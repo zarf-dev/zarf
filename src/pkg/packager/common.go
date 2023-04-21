@@ -108,11 +108,18 @@ func (p *Packager) GetPackageName() string {
 		suffix = "tar"
 	}
 
+	packageFileName := ""
 	if p.cfg.Pkg.Metadata.Version == "" {
-		return fmt.Sprintf("%s%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, suffix)
+		packageFileName = fmt.Sprintf("%s%s-%s", config.ZarfPackagePrefix, packageName, p.arch)
+	} else {
+		packageFileName = fmt.Sprintf("%s%s-%s-%s", config.ZarfPackagePrefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version)
 	}
 
-	return fmt.Sprintf("%s%s-%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
+	if p.cfg.Pkg.Build.Differential {
+		packageFileName = fmt.Sprintf("%s-differential-%s", packageFileName, p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion)
+	}
+
+	return fmt.Sprintf("%s.%s", packageFileName, suffix)
 }
 
 // ClearTempPaths removes the temp directory and any files within it.

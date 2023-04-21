@@ -39,6 +39,7 @@ type ZarfBuildData struct {
 	Timestamp    string   `json:"timestamp" jsonschema:"description=The timestamp when this package was created"`
 	Version      string   `json:"version" jsonschema:"description=The version of Zarf used to build this package"`
 	Migrations   []string `json:"migrations" jsonschema:"description=Any migrations that have been run on this package"`
+	Differential bool     `json:"differential" jsonschema:"description=Whether this package was created with differential compression"`
 }
 
 // ZarfPackageVariable are variables that can be used to dynamically template K8s resources.

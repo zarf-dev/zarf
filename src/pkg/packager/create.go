@@ -33,6 +33,15 @@ import (
 func (p *Packager) Create(baseDir string) error {
 	var originalDir string
 
+	if err := p.readYaml(filepath.Join(baseDir, config.ZarfYAML), false); err != nil {
+		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
+	}
+
+	// Load the images and repos from the 'reference' package
+	if err := p.loadDifferentialData(); err != nil {
+		return err
+	}
+
 	// Change the working directory if this run has an alternate base dir.
 	if baseDir != "" {
 		originalDir, _ = os.Getwd()
@@ -40,10 +49,6 @@ func (p *Packager) Create(baseDir string) error {
 			return fmt.Errorf("unable to access directory '%s': %w", baseDir, err)
 		}
 		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
-	}
-
-	if err := p.readYaml(config.ZarfYAML, false); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
 	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
@@ -58,6 +63,11 @@ func (p *Packager) Create(baseDir string) error {
 	// After components are composed, template the active package.
 	if err := p.fillActiveTemplate(); err != nil {
 		return fmt.Errorf("unable to fill values in template: %s", err.Error())
+	}
+
+	// Handle any potential differential images/repos before going forward
+	if err := p.removeCopiesFromDifferentialPackage(); err != nil {
+		return err
 	}
 
 	// Create component paths and process extensions for each component.
@@ -466,4 +476,89 @@ func generatePackageChecksums(basePath string) (string, error) {
 
 	// Calculate the checksum of the checksum file
 	return utils.GetSHA256OfFile(checksumsFilePath)
+}
+
+// loadDifferentialData extracts the zarf config of a designated 'reference' package that we are building a differential over and creates a list of all images and repos that are in the reference package
+func (p *Packager) loadDifferentialData() error {
+	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath == "" {
+		return nil
+	}
+
+	tmpDir, _ := utils.MakeTempDir("")
+	defer os.RemoveAll(tmpDir)
+
+	// Load the package spec of the package we're using as a 'reference' for the differential build
+	var differentialZarfConfig types.ZarfPackage
+	if err := archiver.Extract(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, config.ZarfYAML, tmpDir); err != nil {
+		return fmt.Errorf("unable to extract the differential zarf package spec: %w", err)
+	}
+	if err := utils.ReadYaml(filepath.Join(tmpDir, config.ZarfYAML), &differentialZarfConfig); err != nil {
+		return fmt.Errorf("unable to load the differential zarf package spec: %w", err)
+	}
+
+	// Generate a list of all the images and repos that are included in the provided package
+	allIncludedImages := []string{}
+	allIncludedRepos := []string{}
+	for _, component := range differentialZarfConfig.Components {
+		allIncludedImages = append(allIncludedImages, component.Images...)
+		allIncludedRepos = append(allIncludedRepos, component.Repos...)
+	}
+	p.cfg.CreateOpts.DifferentialData.DifferentialImages = allIncludedImages
+	p.cfg.CreateOpts.DifferentialData.DifferentialRepos = allIncludedRepos
+	p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
+
+	if differentialZarfConfig.Metadata.Version == p.cfg.Pkg.Metadata.Version {
+		message.Warnf("You are creating a differential package with the same version as the package you are using as a reference. This is not recommended.")
+	}
+
+	return nil
+}
+
+// handleDifferentialThings will remove and images and repos that are already included in the reference package from the new package
+func (p *Packager) removeCopiesFromDifferentialPackage() error {
+	// If a differential build was not request, continue on as normal
+	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath == "" {
+		return nil
+	}
+
+	// Loop through all of the components to determine if any of them are using already included images or repos
+	componentMap := make(map[int]types.ZarfComponent)
+	for idx, component := range p.cfg.Pkg.Components {
+		newImageList := []string{}
+		newRepoList := []string{}
+
+		// Generate a list of all unique images for this component
+		// TODO: @JPERRY This will have to be a bit more detailed: "If an image or repo did not have a tag (or sha) it should be retained (i.e. if a full git repo or branch was specified)"
+		for _, img := range component.Images {
+
+			if !utils.SliceContains(p.cfg.CreateOpts.DifferentialData.DifferentialImages, img) {
+				newImageList = append(newImageList, img)
+			} else {
+				message.Debugf("Image %s is already included in the differential package, we are not going to include that image in this package.", img)
+			}
+		}
+
+		// Generate a list of all unique repos for this component
+		// TODO: @JPERRY This will have to be a bit more detailed: "If an image or repo did not have a tag (or sha) it should be retained (i.e. if a full git repo or branch was specified)"
+		for _, repo := range component.Repos {
+			if !utils.SliceContains(p.cfg.CreateOpts.DifferentialData.DifferentialRepos, repo) {
+				message.Question(fmt.Sprintf("Repo %s is not included in the differential package, include?", repo))
+				newRepoList = append(newRepoList, repo)
+			} else {
+				message.Debugf("Repo %s is already included in the differential package, we are not going to include that repo in this package.", repo)
+			}
+		}
+
+		// Update the component with the unique lists of repos and iam
+		component.Images = newImageList
+		component.Repos = newRepoList
+		componentMap[idx] = component
+	}
+
+	// Update the package with the new component list
+	for idx, component := range componentMap {
+		p.cfg.Pkg.Components[idx] = component
+	}
+
+	return nil
 }
