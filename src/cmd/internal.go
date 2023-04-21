@@ -75,7 +75,11 @@ var configSchemaCmd = &cobra.Command{
 	Aliases: []string{"c"},
 	Short:   lang.CmdInternalConfigSchemaShort,
 	Run: func(cmd *cobra.Command, args []string) {
-		schema := jsonschema.Reflect(&types.ZarfPackage{})
+		r := new(jsonschema.Reflector)
+		if err := r.AddGoComments("github.com/defenseunicorns/zarf", "./src/types"); err != nil {
+			message.Fatal(err, lang.CmdInternalConfigSchemaErr)
+		}
+		schema := r.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
 			message.Fatal(err, lang.CmdInternalConfigSchemaErr)

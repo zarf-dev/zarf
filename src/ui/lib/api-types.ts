@@ -241,394 +241,123 @@ export interface ZarfBuildData {
 }
 
 export interface ZarfComponent {
-    /**
-     * Custom commands to run at various stages of a package lifecycle
-     */
-    actions?: ZarfComponentActions;
-    /**
-     * Helm charts to install during package deploy
-     */
-    charts?: ZarfChart[];
-    /**
-     * Specify a path to a public key to validate signed online resources
-     */
-    cosignKeyPath?: string;
-    /**
-     * Datasets to inject into a container in the target cluster
-     */
+    actions?:        ZarfComponentActions;
+    charts?:         ZarfChart[];
+    cosignKeyPath?:  string;
     dataInjections?: ZarfDataInjection[];
-    /**
-     * Determines the default Y/N state for installing this component on package deploy
-     */
-    default?: boolean;
-    /**
-     * Message to include during package deploy describing the purpose of this component
-     */
-    description?: string;
-    /**
-     * Extend component functionality with additional features
-     */
-    extensions?: ZarfComponentExtensions;
-    /**
-     * Files to place on disk during package deployment
-     */
-    files?: ZarfFile[];
-    /**
-     * Create a user selector field based on all components in the same group
-     */
-    group?: string;
-    /**
-     * List of OCI images to include in the package
-     */
-    images?: string[];
-    /**
-     * Import a component from another Zarf package
-     */
-    import?: ZarfComponentImport;
-    /**
-     * Kubernetes manifests to be included in a generated Helm chart on package deploy
-     */
-    manifests?: ZarfManifest[];
-    /**
-     * The name of the component
-     */
-    name: string;
-    /**
-     * Filter when this component is included in package creation or deployment
-     */
-    only?: ZarfComponentOnlyTarget;
-    /**
-     * List of git repos to include in the package
-     */
-    repos?: string[];
-    /**
-     * Do not prompt user to install this component
-     */
-    required?: boolean;
-    /**
-     * [Deprecated] (replaced by actions) Custom commands to run before or after package
-     * deployment
-     */
-    scripts?: DeprecatedZarfComponentScripts;
+    default?:        boolean;
+    description?:    string;
+    extensions?:     ZarfComponentExtensions;
+    files?:          ZarfFile[];
+    group?:          string;
+    images?:         string[];
+    import?:         ZarfComponentImport;
+    manifests?:      ZarfManifest[];
+    name:            string;
+    only?:           ZarfComponentOnlyTarget;
+    repos?:          string[];
+    required?:       boolean;
+    scripts?:        DeprecatedZarfComponentScripts;
 }
 
-/**
- * Custom commands to run at various stages of a package lifecycle
- */
 export interface ZarfComponentActions {
-    /**
-     * Actions to run during package creation
-     */
     onCreate?: ZarfComponentActionSet;
-    /**
-     * Actions to run during package deployment
-     */
     onDeploy?: ZarfComponentActionSet;
-    /**
-     * Actions to run during package removal
-     */
     onRemove?: ZarfComponentActionSet;
 }
 
-/**
- * Actions to run during package creation
- *
- * Actions to run during package deployment
- *
- * Actions to run during package removal
- */
 export interface ZarfComponentActionSet {
-    /**
-     * Actions to run at the end of an operation
-     */
-    after?: ZarfComponentAction[];
-    /**
-     * Actions to run at the start of an operation
-     */
-    before?: ZarfComponentAction[];
-    /**
-     * Default configuration for all actions in this set
-     */
-    defaults?: ZarfComponentActionDefaults;
-    /**
-     * Actions to run if all operations fail
-     */
+    after?:     ZarfComponentAction[];
+    before?:    ZarfComponentAction[];
+    defaults?:  ZarfComponentActionDefaults;
     onFailure?: ZarfComponentAction[];
-    /**
-     * Actions to run if all operations succeed
-     */
     onSuccess?: ZarfComponentAction[];
 }
 
 export interface ZarfComponentAction {
-    /**
-     * The command to run. Must specify either cmd or wait for the action to do anything.
-     */
-    cmd?: string;
-    /**
-     * Description of the action to be displayed during package execution instead of the command
-     */
-    description?: string;
-    /**
-     * The working directory to run the command in (default is CWD)
-     */
-    dir?: string;
-    /**
-     * Additional environment variables to set for the command
-     */
-    env?: string[];
-    /**
-     * Retry the command if it fails up to given number of times (default 0)
-     */
-    maxRetries?: number;
-    /**
-     * Timeout in seconds for the command (default to 0
-     */
+    cmd?:             string;
+    description?:     string;
+    dir?:             string;
+    env?:             string[];
+    maxRetries?:      number;
     maxTotalSeconds?: number;
-    /**
-     * Hide the output of the command during package deployment (default false)
-     */
-    mute?: boolean;
-    /**
-     * [Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to
-     * update with the output of the command. This variable will be available to all remaining
-     * actions and components in the package.
-     */
-    setVariable?: string;
-    /**
-     * (onDeploy/cmd only) An array of variables to update with the output of the command. These
-     * variables will be available to all remaining actions and components in the package.
-     */
-    setVariables?: ZarfComponentActionSetVariable[];
-    /**
-     * (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on
-     * supported operating systems
-     */
-    shell?: ZarfComponentActionShell;
-    /**
-     * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
-     * action. See the 'zarf tools wait-for' command for more info.
-     */
-    wait?: ZarfComponentActionWait;
+    mute?:            boolean;
+    setVariable?:     string;
+    setVariables?:    ZarfComponentActionSetVariable[];
+    shell?:           ZarfComponentActionShell;
+    wait?:            ZarfComponentActionWait;
 }
 
 export interface ZarfComponentActionSetVariable {
-    /**
-     * Whether to automatically indent the variable's value (if multiline) when templating.
-     * Based on the number of chars before the start of ###ZARF_VAR_.
-     */
     autoIndent?: boolean;
-    /**
-     * The name to be used for the variable
-     */
-    name: string;
-    /**
-     * Whether to mark this variable as sensitive to not print it in the Zarf log
-     */
-    sensitive?: boolean;
+    name:        string;
+    sensitive?:  boolean;
 }
 
-/**
- * (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on
- * supported operating systems
- */
 export interface ZarfComponentActionShell {
-    /**
-     * (default 'sh') Indicates a preference for the shell to use on macOS systems
-     */
-    darwin?: string;
-    /**
-     * (default 'sh') Indicates a preference for the shell to use on Linux systems
-     */
-    linux?: string;
-    /**
-     * (default 'powershell') Indicates a preference for the shell to use on Windows systems
-     * (note that choosing 'cmd' will turn off migrations like touch -> New-Item)
-     */
+    darwin?:  string;
+    linux?:   string;
     windows?: string;
 }
 
-/**
- * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
- * action. See the 'zarf tools wait-for' command for more info.
- */
 export interface ZarfComponentActionWait {
-    /**
-     * Wait for a condition to be met in the cluster before continuing. Only one of cluster or
-     * network can be specified.
-     */
     cluster?: ZarfComponentActionWaitCluster;
-    /**
-     * Wait for a condition to be met on the network before continuing. Only one of cluster or
-     * network can be specified.
-     */
     network?: ZarfComponentActionWaitNetwork;
 }
 
-/**
- * Wait for a condition to be met in the cluster before continuing. Only one of cluster or
- * network can be specified.
- */
 export interface ZarfComponentActionWaitCluster {
-    /**
-     * The condition to wait for; defaults to exist
-     */
     condition?: string;
-    /**
-     * The kind of resource to wait for
-     */
-    kind: string;
-    /**
-     * The name of the resource or selector to wait for
-     */
-    name: string;
-    /**
-     * The namespace of the resource to wait for
-     */
+    kind:       string;
+    name:       string;
     namespace?: string;
 }
 
-/**
- * Wait for a condition to be met on the network before continuing. Only one of cluster or
- * network can be specified.
- */
 export interface ZarfComponentActionWaitNetwork {
-    /**
-     * The address to wait for
-     */
-    address: string;
-    /**
-     * The HTTP status code to wait for if using http or https
-     */
-    code?: number;
-    /**
-     * The protocol to wait for
-     */
-    protocol: Protocol;
+    address:  string;
+    code?:    number;
+    protocol: string;
 }
 
-/**
- * The protocol to wait for
- */
-export enum Protocol {
-    HTTP = "http",
-    HTTPS = "https",
-    TCP = "tcp",
-}
-
-/**
- * Default configuration for all actions in this set
- */
 export interface ZarfComponentActionDefaults {
-    /**
-     * Working directory for commands (default CWD)
-     */
-    dir?: string;
-    /**
-     * Additional environment variables for commands
-     */
-    env?: string[];
-    /**
-     * Retry commands given number of times if they fail (default 0)
-     */
-    maxRetries?: number;
-    /**
-     * Default timeout in seconds for commands (default to 0
-     */
+    dir?:             string;
+    env?:             string[];
+    maxRetries?:      number;
     maxTotalSeconds?: number;
-    /**
-     * Hide the output of commands during execution (default false)
-     */
-    mute?: boolean;
-    /**
-     * (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on
-     * supported operating systems
-     */
-    shell?: ZarfComponentActionShell;
+    mute?:            boolean;
+    shell?:           ZarfComponentActionShell;
 }
 
 export interface ZarfChart {
-    /**
-     * The path to the chart in the repo if using a git repo instead of a helm repo
-     */
     gitPath?: string;
     /**
      * The path to the chart folder
      */
-    localPath?: string;
-    /**
-     * The name of the chart to deploy; this should be the name of the chart as it is installed
-     * in the helm repo
-     */
-    name: string;
-    /**
-     * The namespace to deploy the chart to
-     */
-    namespace: string;
-    /**
-     * Whether to not wait for chart resources to be ready before continuing
-     */
-    noWait?: boolean;
-    /**
-     * The name of the release to create; defaults to the name of the chart
-     */
+    localPath?:   string;
+    name:         string;
+    namespace:    string;
+    noWait?:      boolean;
     releaseName?: string;
     /**
      * The URL of the OCI registry, chart repository, or git repo where the helm chart is stored
      */
-    url?: string;
-    /**
-     * List of values files to include in the package; these will be merged together
-     */
+    url?:         string;
     valuesFiles?: string[];
-    /**
-     * The version of the chart to deploy; for git-based charts this is also the tag of the git
-     * repo
-     */
-    version: string;
+    version:      string;
 }
 
 export interface ZarfDataInjection {
-    /**
-     * Compress the data before transmitting using gzip.  Note: this requires support for
-     * tar/gzip locally and in the target image.
-     */
     compress?: boolean;
-    /**
-     * A path to a local folder or file to inject into the given target pod + container
-     */
-    source: string;
-    /**
-     * The target pod + container to inject the data into
-     */
-    target: ZarfContainerTarget;
+    source:    string;
+    target:    ZarfContainerTarget;
 }
 
-/**
- * The target pod + container to inject the data into
- */
 export interface ZarfContainerTarget {
-    /**
-     * The container name to target for data injection
-     */
     container: string;
-    /**
-     * The namespace to target for data injection
-     */
     namespace: string;
-    /**
-     * The path within the container to copy the data into
-     */
-    path: string;
-    /**
-     * The K8s selector to target for data injection
-     */
-    selector: string;
+    path:      string;
+    selector:  string;
 }
 
-/**
- * Extend component functionality with additional features
- */
 export interface ZarfComponentExtensions {
     /**
      * Configurations for installing Big Bang and Flux in the cluster
@@ -659,143 +388,43 @@ export interface BigBang {
 }
 
 export interface ZarfFile {
-    /**
-     * Determines if the file should be made executable during package deploy
-     */
     executable?: boolean;
-    /**
-     * Optional SHA256 checksum of the file
-     */
-    shasum?: string;
-    /**
-     * Local file path or remote URL to pull into the package
-     */
-    source: string;
-    /**
-     * List of symlinks to create during package deploy
-     */
-    symlinks?: string[];
-    /**
-     * The absolute or relative path where the file should be copied to during package deploy
-     */
-    target: string;
+    shasum?:     string;
+    source:      string;
+    symlinks?:   string[];
+    target:      string;
 }
 
-/**
- * Import a component from another Zarf package
- */
 export interface ZarfComponentImport {
-    /**
-     * The name of the component to import from the referenced zarf.yaml
-     */
     name?: string;
-    /**
-     * The relative path to a directory containing a zarf.yaml to import from
-     */
-    path: string;
+    path:  string;
 }
 
 export interface ZarfManifest {
-    /**
-     * List of individual K8s YAML files to deploy (in order)
-     */
-    files?: string[];
-    /**
-     * List of kustomization paths to include in the package
-     */
-    kustomizations?: string[];
-    /**
-     * Allow traversing directory above the current directory if needed for kustomization
-     */
+    files?:                      string[];
+    kustomizations?:             string[];
     kustomizeAllowAnyDirectory?: boolean;
-    /**
-     * A name to give this collection of manifests; this will become the name of the
-     * dynamically-created helm chart
-     */
-    name: string;
-    /**
-     * The namespace to deploy the manifests to
-     */
-    namespace?: string;
-    /**
-     * Whether to not wait for manifest resources to be ready before continuing
-     */
-    noWait?: boolean;
+    name:                        string;
+    namespace?:                  string;
+    noWait?:                     boolean;
 }
 
-/**
- * Filter when this component is included in package creation or deployment
- */
 export interface ZarfComponentOnlyTarget {
-    /**
-     * Only deploy component to specified clusters
-     */
     cluster?: ZarfComponentOnlyCluster;
-    /**
-     * Only deploy component to specified OS
-     */
-    localOS?: LocalOS;
+    localOS?: string;
 }
 
-/**
- * Only deploy component to specified clusters
- */
 export interface ZarfComponentOnlyCluster {
-    /**
-     * Only create and deploy to clusters of the given architecture
-     */
-    architecture?: Architecture;
-    /**
-     * A list of kubernetes distros this package works with (Reserved for future use)
-     */
-    distros?: string[];
+    architecture?: string;
+    distros?:      string[];
 }
 
-/**
- * Only create and deploy to clusters of the given architecture
- */
-export enum Architecture {
-    Amd64 = "amd64",
-    Arm64 = "arm64",
-}
-
-/**
- * Only deploy component to specified OS
- */
-export enum LocalOS {
-    Darwin = "darwin",
-    Linux = "linux",
-    Windows = "windows",
-}
-
-/**
- * [Deprecated] (replaced by actions) Custom commands to run before or after package
- * deployment
- */
 export interface DeprecatedZarfComponentScripts {
-    /**
-     * Scripts to run after the component successfully deploys
-     */
-    after?: string[];
-    /**
-     * Scripts to run before the component is deployed
-     */
-    before?: string[];
-    /**
-     * Scripts to run before the component is added during package create
-     */
-    prepare?: string[];
-    /**
-     * Retry the script if it fails
-     */
-    retry?: boolean;
-    /**
-     * Show the output of the script during package deployment
-     */
-    showOutput?: boolean;
-    /**
-     * Timeout in seconds for the script
-     */
+    after?:          string[];
+    before?:         string[];
+    prepare?:        string[];
+    retry?:          boolean;
+    showOutput?:     boolean;
     timeoutSeconds?: number;
 }
 
@@ -1436,7 +1065,7 @@ const typeMap: any = {
     "ZarfComponentActionWaitNetwork": o([
         { json: "address", js: "address", typ: "" },
         { json: "code", js: "code", typ: u(undefined, 0) },
-        { json: "protocol", js: "protocol", typ: r("Protocol") },
+        { json: "protocol", js: "protocol", typ: "" },
     ], false),
     "ZarfComponentActionDefaults": o([
         { json: "dir", js: "dir", typ: u(undefined, "") },
@@ -1498,10 +1127,10 @@ const typeMap: any = {
     ], false),
     "ZarfComponentOnlyTarget": o([
         { json: "cluster", js: "cluster", typ: u(undefined, r("ZarfComponentOnlyCluster")) },
-        { json: "localOS", js: "localOS", typ: u(undefined, r("LocalOS")) },
+        { json: "localOS", js: "localOS", typ: u(undefined, "") },
     ], false),
     "ZarfComponentOnlyCluster": o([
-        { json: "architecture", js: "architecture", typ: u(undefined, r("Architecture")) },
+        { json: "architecture", js: "architecture", typ: u(undefined, "") },
         { json: "distros", js: "distros", typ: u(undefined, a("")) },
     ], false),
     "DeprecatedZarfComponentScripts": o([
@@ -1669,20 +1298,6 @@ const typeMap: any = {
         { json: "signingKeyPath", js: "signingKeyPath", typ: "" },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
-    "Protocol": [
-        "http",
-        "https",
-        "tcp",
-    ],
-    "Architecture": [
-        "amd64",
-        "arm64",
-    ],
-    "LocalOS": [
-        "darwin",
-        "linux",
-        "windows",
-    ],
     "Kind": [
         "ZarfInitConfig",
         "ZarfPackageConfig",
