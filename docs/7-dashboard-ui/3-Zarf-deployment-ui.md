@@ -44,7 +44,7 @@ The Zarf Web UI makes connecting to existing clusters easy. When on the packages
 
 :::Tip 
 
-Zarf can only read the default cluster in your Kubeconfig file, if you wish to connect to a different cluster in the kubeconfig you will need to change it to the default cluster in the terminal. See the Kubernetes documentation on [how to configure access to multiple clusters](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/).
+Zarf can only read the default cluster in your Kubeconfig file, if you wish to connect to a different cluster in the Kubeconfig you will need to change it to the default cluster in the terminal. See the Kubernetes documentation on [how to configure access to multiple clusters](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/).
 
 ::: 
 
