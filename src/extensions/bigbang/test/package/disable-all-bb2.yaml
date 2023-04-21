@@ -53,5 +53,6 @@ monitoring:
 twistlock:
   enabled: false
 
-metricsServer:
-  enabled: false
+addons:
+  metricsServer:
+    enabled: false
