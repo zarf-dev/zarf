@@ -6,7 +6,7 @@ Welcome to the Defense Unicorns Project Documentation Style Guide, your guide to
 ### Writing Goals
 With every piece of content or documentation we publish, we should aim to:
 - **Be clear:** Start with the key takeaway. Put the most important thing in the most noticeable spot. Make choices and next steps obvious. Give people just enough information to make decisions confidently.
-- **Be concise:** Everyone likes clarity and getting to the point. Break it up. Step it out. Layer. Short sentences and fragments are easier to scan and read. 
+- **Be concise:** Everyone likes clarity and getting to the point. Break it up. Step it out. Layer. Short sentences and fragments are easier to scan and read.
 - **Be useful:** Before you start writing, ask yourself: What purpose does this serve? Who is going to read it? What do they need to know?
 
 ### Writing Tone
@@ -15,7 +15,7 @@ Here at Defense Unicorns, we aim to publish project documentation that is inform
 Here are some key elements of writing in the Defense Unicorn tone:
 - Use [active voice](https://webapps.towson.edu/ows/activepass.htm), avoid using passive voice.
 - Write plainly, avoid using cliches, colloquiums, jargon, and unclear analogies.
-- Be crisp and clear, make it simple. 
+- Be crisp and clear, make it simple.
 - Be warm and relaxed, we're humans!
 - Be technically correct.
 
@@ -62,31 +62,31 @@ Follow these guidelines for creating Defense Unicorns code examples:
 * Show expected output, either in a separate section after the code example or by using code comments within the code example.
 
 ### Text Formatting
-The thoughtful use of fonts, text formatting, capitalization, alignment, and spacing creates a first impression, reinforces the Defense Unicorn brand, and improves readability. The consistent formatting of text elements, such as command names and URLs, reduces ambiguity and helps users find and interpret information easily. 
+The thoughtful use of fonts, text formatting, capitalization, alignment, and spacing creates a first impression, reinforces the Defense Unicorn brand, and improves readability. The consistent formatting of text elements, such as command names and URLs, reduces ambiguity and helps users find and interpret information easily.
 
 Follow these guidelines for creating proper Defense Unicorns text formatting:
 
-* Use headings to show hierarchy of information. 
-* Project documentation and project websites use Roboto for the body text, unless explicitly stated in otherwise in the project brand guide. 
-* When referring to bold formatting, use bold. 
+* Use headings to show hierarchy of information.
+* Project documentation and project websites use Roboto for the body text, unless explicitly stated in otherwise in the project brand guide.
+* When referring to bold formatting, use bold.
 * When referring to italic formatting, use italic.
-* Default to using left alignment for all body text and titles in documentation. 
+* Default to using left alignment for all body text and titles in documentation.
   * Titles may be center aligned on websites and marketing materials.
 
 ### Procedures and Instructions
-It is important to ensure that our communication is clear, concise, and useful. Many portions of our documentation consists of examples and walkthroughs for users to deploy our software. Creating consistent formatting helps users locate and interpret steps and procedures efficiently. 
+It is important to ensure that our communication is clear, concise, and useful. Many portions of our documentation consists of examples and walkthroughs for users to deploy our software. Creating consistent formatting helps users locate and interpret steps and procedures efficiently.
 
 Follow these guidelines for creating Defense Unicorn instructions and procedures:
 
 * Format procedures consistently so customers can find them easily by scanning.
-* Consider using a heading to help users find instructions quickly. 
+* Consider using a heading to help users find instructions quickly.
 * Use complete sentences.
 * Capitalize the first word in each step.
-* Use a period after each step. 
+* Use a period after each step.
 * Use a period after each bullet or list item.
 
 ### Grammar Rules
-Adhering to certain rules of grammar and mechanics helps us keep our writing clear and consistent. It’s important to ensure that content grammar and mechanics align with our company’s values of sharing insights and mission impact. 
+Adhering to certain rules of grammar and mechanics helps us keep our writing clear and consistent. It's important to ensure that content grammar and mechanics align with our company's values of sharing insights and mission impact.
 
 Following these guidelines will help you write content and documentation that is informative and approachable:
 
@@ -94,28 +94,28 @@ Following these guidelines will help you write content and documentation that is
 * Avoid run-on sentences.
 * Use commas appropriately.
 * Use active voice.
-* Avoid using exclamation points in text except when they're part of a code example. 
+* Avoid using exclamation points in text except when they're part of a code example.
   * Rather than using exclamation points to call attention to an important point, consider using notices such as Note or Caution.
-  * See the ‘Admonitions’ section.
+  * See the 'Admonitions' section.
 
 ### Heading and Title Language
-Considering the majority of our documentation revolves around Zarf, it’s components, and commands, the language we use to introduce titles and headings needs to reflect the correct tense.
+Considering the majority of our documentation revolves around Zarf, it's components, and commands, the language we use to introduce titles and headings needs to reflect the correct tense.
 
 **Default to using the tense of the command when addressing it in titles and headings.** For example:
 
-* “Create Package”/”Package Create”
-* “Deploy Package”/”Package Deploy”
-* “Package Publish” 
+* "Create Package"/"Package Create"
+* "Deploy Package"/"Package Deploy"
+* "Package Publish"
 
-**Do not use:** 
+**Do not use:**
 
-* “Package Creation”
-* “Package Deployment”
-* “Package Publication”
+* "Package Creation"
+* "Package Deployment"
+* "Package Publication"
 
 A good rule of thumb for creating titles and headings is to ensure that they do not wrap on the right hand side of the documentation. This is to maintain consistency and ease of use for the reader.
 
-### Abbreviations 
+### Abbreviations
 Abbreviations are commonly used in the industries we work in (Technology, Defense, Government/Civilian). Abbreviations may be a more effective way of communicating information, especially when the abbreviation is used as a proper noun (ex. DoD, DevSecOps). Remember that some readers may not know what an abbreviation means, especially if it is industry specific.
 
 #### When to use Abbreviations
@@ -125,10 +125,10 @@ To avoid confusion and ensure understanding for all users, follow these guidelin
 
 * Spell out abbreviations the first time you use them on a page or in a document with the abbreviation in parenthesis following the definition.
   * Ex. Continuous Integration & Continuous Delivery (CI/CD)
-* Capitalization of abbreviation follow the capitalization of each letter used when spelled out. 
+* Capitalization of abbreviation follow the capitalization of each letter used when spelled out.
   * Ex. Department of Defense is abbreviated to DoD
 * Use standard acronyms and initialisms that will save the reader time.
-* Spell out abbreviations on first reference, be sure to include the abbreviation in parenthesis following the definition. 
+* Spell out abbreviations on first reference, be sure to include the abbreviation in parenthesis following the definition.
 * Avoid using abbreviations for terms that aren't related to the main topic of the document.
 * Do not use period (.) between letters.
 
@@ -157,25 +157,25 @@ Use *Info* when: you need to include additional information that would disrupt t
 Use *Caution* when: you need to highlight something critical or important.
 
 ### Linking Text
-Linking to other forms of documentation or references is a great way to provide additional insight to the reader. In general, cross-references or in text links can provide information that adds to the reader's understanding. 
+Linking to other forms of documentation or references is a great way to provide additional insight to the reader. In general, cross-references or in text links can provide information that adds to the reader's understanding.
 
 Follow these guidelines to efficiently link the reader to other resources:
 
 * To write link text, use descriptive phrases that provide context for the material that you're linking to.
-  * “For more information on what Zarf consists of, see [Zarf Packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/).
+  * "For more information on what Zarf consists of, see [Zarf Packages](../4-user-guide/2-zarf-packages/index.md).
 * When you write a complete sentence that refers the reader to another topic, introduce the link with the phrase For more information, see or For more information about..., see.
-   * "For more information, see [Getting Started](https://docs.zarf.dev/docs/getting-started)."
+   * "For more information, see [Getting Started](../3-getting-started.md)."
 
-When linking text, **avoid** using non-descriptive terms as the text. Using text such as “here” or “see more” can depreciate the usability for readers. For example, do **not** say:
-* “For more information, see [here.]”
-* “You can also try out the component actions example [here.]”
+When linking text, **avoid** using non-descriptive terms as the text. Using text such as "here" or "see more" can depreciate the usability for readers. For example, do **not** say:
+* "For more information, see [here.]"
+* "You can also try out the component actions example [here.]"
 
 ### Jargon
 Jargon is the specialized and often figurative terminology of a specific group to represent a larger concept—for example, camel case, swim lane, break-glass procedure, or out-of-the-box. Typically, the meaning of jargon isn't understood except by the specific group. For this reason, jargon can hamper our efforts to publish content that's clear.
 
 However, some jargon is widely understood and accepted by our industry or by the intended audience of a document. It can be valuable to include jargon in a document when you know that readers search for those terms.
 
-Don’t use jargon if:
+Don't use jargon if:
 
 * You can use a more familiar term, such as symbol instead of glyph.
 * The term is familiar to only a small segment of your readers.
@@ -189,9 +189,9 @@ If you're going to use jargon, consider the following questions:
 ### Word List
 Follow these guidelines for standardizing Defense Unicorn's spelling and grammar:
 
-* Zarf 
-* Zarf Package 
-* Open-source 
+* Zarf
+* Zarf Package
+* Open-source
 * Air gap/Air-gapped
 * K8/K8s
 * K9/K9s
