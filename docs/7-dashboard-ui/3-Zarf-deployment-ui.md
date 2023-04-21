@@ -20,7 +20,7 @@ Follow these steps to get started using the Web UI
 
 ### Cluster Connection Status
 
-When Zarf is running it automatically searches for a Kubeconfig on the local machine. If the Kubeconfig is found, it searches the defualt cluster to determine if it is a Zarf cluster (Initialized). There are two different cluster statuses the Web UI will display based on the state of the cluster found. 
+When Zarf is running it automatically searches for a Kubeconfig on the local machine. If the Kubeconfig is found, it searches the default cluster to determine if it is a Zarf cluster (i.e. initialized). There are two different cluster statuses the Web UI will display based on the state of the cluster found. 
 
 #### Cluster not Connected (Not Initizalized)
 
