@@ -95,6 +95,8 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	suite.NoError(err)
 	err = exec.CmdWithPrint("rm", "-rf", filepath.Join("src", "test", "test-packages", "51-import-everything", "manifests", "data-injection.yaml"))
 	suite.NoError(err)
+	err = exec.CmdWithPrint("cd", "~/.zarf-cache/oci", "&&", "du", "-ah", ".")
+	suite.NoError(err)
 }
 
 func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
