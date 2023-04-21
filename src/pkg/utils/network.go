@@ -18,7 +18,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
@@ -88,7 +87,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 	// Create the file
 	file, err := os.Create(dst)
 	if err != nil {
-		return fmt.Errorf(lang.ErrUnableToCreateFile, dst)
+		return fmt.Errorf("unable to create file %s", dst)
 	}
 
 	// If the source url start with the sget protocol use that, otherwise do a typical GET call
