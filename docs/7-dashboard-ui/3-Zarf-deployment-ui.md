@@ -16,7 +16,7 @@ Follow these steps to get started using the Web UI
 
 ![GIF showing the Web UI lauch from the CLI terminal](../.images/dashboard/Web_UI__Launch_w__Cluster_AdobeExpress.gif)
 
-## Using Zarf Deployment Web UI
+## Using the Zarf Deployment Web UI
 
 ### Cluster Connection Status
 
