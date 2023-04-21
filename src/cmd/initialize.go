@@ -129,10 +129,9 @@ func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
 		return utils.DownloadToFile(url, downloadCacheTarget, "")
-	} else {
-		// Otherwise, exit and tell the user to manually download the init-package
-		return errors.New(lang.CmdInitDownloadErrManual)
 	}
+	// Otherwise, exit and tell the user to manually download the init-package
+	return errors.New(lang.CmdInitDownloadErrManual)
 }
 
 func validateInitFlags() error {
