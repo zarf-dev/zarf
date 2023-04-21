@@ -10,7 +10,7 @@ The Zarf Deployment Web UI can easily be spun up with a single command from the 
 
 Follow these steps to get started using the Web UI
 
-1. Step one: Install Zarf binary
+1. Step one: Install the Zarf binary
 2. Step two: Open a terminal shell
 3. Step three: Type in the following command: ```zarf dev UI```
 
@@ -97,8 +97,7 @@ Once a package is deployed into the cluster, the Web UI offers additional comman
 
 The web UI is packaged into the Zarf binary, so you don't have to worry about additional dependencies or trying to install it yourself! The Web UI is served through your machine's local browser, running on `localhost`, and utilizes the Zarf go binary as the backend. 
 
-Use the Zarf Deployment UI to execute the existing Zarf CLI commands. 
-- [Zarf tools Kubectl](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_tools_kubectl.md)
+Use the Zarf Deployment UI to execute the existing Zarf CLI commands:
 - [Zarf tools Kubectl top](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/)
 - [Zarf Init](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_init.md)
 - [Zarf Package Deploy](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/)
