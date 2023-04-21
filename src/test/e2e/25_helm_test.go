@@ -162,7 +162,7 @@ func testHelmAdoption(t *testing.T) {
 
 	// Deploy dos-games manually into the cluster without Zarf
 	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "apply", "-f", deploymentManifest)
-	assert.Contains(t, string(kubectlOut), "successfully rolled out")
+	assert.Contains(t, string(kubectlOut), "deployment.apps/game created")
 
 	// Deploy dos-games into the cluster with Zarf
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", packagePath, "--confirm", "--adopt-existing-resources")
