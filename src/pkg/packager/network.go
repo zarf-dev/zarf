@@ -136,16 +136,11 @@ func (p *Packager) handleSgetPackage() error {
 	return nil
 }
 
-func (p *Packager) handleOciPackage(url string, out string, components ...string) error {
+func (p *Packager) handleOciPackage(url string, out string) error {
 	message.Debugf("packager.handleOciPackage(%s, %s)", url, out)
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, "oci://"))
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI reference: %w", err)
-	}
-	alwaysPull := []string{
-		"zarf.yaml",
-		"zarf.yaml.sig",
-		"checksums.txt",
 	}
 
 	message.Debugf("Pulling %s", ref.String())
@@ -156,7 +151,7 @@ func (p *Packager) handleOciPackage(url string, out string, components ...string
 		return err
 	}
 
-	estimatedBytes, err := getOCIPackageSize(src, ref, append(components, alwaysPull...)...)
+	estimatedBytes, err := getOCIPackageSize(src, ref)
 	if err != nil {
 		return err
 	}
@@ -175,17 +170,6 @@ func (p *Packager) handleOciPackage(url string, out string, components ...string
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.PullOpts.CopyOptions.Concurrency
-	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
-		if utils.SliceContains(alwaysPull, desc.Annotations[ocispec.AnnotationTitle]) {
-			return nil
-		}
-		if len(components) > 0 {
-			if !utils.SliceContains(components, desc.Annotations[ocispec.AnnotationTitle]) {
-				return oras.ErrSkipDesc
-			}
-		}
-		return nil
-	}
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		title := desc.Annotations[ocispec.AnnotationTitle]
 		var format string
@@ -237,7 +221,7 @@ func isManifestUnsupported(err error) bool {
 	return false
 }
 
-func getOCIPackageSize(src *utils.OrasRemote, ref registry.Reference, layersToPull ...string) (int64, error) {
+func getOCIPackageSize(src *utils.OrasRemote, ref registry.Reference) (int64, error) {
 	var total int64
 
 	layers, err := getLayers(src)
@@ -245,16 +229,10 @@ func getOCIPackageSize(src *utils.OrasRemote, ref registry.Reference, layersToPu
 		return 0, err
 	}
 
-	for _, layer := range layersToPull {
-		if !utils.SliceContains(layersToPull, layer) {
-			return 0, fmt.Errorf("layer %s not found in package", layer)
-		}
-	}
-
 	processedLayers := make(map[string]bool)
 	for _, layer := range layers {
 		// Only include this layer's size if we haven't already processed it
-		if !processedLayers[layer.Digest.String()] && (len(layersToPull) == 0 || utils.SliceContains(layersToPull, layer.Annotations[ocispec.AnnotationTitle])) {
+		if !processedLayers[layer.Digest.String()] {
 			total += layer.Size
 			processedLayers[layer.Digest.String()] = true
 		}
