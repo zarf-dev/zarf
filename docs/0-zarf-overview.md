@@ -43,7 +43,7 @@ A typical Zarf deployment is made up of three parts:
 
 :::note
 
-For more technical information on how Zarf works and to view the Zarf architecture, visit our [Nerd Notes page](./6-developer-guide/3-nerd-notes.md).
+For more technical information on how Zarf works and to view the Zarf architecture, visit our [Nerd Notes page](./6-contribute-to-zarf/3-nerd-notes.md).
 
 :::
 

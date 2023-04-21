@@ -24,7 +24,7 @@ zarf package create .     # Run the command to create the zarf package
 This set of commands will create a zarf package in the current directory. In this case, the package name should look something like `zarf-init-amd64-v0.24.0.tar.zst`, although it might be slightly different depending on your system architecture.
 
 :::note
-If you continue without entering an agent image, package create will fail. The Zarf Agent is required to rewrite Kubernetes objects in the air gap via what is known as a Mutating Webhook. More technical information about it can be found [here](../6-developer-guide/3-nerd-notes.md).
+If you continue without entering an agent image, package create will fail. The Zarf Agent is required to rewrite Kubernetes objects in the air gap via what is known as a Mutating Webhook. More technical information about it can be found [here](../6-contribute-to-zarf/3-nerd-notes.md).
 :::
 
 When you execute the `zarf package create` command, Zarf will prompt you to confirm that you want to create the package by displaying the package definition and asking you to respond with either `y` or `n`.
