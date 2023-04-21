@@ -85,7 +85,7 @@ Steps to deploy additional packages into cluster:
 
 ### Additional Package Commands
 
-Once a package is deployed into the cluster, the Web UI offers additional commands that can be executed on a package. To view these commands click on the verticle elipse at the end of the table row for the package you wish to execute the command on. The Web UI currently supports these package commands.
+Once a package is deployed into the cluster, the Web UI offers additional commands that can be executed for a package. To view these commands click on the vertical ellipsis at the end of the table row for the package you wish to act upon. The Web UI currently supports the following package commands:
 
 - Update: Use when you wish to update a package with a new version of the same package.
 - Remove: Use when you wish to remove a package and all of it's resources from the cluster. This cannot be undone.
