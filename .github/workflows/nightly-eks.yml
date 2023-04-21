@@ -60,3 +60,7 @@ jobs:
       - name: Teardown the cluster
         if: always()
         run: ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst --components=teardown-eks-cluster --confirm
+
+      - name: Save logs
+        if: always()
+        uses: ./.github/actions/save-logs
