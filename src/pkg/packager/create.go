@@ -310,14 +310,9 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			}
 
 			for idx, path := range chart.ValuesFiles {
-				dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
-				if utils.IsURL(path) {
-					message.Debugf("Downloading %s", path)
-					utils.DownloadToFile(path, dst, component.CosignKeyPath)
-				} else {
-					if err := utils.CreatePathAndCopy(path, dst); err != nil {
-						return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
-					}
+				chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
+				if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
+					return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 				}
 			}
 		}
