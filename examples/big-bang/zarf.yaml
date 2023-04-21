@@ -3,7 +3,7 @@ metadata:
   name: big-bang-example
   description: "Deploy Big Bang Core"
   # renovate: datasource=gitlab-releases depName=big-bang/bigbang versioning=semver registryUrl=https://repo1.dso.mil/
-  version: 1.57.1
+  version: 2.0.0
   url: https://p1.dso.mil/products/big-bang
   # Big Bang / Iron Bank are only amd64
   architecture: amd64
@@ -19,7 +19,7 @@ components:
     extensions:
       bigbang:
         # renovate: datasource=gitlab-releases depName=big-bang/bigbang versioning=semver registryUrl=https://repo1.dso.mil/
-        version: 1.57.1
+        version: 2.0.0
         valuesFiles:
           # Istio configs
           - config/ingress.yaml

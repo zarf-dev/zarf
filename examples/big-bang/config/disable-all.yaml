@@ -2,7 +2,7 @@
 istio:
   enabled: false
 
-istiooperator:
+istioOperator:
   enabled: false
 
 jaeger:
@@ -20,16 +20,16 @@ gatekeeper:
 kyverno:
   enabled: false
 
-kyvernopolicies:
+kyvernoPolicies:
   enabled: false
 
-kyvernoreporter:
+kyvernoReporter:
   enabled: false
 
-logging:
+elasticsearchKibana:
   enabled: false
 
-eckoperator:
+eckOperator:
   enabled: false
 
 fluentbit:

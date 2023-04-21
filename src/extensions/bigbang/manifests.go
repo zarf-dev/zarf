@@ -42,7 +42,7 @@ git:
   # -- HTTP git credentials, both username and password must be provided
     username: "###ZARF_GIT_PUSH###"
     password: "###ZARF_GIT_AUTH_PUSH###"
-kyvernopolicies:
+kyvernoPolicies:
   values:
     exclude:
       any:
