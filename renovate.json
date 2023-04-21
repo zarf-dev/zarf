@@ -40,6 +40,16 @@
         "- name: (?<depName>.+)(.|\n)*?url: (?<registryUrl>.+)(.|\n)*?version: (?<currentValue>.+)"
       ],
       "datasourceTemplate": "helm"
+    },
+    {
+      "fileMatch": [
+        "(^|/)zarf.yaml$"
+      ],
+      "matchStringsStrategy": "recursive",
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?( registryUrl=(?<registryUrl>.*?))?\\s.*?version: (?<currentValue>.*)\\s"
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
     }
   ]
 }
