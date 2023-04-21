@@ -326,7 +326,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 	if len(component.Files) > 0 {
 		if err = utils.CreateDirectory(componentPath.Files, 0700); err != nil {
-			return nil, fmt.Errorf("unable to create the component files directory: %w", err)
+			return nil, fmt.Errorf("unable to create the component files directory: %s", err.Error())
 		}
 
 		for index, file := range component.Files {
@@ -371,7 +371,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				utils.DownloadToFile(data.Source, dst, component.CosignKeyPath)
 			} else {
 				if err := utils.CreatePathAndCopy(data.Source, dst); err != nil {
-					return nil, fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
+					return nil, fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
 				}
 			}
 
@@ -384,7 +384,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 	if len(component.Manifests) > 0 {
 		if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
-			return nil, fmt.Errorf("unable to create manifest directory %s: %w", componentPath.Manifests, err)
+			return nil, fmt.Errorf("unable to create manifest directory %s: %s", componentPath.Manifests, err.Error())
 		}
 		// Get the proper count of total manifests to add.
 		manifestCount := 0
