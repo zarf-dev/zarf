@@ -1,13 +1,13 @@
 # Use Loki instead of EFK
-logging:
+elasticsearchKibana:
   enabled: false
 
-eckoperator:
+eckOperator:
   enabled: false
 
 fluentbit:
   enabled: false
-  
+
 loki:
   enabled: true
 
