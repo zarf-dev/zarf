@@ -2,6 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: big-bang-example
   description: "Deploy Big Bang Core"
+  # renovate: datasource=gitlab-releases depName=big-bang/bigbang versioning=semver registryUrl=https://repo1.dso.mil/
   version: 1.57.1
   url: https://p1.dso.mil/products/big-bang
   # Big Bang / Iron Bank are only amd64
@@ -17,6 +18,7 @@ components:
     required: true
     extensions:
       bigbang:
+        # renovate: datasource=gitlab-releases depName=big-bang/bigbang versioning=semver registryUrl=https://repo1.dso.mil/
         version: 1.57.1
         valuesFiles:
           # Istio configs
