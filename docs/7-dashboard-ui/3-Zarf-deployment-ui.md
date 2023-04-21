@@ -31,7 +31,7 @@ When Zarf is running it automatically searches for a Kubeconfig on the local mac
 
 #### Cluster Connected (Initialized)
 
-If Zarf finds a cluster in the Kubeconfig that has Zarf resources on it it will automatically connect to the cluster and display the cluster details on the Web UI.
+If Zarf finds a cluster in the Kubeconfig that has Zarf resources in it it will automatically connect to the cluster and display the cluster details on the Web UI.
 
 ![Web UI shows cluster metat data in on the cluster card when a connected cluster is found](../.images/dashboard/Web%20UI%20-%20Status%20Cluster%20connected.png)
 
