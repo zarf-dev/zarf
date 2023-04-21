@@ -102,7 +102,7 @@ Use the Zarf Deployment UI to execute the existing Zarf CLI commands:
 - [Zarf Init](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_init.md)
 - [Zarf Package Deploy](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/)
 - [Zarf Package Remove](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_remove.md)
-- [Zarf Pacakge List](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_list.md)
+- [Zarf Package List](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_list.md)
 - [Zarf Package Inspect](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_inspect.md) (coming soon)
 - [Zarf Tools Sbom](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_tools_sbom.md) (Coming soon)
 - [Zarf Connect](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_connect.md) (coming soon) 
