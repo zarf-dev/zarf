@@ -10,7 +10,7 @@ The Zarf Deployment Web UI can easily be spun up with a single command from the 
 
 Follow these steps to get started using the Web UI
 
-1. Step one: Install the Zarf binary
+1. Step one: [Install the Zarf binary](/docs/3-getting-started.md)
 2. Step two: Open a terminal shell
 3. Step three: Type in the following command: ```zarf dev UI```
 
