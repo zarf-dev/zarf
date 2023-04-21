@@ -223,10 +223,6 @@ export interface ZarfBuildData {
      */
     migrations: string[];
     /**
-     * Any path mutations that have been run on this package
-     */
-    pathMutations?: { [key: string]: PathMutation[] };
-    /**
      * The machine name that created this package
      */
     terminal: string;
@@ -242,17 +238,6 @@ export interface ZarfBuildData {
      * The version of Zarf used to build this package
      */
     version: string;
-}
-
-export interface PathMutation {
-    /**
-     * The path to mutate
-     */
-    from: string;
-    /**
-     * The path to mutate to
-     */
-    to: string;
 }
 
 export interface ZarfComponent {
@@ -312,6 +297,10 @@ export interface ZarfComponent {
      * Filter when this component is included in package creation or deployment
      */
     only?: ZarfComponentOnlyTarget;
+    /**
+     * List of path mutations to apply to the component
+     */
+    pathMutations?: { [key: string]: string };
     /**
      * List of git repos to include in the package
      */
@@ -1383,15 +1372,10 @@ const typeMap: any = {
     "ZarfBuildData": o([
         { json: "architecture", js: "architecture", typ: "" },
         { json: "migrations", js: "migrations", typ: a("") },
-        { json: "pathMutations", js: "pathMutations", typ: u(undefined, m(a(r("PathMutation")))) },
         { json: "terminal", js: "terminal", typ: "" },
         { json: "timestamp", js: "timestamp", typ: "" },
         { json: "user", js: "user", typ: "" },
         { json: "version", js: "version", typ: "" },
-    ], false),
-    "PathMutation": o([
-        { json: "from", js: "from", typ: "" },
-        { json: "to", js: "to", typ: "" },
     ], false),
     "ZarfComponent": o([
         { json: "actions", js: "actions", typ: u(undefined, r("ZarfComponentActions")) },
@@ -1408,6 +1392,7 @@ const typeMap: any = {
         { json: "manifests", js: "manifests", typ: u(undefined, a(r("ZarfManifest"))) },
         { json: "name", js: "name", typ: "" },
         { json: "only", js: "only", typ: u(undefined, r("ZarfComponentOnlyTarget")) },
+        { json: "pathMutations", js: "pathMutations", typ: u(undefined, m("")) },
         { json: "repos", js: "repos", typ: u(undefined, a("")) },
         { json: "required", js: "required", typ: u(undefined, true) },
         { json: "scripts", js: "scripts", typ: u(undefined, r("DeprecatedZarfComponentScripts")) },
