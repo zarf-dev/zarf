@@ -1,6 +1,6 @@
 # Core Concepts
 
-Now, assuming you're familiar with Kubernetes, AirGap, and GitOps from [Understanding the Basics](./1-understand-the-basics.md), we can get started on the core concepts of Zarf.
+Now, assuming you're familiar with Kubernetes, AirGap, and GitOps from [Understanding the Basics](../3-getting-started/1-understand-the-basics.md), we can get started on the core concepts of Zarf.
 
 ## Zarf Concepts
 

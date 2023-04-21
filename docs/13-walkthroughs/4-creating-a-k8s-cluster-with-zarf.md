@@ -11,7 +11,7 @@ The 'k3s' component requires root access (not just `sudo`!) when deploying as it
 
 ## Prerequisites
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
-- Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started.md#installing-zarf))
+- Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started/index.md#installing-zarf))
 - An init-package built/downloaded: ([init-package Build Instructions](./0-using-zarf-package-create.md)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
 
 ## Walkthrough

@@ -14,7 +14,7 @@ Zarf is a command line interface (CLI) tool that enables secure software deliver
 <!-- TODO: @JPERRY Is it better to link to 'Installing Zarf' or should we repeat the information here? (check w/ Madeline) -->
 <!-- TODO: @JPERRY Make sure the 'Installing Zarf' section if fully up to date with all the installation methods -->
 
-You can get the Zarf CLI on your machine in a few different ways. You can use the Defense Unicorns Homebrew Tap, download a prebuilt binary from our GitHub releases, or build the CLI from scratch on your own. We provide instructions for all of these methods in the [Installing Zarf](../../3-getting-started.md#installing-zarf) section of the Getting Started guide. If you're eager to start using Zarf and you already have Homebrew installed, you can quickly install it by copying and pasting the relevant commands for your operating system into your terminal:
+You can get the Zarf CLI on your machine in a few different ways. You can use the Defense Unicorns Homebrew Tap, download a prebuilt binary from our GitHub releases, or build the CLI from scratch on your own. We provide instructions for all of these methods in the [Installing Zarf](../../3-getting-started/index.md#installing-zarf) section of the Getting Started guide. If you're eager to start using Zarf and you already have Homebrew installed, you can quickly install it by copying and pasting the relevant commands for your operating system into your terminal:
 
 <!-- NOTE: The empty line after the '<TabItem ...>' lines are important for the rendering... -->
 <Tabs>

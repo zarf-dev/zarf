@@ -18,7 +18,7 @@ It also simplifies the installation, updating, and maintenance of DevSecOps capa
 
 :::note
 
-Check out our [glossary](1-understand-the-basics.md) for an explanation of common terms used in the project.
+Check out our [glossary](3-getting-started/1-understand-the-basics.md) for an explanation of common terms used in the project.
 
 :::
 
@@ -165,7 +165,7 @@ This quick start requires you to already have:
 - [Homebrew](https://brew.sh/) package manager installed on your machine.
 - [Docker](https://www.docker.com/) installed and running on your machine.
 
-For more install options please visit our [Getting Started page](3-getting-started.md).
+For more install options please visit our [Getting Started page](./3-getting-started/index.md).
 
 </Admonition>
 
@@ -203,7 +203,7 @@ This quick start requires you to already have:
 - [Homebrew](https://brew.sh/) package manager installed on your machine.
 - [Docker](https://www.docker.com/) installed and running on your machine.
 
-For more install options please visit our [Getting Started page](3-getting-started.md).
+For more install options please visit our [Getting Started page](./3-getting-started/index.md).
 
 </Admonition>
 

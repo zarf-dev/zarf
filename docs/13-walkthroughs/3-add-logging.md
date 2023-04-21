@@ -13,7 +13,7 @@ More specifically, you'll be adding a [Promtail / Loki / Grafana (PLG)](https://
 ## Prerequisites
 
 Prior to this walkthrough you'll want to have a working cluster with Zarf initialized
-1.  Zarf binary installed on your $PATH: ([Installing Zarf](../3-getting-started.md#installing-zarf))
+1.  Zarf binary installed on your $PATH: ([Installing Zarf](../3-getting-started/index.md#installing-zarf))
 2. [Initialize a cluster](./1-initializing-a-k8s-cluster.md).
 3. Perform the [Doom Walkthrough](./2-deploying-doom.md).
 

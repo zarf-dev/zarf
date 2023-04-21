@@ -35,7 +35,7 @@ Find out more about the types of software Zarf can move in the [What can be Pack
 
 To build a Zarf package, you will need to prepare:
 
-- A "packaging" workstation which must have the `zarf` [CLI tool installed](../3-getting-started.md#installing-zarf).
+- A "packaging" workstation which must have the `zarf` [CLI tool installed](../3-getting-started/index.md#installing-zarf).
 
 - A `zarf.yaml` file which tells Zarf what you need to package.
 
