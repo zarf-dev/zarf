@@ -72,6 +72,9 @@ func (p *Packager) Create(baseDir string) error {
 		if err != nil {
 			return fmt.Errorf("unable to process extensions: %w", err)
 		}
+
+		// Drop any leftover path mutations.
+		p.cfg.Pkg.Components[i].PathMutations = nil
 	}
 
 	// Perform early package validation.
