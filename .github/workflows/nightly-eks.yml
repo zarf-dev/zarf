@@ -49,7 +49,7 @@ jobs:
         run: ./build/zarf package create packages/distros/eks -o build --confirm
 
       - name: Deploy the eks package
-        run: ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst --components=deploy-eks-cluster --set=CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }},INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }}--confirm
+        run: ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst --components=deploy-eks-cluster --set=CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }},INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} --confirm
 
       # NOTE: We are copying the secret because part of the e2e process destroys the `zarf` namespace. We still want to test the remove-ability of the eks cluster via the package.
       - name: Copy the eks secret into a local file
@@ -63,7 +63,7 @@ jobs:
       # NOTE: We are copying the secret because part of the e2e process destroys the `zarf` namespace. We still want to test the remove-ability of the eks cluster via the package.
       - name: Re-create zarf namespace with eks.yaml secret
         run: |
-          ./build/zarf tools kubectl create secret generic zarf-eks-yaml -n zarf --from-file=eks.yamls
+          ./build/zarf tools kubectl create secret generic zarf-eks-yaml -n zarf --from-file=eks.yaml
 
       - name: Teardown the cluster
         if: always()
