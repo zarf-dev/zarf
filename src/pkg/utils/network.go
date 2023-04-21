@@ -67,21 +67,37 @@ func Fetch(url string) io.ReadCloser {
 	return resp.Body
 }
 
+func parseChecksum(src string) (string, string, error) {
+	atSymbolCount := strings.Count(src, "@")
+	var checksum string
+	if atSymbolCount > 0 {
+		parsed, err := url.Parse(src)
+		if err != nil {
+			return src, checksum, fmt.Errorf("unable to parse the URL: %s", src)
+		}
+		if atSymbolCount == 1 && parsed.User != nil {
+			return src, checksum, nil
+		}
+
+		index := strings.LastIndex(src, "@")
+		checksum = src[index+1:]
+		src = src[:index]
+	}
+	return src, checksum, nil
+}
+
 // DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
 func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
+	message.Debugf("downloading file from %s to %s", src, dst)
 	parsed, err := url.Parse(src)
 	if err != nil {
 		return fmt.Errorf("unable to parse the URL: %s", src)
 	}
 	// check if the parsed URL has a checksum
 	// if so, remove it and use the checksum to validate the file
-	hasChecksum := strings.Contains(parsed.Path, "@")
-	var checksum string
-	if hasChecksum {
-		index := strings.LastIndex(parsed.Path, "@")
-		checksum = parsed.Path[index+1:]
-		parsed.Path = parsed.Path[:index]
-		src = parsed.String()
+	src, checksum, err := parseChecksum(src)
+	if err != nil {
+		return err
 	}
 
 	// Create the file
@@ -104,7 +120,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 	}
 
 	// If the file has a checksum, validate it
-	if hasChecksum {
+	if len(checksum) > 0 {
 		received, err := GetCryptoHash(dst, crypto.SHA256)
 		if err != nil {
 			return err
