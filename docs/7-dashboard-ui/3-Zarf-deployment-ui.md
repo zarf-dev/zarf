@@ -6,7 +6,7 @@ The Zarf Web UI mirrors the functionality of the Zarf CLI commands, but with a m
 
 ## Open the Zarf Deployment Web UI
 
-The Zarf Deployment Web UI can be easily spun up with a single command from the CLI terminal. 
+The Zarf Deployment Web UI can easily be spun up with a single command from the CLI. 
 
 Follow these steps to get started using the Web UI
 
