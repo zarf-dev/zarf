@@ -88,7 +88,7 @@ func parseChecksum(src string) (string, string, error) {
 
 // DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
 func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
-	message.Debugf("downloading file from %s to %s", src, dst)
+	message.Debugf("Downloading %s to %s", src, dst)
 	parsed, err := url.Parse(src)
 	if err != nil {
 		return fmt.Errorf("unable to parse the URL: %s", src)

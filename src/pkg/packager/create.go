@@ -313,7 +313,6 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			for idx, path := range chart.ValuesFiles {
 				dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
 				if utils.IsURL(path) {
-					message.Debugf("Downloading %s", dst)
 					utils.DownloadToFile(path, dst, component.CosignKeyPath)
 				} else {
 					if err := utils.CreatePathAndCopy(path, dst); err != nil {
