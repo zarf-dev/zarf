@@ -1,7 +1,7 @@
 name: Test ECR Publishing
 on:
-  # schedule:
-  #  - cron: '0 7 * * * ' ## Every day at 0700 UTC
+  schedule:
+   - cron: '0 7 * * * ' ## Every day at 0700 UTC
 
   workflow_dispatch: ## Give us the ability to run this manually
 
