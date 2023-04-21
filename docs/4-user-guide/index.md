@@ -84,5 +84,5 @@ Once your package has arrived, you will need to:
 If you are looking for more advanced information on how to operate and customize Zarf to your specific environment needs, check out these additional resources:
 
 - For information on how to create a custom configuration of the Zarf CLI see the [Operator Manual](../5-operator-manual/_category_.json).
-- For information on how to create your own Zarf Packages see the [Developer Guide](../6-developer-guide/1-contributor-guide.md).
+- For information on how to create your own Zarf Packages see the [Zarf Packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/) page.
 - To see some of the ways our community is using Zarf to deploy code onto air-gapped systems see the [Zarf Examples](../../examples/README.md).
