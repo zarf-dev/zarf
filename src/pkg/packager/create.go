@@ -8,7 +8,6 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -402,12 +401,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", f)
 				if utils.IsURL(f) {
-					parsed, err := url.Parse(f)
-					if err != nil {
-						return nil, fmt.Errorf("unable to parse manifest URL %s: %w", f, err)
-					}
-					name := filepath.Base(parsed.Path)
-					dst := filepath.Join(componentPath.Temp, fmt.Sprintf("manifest-%d-%s", idx, name))
+					dst := filepath.Join(componentPath.Temp, fmt.Sprintf("manifest-%d", idx))
 					utils.DownloadToFile(f, dst, component.CosignKeyPath)
 					f = dst
 				}
