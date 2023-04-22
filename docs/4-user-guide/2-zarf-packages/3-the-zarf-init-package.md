@@ -9,7 +9,7 @@ It is defined by composed components which provide a foundation for future packa
 
 ## Required Component
 
-Zarf's capabilities require that the [`zarf-agent`](https://docs.zarf.dev/docs/faq#what-is-the-zarf-agent) component of the init package is constantly active, meaning that it cannot be disabled and is always on. This component is automatically deployed whenever a `zarf init` command is executed.
+Zarf's capabilities require that the [`zarf-agent`](../../9-faq.md#what-is-the-zarf-agent) component of the init package is constantly active, meaning that it cannot be disabled and is always on. This component is automatically deployed whenever a `zarf init` command is executed.
 
 | Component              | Description                                                                                                          |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -19,9 +19,9 @@ Zarf's capabilities require that the [`zarf-agent`](https://docs.zarf.dev/docs/f
 
 In addition to the required `zarf-agent` component, Zarf also offers components that provide additional functionality and can be enabled as needed based on your desired end-state.
 
-In most scenarios, Zarf will also deploy an internal registry using the components described below. However, Zarf can be configured to use an already existing registry with the `--registry-*` flags when running `zarf init` (detailed information on all `zarf init` command flags can be found in the [zarf init CLI](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_init) section). This option skips the injector and seed process, and will not deploy a registry to the cluster. Instead, it uploads any images to the externally configured registry.
+In most scenarios, Zarf will also deploy an internal registry using the components described below. However, Zarf can be configured to use an already existing registry with the `--registry-*` flags when running `zarf init` (detailed information on all `zarf init` command flags can be found in the [zarf init CLI](../1-the-zarf-cli/100-cli-commands/zarf_init.md) section). This option skips the injector and seed process, and will not deploy a registry to the cluster. Instead, it uploads any images to the externally configured registry.
 
-| Components   | Description 
+| Components   | Description
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | zarf-injector     | Adds a Rust and Go binary to the working directory to use during the registry bootstrapping. |
 | zarf-seed-registry | Adds a temporary container registry so Zarf can bootstrap itself into the cluster.                             |
@@ -40,7 +40,7 @@ There are two ways to deploy optional components. Firstly, you can provide a com
 :::note
 
 Deploying the 'k3s' component will require root access (not just sudo), as it modifies your host machine to install the cluster.
- 
+
 :::
 
 ## What Makes the Init Package Special

@@ -301,7 +301,10 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			}
 
 			if isGitURL {
-				_, _ = helmCfg.PackageChartFromGit(componentPath.Charts)
+				_, err = helmCfg.PackageChartFromGit(componentPath.Charts)
+				if err != nil {
+					return nil, fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
+				}
 			} else if len(chart.URL) > 0 {
 				helmCfg.DownloadPublishedChart(componentPath.Charts)
 			} else {
