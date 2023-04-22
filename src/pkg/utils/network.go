@@ -106,7 +106,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 		return fmt.Errorf("unable to create file %s", dst)
 	}
 
-	// If the source url start with the sget protocol use that, otherwise do a typical GET call
+	// If the source url starts with the sget protocol use that, otherwise do a typical GET call
 	if parsed.Scheme == "sget" {
 		err = sgetFile(src, file, cosignKeyPath)
 		if err != nil {
