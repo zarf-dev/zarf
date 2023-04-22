@@ -98,12 +98,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
-		rel, err := filepath.Rel(cachePath, pathAncestry)
-		if err != nil {
-			return child, fmt.Errorf("unable to get relative path: %w", err)
-		} else {
-			parent.Import.Path = rel
-		}
+		parent.Import.Path = cachePath
 	}
 
 	subPkg, err := p.getSubPackage(filepath.Join(pathAncestry, parent.Import.Path))
@@ -137,7 +132,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	// If its OCI, we need to unpack the component tarball
 	if parent.Import.URL != "" {
 		dir := filepath.Join(cachePath, "components", child.Name)
-		parent.Import.Path = dir
+		parent.Import.Path = filepath.Join(parent.Import.Path, "components", child.Name)
 		if !utils.InvalidPath(dir) {
 			err = os.RemoveAll(dir)
 			if err != nil {
