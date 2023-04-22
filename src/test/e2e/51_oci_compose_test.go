@@ -76,6 +76,10 @@ func (suite *SkeletonSuite) SetupSuite() {
 	}
 
 	suite.Reference.Registry = "localhost:555"
+
+	// re-add gitea
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "init", "--components=git-server", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
@@ -95,6 +99,8 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	suite.NoError(err)
 	err = exec.CmdWithPrint("rm", "-rf", filepath.Join("src", "test", "test-packages", "51-import-everything", "manifests", "data-injection.yaml"))
 	suite.NoError(err)
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
 }
 
 func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
