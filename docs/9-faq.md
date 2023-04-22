@@ -30,6 +30,16 @@ Resources can be excluded at the namespace or resources level by adding the `zar
 
 During the `zarf init` operation, the Zarf Agent will patch any existing namespaces with the `zarf.dev/agent: ignore` label to prevent the Agent from modifying any resources in that namespace. This is done because there is no way to guarantee the images used by pods in existing namespaces are available in the Zarf Registry.
 
+If you would like to adopt pre-existing resources into a Zarf deployment you can use the `--adopt-existing-resources` flag on [`zarf package deploy`](./4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_deploy.md) to adopt those resources into the Helm Releases that Zarf manages (including namespaces).  This will add the requisite annotations and labels to those resources and drop the `zarf.dev/agent: ignore` label from any namespaces specified by those resources.
+
+:::note
+
+Zarf will refuse to adopt the Kubernetes [initial namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces).  It is recommended that you do not deploy resources into the `default` or `kube-*` namespaces with Zarf.
+
+Additionally, when adopting resources, you should ensure that the namespaces you are adopting are dedicated to Zarf, or that you go back and manually add the `zarf.dev/agent: ignore` label to any non-Zarf managed resources in those namespaces (and ensure that updates to those resources do not strip that label) otherwise you may see [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) errors.
+
+:::
+
 ## How can I improve the speed of loading large images from Docker on `zarf package create`?
 
 Due to some limitations with how Docker provides access to local image layers, `zarf package create` has to rely on `docker save` under the hood which is [very slow overall](https://github.com/defenseunicorns/zarf/issues/1214) and also takes a long time to report progress. We experimented with many ways to improve this, but for now recommend leveraging a local docker registry to speed up the process. This can be done by running a local registry and pushing the images to it before running `zarf package create`. This will allow `zarf package create` to pull the images from the local registry instead of Docker. This can also be combined with [component actions](4-user-guide/5-component-actions.md) to make the process automatic. Given an example image of `my-giant-image:###ZARF_PKG_TMPL_IMG###` you could do something like this:
@@ -111,5 +121,7 @@ spec:
 YOLO Mode is a special package metadata designation that be added to a package prior to `zarf package create` to allow the package to be installed without the need for a `zarf init` operation. In most cases this will not be used, but it can be useful for testing or for environments that manage their own registries and Git servers completely outside of Zarf. This can also be used as a way to transition slowly to using Zarf without having to do a full migration.
 
 :::note
+
 Typically you should not deploy a Zarf package in YOLO mode if the cluster has already been initialized with Zarf. This could lead to an [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) if the resources in the package do not include the `zarf.dev/agent: ignore` label and are not already available in the Zarf Registry.
+
 :::

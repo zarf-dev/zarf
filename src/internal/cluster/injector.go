@@ -82,7 +82,7 @@ func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths, injectorSeedTa
 		spinner.Updatef("Attempting to bootstrap with the %s/%s", node, image)
 
 		// Make sure the pod is not there first
-		_ = c.Kube.DeletePod(ZarfNamespace, "injector")
+		_ = c.Kube.DeletePod(ZarfNamespaceName, "injector")
 
 		// Update the podspec image path and use the first node found
 		pod, err := c.buildInjectionPod(node[0], image, payloadConfigmaps, sha256sum)
@@ -115,18 +115,18 @@ func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths, injectorSeedTa
 // StopInjectionMadness handles cleanup once the seed registry is up.
 func (c *Cluster) StopInjectionMadness() error {
 	// Try to kill the injector pod now
-	if err := c.Kube.DeletePod(ZarfNamespace, "injector"); err != nil {
+	if err := c.Kube.DeletePod(ZarfNamespaceName, "injector"); err != nil {
 		return err
 	}
 
 	// Remove the configmaps
 	labelMatch := map[string]string{"zarf-injector": "payload"}
-	if err := c.Kube.DeleteConfigMapsByLabel(ZarfNamespace, labelMatch); err != nil {
+	if err := c.Kube.DeleteConfigMapsByLabel(ZarfNamespaceName, labelMatch); err != nil {
 		return err
 	}
 
 	// Remove the injector service
-	return c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
+	return c.Kube.DeleteService(ZarfNamespaceName, "zarf-injector")
 }
 
 func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []string, spinner *message.Spinner) ([]transform.Image, error) {
@@ -192,7 +192,7 @@ func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *mes
 		spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", idx+1, chunkCount)
 
 		// Attempt to create the configmap in the cluster
-		if _, err = c.Kube.ReplaceConfigmap(ZarfNamespace, fileName, configData); err != nil {
+		if _, err = c.Kube.ReplaceConfigmap(ZarfNamespaceName, fileName, configData); err != nil {
 			return configMaps, "", err
 		}
 
@@ -245,10 +245,10 @@ func (c *Cluster) createInjectorConfigmap(tempPath types.TempPaths) error {
 	}
 
 	// Try to delete configmap silently
-	_ = c.Kube.DeleteConfigmap(ZarfNamespace, "rust-binary")
+	_ = c.Kube.DeleteConfigmap(ZarfNamespaceName, "rust-binary")
 
 	// Attempt to create the configmap in the cluster
-	if _, err = c.Kube.CreateConfigmap(ZarfNamespace, "rust-binary", configData); err != nil {
+	if _, err = c.Kube.CreateConfigmap(ZarfNamespaceName, "rust-binary", configData); err != nil {
 		return err
 	}
 
@@ -256,7 +256,7 @@ func (c *Cluster) createInjectorConfigmap(tempPath types.TempPaths) error {
 }
 
 func (c *Cluster) createService() (*corev1.Service, error) {
-	service := c.Kube.GenerateService(ZarfNamespace, "zarf-injector")
+	service := c.Kube.GenerateService(ZarfNamespaceName, "zarf-injector")
 
 	service.Spec.Type = corev1.ServiceTypeNodePort
 	service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
@@ -267,14 +267,14 @@ func (c *Cluster) createService() (*corev1.Service, error) {
 	}
 
 	// Attempt to purse the service silently
-	_ = c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
+	_ = c.Kube.DeleteService(ZarfNamespaceName, "zarf-injector")
 
 	return c.Kube.CreateService(service)
 }
 
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection.
 func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
-	pod := c.Kube.GeneratePod("injector", ZarfNamespace)
+	pod := c.Kube.GeneratePod("injector", ZarfNamespaceName)
 	executeMode := int32(0777)
 
 	pod.Labels["app"] = "zarf-injector"

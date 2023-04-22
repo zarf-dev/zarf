@@ -22,7 +22,7 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, error) {
 	var deployedPackages = []types.DeployedPackage{}
 
 	// Get the secrets that describe the deployed packages
-	secrets, err := c.Kube.GetSecretsWithLabel(ZarfNamespace, ZarfPackageInfoLabel)
+	secrets, err := c.Kube.GetSecretsWithLabel(ZarfNamespaceName, ZarfPackageInfoLabel)
 	if err != nil {
 		return deployedPackages, err
 	}
@@ -49,7 +49,7 @@ func (c *Cluster) GetDeployedPackage(packageName string) (types.DeployedPackage,
 	var deployedPackage = types.DeployedPackage{}
 
 	// Get the secret that describes the deployed init package
-	secret, err := c.Kube.GetSecret(ZarfNamespace, config.ZarfPackagePrefix+packageName)
+	secret, err := c.Kube.GetSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName)
 	if err != nil {
 		return deployedPackage, err
 	}
@@ -100,7 +100,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent) {
 	// Generate a secret that describes the package that is being deployed
 	packageName := pkg.Metadata.Name
-	deployedPackageSecret := c.Kube.GenerateSecret(ZarfNamespace, config.ZarfPackagePrefix+packageName, corev1.SecretTypeOpaque)
+	deployedPackageSecret := c.Kube.GenerateSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName, corev1.SecretTypeOpaque)
 	deployedPackageSecret.Labels[ZarfPackageInfoLabel] = packageName
 
 	stateData, _ := json.Marshal(types.DeployedPackage{
@@ -117,7 +117,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 
 // EnableRegHPAScaleDown enables the HPA scale down for the Zarf Registry.
 func (c *Cluster) EnableRegHPAScaleDown() error {
-	hpa, err := c.Kube.GetHPA(ZarfNamespace, "zarf-docker-registry")
+	hpa, err := c.Kube.GetHPA(ZarfNamespaceName, "zarf-docker-registry")
 	if err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func (c *Cluster) EnableRegHPAScaleDown() error {
 
 // DisableRegHPAScaleDown disables the HPA scale down for the Zarf Registry.
 func (c *Cluster) DisableRegHPAScaleDown() error {
-	hpa, err := c.Kube.GetHPA(ZarfNamespace, "zarf-docker-registry")
+	hpa, err := c.Kube.GetHPA(ZarfNamespaceName, "zarf-docker-registry")
 	if err != nil {
 		return err
 	}

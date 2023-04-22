@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	"cuelang.org/go/pkg/strings"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,29 +27,15 @@ func (k *K8s) UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, e
 }
 
 // CreateNamespace creates the given namespace or returns it if it already exists in the cluster.
-func (k *K8s) CreateNamespace(name string, namespace *corev1.Namespace) (*corev1.Namespace, error) {
-	if namespace == nil {
-		// if only a name was provided create the namespace object
-		namespace = &corev1.Namespace{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Namespace",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   name,
-				Labels: k.Labels,
-			},
-		}
-	}
-
+func (k *K8s) CreateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	metaOptions := metav1.GetOptions{}
 	createOptions := metav1.CreateOptions{}
 
-	match, err := k.Clientset.CoreV1().Namespaces().Get(context.TODO(), name, metaOptions)
+	match, err := k.Clientset.CoreV1().Namespaces().Get(context.TODO(), namespace.Name, metaOptions)
 
 	k.Log("%#v", match)
 
-	if err != nil || match.Name != name {
+	if err != nil || match.Name != namespace.Name {
 		return k.Clientset.CoreV1().Namespaces().Create(context.TODO(), namespace, createOptions)
 	}
 
@@ -74,4 +61,29 @@ func (k *K8s) DeleteNamespace(ctx context.Context, name string) error {
 		}
 		time.Sleep(1 * time.Second)
 	}
+}
+
+// NewZarfManagedNamespace returns a corev1.Namespace with Zarf-managed labels
+func (k *K8s) NewZarfManagedNamespace(name string) *corev1.Namespace {
+	return &corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Namespace",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: k.Labels,
+		},
+	}
+}
+
+// IsInitialNamespace returns true if the given namespace name is an initial k8s namespace: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
+func (k *K8s) IsInitialNamespace(name string) bool {
+	if name == "default" {
+		return true
+	} else if strings.HasPrefix(name, "kube-") {
+		return true
+	}
+
+	return false
 }
