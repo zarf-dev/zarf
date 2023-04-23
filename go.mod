@@ -10,6 +10,7 @@ replace (
 )
 
 require (
+	cuelang.org/go v0.4.3
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
@@ -56,7 +57,6 @@ require (
 	bitbucket.org/creachadair/shell v0.0.7 // indirect
 	cloud.google.com/go/compute v1.19.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	cuelang.org/go v0.4.3 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 // indirect
 	github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/alibabacloudsdkgo/helper v0.2.0 // indirect
 	github.com/Azure/azure-sdk-for-go v66.0.0+incompatible // indirect

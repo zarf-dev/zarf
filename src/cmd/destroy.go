@@ -8,7 +8,6 @@ import (
 	"errors"
 	"os"
 	"regexp"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -30,7 +29,7 @@ var destroyCmd = &cobra.Command{
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		c, err := cluster.NewClusterWithWait(30*time.Second, true)
+		c, err := cluster.NewClusterWithWait(cluster.DefaultTimeout, true)
 		if err != nil {
 			message.Fatalf(err, lang.ErrNoClusterConnection)
 		}

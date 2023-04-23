@@ -221,7 +221,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(30*time.Second, true)
+			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, true)
 			if err != nil {
 				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
