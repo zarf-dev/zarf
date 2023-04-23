@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
@@ -89,10 +90,6 @@ func parseChecksum(src string) (string, string, error) {
 // DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
 func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 	message.Debugf("Downloading %s to %s", src, dst)
-	parsed, err := url.Parse(src)
-	if err != nil {
-		return fmt.Errorf("unable to parse the URL: %s", src)
-	}
 	// check if the parsed URL has a checksum
 	// if so, remove it and use the checksum to validate the file
 	src, checksum, err := parseChecksum(src)
@@ -103,9 +100,13 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 	// Create the file
 	file, err := os.Create(dst)
 	if err != nil {
-		return fmt.Errorf("unable to create file %s", dst)
+		return fmt.Errorf(lang.ErrWritingFile, dst, err.Error())
 	}
 
+	parsed, err := url.Parse(src)
+	if err != nil {
+		return fmt.Errorf("unable to parse the URL: %s", src)
+	}
 	// If the source url starts with the sget protocol use that, otherwise do a typical GET call
 	if parsed.Scheme == "sget" {
 		err = sgetFile(src, file, cosignKeyPath)

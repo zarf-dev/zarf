@@ -31,6 +31,8 @@ func (suite *TestNetworkSuite) SetupSuite() {
 		"https://zarf.dev/docs",
 		"https://defenseunicorns.com",
 		"https://google.com",
+		"https://user:pass@hello.world?foo=bar",
+		"https://zarf.dev?foo=bar&bar=baz",
 	}
 	suite.urls.oci = []string{
 		"oci://zarf.dev",
