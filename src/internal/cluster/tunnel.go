@@ -207,7 +207,7 @@ func NewTunnel(namespace, resourceType, resourceName string, local, remote int) 
 
 // NewZarfTunnel will create a new Tunnel struct for the Zarf namespace.
 func NewZarfTunnel() (*Tunnel, error) {
-	return NewTunnel(ZarfNamespace, SvcResource, "", 0, 0)
+	return NewTunnel(ZarfNamespaceName, SvcResource, "", 0, 0)
 }
 
 // EnableAutoOpen will automatically open the established tunnel in the default browser when it is ready.

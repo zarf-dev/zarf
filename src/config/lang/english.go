@@ -37,7 +37,7 @@ const (
 	RootCmdFlagNoProgress  = "Disable fancy UI progress bars, spinners, logos, etc"
 	RootCmdFlagCachePath   = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
-	RootCmdFlagInseure     = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagInsecure    = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
 	RootCmdDeprecatedDeploy = "Please use \"zarf package deploy %s\" to deploy this package."
 	RootCmdDeprecatedCreate = "Please use \"zarf package create\" to create this package."
@@ -52,7 +52,7 @@ const (
 		"Packages can provide service manifests that define their own shortcut connection options. These options will be " +
 		"printed to the terminal when the package finishes deploying.\n If you don't remember what connection shortcuts your deployed " +
 		"package offers, you can search your cluster for services that have the 'zarf.dev/connect-name' label. The value of that label is " +
-		"the name you will pass into the 'zarf connect' command. \n\n" +
+		"the name you will pass into the 'zarf connect' command.\n\n" +
 		"Even if the packages you deploy don't define their own shortcut connection options, you can use the command flags " +
 		"to connect into specific resources. You can read the command flag descriptions below to get a better idea how to connect " +
 		"to whatever resource you are trying to connect to."
@@ -90,7 +90,7 @@ const (
 	CmdInitShort = "Prepares a k8s cluster for the deployment of Zarf packages"
 	CmdInitLong  = "Injects a docker registry as well as other optional useful things (such as a git server " +
 		"and a logging stack) into a k8s cluster under the 'zarf' namespace " +
-		"to support future application deployments. \n" +
+		"to support future application deployments.\n" +
 		"If you do not have a k8s cluster already configured, this command will give you " +
 		"the ability to install a cluster locally.\n\n" +
 		"This command looks for a zarf-init package in the local directory that the command was executed " +
@@ -215,13 +215,14 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackageCreateFlagSigningKey         = "Path to private key file for signing packages"
 	CmdPackageCreateFlagSigningKeyPassword = "Password to the private key file used for signing packages"
 
-	CmdPackageDeployFlagConfirm             = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
-	CmdPackageDeployFlagSet                 = "Specify deployment variables to set on the command line (KEY=value)"
-	CmdPackageDeployFlagComponents          = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
-	CmdPackageDeployFlagShasum              = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
-	CmdPackageDeployFlagSget                = "Path to public sget key file for remote packages signed via cosign"
-	CmdPackageDeployFlagPublicKey           = "Path to public key file for validating signed packages"
-	CmdPackageDeployValidateArchitectureErr = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
+	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
+	CmdPackageDeployFlagAdoptExistingResources = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
+	CmdPackageDeployFlagSet                    = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagComponents             = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
+	CmdPackageDeployFlagShasum                 = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
+	CmdPackageDeployFlagSget                   = "Path to public sget key file for remote packages signed via cosign"
+	CmdPackageDeployFlagPublicKey              = "Path to public key file for validating signed packages"
+	CmdPackageDeployValidateArchitectureErr    = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
 
 	CmdPackageInspectFlagSbom      = "View SBOM contents while inspecting the package"
 	CmdPackageInspectFlagSbomOut   = "Specify an output directory for the SBOMs from the inspected Zarf package"
@@ -240,7 +241,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"
 
-	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE: \n" +
+	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
 	CmdPreparePatchGitFileWriteErr = "Unable to write the changes back to the file"
 
@@ -253,7 +254,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 
 	CmdPrepareGenerateConfigShort = "Generates a config file for Zarf"
 	CmdPrepareGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
-		"The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc. \n" +
+		"The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc.\n" +
 		"Accepted extensions are json, toml, yaml.\n\n" +
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 
@@ -288,13 +289,23 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdToolsGenPkiSuccess     = "Successfully created a chain of trust for %s"
 	CmdToolsGenPkiFlagAltName = "Specify Subject Alternative Names for the certificate"
 
+	CmdToolsGenKeyShort                 = "Generates a cosign public/private keypair that can be used to sign packages"
+	CmdToolsGenKeyPrompt                = "Private key password (empty for no password): "
+	CmdToolsGenKeyPromptAgain           = "Private key password again (empty for no password): "
+	CmdToolsGenKeyPromptExists          = "File %s already exists. Overwrite? "
+	CmdToolsGenKeyErrUnableGetPassword  = "unable to get password for private key: %s"
+	CmdToolsGenKeyErrPasswordsNotMatch  = "passwords do not match"
+	CmdToolsGenKeyErrUnableToGenKeypair = "unable to generate key pair: %s"
+	CmdToolsGenKeyErrNoConfirmOverwrite = "did not receive confirmation for overwriting key file(s)"
+	CmdToolsGenKeySuccess               = "Generated key pair and written to %s and %s"
+
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 	CmdToolsSbomErr   = "Unable to create sbom (syft) CLI"
 
 	CmdToolsWaitForShort = "Waits for a given Kubernetes resource to be ready"
-	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment. \n" +
-		"This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator. \n" +
-		"You can also wait for aribtrary network endpoints using REST or TCP checks. \n\n"
+	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment.\n" +
+		"This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator.\n" +
+		"You can also wait for arbitrary network endpoints using REST or TCP checks.\n\n"
 	CmdToolsWaitForFlagTimeout        = "Specify the timeout duration for the wait command."
 	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration. Please use a valid duration string (e.g. 1s, 2m, 3h)."
 	CmdToolsWaitForErrTimeout         = "Wait timed out."
@@ -305,7 +316,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
 
 	CmdToolsGetCredsShort = "Display a Table of credentials for deployed components. Pass a component name to get a single credential."
-	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry' "
+	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry'"
 
 	// zarf version
 	CmdVersionShort = "Version of the Zarf binary"

@@ -97,72 +97,73 @@ func init() {
 
 	generateKeyCmd := &cobra.Command{
 		Use:     "gen-key",
-		Aliases: []string{"pki"},
-		Short:   "",
+		Aliases: []string{"key"},
+		Short:   lang.CmdToolsGenKeyShort,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			// Utility function to prompt the user for the password to the private key
 			passwordFunc := func(bool) ([]byte, error) {
 				// perform the first prompt
 				var password string
 				prompt := &survey.Password{
-					Message: "Private key password (empty for no password): ",
+					Message: lang.CmdToolsGenKeyPrompt,
 				}
 				if err := survey.AskOne(prompt, &password); err != nil {
-					return nil, fmt.Errorf("unable to get password for private key: %w", err)
+					return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err.Error())
 				}
 
 				// perform the second prompt
 				var doubleCheck string
 				rePrompt := &survey.Password{
-					Message: "Private key password again (empty for no password): ",
+					Message: lang.CmdToolsGenKeyPromptAgain,
 				}
 				if err := survey.AskOne(rePrompt, &doubleCheck); err != nil {
-					return nil, fmt.Errorf("unable to get password for private key: %w", err)
+					return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err.Error())
 				}
 
 				// check if the passwords match
 				if password != doubleCheck {
-					return nil, fmt.Errorf("passwords do not match")
+					return nil, fmt.Errorf(lang.CmdToolsGenKeyErrPasswordsNotMatch)
 				}
 
 				return []byte(password), nil
-
 			}
 
 			// Use cosign to generate the keypair
 			keyBytes, err := cosign.GenerateKeyPair(passwordFunc)
 			if err != nil {
-				message.Fatalf(err, "unable to generate key pair: %s", err.Error())
+				message.Fatalf(err, lang.CmdToolsGenKeyErrUnableToGenKeypair, err.Error())
 			}
 
+			prvKeyFileName := "cosign.key"
+			pubKeyFileName := "cosign.pub"
+
 			// Check if we are about to overwrite existing key files
-			_, prvKeyExistsErr := os.Stat("cosign.key")
-			_, pubKeyExistsErr := os.Stat("cosign.pub")
+			_, prvKeyExistsErr := os.Stat(prvKeyFileName)
+			_, pubKeyExistsErr := os.Stat(pubKeyFileName)
 			if prvKeyExistsErr == nil || pubKeyExistsErr == nil {
 				var confirm bool
 				confirmOverwritePrompt := &survey.Confirm{
-					Message: fmt.Sprintf("File %s already exists. Overwrite? ", "cosign.key"),
+					Message: fmt.Sprintf(lang.CmdToolsGenKeyPromptExists, prvKeyFileName),
 				}
 				err := survey.AskOne(confirmOverwritePrompt, &confirm)
 				if err != nil {
-					message.Fatalf(err, "unable to get confirmation for overwriting key file(s)")
+					message.Fatalf(err, lang.CmdToolsGenKeyErrNoConfirmOverwrite)
 				}
 
 				if !confirm {
-					message.Fatal(nil, "not overwriting exisiting key file(s)")
+					message.Fatal(nil, lang.CmdToolsGenKeyErrNoConfirmOverwrite)
 				}
 			}
 
 			// Write the key file contents to disk
-			if err := os.WriteFile("cosign.key", keyBytes.PrivateBytes, 0600); err != nil {
-				message.Fatalf(err, "unable to write private key to file: %s", err.Error())
+			if err := os.WriteFile(prvKeyFileName, keyBytes.PrivateBytes, 0600); err != nil {
+				message.Fatalf(err, lang.ErrWritingFile, prvKeyFileName, err.Error())
 			}
-			if err := os.WriteFile("cosign.pub", keyBytes.PublicBytes, 0644); err != nil {
-				message.Fatalf(err, "unable to write public key to file: %s", err.Error())
+			if err := os.WriteFile(pubKeyFileName, keyBytes.PublicBytes, 0644); err != nil {
+				message.Fatalf(err, lang.ErrWritingFile, pubKeyFileName, err.Error())
 			}
 
-			message.Successf("Generated key pair and wrote to %s and %s", "cosign.key", "cosign.pub")
+			message.Successf(lang.CmdToolsGenKeySuccess, prvKeyFileName, pubKeyFileName)
 		},
 	}
 
