@@ -40,7 +40,7 @@ If Zarf finds a cluster in the Kubeconfig that has Zarf resources in it it will 
 
 ### Connect to Existing Cluster 
 
-The Zarf Web UI makes connecting to existing clusters easy. When on the packages page, if there is no Zarf cluster currently connected, select the connect cluster button. If Zarf finds a Kubeconfig it will ask the user if they want to connect to the the default cluster context. 
+The Zarf Web UI makes connecting to existing clusters easy. When on the packages page, if there is no Zarf cluster currently connected, select the connect cluster button. If Zarf finds a Kubeconfig it will ask the user if they want to connect to the default cluster context. 
 
 :::Tip 
 
