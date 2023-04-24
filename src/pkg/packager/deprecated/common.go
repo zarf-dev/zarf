@@ -15,6 +15,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
+// BreakingChange represents a breaking change that happened on a specified Zarf version
 type BreakingChange struct {
 	version    *semver.Version
 	title      string

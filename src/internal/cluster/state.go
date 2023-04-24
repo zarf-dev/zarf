@@ -22,7 +22,7 @@ import (
 
 // Zarf Cluster Constants.
 const (
-	ZarfNamespace           = "zarf"
+	ZarfNamespaceName       = "zarf"
 	ZarfStateSecretName     = "zarf-state"
 	ZarfStateDataKey        = "state"
 	ZarfPackageInfoLabel    = "package-deploy-info"
@@ -100,14 +100,15 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
-		if _, err := c.Kube.CreateNamespace(ZarfNamespace, nil); err != nil {
+		zarfNamespace := c.Kube.NewZarfManagedNamespace(ZarfNamespaceName)
+		if _, err := c.Kube.CreateNamespace(zarfNamespace); err != nil {
 			return fmt.Errorf("unable to create the zarf namespace: %w", err)
 		}
 
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
-		if _, err := c.Kube.WaitForServiceAccount(ZarfNamespace, "default", 2*time.Minute); err != nil {
+		if _, err := c.Kube.WaitForServiceAccount(ZarfNamespaceName, "default", 2*time.Minute); err != nil {
 			return fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 	}
@@ -153,7 +154,7 @@ func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 	state := types.ZarfState{}
 
 	// Set up the API connection
-	secret, err := c.Kube.GetSecret(ZarfNamespace, ZarfStateSecretName)
+	secret, err := c.Kube.GetSecret(ZarfNamespaceName, ZarfStateSecretName)
 	if err != nil {
 		return state, err
 	}
@@ -211,7 +212,7 @@ func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ZarfStateSecretName,
-			Namespace: ZarfNamespace,
+			Namespace: ZarfNamespaceName,
 			Labels: map[string]string{
 				config.ZarfManagedByLabel: "zarf",
 			},

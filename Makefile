@@ -37,14 +37,6 @@ help: ## Display this help information
 	  | sort | awk 'BEGIN {FS = ":.*?## "}; \
 	  {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-vm-init: ## Make a vagrant VM (usage -> make vm-init OS=ubuntu)
-	vagrant destroy -f
-	vagrant up --no-color ${OS}
-	echo -e "\n\n\n\033[1;93m  ✅ BUILD COMPLETE.  To access this environment, run \"vagrant ssh ${OS}\"\n\n\n"
-
-vm-destroy: ## Destroy the vagrant VM
-	vagrant destroy -f
-
 clean: ## Clean the build directory
 	rm -rf build
 
@@ -72,8 +64,8 @@ check-ui:
 	fi
 
 build-ui: ## Build the Zarf UI
-	npm ci
-	npm run build
+	npm --prefix src/ui ci
+	npm --prefix src/ui run build
 
 build-cli-linux-amd: check-ui ## Build the Zarf CLI for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
@@ -103,8 +95,8 @@ docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Sche
 
 dev: ensure-ui-build-dir ## Start a Dev Server for the Zarf UI
 	go mod download
-	npm ci
-	npm run dev
+	npm --prefix src/ui ci
+	npm --prefix src/ui run dev
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
@@ -150,7 +142,7 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-test-helm-wait-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-no-wait -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-helm-oci-chart-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-oci-chart -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-helm-oci-chart-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/helm-oci-chart -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
 

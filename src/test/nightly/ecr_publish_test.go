@@ -33,8 +33,7 @@ func TestECRPublishing(t *testing.T) {
 	os.Chdir("../../../")
 
 	// Create a tmpDir for us to use during this test
-	tmpDir := os.TempDir()
-	defer e2e.CleanFiles(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Set up the e2e configs
 	e2e.Arch = config.GetArch()
