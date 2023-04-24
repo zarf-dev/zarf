@@ -316,7 +316,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			for idx, path := range chart.ValuesFiles {
 				dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
 				if utils.IsURL(path) {
-					if err = utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+					if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
 						return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
 					}
 				} else {
@@ -338,7 +338,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			dst := filepath.Join(componentPath.Files, strconv.Itoa(index))
 
 			if utils.IsURL(file.Source) {
-				if err = utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
 					return nil, fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 			} else {
@@ -374,7 +374,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 			dst := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
 			if utils.IsURL(data.Source) {
-				if err = utils.DownloadToFile(data.Source, dst, component.CosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(data.Source, dst, component.CosignKeyPath); err != nil {
 					return nil, fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
@@ -410,16 +410,14 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			for idx, f := range manifest.Files {
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", f)
-				if utils.IsURL(f) {
-					dst := filepath.Join(componentPath.Temp, fmt.Sprintf("manifest-%d", idx))
-					if err = utils.DownloadToFile(f, dst, component.CosignKeyPath); err != nil {
-						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
-					}
-					f = dst
-				}
 				// If using a temp directory, trim the temp directory from the path.
 				trimmedPath := strings.TrimPrefix(f, componentPath.Temp)
-				destination := path.Join(componentPath.Manifests, trimmedPath)
+				destination := filepath.Join(componentPath.Manifests, trimmedPath)
+				if utils.IsURL(f) {
+					if err := utils.DownloadToFile(f, destination, component.CosignKeyPath); err != nil {
+						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
+					}
+				}
 				if err := utils.CreatePathAndCopy(f, destination); err != nil {
 					return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
 				}
@@ -434,11 +432,9 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
 				destination := filepath.Join(componentPath.Manifests, kname)
 				if utils.IsURL(k) {
-					dst := filepath.Join(componentPath.Temp, kname)
-					if err = utils.DownloadToFile(k, dst, component.CosignKeyPath); err != nil {
+					if err := utils.DownloadToFile(k, destination, component.CosignKeyPath); err != nil {
 						return nil, fmt.Errorf(lang.ErrDownloading, k, err.Error())
 					}
-					k = dst
 				}
 				if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return nil, fmt.Errorf("unable to build kustomization %s: %w", k, err)

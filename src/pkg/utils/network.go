@@ -97,6 +97,11 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 		return err
 	}
 
+	err = os.MkdirAll(path.Dir(dst), 0600)
+	if err != nil {
+		return fmt.Errorf(lang.ErrCreatingDir, path.Dir(dst), err.Error())
+	}
+
 	// Create the file
 	file, err := os.Create(dst)
 	if err != nil {

@@ -23,6 +23,7 @@ const (
 	ErrUnmarshal           = "failed to unmarshal file: %w"
 	ErrWritingFile         = "failed to write the file %s: %s"
 	ErrDownloading         = "failed to download %s: %s"
+	ErrCreatingDir         = "failed to create directory %s: %s"
 )
 
 // Zarf CLI commands.
