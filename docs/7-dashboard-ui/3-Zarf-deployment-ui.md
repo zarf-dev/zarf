@@ -14,7 +14,7 @@ Follow these steps to get started using the Web UI
 2. Step two: Open a terminal shell
 3. Step three: Type in the following command: ```zarf dev UI```
 
-![GIF showing the Web UI lauch from the CLI terminal](../.images/dashboard/Web_UI__Launch_w__Cluster_AdobeExpress.gif)
+![GIF showing the Web UI launched from the CLI terminal](../.images/dashboard/Web_UI__Launch_w__Cluster_AdobeExpress.gif)
 
 ## Using the Zarf Deployment Web UI
 
