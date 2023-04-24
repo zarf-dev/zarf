@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
@@ -315,7 +316,9 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			for idx, path := range chart.ValuesFiles {
 				dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
 				if utils.IsURL(path) {
-					utils.DownloadToFile(path, dst, component.CosignKeyPath)
+					if err = utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+						return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
+					}
 				} else {
 					if err := utils.CreatePathAndCopy(path, dst); err != nil {
 						return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
@@ -335,7 +338,9 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			dst := filepath.Join(componentPath.Files, strconv.Itoa(index))
 
 			if utils.IsURL(file.Source) {
-				utils.DownloadToFile(file.Source, dst, component.CosignKeyPath)
+				if err = utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
+					return nil, fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+				}
 			} else {
 				if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
 					return nil, fmt.Errorf("unable to copy file %s: %w", file.Source, err)
@@ -369,7 +374,9 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 			dst := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
 			if utils.IsURL(data.Source) {
-				utils.DownloadToFile(data.Source, dst, component.CosignKeyPath)
+				if err = utils.DownloadToFile(data.Source, dst, component.CosignKeyPath); err != nil {
+					return nil, fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
+				}
 			} else {
 				if err := utils.CreatePathAndCopy(data.Source, dst); err != nil {
 					return nil, fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
@@ -405,7 +412,9 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				spinner.Updatef("Copying manifest %s", f)
 				if utils.IsURL(f) {
 					dst := filepath.Join(componentPath.Temp, fmt.Sprintf("manifest-%d", idx))
-					utils.DownloadToFile(f, dst, component.CosignKeyPath)
+					if err = utils.DownloadToFile(f, dst, component.CosignKeyPath); err != nil {
+						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
+					}
 					f = dst
 				}
 				// If using a temp directory, trim the temp directory from the path.
@@ -426,7 +435,9 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				destination := filepath.Join(componentPath.Manifests, kname)
 				if utils.IsURL(k) {
 					dst := filepath.Join(componentPath.Temp, kname)
-					utils.DownloadToFile(k, dst, component.CosignKeyPath)
+					if err = utils.DownloadToFile(k, dst, component.CosignKeyPath); err != nil {
+						return nil, fmt.Errorf(lang.ErrDownloading, k, err.Error())
+					}
 					k = dst
 				}
 				if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {

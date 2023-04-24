@@ -22,6 +22,7 @@ const (
 	ErrTunnelFailed        = "Failed to create a tunnel to the Kubernetes cluster."
 	ErrUnmarshal           = "failed to unmarshal file: %w"
 	ErrWritingFile         = "failed to write the file %s: %s"
+	ErrDownloading         = "failed to download %s: %s"
 )
 
 // Zarf CLI commands.
