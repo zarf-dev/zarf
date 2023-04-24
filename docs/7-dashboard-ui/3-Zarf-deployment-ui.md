@@ -100,7 +100,7 @@ The web UI is packaged into the Zarf binary, so you don't have to worry about ad
 Use the Zarf Deployment UI to execute the existing Zarf CLI commands:
 - [Zarf tools Kubectl top](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_tools_kubectl.md)
 - [Zarf Init](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_init.md)
-- [Zarf Package Deploy](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/)
+- [Zarf Package Deploy](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_deploy.md)
 - [Zarf Package Remove](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_remove.md)
 - [Zarf Package List](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_list.md)
 - [Zarf Package Inspect](/docs/4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_inspect.md) (coming soon)
