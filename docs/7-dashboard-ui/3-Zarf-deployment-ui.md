@@ -42,7 +42,7 @@ If Zarf finds a cluster in the Kubeconfig that has Zarf resources in it it will 
 
 The Zarf Web UI makes connecting to existing clusters easy. When on the packages page, if there is no Zarf cluster currently connected, select the connect cluster button. If Zarf finds a Kubeconfig it will ask the user if they want to connect to the default cluster context. 
 
-:::Tip 
+:::tip
 
 Zarf can only read the default cluster in your Kubeconfig file, if you wish to connect to a different cluster in the Kubeconfig you will need to change it to the default cluster in the terminal. See the Kubernetes documentation on [how to configure access to multiple clusters](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/).
 
