@@ -6,7 +6,9 @@ package bigbang
 
 import (
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -76,6 +78,9 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		c.Images = append(c.Images, images...)
 	}
 
+	// Create a temp file that hard codes values defined by the schema
+	filename, err := writeTempFile(tmpPaths.Temp, "domain: bigbang.dev")
+
 	// Configure helm to pull down the Big Bang chart.
 	helmCfg := helm.Helm{
 		Chart: types.ZarfChart{
@@ -83,7 +88,7 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 			Namespace:   bb,
 			URL:         cfg.Repo,
 			Version:     cfg.Version,
-			ValuesFiles: cfg.ValuesFiles,
+			ValuesFiles: append(cfg.ValuesFiles, filename),
 			GitPath:     "./chart",
 		},
 		Cfg: &types.PackagerConfig{
@@ -421,4 +426,10 @@ func addBigBangManifests(manifestDir string, cfg *extensions.BigBang) (types.Zar
 	}
 
 	return manifest, nil
+}
+
+func writeTempFile(tempdir string, contents string) (string, error) {
+	tmpFile := filepath.Join(tempdir, "templating.yaml")
+	e := os.WriteFile(tmpFile, []byte(contents), 0700)
+	return tmpFile, e
 }
