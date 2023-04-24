@@ -9,7 +9,7 @@
 	import ZarfChip from './zarf-chip.svelte';
 	import { deployedPkgStore } from '$lib/store';
 	import ButtonDense from './button-dense.svelte';
-	import DeployedPackageMenu from './deployed-package-menu.svelte';
+	import DeployedPackageMenu from './DeployedPackageMenu/deployed-package-menu.svelte';
 
 	const ssx: SSX = {
 		$self: {
