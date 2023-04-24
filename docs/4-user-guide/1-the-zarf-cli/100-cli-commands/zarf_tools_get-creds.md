@@ -5,7 +5,7 @@ Display a Table of credentials for deployed components. Pass a component name to
 
 ## Synopsis
 
-Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry' 
+Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry'
 
 ```
 zarf tools get-creds [flags]
@@ -32,4 +32,3 @@ zarf tools get-creds [flags]
 ## SEE ALSO
 
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-

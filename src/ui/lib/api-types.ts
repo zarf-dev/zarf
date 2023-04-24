@@ -28,6 +28,10 @@ export interface APIZarfDeployPayload {
 
 export interface ZarfDeployOptions {
     /**
+     * Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
+     */
+    adoptExistingResources: boolean;
+    /**
      * Comma separated list of optional components to deploy
      */
     components: string;
@@ -940,6 +944,7 @@ const typeMap: any = {
         { json: "initOpts", js: "initOpts", typ: u(undefined, r("ZarfInitOptions")) },
     ], false),
     "ZarfDeployOptions": o([
+        { json: "adoptExistingResources", js: "adoptExistingResources", typ: true },
         { json: "components", js: "components", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
