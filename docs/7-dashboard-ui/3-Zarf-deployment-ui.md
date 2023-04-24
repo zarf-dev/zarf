@@ -53,7 +53,7 @@ Follow these steps to connect to an existing cluster:
 1. Be sure to have a Kubeconfig on your machine with the cluster you wish to connect to set as the default cluster.
 2. Click connect cluster button on cluster card
 3. Select cluster name in the dialog and click connect
-4. Select a ZarfInitConfig package to deploy into cluster
+4. Select a ZarfInitConfig package to deploy into the cluster
 5. Follow Package deployment prompts to deploy package and initialize cluster as a Zarf cluster.
 
 ### Deploy K8 and Cluster with init package with Cluster
