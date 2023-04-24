@@ -30,7 +30,7 @@ var destroyCmd = &cobra.Command{
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		c, err := cluster.NewClusterWithWait(30 * time.Second)
+		c, err := cluster.NewClusterWithWait(30*time.Second, true)
 		if err != nil {
 			message.Fatalf(err, lang.ErrNoClusterConnection)
 		}
@@ -53,7 +53,7 @@ var destroyCmd = &cobra.Command{
 
 			// Run all the scripts!
 			pattern := regexp.MustCompile(`(?mi)zarf-clean-.+\.sh$`)
-			scripts, _ := utils.RecursiveFileList(config.ZarfCleanupScriptsPath, pattern)
+			scripts, _ := utils.RecursiveFileList(config.ZarfCleanupScriptsPath, pattern, false, true)
 			// Iterate over all matching zarf-clean scripts and exec them
 			for _, script := range scripts {
 				// Run the matched script

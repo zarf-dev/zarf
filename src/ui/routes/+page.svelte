@@ -2,73 +2,51 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
-<script>
-	import { goto } from '$app/navigation';
-	import { Button, Typography } from '@ui';
-	import { clusterStore } from '$lib/store';
-	import { Hero, Spinner } from '$lib/components';
-	import bigZarf from '@images/zarf-bubbles-right.png';
-	import { Packages } from '$lib/api';
-	import PackageErrNotFound from '$lib/components/package-err-not-found.svelte';
+<script lang="ts">
+	import { Cluster, Packages } from '$lib/api';
+	import type { ClusterSummary, DeployedPackage } from '$lib/api-types';
+	import ClusterInfo from '$lib/components/cluster-info.svelte';
+	import PackageTable from '$lib/components/deployed-package-table.svelte';
+	import { clusterStore, deployedPkgStore } from '$lib/store';
+	import { onMount } from 'svelte';
+	const POLL_TIME = 5000;
+	let clusterPoll: NodeJS.Timer;
+	let deployedPkgPoll: NodeJS.Timer;
 
-	const getInitPath = async () => {
-		const res = await Packages.findInit();
-		if (Array.isArray(res)) {
-			return encodeURIComponent(res[0]);
-		} else {
-			throw new Error('No init package found');
-		}
-	};
+	async function storeClusterSummary(): Promise<void> {
+		// Try to get the cluster summary
+		Cluster.summary()
+			// If success update the store
+			.then((val: ClusterSummary) => {
+				clusterStore.set(val);
+			})
+			.catch(() => clusterStore.set(undefined));
+	}
+	async function storeDeployedPkgs(): Promise<void> {
+		Packages.getDeployedPackages()
+			.then((pkgs: DeployedPackage[]) => {
+				deployedPkgStore.set({ pkgs });
+			})
+			.catch((err) => {
+				if ($clusterStore) {
+					deployedPkgStore.set({ err });
+				} else {
+					deployedPkgStore.set({ pkgs: [] });
+				}
+			});
+	}
+
+	onMount(() => {
+		storeClusterSummary();
+		storeDeployedPkgs();
+		clusterPoll = setInterval(storeClusterSummary, POLL_TIME);
+		deployedPkgPoll = setInterval(storeDeployedPkgs, POLL_TIME);
+		return () => {
+			clearInterval(clusterPoll);
+			clearInterval(deployedPkgPoll);
+		};
+	});
 </script>
 
-<svelte:head>
-	<title>Zarf UI</title>
-</svelte:head>
-
-{#if $clusterStore}
-	{#if $clusterStore.hasZarf}
-		{goto(`/packages`, { replaceState: true })}
-	{:else}
-		<Hero>
-			<img src={bigZarf} alt="Zarf logo" id="zarf-logo" width="40%" />
-
-			<Typography variant="h5" class="hero-title">No Active Zarf Clusters</Typography>
-
-			{#if $clusterStore.reachable && $clusterStore.distro !== 'unknown'}
-				<Typography variant="body2" class="hero-subtitle">
-					A {$clusterStore.distro} cluster was found, click initialize cluster to initialize it now with
-					Zarf.
-				</Typography>
-			{:else}
-				<Typography variant="body2" class="hero-subtitle">
-					Click initialize cluster to install the Init Package and deploy a new cluster.
-				</Typography>
-			{/if}
-			{#await getInitPath()}
-				<Button variant="raised" color="secondary" disabled>Initialize Cluster</Button>
-			{:then path}
-				<Button
-					variant="raised"
-					color="secondary"
-					href={`/package/deploy?path=${path}`}
-					id="init-cluster"
-				>
-					Initialize Cluster
-				</Button>
-			{:catch err}
-				<PackageErrNotFound message={err.message} />
-			{/await}
-		</Hero>
-	{/if}
-{:else}
-	<Spinner
-		title="Checking for cluster"
-		msg="Checking if a Kubernetes cluster is available and initialized by Zarf. This may take a few seconds."
-	/>
-{/if}
-
-<style>
-	:global(#init-cluster) {
-		margin-top: 1.5rem;
-	}
-</style>
+<ClusterInfo />
+<PackageTable />

@@ -11,10 +11,11 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/test"
 )
 
 var (
-	e2e ZarfE2ETest //nolint:gochecknoglobals
+	e2e test.ZarfE2ETest //nolint:gochecknoglobals
 )
 
 const (
@@ -47,16 +48,16 @@ func doAllTheThings(m *testing.M) (int, error) {
 	var err error
 
 	// Set up constants in the global variable that all the tests are able to access
-	e2e.arch = config.GetArch()
-	e2e.zarfBinPath = path.Join("build", GetCLIName())
-	e2e.applianceMode = os.Getenv(applianceModeEnvVar) == "true"
-	e2e.runClusterTests = os.Getenv(skipK8sEnvVar) != "true"
+	e2e.Arch = config.GetArch()
+	e2e.ZarfBinPath = path.Join("build", test.GetCLIName())
+	e2e.ApplianceMode = os.Getenv(applianceModeEnvVar) == "true"
+	e2e.RunClusterTests = os.Getenv(skipK8sEnvVar) != "true"
 
 	// Validate that the Zarf binary exists. If it doesn't that means the dev hasn't built it, usually by running
 	// `make build-cli`
-	_, err = os.Stat(e2e.zarfBinPath)
+	_, err = os.Stat(e2e.ZarfBinPath)
 	if err != nil {
-		return 1, fmt.Errorf("zarf binary %s not found", e2e.zarfBinPath)
+		return 1, fmt.Errorf("zarf binary %s not found", e2e.ZarfBinPath)
 	}
 
 	// Run the tests, with the cluster cleanup being deferred to the end of the function call

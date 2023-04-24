@@ -5,14 +5,17 @@
 package tools
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/spf13/cobra"
 )
 
@@ -92,6 +95,78 @@ func init() {
 		},
 	}
 
+	generateKeyCmd := &cobra.Command{
+		Use:     "gen-key",
+		Aliases: []string{"key"},
+		Short:   lang.CmdToolsGenKeyShort,
+		Run: func(cmd *cobra.Command, args []string) {
+			// Utility function to prompt the user for the password to the private key
+			passwordFunc := func(bool) ([]byte, error) {
+				// perform the first prompt
+				var password string
+				prompt := &survey.Password{
+					Message: lang.CmdToolsGenKeyPrompt,
+				}
+				if err := survey.AskOne(prompt, &password); err != nil {
+					return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err.Error())
+				}
+
+				// perform the second prompt
+				var doubleCheck string
+				rePrompt := &survey.Password{
+					Message: lang.CmdToolsGenKeyPromptAgain,
+				}
+				if err := survey.AskOne(rePrompt, &doubleCheck); err != nil {
+					return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err.Error())
+				}
+
+				// check if the passwords match
+				if password != doubleCheck {
+					return nil, fmt.Errorf(lang.CmdToolsGenKeyErrPasswordsNotMatch)
+				}
+
+				return []byte(password), nil
+			}
+
+			// Use cosign to generate the keypair
+			keyBytes, err := cosign.GenerateKeyPair(passwordFunc)
+			if err != nil {
+				message.Fatalf(err, lang.CmdToolsGenKeyErrUnableToGenKeypair, err.Error())
+			}
+
+			prvKeyFileName := "cosign.key"
+			pubKeyFileName := "cosign.pub"
+
+			// Check if we are about to overwrite existing key files
+			_, prvKeyExistsErr := os.Stat(prvKeyFileName)
+			_, pubKeyExistsErr := os.Stat(pubKeyFileName)
+			if prvKeyExistsErr == nil || pubKeyExistsErr == nil {
+				var confirm bool
+				confirmOverwritePrompt := &survey.Confirm{
+					Message: fmt.Sprintf(lang.CmdToolsGenKeyPromptExists, prvKeyFileName),
+				}
+				err := survey.AskOne(confirmOverwritePrompt, &confirm)
+				if err != nil {
+					message.Fatalf(err, lang.CmdToolsGenKeyErrNoConfirmOverwrite)
+				}
+
+				if !confirm {
+					message.Fatal(nil, lang.CmdToolsGenKeyErrNoConfirmOverwrite)
+				}
+			}
+
+			// Write the key file contents to disk
+			if err := os.WriteFile(prvKeyFileName, keyBytes.PrivateBytes, 0600); err != nil {
+				message.Fatalf(err, lang.ErrWritingFile, prvKeyFileName, err.Error())
+			}
+			if err := os.WriteFile(pubKeyFileName, keyBytes.PublicBytes, 0644); err != nil {
+				message.Fatalf(err, lang.ErrWritingFile, pubKeyFileName, err.Error())
+			}
+
+			message.Successf(lang.CmdToolsGenKeySuccess, prvKeyFileName, pubKeyFileName)
+		},
+	}
+
 	toolsCmd.AddCommand(readCredsCmd)
 	toolsCmd.AddCommand(readAllCredsCmd)
 
@@ -100,4 +175,6 @@ func init() {
 
 	toolsCmd.AddCommand(generatePKICmd)
 	generatePKICmd.Flags().StringArrayVar(&subAltNames, "sub-alt-name", []string{}, lang.CmdToolsGenPkiFlagAltName)
+
+	toolsCmd.AddCommand(generateKeyCmd)
 }

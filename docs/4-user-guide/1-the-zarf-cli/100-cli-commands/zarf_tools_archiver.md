@@ -13,7 +13,7 @@ Compress/Decompress generic archives, including Zarf packages.
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
@@ -26,4 +26,3 @@ Compress/Decompress generic archives, including Zarf packages.
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
 * [zarf tools archiver compress](zarf_tools_archiver_compress.md)	 - Compress a collection of sources based off of the destination file extension.
 * [zarf tools archiver decompress](zarf_tools_archiver_decompress.md)	 - Decompress an archive or Zarf package based off of the source file extension.
-

@@ -18,13 +18,13 @@ func TestCreateGit(t *testing.T) {
 	t.Log("E2E: Test Git Repo Behavior")
 
 	extractDir := filepath.Join(os.TempDir(), ".extracted-git-pkg")
-	e2e.cleanFiles(extractDir)
+	e2e.CleanFiles(extractDir)
 
 	// Extract the test package.
-	path := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.arch)
-	stdOut, stdErr, err := e2e.execZarfCommand("tools", "archiver", "decompress", path, extractDir, "--decompress-all")
+	path := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.Arch)
+	stdOut, stdErr, err := e2e.ExecZarfCommand("tools", "archiver", "decompress", path, extractDir, "--decompress-all")
 	require.NoError(t, err, stdOut, stdErr)
-	defer e2e.cleanFiles(extractDir)
+	defer e2e.CleanFiles(extractDir)
 
 	// Verify the full-repo component.
 	gitDirFlag := fmt.Sprintf("--git-dir=%s/components/full-repo/repos/nocode-953829860/.git", extractDir)
@@ -57,15 +57,15 @@ func TestCreateGit(t *testing.T) {
 	require.Equal(t, "v0.16.0\n", stdOut)
 
 	// Verify a repo with a branch.
-	gitDirFlag = fmt.Sprintf("--git-dir=%s/components/specific-branch/repos/bigbang-3067531188/.git", extractDir)
+	gitDirFlag = fmt.Sprintf("--git-dir=%s/components/specific-branch/repos/big-bang-2705706079/.git", extractDir)
 	stdOut, stdErr, err = exec.Cmd("git", gitDirFlag, "log", "HEAD^..HEAD", "--oneline", "--decorate")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "(HEAD -> release-1.53.x, tag: 1.53.0-rc.1, tag: 1.53.0, online-upstream/release-1.53.x)")
+	require.Contains(t, stdOut, "(HEAD -> release-1.54.x, tag: 1.54.0-rc.0, tag: 1.54.0, online-upstream/release-1.54.x)")
 
 	// Verify a repo with a branch only has one branch.
 	stdOut, stdErr, err = exec.Cmd("git", gitDirFlag, "branch")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Equal(t, "* release-1.53.x\n", stdOut)
+	require.Equal(t, "* release-1.54.x\n", stdOut)
 
 	// Verify a repo with a commit hash.
 	gitDirFlag = fmt.Sprintf("--git-dir=%s/components/specific-hash/repos/zarf-1356873667/.git", extractDir)

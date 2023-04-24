@@ -15,8 +15,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -27,7 +29,7 @@ import (
 var payloadChunkSize = 1024 * 768
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths) {
+func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths, injectorSeedTags []string) {
 	message.Debugf("packager.runInjectionMadness(%#v)", tempPath)
 
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
@@ -37,6 +39,7 @@ func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths) {
 	var images k8s.ImageNodeMap
 	var payloadConfigmaps []string
 	var sha256sum string
+	var seedImages []transform.Image
 
 	// Get all the images from the cluster
 	spinner.Updatef("Getting the list of existing cluster images")
@@ -54,6 +57,11 @@ func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths) {
 		spinner.Fatalf(err, "Unable to create the injector service")
 	} else {
 		config.ZarfSeedPort = fmt.Sprintf("%d", service.Spec.Ports[0].NodePort)
+	}
+
+	spinner.Updatef("Loading the seed image from the package")
+	if seedImages, err = c.loadSeedImages(tempPath, injectorSeedTags, spinner); err != nil {
+		spinner.Fatalf(err, "Unable to load the injector seed image from the package")
 	}
 
 	spinner.Updatef("Loading the seed registry configmaps")
@@ -74,7 +82,7 @@ func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths) {
 		spinner.Updatef("Attempting to bootstrap with the %s/%s", node, image)
 
 		// Make sure the pod is not there first
-		_ = c.Kube.DeletePod(ZarfNamespace, "injector")
+		_ = c.Kube.DeletePod(ZarfNamespaceName, "injector")
 
 		// Update the podspec image path and use the first node found
 		pod, err := c.buildInjectionPod(node[0], image, payloadConfigmaps, sha256sum)
@@ -93,7 +101,7 @@ func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths) {
 		}
 
 		// if no error, try and wait for a seed image to be present, return if successful
-		if c.injectorIsReady(spinner) {
+		if c.injectorIsReady(seedImages, spinner) {
 			return
 		}
 
@@ -107,18 +115,42 @@ func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths) {
 // StopInjectionMadness handles cleanup once the seed registry is up.
 func (c *Cluster) StopInjectionMadness() error {
 	// Try to kill the injector pod now
-	if err := c.Kube.DeletePod(ZarfNamespace, "injector"); err != nil {
+	if err := c.Kube.DeletePod(ZarfNamespaceName, "injector"); err != nil {
 		return err
 	}
 
 	// Remove the configmaps
 	labelMatch := map[string]string{"zarf-injector": "payload"}
-	if err := c.Kube.DeleteConfigMapsByLabel(ZarfNamespace, labelMatch); err != nil {
+	if err := c.Kube.DeleteConfigMapsByLabel(ZarfNamespaceName, labelMatch); err != nil {
 		return err
 	}
 
 	// Remove the injector service
-	return c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
+	return c.Kube.DeleteService(ZarfNamespaceName, "zarf-injector")
+}
+
+func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []string, spinner *message.Spinner) ([]transform.Image, error) {
+	var seedImages []transform.Image
+
+	// Load the injector-specific images and save them as seed-images
+	for _, src := range injectorSeedTags {
+		spinner.Updatef("Loading the seed image '%s' from the package", src)
+
+		img, err := utils.LoadOCIImage(tempPath.Images, src)
+		if err != nil {
+			return seedImages, err
+		}
+
+		crane.SaveOCI(img, tempPath.SeedImages)
+
+		imgRef, err := transform.ParseImageRef(src)
+		if err != nil {
+			return seedImages, err
+		}
+		seedImages = append(seedImages, imgRef)
+	}
+
+	return seedImages, nil
 }
 
 func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *message.Spinner) ([]string, string, error) {
@@ -127,7 +159,7 @@ func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *mes
 
 	// Chunk size has to accommodate base64 encoding & etcd 1MB limit
 	tarPath := filepath.Join(tempPath.Base, "payload.tgz")
-	tarFileList, err := filepath.Glob(filepath.Join(tempPath.Base, "seed-image", "*"))
+	tarFileList, err := filepath.Glob(filepath.Join(tempPath.SeedImages, "*"))
 	if err != nil {
 		return configMaps, "", err
 	}
@@ -160,7 +192,7 @@ func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *mes
 		spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", idx+1, chunkCount)
 
 		// Attempt to create the configmap in the cluster
-		if _, err = c.Kube.ReplaceConfigmap(ZarfNamespace, fileName, configData); err != nil {
+		if _, err = c.Kube.ReplaceConfigmap(ZarfNamespaceName, fileName, configData); err != nil {
 			return configMaps, "", err
 		}
 
@@ -175,7 +207,7 @@ func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *mes
 }
 
 // Test for pod readiness and seed image presence.
-func (c *Cluster) injectorIsReady(spinner *message.Spinner) bool {
+func (c *Cluster) injectorIsReady(seedImages []transform.Image, spinner *message.Spinner) bool {
 	message.Debugf("packager.injectorIsReady()")
 
 	// Establish the zarf connect tunnel
@@ -190,11 +222,13 @@ func (c *Cluster) injectorIsReady(spinner *message.Spinner) bool {
 
 	spinner.Updatef("Testing the injector for seed image availability")
 
-	seedRegistry := fmt.Sprintf("%s/v2/library/%s/manifests/%s", tunnel.HTTPEndpoint(), config.ZarfSeedImage, config.ZarfSeedTag)
-	if resp, err := http.Get(seedRegistry); err != nil || resp.StatusCode != 200 {
-		// Just debug log the output because failures just result in trying the next image
-		message.Debug(resp, err)
-		return false
+	for _, seedImage := range seedImages {
+		seedRegistry := fmt.Sprintf("%s/v2/%s/manifests/%s", tunnel.HTTPEndpoint(), seedImage.Path, seedImage.Tag)
+		if resp, err := http.Get(seedRegistry); err != nil || resp.StatusCode != 200 {
+			// Just debug log the output because failures just result in trying the next image
+			message.Debug(resp, err)
+			return false
+		}
 	}
 
 	spinner.Updatef("Seed image found, injector is ready")
@@ -211,10 +245,10 @@ func (c *Cluster) createInjectorConfigmap(tempPath types.TempPaths) error {
 	}
 
 	// Try to delete configmap silently
-	_ = c.Kube.DeleteConfigmap(ZarfNamespace, "rust-binary")
+	_ = c.Kube.DeleteConfigmap(ZarfNamespaceName, "rust-binary")
 
 	// Attempt to create the configmap in the cluster
-	if _, err = c.Kube.CreateConfigmap(ZarfNamespace, "rust-binary", configData); err != nil {
+	if _, err = c.Kube.CreateConfigmap(ZarfNamespaceName, "rust-binary", configData); err != nil {
 		return err
 	}
 
@@ -222,7 +256,7 @@ func (c *Cluster) createInjectorConfigmap(tempPath types.TempPaths) error {
 }
 
 func (c *Cluster) createService() (*corev1.Service, error) {
-	service := c.Kube.GenerateService(ZarfNamespace, "zarf-injector")
+	service := c.Kube.GenerateService(ZarfNamespaceName, "zarf-injector")
 
 	service.Spec.Type = corev1.ServiceTypeNodePort
 	service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
@@ -233,14 +267,14 @@ func (c *Cluster) createService() (*corev1.Service, error) {
 	}
 
 	// Attempt to purse the service silently
-	_ = c.Kube.DeleteService(ZarfNamespace, "zarf-injector")
+	_ = c.Kube.DeleteService(ZarfNamespaceName, "zarf-injector")
 
 	return c.Kube.CreateService(service)
 }
 
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection.
 func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
-	pod := c.Kube.GeneratePod("injector", ZarfNamespace)
+	pod := c.Kube.GeneratePod("injector", ZarfNamespaceName)
 	executeMode := int32(0777)
 
 	pod.Labels["app"] = "zarf-injector"

@@ -76,7 +76,8 @@ func ColorPrintYAML(data any) {
 		}
 	}
 
-	pterm.Print(p.PrintTokens(tokens))
+	pterm.Println()
+	pterm.Println(p.PrintTokens(tokens))
 }
 
 // ReadYaml reads a yaml file and unmarshals it into a given config.

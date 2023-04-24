@@ -42,6 +42,10 @@ func (p *Packager) Deploy() error {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
 
+	if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
+		return err
+	}
+
 	// Now that we have read the zarf.yaml, check the package kind
 	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
 		p.cfg.IsInitConfig = true
@@ -53,14 +57,16 @@ func (p *Packager) Deploy() error {
 	}
 
 	// Set variables and prompt if --confirm is not set
-	if err := p.setActiveVariables(); err != nil {
+	if err := p.setVariableMapInConfig(); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
 	// Reset registry HPA scale down whether an error occurs or not
 	defer func() {
 		if p.cluster != nil && hpaModified {
-			p.cluster.EnableRegHPAScaleDown()
+			if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
+				message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
+			}
 		}
 	}()
 
@@ -99,7 +105,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		if p.cfg.IsInitConfig {
 			charts, err = p.deployInitComponent(component)
 		} else {
-			charts, err = p.deployComponent(component, false /* keep img checksum */)
+			charts, err = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
 		}
 
 		deployedComponent := types.DeployedComponent{Name: component.Name}
@@ -140,11 +146,17 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Always init the state on the seed registry component
 	if isSeedRegistry {
-		p.cluster, err = cluster.NewClusterWithWait(5 * time.Minute)
+		p.cluster, err = cluster.NewClusterWithWait(5*time.Minute, true)
 		if err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
+
 		p.cluster.InitZarfState(p.cfg.InitOpts)
+	}
+
+	if isRegistry {
+		// If we are deploying the registry then mark the HPA as "modifed" to set it to Min later
+		hpaModified = true
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
@@ -154,10 +166,10 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		p.cluster.StartInjectionMadness(p.tmp)
+		p.cluster.StartInjectionMadness(p.tmp, component.Images)
 	}
 
-	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */)
+	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
 	if err != nil {
 		return charts, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 	}
@@ -173,7 +185,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 }
 
 // Deploy a Zarf Component.
-func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool) (charts []types.InstalledChart, err error) {
+func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
 	message.Debugf("packager.deployComponent(%#v, %#v", p.tmp, component)
 
 	// Toggles for general deploy operations
@@ -185,7 +197,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
-	hasImages := len(component.Images) > 0
+	hasImages := len(component.Images) > 0 && !noImgPush
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
@@ -201,28 +213,29 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to process the component files: %w", err)
 	}
 
-	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos) {
+	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections) {
 
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(30 * time.Second)
+			p.cluster, err = cluster.NewClusterWithWait(30*time.Second, true)
 			if err != nil {
 				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
 		}
 
+		// Setup the state in the config and get the valuesTemplate
+		valueTemplate, err = p.setupStateValuesTemplate(component)
+		if err != nil {
+			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
+		}
+
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
 		if hasImages && !hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
 			if err := p.cluster.DisableRegHPAScaleDown(); err != nil {
-				message.Debugf("unable to toggle the registry HPA scale down: %s", err.Error())
+				message.Debugf("unable to disable the registry HPA scale down: %s", err.Error())
 			} else {
 				hpaModified = true
 			}
-		}
-
-		valueTemplate, err = p.getUpdatedValueTemplate(component)
-		if err != nil {
-			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
 		}
 	}
 
@@ -327,7 +340,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 }
 
 // Fetch the current ZarfState from the k8s cluster and generate a valueTemplate from the state values.
-func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (values template.Values, err error) {
+func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values template.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
@@ -350,7 +363,8 @@ func (p *Packager) getUpdatedValueTemplate(component types.ZarfComponent) (value
 
 		// Try to create the zarf namespace
 		spinner.Updatef("Creating the Zarf namespace")
-		if _, err := p.cluster.Kube.CreateNamespace(cluster.ZarfNamespace, nil); err != nil {
+		zarfNamespace := p.cluster.Kube.NewZarfManagedNamespace(cluster.ZarfNamespaceName)
+		if _, err := p.cluster.Kube.CreateNamespace(zarfNamespace); err != nil {
 			spinner.Fatalf(err, "Unable to create the zarf namespace")
 		}
 	}
@@ -387,11 +401,12 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	}
 
 	imgConfig := images.ImgConfig{
-		ImagesPath: p.tmp.Images,
-		ImgList:    componentImages,
-		NoChecksum: noImgChecksum,
-		RegInfo:    p.cfg.State.RegistryInfo,
-		Insecure:   config.CommonOptions.Insecure,
+		ImagesPath:    p.tmp.Images,
+		ImgList:       componentImages,
+		NoChecksum:    noImgChecksum,
+		RegInfo:       p.cfg.State.RegistryInfo,
+		Insecure:      config.CommonOptions.Insecure,
+		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 	}
 
 	return utils.Retry(func() error {

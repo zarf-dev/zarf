@@ -28,7 +28,7 @@ A SHA-based clone only mirrors the SHA hash defined in the Zarf definition. The 
 
 ## Git Reference-Based Git Repository Clone
 
-If you need even more control, Zarf also supports providing full `git` [refspecs](https://git-scm.com/book/en/v2/Git-Internals-The-Refspec), as seen in `https://repo1.dso.mil/big-bang/bigbang.git@refs/heads/release-1.53.x`.  This allows you to pull specific tags or branches by using this standard.  The branch name used by zarf on deploy will depend on the kind of ref specified, branches will use the upstream branch name, whereas other refs (namely tags) will use the `zarf-ref-*` branch name.
+If you need even more control, Zarf also supports providing full `git` [refspecs](https://git-scm.com/book/en/v2/Git-Internals-The-Refspec), as seen in `https://repo1.dso.mil/big-bang/bigbang.git@refs/heads/release-1.54.x`.  This allows you to pull specific tags or branches by using this standard.  The branch name used by zarf on deploy will depend on the kind of ref specified, branches will use the upstream branch name, whereas other refs (namely tags) will use the `zarf-ref-*` branch name.
 
 ## Git Repository Full Clone
 

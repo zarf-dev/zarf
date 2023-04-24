@@ -4,7 +4,8 @@ persistence:
   existingClaim: "###ZARF_VAR_REGISTRY_EXISTING_PVC###"
 
 image:
-  repository: "###ZARF_REGISTRY###/library/registry"
+  repository: "###ZARF_REGISTRY###/###ZARF_CONST_REGISTRY_IMAGE###"
+  tag: "###ZARF_CONST_REGISTRY_IMAGE_TAG###"
 
 imagePullSecrets:
   - name: private-registry

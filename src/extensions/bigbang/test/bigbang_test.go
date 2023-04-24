@@ -11,7 +11,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	test "github.com/defenseunicorns/zarf/src/test/e2e"
+	test "github.com/defenseunicorns/zarf/src/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -49,7 +49,8 @@ func TestReleases(t *testing.T) {
 
 	// Build the previous version
 	bbVersion := fmt.Sprintf("--set=BB_VERSION=%s", previous)
-	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, "--confirm")
+	bbMajor := fmt.Sprintf("--set=BB_MAJOR=%s", previous[0:1])
+	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, bbMajor, "--confirm")
 
 	// Deploy the previous version
 	pkgPath := fmt.Sprintf("zarf-package-big-bang-test-amd64-%s.tar.zst", previous)
@@ -69,7 +70,8 @@ func TestReleases(t *testing.T) {
 
 	// Build the latest version
 	bbVersion = fmt.Sprintf("--set=BB_VERSION=%s", latest)
-	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, "--confirm")
+	bbMajor = fmt.Sprintf("--set=BB_MAJOR=%s", latest[0:1])
+	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, bbMajor, "--confirm")
 
 	// Clean up zarf cache now that all packages are built to reduce disk pressure
 	zarfExec(t, "tools", "clear-cache")

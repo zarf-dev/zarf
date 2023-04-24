@@ -5,8 +5,9 @@
 package utils
 
 import (
-	"bytes"
+	"bufio"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/fs"
@@ -25,6 +26,13 @@ const (
 	dotCharacter  = 46
 	tmpPathPrefix = "zarf-"
 )
+
+// TextTemplate represents a value to be templated into a text file.
+type TextTemplate struct {
+	Sensitive  bool
+	AutoIndent bool
+	Value      string
+}
 
 // MakeTempDir creates a temp directory with the given prefix.
 func MakeTempDir(tmpDir string) (string, error) {
@@ -99,34 +107,80 @@ func WriteFile(path string, data []byte) error {
 }
 
 // ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
-func ReplaceTextTemplate(path string, mappings map[string]string, deprecations map[string]string) {
-	text, err := os.ReadFile(path)
+func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, deprecations map[string]string, templateRegex string) error {
+	textFile, err := os.Open(path)
 	if err != nil {
-		message.Fatalf(err, "Unable to load %s", path)
+		return err
 	}
 
-	// First check for deprecated variables.
-	for old, new := range deprecations {
-		if bytes.Contains(text, []byte(old)) {
-			message.Warnf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.  Please notify your package creator for an update.", old, new)
+	// This regex takes a line and parses the text before and after a discovered template: https://regex101.com/r/ilUxAz/1
+	regexTemplateLine := regexp.MustCompile(fmt.Sprintf("(?P<preTemplate>.*?)(?P<template>%s)(?P<postTemplate>.*)", templateRegex))
+
+	fileScanner := bufio.NewScanner(textFile)
+	fileScanner.Split(bufio.ScanLines)
+
+	text := ""
+
+	for fileScanner.Scan() {
+		line := fileScanner.Text()
+
+		for {
+			matches := regexTemplateLine.FindStringSubmatch(line)
+
+			// No template left on this line so move on
+			if len(matches) == 0 {
+				text += fmt.Sprintln(line)
+				break
+			}
+
+			preTemplate := matches[regexTemplateLine.SubexpIndex("preTemplate")]
+			templateKey := matches[regexTemplateLine.SubexpIndex("template")]
+
+			_, present := deprecations[templateKey]
+			if present {
+				message.Warnf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.  Please notify your package creator for an update.", templateKey, deprecations[templateKey])
+			}
+
+			template := mappings[templateKey]
+
+			// Check if the template is nil (present), use the original templateKey if not (so that it is not replaced).
+			value := templateKey
+			if template != nil {
+				value = template.Value
+
+				// Check if the value is autoIndented and add the correct spacing
+				if template.AutoIndent {
+					indent := fmt.Sprintf("\n%s", strings.Repeat(" ", len(preTemplate)))
+					value = strings.ReplaceAll(value, "\n", indent)
+				}
+			}
+
+			// Add the processed text and continue processing the line
+			text += fmt.Sprintf("%s%s", preTemplate, value)
+			line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
 		}
 	}
 
-	for template, value := range mappings {
-		text = bytes.ReplaceAll(text, []byte(template), []byte(value))
-	}
+	textFile.Close()
 
-	if err = os.WriteFile(path, text, 0600); err != nil {
-		message.Fatalf(err, "Unable to update %s", path)
-	}
+	return os.WriteFile(path, []byte(text), 0600)
+
 }
 
 // RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths.
-func RecursiveFileList(dir string, pattern *regexp.Regexp) (files []string, err error) {
+// the skipPermission flag can be provided to ignore unauthorized files/dirs when true
+// the skipHidden flag can be provided to ignore dot prefixed files/dirs when true
+func RecursiveFileList(dir string, pattern *regexp.Regexp, skipPermission bool, skipHidden bool) (files []string, err error) {
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		// ignore files/dirs that it does not have permission to read
+		if err != nil && os.IsPermission(err) && skipPermission {
+			return nil
+		}
 		// Skip hidden directories
-		if d.IsDir() && d.Name()[0] == dotCharacter {
-			return filepath.SkipDir
+		if skipHidden {
+			if d.IsDir() && d.Name()[0] == dotCharacter {
+				return filepath.SkipDir
+			}
 		}
 
 		// Return errors
@@ -251,4 +305,20 @@ func GetDirSize(path string) (int64, error) {
 	})
 
 	return dirSize, err
+}
+
+// GetSHA256OfFile returns the SHA256 hash of the provided file.
+func GetSHA256OfFile(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }

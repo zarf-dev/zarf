@@ -1,6 +1,13 @@
 [package.create.set]
-# The image tag used for the zarf agent, defaults to a dev image tag
-agent_image = 'agent:local'
+# The image reference to use for the Zarf agent, defaults to a locally built image
+agent_image_domain = 'ghcr.io/'
+agent_image = 'defenseunicorns/zarf/agent'
+agent_image_tag = 'local'
 
 # Tag for the zarf injector binary to use
 injector_version = '2023-02-09'
+
+# The image reference to use for the registry that Zarf deploys into the cluster
+registry_image_domain = ''
+registry_image = 'library/registry'
+registry_image_tag = '2.8.1'

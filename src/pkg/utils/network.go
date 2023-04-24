@@ -154,7 +154,6 @@ func httpGetFile(url string, destinationFile *os.File) {
 	}
 
 	// Writer the body to file
-	text := fmt.Sprintf("Downloading %s", url)
 	title := fmt.Sprintf("Downloading %s", path.Base(url))
 	progressBar := message.NewProgressBar(resp.ContentLength, title)
 
@@ -162,7 +161,8 @@ func httpGetFile(url string, destinationFile *os.File) {
 		progressBar.Fatalf(err, "Unable to save the file %s", destinationFile.Name())
 	}
 
-	progressBar.Successf("%s", text)
+	title = fmt.Sprintf("Downloaded %s", url)
+	progressBar.Successf("%s", title)
 }
 
 func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {

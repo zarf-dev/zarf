@@ -44,7 +44,7 @@ func (h *Helm) Destroy(purgeAllZarfInstallations bool) {
 
 	// Iterate over all releases
 	for _, release := range releases {
-		if !purgeAllZarfInstallations && release.Namespace != cluster.ZarfNamespace {
+		if !purgeAllZarfInstallations && release.Namespace != cluster.ZarfNamespaceName {
 			// Don't process releases outside the zarf namespace unless purge all is true
 			continue
 		}

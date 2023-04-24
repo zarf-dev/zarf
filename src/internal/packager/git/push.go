@@ -11,7 +11,7 @@ import (
 	"path"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/transport"
@@ -19,26 +19,23 @@ import (
 )
 
 // PushRepo pushes a git repository from the local path to the configured git server.
-func (g *Git) PushRepo(srcUrl, targetFolder string) error {
-	spinner := message.NewProgressSpinner("Processing git repo %s", srcUrl)
+func (g *Git) PushRepo(srcURL, targetFolder string) error {
+	spinner := message.NewProgressSpinner("Processing git repo %s", srcURL)
 	defer spinner.Stop()
 
-	// Parse the git URL.
-	get, err := utils.MatchRegex(gitURLRegex, srcUrl)
-	if err != nil {
-		return fmt.Errorf("unable to parse git url (%s): %w", srcUrl, err)
-	}
-
 	// Setup git paths, including a unique name for the repo based on the hash of the git URL to avoid conflicts.
-	repoFolder := fmt.Sprintf("%s-%d", get("repo"), utils.GetCRCHash(srcUrl))
+	repoFolder, err := transform.GitTransformURLtoFolderName(srcURL)
+	if err != nil {
+		return fmt.Errorf("unable to parse git url (%s): %w", srcURL, err)
+	}
 	repoPath := path.Join(targetFolder, repoFolder)
 
 	// Check that this package is using the new repo format (if not fallback to the format from <= 0.24.x)
 	_, err = os.Stat(repoPath)
 	if os.IsNotExist(err) {
-		repoFolder, err = g.TransformURLtoRepoName(srcUrl)
+		repoFolder, err = transform.GitTransformURLtoRepoName(srcURL)
 		if err != nil {
-			return fmt.Errorf("unable to parse git url (%s): %w", srcUrl, err)
+			return fmt.Errorf("unable to parse git url (%s): %w", srcURL, err)
 		}
 		repoPath = path.Join(targetFolder, repoFolder)
 	}
@@ -52,7 +49,7 @@ func (g *Git) PushRepo(srcUrl, targetFolder string) error {
 	}
 
 	if err := g.push(repo, spinner); err != nil {
-		spinner.Warnf("Unable to push the git repo %s (%s). Retrying....", get("repo"), err.Error())
+		spinner.Warnf("Unable to push the git repo %s (%s). Retrying....", repoFolder, err.Error())
 		return err
 	}
 
@@ -65,7 +62,7 @@ func (g *Git) PushRepo(srcUrl, targetFolder string) error {
 			return err
 		}
 		remoteURL := remote.Config().URLs[0]
-		repoName, err := g.TransformURLtoRepoName(remoteURL)
+		repoName, err := transform.GitTransformURLtoRepoName(remoteURL)
 		if err != nil {
 			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 			return err
@@ -96,7 +93,7 @@ func (g *Git) prepRepoForPush() (*git.Repository, error) {
 	}
 
 	remoteURL := remote.Config().URLs[0]
-	targetURL, err := g.TransformURL(remoteURL)
+	targetURL, err := transform.GitTransformURL(g.Server.Address, remoteURL, g.Server.PushUsername)
 	if err != nil {
 		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}
@@ -106,7 +103,7 @@ func (g *Git) prepRepoForPush() (*git.Repository, error) {
 
 	_, err = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,
-		URLs: []string{targetURL},
+		URLs: []string{targetURL.String()},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create offline remote: %w", err)

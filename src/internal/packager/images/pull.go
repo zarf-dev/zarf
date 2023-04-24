@@ -7,6 +7,7 @@ package images
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -48,10 +49,8 @@ func (i *ImgConfig) PullAll() error {
 	spinner := message.NewProgressSpinner("Loading metadata for %d images. %s", imgCount, longer)
 	defer spinner.Stop()
 
-	if message.GetLogLevel() >= message.DebugLevel {
-		logs.Warn.SetOutput(spinner)
-		logs.Progress.SetOutput(spinner)
-	}
+	logs.Warn.SetOutput(&message.DebugWriter{})
+	logs.Progress.SetOutput(&message.DebugWriter{})
 
 	for idx, src := range i.ImgList {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imgCount, src)
@@ -65,7 +64,7 @@ func (i *ImgConfig) PullAll() error {
 
 	// Create the ImagePath directory
 	err := os.Mkdir(i.ImagesPath, 0755)
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrExist) {
 		return fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
 
@@ -145,11 +144,11 @@ func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Imag
 	// Load image tarballs from the local filesystem.
 	if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
 		spinner.Updatef("Reading image tarball: %s", src)
-		return crane.Load(src, config.GetCraneOptions(true)...)
+		return crane.Load(src, config.GetCraneOptions(true, i.Architectures...)...)
 	}
 
 	// If crane is unable to pull the image, try to load it from the local docker daemon.
-	if _, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure)...); err != nil {
+	if _, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
 		message.Debugf("crane unable to pull image %s: %s", src, err)
 		spinner.Updatef("Falling back to docker for %s. This may take some time.", src)
 
@@ -192,7 +191,7 @@ func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Imag
 	}
 
 	// Manifest was found, so use crane to pull the image.
-	if img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure)...); err != nil {
+	if img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
 		return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
 	}
 

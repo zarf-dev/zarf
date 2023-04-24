@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -16,34 +17,51 @@ import (
 
 // fillActiveTemplate handles setting the active variables and reloading the base template.
 func (p *Packager) fillActiveTemplate() error {
-	// Ensure uppercase keys
-	setVariableMap := utils.TransformMapKeys(p.cfg.CreateOpts.SetVariables, strings.ToUpper)
+	templateMap := map[string]string{}
 
-	packageVariables, err := utils.FindYamlTemplates(&p.cfg.Pkg, "###ZARF_PKG_VAR_", "###")
-	if err != nil {
+	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
+		// Ensure uppercase keys
+		setFromCLIConfig := utils.TransformMapKeys(p.cfg.CreateOpts.SetVariables, strings.ToUpper)
+
+		yamlTemplates, err := utils.FindYamlTemplates(&p.cfg.Pkg, templatePrefix, "###")
+		if err != nil {
+			return err
+		}
+
+		for key := range yamlTemplates {
+			if deprecated {
+				message.Warnf(lang.PkgValidateTemplateDeprecation, key, key, key)
+			}
+
+			_, present := setFromCLIConfig[key]
+			if !present && !config.CommonOptions.Confirm {
+				setVal, err := p.promptVariable(types.ZarfPackageVariable{
+					Name: key,
+				})
+
+				if err == nil {
+					setFromCLIConfig[key] = setVal
+				} else {
+					return err
+				}
+			} else if !present {
+				return fmt.Errorf("template '%s' must be '--set' when using the '--confirm' flag", key)
+			}
+		}
+
+		for key, value := range setFromCLIConfig {
+			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
+		}
+
+		return nil
+	}
+
+	if err := promptAndSetTemplate("###ZARF_PKG_TMPL_", false); err != nil {
 		return err
 	}
-
-	for key := range packageVariables {
-		_, present := setVariableMap[key]
-		if !present && !config.CommonOptions.Confirm {
-			setVal, err := p.promptVariable(types.ZarfPackageVariable{
-				Name: key,
-			})
-
-			if err == nil {
-				setVariableMap[key] = setVal
-			} else {
-				return err
-			}
-		} else if !present {
-			return fmt.Errorf("variable '%s' must be '--set' when using the '--confirm' flag", key)
-		}
-	}
-
-	templateMap := map[string]string{}
-	for key, value := range setVariableMap {
-		templateMap[fmt.Sprintf("###ZARF_PKG_VAR_%s###", key)] = value
+	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
+	if err := promptAndSetTemplate("###ZARF_PKG_VAR_", true); err != nil {
+		return err
 	}
 
 	// Add special variable for the current package architecture
@@ -52,21 +70,26 @@ func (p *Packager) fillActiveTemplate() error {
 	return utils.ReloadYamlTemplate(&p.cfg.Pkg, templateMap)
 }
 
-// setActiveVariables handles setting the active variables used to template component files.
-func (p *Packager) setActiveVariables() error {
+// setVariableMapInConfig handles setting the active variables used to template component files.
+func (p *Packager) setVariableMapInConfig() error {
 	// Ensure uppercase keys
-	p.cfg.SetVariableMap = utils.TransformMapKeys(p.cfg.DeployOpts.SetVariables, strings.ToUpper)
+	setVariableValues := utils.TransformMapKeys(p.cfg.DeployOpts.SetVariables, strings.ToUpper)
+	for name, value := range setVariableValues {
+		p.setVariableInConfig(name, value, false, false)
+	}
 
 	for _, variable := range p.cfg.Pkg.Variables {
 		_, present := p.cfg.SetVariableMap[variable.Name]
 
 		// Variable is present, no need to continue checking
 		if present {
+			p.cfg.SetVariableMap[variable.Name].Sensitive = variable.Sensitive
+			p.cfg.SetVariableMap[variable.Name].AutoIndent = variable.AutoIndent
 			continue
 		}
 
 		// First set default (may be overridden by prompt)
-		p.setVariable(variable.Name, variable.Default)
+		p.setVariableInConfig(variable.Name, variable.Default, variable.Sensitive, variable.AutoIndent)
 
 		// Variable is set to prompt the user
 		if variable.Prompt && !config.CommonOptions.Confirm {
@@ -77,16 +100,20 @@ func (p *Packager) setActiveVariables() error {
 				return err
 			}
 
-			p.setVariable(variable.Name, val)
+			p.setVariableInConfig(variable.Name, val, variable.Sensitive, variable.AutoIndent)
 		}
 	}
 
 	return nil
 }
 
-func (p *Packager) setVariable(name, value string) {
-	message.Debugf("Setting variable '%s' to '%s'", name, value)
-	p.cfg.SetVariableMap[name] = value
+func (p *Packager) setVariableInConfig(name, value string, sensitive bool, autoIndent bool) {
+	p.cfg.SetVariableMap[name] = &types.ZarfSetVariable{
+		Name:       name,
+		Value:      value,
+		Sensitive:  sensitive,
+		AutoIndent: autoIndent,
+	}
 }
 
 // injectImportedVariable determines if an imported package variable exists in the active config and adds it if not.
