@@ -109,6 +109,6 @@ Use the Zarf Deployment UI to execute the existing Zarf CLI commands:
 
 :::info
 
-All other zarf [CLI commands](../4-user-guide/1-the-zarf-cli/100-cli-commands/) will require interfacing with the CLI directly.
+All other zarf [CLI commands](../4-user-guide/1-the-zarf-cli/index.md) will require interfacing with the CLI directly.
 
 ::: 
