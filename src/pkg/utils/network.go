@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -97,9 +97,9 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 		return err
 	}
 
-	err = os.MkdirAll(path.Dir(dst), 0600)
+	err = os.MkdirAll(filepath.Dir(dst), 0600)
 	if err != nil {
-		return fmt.Errorf(lang.ErrCreatingDir, path.Dir(dst), err.Error())
+		return fmt.Errorf(lang.ErrCreatingDir, filepath.Dir(dst), err.Error())
 	}
 
 	// Create the file
@@ -200,7 +200,7 @@ func httpGetFile(url string, destinationFile *os.File) error {
 	}
 
 	// Writer the body to file
-	title := fmt.Sprintf("Downloading %s", path.Base(url))
+	title := fmt.Sprintf("Downloading %s", filepath.Base(url))
 	progressBar := message.NewProgressBar(resp.ContentLength, title)
 
 	if _, err = io.Copy(destinationFile, io.TeeReader(resp.Body, progressBar)); err != nil {

@@ -408,22 +408,27 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		// Iterate over all manifests.
 		for _, manifest := range component.Manifests {
 			for idx, f := range manifest.Files {
+				var trimmedPath string
+				var destination string
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", f)
-				// If using a temp directory, trim the temp directory from the path.
-				trimmedPath := strings.TrimPrefix(f, componentPath.Temp)
-				destination := filepath.Join(componentPath.Manifests, trimmedPath)
 				if utils.IsURL(f) {
+					destination = filepath.Join(componentPath.Manifests, fmt.Sprintf("manifest-%s-%d", manifest.Name, idx))
 					if err := utils.DownloadToFile(f, destination, component.CosignKeyPath); err != nil {
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
+					// Update the manifest path to the new location.
+					manifest.Files[idx] = destination
+				} else {
+					// If using a temp directory, trim the temp directory from the path.
+					trimmedPath = strings.TrimPrefix(f, componentPath.Temp)
+					destination = filepath.Join(componentPath.Manifests, trimmedPath)
+					if err := utils.CreatePathAndCopy(f, destination); err != nil {
+						return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
+					}
+					// Update the manifest path to the new location.
+					manifest.Files[idx] = trimmedPath
 				}
-				if err := utils.CreatePathAndCopy(f, destination); err != nil {
-					return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
-				}
-
-				// Update the manifest path to the new location.
-				manifest.Files[idx] = trimmedPath
 			}
 
 			for idx, k := range manifest.Kustomizations {
