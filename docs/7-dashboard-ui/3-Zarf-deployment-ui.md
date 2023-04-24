@@ -24,7 +24,7 @@ When Zarf is running it automatically searches for a Kubeconfig on the local mac
 
 #### Cluster not Connected (Not Initizalized)
 
-![Web UI shows organge warning status and message "cluster not connected" on the cluster card](../.images/dashboard/Web%20UI%20-%20Cluster%20Not%20Connected.png)
+![Web UI shows orange warning status and message "cluster not connected" on the cluster card](../.images/dashboard/Web%20UI%20-%20Cluster%20Not%20Connected.png)
 
 1. Shown when there is no Kubeconfig found on the machine.
 2. Shown when a Kubeconfig is found on the machine, but Zarf has not been deployed and set up in the cluster. 
