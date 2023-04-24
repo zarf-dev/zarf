@@ -56,7 +56,7 @@ Follow these steps to connect to an existing cluster:
 4. Select a ZarfInitConfig package to deploy into the cluster
 5. Follow Package deployment prompts to deploy package and initialize cluster as a Zarf cluster.
 
-### Deploy K8 and Cluster with init package with Cluster
+### Deploy a K3s Cluster with the Init Package
 
 If you do not have access to an existing cluster, or would simply like to spin up a new cluster. You can do that by deploying a ZarfInitConfig package and selecting the optional K3s component. 
 
