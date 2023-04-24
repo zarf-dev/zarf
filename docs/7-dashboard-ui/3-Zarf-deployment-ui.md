@@ -71,7 +71,7 @@ Follow these steps to deploy and initialize a new cluster:
 1. Click deploy package button (on the Deployed packages table)
 2. Select a ZarfInitPackage from the list
 3. Toggle the switch on for the K3s component to select it for deployment
-4. Complete package deployment steps to spin up and initialze your new Zarf cluster.
+4. Complete package deployment steps to spin up and initialize your new Zarf cluster.
 
 ### Deploy additional packages
 
