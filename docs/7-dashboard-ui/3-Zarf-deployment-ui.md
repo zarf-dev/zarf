@@ -77,7 +77,7 @@ Follow these steps to deploy and initialize a new cluster:
 
 Once you have a cluster connected to Zarf, you can deploy additional packages into the cluster. 
 
-Steps to deploy additional packages into cluster:
+Steps to deploy additional packages into the cluster:
 
 1. Click deploy package button on the Deployed packages table
 2. Select the package you wish to deploy from the list
