@@ -28,4 +28,3 @@ zarf tools monitor [flags]
 ## SEE ALSO
 
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-

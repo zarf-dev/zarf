@@ -34,4 +34,3 @@ zarf tools registry push PATH IMAGE [flags]
 ## SEE ALSO
 
 * [zarf tools registry](zarf_tools_registry.md)	 - Tools for working with container registries using go-containertools.
-
