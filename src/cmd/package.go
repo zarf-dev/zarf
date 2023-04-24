@@ -89,6 +89,8 @@ var packageDeployCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
+		pterm.Println()
+
 		// Deploy the package
 		if err := pkgClient.Deploy(); err != nil {
 			message.Fatalf(err, "Failed to deploy package: %s", err.Error())
@@ -319,6 +321,9 @@ func bindDeployFlags() {
 
 	// Always require confirm flag (no viper)
 	deployFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
+
+	// Always require adopt-existing-resources flag (no viper)
+	deployFlags.BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
 
 	v.SetDefault(V_PKG_DEPLOY_SET, map[string]string{})
 	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")

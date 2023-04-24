@@ -42,6 +42,7 @@ func withScopes(ref registry.Reference) context.Context {
 //
 // The credentials are pulled using Docker's default credential store.
 func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error) {
+	message.Debugf("Loading docker config file from default config location: %s", config.Dir())
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
 		return &auth.Client{}, err

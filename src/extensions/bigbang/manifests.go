@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
@@ -20,18 +21,7 @@ import (
 
 var nonAlphnumeric = regexp.MustCompile("[^a-zA-Z0-9]+")
 
-func manifestZarfCredentials() corev1.Secret {
-	return corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Secret",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: bb,
-			Name:      "zarf-credentials",
-		},
-		StringData: map[string]string{
-			"values.yaml": `
+const bbV1ZarfCredentialsValues = `
 registryCredentials:
   registry: "###ZARF_REGISTRY###"
   username: "zarf-pull"
@@ -42,14 +32,56 @@ git:
   # -- HTTP git credentials, both username and password must be provided
     username: "###ZARF_GIT_PUSH###"
     password: "###ZARF_GIT_AUTH_PUSH###"
+# -- Big Bang v1 Kyverno Support
 kyvernopolicies:
   values:
     exclude:
       any:
       - resources:
           namespaces:
-          - zarf # don't have kyverno prevent zarf from doing zarf things
-            `,
+          - zarf # don't have Kyverno prevent Zarf from doing zarf things
+          `
+
+const bbV2ZarfCredentialsValues = `
+registryCredentials:
+  registry: "###ZARF_REGISTRY###"
+  username: "zarf-pull"
+  password: "###ZARF_REGISTRY_AUTH_PULL###"
+git:
+  existingSecret: "private-git-server"	# -- Chart created secrets with user defined values
+  credentials:
+  # -- HTTP git credentials, both username and password must be provided
+    username: "###ZARF_GIT_PUSH###"
+    password: "###ZARF_GIT_AUTH_PUSH###"
+# -- Big Bang v2 Kyverno Support
+kyvernoPolicies:
+  values:
+    exclude:
+      any:
+      - resources:
+          namespaces:
+          - zarf # don't have Kyverno prevent Zarf from doing zarf things
+          `
+
+func manifestZarfCredentials(version string) corev1.Secret {
+	values := bbV1ZarfCredentialsValues
+
+	semverVersion, err := semver.NewVersion(version)
+	if err != nil && semverVersion.Major() == 2 {
+		values = bbV2ZarfCredentialsValues
+	}
+
+	return corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: bb,
+			Name:      "zarf-credentials",
+		},
+		StringData: map[string]string{
+			"values.yaml": values,
 		},
 	}
 }

@@ -29,6 +29,7 @@ var (
 			if len(args) > 0 {
 				target = args[0]
 			}
+			spinner := message.NewProgressSpinner("Preparing a tunnel to connect to %s", target)
 
 			tunnel, err := cluster.NewTunnel(connectNamespace, connectResourceType, connectResourceName, connectLocalPort, connectRemotePort)
 			if err != nil {
@@ -38,7 +39,10 @@ var (
 			if !cliOnly {
 				tunnel.EnableAutoOpen()
 			}
+
+			tunnel.AddSpinner(spinner)
 			tunnel.Connect(target, true)
+			spinner.Success()
 		},
 	}
 
@@ -57,7 +61,7 @@ func init() {
 	connectCmd.AddCommand(connectListCmd)
 
 	connectCmd.Flags().StringVar(&connectResourceName, "name", "", lang.CmdConnectFlagName)
-	connectCmd.Flags().StringVar(&connectNamespace, "namespace", cluster.ZarfNamespace, lang.CmdConnectFlagNamespace)
+	connectCmd.Flags().StringVar(&connectNamespace, "namespace", cluster.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
 	connectCmd.Flags().StringVar(&connectResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
 	connectCmd.Flags().IntVar(&connectLocalPort, "local-port", 0, lang.CmdConnectFlagLocalPort)
 	connectCmd.Flags().IntVar(&connectRemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)

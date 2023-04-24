@@ -76,6 +76,7 @@ func ColorPrintYAML(data any) {
 		}
 	}
 
+	pterm.Println()
 	pterm.Println(p.PrintTokens(tokens))
 }
 

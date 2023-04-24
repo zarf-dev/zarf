@@ -12,4 +12,4 @@ API_DEV_PORT=5173 \
     concurrently --names "ui,api" \
     -c "gray.bold,yellow" \
     "vite dev" \
-    "nodemon -e go -x 'go run -ldflags=\"$BUILD_ARGS\" main.go dev ui -l=trace || exit 1'"
+    "nodemon -e go -x 'go run -ldflags=\"$BUILD_ARGS\" ../../main.go dev ui -l=trace || exit 1'"

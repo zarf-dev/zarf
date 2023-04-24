@@ -24,6 +24,7 @@ var (
 /*
 This test assumes the following:
   1. The user running the test has a current valid credential to the public.ecr.aws/t8y5r5z5/zarf-nightly repository in their docker config.json
+  2. The zarf CLI has been built and is available in the build directory
 */
 func TestECRPublishing(t *testing.T) {
 	t.Log("E2E: Testing component actions")
@@ -32,8 +33,7 @@ func TestECRPublishing(t *testing.T) {
 	os.Chdir("../../../")
 
 	// Create a tmpDir for us to use during this test
-	tmpDir := os.TempDir()
-	defer e2e.CleanFiles(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Set up the e2e configs
 	e2e.Arch = config.GetArch()

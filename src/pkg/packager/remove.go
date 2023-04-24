@@ -60,24 +60,17 @@ func (p *Packager) Remove(packageName string) (err error) {
 
 	// Get the secret for the deployed package
 	deployedPackage := types.DeployedPackage{}
-	secretName := config.ZarfPackagePrefix + packageName
 
 	if requiresCluster {
 		// If we need the cluster, connect to it and pull the package secret
 		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(30 * time.Second)
+			p.cluster, err = cluster.NewClusterWithWait(30*time.Second, true)
 			if err != nil {
 				return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
 		}
 
-		packageSecret, err := p.cluster.Kube.GetSecret(cluster.ZarfNamespace, secretName)
-		if err != nil {
-			return fmt.Errorf("unable to get the secret for the package we are attempting to remove: %w", err)
-		}
-
-		// Get the list of components the package had deployed
-		err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage)
+		deployedPackage, err = p.cluster.GetDeployedPackage(packageName)
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %w", err)
 		}
@@ -102,7 +95,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 			continue
 		}
 
-		if deployedPackage, err = p.removeComponent(deployedPackage, c, secretName, spinner); err != nil {
+		if deployedPackage, err = p.removeComponent(deployedPackage, c, spinner); err != nil {
 			return fmt.Errorf("unable to remove the component (%s): %w", c.Name, err)
 		}
 	}
@@ -110,11 +103,13 @@ func (p *Packager) Remove(packageName string) (err error) {
 	return nil
 }
 
-func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, secretName string) {
+func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, packageName string) {
 	// Only attempt to update the package secret if we are actually connected to a cluster
 	if p.cluster != nil {
+		secretName := config.ZarfPackagePrefix + packageName
+
 		// Save the new secret with the removed components removed from the secret
-		newPackageSecret := p.cluster.Kube.GenerateSecret(cluster.ZarfNamespace, secretName, corev1.SecretTypeOpaque)
+		newPackageSecret := p.cluster.Kube.GenerateSecret(cluster.ZarfNamespaceName, secretName, corev1.SecretTypeOpaque)
 		newPackageSecret.Labels[cluster.ZarfPackageInfoLabel] = p.cfg.Pkg.Metadata.Name
 
 		newPackageSecretData, _ := json.Marshal(deployedPackage)
@@ -127,7 +122,7 @@ func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, se
 	}
 }
 
-func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deployedComponent types.DeployedComponent, secretName string, spinner *message.Spinner) (types.DeployedPackage, error) {
+func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deployedComponent types.DeployedComponent, spinner *message.Spinner) (types.DeployedPackage, error) {
 	components := deployedPackage.Data.Components
 
 	c := utils.Find(components, func(t types.ZarfComponent) bool {
@@ -163,7 +158,7 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 		deployedComponent.InstalledCharts = utils.RemoveMatches(deployedComponent.InstalledCharts, func(t types.InstalledChart) bool {
 			return t.ChartName == chart.ChartName
 		})
-		p.updatePackageSecret(deployedPackage, secretName)
+		p.updatePackageSecret(deployedPackage, deployedPackage.Name)
 	}
 
 	if err := p.runActions(onRemove.Defaults, onRemove.After, nil); err != nil {
@@ -183,13 +178,13 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 
 	if len(deployedPackage.DeployedComponents) == 0 && p.cluster != nil {
 		// All the installed components were deleted, therefore this package is no longer actually deployed
-		packageSecret, err := p.cluster.Kube.GetSecret(cluster.ZarfNamespace, secretName)
+		packageSecret, err := p.cluster.Kube.GetSecret(cluster.ZarfNamespaceName, config.ZarfPackagePrefix+deployedPackage.Name)
 		if err != nil {
 			return deployedPackage, fmt.Errorf("unable to get the secret for the package we are attempting to remove: %w", err)
 		}
 		_ = p.cluster.Kube.DeleteSecret(packageSecret)
 	} else {
-		p.updatePackageSecret(deployedPackage, secretName)
+		p.updatePackageSecret(deployedPackage, deployedPackage.Name)
 	}
 
 	return deployedPackage, nil
