@@ -66,7 +66,7 @@ This option is currently only available for Linux machines with access to the `r
 
 :::
 
-Follow these steps to deploy and initialze a new cluster:
+Follow these steps to deploy and initialize a new cluster:
 
 1. Click deploy package button (on the Deployed packages table)
 2. Select a ZarfInitPackage from the list
