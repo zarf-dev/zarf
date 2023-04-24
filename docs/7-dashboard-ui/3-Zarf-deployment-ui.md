@@ -22,7 +22,7 @@ Follow these steps to get started using the Web UI
 
 When Zarf is running it automatically searches for a Kubeconfig on the local machine. If the Kubeconfig is found, it searches the default cluster to determine if it is a Zarf cluster (i.e. initialized). There are two different cluster statuses the Web UI will display based on the state of the cluster found. 
 
-#### Cluster not Connected (Not Initizalized)
+#### Cluster not Connected (Not Initialized)
 
 ![Web UI shows orange warning status and message "cluster not connected" on the cluster card](../.images/dashboard/Web%20UI%20-%20Cluster%20Not%20Connected.png)
 
