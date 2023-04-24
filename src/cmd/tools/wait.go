@@ -39,15 +39,14 @@ var waitForCmd = &cobra.Command{
         zarf tools wait-for pod app=podinfo ready -n podinfo                    wait for pod with label app=podinfo in namespace podinfo to be ready
         zarf tools wait-for svc zarf-docker-registry exists -n zarf             wait for service zarf-docker-registry in namespace zarf to exist
         zarf tools wait-for svc zarf-docker-registry -n zarf                    same as above, except exists is the default condition
-        zarf tools wati-for crd addons.k3s.cattle.io                            wait for crd addons.k3s.cattle.io to exist
+        zarf tools wait-for crd addons.k3s.cattle.io                            wait for crd addons.k3s.cattle.io to exist
 
     Wait for network endpoints:
         zarf tools wait-for http localhost:8080 200                             wait for a 200 response from http://localhost:8080
         zarf tools wait-for tcp localhost:8080                                  wait for a connection to be established on localhost:8080
         zarf tools wait-for https 1.1.1.1 200                                   wait for a 200 response from https://1.1.1.1
         zarf tools wait-for http google.com                                     wait for any 2xx response from http://google.com
-        zarf tools wait-for http google.com success                             wait for any 2xx response from http://google.com
-  `,
+        zarf tools wait-for http google.com success                             wait for any 2xx response from http://google.com`,
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Parse the timeout string
