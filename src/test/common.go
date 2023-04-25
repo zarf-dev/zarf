@@ -17,6 +17,7 @@ import (
 type ZarfE2ETest struct {
 	ZarfBinPath     string
 	Arch            string
+	MismatchedArch  string
 	ApplianceMode   bool
 	RunClusterTests bool
 }
@@ -74,4 +75,16 @@ func (e2e *ZarfE2ETest) CleanFiles(files ...string) {
 	for _, file := range files {
 		_ = os.RemoveAll(file)
 	}
+}
+
+// SetMismatchedArch determines what architecture our tests are running on,
+// and sets e2e.MismatchedArch to the opposite architecture.
+func (e2e *ZarfE2ETest) SetMismatchedArch() string {
+	if e2e.Arch == "amd64" {
+		e2e.MismatchedArch = "arm64"
+	}
+	if e2e.Arch == "arm64" {
+		e2e.MismatchedArch = "amd64"
+	}
+	return e2e.MismatchedArch
 }
