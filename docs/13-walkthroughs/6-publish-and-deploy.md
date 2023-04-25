@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In this walkthrough, we are going to run through how to publish a Zarf package to an OCI compliant registry, allowing end users to pull and deploy packages without needing to build locally, or transfer the package to their environment.
+In this walkthrough, we are going to run through how to publish a Zarf package to an [OCI](https://github.com/opencontainers/image-spec) compliant registry, allowing end users to pull and deploy packages without needing to build locally, or transfer the package to their environment.
 
 ## System Requirements
 
