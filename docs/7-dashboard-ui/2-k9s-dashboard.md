@@ -1,4 +1,4 @@
-# K9s
+# K9s Dashboard
 
 Zarf vendors in [K9s, a terminal-based UI to interact with your Kubernetes cluster. K9s is not necessary to deploy, manage, or operate Zarf or its deployed packages, but it is a great tool to use when you want to interact with your cluster. Since Zarf vendors in this tool, you don't have to worry about additional dependencies or trying to install it yourself!
 
