@@ -7,11 +7,13 @@ package packager
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
@@ -37,7 +39,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 	}
 
 	if err := p.readYaml(config.ZarfYAML, false); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
+		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
 	if err := p.composeComponents(); err != nil {
@@ -46,7 +48,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
 	// After components are composed, template the active package
 	if err := p.fillActiveTemplate(); err != nil {
-		return fmt.Errorf("unable to fill values in template: %w", err)
+		return fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
@@ -94,7 +96,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
 		componentPath, err := p.createOrGetComponentPaths(component)
 		if err != nil {
-			return fmt.Errorf("unable to create component paths: %w", err)
+			return fmt.Errorf("unable to create component paths: %s", err.Error())
 		}
 
 		chartNames := make(map[string]string)
@@ -102,10 +104,10 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 		if len(component.Charts) > 0 {
 			_ = utils.CreateDirectory(componentPath.Charts, 0700)
 			_ = utils.CreateDirectory(componentPath.Values, 0700)
-			gitURLRegex := regexp.MustCompile(`\.git$`)
+			re := regexp.MustCompile(`\.git$`)
 
 			for _, chart := range component.Charts {
-				isGitURL := gitURLRegex.MatchString(chart.URL)
+				isGitURL := re.MatchString(chart.URL)
 				helmCfg := helm.Helm{
 					Chart: chart,
 					Cfg:   p.cfg,
@@ -119,16 +121,22 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 					}
 					// track the actual chart path
 					chartNames[chart.Name] = path
-				} else if chart.URL != "" {
+				} else if len(chart.URL) > 0 {
 					helmCfg.DownloadPublishedChart(componentPath.Charts)
 				} else {
 					helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
 				}
 
 				for idx, path := range chart.ValuesFiles {
-					chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
-					if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
-						return fmt.Errorf("unable to copy values file %s: %w", path, err)
+					dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
+					if utils.IsURL(path) {
+						if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+							return fmt.Errorf(lang.ErrDownloading, path, err.Error())
+						}
+					} else {
+						if err := utils.CreatePathAndCopy(path, dst); err != nil {
+							return fmt.Errorf("unable to copy values file %s: %w", path, err)
+						}
 					}
 				}
 
@@ -160,26 +168,41 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
 		if len(component.Manifests) > 0 {
 			if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
-				message.Errorf(err, "Unable to create the manifest path %s", componentPath.Manifests)
+				return fmt.Errorf("unable to create the manifest path %s: %s", componentPath.Manifests, err.Error())
 			}
 
 			for _, manifest := range component.Manifests {
-				for idx, kustomization := range manifest.Kustomizations {
-					// Generate manifests from kustomizations and place in the package
-					destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.Manifests, manifest.Name, idx)
-					if err := kustomize.BuildKustomization(kustomization, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
-						message.Errorf(err, "unable to build the kustomization for %s", kustomization)
-					} else {
-						manifest.Files = append(manifest.Files, destination)
-					}
-				}
 
+				for idx, k := range manifest.Kustomizations {
+					// Generate manifests from kustomizations and place in the package
+					kname := fmt.Sprintf("kustomization-%s-%d", manifest.Name, idx)
+					destination := filepath.Join(componentPath.Manifests, kname)
+					if utils.IsURL(k) {
+						if err := utils.DownloadToFile(k, destination, component.CosignKeyPath); err != nil {
+							return fmt.Errorf(lang.ErrDownloading, k, err.Error())
+						}
+						k = destination
+					}
+					if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
+						return fmt.Errorf("unable to build the kustomization for %s: %s", k, err.Error())
+					}
+					manifest.Files = append(manifest.Files, destination)
+				}
 				// Get all manifest files
-				for _, file := range manifest.Files {
+				for idx, f := range manifest.Files {
+					if utils.IsURL(f) {
+						mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
+						destination := filepath.Join(componentPath.Manifests, mname)
+						if err := utils.DownloadToFile(f, destination, component.CosignKeyPath); err != nil {
+							return fmt.Errorf(lang.ErrDownloading, f, err.Error())
+						}
+						f = destination
+					}
+
 					// Read the contents of each file
-					contents, err := os.ReadFile(file)
+					contents, err := os.ReadFile(f)
 					if err != nil {
-						message.Errorf(err, "Unable to read the file %s", file)
+						message.Errorf(err, "Unable to read the file %s", f)
 						continue
 					}
 
