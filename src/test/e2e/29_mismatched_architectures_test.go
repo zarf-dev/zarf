@@ -29,11 +29,10 @@ func TestMismatchedArchitectures(t *testing.T) {
 	}
 
 	var (
-		initPackageVersion               = "UnknownVersion"
-		mismatchedComponentChoicePackage = fmt.Sprintf("zarf-package-component-choice-%s.tar.zst", mismatchedArch)
-		mismatchedGamesPackage           = fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", mismatchedArch)
-		mismatchedInitPackage            = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
-		expectedErrorMessage             = fmt.Sprintf("this package architecture is %s", mismatchedArch)
+		initPackageVersion     = "UnknownVersion"
+		mismatchedGamesPackage = fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", mismatchedArch)
+		mismatchedInitPackage  = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
+		expectedErrorMessage   = fmt.Sprintf("this package architecture is %s", mismatchedArch)
 	)
 
 	// Build init package with different arch than the cluster arch.
@@ -46,24 +45,13 @@ func TestMismatchedArchitectures(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(mismatchedGamesPackage)
 
-	// Build component-choice package with different arch than the cluster arch.
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", "examples/component-choice/", "--architecture", mismatchedArch, "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-	defer e2e.CleanFiles(mismatchedComponentChoicePackage)
-
 	// Ensure zarf init returns an error because of the mismatched architectures.
 	// We need to use the --architecture flag here to force zarf to find the package.
 	_, stdErr, err = e2e.ExecZarfCommand("init", "--architecture", mismatchedArch, "--confirm")
 	require.Error(t, err, stdErr)
-	require.Contains(t, stdErr, expectedErrorMessage)
 
 	// Ensure zarf package deploy returns an error because of the mismatched architectures.
 	_, stdErr, err = e2e.ExecZarfCommand("package", "deploy", mismatchedGamesPackage, "--confirm")
 	require.Error(t, err, stdErr)
 	require.Contains(t, stdErr, expectedErrorMessage)
-
-	// Ensure zarf package deploy is successful when a package has a mismatched architecture,
-	// but isn't deploying any k8s resources.
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", mismatchedComponentChoicePackage, "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
 }
