@@ -6,7 +6,7 @@ In this walkthrough, we are going to deploy the Helm OCI chart package onto your
 
 ## System Requirements
 
-- You'll need an internet connection to grab the Zarf source code that includes the Helm OCI chart example
+- You'll need an internet connection to grab the pre-requisites (such as the Zarf source code that includes the Helm OCI chart example)
 
 ## Prerequisites
 
