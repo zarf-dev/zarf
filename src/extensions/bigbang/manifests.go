@@ -67,7 +67,7 @@ func manifestZarfCredentials(version string) corev1.Secret {
 	values := bbV1ZarfCredentialsValues
 
 	semverVersion, err := semver.NewVersion(version)
-	if err != nil && semverVersion.Major() == 2 {
+	if err == nil && semverVersion.Major() == 2 {
 		values = bbV2ZarfCredentialsValues
 	}
 
