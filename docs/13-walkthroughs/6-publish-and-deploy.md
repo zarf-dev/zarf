@@ -6,8 +6,8 @@ In this walkthrough, we are going to run through how to publish a Zarf package t
 
 ## System Requirements
 
-- Internet access to download any images or access to Docker Hub
-- A method to run a registry container, if wishing to run a local registry for testing.
+- Internet access to download resources or upload packages
+- Access to a registry (this walkthrough uses Docker Hub)
 
 ## Prerequisites
 
