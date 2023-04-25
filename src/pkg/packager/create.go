@@ -413,12 +413,13 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", f)
 				if utils.IsURL(f) {
-					destination = filepath.Join(componentPath.Manifests, fmt.Sprintf("manifest-%s-%d", manifest.Name, idx))
+					mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
+					destination = filepath.Join(componentPath.Manifests, mname)
 					if err := utils.DownloadToFile(f, destination, component.CosignKeyPath); err != nil {
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
 					// Update the manifest path to the new location.
-					manifest.Files[idx] = destination
+					manifest.Files[idx] = mname
 				} else {
 					// If using a temp directory, trim the temp directory from the path.
 					trimmedPath = strings.TrimPrefix(f, componentPath.Temp)
