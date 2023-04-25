@@ -135,7 +135,7 @@ You attepted to publish a package with no version metadata.
 
 You attempted to publish a package to an insecure registry, using http instead of https.
 
-1. Use the `--insecure` flag.  This is not suitable for production workloads.
+1. Use the `--insecure` flag.  Note that this is not suitable for production workloads.
 
 ### Unable to connect to the Kubernetes cluster.
 
