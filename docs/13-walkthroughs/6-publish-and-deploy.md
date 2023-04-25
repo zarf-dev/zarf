@@ -15,7 +15,7 @@ For following along locally, please ensure the following prerequisites are met:
 
 1. Zarf binary installed on your `$PATH`: ([Install Instructions](../3-getting-started.md#installing-zarf))
 2. Access to a [Registry supporting the OCI Distribution Spec](https://oras.land/implementors/#registries-supporting-oci-artifacts), this walkthrough will be using Docker Hub
-2. [Initialize a cluster](./1-initializing-a-k8s-cluster.md).
+3. Access to a cluster that has been [initialized with zarf](./1-initializing-a-k8s-cluster.md).
 
 ## Walkthrough
 [![Using OCI to Store & Deploy Zarf Packages Video on YouTube](../.images/walkthroughs/publish_and_deploy_thumbnail.png)](https://www.youtube.com/watch?v=QKxgJnC_37Y "Using OCI to Store & Deploy Zarf Packages")
