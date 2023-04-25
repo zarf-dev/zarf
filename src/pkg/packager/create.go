@@ -24,6 +24,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
@@ -528,10 +529,15 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 		newRepoList := []string{}
 
 		// Generate a list of all unique images for this component
-		// TODO: @JPERRY This will have to be a bit more detailed: "If an image or repo did not have a tag (or sha) it should be retained (i.e. if a full git repo or branch was specified)"
 		for _, img := range component.Images {
-
-			if !utils.SliceContains(p.cfg.CreateOpts.DifferentialData.DifferentialImages, img) {
+			// If a image doesn't have a tag (or is a commonly reused tag), we will include this image in the differential package
+			imgRef, err := transform.ParseImageRef(img)
+			if err != nil {
+				return fmt.Errorf("unable to parse image ref %s: %w", img, err)
+			}
+			imgTag := imgRef.TagOrDigest
+			useImgAnyways := imgTag == "latest" || imgTag == "stable" || imgTag == "nightly"
+			if !utils.SliceContains(p.cfg.CreateOpts.DifferentialData.DifferentialImages, img) || useImgAnyways {
 				newImageList = append(newImageList, img)
 			} else {
 				message.Debugf("Image %s is already included in the differential package, we are not going to include that image in this package.", img)
@@ -539,9 +545,17 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 		}
 
 		// Generate a list of all unique repos for this component
-		// TODO: @JPERRY This will have to be a bit more detailed: "If an image or repo did not have a tag (or sha) it should be retained (i.e. if a full git repo or branch was specified)"
 		for _, repo := range component.Repos {
-			if !utils.SliceContains(p.cfg.CreateOpts.DifferentialData.DifferentialRepos, repo) {
+			// If a repo doesn't have a tag/sha/branch (or is a commonly reused tag), we will include this repo in the differential package
+			// TODO: @JPERRY this doesn't seem like it's the BEST solution.. There must be a better way to get the reference..
+			repoSplit := strings.Split(repo, "@")
+			repoRef := ""
+			if len(repoRef) > 1 {
+				repoRef = repoSplit[len(repoSplit)-1]
+			}
+			useRepoAnyways := len(repoSplit) == 1 || repoRef == "latest" || repoRef == "stable" || repoRef == "nightly"
+
+			if !utils.SliceContains(p.cfg.CreateOpts.DifferentialData.DifferentialRepos, repo) || useRepoAnyways {
 				message.Question(fmt.Sprintf("Repo %s is not included in the differential package, include?", repo))
 				newRepoList = append(newRepoList, repo)
 			} else {
