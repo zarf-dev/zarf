@@ -53,9 +53,9 @@ b.BWHI {background-color: #aaaaaa}
 	$ cat <<EOF > ~/.docker/config.json
 	{
 	  "auths": {
-		"$REGISTRY": {
-		  "auth": "$AUTH"
-		}
+		  "$REGISTRY": {
+		    "auth": "$AUTH"
+		  }
 	  }
 	}
 	EOF
