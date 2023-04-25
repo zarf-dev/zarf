@@ -49,6 +49,12 @@ func TestMismatchedArchitectures(t *testing.T) {
 	// We need to use the --architecture flag here to force zarf to find the package.
 	_, stdErr, err = e2e.ExecZarfCommand("init", "--architecture", mismatchedArch, "--confirm")
 	require.Error(t, err, stdErr)
+	require.Contains(t, stdErr, expectedErrorMessage)
+
+	// Ensure zarf init in appliance mode returns an error because of the mismatched architectures.
+	// We need to use the --architecture flag here to force zarf to find the package.
+	_, stdErr, err = e2e.ExecZarfCommand("init", "--architecture", mismatchedArch, "--components=k3s", "--confirm")
+	require.Error(t, err, stdErr)
 
 	// Ensure zarf package deploy returns an error because of the mismatched architectures.
 	_, stdErr, err = e2e.ExecZarfCommand("package", "deploy", mismatchedGamesPackage, "--confirm")
