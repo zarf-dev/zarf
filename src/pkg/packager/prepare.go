@@ -46,7 +46,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
 	// After components are composed, template the active package
 	if err := p.fillActiveTemplate(); err != nil {
-		return fmt.Errorf("unable to fill variables in template: %w", err)
+		return fmt.Errorf("unable to fill values in template: %w", err)
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
@@ -92,7 +92,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 		// resources are a slice of generic structs that represent parsed K8s resources
 		var resources []*unstructured.Unstructured
 
-		componentPath, err := p.createComponentPaths(component)
+		componentPath, err := p.createOrGetComponentPaths(component)
 		if err != nil {
 			return fmt.Errorf("unable to create component paths: %w", err)
 		}
@@ -113,13 +113,16 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
 				helmCfg.Cfg.State = types.ZarfState{}
 				if isGitURL {
-					path := helmCfg.DownloadChartFromGit(componentPath.Charts)
+					path, err := helmCfg.PackageChartFromGit(componentPath.Charts)
+					if err != nil {
+						return fmt.Errorf("unable to download chart from git repo (%s): %w", chart.URL, err)
+					}
 					// track the actual chart path
 					chartNames[chart.Name] = path
 				} else if chart.URL != "" {
 					helmCfg.DownloadPublishedChart(componentPath.Charts)
 				} else {
-					helmCfg.CreateChartFromLocalFiles(componentPath.Charts)
+					helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
 				}
 
 				for idx, path := range chart.ValuesFiles {

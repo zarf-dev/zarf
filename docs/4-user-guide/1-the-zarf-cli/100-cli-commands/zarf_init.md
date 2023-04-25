@@ -5,14 +5,22 @@ Prepares a k8s cluster for the deployment of Zarf packages
 
 ## Synopsis
 
-Injects a docker registry as well as other optional useful things (such as a git server and a logging stack) into a k8s cluster under the 'zarf' namespace to support future application deployments. 
+Injects a docker registry as well as other optional useful things (such as a git server and a logging stack) into a k8s cluster under the 'zarf' namespace to support future application deployments.
 If you do not have a k8s cluster already configured, this command will give you the ability to install a cluster locally.
 
 This command looks for a zarf-init package in the local directory that the command was executed from. If no package is found in the local directory and the Zarf CLI exists somewhere outside of the current directory, Zarf will failover and attempt to find a zarf-init package in the directory that the Zarf binary is located in.
 
 
 
-Example Usage:
+
+
+```
+zarf init [flags]
+```
+
+## Examples
+
+```
 # Initializing without any optional components:
 zarf init
 
@@ -31,17 +39,16 @@ zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME
 # Initializing w/ an external git server:
 zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 
-
-
-```
-zarf init [flags]
 ```
 
 ## Options
 
 ```
+      --artifact-push-token string      API Token for the push-user to access the artifact registry
+      --artifact-push-username string   Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
+      --artifact-url string             External artifact registry url to use for this Zarf cluster
       --components string               Specify which optional components to install.  E.g. --components=git-server,logging
-      --confirm                         Confirm the install without prompting
+      --confirm                         Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
       --git-pull-password string        Password for the pull-only user to access the git server
       --git-pull-username string        Username for pull-only access to the git server
       --git-push-password string        Password for the push-user to access the git server
@@ -63,7 +70,7 @@ zarf init [flags]
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
@@ -74,4 +81,3 @@ zarf init [flags]
 ## SEE ALSO
 
 * [zarf](zarf.md)	 - DevSecOps for Airgap
-

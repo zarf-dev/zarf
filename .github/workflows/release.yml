@@ -8,6 +8,9 @@ on:
 jobs:
   push-resources:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -52,13 +55,14 @@ jobs:
       # Builds init packages since GoReleaser won't handle this for us
       - name: Build init-packages For Release
         run: |
-          make release-init-package ARCH=amd64 AGENT_IMAGE=agent:$GITHUB_REF_NAME
-          make release-init-package ARCH=arm64 AGENT_IMAGE=agent:$GITHUB_REF_NAME
+          make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=$GITHUB_REF_NAME
+          make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=$GITHUB_REF_NAME
 
       - name: Run Tests
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
           sudo rm -rf zarf-sbom
+          sudo rm -rf build/zarf-package-*
           sudo chown $USER /tmp/zarf-*.log
 
       - name: Save logs

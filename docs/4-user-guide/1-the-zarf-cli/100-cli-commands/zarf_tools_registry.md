@@ -13,7 +13,7 @@ Tools for working with container registries using go-containertools.
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
@@ -29,4 +29,3 @@ Tools for working with container registries using go-containertools.
 * [zarf tools registry login](zarf_tools_registry_login.md)	 - Log in to a registry
 * [zarf tools registry pull](zarf_tools_registry_pull.md)	 - Pull remote images by reference and store their contents locally
 * [zarf tools registry push](zarf_tools_registry_push.md)	 - Push local image contents to a remote registry
-

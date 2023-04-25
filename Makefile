@@ -26,7 +26,9 @@ else
 endif
 
 CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
-BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)'
+GIT_SHA := $(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"")
+BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)' -X 'k8s.io/component-base/version.gitVersion=v0.0.0+zarf$(CLI_VERSION)' -X 'k8s.io/component-base/version.gitCommit=$(GIT_SHA)' -X 'k8s.io/component-base/version.buildDate=$(BUILD_DATE)'
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -34,14 +36,6 @@ help: ## Display this help information
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 	  | sort | awk 'BEGIN {FS = ":.*?## "}; \
 	  {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
-
-vm-init: ## Make a vagrant VM (usage -> make vm-init OS=ubuntu)
-	vagrant destroy -f
-	vagrant up --no-color ${OS}
-	echo -e "\n\n\n\033[1;93m  ✅ BUILD COMPLETE.  To access this environment, run \"vagrant ssh ${OS}\"\n\n\n"
-
-vm-destroy: ## Destroy the vagrant VM
-	vagrant destroy -f
 
 clean: ## Clean the build directory
 	rm -rf build
@@ -70,8 +64,8 @@ check-ui:
 	fi
 
 build-ui: ## Build the Zarf UI
-	npm ci
-	npm run build
+	npm --prefix src/ui ci
+	npm --prefix src/ui run build
 
 build-cli-linux-amd: check-ui ## Build the Zarf CLI for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf main.go
@@ -101,12 +95,12 @@ docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Sche
 
 dev: ensure-ui-build-dir ## Start a Dev Server for the Zarf UI
 	go mod download
-	npm ci
-	npm run dev
+	npm --prefix src/ui ci
+	npm --prefix src/ui run dev
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
-	@test "$(AGENT_IMAGE)" != "agent:local" || $(MAKE) build-local-agent-image
+	@test "$(AGENT_IMAGE_TAG)" != "local" || $(MAKE) build-local-agent-image
 
 build-local-agent-image: ## Build the Zarf agent image to be used in a locally built init package
 	@ if [ "$(ARCH)" = "amd64" ] && [ ! -s ./build/zarf ]; then $(MAKE) build-cli-linux-amd; fi
@@ -121,7 +115,7 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 
 # INTERNAL: used to build a release version of the init package with a specific agent image
 release-init-package:
-	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE=$(AGENT_IMAGE) --confirm .
+	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
@@ -132,7 +126,7 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-component-choice-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-choice -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/package-variables --set CONFIG_MAP=simple-configmap.yaml --set ACTION=template -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/variables --set NGINX_VERSION=1.23.3 -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-data-injection-demo-$(ARCH).tar || $(ZARF_BIN) package create examples/data-injection -o build -a $(ARCH) --confirm
 
@@ -148,7 +142,7 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-test-helm-wait-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-no-wait -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-helm-oci-chart-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-oci-chart -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-helm-oci-chart-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/helm-oci-chart -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
 
@@ -166,9 +160,19 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
 	cd src/test/external-test && go test -failfast -v -timeout 30m
 
+## NOTE: Requires an existing cluster and
+.PHONY: test-upgrade
+test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
+	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	[ -n "$(shell zarf version)" ] || (echo "Zarf must be installed prior to the upgrade test" && exit 1)
+	[ -n "$(shell zarf package list 2>&1 | grep test-upgrade-package)" ] || (echo "Zarf must be initialized and have the 6.3.3 upgrade-test package installed prior to the upgrade test" && exit 1)
+	@test -s "zarf-package-test-upgrade-package-amd64-6.3.4.tar.zst" || zarf package create src/test/upgrade-test/ --set PODINFO_VERSION=6.3.4 --confirm
+	cd src/test/upgrade-test && go test -failfast -v -timeout 30m
+
 .PHONY: test-unit
-test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg directory
+test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg and the bigbang extension directory
 	cd src/pkg && go test ./... -failfast -v -timeout 30m
+	cd src/extensions/bigbang && go test ./. -failfast -v timeout 30m
 
 .PHONY: test-built-ui
 test-built-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first)

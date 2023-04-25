@@ -37,7 +37,7 @@ const (
 	RootCmdFlagNoProgress  = "Disable fancy UI progress bars, spinners, logos, etc"
 	RootCmdFlagCachePath   = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
-	RootCmdFlagInseure     = "Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagInsecure    = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
 	RootCmdDeprecatedDeploy = "Please use \"zarf package deploy %s\" to deploy this package."
 	RootCmdDeprecatedCreate = "Please use \"zarf package create\" to create this package."
@@ -52,7 +52,7 @@ const (
 		"Packages can provide service manifests that define their own shortcut connection options. These options will be " +
 		"printed to the terminal when the package finishes deploying.\n If you don't remember what connection shortcuts your deployed " +
 		"package offers, you can search your cluster for services that have the 'zarf.dev/connect-name' label. The value of that label is " +
-		"the name you will pass into the 'zarf connect' command. \n\n" +
+		"the name you will pass into the 'zarf connect' command.\n\n" +
 		"Even if the packages you deploy don't define their own shortcut connection options, you can use the command flags " +
 		"to connect into specific resources. You can read the command flag descriptions below to get a better idea how to connect " +
 		"to whatever resource you are trying to connect to."
@@ -90,25 +90,38 @@ const (
 	CmdInitShort = "Prepares a k8s cluster for the deployment of Zarf packages"
 	CmdInitLong  = "Injects a docker registry as well as other optional useful things (such as a git server " +
 		"and a logging stack) into a k8s cluster under the 'zarf' namespace " +
-		"to support future application deployments. \n" +
+		"to support future application deployments.\n" +
 		"If you do not have a k8s cluster already configured, this command will give you " +
 		"the ability to install a cluster locally.\n\n" +
 		"This command looks for a zarf-init package in the local directory that the command was executed " +
 		"from. If no package is found in the local directory and the Zarf CLI exists somewhere outside of " +
 		"the current directory, Zarf will failover and attempt to find a zarf-init package in the directory " +
-		"that the Zarf binary is located in.\n\n\n\n" +
-		"Example Usage:\n" +
-		"# Initializing without any optional components:\nzarf init\n\n" +
-		"# Initializing w/ Zarfs internal git server:\nzarf init --components=git-server\n\n" +
-		"# Initializing w/ Zarfs internal git server and PLG stack:\nzarf init --components=git-server,logging\n\n" +
-		"# Initializing w/ an internal registry but with a different nodeport:\nzarf init --nodeport=30333\n\n" +
-		"# Initializing w/ an external registry:\nzarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}\n\n" +
-		"# Initializing w/ an external git server:\nzarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}\n\n"
+		"that the Zarf binary is located in.\n\n\n\n"
+
+	CmdInitExample = `# Initializing without any optional components:
+zarf init
+
+# Initializing w/ Zarfs internal git server:
+zarf init --components=git-server
+
+# Initializing w/ Zarfs internal git server and PLG stack:
+zarf init --components=git-server,logging
+
+# Initializing w/ an internal registry but with a different nodeport:
+zarf init --nodeport=30333
+
+# Initializing w/ an external registry:
+zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
+
+# Initializing w/ an external git server:
+zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
+`
 
 	CmdInitErrFlags             = "Invalid command flags were provided."
 	CmdInitErrDownload          = "failed to download the init package: %s"
 	CmdInitErrValidateGit       = "the 'git-push-username' and 'git-push-password' flags must be provided if the 'git-url' flag is provided"
-	CmdInitErrValidateRegistry  = "the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided "
+	CmdInitErrValidateRegistry  = "the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided"
+	CmdInitErrValidateArtifact  = "the 'artifact-push-username' and 'artifact-push-token' flags must be provided if the 'artifact-url' flag is provided"
 	CmdInitErrUnableCreateCache = "Unable to create the cache directory: %s"
 
 	CmdInitDownloadAsk       = "It seems the init package could not be found locally, but can be downloaded from %s"
@@ -119,7 +132,7 @@ const (
 
 	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
 
-	CmdInitFlagConfirm      = "Confirm the install without prompting"
+	CmdInitFlagConfirm      = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdInitFlagComponents   = "Specify which optional components to install.  E.g. --components=git-server,logging"
 	CmdInitFlagStorageClass = "Specify the storage class to use for the registry.  E.g. --storage-class=standard"
 
@@ -136,6 +149,10 @@ const (
 	CmdInitFlagRegPullUser = "Username for pull-only access to the registry"
 	CmdInitFlagRegPullPass = "Password for the pull-only user to access the registry"
 	CmdInitFlagRegSecret   = "Registry secret value"
+
+	CmdInitFlagArtifactURL       = "External artifact registry url to use for this Zarf cluster"
+	CmdInitFlagArtifactPushUser  = "Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts."
+	CmdInitFlagArtifactPushToken = "API Token for the push-user to access the artifact registry"
 
 	// zarf internal
 	CmdInternalShort = "Internal tools used by zarf"
@@ -188,30 +205,42 @@ const (
 	CmdPackageRemoveExtractErr  = "Unable to extract the package contents"
 	CmdPackageRemoveReadZarfErr = "Unable to read zarf.yaml"
 
-	CmdPackageCreateFlagConfirm         = "Confirm package creation without prompting"
-	CmdPackageCreateFlagSet             = "Specify package variables to set on the command line (KEY=value)"
-	CmdPackageCreateFlagOutputDirectory = "Specify the output directory for the created Zarf package"
-	CmdPackageCreateFlagSbom            = "View SBOM contents after creating the package"
-	CmdPackageCreateFlagSbomOut         = "Specify an output directory for the SBOMs from the created Zarf package"
-	CmdPackageCreateFlagSkipSbom        = "Skip generating SBOM for this package"
-	CmdPackageCreateFlagMaxPackageSize  = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting."
+	CmdPackageCreateFlagConfirm            = "Confirm package creation without prompting"
+	CmdPackageCreateFlagSet                = "Specify package variables to set on the command line (KEY=value)"
+	CmdPackageCreateFlagOutputDirectory    = "Specify the output directory for the created Zarf package"
+	CmdPackageCreateFlagSbom               = "View SBOM contents after creating the package"
+	CmdPackageCreateFlagSbomOut            = "Specify an output directory for the SBOMs from the created Zarf package"
+	CmdPackageCreateFlagSkipSbom           = "Skip generating SBOM for this package"
+	CmdPackageCreateFlagMaxPackageSize     = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting."
+	CmdPackageCreateFlagSigningKey         = "Path to private key file for signing packages"
+	CmdPackageCreateFlagSigningKeyPassword = "Password to the private key file used for signing packages"
 
-	CmdPackageDeployFlagConfirm    = "Confirm package deployment without prompting"
-	CmdPackageDeployFlagSet        = "Specify deployment variables to set on the command line (KEY=value)"
-	CmdPackageDeployFlagComponents = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
-	CmdPackageDeployFlagShasum     = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
-	CmdPackageDeployFlagSget       = "Path to public sget key file for remote packages signed via cosign"
+	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
+	CmdPackageDeployFlagAdoptExistingResources = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
+	CmdPackageDeployFlagSet                    = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagComponents             = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
+	CmdPackageDeployFlagShasum                 = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
+	CmdPackageDeployFlagSget                   = "Path to public sget key file for remote packages signed via cosign"
+	CmdPackageDeployFlagPublicKey              = "Path to public key file for validating signed packages"
 
-	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
-	CmdPackageInspectFlagSbomOut = "Specify an output directory for the SBOMs from the inspected Zarf package"
+	CmdPackageInspectFlagSbom      = "View SBOM contents while inspecting the package"
+	CmdPackageInspectFlagSbomOut   = "Specify an output directory for the SBOMs from the inspected Zarf package"
+	CmdPackageInspectFlagValidate  = "Validate any checksums and signatures while inspecting the package"
+	CmdPackageInspectFlagPublicKey = "Path to a public key file that will be used to validate a signed package"
 
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
 
+	CmdPackagePublishFlagConcurrency        = "Number of concurrent layer operations to perform when interacting with a remote package."
+	CmdPackagePublishFlagSigningKey         = "Path to private key file for signing packages"
+	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
+
+	CmdPackagePullPublicKey = "Path to public key file for validating signed packages"
+
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"
 
-	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE: \n" +
+	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
 	CmdPreparePatchGitFileWriteErr = "Unable to write the changes back to the file"
 
@@ -224,7 +253,7 @@ const (
 
 	CmdPrepareGenerateConfigShort = "Generates a config file for Zarf"
 	CmdPrepareGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
-		"The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc. \n" +
+		"The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc.\n" +
 		"Accepted extensions are json, toml, yaml.\n\n" +
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 
@@ -253,19 +282,29 @@ const (
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory."
 	CmdToolsClearCacheErr           = "Unable to clear the cache directory %s"
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
-	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf  artifact cache (images and git repositories)"
+	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
 	CmdToolsGenPkiShort       = "Generates a Certificate Authority and PKI chain of trust for the given host"
 	CmdToolsGenPkiSuccess     = "Successfully created a chain of trust for %s"
 	CmdToolsGenPkiFlagAltName = "Specify Subject Alternative Names for the certificate"
 
+	CmdToolsGenKeyShort                 = "Generates a cosign public/private keypair that can be used to sign packages"
+	CmdToolsGenKeyPrompt                = "Private key password (empty for no password): "
+	CmdToolsGenKeyPromptAgain           = "Private key password again (empty for no password): "
+	CmdToolsGenKeyPromptExists          = "File %s already exists. Overwrite? "
+	CmdToolsGenKeyErrUnableGetPassword  = "unable to get password for private key: %s"
+	CmdToolsGenKeyErrPasswordsNotMatch  = "passwords do not match"
+	CmdToolsGenKeyErrUnableToGenKeypair = "unable to generate key pair: %s"
+	CmdToolsGenKeyErrNoConfirmOverwrite = "did not receive confirmation for overwriting key file(s)"
+	CmdToolsGenKeySuccess               = "Generated key pair and written to %s and %s"
+
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 	CmdToolsSbomErr   = "Unable to create sbom (syft) CLI"
 
 	CmdToolsWaitForShort = "Waits for a given Kubernetes resource to be ready"
-	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment. \n" +
-		"This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator. \n" +
-		"You can also wait for aribtrary network endpoints using REST or TCP checks. \n\n"
+	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment.\n" +
+		"This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator.\n" +
+		"You can also wait for arbitrary network endpoints using REST or TCP checks.\n\n"
 	CmdToolsWaitForFlagTimeout        = "Specify the timeout duration for the wait command."
 	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration. Please use a valid duration string (e.g. 1s, 2m, 3h)."
 	CmdToolsWaitForErrTimeout         = "Wait timed out."
@@ -276,10 +315,10 @@ const (
 	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
 
 	CmdToolsGetCredsShort = "Display a Table of credentials for deployed components. Pass a component name to get a single credential."
-	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry' "
+	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry'"
 
 	// zarf version
-	CmdVersionShort = "SBOM tools provided by Anchore Syft"
+	CmdVersionShort = "Version of the Zarf binary"
 	CmdVersionLong  = "Displays the version of the Zarf release that the Zarf binary was built from."
 
 	// cmd viper setup
@@ -308,12 +347,15 @@ const (
 	AgentErrNilReq                 = "malformed admission review: request is nil"
 	AgentErrShutdown               = "unable to properly shutdown the web server"
 	AgentErrStart                  = "Failed to start the web server"
+	AgentErrUnableTransform        = "unable to transform the provided request; see zarf http proxy logs for more details"
 )
 
 // src/internal/packager/validate.
 const (
+	PkgValidateTemplateDeprecation        = "Package template '%s' is using the deprecated syntax ###ZARF_PKG_VAR_%s###.  This will be removed in a future Zarf version.  Please update to ###ZARF_PKG_TMPL_%s###."
 	PkgValidateMustBeUppercase            = "variable name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
+	PkgValidateErrActionVariables         = "component %s cannot contain setVariables outside of onDeploy in actions"
 	PkgValidateErrActionCmdWait           = "action %s cannot be both a command and wait action"
 	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
 	PkgValidateErrChart                   = "invalid chart definition: %w"

@@ -42,9 +42,15 @@ Our E2E tests can be found in the `/test` folder and follow the journey of someo
 Our Unit tests can be found as `*_test.go` files inside the package that they are designed to test. These are also run in CI and are designed to test small functions with clear interfaces that would be difficult to test otherwise. As a general rule, we are limiting unit tests to the `src/pkg/*` folder.
 
 All of our tests should be able to be run locally or in CI.
-You can learn more about the testing of Zarf [here](docs/6-developer-guide/2-testing.md).
+You can learn more about the testing of Zarf [here](docs/6-contribute-to-zarf/2-testing.md).
 
 ## Documentation
+
+### Updating Our Documentation
+
+Our documentation is auto-generated from the `src/types` and `src/cmd` go packages.  This includes the [Zarf package jsonschema](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json), the [Zarf schema docs](https://docs.zarf.dev/docs/user-guide/zarf-schema), the [Zarf CLI docs](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/), and our [front-end API types](https://github.com/defenseunicorns/zarf/blob/main/src/ui/lib/api-types.ts).   When an update to types or the CLI commands is made you will need to run `make docs-and-schema` locally to regenerate the schema and documentation. CI checks if this was ran, and will fail if it wasn't.
+
+We do this so that there is a git commit signature from a person on the commit for better traceability, rather than a non-person entity (e.g. GitHub CI token).
 
 ### Architecture Decision Records (ADR)
 
@@ -52,7 +58,7 @@ We've chosen to use ADRs to document architecturally significant decisions. We p
 
 - The criteria for when an ADR is needed is undefined. The team will decide when the team needs an ADR.
 - We will use the tool [adr-tools](https://github.com/npryce/adr-tools) to make it easier on us to create and maintain ADRs.
-- We will keep ADRs in the repository under `docs/adr/NNNN-name-of-adr.md`. `adr-tools` is configured with a dotfile to automatically use this directory and format.
+- We will keep ADRs in the repository under `adr/NNNN-name-of-adr.md`. `adr-tools` is configured with a dotfile to automatically use this directory and format.
 
 ### How to use `adr-tools`
 

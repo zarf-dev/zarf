@@ -15,6 +15,12 @@ type PackagerConfig struct {
 	// InitOpts tracks user-defined values for the active Zarf initialization.
 	InitOpts ZarfInitOptions
 
+	// PublishOpts tracks user-defined options used to publish the package
+	PublishOpts ZarfPublishOptions
+
+	// PullOpts tracks user-defined options used to pull packages
+	PullOpts ZarfPullOptions
+
 	// Track if CLI prompts should be generated
 	IsInteractive bool
 
@@ -28,7 +34,7 @@ type PackagerConfig struct {
 	State ZarfState
 
 	// Variables set by the user
-	SetVariableMap map[string]string
+	SetVariableMap map[string]*ZarfSetVariable
 
 	// SBOM file paths in the package
 	SBOMViewFiles []string

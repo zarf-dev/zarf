@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
+	"oras.land/oras-go/v2/registry"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -27,6 +28,7 @@ import (
 
 var includeInspectSBOM bool
 var outputInspectSBOM string
+var inspectPublicKey string
 
 var packageCmd = &cobra.Command{
 	Use:     "package",
@@ -80,12 +82,14 @@ var packageDeployCmd = &cobra.Command{
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
 
 		// Ensure uppercase keys from viper
-		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
-		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(viperConfig, pkgConfig.DeployOpts.SetVariables)
+		viperConfigSetVariables := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
+		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(viperConfigSetVariables, pkgConfig.DeployOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
+
+		pterm.Println()
 
 		// Deploy the package
 		if err := pkgClient.Deploy(); err != nil {
@@ -108,7 +112,7 @@ var packageInspectCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Inspect the package
-		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM); err != nil {
+		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM, inspectPublicKey); err != nil {
 			message.Fatalf(err, "Failed to inspect package: %s", err.Error())
 		}
 	},
@@ -173,13 +177,14 @@ var packageRemoveCmd = &cobra.Command{
 				message.Fatalf(err, lang.CmdPackageRemoveExtractErr)
 			}
 
-			var pkgConfig types.ZarfPackage
+			var pkg types.ZarfPackage
 			configPath := filepath.Join(tempPath, config.ZarfYAML)
-			if err := utils.ReadYaml(configPath, &pkgConfig); err != nil {
+			if err := utils.ReadYaml(configPath, &pkg); err != nil {
 				message.Fatalf(err, lang.CmdPackageRemoveReadZarfErr)
 			}
 
-			pkgName = pkgConfig.Metadata.Name
+			pkgName = pkg.Metadata.Name
+			pkgConfig.Pkg = pkg
 		}
 
 		// Configure the packager
@@ -188,6 +193,56 @@ var packageRemoveCmd = &cobra.Command{
 
 		if err := pkgClient.Remove(pkgName); err != nil {
 			message.Fatalf(err, "Unable to remove the package with an error of: %#v", err)
+		}
+	},
+}
+
+var packagePublishCmd = &cobra.Command{
+	Use:     "publish [PACKAGE] [REPOSITORY]",
+	Short:   "Publish a Zarf package to a remote registry",
+	Example: "  zarf package publish my-package.tar oci://my-registry.com/my-namespace",
+	Args:    cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
+
+		if !utils.IsOCIURL(args[1]) {
+			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
+		}
+		parts := strings.Split(strings.TrimPrefix(args[1], "oci://"), "/")
+		pkgConfig.PublishOpts.Reference = registry.Reference{
+			Registry:   parts[0],
+			Repository: strings.Join(parts[1:], "/"),
+		}
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Publish the package
+		if err := pkgClient.Publish(); err != nil {
+			message.Fatalf(err, "Failed to publish package: %s", err.Error())
+		}
+	},
+}
+
+var packagePullCmd = &cobra.Command{
+	Use:     "pull [REFERENCE]",
+	Short:   "Pull a Zarf package from a remote registry and save to the local file system",
+	Example: "  zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64",
+	Args:    cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		if !utils.IsOCIURL(args[0]) {
+			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
+		}
+		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Pull the package
+		if err := pkgClient.Pull(); err != nil {
+			message.Fatalf(err, "Failed to pull package: %s", err.Error())
 		}
 	},
 }
@@ -226,11 +281,15 @@ func init() {
 	packageCmd.AddCommand(packageInspectCmd)
 	packageCmd.AddCommand(packageRemoveCmd)
 	packageCmd.AddCommand(packageListCmd)
+	packageCmd.AddCommand(packagePublishCmd)
+	packageCmd.AddCommand(packagePullCmd)
 
 	bindCreateFlags()
 	bindDeployFlags()
 	bindInspectFlags()
 	bindRemoveFlags()
+	bindPublishFlags()
+	bindPullFlags()
 }
 
 func bindCreateFlags() {
@@ -245,6 +304,7 @@ func bindCreateFlags() {
 	v.SetDefault(V_PKG_CREATE_SBOM_OUTPUT, "")
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 0)
+	v.SetDefault(V_PKG_CREATE_SIGNING_KEY, "")
 
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPackageCreateFlagSet)
 	createFlags.StringVarP(&pkgConfig.CreateOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), lang.CmdPackageCreateFlagOutputDirectory)
@@ -252,6 +312,8 @@ func bindCreateFlags() {
 	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), lang.CmdPackageCreateFlagSbomOut)
 	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), lang.CmdPackageCreateFlagSkipSbom)
 	createFlags.IntVarP(&pkgConfig.CreateOpts.MaxPackageSizeMB, "max-package-size", "m", v.GetInt(V_PKG_CREATE_MAX_PACKAGE_SIZE), lang.CmdPackageCreateFlagMaxPackageSize)
+	createFlags.StringVarP(&pkgConfig.CreateOpts.SigningKeyPath, "key", "k", v.GetString(V_PKG_CREATE_SIGNING_KEY), lang.CmdPackageCreateFlagSigningKey)
+	createFlags.StringVar(&pkgConfig.CreateOpts.SigningKeyPassword, "key-pass", v.GetString(V_PKG_CREATE_SIGNING_KEY_PASSWORD), lang.CmdPackageCreateFlagSigningKeyPassword)
 }
 
 func bindDeployFlags() {
@@ -260,21 +322,29 @@ func bindDeployFlags() {
 	// Always require confirm flag (no viper)
 	deployFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
 
+	// Always require adopt-existing-resources flag (no viper)
+	deployFlags.BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+
 	v.SetDefault(V_PKG_DEPLOY_SET, map[string]string{})
 	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
+	v.SetDefault(V_PKG_PUBLISH_OCI_CONCURRENCY, 3)
+	v.SetDefault(V_PKG_DEPLOY_PUBLIC_KEY, "")
 
 	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
+	deployFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+	deployFlags.StringVarP(&pkgConfig.DeployOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageDeployFlagPublicKey)
 }
 
 func bindInspectFlags() {
 	inspectFlags := packageInspectCmd.Flags()
 	inspectFlags.BoolVarP(&includeInspectSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
 	inspectFlags.StringVar(&outputInspectSBOM, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
+	inspectFlags.StringVarP(&inspectPublicKey, "key", "k", v.GetString(V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageInspectFlagPublicKey)
 }
 
 func bindRemoveFlags() {
@@ -282,4 +352,17 @@ func bindRemoveFlags() {
 	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageRemoveFlagConfirm)
 	removeFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageRemoveFlagComponents)
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
+}
+
+func bindPublishFlags() {
+	publishFlags := packagePublishCmd.Flags()
+	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+	publishFlags.StringVarP(&pkgConfig.PublishOpts.SigningKeyPath, "key", "k", v.GetString(V_PKG_PUBLISH_SIGNING_KEY), lang.CmdPackagePublishFlagSigningKey)
+	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "key-pass", v.GetString(V_PKG_PUBLISH_SIGNING_KEY_PASSWORD), lang.CmdPackagePublishFlagSigningKeyPassword)
+}
+
+func bindPullFlags() {
+	pullFlags := packagePullCmd.Flags()
+	pullFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_PULL_PUBLIC_KEY), lang.CmdPackagePullPublicKey)
 }

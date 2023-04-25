@@ -31,6 +31,7 @@ const (
 	ZarfMaxChartNameLength   = 40
 	ZarfGitPushUser          = "zarf-git-user"
 	ZarfGitReadUser          = "zarf-git-read-user"
+	ZarfArtifactTokenName    = "zarf-artifact-registry-token"
 	ZarfRegistryPushUser     = "zarf-push"
 	ZarfRegistryPullUser     = "zarf-pull"
 	ZarfImagePullSecretName  = "private-registry"
@@ -48,7 +49,6 @@ const (
 	ZarfCleanupScriptsPath = "/opt/zarf"
 
 	ZarfImageCacheDir = "images"
-	ZarfGitCacheDir   = "repos"
 
 	ZarfYAML          = "zarf.yaml"
 	ZarfSBOMDir       = "zarf-sbom"
@@ -56,10 +56,8 @@ const (
 
 	ZarfInClusterContainerRegistryNodePort = 31999
 
-	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
-
-	ZarfSeedImage = "registry"
-	ZarfSeedTag   = "2.8.1"
+	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 )
 
 // Zarf Global Configuration Variables.
@@ -118,7 +116,7 @@ func GetDataInjectionMarker() string {
 }
 
 // GetCraneOptions returns a crane option object with the correct options & platform.
-func GetCraneOptions(insecure bool) []crane.Option {
+func GetCraneOptions(insecure bool, archs ...string) []crane.Option {
 	var options []crane.Option
 
 	// Handle insecure registry option
@@ -134,8 +132,9 @@ func GetCraneOptions(insecure bool) []crane.Option {
 	options = append(options,
 		crane.WithPlatform(&v1.Platform{
 			OS:           "linux",
-			Architecture: GetArch(),
+			Architecture: GetArch(archs...),
 		}),
+		crane.WithUserAgent("zarf"),
 	)
 
 	return options

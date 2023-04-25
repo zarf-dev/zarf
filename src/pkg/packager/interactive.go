@@ -12,7 +12,9 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
@@ -20,28 +22,42 @@ import (
 
 func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (confirm bool) {
 
-	pterm.Println()
+	message.HorizontalRule()
 	utils.ColorPrintYAML(p.cfg.Pkg)
 
+	// Print the location that the user can view the package SBOMs from
 	if len(sbomViewFiles) > 0 {
 		cwd, _ := os.Getwd()
-		link := filepath.Join(cwd, config.ZarfSBOMDir, filepath.Base(sbomViewFiles[0]))
+		link := pterm.FgWhite.Sprint(pterm.Bold.Sprint(filepath.Join(cwd, config.ZarfSBOMDir, filepath.Base(sbomViewFiles[0]))))
 		msg := fmt.Sprintf("This package has %d artifacts with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s", len(sbomViewFiles), link)
+		message.HorizontalNoteRule()
 		message.Note(msg)
 		message.Note(" * This directory will be removed after package deployment.")
 	}
 
-	pterm.Println()
+	// Print any potential breaking changes (if this is a Deploy confirm) between this CLI version and the deployed init package
+	if userMessage == "Deploy" {
+		if cluster, err := cluster.NewCluster(); err == nil {
+			if initPackage, err := cluster.GetDeployedPackage("init"); err == nil {
+				// We use the build.version for now because it is the most reliable way to get this version info pre v0.26.0
+				deprecated.PrintBreakingChanges(initPackage.Data.Build.Version)
+			}
+		}
+
+		message.HorizontalNoteRule()
+	}
 
 	// Display prompt if not auto-confirmed
 	if config.CommonOptions.Confirm {
-		message.SuccessF("%s Zarf package confirmed", userMessage)
+		message.Successf("%s Zarf package confirmed", userMessage)
 		return config.CommonOptions.Confirm
 	}
 
 	prompt := &survey.Confirm{
 		Message: userMessage + " this Zarf package?",
 	}
+
+	pterm.Println()
 
 	// Prompt the user for confirmation, on abort return false
 	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {

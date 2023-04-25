@@ -1,0 +1,1 @@
+This folder holds the source code for the extensions unitl the WASM extension support is added. Types should be stored in `/src/types/extensions/<name>.go` and the extension code should be stored in `/src/extensions/<name>/*`.

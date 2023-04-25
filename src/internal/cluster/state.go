@@ -22,10 +22,11 @@ import (
 
 // Zarf Cluster Constants.
 const (
-	ZarfNamespace        = "zarf"
-	ZarfStateSecretName  = "zarf-state"
-	ZarfStateDataKey     = "state"
-	ZarfPackageInfoLabel = "package-deploy-info"
+	ZarfNamespaceName       = "zarf"
+	ZarfStateSecretName     = "zarf-state"
+	ZarfStateDataKey        = "state"
+	ZarfPackageInfoLabel    = "package-deploy-info"
+	ZarfInitPackageInfoName = "zarf-package-init"
 )
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
@@ -99,14 +100,15 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
-		if _, err := c.Kube.CreateNamespace(ZarfNamespace, nil); err != nil {
+		zarfNamespace := c.Kube.NewZarfManagedNamespace(ZarfNamespaceName)
+		if _, err := c.Kube.CreateNamespace(zarfNamespace); err != nil {
 			return fmt.Errorf("unable to create the zarf namespace: %w", err)
 		}
 
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
-		if _, err := c.Kube.WaitForServiceAccount(ZarfNamespace, "default", 2*time.Minute); err != nil {
+		if _, err := c.Kube.WaitForServiceAccount(ZarfNamespaceName, "default", 2*time.Minute); err != nil {
 			return fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 	}
@@ -132,6 +134,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 
 	state.GitServer = c.fillInEmptyGitServerValues(initOptions.GitServer)
 	state.RegistryInfo = c.fillInEmptyContainerRegistryValues(initOptions.RegistryInfo)
+	state.ArtifactServer = c.fillInEmptyArtifactServerValues(initOptions.ArtifactServer)
 
 	spinner.Success()
 
@@ -151,16 +154,39 @@ func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 	state := types.ZarfState{}
 
 	// Set up the API connection
-	secret, err := c.Kube.GetSecret(ZarfNamespace, ZarfStateSecretName)
+	secret, err := c.Kube.GetSecret(ZarfNamespaceName, ZarfStateSecretName)
 	if err != nil {
 		return state, err
 	}
 
 	_ = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
 
-	message.Debugf("ZarfState = %s", message.JSONValue(state))
+	message.Debugf("ZarfState = %s", message.JSONValue(c.sanitizeZarfState(state)))
 
 	return state, nil
+}
+
+func (c *Cluster) sanitizeZarfState(state types.ZarfState) types.ZarfState {
+	sanitizedState := state
+
+	// Overwrite the AgentTLS information
+	sanitizedState.AgentTLS.CA = []byte("**sanitized**")
+	sanitizedState.AgentTLS.Cert = []byte("**sanitized**")
+	sanitizedState.AgentTLS.Key = []byte("**sanitized**")
+
+	// Overwrite the GitServer passwords
+	sanitizedState.GitServer.PushPassword = "**sanitized**"
+	sanitizedState.GitServer.PullPassword = "**sanitized**"
+
+	// Overwrite the RegistryInfo passwords
+	sanitizedState.RegistryInfo.PushPassword = "**sanitized**"
+	sanitizedState.RegistryInfo.PullPassword = "**sanitized**"
+	sanitizedState.RegistryInfo.Secret = "**sanitized**"
+
+	// Overwrite the Logging secret
+	sanitizedState.LoggingSecret = "**sanitized**"
+
+	return sanitizedState
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
@@ -186,7 +212,7 @@ func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ZarfStateSecretName,
-			Namespace: ZarfNamespace,
+			Namespace: ZarfNamespaceName,
 			Labels: map[string]string{
 				config.ZarfManagedByLabel: "zarf",
 			},
@@ -275,4 +301,20 @@ func (c *Cluster) fillInEmptyGitServerValues(gitServer types.GitServerInfo) type
 	}
 
 	return gitServer
+}
+
+// Fill in empty ArtifactServerInfo values with the defaults.
+func (c *Cluster) fillInEmptyArtifactServerValues(artifactServer types.ArtifactServerInfo) types.ArtifactServerInfo {
+	// Set default svc url if an external registry was not provided
+	if artifactServer.Address == "" {
+		artifactServer.Address = config.ZarfInClusterArtifactServiceURL
+		artifactServer.InternalServer = true
+	}
+
+	// Set the push username to the git push user if not specified
+	if artifactServer.PushUsername == "" {
+		artifactServer.PushUsername = config.ZarfGitPushUser
+	}
+
+	return artifactServer
 }

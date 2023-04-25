@@ -18,8 +18,6 @@ persistence:
   enabled: true
   size: 20Gi
 
-storage: filesystem
-
 secrets:
   htpasswd: ""
   configData:
@@ -45,11 +43,6 @@ secrets:
         enabled: true
         interval: 10s
         threshold: 3
-
-securityContext:
-  enabled: true
-  runAsUser: 1000
-  fsGroup: 1000
 
 podDisruptionBudget:
   minAvailable: 1

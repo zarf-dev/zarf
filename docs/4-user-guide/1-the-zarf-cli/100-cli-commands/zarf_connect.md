@@ -9,7 +9,7 @@ Uses a k8s port-forward to connect to resources within the cluster referenced by
 Three default options for this command are <REGISTRY|LOGGING|GIT>. These will connect to the Zarf created resources (assuming they were selected when performing the `zarf init` command).
 
 Packages can provide service manifests that define their own shortcut connection options. These options will be printed to the terminal when the package finishes deploying.
- If you don't remember what connection shortcuts your deployed package offers, you can search your cluster for services that have the 'zarf.dev/connect-name' label. The value of that label is the name you will pass into the 'zarf connect' command. 
+ If you don't remember what connection shortcuts your deployed package offers, you can search your cluster for services that have the 'zarf.dev/connect-name' label. The value of that label is the name you will pass into the 'zarf connect' command.
 
 Even if the packages you deploy don't define their own shortcut connection options, you can use the command flags to connect into specific resources. You can read the command flag descriptions below to get a better idea how to connect to whatever resource you are trying to connect to.
 
@@ -33,7 +33,7 @@ zarf connect {REGISTRY|LOGGING|GIT|connect-name} [flags]
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
@@ -45,4 +45,3 @@ zarf connect {REGISTRY|LOGGING|GIT|connect-name} [flags]
 
 * [zarf](zarf.md)	 - DevSecOps for Airgap
 * [zarf connect list](zarf_connect_list.md)	 - List all available connection shortcuts.
-

@@ -7,9 +7,11 @@ package git
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
+	"os"
+	"path"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/transport"
@@ -17,13 +19,28 @@ import (
 )
 
 // PushRepo pushes a git repository from the local path to the configured git server.
-func (g *Git) PushRepo(localPath string) error {
-	spinner := message.NewProgressSpinner("Processing git repo at %s", localPath)
+func (g *Git) PushRepo(srcURL, targetFolder string) error {
+	spinner := message.NewProgressSpinner("Processing git repo %s", srcURL)
 	defer spinner.Stop()
 
-	g.GitPath = localPath
-	basename := filepath.Base(localPath)
-	spinner.Updatef("Pushing git repo %s", basename)
+	// Setup git paths, including a unique name for the repo based on the hash of the git URL to avoid conflicts.
+	repoFolder, err := transform.GitTransformURLtoFolderName(srcURL)
+	if err != nil {
+		return fmt.Errorf("unable to parse git url (%s): %w", srcURL, err)
+	}
+	repoPath := path.Join(targetFolder, repoFolder)
+
+	// Check that this package is using the new repo format (if not fallback to the format from <= 0.24.x)
+	_, err = os.Stat(repoPath)
+	if os.IsNotExist(err) {
+		repoFolder, err = transform.GitTransformURLtoRepoName(srcURL)
+		if err != nil {
+			return fmt.Errorf("unable to parse git url (%s): %w", srcURL, err)
+		}
+		repoPath = path.Join(targetFolder, repoFolder)
+	}
+
+	g.GitPath = repoPath
 
 	repo, err := g.prepRepoForPush()
 	if err != nil {
@@ -32,7 +49,7 @@ func (g *Git) PushRepo(localPath string) error {
 	}
 
 	if err := g.push(repo, spinner); err != nil {
-		spinner.Warnf("Unable to push the git repo %s (%s). Retrying....", basename, err.Error())
+		spinner.Warnf("Unable to push the git repo %s (%s). Retrying....", repoFolder, err.Error())
 		return err
 	}
 
@@ -45,7 +62,7 @@ func (g *Git) PushRepo(localPath string) error {
 			return err
 		}
 		remoteURL := remote.Config().URLs[0]
-		repoName, err := g.TransformURLtoRepoName(remoteURL)
+		repoName, err := transform.GitTransformURLtoRepoName(remoteURL)
 		if err != nil {
 			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 			return err
@@ -76,7 +93,7 @@ func (g *Git) prepRepoForPush() (*git.Repository, error) {
 	}
 
 	remoteURL := remote.Config().URLs[0]
-	targetURL, err := g.TransformURL(remoteURL)
+	targetURL, err := transform.GitTransformURL(g.Server.Address, remoteURL, g.Server.PushUsername)
 	if err != nil {
 		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}
@@ -86,7 +103,7 @@ func (g *Git) prepRepoForPush() (*git.Repository, error) {
 
 	_, err = repo.CreateRemote(&goConfig.RemoteConfig{
 		Name: offlineRemoteName,
-		URLs: []string{targetURL},
+		URLs: []string{targetURL.String()},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create offline remote: %w", err)
@@ -101,27 +118,18 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 		Password: g.Server.PushPassword,
 	}
 
-	// Since we are pushing HEAD:refs/heads/master on deployment, leaving
-	// duplicates of the HEAD ref (ex. refs/heads/master,
-	// refs/remotes/online-upstream/master, will cause the push to fail)
-	removedRefs, err := g.removeHeadCopies()
-	if err != nil {
-		return fmt.Errorf("unable to remove unused git refs from the repo: %w", err)
-	}
-
 	// Fetch remote offline refs in case of old update or if multiple refs are specified in one package
 	fetchOptions := &git.FetchOptions{
 		RemoteName: offlineRemoteName,
 		Auth:       &gitCred,
 		RefSpecs: []goConfig.RefSpec{
 			"refs/heads/*:refs/heads/*",
-			onlineRemoteRefPrefix + "*:refs/heads/*",
 			"refs/tags/*:refs/tags/*",
 		},
 	}
 
 	// Attempt the fetch, if it fails, log a warning and continue trying to push (might as well try..)
-	err = repo.Fetch(fetchOptions)
+	err := repo.Fetch(fetchOptions)
 	if errors.Is(err, transport.ErrRepositoryNotFound) {
 		message.Debugf("Repo not yet available offline, skipping fetch...")
 	} else if errors.Is(err, git.ErrForceNeeded) {
@@ -137,10 +145,11 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 		RemoteName: offlineRemoteName,
 		Auth:       &gitCred,
 		Progress:   spinner,
+		// TODO: (@JEFFMCCOY) add the parsing for the `+` force prefix (see https://github.com/defenseunicorns/zarf/issues/1410)
+		//Force: isForce,
 		// If a provided refspec doesn't push anything, it is just ignored
 		RefSpecs: []goConfig.RefSpec{
 			"refs/heads/*:refs/heads/*",
-			onlineRemoteRefPrefix + "*:refs/heads/*",
 			"refs/tags/*:refs/tags/*",
 		},
 	})
@@ -150,10 +159,6 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 	} else if err != nil {
 		return fmt.Errorf("unable to push repo to the gitops service: %w", err)
 	}
-
-	// Add back the refs we removed just incase this push isn't the last thing
-	// being run and a later task needs to reference them.
-	g.addRefs(removedRefs)
 
 	return nil
 }

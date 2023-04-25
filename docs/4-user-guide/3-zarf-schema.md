@@ -93,7 +93,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Generic string to track the package version by a package author
+**Description:** Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with)
 
 |          |          |
 | -------- | -------- |
@@ -183,6 +183,86 @@ Must be one of:
 |          |           |
 | -------- | --------- |
 | **Type** | `boolean` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="metadata_authors"></a>authors</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** List of package authors (including contact info)
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="metadata_documentation"></a>documentation</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Link to package documentation when online
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="metadata_source"></a>source</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Link to package source code when online
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="metadata_vendor"></a>vendor</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Name of the distributing entity, organization or individual.
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="metadata_aggregateChecksum"></a>aggregateChecksum</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Checksum of a checksums.txt file that contains checksums all the layers within the package.
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -620,158 +700,9 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                                                       |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^(?!.*###ZARF_PKG_VAR_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_VAR_%29.%2A%24) |
-
-</blockquote>
-</details>
-
-</blockquote>
-</details>
-
-<details open>
-<summary>
-<strong> <a name="components_items_scripts"></a>scripts</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-  ## components > scripts
-
-**Description:** [DEPRECATED] (replaced by actions) Custom commands to run before or after package deployment
-
-|                           |                                                                                                          |
-| ------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `object`                                                                                                 |
-| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
-| **Defined in**            | #/definitions/DeprecatedZarfComponentScripts                                                             |
-
-<details>
-<summary>
-<strong> <a name="components_items_scripts_showOutput"></a>showOutput</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Show the output of the script during package deployment
-
-|          |           |
-| -------- | --------- |
-| **Type** | `boolean` |
-
-</blockquote>
-</details>
-
-<details>
-<summary>
-<strong> <a name="components_items_scripts_timeoutSeconds"></a>timeoutSeconds</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Timeout in seconds for the script
-
-|          |           |
-| -------- | --------- |
-| **Type** | `integer` |
-
-</blockquote>
-</details>
-
-<details>
-<summary>
-<strong> <a name="components_items_scripts_retry"></a>retry</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Retry the script if it fails
-
-|          |           |
-| -------- | --------- |
-| **Type** | `boolean` |
-
-</blockquote>
-</details>
-
-<details>
-<summary>
-<strong> <a name="components_items_scripts_prepare"></a>prepare</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Scripts to run before the component is added during package create
-
-|          |                   |
-| -------- | ----------------- |
-| **Type** | `array of string` |
-
-![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
-![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
-![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
-![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
-
- ### <a name="autogenerated_heading_7"></a>prepare items  
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
-<details>
-<summary>
-<strong> <a name="components_items_scripts_before"></a>before</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Scripts to run before the component is deployed
-
-|          |                   |
-| -------- | ----------------- |
-| **Type** | `array of string` |
-
-![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
-![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
-![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
-![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
-
- ### <a name="autogenerated_heading_8"></a>before items  
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
-<details>
-<summary>
-<strong> <a name="components_items_scripts_after"></a>after</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Scripts to run after the component successfully deploys
-
-|          |                   |
-| -------- | ----------------- |
-| **Type** | `array of string` |
-
-![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
-![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
-![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
-![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
-
- ### <a name="autogenerated_heading_9"></a>after items  
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
+| Restrictions                      |                                                                                                                         |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^(?!.*###ZARF_PKG_TMPL_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_TMPL_%29.%2A%24) |
 
 </blockquote>
 </details>
@@ -912,11 +843,94 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_10"></a>env items  
+ ### <a name="autogenerated_heading_7"></a>env items  
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_shell"></a>shell</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+  ## components > actions > onCreate > defaults > shell
+
+**Description:** (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems
+
+|                           |                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                 |
+| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
+| **Defined in**            | #/definitions/ZarfComponentActionShell                                                                   |
+
+<details>
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_shell_windows"></a>windows</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** (default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"powershell", "cmd", "pwsh", "sh", "bash", "gsh"</code>
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_shell_linux"></a>linux</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** (default 'sh') Indicates a preference for the shell to use on Linux systems
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"sh", "bash", "fish", "zsh", "pwsh"</code>
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_actions_onCreate_defaults_shell_darwin"></a>darwin</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** (default 'sh') Indicates a preference for the shell to use on macOS systems
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"sh", "bash", "fish", "zsh", "pwsh"</code>
+
+</blockquote>
+</details>
 
 </blockquote>
 </details>
@@ -944,7 +958,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_11"></a>ZarfComponentAction  
+ ### <a name="autogenerated_heading_8"></a>ZarfComponentAction  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1034,7 +1048,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_12"></a>env items  
+ ### <a name="autogenerated_heading_9"></a>env items  
 
 |          |          |
 | -------- | -------- |
@@ -1059,14 +1073,64 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
+<details open>
 <summary>
-<strong> <a name="components_items_actions_onCreate_before_items_setVariable"></a>setVariable</strong>
+<strong> <a name="components_items_actions_onCreate_before_items_shell"></a>shell</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** (Cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package.
+  ## components > actions > onCreate > before > shell
+
+**Description:** (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems
+
+|                           |                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                 |
+| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
+| **Same definition as**    | [shell](#components_items_actions_onCreate_defaults_shell)                                               |
+
+</blockquote>
+</details>
+
+<details open>
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_setVariables"></a>setVariables</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+  ## components > actions > onCreate > before > setVariables
+
+**Description:** (onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
+
+|          |         |
+| -------- | ------- |
+| **Type** | `array` |
+
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
+
+ ### <a name="autogenerated_heading_10"></a>ZarfComponentActionSetVariable  
+
+|                           |                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                 |
+| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
+| **Defined in**            | #/definitions/ZarfComponentActionSetVariable                                                             |
+
+<details>
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_setVariables_items_name"></a>name *</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The name to be used for the variable
 
 |          |          |
 | -------- | -------- |
@@ -1075,6 +1139,41 @@ Must be one of:
 | Restrictions                      |                                                                               |
 | --------------------------------- | ----------------------------------------------------------------------------- |
 | **Must match regular expression** | ```^[A-Z0-9_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z0-9_%5D%2B%24) |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_setVariables_items_sensitive"></a>sensitive</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Whether to mark this variable as sensitive to not print it in the Zarf log
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_setVariables_items_autoIndent"></a>autoIndent</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_.
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
+
+</blockquote>
+</details>
 
 </blockquote>
 </details>
@@ -1330,7 +1429,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_13"></a>ZarfComponentAction  
+ ### <a name="autogenerated_heading_11"></a>ZarfComponentAction  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1361,7 +1460,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_14"></a>ZarfComponentAction  
+ ### <a name="autogenerated_heading_12"></a>ZarfComponentAction  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1392,7 +1491,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_15"></a>ZarfComponentAction  
+ ### <a name="autogenerated_heading_13"></a>ZarfComponentAction  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1469,7 +1568,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_16"></a>ZarfFile  
+ ### <a name="autogenerated_heading_14"></a>ZarfFile  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1563,7 +1662,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_17"></a>symlinks items  
+ ### <a name="autogenerated_heading_15"></a>symlinks items  
 
 |          |          |
 | -------- | -------- |
@@ -1595,7 +1694,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_18"></a>ZarfChart  
+ ### <a name="autogenerated_heading_16"></a>ZarfChart  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1684,11 +1783,16 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The URL of the chart repository or git url if the chart is using a git repo instead of helm repo
+**Description:** The URL of the OCI registry, chart repository, or git repo where the helm chart is stored
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+**Examples:** 
+
+<code>
+"OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo", "helm chart repo: https://stefanprodan.github.io/podinfo", "git repo: https://github.com/stefanprodan/podinfo"</code>
 
 </blockquote>
 </details>
@@ -1747,7 +1851,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_19"></a>valuesFiles items  
+ ### <a name="autogenerated_heading_17"></a>valuesFiles items  
 
 |          |          |
 | -------- | -------- |
@@ -1832,7 +1936,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_20"></a>ZarfManifest  
+ ### <a name="autogenerated_heading_18"></a>ZarfManifest  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1892,7 +1996,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_21"></a>files items  
+ ### <a name="autogenerated_heading_19"></a>files items  
 
 |          |          |
 | -------- | -------- |
@@ -1935,7 +2039,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_22"></a>kustomizations items  
+ ### <a name="autogenerated_heading_20"></a>kustomizations items  
 
 |          |          |
 | -------- | -------- |
@@ -1981,7 +2085,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_23"></a>images items  
+ ### <a name="autogenerated_heading_21"></a>images items  
 
 |          |          |
 | -------- | -------- |
@@ -2008,7 +2112,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_24"></a>repos items  
+ ### <a name="autogenerated_heading_22"></a>repos items  
 
 |          |          |
 | -------- | -------- |
@@ -2037,7 +2141,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_25"></a>ZarfDataInjection  
+ ### <a name="autogenerated_heading_23"></a>ZarfDataInjection  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -2180,6 +2284,123 @@ Must be one of:
 </blockquote>
 </details>
 
+<details open>
+<summary>
+<strong> <a name="components_items_extensions"></a>extensions</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+  ## components > extensions
+
+**Description:** Extend component functionality with additional features
+
+|                           |                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                 |
+| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
+| **Defined in**            | #/definitions/ZarfComponentExtensions                                                                    |
+
+<details open>
+<summary>
+<strong> <a name="components_items_extensions_bigbang"></a>bigbang</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+  ## components > extensions > bigbang
+
+**Description:** Configurations for installing Big Bang and Flux in the cluster
+
+|                           |                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                 |
+| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
+| **Defined in**            | #/definitions/BigBang                                                                                    |
+
+<details>
+<summary>
+<strong> <a name="components_items_extensions_bigbang_version"></a>version *</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The version of Big Bang to use
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_extensions_bigbang_repo"></a>repo</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Override repo to pull Big Bang from instead of Repo One
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_extensions_bigbang_valuesFiles"></a>valuesFiles</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The list of values files to pass to Big Bang; these will be merged together
+
+|          |                   |
+| -------- | ----------------- |
+| **Type** | `array of string` |
+
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
+
+ ### <a name="autogenerated_heading_24"></a>valuesFiles items  
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_extensions_bigbang_skipFlux"></a>skipFlux</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Whether to skip deploying flux; Defaults to false
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
+
+</blockquote>
+</details>
+
+</blockquote>
+</details>
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -2203,7 +2424,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_26"></a>ZarfPackageVariable  
+ ### <a name="autogenerated_heading_25"></a>ZarfPackageVariable  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -2281,6 +2502,38 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="variables_items_sensitive"></a>sensitive</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Whether to mark this variable as sensitive to not print it in the Zarf log
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="variables_items_autoIndent"></a>autoIndent</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_.
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -2304,7 +2557,7 @@ Must be one of:
 ![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
 ![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
 
- ### <a name="autogenerated_heading_27"></a>ZarfPackageConstant  
+ ### <a name="autogenerated_heading_26"></a>ZarfPackageConstant  
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -2364,6 +2617,22 @@ Must be one of:
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="constants_items_autoIndent"></a>autoIndent</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_CONST_.
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>

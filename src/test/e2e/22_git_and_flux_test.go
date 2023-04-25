@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -21,13 +19,13 @@ import (
 
 func TestGitAndFlux(t *testing.T) {
 	t.Log("E2E: Git and flux")
-	e2e.setupWithCluster(t)
-	defer e2e.teardown(t)
+	e2e.SetupWithCluster(t)
+	defer e2e.Teardown(t)
 
-	path := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.Arch)
 
 	// Deploy the gitops example
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	tunnel, err := cluster.NewZarfTunnel()
@@ -40,13 +38,11 @@ func TestGitAndFlux(t *testing.T) {
 	testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
 	waitFluxPodInfoDeployment(t)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "flux-test", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "flux-test", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-
-	testRemovingTagsOnCreate(t)
 }
 
 func testGitServerConnect(t *testing.T, gitURL string) {
@@ -99,75 +95,18 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 
 	// Get the Zarf repo commit
 	repoHash := "c74e2e9626da0400e0a41e78319b3054c53a5d4e"
-	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/commits", gitURL, config.ZarfGitPushUser, repoName), nil)
+	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/git/commits/%s", gitURL, config.ZarfGitPushUser, repoName, repoHash), nil)
 	getRepoCommitsResponseBody, err := gitCfg.DoHTTPThings(getRepoCommitsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	assert.NoError(t, err)
-
-	// Make sure the pushed commit exists
-	var commitMap []map[string]interface{}
-	json.Unmarshal(getRepoCommitsResponseBody, &commitMap)
-	assert.Equal(t, repoHash, commitMap[0]["sha"])
+	assert.Contains(t, string(getRepoCommitsResponseBody), repoHash)
 }
 
 func waitFluxPodInfoDeployment(t *testing.T) {
 	// Deploy the flux example and verify that it works
-	path := fmt.Sprintf("build/zarf-package-flux-test-%s.tar.zst", e2e.arch)
-	stdOut, stdErr, err := e2e.execZarfCommand("package", "deploy", path, "--confirm")
+	path := fmt.Sprintf("build/zarf-package-flux-test-%s.tar.zst", e2e.Arch)
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	kubectlOut, _, _ := e2e.execZarfCommand("tools", "kubectl", "-n=podinfo", "rollout", "status", "deployment/podinfo")
+	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=podinfo", "rollout", "status", "deployment/podinfo")
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
-}
-
-func testRemovingTagsOnCreate(t *testing.T) {
-	homeDir, err := os.UserHomeDir()
-	require.NoError(t, err, "unable to get the user's home directory")
-
-	// Build the test package
-	testPackageDirPath := "src/test/test-packages/git-repo-caching"
-	testPackagePath := fmt.Sprintf("%s/zarf-package-test-package-git-cache-%s.tar.zst", testPackageDirPath, e2e.arch)
-	outputFlag := fmt.Sprintf("-o=%s", testPackageDirPath)
-	_, _, err = e2e.execZarfCommand("package", "create", testPackageDirPath, outputFlag, "--confirm")
-	require.NoError(t, err, "error when building the test package")
-	defer e2e.cleanFiles(testPackagePath)
-
-	// Extract the built package so we can inspect the repositories that are included
-	extractedDirPath := "tmp-extraction"
-	stdOut, stdErr, err := e2e.execZarfCommand("tools", "archiver", "decompress", testPackagePath, extractedDirPath, "-l=trace")
-	defer e2e.cleanFiles(extractedDirPath)
-	require.NoError(t, err, stdOut, stdErr)
-
-	/* Test to make sure we are removing tags where necessary */
-	// verify the component has multiple tags (in this case, we want to make sure it includes something we didn't specifically ask for)
-	gitDirFlag := fmt.Sprintf("--git-dir=%s/components/full-repo/repos/zarf-1211668992/.git", extractedDirPath)
-	gitTagOut, err := exec.Command("git", gitDirFlag, "tag", "-l").Output()
-	require.NoError(t, err)
-	require.Contains(t, string(gitTagOut), "v0.22.0")
-
-	// verify the component has only a single tag
-	gitDirFlag = fmt.Sprintf("--git-dir=%s/components/specific-tag/repos/zarf-1211668992/.git", extractedDirPath)
-	gitTagOut, err = exec.Command("git", gitDirFlag, "tag", "-l").Output()
-	require.NoError(t, err)
-	require.Equal(t, "v0.16.0\n", string(gitTagOut))
-
-	/* Test to make sure we are pulling the latest upstream changes when building a package */
-	// Force our cache to be 'old' by resetting the HEAD of the cached Zarf repo
-	cachedRepoGitDirFlag := fmt.Sprintf("--git-dir=%s/.zarf-cache/repos/zarf-1211668992/.git", homeDir)
-	cachedRepoWorkTreeFlag := fmt.Sprintf("--work-tree=%s/.zarf-cache/repos/zarf-1211668992", homeDir)
-	_, err = exec.Command("git", cachedRepoGitDirFlag, cachedRepoWorkTreeFlag, "reset", "HEAD~3", "--hard").Output()
-	require.NoError(t, err, err)
-
-	// Make sure the cache is now 'old'
-	statusOutput, err := exec.Command("git", cachedRepoGitDirFlag, "status").Output()
-	require.NoError(t, err, err)
-	require.Contains(t, string(statusOutput), "Your branch is behind")
-
-	// Re-build the test package
-	_, _, err = e2e.execZarfCommand("package", "create", testPackageDirPath, outputFlag, "--confirm")
-	require.NoError(t, err, "error when rebuilding the test git-cache package")
-
-	// Check to make sure the cache is no longer 'old'
-	statusOutput, err = exec.Command("git", cachedRepoGitDirFlag, cachedRepoWorkTreeFlag, "status").Output()
-	require.NoError(t, err, err)
-	require.Contains(t, string(statusOutput), "Your branch is up to date")
 }

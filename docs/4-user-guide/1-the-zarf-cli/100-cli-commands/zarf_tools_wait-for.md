@@ -5,9 +5,9 @@ Waits for a given Kubernetes resource to be ready
 
 ## Synopsis
 
-By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment. 
-This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator. 
-You can also wait for aribtrary network endpoints using REST or TCP checks. 
+By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment.
+This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator.
+You can also wait for arbitrary network endpoints using REST or TCP checks.
 
 
 
@@ -25,7 +25,7 @@ zarf tools wait-for {KIND|PROTOCOL} {NAME|SELECTOR|URI} {CONDITION|HTTP_CODE} [f
         zarf tools wait-for pod app=podinfo ready -n podinfo                    wait for pod with label app=podinfo in namespace podinfo to be ready
         zarf tools wait-for svc zarf-docker-registry exists -n zarf             wait for service zarf-docker-registry in namespace zarf to exist
         zarf tools wait-for svc zarf-docker-registry -n zarf                    same as above, except exists is the default condition
-        zarf tools wati-for crd addons.k3s.cattle.io                            wait for crd addons.k3s.cattle.io to exist
+        zarf tools wait-for crd addons.k3s.cattle.io                            wait for crd addons.k3s.cattle.io to exist
 
     Wait for network endpoints:
         zarf tools wait-for http localhost:8080 200                             wait for a 200 response from http://localhost:8080
@@ -33,7 +33,6 @@ zarf tools wait-for {KIND|PROTOCOL} {NAME|SELECTOR|URI} {CONDITION|HTTP_CODE} [f
         zarf tools wait-for https 1.1.1.1 200                                   wait for a 200 response from https://1.1.1.1
         zarf tools wait-for http google.com                                     wait for any 2xx response from http://google.com
         zarf tools wait-for http google.com success                             wait for any 2xx response from http://google.com
-  
 ```
 
 ## Options
@@ -48,7 +47,7 @@ zarf tools wait-for {KIND|PROTOCOL} {NAME|SELECTOR|URI} {CONDITION|HTTP_CODE} [f
 
 ```
   -a, --architecture string   Architecture for OCI images
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
@@ -59,4 +58,3 @@ zarf tools wait-for {KIND|PROTOCOL} {NAME|SELECTOR|URI} {CONDITION|HTTP_CODE} [f
 ## SEE ALSO
 
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-

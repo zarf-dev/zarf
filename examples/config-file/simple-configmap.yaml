@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: simple-configmap
   namespace: zarf
+  labels:
+    app: zarf
 data:
   templateme.properties: |
     scorpion=###ZARF_VAR_SCORPION###

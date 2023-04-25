@@ -15,6 +15,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -36,7 +37,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		cmdEscaped string
 		out        string
 		err        error
-		vars       map[string]string
+		vars       map[string]*utils.TextTemplate
 
 		cmd = action.Cmd
 	)
@@ -66,7 +67,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		d := ""
 		action.Dir = &d
 		action.Env = []string{}
-		action.SetVariable = ""
+		action.SetVariables = []types.ZarfComponentActionSetVariable{}
 	}
 
 	if action.Description != "" {
@@ -88,7 +89,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 	cfg := actionGetCfg(defaultCfg, action, vars)
 
-	if cmd, err = actionCmdMutation(cmd); err != nil {
+	if cmd, err = actionCmdMutation(cmd, cfg.Shell); err != nil {
 		spinner.Errorf(err, "Error mutating command: %s", cmdEscaped)
 	}
 
@@ -101,15 +102,15 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		// Perform the action run.
 		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(ctx, cfg, cmd, spinner); err != nil {
+			if out, err = actionRun(ctx, cfg, cmd, cfg.Shell, spinner); err != nil {
 				return err
 			}
 
 			out = strings.TrimSpace(out)
 
 			// If an output variable is defined, set it.
-			if action.SetVariable != "" {
-				p.setVariable(action.SetVariable, out)
+			for _, v := range action.SetVariables {
+				p.setVariableInConfig(v.Name, out, v.Sensitive, v.AutoIndent)
 			}
 
 			// If the action has a wait, change the spinner message to reflect that on success.
@@ -192,7 +193,7 @@ func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string,
 }
 
 // Perform some basic string mutations to make commands more useful.
-func actionCmdMutation(cmd string) (string, error) {
+func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (string, error) {
 	binaryPath, err := os.Executable()
 	if err != nil {
 		return cmd, err
@@ -202,7 +203,7 @@ func actionCmdMutation(cmd string) (string, error) {
 	cmd = strings.ReplaceAll(cmd, "./zarf ", binaryPath+" ")
 
 	// Make commands 'more' compatible with Windows OS PowerShell
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" && (exec.IsPowershell(shellPref.Windows) || shellPref.Windows == "") {
 		// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliased by M$.
 		// See https://mathieubuisson.github.io/powershell-linux-bash/ &
 		// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
@@ -211,10 +212,9 @@ func actionCmdMutation(cmd string) (string, error) {
 		// Convert any ${ZARF_VAR_*} or $ZARF_VAR_* to ${env:ZARF_VAR_*} or $env:ZARF_VAR_* respectively (also TF_VAR_*).
 		// https://regex101.com/r/xk1rkw/1
 		envVarRegex := regexp.MustCompile(`(?P<envIndicator>\${?(?P<varName>(ZARF|TF)_VAR_([a-zA-Z0-9_-])+)}?)`)
-		matches := envVarRegex.FindStringSubmatch(cmd)
-		matchIndex := envVarRegex.SubexpIndex
-		if len(matches) > 0 {
-			newCmd := strings.ReplaceAll(cmd, matches[matchIndex("envIndicator")], fmt.Sprintf("$Env:%s", matches[matchIndex("varName")]))
+		get, err := utils.MatchRegex(envVarRegex, cmd)
+		if err == nil {
+			newCmd := strings.ReplaceAll(cmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
 			message.Debugf("Converted command \"%s\" to \"%s\" t", cmd, newCmd)
 			cmd = newCmd
 		}
@@ -224,7 +224,7 @@ func actionCmdMutation(cmd string) (string, error) {
 }
 
 // Merge the ActionSet defaults with the action config.
-func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]string) types.ZarfComponentActionDefaults {
+func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*utils.TextTemplate) types.ZarfComponentActionDefaults {
 	if a.Mute != nil {
 		cfg.Mute = *a.Mute
 	}
@@ -246,32 +246,27 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 		cfg.Env = append(cfg.Env, a.Env...)
 	}
 
+	if a.Shell != nil {
+		cfg.Shell = *a.Shell
+	}
+
 	// Add variables to the environment.
 	for k, v := range vars {
 		// Remove # from env variable name.
 		k = strings.ReplaceAll(k, "#", "")
 		// Make terraform variables available to the action as TF_VAR_lowercase_name.
 		k1 := strings.ReplaceAll(strings.ToLower(k), "zarf_var", "TF_VAR")
-		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k, v))
-		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k1, v))
+		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k, v.Value))
+		cfg.Env = append(cfg.Env, fmt.Sprintf("%s=%s", k1, v.Value))
 	}
 
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, spinner *message.Spinner) (string, error) {
-	var shell string
-	var shellArgs string
+func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, shellPref types.ZarfComponentActionShell, spinner *message.Spinner) (string, error) {
+	shell, shellArgs := exec.GetOSShell(shellPref)
 
-	if runtime.GOOS == "windows" {
-		shell = "powershell"
-		shellArgs = "-Command"
-		message.Debug("Running command in PowerShell: %s", cmd)
-	} else {
-		shell = "sh"
-		shellArgs = "-c"
-		message.Debug("Running command in shell: %s", cmd)
-	}
+	message.Debugf("Running command in %s: %s", shell, cmd)
 
 	execCfg := exec.Config{
 		Env: cfg.Env,
@@ -284,8 +279,10 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	}
 
 	out, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
-	// Dump final complete output.
-	message.Debug(cmd, out, errOut)
+	// Dump final complete output (respect mute to prevent sensitive values from hitting the logs).
+	if !cfg.Mute {
+		message.Debug(cmd, out, errOut)
+	}
 
 	return out, err
 }

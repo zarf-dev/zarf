@@ -11,7 +11,7 @@ jobs:
     if: github.event_name == 'issues' && github.event.action == 'opened'
     steps:
       - name: Move issue to Zarf Project
-        uses: actions/add-to-project@v0.4.0
+        uses: actions/add-to-project@v0.5.0
         with:
           project-url: https://github.com/orgs/defenseunicorns/projects/1
           github-token: ${{ secrets. ZARF_ORG_PROJECT_TOKEN }}

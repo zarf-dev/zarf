@@ -1,0 +1,40 @@
+kind: ZarfPackageConfig
+metadata:
+  name: big-bang-example
+  description: "Deploy Big Bang Core"
+  # renovate: datasource=gitlab-releases depName=big-bang/bigbang versioning=semver registryUrl=https://repo1.dso.mil/
+  version: 2.0.0
+  url: https://p1.dso.mil/products/big-bang
+  # Big Bang / Iron Bank are only amd64
+  architecture: amd64
+
+variables:
+  - name: DOMAIN
+    default: "bigbang.dev"
+    prompt: false
+
+components:
+  - name: bigbang
+    required: true
+    extensions:
+      bigbang:
+        # renovate: datasource=gitlab-releases depName=big-bang/bigbang versioning=semver registryUrl=https://repo1.dso.mil/
+        version: 2.0.0
+        valuesFiles:
+          # Istio configs
+          - config/ingress.yaml
+          # Use Kyverno instead of Gatekeeper
+          - config/kyverno.yaml
+          # Use PLG instead of EFK
+          - config/loki.yaml
+          # Values are merged in order, so this would override the above and disable everything if uncommented
+          # - config/disable-all.yaml
+  - name: gitea-virtual-service
+    description: >
+      Expose the internal Zarf Gitea server through the Big Bang Istio deployment via a virtual service.
+      (only applies if you are using the Zarf-provided Gitea deployment - not an externally configured git host)
+    manifests:
+      - name: gitea
+        namespace: zarf
+        files:
+          - virtualservices/gitea.yaml

@@ -34,3 +34,5 @@ zarf
 zarf-pki
 zarf-sbom/
 *.part*
+test-*.txt
+__debug_bin

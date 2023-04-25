@@ -17,7 +17,7 @@ zarf [COMMAND] [flags]
 ```
   -a, --architecture string   Architecture for OCI images
   -h, --help                  help for zarf
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
@@ -34,5 +34,4 @@ zarf [COMMAND] [flags]
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
 * [zarf prepare](zarf_prepare.md)	 - Tools to help prepare assets for packaging
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-* [zarf version](zarf_version.md)	 - SBOM tools provided by Anchore Syft
-
+* [zarf version](zarf_version.md)	 - Version of the Zarf binary

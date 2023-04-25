@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	// "github.com/stretchr/testify/assert"
+	"github.com/defenseunicorns/zarf/src/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,17 +24,17 @@ type zarfCommandResult struct {
 	err    error
 }
 
-func zarfCommandWStruct(e2e ZarfE2ETest, path string) (result zarfCommandResult) {
-	result.stdOut, result.stdErr, result.err = e2e.execZarfCommand("package", "deploy", path, "--confirm")
+func zarfCommandWStruct(e2e test.ZarfE2ETest, path string) (result zarfCommandResult) {
+	result.stdOut, result.stdErr, result.err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	return result
 }
 
 func TestWait(t *testing.T) {
 	t.Log("E2E: Helm Wait")
-	e2e.setupWithCluster(t)
-	defer e2e.teardown(t)
+	e2e.SetupWithCluster(t)
+	defer e2e.Teardown(t)
 
-	path := fmt.Sprintf("build/zarf-package-test-helm-wait-%s.tar.zst", e2e.arch)
+	path := fmt.Sprintf("build/zarf-package-test-helm-wait-%s.tar.zst", e2e.Arch)
 
 	zarfChannel := make(chan zarfCommandResult, 1)
 	go func() {
@@ -49,7 +50,7 @@ func TestWait(t *testing.T) {
 		stdOut = res.stdOut
 		stdErr = res.stdErr
 		err = res.err
-	case <-time.After(10 * time.Second):
+	case <-time.After(30 * time.Second):
 		t.Error("Timeout waiting for zarf deploy (it tried to wait)")
 		t.Log("Removing hanging namespace...")
 		kubectlOut, err := exec.Command("kubectl", "delete", "namespace", "no-wait", "--force=true", "--wait=false", "--grace-period=0").Output()
@@ -61,6 +62,6 @@ func TestWait(t *testing.T) {
 	}
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.execZarfCommand("package", "remove", "test-helm-wait", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "test-helm-wait", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

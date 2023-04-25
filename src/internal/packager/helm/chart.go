@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"time"
 
@@ -68,25 +69,42 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	for {
 		attempt++
 
-		spinner.Updatef("Attempt %d of 3 to install chart", attempt)
+		spinner.Updatef("Attempt %d of 4 to install chart", attempt)
 		histClient := action.NewHistory(h.actionConfig)
 		histClient.Max = 1
+		releases, histErr := histClient.Run(h.ReleaseName)
 
 		if attempt > 4 {
-			// On total failure try to rollback or uninstall.
-			if histClient.Version > 1 {
-				spinner.Updatef("Performing chart rollback")
-				_ = h.rollbackChart(h.ReleaseName)
-			} else {
-				spinner.Updatef("Performing chart uninstall")
-				_, _ = h.uninstallChart(h.ReleaseName)
+			previouslyDeployed := false
+
+			// Check for previous releases that successfully deployed
+			for _, release := range releases {
+				if release.Info.Status == "deployed" {
+					previouslyDeployed = true
+				}
 			}
-			return nil, "", fmt.Errorf("unable to install/upgrade chart after 3 attempts")
+
+			// On total failure try to rollback or uninstall.
+			if previouslyDeployed {
+				spinner.Updatef("Performing chart rollback")
+				err = h.rollbackChart(h.ReleaseName)
+				if err != nil {
+					return nil, "", fmt.Errorf("unable to upgrade chart after 4 attempts and unable to rollback: %s", err.Error())
+				}
+
+				return nil, "", fmt.Errorf("unable to upgrade chart after 4 attempts")
+			}
+
+			spinner.Updatef("Performing chart uninstall")
+			_, err = h.uninstallChart(h.ReleaseName)
+			if err != nil {
+				return nil, "", fmt.Errorf("unable to install chart after 4 attempts and unable to uninstall: %s", err.Error())
+			}
+
+			return nil, "", fmt.Errorf("unable to install chart after 4 attempts")
 		}
 
 		spinner.Updatef("Checking for existing helm deployment")
-
-		_, histErr := histClient.Run(h.ReleaseName)
 
 		switch histErr {
 		case driver.ErrReleaseNotFound:
@@ -113,7 +131,6 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 			spinner.Success()
 			break
 		}
-
 	}
 
 	// return any collected connect strings for zarf connect.
@@ -171,7 +188,7 @@ func (h *Helm) TemplateChart() (string, error) {
 }
 
 // GenerateChart generates a helm chart for a given Zarf manifest.
-func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings, string, error) {
+func (h *Helm) GenerateChart(manifest types.ZarfManifest) error {
 	message.Debugf("helm.GenerateChart(%#v)", manifest)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
@@ -194,10 +211,10 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 	// Add the manifest files so helm does its thing.
 	for _, file := range manifest.Files {
 		spinner.Updatef("Processing %s", file)
-		manifest := fmt.Sprintf("%s/%s", h.BasePath, file)
+		manifest := path.Join(h.BasePath, file)
 		data, err := os.ReadFile(manifest)
 		if err != nil {
-			return nil, "", fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
+			return fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
 		}
 
 		// Escape all chars and then wrap in {{ }}.
@@ -223,7 +240,7 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) (types.ConnectStrings,
 
 	spinner.Success()
 
-	return h.InstallOrUpgradeChart()
+	return nil
 }
 
 // RemoveChart removes a chart from the cluster.
@@ -269,7 +286,10 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 }
 
 func (h *Helm) upgradeChart(postRender *renderer) (*release.Release, error) {
-	message.Debugf("helm.upgradeChart(%#v)", postRender)
+	// Print the postRender object piece by piece to not print the htpasswd
+	message.Debugf("helm.upgradeChart(%#v, %#v, %#v, %#v, %s)", postRender.actionConfig, postRender.connectStrings,
+		postRender.namespaces, postRender.options, fmt.Sprintf("values:template.Values{ registry: \"%s\" }", postRender.values.GetRegistry()))
+
 	client := action.NewUpgrade(h.actionConfig)
 
 	// Let each chart run for the default timeout.

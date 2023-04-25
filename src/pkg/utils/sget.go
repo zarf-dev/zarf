@@ -18,6 +18,8 @@ import (
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/pkg/cosign"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/pkg/signature"
@@ -149,4 +151,55 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	spinner.Successf(verifyMsg)
 
 	return err
+}
+
+// CosignVerifyBlob verifies the zarf.yaml.sig was signed with the key provided by the flag
+func CosignVerifyBlob(blobPath string, sigPath string, keyPath string) error {
+	ctx := context.TODO()
+	keyOptions := options.KeyOpts{KeyRef: keyPath}
+	certRef := ""
+	certEmail := ""
+	certIdentity := ""
+	certOidcIssuer := ""
+	certChain := ""
+	certGithubWorkflowTrigger := ""
+	certGithubWorkflowSha := ""
+	certGithubWorkflowName := ""
+	certGithubWorkflowRepository := ""
+	certGithubWorkflowRef := ""
+	enforceSCT := false
+
+	err := verify.VerifyBlobCmd(ctx, keyOptions, certRef, certEmail, certIdentity, certOidcIssuer, certChain, sigPath, blobPath, certGithubWorkflowTrigger, certGithubWorkflowSha, certGithubWorkflowName, certGithubWorkflowRepository, certGithubWorkflowRef, enforceSCT)
+	if err == nil {
+		message.Successf("Package signature validated!")
+	}
+
+	return err
+}
+
+// CosignSignBlob signs the provide binary and returns the signature
+func CosignSignBlob(blobPath string, outputSigPath string, keyPath string, passwordFunc func(bool) ([]byte, error)) ([]byte, error) {
+	rootOptions := &options.RootOptions{Verbose: false}
+
+	regOptions := options.RegistryOptions{
+		AllowInsecure:      true,
+		KubernetesKeychain: false,
+		RefOpts:            options.ReferenceOptions{TagPrefix: ""},
+		Keychain:           nil,
+	}
+
+	keyOptions := options.KeyOpts{KeyRef: keyPath,
+		PassFunc: passwordFunc}
+	b64 := true
+	outputCertificate := ""
+
+	sig, err := sign.SignBlobCmd(rootOptions,
+		keyOptions,
+		regOptions,
+		blobPath,
+		b64,
+		outputSigPath,
+		outputCertificate)
+
+	return sig, err
 }
