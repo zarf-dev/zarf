@@ -18,7 +18,7 @@ type Cluster struct {
 }
 
 const (
-	// The default time to wait for a cluster to be ready.
+	// DefaultTimeout is the default time to wait for a cluster to be ready.
 	DefaultTimeout = 30 * time.Second
 	agentLabel     = "zarf.dev/agent"
 )
