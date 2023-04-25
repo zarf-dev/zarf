@@ -1,19 +1,19 @@
 * @defenseunicorns/zarf
 
 # Docs & examples
-/adr/ @jeff-mccoy @YrrepNoj @Racer159
-/docs/ @Madeline-UX @JasonvanBrackel @jeff-mccoy @YrrepNoj @Racer159 @wirewc
-/examples/ @JasonvanBrackel @jeff-mccoy @YrrepNoj @Racer159 @wirewc
-*.md @Madeline-UX @JasonvanBrackel @jeff-mccoy @YrrepNoj @Racer159 @wirewc
+/adr/ @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/docs/ @Madeline-UX @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/examples/ @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+*.md @Madeline-UX @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
 
 # Core code
-/src/ @jeff-mccoy @YrrepNoj @Racer159
-/go.* @jeff-mccoy @YrrepNoj @Racer159
-main.go @jeff-mccoy @YrrepNoj @Racer159
+/src/ @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/go.* @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+main.go @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
 
 # Init package
-/packages/ @jeff-mccoy @YrrepNoj @Racer159
-/zarf.yaml @jeff-mccoy @YrrepNoj @Racer159
+/packages/ @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/zarf.yaml @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
 
 # Web UI-specific
 /package*.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
@@ -26,15 +26,15 @@ main.go @jeff-mccoy @YrrepNoj @Racer159
 /docs-website/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
 
 # Privileged pipeline files
-/.github/ @jeff-mccoy @YrrepNoj @Racer159
-/hack/ @jeff-mccoy @YrrepNoj @Racer159
-/.gitignore @jeff-mccoy @YrrepNoj @Racer159
-/.golangci.yml @jeff-mccoy @YrrepNoj @Racer159
-/.goreleaser.yml @jeff-mccoy @YrrepNoj @Racer159
-/.grype.yaml @jeff-mccoy @YrrepNoj @Racer159
-/Dockerfile @jeff-mccoy @YrrepNoj @Racer159
-/renovate.json @jeff-mccoy @YrrepNoj @Racer159
-/Makefile @jeff-mccoy @YrrepNoj @Racer159
+/.github/ @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/hack/ @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/.gitignore @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/.golangci.yml @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/.goreleaser.yml @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/.grype.yaml @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/Dockerfile @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/renovate.json @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/Makefile @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
 
 # Additional privileged files
 /CODEOWNERS @jeff-mccoy @runyontr
