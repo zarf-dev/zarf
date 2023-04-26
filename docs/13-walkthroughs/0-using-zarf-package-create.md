@@ -47,7 +47,7 @@ Congratulations! You've just created your first Zarf package!
 
 ## Building the Helm OCI chart package
 
-Creating the Helm OCI chart package is just as simple as creating the init package! Once again, we will use the `zarf package create` command to create the package. Since the package definition lives in `examples/helm-oci-chart` within the Zarf repository, the only thing we need to do differently is specify the correct directory. This time we will skip the confirmation prompt by adding the `--confirm` flag to save some time.
+Creating the Helm OCI chart package is just as simple as creating the init package! However, unlike the init package, the Helm OCI chart package does not require Docker. Once again, we will use the `zarf package create` command to create the package. Since the package definition lives in `examples/helm-oci-chart` within the Zarf repository, the only thing we need to do differently is specify the correct directory. This time we will skip the confirmation prompt by adding the `--confirm` flag to save some time.
 
 ```bash
 zarf package create examples/helm-oci-chart --confirm

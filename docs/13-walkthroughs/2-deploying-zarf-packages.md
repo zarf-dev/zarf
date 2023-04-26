@@ -87,15 +87,8 @@ After that you can try deploying the package again.
 
 #### Example
 
-<iframe src="/docs/walkthroughs/troubleshoot_uninitialized.html" width="100%" height="250px"></iframe>
+<iframe src="/docs/walkthroughs/troubleshoot_uninitialized_helmOCI.html" width="100%" height="250px"></iframe>
 
 #### Remediation
 
-If you receive this error when zarf is attempting to deploy the `BASELINE COMPONENT`, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this walkthrough.  Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) walkthrough, then try again.
-
-## Credits
-
-:sparkles: Special thanks to these fine references! :sparkles:
-
-- <https://www.reddit.com/r/programming/comments/nap4pt/dos_gaming_in_docker/>
-- <https://earthly.dev/blog/dos-gaming-in-docker/>
+If you receive this error when zarf is attempting to deploy the package, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this walkthrough.  Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) walkthrough, then try again.

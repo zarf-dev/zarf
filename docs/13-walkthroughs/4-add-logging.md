@@ -15,7 +15,7 @@ More specifically, you'll be adding a [Promtail / Loki / Grafana (PLG)](https://
 Prior to this walkthrough you'll want to have a working cluster with Zarf initialized
 1.  Zarf binary installed on your $PATH: ([Installing Zarf](../3-getting-started.md#installing-zarf))
 2. [Initialize a cluster](./1-initializing-a-k8s-cluster.md).
-3. Perform the [Retro Arcade Walkthrough](./3-deploy-a-retro-arcade).
+3. Perform the [Retro Arcade Walkthrough](./3-deploy-a-retro-arcade.md).
 
 ## Walkthrough
 [![Walkthrough: Add Logging to an existing Zarf Cluster with Zarf Init](../.images/walkthroughs/logging_thumbnail.png)](https://youtu.be/FYkafs1idlQ "Add Logging to an existing Zarf Cluster with Zarf Init")
