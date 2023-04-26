@@ -8,17 +8,18 @@ import "k8s.io/client-go/tools/clientcmd/api"
 
 // RestAPI is the struct that is used to marshal/unmarshal the top-level API objects.
 type RestAPI struct {
-	ZarfPackage          ZarfPackage          `json:"zarfPackage"`
-	ZarfState            ZarfState            `json:"zarfState"`
-	ZarfCommonOptions    ZarfCommonOptions    `json:"zarfCommonOptions"`
-	ZarfCreateOptions    ZarfCreateOptions    `json:"zarfCreateOptions"`
-	ZarfDeployOptions    ZarfDeployOptions    `json:"zarfDeployOptions"`
-	ZarfInitOptions      ZarfInitOptions      `json:"zarfInitOptions"`
-	ConnectStrings       ConnectStrings       `json:"connectStrings"`
-	ClusterSummary       ClusterSummary       `json:"clusterSummary"`
-	DeployedPackage      DeployedPackage      `json:"deployedPackage"`
-	APIZarfPackage       APIZarfPackage       `json:"apiZarfPackage"`
-	APIZarfDeployPayload APIZarfDeployPayload `json:"apiZarfDeployPayload"`
+	ZarfPackage           ZarfPackage           `json:"zarfPackage"`
+	ZarfState             ZarfState             `json:"zarfState"`
+	ZarfCommonOptions     ZarfCommonOptions     `json:"zarfCommonOptions"`
+	ZarfCreateOptions     ZarfCreateOptions     `json:"zarfCreateOptions"`
+	ZarfDeployOptions     ZarfDeployOptions     `json:"zarfDeployOptions"`
+	ZarfInitOptions       ZarfInitOptions       `json:"zarfInitOptions"`
+	ConnectStrings        ConnectStrings        `json:"connectStrings"`
+	ClusterSummary        ClusterSummary        `json:"clusterSummary"`
+	DeployedPackage       DeployedPackage       `json:"deployedPackage"`
+	APIZarfPackage        APIZarfPackage        `json:"apiZarfPackage"`
+	APIZarfDeployPayload  APIZarfDeployPayload  `json:"apiZarfDeployPayload"`
+	APIPackageConnections APIPackageConnections `json:"apiPackageConnections"`
 }
 
 // ClusterSummary contains the summary of a cluster for the API.
@@ -41,4 +42,9 @@ type APIZarfPackage struct {
 type APIZarfDeployPayload struct {
 	DeployOpts ZarfDeployOptions `json:"deployOpts"`
 	InitOpts   *ZarfInitOptions  `json:"initOpts,omitempty"`
+}
+
+// APIPackageConnections represents the connections for a ZarfPackage.
+type APIPackageConnections struct {
+	ConnectStrings ConnectStrings `json:"connectStrings"`
 }

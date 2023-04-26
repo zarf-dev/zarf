@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 // Package api provides the UI API server.
@@ -90,6 +91,7 @@ func LaunchAPIServer() {
 			r.Get("/find-init", packages.FindInitPackage)
 			r.Get("/read/{path}", packages.Read)
 			r.Get("/list", packages.ListDeployedPackages)
+			r.Get("/list/connections/{name}", packages.ListPackageConnections)
 			r.Put("/deploy", packages.DeployPackage)
 			r.Get("/deploy-stream", packages.StreamDeployPackage)
 			r.Delete("/remove/{name}", packages.RemovePackage)

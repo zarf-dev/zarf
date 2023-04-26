@@ -9,11 +9,13 @@
 	import { Kind, type DeployedPackage } from '$lib/api-types';
 	import { IconButton, ListItem, ListItemAdornment, Menu, type SSX } from '@ui';
 	import { current_component } from 'svelte/internal';
+	import ConnectDeployedPackageDialog from './connect-deployed-package-dialog.svelte';
 
 	export let pkg: DeployedPackage;
 
 	let anchorRef: HTMLButtonElement;
 	let toggleRemoveDialog: () => void;
+	let toggleConnectDialog: () => void;
 
 	let updateLink = '';
 	let toggled = false;
@@ -53,7 +55,7 @@
 	iconContent="more_vert"
 />
 <Menu ssx={menuSSX} bind:anchorRef open={toggled} anchorOrigin="bottom-end">
-	<ListItem text="Connect..." />
+	<ListItem text="Connect..." on:click={toggleConnectDialog} />
 	<ListItem text="Update Package..." on:click={() => goto(updateLink)}>
 		<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined">
 			cached
@@ -66,4 +68,5 @@
 		</ListItemAdornment>
 	</ListItem>
 </Menu>
+<ConnectDeployedPackageDialog {pkg} bind:toggleDialog={toggleConnectDialog} />
 <RemoveDeployedPackageDialog {pkg} bind:toggleDialog={toggleRemoveDialog} />
