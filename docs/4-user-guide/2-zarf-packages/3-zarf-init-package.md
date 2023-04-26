@@ -50,7 +50,7 @@ Beyond the registry, their are also fully-optional components available for the 
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | k3s          | REQUIRES ROOT (not sudo). Installs a lightweight Kubernetes Cluster on the local host&mdash;[K3s](https://k3s.io/)&mdash;and configures it to start up on boot.   |
 | logging      | Adds a log monitoring stack&mdash;[promtail/loki/grafana (aka PLG)](https://github.com/grafana/loki)&mdash;into the cluster.                                      |
-| git-server   | Adds a [GitOps](https://www.cloudbees.com/gitops/what-is-gitops)-compatible source control service&mdash;[Gitea](https://gitea.io/en-us/)&mdash;into the cluster. |
+| git-server   | Adds a [GitOps](https://about.gitlab.com/topics/gitops/)-compatible source control service&mdash;[Gitea](https://gitea.io/en-us/)&mdash;into the cluster. |
 
 There are two ways to deploy these optional components. First, you can provide a comma-separated list of components to the `--components` flag, such as `zarf init --components k3s,git-server --confirm`, or, you can choose to exclude the `--components` and `--confirm` flags and respond with a yes (`y`) or no (`n`) for each optional component when interactively prompted.
 
