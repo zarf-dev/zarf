@@ -20,6 +20,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -58,7 +59,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 		}
 	}
 
-	fmt.Printf("components:\n")
+	componentDefinition := "\ncomponents:\n"
 
 	for _, component := range p.cfg.Pkg.Components {
 
@@ -204,16 +205,16 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
 		if sortedImages := k8s.SortImages(matchedImages, nil); len(sortedImages) > 0 {
 			// Log the header comment
-			fmt.Printf("\n  - name: %s\n    images:\n", component.Name)
+			componentDefinition += fmt.Sprintf("\n  - name: %s\n    images:\n", component.Name)
 			for _, image := range sortedImages {
 				// Use print because we want this dumped to stdout
-				fmt.Println("      - " + image)
+				componentDefinition += fmt.Sprintf("      - %s\n", image)
 			}
 		}
 
 		// Handle the "maybes"
 		if sortedImages := k8s.SortImages(maybeImages, matchedImages); len(sortedImages) > 0 {
-			var realImages []string
+			var validImages []string
 			for _, image := range sortedImages {
 				if descriptor, err := crane.Head(image, config.GetCraneOptions(config.CommonOptions.Insecure)...); err != nil {
 					// Test if this is a real image, if not just quiet log to debug, this is normal
@@ -221,18 +222,20 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 				} else {
 					// Otherwise, add to the list of images
 					message.Debugf("Imaged digest found: %s", descriptor.Digest)
-					realImages = append(realImages, image)
+					validImages = append(validImages, image)
 				}
 			}
 
-			if len(realImages) > 0 {
-				fmt.Printf("      # Possible images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
-				for _, image := range realImages {
-					fmt.Println("      - " + image)
+			if len(validImages) > 0 {
+				componentDefinition += fmt.Sprintf("      # Possible images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
+				for _, image := range validImages {
+					componentDefinition += fmt.Sprintf("      - %s\n", image)
 				}
 			}
 		}
 	}
+
+	fmt.Println(componentDefinition)
 
 	// In case the directory was changed, reset to prevent breaking relative target paths
 	if originalDir != "" {
@@ -244,7 +247,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
 func (p *Packager) processUnstructured(resource *unstructured.Unstructured, matchedImages, maybeImages k8s.ImageMap) (k8s.ImageMap, k8s.ImageMap, error) {
 	var imageSanityCheck = regexp.MustCompile(`(?mi)"image":"([^"]+)"`)
-	var imageFuzzyCheck = regexp.MustCompile(`(?mi)"([a-z0-9\-./]+:[\w][\w.\-]{0,127})"`)
+	var imageFuzzyCheck = regexp.MustCompile(`(?mi)"([a-z0-9\-.\/]+:[\w][\w.\-]{0,127})"`)
 	var json string
 
 	contents := resource.UnstructuredContent()
@@ -281,6 +284,13 @@ func (p *Packager) processUnstructured(resource *unstructured.Unstructured, matc
 			return matchedImages, maybeImages, fmt.Errorf("could not parse replicaset: %w", err)
 		}
 		matchedImages = k8s.BuildImageMap(matchedImages, replicaSet.Spec.Template.Spec)
+
+	case "Job":
+		var job batchv1.Job
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &job); err != nil {
+			return matchedImages, maybeImages, fmt.Errorf("could not parse job: %w", err)
+		}
+		matchedImages = k8s.BuildImageMap(matchedImages, job.Spec.Template.Spec)
 
 	default:
 		// Capture any custom images

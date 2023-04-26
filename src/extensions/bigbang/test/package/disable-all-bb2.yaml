@@ -1,0 +1,58 @@
+# Disable everything
+istio:
+  enabled: false
+
+istioOperator:
+  enabled: false
+
+jaeger:
+  enabled: false
+
+kiali:
+  enabled: false
+
+clusterAuditor:
+  enabled: false
+
+gatekeeper:
+  enabled: false
+
+kyverno:
+  enabled: false
+
+kyvernoPolicies:
+  enabled: false
+
+kyvernoReporter:
+  enabled: false
+
+elasticsearchKibana:
+  enabled: false
+
+eckOperator:
+  enabled: false
+
+fluentbit:
+  enabled: false
+
+promtail:
+  enabled: false
+
+loki:
+  enabled: false
+
+neuvector:
+  enabled: false
+
+tempo:
+  enabled: false
+
+monitoring:
+  enabled: false
+
+twistlock:
+  enabled: false
+
+addons:
+  metricsServer:
+    enabled: false

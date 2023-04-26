@@ -8,7 +8,7 @@ components:
     required: true
     manifests:
       - name: multi-games
-        namespace: zarf
+        namespace: dos-games
         files:
           - manifests/deployment.yaml
           - manifests/service.yaml

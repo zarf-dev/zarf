@@ -2,7 +2,7 @@
 
 Using Zarf optimizes the delivery of applications and capabilities in air-gapped and complex environments. This tool eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud-native workloads using a declarative packaging strategy to support DevSecOps. This guide is intended for end users using Zarf to securely and efficiently deploy modern stacks onto remote/constrained/independent environments.
 
-The below list contains information on how to use and configure Zarf’s major features: 
+The below list contains information on how to use and configure Zarf's major features:
 
 - Deploy Zarf [Packages](2-zarf-packages/1-zarf-packages.md) (Zpkg).
 - Maintain Zarf Packages in the cluster.
@@ -65,7 +65,7 @@ Shipping a Zarf Package is _very_ contextual to the target environment. Consider
 
 There are numerous methods to transport your Zarf Package, for example:
 
-- Burning your package onto a disk. 
+- Burning your package onto a disk.
 - Using a satellite uplink.
 - Creating a direct internet connection.
 
@@ -84,5 +84,5 @@ Once your package has arrived, you will need to:
 If you are looking for more advanced information on how to operate and customize Zarf to your specific environment needs, check out these additional resources:
 
 - For information on how to create a custom configuration of the Zarf CLI see the [Operator Manual](../5-operator-manual/_category_.json).
-- For information on how to create your own Zarf Packages see the [Developer Guide](../6-developer-guide/1-contributor-guide.md).
+- For information on how to create your own Zarf Packages see the [Zarf Packages](./2-zarf-packages/index.md) page.
 - To see some of the ways our community is using Zarf to deploy code onto air-gapped systems see the [Zarf Examples](../../examples/README.md).

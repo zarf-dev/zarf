@@ -387,7 +387,7 @@ func addBigBangManifests(manifestDir string, cfg *extensions.BigBang) (types.Zar
 	}
 
 	// Create the zarf-credentials secret manifest.
-	if err := addManifest("bb-ext-zarf-credentials.yaml", manifestZarfCredentials()); err != nil {
+	if err := addManifest("bb-ext-zarf-credentials.yaml", manifestZarfCredentials(cfg.Version)); err != nil {
 		return manifest, err
 	}
 

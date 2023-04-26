@@ -43,7 +43,7 @@ A typical Zarf deployment is made up of three parts:
 
 :::note
 
-For more technical information on how Zarf works and to view the Zarf architecture, visit our [Nerd Notes page](./6-developer-guide/3-nerd-notes.md).
+For more technical information on how Zarf works and to view the Zarf architecture, visit our [Nerd Notes page](./6-contribute-to-zarf/3-nerd-notes.md).
 
 :::
 
@@ -130,23 +130,23 @@ In the more complex use case, your package consists of updates for many apps/sys
 
 - Automate Kubernetes deployments in disconnected environments
 - Automate [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) generation
-- Provide a [web dashboard](https://docs.zarf.dev/docs/dashboard-ui/sbom-dashboard) for viewing SBOM output
+- Provide a [web dashboard](./7-dashboard-ui/1-sbom-dashboard.md) for viewing SBOM output
 - Create and verify package signatures with [cosign](https://github.com/sigstore/cosign)
-- [Publish](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_package_publish), [pull](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
-- Powerful component lifecycle [actions](https://docs.zarf.dev/docs/user-guide/component-actions)
+- [Publish](./4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_publish.md), [pull](./4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_pull.md), and [deploy](./4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_deploy.md) packages from an [OCI registry](https://opencontainers.org/)
+- Powerful component lifecycle [actions](./4-user-guide/5-component-actions.md)
 - Deploy a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
 - Builtin logging stack with [Loki](https://grafana.com/oss/loki/)
 - Builtin Git server with [Gitea](https://gitea.com/)
 - Builtin Docker registry
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
 - [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
-- Builtin [command to find images](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a Helm chart
-- Tunneling capability to [connect to Kuberenetes resources](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS or Ingress configuration required
+- Builtin [command to find images](./4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_prepare_find-images.md) and resources from a Helm chart
+- Tunneling capability to [connect to Kuberenetes resources](./4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_connect.md) without network routing, DNS, TLS or Ingress configuration required
 
 ### 🛠️ Configurable Features
 
 - Customizable [variables and package templates](examples/variables/README.md) with defaults and user prompting
-- [Composable packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components
+- [Composable packages](./4-user-guide/2-zarf-packages/2-zarf-components.md#composing-package-components) to include multiple sub-packages/components
 - Component-level OS/architecture filtering
 
 ## Quick Start

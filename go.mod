@@ -10,16 +10,17 @@ replace (
 )
 
 require (
+	cuelang.org/go v0.4.3
 	github.com/AlecAivazis/survey/v2 v2.3.6
-	github.com/Masterminds/semver/v3 v3.2.0
+	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/anchore/stereoscope v0.0.0-20230412183729-8602f1afc574
-	github.com/anchore/syft v0.76.1
+	github.com/anchore/syft v0.79.0
 	github.com/derailed/k9s v0.27.3
 	github.com/distribution/distribution v2.8.1+incompatible
-	github.com/docker/cli v23.0.3+incompatible
+	github.com/docker/cli v23.0.4+incompatible
 	github.com/fatih/color v1.15.0
-	github.com/fluxcd/helm-controller/api v0.32.1
+	github.com/fluxcd/helm-controller/api v0.32.2
 	github.com/fluxcd/source-controller/api v0.36.1
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-git/go-git/v5 v5.6.1
@@ -27,23 +28,24 @@ require (
 	github.com/goccy/go-yaml v1.11.0
 	github.com/google/go-containerregistry v0.14.0
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/moby/moby v23.0.3+incompatible
+	github.com/moby/moby v23.0.4+incompatible
 	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b
-	github.com/otiai10/copy v1.9.0
+	github.com/otiai10/copy v1.11.0
 	github.com/pkg/errors v0.9.1
-	github.com/pterm/pterm v0.12.58
+	github.com/pterm/pterm v0.12.59
+	github.com/sergi/go-diff v1.3.1
 	github.com/sigstore/cosign v1.13.1
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
-	golang.org/x/crypto v0.7.0
-	helm.sh/helm/v3 v3.11.2
-	k8s.io/api v0.26.3
-	k8s.io/apimachinery v0.26.3
-	k8s.io/client-go v0.26.3
-	k8s.io/component-base v0.26.3
+	golang.org/x/crypto v0.8.0
+	helm.sh/helm/v3 v3.11.3
+	k8s.io/api v0.26.4
+	k8s.io/apimachinery v0.26.4
+	k8s.io/client-go v0.26.4
+	k8s.io/component-base v0.26.4
 	k8s.io/klog/v2 v2.90.1
-	k8s.io/kubectl v0.26.3
+	k8s.io/kubectl v0.26.4
 	oras.land/oras-go/v2 v2.0.2
 	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9
@@ -56,7 +58,6 @@ require (
 	bitbucket.org/creachadair/shell v0.0.7 // indirect
 	cloud.google.com/go/compute v1.19.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	cuelang.org/go v0.4.3 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 // indirect
 	github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/alibabacloudsdkgo/helper v0.2.0 // indirect
 	github.com/Azure/azure-sdk-for-go v66.0.0+incompatible // indirect
@@ -148,12 +149,13 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/daviddengcn/go-colortext v1.0.0 // indirect
+	github.com/deitch/magic v0.0.0-20230404182410-1ff89d7342da // indirect
 	github.com/derailed/popeye v0.10.1 // indirect
 	github.com/derailed/tcell/v2 v2.3.1-rc.3 // indirect
 	github.com/derailed/tview v0.8.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
-	github.com/docker/docker v23.0.3+incompatible // indirect
+	github.com/docker/docker v23.0.4+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
@@ -319,7 +321,6 @@ require (
 	github.com/scylladb/go-set v1.0.3-0.20200225121959-cc7b2070d91e // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
-	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sigstore/fulcio v0.6.0 // indirect
@@ -420,10 +421,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.26.3 // indirect
 	k8s.io/apiserver v0.26.3 // indirect
-	k8s.io/cli-runtime v0.26.3 // indirect
-	k8s.io/component-helpers v0.26.3 // indirect
-	k8s.io/kube-openapi v0.0.0-20230109183929-3758b55a6596 // indirect
-	k8s.io/metrics v0.26.3 // indirect
+	k8s.io/cli-runtime v0.26.4 // indirect
+	k8s.io/component-helpers v0.26.4 // indirect
+	k8s.io/kube-openapi v0.0.0-20230308215209-15aac26d736a // indirect
+	k8s.io/metrics v0.26.4 // indirect
 	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5 // indirect
 	lukechampine.com/uint128 v1.1.1 // indirect
 	modernc.org/cc/v3 v3.36.0 // indirect

@@ -1,4 +1,4 @@
-# Set Up And Install
+# Set Up and Install
 
 <!-- TODO: I @jperry am still confused about what the difference between this page the other install/setup sections should be.. -->
 <!--       ex. The 'Getting Started' page has an 'Installing Zarf' section that I copied this from.. -->
@@ -7,50 +7,55 @@
 
 <!-- TODO: @JPERRY Look at how other tools/apps do their instillation instructions -->
 
-Until we get Zarf into common package managers, you can install the Zarf CLI by:
+In order to install the Zarf CLI, which is not yet available in common Linux package managers, you may follow the steps below:
 
-1. Downloading the latest release version for your machine from our [GitHub release page](https://github.com/defenseunicorns/zarf/releases).
-2. Move the downloaded file onto your path. This can be done in your terminal with the command `mv ~/Downloads/{DOWNLOADED_RELEASE_FILE} /usr/local/bin/zarf`
-3. Test out the CLI within your terminal with the command `zarf -version`. The version you downloaded from GitHub should print to your terminal.
+1. Download the latest release version for your machine from our [GitHub release page](https://github.com/defenseunicorns/zarf/releases).
+2. Transfer the downloaded file onto your path. This can be executed in your terminal with the command `mv ~/Downloads/{DOWNLOADED_RELEASE_FILE} /usr/local/bin/zarf`.
+3. Verify the installation by testing the CLI within your terminal with the command `zarf -version`. If the installation is successful, the version of Zarf CLI that you have downloaded from GitHub should be displayed in your terminal.
 
-## Starting Up A Cluster
+:::note
+
+For macOS or Linux, you may also install the Zarf CLI by using [brew](https://zarf.dev/install/).  
+
+:::
+
+## Starting up a Cluster
 
 ### Zarf Deployed K3s Cluster
 
 <!-- TODO: Some duplicated information from the 'Common CLI Uses' page incoming... -->
 
-Now that you have a Zarf CLI to work with, let's make a cluster that you can deploy to! The [init package](../4-user-guide/2-zarf-packages/3-the-zarf-init-package.md) comes with a built-in k3s cluster that you can deploy if you don't already have another cluster available. You can find the relevant [init package release](https://github.com/defenseunicorns/zarf/releases) on the GitHub releases page.
+Once the Zarf CLI is installed, you can create a cluster using the built-in K3s cluster available in the init package (if another cluster isn’t already available). You can find the relevant [init package release](https://github.com/defenseunicorns/zarf/releases) from the GitHub releases page.
 
 Once downloaded, you can install the init package by navigating to the directory containing the init package and running the command [zarf init](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_init.md). Zarf will prompt you, asking if you want to deploy the k3s component, you can type `y` and hit enter to have Zarf startup a local single node k3s cluster on your current machine. Other useful information about initializing a cluster with Zarf is available in the [Initializing a Cluster](#initializing-a-cluster) section later on in this page.
 
 :::note
-Depending on the permissions of your user, if you are installing k3s through the `zarf init` command you may need to run the command as a privileged user. This can be done by either:
+Depending on the permissions of your user, if you are installing K3s through the `zarf init` command you may need to run the command as a privileged user. To accomplish this, you can:
 
-1. Becoming a privileged user via the command `sudo su` and then running all the Zarf commands as you normally would.
-2. Manually running all the Zarf commands as a privileged user via the command `sudo {ZARF_COMMAND_HERE}`.
-3. Running the init command as a privileged user via `sudo zarf init` and then changing the permissions of the `~/.kube/config` file to be readable by the current user.
-   :::
+1. Become a privileged user by running the command `sudo su` and then executing all the Zarf commands as usual.
+2. Run the init command as a privileged user with the command `sudo zarf init`. Then, when Zarf is waiting for the cluster connection, copy `/root/.kube/config` to `~/.kube/config` and adjust the permissions of the `~/.kube/config` file to be readable by the current user.
+:::
 
-### Any Other Cluster
+### Deploy to Your Preferred Cluster
 
 <!-- TODO: Link to a support matrix of k8 distros -->
 
-Zarf deploys to almost any cluster, you are not tied down to the K3s cluster that the [init package](../4-user-guide/2-zarf-packages/3-the-zarf-init-package.md) provides! You could use local dockerized k8s cluster such as [k3d](https://k3d.io/v5.4.1/) or [Kind](https://kind.sigs.k8s.io/), Rancher's next-generation k8s distribution [RKE2](https://docs.rke2.io/), or cloud-provided clusters such as [eks](https://aws.amazon.com/eks/)
+Zarf offers the flexibility of deploying to a wide range of clusters beyond the K3s cluster included in the [init package](../4-user-guide/2-zarf-packages/3-the-zarf-init-package.md). This means that you can utilize various options, including local dockerized K8s clusters such as [k3d](https://k3d.io/v5.4.1/) or [Kind](https://kind.sigs.k8s.io/), Rancher's next-generation K8s distribution [RKE2](https://docs.rke2.io/), or cloud-provided clusters such as [eks](https://aws.amazon.com/eks/). Such a diverse set of deployment choices frees you from being tethered to a single cluster option, allowing you to select the best-suited cluster environment for your specific needs.
 
 ## Initializing a Cluster
 
 <!-- TODO: Some duplicated information from the 'Common CLI Uses' page incoming... -->
 
-Now that you have the CLI installed and a cluster to work with, let's get that cluster initialized so you can deploy application packages onto it!
+After installing the CLI and setting up a cluster, the next step is to initialize the cluster to enable the deployment of application packages.
 
-Initializing a cluster is necessary since almost all k8 clusters do not come with a container registry by default. This becomes an interesting 'chicken or the egg' problem since you don't have a container registry available to push your container registry image into. This problem is discussed more in the [init package](./../4-user-guide/2-zarf-packages/3-the-zarf-init-package.md) page.
+Initializing a cluster is necessary since most K8 clusters do not come pre-installed with a container registry. This presents a challenging situation since pushing container images into a registry requires a registry to exist in the first place. For more information, please see the [init package](./../4-user-guide/2-zarf-packages/3-the-zarf-init-package.md) page.
 
-During the initialization process, Zarf will create a `zarf` namespace and deploy an in-cluster Docker registry (used to host container images future packages will need), a `zarf agent` mutating webhook (to redirect outgoing requests into the internally hosted resources), an optional gitea server (to host the git repositories future packages will need), and a handful of secrets.
+As part of the initialization process, Zarf creates a dedicated namespace called `zarf` and deploys several essential components within the cluster. These include an in-cluster Docker registry (serves as the container image host for future packages), a `zarf agent` mutating webhook (to redirect outgoing requests to the internally hosted resources), and a set of secrets. Additionally, users can optionally deploy a gitea server that hosts the Git repositories needed for future packages. For more information regarding package components, see the [init package](./../4-user-guide/2-zarf-packages/3-the-zarf-init-package.md) page.
 
-You can find the relevant [init package release](https://github.com/defenseunicorns/zarf/releases) on the GitHub releases page. Once downloaded, you can install the init package by navigating to the directory containing the init package and running the command [zarf init](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_init.md). Zarf will prompt you, asking if you want to deploy the optional component, you can type `y` or `n` depending on your use case and needs.
+To access the relevant init package release, visit the [GitHub releases](https://github.com/defenseunicorns/zarf/releases) page. Once downloaded, navigate to the directory containing the init package and execute the command [`zarf init`](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_init.md) to install it. Zarf will prompt you to confirm whether you wish to deploy the optional component. You can type 'y' or 'n' depending on your specific use case.
 
-Once the init command is finished, you can run `zarf tools kubectl get pods -n zarf` to verify that the pods have come up healthy. You should expect to see two `agent-hook` pods, a `zarf-docker-registry` pod, and optionally a `zarf-gitea` pod.
+After the initialization process is complete, you can verify that the pods have come up healthy by running the command `zarf tools kubectl get pods -n zarf`. You should expect to see two `agent-hook` pods, a `zarf-docker-registry` pod, and optionally a `zarf-gitea` pod.
 
-## Setup Complete
+## Set Up Complete
 
-At this point, you have the Zarf CLI installed and a k8s cluster running and initialized. You are now ready to start deploying packages to your cluster! The Walkthroughs section of the documentation will guide you through the process of deploying packages to your cluster, a good one to start with is the [Doom Walkthrough](../13-walkthroughs/2-deploying-doom.md).
+At this point, you have successfully installed the Zarf CLI and initialized a K8s cluster. You are now ready to begin deploying packages to your cluster. The [Walkthroughs](../13-walkthroughs/index.md) section of the documentation provides a step-by-step guide on how to deploy packages to your cluster, and the [Doom Walkthrough](../13-walkthroughs/2-deploying-doom.md) is a great place to start. Follow along with the guide to learn more about deploying packages to your cluster and get started with your first deployment.
