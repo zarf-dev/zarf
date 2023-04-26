@@ -175,15 +175,8 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 			for _, manifest := range component.Manifests {
 				for idx, k := range manifest.Kustomizations {
 					// Generate manifests from kustomizations and place in the package
-					kname := fmt.Sprintf("kustomization-%s-%d", manifest.Name, idx)
-					if utils.IsURL(k) {
-						tmp := filepath.Join(componentPath.Temp, kname)
-						if err := kustomize.Fetch(k, tmp); err != nil {
-							return fmt.Errorf(lang.ErrDownloading, k, err.Error())
-						}
-						k = tmp
-					}
-					destination := filepath.Join(componentPath.Manifests, kname+".yaml")
+					kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+					destination := filepath.Join(componentPath.Manifests, kname)
 					if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 						return fmt.Errorf("unable to build the kustomization for %s: %s", k, err.Error())
 					}

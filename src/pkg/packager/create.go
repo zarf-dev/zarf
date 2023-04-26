@@ -435,15 +435,8 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			for idx, k := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
 				spinner.Updatef("Building kustomization for %s", k)
-				kname := fmt.Sprintf("kustomization-%s-%d", manifest.Name, idx)
-				if utils.IsURL(k) {
-					tmp := filepath.Join(componentPath.Temp, kname)
-					if err := kustomize.Fetch(k, tmp); err != nil {
-						return nil, fmt.Errorf(lang.ErrDownloading, k, err.Error())
-					}
-					k = tmp
-				}
-				destination := filepath.Join(componentPath.Manifests, kname+".yaml")
+				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+				destination := filepath.Join(componentPath.Manifests, kname)
 				if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return nil, fmt.Errorf("unable to build kustomization %s: %w", k, err)
 				}

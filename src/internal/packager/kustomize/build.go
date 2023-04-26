@@ -6,42 +6,12 @@ package kustomize
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"sigs.k8s.io/kustomize/api/krusty"
 	krustytypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
-
-// Fetch creates a kustomization file for a git repository.
-func Fetch(gitRef string, directory string) error {
-	k := krustytypes.Kustomization{
-		Resources: []string{
-			gitRef,
-		},
-	}
-	err := os.MkdirAll(directory, 0600)
-	if err != nil {
-		return err
-	}
-	file, err := os.Create(filepath.Join(directory, "kustomization.yaml"))
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	b := []byte{}
-	err = k.Unmarshal(b)
-	if err != nil {
-		return err
-	}
-	_, err = file.Write(b)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 // Build reads a kustomization and builds it into a single yaml file.
 func Build(path string, destination string, kustomizeAllowAnyDirectory bool) error {
