@@ -12,6 +12,7 @@ When creating a Zarf package, you must have an Internet connection so that Zarf 
 
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 -  Zarf binary installed on your $PATH: ([install instructions](../3-getting-started.md#installing-zarf))
+- The [Docker CLI](https://docs.docker.com/desktop/) installed for building the [`zarf-agent`](../9-faq.md#what-is-the-zarf-agent) image.
 
 ## Building the init-package
 
