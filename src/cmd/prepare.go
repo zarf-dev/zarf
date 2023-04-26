@@ -8,6 +8,7 @@ import (
 	"crypto"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -77,6 +78,19 @@ var prepareComputeFileSha256sum = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		fileName := args[0]
+		if utils.IsURL(fileName) {
+			tmp, err := utils.MakeTempDir("")
+			if err != nil {
+				message.Fatalf(err, lang.ErrWritingFile, tmp, err.Error())
+			}
+			dst := filepath.Join(tmp, "file-to-be-hashed")
+			defer os.RemoveAll(tmp)
+			err = utils.DownloadToFile(fileName, dst, "")
+			if err != nil {
+				message.Fatalf(err, lang.ErrDownloading, fileName, err.Error())
+			}
+			fileName = dst
+		}
 		hash, err := utils.GetCryptoHash(fileName, crypto.SHA256)
 		if err != nil {
 			message.Fatal(err, lang.CmdPrepareSha256sumHashErr)
