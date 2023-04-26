@@ -55,7 +55,11 @@
 	iconContent="more_vert"
 />
 <Menu ssx={menuSSX} bind:anchorRef open={toggled} anchorOrigin="bottom-end">
-	<ListItem text="Connect..." on:click={toggleConnectDialog} />
+	<ListItem text="Connect..." on:click={toggleConnectDialog}>
+		<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined">
+			private_connectivity
+		</ListItemAdornment>
+	</ListItem>
 	<ListItem text="Update Package..." on:click={() => goto(updateLink)}>
 		<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined">
 			cached
