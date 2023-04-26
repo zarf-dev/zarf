@@ -50,4 +50,9 @@ const DeployingComponents = {
 	list: () => http.get<DeployedComponent[]>('/components/deployed'),
 };
 
-export { Auth, Cluster, Packages, DeployingComponents };
+const Tunnels = {
+	connect: (name: string) => http.put<boolean>(`/tunnels/connect/${encodeURIComponent(name)}`, {}),
+	disconnect: (name: string) => http.del(`/tunnels/disconnect/${encodeURIComponent(name)}`),
+}
+
+export { Auth, Cluster, Packages, DeployingComponents, Tunnels };

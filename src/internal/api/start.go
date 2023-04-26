@@ -101,6 +101,10 @@ func LaunchAPIServer() {
 			r.Get("/deployed", components.ListDeployingComponents)
 		})
 
+		r.Route("/tunnels", func(r chi.Router) {
+			r.Put("/connect/{name}", cluster.ConnectTunnel)
+			r.Delete("/disconnect/{name}", cluster.DisconnectTunnel)
+		})
 	})
 
 	// If no dev port specified, use the server port for the URL and try to open it
