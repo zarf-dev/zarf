@@ -56,7 +56,7 @@ There are two ways to deploy these optional components. First, you can provide a
 
 :::caution
 
-Deploying the 'k3s' component will require `root` access (not just `sudo`), as it modifies your host machine to install the cluster and by default only provides access to the cluster to the `root` user.
+(Linux only) Deploying the 'k3s' component will require `root` access (not just `sudo`), as it modifies your host machine to install the cluster and by default only provides access to the cluster to the `root` user.
 
 :::
 
