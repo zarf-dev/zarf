@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 // LogLevel is the level of logging to display.
@@ -241,6 +242,17 @@ func Paragraph(format string, a ...any) string {
 // Paragraphn formats text into an n column paragraph
 func Paragraphn(n int, format string, a ...any) string {
 	return pterm.DefaultParagraph.WithMaxWidth(n).Sprintf(format, a...)
+}
+
+// PrintDiff prints the differences between a and b with a as original and b as new
+func PrintDiff(textA, textB string) {
+	dmp := diffmatchpatch.New()
+
+	diffs := dmp.DiffMain(textA, textB, true)
+
+	diffs = dmp.DiffCleanupSemantic(diffs)
+
+	pterm.Println(dmp.DiffPrettyText(diffs))
 }
 
 func debugPrinter(offset int, a ...any) {
