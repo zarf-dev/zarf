@@ -36,6 +36,14 @@ In most scenarios, Zarf will also deploy an internal registry using the three co
 | zarf-seed-registry      | Adds a temporary container registry so Zarf can bootstrap itself into the cluster.                                              |
 | zarf-registry           | Adds a long-lived container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster. |
 
+:::tip
+
+You can further customize how the registry behaves by setting variables such as `REGISTRY_PVC_SIZE` with a config file or `--set` on `zarf init`.
+
+To see a full list of `variables` you can view the [zarf.yaml that defines the registry](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-registry/zarf.yaml).
+
+:::
+
 Beyond the registry, their are also fully-optional components available for the init package.  Many of these also have external configurations you can set with `zarf init` (such as `--git-*`), but these components provide an easy way to get started in environments where these core services are needed and may not already exist.
 
 | Components   | Description                                                                                                                                                       |
@@ -52,13 +60,21 @@ Deploying the 'k3s' component will require `root` access (not just `sudo`), as i
 
 :::
 
-:::note
+:::tip
 
 The `k3s` component included in Zarf differs from the default `k3s` install in that it disables the installation of `traefik` out of the box.  This was done so that people could more intentionally choose if they wanted `traefik` or another ingress provider (or no ingress at all) depending on their needs.  If you would like to return `k3s` to its defaults, you can set the `K3S_ARGS` zarf variable to an empty string:
 
 ```
 # zarf init --components k3s --set K3S_ARGS="" --confirm
 ```
+
+:::
+
+:::tip
+
+You can further customize how the git-server behaves by setting variables such as `GIT_SERVER_PVC_SIZE` with a config file or `--set` on `zarf init`.
+
+To see a full list of `variables` you can view the [zarf.yaml that defines the git-server](https://github.com/defenseunicorns/zarf/blob/main/packages/gitea/zarf.yaml).
 
 :::
 
