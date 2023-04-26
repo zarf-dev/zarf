@@ -47,6 +47,9 @@ var prepareTransformGitLinks = &cobra.Command{
 		text := string(content)
 		processedText := transform.MutateGitURLsInText(pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
 
+		// Print the differences
+		message.PrintDiff(text, processedText)
+
 		// Ask the user before this destructive action
 		confirm := false
 		prompt := &survey.Confirm{

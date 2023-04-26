@@ -182,9 +182,15 @@ func (h *Helm) TemplateChart() (string, error) {
 		return "", fmt.Errorf("error generating helm chart template: %w", err)
 	}
 
+	manifest := templatedChart.Manifest
+
+	for _, hook := range templatedChart.Hooks {
+		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)
+	}
+
 	spinner.Success()
 
-	return templatedChart.Manifest, nil
+	return manifest, nil
 }
 
 // GenerateChart generates a helm chart for a given Zarf manifest.
