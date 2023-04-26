@@ -114,7 +114,10 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 	}
 	// If the source url starts with the sget protocol use that, otherwise do a typical GET call
 	if parsed.Scheme == "sget" {
-		err = sgetFile(src, file, cosignKeyPath)
+		err = Sget(context.TODO(), src, cosignKeyPath, file)
+		if err != nil {
+			return fmt.Errorf("unable to download file with sget: %s", src)
+		}
 		if err != nil {
 			return err
 		}
@@ -210,19 +213,5 @@ func httpGetFile(url string, destinationFile *os.File) error {
 
 	title = fmt.Sprintf("Downloaded %s", url)
 	progressBar.Successf("%s", title)
-	return nil
-}
-
-func sgetFile(src string, destinationFile *os.File, cosignKeyPath string) error {
-	// Remove the custom protocol header from the url
-	parsed, err := url.Parse(src)
-	if err != nil {
-		return fmt.Errorf("unable to parse the URL: %s", src)
-	}
-	parsed.Scheme = ""
-	err = Sget(context.TODO(), parsed.String(), cosignKeyPath, destinationFile)
-	if err != nil {
-		return fmt.Errorf("unable to download file with sget: %s", parsed.String())
-	}
 	return nil
 }
