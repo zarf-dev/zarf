@@ -1,4 +1,4 @@
-# remote-manifests
+# Remote Manifests
 
 This example shows how you to specify remote resources for a component's `manifests`.
 
