@@ -16,7 +16,7 @@ Zarf's mutation capabilities require that the [`zarf-agent`](../../9-faq.md#what
 
 | Component               | Description                                                                                                                                           |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| zarf-agent              | A Kubernetes mutating webhook installed during `zarf init` that converts Pod specs and Flux GitRepository objects to match their air-gap equivalents. |
+| zarf-agent              | A Kubernetes mutating webhook installed during `zarf init` that converts Pod specs and Flux GitRepository objects to match their air gap equivalents. |
 
 :::note
 
