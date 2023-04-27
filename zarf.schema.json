@@ -147,7 +147,7 @@
             "type": "string"
           },
           "type": "array",
-          "description": "List of values files to include in the package; these will be merged together"
+          "description": "List of local values file paths or remote URLs to include in the package; these will be merged together"
         },
         "gitPath": {
           "type": "string",
@@ -699,7 +699,7 @@
       "properties": {
         "source": {
           "type": "string",
-          "description": "A path to a local folder or file to inject into the given target pod + container"
+          "description": "Either a path to a local folder/file or a remote URL of a file to inject into the given target pod + container"
         },
         "target": {
           "$schema": "http://json-schema.org/draft-04/schema#",
@@ -765,7 +765,7 @@
             "type": "string"
           },
           "type": "array",
-          "description": "List of individual K8s YAML files to deploy (in order)"
+          "description": "List of local K8s YAML files or remote URLs to deploy (in order)"
         },
         "kustomizeAllowAnyDirectory": {
           "type": "boolean",
@@ -776,7 +776,7 @@
             "type": "string"
           },
           "type": "array",
-          "description": "List of kustomization paths to include in the package"
+          "description": "List of local kustomization paths or remote URLs to include in the package"
         },
         "noWait": {
           "type": "boolean",
