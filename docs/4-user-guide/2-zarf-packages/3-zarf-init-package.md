@@ -71,7 +71,7 @@ There are two ways to deploy these optional components. First, you can provide a
 The `k3s` component included in Zarf differs from the default `k3s` install in that it disables the installation of `traefik` out of the box.  This was done so that people could more intentionally choose if they wanted `traefik` or another ingress provider (or no ingress at all) depending on their needs.  If you would like to return `k3s` to its defaults, you can set the `K3S_ARGS` zarf variable to an empty string:
 
 ```
-# zarf init --components k3s --set K3S_ARGS="" --confirm
+root@machine ~ # zarf init --components k3s --set K3S_ARGS="" --confirm
 ```
 
 :::
