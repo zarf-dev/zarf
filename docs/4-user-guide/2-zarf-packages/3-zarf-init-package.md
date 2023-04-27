@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # The Zarf 'init' Package
 
-The 'init' package is the Zarf Package that initializes a cluster with the requisite air-gap services when running `zarf init`.  This allows future Zarf Packages to store any required resources (i.e. container images and git repositories) so that they can be retrieved later.
+The 'init' package is a special Zarf Package (denoted by `kind: ZarfInitConfig` in its `zarf.yaml`) that initializes a cluster with the requisite air gap services when running `zarf init`.  This allows future Zarf Packages to store any required resources (i.e. container images and git repositories) so that they can be retrieved later.
 
 The default 'init' package that Zarf ships is defined in the `zarf.yaml` that lives at the [root of the Zarf repository](https://github.com/defenseunicorns/zarf/blob/main/zarf.yaml), and is constructed from composed components that provide a foundation for customization.  If you would like to change the behavior of the 'init' package you can do so by modifying this `zarf.yaml` or any of the composed components that it references and running `zarf package create` at the root of the repository.  You can learn more about creating a custom init package in the [Using Zarf Package Create Walkthrough](../../13-walkthroughs/0-using-zarf-package-create.md).
 
