@@ -36,9 +36,15 @@ In most scenarios, Zarf will also deploy an internal registry using the three co
 | zarf-seed-registry      | Adds a temporary container registry so Zarf can bootstrap itself into the cluster.                                              |
 | zarf-registry           | Adds a long-lived container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster. |
 
+:::note
+
+Given the registry is a core part of any Kubernetes deployment you MUST either specify an external registry with the `--registry-*` flags or use the injected registry which is why it cannot be selected with `--components` like the components below.
+
+:::
+
 :::tip
 
-You can further customize how the registry behaves by setting variables such as `REGISTRY_PVC_SIZE` with a config file or `--set` on `zarf init`.
+You can further customize how the registry behaves by setting variables such as `REGISTRY_PVC_SIZE` with a [config file](../1-the-zarf-cli/index.md#using-a-config-file-to-make-cli-command-flags-declarative) or `--set` on `zarf init`.
 
 To see a full list of `variables` you can view the [zarf.yaml that defines the registry](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-registry/zarf.yaml).
 
@@ -72,7 +78,7 @@ The `k3s` component included in Zarf differs from the default `k3s` install in t
 
 :::tip
 
-You can further customize how the git-server behaves by setting variables such as `GIT_SERVER_PVC_SIZE` with a config file or `--set` on `zarf init`.
+You can further customize how the git-server behaves by setting variables such as `GIT_SERVER_PVC_SIZE` with a [config file](../1-the-zarf-cli/index.md#using-a-config-file-to-make-cli-command-flags-declarative) or `--set` on `zarf init`.
 
 To see a full list of `variables` you can view the [zarf.yaml that defines the git-server](https://github.com/defenseunicorns/zarf/blob/main/packages/gitea/zarf.yaml).
 
@@ -84,6 +90,11 @@ Deploying into air gapped environments is a [hard problem](../../1-understand-th
 
 This is done with the `zarf-injector` [component](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-injector/zarf.yaml) which injects a single rust binary (statically compiled) and a series of configmap chunks of a `registry:2` image into an ephemeral pod that is based on an existing image in the cluster.  This gives us a running registry to bootstrap from and deploy the rest of the 'init' package and any other packages down the line.
 
+:::note
+
+The `registry:2` image and the Zarf Agent image can be configured with a custom init package using the `registry_image_*` and `agent_image_*` templates defined in the Zarf repo's [zarf-config.toml](https://github.com/defenseunicorns/zarf/blob/main/zarf-config.toml).  This allows you to swap them for enterprise provided / hardened versions if desired such as those provided by [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
+
+:::
 
 ## The `zarf init` Lifecycle
 
