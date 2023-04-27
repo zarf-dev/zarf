@@ -89,7 +89,7 @@ type ZarfChart struct {
 	URL         string   `json:"url,omitempty" jsonschema:"oneof_required=url,example=OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo,example=helm chart repo: https://stefanprodan.github.io/podinfo,example=git repo: https://github.com/stefanprodan/podinfo" jsonschema_description:"The URL of the OCI registry, chart repository, or git repo where the helm chart is stored"`
 	Version     string   `json:"version" jsonschema:"description=The version of the chart to deploy; for git-based charts this is also the tag of the git repo"`
 	Namespace   string   `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
-	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of values files to include in the package; these will be merged together"`
+	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of local values file paths or remote URLs to include in the package; these will be merged together"`
 	GitPath     string   `json:"gitPath,omitempty" jsonschema:"description=The path to the chart in the repo if using a git repo instead of a helm repo,example=charts/your-chart"`
 	LocalPath   string   `json:"localPath,omitempty" jsonschema:"oneof_required=localPath,description=The path to the chart folder"`
 	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
@@ -99,9 +99,9 @@ type ZarfChart struct {
 type ZarfManifest struct {
 	Name                       string   `json:"name" jsonschema:"description=A name to give this collection of manifests; this will become the name of the dynamically-created helm chart"`
 	Namespace                  string   `json:"namespace,omitempty" jsonschema:"description=The namespace to deploy the manifests to"`
-	Files                      []string `json:"files,omitempty" jsonschema:"description=List of individual K8s YAML files to deploy (in order)"`
+	Files                      []string `json:"files,omitempty" jsonschema:"description=List of local K8s YAML files or remote URLs to deploy (in order)"`
 	KustomizeAllowAnyDirectory bool     `json:"kustomizeAllowAnyDirectory,omitempty" jsonschema:"description=Allow traversing directory above the current directory if needed for kustomization"`
-	Kustomizations             []string `json:"kustomizations,omitempty" jsonschema:"description=List of kustomization paths to include in the package"`
+	Kustomizations             []string `json:"kustomizations,omitempty" jsonschema:"description=List of local kustomization paths or remote URLs to include in the package"`
 	NoWait                     bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for manifest resources to be ready before continuing"`
 }
 
@@ -201,7 +201,7 @@ type ZarfContainerTarget struct {
 
 // ZarfDataInjection is a data-injection definition.
 type ZarfDataInjection struct {
-	Source   string              `json:"source" jsonschema:"description=A path to a local folder or file to inject into the given target pod + container"`
+	Source   string              `json:"source" jsonschema:"description=Either a path to a local folder/file or a remote URL of a file to inject into the given target pod + container"`
 	Target   ZarfContainerTarget `json:"target" jsonschema:"description=The target pod + container to inject the data into"`
 	Compress bool                `json:"compress,omitempty" jsonschema:"description=Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."`
 }
