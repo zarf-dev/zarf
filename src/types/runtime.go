@@ -112,6 +112,7 @@ type ComponentPaths struct {
 	Repos          string
 	Manifests      string
 	DataInjections string
+	Reports        string
 }
 
 // TempPaths is a struct that represents all of the subdirectories for a Zarf package.

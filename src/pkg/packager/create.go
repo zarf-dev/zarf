@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"bytes"
 	"crypto"
 	"encoding/json"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
+	"github.com/openvex/go-vex/pkg/vex"
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
@@ -456,6 +458,43 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				return nil, fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
+	}
+
+	if len(component.Reports) > 0 {
+		spinner := message.NewProgressSpinner("Loading %d vex docs", len(component.Vex))
+		defer spinner.Success()
+
+		err = utils.CreateDirectory(componentPath.Reports, 0700)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create vex destination directory: %w", err)
+		}
+
+		for _, report := range component.Reports {
+			switch reportType := strings.ToLower(report.Type); reportType {
+			case "VEX":
+				doc, err := vex.Load(report.Path)
+				if err != nil {
+					return nil, fmt.Errorf("unable to load vex document %s from %s: %w", report.ComponentName, report.Path, err)
+				}
+
+				// Convert to JSON
+				var b bytes.Buffer
+				if err = doc.ToJSON(&b); err != nil {
+					return nil, fmt.Errorf("unable to write vex doc to JSON for %s: %w", report.ComponentName, err)
+				}
+				message.Debugf("Loaded VEX file %s (%d bytes)", report.ComponentName, b.Len())
+
+				// Write VEX file
+				dest := fmt.Sprintf("%s/%s", componentPath.Reports, report.ComponentName)
+				if err = utils.WriteFile(dest, b.Bytes()); err != nil {
+					return nil, fmt.Errorf("unable to write vex file to %s: %w", dest, err)
+				}
+			default:
+				//do some other stuff
+				message.Debugf("Loaded file %s)", reportType)
+			}
+		}
+
 	}
 
 	if err := p.runActions(onCreate.Defaults, onCreate.After, nil); err != nil {
