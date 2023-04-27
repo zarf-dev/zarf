@@ -80,7 +80,7 @@ To see a full list of `variables` you can view the [zarf.yaml that defines the g
 
 ## What Makes the Init Package Special
 
-Deploying into air-gapped environments is a [hard problem](../../1-understand-the-basics.md#what-is-the-air-gap), particularly when the K8s environment doesn't have a container registry for you to store images in already. This results in a dilemma where the container registry image must be introduced to the cluster, but there is no container registry to push it to as the image is not yet in the cluster - chicken, meet egg. To ensure that our approach is distro-agnostic, we developed a unique solution to seed the container registry into the cluster.
+Deploying into air gapped environments is a [hard problem](../../1-understand-the-basics.md#what-is-the-air-gap), particularly when the K8s environment doesn't have a container registry for you to store images in already. This results in a dilemma where the container registry image must be introduced to the cluster, but there is no container registry to push it to as the image is not yet in the cluster - chicken, meet egg. To ensure that our approach is distro-agnostic, we developed a unique solution to seed the container registry into the cluster.
 
 This is done with the `zarf-injector` [component](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-injector/zarf.yaml) which injects a single rust binary (statically compiled) and a series of configmap chunks of a `registry:2` image into an ephemeral pod that is based on an existing image in the cluster.  This gives us a running registry to bootstrap from and deploy the rest of the 'init' package and any other packages down the line.
 
