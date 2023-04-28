@@ -10,7 +10,7 @@ components:
     reports:
       - name: test-component-vex.vex.json
         path: ./vex/test-component.vex.json
-        type: vex
+        type: veX
       - name: test-component-vex-2.vex.json
         path: ./vex/test-component-2.vex.json
         type: vex

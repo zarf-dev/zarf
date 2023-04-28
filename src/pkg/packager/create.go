@@ -466,7 +466,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 		err = utils.CreateDirectory(componentPath.Reports, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("unable to create vex destination directory: %w", err)
+			return nil, fmt.Errorf("unable to create reports destination directory: %w", err)
 		}
 
 		for _, report := range component.Reports {
@@ -483,6 +483,12 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 					return nil, fmt.Errorf("unable to write vex doc to JSON for %s: %w", report.Name, err)
 				}
 				message.Debugf("Loaded VEX file %s (%d bytes)", report.Name, b.Len())
+
+				dst := fmt.Sprintf("%s/%s", componentPath.Reports, reportType)
+				err = utils.CreateDirectory(dst, 0700)
+				if err != nil {
+					return nil, fmt.Errorf("unable to create reports destination directory: %w", err)
+				}
 
 				// Write VEX file to the vex directory
 				dest := fmt.Sprintf("%s/%s/%s", componentPath.Reports, reportType, report.Name)
