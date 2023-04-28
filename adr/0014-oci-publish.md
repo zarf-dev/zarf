@@ -47,7 +47,7 @@ zarf-package-adr-arm64.tar.zst
 
 With this new structure in place, we can now publish Zarf packages as OCI artifacts. Under the hood this implements the `oras` Go library using Docker's authentication system. For interacting with these packages, the `oci://` package path prefix has been added (ex. `zarf package publish oci://...`).
 
-For an example of this in action, please see the [walkthrough](./docs/../../docs/13-walkthroughs/6-publish-and-deploy.md).
+For an example of this in action, please see the [walkthrough](./docs/../../docs/13-walkthroughs/7-publish-and-deploy.md).
 
 ## Consequences
 

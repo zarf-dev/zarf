@@ -47,10 +47,30 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class="WHI">$ zarf package remove init --components="logging" --confirm</b><br/>
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-22-13-17-09-3967112348.log</b>
-<b class=YEL></b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Removing zarf package init</b>
+<b class="GRN"># Make a new directory to work in</b>
+$ mkdir -p zarf-publish-walkthrough &amp;&amp; cd zarf-publish-walkthrough
+
+<b class="GRN"># For this walkthrough we will use the  example package
+# located here: https://github.com/defenseunicorns/zarf/blob/main/examples/helm-oci-chart/zarf.yaml</b>
+$ cat &lt;&lt;EOF &gt; zarf.yaml
+kind: ZarfPackageConfig
+metadata:
+  name: helm-oci-chart
+  description: Deploy podinfo using a Helm OCI chart
+  # Note: In order to publish, the package must have a version
+  version: 0.0.1
+
+components:
+  - name: helm-oci-chart
+    required: true
+    charts:
+      - name: podinfo
+        version: 6.3.3
+        namespace: helm-oci-demo
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.3
+EOF
 </pre>
 </body>
 </html>

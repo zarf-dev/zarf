@@ -47,10 +47,13 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class="WHI">$ zarf package remove init --components="logging" --confirm</b><br/>
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-22-13-17-09-3967112348.log</b>
-<b class=YEL></b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Removing zarf package init</b>
+<b class="GRN"># Setup some variables for the registry we will be using</b>
+$ REGISTRY=docker.io
+$ set +o history
+$ REGISTRY_USERNAME=&lt;username&gt; <b class="GRN"># &lt;-- replace with your username</b>
+$ REPOSITORY_URL=$REGISTRY/$REGISTRY_USERNAME
+$ REGISTRY_SECRET=&lt;secret&gt; # <b class="GRN">&lt;-- replace with your password or auth token</b>
+$ set -o history
 </pre>
 </body>
 </html>

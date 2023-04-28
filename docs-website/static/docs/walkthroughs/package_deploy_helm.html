@@ -47,43 +47,40 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class=WHI>$ zarf package deploy ./zarf-package-dos-games-arm64.tar.zst</b>
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-23-10-20-59-1265818177.log</b>
-<b class=YEL></b>  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package ../examples/dos-games/zarf-package-dos-games-arm64.tar.zst</b>
-<b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package ../examples/dos-games/zarf-package-dos-games-arm64.tar.zst</b>
+<b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package zarf-package-helm-oci-chart-arm64-0.0.1.tar.zst</b>
 
 <b style="color:#55ffff;">kind</b>:<b style="color:#ff55ff;"> ZarfPackageConfig</b>
 <b style="color:#ff55ff;"></b><b style="color:#55ffff;">metadata</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> dos-games</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Simple example to load classic DOS games into K8s in the airgap</b>
+<b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> helm-oci-chart</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Deploy podinfo using a Helm OCI chart</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 0.0.1</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> arm64</b>
 <b style="color:#ff55ff;"></b><b style="color:#55ffff;">build</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  terminal</b>:<b style="color:#ff55ff;"> JvBUnicornMBP5</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">user</b>:<b style="color:#ff55ff;"> jason</b>
+<b style="color:#55ffff;">  terminal</b>:<b style="color:#ff55ff;"> Laurens-MacBook-Pro-2.local</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">user</b>:<b style="color:#ff55ff;"> laurensmacbook</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> arm64</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">timestamp</b>:<b style="color:#ff55ff;"> Tue, 07 Mar 2023 10:53:12 -0500</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> v0.24.3</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">timestamp</b>:<b style="color:#ff55ff;"> Wed, 12 Apr 2023 10:59:47 -0600</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> v0.25.0</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">migrations</b>:
   -<b style="color:#ff55ff;"> scripts-to-actions</b>
 <b style="color:#ff55ff;"></b><b style="color:#55ffff;">components</b>:
--<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> baseline</b>
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> helm-oci-chart</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;">  </b><b style="color:#55ffff;">manifests</b>:
-  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> multi-games</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> zarf</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">files</b>:
-    -<b style="color:#ff55ff;"> manifests/deployment.yaml</b>
-<b style="color:#ff55ff;">    </b>-<b style="color:#ff55ff;"> manifests/service.yaml</b>
+<b style="color:#ffffff;">  </b><b style="color:#55ffff;">charts</b>:
+  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> podinfo</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">url</b>:<b style="color:#ff55ff;"> oci://ghcr.io/stefanprodan/charts/podinfo</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 6.3.3</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> helm-oci-demo</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
-  -<b style="color:#ff55ff;"> defenseunicorns/zarf-game:multi-tile-dark</b>
+  -<b style="color:#ff55ff;"> ghcr.io/stefanprodan/podinfo:6.3.3</b>
 <b class=YEL>This package has 1 artifacts with software bill-of-materials (SBOM) included. You can view them now</b>
 <b class=YEL>in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:</b>
-<b class=YEL>/Users/jason/src/github.com/jasonvanbrackel/zarf/docs-website/zarf-sbom/sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html</b>
+<b class=YEL>/Users/Lauren/Defense-Unicorns/zarf/examples/helm-oci-chart/zarf-sbom/sbom-viewer-ghcr.io_stefanprodan_podinfo_6.3.3.html</b>
 <b class=YEL></b>
 <b class=YEL>* This directory will be removed after package deployment.</b>
 <b class=YEL></b>
-<b style="color:#55ff55;">? </b><b class="HIW">Deploy this Zarf package?</b> (y/N) <span style="color:#00aaaa">Yes</span>
+<b class="HIG"> ? </b><b class="HIW">Deploy this Zarf package? </b>(y/N) <span style="color:#55ffff;">Yes</span> <br/>
+<!-- <b style="color:#55ff55;">? </b><b class="WHI">Deploy this Zarf package?</b> (y/N) <span style="color:#00aaaa">Yes</span> -->
 </pre>
 </body>
 </html>

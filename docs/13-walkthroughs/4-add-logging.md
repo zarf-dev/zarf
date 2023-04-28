@@ -4,7 +4,7 @@
 
 In this walkthrough, we are going to show how you can use a Zarf component to inject zero-config, centralized logging into your Zarf cluster.
 
-More specifically, you'll be adding a [Promtail / Loki / Grafana (PLG)](https://github.com/grafana/loki) stack to the [Doom Walkthrough](./2-deploying-doom.md) by installing Zarf's "logging" component.
+More specifically, you'll be adding a [Promtail / Loki / Grafana (PLG)](https://github.com/grafana/loki) stack to the [Retro Arcade Walkthrough](./3-deploy-a-retro-arcade.md) by installing Zarf's "logging" component.
 
 ## System Requirements
 
@@ -15,7 +15,7 @@ More specifically, you'll be adding a [Promtail / Loki / Grafana (PLG)](https://
 Prior to this walkthrough you'll want to have a working cluster with Zarf initialized
 1.  Zarf binary installed on your $PATH: ([Installing Zarf](../3-getting-started.md#installing-zarf))
 2. [Initialize a cluster](./1-initializing-a-k8s-cluster.md).
-3. Perform the [Doom Walkthrough](./2-deploying-doom.md).
+3. Perform the [Retro Arcade Walkthrough](./3-deploy-a-retro-arcade.md).
 
 ## Walkthrough
 [![Walkthrough: Add Logging to an existing Zarf Cluster with Zarf Init](../.images/walkthroughs/logging_thumbnail.png)](https://youtu.be/FYkafs1idlQ "Add Logging to an existing Zarf Cluster with Zarf Init")
@@ -44,9 +44,9 @@ key. <br/> When prompted to deploy the logging component select `y` for Yes, the
 
 You should see a section for `Logging`.  You will need these credentials later on.
 
-## Deploy the Doom Walkthrough
+## Deploy the Retro Arcade Walkthrough
 
-1. If you haven't already in the prerequisites, deploy the [Doom Walkthrough](./2-deploying-doom.md).
+1. If you haven't already in the prerequisites, deploy the [Retro Arcade Walkthrough](./3-deploy-a-retro-arcade.md).
 
 ## Check the logs
 
@@ -105,7 +105,7 @@ If you receive this error, either you don't have a Kubernetes cluster, your clus
 
 If you need to setup a cluster, you can perform the following.
 
-1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](./4-creating-a-k8s-cluster-with-zarf.md) walkthrough.
+1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](./5-creating-a-k8s-cluster-with-zarf.md) walkthrough.
 2. Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) walkthrough.
 
 After that you can try deploying the package again.
