@@ -58,4 +58,4 @@ After the initialization process is complete, you can verify that the pods have 
 
 ## Set Up Complete
 
-At this point, you have successfully installed the Zarf CLI and initialized a K8s cluster. You are now ready to begin deploying packages to your cluster. The [Walkthroughs](../13-walkthroughs/index.md) section of the documentation provides a step-by-step guide on how to deploy packages to your cluster, and the [Doom Walkthrough](../13-walkthroughs/2-deploying-doom.md) is a great place to start. Follow along with the guide to learn more about deploying packages to your cluster and get started with your first deployment.
+At this point, you have successfully installed the Zarf CLI and initialized a K8s cluster. You are now ready to begin deploying packages to your cluster. The [Walkthroughs](../13-walkthroughs/index.md) section of the documentation provides a step-by-step guide on how to deploy packages to your cluster, and the [Deploying Zarf Packages](../13-walkthroughs/2-deploying-zarf-packages.md) is a great place to start. Follow along with the guide to learn more about deploying packages to your cluster and get started with your first deployment.

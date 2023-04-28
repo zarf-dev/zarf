@@ -15,7 +15,6 @@ pre {
 }
 b {font-weight: normal}
 b.BOLD {color: #fff}
-b.ITA {font-style: italic}
 b.UND {text-decoration: underline}
 b.STR {text-decoration: line-through}
 b.UNDSTR {text-decoration: underline line-through}
@@ -47,10 +46,12 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class="WHI">$ zarf package remove init --components="logging" --confirm</b><br/>
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-22-13-17-09-3967112348.log</b>
-<b class=YEL></b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Removing zarf package init</b>
+<b class="WHI">$ zarf package deploy</b><br/>
+<b class="YEL">Saving log file to
+/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-23-13-18-54-4086179855.log</b>
+<b class="BOLD" style="color:#55ff55;">? </b><b class="BOLD">Choose or type the package file </b><b class="WHI">zarf-package-helm-oci-chart-arm64-0.0.1.tar.zst</b><b class=CYN>[</b><b class=CYN>tab for suggestions]</b>
+<b class=WHI>  zarf-package-distro-eks-multi.tar.zst</b>
+<b class=CYN>> zarf-package-helm-oci-chart-arm64-0.0.1.tar.zst</b>
 </pre>
 </body>
 </html>
