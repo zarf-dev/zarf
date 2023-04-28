@@ -1,0 +1,36 @@
+kind: ZarfPackageConfig
+metadata:
+  name: vex-example
+  description: 'Demo Zarf package composability with reports'
+
+components:
+  - name: test-component
+    required: true
+    description: 'Example component that has reports'
+    reports:
+      - name: test-component-vex.vex.json
+        path: ./vex/test-component.vex.json
+        type: vex
+      - name: test-component-vex-2.vex.json
+        path: ./vex/test-component-2.vex.json
+        type: vex
+      # - name: test-bad-component-vex
+      #   path: ./vex/test-component-bad.vex.json
+      #   type: vex
+      - name: component-oscal.yaml
+        path: ./oscal/oscal-component.yaml
+        type: oscal
+  - name: test-component-2
+    required: true
+    description: 'Example component that has reports round 2'
+    reports:
+      - name: test-component-vex.vex.json
+        path: ./vex/test-component.vex.json
+        type: vex
+      # - name: test-bad-component-vex
+      #   path: ./vex/test-component-bad.vex.json
+      #   type: vex
+      - name: randomtext.txt
+        path: ./test.txt
+        type: text
+

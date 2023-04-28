@@ -1,0 +1,26 @@
+{
+    "@context": "",
+    "@id": "merged-vex-67124ea942ef30e1f42f3f2bf405fbbc4f5a56e6e87684fc5cd957212fa3e026",
+    "author": "Known Author",
+    "role": "Document Creator",
+    "timestamp": "2023-02-03T08:11:42.525456-07:00",
+    "version": "",
+    "statements": [
+        {
+            "vulnerability": "CVE-1234-5678",
+            "timestamp": "2022-12-22T16:36:43-05:00",
+            "products": [
+                "pkg:apk/wolfi/bash@1.0.0"
+            ],
+            "status": "under_investigation"
+        },
+        {
+            "vulnerability": "CVE-1234-5678",
+            "timestamp": "2022-12-22T20:56:05-05:00",
+            "products": [
+                "pkg:apk/wolfi/bash@1.0.0"
+            ],
+            "status": "fixed"
+        }
+    ]
+}

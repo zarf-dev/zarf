@@ -461,7 +461,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 	}
 
 	if len(component.Reports) > 0 {
-		spinner := message.NewProgressSpinner("Loading %d vex docs", len(component.Vex))
+		spinner := message.NewProgressSpinner("Loading %d reports", len(component.Reports))
 		defer spinner.Success()
 
 		err = utils.CreateDirectory(componentPath.Reports, 0700)
@@ -474,24 +474,35 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			case "VEX":
 				doc, err := vex.Load(report.Path)
 				if err != nil {
-					return nil, fmt.Errorf("unable to load vex document %s from %s: %w", report.ComponentName, report.Path, err)
+					return nil, fmt.Errorf("unable to load vex document %s from %s: %w", report.Name, report.Path, err)
 				}
 
 				// Convert to JSON
 				var b bytes.Buffer
 				if err = doc.ToJSON(&b); err != nil {
-					return nil, fmt.Errorf("unable to write vex doc to JSON for %s: %w", report.ComponentName, err)
+					return nil, fmt.Errorf("unable to write vex doc to JSON for %s: %w", report.Name, err)
 				}
-				message.Debugf("Loaded VEX file %s (%d bytes)", report.ComponentName, b.Len())
+				message.Debugf("Loaded VEX file %s (%d bytes)", report.Name, b.Len())
 
-				// Write VEX file
-				dest := fmt.Sprintf("%s/%s", componentPath.Reports, report.ComponentName)
+				// Write VEX file to the vex directory
+				dest := fmt.Sprintf("%s/%s/%s", componentPath.Reports, reportType, report.Name)
 				if err = utils.WriteFile(dest, b.Bytes()); err != nil {
 					return nil, fmt.Errorf("unable to write vex file to %s: %w", dest, err)
 				}
 			default:
-				//do some other stuff
 				message.Debugf("Loaded file %s)", reportType)
+
+				dst := filepath.Join(componentPath.Reports, reportType, report.Name)
+
+				if utils.IsURL(report.Path) {
+					if err := utils.DownloadToFile(report.Path, dst, component.CosignKeyPath); err != nil {
+						return nil, fmt.Errorf(lang.ErrDownloading, report.Path, err.Error())
+					}
+				} else {
+					if err := utils.CreatePathAndCopy(report.Path, dst); err != nil {
+						return nil, fmt.Errorf("unable to copy file %s: %w", report.Path, err)
+					}
+				}
 			}
 		}
 

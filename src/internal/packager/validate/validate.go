@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/openvex/go-vex/pkg/vex"
 )
 
 var (
@@ -139,6 +140,15 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		return fmt.Errorf(lang.PkgValidateErrAction, err)
 	} else if containsVariables {
 		return fmt.Errorf(lang.PkgValidateErrActionVariables, component.Name)
+	}
+
+	for _, report := range component.Reports {
+		if strings.ToLower(report.Type) == "vex" {
+			if err := validateVex(report); err != nil {
+				return fmt.Errorf(lang.AgentErrInvalidOp, err)
+			}
+		}
+
 	}
 
 	return nil
@@ -296,6 +306,16 @@ func validateManifest(manifest types.ZarfManifest) error {
 	// Require files in manifest
 	if len(manifest.Files) < 1 && len(manifest.Kustomizations) < 1 {
 		return fmt.Errorf(lang.PkgValidateErrManifestFileOrKustomize, manifest.Name)
+	}
+
+	return nil
+}
+
+func validateVex(component types.ZarfComponentReport) error {
+	// check valid vex document
+	_, err := vex.Load(component.Path)
+	if err != nil {
+		return err
 	}
 
 	return nil

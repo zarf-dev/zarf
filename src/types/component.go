@@ -217,7 +217,7 @@ type ZarfComponentImport struct {
 }
 
 type ZarfComponentReport struct {
-	ComponentName string `json:"name,omitempty"`
-	Path          string `json:"path" jsonschema:"description=The path to the data"`
-	Type          string `json:"type" jsonschema:"description=The type of data the file represents"`
+	Name string `json:"name,omitempty"`
+	Path string `json:"path" jsonschema:"description=The path to the data"`
+	Type string `json:"type" jsonschema:"description=The type of data the file represents"`
 }
