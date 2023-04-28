@@ -22,6 +22,8 @@ const (
 	ErrTunnelFailed        = "Failed to create a tunnel to the Kubernetes cluster."
 	ErrUnmarshal           = "failed to unmarshal file: %w"
 	ErrWritingFile         = "failed to write the file %s: %s"
+	ErrDownloading         = "failed to download %s: %s"
+	ErrCreatingDir         = "failed to create directory %s: %s"
 )
 
 // Zarf CLI commands.
@@ -127,7 +129,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdInitDownloadAsk       = "It seems the init package could not be found locally, but can be downloaded from %s"
 	CmdInitDownloadNote      = "Note: This will require an internet connection."
 	CmdInitDownloadConfirm   = "Do you want to download this init package?"
-	CmdInitDownloadCancel    = "Confirm selection canceled: %s"
+	CmdInitDownloadCancel    = "confirm selection canceled: %s"
 	CmdInitDownloadErrManual = "download the init package manually and place it in the current working directory"
 
 	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"

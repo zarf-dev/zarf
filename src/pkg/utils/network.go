@@ -6,22 +6,21 @@ package utils
 
 import (
 	"context"
+	"crypto"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
-
-// SGETProtocol is the protocol URI scheme for SGET.
-const SGETProtocol = "sget://"
 
 // IsURL is a helper function to check if a URL is valid.
 func IsURL(source string) bool {
@@ -69,27 +68,77 @@ func Fetch(url string) io.ReadCloser {
 	return resp.Body
 }
 
-// DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
-func DownloadToFile(url string, target string, cosignKeyPath string) {
+func parseChecksum(src string) (string, string, error) {
+	atSymbolCount := strings.Count(src, "@")
+	var checksum string
+	if atSymbolCount > 0 {
+		parsed, err := url.Parse(src)
+		if err != nil {
+			return src, checksum, fmt.Errorf("unable to parse the URL: %s", src)
+		}
+		if atSymbolCount == 1 && parsed.User != nil {
+			return src, checksum, nil
+		}
 
-	// Always ensure the target directory exists
-	if err := CreateFilePath(target); err != nil {
-		message.Fatalf(err, "Unable to create file path: %s", target)
+		index := strings.LastIndex(src, "@")
+		checksum = src[index+1:]
+		src = src[:index]
+	}
+	return src, checksum, nil
+}
+
+// DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
+func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
+	message.Debugf("Downloading %s to %s", src, dst)
+	// check if the parsed URL has a checksum
+	// if so, remove it and use the checksum to validate the file
+	src, checksum, err := parseChecksum(src)
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(filepath.Dir(dst), 0600)
+	if err != nil {
+		return fmt.Errorf(lang.ErrCreatingDir, filepath.Dir(dst), err.Error())
 	}
 
 	// Create the file
-	destinationFile, err := os.Create(target)
+	file, err := os.Create(dst)
 	if err != nil {
-		message.Fatal(err, "Unable to create the destination file")
+		return fmt.Errorf(lang.ErrWritingFile, dst, err.Error())
 	}
-	defer destinationFile.Close()
 
-	// If the url start with the sget protocol use that, otherwise do a typical GET call
-	if strings.HasPrefix(url, SGETProtocol) {
-		sgetFile(url, destinationFile, cosignKeyPath)
-	} else {
-		httpGetFile(url, destinationFile)
+	parsed, err := url.Parse(src)
+	if err != nil {
+		return fmt.Errorf("unable to parse the URL: %s", src)
 	}
+	// If the source url starts with the sget protocol use that, otherwise do a typical GET call
+	if parsed.Scheme == "sget" {
+		err = Sget(context.TODO(), src, cosignKeyPath, file)
+		if err != nil {
+			return fmt.Errorf("unable to download file with sget: %s", src)
+		}
+		if err != nil {
+			return err
+		}
+	} else {
+		err = httpGetFile(src, file)
+		if err != nil {
+			return err
+		}
+	}
+
+	// If the file has a checksum, validate it
+	if len(checksum) > 0 {
+		received, err := GetCryptoHash(dst, crypto.SHA256)
+		if err != nil {
+			return err
+		}
+		if received != checksum {
+			return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s ", dst, checksum, received)
+		}
+	}
+	return file.Close()
 }
 
 // GetAvailablePort retrieves an available port on the host machine. This delegates the port selection to the golang net
@@ -140,36 +189,29 @@ func validHostname(hostname string) bool {
 	return isValid
 }
 
-func httpGetFile(url string, destinationFile *os.File) {
+func httpGetFile(url string, destinationFile *os.File) error {
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
-		message.Fatal(err, "Unable to download the file")
+		return fmt.Errorf("unable to download the file %s", url)
 	}
 	defer resp.Body.Close()
 
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
-		message.Fatalf(nil, "Bad HTTP status: %s", resp.Status)
+		return fmt.Errorf("bad HTTP status: %s", resp.Status)
 	}
 
 	// Writer the body to file
-	title := fmt.Sprintf("Downloading %s", path.Base(url))
+	title := fmt.Sprintf("Downloading %s", filepath.Base(url))
 	progressBar := message.NewProgressBar(resp.ContentLength, title)
 
 	if _, err = io.Copy(destinationFile, io.TeeReader(resp.Body, progressBar)); err != nil {
-		progressBar.Fatalf(err, "Unable to save the file %s", destinationFile.Name())
+		progressBar.Errorf(err, "Unable to save the file %s", destinationFile.Name())
+		return err
 	}
 
 	title = fmt.Sprintf("Downloaded %s", url)
 	progressBar.Successf("%s", title)
-}
-
-func sgetFile(url string, destinationFile *os.File, cosignKeyPath string) {
-	// Remove the custom protocol header from the url
-	_, url, _ = strings.Cut(url, SGETProtocol)
-	err := Sget(context.TODO(), url, cosignKeyPath, destinationFile)
-	if err != nil {
-		message.Fatalf(err, "Unable to download file with sget: %s\n", url)
-	}
+	return nil
 }

@@ -122,19 +122,16 @@ func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
 			Message: lang.CmdInitDownloadConfirm,
 		}
 		if err := survey.AskOne(prompt, &confirmDownload); err != nil {
-			message.Fatalf(nil, lang.CmdInitDownloadCancel, err.Error())
+			return fmt.Errorf(lang.CmdInitDownloadCancel, err.Error())
 		}
 	}
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		utils.DownloadToFile(url, downloadCacheTarget, "")
-	} else {
-		// Otherwise, exit and tell the user to manually download the init-package
-		return errors.New(lang.CmdInitDownloadErrManual)
+		return utils.DownloadToFile(url, downloadCacheTarget, "")
 	}
-
-	return nil
+	// Otherwise, exit and tell the user to manually download the init-package
+	return errors.New(lang.CmdInitDownloadErrManual)
 }
 
 func validateInitFlags() error {

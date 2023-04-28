@@ -13,8 +13,8 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
-// BuildKustomization reads a kustomization and builds it into a single yaml file.
-func BuildKustomization(path string, destination string, kustomizeAllowAnyDirectory bool) error {
+// Build reads a kustomization and builds it into a single yaml file.
+func Build(path string, destination string, kustomizeAllowAnyDirectory bool) error {
 	// Kustomize has to write to the filesystem on-disk
 	fSys := filesys.MakeFsOnDisk()
 
