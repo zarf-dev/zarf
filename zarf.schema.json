@@ -286,7 +286,7 @@
         "reports": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfComponentVex"
+            "$ref": "#/definitions/ZarfComponentReport"
           },
           "type": "array",
           "description": "Report documents to add into Zarf package"
