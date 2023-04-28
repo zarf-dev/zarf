@@ -470,11 +470,30 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		}
 
 		for _, report := range component.Reports {
+			var path string
 			switch reportType := strings.ToLower(report.Type); reportType {
 			case "vex":
-				doc, err := vex.Load(report.Path)
+				dst := fmt.Sprintf("%s/%s", componentPath.Reports, reportType)
+				err = utils.CreateDirectory(dst, 0700)
 				if err != nil {
-					return nil, fmt.Errorf("unable to load vex document %s from %s: %w", report.Name, report.Path, err)
+					return nil, fmt.Errorf("unable to create reports destination directory: %w", err)
+				}
+				message.Debug("Source was identified as a URL")
+				if _, err := os.Stat(dst + report.Name); err == nil {
+					return nil, fmt.Errorf("%s already exists for this component and cannot conflict", dst+report.Name)
+				}
+				if utils.IsURL(report.Source) {
+					path = fmt.Sprintf("%s/%s/%s", componentPath.Reports, reportType, report.Name)
+					if err := utils.DownloadToFile(report.Source, path, component.CosignKeyPath); err != nil {
+						return nil, fmt.Errorf(lang.ErrDownloading, report.Source, err.Error())
+					}
+				} else {
+					path = report.Source
+				}
+
+				doc, err := vex.Load(path)
+				if err != nil {
+					return nil, fmt.Errorf("unable to load vex document %s from %s: %w", report.Name, path, err)
 				}
 
 				// Convert to JSON
@@ -482,13 +501,8 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				if err = doc.ToJSON(&b); err != nil {
 					return nil, fmt.Errorf("unable to write vex doc to JSON for %s: %w", report.Name, err)
 				}
-				message.Debugf("Loaded VEX file %s (%d bytes)", report.Name, b.Len())
 
-				dst := fmt.Sprintf("%s/%s", componentPath.Reports, reportType)
-				err = utils.CreateDirectory(dst, 0700)
-				if err != nil {
-					return nil, fmt.Errorf("unable to create reports destination directory: %w", err)
-				}
+				message.Debugf("Loaded VEX file %s (%d bytes)", report.Name, b.Len())
 
 				// Write VEX file to the vex directory
 				dest := fmt.Sprintf("%s/%s/%s", componentPath.Reports, reportType, report.Name)
@@ -500,18 +514,17 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 				dst := filepath.Join(componentPath.Reports, reportType, report.Name)
 
-				if utils.IsURL(report.Path) {
-					if err := utils.DownloadToFile(report.Path, dst, component.CosignKeyPath); err != nil {
-						return nil, fmt.Errorf(lang.ErrDownloading, report.Path, err.Error())
+				if utils.IsURL(report.Source) {
+					if err := utils.DownloadToFile(report.Source, dst, component.CosignKeyPath); err != nil {
+						return nil, fmt.Errorf(lang.ErrDownloading, report.Source, err.Error())
 					}
 				} else {
-					if err := utils.CreatePathAndCopy(report.Path, dst); err != nil {
-						return nil, fmt.Errorf("unable to copy file %s: %w", report.Path, err)
+					if err := utils.CreatePathAndCopy(report.Source, dst); err != nil {
+						return nil, fmt.Errorf("unable to copy file %s: %w", report.Source, err)
 					}
 				}
 			}
 		}
-
 	}
 
 	if err := p.runActions(onCreate.Defaults, onCreate.After, nil); err != nil {

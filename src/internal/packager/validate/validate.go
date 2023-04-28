@@ -13,6 +13,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/openvex/go-vex/pkg/vex"
@@ -313,7 +314,11 @@ func validateManifest(manifest types.ZarfManifest) error {
 
 func validateVex(component types.ZarfComponentReport) error {
 	// check valid vex document
-	_, err := vex.Load(component.Path)
+	if utils.IsURL(component.Source) {
+		message.Debug("skipping validation due to remote location - validation will occur during create")
+		return nil
+	}
+	_, err := vex.Load(component.Source)
 	if err != nil {
 		return err
 	}
