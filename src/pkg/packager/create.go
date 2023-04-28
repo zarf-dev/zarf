@@ -471,7 +471,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 		for _, report := range component.Reports {
 			switch reportType := strings.ToLower(report.Type); reportType {
-			case "VEX":
+			case "vex":
 				doc, err := vex.Load(report.Path)
 				if err != nil {
 					return nil, fmt.Errorf("unable to load vex document %s from %s: %w", report.Name, report.Path, err)
