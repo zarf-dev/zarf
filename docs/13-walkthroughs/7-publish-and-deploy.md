@@ -1,4 +1,4 @@
-# Using OCI to Store & Deploy Zarf Packages 
+# Using OCI to Store & Deploy Zarf Packages
 
 ## Introduction
 
@@ -18,9 +18,9 @@ For following along locally, please ensure the following prerequisites are met:
 3. Access to a cluster that has been [initialized with zarf](./1-initializing-a-k8s-cluster.md).
 
 ## Setup
+
 [![Using OCI to Store & Deploy Zarf Packages Video on YouTube](../.images/walkthroughs/publish_and_deploy_thumbnail.png)](https://www.youtube.com/watch?v=QKxgJnC_37Y "Using OCI to Store & Deploy Zarf Packages")
 
-### Setup
 This walkthrough will require a registry to be configured (see [prerequisites](#prerequisites) for more information).  The below sets up some variables for us to use when logging into the registry:
 
 <iframe src="/docs/walkthroughs/publish_and_deploy_setup.html" width="100%"></iframe>
@@ -116,7 +116,7 @@ Packages can be saved to the local disk in order to deploy a package multiple ti
 
 #### Remediation
 
-You attepted to publish a package with no version metadata.
+You attempted to publish a package with no version metadata.
 
 <iframe src="/docs/walkthroughs/troubleshoot_version_required_no_version.html" width="100%" height="300px"></iframe>
 
@@ -165,4 +165,3 @@ After that you can try deploying the package again.
 #### Remediation
 
 If you receive this error when zarf is attempting to deploy any component, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this walkthrough.  Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) walkthrough, then try again.
-
