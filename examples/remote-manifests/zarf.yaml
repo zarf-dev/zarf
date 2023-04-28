@@ -1,0 +1,52 @@
+kind: ZarfPackageConfig
+metadata:
+  name: remote-manifests
+  version: 0.0.1
+
+components:
+  - name: remote-manifests-and-kustomizations
+    required: true
+    manifests:
+      - name: simple-nginx-deployment
+        namespace: nginx
+        files:
+          # to verify integrity of a remote manifest, you can use the sha256sum of the file
+          # append the sha256sum to the end of the url, separated by an @
+          # example:
+          - https://k8s.io/examples/application/deployment.yaml@c57f73449b26eae02ca2a549c388807d49ef6d3f2dc040a9bbb1290128d97157
+          # this sha256 can be discovered using the following:
+          # curl -s https://k8s.io/examples/application/deployment.yaml | sha256sum
+          # or
+          # zarf prepare sha256sum https://k8s.io/examples/application/deployment.yaml
+      - name: podinfo
+        namespace: podinfo
+        kustomizations:
+          # note this syntax: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md
+          # using a specific commit hash (essentially the same thing as sha256summ'ing the kustomization)
+          # ?ref= is not a requirement, but it is recommended to use a specific commit hash / git tag to ensure
+          # that the kustomization is not changed in a way that breaks your deployment
+          # example:
+          - github.com/stefanprodan/podinfo//kustomize?ref=0647aea75b85755411b007a290b9321668370be5
+    actions:
+      onDeploy:
+      # the following checks were computed by viewing the success state of the package deployment
+      # and creating `wait` actions that match
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: nginx-deployment
+                namespace: nginx
+                condition: available
+          - wait:
+              cluster:
+                kind: deployment
+                name: podinfo
+                namespace: podinfo
+                condition: available
+    # image discovery is supported in remote manifests and kustomizations
+    # using the following command:
+    # zarf prepare find-images
+    images:
+      - nginx:1.14.2
+      - ghcr.io/stefanprodan/podinfo:6.3.5
