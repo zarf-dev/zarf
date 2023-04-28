@@ -1840,7 +1840,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** List of values files to include in the package; these will be merged together
+**Description:** List of local values file paths or remote URLs to include in the package; these will be merged together
 
 |          |                   |
 | -------- | ----------------- |
@@ -1985,7 +1985,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** List of individual K8s YAML files to deploy (in order)
+**Description:** List of local K8s YAML files or remote URLs to deploy (in order)
 
 |          |                   |
 | -------- | ----------------- |
@@ -2028,7 +2028,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** List of kustomization paths to include in the package
+**Description:** List of local kustomization paths or remote URLs to include in the package
 
 |          |                   |
 | -------- | ----------------- |
@@ -2158,7 +2158,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** A path to a local folder or file to inject into the given target pod + container
+**Description:** Either a path to a local folder/file or a remote URL of a file to inject into the given target pod + container
 
 |          |          |
 | -------- | -------- |
