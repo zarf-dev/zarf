@@ -1,0 +1,11 @@
+---
+kind: GitRepo
+apiVersion: fleet.cattle.io/v1alpha1
+metadata:
+  name: helm
+  namespace: fleet-local
+spec:
+  # TODO: This should not point to my own version of podinfo.  I added a fleet.yaml (likely not needed though) and removed the kubeVersion check in the Chart.yaml (likely the real problem)
+  repo: https://github.com/Racer159/podinfo.git
+  paths:
+  - charts/podinfo

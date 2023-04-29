@@ -7,10 +7,12 @@ package helm
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/registry"
@@ -82,7 +84,7 @@ func (h *Helm) PackageChartFromGit(destination string) (string, error) {
 	return name, nil
 }
 
-// DownloadPublishedChart loads a specific chart version from a remote repo.
+// DownloadPublishedChart loads a specific chart version from a remote repo or url.
 func (h *Helm) DownloadPublishedChart(destination string) {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.Chart.Name, h.Chart.Version, h.Chart.URL)
 	defer spinner.Stop()
@@ -91,58 +93,70 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 	pull := action.NewPull()
 	pull.Settings = cli.New()
 
+	rePrePack := regexp.MustCompile(`\.tgz$`)
+	isPrePack := rePrePack.MatchString(h.Chart.URL)
+
 	var (
 		regClient *registry.Client
 		chartURL  string
 		err       error
 	)
 
-	// Handle OCI registries
-	if registry.IsOCI(h.Chart.URL) {
-		regClient, err = registry.NewClient(registry.ClientOptEnableCache(true))
+	// Ensure the name is consistent for deployments
+	destinationTarball := StandardName(destination, h.Chart) + ".tgz"
+
+	if isPrePack {
+		err = utils.DownloadToFile(h.Chart.URL, destinationTarball, "")
 		if err != nil {
-			spinner.Fatalf(err, "Unable to create a new registry client")
+			spinner.Fatalf(err, "Unable download chart: %s", err.Error())
 		}
-		chartURL = h.Chart.URL
-		// Explicitly set the pull version for OCI
-		pull.Version = h.Chart.Version
 	} else {
-		// Perform simple chart download
-		chartURL, err = repo.FindChartInRepoURL(h.Chart.URL, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
-		if err != nil {
-			spinner.Fatalf(err, "Unable to pull the helm chart")
+		// Handle OCI registries
+		if registry.IsOCI(h.Chart.URL) {
+			regClient, err = registry.NewClient(registry.ClientOptEnableCache(true))
+			if err != nil {
+				spinner.Fatalf(err, "Unable to create a new registry client")
+			}
+			chartURL = h.Chart.URL
+			// Explicitly set the pull version for OCI
+			pull.Version = h.Chart.Version
+
+		} else {
+			// Perform simple chart download
+			chartURL, err = repo.FindChartInRepoURL(h.Chart.URL, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+			if err != nil {
+				spinner.Fatalf(err, "Unable to pull the helm chart")
+			}
 		}
-	}
 
-	// Set up the chart chartDownloader
-	chartDownloader := downloader.ChartDownloader{
-		Out:            spinner,
-		RegistryClient: regClient,
-		// TODO: Further research this with regular/OCI charts
-		Verify:  downloader.VerifyNever,
-		Getters: getter.All(pull.Settings),
-		Options: []getter.Option{
-			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.Insecure),
-		},
-	}
+		// Set up the chart chartDownloader
+		chartDownloader := downloader.ChartDownloader{
+			Out:            spinner,
+			RegistryClient: regClient,
+			// TODO: Further research this with regular/OCI charts
+			Verify:  downloader.VerifyNever,
+			Getters: getter.All(pull.Settings),
+			Options: []getter.Option{
+				getter.WithInsecureSkipVerifyTLS(config.CommonOptions.Insecure),
+			},
+		}
 
-	// Download the file (we don't control what name helm creates here)
-	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, destination)
-	if err != nil {
-		spinner.Fatalf(err, "Unable to download the helm chart")
+		// Download the file (we don't control what name helm creates here)
+		savedChart, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, destination)
+		if err != nil {
+			spinner.Fatalf(err, "Unable to download the helm chart")
+		}
+
+		err = os.Rename(savedChart, destinationTarball)
+		if err != nil {
+			spinner.Fatalf(err, "Unable to save the chart tarball")
+		}
 	}
 
 	// Validate the chart
-	_, err = loader.LoadFile(saved)
+	_, err = loader.LoadFile(destinationTarball)
 	if err != nil {
 		spinner.Fatalf(err, "Validation failed for chart %s (%s)", h.Chart.Name, err.Error())
-	}
-
-	// Ensure the name is consistent for deployments
-	destinationTarball := StandardName(destination, h.Chart) + ".tgz"
-	err = os.Rename(saved, destinationTarball)
-	if err != nil {
-		spinner.Fatalf(err, "Unable to save the chart tarball")
 	}
 
 	spinner.Success()

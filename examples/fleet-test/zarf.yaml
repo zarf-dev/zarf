@@ -1,0 +1,37 @@
+kind: ZarfPackageConfig
+metadata:
+  name: fleet-test
+  description: "Deploy fleet and then podinfo via fleet"
+
+components:
+  - name: fleet
+    description: "Installs the fleet CRD / agent / controller to use fleet-based deployments in the cluster"
+    required: true
+    charts:
+      - name: fleet-crd
+        url: https://github.com/rancher/fleet/releases/download/v0.6.0/fleet-crd-0.6.0.tgz
+        version: 0.6.0
+        namespace: fleet
+      - name: fleet
+        url: https://github.com/rancher/fleet/releases/download/v0.6.0/fleet-0.6.0.tgz
+        version: 0.6.0
+        namespace: fleet
+    images:
+      - rancher/fleet:v0.6.0
+      - rancher/fleet-agent:v0.6.0
+      - rancher/gitjob:v0.1.37
+      - rancher/tekton-utils:v0.1.11
+
+  - name: podinfo-via-fleet
+    description: "Example deployment via fleet using the podinfo example"
+    required: true
+    manifests:
+      - name: podinfo-via-fleet
+        namespace: podinfo
+        files:
+          - podinfo-source.yaml
+    repos:
+      # TODO: This should not point to my own version of podinfo.  I added a fleet.yaml (likely not needed though) and removed the kubeVersion check in the Chart.yaml (likely the real problem)
+      - https://github.com/Racer159/podinfo.git
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.5

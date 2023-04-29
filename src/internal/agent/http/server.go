@@ -18,14 +18,16 @@ func NewAdmissionServer(port string) *http.Server {
 
 	// Instances hooks
 	podsMutation := hooks.NewPodMutationHook()
-	gitRepositoryMutation := hooks.NewGitRepositoryMutationHook()
+	fluxGitRepositoryMutation := hooks.NewFluxGitRepositoryMutationHook()
+	fleetGitRepositoryMutation := hooks.NewFleetGitRepoMutationHook()
 
 	// Routers
 	ah := newAdmissionHandler()
 	mux := http.NewServeMux()
 	mux.Handle("/healthz", healthz())
 	mux.Handle("/mutate/pod", ah.Serve(podsMutation))
-	mux.Handle("/mutate/flux-gitrepository", ah.Serve(gitRepositoryMutation))
+	mux.Handle("/mutate/flux-gitrepository", ah.Serve(fluxGitRepositoryMutation))
+	mux.Handle("/mutate/fleet-gitrepo", ah.Serve(fleetGitRepositoryMutation))
 
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),

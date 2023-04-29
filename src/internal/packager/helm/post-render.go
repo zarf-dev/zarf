@@ -218,7 +218,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			}
 
 			// Generate the git server secret
-			gitServerSecret := c.Kube.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
+			gitServerSecret := c.Kube.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeBasicAuth)
 			gitServerSecret.StringData = map[string]string{
 				"username": r.options.Cfg.State.GitServer.PullUsername,
 				"password": r.options.Cfg.State.GitServer.PullPassword,

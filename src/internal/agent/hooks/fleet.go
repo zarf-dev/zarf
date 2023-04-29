@@ -19,30 +19,25 @@ import (
 	v1 "k8s.io/api/admission/v1"
 )
 
-// FluxSecretRef contains the name used to reference a git repository secret.
-type FluxSecretRef struct {
-	Name string `json:"name"`
-}
-
-// FluxGitRepository contains the URL of a git repo and the secret that corresponds to it for use with Flux.
-type FluxGitRepository struct {
+// FleetGitRepo contains the URL of a git repo for use with Fleet.
+type FleetGitRepo struct {
 	Spec struct {
-		URL       string        `json:"url"`
-		SecretRef FluxSecretRef `json:"secretRef,omitempty"`
+		Repo             string `json:"repo"`
+		ClientSecretName string `json:"clientSecretName,omitempty"`
 	}
 }
 
-// NewFluxGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
-func NewFluxGitRepositoryMutationHook() operations.Hook {
-	message.Debug("hooks.NewFluxGitRepositoryMutationHook()")
+// NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
+func NewFleetGitRepoMutationHook() operations.Hook {
+	message.Debug("hooks.NewFleetGitRepoMutationHook()")
 	return operations.Hook{
-		Create: mutateFluxGitRepository,
-		Update: mutateFluxGitRepository,
+		Create: mutateFleetGitRepo,
+		Update: mutateFleetGitRepo,
 	}
 }
 
 // mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
-func mutateFluxGitRepository(r *v1.AdmissionRequest) (result *operations.Result, err error) {
+func mutateFleetGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	var (
 		zarfState types.ZarfState
@@ -61,18 +56,18 @@ func mutateFluxGitRepository(r *v1.AdmissionRequest) (result *operations.Result,
 	message.Debugf("Using the url of (%s) to mutate the flux repository", zarfState.GitServer.Address)
 
 	// parse to simple struct to read the git url
-	src := &FluxGitRepository{}
+	src := &FleetGitRepo{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
-	patchedURL := src.Spec.URL
+	patchedURL := src.Spec.Repo
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
 	if isUpdate {
-		isPatched, err = utils.DoHostnamesMatch(zarfState.GitServer.Address, src.Spec.URL)
+		isPatched, err = utils.DoHostnamesMatch(zarfState.GitServer.Address, src.Spec.Repo)
 		if err != nil {
 			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}
@@ -86,11 +81,11 @@ func mutateFluxGitRepository(r *v1.AdmissionRequest) (result *operations.Result,
 			message.Warnf("Unable to transform the git url, using the original url we have: %s", patchedURL)
 		}
 		patchedURL = transformedURL.String()
-		message.Debugf("original git URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
+		message.Debugf("original git URL of (%s) got mutated to (%s)", src.Spec.Repo, patchedURL)
 	}
 
 	// Patch updates of the repo spec
-	patches = populateFluxPatchOperations(patchedURL, src.Spec.SecretRef.Name)
+	patches = populateFleetPatchOperations(patchedURL)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -99,17 +94,11 @@ func mutateFluxGitRepository(r *v1.AdmissionRequest) (result *operations.Result,
 }
 
 // Patch updates of the repo spec.
-func populateFluxPatchOperations(repoURL string, secretName string) []operations.PatchOperation {
+func populateFleetPatchOperations(repoURL string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
-	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
-
-	// If a prior secret exists, replace it
-	if secretName != "" {
-		patches = append(patches, operations.ReplacePatchOperation("/spec/secretRef/name", config.ZarfGitServerSecretName))
-	} else {
-		// Otherwise, add the new secret
-		patches = append(patches, operations.AddPatchOperation("/spec/secretRef", FluxSecretRef{Name: config.ZarfGitServerSecretName}))
-	}
+	patches = append(patches, operations.ReplacePatchOperation("/spec/repo", repoURL))
+	// TODO: For some reason this doesn't work!  It will deploy successfully though after putting username:password in the repoURL...
+	patches = append(patches, operations.ReplacePatchOperation("/spec/clientSecretName", config.ZarfGitServerSecretName))
 
 	return patches
 }
