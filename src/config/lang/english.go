@@ -229,6 +229,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackageInspectFlagSbomOut   = "Specify an output directory for the SBOMs from the inspected Zarf package"
 	CmdPackageInspectFlagValidate  = "Validate any checksums and signatures while inspecting the package"
 	CmdPackageInspectFlagPublicKey = "Path to a public key file that will be used to validate a signed package"
+	CmdPackageInspectFlagType      = "Specify a Report Type to export (ie: vex)"
 
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"

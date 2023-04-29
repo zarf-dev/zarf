@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,7 +22,7 @@ import (
 )
 
 // Inspect list the contents of a package.
-func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string) error {
+func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string, inspectType string) error {
 	// Handle OCI packages that have been published to a registry
 	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
 
@@ -90,6 +91,74 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	if outputSBOM != "" {
 		if err := sbom.OutputSBOMFiles(p.tmp, outputSBOM, p.cfg.Pkg.Metadata.Name); err != nil {
 			return err
+		}
+	}
+
+	// Output reports if type is specified
+	if inspectType != "" {
+		message.HeaderInfof("Reports with type '%s'", inspectType)
+
+		componentTars, err := utils.RecursiveFileList(p.tmp.Components, nil, true, true)
+		if err != nil {
+			message.Warnf("The package being inspected does not contain components: %w", err)
+		}
+
+		for _, componentTar := range componentTars {
+			if err := archiver.Unarchive(componentTar, p.tmp.Components); err != nil {
+				return fmt.Errorf("unable to extract component %s: %w", componentTar, err)
+			}
+
+			componentDir := strings.TrimSuffix(componentTar, filepath.Ext(componentTar))
+			componentName := filepath.Base(componentDir)
+			reportPath := filepath.Join(componentDir, "reports", inspectType)
+
+			if _, err := os.Stat(reportPath); err != nil {
+				message.Debugf("Unable to read reports of type %s from component %s: %w", componentName, inspectType, err)
+				message.Infof("Component '%s' does not have '%s' reports", componentName, inspectType)
+				continue
+			}
+
+			reportFiles, err := utils.RecursiveFileList(reportPath, nil, true, true)
+			if err != nil {
+				message.Debugf("Unable to read reports of type %s from component %s: %w", componentName, inspectType, err)
+				continue
+			}
+
+			message.Infof("Component '%s'", componentName)
+
+			for _, reportFile := range reportFiles {
+				reportBase := filepath.Base(reportFile)
+
+				pterm.Println()
+				message.Infof("Report file '%s'", reportBase)
+				pterm.Println()
+
+				isTextFile, err := utils.IsTextFile(reportFile)
+				if err != nil {
+					message.Warnf("Unable to open %s: %w", reportFile, err)
+					continue
+				}
+
+				if isTextFile {
+					file, err := os.Open(reportFile)
+					if err != nil {
+						message.Warnf("Unable to open %s: %w", reportFile, err)
+					}
+					defer file.Close()
+
+					fileScanner := bufio.NewScanner(file)
+					fileScanner.Split(bufio.ScanLines)
+
+					for fileScanner.Scan() {
+						pterm.Printfln("%s", fileScanner.Text())
+					}
+				} else {
+					message.Note("File is not a text file")
+				}
+			}
+
+			message.HorizontalRule()
+			pterm.Println()
 		}
 	}
 
