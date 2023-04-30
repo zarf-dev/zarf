@@ -161,6 +161,7 @@ func (h *Helm) TemplateChart() (string, error) {
 	client.Verify = false
 	client.InsecureSkipTLSverify = config.CommonOptions.Insecure
 
+	client.KubeVersion = h.KubeVersion
 	client.ReleaseName = h.Chart.ReleaseName
 
 	// If no release name is specified, use the chart name.

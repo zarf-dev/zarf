@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var repoHelmChartPath string
+var repoHelmChartPath, kubeVersionOverride string
 var prepareCmd = &cobra.Command{
 	Use:     "prepare",
 	Aliases: []string{"prep"},
@@ -149,6 +149,8 @@ func init() {
 	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
 	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPrepareFlagSet)
+	// allow for the override of KubeVersion
+	prepareFindImages.Flags().StringVar(&kubeVersionOverride, "kube-version", "", "--kube-version v1.21")
 
 	prepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdPrepareFlagGitAccount)
 }
