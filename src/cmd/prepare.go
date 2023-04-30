@@ -109,7 +109,7 @@ var prepareFindImages = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Find all the images the package might need
-		if err := pkgClient.FindImages(baseDir, repoHelmChartPath); err != nil {
+		if err := pkgClient.FindImages(baseDir, repoHelmChartPath, kubeVersionOverride); err != nil {
 			message.Fatalf(err, "Unable to find images for the package definition %s", baseDir)
 		}
 	},
@@ -149,8 +149,8 @@ func init() {
 	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
 	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPrepareFlagSet)
-	// allow for the override of KubeVersion
-	prepareFindImages.Flags().StringVar(&kubeVersionOverride, "kube-version", "", "--kube-version v1.21")
+	// allow for the override of the default helm KubeVersion
+	prepareFindImages.Flags().StringVar(&kubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
 
 	prepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdPrepareFlagGitAccount)
 }

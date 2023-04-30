@@ -21,6 +21,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"helm.sh/helm/v3/pkg/chartutil"
 	v1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,7 +29,7 @@ import (
 )
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
-func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
+func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOverride string) error {
 
 	var originalDir string
 
@@ -143,9 +144,22 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 
 				var override string
 				var ok bool
+				var kubeVersion *chartutil.KubeVersion
 
 				if override, ok = chartNames[chart.Name]; ok {
 					chart.Name = "dummy"
+				}
+
+				if kubeVersionOverride != "" {
+					verSplit := strings.Split(kubeVersionOverride, ".")
+
+					kubeVersion = &chartutil.KubeVersion{
+						Version: kubeVersionOverride,
+						Major:   verSplit[0],
+						Minor:   verSplit[1],
+					}
+				} else {
+					kubeVersion = &chartutil.DefaultCapabilities.KubeVersion
 				}
 
 				// Generate helm templates to pass to gitops engine
@@ -153,6 +167,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 					BasePath:          componentPath.Base,
 					Chart:             chart,
 					ChartLoadOverride: override,
+					KubeVersion:       kubeVersion,
 				}
 				template, err := helmCfg.TemplateChart()
 
