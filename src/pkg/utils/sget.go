@@ -9,7 +9,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -27,6 +30,15 @@ import (
 
 // Sget performs a cosign signature verification on a given image using the specified public key.
 func Sget(ctx context.Context, image, key string, out io.Writer) error {
+	// If this is a DefenseUnicorns package, use an internal sget public key
+	if strings.HasPrefix(image, "sget://defenseunicorns") {
+		os.Setenv("DU_SGET_KEY", config.SGetPublicKey)
+		key = "env://DU_SGET_KEY"
+	}
+
+	// Remove the custom protocol header from the url
+	image = strings.TrimPrefix(image, "sget://")
+
 	message.Debugf("utils.Sget: image=%s, key=%s", image, key)
 
 	spinner := message.NewProgressSpinner("Loading signed file %s", image)

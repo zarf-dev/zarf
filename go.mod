@@ -33,6 +33,7 @@ require (
 	github.com/otiai10/copy v1.11.0
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.59
+	github.com/sergi/go-diff v1.3.1
 	github.com/sigstore/cosign v1.13.1
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
@@ -320,7 +321,6 @@ require (
 	github.com/scylladb/go-set v1.0.3-0.20200225121959-cc7b2070d91e // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
-	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sigstore/fulcio v0.6.0 // indirect

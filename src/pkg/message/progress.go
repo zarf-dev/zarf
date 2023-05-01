@@ -88,8 +88,8 @@ func (p *ProgressBar) Stop() {
 	}
 }
 
-// Fatalf marks the ProgressBar as failed in the CLI.
-func (p *ProgressBar) Fatalf(err error, format string, a ...any) {
+// Errorf marks the ProgressBar as failed in the CLI.
+func (p *ProgressBar) Errorf(err error, format string, a ...any) {
 	p.Stop()
-	Fatalf(err, format, a...)
+	Errorf(err, format, a...)
 }
