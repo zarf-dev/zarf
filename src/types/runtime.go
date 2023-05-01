@@ -5,7 +5,6 @@
 package types
 
 import (
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 )
@@ -96,9 +95,6 @@ type ConnectString struct {
 
 // ConnectStrings is a map of connect names to connection information.
 type ConnectStrings map[string]ConnectString
-
-// ZarfTunnels is a map of resource names to the open tunnels.
-type ZarfTunnels map[string]*cluster.Tunnel
 
 // ComponentSBOM contains information related to the files SBOM'ed from a component.
 type ComponentSBOM struct {

@@ -13,11 +13,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-chi/chi"
 )
 
-var tunnels types.ZarfTunnels
+var tunnels map[string]*cluster.Tunnel
 
 // ConnectTunnel establishes a tunnel for the requested resource
 func ConnectTunnel(w http.ResponseWriter, r *http.Request) {
@@ -26,12 +25,11 @@ func ConnectTunnel(w http.ResponseWriter, r *http.Request) {
 	if tunnels != nil {
 		if tunnels[name] != nil {
 			launchTunnelUrl(tunnels[name], w, name)
-			message.Debug("Tunnel already exists for %s", name)
 			common.WriteJSONResponse(w, true, http.StatusCreated)
 			return
 		}
 	} else {
-		tunnels = make(types.ZarfTunnels)
+		tunnels = make(map[string]*cluster.Tunnel)
 		// Keep this open until an interrupt signal is received.
 		c := make(chan os.Signal)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -50,7 +48,6 @@ func ConnectTunnel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tunnel, err := cluster.NewZarfTunnel()
-	tunnel.EnableAutoOpen()
 
 	if err != nil {
 		message.ErrorWebf(err, w, "Failed to create tunnel for %s", name)
@@ -60,18 +57,10 @@ func ConnectTunnel(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message.ErrorWebf(err, w, "Failed to connect to %s", name)
 	}
+	tunnels[name] = tunnel
 	launchTunnelUrl(tunnel, w, name)
 
-	tunnels[name] = tunnel
 	common.WriteJSONResponse(w, true, http.StatusCreated)
-}
-
-// launchTunnelUrl launches the tunnel URL in the default browser
-func launchTunnelUrl(tunnel *cluster.Tunnel, w http.ResponseWriter, name string) {
-	if err := exec.LaunchURL(tunnel.HTTPEndpoint()); err != nil {
-		message.ErrorWebf(err, w, "Failed to launch browser for %s", name)
-
-	}
 }
 
 // DisconnectTunnel closes the tunnel for the requested resource
@@ -81,6 +70,14 @@ func DisconnectTunnel(w http.ResponseWriter, r *http.Request) {
 	closeTunnel(name)
 
 	common.WriteJSONResponse(w, true, http.StatusOK)
+}
+
+// launchTunnelUrl launches the tunnel URL in the default browser
+func launchTunnelUrl(tunnel *cluster.Tunnel, w http.ResponseWriter, name string) {
+	if err := exec.LaunchURL(tunnel.HTTPEndpoint()); err != nil {
+		message.ErrorWebf(err, w, "Failed to launch browser for %s", name)
+
+	}
 }
 
 // closeTunnel closes the tunnel for the requested resource and removes it from the tunnels map
