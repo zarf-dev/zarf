@@ -151,7 +151,7 @@ If you receive this error, either you don't have a Kubernetes cluster, your clus
 
 If you need to setup a cluster, you can perform the following.
 
-1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](./4-creating-a-k8s-cluster-with-zarf.md) walkthrough.
+1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](./5-creating-a-k8s-cluster-with-zarf.md) walkthrough.
 2. Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) walkthrough.
 
 After that you can try deploying the package again.

@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to the Zarf documentation! This section will list the various ways to install Zarf onto your machine. It will also demonstrate how to verify the installation. Choose the installation type that best suits your needs in accordance with your operating system. Let’s get started.
+Welcome to the Zarf documentation! This section will list the various ways to install Zarf onto your machine. It will also demonstrate how to verify the installation. Choose the installation type that best suits your needs in accordance with your operating system. Let's get started.
 
 ## Installing Zarf
 
@@ -41,7 +41,7 @@ The `make` build-cli` command builds a binary for each combination of OS and arc
 - `make build-cli-linux-amd`
 - `make build-cli-linux-arm`
 
-For additional information, see the [Building Your Own Zarf CLI](./4-user-guide/1-the-zarf-cli/1-building-your-own-cli.md) page.
+For additional information, see the [Building Your Own Zarf CLI](../4-user-guide/1-the-zarf-cli/1-building-your-own-cli.md) page.
 :::
 
 ---
@@ -64,10 +64,10 @@ If you are not seeing this then Zarf was not installed onto your $PATH correctly
 
 Depending on how familiar you are with Kubernetes, DevOps, and Zarf, let's find what set of information would be most useful to you.
 
-- If you want to become more familiar with Zarf and it's features, see the [Walkthroughs](./13-walkthroughs/index.md) page.
+- If you want to become more familiar with Zarf and it's features, see the [Walkthroughs](../13-walkthroughs/index.md) page.
 
-- More information about the Zarf CLI is available on the [Zarf CLI](./4-user-guide/1-the-zarf-cli/index.md) page, or by browsing through the help descriptions of all the commands available through `zarf --help`.
+- More information about the Zarf CLI is available on the [Zarf CLI](../4-user-guide/1-the-zarf-cli/index.md) page, or by browsing through the help descriptions of all the commands available through `zarf --help`.
 
-- More information about the packages that Zarf creates and deploys is available in the [Understanding Zarf Packages](./4-user-guide/2-zarf-packages/1-zarf-packages.md) page.
+- More information about the packages that Zarf creates and deploys is available in the [Understanding Zarf Packages](../4-user-guide/2-zarf-packages/1-zarf-packages.md) page.
 
-- If you want to take a step back and better understand the problem Zarf is trying to solve, you can find more context on the [Understand the Basics](./1-understand-the-basics.md) and [Core Concepts](./2-core-concepts.md) pages.
+- If you want to take a step back and better understand the problem Zarf is trying to solve, you can find more context on the [Understand the Basics](../1-understand-the-basics.md) and [Core Concepts](../2-core-concepts.md) pages.
