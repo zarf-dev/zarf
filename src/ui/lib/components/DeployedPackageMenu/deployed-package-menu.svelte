@@ -3,19 +3,21 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import RemoveDeployedPackageDialog from './remove-deployed-package-dialog.svelte';
-
 	import { goto } from '$app/navigation';
 	import { Kind, type DeployedPackage } from '$lib/api-types';
-	import { IconButton, ListItem, ListItemAdornment, Menu, type SSX } from '@ui';
+	import { IconButton, List, ListItem, ListItemAdornment, Menu, type SSX } from '@ui';
 	import { current_component } from 'svelte/internal';
+	import { tunnelStore } from '$lib/store';
+	import RemoveDeployedPackageDialog from './remove-deployed-package-dialog.svelte';
 	import ConnectDeployedPackageDialog from './connect-deployed-package-dialog.svelte';
+	import DisconnectDeployedPackageDialog from './disconnect-deployed-package-dialog.svelte';
 
 	export let pkg: DeployedPackage;
 
 	let anchorRef: HTMLButtonElement;
 	let toggleRemoveDialog: () => void;
 	let toggleConnectDialog: () => void;
+	let toggleDisconnectDialog: () => void;
 
 	let updateLink = '';
 	let toggled = false;
@@ -42,6 +44,8 @@
 			updateLink = '/packages';
 		}
 	}
+
+	$: hasConnections = $tunnelStore[pkg.name]?.length > 0;
 </script>
 
 <svelte:window on:click={handleClick} />
@@ -55,6 +59,13 @@
 	iconContent="more_vert"
 />
 <Menu ssx={menuSSX} bind:anchorRef open={toggled} anchorOrigin="bottom-end">
+	{#if hasConnections}
+		<ListItem text="Disconnect..." on:click={toggleDisconnectDialog}>
+			<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined">
+				signal_disconnected
+			</ListItemAdornment>
+		</ListItem>
+	{/if}
 	<ListItem text="Connect..." on:click={toggleConnectDialog}>
 		<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined">
 			private_connectivity
@@ -72,5 +83,6 @@
 		</ListItemAdornment>
 	</ListItem>
 </Menu>
+<DisconnectDeployedPackageDialog {pkg} bind:toggleDialog={toggleDisconnectDialog} />
 <ConnectDeployedPackageDialog {pkg} bind:toggleDialog={toggleConnectDialog} />
 <RemoveDeployedPackageDialog {pkg} bind:toggleDialog={toggleRemoveDialog} />
