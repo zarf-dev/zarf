@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package tunnels contains the handlers for the tunnels API.
 package tunnels
 
 import (
