@@ -3,6 +3,7 @@
 In this tutorial, we will demonstrate how to use Zarf on a fresh Linux machine to deploy a [k3s](https://k3s.io/) cluster through Zarf's `k3s` component.
 
 ## System Requirements
+
 -  `root` access on a Linux machine
 
 :::info REQUIRES ROOT

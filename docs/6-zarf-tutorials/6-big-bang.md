@@ -34,7 +34,6 @@ Before beginning this tutorial you will need the following:
 - A local copy of the Zarf repository
   - `git clone https://github.com/defenseunicorns/zarf.git`
 - A kubernetes cluster onto which you can deploy Zarf and Big Bang
-  - Follow steps 3 through 5 of the [Big Bang Quick Start](https://docs-bigbang.dso.mil/1.54.0/docs/guides/deployment-scenarios/quickstart/) to setup `docker` and a `k3d` cluster.
 - The latest version of the Zarf `cli`
   - Follow instructions on https://zarf.dev/install/
 - An account on `https://registry1.dso.mil` to retrieve Big Bang images
@@ -42,9 +41,10 @@ Before beginning this tutorial you will need the following:
 
 :::note
 
-Big Bang requires some additional [configuration options](https://docs-bigbang.dso.mil/1.54.0/docs/guides/deployment-scenarios/quickstart/#Explanation-of-k3d-Command-Flags-Relevant-to-the-Quick-Start) to be passed to `k3d` than is required in most other Zarf tutorials.  Below are some examples:
+If you followed the [Setting Up a Local Kubernetes Cluster](./index.md#setting-up-a-local-kubernetes-cluster) instructions for other Zarf tutorials, you will need to pass additional command flags to `k3d` for it to work with Big Bang.  See the below to create a working cluster:
 
 ```bash
+k3d cluster create
   # Required by the PLG stack
   --volume /etc/machine-id:/etc/machine-id
 
@@ -58,7 +58,7 @@ Big Bang requires some additional [configuration options](https://docs-bigbang.d
   --api-port 6443
 ```
 
-If you tweak the packages that are deployed there may be other configuration options you need to specify, please refer to the [Big Bang documentation](https://docs-bigbang.dso.mil/1.54.0/docs/) for more details.
+If you tweak the packages that are deployed there may be other configuration options you need to specify, please refer to the [Big Bang documentation](https://docs-bigbang.dso.mil/latest/) for more details.
 
 :::
 

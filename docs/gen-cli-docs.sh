@@ -4,7 +4,7 @@ ZARF_CONFIG=hack/empty-config.toml go run main.go internal generate-cli-docs
 
 # Create the top menu label for the sidebar menu
 printf "Generating sidebar menu label\n"
-MENU_LABEL='{"label": "CLI Commands"}'
+MENU_LABEL='{"label": "CLI Commands"}\n'
 printf "${MENU_LABEL}" > docs/2-the-zarf-cli/100-cli-commands/_category_.json
 
 # The GenMarkdownTree function from cobra/docs starts the headers at H2.

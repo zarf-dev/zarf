@@ -29,10 +29,12 @@ $ cd src/github.com/defenseunicorns/zarf/examples/helm-oci-chart
 
 3. If you do not provide the path to the package as an argument to the `zarf package deploy` command, Zarf will prompt you asking for you to choose which package you want to deploy. You can use the `tab` key, to be prompted for avaiable packages in the current working directory.
 
-<iframe src="/docs/tutorials/package_deploy_suggest.html" width="100%" height="150px"></iframe>
+<iframe src="/docs/tutorials/package_deploy_suggest.html" width="100%" height="120px"></iframe>
+
 By hitting 'tab', you can use the arrow keys to select which package you want to deploy. Since we are deploying the Helm OCI chart package in this tutorial, we will select that package and hit 'enter'.
 
 <iframe src="/docs/tutorials/package_deploy_helm_suggestions.html" width="100%" height="150px"></iframe>
+
 As we have seen a few times now, we are going to be prompted with a confirmation dialog asking us to confirm that we want to deploy this package onto our cluster.
 
 <iframe src="/docs/tutorials/package_deploy_helm.html" width="100%" height="550px"></iframe>
@@ -50,7 +52,7 @@ As we have seen a few times now, we are going to be prompted with a confirmation
 
 1. Use the `zarf package list` command to get a list of the installed packages.  This will give you the name of the Helm OCI chart package to remove it.
 
-<iframe src="/docs/tutorials/package_deploy_helm_list.html" width="100%"></iframe>
+<iframe src="/docs/tutorials/package_deploy_helm_list.html" height="120px" width="100%"></iframe>
 
 2. Use the `zarf package remove` command to remove the `helm-oci-chart` package.  Don't forget the `--confirm` flag.  Otherwise you'll receive an error.
 
@@ -58,7 +60,7 @@ As we have seen a few times now, we are going to be prompted with a confirmation
 
 3. You can also use the `zarf package remove` command with the zarf package file, to remove the package.  Again, don't forget the `--confirm` flag.
 
-<iframe src="/docs/tutorials/package_deploy_helm_remove_by_file.html" width="100%"></iframe>
+<iframe src="/docs/tutorials/package_deploy_helm_remove_by_file.html" height="100px" width="100%"></iframe>
 
 The helm-oci-chart package has now been removed from your cluster.
 

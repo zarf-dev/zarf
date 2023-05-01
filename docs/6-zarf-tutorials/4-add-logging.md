@@ -40,6 +40,7 @@ key. <br/> When prompted to deploy the logging component select `y` for Yes, the
 #### Note the Credentials
 
 1. Review the `zarf init` command output for the following:
+
 <iframe src="/docs/tutorials/logging_credentials.html" width="100%"></iframe>
 
 You should see a section for `Logging`.  You will need these credentials later on.
@@ -68,7 +69,6 @@ You'll be redirected the `/login` page where you have to sign in with the Grafan
 Once you've successfully logged in go to:
 
 1. The "Explore" page (Button on the left that looks like a compass)
-
 2. Select `Loki` in the dropdown, and then
 3. Enter `{app="game"}` into the Log Browser query input field
 

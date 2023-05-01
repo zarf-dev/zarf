@@ -43,7 +43,6 @@ Once you enter your response for the package size, the output that follows will 
 
 <iframe src="/docs/tutorials/package_create_components.html" height="500px" width="100%"></iframe>
 
-
 Congratulations! You've just created your first Zarf package!
 
 ## Building the Helm OCI chart package
@@ -64,7 +63,7 @@ Congratulations! You've built the Helm OCI chart package. Now, let's [deploy it]
 
 #### Example
 
-<iframe src="/docs/tutorials/package_create_error.html" width="100%" ></iframe>
+<iframe src="/docs/tutorials/package_create_error.html" height="120px" width="100%"></iframe>
 
 #### Remediation
 

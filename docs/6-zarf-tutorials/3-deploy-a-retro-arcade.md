@@ -41,7 +41,7 @@ Once you enter your response for the package size, the output that follows will 
 
 5. If you do not provide the path to the package as an argument to the `zarf package deploy` command, Zarf will prompt you to choose which package you want to deploy.
 
-<iframe src="/docs/tutorials/package_deploy_suggest.html" width="100%" height="150px"></iframe>
+<iframe src="/docs/tutorials/package_deploy_suggest.html" width="100%" height="120px"></iframe>
 
 You can list all packages in the current directory by hitting `tab`. Then, use the arrow keys to select which package you want to deploy. If there is only one package available, hitting `tab` will autofill that one option. Since we are deploying the games package in this tutorial, we will select that package and hit `enter`.
 
@@ -75,7 +75,7 @@ The `zarf connect games` will continue running in the background until you close
 
 1. Use the `zarf package list` command to get a list of the installed packages.  This will give you the name of the games package to remove it.
 
-<iframe src="/docs/tutorials/package_deploy_list.html" width="100%"></iframe>
+<iframe src="/docs/tutorials/package_deploy_list.html" height="120px" width="100%"></iframe>
 
 2. Use the `zarf package remove` command to remove the `dos-games` package.  Don't forget the `--confirm` flag.  Otherwise you'll receive an error.
 
@@ -83,7 +83,7 @@ The `zarf connect games` will continue running in the background until you close
 
 3. You can also use the `zarf package remove` command with the zarf package file, to remove the package.  Again don't forget the `--confirm` flag.
 
-<iframe src="/docs/tutorials/package_deploy_remove_by_file.html" width="100%"></iframe>
+<iframe src="/docs/tutorials/package_deploy_remove_by_file.html" height="100px" width="100%"></iframe>
 
 The dos-games package has now been removed from your cluster.
 

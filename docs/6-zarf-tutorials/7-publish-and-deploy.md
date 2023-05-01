@@ -1,4 +1,4 @@
-# Using OCI to Store & Deploy Zarf Packages
+# Store & Deploy Packages with OCI
 
 ## Introduction
 
@@ -23,7 +23,7 @@ For following along locally, please ensure the following prerequisites are met:
 
 This tutorial will require a registry to be configured (see [prerequisites](#prerequisites) for more information).  The below sets up some variables for us to use when logging into the registry:
 
-<iframe src="/docs/tutorials/publish_and_deploy_setup.html" width="100%"></iframe>
+<iframe src="/docs/tutorials/publish_and_deploy_setup.html" height="130px" width="100%"></iframe>
 
 With those set, you can tell Zarf to login to your registry with the following:
 
@@ -76,7 +76,7 @@ To modify, edit `zarf.yaml` and re-run `zarf package create .`
 
 Inspecting a Zarf package stored in an OCI registry is the same as inspecting a local package and has the same flags:
 
-<iframe src="/docs/tutorials/publish_and_deploy_inspect.html" width="100%" height="550px"></iframe>
+<iframe src="/docs/tutorials/publish_and_deploy_inspect.html" width="100%" height="520px"></iframe>
 
 
 ### Deploy Package
@@ -129,7 +129,7 @@ You attempted to publish a package with no version metadata.
 
 #### Example
 
-<iframe src="/docs/tutorials/troubleshoot_insecure_registry.html" width="100%" height="425px"></iframe>
+<iframe src="/docs/tutorials/troubleshoot_insecure_registry.html" width="100%" height="375px"></iframe>
 
 #### Remediation
 
