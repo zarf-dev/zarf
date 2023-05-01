@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-import { expect, test, browser } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 
 test.describe.serial('connect the dos-games package @connect', async () => {
