@@ -474,7 +474,7 @@ func generatePackageChecksums(basePath string) (string, error) {
 	// Add a '/' or '\' to the basePath so that the checksums file lists paths from the perspective of the basePath
 	basePathWithModifier := basePath + string(filepath.Separator)
 
-	// Tutorial all files in the package path and calculate their checksums
+	// Walk all files in the package path and calculate their checksums
 	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
 			sum, err := utils.GetSHA256OfFile(path)
