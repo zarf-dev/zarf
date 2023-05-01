@@ -278,10 +278,13 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 		execCfg.Stderr = spinner
 	}
 
-	out, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
+	out, errOut, exitCode, err := exec.CmdWithContext(ctx, execCfg, shell, shellArgs, cmd)
 	// Dump final complete output (respect mute to prevent sensitive values from hitting the logs).
 	if !cfg.Mute {
 		message.Debug(cmd, out, errOut)
+	}
+	if exitCode != 0 {
+		return "", err
 	}
 
 	return out, err

@@ -69,6 +69,6 @@ func TestExtInClusterDeploy(t *testing.T) {
 	success = verifyKubectlWaitSuccess(t, 2, podinfoWaitCmd, errorStr)
 	assert.True(t, success, errorStr)
 
-	_, _, err = exec.CmdWithContext(context.TODO(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
+	_, _, _, err = exec.CmdWithContext(context.TODO(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
 	require.NoError(t, err, "unable to teardown zarf")
 }

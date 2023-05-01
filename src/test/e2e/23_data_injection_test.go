@@ -28,12 +28,12 @@ func TestDataInjection(t *testing.T) {
 	}
 
 	// Verify the file and injection marker were created
-	stdOut, stdErr, err := exec.CmdWithContext(context.TODO(), exec.PrintCfg(), "kubectl", "--namespace=demo", "logs", "--tail=5", "--selector=app=data-injection", "-c=data-injection")
+	stdOut, stdErr, _, err := exec.CmdWithContext(context.TODO(), exec.PrintCfg(), "kubectl", "--namespace=demo", "logs", "--tail=5", "--selector=app=data-injection", "-c=data-injection")
 	require.NoError(t, err, stdOut, stdErr)
 	assert.Contains(t, stdOut, "this-is-an-example-file.txt")
 	assert.Contains(t, stdOut, ".zarf-injection-")
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "data-injection-demo", "--confirm")
+	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "remove", "data-injection-demo", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
@@ -43,6 +43,6 @@ func runDataInjection(t *testing.T, path string) {
 	defer cancel()
 
 	// Deploy the data injection example
-	stdOut, stdErr, err := exec.CmdWithContext(ctx, exec.PrintCfg(), e2e.ZarfBinPath, "package", "deploy", path, "--confirm")
+	stdOut, stdErr, _, err := exec.CmdWithContext(ctx, exec.PrintCfg(), e2e.ZarfBinPath, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

@@ -39,20 +39,20 @@ func PrintCfg() Config {
 }
 
 // Cmd executes a given command with given config.
-func Cmd(command string, args ...string) (string, string, error) {
+func Cmd(command string, args ...string) (string, string, int, error) {
 	return CmdWithContext(context.TODO(), Config{}, command, args...)
 }
 
 // CmdWithPrint executes a given command with given config and prints the command.
 func CmdWithPrint(command string, args ...string) error {
-	_, _, err := CmdWithContext(context.TODO(), PrintCfg(), command, args...)
+	_, _, _, err := CmdWithContext(context.TODO(), PrintCfg(), command, args...)
 	return err
 }
 
 // CmdWithContext executes a given command with given config.
-func CmdWithContext(ctx context.Context, config Config, command string, args ...string) (string, string, error) {
+func CmdWithContext(ctx context.Context, config Config, command string, args ...string) (string, string, int, error) {
 	if command == "" {
-		return "", "", errors.New("command is required")
+		return "", "", 0, errors.New("command is required")
 	}
 
 	// Set up the command.
@@ -106,7 +106,7 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 
 	// Start the command.
 	if err := cmd.Start(); err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 
 	// Add to waitgroup for each goroutine.
@@ -129,14 +129,14 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 
 	// Abort if there was an error capturing the command's outputs.
 	if errStdout != nil {
-		return "", "", fmt.Errorf("failed to capture the stdout command output: %w", errStdout)
+		return "", "", 0, fmt.Errorf("failed to capture the stdout command output: %w", errStdout)
 	}
 	if errStderr != nil {
-		return "", "", fmt.Errorf("failed to capture the stderr command output: %w", errStderr)
+		return "", "", 0, fmt.Errorf("failed to capture the stderr command output: %w", errStderr)
 	}
 
 	// Wait for the command to finish and return the buffered outputs, regardless of whether we printed them.
-	return stdoutBuf.String(), stderrBuf.String(), cmd.Wait()
+	return stdoutBuf.String(), stderrBuf.String(), cmd.ProcessState.ExitCode(), cmd.Wait()
 }
 
 // LaunchURL opens a URL in the default browser.

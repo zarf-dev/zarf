@@ -33,24 +33,24 @@ func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 	outputFlag := fmt.Sprintf("-o=%s", testPackageDirPath)
 
 	// Check that the command still errors out
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", testPackageDirPath, outputFlag, "--confirm")
+	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "create", testPackageDirPath, outputFlag, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "template 'ECHO' must be '--set'")
 
 	// Check that the command displays a warning on create
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", testPackageDirPath, outputFlag, "--confirm", "--set", "ECHO=Zarf-The-Axolotl")
+	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "create", testPackageDirPath, outputFlag, "--confirm", "--set", "ECHO=Zarf-The-Axolotl")
 	defer e2e.CleanFiles(testPackagePath)
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Component '1-test-deprecated-set-variable' is using setVariable")
 	require.Contains(t, stdErr, "deprecated syntax ###ZARF_PKG_VAR_ECHO###")
 
 	// 1. Deploy the setVariable action that should pass and output the variable
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", testPackagePath, "--confirm", "--components=1-test-deprecated-set-variable")
+	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "deploy", testPackagePath, "--confirm", "--components=1-test-deprecated-set-variable")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Hello from: Hello Kitteh")
 
 	// 2. Deploy the setVariable action that should pass and output the variable
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", testPackagePath, "--confirm", "--components=2-test-deprecated-pkg-var")
+	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "deploy", testPackagePath, "--confirm", "--components=2-test-deprecated-pkg-var")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Zarf-The-Axolotl")
 }
