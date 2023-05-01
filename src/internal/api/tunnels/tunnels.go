@@ -4,16 +4,12 @@ package cluster
 
 import (
 	"net/http"
-	"os"
-	"os/signal"
-	"runtime"
-	"syscall"
 
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 var tunnels map[string]*cluster.Tunnel
@@ -30,37 +26,24 @@ func ConnectTunnel(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		tunnels = make(map[string]*cluster.Tunnel)
-		// Keep this open until an interrupt signal is received.
-		c := make(chan os.Signal)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		go func() {
-			<-c
-			// Close all tunnels before exiting.
-			for _, tunnel := range tunnels {
-				tunnel.Close()
-			}
-			os.Exit(0)
-		}()
-
-		for {
-			runtime.Gosched()
-		}
 	}
 
 	tunnel, err := cluster.NewZarfTunnel()
 
 	if err != nil {
 		message.ErrorWebf(err, w, "Failed to create tunnel for %s", name)
+		return
 	}
 
 	err = tunnel.Connect(name, false)
 	if err != nil {
 		message.ErrorWebf(err, w, "Failed to connect to %s", name)
+		return
 	}
 	tunnels[name] = tunnel
 	launchTunnelUrl(tunnel, w, name)
 
-	common.WriteJSONResponse(w, true, http.StatusCreated)
+	common.WriteJSONResponse(w, true, http.StatusOK)
 }
 
 // DisconnectTunnel closes the tunnel for the requested resource
@@ -74,7 +57,7 @@ func DisconnectTunnel(w http.ResponseWriter, r *http.Request) {
 
 // launchTunnelUrl launches the tunnel URL in the default browser
 func launchTunnelUrl(tunnel *cluster.Tunnel, w http.ResponseWriter, name string) {
-	if err := exec.LaunchURL(tunnel.HTTPEndpoint()); err != nil {
+	if err := exec.LaunchURL(tunnel.FullUrl()); err != nil {
 		message.ErrorWebf(err, w, "Failed to launch browser for %s", name)
 
 	}

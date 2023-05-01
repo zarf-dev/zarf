@@ -318,6 +318,11 @@ func (tunnel *Tunnel) HTTPEndpoint() string {
 	return fmt.Sprintf("http://%s", tunnel.Endpoint())
 }
 
+// FullUrl returns the tunnel endpoint as a HTTP URL string with the urlSuffix appended.
+func (tunnel *Tunnel) FullUrl() string {
+	return fmt.Sprintf("%s%s", tunnel.HTTPEndpoint(), tunnel.urlSuffix)
+}
+
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
 func (tunnel *Tunnel) Close() {
 	message.Debug("tunnel.Close()")

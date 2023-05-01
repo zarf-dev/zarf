@@ -9,6 +9,7 @@ const clusterStore = writable<ClusterSummary | undefined>();
 const pkgStore = writable<APIZarfPackage>();
 const deployedPkgStore = writable<{ pkgs?: DeployedPackage[]; err?: Error } | undefined>();
 const pkgComponentDeployStore = writable<number[]>([]);
+const tunnelStore = writable<{[key: string]: string[]}>({});
 // check localstorage for theme, if not found, use the preferred theme, otherwise default to light
 const storedTheme = localStorage.theme ?? getPreferredTheme(window) ?? 'light';
 const themeStore = writable<'dark' | 'light'>(storedTheme);
@@ -18,4 +19,4 @@ themeStore.subscribe((theme) => {
 	localStorage.theme = theme;
 });
 
-export { clusterStore, pkgStore, pkgComponentDeployStore, themeStore, deployedPkgStore };
+export { clusterStore, pkgStore, pkgComponentDeployStore, themeStore, deployedPkgStore, tunnelStore  };
