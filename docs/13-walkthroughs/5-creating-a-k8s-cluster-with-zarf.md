@@ -22,7 +22,7 @@ The 'k3s' component requires root access (not just `sudo`!) when deploying as it
 # zarf init
 ```
 
-2. Confirm Package Deployment: <br/> 
+2. Confirm Package Deployment: <br/>
 - When prompted to deploy the package select `y` for Yes, then hit the `enter` key. <br/>
 
 3. Confirm k3s Component Deployment: <br/>

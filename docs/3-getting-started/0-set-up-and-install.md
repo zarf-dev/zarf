@@ -25,7 +25,7 @@ For macOS or Linux, you may also install the Zarf CLI by using [brew](https://za
 
 <!-- TODO: Some duplicated information from the 'Common CLI Uses' page incoming... -->
 
-Once the Zarf CLI is installed, you can create a cluster using the built-in K3s cluster available in the init package (if another cluster isn’t already available). You can find the relevant [init package release](https://github.com/defenseunicorns/zarf/releases) from the GitHub releases page.
+Once the Zarf CLI is installed, you can create a cluster using the built-in K3s cluster available in the init package (if another cluster isn't already available). You can find the relevant [init package release](https://github.com/defenseunicorns/zarf/releases) from the GitHub releases page.
 
 Once downloaded, you can install the init package by navigating to the directory containing the init package and running the command [zarf init](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_init.md). Zarf will prompt you, asking if you want to deploy the k3s component, you can type `y` and hit enter to have Zarf startup a local single node k3s cluster on your current machine. Other useful information about initializing a cluster with Zarf is available in the [Initializing a Cluster](#initializing-a-cluster) section later on in this page.
 
@@ -58,4 +58,4 @@ After the initialization process is complete, you can verify that the pods have 
 
 ## Set Up Complete
 
-At this point, you have successfully installed the Zarf CLI and initialized a K8s cluster. You are now ready to begin deploying packages to your cluster. The [Walkthroughs](../13-walkthroughs/index.md) section of the documentation provides a step-by-step guide on how to deploy packages to your cluster, and the [Doom Walkthrough](../13-walkthroughs/2-deploying-doom.md) is a great place to start. Follow along with the guide to learn more about deploying packages to your cluster and get started with your first deployment.
+At this point, you have successfully installed the Zarf CLI and initialized a K8s cluster. You are now ready to begin deploying packages to your cluster. The [Walkthroughs](../13-walkthroughs/index.md) section of the documentation provides a step-by-step guide on how to deploy packages to your cluster, and the [Deploying Zarf Packages](../13-walkthroughs/2-deploying-zarf-packages.md) is a great place to start. Follow along with the guide to learn more about deploying packages to your cluster and get started with your first deployment.

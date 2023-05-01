@@ -582,7 +582,8 @@ export interface ZarfChart {
      */
     url?: string;
     /**
-     * List of values files to include in the package; these will be merged together
+     * List of local values file paths or remote URLs to include in the package; these will be
+     * merged together
      */
     valuesFiles?: string[];
     /**
@@ -599,7 +600,8 @@ export interface ZarfDataInjection {
      */
     compress?: boolean;
     /**
-     * A path to a local folder or file to inject into the given target pod + container
+     * Either a path to a local folder/file or a remote URL of a file to inject into the given
+     * target pod + container
      */
     source: string;
     /**
@@ -701,11 +703,11 @@ export interface ZarfComponentImport {
 
 export interface ZarfManifest {
     /**
-     * List of individual K8s YAML files to deploy (in order)
+     * List of local K8s YAML files or remote URLs to deploy (in order)
      */
     files?: string[];
     /**
-     * List of kustomization paths to include in the package
+     * List of local kustomization paths or remote URLs to include in the package
      */
     kustomizations?: string[];
     /**

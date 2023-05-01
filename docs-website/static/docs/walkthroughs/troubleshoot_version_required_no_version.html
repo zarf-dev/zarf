@@ -47,10 +47,24 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class="WHI">$ zarf package remove init --components="logging" --confirm</b><br/>
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-22-13-17-09-3967112348.log</b>
-<b class=YEL></b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Removing zarf package init</b>
+<b>$ cat zarf.yaml</b>
+kind: ZarfPackageConfig
+metadata:
+  name: helm-oci-chart
+  description: Deploy podinfo using a Helm OCI chart
+  <b class="GRN"># Note: In order to publish, the package must have a version</b>
+  <b class="RED">VERSION NEEDS TO BE HERE</b>
+
+components:
+  - name: helm-oci-chart
+    required: true
+    charts:
+      - name: podinfo
+        version: 6.3.3
+        namespace: helm-oci-demo
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.3
 </pre>
 </body>
 </html>
