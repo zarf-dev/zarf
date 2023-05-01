@@ -2,7 +2,6 @@
 *What are we hoping to validate?*
 
 
-
 ## Testing Plan ##
 User persona:
 Sample Group:
@@ -12,6 +11,6 @@ Sample Group:
 ## Additional context ##
 *Screenshot or link to what needs to be tested*
 
-Related to issue 
+Related to issue
 
 ## Link to Test & Results ##
