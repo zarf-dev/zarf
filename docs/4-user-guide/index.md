@@ -6,7 +6,7 @@ The below list contains information on how to use and configure Zarf's major fea
 
 - Deploy Zarf [Packages](2-zarf-packages/1-zarf-packages.md) (Zpkg).
 - Maintain Zarf Packages in the cluster.
-- A reference of all [CLI commands](1-the-zarf-cli/100-cli-commands/zarf.md).
+- A reference of all [CLI commands](../2-the-zarf-cli/100-cli-commands/zarf.md).
 - Autogenerate and view a package SBOM.
 - Add logging to your cluster.
 - A list of [supported Zarf Packages](2-zarf-packages/1-zarf-packages.md).
@@ -35,7 +35,7 @@ Find out more about the types of software Zarf can move in the [What can be Pack
 
 To build a Zarf package, you will need to prepare:
 
-- A "packaging" workstation which must have the `zarf` [CLI tool installed](../3-getting-started/index.md#installing-zarf).
+- A "packaging" workstation which must have the `zarf` [CLI tool installed](../1-getting-started/index.md#installing-zarf).
 
 - A `zarf.yaml` file which tells Zarf what you need to package.
 

@@ -30,7 +30,7 @@ Resources can be excluded at the namespace or resources level by adding the `zar
 
 During the `zarf init` operation, the Zarf Agent will patch any existing namespaces with the `zarf.dev/agent: ignore` label to prevent the Agent from modifying any resources in that namespace. This is done because there is no way to guarantee the images used by pods in existing namespaces are available in the Zarf Registry.
 
-If you would like to adopt pre-existing resources into a Zarf deployment you can use the `--adopt-existing-resources` flag on [`zarf package deploy`](./4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_deploy.md) to adopt those resources into the Helm Releases that Zarf manages (including namespaces).  This will add the requisite annotations and labels to those resources and drop the `zarf.dev/agent: ignore` label from any namespaces specified by those resources.
+If you would like to adopt pre-existing resources into a Zarf deployment you can use the `--adopt-existing-resources` flag on [`zarf package deploy`](./2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md) to adopt those resources into the Helm Releases that Zarf manages (including namespaces).  This will add the requisite annotations and labels to those resources and drop the `zarf.dev/agent: ignore` label from any namespaces specified by those resources.
 
 :::note
 

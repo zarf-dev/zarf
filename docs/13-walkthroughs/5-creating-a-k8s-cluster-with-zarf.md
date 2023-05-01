@@ -11,7 +11,7 @@ The 'k3s' component requires root access (not just `sudo`!) when deploying as it
 
 ## Prerequisites
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
-- Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started/index.md#installing-zarf))
+- Zarf binary installed on your $PATH: ([Install Instructions](../1-getting-started/index.md#installing-zarf))
 - An init-package built/downloaded: ([init-package Build Instructions](./0-using-zarf-package-create.md)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
 
 ## Walkthrough
@@ -59,7 +59,7 @@ By default, the k3s component will only automatically provide cluster access to 
 
 ## Cleaning Up
 
-The [`zarf destroy`](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_destroy.md) command will remove all of the resources, including the k3s cluster, that was created by the initialization command.
+The [`zarf destroy`](../2-the-zarf-cli/100-cli-commands/zarf_destroy.md) command will remove all of the resources, including the k3s cluster, that was created by the initialization command.
 
 ```sh
 zarf destroy --confirm

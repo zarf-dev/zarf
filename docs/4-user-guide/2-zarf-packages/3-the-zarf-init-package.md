@@ -19,7 +19,7 @@ Zarf's capabilities require that the [`zarf-agent`](../../9-faq.md#what-is-the-z
 
 In addition to the required `zarf-agent` component, Zarf also offers components that provide additional functionality and can be enabled as needed based on your desired end-state.
 
-In most scenarios, Zarf will also deploy an internal registry using the components described below. However, Zarf can be configured to use an already existing registry with the `--registry-*` flags when running `zarf init` (detailed information on all `zarf init` command flags can be found in the [zarf init CLI](../1-the-zarf-cli/100-cli-commands/zarf_init.md) section). This option skips the injector and seed process, and will not deploy a registry to the cluster. Instead, it uploads any images to the externally configured registry.
+In most scenarios, Zarf will also deploy an internal registry using the components described below. However, Zarf can be configured to use an already existing registry with the `--registry-*` flags when running `zarf init` (detailed information on all `zarf init` command flags can be found in the [zarf init CLI](../../2-the-zarf-cli/100-cli-commands/zarf_init.md) section). This option skips the injector and seed process, and will not deploy a registry to the cluster. Instead, it uploads any images to the externally configured registry.
 
 | Components   | Description
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -45,6 +45,6 @@ Deploying the 'k3s' component will require root access (not just sudo), as it mo
 
 ## What Makes the Init Package Special
 
-Deploying onto air-gapped environments is a [hard problem](../../3-getting-started/1-understand-the-basics.md#airgap-basics), particularly when the K8s environment doesn't have a container registry for you to store images. This results in a dilemma where the container registry image must be introduced to the cluster, but there is no container registry to push it to as the image is not yet in the cluster. To ensure that our approach is distro-agnostic, we developed a unique solution to seed the container registry into the cluster.
+Deploying onto air-gapped environments is a [hard problem](../../1-getting-started/0-understand-the-basics.md#airgap-basics), particularly when the K8s environment doesn't have a container registry for you to store images. This results in a dilemma where the container registry image must be introduced to the cluster, but there is no container registry to push it to as the image is not yet in the cluster. To ensure that our approach is distro-agnostic, we developed a unique solution to seed the container registry into the cluster.
 
 To address this problem, we use the `zarf-injector` [component](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-injector/zarf.yaml) within the init-package. This resolves the issue by injecting a single rust binary (statically compiled) and a series of configmap chunks of a `registry:2` image into an ephemeral pod that is based on an existing image in the cluster.

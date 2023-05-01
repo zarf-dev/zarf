@@ -12,7 +12,7 @@ Before you can effectively use Zarf, it is useful to have an understanding of th
 - [Learn Kubernetes Basics](https://kubernetes.io/docs/tutorials/kubernetes-basics/)
 - [Free Introduction to Kubernetes Course](https://www.edx.org/course/introduction-to-kubernetes)
 - [Super charge your Kubernetes deployments](https://www.youtube.com/watch?v=N6UCKF7JD7k)
-  
+
 ### AirGap Basics
 
 - [What is AirGap](https://ibm.github.io/kubernetes-networking/vpc/airgap/)

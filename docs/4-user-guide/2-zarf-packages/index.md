@@ -16,9 +16,8 @@ Zarf Packages are highly distributable, allowing for seamless operation in diver
 
 The following is a list of dependencies necessary for deploying Zarf Packages:
 
-- A Zarf CLI ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../1-the-zarf-cli/1-building-your-own-cli.md)).
-- A Zarf init package ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../1-the-zarf-cli/1-building-your-own-cli.md)).
+- A Zarf CLI ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../../2-the-zarf-cli/0-building-your-own-cli.md)).
+- A Zarf init package ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../../2-the-zarf-cli/0-building-your-own-cli.md)).
 - A Zarf Package (provided externally or [manually built](./1-zarf-packages.md#building-a-package)).
 - kube-context into a K8s cluster.
   - (Not needed if you plan on deploying the cluster with `zarf init` step).
-

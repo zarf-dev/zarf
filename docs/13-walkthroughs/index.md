@@ -7,7 +7,7 @@ If a walkthrough has any prerequisites, they will be listed at the beginning of 
 Almost all walkthroughs will have the following prerequisites/assumptions:
 
 1. The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
-1. You have a Zarf binary installed on your $PATH: ([Zarf Install Instructions](../3-getting-started/index.md#installing-zarf))
+1. You have a Zarf binary installed on your $PATH: ([Zarf Install Instructions](../1-getting-started/index.md#installing-zarf))
 1. You have an init-package built/downloaded: ([init-package Build Instructions](./0-using-zarf-package-create.md)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
 1. Have a kubernetes cluster running/available (ex. [k3s](https://k3s.io/)/[k3d](https://k3d.io/v5.4.1/)/[Kind](https://kind.sigs.k8s.io/docs/user/quick-start#installation))
 

@@ -1,11 +1,11 @@
 # Initializing a K8s Cluster
 
-In this walkthrough, we will demonstrate how to initialize Zarf onto a K8s cluster. This is done by running the [`zarf init`](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_init.md) command, which uses a specialized package called an 'init-package'. More information about this specific package can be found [here](../4-user-guide/2-zarf-packages/3-the-zarf-init-package.md).
+In this walkthrough, we will demonstrate how to initialize Zarf onto a K8s cluster. This is done by running the [`zarf init`](../2-the-zarf-cli/100-cli-commands/zarf_init.md) command, which uses a specialized package called an 'init-package'. More information about this specific package can be found [here](../4-user-guide/2-zarf-packages/3-the-zarf-init-package.md).
 
 ## Prerequisites
 
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
-- Zarf binary installed on your $PATH: ([Install Instructions](../3-getting-started/index.md#installing-zarf))
+- Zarf binary installed on your $PATH: ([Install Instructions](../1-getting-started/index.md#installing-zarf))
 - An init-package built/downloaded: ([init-package Build Instructions](./0-using-zarf-package-create.md)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
 - A Kubernetes cluster to work with: ([Local k8s Cluster Instructions](./#setting-up-a-local-kubernetes-cluster))
 
@@ -42,7 +42,7 @@ zarf tools monitor
 
 ## Cleaning Up
 
-The [`zarf destroy`](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_destroy.md) command will remove all of the resources that were created by the initialization command. This command will leave you with a clean cluster that you can either destroy or use for another walkthrough.
+The [`zarf destroy`](../2-the-zarf-cli/100-cli-commands/zarf_destroy.md) command will remove all of the resources that were created by the initialization command. This command will leave you with a clean cluster that you can either destroy or use for another walkthrough.
 
 ```sh
 zarf destroy --confirm

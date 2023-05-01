@@ -17,7 +17,7 @@ If you are running `make` targets other than the `build-cli-*` targets described
 :::
 
 
-If you don't want to build the CLI yourself, you can download a pre-compiled binary from the 'Assets' tab of our latest [releases](https://github.com/defenseunicorns/zarf/releases) on GitHub. The pre-compiled binary is available for both arm64 and amd64 machines. 
+If you don't want to build the CLI yourself, you can download a pre-compiled binary from the 'Assets' tab of our latest [releases](https://github.com/defenseunicorns/zarf/releases) on GitHub. The pre-compiled binary is available for both arm64 and amd64 machines.
 
 ## Building the CLI
 
@@ -37,7 +37,7 @@ The `make build-cli` command builds a binary for each combination of OS and arch
 - `make build-cli-mac-apple`
 - `make build-cli-linux-amd`
 - `make build-cli-linux-arm`
-- `make build-cli-windows-amd` 
+- `make build-cli-windows-amd`
 - `make build-cli-windows-arm`
 :::
 

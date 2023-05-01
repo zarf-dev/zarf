@@ -164,7 +164,7 @@ Follow these guidelines to efficiently link the reader to other resources:
 * To write link text, use descriptive phrases that provide context for the material that you're linking to.
   * "For more information on what Zarf consists of, see [Zarf Packages](../4-user-guide/2-zarf-packages/index.md).
 * When you write a complete sentence that refers the reader to another topic, introduce the link with the phrase For more information, see or For more information about..., see.
-   * "For more information, see [Getting Started](../3-getting-started/index.md)."
+   * "For more information, see [Getting Started](../1-getting-started/index.md)."
 
 When linking text, **avoid** using non-descriptive terms as the text. Using text such as "here" or "see more" can depreciate the usability for readers. For example, do **not** say:
 * "For more information, see [here.]"

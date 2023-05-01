@@ -14,7 +14,7 @@ Zarf is a command line interface (CLI) tool that enables secure software deliver
 <!-- TODO: @JPERRY Is it better to link to 'Installing Zarf' or should we repeat the information here? (check w/ Madeline) -->
 <!-- TODO: @JPERRY Make sure the 'Installing Zarf' section if fully up to date with all the installation methods -->
 
-You can get the Zarf CLI on your machine in a few different ways. You can use the Defense Unicorns Homebrew Tap, download a prebuilt binary from our GitHub releases, or build the CLI from scratch on your own. We provide instructions for all of these methods in the [Installing Zarf](../../3-getting-started/index.md#installing-zarf) section of the Getting Started guide. If you're eager to start using Zarf and you already have Homebrew installed, you can quickly install it by copying and pasting the relevant commands for your operating system into your terminal:
+You can get the Zarf CLI on your machine in a few different ways. You can use the Defense Unicorns Homebrew Tap, download a prebuilt binary from our GitHub releases, or build the CLI from scratch on your own. We provide instructions for all of these methods in the [Installing Zarf](../1-getting-started/index.md#installing-zarf) section of the Getting Started guide. If you're eager to start using Zarf and you already have Homebrew installed, you can quickly install it by copying and pasting the relevant commands for your operating system into your terminal:
 
 <!-- NOTE: The empty line after the '<TabItem ...>' lines are important for the rendering... -->
 <Tabs>
@@ -121,13 +121,13 @@ Throughout the rest of the documentation, we will often be describing commands a
 
 Zarf provides a suite of commands that streamline the creation, deployment, and maintenance of packages. Some of these commands contain additional sub-commands to further assist with package management. When executed with the "--help" flag, each command and sub-command provides a concise summary of its functionality. As you navigate deeper into the command hierarchy, the provided descriptions become increasingly detailed. We encourage you to explore the various commands available to gain a comprehensive understanding of Zarf's capabilities.
 
-As previously mentioned, Zarf was specifically designed to facilitate the deployment of applications in disconnected environments with ease. As a result, the most commonly utilized commands are `zarf init`, `zarf package create`, and `zarf package deploy`. Detailed information on all commands can be found in the [CLI Commands](./100-cli-commands/zarf.md) section. However, brief descriptions of the most frequently used commands are provided below. It's worth noting that these three commands are closely linked to what we refer to as a "Zarf Package". Additional information on Zarf Packages can be found in the following section: [Zarf Packages](../2-zarf-packages/1-zarf-packages.md).
+As previously mentioned, Zarf was specifically designed to facilitate the deployment of applications in disconnected environments with ease. As a result, the most commonly utilized commands are `zarf init`, `zarf package create`, and `zarf package deploy`. Detailed information on all commands can be found in the [CLI Commands](./100-cli-commands/zarf.md) section. However, brief descriptions of the most frequently used commands are provided below. It's worth noting that these three commands are closely linked to what we refer to as a "Zarf Package". Additional information on Zarf Packages can be found in the following section: [Zarf Packages](../4-user-guide/2-zarf-packages/1-zarf-packages.md).
 
 ### zarf init
 
 <!-- TODO: Find a good place to talk about what the init command is actually doing (there's a lot of special magic sauce going on with that command) -->
 
-The `zarf init` command is utilized to configure a K8s cluster in preparation for the deployment of future Zarf Packages. The init command uses a specialized 'init-package' to operate. This package may be located in your current working directory, the directory where the Zarf CLI binary is located, or downloaded from GitHub releases during command execution. For further details regarding the init-package, please refer to the [init-package](../2-zarf-packages/3-the-zarf-init-package.md) page.
+The `zarf init` command is utilized to configure a K8s cluster in preparation for the deployment of future Zarf Packages. The init command uses a specialized 'init-package' to operate. This package may be located in your current working directory, the directory where the Zarf CLI binary is located, or downloaded from GitHub releases during command execution. For further details regarding the init-package, please refer to the [init-package](../4-user-guide/2-zarf-packages/3-the-zarf-init-package.md) page.
 
 ### zarf package deploy
 
@@ -151,4 +151,4 @@ While config files set default values, these values can still be overwritten by 
 3. Config file
 4. Default values
 
-For additional information, see the [Config File Example](../../../examples/config-file/README.md).
+For additional information, see the [Config File Example](../../examples/config-file/README.md).

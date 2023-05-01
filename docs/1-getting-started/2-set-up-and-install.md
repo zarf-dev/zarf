@@ -5,7 +5,7 @@
 
 ## Installing Zarf
 
-<!-- TODO: @JPERRY Look at how other tools/apps do their instillation instructions -->
+<!-- TODO: @JPERRY Look at how other tools/apps do their installation instructions -->
 
 In order to install the Zarf CLI, which is not yet available in common Linux package managers, you may follow the steps below:
 
@@ -27,7 +27,7 @@ For macOS or Linux, you may also install the Zarf CLI by using [brew](https://za
 
 Once the Zarf CLI is installed, you can create a cluster using the built-in K3s cluster available in the init package (if another cluster isn't already available). You can find the relevant [init package release](https://github.com/defenseunicorns/zarf/releases) from the GitHub releases page.
 
-Once downloaded, you can install the init package by navigating to the directory containing the init package and running the command [zarf init](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_init.md). Zarf will prompt you, asking if you want to deploy the k3s component, you can type `y` and hit enter to have Zarf startup a local single node k3s cluster on your current machine. Other useful information about initializing a cluster with Zarf is available in the [Initializing a Cluster](#initializing-a-cluster) section later on in this page.
+Once downloaded, you can install the init package by navigating to the directory containing the init package and running the command [zarf init](../2-the-zarf-cli/100-cli-commands/zarf_init.md). Zarf will prompt you, asking if you want to deploy the k3s component, you can type `y` and hit enter to have Zarf startup a local single node k3s cluster on your current machine. Other useful information about initializing a cluster with Zarf is available in the [Initializing a Cluster](#initializing-a-cluster) section later on in this page.
 
 :::note
 Depending on the permissions of your user, if you are installing K3s through the `zarf init` command you may need to run the command as a privileged user. To accomplish this, you can:
@@ -52,7 +52,7 @@ Initializing a cluster is necessary since most K8 clusters do not come pre-insta
 
 As part of the initialization process, Zarf creates a dedicated namespace called `zarf` and deploys several essential components within the cluster. These include an in-cluster Docker registry (serves as the container image host for future packages), a `zarf agent` mutating webhook (to redirect outgoing requests to the internally hosted resources), and a set of secrets. Additionally, users can optionally deploy a gitea server that hosts the Git repositories needed for future packages. For more information regarding package components, see the [init package](./../4-user-guide/2-zarf-packages/3-the-zarf-init-package.md) page.
 
-To access the relevant init package release, visit the [GitHub releases](https://github.com/defenseunicorns/zarf/releases) page. Once downloaded, navigate to the directory containing the init package and execute the command [`zarf init`](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_init.md) to install it. Zarf will prompt you to confirm whether you wish to deploy the optional component. You can type 'y' or 'n' depending on your specific use case.
+To access the relevant init package release, visit the [GitHub releases](https://github.com/defenseunicorns/zarf/releases) page. Once downloaded, navigate to the directory containing the init package and execute the command [`zarf init`](../2-the-zarf-cli/100-cli-commands/zarf_init.md) to install it. Zarf will prompt you to confirm whether you wish to deploy the optional component. You can type 'y' or 'n' depending on your specific use case.
 
 After the initialization process is complete, you can verify that the pods have come up healthy by running the command `zarf tools kubectl get pods -n zarf`. You should expect to see two `agent-hook` pods, a `zarf-docker-registry` pod, and optionally a `zarf-gitea` pod.
 

@@ -11,12 +11,12 @@ When creating a Zarf package, you must have an Internet connection so that Zarf 
 ## Walkthrough Prerequisites
 
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
--  Zarf binary installed on your $PATH: ([install instructions](../3-getting-started/index.md#installing-zarf))
+-  Zarf binary installed on your $PATH: ([install instructions](../1-getting-started/index.md#installing-zarf))
 - The [Docker CLI](https://docs.docker.com/desktop/) installed for building the [`zarf-agent`](../9-faq.md#what-is-the-zarf-agent) image.
 
 ## Building the init-package
 
-Creating zarf packages is a simple process you can complete with a single command; [`zarf package create`](../4-user-guide/1-the-zarf-cli/100-cli-commands/zarf_package_create.md). This command looks for a `zarf.yaml` file in the specified directory and creates a package containing all the resources the file defines. You can find more information about Zarf packages on the [Zarf Packages](../4-user-guide/2-zarf-packages/1-zarf-packages.md) page.
+Creating zarf packages is a simple process you can complete with a single command; [`zarf package create`](../2-the-zarf-cli/100-cli-commands/zarf_package_create.md). This command looks for a `zarf.yaml` file in the specified directory and creates a package containing all the resources the file defines. You can find more information about Zarf packages on the [Zarf Packages](../4-user-guide/2-zarf-packages/1-zarf-packages.md) page.
 
 ```bash
 cd zarf                   # Enter the zarf repository that you have cloned down

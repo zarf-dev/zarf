@@ -11,7 +11,7 @@ In this walkthrough, we are going to deploy the Helm OCI chart package onto your
 ## Prerequisites
 
 Prior to this walkthrough you'll want to have a working cluster with Zarf initialized
-1.  Zarf binary installed on your $PATH: ([Installing Zarf](../3-getting-started/index.md#installing-zarf))
+1.  Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
 2. [An initialized cluster](./1-initializing-a-k8s-cluster.md)
 3. The [Helm OCI chart package created](./0-using-zarf-package-create.md)
 
