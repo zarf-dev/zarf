@@ -10,6 +10,8 @@ In previous tutorials, we learned how to [create a package](./0-using-zarf-packa
 
 ## Prerequisites
 
+Before beginning this tutorial you will need the following:
+
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 - Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
 - [An initialized cluster](./1-initializing-a-k8s-cluster.md)

@@ -12,7 +12,7 @@ More specifically, you'll be adding a [Promtail / Loki / Grafana (PLG)](https://
 
 ## Prerequisites
 
-Prior to this tutorial you'll want to have a working cluster with Zarf initialized
+Prior to this tutorial you'll want to have a working cluster with Zarf initialized.
 
 - Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
 - [Initialize a cluster](./1-initializing-a-k8s-cluster.md).
