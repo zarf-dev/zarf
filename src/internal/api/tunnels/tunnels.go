@@ -17,7 +17,7 @@ import (
 var tunnels map[string]*cluster.Tunnel
 
 // ListTunnels lists all tunnel names
-func ListTunnels(w http.ResponseWriter, r *http.Request) {
+func ListTunnels(w http.ResponseWriter, _ *http.Request) {
 	// make sure tunnels is initialized
 	makeTunnels()
 
