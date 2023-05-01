@@ -39,7 +39,7 @@ func ConnectTunnel(w http.ResponseWriter, r *http.Request) {
 
 	// if the tunnel already exists, just launch the URL
 	if tunnels[name] != nil {
-		launchTunnelUrl(tunnels[name], w, name)
+		launchTunnelURL(tunnels[name], w, name)
 		common.WriteJSONResponse(w, true, http.StatusCreated)
 		return
 	}
@@ -58,7 +58,7 @@ func ConnectTunnel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tunnels[name] = tunnel
-	launchTunnelUrl(tunnel, w, name)
+	launchTunnelURL(tunnel, w, name)
 
 	common.WriteJSONResponse(w, true, http.StatusOK)
 }
@@ -79,8 +79,8 @@ func makeTunnels() {
 	}
 }
 
-// launchTunnelUrl launches the tunnel URL in the default browser
-func launchTunnelUrl(tunnel *cluster.Tunnel, w http.ResponseWriter, name string) {
+// launchTunnelURL launches the tunnel URL in the default browser
+func launchTunnelURL(tunnel *cluster.Tunnel, w http.ResponseWriter, name string) {
 	if err := exec.LaunchURL(tunnel.FullUrl()); err != nil {
 		message.ErrorWebf(err, w, "Failed to launch browser for %s", name)
 
