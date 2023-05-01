@@ -10,7 +10,7 @@ The Zarf Deployment Web UI can easily be spun up with a single command from the 
 
 Follow these steps to get started using the Web UI
 
-1. Step one: [Install the Zarf binary](/docs/1-getting-started/index.md)
+1. Step one: [Install the Zarf binary](../1-getting-started/index.md)
 2. Step two: Open a terminal shell
 3. Step three: Type in the following command: ```zarf dev UI```
 
@@ -98,14 +98,14 @@ Once a package is deployed into the cluster, the Web UI offers additional comman
 The web UI is packaged into the Zarf binary, so you don't have to worry about additional dependencies or trying to install it yourself! The Web UI is served through your machine's local browser, running on `localhost`, and utilizes the Zarf go binary as the backend.
 
 Use the Zarf Deployment UI to execute the existing Zarf CLI commands:
-- [Zarf tools Kubectl top](/docs/2-the-zarf-cli/100-cli-commands/zarf_tools_kubectl.md)
-- [Zarf Init](/docs/2-the-zarf-cli/100-cli-commands/zarf_init.md)
-- [Zarf Package Deploy](/docs/2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md)
-- [Zarf Package Remove](/docs/2-the-zarf-cli/100-cli-commands/zarf_package_remove.md)
-- [Zarf Package List](/docs/2-the-zarf-cli/100-cli-commands/zarf_package_list.md)
-- [Zarf Package Inspect](/docs/2-the-zarf-cli/100-cli-commands/zarf_package_inspect.md) (coming soon)
-- [Zarf Tools Sbom](/docs/2-the-zarf-cli/100-cli-commands/zarf_tools_sbom.md) (Coming soon)
-- [Zarf Connect](/docs/2-the-zarf-cli/100-cli-commands/zarf_connect.md) (coming soon)
+- [Zarf tools Kubectl top](../2-the-zarf-cli/100-cli-commands/zarf_tools_kubectl.md)
+- [Zarf Init](../2-the-zarf-cli/100-cli-commands/zarf_init.md)
+- [Zarf Package Deploy](../2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md)
+- [Zarf Package Remove](../2-the-zarf-cli/100-cli-commands/zarf_package_remove.md)
+- [Zarf Package List](../2-the-zarf-cli/100-cli-commands/zarf_package_list.md)
+- [Zarf Package Inspect](../2-the-zarf-cli/100-cli-commands/zarf_package_inspect.md) (coming soon)
+- [Zarf Tools Sbom](../2-the-zarf-cli/100-cli-commands/zarf_tools_sbom.md) (Coming soon)
+- [Zarf Connect](../2-the-zarf-cli/100-cli-commands/zarf_connect.md) (coming soon)
 
 :::info
 
