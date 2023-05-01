@@ -51,6 +51,7 @@ const DeployingComponents = {
 };
 
 const Tunnels = {
+	list: () => http.get<string[]>('/tunnels/list'),
 	connect: (name: string) => http.put<boolean>(`/tunnels/connect/${encodeURIComponent(name)}`, {}),
 	disconnect: (name: string) => http.del(`/tunnels/disconnect/${encodeURIComponent(name)}`),
 }

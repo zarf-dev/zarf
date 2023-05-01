@@ -14,18 +14,32 @@ import (
 
 var tunnels map[string]*cluster.Tunnel
 
+// ListTunnels lists all tunnel names
+func ListTunnels(w http.ResponseWriter, r *http.Request) {
+	// make sure tunnels is initialized
+	makeTunnels()
+
+	// get the tunnel names
+	tunnelNames := make([]string, 0, len(tunnels))
+	for name := range tunnels {
+		tunnelNames = append(tunnelNames, name)
+	}
+
+	common.WriteJSONResponse(w, tunnelNames, http.StatusOK)
+}
+
 // ConnectTunnel establishes a tunnel for the requested resource
 func ConnectTunnel(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	if tunnels != nil {
-		if tunnels[name] != nil {
-			launchTunnelUrl(tunnels[name], w, name)
-			common.WriteJSONResponse(w, true, http.StatusCreated)
-			return
-		}
-	} else {
-		tunnels = make(map[string]*cluster.Tunnel)
+	// make sure tunnels is initialized
+	makeTunnels()
+
+	// if the tunnel already exists, just launch the URL
+	if tunnels[name] != nil {
+		launchTunnelUrl(tunnels[name], w, name)
+		common.WriteJSONResponse(w, true, http.StatusCreated)
+		return
 	}
 
 	tunnel, err := cluster.NewZarfTunnel()
@@ -40,6 +54,7 @@ func ConnectTunnel(w http.ResponseWriter, r *http.Request) {
 		message.ErrorWebf(err, w, "Failed to connect to %s", name)
 		return
 	}
+
 	tunnels[name] = tunnel
 	launchTunnelUrl(tunnel, w, name)
 
@@ -53,6 +68,13 @@ func DisconnectTunnel(w http.ResponseWriter, r *http.Request) {
 	closeTunnel(name)
 
 	common.WriteJSONResponse(w, true, http.StatusOK)
+}
+
+// makeTunnels initializes the tunnels map if it is nil
+func makeTunnels() {
+	if tunnels == nil {
+		tunnels = make(map[string]*cluster.Tunnel)
+	}
 }
 
 // launchTunnelUrl launches the tunnel URL in the default browser

@@ -7,13 +7,14 @@
 	import type { DeployedPackage } from '$lib/api-types';
 	import ButtonDense from '../button-dense.svelte';
 	import ZarfDialog from '../zarf-dialog.svelte';
-	import { onMount } from 'svelte/internal';
+	import { onMount, onDestroy } from 'svelte/internal';
 	import { tunnelStore } from '$lib/store';
 	import { Tunnels } from '$lib/api';
 
 	export let pkg: DeployedPackage;
 	export let toggleDialog: () => void;
 
+	let open: boolean;
 	let selectedConnection = '';
 	let errMessage: string = '';
 
@@ -64,20 +65,26 @@
 
 	onMount(() => {
 		selectedConnection = resources[0];
-		return () => {
-			errMessage = '';
-		};
 	});
 
-	$: failedToConnect = errMessage !== '';
+	onDestroy(() => {
+		errMessage = '';
+	});
+
+	$: failedToDisconnect = errMessage !== '';
 	$: titleText =
-		(failedToConnect && `Failed to disconnect ${selectedConnection}`) || 'Disconnect Resource';
+		(failedToDisconnect && `Failed to disconnect ${selectedConnection}`) || 'Disconnect Resource';
 	$: resources = $tunnelStore[pkg.name] || [];
+	$: {
+		if (open && resources.length > 0) {
+			selectedConnection = resources[0];
+		}
+	}
 </script>
 
-<ZarfDialog bind:toggleDialog {titleText} happyZarf={!failedToConnect}>
+<ZarfDialog bind:open bind:toggleDialog {titleText} happyZarf={!failedToDisconnect}>
 	<svelte:fragment>
-		{#if !failedToConnect}
+		{#if !failedToDisconnect}
 			<Typography variant="body1" color="text-secondary-on-dark">
 				Select which resource you would like Zarf to disconnect from. Zarf will close and remove the
 				secure tunnel.
@@ -119,7 +126,7 @@
 		<ButtonDense on:click={toggleDialog} variant="outlined" backgroundColor="white">
 			Cancel
 		</ButtonDense>
-		{#if !failedToConnect}
+		{#if !failedToDisconnect}
 			<ButtonDense variant="raised" backgroundColor="white" textColor="black" on:click={disconnect}>
 				Disconnect
 			</ButtonDense>

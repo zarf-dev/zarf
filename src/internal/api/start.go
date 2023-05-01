@@ -103,6 +103,7 @@ func LaunchAPIServer() {
 		})
 
 		r.Route("/tunnels", func(r chi.Router) {
+			r.Get("/list", tunnels.ListTunnels)
 			r.Put("/connect/{name}", tunnels.ConnectTunnel)
 			r.Delete("/disconnect/{name}", tunnels.DisconnectTunnel)
 		})

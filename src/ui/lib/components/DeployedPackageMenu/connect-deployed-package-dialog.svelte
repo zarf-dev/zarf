@@ -14,8 +14,10 @@
 	export let pkg: DeployedPackage;
 	export let toggleDialog: () => void;
 
+	let open: boolean;
 	let selectedConnection = '';
 	let errMessage: string = '';
+	let connections: { name: string; connectString: ConnectString }[] = [];
 
 	const listSSX: SSX = {
 		$self: {
@@ -46,11 +48,10 @@
 	> {
 		const result = await Packages.packageConnections(pkg.name);
 
-		const connections = Object.entries(result.connectStrings).map(([name, connectString]) => ({
+		connections = Object.entries(result.connectStrings).map(([name, connectString]) => ({
 			name,
 			connectString,
 		}));
-		selectedConnection = connections[0].name || '';
 		return connections;
 	}
 
@@ -84,9 +85,14 @@
 	$: failedToConnect = errMessage !== '';
 	$: titleText =
 		(failedToConnect && `Failed to connect to ${selectedConnection}`) || 'Connect to Resource';
+	$: {
+		if (open && connections.length > 0) {
+			selectedConnection = connections[0].name;
+		}
+	}
 </script>
 
-<ZarfDialog bind:toggleDialog {titleText} happyZarf={!failedToConnect}>
+<ZarfDialog bind:open bind:toggleDialog {titleText} happyZarf={!failedToConnect}>
 	<svelte:fragment>
 		{#if !failedToConnect}
 			<Typography variant="body1" color="text-secondary-on-dark">
