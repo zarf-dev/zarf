@@ -64,10 +64,10 @@ If you are not seeing this then Zarf was not installed onto your $PATH correctly
 
 Depending on how familiar you are with Kubernetes, DevOps, and Zarf, let's find what set of information would be most useful to you.
 
-- If you want to become more familiar with Zarf and it's features, see the [Walkthroughs](../13-walkthroughs/index.md) page.
+- If you want to become more familiar with Zarf and it's features, see the [Tutorials](../6-zarf-tutorials/index.md) page.
 
 - More information about the Zarf CLI is available on the [Zarf CLI](../2-the-zarf-cli/index.md) page, or by browsing through the help descriptions of all the commands available through `zarf --help`.
 
-- More information about the packages that Zarf creates and deploys is available in the [Understanding Zarf Packages](../4-user-guide/2-zarf-packages/1-zarf-packages.md) page.
+- More information about the packages that Zarf creates and deploys is available in the [Understanding Zarf Packages](../3-create-a-zarf-package/1-zarf-packages.md) page.
 
 - If you want to take a step back and better understand the problem Zarf is trying to solve, you can find more context on the [Understand the Basics](./0-understand-the-basics.md) and [Core Concepts](./1-core-concepts.md) pages.
