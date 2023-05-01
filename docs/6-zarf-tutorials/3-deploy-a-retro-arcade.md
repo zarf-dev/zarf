@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In previous tutorials, we learned how to [create a package](./0-using-zarf-package-create.md), [initialize a cluster](./1-initializing-a-k8s-cluster.md), and [deploy a package](./2-deploying-zarf-packages.md). In this tutorial, we will leverage all that past work and deploy a fun application onto your cluster. While this example game is nothing crazy, this tutorial hopes to show how simple it is to build packages and deploy them into a Kubernetes cluster.
+In previous tutorials, we learned how to [create a package](./0-using-zarf-package-create.md), [initialize a cluster](./1-initializing-a-k8s-cluster.md), and [deploy a package](./2-deploying-zarf-packages.md). In this tutorial, we will leverage all that past work and deploy a fun application onto your cluster.
 
 ## System Requirements
 
@@ -17,29 +17,21 @@ In previous tutorials, we learned how to [create a package](./0-using-zarf-packa
 ## YouTube Tutorial
 [![Deploying Packages with Zarf Video on YouTube](../.images/tutorials/package_deploy_thumbnail.jpg)](https://youtu.be/7hDK4ew_bTo "Deploying Packages with Zarf")
 
-1. Navigate to the folder where you created the package in a previous tutorial. (see [prerequisites](#prerequisites))
+## Deploying the Arcade
 
-```sh
-$ cd src/github.com/defenseunicorns/zarf/examples/dos-games
-```
+<!-- TODO: (@WSTARR) This should point to an OCI version of this at some point. -->
 
-2. Use the `zarf package create .` command to create the Zarf games package. Enter `y` to confirm package creation.
+1. The `dos-games` package is easily deployable via `sget://` by running `zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)`.
 
-<iframe src="/docs/tutorials/dos_games_create.html" width="100%" height="275px"></iframe>
+:::tip
 
-3. Provide a file size for the package, or enter `0` to disable the feature.
+You can publish your own packages for deployment too via `oci://`.  See the [Store and Deploy Packages with OCI](./7-publish-and-deploy.md) tutorial for more information.
 
-<iframe src="/docs/tutorials/dos_games_size.html" width="100%" height="100px"></iframe>
-
-Once you enter your response for the package size, the output that follows will show the package being created.
-
-<iframe src="/docs/tutorials/dos_games_components.html" width="100%" height="300px"></iframe>
-
-4. Use the `zarf package deploy` command to deploy the Zarf games package.
+:::
 
 <iframe src="/docs/tutorials/package_deploy_deploy.html" width="100%" height="595px"></iframe>
 
-5. If you do not provide the path to the package as an argument to the `zarf package deploy` command, Zarf will prompt you to choose which package you want to deploy.
+2. If you do not provide the path to the package as an argument to the `zarf package deploy` command, Zarf will prompt you to choose which package you want to deploy.
 
 <iframe src="/docs/tutorials/package_deploy_suggest.html" width="100%" height="120px"></iframe>
 
@@ -50,8 +42,7 @@ As we have seen a few times now, we are going to be prompted to confirm that we 
 
 <iframe src="/docs/tutorials/package_deploy_deploy.html" width="100%" height="595px"></iframe>
 
-
-6. If you did not use the `--confirm` flag to automatically confirm that you want to deploy this package, press `y` for yes.  Then hit the `enter` key.
+3. If you did not use the `--confirm` flag to automatically confirm that you want to deploy this package, press `y` for yes.  Then hit the `enter` key.
 
 <iframe src="/docs/tutorials/package_deploy_deploy_bottom.html" width="100%" height="400px"></iframe>
 

@@ -17,8 +17,10 @@ Prior to this tutorial you'll want to have a working cluster with Zarf initializ
 2. [Initialize a cluster](./1-initializing-a-k8s-cluster.md).
 3. Perform the [Retro Arcade Tutorial](./3-deploy-a-retro-arcade.md).
 
-## Tutorial
+## Youtube Tutorial
 [![Tutorial: Add Logging to an existing Zarf Cluster with Zarf Init](../.images/tutorials/logging_thumbnail.png)](https://youtu.be/FYkafs1idlQ "Add Logging to an existing Zarf Cluster with Zarf Init")
+
+## Installing the Logging Component
 
 1. Run the `zarf init` command on your cluster.
 

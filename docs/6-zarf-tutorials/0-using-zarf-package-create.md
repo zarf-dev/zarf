@@ -1,5 +1,7 @@
 # Using Zarf Package Create
 
+## Introduction
+
 In this tutorial, we will demonstrate how to build a Zarf package with `zarf package create`. We will build two packages: the first will be the zarf init-package (which will be very useful for nearly every other tutorial) and the second will be a Helm OCI chart package.
 
 When creating a Zarf package, you must have an Internet connection so that Zarf can fetch all of the dependencies and resources necessary to build the package. If your package is using images from a private registry or is referencing repositories in a private repository, you will need to have your credentials configured on your machine for Zarf to be able to fetch the resources.
@@ -8,7 +10,7 @@ When creating a Zarf package, you must have an Internet connection so that Zarf 
 
 - You'll need an internet connection so Zarf can pull in anything required to build the package.
 
-## Tutorial Prerequisites
+## Prerequisites
 
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 -  Zarf binary installed on your $PATH: ([install instructions](../1-getting-started/index.md#installing-zarf))

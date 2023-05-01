@@ -1,8 +1,8 @@
-# Deploying Zarf Packages
+# Deploying Local Zarf Packages
 
 ## Introduction
 
-In this tutorial, we are going to deploy the Helm OCI chart package onto your cluster. In previous tutorials, we learned how to [create a package](./0-using-zarf-package-create.md) and [initialize a cluster](./1-initializing-a-k8s-cluster.md). We will be leveraging all that past work and then go the extra step of deploying an application onto our cluster with the `zarf package deploy` command.
+In this tutorial, we are going to deploy the Helm OCI chart package onto your cluster using the local package we created in the earlier [create a package](./0-using-zarf-package-create.md) tutorial and the cluster we initialized in the [initialize a k8s cluster](./1-initializing-a-k8s-cluster.md) tutorial. We will be leveraging that past work and then go the extra step of deploying an application onto our cluster with the `zarf package deploy` command.
 
 ## System Requirements
 
@@ -11,7 +11,7 @@ In this tutorial, we are going to deploy the Helm OCI chart package onto your cl
 ## Prerequisites
 
 Prior to this tutorial you'll want to have a working cluster with Zarf initialized
-1.  Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
+1. Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
 2. [An initialized cluster](./1-initializing-a-k8s-cluster.md)
 3. The [Helm OCI chart package created](./0-using-zarf-package-create.md)
 

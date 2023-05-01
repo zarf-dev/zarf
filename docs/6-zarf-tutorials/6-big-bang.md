@@ -27,7 +27,7 @@ Big Bang requires a reasonably powerful `amd64` system that scales up with the n
 
 To learn more about Big Bang's requirements in general, see their documentation: https://docs-bigbang.dso.mil/latest/docs/prerequisites/minimum-hardware-requirements/
 
-## Pre-requisites
+## Prerequisites
 
 Before beginning this tutorial you will need the following:
 

@@ -1,5 +1,7 @@
 # Initializing a K8s Cluster
 
+## Introduction
+
 In this tutorial, we will demonstrate how to initialize Zarf onto a K8s cluster. This is done by running the [`zarf init`](../2-the-zarf-cli/100-cli-commands/zarf_init.md) command, which uses a specialized package called an 'init-package'. More information about this specific package can be found [here](../3-create-a-zarf-package/3-the-zarf-init-package.md).
 
 ## Prerequisites
@@ -9,7 +11,7 @@ In this tutorial, we will demonstrate how to initialize Zarf onto a K8s cluster.
 - An init-package built/downloaded: ([init-package Build Instructions](./0-using-zarf-package-create.md)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
 - A Kubernetes cluster to work with: ([Local k8s Cluster Instructions](./#setting-up-a-local-kubernetes-cluster))
 
-## Tutorial
+## Initializing the Cluster
 
 1. Run the `zarf init` command on your cluster.
 

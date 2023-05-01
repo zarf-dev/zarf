@@ -15,7 +15,7 @@ The 'k3s' component requires root access (not just `sudo`!) when deploying as it
 - Zarf binary installed on your $PATH: ([Install Instructions](../1-getting-started/index.md#installing-zarf))
 - An init-package built/downloaded: ([init-package Build Instructions](./0-using-zarf-package-create.md)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
 
-## Tutorial
+## Creating the Cluster
 
 1. Run the `zarf init` command as `root`.
 
