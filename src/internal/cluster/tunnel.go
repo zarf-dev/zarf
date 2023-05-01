@@ -318,8 +318,8 @@ func (tunnel *Tunnel) HTTPEndpoint() string {
 	return fmt.Sprintf("http://%s", tunnel.Endpoint())
 }
 
-// FullUrl returns the tunnel endpoint as a HTTP URL string with the urlSuffix appended.
-func (tunnel *Tunnel) FullUrl() string {
+// FullURL returns the tunnel endpoint as a HTTP URL string with the urlSuffix appended.
+func (tunnel *Tunnel) FullURL() string {
 	return fmt.Sprintf("%s%s", tunnel.HTTPEndpoint(), tunnel.urlSuffix)
 }
 

@@ -81,7 +81,7 @@ func makeTunnels() {
 
 // launchTunnelURL launches the tunnel URL in the default browser
 func launchTunnelURL(tunnel *cluster.Tunnel, w http.ResponseWriter, name string) {
-	if err := exec.LaunchURL(tunnel.FullUrl()); err != nil {
+	if err := exec.LaunchURL(tunnel.FullURL()); err != nil {
 		message.ErrorWebf(err, w, "Failed to launch browser for %s", name)
 
 	}
