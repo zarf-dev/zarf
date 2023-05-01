@@ -17,7 +17,7 @@ In previous walkthroughs, we learned how to [create a package](./0-using-zarf-pa
 ## YouTube Walkthrough
 [![Deploying Packages with Zarf Video on YouTube](../.images/walkthroughs/package_deploy_thumbnail.jpg)](https://youtu.be/7hDK4ew_bTo "Deploying Packages with Zarf")
 
-1. Navigate to the `dos-games` folder within the Zarf repo.
+1. Navigate to the folder where you created the package in a previous walkthrough. (see [prerequisites](#prerequisites))
 
 ```sh
 $ cd src/github.com/defenseunicorns/zarf/examples/dos-games
