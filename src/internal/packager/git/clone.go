@@ -87,7 +87,7 @@ func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName) error 
 		Stdout: g.Spinner,
 		Stderr: g.Spinner,
 	}
-	_, _, _, err := exec.CmdWithContext(context.TODO(), execConfig, "git", cmdArgs...)
+	_, _, err := exec.CmdWithContext(context.TODO(), execConfig, "git", cmdArgs...)
 	if err != nil {
 		return err
 	}

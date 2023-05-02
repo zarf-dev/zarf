@@ -27,23 +27,23 @@ func TestMismatchedArchitectures(t *testing.T) {
 	)
 
 	// Build init package with different arch than the cluster arch.
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "create", ".", "--architecture", mismatchedArch, "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", ".", "--architecture", mismatchedArch, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(mismatchedInitPackage)
 
 	// Build dos-games package with different arch than the cluster arch.
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "create", "examples/dos-games/", "--architecture", mismatchedArch, "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", "examples/dos-games/", "--architecture", mismatchedArch, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(mismatchedGamesPackage)
 
 	// Ensure zarf init returns an error because of the mismatched architectures.
 	// We need to use the --architecture flag here to force zarf to find the package.
-	_, stdErr, _, err = e2e.ExecZarfCommand("init", "--architecture", mismatchedArch, "--confirm")
+	_, stdErr, err = e2e.ExecZarfCommand("init", "--architecture", mismatchedArch, "--confirm")
 	require.Error(t, err, stdErr)
 	require.Contains(t, stdErr, expectedErrorMessage)
 
 	// Ensure zarf package deploy returns an error because of the mismatched architectures.
-	_, stdErr, _, err = e2e.ExecZarfCommand("package", "deploy", mismatchedGamesPackage, "--confirm")
+	_, stdErr, err = e2e.ExecZarfCommand("package", "deploy", mismatchedGamesPackage, "--confirm")
 	require.Error(t, err, stdErr)
 	require.Contains(t, stdErr, expectedErrorMessage)
 }

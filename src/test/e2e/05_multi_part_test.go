@@ -27,7 +27,7 @@ func TestMultiPartPackage(t *testing.T) {
 	e2e.CleanFiles(deployPath, outputFile)
 
 	// Create the package with a max size of 1MB
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "create", createPath, "--confirm", "--max-package-size=1")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", createPath, "--confirm", "--max-package-size=1")
 	require.NoError(t, err, stdOut, stdErr)
 
 	list, err := filepath.Glob("zarf-package-multi-part-*")
@@ -35,7 +35,7 @@ func TestMultiPartPackage(t *testing.T) {
 	// Length is 7 because there are 6 parts and 1 manifest
 	require.Len(t, list, 7)
 
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "deploy", deployPath, "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", deployPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the package was deployed

@@ -26,13 +26,13 @@ func TestYOLOMode(t *testing.T) {
 	defer e2e.Teardown(t)
 
 	// Destroy the cluster to test Zarf cleaning up after itself
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("destroy", "--confirm", "--remove-components")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("destroy", "--confirm", "--remove-components")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-yolo-%s.tar.zst", e2e.Arch)
 
 	// Deploy the YOLO package
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	tunnel, err := cluster.NewZarfTunnel()
@@ -45,6 +45,6 @@ func TestYOLOMode(t *testing.T) {
 	assert.NoError(t, err, resp)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "remove", "yolo", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "yolo", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

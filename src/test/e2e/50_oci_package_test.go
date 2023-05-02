@@ -39,7 +39,7 @@ func (suite *RegistryClientTestSuite) SetupSuite() {
 	suite.NoError(err)
 	if !cfg.ContainsAuth() {
 		// make a docker config file w/ some blank creds
-		_, _, _, err := e2e.ExecZarfCommand("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
+		_, _, err := e2e.ExecZarfCommand("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
 		suite.NoError(err)
 	}
 
@@ -52,10 +52,10 @@ func (suite *RegistryClientTestSuite) TearDownSuite() {
 	local := fmt.Sprintf("zarf-package-helm-oci-chart-%s-0.0.1.tar.zst", e2e.Arch)
 	e2e.CleanFiles(local)
 
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "remove", "helm-oci-chart", "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "remove", "helm-oci-chart", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
-	_, _, _, err = exec.Cmd("docker", "rm", "-f", "registry")
+	_, _, err = exec.Cmd("docker", "rm", "-f", "registry")
 	suite.NoError(err)
 }
 
@@ -65,13 +65,13 @@ func (suite *RegistryClientTestSuite) Test_0_Publish() {
 	// Publish package.
 	example := filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-helm-oci-chart-%s-0.0.1.tar.zst", e2e.Arch))
 	ref := suite.Reference.String()
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "publish", example, "oci://"+ref, "--insecure")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "publish", example, "oci://"+ref, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Published "+ref)
 
 	// Publish w/ package missing `metadata.version` field.
 	example = filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch))
-	_, stdErr, _, err = e2e.ExecZarfCommand("package", "publish", example, "oci://"+ref, "--insecure")
+	_, stdErr, err = e2e.ExecZarfCommand("package", "publish", example, "oci://"+ref, "--insecure")
 	suite.Error(err, stdErr)
 }
 
@@ -86,7 +86,7 @@ func (suite *RegistryClientTestSuite) Test_1_Pull() {
 	ref := suite.Reference.String()
 
 	// Pull the package via OCI.
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "pull", "oci://"+ref, "--insecure")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "pull", "oci://"+ref, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Pulled "+ref)
 
@@ -94,7 +94,7 @@ func (suite *RegistryClientTestSuite) Test_1_Pull() {
 	suite.FileExists(out)
 
 	// Test pull w/ bad ref.
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "pull", "oci://"+badRef.String(), "--insecure")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "pull", "oci://"+badRef.String(), "--insecure")
 	suite.Error(err, stdOut, stdErr)
 }
 
@@ -107,16 +107,16 @@ func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 	ref := suite.Reference.String()
 
 	// Deploy the package via OCI.
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "deploy", "oci://"+ref, "--insecure", "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", "oci://"+ref, "--insecure", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Pulled "+ref)
 
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-n=helm-oci-demo", "--no-headers")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-n=helm-oci-demo", "--no-headers")
 	suite.NoError(err, stdErr)
 	suite.Contains(string(stdOut), "podinfo-")
 
 	// Test deploy w/ bad ref.
-	_, stdErr, _, err = e2e.ExecZarfCommand("package", "deploy", "oci://"+badRef.String(), "--insecure", "--confirm")
+	_, stdErr, err = e2e.ExecZarfCommand("package", "deploy", "oci://"+badRef.String(), "--insecure", "--confirm")
 	suite.Error(err, stdErr)
 }
 
@@ -126,12 +126,12 @@ func (suite *RegistryClientTestSuite) Test_3_Inspect() {
 	suite.Reference.Repository = "helm-oci-chart"
 	suite.Reference.Reference = fmt.Sprintf("0.0.1-%s", e2e.Arch)
 	ref := suite.Reference.String()
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "inspect", "oci://"+ref, "--insecure")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "inspect", "oci://"+ref, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Loading Zarf Package oci://"+ref)
 
 	// Test inspect w/ bad ref.
-	_, stdErr, _, err = e2e.ExecZarfCommand("package", "inspect", "oci://"+badRef.String(), "--insecure")
+	_, stdErr, err = e2e.ExecZarfCommand("package", "inspect", "oci://"+badRef.String(), "--insecure")
 	suite.Error(err, stdErr)
 }
 
@@ -144,10 +144,10 @@ func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {
 	suite.FileExists(local)
 
 	// Deploy the local package.
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "deploy", local, "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", local, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-n=helm-oci-demo", "--no-headers")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-n=helm-oci-demo", "--no-headers")
 	suite.NoError(err, stdErr)
 	suite.Contains(string(stdOut), "podinfo-")
 }

@@ -22,7 +22,7 @@ func TestCreateSBOM(t *testing.T) {
 
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "create", "examples/dos-games", "--confirm", "--zarf-cache", cachePath, "--sbom-out", sbomPath)
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", "examples/dos-games", "--confirm", "--zarf-cache", cachePath, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Creating SBOMs for 1 images and 0 components with files.")
 	// Test that the game package generates the SBOMs we expect (images only)
@@ -36,7 +36,7 @@ func TestCreateSBOM(t *testing.T) {
 	// Clean the SBOM path so it is force to be recreated
 	e2e.CleanFiles(sbomPath)
 
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "inspect", pkgName, "--sbom-out", sbomPath)
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "inspect", pkgName, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	// Test that the game package generates the SBOMs we expect (images only)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
@@ -47,12 +47,12 @@ func TestCreateSBOM(t *testing.T) {
 	require.NoError(t, err)
 
 	// Pull the current zarf binary version to find the corresponding init package
-	version, stdErr, _, err := e2e.ExecZarfCommand("version")
+	version, stdErr, err := e2e.ExecZarfCommand("version")
 	require.NoError(t, err, version, stdErr)
 
 	initName := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", e2e.Arch, strings.TrimSpace(version))
 
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "inspect", initName, "--sbom-out", sbomPath)
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "inspect", initName, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	// Test that we preserve the filepath
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))

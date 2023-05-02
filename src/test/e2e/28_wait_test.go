@@ -25,7 +25,7 @@ type zarfCommandResult struct {
 }
 
 func zarfCommandWStruct(e2e test.ZarfE2ETest, path string) (result zarfCommandResult) {
-	result.stdOut, result.stdErr, _, result.err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	result.stdOut, result.stdErr, result.err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	return result
 }
 
@@ -62,6 +62,6 @@ func TestWait(t *testing.T) {
 	}
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "remove", "test-helm-wait", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "test-helm-wait", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

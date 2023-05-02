@@ -32,7 +32,7 @@ func TestTempDirectoryDeploy(t *testing.T) {
 
 	_ = os.Mkdir(otherTmpPath, 0750)
 
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm", "--tmpdir", otherTmpPath, "--log-level=debug")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm", "--tmpdir", otherTmpPath, "--log-level=debug")
 	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
 	require.NoError(t, err, stdOut, stdErr)
 

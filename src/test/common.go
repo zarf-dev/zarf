@@ -66,7 +66,7 @@ func (e2e *ZarfE2ETest) Teardown(t *testing.T) {
 }
 
 // ExecZarfCommand executes a Zarf command.
-func (e2e *ZarfE2ETest) ExecZarfCommand(commandString ...string) (string, string, int, error) {
+func (e2e *ZarfE2ETest) ExecZarfCommand(commandString ...string) (string, string, error) {
 	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, commandString...)
 }
 

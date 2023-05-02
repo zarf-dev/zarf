@@ -37,7 +37,7 @@ func testHelmReleaseName(t *testing.T) {
 	path := fmt.Sprintf("build/zarf-package-test-helm-releasename-%s.tar.zst", e2e.Arch)
 
 	// Deploy the package.
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify multiple helm installs of different release names were deployed.
@@ -45,7 +45,7 @@ func testHelmReleaseName(t *testing.T) {
 	assert.Contains(t, string(kubectlOut), "cool-name-podinfo")
 
 	// Remove the package.
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "remove", "test-helm-releasename", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "test-helm-releasename", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
@@ -55,15 +55,15 @@ func testHelmLocalChart(t *testing.T) {
 	path := fmt.Sprintf("build/zarf-package-test-helm-local-chart-%s.tar.zst", e2e.Arch)
 
 	// Deploy the package.
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify that nginx successfully deploys in the cluster
-	kubectlOut, _, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=local-chart", "rollout", "status", "deployment/local-demo")
+	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=local-chart", "rollout", "status", "deployment/local-demo")
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
 
 	// Remove the package.
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "remove", "test-helm-local-chart", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "test-helm-local-chart", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
@@ -71,13 +71,13 @@ func testHelmEscaping(t *testing.T) {
 	t.Log("E2E: Helm chart escaping")
 
 	// Create the package.
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "create", "src/test/test-packages/25-evil-templates/", "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", "src/test/test-packages/25-evil-templates/", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("zarf-package-evil-templates-%s.tar.zst", e2e.Arch)
 
 	// Deploy the package.
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the configmap was deployed and escaped.
@@ -88,7 +88,7 @@ func testHelmEscaping(t *testing.T) {
 	assert.Contains(t, string(kubectlOut), `description: Pod {{$labels.pod}} in {{$labels.namespace}} got OOMKilled`)
 
 	// Remove the package.
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "remove", "evil-templates", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "evil-templates", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
@@ -98,17 +98,17 @@ func testHelmOCIChart(t *testing.T) {
 	path := fmt.Sprintf("build/zarf-package-helm-oci-chart-%s-0.0.1.tar.zst", e2e.Arch)
 
 	// Deploy the package.
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify that podinfo successfully deploys in the cluster
-	kubectlOut, _, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=helm-oci-demo", "rollout", "status", "deployment/podinfo")
+	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=helm-oci-demo", "rollout", "status", "deployment/podinfo")
 	assert.Contains(t, string(kubectlOut), "successfully rolled out")
-	kubectlOut, _, _, _ = e2e.ExecZarfCommand("tools", "kubectl", "-n=helm-oci-demo", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}")
+	kubectlOut, _, _ = e2e.ExecZarfCommand("tools", "kubectl", "-n=helm-oci-demo", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}")
 	assert.Contains(t, string(kubectlOut), "6.3.3")
 
 	// Remove the package.
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "remove", "helm-oci-chart", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "helm-oci-chart", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
@@ -119,11 +119,11 @@ func testHelmUninstallRollback(t *testing.T) {
 	evilPath := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
 	// Create the evil package (with the bad configmap).
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "create", "src/test/test-packages/25-evil-dos-games/", "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", "src/test/test-packages/25-evil-dos-games/", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the evil package.
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "deploy", evilPath, "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", evilPath, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 
 	// Ensure that this does not leave behind a dos-games chart
@@ -132,7 +132,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	assert.NotContains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
 	// Deploy the good package.
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "deploy", goodPath, "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", goodPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure that this does create a dos-games chart
@@ -141,7 +141,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	assert.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
 	// Deploy the evil package.
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "deploy", evilPath, "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", evilPath, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 
 	// Ensure that the dos-games chart was not uninstalled
@@ -150,7 +150,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	assert.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
 	// Remove the package.
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "remove", "dos-games", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
@@ -161,11 +161,11 @@ func testHelmAdoption(t *testing.T) {
 	deploymentManifest := "src/test/test-packages/25-manifest-adoption/deployment.yaml"
 
 	// Deploy dos-games manually into the cluster without Zarf
-	kubectlOut, _, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "apply", "-f", deploymentManifest)
+	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "apply", "-f", deploymentManifest)
 	assert.Contains(t, string(kubectlOut), "deployment.apps/game created")
 
 	// Deploy dos-games into the cluster with Zarf
-	stdOut, stdErr, _, err := e2e.ExecZarfCommand("package", "deploy", packagePath, "--confirm", "--adopt-existing-resources")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", packagePath, "--confirm", "--adopt-existing-resources")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure that this does create a dos-games chart
@@ -174,6 +174,6 @@ func testHelmAdoption(t *testing.T) {
 	assert.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
 	// Remove the package.
-	stdOut, stdErr, _, err = e2e.ExecZarfCommand("package", "remove", "dos-games", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

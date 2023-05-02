@@ -111,7 +111,7 @@ var waitForCmd = &cobra.Command{
 				spinner.Updatef(existMsg)
 				// Check if the resource exists.
 				args := []string{"tools", "kubectl", "get", "-n", waitNamespace, kind, identifier}
-				if stdout, stderr, _, err := exec.Cmd(zarfBinPath, args...); err != nil {
+				if stdout, stderr, err := exec.Cmd(zarfBinPath, args...); err != nil {
 					message.Debug(stdout, stderr, err)
 					continue
 				}
@@ -130,7 +130,7 @@ var waitForCmd = &cobra.Command{
 					"--timeout=" + waitTimeout}
 
 				// If there is an error, log it and try again.
-				if stdout, stderr, _, err := exec.Cmd(zarfBinPath, args...); err != nil {
+				if stdout, stderr, err := exec.Cmd(zarfBinPath, args...); err != nil {
 					message.Debug(stdout, stderr, err)
 					continue
 				}

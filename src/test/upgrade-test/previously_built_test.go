@@ -21,10 +21,10 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 
 	// For the upgrade test, podinfo-upgrade should already be in the cluster (version 6.3.3) (see .github/workflows/test-upgrade.yml)
 	kubeCtlRolloutArgs := []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade"}
-	kubectlOut, _, _, _ := exec.Cmd("kubectl", kubeCtlRolloutArgs...)
+	kubectlOut, _, _ := exec.Cmd("kubectl", kubeCtlRolloutArgs...)
 	require.Contains(t, kubectlOut, "successfully rolled out")
 	kubeCtlGetArgs := []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}"}
-	kubectlOut, _, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
+	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
 	require.Contains(t, kubectlOut, "6.3.3")
 
 	// We also expect a 6.3.4 package to have been previously built
@@ -32,7 +32,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 
 	// Deploy the package.
 	zarfDeployArgs := []string{"package", "deploy", previouslyBuiltPackage, "--confirm"}
-	stdOut, stdErr, _, err := exec.Cmd(zarfBinPath, zarfDeployArgs...)
+	stdOut, stdErr, err := exec.Cmd(zarfBinPath, zarfDeployArgs...)
 	require.NoError(t, err, stdOut, stdErr)
 
 	// [DEPRECATIONS] We expect any deprecated things to work from the old package
@@ -41,21 +41,21 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 
 	// Verify that podinfo-upgrade successfully deploys in the cluster (version 6.3.4)
 	kubeCtlRolloutArgs = []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade"}
-	kubectlOut, _, _, _ = exec.Cmd("kubectl", kubeCtlRolloutArgs...)
+	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlRolloutArgs...)
 	require.Contains(t, kubectlOut, "successfully rolled out")
 	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}"}
-	kubectlOut, _, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
+	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
 	require.Contains(t, kubectlOut, "6.3.4")
 
 	// We also want to build a new package.
 	zarfCreateArgs := []string{"package", "create", "../../../src/test/upgrade-test", "--set", "PODINFO_VERSION=6.3.5", "--confirm"}
-	stdOut, stdErr, _, err = exec.Cmd(zarfBinPath, zarfCreateArgs...)
+	stdOut, stdErr, err = exec.Cmd(zarfBinPath, zarfCreateArgs...)
 	require.NoError(t, err, stdOut, stdErr)
 	newlyBuiltPackage := "zarf-package-test-upgrade-package-amd64-6.3.5.tar.zst"
 
 	// Deploy the package.
 	zarfDeployArgs = []string{"package", "deploy", newlyBuiltPackage, "--confirm"}
-	stdOut, stdErr, _, err = exec.Cmd(zarfBinPath, zarfDeployArgs...)
+	stdOut, stdErr, err = exec.Cmd(zarfBinPath, zarfDeployArgs...)
 	require.NoError(t, err, stdOut, stdErr)
 
 	// [DEPRECATIONS] We expect any deprecated things to work from the new package
@@ -64,14 +64,14 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 
 	// Verify that podinfo-upgrade successfully deploys in the cluster (version 6.3.5)
 	kubeCtlRolloutArgs = []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade"}
-	kubectlOut, _, _, _ = exec.Cmd("kubectl", kubeCtlRolloutArgs...)
+	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlRolloutArgs...)
 	require.Contains(t, kubectlOut, "successfully rolled out")
 	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}"}
-	kubectlOut, _, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
+	kubectlOut, _, _ = exec.Cmd("kubectl", kubeCtlGetArgs...)
 	require.Contains(t, kubectlOut, "6.3.5")
 
 	// Remove the package.
 	zarfRemoveArgs := []string{"package", "remove", "test-upgrade-package", "--confirm"}
-	stdOut, stdErr, _, err = exec.Cmd(zarfBinPath, zarfRemoveArgs...)
+	stdOut, stdErr, err = exec.Cmd(zarfBinPath, zarfRemoveArgs...)
 	require.NoError(t, err, stdOut, stdErr)
 }
