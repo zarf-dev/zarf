@@ -15,12 +15,6 @@ components:
     import:
       url: oci://localhost:555/import-everything:0.0.1
 
-# this will fail w/ an error of `component %s does not exist in the published skeleton package` due to this component not having any skeleton
-  # - name: import-component-oci
-  #   required: false
-  #   import:
-  #     url: oci://localhost:555/import-everything:0.0.1
-
   - name: file-imports
     required: false
     import:
@@ -30,14 +24,3 @@ components:
     required: false
     import:
       url: oci://localhost:555/import-everything:0.0.1
-
-  - name: import-repos
-    required: false
-    import:
-      url: oci://localhost:555/import-everything:0.0.1
-
-# same as import-component-oci
-  # - name: import-images
-  #   required: false
-  #   import:
-  #     url: oci://localhost:555/import-everything:0.0.1
