@@ -51,7 +51,6 @@ test.describe.serial('connect the dos-games package @connect', async () => {
         
         // Click the Disconnect Button
         await disconnectButton.click();
-        await page.waitForResponse('api/tunnels/disconnect/doom');
 
         // Ensure the menu no longer contains the Disconnect option
         menu = await openDosGamesMenu(page);
