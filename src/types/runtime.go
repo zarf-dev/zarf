@@ -69,7 +69,7 @@ type ZarfCreateOptions struct {
 	MaxPackageSizeMB   int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
 	SigningKeyPath     string            `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
 	SigningKeyPassword string            `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sigh the created package"`
-	DifferentialData   DifferentialData  `json:"differential" jsonschema:"description=Location of a previous package to use as a base for the current package"`
+	DifferentialData   DifferentialData  `json:"differential" jsonschema:"description=A package's differential images and git repositories from a referenced previously built package"`
 }
 
 // ZarfPartialPackageData contains info about a partial package.
@@ -128,6 +128,7 @@ type TempPaths struct {
 	Checksums    string
 }
 
+// DifferentialData contains image and repository information about the package a Differential Package is based on.
 type DifferentialData struct {
 	DifferentialPackagePath    string
 	DifferentialPackageVersion string

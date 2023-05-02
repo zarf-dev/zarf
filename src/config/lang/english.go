@@ -214,7 +214,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackageCreateFlagMaxPackageSize     = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting."
 	CmdPackageCreateFlagSigningKey         = "Path to private key file for signing packages"
 	CmdPackageCreateFlagSigningKeyPassword = "Password to the private key file used for signing packages"
-	CmdPackageCreateFlagDifferential       = "Build a differential package that only contains the changes local resources and new remote resources since the last build"
+	CmdPackageCreateFlagDifferential       = "Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
 
 	CmdPackageDeployFlagConfirm    = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdPackageDeployFlagSet        = "Specify deployment variables to set on the command line (KEY=value)"
@@ -338,6 +338,12 @@ const (
 	AgentErrShutdown               = "unable to properly shutdown the web server"
 	AgentErrStart                  = "Failed to start the web server"
 	AgentErrUnableTransform        = "unable to transform the provided request; see zarf http proxy logs for more details"
+)
+
+// src/internal/packager/create
+const (
+	PkgCreateWarnDifferentialSameVersion = "You are creating a differential package with the same version as the package you are using as a reference. This is not recommended."
+	PkgCreateErrDifferentialSameVersion  = ""
 )
 
 // src/internal/packager/validate.

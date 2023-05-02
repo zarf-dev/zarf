@@ -67,7 +67,7 @@ func testDifferentialGitRepos(t *testing.T, tmpPath string) {
 
 // verify that images that are tagged are removed from the differential package
 func testDifferentialImages(t *testing.T, tmpPath string) {
-	originalImagePackagePath := fmt.Sprintf("build/zarf-package-flux-test-%s.tar.zst", e2e.Arch) // @JPERRY double check the version here too
+	originalImagePackagePath := fmt.Sprintf("build/zarf-package-flux-test-%s.tar.zst", e2e.Arch)
 	imageDiffPackagePath := "examples/flux-test"
 	imageDifferentialFlag := fmt.Sprintf("--differential=%s", originalImagePackagePath)
 	imageDifferentialPackageName := "zarf-package-flux-test-amd64-differential.tar.zst"

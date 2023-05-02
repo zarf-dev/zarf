@@ -7,6 +7,7 @@ package packager
 import (
 	"crypto"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
@@ -37,7 +39,7 @@ func (p *Packager) Create(baseDir string) error {
 	var originalDir string
 
 	if err := p.readYaml(filepath.Join(baseDir, config.ZarfYAML), false); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
+		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
 	// Load the images and repos from the 'reference' package
@@ -435,7 +437,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			// Pull all the references if there is no `@` in the string.
 			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
 			if err := gitCfg.Pull(url, componentPath.Repos); err != nil {
-				return nil, fmt.Errorf("unable to pull git repo %s: %w", url, err)
+				return nil, fmt.Errorf("unable to pull git repoURL %s: %w", url, err)
 			}
 		}
 	}
@@ -493,10 +495,10 @@ func (p *Packager) loadDifferentialData() error {
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	var differentialZarfConfig types.ZarfPackage
 	if err := archiver.Extract(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, config.ZarfYAML, tmpDir); err != nil {
-		return fmt.Errorf("unable to extract the differential zarf package spec: %w", err)
+		return fmt.Errorf("unable to extract the differential zarf package spec: %s", err.Error())
 	}
 	if err := utils.ReadYaml(filepath.Join(tmpDir, config.ZarfYAML), &differentialZarfConfig); err != nil {
-		return fmt.Errorf("unable to load the differential zarf package spec: %w", err)
+		return fmt.Errorf("unable to load the differential zarf package spec: %s", err.Error())
 	}
 
 	// Generate a list of all the images and repos that are included in the provided package
@@ -552,7 +554,7 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 			// If a image doesn't have a tag (or is a commonly reused tag), we will include this image in the differential package
 			imgRef, err := transform.ParseImageRef(img)
 			if err != nil {
-				return fmt.Errorf("unable to parse image ref %s: %w", img, err)
+				return fmt.Errorf("unable to parse image ref %s: %s", img, err.Error())
 			}
 			imgTag := imgRef.TagOrDigest
 			useImgAnyways := imgTag == "latest" || imgTag == "stable" || imgTag == "nightly"
@@ -579,10 +581,9 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 
 			useRepoAnyways := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
 			if !utils.SliceContains(p.cfg.CreateOpts.DifferentialData.DifferentialRepos, repoURL) || useRepoAnyways {
-				message.Question(fmt.Sprintf("Repo %s is not included in the differential package, include?", repoURL))
 				newRepoList = append(newRepoList, repoURL)
 			} else {
-				message.Warnf("Repo %s is already included in the differential package, we are not going to include that repoURL in this package.", repoURL)
+				message.Debugf("Repo %s is already included in the differential package", repoURL)
 			}
 		}
 
