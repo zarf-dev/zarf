@@ -12,4 +12,4 @@ jobs:
     steps:
       - uses: yogevbd/enforce-label-action@a3c219da6b8fa73f6ba62b68ff09c469b3a1c024 # 2.2.2
         with:
-          BANNED_LABELS: "needs-docs,needs-tests,needs-adr,needs-git-sign-off,needs-walkthrough"
+          BANNED_LABELS: "needs-docs,needs-tests,needs-adr,needs-git-sign-off,needs-tutorial"
