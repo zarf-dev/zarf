@@ -5,7 +5,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Kind, type DeployedPackage } from '$lib/api-types';
-	import { IconButton, List, ListItem, ListItemAdornment, Menu, type SSX } from '@ui';
+	import { IconButton, ListItem, ListItemAdornment, Menu, type SSX } from '@ui';
 	import { current_component } from 'svelte/internal';
 	import { tunnelStore } from '$lib/store';
 	import RemoveDeployedPackageDialog from './remove-deployed-package-dialog.svelte';

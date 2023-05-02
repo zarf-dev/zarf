@@ -78,7 +78,11 @@ func (p *Packager) Deploy() error {
 
 	// Notify all the things about the successful deployment
 	message.Successf("Zarf deployment complete")
+
 	p.printTablesForDeployment(deployedComponents)
+
+	// Add the connect strings to the package metadata
+	p.cfg.Pkg.Metadata.ConnectStrings = connectStrings
 
 	// Save deployed package information to k8s
 	// Note: Not all packages need k8s; check if k8s is being used before saving the secret

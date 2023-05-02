@@ -30,6 +30,24 @@
       "additionalProperties": false,
       "type": "object"
     },
+    "ConnectString": {
+      "required": [
+        "description",
+        "url"
+      ],
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Descriptive text that explains what the resource you would be connecting to is used for"
+        },
+        "url": {
+          "type": "string",
+          "description": "URL path that gets appended to the k8s port-forward result"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "DeprecatedZarfComponentScripts": {
       "properties": {
         "showOutput": {
@@ -847,6 +865,16 @@
         "aggregateChecksum": {
           "type": "string",
           "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package."
+        },
+        "connectStrings": {
+          "patternProperties": {
+            ".*": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "$ref": "#/definitions/ConnectString"
+            }
+          },
+          "type": "object",
+          "description": "List of connection strings for the package"
         }
       },
       "additionalProperties": false,

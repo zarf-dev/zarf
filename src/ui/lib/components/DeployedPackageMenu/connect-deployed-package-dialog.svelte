@@ -3,21 +3,24 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import type { ConnectString, DeployedPackage } from '$lib/api-types';
 	import { IconButton, List, Typography, type SSX } from '@ui';
-	import ZarfDialog from '../zarf-dialog.svelte';
-	import Spinner from '../spinner.svelte';
-	import { Packages, Tunnels } from '$lib/api';
+	import type { DeployedPackage } from '$lib/api-types';
 	import ButtonDense from '../button-dense.svelte';
-	import { tunnelStore } from '$lib/store';
-	import { onDestroy } from 'svelte/internal';
+	import ZarfDialog from '../zarf-dialog.svelte';
+	import { onDestroy, onMount } from 'svelte/internal';
+	import { Packages } from '$lib/api';
+	import { updateConnections } from '$lib/store';
+
+	// Props
 	export let pkg: DeployedPackage;
 	export let toggleDialog: () => void;
 
+	// Locals
 	let open: boolean;
+	let currentWindow: Window;
 	let selectedConnection = '';
 	let errMessage: string = '';
-	let connections: { name: string; connectString: ConnectString }[] = [];
+	const connections: string[] = Object.keys(pkg.data.metadata?.connectStrings || {}) || [];
 
 	const listSSX: SSX = {
 		$self: {
@@ -43,40 +46,20 @@
 		},
 	};
 
-	async function getPackageConnections(): Promise<
-		{ name: string; connectString: ConnectString }[]
-	> {
-		const result = await Packages.packageConnections(pkg.name);
-
-		connections = Object.entries(result.connectStrings).map(([name, connectString]) => ({
-			name,
-			connectString,
-		}));
-		return connections;
-	}
-
-	function addTunnel(pkgName: string, connectionName: string) {
-		const tunnels = { ...$tunnelStore };
-		if (!tunnels[pkgName]) {
-			tunnels[pkgName] = [connectionName];
-		} else {
-			const connections = tunnels[pkgName];
-			if (!connections.includes(connectionName)) {
-				connections.push(connectionName);
-			}
-		}
-		tunnelStore.set(tunnels);
-	}
-
 	async function connectPackage(): Promise<void> {
 		try {
-			await Tunnels.connect(selectedConnection);
-			addTunnel(pkg.name, selectedConnection);
+			const connection = await Packages.connect(pkg.name, selectedConnection);
+			currentWindow.open(connection.url, '_blank');
+			await updateConnections();
 			toggleDialog();
 		} catch (err: any) {
 			errMessage = err.message;
 		}
 	}
+
+	onMount(() => {
+		currentWindow = window;
+	});
 
 	onDestroy(() => {
 		errMessage = '';
@@ -87,7 +70,7 @@
 		(failedToConnect && `Failed to connect to ${selectedConnection}`) || 'Connect to Resource';
 	$: {
 		if (open && connections.length > 0) {
-			selectedConnection = connections[0].name;
+			selectedConnection = connections[0];
 		}
 	}
 </script>
@@ -99,31 +82,27 @@
 				Select which resource you would like Zarf to connect to. Zarf will create a secure tunnel
 				and open the connection in a new tab
 			</Typography>
-			{#await getPackageConnections()}
-				<Spinner />
-			{:then connections}
-				<List ssx={listSSX}>
-					{#each connections as connection}
-						<Typography
-							variant="body1"
-							element="li"
-							value={connection.name}
-							on:click={() => (selectedConnection = connection.name)}
-						>
-							<IconButton
-								toggleable
-								toggled={selectedConnection === connection.name}
-								iconClass="material-symbols-outlined"
-								iconContent="radio_button_unchecked"
-								iconColor="primary"
-								toggledIconClass="material-symbols-outlined"
-								toggledIconContent="radio_button_checked"
-							/>
-							Zarf Connect {connection.name}
-						</Typography>
-					{/each}
-				</List>
-			{/await}
+			<List ssx={listSSX}>
+				{#each connections as connection}
+					<Typography
+						variant="body1"
+						element="li"
+						value={connection}
+						on:click={() => (selectedConnection = connection)}
+					>
+						<IconButton
+							toggleable
+							toggled={selectedConnection === connection}
+							iconClass="material-symbols-outlined"
+							iconContent="radio_button_unchecked"
+							iconColor="primary"
+							toggledIconClass="material-symbols-outlined"
+							toggledIconContent="radio_button_checked"
+						/>
+						Zarf Connect {connection}
+					</Typography>
+				{/each}
+			</List>
 		{:else}
 			<Typography variant="body1" color="text-secondary-on-dark">
 				{errMessage}

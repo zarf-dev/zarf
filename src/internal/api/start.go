@@ -18,7 +18,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/api/components"
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
-	"github.com/defenseunicorns/zarf/src/internal/api/tunnels"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
@@ -92,20 +91,17 @@ func LaunchAPIServer() {
 			r.Get("/find-init", packages.FindInitPackage)
 			r.Get("/read/{path}", packages.Read)
 			r.Get("/list", packages.ListDeployedPackages)
-			r.Get("/list/connections/{name}", packages.ListPackageConnections)
 			r.Put("/deploy", packages.DeployPackage)
 			r.Get("/deploy-stream", packages.StreamDeployPackage)
 			r.Delete("/remove/{name}", packages.RemovePackage)
+			r.Put("/{pkg}/connect/{name}", packages.ConnectTunnel)
+			r.Delete("/{pkg}/disconnect/{name}", packages.DisconnectTunnel)
+			r.Get("/{pkg}/connections", packages.ListPackageConnections)
+			r.Get("/connections", packages.ListConnections)
 		})
 
 		r.Route("/components", func(r chi.Router) {
 			r.Get("/deployed", components.ListDeployingComponents)
-		})
-
-		r.Route("/tunnels", func(r chi.Router) {
-			r.Get("/list", tunnels.ListTunnels)
-			r.Put("/connect/{name}", tunnels.ConnectTunnel)
-			r.Delete("/disconnect/{name}", tunnels.DisconnectTunnel)
 		})
 	})
 

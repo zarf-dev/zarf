@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 import type {
-	APIPackageConnections,
+	APIDeployedPackageConnection,
 	APIZarfDeployPayload,
 	APIZarfPackage,
 	ClusterSummary,
@@ -11,6 +11,7 @@ import type {
 	ZarfState,
 } from './api-types';
 import { HTTP, type EventParams } from './http';
+import type { PackageTunnels } from './store';
 
 const http = new HTTP();
 
@@ -39,21 +40,26 @@ const Packages = {
 	findInit: () => http.get<string[]>('/packages/find-init'),
 	read: (name: string) => http.get<APIZarfPackage>(`/packages/read/${encodeURIComponent(name)}`),
 	getDeployedPackages: () => http.get<DeployedPackage[]>('/packages/list'),
-	packageConnections: (name: string) => http.get<APIPackageConnections>(`/packages/list/connections/${name}`),
 	deploy: (options: APIZarfDeployPayload) => http.put<boolean>(`/packages/deploy`, options),
 	deployStream: (eventParams: EventParams) =>
 		http.eventStream('/packages/deploy-stream', eventParams),
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`),
+	listPkgConnections: (name: string) =>
+		http.get(`/packages/${encodeURIComponent(name)}/connections`),
+	listConnections: () => http.get<PackageTunnels>('/packages/connections'),
+	connect: (pkgName: string, connectionName: string) =>
+		http.put<APIDeployedPackageConnection>(
+			`/packages/${encodeURIComponent(pkgName)}/connect/${encodeURIComponent(connectionName)}`,
+			{}
+		),
+	disconnect: (pkgName: string, connectionName: string) =>
+		http.del(
+			`/packages/${encodeURIComponent(pkgName)}/disconnect/${encodeURIComponent(connectionName)}`
+		),
 };
 
 const DeployingComponents = {
 	list: () => http.get<DeployedComponent[]>('/components/deployed'),
 };
 
-const Tunnels = {
-	list: () => http.get<string[]>('/tunnels/list'),
-	connect: (name: string) => http.put<boolean>(`/tunnels/connect/${encodeURIComponent(name)}`, {}),
-	disconnect: (name: string) => http.del(`/tunnels/disconnect/${encodeURIComponent(name)}`),
-}
-
-export { Auth, Cluster, Packages, DeployingComponents, Tunnels };
+export { Auth, Cluster, Packages, DeployingComponents };

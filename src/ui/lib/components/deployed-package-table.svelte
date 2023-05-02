@@ -123,7 +123,7 @@
 				<Typography color="blue-200" variant="body1">No Packages have been Deployed</Typography>
 			</div>
 		{:else}
-			{#each $deployedPkgStore.pkgs as pkg}
+			{#each $deployedPkgStore.pkgs as pkg, index (`${pkg.name}-${index}`)}
 				<Paper class="package-table-row" square elevation={1}>
 					<Typography variant="body2" class="package-table-td name" element="span">
 						<span class="material-symbols-outlined" style="color:var(--success);">

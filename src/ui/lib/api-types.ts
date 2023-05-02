@@ -8,33 +8,25 @@
 // match the expected interface, even if the JSON is valid.
 
 export interface APITypes {
-    apiPackageConnections: APIPackageConnections;
-    apiZarfDeployPayload:  APIZarfDeployPayload;
-    apiZarfPackage:        APIZarfPackage;
-    clusterSummary:        ClusterSummary;
-    connectStrings:        { [key: string]: ConnectString };
-    deployedPackage:       DeployedPackage;
-    zarfCommonOptions:     ZarfCommonOptions;
-    zarfCreateOptions:     ZarfCreateOptions;
-    zarfDeployOptions:     ZarfDeployOptions;
-    zarfInitOptions:       ZarfInitOptions;
-    zarfPackage:           ZarfPackage;
-    zarfState:             ZarfState;
+    apiConnections:            { [key: string]: APIDeployedPackageConnection[] };
+    apiZarfDeployPayload:      APIZarfDeployPayload;
+    apiZarfPackage:            APIZarfPackage;
+    apiZarfPackageConnection:  APIDeployedPackageConnection;
+    apiZarfPackageConnections: APIDeployedPackageConnection[];
+    clusterSummary:            ClusterSummary;
+    connectStrings:            { [key: string]: ConnectString };
+    deployedPackage:           DeployedPackage;
+    zarfCommonOptions:         ZarfCommonOptions;
+    zarfCreateOptions:         ZarfCreateOptions;
+    zarfDeployOptions:         ZarfDeployOptions;
+    zarfInitOptions:           ZarfInitOptions;
+    zarfPackage:               ZarfPackage;
+    zarfState:                 ZarfState;
 }
 
-export interface APIPackageConnections {
-    connectStrings: { [key: string]: ConnectString };
-}
-
-export interface ConnectString {
-    /**
-     * Descriptive text that explains what the resource you would be connecting to is used for
-     */
-    description: string;
-    /**
-     * URL path that gets appended to the k8s port-forward result
-     */
-    url: string;
+export interface APIDeployedPackageConnection {
+    name: string;
+    url?: string;
 }
 
 export interface APIZarfDeployPayload {
@@ -868,6 +860,10 @@ export interface ZarfMetadata {
      */
     authors?: string;
     /**
+     * List of connection strings for the package
+     */
+    connectStrings?: { [key: string]: ConnectString };
+    /**
      * Additional information about this package
      */
     description?: string;
@@ -910,6 +906,17 @@ export interface ZarfMetadata {
      * existing VCS and container registries.
      */
     yolo?: boolean;
+}
+
+export interface ConnectString {
+    /**
+     * Descriptive text that explains what the resource you would be connecting to is used for
+     */
+    description: string;
+    /**
+     * URL path that gets appended to the k8s port-forward result
+     */
+    url: string;
 }
 
 export interface ZarfPackageVariable {
@@ -1305,9 +1312,11 @@ function r(name: string) {
 
 const typeMap: any = {
     "APITypes": o([
-        { json: "apiPackageConnections", js: "apiPackageConnections", typ: r("APIPackageConnections") },
+        { json: "apiConnections", js: "apiConnections", typ: m(a(r("APIDeployedPackageConnection"))) },
         { json: "apiZarfDeployPayload", js: "apiZarfDeployPayload", typ: r("APIZarfDeployPayload") },
         { json: "apiZarfPackage", js: "apiZarfPackage", typ: r("APIZarfPackage") },
+        { json: "apiZarfPackageConnection", js: "apiZarfPackageConnection", typ: r("APIDeployedPackageConnection") },
+        { json: "apiZarfPackageConnections", js: "apiZarfPackageConnections", typ: a(r("APIDeployedPackageConnection")) },
         { json: "clusterSummary", js: "clusterSummary", typ: r("ClusterSummary") },
         { json: "connectStrings", js: "connectStrings", typ: m(r("ConnectString")) },
         { json: "deployedPackage", js: "deployedPackage", typ: r("DeployedPackage") },
@@ -1318,12 +1327,9 @@ const typeMap: any = {
         { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
     ], false),
-    "APIPackageConnections": o([
-        { json: "connectStrings", js: "connectStrings", typ: m(r("ConnectString")) },
-    ], false),
-    "ConnectString": o([
-        { json: "description", js: "description", typ: "" },
-        { json: "url", js: "url", typ: "" },
+    "APIDeployedPackageConnection": o([
+        { json: "name", js: "name", typ: "" },
+        { json: "url", js: "url", typ: u(undefined, "") },
     ], false),
     "APIZarfDeployPayload": o([
         { json: "deployOpts", js: "deployOpts", typ: r("ZarfDeployOptions") },
@@ -1542,6 +1548,7 @@ const typeMap: any = {
         { json: "aggregateChecksum", js: "aggregateChecksum", typ: u(undefined, "") },
         { json: "architecture", js: "architecture", typ: u(undefined, "") },
         { json: "authors", js: "authors", typ: u(undefined, "") },
+        { json: "connectStrings", js: "connectStrings", typ: u(undefined, m(r("ConnectString"))) },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "documentation", js: "documentation", typ: u(undefined, "") },
         { json: "image", js: "image", typ: u(undefined, "") },
@@ -1552,6 +1559,10 @@ const typeMap: any = {
         { json: "vendor", js: "vendor", typ: u(undefined, "") },
         { json: "version", js: "version", typ: u(undefined, "") },
         { json: "yolo", js: "yolo", typ: u(undefined, true) },
+    ], false),
+    "ConnectString": o([
+        { json: "description", js: "description", typ: "" },
+        { json: "url", js: "url", typ: "" },
     ], false),
     "ZarfPackageVariable": o([
         { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },

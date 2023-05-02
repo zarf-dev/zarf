@@ -7,9 +7,9 @@
 	import type { DeployedPackage } from '$lib/api-types';
 	import ButtonDense from '../button-dense.svelte';
 	import ZarfDialog from '../zarf-dialog.svelte';
-	import { onMount, onDestroy } from 'svelte/internal';
-	import { tunnelStore } from '$lib/store';
-	import { Tunnels } from '$lib/api';
+	import { onDestroy } from 'svelte/internal';
+	import { Packages } from '$lib/api';
+	import { tunnelStore, updateConnections } from '$lib/store';
 
 	export let pkg: DeployedPackage;
 	export let toggleDialog: () => void;
@@ -42,42 +42,26 @@
 		},
 	};
 
-	function removeTunnel(pkgName: string, connectionName: string) {
-		const tunnels = { ...$tunnelStore };
-		resources = resources.filter((resource) => resource !== connectionName);
-		if (resources.length === 0) {
-			delete tunnels[pkgName];
-		} else {
-			tunnels[pkgName] = resources;
-		}
-		tunnelStore.set(tunnels);
-	}
-
 	async function disconnect(): Promise<void> {
 		try {
-			await Tunnels.disconnect(selectedConnection);
-			removeTunnel(pkg.name, selectedConnection);
+			await Packages.disconnect(pkg.name, selectedConnection);
+			await updateConnections();
 			toggleDialog();
 		} catch (err: any) {
 			errMessage = err.message;
 		}
 	}
 
-	onMount(() => {
-		selectedConnection = resources[0];
-	});
-
 	onDestroy(() => {
 		errMessage = '';
 	});
-
+	$: connections = $tunnelStore[pkg.name] || [];
 	$: failedToDisconnect = errMessage !== '';
 	$: titleText =
 		(failedToDisconnect && `Failed to disconnect ${selectedConnection}`) || 'Disconnect Resource';
-	$: resources = $tunnelStore[pkg.name] || [];
 	$: {
-		if (open && resources.length > 0) {
-			selectedConnection = resources[0];
+		if (open && connections.length > 0) {
+			selectedConnection = connections[0].name;
 		}
 	}
 </script>
@@ -89,25 +73,25 @@
 				Select which resource you would like Zarf to disconnect from. Zarf will close and remove the
 				secure tunnel.
 			</Typography>
-			{#if resources.length > 0}
+			{#if connections.length > 0}
 				<List ssx={listSSX}>
-					{#each resources as connection}
+					{#each connections as connection}
 						<Typography
 							variant="body1"
 							element="li"
 							value={connection}
-							on:click={() => (selectedConnection = connection)}
+							on:click={() => (selectedConnection = connection.name)}
 						>
 							<IconButton
 								toggleable
-								toggled={selectedConnection === connection}
+								toggled={selectedConnection === connection.name}
 								iconClass="material-symbols-outlined"
 								iconContent="radio_button_unchecked"
 								iconColor="primary"
 								toggledIconClass="material-symbols-outlined"
 								toggledIconContent="radio_button_checked"
 							/>
-							Zarf Disconnect {connection}
+							Zarf Disconnect {connection.name}
 						</Typography>
 					{/each}
 				</List>
