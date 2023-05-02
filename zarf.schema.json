@@ -76,7 +76,8 @@
         "architecture",
         "timestamp",
         "version",
-        "migrations"
+        "migrations",
+        "differential"
       ],
       "properties": {
         "terminal": {
@@ -105,6 +106,10 @@
           },
           "type": "array",
           "description": "Any migrations that have been run on this package"
+        },
+        "differential": {
+          "type": "boolean",
+          "description": "Whether this package was created with differential components"
         }
       },
       "additionalProperties": false,
