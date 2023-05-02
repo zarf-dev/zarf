@@ -57,18 +57,15 @@ components:
         after:
           - cmd: test -f files/coffee-ipsum.txt
           - cmd: test -f files/latte.txt
-          - cmd: test -f files/nocode-readme.md
           - cmd: test -f files/zarf-readme.md
       onRemove:
         before:
           - cmd: rm files/coffee-ipsum.txt
           - cmd: rm files/latte.txt
-          - cmd: rm files/nocode-readme.md
           - cmd: rm files/zarf-readme.md
         after:
           - cmd: test ! -f files/coffee-ipsum.txt
           - cmd: test ! -f files/latte.txt
-          - cmd: test ! -f files/nocode-readme.md
           - cmd: test ! -f files/zarf-readme.md
 
   - name: import-helm
