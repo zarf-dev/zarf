@@ -158,7 +158,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				template, err := helmCfg.TemplateChart()
 
 				if err != nil {
-					message.Errorf(err, "Problem rendering the helm template for %s", chart.URL)
+					message.Errorf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
 					continue
 				}
 
