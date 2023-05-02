@@ -13,6 +13,9 @@ on:
       - "package-lock.json"
       - "CODEOWNERS"
 
+permissions:
+  contents: read
+
 # Abort prior jobs in the same workflow / PR
 concurrency:
   group: e2e-upgrade-${{ github.ref }}

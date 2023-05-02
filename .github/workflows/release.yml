@@ -1,5 +1,8 @@
 name: Publish Zarf Packages on Tag
 
+permissions:
+  contents: read
+
 on:
   push:
     tags:

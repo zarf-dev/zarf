@@ -1,4 +1,8 @@
 name: Analyze CVEs
+
+permissions:
+  contents: read
+
 on:
   schedule:
     - cron: "0 10 * * *"
