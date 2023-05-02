@@ -132,6 +132,6 @@ type TempPaths struct {
 type DifferentialData struct {
 	DifferentialPackagePath    string
 	DifferentialPackageVersion string
-	DifferentialImages         []string
-	DifferentialRepos          []string
+	DifferentialImages         map[string]bool
+	DifferentialRepos          map[string]bool
 }

@@ -502,14 +502,19 @@ func (p *Packager) loadDifferentialData() error {
 	}
 
 	// Generate a list of all the images and repos that are included in the provided package
-	allIncludedImages := []string{}
-	allIncludedRepos := []string{}
+	allIncludedImagesMap := map[string]bool{}
+	allIncludedReposMap := map[string]bool{}
 	for _, component := range differentialZarfConfig.Components {
-		allIncludedImages = append(allIncludedImages, component.Images...)
-		allIncludedRepos = append(allIncludedRepos, component.Repos...)
+		for _, image := range component.Images {
+			allIncludedImagesMap[image] = true
+		}
+		for _, repo := range component.Repos {
+			allIncludedReposMap[repo] = true
+		}
 	}
-	p.cfg.CreateOpts.DifferentialData.DifferentialImages = allIncludedImages
-	p.cfg.CreateOpts.DifferentialData.DifferentialRepos = allIncludedRepos
+
+	p.cfg.CreateOpts.DifferentialData.DifferentialImages = allIncludedImagesMap
+	p.cfg.CreateOpts.DifferentialData.DifferentialRepos = allIncludedReposMap
 	p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
 
 	// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
@@ -556,9 +561,11 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 			if err != nil {
 				return fmt.Errorf("unable to parse image ref %s: %s", img, err.Error())
 			}
+
+			// Only include new images or images that have a commonly overwritten tag
 			imgTag := imgRef.TagOrDigest
 			useImgAnyways := imgTag == "latest" || imgTag == "stable" || imgTag == "nightly"
-			if !utils.SliceContains(p.cfg.CreateOpts.DifferentialData.DifferentialImages, img) || useImgAnyways {
+			if useImgAnyways || !p.cfg.CreateOpts.DifferentialData.DifferentialImages[img] {
 				newImageList = append(newImageList, img)
 			} else {
 				message.Debugf("Image %s is already included in the differential package", img)
@@ -579,8 +586,9 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 				ref = git.ParseRef(refPlain)
 			}
 
+			// Only include new repos or repos that were not refferenced by a specific commit sha or tag
 			useRepoAnyways := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
-			if !utils.SliceContains(p.cfg.CreateOpts.DifferentialData.DifferentialRepos, repoURL) || useRepoAnyways {
+			if useRepoAnyways || !p.cfg.CreateOpts.DifferentialData.DifferentialRepos[repoURL] {
 				newRepoList = append(newRepoList, repoURL)
 			} else {
 				message.Debugf("Repo %s is already included in the differential package", repoURL)
