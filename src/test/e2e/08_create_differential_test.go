@@ -23,6 +23,7 @@ func TestCreateDifferential(t *testing.T) {
 	t.Log("E2E: Test Differential Package Behavior")
 	testDifferentialGitRepos(t, tmpPath)
 	testDifferentialImages(t, tmpPath)
+	testErrorWhenNoChange(t)
 
 	e2e.CleanFiles(tmpPath)
 }
@@ -30,14 +31,13 @@ func TestCreateDifferential(t *testing.T) {
 // verify that any repo that isn't a specific commit hash or a tag is still included with the differential package
 func testDifferentialGitRepos(t *testing.T, tmpPath string) {
 	originalGitPackagePath := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.Arch)
-	gitDiffPackagePath := "examples/git-data"
+	gitDiffPackagePath := "src/test/test-packages/08-create-differential-git"
 	gitDifferentialFlag := fmt.Sprintf("--differential=%s", originalGitPackagePath)
-	gitDifferentialPackageName := "zarf-package-git-data-amd64-v1.0.0-differential-v1.0.0.tar.zst"
+	gitDifferentialPackageName := "zarf-package-git-data-amd64-v1.0.0-differential-v1.0.1.tar.zst"
 
 	// Build the differential packages
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", gitDiffPackagePath, gitDifferentialFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "You are creating a differential package with the same version as the package you are using")
 	// Extract Git Zarf YAML
 	err = archiver.Extract(gitDifferentialPackageName, "zarf.yaml", tmpPath)
 	require.NoError(t, err, "unable to extract zarf.yaml from the differential git package")
@@ -68,14 +68,13 @@ func testDifferentialGitRepos(t *testing.T, tmpPath string) {
 // verify that images that are tagged are removed from the differential package
 func testDifferentialImages(t *testing.T, tmpPath string) {
 	originalImagePackagePath := fmt.Sprintf("build/zarf-package-flux-test-%s.tar.zst", e2e.Arch)
-	imageDiffPackagePath := "examples/flux-test"
+	imageDiffPackagePath := "src/test/test-packages/08-create-differential-images"
 	imageDifferentialFlag := fmt.Sprintf("--differential=%s", originalImagePackagePath)
-	imageDifferentialPackageName := "zarf-package-flux-test-amd64-differential.tar.zst"
+	imageDifferentialPackageName := "zarf-package-flux-test-amd64-differential-0.0.1.tar.zst"
 
 	// Build the differential package
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", imageDiffPackagePath, imageDifferentialFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "You are creating a differential package with the same version as the package you are using")
 
 	// Extract the zarf.yaml of the new package
 	err = archiver.Extract(imageDifferentialPackageName, "zarf.yaml", tmpPath)
@@ -92,4 +91,14 @@ func testDifferentialImages(t *testing.T, tmpPath string) {
 
 	require.Len(t, actualImages, 0, "zarf.yaml from the differential image package does not contain the correct number of images")
 	e2e.CleanFiles(filepath.Join(tmpPath, "zarf.yaml"), imageDifferentialPackageName)
+}
+
+func testErrorWhenNoChange(t *testing.T) {
+	originalPackagePath := fmt.Sprintf("build/zarf-package-flux-test-%s.tar.zst", e2e.Arch)
+	packagePath := "examples/flux-test"
+	differentialFlag := fmt.Sprintf("--differential=%s", originalPackagePath)
+
+	_, stdErr, err := e2e.ExecZarfCommand("package", "create", packagePath, differentialFlag, "--confirm")
+	require.Error(t, err, "zarf package create should have errored when a differential package was being created without updating the package version number")
+	require.Contains(t, stdErr, "unable to create a differential package with the same version")
 }
