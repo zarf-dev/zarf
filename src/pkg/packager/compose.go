@@ -98,7 +98,16 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
-		parent.Import.Path = cachePath
+		cwd, err := os.Getwd()
+		if err != nil {
+			return child, fmt.Errorf("unable to get current working directory: %w", err)
+		}
+
+		rel, err := filepath.Rel(cwd, cachePath)
+		if err != nil {
+			return child, fmt.Errorf("unable to get relative path: %w", err)
+		}
+		parent.Import.Path = rel
 	}
 
 	subPkg, err := p.getSubPackage(filepath.Join(pathAncestry, parent.Import.Path))

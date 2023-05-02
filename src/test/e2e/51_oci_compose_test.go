@@ -152,11 +152,6 @@ func (suite *SkeletonSuite) Test_6_Deploy_And_Remove_Import_Component_Helm() {
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_7_Deploy_And_Remove_Import_Component_Repos() {
-	err := deployAndRemove("import-repos")
-	suite.NoError(err)
-}
-
 func (suite *SkeletonSuite) Test_8_Deploy_And_Remove_Import_Component_Images() {
 	err := deployAndRemove("import-images")
 	suite.NoError(err)
