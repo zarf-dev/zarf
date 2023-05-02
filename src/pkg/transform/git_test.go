@@ -46,8 +46,8 @@ func TestMutateGitURLsInText(t *testing.T) {
 	# We transform https://*/*.git URLs
 	https://github.com/defenseunicorns/zarf.git
 	# Even URLs with things on either side
-	stuffhttps://github.com/defenseunicorns/zarf.gitandthings
-	# But not ssh://*/*.git URLs
+	stuff https://github.com/defenseunicorns/zarf.git andthings
+	# Including ssh://*/*.git URLs
 	ssh://git@github.com/defenseunicorns/zarf.git
 	# Or non .git URLs
 	https://www.defenseunicorns.com/
@@ -58,9 +58,9 @@ func TestMutateGitURLsInText(t *testing.T) {
 	# We transform https://*/*.git URLs
 	https://gitlab.com/repo-owner/zarf-1211668992.git
 	# Even URLs with things on either side
-	stuffhttps://gitlab.com/repo-owner/zarf-1211668992.gitandthings
-	# But not ssh://*/*.git URLs
-	ssh://git@github.com/defenseunicorns/zarf.git
+	stuff https://gitlab.com/repo-owner/zarf-1211668992.git andthings
+	# Including ssh://*/*.git URLs
+	https://gitlab.com/repo-owner/zarf-2566185087.git
 	# Or non .git URLs
 	https://www.defenseunicorns.com/
 	`

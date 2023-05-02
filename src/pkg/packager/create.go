@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
@@ -313,45 +314,55 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			}
 
 			for idx, path := range chart.ValuesFiles {
-				chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
-				if err := utils.CreatePathAndCopy(path, chartValueName); err != nil {
-					return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+				dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
+				if utils.IsURL(path) {
+					if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+						return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
+					}
+				} else {
+					if err := utils.CreatePathAndCopy(path, dst); err != nil {
+						return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+					}
 				}
 			}
 		}
 	}
 
 	if len(component.Files) > 0 {
-		_ = utils.CreateDirectory(componentPath.Files, 0700)
+		if err = utils.CreateDirectory(componentPath.Files, 0700); err != nil {
+			return nil, fmt.Errorf("unable to create the component files directory: %s", err.Error())
+		}
 
 		for index, file := range component.Files {
 			message.Debugf("Loading %#v", file)
-			destinationFile := filepath.Join(componentPath.Files, strconv.Itoa(index))
+			dst := filepath.Join(componentPath.Files, strconv.Itoa(index))
 
 			if utils.IsURL(file.Source) {
-				utils.DownloadToFile(file.Source, destinationFile, component.CosignKeyPath)
+				if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
+					return nil, fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+				}
 			} else {
-				if err := utils.CreatePathAndCopy(file.Source, destinationFile); err != nil {
+				if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
 					return nil, fmt.Errorf("unable to copy file %s: %w", file.Source, err)
 				}
 			}
 
 			// Abort packaging on invalid shasum (if one is specified).
 			if file.Shasum != "" {
-				if actualShasum, _ := utils.GetCryptoHash(destinationFile, crypto.SHA256); actualShasum != file.Shasum {
+				if actualShasum, _ := utils.GetCryptoHash(dst, crypto.SHA256); actualShasum != file.Shasum {
 					return nil, fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 				}
 			}
 
-			info, _ := os.Stat(destinationFile)
+			info, _ := os.Stat(dst)
 
 			if file.Executable || info.IsDir() {
-				_ = os.Chmod(destinationFile, 0700)
+				_ = os.Chmod(dst, 0700)
 			} else {
-				_ = os.Chmod(destinationFile, 0600)
+				_ = os.Chmod(dst, 0600)
 			}
 
-			componentSBOM.Files = append(componentSBOM.Files, destinationFile)
+			componentSBOM.Files = append(componentSBOM.Files, dst)
 		}
 	}
 
@@ -361,19 +372,28 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 		for _, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-			destination := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
-			if err := utils.CreatePathAndCopy(data.Source, destination); err != nil {
-				return nil, fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
+			dst := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
+			if utils.IsURL(data.Source) {
+				if err := utils.DownloadToFile(data.Source, dst, component.CosignKeyPath); err != nil {
+					return nil, fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
+				}
+			} else {
+				if err := utils.CreatePathAndCopy(data.Source, dst); err != nil {
+					return nil, fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
+				}
 			}
 
 			// Unwrap the dataInjection dir into individual files.
 			pattern := regexp.MustCompile(`(?mi).+$`)
-			files, _ := utils.RecursiveFileList(destination, pattern, false, true)
+			files, _ := utils.RecursiveFileList(dst, pattern, false, true)
 			componentSBOM.Files = append(componentSBOM.Files, files...)
 		}
 	}
 
 	if len(component.Manifests) > 0 {
+		if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
+			return nil, fmt.Errorf("unable to create manifest directory %s: %s", componentPath.Manifests, err.Error())
+		}
 		// Get the proper count of total manifests to add.
 		manifestCount := 0
 
@@ -385,31 +405,39 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		spinner := message.NewProgressSpinner("Loading %d K8s manifests", manifestCount)
 		defer spinner.Success()
 
-		if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
-			return nil, fmt.Errorf("unable to create manifest directory %s: %w", componentPath.Manifests, err)
-		}
-
 		// Iterate over all manifests.
 		for _, manifest := range component.Manifests {
 			for idx, f := range manifest.Files {
+				var trimmedPath string
+				var destination string
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", f)
-				// If using a temp directory, trim the temp directory from the path.
-				trimmedPath := strings.TrimPrefix(f, componentPath.Temp)
-				destination := path.Join(componentPath.Manifests, trimmedPath)
-				if err := utils.CreatePathAndCopy(f, destination); err != nil {
-					return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
+				if utils.IsURL(f) {
+					mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
+					destination = filepath.Join(componentPath.Manifests, mname)
+					if err := utils.DownloadToFile(f, destination, component.CosignKeyPath); err != nil {
+						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
+					}
+					// Update the manifest path to the new location.
+					manifest.Files[idx] = mname
+				} else {
+					// If using a temp directory, trim the temp directory from the path.
+					trimmedPath = strings.TrimPrefix(f, componentPath.Temp)
+					destination = filepath.Join(componentPath.Manifests, trimmedPath)
+					if err := utils.CreatePathAndCopy(f, destination); err != nil {
+						return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
+					}
+					// Update the manifest path to the new location.
+					manifest.Files[idx] = trimmedPath
 				}
-
-				// Update the manifest path to the new location.
-				manifest.Files[idx] = trimmedPath
 			}
 
 			for idx, k := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
 				spinner.Updatef("Building kustomization for %s", k)
-				destination := fmt.Sprintf("%s/kustomization-%s-%d.yaml", componentPath.Manifests, manifest.Name, idx)
-				if err := kustomize.BuildKustomization(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
+				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+				destination := filepath.Join(componentPath.Manifests, kname)
+				if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return nil, fmt.Errorf("unable to build kustomization %s: %w", k, err)
 				}
 			}
