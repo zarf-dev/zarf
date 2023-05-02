@@ -3,10 +3,13 @@ on:
   pull_request:
     types: [labeled, unlabeled, opened, edited, synchronize]
 
+permissions:
+  contents: read
+
 jobs:
   enforce:
     runs-on: ubuntu-latest
     steps:
       - uses: yogevbd/enforce-label-action@2.2.2
         with:
-          BANNED_LABELS: "needs-docs,needs-tests,needs-adr,needs-git-sign-off,needs-walkthrough"
+          BANNED_LABELS: "needs-docs,needs-tests,needs-adr,needs-git-sign-off,needs-tutorial"

@@ -1,4 +1,4 @@
-**Example{% if examples|length > 1 %}s{% endif %}:**{{ " " }}
+**Example{% if examples|length > 1 %}s{% endif %}:**
 
 <code>
 {% for example in examples %}
