@@ -302,10 +302,6 @@ export interface ZarfComponent {
      */
     only?: ZarfComponentOnlyTarget;
     /**
-     * List of path mutations to apply to the component
-     */
-    pathMutations?: { [key: string]: string };
-    /**
      * List of git repos to include in the package
      */
     repos?: string[];
@@ -1397,7 +1393,6 @@ const typeMap: any = {
         { json: "manifests", js: "manifests", typ: u(undefined, a(r("ZarfManifest"))) },
         { json: "name", js: "name", typ: "" },
         { json: "only", js: "only", typ: u(undefined, r("ZarfComponentOnlyTarget")) },
-        { json: "pathMutations", js: "pathMutations", typ: u(undefined, m("")) },
         { json: "repos", js: "repos", typ: u(undefined, a("")) },
         { json: "required", js: "required", typ: u(undefined, true) },
         { json: "scripts", js: "scripts", typ: u(undefined, r("DeprecatedZarfComponentScripts")) },

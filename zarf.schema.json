@@ -282,15 +282,6 @@
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentExtensions",
           "description": "Extend component functionality with additional features"
-        },
-        "pathMutations": {
-          "patternProperties": {
-            ".*": {
-              "type": "string"
-            }
-          },
-          "type": "object",
-          "description": "List of path mutations to apply to the component"
         }
       },
       "additionalProperties": false,
