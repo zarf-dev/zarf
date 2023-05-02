@@ -1,0 +1,7 @@
+name: setup-go
+description: "Setup Go binary and caching"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
