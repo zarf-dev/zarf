@@ -28,8 +28,6 @@ var (
 	importEverything   = filepath.Join("src", "test", "test-packages", "51-import-everything")
 	importception      = filepath.Join("src", "test", "test-packages", "51-import-everything", "inception")
 	everythingExternal = filepath.Join("src", "test", "test-packages", "everything-external")
-	absEverything      = filepath.Join("/", "tmp", "everything-external")
-	absDosGames        = filepath.Join("/", "tmp", "dos-games")
 	absNoCode          = filepath.Join("/", "tmp", "nocode")
 )
 
@@ -47,14 +45,6 @@ func (suite *SkeletonSuite) SetupSuite() {
 	err = exec.CmdWithPrint("cp", "-r", importEverything, everythingExternal)
 	suite.NoError(err)
 	suite.DirExists(everythingExternal)
-
-	err = exec.CmdWithPrint("cp", "-r", importEverything, absEverything)
-	suite.NoError(err)
-	suite.DirExists(absEverything)
-
-	err = exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "dos-games"), absDosGames)
-	suite.NoError(err)
-	suite.DirExists(absDosGames)
 
 	err = exec.CmdWithPrint("git", "clone", "https://github.com/kelseyhightower/nocode", absNoCode)
 	suite.NoError(err)
@@ -86,10 +76,6 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
 	suite.NoError(err)
 	err = exec.CmdWithPrint("rm", "-rf", everythingExternal)
-	suite.NoError(err)
-	err = exec.CmdWithPrint("rm", "-rf", absEverything)
-	suite.NoError(err)
-	err = exec.CmdWithPrint("rm", "-rf", absDosGames)
 	suite.NoError(err)
 	err = exec.CmdWithPrint("rm", "-rf", absNoCode)
 	suite.NoError(err)
@@ -156,12 +142,7 @@ func (suite *SkeletonSuite) Test_3_Deploy_And_Remove_Import_Component_Local_Rela
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_4_Deploy_And_Remove_Import_Component_Local_Absolute() {
-	err := deployAndRemove("import-component-local-absolute")
-	suite.NoError(err)
-}
-
-func (suite *SkeletonSuite) Test_5_Deploy_And_Remove_Import_Component_Oci() {
+func (suite *SkeletonSuite) Test_5_Deploy_And_Remove_Import_Component_OCI() {
 	err := deployAndRemove("import-component-oci")
 	suite.NoError(err)
 }
@@ -178,6 +159,11 @@ func (suite *SkeletonSuite) Test_7_Deploy_And_Remove_Import_Component_Repos() {
 
 func (suite *SkeletonSuite) Test_8_Deploy_And_Remove_Import_Component_Images() {
 	err := deployAndRemove("import-images")
+	suite.NoError(err)
+}
+
+func (suite *SkeletonSuite) Test_9_Deploy_And_Remove_File_Imports() {
+	err := deployAndRemove("file-imports")
 	suite.NoError(err)
 }
 

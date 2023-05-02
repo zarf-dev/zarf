@@ -336,7 +336,7 @@ func (p *Packager) loadSkeleton() error {
 		return err
 	}
 
-	for idx, component := range p.cfg.Pkg.Components {
+	for _, component := range p.cfg.Pkg.Components {
 		local := component.LocalPaths()
 		message.Debugf("mutating local paths for %s: %v", component.Name, local)
 		local = utils.Unique(local)
@@ -348,28 +348,22 @@ func (p *Packager) loadSkeleton() error {
 		}
 
 		for _, path := range local {
-			pathSha := fmt.Sprintf("%d", utils.GetCRCHash(path))
-			src := strings.TrimPrefix(path, "file://")
-			if !filepath.IsAbs(src) {
-				src = filepath.Join(base, path)
+			if strings.HasPrefix(path, "file://") {
+				return fmt.Errorf("(%s) file:// paths are not supported in skeleton packages", path)
 			}
-			if utils.InvalidPath(src) {
+			if filepath.IsAbs(path) {
+				return fmt.Errorf("(%s) absolute paths are not supported in skeleton packages", path)
+			}
+			if utils.InvalidPath(filepath.Join(base, path)) {
 				return fmt.Errorf("unable to find path %s referenced in %s", path, component.Name)
 			}
-			var dst string
-			if utils.DirHasFile(base, src) {
-				dst = filepath.Join(tmp, path)
-			} else {
-				dst = filepath.Join(tmp, pathSha, filepath.Base(src))
-				dstrel := filepath.Join(pathSha, filepath.Base(src))
-				if strings.HasPrefix(path, "file://") {
-					dstrel = "file://" + dstrel
-				}
-				if p.cfg.Pkg.Components[idx].PathMutations == nil {
-					p.cfg.Pkg.Components[idx].PathMutations = make(map[string]string)
-				}
-				p.cfg.Pkg.Components[idx].PathMutations[path] = dstrel
-			}
+		}
+
+		for _, path := range local {
+			pathSha := fmt.Sprintf("%d", utils.GetCRCHash(path))
+			src := filepath.Join(base, path)
+			dst := filepath.Join(tmp, pathSha, filepath.Base(src))
+			// dstrel := filepath.Join(pathSha, filepath.Base(src))
 			err = os.MkdirAll(filepath.Dir(dst), 0755)
 			if err != nil {
 				return err

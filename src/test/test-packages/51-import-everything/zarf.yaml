@@ -24,12 +24,6 @@ components:
       path: ../../../../examples/dos-games
       name: baseline
 
-  - name: import-component-local-absolute
-    required: false
-    import:
-      path: /tmp/dos-games
-      name: baseline
-
   - name: import-component-oci
     required: false
     import:
@@ -55,19 +49,27 @@ components:
         # Import of a file from a relative path external to the current directory
       - source: ../everything-external/files/coffee-ipsum.txt
         target: files/latte.txt
-        # Import of a file from an absolute path external to the current directory
-      - source: /tmp/nocode/README.md
-        target: files/nocode-readme.md
         # Import of a file from a URL
       - source: https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md
         target: files/zarf-readme.md
     actions:
       onDeploy:
         after:
-        - cmd: test -f files/coffee-ipsum.txt
-        - cmd: test -f files/latte.txt
-        - cmd: test -f files/nocode-readme.md
-        - cmd: test -f files/zarf-readme.md
+          - cmd: test -f files/coffee-ipsum.txt
+          - cmd: test -f files/latte.txt
+          - cmd: test -f files/nocode-readme.md
+          - cmd: test -f files/zarf-readme.md
+      onRemove:
+        before:
+          - cmd: rm files/coffee-ipsum.txt
+          - cmd: rm files/latte.txt
+          - cmd: rm files/nocode-readme.md
+          - cmd: rm files/zarf-readme.md
+        after:
+          - cmd: test ! -f files/coffee-ipsum.txt
+          - cmd: test ! -f files/latte.txt
+          - cmd: test ! -f files/nocode-readme.md
+          - cmd: test ! -f files/zarf-readme.md
 
   - name: import-helm
     required: false
@@ -79,10 +81,6 @@ components:
       - name: local-demo
         localPath: ../everything-external/charts/local
         namespace: local-chart-relative
-        version: 0.1.0
-      - name: local-demo
-        localPath: /tmp/everything-external/charts/local
-        namespace: local-chart-absolute
         version: 0.1.0
       - name: oci-demo
         version: 6.3.3
@@ -105,12 +103,6 @@ components:
                 kind: deployment
                 name: local-demo
                 namespace: local-chart-relative
-                condition: available
-          - wait:
-              cluster:
-                kind: deployment
-                name: local-demo
-                namespace: local-chart-absolute
                 condition: available
           - wait:
               cluster:

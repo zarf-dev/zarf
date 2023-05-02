@@ -61,15 +61,16 @@ type ZarfComponent struct {
 
 	// Extensions provide additional functionality to a component
 	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
-
-	// Mutations are a list of path mutations to apply to the component
-	PathMutations map[string]string `json:"pathMutations,omitempty" jsonschema:"description=List of path mutations to apply to the component"`
 }
 
 // LocalPaths returns a list of local paths for this component
 //
+// Git repos are not checked for local paths, as they are not local and
+// the file:// protocol is not supported in skeleton packages but is supported for
+// local testing.
+//
 // ex. local paths: ["./foo", "/bar", "../baz"]
-// ex. remote paths: ["https://example.com/foo", "ssh://bar", "oci://baz"]
+// ex. remote paths: ["https://example.com/foo", "oci://baz"]
 func (c ZarfComponent) LocalPaths() []string {
 	local := []string{}
 
@@ -83,12 +84,6 @@ func (c ZarfComponent) LocalPaths() []string {
 
 	for _, manifest := range c.Manifests {
 		local = append(local, manifest.LocalPaths()...)
-	}
-
-	for _, repo := range c.Repos {
-		if isLocal(repo) {
-			local = append(local, repo)
-		}
 	}
 
 	local = append(local, c.Extensions.LocalPaths()...)

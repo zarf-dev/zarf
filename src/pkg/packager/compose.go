@@ -322,11 +322,10 @@ func (p *Packager) getComposedFilePath(parent types.ZarfComponent, child types.Z
 	}
 
 	prefix := parent.Import.Path
-	// If the path is in the skeleton mutations map, use the mutated path.
-	for k, v := range child.PathMutations {
-		if k == path {
-			path = v
-		}
+	// If the parent is a remote package, prefix with the sha of the path.
+	if parent.Import.URL != "" {
+		pathSha := fmt.Sprintf("%d", utils.GetCRCHash(path))
+		return filepath.Join(prefix, pathSha, filepath.Base(path))
 	}
 
 	if filepath.IsAbs(path) {
