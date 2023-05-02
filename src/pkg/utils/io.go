@@ -293,7 +293,7 @@ func IsTextFile(path string) (bool, error) {
 func GetDirSize(path string) (int64, error) {
 	dirSize := int64(0)
 
-	// Walk through all files in the path
+	// Walk all files in the path
 	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
