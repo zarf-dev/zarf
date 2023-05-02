@@ -2,7 +2,8 @@
 
 The following diagrams show the order of operations for the `zarf package` commands and the hook locations for [actions](../../examples/component-actions/README.md).
 
-## `zarf package create`
+## The `zarf package create` Lifecycle
+
 
 ```mermaid
 graph TD
@@ -14,13 +15,13 @@ graph TD
     A6(parse component imports)-->A7
     A7(process create-time variables)-->A8
     A8(write build data and zarf.yaml)-->A9
-    
+
     A9(run validations)-->A10
     A10(confirm package create):::prompt-->A11
     A11{Init package?}
     A11 -->|Yes| A12(add seed image)-->A13
     A11 -->|No| A13
-    
+
     subgraph  
     A13(add each component)-->A13
     A13 --> A14(run each '.actions.onCreate.before'):::action-->A14
@@ -54,16 +55,17 @@ graph TD
     classDef fail fill:#aa0000
 ```
 
-## `zarf package deploy`
+## The `zarf package deploy` Lifecycle
 
 ```mermaid
 graph TD
     B1(load package archive)-->B2
     B2(handle multipart package)-->B3
     B3(extract archive to temp dir)-->B4
-    B4(filter components by architecture & OS)-->B5
-    B5(save SBOM files to current dir)-->B6
-    B6(handle deprecations)-->B9
+    B4(validate package checksums and signature)-->B5
+    B5(filter components by architecture & OS)-->B6
+    B6(save SBOM files to current dir)-->B7
+    B7(handle deprecations and breaking changes)-->B9
     B9(confirm package deploy):::prompt-->B10
     B10(process deploy-time variables)-->B11
     B11(prompt for missing variables)-->B12
