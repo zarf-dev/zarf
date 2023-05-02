@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
@@ -27,6 +28,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -508,14 +510,31 @@ func (p *Packager) loadDifferentialData() error {
 	p.cfg.CreateOpts.DifferentialData.DifferentialRepos = allIncludedRepos
 	p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
 
+	// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
+	// If the package versions are the same, prompt the user to confirm they want to continue anyways
+	confirmDifferentialBuild := differentialZarfConfig.Metadata.Version != p.cfg.Pkg.Metadata.Version || config.CommonOptions.Confirm
 	if differentialZarfConfig.Metadata.Version == p.cfg.Pkg.Metadata.Version {
-		message.Warnf("You are creating a differential package with the same version as the package you are using as a reference. This is not recommended.")
+		// Prompt the user if --confirm not specified
+		if !config.CommonOptions.Confirm {
+			prompt := &survey.Confirm{
+				Message: lang.PkgCreateWarnDifferentialSameVersion + "\nDo you want to continue anyways?",
+			}
+			if err := survey.AskOne(prompt, &confirmDifferentialBuild); err != nil {
+				message.Fatalf(nil, lang.CmdInitDownloadCancel, err.Error())
+			}
+		} else {
+			message.Warnf(lang.PkgCreateWarnDifferentialSameVersion)
+		}
+	}
+
+	if !confirmDifferentialBuild {
+		return errors.New(lang.PkgCreateErrDifferentialSameVersion)
 	}
 
 	return nil
 }
 
-// handleDifferentialThings will remove and images and repos that are already included in the reference package from the new package
+// handleDifferentialThings will remove any images and repos that are already included in the reference package from the new package
 func (p *Packager) removeCopiesFromDifferentialPackage() error {
 	// If a differential build was not request, continue on as normal
 	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath == "" {
@@ -540,26 +559,30 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 			if !utils.SliceContains(p.cfg.CreateOpts.DifferentialData.DifferentialImages, img) || useImgAnyways {
 				newImageList = append(newImageList, img)
 			} else {
-				message.Debugf("Image %s is already included in the differential package, we are not going to include that image in this package.", img)
+				message.Debugf("Image %s is already included in the differential package", img)
 			}
 		}
 
 		// Generate a list of all unique repos for this component
-		for _, repo := range component.Repos {
-			// If a repo doesn't have a tag/sha/branch (or is a commonly reused tag), we will include this repo in the differential package
-			// TODO: @JPERRY this doesn't seem like it's the BEST solution.. There must be a better way to get the reference..
-			repoSplit := strings.Split(repo, "@")
-			repoRef := ""
-			if len(repoRef) > 1 {
-				repoRef = repoSplit[len(repoSplit)-1]
+		for _, repoURL := range component.Repos {
+			// Split the remote url and the zarf reference
+			_, refPlain, err := transform.GitTransformURLSplitRef(repoURL)
+			if err != nil {
+				return err
 			}
-			useRepoAnyways := len(repoSplit) == 1 || repoRef == "latest" || repoRef == "stable" || repoRef == "nightly"
 
-			if !utils.SliceContains(p.cfg.CreateOpts.DifferentialData.DifferentialRepos, repo) || useRepoAnyways {
-				message.Question(fmt.Sprintf("Repo %s is not included in the differential package, include?", repo))
-				newRepoList = append(newRepoList, repo)
+			var ref plumbing.ReferenceName
+			// Parse the ref from the git URL.
+			if refPlain != "" {
+				ref = git.ParseRef(refPlain)
+			}
+
+			useRepoAnyways := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
+			if !utils.SliceContains(p.cfg.CreateOpts.DifferentialData.DifferentialRepos, repoURL) || useRepoAnyways {
+				message.Question(fmt.Sprintf("Repo %s is not included in the differential package, include?", repoURL))
+				newRepoList = append(newRepoList, repoURL)
 			} else {
-				message.Debugf("Repo %s is already included in the differential package, we are not going to include that repo in this package.", repo)
+				message.Warnf("Repo %s is already included in the differential package, we are not going to include that repoURL in this package.", repoURL)
 			}
 		}
 

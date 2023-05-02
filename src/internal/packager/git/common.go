@@ -43,7 +43,7 @@ func NewWithSpinner(server types.GitServerInfo, spinner *message.Spinner) *Git {
 }
 
 // parseRef parses the provided ref into a ReferenceName if it's not a hash.
-func (g *Git) parseRef(r string) plumbing.ReferenceName {
+func ParseRef(r string) plumbing.ReferenceName {
 	// If not a full ref, assume it's a tag at this point.
 	if !plumbing.IsHash(r) && !strings.HasPrefix(r, "refs/") {
 		r = fmt.Sprintf("refs/tags/%s", r)

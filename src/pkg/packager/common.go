@@ -116,7 +116,12 @@ func (p *Packager) GetPackageName() string {
 	}
 
 	if p.cfg.Pkg.Build.Differential {
-		packageFileName = fmt.Sprintf("%s-differential-%s", packageFileName, p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion)
+		packageFileName = fmt.Sprintf("%s-differential", packageFileName)
+
+		// Only include the differential package version number if it is available
+		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion != "" {
+			packageFileName = fmt.Sprintf("%s-%s", packageFileName, p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion)
+		}
 	}
 
 	return fmt.Sprintf("%s.%s", packageFileName, suffix)
