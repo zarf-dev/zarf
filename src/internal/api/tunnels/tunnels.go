@@ -14,13 +14,12 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-var tunnels map[string]*cluster.Tunnel
+// tunnels is a map of package names to tunnel objects used for storing connected tunnels
+var tunnels map[string]*cluster.Tunnel = make(map[string]*cluster.Tunnel)
 
 // ListTunnels lists all tunnel names
 func ListTunnels(w http.ResponseWriter, _ *http.Request) {
 	// make sure tunnels is initialized
-	makeTunnels()
-
 	// get the tunnel names
 	tunnelNames := make([]string, 0, len(tunnels))
 	for name := range tunnels {
@@ -34,13 +33,10 @@ func ListTunnels(w http.ResponseWriter, _ *http.Request) {
 func ConnectTunnel(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	// make sure tunnels is initialized
-	makeTunnels()
-
 	// if the tunnel already exists, just launch the URL
 	if tunnels[name] != nil {
 		launchTunnelURL(tunnels[name], w, name)
-		common.WriteJSONResponse(w, true, http.StatusCreated)
+		common.WriteJSONResponse(w, true, http.StatusOK)
 		return
 	}
 
@@ -60,7 +56,7 @@ func ConnectTunnel(w http.ResponseWriter, r *http.Request) {
 	tunnels[name] = tunnel
 	launchTunnelURL(tunnel, w, name)
 
-	common.WriteJSONResponse(w, true, http.StatusOK)
+	common.WriteJSONResponse(w, true, http.StatusCreated)
 }
 
 // DisconnectTunnel closes the tunnel for the requested resource
@@ -70,13 +66,6 @@ func DisconnectTunnel(w http.ResponseWriter, r *http.Request) {
 	closeTunnel(name)
 
 	common.WriteJSONResponse(w, true, http.StatusOK)
-}
-
-// makeTunnels initializes the tunnels map if it is nil
-func makeTunnels() {
-	if tunnels == nil {
-		tunnels = make(map[string]*cluster.Tunnel)
-	}
 }
 
 // launchTunnelURL launches the tunnel URL in the default browser

@@ -26,14 +26,13 @@ test.describe.serial('connect the dos-games package @connect', async () => {
         const connectButton = connectDialog.locator('button:has-text("Connect")');
 
         // Click the Connect Button
-        await connectButton.click();
-        await page.waitForResponse('api/tunnels/connect/doom');
+        await Promise.all([page.waitForResponse('api/tunnels/connect/doom'), connectButton.click()]);
 
         menu = await openDosGamesMenu(page);
         expect(await menu.textContent()).toContain('Disconnect...');
     });
 
-    test('disconnect the dos-games package', async ({page}) => {
+    test('disconnect the dos-games package', async ({ page }) => {
         // Dispose context once it's no longer needed.
         let menu = await openDosGamesMenu(page);
 
@@ -48,9 +47,9 @@ test.describe.serial('connect the dos-games package @connect', async () => {
         const dialog = page.locator('.dialog-open');
         expect(await dialog.textContent()).toContain('Disconnect Resource');
         const disconnectButton = dialog.locator('.button-label:text-is("Disconnect")');
-        
+
         // Click the Disconnect Button
-        await disconnectButton.click();
+        await Promise.all([page.waitForResponse('api/tunnels/disconnect/doom'), disconnectButton.click()])
 
         // Ensure the menu no longer contains the Disconnect option
         menu = await openDosGamesMenu(page);
