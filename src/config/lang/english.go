@@ -342,8 +342,7 @@ const (
 
 // src/internal/packager/create
 const (
-	PkgCreateWarnDifferentialSameVersion = "You are creating a differential package with the same version as the package you are using as a reference. This is not recommended."
-	PkgCreateErrDifferentialSameVersion  = ""
+	PkgCreateErrDifferentialSameVersion = "unable to create a differential package with the same version as the package you are using as a reference; the package version must be incremented"
 )
 
 // src/internal/packager/validate.

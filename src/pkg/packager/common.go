@@ -108,20 +108,15 @@ func (p *Packager) GetPackageName() string {
 		suffix = "tar"
 	}
 
-	packageFileName := ""
-	if p.cfg.Pkg.Metadata.Version == "" {
-		packageFileName = fmt.Sprintf("%s%s-%s", config.ZarfPackagePrefix, packageName, p.arch)
-	} else {
-		packageFileName = fmt.Sprintf("%s%s-%s-%s", config.ZarfPackagePrefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version)
-	}
-
+	packageFileName := fmt.Sprintf("%s%s-%s", config.ZarfPackagePrefix, packageName, p.arch)
 	if p.cfg.Pkg.Build.Differential {
-		packageFileName = fmt.Sprintf("%s-differential", packageFileName)
-
-		// Only include the differential package version number if it is available
-		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion != "" {
-			packageFileName = fmt.Sprintf("%s-%s", packageFileName, p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion)
+		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == "" {
+			packageFileName = fmt.Sprintf("%s-differential-%s", packageFileName, p.cfg.Pkg.Metadata.Version)
+		} else {
+			packageFileName = fmt.Sprintf("%s-%s-differential-%s", packageFileName, p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion, p.cfg.Pkg.Metadata.Version)
 		}
+	} else if p.cfg.Pkg.Metadata.Version != "" {
+		packageFileName = fmt.Sprintf("%s-%s", packageFileName, p.cfg.Pkg.Metadata.Version)
 	}
 
 	return fmt.Sprintf("%s.%s", packageFileName, suffix)

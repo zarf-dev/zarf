@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
@@ -518,23 +517,8 @@ func (p *Packager) loadDifferentialData() error {
 	p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
 
 	// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
-	// If the package versions are the same, prompt the user to confirm they want to continue anyways
-	confirmDifferentialBuild := differentialZarfConfig.Metadata.Version != p.cfg.Pkg.Metadata.Version || config.CommonOptions.Confirm
+	// If the package versions are the same return an error
 	if differentialZarfConfig.Metadata.Version == p.cfg.Pkg.Metadata.Version {
-		// Prompt the user if --confirm not specified
-		if !config.CommonOptions.Confirm {
-			prompt := &survey.Confirm{
-				Message: lang.PkgCreateWarnDifferentialSameVersion + "\nDo you want to continue anyways?",
-			}
-			if err := survey.AskOne(prompt, &confirmDifferentialBuild); err != nil {
-				message.Fatalf(nil, lang.CmdInitDownloadCancel, err.Error())
-			}
-		} else {
-			message.Warnf(lang.PkgCreateWarnDifferentialSameVersion)
-		}
-	}
-
-	if !confirmDifferentialBuild {
 		return errors.New(lang.PkgCreateErrDifferentialSameVersion)
 	}
 
