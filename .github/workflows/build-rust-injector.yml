@@ -1,5 +1,8 @@
 name: Zarf Injector Rust Binaries
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
     inputs:

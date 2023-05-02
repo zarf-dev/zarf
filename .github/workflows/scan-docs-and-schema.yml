@@ -2,6 +2,9 @@ name: Validate Docs and Schema
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
