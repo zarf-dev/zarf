@@ -50,7 +50,7 @@ func getFlux(baseDir string, cfg *extensions.BigBang) (manifest types.ZarfManife
 	remotePath := fmt.Sprintf("%s//base/flux?ref=%s", cfg.Repo, cfg.Version)
 
 	// Perform Kustomzation now to get the flux.yaml file.
-	if err := kustomize.BuildKustomization(remotePath, localPath, true); err != nil {
+	if err := kustomize.Build(remotePath, localPath, true); err != nil {
 		return manifest, images, fmt.Errorf("unable to build kustomization: %w", err)
 	}
 

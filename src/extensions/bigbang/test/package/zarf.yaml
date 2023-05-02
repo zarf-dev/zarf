@@ -19,5 +19,5 @@ components:
       bigbang:
         version: "###ZARF_PKG_TMPL_BB_VERSION###"
         valuesFiles:
-          - disable-all.yaml
+          - disable-all-bb###ZARF_PKG_TMPL_BB_MAJOR###.yaml
           - enable-twistlock.yaml

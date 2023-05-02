@@ -122,6 +122,8 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
+	@test -s ./build/zarf-package-remote-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/remote-manifests -o build -a $(ARCH) --confirm
+
 	@test -s ./build/zarf-package-component-actions-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-actions -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-component-choice-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-choice -o build -a $(ARCH) --confirm
@@ -142,7 +144,7 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-test-helm-wait-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-no-wait -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-helm-oci-chart-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-oci-chart -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-helm-oci-chart-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/helm-oci-chart -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
 

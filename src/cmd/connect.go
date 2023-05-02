@@ -61,7 +61,7 @@ func init() {
 	connectCmd.AddCommand(connectListCmd)
 
 	connectCmd.Flags().StringVar(&connectResourceName, "name", "", lang.CmdConnectFlagName)
-	connectCmd.Flags().StringVar(&connectNamespace, "namespace", cluster.ZarfNamespace, lang.CmdConnectFlagNamespace)
+	connectCmd.Flags().StringVar(&connectNamespace, "namespace", cluster.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
 	connectCmd.Flags().StringVar(&connectResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
 	connectCmd.Flags().IntVar(&connectLocalPort, "local-port", 0, lang.CmdConnectFlagLocalPort)
 	connectCmd.Flags().IntVar(&connectRemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)
