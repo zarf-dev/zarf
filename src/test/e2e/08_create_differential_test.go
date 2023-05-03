@@ -17,88 +17,63 @@ import (
 
 // TestCreateDifferential creates several differential packages and ensures the already built images and repos and not included in the new package
 func TestCreateDifferential(t *testing.T) {
-
+	t.Log("E2E: Test Differential Package Behavior")
 	tmpPath, _ := utils.MakeTempDir("")
 
-	t.Log("E2E: Test Differential Package Behavior")
-	testDifferentialGitRepos(t, tmpPath)
-	testDifferentialImages(t, tmpPath)
-	testErrorWhenNoChange(t)
+	packagePath := "src/test/test-packages/08-differential-package"
+	packageName := "zarf-package-differential-package-amd64-v0.0.1.tar.zst"
+	differentialPackageName := "zarf-package-differential-package-amd64-v0.0.1-differential-v0.0.2.tar.zst"
+	differentialFlag := fmt.Sprintf("--differential=%s", packageName)
 
-	e2e.CleanFiles(tmpPath)
-}
-
-// verify that any repo that isn't a specific commit hash or a tag is still included with the differential package
-func testDifferentialGitRepos(t *testing.T, tmpPath string) {
-	originalGitPackagePath := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.Arch)
-	gitDiffPackagePath := "src/test/test-packages/08-create-differential-git"
-	gitDifferentialFlag := fmt.Sprintf("--differential=%s", originalGitPackagePath)
-	gitDifferentialPackageName := "zarf-package-git-data-amd64-v1.0.0-differential-v1.0.1.tar.zst"
-
-	// Build the differential packages
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", gitDiffPackagePath, gitDifferentialFlag, "--confirm")
+	// Build the package a first time
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.0.1", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	// Extract Git Zarf YAML
-	err = archiver.Extract(gitDifferentialPackageName, "zarf.yaml", tmpPath)
+	defer e2e.CleanFiles(packageName)
+
+	// Build the differential package without changing the version
+	_, stdErr, err = e2e.ExecZarfCommand("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.0.1", differentialFlag, "--confirm")
+	require.Error(t, err, "zarf package create should have errored when a differential package was being created without updating the package version number")
+	require.Contains(t, stdErr, "unable to create a differential package with the same version")
+
+	// Build the differential package
+	_, stdErr, err = e2e.ExecZarfCommand("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.0.2", differentialFlag, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	defer e2e.CleanFiles(differentialPackageName)
+
+	// Extract the yaml of the differential package
+	err = archiver.Extract(differentialPackageName, "zarf.yaml", tmpPath)
 	require.NoError(t, err, "unable to extract zarf.yaml from the differential git package")
 
+	// Load the extracted zarf.yaml specification
 	var differentialZarfConfig types.ZarfPackage
 	err = utils.ReadYaml(filepath.Join(tmpPath, "zarf.yaml"), &differentialZarfConfig)
 	require.NoError(t, err, "unable to read zarf.yaml from the differential git package")
 
+	// Get a list of all images and repos that are inside of the differential package
+	actualGitRepos := []string{}
+	actualImages := []string{}
+	for _, component := range differentialZarfConfig.Components {
+		actualGitRepos = append(actualGitRepos, component.Repos...)
+		actualImages = append(actualImages, component.Images...)
+	}
+
+	/* Validate we have ONLY the git repos we expect to have */
 	expectedGitRepos := []string{
 		"https://github.com/stefanprodan/podinfo.git",
 		"https://github.com/kelseyhightower/nocode.git",
 		"https://github.com/DoD-Platform-One/big-bang.git@refs/heads/release-1.54.x",
 	}
-	actualGitRepos := []string{}
-	for _, component := range differentialZarfConfig.Components {
-		actualGitRepos = append(actualGitRepos, component.Repos...)
-	}
-
-	// Ensure all the repos we expect to be there are there
-	require.Len(t, actualGitRepos, 3, "zarf.yaml from the differential git package does not contain the correct number of repos")
+	require.Len(t, actualGitRepos, 3, "zarf.yaml from the differential package does not contain the correct number of repos")
 	for _, expectedRepo := range expectedGitRepos {
 		require.Contains(t, actualGitRepos, expectedRepo, fmt.Sprintf("unable to find expected repo %s", expectedRepo))
 	}
 
-	e2e.CleanFiles(filepath.Join(tmpPath, "zarf.yaml"), gitDifferentialPackageName)
-}
-
-// verify that images that are tagged are removed from the differential package
-func testDifferentialImages(t *testing.T, tmpPath string) {
-	originalImagePackagePath := fmt.Sprintf("build/zarf-package-flux-test-%s.tar.zst", e2e.Arch)
-	imageDiffPackagePath := "src/test/test-packages/08-create-differential-images"
-	imageDifferentialFlag := fmt.Sprintf("--differential=%s", originalImagePackagePath)
-	imageDifferentialPackageName := "zarf-package-flux-test-amd64-differential-0.0.1.tar.zst"
-
-	// Build the differential package
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", imageDiffPackagePath, imageDifferentialFlag, "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-
-	// Extract the zarf.yaml of the new package
-	err = archiver.Extract(imageDifferentialPackageName, "zarf.yaml", tmpPath)
-	require.NoError(t, err, "unable to extract zarf.yaml from the differential image package")
-
-	var differentialZarfConfig types.ZarfPackage
-	err = utils.ReadYaml(filepath.Join(tmpPath, "zarf.yaml"), &differentialZarfConfig)
-	require.NoError(t, err, "unable to read zarf.yaml from the differential image package")
-
-	actualImages := []string{}
-	for _, component := range differentialZarfConfig.Components {
-		actualImages = append(actualImages, component.Images...)
+	/* Validate we have ONLY the images we expect to have */
+	expectedImages := []string{"ghcr.io/stefanprodan/podinfo:latest"}
+	require.Len(t, actualImages, 1, "zarf.yaml from the differential package does not contain the correct number of images")
+	for _, expectedImage := range expectedImages {
+		require.Contains(t, actualImages, expectedImage, fmt.Sprintf("unable to find expected image %s", expectedImage))
 	}
 
-	require.Len(t, actualImages, 0, "zarf.yaml from the differential image package does not contain the correct number of images")
-	e2e.CleanFiles(filepath.Join(tmpPath, "zarf.yaml"), imageDifferentialPackageName)
-}
-
-func testErrorWhenNoChange(t *testing.T) {
-	originalPackagePath := fmt.Sprintf("build/zarf-package-flux-test-%s.tar.zst", e2e.Arch)
-	packagePath := "examples/flux-test"
-	differentialFlag := fmt.Sprintf("--differential=%s", originalPackagePath)
-
-	_, stdErr, err := e2e.ExecZarfCommand("package", "create", packagePath, differentialFlag, "--confirm")
-	require.Error(t, err, "zarf package create should have errored when a differential package was being created without updating the package version number")
-	require.Contains(t, stdErr, "unable to create a differential package with the same version")
+	e2e.CleanFiles(tmpPath)
 }

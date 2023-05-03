@@ -69,9 +69,18 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
-	// Handle any potential differential images/repos before going forward
-	if err := p.removeCopiesFromDifferentialPackage(); err != nil {
-		return err
+	// Remove unnecessary repos and images if we are building a differential package
+	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
+		// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
+		// If the package versions are the same return an error
+		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == p.cfg.Pkg.Metadata.Version {
+			return errors.New(lang.PkgCreateErrDifferentialSameVersion)
+		}
+
+		// Handle any potential differential images/repos before going forward
+		if err := p.removeCopiesFromDifferentialPackage(); err != nil {
+			return err
+		}
 	}
 
 	// Create component paths and process extensions for each component.
@@ -553,12 +562,6 @@ func (p *Packager) loadDifferentialData() error {
 	p.cfg.CreateOpts.DifferentialData.DifferentialRepos = allIncludedReposMap
 	p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
 
-	// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
-	// If the package versions are the same return an error
-	if differentialZarfConfig.Metadata.Version == p.cfg.Pkg.Metadata.Version {
-		return errors.New(lang.PkgCreateErrDifferentialSameVersion)
-	}
-
 	return nil
 }
 
@@ -585,7 +588,7 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 
 			// Only include new images or images that have a commonly overwritten tag
 			imgTag := imgRef.TagOrDigest
-			useImgAnyways := imgTag == "latest" || imgTag == "stable" || imgTag == "nightly"
+			useImgAnyways := imgTag == ":latest" || imgTag == ":stable" || imgTag == ":nightly"
 			if useImgAnyways || !p.cfg.CreateOpts.DifferentialData.DifferentialImages[img] {
 				newImageList = append(newImageList, img)
 			} else {
