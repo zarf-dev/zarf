@@ -360,11 +360,9 @@ func (p *Packager) loadSkeleton() error {
 		}
 
 		for _, path := range local {
-			pathSha := fmt.Sprintf("%d", utils.GetCRCHash(path))
 			src := filepath.Join(base, path)
-			dst := filepath.Join(tmp, pathSha, filepath.Base(src))
-			// dstrel := filepath.Join(pathSha, filepath.Base(src))
-			err = os.MkdirAll(filepath.Dir(dst), 0755)
+			dst := filepath.Join(tmp, crcPath(path))
+			err = os.MkdirAll(filepath.Dir(dst), 0700)
 			if err != nil {
 				return err
 			}

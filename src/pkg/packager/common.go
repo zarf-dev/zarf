@@ -122,29 +122,67 @@ func (p *Packager) ClearTempPaths() {
 	_ = os.RemoveAll(config.ZarfSBOMDir)
 }
 
-func (p *Packager) getComponentBasePath(component types.ZarfComponent) string {
-	return filepath.Join(p.tmp.Components, component.Name)
-}
-
 func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
 	message.Debugf("packager.createComponentPaths(%s)", message.JSONValue(component))
 
-	basePath := p.getComponentBasePath(component)
+	base := filepath.Join(p.tmp.Components, component.Name)
 
-	if _, err = os.Stat(basePath); os.IsNotExist(err) {
+	if _, err = os.Stat(base); os.IsNotExist(err) {
 		// basePath does not exist
-		err = utils.CreateDirectory(basePath, 0700)
+		err = utils.CreateDirectory(base, 0700)
+		if err != nil {
+			return paths, err
+		}
 	}
 
 	paths = types.ComponentPaths{
-		Base:           basePath,
-		Temp:           filepath.Join(basePath, "temp"),
-		Files:          filepath.Join(basePath, "files"),
-		Charts:         filepath.Join(basePath, "charts"),
-		Repos:          filepath.Join(basePath, "repos"),
-		Manifests:      filepath.Join(basePath, "manifests"),
-		DataInjections: filepath.Join(basePath, "data"),
-		Values:         filepath.Join(basePath, "values"),
+		Base:           base,
+		Temp:           filepath.Join(base, "temp"),
+		Files:          filepath.Join(base, "files"),
+		Charts:         filepath.Join(base, "charts"),
+		Repos:          filepath.Join(base, "repos"),
+		Manifests:      filepath.Join(base, "manifests"),
+		DataInjections: filepath.Join(base, "data"),
+		Values:         filepath.Join(base, "values"),
+	}
+
+	if len(component.Files) > 0 {
+		err = utils.CreateDirectory(paths.Files, 0700)
+		if err != nil {
+			return paths, err
+		}
+	}
+
+	if len(component.Charts) > 0 {
+		err = utils.CreateDirectory(paths.Charts, 0700)
+		if err != nil {
+			return paths, err
+		}
+		err = utils.CreateDirectory(paths.Values, 0700)
+		if err != nil {
+			return paths, err
+		}
+	}
+
+	if len(component.Repos) > 0 {
+		err = utils.CreateDirectory(paths.Repos, 0700)
+		if err != nil {
+			return paths, err
+		}
+	}
+
+	if len(component.Manifests) > 0 {
+		err = utils.CreateDirectory(paths.Manifests, 0700)
+		if err != nil {
+			return paths, err
+		}
+	}
+
+	if len(component.DataInjections) > 0 {
+		err = utils.CreateDirectory(paths.DataInjections, 0700)
+		if err != nil {
+			return paths, err
+		}
 	}
 
 	return paths, err
@@ -506,4 +544,9 @@ func promptForSigPassword() ([]byte, error) {
 
 	// We are returning a nil error here because purposefully avoiding a password input is a valid use condition
 	return nil, nil
+}
+
+func crcPath(path string) string {
+	crc := fmt.Sprintf("%d", utils.GetCRCHash(path))
+	return filepath.Join(crc, filepath.Base(path))
 }

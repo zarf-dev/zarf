@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -113,8 +112,7 @@ func (p *Packager) Create(baseDir string) error {
 		combinedImageList = append(combinedImageList, component.Images...)
 
 		// Remove the temp directory for this component before archiving.
-		tmpPath := path.Join(p.getComponentBasePath(component), "temp")
-		_ = os.RemoveAll(tmpPath)
+		_ = os.RemoveAll(filepath.Join(p.tmp.Components, component.Name, "temp"))
 	}
 
 	imgList := utils.Unique(combinedImageList)
@@ -152,16 +150,16 @@ func (p *Packager) Create(baseDir string) error {
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range p.cfg.Pkg.Components {
 		// Make the component a tar archive
-		componentPaths, _ := p.createOrGetComponentPaths(component)
+		componentPath := filepath.Join(p.tmp.Components, component.Name)
 		componentName := fmt.Sprintf("%s.%s", component.Name, "tar")
 		componentTarPath := filepath.Join(p.tmp.Components, componentName)
-		if err := archiver.Archive([]string{componentPaths.Base}, componentTarPath); err != nil {
+		if err := archiver.Archive([]string{componentPath}, componentTarPath); err != nil {
 			return fmt.Errorf("unable to create package: %w", err)
 		}
 
 		// Remove the deflated component directory
 		if err := os.RemoveAll(filepath.Join(p.tmp.Components, component.Name)); err != nil {
-			return fmt.Errorf("unable to remove the component directory (%s): %w", componentPaths.Base, err)
+			return fmt.Errorf("unable to remove the component directory (%s): %w", componentPath, err)
 		}
 	}
 
@@ -268,15 +266,15 @@ func (p *Packager) Create(baseDir string) error {
 func (p *Packager) addComponent(component types.ZarfComponent) (*types.ComponentSBOM, error) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
-	componentPath, err := p.createOrGetComponentPaths(component)
+	tmp, err := p.createOrGetComponentPaths(component)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create the component paths: %w", err)
+		return nil, fmt.Errorf("unable to create the component paths: %s", err.Error())
 	}
 
 	// Create an struct to hold the SBOM information for this component.
 	componentSBOM := types.ComponentSBOM{
 		Files:         []string{},
-		ComponentPath: componentPath,
+		ComponentPath: tmp,
 	}
 
 	onCreate := component.Actions.OnCreate
@@ -286,93 +284,82 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 	}
 
 	// If any helm charts are defined, process them.
-	if len(component.Charts) > 0 {
-		_ = utils.CreateDirectory(componentPath.Charts, 0700)
-		_ = utils.CreateDirectory(componentPath.Values, 0700)
+	for _, chart := range component.Charts {
 		re := regexp.MustCompile(`\.git$`)
+		isGitURL := re.MatchString(chart.URL)
+		helmCfg := helm.Helm{
+			Chart: chart,
+			Cfg:   p.cfg,
+		}
 
-		for _, chart := range component.Charts {
-			isGitURL := re.MatchString(chart.URL)
-			helmCfg := helm.Helm{
-				Chart: chart,
-				Cfg:   p.cfg,
+		if isGitURL {
+			_, err = helmCfg.PackageChartFromGit(tmp.Charts)
+			if err != nil {
+				return nil, fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
 			}
+		} else if len(chart.URL) > 0 {
+			helmCfg.DownloadPublishedChart(tmp.Charts)
+		} else {
+			path := helmCfg.PackageChartFromLocalFiles(tmp.Charts)
+			zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
+			if !strings.HasSuffix(path, zarfFilename) {
+				return nil, fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
+			}
+		}
 
-			if isGitURL {
-				_, err = helmCfg.PackageChartFromGit(componentPath.Charts)
-				if err != nil {
-					return nil, fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
+		for idx, path := range chart.ValuesFiles {
+			dst := fmt.Sprintf("%s-%d", helm.StandardName(tmp.Values, chart), idx)
+			if utils.IsURL(path) {
+				if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+					return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
 				}
-			} else if len(chart.URL) > 0 {
-				helmCfg.DownloadPublishedChart(componentPath.Charts)
 			} else {
-				path := helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
-				zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
-				if !strings.HasSuffix(path, zarfFilename) {
-					return nil, fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
-				}
-			}
-
-			for idx, path := range chart.ValuesFiles {
-				dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
-				if utils.IsURL(path) {
-					if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
-						return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
-					}
-				} else {
-					if err := utils.CreatePathAndCopy(path, dst); err != nil {
-						return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
-					}
+				if err := utils.CreatePathAndCopy(path, dst); err != nil {
+					return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 				}
 			}
 		}
 	}
 
-	if len(component.Files) > 0 {
-		if err = utils.CreateDirectory(componentPath.Files, 0700); err != nil {
-			return nil, fmt.Errorf("unable to create the component files directory: %s", err.Error())
+	for index, file := range component.Files {
+		message.Debugf("Loading %#v", file)
+		dst := filepath.Join(tmp.Files, strconv.Itoa(index))
+
+		if utils.IsURL(file.Source) {
+			if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
+				return nil, fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+			}
+		} else {
+			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
+				return nil, fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+			}
 		}
 
-		for index, file := range component.Files {
-			message.Debugf("Loading %#v", file)
-			dst := filepath.Join(componentPath.Files, strconv.Itoa(index))
-
-			if utils.IsURL(file.Source) {
-				if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
-					return nil, fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
-				}
-			} else {
-				if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
-					return nil, fmt.Errorf("unable to copy file %s: %w", file.Source, err)
-				}
+		// Abort packaging on invalid shasum (if one is specified).
+		if file.Shasum != "" {
+			if actualShasum, _ := utils.GetCryptoHash(dst, crypto.SHA256); actualShasum != file.Shasum {
+				return nil, fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 			}
-
-			// Abort packaging on invalid shasum (if one is specified).
-			if file.Shasum != "" {
-				if actualShasum, _ := utils.GetCryptoHash(dst, crypto.SHA256); actualShasum != file.Shasum {
-					return nil, fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
-				}
-			}
-
-			info, _ := os.Stat(dst)
-
-			if file.Executable || info.IsDir() {
-				_ = os.Chmod(dst, 0700)
-			} else {
-				_ = os.Chmod(dst, 0600)
-			}
-
-			componentSBOM.Files = append(componentSBOM.Files, dst)
 		}
+
+		info, _ := os.Stat(dst)
+
+		if file.Executable || info.IsDir() {
+			_ = os.Chmod(dst, 0700)
+		} else {
+			_ = os.Chmod(dst, 0600)
+		}
+
+		componentSBOM.Files = append(componentSBOM.Files, dst)
 	}
 
 	if len(component.DataInjections) > 0 {
 		spinner := message.NewProgressSpinner("Loading data injections")
 		defer spinner.Success()
 
-		for _, data := range component.DataInjections {
+		for idx, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-			dst := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
+			dst := filepath.Join(tmp.DataInjections, strconv.Itoa(idx))
 			if utils.IsURL(data.Source) {
 				if err := utils.DownloadToFile(data.Source, dst, component.CosignKeyPath); err != nil {
 					return nil, fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
@@ -391,9 +378,6 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 	}
 
 	if len(component.Manifests) > 0 {
-		if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
-			return nil, fmt.Errorf("unable to create manifest directory %s: %s", componentPath.Manifests, err.Error())
-		}
 		// Get the proper count of total manifests to add.
 		manifestCount := 0
 
@@ -408,27 +392,19 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		// Iterate over all manifests.
 		for _, manifest := range component.Manifests {
 			for idx, f := range manifest.Files {
-				var trimmedPath string
-				var destination string
+				destination := filepath.Join(tmp.Manifests, fmt.Sprintf("%s-%d.yaml", manifest.Name, idx))
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", f)
 				if utils.IsURL(f) {
-					mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
-					destination = filepath.Join(componentPath.Manifests, mname)
 					if err := utils.DownloadToFile(f, destination, component.CosignKeyPath); err != nil {
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
 					// Update the manifest path to the new location.
-					manifest.Files[idx] = mname
+					manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
 				} else {
-					// If using a temp directory, trim the temp directory from the path.
-					trimmedPath = strings.TrimPrefix(f, componentPath.Temp)
-					destination = filepath.Join(componentPath.Manifests, trimmedPath)
 					if err := utils.CreatePathAndCopy(f, destination); err != nil {
 						return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
 					}
-					// Update the manifest path to the new location.
-					manifest.Files[idx] = trimmedPath
 				}
 			}
 
@@ -436,10 +412,11 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				// Generate manifests from kustomizations and place in the package.
 				spinner.Updatef("Building kustomization for %s", k)
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-				destination := filepath.Join(componentPath.Manifests, kname)
+				destination := filepath.Join(tmp.Manifests, kname)
 				if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return nil, fmt.Errorf("unable to build kustomization %s: %w", k, err)
 				}
+				manifest.Kustomizations[idx] = kname
 			}
 		}
 	}
@@ -452,7 +429,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
 			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
-			if err := gitCfg.Pull(url, componentPath.Repos); err != nil {
+			if err := gitCfg.Pull(url, tmp.Repos); err != nil {
 				return nil, fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}

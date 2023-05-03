@@ -273,11 +273,11 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 // Move files onto the host of the machine performing the deployment.
 func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLocation string) error {
 	// If there are no files to process, return early.
-	if len(component.Files) < 1 {
+	if len(component.Files) == 0 {
 		return nil
 	}
 
-	spinner := *message.NewProgressSpinner("Copying %d files", len(component.Files))
+	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
 	defer spinner.Stop()
 
 	for index, file := range component.Files {
@@ -343,7 +343,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values template.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
-	defer spinner.Stop()
+	defer spinner.Success()
 
 	state, err := p.cluster.LoadZarfState()
 	// Return on error if we are not in YOLO mode
@@ -390,7 +390,6 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 			p.arch, state.Architecture)
 	}
 
-	spinner.Success()
 	return values, nil
 }
 
@@ -453,9 +452,9 @@ func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPat
 		message.Info("Loading data injections")
 	}
 
-	for _, data := range dataInjections {
+	for idx, data := range dataInjections {
 		waitGroup.Add(1)
-		go p.cluster.HandleDataInjection(waitGroup, data, componentPath)
+		go p.cluster.HandleDataInjection(waitGroup, data, componentPath, idx)
 	}
 }
 
@@ -467,14 +466,14 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
-			chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
+			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPath.Values, chart), idx)
 			if err := valueTemplate.Apply(component, chartValueName, false); err != nil {
 				return installedCharts, err
 			}
 		}
 
 		// Generate helm templates to pass to gitops engine
-		helmCfg := &helm.Helm{
+		helmCfg := helm.Helm{
 			BasePath:  componentPath.Base,
 			Chart:     chart,
 			Component: component,
@@ -495,11 +494,11 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 	}
 
 	for _, manifest := range component.Manifests {
-		for idx := range manifest.Kustomizations {
-			// Move kustomizations to files now
-			destination := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-			manifest.Files = append(manifest.Files, destination)
+		for idx := range manifest.Files {
+			manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
 		}
+		// Move kustomizations to files now
+		manifest.Files = append(manifest.Files, manifest.Kustomizations...)
 
 		if manifest.Namespace == "" {
 			// Helm gets sad when you don't provide a namespace even though we aren't using helm templating
