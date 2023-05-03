@@ -20,7 +20,7 @@ Before the magic can happen you have to do a few things:
 
 1. Build the package using `zarf package create examples/tiny-kafka`
 
-1. Create a Zarf cluster as described in the [Initializing a Cluster Walkthrough](../../docs/13-walkthroughs/1-initializing-a-k8s-cluster.md/)
+1. Create a Zarf cluster as described in the [Initializing a Cluster Tutorial](../../docs/6-zarf-tutorials/1-initializing-a-k8s-cluster.md/)
 
 ## Instructions
 

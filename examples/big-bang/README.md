@@ -24,4 +24,4 @@ The `bigbang` noun sits within the `extensions` specification of Zarf and provid
 - `skipFlux`    - Whether to skip deploying flux; Defaults to false
 - `valuesFiles` - The list of values files to pass to Big Bang; these will be merged together
 
-To walkthrough the creation and deployment of this package see the [Big Bang Walkthrough](../../docs/13-walkthroughs/6-big-bang.md).
+To see a tutorial for the creation and deployment of this package see the [Big Bang Tutorial](../../docs/6-zarf-tutorials/6-big-bang.md).

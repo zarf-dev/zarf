@@ -56,13 +56,13 @@ var generateCLIDocs = &cobra.Command{
 		// Don't include the datestamp in the output
 		rootCmd.DisableAutoGenTag = true
 		//Generate markdown of the Zarf command (and all of its child commands)
-		if err := os.RemoveAll("./docs/4-user-guide/1-the-zarf-cli/100-cli-commands"); err != nil {
+		if err := os.RemoveAll("./docs/2-the-zarf-cli/100-cli-commands"); err != nil {
 			message.Fatalf("Unable to generate the CLI documentation: %s", err.Error())
 		}
-		if err := os.Mkdir("./docs/4-user-guide/1-the-zarf-cli/100-cli-commands", 0775); err != nil {
+		if err := os.Mkdir("./docs/2-the-zarf-cli/100-cli-commands", 0775); err != nil {
 			message.Fatalf("Unable to generate the CLI documentation: %s", err.Error())
 		}
-		if err := doc.GenMarkdownTree(rootCmd, "./docs/4-user-guide/1-the-zarf-cli/100-cli-commands"); err != nil {
+		if err := doc.GenMarkdownTree(rootCmd, "./docs/2-the-zarf-cli/100-cli-commands"); err != nil {
 			message.Fatalf("Unable to generate the CLI documentation: %s", err.Error())
 		} else {
 			message.Successf(lang.CmdInternalGenerateCliDocsSuccess)
