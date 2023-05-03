@@ -110,11 +110,7 @@ func (p *Packager) GetPackageName() string {
 
 	packageFileName := fmt.Sprintf("%s%s-%s", config.ZarfPackagePrefix, packageName, p.arch)
 	if p.cfg.Pkg.Build.Differential {
-		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == "" {
-			packageFileName = fmt.Sprintf("%s-differential-%s", packageFileName, p.cfg.Pkg.Metadata.Version)
-		} else {
-			packageFileName = fmt.Sprintf("%s-%s-differential-%s", packageFileName, p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion, p.cfg.Pkg.Metadata.Version)
-		}
+		packageFileName = fmt.Sprintf("%s-%s-differential-%s", packageFileName, p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion, p.cfg.Pkg.Metadata.Version)
 	} else if p.cfg.Pkg.Metadata.Version != "" {
 		packageFileName = fmt.Sprintf("%s-%s", packageFileName, p.cfg.Pkg.Metadata.Version)
 	}

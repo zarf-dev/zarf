@@ -76,6 +76,9 @@ func (p *Packager) Create(baseDir string) error {
 		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == p.cfg.Pkg.Metadata.Version {
 			return errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
+		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == "" || p.cfg.Pkg.Metadata.Version == "" {
+			fmt.Errorf("unable to build differential package when either the differential package version or the referenced package version is not set")
+		}
 
 		// Handle any potential differential images/repos before going forward
 		if err := p.removeCopiesFromDifferentialPackage(); err != nil {
@@ -532,7 +535,7 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if utils.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		if err := p.pullPackageSpecLayer(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, tmpDir); err != nil {
+		if err := p.pullPackageLayers(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, tmpDir, []string{config.ZarfYAML}); err != nil {
 			return fmt.Errorf("unable to pull the differential zarf package spec: %s", err.Error())
 		}
 	} else {
@@ -546,7 +549,7 @@ func (p *Packager) loadDifferentialData() error {
 		return fmt.Errorf("unable to load the differential zarf package spec: %s", err.Error())
 	}
 
-	// Generate a list of all the images and repos that are included in the provided package
+	// Generate a map of all the images and repos that are included in the provided package
 	allIncludedImagesMap := map[string]bool{}
 	allIncludedReposMap := map[string]bool{}
 	for _, component := range differentialZarfConfig.Components {

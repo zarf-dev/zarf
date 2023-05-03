@@ -55,7 +55,7 @@ func (p *Packager) Pull() error {
 }
 
 // pullPackageSpecLayer pulls the `zarf.yaml` and `zarf.yaml.sig` (if it exists) layers from the published package
-func (p *Packager) pullPackageSpecLayer(packagePath string, targetDir string) error {
+func (p *Packager) pullPackageLayers(packagePath string, targetDir string, layersToPull []string) error {
 	ref, err := registry.ParseReference(strings.TrimPrefix(packagePath, "oci://"))
 	if err != nil {
 		return err
@@ -71,22 +71,17 @@ func (p *Packager) pullPackageSpecLayer(packagePath string, targetDir string) er
 	if err != nil {
 		return err
 	}
-	zarfYamlDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
-		return d.Annotations["org.opencontainers.image.title"] == config.ZarfYAML
-	})
-	if err := pullLayer(dst, zarfYamlDesc, filepath.Join(targetDir, config.ZarfYAML)); err != nil {
-		return fmt.Errorf("unable to pull the zarf.yaml: %s", err.Error())
-	}
 
-	// pull the signature if it exists
-	sigTarDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
-		return d.Annotations["org.opencontainers.image.title"] == "zarf.yaml.sig"
-	})
-	if len(sigTarDesc.URLs) > 0 {
-		if err := pullLayer(dst, sigTarDesc, filepath.Join(targetDir, "zarf.yaml.sig")); err != nil {
-			return fmt.Errorf("unable to pull the zarf.yaml.sig: %s", err.Error())
+	for _, layerToPull := range layersToPull {
+		layerDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
+			return d.Annotations["org.opencontainers.image.title"] == layerToPull
+		})
+		if len(layerDesc.Digest) == 0 {
+			return fmt.Errorf("unable to find layer (%s) from the OCI package %s", layerToPull, packagePath)
+		}
+		if err := pullLayer(dst, layerDesc, filepath.Join(targetDir, layerToPull)); err != nil {
+			return fmt.Errorf("unable to pull the layer (%s) from the OCI package %s", layerToPull, packagePath)
 		}
 	}
-
 	return nil
 }
