@@ -56,7 +56,10 @@ iterator:
 	// The eternal loop because some data injections can take a very long time
 	for {
 		message.Debugf("Attempting to inject data into %s", data.Target)
-		source := filepath.Join(componentPath.DataInjections, strconv.Itoa(index))
+		source := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
+		if utils.InvalidPath(source) {
+			source = filepath.Join(componentPath.DataInjections, strconv.Itoa(index))
+		}
 
 		target := k8s.PodLookup{
 			Namespace: data.Target.Namespace,
