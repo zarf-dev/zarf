@@ -38,7 +38,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: ./.github/actions/checkout
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - name: Setup golang
         uses: ./.github/actions/golang

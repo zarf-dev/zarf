@@ -1,5 +1,5 @@
-name: setup-go
-description: "Setup Go binary and caching"
+name: aws-nightly-creds
+description: "Login to AWS for the nightly jobs"
 
 runs:
   using: composite
