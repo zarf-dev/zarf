@@ -21,22 +21,22 @@ func TestCreateDifferential(t *testing.T) {
 	tmpPath, _ := utils.MakeTempDir("")
 
 	packagePath := "src/test/test-packages/08-differential-package"
-	packageName := "zarf-package-differential-package-amd64-v0.0.1.tar.zst"
-	differentialPackageName := "zarf-package-differential-package-amd64-v0.0.1-differential-v0.0.2.tar.zst"
+	packageName := "zarf-package-differential-package-amd64-v0.25.0.tar.zst"
+	differentialPackageName := "zarf-package-differential-package-amd64-v0.25.0-differential-v0.26.0.tar.zst"
 	differentialFlag := fmt.Sprintf("--differential=%s", packageName)
 
 	// Build the package a first time
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.0.1", "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.25.0", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(packageName)
 
 	// Build the differential package without changing the version
-	_, stdErr, err = e2e.ExecZarfCommand("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.0.1", differentialFlag, "--confirm")
+	_, stdErr, err = e2e.ExecZarfCommand("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.25.0", differentialFlag, "--confirm")
 	require.Error(t, err, "zarf package create should have errored when a differential package was being created without updating the package version number")
 	require.Contains(t, stdErr, "unable to create a differential package with the same version")
 
 	// Build the differential package
-	_, stdErr, err = e2e.ExecZarfCommand("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.0.2", differentialFlag, "--confirm")
+	_, stdErr, err = e2e.ExecZarfCommand("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.26.0", differentialFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(differentialPackageName)
 
@@ -62,15 +62,19 @@ func TestCreateDifferential(t *testing.T) {
 		"https://github.com/stefanprodan/podinfo.git",
 		"https://github.com/kelseyhightower/nocode.git",
 		"https://github.com/DoD-Platform-One/big-bang.git@refs/heads/release-1.54.x",
+		"https://github.com/defenseunicorns/zarf.git@refs/tags/v0.26.0",
 	}
-	require.Len(t, actualGitRepos, 3, "zarf.yaml from the differential package does not contain the correct number of repos")
+	require.Len(t, actualGitRepos, 4, "zarf.yaml from the differential package does not contain the correct number of repos")
 	for _, expectedRepo := range expectedGitRepos {
 		require.Contains(t, actualGitRepos, expectedRepo, fmt.Sprintf("unable to find expected repo %s", expectedRepo))
 	}
 
 	/* Validate we have ONLY the images we expect to have */
-	expectedImages := []string{"ghcr.io/stefanprodan/podinfo:latest"}
-	require.Len(t, actualImages, 1, "zarf.yaml from the differential package does not contain the correct number of images")
+	expectedImages := []string{
+		"ghcr.io/stefanprodan/podinfo:latest",
+		"ghcr.io/defenseunicorns/zarf/agent:v0.26.0",
+	}
+	require.Len(t, actualImages, 2, "zarf.yaml from the differential package does not contain the correct number of images")
 	for _, expectedImage := range expectedImages {
 		require.Contains(t, actualImages, expectedImage, fmt.Sprintf("unable to find expected image %s", expectedImage))
 	}
