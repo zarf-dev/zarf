@@ -11,6 +11,9 @@ on:
       - "docs/**"
       - "CODEOWNERS"
 
+permissions:
+  contents: read
+
 # Abort prior jobs in the same workflow / PR
 concurrency:
   group: e2e-ui-${{ github.ref }}
