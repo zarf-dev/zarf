@@ -15,14 +15,17 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// PackageTunnel is a struct for storing a tunnel and its connection details
 type PackageTunnel struct {
 	tunnel     *cluster.Tunnel
 	Connection types.APIDeployedPackageConnection `json:"connection,omitempty"`
 }
-type PackageTunnels map[string]map[string]PackageTunnel
+
+// packageTunnels is a map of package names to PackageTunnel objects
+type packageTunnels map[string]map[string]PackageTunnel
 
 // tunnels is a map of package names to tunnel objects used for storing connected tunnels
-var tunnels = make(PackageTunnels)
+var tunnels = make(packageTunnels)
 
 // ListConnections returns a map of pkgName to a list of connections
 func ListConnections(w http.ResponseWriter, _ *http.Request) {
