@@ -495,10 +495,16 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
+			if !utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+				continue
+			}
 			manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
 		}
 		// Move kustomizations to files now
-		manifest.Files = append(manifest.Files, manifest.Kustomizations...)
+		for idx := range manifest.Kustomizations {
+			kustomization := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+			manifest.Files = append(manifest.Files, kustomization)
+		}
 
 		if manifest.Namespace == "" {
 			// Helm gets sad when you don't provide a namespace even though we aren't using helm templating

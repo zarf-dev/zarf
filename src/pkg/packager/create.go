@@ -399,8 +399,6 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 					if err := utils.DownloadToFile(f, destination, component.CosignKeyPath); err != nil {
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
-					// Update the manifest path to the new location.
-					manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
 				} else {
 					if err := utils.CreatePathAndCopy(f, destination); err != nil {
 						return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
@@ -416,7 +414,6 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return nil, fmt.Errorf("unable to build kustomization %s: %w", k, err)
 				}
-				manifest.Kustomizations[idx] = kname
 			}
 		}
 	}
