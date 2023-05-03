@@ -466,7 +466,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			// Pull all the references if there is no `@` in the string.
 			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
 			if err := gitCfg.Pull(url, componentPath.Repos); err != nil {
-				return nil, fmt.Errorf("unable to pull git repoURL %s: %w", url, err)
+				return nil, fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
 	}
@@ -522,10 +522,17 @@ func (p *Packager) loadDifferentialData() error {
 	defer os.RemoveAll(tmpDir)
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
-	var differentialZarfConfig types.ZarfPackage
-	if err := archiver.Extract(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, config.ZarfYAML, tmpDir); err != nil {
-		return fmt.Errorf("unable to extract the differential zarf package spec: %s", err.Error())
+	if utils.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
+		if err := p.pullPackageSpecLayer(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, tmpDir); err != nil {
+			return fmt.Errorf("unable to pull the differential zarf package spec: %s", err.Error())
+		}
+	} else {
+		if err := archiver.Extract(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, config.ZarfYAML, tmpDir); err != nil {
+			return fmt.Errorf("unable to extract the differential zarf package spec: %s", err.Error())
+		}
 	}
+
+	var differentialZarfConfig types.ZarfPackage
 	if err := utils.ReadYaml(filepath.Join(tmpDir, config.ZarfYAML), &differentialZarfConfig); err != nil {
 		return fmt.Errorf("unable to load the differential zarf package spec: %s", err.Error())
 	}
@@ -555,9 +562,9 @@ func (p *Packager) loadDifferentialData() error {
 	return nil
 }
 
-// handleDifferentialThings will remove any images and repos that are already included in the reference package from the new package
+// removeCopiesFromDifferentialPackage will remove any images and repos that are already included in the reference package from the new package
 func (p *Packager) removeCopiesFromDifferentialPackage() error {
-	// If a differential build was not request, continue on as normal
+	// If a differential build was not requested, continue on as normal
 	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath == "" {
 		return nil
 	}
@@ -600,7 +607,7 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 				ref = git.ParseRef(refPlain)
 			}
 
-			// Only include new repos or repos that were not refferenced by a specific commit sha or tag
+			// Only include new repos or repos that were not referenced by a specific commit sha or tag
 			useRepoAnyways := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
 			if useRepoAnyways || !p.cfg.CreateOpts.DifferentialData.DifferentialRepos[repoURL] {
 				newRepoList = append(newRepoList, repoURL)
@@ -609,7 +616,7 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 			}
 		}
 
-		// Update the component with the unique lists of repos and iam
+		// Update the component with the unique lists of repos and images
 		component.Images = newImageList
 		component.Repos = newRepoList
 		componentMap[idx] = component
