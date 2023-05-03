@@ -71,7 +71,7 @@
 		{#if !failedToDisconnect}
 			<Typography variant="body1" color="text-secondary-on-dark">
 				Select which resource you would like Zarf to disconnect from. Zarf will close and remove the
-				secure tunnel.
+				tunnel.
 			</Typography>
 			{#if connections.length > 0}
 				<List ssx={listSSX}>

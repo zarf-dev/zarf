@@ -79,8 +79,8 @@
 	<svelte:fragment>
 		{#if !failedToConnect}
 			<Typography variant="body1" color="text-secondary-on-dark">
-				Select which resource you would like Zarf to connect to. Zarf will create a secure tunnel
-				and open the connection in a new tab
+				Select which resource you would like Zarf to connect to. Zarf will create a tunnel and open
+				the connection in a new tab
 			</Typography>
 			<List ssx={listSSX}>
 				{#each connections as connection}
