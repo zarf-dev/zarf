@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - name: Setup golang
         uses: ./.github/actions/golang
@@ -40,12 +40,7 @@ jobs:
         uses: ./.github/actions/packages
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.AWS_NIGHTLY_ROLE }}
-          aws-region: us-east-1
-          role-duration-seconds: 14400
-
+        uses: ./.github/actions/aws-nightly-creds
 
       - name: Build the eks package
         run: ./build/zarf package create packages/distros/eks -o build --confirm
