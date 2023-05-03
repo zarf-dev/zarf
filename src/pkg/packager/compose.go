@@ -190,19 +190,19 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 
 	// Prefix composed component file paths.
 	for fileIdx, file := range child.Files {
-		child.Files[fileIdx].Source = p.getComposedFilePath(parent, child, file.Source)
+		child.Files[fileIdx].Source = p.getComposedFilePath(parent, file.Source)
 	}
 
 	// Prefix non-url composed component chart values files and localPath.
 	for chartIdx, chart := range child.Charts {
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
-			child.Charts[chartIdx].ValuesFiles[valuesIdx] = p.getComposedFilePath(parent, child, valuesFile)
+			child.Charts[chartIdx].ValuesFiles[valuesIdx] = p.getComposedFilePath(parent, valuesFile)
 		}
 		if child.Charts[chartIdx].LocalPath != "" {
 			// Check if the localPath is relative to the parent Zarf package
 			if _, err := os.Stat(child.Charts[chartIdx].LocalPath); os.IsNotExist(err) {
 				// Since the chart localPath is not relative to the parent Zarf package, get the relative path from the composed child
-				child.Charts[chartIdx].LocalPath = p.getComposedFilePath(parent, child, child.Charts[chartIdx].LocalPath)
+				child.Charts[chartIdx].LocalPath = p.getComposedFilePath(parent, child.Charts[chartIdx].LocalPath)
 			}
 		}
 	}
@@ -210,15 +210,15 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types
 	// Prefix non-url composed manifest files and kustomizations.
 	for manifestIdx, manifest := range child.Manifests {
 		for fileIdx, file := range manifest.Files {
-			child.Manifests[manifestIdx].Files[fileIdx] = p.getComposedFilePath(parent, child, file)
+			child.Manifests[manifestIdx].Files[fileIdx] = p.getComposedFilePath(parent, file)
 		}
 		for kustomizeIdx, kustomization := range manifest.Kustomizations {
-			child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = p.getComposedFilePath(parent, child, kustomization)
+			child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = p.getComposedFilePath(parent, kustomization)
 		}
 	}
 
 	if child.CosignKeyPath != "" {
-		child.CosignKeyPath = p.getComposedFilePath(parent, child, child.CosignKeyPath)
+		child.CosignKeyPath = p.getComposedFilePath(parent, child.CosignKeyPath)
 	}
 
 	return child
@@ -322,8 +322,8 @@ func (p *Packager) getSubPackage(packagePath string) (importedPackage types.Zarf
 }
 
 // Prefix file path with importPath if original file path is not a url.
-func (p *Packager) getComposedFilePath(parent types.ZarfComponent, child types.ZarfComponent, path string) string {
-	message.Debugf("packager.getComposedFilePath(%s, %s)", path, parent.Import.Path)
+func (p *Packager) getComposedFilePath(parent types.ZarfComponent, path string) string {
+	message.Debugf("packager.getComposedFilePath(%s, %s)", parent.Import.Path, path)
 
 	// Return original if it is a remote file.
 	if utils.IsURL(path) {

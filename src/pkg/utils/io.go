@@ -316,21 +316,6 @@ func IsDir(path string) bool {
 	return info.IsDir()
 }
 
-// DirHasFile returns true if the given path is within the given directory.
-func DirHasFile(dir string, path string) bool {
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return false
-	}
-
-	absDir, err := filepath.Abs(dir)
-	if err != nil {
-		return false
-	}
-
-	return strings.HasPrefix(absPath, absDir)
-}
-
 // GetSHA256OfFile returns the SHA256 hash of the provided file.
 func GetSHA256OfFile(filePath string) (string, error) {
 	file, err := os.Open(filePath)
