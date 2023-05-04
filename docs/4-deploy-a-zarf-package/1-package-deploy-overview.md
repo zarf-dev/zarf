@@ -2,7 +2,7 @@
 
 Zarf Packages are designed to be easily deployable on a variety of systems, including air-gapped systems. All of the necessary dependencies are included within the package, eliminating the need for outbound internet connectivity. When deploying the package onto a cluster, the dependencies contained in each component are automatically pushed into a Docker registry and/or Git server created by or known to Zarf on the air-gapped system.
 
-Once the Zarf package has arrived in your target environment, run the `zarf package deploy` command to deploy the package onto your [Zarf initialized](../3-create-a-zarf-package/3-the-zarf-init-package.md) cluster. This command deploys the package's capabilities into the target environment, including all external resources required for the package. The `zarf.yaml` file included in the package will be used to orchestrate the deployment of the application according to the instructions provided.
+Once the Zarf package has arrived in your target environment, run the `zarf package deploy` command to deploy the package onto your [Zarf initialized](../3-create-a-zarf-package/3-zarf-init-package.md) cluster. This command deploys the package's capabilities into the target environment, including all external resources required for the package. The `zarf.yaml` file included in the package will be used to orchestrate the deployment of the application according to the instructions provided.
 
 :::tip
 
@@ -20,7 +20,7 @@ Zarf provides a few options that can provide control over how a deployment of a 
 
 ## Additional Deployment-modes
 
-Zarf normally expects to operate against a Kubernetes cluster that has been [Zarf initialized](../3-create-a-zarf-package/3-the-zarf-init-package.md), but there are additional modes that can be configured by package creators including:
+Zarf normally expects to operate against a Kubernetes cluster that has been [Zarf initialized](../3-create-a-zarf-package/3-zarf-init-package.md), but there are additional modes that can be configured by package creators including:
 
 - **YOLO Mode** - Yaml-OnLy Online mode allows for a faster deployment without requiring the `zarf init` command to be run beforehand. It can be useful for testing or for environments that manage their own registries and Git servers completely outside of Zarf.  Given this mode does not use the [Zarf Agent](../8-faq.md#what-is-the-zarf-agent) any resources specified will need to be manually modified for the environment.
 
