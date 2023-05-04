@@ -30,7 +30,8 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: if [[ $(arch) != "x86_64" ]]; then echo \"I failed\" && exit 1; fi
+          - cmd: if [ "$(arch)" != "x86_64" ]; then echo "this package architecture is amd64, but the target cluster has the arm64 architecture. These architectures must be the same" && exit 1; fi
+            description: Check that the host architecture matches the package architecture
             maxRetries: 0
 
   # ARM-64 version of the K3s stack
@@ -59,5 +60,6 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: if [[ $(arch) != "arm64" ]]; then echo \"I failed\" && exit 1; fi
+          - cmd: if [ "$(arch)" != "arm64" ]; then echo "this package architecture is arm64, but the target cluster has the amd64 architecture. These architectures must be the same" && exit 1; fi
+            description: Check that the host architecture matches the package architecture
             maxRetries: 0
