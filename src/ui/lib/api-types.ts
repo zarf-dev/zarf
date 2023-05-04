@@ -860,10 +860,6 @@ export interface ZarfMetadata {
      */
     authors?: string;
     /**
-     * List of connection strings for the package
-     */
-    connectStrings?: { [key: string]: ConnectString };
-    /**
      * Additional information about this package
      */
     description?: string;
@@ -906,17 +902,6 @@ export interface ZarfMetadata {
      * existing VCS and container registries.
      */
     yolo?: boolean;
-}
-
-export interface ConnectString {
-    /**
-     * Descriptive text that explains what the resource you would be connecting to is used for
-     */
-    description: string;
-    /**
-     * URL path that gets appended to the k8s port-forward result
-     */
-    url: string;
 }
 
 export interface ZarfPackageVariable {
@@ -1073,8 +1058,20 @@ export interface GeneratedPKI {
     key:  string;
 }
 
+export interface ConnectString {
+    /**
+     * Descriptive text that explains what the resource you would be connecting to is used for
+     */
+    description: string;
+    /**
+     * URL path that gets appended to the k8s port-forward result
+     */
+    url: string;
+}
+
 export interface DeployedPackage {
     cliVersion:         string;
+    connectStrings?:    { [key: string]: ConnectString };
     data:               ZarfPackage;
     deployedComponents: DeployedComponent[];
     name:               string;
@@ -1548,7 +1545,6 @@ const typeMap: any = {
         { json: "aggregateChecksum", js: "aggregateChecksum", typ: u(undefined, "") },
         { json: "architecture", js: "architecture", typ: u(undefined, "") },
         { json: "authors", js: "authors", typ: u(undefined, "") },
-        { json: "connectStrings", js: "connectStrings", typ: u(undefined, m(r("ConnectString"))) },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "documentation", js: "documentation", typ: u(undefined, "") },
         { json: "image", js: "image", typ: u(undefined, "") },
@@ -1559,10 +1555,6 @@ const typeMap: any = {
         { json: "vendor", js: "vendor", typ: u(undefined, "") },
         { json: "version", js: "version", typ: u(undefined, "") },
         { json: "yolo", js: "yolo", typ: u(undefined, true) },
-    ], false),
-    "ConnectString": o([
-        { json: "description", js: "description", typ: "" },
-        { json: "url", js: "url", typ: "" },
     ], false),
     "ZarfPackageVariable": o([
         { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
@@ -1666,8 +1658,13 @@ const typeMap: any = {
         { json: "cert", js: "cert", typ: "" },
         { json: "key", js: "key", typ: "" },
     ], false),
+    "ConnectString": o([
+        { json: "description", js: "description", typ: "" },
+        { json: "url", js: "url", typ: "" },
+    ], false),
     "DeployedPackage": o([
         { json: "cliVersion", js: "cliVersion", typ: "" },
+        { json: "connectStrings", js: "connectStrings", typ: u(undefined, m(r("ConnectString"))) },
         { json: "data", js: "data", typ: r("ZarfPackage") },
         { json: "deployedComponents", js: "deployedComponents", typ: a(r("DeployedComponent")) },
         { json: "name", js: "name", typ: "" },

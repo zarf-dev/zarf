@@ -5,11 +5,11 @@
 <script lang="ts">
 	import { IconButton, List, Typography, type SSX } from '@ui';
 	import type { DeployedPackage } from '$lib/api-types';
+	import { onDestroy, onMount } from 'svelte/internal';
 	import ButtonDense from '../button-dense.svelte';
 	import ZarfDialog from '../zarf-dialog.svelte';
-	import { onDestroy, onMount } from 'svelte/internal';
-	import { Packages } from '$lib/api';
 	import { updateConnections } from '$lib/store';
+	import { Packages } from '$lib/api';
 
 	// Props
 	export let pkg: DeployedPackage;
@@ -20,7 +20,7 @@
 	let currentWindow: Window;
 	let selectedConnection = '';
 	let errMessage: string = '';
-	const connections: string[] = Object.keys(pkg.data.metadata?.connectStrings || {}) || [];
+	const connections: string[] = Object.keys(pkg.connectStrings || {}) || [];
 
 	const listSSX: SSX = {
 		$self: {
@@ -78,31 +78,37 @@
 <ZarfDialog bind:open bind:toggleDialog {titleText} happyZarf={!failedToConnect}>
 	<svelte:fragment>
 		{#if !failedToConnect}
-			<Typography variant="body1" color="text-secondary-on-dark">
-				Select which resource you would like Zarf to connect to. Zarf will create a tunnel and open
-				the connection in a new tab
-			</Typography>
-			<List ssx={listSSX}>
-				{#each connections as connection}
-					<Typography
-						variant="body1"
-						element="li"
-						value={connection}
-						on:click={() => (selectedConnection = connection)}
-					>
-						<IconButton
-							toggleable
-							toggled={selectedConnection === connection}
-							iconClass="material-symbols-outlined"
-							iconContent="radio_button_unchecked"
-							iconColor="primary"
-							toggledIconClass="material-symbols-outlined"
-							toggledIconContent="radio_button_checked"
-						/>
-						Zarf Connect {connection}
-					</Typography>
-				{/each}
-			</List>
+			{#if connections.length === 0}
+				<Typography variant="body1" color="text-secondary-on-dark">
+					No connections available for this package
+				</Typography>
+			{:else}
+				<Typography variant="body1" color="text-secondary-on-dark">
+					Select which resource you would like Zarf to connect to. Zarf will create a tunnel and
+					open the connection in a new tab
+				</Typography>
+				<List ssx={listSSX}>
+					{#each connections as connection}
+						<Typography
+							variant="body1"
+							element="li"
+							value={connection}
+							on:click={() => (selectedConnection = connection)}
+						>
+							<IconButton
+								toggleable
+								toggled={selectedConnection === connection}
+								iconClass="material-symbols-outlined"
+								iconContent="radio_button_unchecked"
+								iconColor="primary"
+								toggledIconClass="material-symbols-outlined"
+								toggledIconContent="radio_button_checked"
+							/>
+							Zarf Connect {connection}
+						</Typography>
+					{/each}
+				</List>
+			{/if}
 		{:else}
 			<Typography variant="body1" color="text-secondary-on-dark">
 				{errMessage}
