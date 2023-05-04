@@ -4,13 +4,6 @@ metadata:
   description: Test nearly every type of import
   version: 0.0.1
 
-# This package showcases the following types of imports:
-# - files (local and via HTTP)
-# - charts (local and via OCI)
-# - images (via a registry)
-# - repos (via https:// or file://), git@ and ssh:// are also supported but not shown here
-# - components (local and via OCI)
-
 components:
   - name: import-component-local
     required: false
@@ -29,7 +22,7 @@ components:
     import:
       # name is optional, if not provided the name of the component will be used to import
       name: demo-helm-local-chart
-      url: oci://localhost:555/test-helm-local-chart:0.0.1
+      url: oci://localhost:555/test-helm-local-chart:0.0.1-skeleton
     actions:
       onDeploy:
         after:
@@ -121,22 +114,3 @@ components:
     images:
       - nginx:1.16.0
       - ghcr.io/stefanprodan/podinfo:6.3.3
-
-  # - name: import-data-injections
-  #   required: false
-  #   manifests:
-  #     - name: import-data-injections
-  #       namespace: import-data-injections
-  #       files:
-  #         - manifests/data-injection.yaml
-  #   dataInjections:
-  #     # Injection in the root directory using data-loader init container
-  #     - source: files
-  #       target:
-  #         namespace: import-data-injections
-  #         selector: app=data-injection
-  #         container: data-loader
-  #         path: /test
-  #       compress: true
-  #   images:
-  #     - alpine:3.15

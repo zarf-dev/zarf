@@ -63,34 +63,6 @@ type ZarfComponent struct {
 	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
 }
 
-// LocalPaths returns a list of local paths for this component
-//
-// Git repos are not checked for local paths, as they are not local and
-// the file:// protocol is not supported in skeleton packages but is supported for
-// local testing.
-//
-// ex. local paths: ["./foo", "/bar", "../baz"]
-// ex. remote paths: ["https://example.com/foo", "oci://baz"]
-func (c ZarfComponent) LocalPaths() []string {
-	local := []string{}
-
-	for _, file := range c.Files {
-		local = append(local, file.LocalPaths()...)
-	}
-
-	for _, chart := range c.Charts {
-		local = append(local, chart.LocalPaths()...)
-	}
-
-	for _, manifest := range c.Manifests {
-		local = append(local, manifest.LocalPaths()...)
-	}
-
-	local = append(local, c.Extensions.LocalPaths()...)
-
-	return local
-}
-
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
 type ZarfComponentOnlyTarget struct {
 	LocalOS string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
@@ -112,14 +84,6 @@ type ZarfFile struct {
 	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
 }
 
-// LocalPaths returns a list of local paths for this file
-func (zf ZarfFile) LocalPaths() []string {
-	if isLocal(zf.Source) {
-		return []string{zf.Source}
-	}
-	return nil
-}
-
 // ZarfChart defines a helm chart to be deployed.
 type ZarfChart struct {
 	Name        string   `json:"name" jsonschema:"description=The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo"`
@@ -133,20 +97,6 @@ type ZarfChart struct {
 	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
 }
 
-// LocalPaths returns a list of local paths for this chart
-func (zc ZarfChart) LocalPaths() []string {
-	local := []string{}
-	if isLocal(zc.LocalPath) {
-		local = append(local, zc.LocalPath)
-	}
-	for _, file := range zc.ValuesFiles {
-		if isLocal(file) {
-			local = append(local, file)
-		}
-	}
-	return local
-}
-
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
 type ZarfManifest struct {
 	Name                       string   `json:"name" jsonschema:"description=A name to give this collection of manifests; this will become the name of the dynamically-created helm chart"`
@@ -155,22 +105,6 @@ type ZarfManifest struct {
 	KustomizeAllowAnyDirectory bool     `json:"kustomizeAllowAnyDirectory,omitempty" jsonschema:"description=Allow traversing directory above the current directory if needed for kustomization"`
 	Kustomizations             []string `json:"kustomizations,omitempty" jsonschema:"description=List of local kustomization paths or remote URLs to include in the package"`
 	NoWait                     bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for manifest resources to be ready before continuing"`
-}
-
-// LocalPaths returns a list of local paths for this manifest
-func (zm ZarfManifest) LocalPaths() []string {
-	local := []string{}
-	for _, file := range zm.Files {
-		if isLocal(file) {
-			local = append(local, file)
-		}
-	}
-	for _, kustomization := range zm.Kustomizations {
-		if isLocal(kustomization) {
-			local = append(local, kustomization)
-		}
-	}
-	return local
 }
 
 // DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed
@@ -272,14 +206,6 @@ type ZarfDataInjection struct {
 	Source   string              `json:"source" jsonschema:"description=Either a path to a local folder/file or a remote URL of a file to inject into the given target pod + container"`
 	Target   ZarfContainerTarget `json:"target" jsonschema:"description=The target pod + container to inject the data into"`
 	Compress bool                `json:"compress,omitempty" jsonschema:"description=Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."`
-}
-
-// LocalPaths returns the local paths for the data injection
-func (zdi ZarfDataInjection) LocalPaths() []string {
-	if isLocal(zdi.Source) {
-		return []string{zdi.Source}
-	}
-	return nil
 }
 
 // ZarfComponentImport structure for including imported Zarf components.

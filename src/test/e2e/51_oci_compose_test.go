@@ -38,10 +38,6 @@ func (suite *SkeletonSuite) SetupSuite() {
 	suite.NoError(err)
 	suite.DirExists(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 
-	err = exec.CmdWithPrint("cp", filepath.Join("examples", "data-injection", "manifest.yaml"), filepath.Join("src", "test", "test-packages", "51-import-everything", "manifests", "data-injection.yaml"))
-	suite.NoError(err)
-	suite.FileExists(filepath.Join("src", "test", "test-packages", "51-import-everything", "manifests", "data-injection.yaml"))
-
 	err = exec.CmdWithPrint("cp", "-r", importEverything, everythingExternal)
 	suite.NoError(err)
 	suite.DirExists(everythingExternal)
@@ -82,8 +78,6 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	err = exec.CmdWithPrint("rm", "-rf", filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
 	err = exec.CmdWithPrint("rm", "-rf", "files")
-	suite.NoError(err)
-	err = exec.CmdWithPrint("rm", "-rf", filepath.Join("src", "test", "test-packages", "51-import-everything", "manifests", "data-injection.yaml"))
 	suite.NoError(err)
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
@@ -161,11 +155,6 @@ func (suite *SkeletonSuite) Test_9_Deploy_And_Remove_File_Imports() {
 	err := deployAndRemove("file-imports")
 	suite.NoError(err)
 }
-
-// func (suite *SkeletonSuite) Test_9_Deploy_And_Remove_Import_Component_Data_Injections() {
-// 	err := deployAndRemove("import-data-injections")
-// 	suite.NoError(err)
-// }
 
 func TestSkeletonSuite(t *testing.T) {
 	e2e.SetupWithCluster(t)

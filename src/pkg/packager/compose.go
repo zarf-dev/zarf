@@ -87,7 +87,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	var cachePath string
 	if parent.Import.URL != "" {
-		skelURL := strings.TrimPrefix(parent.Import.URL+"-skeleton", "oci://")
+		skelURL := strings.TrimPrefix(parent.Import.URL, "oci://")
 		cachePath = filepath.Join(config.GetAbsCachePath(), "oci", skelURL)
 		err = os.MkdirAll(cachePath, 0755)
 		if err != nil {

@@ -359,7 +359,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 		for idx, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-			dst := filepath.Join(tmp.DataInjections, strconv.Itoa(idx))
+			dst := filepath.Join(tmp.DataInjections, fmt.Sprintf("injection-%d", idx))
 			if utils.IsURL(data.Source) {
 				if err := utils.DownloadToFile(data.Source, dst, component.CosignKeyPath); err != nil {
 					return nil, fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())

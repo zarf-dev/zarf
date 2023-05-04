@@ -123,7 +123,7 @@ func (p *Packager) ClearTempPaths() {
 }
 
 func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
-	message.Debugf("packager.createComponentPaths(%s)", message.JSONValue(component))
+	message.Debugf("packager.createOrGetComponentPaths(%s)", message.JSONValue(component))
 
 	base := filepath.Join(p.tmp.Components, component.Name)
 

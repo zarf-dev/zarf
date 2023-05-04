@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -58,7 +57,7 @@ iterator:
 		message.Debugf("Attempting to inject data into %s", data.Target)
 		source := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
 		if utils.InvalidPath(source) {
-			source = filepath.Join(componentPath.DataInjections, strconv.Itoa(index))
+			source = filepath.Join(componentPath.DataInjections, fmt.Sprintf("injection-%d", index))
 		}
 
 		target := k8s.PodLookup{

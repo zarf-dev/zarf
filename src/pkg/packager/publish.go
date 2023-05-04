@@ -12,9 +12,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -180,10 +183,11 @@ func (p *Packager) publish(ref registry.Reference) error {
 			Name: fmt.Sprintf("import-%s", p.cfg.Pkg.Components[0].Name),
 			Import: types.ZarfComponentImport{
 				ComponentName: p.cfg.Pkg.Components[0].Name,
-				URL:           fmt.Sprintf("oci://%s", strings.TrimSuffix(ref.String(), "-skeleton")),
+				URL:           fmt.Sprintf("oci://%s", ref.String()),
 			},
 		})
 		utils.ColorPrintYAML(ex)
+		fmt.Println()
 	} else {
 		flags := ""
 		if config.CommonOptions.Insecure {
@@ -336,41 +340,102 @@ func (p *Packager) loadSkeleton() error {
 		return err
 	}
 
-	for _, component := range p.cfg.Pkg.Components {
-		local := component.LocalPaths()
-		message.Debugf("mutating local paths for %s: %v", component.Name, local)
-		local = utils.Unique(local)
+	for idx, component := range p.cfg.Pkg.Components {
 		tmp := filepath.Join(p.tmp.Components, component.Name)
-
-		err := os.MkdirAll(tmp, 0755)
-		if err != nil {
+		if err := os.Mkdir(tmp, 0600); err != nil {
 			return err
 		}
 
-		for _, path := range local {
-			if strings.HasPrefix(path, "file://") {
-				return fmt.Errorf("(%s) file:// paths are not supported in skeleton packages", path)
+		for chartIdx, chart := range component.Charts {
+			if chart.LocalPath != "" {
+				newName := fmt.Sprintf("%s-%d", chart.Name, idx)
+				err := utils.CreatePathAndCopy(chart.LocalPath, filepath.Join(tmp, newName))
+				if err != nil {
+					return err
+				}
+				p.cfg.Pkg.Components[idx].Charts[chartIdx].LocalPath = newName
 			}
-			if filepath.IsAbs(path) {
-				return fmt.Errorf("(%s) absolute paths are not supported in skeleton packages", path)
-			}
-			if utils.InvalidPath(filepath.Join(base, path)) {
-				return fmt.Errorf("unable to find path %s referenced in %s", path, component.Name)
+			for valuesIdx, path := range chart.ValuesFiles {
+				if utils.IsURL(path) {
+					continue
+				}
+				if err := validate.SkeletonPath(path); err != nil {
+					return err
+				}
+				newName := fmt.Sprintf("%s-%d.yaml", chart.Name, valuesIdx)
+				err := utils.CreatePathAndCopy(path, filepath.Join(tmp, newName))
+				if err != nil {
+					return err
+				}
+				p.cfg.Pkg.Components[idx].Charts[chartIdx].ValuesFiles[valuesIdx] = newName
 			}
 		}
-
-		for _, path := range local {
-			src := filepath.Join(base, path)
-			dst := filepath.Join(tmp, crcPath(path))
-			err = os.MkdirAll(filepath.Dir(dst), 0700)
+		for filesIdx, file := range component.Files {
+			path := file.Source
+			if utils.IsURL(path) {
+				continue
+			}
+			if err := validate.SkeletonPath(path); err != nil {
+				return err
+			}
+			newName := strconv.Itoa(filesIdx)
+			err := utils.CreatePathAndCopy(path, filepath.Join(tmp, newName))
 			if err != nil {
 				return err
 			}
-			if err := utils.CreatePathAndCopy(src, dst); err != nil {
+			p.cfg.Pkg.Components[idx].Files[filesIdx].Source = newName
+		}
+		for dataInjectionsIdx, dataInjection := range component.DataInjections {
+			path := dataInjection.Source
+			if utils.IsURL(path) {
+				continue
+			}
+			if err := validate.SkeletonPath(path); err != nil {
 				return err
 			}
+			newName := fmt.Sprintf("injection-%d", dataInjectionsIdx)
+			err := utils.CreatePathAndCopy(path, filepath.Join(tmp, newName))
+			if err != nil {
+				return err
+			}
+			p.cfg.Pkg.Components[idx].DataInjections[dataInjectionsIdx].Source = newName
 		}
-		if len(local) > 0 {
+		for manifestsIdx, manifest := range component.Manifests {
+			for fileIdx, path := range manifest.Files {
+				if utils.IsURL(path) {
+					continue
+				}
+				if err := validate.SkeletonPath(path); err != nil {
+					return err
+				}
+				newName := fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx)
+				err := utils.CreatePathAndCopy(path, filepath.Join(tmp, newName))
+				if err != nil {
+					return err
+				}
+				p.cfg.Pkg.Components[idx].Manifests[manifestsIdx].Files[fileIdx] = newName
+			}
+			for kustomizeIdx, path := range manifest.Kustomizations {
+				// kustomizations do not follow standard https:// URLs and can look like: github.com/org/repo?ref=main
+				// and can traverse directories outside of their own
+				// therefore we will have to pre-render them before copying them over
+
+				newName := fmt.Sprintf("kustomization-%s-%d", manifest.Name, kustomizeIdx)
+				if err := kustomize.Build(path, filepath.Join(tmp, newName), manifest.KustomizeAllowAnyDirectory); err != nil {
+					return err
+				}
+				p.cfg.Pkg.Components[idx].Manifests[manifestsIdx].Files = append(p.cfg.Pkg.Components[idx].Manifests[manifestsIdx].Files, newName)
+			}
+			// clear out kustomizations since they have been rendered and are now files
+			p.cfg.Pkg.Components[idx].Manifests[manifestsIdx].Kustomizations = nil
+		}
+
+		// if tmp is not empty, tar it up
+		tmpFiles, err := os.ReadDir(tmp)
+		if err != nil {
+			return err
+		}
+		if len(tmpFiles) > 0 {
 			tarPath := fmt.Sprintf("%s.tar", tmp)
 			err = archiver.Archive([]string{tmp + string(os.PathSeparator)}, tarPath)
 			if err != nil {
@@ -408,21 +473,20 @@ func (p *Packager) pack(ctx context.Context, artifactType string, descs []ocispe
 
 // ref returns a registry.Reference using metadata from the package's build config and the PublishOpts
 //
-// if skeleton is not empty, the architecture will be replaced with the skeleton string (e.g. "skeleton")
-func (p *Packager) ref(skeleton string) (registry.Reference, error) {
+// if suffix is not empty, the architecture will be replaced with the suffix string
+func (p *Packager) ref(suffix string) (registry.Reference, error) {
 	ver := p.cfg.Pkg.Metadata.Version
 	if len(ver) == 0 {
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
 	arch := p.cfg.Pkg.Build.Architecture
-	// changes package ref from "name:version-arch" to "name:version-skeleton"
-	if len(skeleton) > 0 {
-		arch = skeleton
+	if len(suffix) == 0 {
+		suffix = arch
 	}
 	ref := registry.Reference{
 		Registry:   p.cfg.PublishOpts.Reference.Registry,
 		Repository: fmt.Sprintf("%s/%s", p.cfg.PublishOpts.Reference.Repository, p.cfg.Pkg.Metadata.Name),
-		Reference:  fmt.Sprintf("%s-%s", ver, arch),
+		Reference:  fmt.Sprintf("%s-%s", ver, suffix),
 	}
 	if len(p.cfg.PublishOpts.Reference.Repository) == 0 {
 		ref.Repository = p.cfg.Pkg.Metadata.Name
