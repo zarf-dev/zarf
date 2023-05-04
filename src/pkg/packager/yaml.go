@@ -69,6 +69,8 @@ func (p *Packager) writeYaml() error {
 		p.cfg.Pkg.Build.Terminal = hostname
 	}
 
+	p.cfg.Pkg.Build.Differential = p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != ""
+
 	// Record the migrations that will be run on the package.
 	p.cfg.Pkg.Build.Migrations = []string{
 		deprecated.ScriptsToActionsMigrated,
