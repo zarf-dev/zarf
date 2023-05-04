@@ -127,7 +127,7 @@ As previously mentioned, Zarf was specifically designed to facilitate the deploy
 
 <!-- TODO: Find a good place to talk about what the init command is actually doing (there's a lot of special magic sauce going on with that command) -->
 
-The `zarf init` command is utilized to configure a K8s cluster in preparation for the deployment of future Zarf Packages. The init command uses a specialized 'init-package' to operate. This package may be located in your current working directory, the directory where the Zarf CLI binary is located, or downloaded from GitHub releases during command execution. For further details regarding the init-package, please refer to the [init-package](../3-create-a-zarf-package/3-the-zarf-init-package.md) page.
+The `zarf init` command is utilized to configure a K8s cluster in preparation for the deployment of future Zarf Packages. The init command uses a specialized 'init-package' to operate. This package may be located in your current working directory, the directory where the Zarf CLI binary is located, or downloaded from GitHub releases during command execution. For further details regarding the init-package, please refer to the [init-package](../3-create-a-zarf-package/3-zarf-init-package.md) page.
 
 ### zarf package deploy
 
