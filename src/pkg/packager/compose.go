@@ -177,7 +177,10 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	}
 
 	// Fix the filePaths of imported components to be accessible from our current location.
-	child = p.fixComposedFilepaths(parent, child)
+	child, err = p.fixComposedFilepaths(parent, child)
+	if err != nil {
+		return child, fmt.Errorf("unable to fix composed filepaths: %s", err.Error())
+	}
 
 	// Migrate any deprecated component configurations now
 	child = deprecated.MigrateComponent(p.cfg.Pkg.Build, child)
@@ -185,43 +188,69 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	return
 }
 
-func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) types.ZarfComponent {
+func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) (types.ZarfComponent, error) {
 	message.Debugf("packager.fixComposedFilepaths(%+v, %+v)", child, parent)
 
-	// Prefix composed component file paths.
 	for fileIdx, file := range child.Files {
-		child.Files[fileIdx].Source = p.getComposedFilePath(parent.Import.Path, file.Source)
+		composed, err := p.getComposedFilePath(parent.Import.Path, file.Source)
+		if err != nil {
+			return child, err
+		}
+		child.Files[fileIdx].Source = composed
 	}
 
-	// Prefix non-url composed component chart values files and localPath.
 	for chartIdx, chart := range child.Charts {
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
-			child.Charts[chartIdx].ValuesFiles[valuesIdx] = p.getComposedFilePath(parent.Import.Path, valuesFile)
+			composed, err := p.getComposedFilePath(parent.Import.Path, valuesFile)
+			if err != nil {
+				return child, err
+			}
+			child.Charts[chartIdx].ValuesFiles[valuesIdx] = composed
 		}
 		if child.Charts[chartIdx].LocalPath != "" {
-			// Check if the localPath is relative to the parent Zarf package
-			if _, err := os.Stat(child.Charts[chartIdx].LocalPath); os.IsNotExist(err) {
-				// Since the chart localPath is not relative to the parent Zarf package, get the relative path from the composed child
-				child.Charts[chartIdx].LocalPath = p.getComposedFilePath(parent.Import.Path, child.Charts[chartIdx].LocalPath)
+			composed, err := p.getComposedFilePath(parent.Import.Path, child.Charts[chartIdx].LocalPath)
+			if err != nil {
+				return child, err
 			}
+			child.Charts[chartIdx].LocalPath = composed
 		}
 	}
 
-	// Prefix non-url composed manifest files and kustomizations.
 	for manifestIdx, manifest := range child.Manifests {
 		for fileIdx, file := range manifest.Files {
-			child.Manifests[manifestIdx].Files[fileIdx] = p.getComposedFilePath(parent.Import.Path, file)
+			composed, err := p.getComposedFilePath(parent.Import.Path, file)
+			if err != nil {
+				return child, err
+			}
+			child.Manifests[manifestIdx].Files[fileIdx] = composed
 		}
 		for kustomizeIdx, kustomization := range manifest.Kustomizations {
-			child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = p.getComposedFilePath(parent.Import.Path, kustomization)
+			// todo: this will break if kustomization if a url
+			composed, err := p.getComposedFilePath(parent.Import.Path, kustomization)
+			if err != nil {
+				return child, err
+			}
+			child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = composed
 		}
+	}
+
+	for dataInjectionsIdx, dataInjection := range child.DataInjections {
+		composed, err := p.getComposedFilePath(parent.Import.Path, dataInjection.Source)
+		if err != nil {
+			return child, err
+		}
+		child.DataInjections[dataInjectionsIdx].Source = composed
 	}
 
 	if child.CosignKeyPath != "" {
-		child.CosignKeyPath = p.getComposedFilePath(parent.Import.Path, child.CosignKeyPath)
+		composed, err := p.getComposedFilePath(parent.Import.Path, child.CosignKeyPath)
+		if err != nil {
+			return child, err
+		}
+		child.CosignKeyPath = composed
 	}
 
-	return child
+	return child, nil
 }
 
 // Sets Name, Default, Required and Description to the original components values.
@@ -322,14 +351,31 @@ func (p *Packager) getSubPackage(packagePath string) (importedPackage types.Zarf
 }
 
 // Prefix file path with importPath if original file path is not a url.
-func (p *Packager) getComposedFilePath(prefix string, path string) string {
+func (p *Packager) getComposedFilePath(prefix string, path string) (string, error) {
 	message.Debugf("packager.getComposedFilePath(%s, %s)", prefix, path)
 
 	// Return original if it is a remote file.
 	if utils.IsURL(path) {
-		return path
+		return path, nil
 	}
 
 	// Add prefix for local files.
-	return filepath.Join(prefix, path)
+	relativeToParent := filepath.Join(prefix, path)
+
+	abs, err := filepath.Abs(relativeToParent)
+	if err != nil {
+		return "", err
+	}
+	if utils.InvalidPath(abs) {
+		pathAbs, err := filepath.Abs(path)
+		if err != nil {
+			return "", err
+		}
+		if !utils.InvalidPath(pathAbs) {
+			return "", fmt.Errorf("imported path %s does not exist, please update %s to be relative to the imported component", relativeToParent, path)
+		}
+		return "", fmt.Errorf("imported path %s does not exist", relativeToParent)
+	}
+
+	return relativeToParent, nil
 }
