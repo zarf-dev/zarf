@@ -58,6 +58,7 @@ const (
 	V_PKG_CREATE_MAX_PACKAGE_SIZE     = "package.create.max_package_size"
 	V_PKG_CREATE_SIGNING_KEY          = "package.create.signing_key"
 	V_PKG_CREATE_SIGNING_KEY_PASSWORD = "package.create.signing_key_password"
+	V_PKG_CREATE_DIFFERENTIAL         = "package.create.differential"
 
 	// Package deploy config keys
 	V_PKG_DEPLOY_SET        = "package.deploy.set"

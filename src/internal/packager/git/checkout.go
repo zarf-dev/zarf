@@ -18,7 +18,7 @@ func (g *Git) CheckoutTag(tag string) error {
 	message.Debugf("git.CheckoutTag(%s)", tag)
 
 	options := &git.CheckoutOptions{
-		Branch: g.parseRef(tag),
+		Branch: ParseRef(tag),
 	}
 	return g.checkout(options)
 }
