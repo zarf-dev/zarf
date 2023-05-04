@@ -160,11 +160,8 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	// Check if we need to get more of children.
 	if child.Import.Path != "" {
-		// Set a temporary composePath so we can get future children/grandchildren from our current location.
-		tmpPathAncestry := filepath.Join(pathAncestry, parent.Import.Path)
-
 		// Recursively call this function to get the next layer of children.
-		grandchildComponent, err := p.getChildComponent(child, tmpPathAncestry)
+		grandchildComponent, err := p.getChildComponent(child, filepath.Join(pathAncestry, parent.Import.Path))
 		if err != nil {
 			return child, err
 		}
@@ -174,12 +171,12 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 		// Set the grandchild as the child component now that we're done with recursively importing.
 		child = grandchildComponent
-	}
-
-	// Fix the filePaths of imported components to be accessible from our current location.
-	child, err = p.fixComposedFilepaths(parent, child)
-	if err != nil {
-		return child, fmt.Errorf("unable to fix composed filepaths: %s", err.Error())
+	} else {
+		// Fix the filePaths of imported components to be accessible from our current location.
+		child, err = p.fixComposedFilepaths(filepath.Join(pathAncestry, parent.Import.Path), child)
+		if err != nil {
+			return child, fmt.Errorf("unable to fix composed filepaths: %s", err.Error())
+		}
 	}
 
 	// Migrate any deprecated component configurations now
@@ -188,11 +185,11 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	return
 }
 
-func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) (types.ZarfComponent, error) {
-	message.Debugf("packager.fixComposedFilepaths(%+v, %+v)", child, parent)
+func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfComponent) (types.ZarfComponent, error) {
+	message.Debugf("packager.fixComposedFilepaths(%+v, %+v)", pathAncestry, child)
 
 	for fileIdx, file := range child.Files {
-		composed, err := p.getComposedFilePath(parent.Import.Path, file.Source)
+		composed, err := p.getComposedFilePath(pathAncestry, file.Source)
 		if err != nil {
 			return child, err
 		}
@@ -201,14 +198,14 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) (type
 
 	for chartIdx, chart := range child.Charts {
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
-			composed, err := p.getComposedFilePath(parent.Import.Path, valuesFile)
+			composed, err := p.getComposedFilePath(pathAncestry, valuesFile)
 			if err != nil {
 				return child, err
 			}
 			child.Charts[chartIdx].ValuesFiles[valuesIdx] = composed
 		}
 		if child.Charts[chartIdx].LocalPath != "" {
-			composed, err := p.getComposedFilePath(parent.Import.Path, child.Charts[chartIdx].LocalPath)
+			composed, err := p.getComposedFilePath(pathAncestry, child.Charts[chartIdx].LocalPath)
 			if err != nil {
 				return child, err
 			}
@@ -218,7 +215,7 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) (type
 
 	for manifestIdx, manifest := range child.Manifests {
 		for fileIdx, file := range manifest.Files {
-			composed, err := p.getComposedFilePath(parent.Import.Path, file)
+			composed, err := p.getComposedFilePath(pathAncestry, file)
 			if err != nil {
 				return child, err
 			}
@@ -226,7 +223,7 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) (type
 		}
 		for kustomizeIdx, kustomization := range manifest.Kustomizations {
 			// todo: this will break if kustomization if a url
-			composed, err := p.getComposedFilePath(parent.Import.Path, kustomization)
+			composed, err := p.getComposedFilePath(pathAncestry, kustomization)
 			if err != nil {
 				return child, err
 			}
@@ -235,7 +232,7 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) (type
 	}
 
 	for dataInjectionsIdx, dataInjection := range child.DataInjections {
-		composed, err := p.getComposedFilePath(parent.Import.Path, dataInjection.Source)
+		composed, err := p.getComposedFilePath(pathAncestry, dataInjection.Source)
 		if err != nil {
 			return child, err
 		}
@@ -243,7 +240,7 @@ func (p *Packager) fixComposedFilepaths(parent, child types.ZarfComponent) (type
 	}
 
 	if child.CosignKeyPath != "" {
-		composed, err := p.getComposedFilePath(parent.Import.Path, child.CosignKeyPath)
+		composed, err := p.getComposedFilePath(pathAncestry, child.CosignKeyPath)
 		if err != nil {
 			return child, err
 		}
