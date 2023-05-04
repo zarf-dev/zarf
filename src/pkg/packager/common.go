@@ -548,8 +548,3 @@ func promptForSigPassword() ([]byte, error) {
 	// We are returning a nil error here because purposefully avoiding a password input is a valid use condition
 	return nil, nil
 }
-
-func crcPath(path string) string {
-	crc := fmt.Sprintf("%d", utils.GetCRCHash(path))
-	return filepath.Join(crc, filepath.Base(path))
-}

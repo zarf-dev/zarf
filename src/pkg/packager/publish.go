@@ -342,7 +342,7 @@ func (p *Packager) loadSkeleton() error {
 
 	for idx, component := range p.cfg.Pkg.Components {
 		tmp := filepath.Join(p.tmp.Components, component.Name)
-		if err := os.MkdirAll(tmp, 0600); err != nil {
+		if err := os.MkdirAll(tmp, 0700); err != nil {
 			return err
 		}
 
