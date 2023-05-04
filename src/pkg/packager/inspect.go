@@ -7,17 +7,13 @@ package packager
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pterm/pterm"
-	"oras.land/oras-go/v2/registry"
 )
 
 // Inspect list the contents of a package.
@@ -28,7 +24,17 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		// Download all the layers we need
 		pullSBOM := includeSBOM || outputSBOM != ""
 		pullZarfSig := inspectPublicKey != ""
-		if err := pullLayersForInspect(p.cfg.DeployOpts.PackagePath, p.tmp, pullSBOM, pullZarfSig); err != nil {
+
+		layersToPull := []string{config.ZarfYAML}
+		if pullSBOM {
+			layersToPull = append(layersToPull, "sboms.tar")
+		}
+		if pullZarfSig {
+			layersToPull = append(layersToPull, "zarf.yaml.sig")
+		}
+
+		message.Debugf("Pulling layers %v from %s", layersToPull, p.cfg.DeployOpts.PackagePath)
+		if err := p.pullPackageLayers(p.cfg.DeployOpts.PackagePath, p.tmp.Base, layersToPull); err != nil {
 			return fmt.Errorf("unable to pull layers for inspect: %w", err)
 		}
 		err := utils.ReadYaml(p.tmp.ZarfYaml, &p.cfg.Pkg)
@@ -89,59 +95,6 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	// Output the SBOM files into a directory if specified
 	if outputSBOM != "" {
 		if err := sbom.OutputSBOMFiles(p.tmp, outputSBOM, p.cfg.Pkg.Metadata.Name); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func pullLayersForInspect(packagePath string, tmpPath types.TempPaths, includeSBOM bool, includeSig bool) error {
-	spinner := message.NewProgressSpinner("Loading Zarf Package %s", packagePath)
-	ref, err := registry.ParseReference(strings.TrimPrefix(packagePath, "oci://"))
-	if err != nil {
-		return err
-	}
-
-	dst, err := utils.NewOrasRemote(ref)
-	if err != nil {
-		return err
-	}
-
-	// get the manifest
-	spinner.Updatef("Fetching the manifest for %s", packagePath)
-	layers, err := getLayers(dst)
-	if err != nil {
-		return err
-	}
-	spinner.Updatef("Loading Zarf Package %s", packagePath)
-	zarfYamlDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
-		return d.Annotations["org.opencontainers.image.title"] == "zarf.yaml"
-	})
-	err = pullLayer(dst, zarfYamlDesc, tmpPath.ZarfYaml)
-	if err != nil {
-		return err
-	}
-
-	if includeSBOM {
-		sbmomsTarDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
-			return d.Annotations["org.opencontainers.image.title"] == "sboms.tar"
-		})
-		err = pullLayer(dst, sbmomsTarDesc, tmpPath.SbomTar)
-		if err != nil {
-			return err
-		}
-		if err := archiver.Unarchive(tmpPath.SbomTar, filepath.Join(tmpPath.Base, "sboms")); err != nil {
-			return err
-		}
-	}
-
-	if includeSig {
-		sigTarDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
-			return d.Annotations["org.opencontainers.image.title"] == "zarf.yaml.sig"
-		})
-		err = pullLayer(dst, sigTarDesc, tmpPath.ZarfSig)
-		if err != nil {
 			return err
 		}
 	}

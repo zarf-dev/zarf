@@ -406,6 +406,24 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="build_differential"></a>differential *</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** Whether this package was created with differential components
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
