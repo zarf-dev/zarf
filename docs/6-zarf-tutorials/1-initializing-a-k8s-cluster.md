@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In this tutorial, we will demonstrate how to initialize Zarf onto a K8s cluster. This is done by running the [`zarf init`](../2-the-zarf-cli/100-cli-commands/zarf_init.md) command, which uses a specialized package called an 'init-package'. More information about this specific package can be found [here](../3-create-a-zarf-package/3-the-zarf-init-package.md).
+In this tutorial, we will demonstrate how to initialize Zarf onto a K8s cluster. This is done by running the [`zarf init`](../2-the-zarf-cli/100-cli-commands/zarf_init.md) command, which uses a specialized package called an 'init-package'. More information about this specific package can be found [here](../3-create-a-zarf-package/3-zarf-init-package.md).
 
 ## Prerequisites
 
@@ -26,7 +26,7 @@ $ zarf init
 3. Decline Optional Components
 
 :::info
-More information about the init-package and its components can be found [here](../3-create-a-zarf-package/3-the-zarf-init-package.md)
+More information about the init-package and its components can be found [here](../3-create-a-zarf-package/3-zarf-init-package.md)
 :::
 <iframe src="/docs/tutorials/zarf_init.html" height="800px" width="100%"></iframe>
 
