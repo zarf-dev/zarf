@@ -16,7 +16,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
         with:
           fetch-depth: 0
 
@@ -35,7 +35,7 @@ jobs:
           make build-cli-linux-arm
 
       - name: "Zarf Agent: Login to GHCR"
-        uses: docker/login-action@v2
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.1.0
         with:
           registry: ghcr.io
           username: dummy
@@ -78,7 +78,7 @@ jobs:
 
       # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
       - name: Set AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@023daa7fe5f7f817faa31fc0fc4a8d0fb6224ed0 # v1-node16
         with:
           aws-access-key-id: ${{ secrets.AWS_GOV_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
@@ -94,7 +94,7 @@ jobs:
 
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@f82d6c1c344bcacabba2c841718984797f664a6b # v4.2.0
         with:
           distribution: goreleaser
           version: latest
@@ -104,7 +104,7 @@ jobs:
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.ZARF_ORG_PROJECT_TOKEN }}
 
       - name: Save CVE report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: cve-report
           path: build/zarf-known-cves.csv

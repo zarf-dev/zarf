@@ -223,6 +223,10 @@ export interface ZarfBuildData {
      */
     architecture: string;
     /**
+     * Whether this package was created with differential components
+     */
+    differential: boolean;
+    /**
      * Any migrations that have been run on this package
      */
     migrations: string[];
@@ -1100,6 +1104,11 @@ export interface ZarfCommonOptions {
 
 export interface ZarfCreateOptions {
     /**
+     * A package's differential images and git repositories from a referenced previously built
+     * package
+     */
+    differential: DifferentialData;
+    /**
      * Size of chunks to use when splitting a zarf package into multiple files in megabytes
      */
     maxPackageSizeMB: number;
@@ -1132,6 +1141,17 @@ export interface ZarfCreateOptions {
      * Disable the generation of SBOM materials during package creation
      */
     skipSBOM: boolean;
+}
+
+/**
+ * A package's differential images and git repositories from a referenced previously built
+ * package
+ */
+export interface DifferentialData {
+    DifferentialImages:         { [key: string]: boolean };
+    DifferentialPackagePath:    string;
+    DifferentialPackageVersion: string;
+    DifferentialRepos:          { [key: string]: boolean };
 }
 
 // Converts JSON strings to/from your types
@@ -1370,6 +1390,7 @@ const typeMap: any = {
     ], false),
     "ZarfBuildData": o([
         { json: "architecture", js: "architecture", typ: "" },
+        { json: "differential", js: "differential", typ: true },
         { json: "migrations", js: "migrations", typ: a("") },
         { json: "terminal", js: "terminal", typ: "" },
         { json: "timestamp", js: "timestamp", typ: "" },
@@ -1667,6 +1688,7 @@ const typeMap: any = {
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
+        { json: "differential", js: "differential", typ: r("DifferentialData") },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
         { json: "sbom", js: "sbom", typ: true },
@@ -1675,6 +1697,12 @@ const typeMap: any = {
         { json: "signingKeyPassword", js: "signingKeyPassword", typ: "" },
         { json: "signingKeyPath", js: "signingKeyPath", typ: "" },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
+    ], false),
+    "DifferentialData": o([
+        { json: "DifferentialImages", js: "DifferentialImages", typ: m(true) },
+        { json: "DifferentialPackagePath", js: "DifferentialPackagePath", typ: "" },
+        { json: "DifferentialPackageVersion", js: "DifferentialPackageVersion", typ: "" },
+        { json: "DifferentialRepos", js: "DifferentialRepos", typ: m(true) },
     ], false),
     "Protocol": [
         "http",
