@@ -64,6 +64,10 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 		return &auth.Client{}, fmt.Errorf("unable to get credentials for %s: %w", key, err)
 	}
 
+	if authConf.ServerAddress != "" {
+		o.Context = withScopes(ref)
+	}
+
 	cred := auth.Credential{
 		Username:     authConf.Username,
 		Password:     authConf.Password,
@@ -91,7 +95,7 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 // NewOrasRemote returns an oras remote repository client and context for the given reference.
 func NewOrasRemote(ref registry.Reference) (*OrasRemote, error) {
 	o := &OrasRemote{}
-	o.Context = withScopes(ref)
+	o.Context = context.TODO()
 	// patch docker.io to registry-1.docker.io
 	// this allows end users to use docker.io as an alias for registry-1.docker.io
 	if ref.Registry == "docker.io" {
