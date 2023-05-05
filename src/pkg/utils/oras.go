@@ -35,7 +35,7 @@ func withScopes(ref registry.Reference) context.Context {
 	scopes := []string{
 		fmt.Sprintf("repository:%s:pull,push", ref.Repository),
 	}
-	return auth.WithScopes(context.Background(), scopes...)
+	return auth.WithScopes(context.TODO(), scopes...)
 }
 
 // withAuthClient returns an auth client for the given reference.
