@@ -76,7 +76,7 @@ func (p *Packager) Create(baseDir string) error {
 			return errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
 		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == "" || p.cfg.Pkg.Metadata.Version == "" {
-			fmt.Errorf("unable to build differential package when either the differential package version or the referenced package version is not set")
+			return fmt.Errorf("unable to build differential package when either the differential package version or the referenced package version is not set")
 		}
 
 		// Handle any potential differential images/repos before going forward
