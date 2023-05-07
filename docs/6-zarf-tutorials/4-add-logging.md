@@ -96,11 +96,9 @@ Submit that query and you'll get back a dump of all the game pod logs that Loki 
 
 ### Unable to connect to the Kubernetes cluster.
 
-#### Example
-
 <iframe src="/docs/tutorials/troubleshoot_unreachable.html" width="100%" height="200px"></iframe>
 
-#### Remediation
+:::info Remediation
 
 If you receive this error, either you don't have a Kubernetes cluster, your cluster is down, or your cluster is unreachable.
 
@@ -112,3 +110,5 @@ If you need to setup a cluster, you can perform the following.
 2. Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) tutorial.
 
 After that you can try deploying the package again.
+
+:::

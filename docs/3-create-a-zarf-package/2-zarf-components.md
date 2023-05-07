@@ -45,4 +45,4 @@ components:
 
 ## What Makes Up A Component
 
-Zarf components can contain different key/value pairs which you can learn more about here under the `components` section: [ZarfComponent Schema Docs](./5-zarf-schema.md#components)
+Zarf components can contain different key/value pairs which you can learn more about here under the `components` section: [ZarfComponent Schema Docs](./4-zarf-schema.md#components)
