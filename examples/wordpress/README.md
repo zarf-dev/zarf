@@ -8,7 +8,7 @@ To view the example source code, select the `Edit this page` link below the arti
 
 :::
 
-```
+```yaml
 kind: ZarfPackageConfig # ZarfPackageConfig is the package kind for most normal zarf packages
 metadata:
   name: wordpress       # specifies the name of our package and should be unique and unchanging through updates
