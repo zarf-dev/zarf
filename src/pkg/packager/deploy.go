@@ -343,7 +343,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values template.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
-	defer spinner.Success()
+	defer spinner.Stop()
 
 	state, err := p.cluster.LoadZarfState()
 	// Return on error if we are not in YOLO mode
@@ -390,6 +390,7 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 			p.arch, state.Architecture)
 	}
 
+	spinner.Success()
 	return values, nil
 }
 

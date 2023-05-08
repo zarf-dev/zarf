@@ -23,8 +23,6 @@ type SkeletonSuite struct {
 	Reference registry.Reference
 }
 
-// go test ./src/test/e2e/... -v -run TestSkeletonSuite -count=1 -failfast
-
 var (
 	importEverything   = filepath.Join("src", "test", "test-packages", "51-import-everything")
 	importception      = filepath.Join("src", "test", "test-packages", "51-import-everything", "inception")

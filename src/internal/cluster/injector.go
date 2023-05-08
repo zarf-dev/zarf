@@ -33,7 +33,7 @@ func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths, injectorSeedTa
 	message.Debugf("packager.runInjectionMadness(%#v)", tempPath)
 
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
-	defer spinner.Success()
+	defer spinner.Stop()
 
 	var err error
 	var images k8s.ImageNodeMap
@@ -102,6 +102,7 @@ func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths, injectorSeedTa
 
 		// if no error, try and wait for a seed image to be present, return if successful
 		if c.injectorIsReady(seedImages, spinner) {
+			spinner.Success()
 			return
 		}
 

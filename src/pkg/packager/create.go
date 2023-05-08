@@ -110,18 +110,22 @@ func (p *Packager) Create(baseDir string) error {
 
 	var combinedImageList []string
 	componentSBOMs := map[string]*types.ComponentSBOM{}
-	for _, component := range p.cfg.Pkg.Components {
-		componentSBOM, err := p.addComponent(component)
+	for idx, component := range p.cfg.Pkg.Components {
 		onCreate := component.Actions.OnCreate
 		onFailure := func() {
 			if err := p.runActions(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
-
+		err := p.addComponent(idx, component, "create")
 		if err != nil {
 			onFailure()
 			return fmt.Errorf("unable to add component: %w", err)
+		}
+		componentSBOM, err := p.getFilesToSBOM(component)
+		if err != nil {
+			onFailure()
+			return fmt.Errorf("unable to create component SBOM: %w", err)
 		}
 
 		if err := p.runActions(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
@@ -288,28 +292,50 @@ func (p *Packager) Create(baseDir string) error {
 	return nil
 }
 
-func (p *Packager) addComponent(component types.ZarfComponent) (*types.ComponentSBOM, error) {
-	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
-
-	tmp, err := p.createOrGetComponentPaths(component)
+func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.ComponentSBOM, error) {
+	componentPath, err := p.createOrGetComponentPaths(component)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create the component paths: %s", err.Error())
 	}
-
 	// Create an struct to hold the SBOM information for this component.
 	componentSBOM := types.ComponentSBOM{
 		Files:         []string{},
-		ComponentPath: tmp,
+		ComponentPath: componentPath,
+	}
+	for idx := range component.Files {
+		path := filepath.Join(componentPath.Files, strconv.Itoa(idx))
+		componentSBOM.Files = append(componentSBOM.Files, path)
+	}
+	for idx := range component.DataInjections {
+		path := filepath.Join(componentPath.DataInjections, fmt.Sprintf("injection-%d", idx))
+		// Unwrap the dataInjection dir into individual files.
+		pattern := regexp.MustCompile(`(?mi).+$`)
+		files, _ := utils.RecursiveFileList(path, pattern, false, true)
+		componentSBOM.Files = append(componentSBOM.Files, files...)
+	}
+	return &componentSBOM, nil
+}
+
+func (p *Packager) addComponent(index int, component types.ZarfComponent, operation string) error {
+	if operation != "create" && operation != "skeleton" {
+		return fmt.Errorf("unknown operation %s", operation)
+	}
+	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
+
+	componentPath, err := p.createOrGetComponentPaths(component)
+	if err != nil {
+		return fmt.Errorf("unable to create the component paths: %s", err.Error())
 	}
 
 	onCreate := component.Actions.OnCreate
-
-	if err := p.runActions(onCreate.Defaults, onCreate.Before, nil); err != nil {
-		return nil, fmt.Errorf("unable to run component before action: %w", err)
+	if operation == "create" {
+		if err := p.runActions(onCreate.Defaults, onCreate.Before, nil); err != nil {
+			return fmt.Errorf("unable to run component before action: %w", err)
+		}
 	}
 
 	// If any helm charts are defined, process them.
-	for _, chart := range component.Charts {
+	for chartIdx, chart := range component.Charts {
 		re := regexp.MustCompile(`\.git$`)
 		isGitURL := re.MatchString(chart.URL)
 		helmCfg := helm.Helm{
@@ -317,89 +343,114 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			Cfg:   p.cfg,
 		}
 
-		if isGitURL {
-			_, err = helmCfg.PackageChartFromGit(tmp.Charts)
+		if isGitURL && operation == "create" {
+			_, err = helmCfg.PackageChartFromGit(componentPath.Charts)
 			if err != nil {
-				return nil, fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
+				return fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
 			}
-		} else if len(chart.URL) > 0 {
-			helmCfg.DownloadPublishedChart(tmp.Charts)
+		} else if len(chart.URL) > 0 && operation == "create" {
+			helmCfg.DownloadPublishedChart(componentPath.Charts)
+		} else if operation == "skeleton" {
+			dst := filepath.Join(componentPath.Charts, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+			rel := strings.TrimPrefix(dst, componentPath.Base)
+			err := utils.CreatePathAndCopy(chart.LocalPath, dst)
+			if err != nil {
+				return err
+			}
+			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
 		} else {
-			path := helmCfg.PackageChartFromLocalFiles(tmp.Charts)
+			path := helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
 			zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
 			if !strings.HasSuffix(path, zarfFilename) {
-				return nil, fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
+				return fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
 			}
 		}
 
-		for idx, path := range chart.ValuesFiles {
-			dst := fmt.Sprintf("%s-%d", helm.StandardName(tmp.Values, chart), idx)
+		for valuesIdx, path := range chart.ValuesFiles {
+			dst := fmt.Sprintf("%s-%d", helm.StandardName(componentPath.Values, chart), valuesIdx)
 			if utils.IsURL(path) {
+				if operation == "skeleton" {
+					continue
+				}
 				if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
-					return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
+					return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 				}
 			} else {
 				if err := utils.CreatePathAndCopy(path, dst); err != nil {
-					return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+					return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+				}
+				if operation == "skeleton" {
+					rel := strings.TrimPrefix(dst, componentPath.Base)
+					p.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 				}
 			}
 		}
 	}
 
-	for index, file := range component.Files {
+	for filesIdx, file := range component.Files {
 		message.Debugf("Loading %#v", file)
-		dst := filepath.Join(tmp.Files, strconv.Itoa(index))
+		dst := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx))
 
 		if utils.IsURL(file.Source) {
+			if operation == "skeleton" {
+				continue
+			}
 			if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
-				return nil, fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+				return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 			}
 		} else {
 			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
-				return nil, fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+			}
+			if operation == "skeleton" {
+				rel := strings.TrimPrefix(dst, componentPath.Base)
+				p.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
 			}
 		}
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
 			if actualShasum, _ := utils.GetCryptoHash(dst, crypto.SHA256); actualShasum != file.Shasum {
-				return nil, fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
+				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 			}
 		}
 
-		info, _ := os.Stat(dst)
+		if operation == "create" {
+			info, _ := os.Stat(dst)
 
-		if file.Executable || info.IsDir() {
-			_ = os.Chmod(dst, 0700)
-		} else {
-			_ = os.Chmod(dst, 0600)
+			if file.Executable || info.IsDir() {
+				_ = os.Chmod(dst, 0700)
+			} else {
+				_ = os.Chmod(dst, 0600)
+			}
 		}
-
-		componentSBOM.Files = append(componentSBOM.Files, dst)
 	}
 
 	if len(component.DataInjections) > 0 {
 		spinner := message.NewProgressSpinner("Loading data injections")
-		defer spinner.Success()
+		defer spinner.Stop()
 
-		for idx, data := range component.DataInjections {
+		for dataIdx, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-			dst := filepath.Join(tmp.DataInjections, fmt.Sprintf("injection-%d", idx))
+			dst := filepath.Join(componentPath.DataInjections, fmt.Sprintf("injection-%d", dataIdx))
 			if utils.IsURL(data.Source) {
+				if operation == "skeleton" {
+					continue
+				}
 				if err := utils.DownloadToFile(data.Source, dst, component.CosignKeyPath); err != nil {
-					return nil, fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
+					return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
 				if err := utils.CreatePathAndCopy(data.Source, dst); err != nil {
-					return nil, fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
+					return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
+				}
+				if operation == "skeleton" {
+					rel := strings.TrimPrefix(dst, componentPath.Base)
+					p.cfg.Pkg.Components[index].DataInjections[dataIdx].Source = rel
 				}
 			}
-
-			// Unwrap the dataInjection dir into individual files.
-			pattern := regexp.MustCompile(`(?mi).+$`)
-			files, _ := utils.RecursiveFileList(dst, pattern, false, true)
-			componentSBOM.Files = append(componentSBOM.Files, files...)
 		}
+		spinner.Success()
 	}
 
 	if len(component.Manifests) > 0 {
@@ -412,56 +463,77 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		}
 
 		spinner := message.NewProgressSpinner("Loading %d K8s manifests", manifestCount)
-		defer spinner.Success()
+		defer spinner.Stop()
 
 		// Iterate over all manifests.
-		for _, manifest := range component.Manifests {
-			for idx, f := range manifest.Files {
-				destination := filepath.Join(tmp.Manifests, fmt.Sprintf("%s-%d.yaml", manifest.Name, idx))
+		for manifestIdx, manifest := range component.Manifests {
+			for fileIdx, path := range manifest.Files {
+				dst := filepath.Join(componentPath.Manifests, fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
 				// Copy manifests without any processing.
-				spinner.Updatef("Copying manifest %s", f)
-				if utils.IsURL(f) {
-					if err := utils.DownloadToFile(f, destination, component.CosignKeyPath); err != nil {
-						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
+				spinner.Updatef("Copying manifest %s", path)
+				if utils.IsURL(path) {
+					if operation == "skeleton" {
+						continue
+					}
+					if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 					}
 				} else {
-					if err := utils.CreatePathAndCopy(f, destination); err != nil {
-						return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
+					if err := utils.CreatePathAndCopy(path, dst); err != nil {
+						return fmt.Errorf("unable to copy manifest %s: %w", path, err)
+					}
+					if operation == "skeleton" {
+						rel := strings.TrimPrefix(dst, componentPath.Base)
+						p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files[fileIdx] = rel
 					}
 				}
 			}
 
-			for idx, k := range manifest.Kustomizations {
+			for kustomizeIdx, path := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
-				spinner.Updatef("Building kustomization for %s", k)
-				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-				destination := filepath.Join(tmp.Manifests, kname)
-				if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
-					return nil, fmt.Errorf("unable to build kustomization %s: %w", k, err)
+				spinner.Updatef("Building kustomization for %s", path)
+				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
+				dst := filepath.Join(componentPath.Manifests, kname)
+				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+					return fmt.Errorf("unable to build kustomization %s: %w", path, err)
+				}
+				if operation == "skeleton" {
+					rel := strings.TrimPrefix(dst, componentPath.Base)
+					p.cfg.Pkg.Components[index].Manifests[manifestIdx].Kustomizations[kustomizeIdx] = rel
 				}
 			}
+			if operation == "skeleton" {
+				// append kustomizations to manifests
+				p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files = append(p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files, p.cfg.Pkg.Components[index].Manifests[manifestIdx].Kustomizations...)
+				// remove kustomizations
+				p.cfg.Pkg.Components[index].Manifests[manifestIdx].Kustomizations = nil
+			}
 		}
+		spinner.Success()
 	}
 
 	// Load all specified git repos.
-	if len(component.Repos) > 0 {
+	if len(component.Repos) > 0 && operation == "create" {
 		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
-		defer spinner.Success()
+		defer spinner.Stop()
 
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
 			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
-			if err := gitCfg.Pull(url, tmp.Repos); err != nil {
-				return nil, fmt.Errorf("unable to pull git repo %s: %w", url, err)
+			if err := gitCfg.Pull(url, componentPath.Repos); err != nil {
+				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
+		}
+		spinner.Success()
+	}
+
+	if operation == "create" {
+		if err := p.runActions(onCreate.Defaults, onCreate.After, nil); err != nil {
+			return fmt.Errorf("unable to run component after action: %w", err)
 		}
 	}
 
-	if err := p.runActions(onCreate.Defaults, onCreate.After, nil); err != nil {
-		return nil, fmt.Errorf("unable to run component after action: %w", err)
-	}
-
-	return &componentSBOM, nil
+	return nil
 }
 
 // generateChecksum walks through all of the files starting at the base path and generates a checksum file.

@@ -12,12 +12,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
-	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -332,7 +329,7 @@ func (p *Packager) loadSkeleton() error {
 		return err
 	}
 	if err := p.readYaml(config.ZarfYAML, false); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", base, err)
+		return fmt.Errorf("unable to read the zarf.yaml in %s: %s", base, err.Error())
 	}
 
 	err = p.composeComponents()
@@ -341,108 +338,25 @@ func (p *Packager) loadSkeleton() error {
 	}
 
 	for idx, component := range p.cfg.Pkg.Components {
-		tmp := filepath.Join(p.tmp.Components, component.Name)
-		if err := os.MkdirAll(tmp, 0700); err != nil {
-			return err
-		}
-
-		for chartIdx, chart := range component.Charts {
-			if chart.LocalPath != "" {
-				newName := fmt.Sprintf("%s-%d", chart.Name, idx)
-				err := utils.CreatePathAndCopy(chart.LocalPath, filepath.Join(tmp, newName))
-				if err != nil {
-					return err
-				}
-				p.cfg.Pkg.Components[idx].Charts[chartIdx].LocalPath = newName
-			}
-			for valuesIdx, path := range chart.ValuesFiles {
-				if utils.IsURL(path) {
-					continue
-				}
-				if err := validate.SkeletonPath(path); err != nil {
-					return err
-				}
-				newName := fmt.Sprintf("%s-%d.yaml", chart.Name, valuesIdx)
-				err := utils.CreatePathAndCopy(path, filepath.Join(tmp, newName))
-				if err != nil {
-					return err
-				}
-				p.cfg.Pkg.Components[idx].Charts[chartIdx].ValuesFiles[valuesIdx] = newName
-			}
-		}
-		for filesIdx, file := range component.Files {
-			path := file.Source
-			if utils.IsURL(path) {
-				continue
-			}
-			if err := validate.SkeletonPath(path); err != nil {
-				return err
-			}
-			newName := strconv.Itoa(filesIdx)
-			err := utils.CreatePathAndCopy(path, filepath.Join(tmp, newName))
-			if err != nil {
-				return err
-			}
-			p.cfg.Pkg.Components[idx].Files[filesIdx].Source = newName
-		}
-		for dataInjectionsIdx, dataInjection := range component.DataInjections {
-			path := dataInjection.Source
-			if utils.IsURL(path) {
-				continue
-			}
-			if err := validate.SkeletonPath(path); err != nil {
-				return err
-			}
-			newName := fmt.Sprintf("injection-%d", dataInjectionsIdx)
-			err := utils.CreatePathAndCopy(path, filepath.Join(tmp, newName))
-			if err != nil {
-				return err
-			}
-			p.cfg.Pkg.Components[idx].DataInjections[dataInjectionsIdx].Source = newName
-		}
-		for manifestsIdx, manifest := range component.Manifests {
-			for fileIdx, path := range manifest.Files {
-				if utils.IsURL(path) {
-					continue
-				}
-				if err := validate.SkeletonPath(path); err != nil {
-					return err
-				}
-				newName := fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx)
-				err := utils.CreatePathAndCopy(path, filepath.Join(tmp, newName))
-				if err != nil {
-					return err
-				}
-				p.cfg.Pkg.Components[idx].Manifests[manifestsIdx].Files[fileIdx] = newName
-			}
-			for kustomizeIdx, path := range manifest.Kustomizations {
-				// kustomizations do not follow standard https:// URLs and can look like: github.com/org/repo?ref=main
-				// and can traverse directories outside of their own
-				// therefore we will have to pre-render them before copying them over
-
-				newName := fmt.Sprintf("kustomization-%s-%d", manifest.Name, kustomizeIdx)
-				if err := kustomize.Build(path, filepath.Join(tmp, newName), manifest.KustomizeAllowAnyDirectory); err != nil {
-					return err
-				}
-				p.cfg.Pkg.Components[idx].Manifests[manifestsIdx].Files = append(p.cfg.Pkg.Components[idx].Manifests[manifestsIdx].Files, newName)
-			}
-			// clear out kustomizations since they have been rendered and are now files
-			p.cfg.Pkg.Components[idx].Manifests[manifestsIdx].Kustomizations = nil
-		}
-
-		// if tmp is not empty, tar it up
-		tmpFiles, err := os.ReadDir(tmp)
+		componentPath := filepath.Join(p.tmp.Components, component.Name)
+		err := p.addComponent(idx, component, "skeleton")
 		if err != nil {
 			return err
 		}
-		if len(tmpFiles) > 0 {
-			tarPath := fmt.Sprintf("%s.tar", tmp)
-			err = archiver.Archive([]string{tmp + string(os.PathSeparator)}, tarPath)
+
+		// if tmp is not empty, tar it up
+		info, err := os.Stat(componentPath)
+		if err != nil {
+			return err
+		}
+		if info.Size() > 0 {
+			tarPath := fmt.Sprintf("%s.tar", componentPath)
+			err = archiver.Archive([]string{componentPath + string(os.PathSeparator)}, tarPath)
 			if err != nil {
 				return err
 			}
 		}
-		err = os.RemoveAll(tmp)
+		err = os.RemoveAll(componentPath)
 		if err != nil {
 			return err
 		}
