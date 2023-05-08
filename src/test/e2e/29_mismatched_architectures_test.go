@@ -19,7 +19,7 @@ func TestMismatchedArchitectures(t *testing.T) {
 	defer e2e.Teardown(t)
 
 	var (
-		mismatchedArch         = e2e.SetMismatchedArch()
+		mismatchedArch         = e2e.GetMismatchedArch()
 		mismatchedGamesPackage = fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", mismatchedArch)
 		initPackageVersion     = "UnknownVersion"
 		mismatchedInitPackage  = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
