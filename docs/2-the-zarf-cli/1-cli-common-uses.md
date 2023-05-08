@@ -4,7 +4,7 @@ Zarf is a tool that optimizes the delivery of applications and capabilities into
 
 ## Building Packages: `zarf package create`
 
-To create a Zarf Package, you must execute the [`zarf package create`](./100-cli-commands/zarf_package_create.md) command, which generates a `tar.zst` archive that includes all the required dependencies and instructions to deploy the capabilities onto another machine. The `zarf package create` command uses a [`zarf.yaml` configuration file](../3-create-a-zarf-package/4-zarf-schema.md) that describes the package's components and performs all necessary actions, such as downloading container images and git repositories, to build the final package.
+To create a Zarf Package, you must execute the [`zarf package create`](./100-cli-commands/zarf_package_create.md) command, which generates a tarball archive that includes all the required dependencies and instructions to deploy the capabilities onto another machine. The `zarf package create` command uses a [`zarf.yaml` configuration file](../3-create-a-zarf-package/4-zarf-schema.md) that describes the package's components and performs all necessary actions, such as downloading container images and git repositories, to build the final package.
 
 Additional information on Zarf Packages can be found on the [Understanding Zarf Packages](../3-create-a-zarf-package/1-zarf-packages.md) page along with the [Creating a Zarf Package Tutorial](../6-zarf-tutorials/0-creating-a-zarf-package.md).
 
