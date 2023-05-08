@@ -121,6 +121,12 @@ components:
       - '###ZARF_PKG_TMPL_PROMPT_ON_CREATE###'
 ```
 
+:::caution
+
+It is not recommended to use package configuration templates for any `sensitive` data as this will be baked into the package as plain text.  Please use a deploy-time variable with the `sensitive` key set instead.
+
+:::
+
 :::note
 
 You can only template string values in this way as non-string values will not marshal/unmarshal properly through the yaml.
