@@ -28,6 +28,8 @@ type ImgConfig struct {
 	Insecure bool
 
 	Architectures []string
+
+	RegistryOverrides map[string]string
 }
 
 // GetLegacyImgTarballPath returns the ImagesPath as if it were a path to a tarball instead of a directory.

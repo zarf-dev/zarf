@@ -17,6 +17,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
@@ -55,9 +56,22 @@ func (i *ImgConfig) PullAll() error {
 	for idx, src := range i.ImgList {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imgCount, src)
 
-		img, err := i.PullImage(src, spinner)
+		srcParsed, err := transform.ParseImageRef(src)
 		if err != nil {
-			return fmt.Errorf("failed to pull image %s: %w", src, err)
+			return fmt.Errorf("failed to parse image ref %s: %w", src, err)
+		}
+
+		actualSrc := src
+		if overrideHost, present := i.RegistryOverrides[srcParsed.Host]; present {
+			actualSrc, err = transform.ImageTransformHostWithoutChecksum(overrideHost, src)
+			if err != nil {
+				return fmt.Errorf("failed to swap override host %s for %s: %w", overrideHost, src, err)
+			}
+		}
+
+		img, err := i.PullImage(actualSrc, spinner)
+		if err != nil {
+			return fmt.Errorf("failed to pull image %s: %w", actualSrc, err)
 		}
 		imageMap[src] = img
 	}
