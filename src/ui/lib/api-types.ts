@@ -231,6 +231,10 @@ export interface ZarfBuildData {
      */
     migrations: string[];
     /**
+     * Any registry domains that were overridden on package create when pulling images
+     */
+    registryOverrides: { [key: string]: string };
+    /**
      * The machine name that created this package
      */
     terminal: string;
@@ -1396,6 +1400,7 @@ const typeMap: any = {
         { json: "architecture", js: "architecture", typ: "" },
         { json: "differential", js: "differential", typ: true },
         { json: "migrations", js: "migrations", typ: a("") },
+        { json: "registryOverrides", js: "registryOverrides", typ: m("") },
         { json: "terminal", js: "terminal", typ: "" },
         { json: "timestamp", js: "timestamp", typ: "" },
         { json: "user", js: "user", typ: "" },
