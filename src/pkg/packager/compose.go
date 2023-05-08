@@ -94,7 +94,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			return child, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
 		}
 
-		err = handleOciPackage(skelURL, cachePath, p.cfg.PublishOpts.CopyOptions.Concurrency)
+		err = handleOciPackage(skelURL, cachePath, p.cfg.PublishOpts.CopyOptions.Concurrency, fmt.Sprintf("components/%s.tar", childComponentName))
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}

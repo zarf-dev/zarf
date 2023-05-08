@@ -133,7 +133,7 @@ func (p *Packager) handleSgetPackage() error {
 	return nil
 }
 
-func handleOciPackage(url string, out string, concurrency int) error {
+func handleOciPackage(url string, out string, concurrency int, components ...string) error {
 	message.Debugf("packager.handleOciPackage(%s, %s)", url, out)
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, "oci://"))
 	if err != nil {
@@ -159,12 +159,6 @@ func handleOciPackage(url string, out string, concurrency int) error {
 	}
 	defer dst.Close()
 
-	// Create a thread to update a progress bar as we save the package to disk
-	doneSaving := make(chan int)
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go utils.RenderProgressBarForLocalDirWrite(out, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
-
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
@@ -179,7 +173,31 @@ func handleOciPackage(url string, out string, concurrency int) error {
 		return nil
 	}
 	copyOpts.PostCopy = copyOpts.OnCopySkipped
+	if len(components) > 0 {
+		alwaysPull := []string{"zarf.yaml", "checksums.txt", "zarf.yaml.sig"}
+		components = append(components, alwaysPull...)
+		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+			nodes, err := content.Successors(ctx, fetcher, desc)
+			if err != nil {
+				return nil, err
+			}
+			var ret []ocispec.Descriptor
+			for _, node := range nodes {
+				if utils.SliceContains(components, node.Annotations[ocispec.AnnotationTitle]) {
+					ret = append(ret, node)
+				} else {
+					estimatedBytes -= node.Size
+				}
+			}
+			return ret, nil
+		}
+	}
 
+	// Create a thread to update a progress bar as we save the package to disk
+	doneSaving := make(chan int)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go utils.RenderProgressBarForLocalDirWrite(out, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
 	_, err = oras.Copy(src.Context, src.Repository, ref.Reference, dst, ref.Reference, copyOpts)
 	if err != nil {
 		return err

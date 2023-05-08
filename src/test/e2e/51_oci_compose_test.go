@@ -85,9 +85,9 @@ func (suite *SkeletonSuite) TearDownSuite() {
 func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.T().Log("E2E: Skeleton Package Publish oci://")
 
-	noWaitExample := filepath.Join("examples", "helm-local-chart")
+	helmLocal := filepath.Join("examples", "helm-local-chart")
 	ref := suite.Reference.String()
-	_, stdErr, err := e2e.ExecZarfCommand("package", "publish", noWaitExample, "oci://"+ref, "--insecure")
+	_, stdErr, err := e2e.ExecZarfCommand("package", "publish", helmLocal, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
