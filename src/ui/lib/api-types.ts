@@ -8,17 +8,25 @@
 // match the expected interface, even if the JSON is valid.
 
 export interface APITypes {
-    apiZarfDeployPayload: APIZarfDeployPayload;
-    apiZarfPackage:       APIZarfPackage;
-    clusterSummary:       ClusterSummary;
-    connectStrings:       { [key: string]: ConnectString };
-    deployedPackage:      DeployedPackage;
-    zarfCommonOptions:    ZarfCommonOptions;
-    zarfCreateOptions:    ZarfCreateOptions;
-    zarfDeployOptions:    ZarfDeployOptions;
-    zarfInitOptions:      ZarfInitOptions;
-    zarfPackage:          ZarfPackage;
-    zarfState:            ZarfState;
+    apiConnections:            { [key: string]: APIDeployedPackageConnection[] };
+    apiZarfDeployPayload:      APIZarfDeployPayload;
+    apiZarfPackage:            APIZarfPackage;
+    apiZarfPackageConnection:  APIDeployedPackageConnection;
+    apiZarfPackageConnections: APIDeployedPackageConnection[];
+    clusterSummary:            ClusterSummary;
+    connectStrings:            { [key: string]: ConnectString };
+    deployedPackage:           DeployedPackage;
+    zarfCommonOptions:         ZarfCommonOptions;
+    zarfCreateOptions:         ZarfCreateOptions;
+    zarfDeployOptions:         ZarfDeployOptions;
+    zarfInitOptions:           ZarfInitOptions;
+    zarfPackage:               ZarfPackage;
+    zarfState:                 ZarfState;
+}
+
+export interface APIDeployedPackageConnection {
+    name: string;
+    url?: string;
 }
 
 export interface APIZarfDeployPayload {
@@ -1067,6 +1075,7 @@ export interface ConnectString {
 
 export interface DeployedPackage {
     cliVersion:         string;
+    connectStrings?:    { [key: string]: ConnectString };
     data:               ZarfPackage;
     deployedComponents: DeployedComponent[];
     name:               string;
@@ -1320,8 +1329,11 @@ function r(name: string) {
 
 const typeMap: any = {
     "APITypes": o([
+        { json: "apiConnections", js: "apiConnections", typ: m(a(r("APIDeployedPackageConnection"))) },
         { json: "apiZarfDeployPayload", js: "apiZarfDeployPayload", typ: r("APIZarfDeployPayload") },
         { json: "apiZarfPackage", js: "apiZarfPackage", typ: r("APIZarfPackage") },
+        { json: "apiZarfPackageConnection", js: "apiZarfPackageConnection", typ: r("APIDeployedPackageConnection") },
+        { json: "apiZarfPackageConnections", js: "apiZarfPackageConnections", typ: a(r("APIDeployedPackageConnection")) },
         { json: "clusterSummary", js: "clusterSummary", typ: r("ClusterSummary") },
         { json: "connectStrings", js: "connectStrings", typ: m(r("ConnectString")) },
         { json: "deployedPackage", js: "deployedPackage", typ: r("DeployedPackage") },
@@ -1331,6 +1343,10 @@ const typeMap: any = {
         { json: "zarfInitOptions", js: "zarfInitOptions", typ: r("ZarfInitOptions") },
         { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
+    ], false),
+    "APIDeployedPackageConnection": o([
+        { json: "name", js: "name", typ: "" },
+        { json: "url", js: "url", typ: u(undefined, "") },
     ], false),
     "APIZarfDeployPayload": o([
         { json: "deployOpts", js: "deployOpts", typ: r("ZarfDeployOptions") },
@@ -1669,6 +1685,7 @@ const typeMap: any = {
     ], false),
     "DeployedPackage": o([
         { json: "cliVersion", js: "cliVersion", typ: "" },
+        { json: "connectStrings", js: "connectStrings", typ: u(undefined, m(r("ConnectString"))) },
         { json: "data", js: "data", typ: r("ZarfPackage") },
         { json: "deployedComponents", js: "deployedComponents", typ: a(r("DeployedComponent")) },
         { json: "name", js: "name", typ: "" },

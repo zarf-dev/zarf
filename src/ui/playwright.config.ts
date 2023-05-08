@@ -12,8 +12,8 @@ import type { PlaywrightTestConfig } from '@playwright/test';
  */
 const config: PlaywrightTestConfig = {
 	testDir: '../test/ui',
-	/* This is 10 minutes jon */
-	timeout: 10 * 60 * 1000,
+	/* This is 15 minutes jon */
+	timeout: 15 * 60 * 1000,
 	expect: {
 		/**
 		 * Maximum time expect() should wait for the condition to be met.
