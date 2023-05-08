@@ -5,12 +5,9 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"testing"
-	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,9 +21,6 @@ func TestZarfInit(t *testing.T) {
 	if e2e.ApplianceMode {
 		initComponents = "k3s,logging,git-server"
 	}
-
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Minute)
-	defer cancel()
 
 	var (
 		mismatchedArch        = e2e.GetMismatchedArch()
