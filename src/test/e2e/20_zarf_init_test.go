@@ -26,6 +26,7 @@ func TestZarfInit(t *testing.T) {
 		mismatchedArch        = e2e.GetMismatchedArch()
 		initPackageVersion    = "UnknownVersion"
 		mismatchedInitPackage = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
+		expectedErrorMessage  = fmt.Sprintf("this package architecture is %s", mismatchedArch)
 	)
 
 	// Build init package with different arch than the cluster arch.
@@ -38,6 +39,7 @@ func TestZarfInit(t *testing.T) {
 	// We need to use the --architecture flag here to force zarf to find the package.
 	_, stdErr, err = e2e.ExecZarfCommand("init", "--architecture", mismatchedArch, "--components=k3s", "--confirm")
 	require.Error(t, err, stdErr)
+	require.Contains(t, stdErr, expectedErrorMessage)
 
 	// run `zarf init`
 	_, stdErr, err = e2e.ExecZarfCommand("init", "--components="+initComponents, "--confirm", "--nodeport", "31337")
