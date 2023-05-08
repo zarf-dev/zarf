@@ -39,7 +39,8 @@ On Windows or macOS, you can install the binary onto your `$PATH` by moving the 
 If you want to build the CLI from scratch, you can do that too. Our local builds depend on [Go 1.19.x](https://golang.org/doc/install) and [Node 18.x](https://nodejs.org/en) and are built using [make](https://www.gnu.org/software/make/).
 
 :::note
-The `make` build-cli` command builds a binary for each combination of OS and architecture. If you want to shorten the build time, you can use an alternative command to only build the binary you need:
+
+The `make build-cli` command builds a binary for each combination of OS and architecture. If you want to shorten the build time, you can use an alternative command to only build the binary you need:
 
 - `make build-cli-mac-intel`
 - `make build-cli-mac-apple`
@@ -49,6 +50,7 @@ The `make` build-cli` command builds a binary for each combination of OS and arc
 - `make build-cli-windows-arm`
 
 For additional information, see the [Building Your Own Zarf CLI](../2-the-zarf-cli/0-building-your-own-cli.md) page.
+
 :::
 
 ---
@@ -74,6 +76,12 @@ The ['init' package](../3-create-a-zarf-package/3-zarf-init-package.md) is a spe
 You can get it for your version of Zarf by visiting the [Zarf releases](https://github.com/defenseunicorns/zarf/releases) page and downloading it into your working directory or into `~/.zarf-cache/zarf-init-<amd64|arm64>-vX.X.X.tar.zst`)
 
 If you are online on the machine with cluster access you can also run `zarf init` without the `--confirm` flag to be given the option to download the version of the init package for your Zarf version.
+
+:::note
+
+You can build your own custom 'init' package too if you'd like. For this you should check out the [Creating a Custom 'init' Package Tutorial](../6-zarf-tutorials/8-custom-init-packages.md).
+
+:::
 
 ---
 
