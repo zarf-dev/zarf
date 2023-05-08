@@ -14,6 +14,9 @@ const config: UserConfig = {
 		proxy: {
 			'/api': backendAPI,
 		},
+		fs: {
+			strict: false,
+		}
 	},
 	optimizeDeps: {
 		include: [

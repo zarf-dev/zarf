@@ -6,7 +6,7 @@
 	import { Typography, Box, type SSX, Dialog, DialogActions } from '@ui';
 	import ZarfHappy from '../../images/png/zarf-kube-config-found.png';
 	import ZarfSad from '../../images/png/zarf-kube-not-found.png';
-
+	export let open: boolean = false;
 	export let toggleDialog: () => void;
 	export let happyZarf = true;
 	export let titleText = 'Zarf Dialog';
@@ -27,7 +27,7 @@
 	}
 </script>
 
-<Dialog {clickAway} class="zarf-dialog" {ssx} bind:toggleDialog elevation={12}>
+<Dialog {clickAway} bind:open class="zarf-dialog" {ssx} bind:toggleDialog elevation={12}>
 	<svelte:fragment slot="content">
 		<Box class="dialog-header">
 			<img src={titleImage} alt="{titleAltPrefix} {zarfAlt}" width="64px" height="64px" />
