@@ -17,7 +17,6 @@ import (
 type ZarfE2ETest struct {
 	ZarfBinPath     string
 	Arch            string
-	MismatchedArch  string
 	ApplianceMode   bool
 	RunClusterTests bool
 }
