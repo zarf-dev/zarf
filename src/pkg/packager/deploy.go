@@ -42,6 +42,10 @@ func (p *Packager) Deploy() error {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
 
+	if err := p.validatePackageArchitecture(); err != nil {
+		return err
+	}
+
 	if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
 		return err
 	}
@@ -218,7 +222,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(30*time.Second, true)
+			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, true)
 			if err != nil {
 				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
