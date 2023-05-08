@@ -30,7 +30,7 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: if [ "$(arch)" != "x86_64" ]; then echo "this package architecture is amd64, but the target cluster has the arm64 architecture. These architectures must be the same" && exit 1; fi
+          - cmd: if [ "$(arch)" != "x86_64" ]; then echo "this package architecture is amd64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
             description: Check that the host architecture matches the package architecture
             maxRetries: 0
 
