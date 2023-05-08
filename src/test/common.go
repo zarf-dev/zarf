@@ -76,14 +76,13 @@ func (e2e *ZarfE2ETest) CleanFiles(files ...string) {
 	}
 }
 
-// SetMismatchedArch determines what architecture our tests are running on,
-// and sets e2e.MismatchedArch to the opposite architecture.
-func (e2e *ZarfE2ETest) SetMismatchedArch() string {
-	if e2e.Arch == "amd64" {
-		e2e.MismatchedArch = "arm64"
+// GetMismatchedArch determines what architecture our tests are running on,
+// and returns the opposite architecture.
+func (e2e *ZarfE2ETest) GetMismatchedArch() string {
+	switch e2e.Arch {
+	case "arm64":
+		return "amd64"
+	default:
+		return"arm64"
 	}
-	if e2e.Arch == "arm64" {
-		e2e.MismatchedArch = "amd64"
-	}
-	return e2e.MismatchedArch
 }
