@@ -82,12 +82,13 @@ func (p *Packager) Deploy() error {
 
 	// Notify all the things about the successful deployment
 	message.Successf("Zarf deployment complete")
+
 	p.printTablesForDeployment(deployedComponents)
 
 	// Save deployed package information to k8s
 	// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 	if p.cluster != nil {
-		p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents)
+		p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings)
 	}
 
 	return nil
