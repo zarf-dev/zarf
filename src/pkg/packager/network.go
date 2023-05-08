@@ -43,7 +43,7 @@ func (p *Packager) handlePackagePath() error {
 	if utils.IsOCIURL(opts.PackagePath) {
 		ociURL := opts.PackagePath
 		p.cfg.DeployOpts.PackagePath = p.tmp.Base
-		return p.handleOciPackage(ociURL, p.tmp.Base)
+		return handleOciPackage(ociURL, p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency)
 	}
 
 	// Handle case where deploying remote package validated via sget
@@ -133,7 +133,7 @@ func (p *Packager) handleSgetPackage() error {
 	return nil
 }
 
-func handleOciPackage(url string, out string) error {
+func handleOciPackage(url string, out string, concurrency int) error {
 	message.Debugf("packager.handleOciPackage(%s, %s)", url, out)
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, "oci://"))
 	if err != nil {
@@ -166,7 +166,7 @@ func handleOciPackage(url string, out string) error {
 	go utils.RenderProgressBarForLocalDirWrite(out, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
 
 	copyOpts := oras.DefaultCopyOptions
-	copyOpts.Concurrency = p.cfg.PullOpts.CopyOptions.Concurrency
+	copyOpts.Concurrency = concurrency
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		title := desc.Annotations[ocispec.AnnotationTitle]
 		var format string
