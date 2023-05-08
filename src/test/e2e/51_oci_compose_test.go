@@ -6,6 +6,7 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -32,13 +33,13 @@ var (
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
-	err := exec.CmdWithPrint("mkdir", "-p", filepath.Join("src", "test", "test-packages", "51-import-everything", "charts"))
+	err := os.MkdirAll(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts"), 0755)
 	suite.NoError(err)
-	err = exec.CmdWithPrint("cp", "-r", filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	err = utils.CreatePathAndCopy(filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
 	suite.DirExists(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 
-	err = exec.CmdWithPrint("cp", "-r", importEverything, everythingExternal)
+	err = utils.CreatePathAndCopy(importEverything, everythingExternal)
 	suite.NoError(err)
 	suite.DirExists(everythingExternal)
 
@@ -71,13 +72,13 @@ func (suite *SkeletonSuite) SetupSuite() {
 func (suite *SkeletonSuite) TearDownSuite() {
 	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
 	suite.NoError(err)
-	err = exec.CmdWithPrint("rm", "-rf", everythingExternal)
+	err = os.RemoveAll(everythingExternal)
 	suite.NoError(err)
-	err = exec.CmdWithPrint("rm", "-rf", absNoCode)
+	err = os.RemoveAll(absNoCode)
 	suite.NoError(err)
-	err = exec.CmdWithPrint("rm", "-rf", filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	err = os.RemoveAll(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
-	err = exec.CmdWithPrint("rm", "-rf", "files")
+	err = os.RemoveAll(filepath.Join("files"))
 	suite.NoError(err)
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
