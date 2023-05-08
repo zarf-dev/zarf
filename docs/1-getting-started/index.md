@@ -7,7 +7,7 @@ Welcome to the Zarf documentation! This section will list the various ways to in
 There are multiple ways to get the Zarf CLI onto your machine:
 
 - Install from [Homebrew](#installing-from-the-defense-unicorns-homebrew-tap).
-- [Download a binary](#downloading-a-prebuilt-binary-from-our-github-releases).
+- [Download a prebuilt binary](#downloading-a-prebuilt-binary-from-our-github-releases).
 - [Build the CLI](#building-the-cli-from-scratch) from scratch.
 
 ### Installing from the Defense Unicorns Homebrew Tap
