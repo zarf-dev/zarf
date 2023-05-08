@@ -17,7 +17,7 @@ Before deploying a package to a cluster, you must initialize the cluster using t
 
 For Windows and macOS environments, a cluster must already exist before initializing it using Zarf. You can use [Kind](https://kind.sigs.k8s.io/), [K3d](https://k3d.io/), [Docker Desktop](https://docs.docker.com/desktop/kubernetes/), or any other local or remote Kubernetes cluster.
 
-For Linux environments, Zarf can, itself, create and update a local K3s cluster, in addition to using any other local or remote Kubernetes cluster. The init package used by `zarf init` contains all the resources necessary to create a local [K3s](https://k3s.io/) cluster on your machine. This package may be located in your current working directory, the directory where the Zarf CLI binary is located, or downloaded from GitHub releases during command execution.
+For Linux environments, Zarf itself can create and update a local K3s cluster, in addition to using any other local or remote Kubernetes cluster. The init package used by `zarf init` contains all the resources necessary to create a local [K3s](https://k3s.io/) cluster on your machine. This package may be located in your current working directory, the directory where the Zarf CLI binary is located, or downloaded from GitHub releases during command execution.
 
 Further details on the initialization process can be found on the [init package](../3-create-a-zarf-package/3-zarf-init-package.md) page along with the [Initializing a K8s Cluster Tutorial](../6-zarf-tutorials/1-initializing-a-k8s-cluster.md).
 
