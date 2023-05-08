@@ -11,14 +11,3 @@ type BigBang struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=The list of values files to pass to Big Bang; these will be merged together"`
 	SkipFlux    bool     `json:"skipFlux,omitempty" jsonschema:"description=Whether to skip deploying flux; Defaults to false"`
 }
-
-// LocalPaths returns the list of local paths in the BigBang extension.
-func (bb BigBang) LocalPaths() []string {
-	local := []string{}
-	for _, file := range bb.ValuesFiles {
-		if isLocal(file) {
-			local = append(local, file)
-		}
-	}
-	return local
-}
