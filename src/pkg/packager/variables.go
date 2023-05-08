@@ -143,3 +143,34 @@ func (p *Packager) injectImportedConstant(importedConstant types.ZarfPackageCons
 		p.cfg.Pkg.Constants = append(p.cfg.Pkg.Constants, importedConstant)
 	}
 }
+
+// // printDeploySetVariables prints the variables that were set prior to this deployment.
+// func (p *Packager) printDeploySetVariables() {
+// 	if len(p.cfg.DeployOpts.SetVariables) > 0 {
+// 		setVariableValues := utils.TransformMapKeys(p.cfg.DeployOpts.SetVariables, strings.ToUpper)
+
+// 		message.HorizontalRule()
+// 		pterm.Println()
+
+// 		list := pterm.TableData{{"Variable Name", "Current Value", "Will Prompt"}}
+// 		// Loop over each variable and convert to pterm.TableData
+// 		for _, variable := range p.cfg.Pkg.Variables {
+// 			value, present := setVariableValues[variable.Name]
+// 			if variable.Sensitive {
+// 				value = "**sanitized**"
+// 			}
+// 			willPrompt := ""
+// 			if !present {
+// 				value = variable.Default
+// 				if variable.Prompt {
+// 					willPrompt = pterm.FgLightGreen.Sprint("✔")
+// 				}
+// 			}
+
+// 			list = append(list, []string{variable.Name, value, willPrompt})
+// 		}
+
+// 		// Create the table output with the data
+// 		_ = pterm.DefaultTable.WithHasHeader().WithData(list).Render()
+// 	}
+// }

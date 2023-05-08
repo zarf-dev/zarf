@@ -34,7 +34,7 @@ func yamlFormat(attr color.Attribute) string {
 }
 
 // ColorPrintYAML pretty prints a yaml file to the console.
-func ColorPrintYAML(data any) {
+func ColorPrintYAML(data any, comments map[string]string) {
 	text, _ := goyaml.Marshal(data)
 	tokens := lexer.Tokenize(string(text))
 
@@ -76,8 +76,21 @@ func ColorPrintYAML(data any) {
 		}
 	}
 
+	colorizedYAML := p.PrintTokens(tokens)
+
+	for key, value := range comments {
+		colorizedYAML = strings.Replace(colorizedYAML, key, key+value, 1)
+	}
+
 	pterm.Println()
-	pterm.Println(p.PrintTokens(tokens))
+	pterm.Println(colorizedYAML)
+}
+
+// MakeYamlComment makes a comment string for a given yaml key and value.
+func MakeYamlComment(yamlKey string, yamlValue string, commentFmt string, commentArgs ...any) (string, string) {
+	key := fmt.Sprintf("%s %s%s:%s %s%s", yamlFormat(color.FgHiCyan), yamlKey, yamlFormat(color.Reset), yamlFormat(color.FgHiMagenta), yamlValue, yamlFormat(color.Reset))
+	comment := fmt.Sprintf(" %s# %s%s", yamlFormat(color.FgHiGreen), fmt.Sprintf(commentFmt, commentArgs...), yamlFormat(color.Reset))
+	return key, comment
 }
 
 // ReadYaml reads a yaml file and unmarshals it into a given config.

@@ -55,7 +55,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	pterm.Println()
 	pterm.Println()
 
-	utils.ColorPrintYAML(p.cfg.Pkg)
+	utils.ColorPrintYAML(p.cfg.Pkg, nil)
 
 	// Attempt to validate the checksums, or explain why we cannot validate them
 	if !utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {

@@ -23,7 +23,26 @@ import (
 func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (confirm bool) {
 
 	message.HorizontalRule()
-	utils.ColorPrintYAML(p.cfg.Pkg)
+
+	variableComments := map[string]string{}
+
+	for _, variable := range p.cfg.Pkg.Variables {
+		value, present := p.cfg.DeployOpts.SetVariables[variable.Name]
+		if !present {
+			value = fmt.Sprintf("'%s' (default)", variable.Default)
+		} else {
+			value = fmt.Sprintf("'%s'", value)
+		}
+		if variable.Sensitive {
+			value = "'**sanitized**'"
+		}
+		commentKey, commentValue := utils.MakeYamlComment("name", variable.Name, "currently: %s", value)
+		variableComments[commentKey] = commentValue
+	}
+
+	utils.ColorPrintYAML(p.cfg.Pkg, variableComments)
+
+	// p.printDeploySetVariables()
 
 	// Print the location that the user can view the package SBOMs from
 	if len(sbomViewFiles) > 0 {
