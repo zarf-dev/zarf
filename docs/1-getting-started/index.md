@@ -28,7 +28,7 @@ All [Zarf releases](https://github.com/defenseunicorns/zarf/releases) on GitHub 
 On most Linux distributions, you can install the binary onto your `$PATH` by simply moving the downloaded binary to the `/usr/local/bin` directory:
 
 ```bash
-chmod +x zarf
+chmod +x ./path/to/downloaded/{ZARF_FILE}
 mv ./path/to/downloaded/{ZARF_FILE} /usr/local/bin/zarf
 ```
 
