@@ -173,7 +173,7 @@ func (p *Packager) publish(ref registry.Reference) error {
 	dst.Transport.ProgressBar.Successf("Published %s [%s]", ref, root.MediaType)
 	fmt.Println()
 	if strings.HasSuffix(ref.Reference, "-skeleton") {
-		message.Info("Example importing components from this package:")
+		message.Info("Example of importing components from this package:")
 		fmt.Println()
 		ex := []types.ZarfComponent{}
 		ex = append(ex, types.ZarfComponent{

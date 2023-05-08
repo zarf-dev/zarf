@@ -84,7 +84,7 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		}
 
 		// ensure there is a zarf.yaml in provided path
-		if utils.InvalidPath(path + config.ZarfYAML) {
+		if utils.InvalidPath(filepath.Join(path, config.ZarfYAML)) {
 			return fmt.Errorf(lang.PkgValidateErrImportPathInvalid, composedComponent.Import.Path)
 		}
 	} else {

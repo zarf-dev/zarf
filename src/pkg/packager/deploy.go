@@ -496,10 +496,9 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
-			if !utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
-				continue
+			if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
 			}
-			manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
 		}
 		// Move kustomizations to files now
 		for idx := range manifest.Kustomizations {

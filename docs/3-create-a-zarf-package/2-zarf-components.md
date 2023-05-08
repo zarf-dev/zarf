@@ -9,9 +9,9 @@ import FetchExampleYAML from '@site/src/components/FetchExampleYAML';
 
 ## Overview
 
-The actual capabilities that Zarf Packages provided are defined within named components. These components define what dependencies they have and a declarative definition of how they should be deployed. Each package can have as many components as the package creator wants but a package isn't anything without at least one component. Component actions documentations can be found [here](../5-component-actions.md).
+The actual capabilities that Zarf Packages provided are defined within named components. These components define what dependencies they have and a declarative definition of how they should be deployed. Each package can have as many components as the package creator wants but a package isn't anything without at least one component. More documentation can be found [on the component actions docs page](../5-component-actions.md).
 
-Components can define a wide range of resources that it needs when the package it is a part of gets deployed. The schema for components is located under the `components` section of the [Schema Docs](../3-zarf-schema.md#components). The below documentation showcase some of the different types of resources that can be defined in a component.
+Components can define a wide range of resources that are needed when the package is deployed. The schema for components is located under the [`components` section of the package schema documentation](../3-zarf-schema.md#components). The below documentation showcases some of the different types of resources that can be defined in a component.
 
 ## Common Component Fields
 
@@ -90,7 +90,7 @@ components:
 
 ## Deploying Components
 
-When deploying a Zarf package, the **components within a package are deployed in the order they are defined in the `zarf.yaml` that the package was created from.** The `zarf.yaml` configuration for each component also defines whether the component is 'required' or not. 'Required' components are always deployed without any additional user interaction whenever the package is deployed while optional components are printed out in an interactive prompt to the user asking if they wish to the deploy the component.
+When deploying a Zarf package, the **components within a package are deployed in the order they are defined in the `zarf.yaml`**. The `zarf.yaml` configuration for each component also defines whether the component is 'required' or not. 'Required' components are always deployed without any additional user interaction while optional components are printed out in an interactive prompt asking the user if they wish to the deploy the component.
 
 If you already know which components you want to deploy, you can do so without getting prompted by passing the components as a comma-separated list to the `--components` flag during the deploy command. (ex. `zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,optional-component-2`)
 

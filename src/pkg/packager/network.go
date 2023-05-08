@@ -133,7 +133,7 @@ func (p *Packager) handleSgetPackage() error {
 	return nil
 }
 
-func (p *Packager) handleOciPackage(url string, out string) error {
+func handleOciPackage(url string, out string) error {
 	message.Debugf("packager.handleOciPackage(%s, %s)", url, out)
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, "oci://"))
 	if err != nil {
