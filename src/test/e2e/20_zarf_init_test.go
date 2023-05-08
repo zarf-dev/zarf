@@ -29,7 +29,7 @@ func TestZarfInit(t *testing.T) {
 	defer cancel()
 
 	var (
-		mismatchedArch        = e2e.SetMismatchedArch()
+		mismatchedArch        = e2e.GetMismatchedArch()
 		initPackageVersion    = "UnknownVersion"
 		mismatchedInitPackage = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
 	)
