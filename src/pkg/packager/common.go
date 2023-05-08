@@ -447,7 +447,7 @@ func (p *Packager) validatePackageChecksums() error {
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() error {
 	// Attempt to connect to a cluster to get the architecture.
-	if cluster, err := cluster.NewClusterWithWait(cluster.DefaultTimeout, false); err == nil {
+	if cluster, err := cluster.NewCluster(); err == nil {
 		clusterArch, err := cluster.Kube.GetArchitecture()
 		if err != nil {
 			return err
