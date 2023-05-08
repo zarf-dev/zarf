@@ -46,7 +46,7 @@ func TestZarfInit(t *testing.T) {
 	require.Error(t, err, stdErr)
 
 	// run `zarf init`
-	_, stdErr, err = exec.CmdWithContext(ctx, exec.PrintCfg(), e2e.ZarfBinPath, "init", "--components="+initComponents, "--confirm", "--nodeport", "31337")
+	_, stdErr, err = e2e.ExecZarfCommand("init", "--components="+initComponents, "--confirm", "--nodeport", "31337")
 	require.Contains(t, stdErr, "artifacts with software bill-of-materials (SBOM) included")
 	require.NoError(t, err)
 
