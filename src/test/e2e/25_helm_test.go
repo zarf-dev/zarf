@@ -20,7 +20,7 @@ func TestHelm(t *testing.T) {
 
 	testHelmReleaseName(t)
 
-	testHelmLocalChart(t)
+	testHelmLocalChartWithAltRegistry(t)
 
 	testHelmEscaping(t)
 
@@ -49,13 +49,17 @@ func testHelmReleaseName(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testHelmLocalChart(t *testing.T) {
+func testHelmLocalChartWithAltRegistry(t *testing.T) {
 	t.Log("E2E: Local Helm chart")
+
+	// Deploy the package.
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", "examples/helm-local-chart", "-o build", "--registry-override", "ghcr.io=docker.io", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-test-helm-local-chart-%s.tar.zst", e2e.Arch)
 
 	// Deploy the package.
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify that nginx successfully deploys in the cluster

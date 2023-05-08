@@ -1117,6 +1117,10 @@ export interface ZarfCreateOptions {
      */
     outputDirectory: string;
     /**
+     * A map of domains to override on package create when pulling images
+     */
+    registryOverrides: { [key: string]: string };
+    /**
      * Whether to pause to allow for viewing the SBOM post-creation
      */
     sbom: boolean;
@@ -1691,6 +1695,7 @@ const typeMap: any = {
         { json: "differential", js: "differential", typ: r("DifferentialData") },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
+        { json: "registryOverrides", js: "registryOverrides", typ: m("") },
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },

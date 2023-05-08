@@ -16,17 +16,18 @@ zarf package create [DIRECTORY] [flags]
 ## Options
 
 ```
-      --confirm                   Confirm package creation without prompting
-      --differential string       Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package
-  -h, --help                      help for create
-  -k, --key string                Path to private key file for signing packages
-      --key-pass string           Password to the private key file used for signing packages
-  -m, --max-package-size int      Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting.
-  -o, --output-directory string   Specify the output directory for the created Zarf package
-  -s, --sbom                      View SBOM contents after creating the package
-      --sbom-out string           Specify an output directory for the SBOMs from the created Zarf package
-      --set stringToString        Specify package variables to set on the command line (KEY=value) (default [])
-      --skip-sbom                 Skip generating SBOM for this package
+      --confirm                            Confirm package creation without prompting
+      --differential string                Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package
+  -h, --help                               help for create
+  -k, --key string                         Path to private key file for signing packages
+      --key-pass string                    Password to the private key file used for signing packages
+  -m, --max-package-size int               Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting.
+  -o, --output-directory string            Specify the output directory for the created Zarf package
+      --registry-override stringToString   Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet) (default [])
+  -s, --sbom                               View SBOM contents after creating the package
+      --sbom-out string                    Specify an output directory for the SBOMs from the created Zarf package
+      --set stringToString                 Specify package variables to set on the command line (KEY=value) (default [])
+      --skip-sbom                          Skip generating SBOM for this package
 ```
 
 ## Options inherited from parent commands
