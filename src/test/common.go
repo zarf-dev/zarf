@@ -75,3 +75,14 @@ func (e2e *ZarfE2ETest) CleanFiles(files ...string) {
 		_ = os.RemoveAll(file)
 	}
 }
+
+// GetMismatchedArch determines what architecture our tests are running on,
+// and returns the opposite architecture.
+func (e2e *ZarfE2ETest) GetMismatchedArch() string {
+	switch e2e.Arch {
+	case "arm64":
+		return "amd64"
+	default:
+		return"arm64"
+	}
+}
