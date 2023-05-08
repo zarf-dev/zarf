@@ -63,12 +63,23 @@ kyvernoPolicies:
           - zarf # don't have Kyverno prevent Zarf from doing zarf things
           `
 
-func manifestZarfCredentials(version string) corev1.Secret {
+const bbV2ZarfYoloModeCredentialsValues = `
+registryCredentials:
+  registry: "registry1.dso.mil"
+  username: "###ZARF_VAR_REGISTRY1_USERNAME###"
+  password: "###ZARF_VAR_REGISTRY1_CLI_SECRET###"
+  `
+
+func manifestZarfCredentials(YOLO bool, version string) corev1.Secret {
 	values := bbV1ZarfCredentialsValues
 
 	semverVersion, err := semver.NewVersion(version)
 	if err == nil && semverVersion.Major() == 2 {
-		values = bbV2ZarfCredentialsValues
+		if YOLO {
+			values = bbV2ZarfYoloModeCredentialsValues
+		} else {
+			values = bbV2ZarfCredentialsValues
+		}
 	}
 
 	return corev1.Secret{
