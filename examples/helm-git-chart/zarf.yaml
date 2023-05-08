@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: test-helm-git-chart
+  name: helm-git-chart
   description: "Deploys a helm chart from git"
 components:
   - name: demo-helm-git-chart

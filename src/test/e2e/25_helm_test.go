@@ -20,7 +20,9 @@ func TestHelm(t *testing.T) {
 
 	testHelmReleaseName(t)
 
-	testHelmLocalChartWithAltRegistry(t)
+	testHelmGitChartWithRegistryOverride(t)
+
+	testHelmLocalChart(t)
 
 	testHelmEscaping(t)
 
@@ -49,17 +51,35 @@ func testHelmReleaseName(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testHelmLocalChartWithAltRegistry(t *testing.T) {
-	t.Log("E2E: Local Helm chart")
+func testHelmGitChartWithRegistryOverride(t *testing.T) {
+	t.Log("E2E: Git Helm chart w/Registry Override")
+
+	// Create the package.
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", "examples/helm-git-chart", "-o", "build", "--registry-override", "ghcr.io=docker.io", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	path := fmt.Sprintf("build/zarf-package-helm-git-chart-%s.tar.zst", e2e.Arch)
 
 	// Deploy the package.
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", "examples/helm-local-chart", "-o build", "--registry-override", "ghcr.io=docker.io", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Verify that nginx successfully deploys in the cluster
+	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=local-chart", "rollout", "status", "deployment/local-demo")
+	assert.Contains(t, string(kubectlOut), "successfully rolled out")
+
+	// Remove the package.
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "helm-git-chart", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
+
+func testHelmLocalChart(t *testing.T) {
+	t.Log("E2E: Local Helm chart")
 
 	path := fmt.Sprintf("build/zarf-package-test-helm-local-chart-%s.tar.zst", e2e.Arch)
 
 	// Deploy the package.
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify that nginx successfully deploys in the cluster
