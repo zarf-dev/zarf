@@ -130,15 +130,15 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/variables --set NGINX_VERSION=1.23.3 -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-data-injection-demo-$(ARCH).tar || $(ZARF_BIN) package create examples/data-injection -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-data-injection-$(ARCH).tar || $(ZARF_BIN) package create examples/data-injection -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-git-data-$(ARCH)-v1.0.0.tar.zst || $(ZARF_BIN) package create examples/git-data -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-test-helm-releasename-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-alt-release-name -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-helm-alt-release-name-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-alt-release-name -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-test-helm-local-chart-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/helm-local-chart -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-helm-local-chart-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/helm-local-chart -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-helm-no-wait-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-no-wait -o build -a $(ARCH) --confirm
 

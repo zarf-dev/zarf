@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: test-helm-local-chart
+  name: helm-local-chart
   description: "Deploys a helm chart from local files"
   version: 0.0.1
 components:

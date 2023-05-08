@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: compose-example
+  name: composable-packages
   description: "Demo Zarf package composability"
 
 components:
