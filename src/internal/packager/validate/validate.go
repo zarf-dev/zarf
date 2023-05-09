@@ -67,9 +67,9 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 	path := composedComponent.Import.Path
 	url := composedComponent.Import.URL
 
-	if url != "" {
+	if url == "" {
 		// ensure path exists
-		if !(path != "") {
+		if path == "" {
 			return fmt.Errorf(lang.PkgValidateErrImportPathMissing, composedComponent.Name)
 		}
 
@@ -88,13 +88,13 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 			return fmt.Errorf(lang.PkgValidateErrImportPathInvalid, composedComponent.Import.Path)
 		}
 	} else {
-		ok := utils.IsURL(url)
-		if !ok {
-			return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, composedComponent.Import.URL)
-		}
 		// ensure path is empty
 		if path != "" {
 			return fmt.Errorf(lang.PkgValidateErrImportOptions, composedComponent.Name)
+		}
+		ok := utils.IsOCIURL(url)
+		if !ok {
+			return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, composedComponent.Import.URL)
 		}
 	}
 
