@@ -118,12 +118,17 @@ func Error(err any, message string) {
 	Warnf(message)
 }
 
-// ErrorWebf prints an error message and returns a web response.
-func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
+// ErrorCodeWebf prints an error message and returns a web response with the provided status code.
+func ErrorCodeWebf(err any, w http.ResponseWriter, code int, format string, a ...any) {
 	Debug(err)
 	message := fmt.Sprintf(format, a...)
 	Warn(message)
-	http.Error(w, message, http.StatusInternalServerError)
+	http.Error(w, message, code)
+}
+
+// ErrorWebf prints an error message and returns a web response with a status code of 500.
+func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
+	ErrorCodeWebf(err, w, http.StatusInternalServerError, format, a...)
 }
 
 // Errorf prints an error message.

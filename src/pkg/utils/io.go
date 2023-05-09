@@ -203,6 +203,30 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp, skipPermission bool, 
 	return files, err
 }
 
+// FileList reads a directory and returns a list of filepaths matched against an optional regex.
+func FileList(dir string, pattern *regexp.Regexp) ([]string, error) {
+	var matches []string
+
+	files, err := os.ReadDir(dir)
+
+	for _, file := range files {
+
+		if !file.IsDir() {
+			path := fmt.Sprintf("%s/%s", dir, file.Name())
+			message.Debugf("Checking file: %s", path)
+			if pattern != nil {
+				if len(pattern.FindStringIndex(path)) > 0 {
+					matches = append(matches, path)
+				}
+			} else {
+				matches = append(matches, path)
+			}
+		}
+	}
+
+	return matches, err
+}
+
 // CreateFilePath creates the parent directory for the given file path.
 func CreateFilePath(destination string) error {
 	parentDest := filepath.Dir(destination)
