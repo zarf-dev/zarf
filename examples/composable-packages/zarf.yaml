@@ -11,3 +11,9 @@ components:
       path: ../dos-games
       # Example optional custom name to point to in the imported package
       name: baseline
+
+  - name: chart-via-oci
+    required: false
+    import:
+      url: oci://localhost:5000/helm-local-chart:0.0.1-skeleton
+      name: demo-helm-local-chart
