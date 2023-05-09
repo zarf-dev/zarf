@@ -254,7 +254,7 @@ This will create a zarf package in the current directory with a package name tha
 
 :::tip
 
-You can learn more about what is going on behind the scenes of this process on the [package create lifecycle page](../3-create-a-zarf-package/5-package-create-lifecycle.md).
+You can learn more about what is going on behind the scenes of this process on the [package create lifecycle page](../3-create-a-zarf-package/5-package-create-lifecycle.md), and can view other useful command flags like `--differential` and `--registry-override` on the [package create command flags page](../2-the-zarf-cli/100-cli-commands/zarf_package_create.md).
 
 :::
 
