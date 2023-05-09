@@ -78,7 +78,7 @@ jobs:
 
       # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
       - name: Set AWS Credentials
-        uses: aws-actions/configure-aws-credentials@023daa7fe5f7f817faa31fc0fc4a8d0fb6224ed0 # v1-node16
+        uses: aws-actions/configure-aws-credentials@67fbcbb121271f7775d2e7715933280b06314838 # v1-node16
         with:
           aws-access-key-id: ${{ secrets.AWS_GOV_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
