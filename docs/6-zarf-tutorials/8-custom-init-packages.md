@@ -74,6 +74,19 @@ As of v0.26.0 you can swap the `registry` and `agent` images by specifying diffe
 
 For other components, or older versions of Zarf, you can modify the manifests of the components you want to change in their individual packages under the `packages` folder of the Zarf repo.
 
+:::tip
+
+If your enterprise uses pull-through mirrors to host vetted images you can run the following command to create a Zarf 'init' package from those mirrors (where `<registry>.enterprise.corp` are your enterprise mirror(s)):
+
+```
+$ zarf package create . --set AGENT_IMAGE_TAG=vX.X.X \
+  --registry-override docker.io=dockerio.enterprise.corp \
+  --registry-override ghcr.io=ghcr.enterprise.corp \
+  --registry-override quay.io=quay.enterprise.corp
+```
+
+:::
+
 ### Removing Components
 
 You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them.  Because the [Zarf Package is composed](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) all you need to do is remove the component that imports the component you wish to exclude.
