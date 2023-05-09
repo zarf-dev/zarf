@@ -141,7 +141,10 @@ func (p *Packager) Create(baseDir string) error {
 		combinedImageList = append(combinedImageList, component.Images...)
 
 		// Remove the temp directory for this component before archiving.
-		_ = os.RemoveAll(filepath.Join(p.tmp.Components, component.Name, "temp"))
+		err = os.RemoveAll(filepath.Join(p.tmp.Components, component.Name, "temp"))
+		if err != nil {
+			message.Warnf("unable to remove temp directory for component %s, component tarball may contain unused artifacts: %s", component.Name, err.Error())
+		}
 	}
 
 	imgList := utils.Unique(combinedImageList)

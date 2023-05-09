@@ -278,7 +278,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 // Move files onto the host of the machine performing the deployment.
 func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLocation string) error {
 	// If there are no files to process, return early.
-	if len(component.Files) == 0 {
+	if len(component.Files) < 1 {
 		return nil
 	}
 
