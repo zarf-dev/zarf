@@ -155,10 +155,11 @@ func (p *Packager) Create(baseDir string) error {
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
-				ImagesPath:    p.tmp.Images,
-				ImgList:       imgList,
-				Insecure:      config.CommonOptions.Insecure,
-				Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
+				ImagesPath:        p.tmp.Images,
+				ImgList:           imgList,
+				Insecure:          config.CommonOptions.Insecure,
+				Architectures:     []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
+				RegistryOverrides: p.cfg.CreateOpts.RegistryOverrides,
 			}
 
 			return imgConfig.PullAll()

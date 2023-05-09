@@ -59,6 +59,7 @@ const (
 	V_PKG_CREATE_SIGNING_KEY          = "package.create.signing_key"
 	V_PKG_CREATE_SIGNING_KEY_PASSWORD = "package.create.signing_key_password"
 	V_PKG_CREATE_DIFFERENTIAL         = "package.create.differential"
+	V_PKG_CREATE_REGISTRY_OVERRIDE    = "package.create.registry_override"
 
 	// Package deploy config keys
 	V_PKG_DEPLOY_SET        = "package.deploy.set"

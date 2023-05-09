@@ -18,9 +18,9 @@ The `scripts` section of the `zarf.yaml` will be replaced with a new `actions` s
 - `onDeploy` - Runs during `zarf package deploy`
 - `onRemove` - Runs during `zarf package remove`
 
-In addition to adding more lifecycle events, the `actions` section will also allow for more complex actions to be defined. New configurations include, setting the cmd directory, defining custom env variables, setting the number of retries, setting the max total seconds, muting the output, and [setting a variable](../docs/3-create-a-zarf-package/7-component-actions.md#creating-dynamic-variables-from-actions) to be used in other actions or components.
+In addition to adding more lifecycle events, the `actions` section will also allow for more complex actions to be defined. New configurations include, setting the cmd directory, defining custom env variables, setting the number of retries, setting the max total seconds, muting the output, and [setting a variable](../docs/3-create-a-zarf-package/6-component-actions.md#creating-dynamic-variables-from-actions) to be used in other actions or components.
 
-Further details can be found in the `component-actions` [component actions documentation](../docs/3-create-a-zarf-package/7-component-actions.md), [package create lifecycle documentation](../docs/3-create-a-zarf-package/6-package-create-lifecycle.md), [package deploy lifecycle documentation](../docs/4-deploy-a-zarf-package/2-package-deploy-lifecycle.md), and the [example package](../examples/component-actions/README.md).
+Further details can be found in the `component-actions` [component actions documentation](../docs/3-create-a-zarf-package/6-component-actions.md), [package create lifecycle documentation](../docs/3-create-a-zarf-package/5-package-create-lifecycle.md), [package deploy lifecycle documentation](../docs/4-deploy-a-zarf-package/1-package-deploy-lifecycle.md), and the [example package](../examples/component-actions/README.md).
 
 ## Consequences
 

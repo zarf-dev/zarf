@@ -30,4 +30,4 @@ components:
     actions:
       onCreate:
         before:
-          - cmd: "make init-package-local-agent AGENT_IMAGE_TAG=\"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\""
+          - cmd: "make init-package-local-agent AGENT_IMAGE_TAG=\"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\" ARCH=\"###ZARF_PKG_ARCH###\""

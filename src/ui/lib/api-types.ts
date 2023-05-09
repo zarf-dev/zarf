@@ -239,6 +239,10 @@ export interface ZarfBuildData {
      */
     migrations: string[];
     /**
+     * Any registry domains that were overridden on package create when pulling images
+     */
+    registryOverrides: { [key: string]: string };
+    /**
      * The machine name that created this package
      */
     terminal: string;
@@ -1130,6 +1134,10 @@ export interface ZarfCreateOptions {
      */
     outputDirectory: string;
     /**
+     * A map of domains to override on package create when pulling images
+     */
+    registryOverrides: { [key: string]: string };
+    /**
      * Whether to pause to allow for viewing the SBOM post-creation
      */
     sbom: boolean;
@@ -1412,6 +1420,7 @@ const typeMap: any = {
         { json: "architecture", js: "architecture", typ: "" },
         { json: "differential", js: "differential", typ: true },
         { json: "migrations", js: "migrations", typ: a("") },
+        { json: "registryOverrides", js: "registryOverrides", typ: m("") },
         { json: "terminal", js: "terminal", typ: "" },
         { json: "timestamp", js: "timestamp", typ: "" },
         { json: "user", js: "user", typ: "" },
@@ -1713,6 +1722,7 @@ const typeMap: any = {
         { json: "differential", js: "differential", typ: r("DifferentialData") },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
+        { json: "registryOverrides", js: "registryOverrides", typ: m("") },
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },

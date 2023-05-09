@@ -85,7 +85,10 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 		}
 
 		if tunnel != nil {
-			tunnel.Connect(target, false)
+			err = tunnel.Connect(target, false)
+			if err != nil {
+				return err
+			}
 			registryURL = tunnel.Endpoint()
 		} else {
 			registryURL = i.RegInfo.Address

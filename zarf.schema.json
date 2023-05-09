@@ -77,7 +77,8 @@
         "timestamp",
         "version",
         "migrations",
-        "differential"
+        "differential",
+        "registryOverrides"
       ],
       "properties": {
         "terminal": {
@@ -110,6 +111,15 @@
         "differential": {
           "type": "boolean",
           "description": "Whether this package was created with differential components"
+        },
+        "registryOverrides": {
+          "patternProperties": {
+            ".*": {
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "description": "Any registry domains that were overridden on package create when pulling images"
         }
       },
       "additionalProperties": false,
