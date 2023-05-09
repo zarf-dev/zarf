@@ -97,7 +97,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent) {
+func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings) {
 	// Generate a secret that describes the package that is being deployed
 	packageName := pkg.Metadata.Name
 	deployedPackageSecret := c.Kube.GenerateSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName, corev1.SecretTypeOpaque)
@@ -108,6 +108,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 		CLIVersion:         config.CLIVersion,
 		Data:               pkg,
 		DeployedComponents: components,
+		ConnectStrings:     connectStrings,
 	})
 
 	deployedPackageSecret.Data = map[string][]byte{"data": stateData}

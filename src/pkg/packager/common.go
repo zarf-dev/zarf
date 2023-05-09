@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -478,6 +479,24 @@ func (p *Packager) validatePackageChecksums() error {
 	}
 
 	message.Successf("All of the checksums matched!")
+	return nil
+}
+
+// validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
+func (p *Packager) validatePackageArchitecture() error {
+	// Attempt to connect to a cluster to get the architecture.
+	if cluster, err := cluster.NewCluster(); err == nil {
+		clusterArch, err := cluster.Kube.GetArchitecture()
+		if err != nil {
+			return err
+		}
+
+		// Check if the package architecture and the cluster architecture are the same.
+		if p.arch != clusterArch {
+			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+		}
+	}
+
 	return nil
 }
 

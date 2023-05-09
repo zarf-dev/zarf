@@ -124,7 +124,7 @@ func ServiceInfoFromNodePortURL(nodePortURL string) (*ServiceInfo, error) {
 		return nil, fmt.Errorf("node port services should use the port range 30000-32767")
 	}
 
-	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
+	kube, err := k8s.NewWithWait(message.Debugf, labels, DefaultTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func ServiceInfoFromServiceURL(serviceURL string) (*ServiceInfo, error) {
 func NewTunnel(namespace, resourceType, resourceName string, local, remote int) (*Tunnel, error) {
 	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %d, %d)", namespace, resourceType, resourceName, local, remote)
 
-	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
+	kube, err := k8s.NewWithWait(message.Debugf, labels, DefaultTimeout)
 	if err != nil {
 		return &Tunnel{}, err
 	}
@@ -318,6 +318,11 @@ func (tunnel *Tunnel) HTTPEndpoint() string {
 	return fmt.Sprintf("http://%s", tunnel.Endpoint())
 }
 
+// FullURL returns the tunnel endpoint as a HTTP URL string with the urlSuffix appended.
+func (tunnel *Tunnel) FullURL() string {
+	return fmt.Sprintf("%s%s", tunnel.HTTPEndpoint(), tunnel.urlSuffix)
+}
+
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
 func (tunnel *Tunnel) Close() {
 	message.Debug("tunnel.Close()")
@@ -405,7 +410,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 		message.Debug(spinnerMessage)
 	}
 
-	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
+	kube, err := k8s.NewWithWait(message.Debugf, labels, DefaultTimeout)
 	if err != nil {
 		return "", fmt.Errorf("unable to connect to the cluster: %w", err)
 	}
