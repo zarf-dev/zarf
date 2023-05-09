@@ -22,6 +22,7 @@ const FetchExampleYAML = ({ example, component, raw, showLink = true }) => {
   }, []);
 
   if (!content) {
+    console.log(`Unable to fetch example YAML ${url}`)
     return <></>
   }
   if (raw) {
@@ -32,7 +33,7 @@ const FetchExampleYAML = ({ example, component, raw, showLink = true }) => {
       {showLink && (
         <p>
           This example's full <code>zarf.yaml</code> can be viewed at{" "}
-          <a href={`/examples/${example}/?view=zarf.yaml`}>examples/{example}</a>
+          <a href={`/examples/${example}/#zarf.yaml`}>examples/{example}</a>
         </p>
       )}
       <CodeBlock copy={false} title={`examples/${example}/zarf.yaml`} language="yaml">

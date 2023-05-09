@@ -25,7 +25,7 @@ Fully defined examples of components can be found in the [examples section](/exa
 
 There are certain fields that will be common across all component definitions. These fields are:
 
-<Properties item="ZarfComponent" include={["name","description","default","required","group","cosignKeyPath","only","actions"]} />
+<Properties item="ZarfComponent" invert include={["files","charts","manifests","images","repos","dataInjections","extensions","scripts"]} />
 
 :::note
 
@@ -40,7 +40,6 @@ Component actions are explored in the [component actions documentation](7-compon
 Can be:
 
 - Relative paths to either a file or directory (from the `zarf.yaml` file)
-- Absolute paths to either a file or directory (not recommended)
 - A remote URL (http/https)
 - Verified using the `shasum` field for data integrity (optional and only available for files)
 
@@ -93,7 +92,6 @@ Can be:
 Can be when using the `localPath` key:
 
 - Relative paths to either a file or directory (from the `zarf.yaml` file)
-- Absolute paths to either a file or directory (not recommended)
 
 Can be when using the `url` key:
 
@@ -121,7 +119,6 @@ Can be when using the `url` key:
 Can be when using the `files` key:
 
 - Relative paths to a Kubernetes manifest file (from the `zarf.yaml` file)
-- Absolute paths to a Kubernetes manifest file (not recommended)
 - Verified using the `url@shasum` syntax for data integrity (optional and only for remote URLs)
 
 Can be when using the `kustomizations` key:

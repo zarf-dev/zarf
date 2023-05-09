@@ -1,28 +1,8 @@
 import ExampleYAML from '@site/src/components/ExampleYAML';
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
 
 # Big Bang
 
-<Tabs queryString="view">
-<TabItem value="README">
-
-This package deploys [Big Bang](https://repo1.dso.mil/platform-one/big-bang/bigbang) using the Zarf `bigbang` extension.  An example of this configuration is below:
-
-```yaml
-components:
-  - name: bigbang
-    required: true
-    extensions:
-      bigbang:
-        version: 1.54.0
-        skipFlux: false
-        valuesFiles:
-          - config/minimal.yaml #turns on just istio
-          - config/ingress.yaml # adds istio certs for *.bigbang.dev
-          - config/kyverno.yaml # turns on kyverno
-          - config/loki.yaml # turns on loki and monitoring
-```
+This package deploys [Big Bang](https://repo1.dso.mil/platform-one/big-bang/bigbang) using the Zarf `bigbang` extension.
 
 The `bigbang` noun sits within the `extensions` specification of Zarf and provides the following configuration:
 
@@ -33,8 +13,12 @@ The `bigbang` noun sits within the `extensions` specification of Zarf and provid
 
 To see a tutorial for the creation and deployment of this package see the [Big Bang Tutorial](../../docs/6-zarf-tutorials/6-big-bang.md).
 
-</TabItem>
-<TabItem value="zarf.yaml">
+## `zarf.yaml` {#zarf.yaml}
+
+:::info
+
+To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
+
+:::
+
 <ExampleYAML example="big-bang" showLink={false} />
-</TabItem>
-</Tabs>
