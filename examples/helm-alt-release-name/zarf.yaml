@@ -10,6 +10,6 @@ components:
         releaseName: cool-name
         url: https://stefanprodan.github.io/podinfo
         version: 6.1.6
-        namespace: helm-releasename
+        namespace: helm-alt-release-name
     images:
       - ghcr.io/stefanprodan/podinfo:6.1.6
