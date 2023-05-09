@@ -52,20 +52,20 @@ During the deployment process, Zarf will leverage the infrastructure created dur
 
 ## Package Components
 
-Zarf Packages consist of smaller units known as 'components'. These components are further defined on the [Zarf Components page](./2-zarf-components.md), but to summarize, they represent the named capabilities that packages offer. For additional information regarding the `zarf.yaml` package structure, please refer to the [Zarf Package Schema](./5-zarf-schema.md) documentation.
+Zarf Packages consist of smaller units known as 'components'. These components are further defined on the [Zarf Components page](./2-zarf-components.md), but to summarize, they represent the named capabilities that packages offer. For additional information regarding the `zarf.yaml` package structure, please refer to the [Zarf Package Schema](./4-zarf-schema.md) documentation.
 
 ## Creating a Zarf Package
 
 The following list outlines the dependencies for creating a Zarf Package:
 
-- A local K8s cluster to work with ([K3s](https://k3s.io/)/[k3d](https://k3d.io/v5.4.1/)/[Kind](https://kind.sigs.k8s.io/docs/user/quick-start#installation)).
-- A Zarf CLI ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../2-the-zarf-cli/0-building-your-own-cli.md)).
-- A Zarf init package ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../2-the-zarf-cli/0-building-your-own-cli.md)).
+- A copy of the Zarf CLI ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../2-the-zarf-cli/0-building-your-own-cli.md)).
+- A `zarf.yaml` file defined to build a package from.
+- (for testing) A local K8s cluster to work with ([K3s](https://k3s.io/)/[k3d](https://k3d.io/v5.4.1/)/[Kind](https://kind.sigs.k8s.io/docs/user/quick-start#installation)).
+- (for testing) A Zarf init package ([downloaded](https://github.com/defenseunicorns/zarf/releases) or [manually built](../2-the-zarf-cli/0-building-your-own-cli.md)).
 
-The process of defining a package is elaborated in detail on the [Creating a Package](../6-zarf-tutorials/0-using-zarf-package-create.md) page. Once a package has been defined, building it is a relatively straightforward task.
+When executed, the `zarf package create` command locates the `zarf.yaml` file in the current directory and constructs the package from that file. The command utilizes internet or intranet resources to retrieve all the required assets and stores them in a temporary directory. After the required resources have been obtained, Zarf generates a tarball of the temporary directory and performs necessary cleanup actions.  You can learn more about this flow on the [package create lifecycle](./5-package-create-lifecycle.md) page.
 
-The `zarf package create` command locates the `zarf.yaml` file in the current directory and constructs the package from that file. The command utilizes internet or intranet resources to retrieve all the required assets and stores them in a temporary directory. After the required resources have been obtained, Zarf generates a tarball of the temporary directory and performs necessary cleanup actions.
-
+The process of defining and creating a package is also elaborated on in detail in the [Creating a Zarf Package Tutorial](../6-zarf-tutorials/0-creating-a-zarf-package.md).
 
 ## Inspecting a Created Package
 

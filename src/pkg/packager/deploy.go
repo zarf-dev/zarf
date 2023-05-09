@@ -435,7 +435,10 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 					return err
 				}
 
-				tunnel.Connect("", false)
+				err = tunnel.Connect("", false)
+				if err != nil {
+					return err
+				}
 				defer tunnel.Close()
 				gitClient.Server.Address = tunnel.HTTPEndpoint()
 			}

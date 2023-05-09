@@ -1,4 +1,4 @@
-# Intro to Package Deploy
+# Deploy a Zarf Package
 
 Zarf Packages are designed to be easily deployable on a variety of systems, including air-gapped systems. All of the necessary dependencies are included within the package, eliminating the need for outbound internet connectivity. When deploying the package onto a cluster, the dependencies contained in each component are automatically pushed into a Docker registry and/or Git server created by or known to Zarf on the air-gapped system.
 
@@ -30,8 +30,11 @@ Zarf normally expects to operate against a Kubernetes cluster that has been [Zar
 
 To learn more about deploying a Zarf package, you can check out the following resources:
 
-- [Getting Started with Zarf](../1-getting-started/index.md): A step-by-step guide to using Zarf to create and deploy packages.
+- [Getting Started with Zarf](../1-getting-started/index.md): A step-by-step guide to installing Zarf and a description of the problems it seeks to solve.
 - [Zarf CLI Documentation](../2-the-zarf-cli/index.md): A comprehensive guide to using the Zarf command-line interface.
+- [The Package Deploy Lifecycle](./1-package-deploy-lifecycle.md): An overview of the lifecycle of `zarf package deploy`.
+- [Deploying a Zarf Package Tutorial](../6-zarf-tutorials/3-deploy-a-retro-arcade.md): A tutorial covering how to deploy a package onto an initialized cluster.
+- [The Zarf Init Package](../3-create-a-zarf-package/3-zarf-init-package.md): Learn about the 'init' package that is used to store resources for zarf packages.
 
 ## Typical Deployment Workflow:
 
