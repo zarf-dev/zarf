@@ -354,6 +354,9 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 		} else if len(chart.URL) > 0 && operation == "create" {
 			helmCfg.DownloadPublishedChart(componentPath.Charts)
 		} else if operation == "skeleton" {
+			if chart.URL != "" {
+				continue
+			}
 			dst := filepath.Join(componentPath.Charts, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			rel := strings.TrimPrefix(dst, componentPath.Base)
 			err := utils.CreatePathAndCopy(chart.LocalPath, dst)

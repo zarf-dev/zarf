@@ -131,12 +131,9 @@ func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (pat
 
 	base := filepath.Join(p.tmp.Components, component.Name)
 
-	if _, err = os.Stat(base); os.IsNotExist(err) {
-		// basePath does not exist
-		err = utils.CreateDirectory(base, 0700)
-		if err != nil {
-			return paths, err
-		}
+	err = utils.CreateDirectory(base, 0700)
+	if err != nil {
+		return paths, err
 	}
 
 	paths = types.ComponentPaths{
@@ -162,9 +159,14 @@ func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (pat
 		if err != nil {
 			return paths, err
 		}
-		err = utils.CreateDirectory(paths.Values, 0700)
-		if err != nil {
-			return paths, err
+		for _, chart := range component.Charts {
+			if len(chart.ValuesFiles) > 0 {
+				err = utils.CreateDirectory(paths.Values, 0700)
+				if err != nil {
+					return paths, err
+				}
+				break
+			}
 		}
 	}
 
