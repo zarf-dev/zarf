@@ -1,4 +1,11 @@
+import ExampleYAML from '@site/src/components/ExampleYAML';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Big Bang
+
+<Tabs queryString="view">
+<TabItem value="README">
 
 This package deploys [Big Bang](https://repo1.dso.mil/platform-one/big-bang/bigbang) using the Zarf `bigbang` extension.  An example of this configuration is below:
 
@@ -25,3 +32,9 @@ The `bigbang` noun sits within the `extensions` specification of Zarf and provid
 - `valuesFiles` - The list of values files to pass to Big Bang; these will be merged together
 
 To see a tutorial for the creation and deployment of this package see the [Big Bang Tutorial](../../docs/6-zarf-tutorials/6-big-bang.md).
+
+</TabItem>
+<TabItem value="zarf.yaml">
+<ExampleYAML example="big-bang" showLink={false} />
+</TabItem>
+</Tabs>

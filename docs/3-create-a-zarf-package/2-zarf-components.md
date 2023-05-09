@@ -1,93 +1,229 @@
 import Properties from '@site/src/components/SchemaItemProperties';
-import FetchExampleYAML from '@site/src/components/FetchExampleYAML';
+import ExampleYAML from '@site/src/components/ExampleYAML';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Package Components
 
+:::note
+
+The following examples are not all-inclusive and are only meant to showcase the different types of resources that can be defined in a component. For a full list of fields and their options, please see the [component schema documentation](5-zarf-schema.md#components).
+
+:::
+
 ## Overview
 
-The actual capabilities that Zarf Packages provided are defined within named components. These components define what dependencies they have and a declarative definition of how they should be deployed. Each package can have as many components as the package creator wants but a package isn't anything without at least one component. More documentation can be found [on the component actions docs page](../5-component-actions.md).
+The actual capabilities that Zarf Packages provided are defined within named components.
 
-Components can define a wide range of resources that are needed when the package is deployed. The schema for components is located under the [`components` section of the package schema documentation](../3-zarf-schema.md#components). The below documentation showcases some of the different types of resources that can be defined in a component.
+These components define what dependencies they have along with a declarative definition of how they should be deployed.
+
+Each package can have as many components as the package creator wants but a package isn't anything without at least one component.
+
+Fully defined examples of components can be found in the [examples section](/examples/) of the documentation.
 
 ## Common Component Fields
 
 There are certain fields that will be common across all component definitions. These fields are:
 
-<Properties item="ZarfComponent" include={["name","description","default","required","group","cosignKeyPath","only"]} />
+<Properties item="ZarfComponent" include={["name","description","default","required","group","cosignKeyPath","only","actions"]} />
+
+:::note
+
+Component actions are explored in the [component actions documentation](7-component-actions.md).
+
+:::
 
 ### Files
 
 <Properties item="ZarfComponent" include={["files"]} />
 
-<FetchExampleYAML example="import-everything" component="file-imports" branch="oci-package-compose" />
+Can be:
 
-> explanation + example of local + relative + absolute + remote
+- Relative paths to either a file or directory (from the `zarf.yaml` file)
+- Absolute paths to either a file or directory (not recommended)
+- A remote URL (http/https)
+- Verified using the `shasum` field for data integrity (optional and only available for files)
+
+#### File Examples
+
+<Tabs queryString="file-examples">
+<TabItem value="Local and Remote">
+<ExampleYAML example="terraform" component="download-terraform" />
+</TabItem>
+<TabItem value="Remote with SHA sums">
+
+```yaml title="packages/distros/k3s/zarf.yaml"
+  - name: k3s
+    import:
+      path: common
+      name: k3s
+    only:
+      cluster:
+        architecture: amd64
+    files:
+      # Include the actual K3s binary
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s
+        shasum: ca398d83fee8f9f52b05fb184582054be3c0285a1b9e8fb5c7305c7b9a91448a
+        target: /usr/sbin/k3s
+        executable: true
+        # K3s magic provides these tools when symlinking
+        symlinks:
+          - /usr/sbin/kubectl
+          - /usr/sbin/ctr
+          - /usr/sbin/crictl
+      # Transfer the K3s images for containerd to pick them up
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s-airgap-images-amd64.tar.zst
+        shasum: 6736f9fa4d5754d60b0508bafb2f888170cb99a2d93a3a1617a919ca4ee74034
+        target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
+    actions:
+      onDeploy:
+        before:
+          - cmd: if [ "$(arch)" != "x86_64" ]; then echo "this package architecture is amd64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
+            description: Check that the host architecture matches the package architecture
+            maxRetries: 0
+```
+
+</TabItem>
+</Tabs>
 
 ### Helm Charts
 
 <Properties item="ZarfComponent" include={["charts"]} />
 
-<FetchExampleYAML example="import-everything" component="import-helm" branch="oci-package-compose" />
+Can be when using the `localPath` key:
 
-> explanation + example of local + relative + absolute + remote
+- Relative paths to either a file or directory (from the `zarf.yaml` file)
+- Absolute paths to either a file or directory (not recommended)
+
+Can be when using the `url` key:
+
+- A remote URL (http/https) to a Git repository
+- A remote URL (oci://) to an OCI registry
+
+#### Chart Examples
+
+<Tabs queryString="chart-examples">
+<TabItem value="localPath">
+<ExampleYAML example="helm-local-chart" component="demo-helm-local-chart" />
+</TabItem>
+<TabItem value="URL (git)">
+<ExampleYAML example="helm-git-chart" component="demo-helm-git-chart" />
+</TabItem>
+<TabItem value="URL (oci)">
+<ExampleYAML example="helm-oci-chart" component="helm-oci-chart" />
+</TabItem>
+</Tabs>
 
 ### Kubernetes Manifests
 
 <Properties item="ZarfComponent" include={["manifests"]} />
 
-Raw Kubernetes manifests to deploy (by getting converted into zarf-generated helm charts and installed)
+Can be when using the `files` key:
 
-> explanation + example of local + relative + absolute + remote
+- Relative paths to a Kubernetes manifest file (from the `zarf.yaml` file)
+- Absolute paths to a Kubernetes manifest file (not recommended)
+- Verified using the `url@shasum` syntax for data integrity (optional and only for remote URLs)
+
+Can be when using the `kustomizations` key:
+
+- Any valid Kustomize reference both local and [remote](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md) (ie. anything you could do a `kustomize build` on)
+
+#### Manifest Examples
+
+<Tabs queryString="manifest-examples">
+<TabItem value="Local">
+
+> While this explanation does not showcase it, you can also specify a local directory containing a `kustomization.yaml` file and Zarf will automatically run `kustomize build` on the directory during `zarf package create`, rendering the Kustomization into a single manifest file.
+
+<ExampleYAML example="dos-games" component="baseline" />
+</TabItem>
+<TabItem value="Remote">
+<ExampleYAML example="remote-manifests" component="remote-manifests-and-kustomizations" />
+</TabItem>
+</Tabs>
 
 ### Container Images
 
 <Properties item="ZarfComponent" include={["images"]} />
 
-> explanation + example
+Images can either be discovered manually, or automatically by using [`zarf prepare find-images`](../2-the-zarf-cli/100-cli-commands/zarf_prepare_find-images.md).
+
+:::note
+
+`zarf prepare find-images` has some known limitations due to the numerous ways images can be defined in Kubernetes resources, but should work for most standard manifests, kustomizations, and helm charts.
+
+:::
+
+#### Image Examples
+
+<ExampleYAML example="podinfo-flux" component="flux" />
 
 ### Git Repositories
 
+The [`git-data`](/examples/git-data/) example provides an in-depth explanation of how to include Git repositories in your Zarf package to be pushed to the internal/external Git server.
+
+The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps workflow using Flux and Zarf.
+
 <Properties item="ZarfComponent" include={["repos"]} />
 
-* Git repositories to push into the git server the init-package created in the k8s cluster
+#### Repository Examples
 
-> explanation + example
+<Tabs queryString="git-repo-examples">
+<TabItem value="Full Mirror">
+<ExampleYAML example="git-data" component="full-repo" />
+</TabItem>
+<TabItem value="Specific Tag">
+<ExampleYAML example="git-data" component="specific-tag" />
+</TabItem>
+<TabItem value="Specific Branch">
+<ExampleYAML example="git-data" component="specific-branch" />
+</TabItem>
+<TabItem value="Specific Hash">
+<ExampleYAML example="git-data" component="specific-hash" />
+</TabItem>
+</Tabs>
 
 ### Data Injections
 
 <Properties item="ZarfComponent" include={["dataInjections"]} />
 
-Data to push into a resource (i.e. a pod) in the k8s cluster
+<ExampleYAML example="data-injection" component="with-init-container" />
 
-<FetchExampleYAML example="data-injection" component="with-init-container" />
+### Component Imports
 
-### Zarf Components
+<Properties item="ZarfComponent" include={["import"]} />
 
-Existing components from other packages can be composed in new packages. This can be achieved by using the import field and providing a path to the `zarf.yaml` you wish to compose.
+<ExampleYAML example="composable-packages" component="games" />
 
-```yaml
-components:
-  - name: flux
-    import:
-     path: 'path/to/flux/package/directory/'
-```
+:::note
 
-Unless you specify the component name in the import field, Zarf will try to import a component from the specified path that has the same name as the new component that is currently being defined. In the example above, since the new component is named 'flux' Zarf will import the 'flux' component from the specified path. If the new component is going to have a different name, you can specify the name of the package that needs to be imported in the import field.
+During composition, Zarf will merge the imported component with the component that is importing it. This means that if the importing component defines a field that the imported component also defines, the value from the importing component will be used and override.
 
-```yaml
-components:
-  - name: flux
-    import:
-     path: 'path/to/flux/package/directory/'
-     name: flux-v1.0.0
-```
+This process will also merge `variables` and `constants` defined in the imported component's `zarf.yaml` with the importing component. The same ovveride rules apply here as well.
 
-> Note: When importing a component, Zarf will copy all of the values from the original component except for the `required` key. In addition, while Zarf will copy the values, you have the ability to override the value for the `description` key.
+:::
+
+### Extensions
+
+<Properties item="ZarfComponent" include={["extensions"]} />
+
+<ExampleYAML example="big-bang" component="bigbang" />
 
 ## Deploying Components
 
-When deploying a Zarf package, the **components within a package are deployed in the order they are defined in the `zarf.yaml`**. The `zarf.yaml` configuration for each component also defines whether the component is 'required' or not. 'Required' components are always deployed without any additional user interaction while optional components are printed out in an interactive prompt asking the user if they wish to the deploy the component.
+When deploying a Zarf package, compone are deployed in the order they are defined in the `zarf.yaml`.
 
-If you already know which components you want to deploy, you can do so without getting prompted by passing the components as a comma-separated list to the `--components` flag during the deploy command. (ex. `zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,optional-component-2`)
+The `zarf.yaml` configuration for each component also defines whether the component is 'required' or not. 'Required' components are always deployed without any additional user interaction while optional components are printed out in an interactive prompt asking the user if they wish to the deploy the component.
 
-Zarf components can contain different key/value pairs which you can learn more about here under the `components` section: [ZarfComponent Schema Docs](./5-zarf-schema.md#components)
+If you already know which components you want to deploy, you can do so without getting prompted by passing the components as a comma-separated list to the `--components` flag during the deploy command.
+
+```bash
+# deploy all required components, prompting for optional components and variables
+$ zarf package deploy ./path/to/package.tar.zst
+
+# deploy all required components, ignoring optional components and variable prompts
+$ zarf package deploy ./path/to/package.tar.zst --confirm
+
+# deploy optional-component-1 and optional-component-2 components whether they are required or not
+$ zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,optional-component-2
+```

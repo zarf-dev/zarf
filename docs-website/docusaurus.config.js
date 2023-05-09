@@ -11,7 +11,7 @@ const config = {
   url: "https://zarf.dev",
   baseUrl: "/",
   onBrokenLinks: "warn",
-  onBrokenMarkdownLinks: "warn",
+  onBrokenMarkdownLinks: "throw",
   favicon: "img/favicon.svg",
   organizationName: "Defense Unicorns", // Usually your GitHub org/user name.
   projectName: "Zarf", // Usually your repo name.
@@ -21,6 +21,10 @@ const config = {
   themes: [
     [require.resolve("@easyops-cn/docusaurus-search-local"), { hashed: true }],
     [require.resolve("@docusaurus/theme-mermaid"), { hashed: true }],
+  ],
+  staticDirectories:[
+    "static",
+    "../examples",
   ],
   presets: [
     [
@@ -36,6 +40,8 @@ const config = {
             "examples/**/*.{md,mdx}",
             "packages/**/*.{md,mdx}",
           ],
+          showLastUpdateTime: true,
+          showLastUpdateAuthor: true,
           sidebarPath: require.resolve("./src/sidebars.js"),
           editUrl: ({ docPath }) => {
             // TODO: (@RAZZLE) once examples have been fixed, change this url to edit: `https://github.com/defenseunicorns/zarf/edit/main/${docPath}`
