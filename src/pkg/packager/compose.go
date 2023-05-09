@@ -222,12 +222,18 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 			child.Manifests[manifestIdx].Files[fileIdx] = composed
 		}
 		for kustomizeIdx, kustomization := range manifest.Kustomizations {
-			// todo: this will break if kustomization if a url
 			composed, err := p.getComposedFilePath(pathAncestry, kustomization)
 			if err != nil {
 				return child, err
 			}
-			child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = composed
+			// kustomizations can use non-standard urls, so we need to check if the composed path exists on the local filesystem
+			abs, _ := filepath.Abs(composed)
+			dne := utils.InvalidPath(abs)
+			if dne {
+				child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = kustomization
+			} else {
+				child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = composed
+			}
 		}
 	}
 
