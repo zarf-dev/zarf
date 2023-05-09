@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 // Package api provides the UI API server.
@@ -93,12 +94,15 @@ func LaunchAPIServer() {
 			r.Put("/deploy", packages.DeployPackage)
 			r.Get("/deploy-stream", packages.StreamDeployPackage)
 			r.Delete("/remove/{name}", packages.RemovePackage)
+			r.Put("/{pkg}/connect/{name}", packages.ConnectTunnel)
+			r.Delete("/{pkg}/disconnect/{name}", packages.DisconnectTunnel)
+			r.Get("/{pkg}/connections", packages.ListPackageConnections)
+			r.Get("/connections", packages.ListConnections)
 		})
 
 		r.Route("/components", func(r chi.Router) {
 			r.Get("/deployed", components.ListDeployingComponents)
 		})
-
 	})
 
 	// If no dev port specified, use the server port for the URL and try to open it
