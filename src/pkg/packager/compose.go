@@ -158,10 +158,11 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		}
 	}
 
+	pathAncestry = filepath.Join(pathAncestry, parent.Import.Path)
 	// Check if we need to get more of children.
 	if child.Import.Path != "" {
 		// Recursively call this function to get the next layer of children.
-		grandchildComponent, err := p.getChildComponent(child, filepath.Join(pathAncestry, parent.Import.Path))
+		grandchildComponent, err := p.getChildComponent(child, pathAncestry)
 		if err != nil {
 			return child, err
 		}
@@ -173,7 +174,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		child = grandchildComponent
 	} else {
 		// Fix the filePaths of imported components to be accessible from our current location.
-		child, err = p.fixComposedFilepaths(filepath.Join(pathAncestry, parent.Import.Path), child)
+		child, err = p.fixComposedFilepaths(pathAncestry, child)
 		if err != nil {
 			return child, fmt.Errorf("unable to fix composed filepaths: %s", err.Error())
 		}
