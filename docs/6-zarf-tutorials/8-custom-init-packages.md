@@ -76,7 +76,7 @@ For other components, or older versions of Zarf, you can modify the manifests of
 
 :::tip
 
-If your enterprise uses pull-through mirrors to host vetted images you can run the following to create a Zarf 'init' package from those mirrors (where `<registry>.enterprise.corp` are your enterprise mirror(s)):
+If your enterprise uses pull-through mirrors to host vetted images you can run the following command to create a Zarf 'init' package from those mirrors (where `<registry>.enterprise.corp` are your enterprise mirror(s)):
 
 ```
 $ zarf package create . --set AGENT_IMAGE_TAG=vX.X.X \
