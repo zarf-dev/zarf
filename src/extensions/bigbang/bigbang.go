@@ -393,7 +393,7 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 		return manifest, err
 	}
 
-	hrValues := []fluxHelmCtrl.ValuesReference{{}}
+	var hrValues []fluxHelmCtrl.ValuesReference
 
 	// If YOLO mode is enabled, do not include the zarf-credentials secret
 	if !YOLO {
