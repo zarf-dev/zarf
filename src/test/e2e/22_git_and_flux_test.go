@@ -30,7 +30,8 @@ func TestGitAndFlux(t *testing.T) {
 
 	tunnel, err := cluster.NewZarfTunnel()
 	require.NoError(t, err)
-	tunnel.Connect(cluster.ZarfGit, false)
+	err = tunnel.Connect(cluster.ZarfGit, false)
+	require.NoError(t, err)
 	defer tunnel.Close()
 
 	testGitServerConnect(t, tunnel.HTTPEndpoint())

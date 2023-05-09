@@ -36,7 +36,8 @@ func TestConnect(t *testing.T) {
 	// Connect to Gitea
 	tunnelGit, err := cluster.NewZarfTunnel()
 	require.NoError(t, err)
-	tunnelGit.Connect(cluster.ZarfGit, false)
+	err = tunnelGit.Connect(cluster.ZarfGit, false)
+	require.NoError(t, err)
 	defer tunnelGit.Close()
 
 	// Make sure Gitea comes up cleanly
@@ -47,7 +48,8 @@ func TestConnect(t *testing.T) {
 	// Connect to the Logging Stack
 	tunnelLog, err := cluster.NewZarfTunnel()
 	require.NoError(t, err)
-	tunnelLog.Connect(cluster.ZarfLogging, false)
+	err = tunnelLog.Connect(cluster.ZarfLogging, false)
+	require.NoError(t, err)
 	defer tunnelLog.Close()
 
 	// Make sure Grafana comes up cleanly

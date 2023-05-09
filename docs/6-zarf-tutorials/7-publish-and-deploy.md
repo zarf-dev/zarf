@@ -111,11 +111,9 @@ Packages can be saved to the local disk in order to deploy a package multiple ti
 
 ### Failed to publish package: version is required for publishing
 
-#### Example
-
 <iframe src="/docs/tutorials/troubleshoot_version_required_publish.html" width="100%" height="130px"></iframe>
 
-#### Remediation
+:::info Remediation
 
 You attempted to publish a package with no version metadata.
 
@@ -126,25 +124,25 @@ You attempted to publish a package with no version metadata.
 3. Recreate the package with the `zarf package create` command.
 4. Publish the package.  The filename will now have the version as part of it.
 
-### Failed to publish, http: server gave HTTP response to HTTPS client
+:::
 
-#### Example
+### Failed to publish, http: server gave HTTP response to HTTPS client
 
 <iframe src="/docs/tutorials/troubleshoot_insecure_registry.html" width="100%" height="375px"></iframe>
 
-#### Remediation
+:::info Remediation
 
 You attempted to publish a package to an insecure registry, using http instead of https.
 
 1. Use the `--insecure` flag.  Note that this is not suitable for production workloads.
 
-### Unable to connect to the Kubernetes cluster.
+:::
 
-#### Example
+### Unable to connect to the Kubernetes cluster.
 
 <iframe src="/docs/tutorials/troubleshoot_unreachable.html" width="100%" height="200px"></iframe>
 
-#### Remediation
+:::info Remediation
 
 If you receive this error, either you don't have a Kubernetes cluster, your cluster is down, or your cluster is unreachable.
 
@@ -157,12 +155,14 @@ If you need to setup a cluster, you can perform the following.
 
 After that you can try deploying the package again.
 
-### Secrets "zarf-state" not found.
+:::
 
-#### Example
+### Secrets "zarf-state" not found.
 
 <iframe src="/docs/tutorials/troubleshoot_uninitialized.html" width="100%" height="250px"></iframe>
 
-#### Remediation
+:::info Remediation
 
 If you receive this error when zarf is attempting to deploy any component, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this tutorial.  Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) tutorial, then try again.
+
+:::

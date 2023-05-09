@@ -66,7 +66,10 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		tunnelReg.Connect(cluster.ZarfRegistry, false)
+		err = tunnelReg.Connect(cluster.ZarfRegistry, false)
+		if err != nil {
+			return err
+		}
 
 		// Add the correct authentication to the crane command options
 		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PullUsername, zarfState.RegistryInfo.PullPassword)

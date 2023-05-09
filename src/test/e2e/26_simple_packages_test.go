@@ -27,7 +27,8 @@ func TestDosGames(t *testing.T) {
 
 	tunnel, err := cluster.NewZarfTunnel()
 	require.NoError(t, err)
-	tunnel.Connect("doom", false)
+	err = tunnel.Connect("doom", false)
+	require.NoError(t, err)
 	defer tunnel.Close()
 
 	// Check that 'curl' returns something.
