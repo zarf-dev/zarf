@@ -214,5 +214,5 @@ type ZarfComponentImport struct {
 	// For further explanation see https://regex101.com/r/nxX8vx/1
 	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
 	// For further explanation see https://regex101.com/r/nxX8vx/1
-	URL string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package to import via OCI,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
+	URL string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package to import via OCI,pattern=^oci://(?!.*###ZARF_PKG_TMPL_).*$"`
 }

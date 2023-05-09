@@ -712,7 +712,7 @@ export interface ZarfComponentImport {
      */
     path?: string;
     /**
-     * The URL to a Zarf package
+     * The URL to a Zarf package to import via OCI
      */
     url?: string;
 }
