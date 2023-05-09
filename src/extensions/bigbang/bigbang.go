@@ -393,16 +393,21 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 		return manifest, err
 	}
 
-	// Create the zarf-credentials secret manifest.
-	if err := addManifest("bb-ext-zarf-credentials.yaml", manifestZarfCredentials(YOLO, cfg.Version)); err != nil {
-		return manifest, err
-	}
+	hrValues := []fluxHelmCtrl.ValuesReference{{}}
 
-	// Create the list of values manifests starting with zarf-credentials.
-	hrValues := []fluxHelmCtrl.ValuesReference{{
-		Kind: "Secret",
-		Name: "zarf-credentials",
-	}}
+	// If YOLO mode is enabled, do not include the zarf-credentials secret
+	if !YOLO {
+		// Create the zarf-credentials secret manifest.
+		if err := addManifest("bb-ext-zarf-credentials.yaml", manifestZarfCredentials(cfg.Version)); err != nil {
+			return manifest, err
+		}
+
+		// Create the list of values manifests starting with zarf-credentials.
+		hrValues = []fluxHelmCtrl.ValuesReference{{
+			Kind: "Secret",
+			Name: "zarf-credentials",
+		}}
+	}
 
 	// Loop through the valuesFrom list and create a manifest for each.
 	for _, path := range cfg.ValuesFiles {
