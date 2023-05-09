@@ -1,8 +1,8 @@
 import ExampleYAML from "@site/src/components/ExampleYAML";
 
-# Remote Manifests
+# Multi-Part
 
-This example shows how you to specify remote resources in a component's `manifests`.
+This example shows how to create multi-part zarf packages.
 
 ## `zarf.yaml` {#zarf.yaml}
 
@@ -12,4 +12,4 @@ To view the example in its entirety, select the `Edit this page` link below the 
 
 :::
 
-<ExampleYAML example="remote-manifests" showLink={false} />
+<ExampleYAML example="multi-part" showLink={false} />

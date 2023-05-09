@@ -1,8 +1,8 @@
 import ExampleYAML from "@site/src/components/ExampleYAML";
 
-# Remote Manifests
+# Minio
 
-This example shows how you to specify remote resources in a component's `manifests`.
+This example shows a simple deployment of minio.
 
 ## `zarf.yaml` {#zarf.yaml}
 
@@ -12,4 +12,4 @@ To view the example in its entirety, select the `Edit this page` link below the 
 
 :::
 
-<ExampleYAML example="remote-manifests" showLink={false} />
+<ExampleYAML example="minio" showLink={false} />

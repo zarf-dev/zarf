@@ -1,3 +1,5 @@
+import ExampleYAML from "@site/src/components/ExampleYAML";
+
 # Variables
 
 This example demonstrates how to define `variables` and `constants` in your package that will be templated across the manifests and charts your package uses during `zarf package deploy` with `###ZARF_VAR_*###` and `###ZARF_CONST_*###`, and also shows how package configuration templates can be used in the `zarf.yaml` during `zarf package create` with `###ZARF_PKG_TMPL_*###`.
@@ -11,12 +13,6 @@ Text files are also templated during `zarf package deploy` so you can use these 
 :::note
 
 Because files can be deployed without a Kubernetes cluster, some built-in variables such as `###ZARF_REGISTRY###` may not be available if no previous component has required access to the cluster. If you need one of these built-in variables, a prior component will need to have been called that requires access to the cluster, such as `images`, `repos`, `manifests`, `dataInjections`.
-
-:::
-
-:::info
-
-To view the example source code, select the `Edit this page` link below the article and select the parent folder.
 
 :::
 
@@ -138,3 +134,13 @@ If you use `--confirm` and do not `--set` all of the package configuration templ
 You cannot template the component import path using package configuration templates
 
 :::
+
+## `zarf.yaml` {#zarf.yaml}
+
+:::info
+
+To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
+
+:::
+
+<ExampleYAML example="variables" showLink={false} />
