@@ -10,7 +10,13 @@ zarf package publish [PACKAGE] [REPOSITORY] [flags]
 ## Examples
 
 ```
-  zarf package publish my-package.tar oci://my-registry.com/my-namespace
+
+# Publish a package to a remote registry
+zarf package publish my-package.tar oci://my-registry.com/my-namespace
+
+# Publish a skeleton package to a remote registry
+zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
+
 ```
 
 ## Options
