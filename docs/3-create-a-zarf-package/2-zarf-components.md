@@ -7,7 +7,7 @@ import TabItem from '@theme/TabItem';
 
 :::warning
 
-The following examples are not all-inclusive and are only meant to showcase the different types of resources that can be defined in a component. For a full list of fields and their options, please see the [component schema documentation](5-zarf-schema.md#components).
+The following examples are not all-inclusive and are only meant to showcase the different types of resources that can be defined in a component. For a full list of fields and their options, please see the [component schema documentation](4-zarf-schema.md#components).
 
 :::
 
@@ -31,7 +31,7 @@ There are certain fields that will be common across all component definitions. T
 
 <Properties item="ZarfComponent" include={["actions"]} />
 
-Component actions are explored in the [component actions documentation](7-component-actions.md).
+Component actions are explored in the [component actions documentation](6-component-actions.md).
 
 ### Files
 
