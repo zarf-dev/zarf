@@ -148,7 +148,7 @@ func handleOciPackage(url string, out string, concurrency int, components ...str
 		return err
 	}
 
-	estimatedBytes, err := getOCIPackageSize(src, ref)
+	estimatedBytes, err := getOCIPackageSize(src)
 	if err != nil {
 		return err
 	}
@@ -236,7 +236,7 @@ func isManifestUnsupported(err error) bool {
 	return false
 }
 
-func getOCIPackageSize(src *utils.OrasRemote, ref registry.Reference) (int64, error) {
+func getOCIPackageSize(src *utils.OrasRemote) (int64, error) {
 	var total int64
 
 	layers, err := getLayers(src)
