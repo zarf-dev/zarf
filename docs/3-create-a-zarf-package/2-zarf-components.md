@@ -203,7 +203,7 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 
 During composition, Zarf will merge the imported component with the component that is importing it. This means that if the importing component defines a field that the imported component also defines, the value from the importing component will be used and override.
 
-This process will also merge `variables` and `constants` defined in the imported component's `zarf.yaml` with the importing component. The same ovveride rules apply here as well.
+This process will also merge `variables` and `constants` defined in the imported component's `zarf.yaml` with the importing component. The same override rules apply here as well.
 
 :::
 
@@ -215,7 +215,7 @@ This process will also merge `variables` and `constants` defined in the imported
 
 ## Deploying Components
 
-When deploying a Zarf package, compone are deployed in the order they are defined in the `zarf.yaml`.
+When deploying a Zarf package, components are deployed in the order they are defined in the `zarf.yaml`.
 
 The `zarf.yaml` configuration for each component also defines whether the component is 'required' or not. 'Required' components are always deployed without any additional user interaction while optional components are printed out in an interactive prompt asking the user if they wish to the deploy the component.
 

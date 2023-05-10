@@ -6,7 +6,7 @@ This example demonstrates using Zarf to compose existing zarf packages into anot
 
 :::note
 
-Import paths must be statically defined at create time.  You cannot use [variables](../variables/) in them
+Import paths must be statically defined at create time.  You cannot use [variables](../variables/) in them.
 
 :::
 

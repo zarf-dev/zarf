@@ -344,7 +344,7 @@ func (p *Packager) loadSkeleton() error {
 			return err
 		}
 
-		// if tmp is not empty, tar it up
+		// if componentPath is not empty, tar it up
 		info, err := os.Stat(componentPath)
 		if err != nil {
 			return err
