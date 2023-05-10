@@ -23,7 +23,6 @@ func (p *Packager) Pull() error {
 	if err != nil {
 		return err
 	}
-	p.cfg.DeployOpts.PackagePath = p.tmp.Base
 	err = utils.ReadYaml(p.tmp.ZarfYaml, &p.cfg.Pkg)
 	if err != nil {
 		return err
