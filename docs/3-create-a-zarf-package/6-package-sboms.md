@@ -22,7 +22,7 @@ $ syft packages file:path/to/yourproject/file -o json > my-sbom.json
 
 :::note
 
-Zarf uses the file Syft SBOM scheme even if given a directory as the `files` or `dataInjection` source since this generally provides more information (at the cost of execution speed).
+Zarf uses the `file:` Syft SBOM scheme even if given a directory as the `files` or `dataInjection` source since this generally provides more information (at the cost of execution speed).
 
 :::
 
