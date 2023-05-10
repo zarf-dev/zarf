@@ -12,12 +12,12 @@ If you were using the Syft CLI to create these SBOM files manually this would be
 
 ```bash
 # For `images` contained within the package
-$ syft packages oci-dir:path/to/yourimage
+$ syft packages oci-dir:path/to/yourimage -o json > my-sbom.json
 ```
 
 ```bash
 # For `files` or `dataInjections` contained within the package
-$ syft packages file:path/to/yourproject/file
+$ syft packages file:path/to/yourproject/file -o json > my-sbom.json
 ```
 
 :::note
@@ -31,7 +31,7 @@ Zarf uses the file Syft SBOM scheme even if given a directory as the `files` or 
 Given the Syft CLI is vendored into Zarf you can run these commands with the Zarf binary as well:
 
 ```bash
-$ zarf tools sbom packages file:path/to/yourproject/file
+$ zarf tools sbom packages file:path/to/yourproject/file -o json > my-sbom.json
 ```
 
 :::
