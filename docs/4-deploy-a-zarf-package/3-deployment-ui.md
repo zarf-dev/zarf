@@ -1,4 +1,4 @@
-# Zarf Deployment Web UI
+# Deployment Web UI
 
 Zarf has a Deployment Web UI built in that supports a number of Zarf features used during the package deployment process. For users who prefer not to use the command line tool, the Web UI creates a simple experience to deploy and manage Zarf clusters and packages. The Web UI can be used to connect to existing clusters (via a Kubeconfig), initialize a cluster, deploy packages into a cluster, update packages in the cluster, and remove packages from the cluster.
 
