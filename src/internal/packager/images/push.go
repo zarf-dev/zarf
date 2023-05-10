@@ -21,7 +21,7 @@ import (
 // PushToZarfRegistry pushes a provided image into the configured Zarf registry
 // This function will optionally shorten the image name while appending a checksum of the original image name.
 func (i *ImgConfig) PushToZarfRegistry() error {
-	message.Debugf("images.PushToZarfRegistry(%#v)", i)
+	message.Debug("images.PushToZarfRegistry()")
 
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})

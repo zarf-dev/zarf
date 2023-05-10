@@ -47,7 +47,7 @@ var useLogFile bool
 type DebugWriter struct{}
 
 func (d *DebugWriter) Write(raw []byte) (int, error) {
-	Debug(raw)
+	Debug(string(raw))
 	return len(raw), nil
 }
 
