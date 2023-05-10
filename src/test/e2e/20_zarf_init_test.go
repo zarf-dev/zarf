@@ -55,10 +55,10 @@ func TestZarfInit(t *testing.T) {
 	// Verify that any state secrets were not included in the log
 	base64State, _, err := e2e.ExecZarfCommand("tools", "kubectl", "get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
 	require.NoError(t, err)
-	stateJson, err := base64.StdEncoding.DecodeString(base64State)
+	stateJSON, err := base64.StdEncoding.DecodeString(base64State)
 	require.NoError(t, err)
 	state := types.ZarfState{}
-	err = json.Unmarshal(stateJson, &state)
+	err = json.Unmarshal(stateJSON, &state)
 	require.NoError(t, err)
 	require.NotContains(t, logText, state.AgentTLS.CA)
 	require.NotContains(t, logText, state.AgentTLS.Cert)
