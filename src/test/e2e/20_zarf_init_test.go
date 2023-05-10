@@ -5,14 +5,18 @@
 package test
 
 import (
+	"encoding/base64"
 	"fmt"
 	"testing"
 
+	"encoding/json"
+
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
 
 func TestZarfInit(t *testing.T) {
-	t.Log("E2E: Zarf init (limit to 10 minutes)")
+	t.Log("E2E: Zarf init")
 	e2e.SetupWithCluster(t)
 	defer e2e.Teardown(t)
 
@@ -42,9 +46,30 @@ func TestZarfInit(t *testing.T) {
 	require.Contains(t, stdErr, expectedErrorMessage)
 
 	// run `zarf init`
-	_, stdErr, err = e2e.ExecZarfCommand("init", "--components="+initComponents, "--confirm", "--nodeport", "31337")
-	require.Contains(t, stdErr, "artifacts with software bill-of-materials (SBOM) included")
+	_, initStdErr, err := e2e.ExecZarfCommand("init", "--components="+initComponents, "--confirm", "--nodeport", "31337", "-l", "trace")
 	require.NoError(t, err)
+	require.Contains(t, initStdErr, "artifacts with software bill-of-materials (SBOM) included")
+
+	logText := e2e.GetLogFileContents(t, initStdErr)
+
+	// Verify that any state secrets were not included in the log
+	base64State, _, err := e2e.ExecZarfCommand("tools", "kubectl", "get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
+	require.NoError(t, err)
+	stateJson, err := base64.StdEncoding.DecodeString(base64State)
+	require.NoError(t, err)
+	state := types.ZarfState{}
+	err = json.Unmarshal(stateJson, &state)
+	require.NoError(t, err)
+	require.NotContains(t, logText, state.AgentTLS.CA)
+	require.NotContains(t, logText, state.AgentTLS.Cert)
+	require.NotContains(t, logText, state.AgentTLS.Key)
+	require.NotContains(t, logText, state.ArtifactServer.PushToken)
+	require.NotContains(t, logText, state.GitServer.PullPassword)
+	require.NotContains(t, logText, state.GitServer.PushPassword)
+	require.NotContains(t, logText, state.RegistryInfo.PullPassword)
+	require.NotContains(t, logText, state.RegistryInfo.PushPassword)
+	require.NotContains(t, logText, state.RegistryInfo.Secret)
+	require.NotContains(t, logText, state.LoggingSecret)
 
 	// Check that gitea is actually running and healthy
 	stdOut, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-l", "app in (gitea)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
