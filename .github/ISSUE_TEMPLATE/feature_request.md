@@ -11,9 +11,9 @@ A clear and concise description of what the problem is. Ex. I'm always frustrate
 
 ### Describe the solution you'd like
 
-**Given** a state
-**When** an action is taken
-**Then** something happens
+- **Given** a state
+- **When** an action is taken
+- **Then** something happens
 
 ### Describe alternatives you've considered
 (optional) A clear and concise description of any alternative solutions or features you've considered.
