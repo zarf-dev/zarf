@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -120,9 +119,8 @@ func FindInitPackage(w http.ResponseWriter, _ *http.Request) {
 func Explore(w http.ResponseWriter, r *http.Request) {
 	message.Debug("packages.Explore()")
 	var pattern *regexp.Regexp
-	encodedPath := r.URL.Query().Get("path")
+	path := r.URL.Query().Get("path")
 	isInit := r.URL.Query().Get("init")
-	path, err := url.PathUnescape(encodedPath)
 
 	if isInit == "true" {
 		pattern = initPackagesPattern
