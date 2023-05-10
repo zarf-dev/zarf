@@ -24,6 +24,7 @@ type RestAPI struct {
 	APIZarfPackageConnection      APIDeployedPackageConnection  `json:"apiZarfPackageConnection"`
 	APIDeployedPackageConnections APIDeployedPackageConnections `json:"apiZarfPackageConnections"`
 	APIConnections                APIConnections                `json:"apiConnections"`
+	APIExplorer                   APIExplorer                   `json:"apiExplorer"`
 }
 
 // ClusterSummary contains the summary of a cluster for the API.
@@ -58,4 +59,14 @@ type APIDeployedPackageConnections []APIDeployedPackageConnection
 type APIDeployedPackageConnection struct {
 	Name string `json:"name"`
 	URL  string `json:"url,omitempty"`
+}
+
+type APIExplorer struct {
+	Dir   string            `json:"dir"`
+	Files []APIExplorerFile `json:"files"`
+}
+
+type APIExplorerFile struct {
+	IsDir bool   `json:"isDir"`
+	Path  string `json:"path"`
 }

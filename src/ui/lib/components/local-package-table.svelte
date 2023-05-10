@@ -4,19 +4,45 @@
  -->
 <script lang="ts">
 	import { Packages } from '$lib/api';
-	import { Paper, Typography, Box, Button, type SSX } from '@ui';
+	import {
+		Paper,
+		Typography,
+		Box,
+		Button,
+		type SSX,
+		Dialog,
+		ListItem,
+		List,
+		ListItemAdornment,
+	} from '@ui';
 	import Tooltip from './tooltip.svelte';
 	import ZarfChip from './zarf-chip.svelte';
 	import { page } from '$app/stores';
-	import type { APIZarfPackage } from '$lib/api-types';
+	import type { APIExplorerFile, APIZarfPackage } from '$lib/api-types';
 	import { pkgStore } from '$lib/store';
 	import { goto } from '$app/navigation';
 	import Spinner from './spinner.svelte';
+	import ButtonDense from './button-dense.svelte';
+	import ZarfDialog from './zarf-dialog.svelte';
+	import Divider from './divider.svelte';
 
 	const initPkg = $page.url.searchParams.get('init');
 
+	let exploreErrorToggle: () => void;
+	let explorerToggle: () => void;
+	let selectedPackage: string;
+	let currentDir: string;
+	let homeDir: string;
+	let selectedPath: string;
+
+	function backOneFolder() {
+		const splitPath = currentDir.split('/');
+		splitPath.pop();
+		currentDir = splitPath.join('/');
+	}
+
 	async function readPackages(): Promise<APIZarfPackage[]> {
-		const paths = initPkg ? await Packages.findInit() : await Packages.findInHome();
+		const paths = initPkg ? await Packages.findInit() : await Packages.find();
 		// resolve all reads regardless of success or failure.
 		const result = await Promise.allSettled(paths.map((p) => Packages.read(p)));
 		// Filter out failed reads
@@ -29,11 +55,23 @@
 		return settledFulfilled.map((p) => p.value);
 	}
 
+	async function explorePath(path?: string): Promise<APIExplorerFile[]> {
+		const explorer = initPkg ? await Packages.exploreInit(path) : await Packages.explore(path);
+		if (!path) {
+			homeDir = explorer.dir;
+		}
+		currentDir = explorer.dir;
+		selectedPath = '';
+
+		return explorer.files;
+	}
+
 	const ssx: SSX = {
 		$self: {
 			display: 'flex',
 			flexDirection: 'column',
-			maxHeight: '288px',
+			flexGrow: '1',
+			height: '100%',
 			'& .local-package-list-header': {
 				height: '56px',
 				padding: '16px',
@@ -54,7 +92,7 @@
 				},
 			},
 			'& .local-package-list-body': {
-				height: '100px',
+				minHeight: '100%',
 				boxShadow: '0px -1px 0px 0px rgba(255, 255, 255, 0.12) inset',
 				overflowX: 'hidden',
 				overflowY: 'scroll',
@@ -68,7 +106,7 @@
 				},
 			},
 			'& .local-package-list-footer': {
-				height: '48px',
+				minHeight: '48px',
 				borderTopLeftRadius: '0px',
 				borderTopRightRadius: '0px',
 			},
@@ -120,14 +158,20 @@
 
 	const tableLabels = ['name', 'version', 'tags', 'description'];
 	$: initString = (initPkg && 'Init') || '';
+	$: tooltip =
+		(initPkg && 'in the execution, current working, and .zarf-cache directories') ||
+		'in the current working directory';
 </script>
 
 <Box {ssx} class="local-package-list-container">
 	<Paper class="local-package-list-header" elevation={1}>
 		<Typography variant="th">Local Directory</Typography>
 		<Tooltip>
-			This table shows all of the Zarf{initString} packages that exist on your local machine.
+			This table shows all of the Zarf{initString} packages that exist {tooltip}.
 		</Tooltip>
+		<ButtonDense variant="outlined" backgroundColor="white" on:click={explorerToggle}>
+			Select Package
+		</ButtonDense>
 	</Paper>
 	<Paper class="package-table-head-row package-table-row" square elevation={1}>
 		{#each tableLabels as l}
@@ -213,3 +257,101 @@
 	</Paper>
 	<Paper class="local-package-list-footer" elevation={1} />
 </Box>
+<ZarfDialog
+	bind:toggleDialog={exploreErrorToggle}
+	happyZarf={false}
+	titleText="Failed to load Zarf{initString} package."
+>
+	<Typography variant="body1" color="text-secondary-on-dark">
+		Failed to open file {selectedPackage}
+	</Typography>
+	<ButtonDense
+		slot="actions"
+		variant="outlined"
+		backgroundColor="white"
+		on:click={exploreErrorToggle}
+	>
+		Ok
+	</ButtonDense>
+</ZarfDialog>
+<ZarfDialog bind:toggleDialog={explorerToggle} titleText="Select ZarfPackage">
+	<svelte:fragment>
+		<Typography variant="body1" color="text-secondary-on-dark">
+			{currentDir}
+		</Typography>
+		<List
+			ssx={{
+				$self: {
+					maxHeight: '150px',
+					overflowY: 'scroll',
+					padding: '0px',
+					'& > li': {
+						display: 'flex',
+						alignItems: 'center',
+						padding: '0px',
+					},
+					'& .list-item-adornment': { color: 'var(--text-secondary-on-dark)' },
+					'& .divider': { height: '1px', boxShadow: 'inset 0px -1px 0px rgba(255,255,255,0.12)' },
+				},
+			}}
+		>
+			{#await explorePath(currentDir)}
+				<Box
+					ssx={{
+						$self: {
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+						},
+					}}
+				>
+					<Spinner color="blue-200" />
+				</Box>
+			{:then files}
+				{#each files as file}
+					<ListItem
+						title={file.path}
+						class="list-item"
+						selected={selectedPath === file.path}
+						on:click={async () => {
+							selectedPath = file.path;
+							if (file.isDir) {
+								currentDir = file.path;
+							} else {
+								try {
+									const pkg = await Packages.read(file.path);
+									pkgStore.set(pkg);
+									goto(`/packages/${pkg.zarfPackage.metadata?.name}/configure`);
+								} catch (err) {
+									selectedPackage = file.path;
+									explorerToggle();
+									exploreErrorToggle();
+								}
+							}
+						}}
+						text={file.path.split('/').pop() || ''}
+					>
+						<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined">
+							{file.isDir ? 'folder' : 'description'}
+						</ListItemAdornment>
+					</ListItem>
+					<div class="divider" />
+				{/each}
+			{:catch err}
+				<Typography variant="body1" color="error">
+					{err.message}
+				</Typography>
+			{/await}
+		</List>
+	</svelte:fragment>
+	<svelte:fragment slot="actions">
+		{#if currentDir !== homeDir}
+			<ButtonDense variant="raised" backgroundColor={'white'} on:click={backOneFolder}>
+				Back
+			</ButtonDense>
+		{/if}
+		<ButtonDense variant="outlined" backgroundColor="white" on:click={explorerToggle}>
+			Close
+		</ButtonDense>
+	</svelte:fragment>
+</ZarfDialog>

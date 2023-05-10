@@ -9,6 +9,7 @@
 
 export interface APITypes {
     apiConnections:            { [key: string]: APIDeployedPackageConnection[] };
+    apiExplorer:               APIExplorer;
     apiZarfDeployPayload:      APIZarfDeployPayload;
     apiZarfPackage:            APIZarfPackage;
     apiZarfPackageConnection:  APIDeployedPackageConnection;
@@ -27,6 +28,16 @@ export interface APITypes {
 export interface APIDeployedPackageConnection {
     name: string;
     url?: string;
+}
+
+export interface APIExplorer {
+    dir:   string;
+    files: APIExplorerFile[];
+}
+
+export interface APIExplorerFile {
+    isDir: boolean;
+    path:  string;
 }
 
 export interface APIZarfDeployPayload {
@@ -1330,6 +1341,7 @@ function r(name: string) {
 const typeMap: any = {
     "APITypes": o([
         { json: "apiConnections", js: "apiConnections", typ: m(a(r("APIDeployedPackageConnection"))) },
+        { json: "apiExplorer", js: "apiExplorer", typ: r("APIExplorer") },
         { json: "apiZarfDeployPayload", js: "apiZarfDeployPayload", typ: r("APIZarfDeployPayload") },
         { json: "apiZarfPackage", js: "apiZarfPackage", typ: r("APIZarfPackage") },
         { json: "apiZarfPackageConnection", js: "apiZarfPackageConnection", typ: r("APIDeployedPackageConnection") },
@@ -1347,6 +1359,14 @@ const typeMap: any = {
     "APIDeployedPackageConnection": o([
         { json: "name", js: "name", typ: "" },
         { json: "url", js: "url", typ: u(undefined, "") },
+    ], false),
+    "APIExplorer": o([
+        { json: "dir", js: "dir", typ: "" },
+        { json: "files", js: "files", typ: a(r("APIExplorerFile")) },
+    ], false),
+    "APIExplorerFile": o([
+        { json: "isDir", js: "isDir", typ: true },
+        { json: "path", js: "path", typ: "" },
     ], false),
     "APIZarfDeployPayload": o([
         { json: "deployOpts", js: "deployOpts", typ: r("ZarfDeployOptions") },

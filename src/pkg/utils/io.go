@@ -213,7 +213,6 @@ func FileList(dir string, pattern *regexp.Regexp) ([]string, error) {
 
 		if !file.IsDir() {
 			path := fmt.Sprintf("%s/%s", dir, file.Name())
-			message.Debugf("Checking file: %s", path)
 			if pattern != nil {
 				if len(pattern.FindStringIndex(path)) > 0 {
 					matches = append(matches, path)
