@@ -176,13 +176,15 @@ func (p *Packager) publish(ref registry.Reference) error {
 		message.Info("Example of importing components from this package:")
 		fmt.Println()
 		ex := []types.ZarfComponent{}
-		ex = append(ex, types.ZarfComponent{
-			Name: fmt.Sprintf("import-%s", p.cfg.Pkg.Components[0].Name),
-			Import: types.ZarfComponentImport{
-				ComponentName: p.cfg.Pkg.Components[0].Name,
-				URL:           fmt.Sprintf("oci://%s", ref.String()),
-			},
-		})
+		for _, c := range p.cfg.Pkg.Components {
+			ex = append(ex, types.ZarfComponent{
+				Name: fmt.Sprintf("import-%s", c.Name),
+				Import: types.ZarfComponentImport{
+					ComponentName: c.Name,
+					URL:           fmt.Sprintf("oci://%s", ref.String()),
+				},
+			})
+		}
 		utils.ColorPrintYAML(ex)
 		fmt.Println()
 	} else {

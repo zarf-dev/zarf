@@ -22,10 +22,7 @@ const config = {
     [require.resolve("@easyops-cn/docusaurus-search-local"), { hashed: true }],
     [require.resolve("@docusaurus/theme-mermaid"), { hashed: true }],
   ],
-  staticDirectories:[
-    "static",
-    "../examples",
-  ],
+  staticDirectories: ["static", "../examples", "../packages"],
   presets: [
     [
       "classic",

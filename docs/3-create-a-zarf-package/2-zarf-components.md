@@ -50,38 +50,7 @@ Can be:
 <ExampleYAML example="terraform" component="download-terraform" />
 </TabItem>
 <TabItem value="Remote with SHA sums">
-
-```yaml title="packages/distros/k3s/zarf.yaml"
-  - name: k3s
-    import:
-      path: common
-      name: k3s
-    only:
-      cluster:
-        architecture: amd64
-    files:
-      # Include the actual K3s binary
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s
-        shasum: ca398d83fee8f9f52b05fb184582054be3c0285a1b9e8fb5c7305c7b9a91448a
-        target: /usr/sbin/k3s
-        executable: true
-        # K3s magic provides these tools when symlinking
-        symlinks:
-          - /usr/sbin/kubectl
-          - /usr/sbin/ctr
-          - /usr/sbin/crictl
-      # Transfer the K3s images for containerd to pick them up
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.24.1+k3s1/k3s-airgap-images-amd64.tar.zst
-        shasum: 6736f9fa4d5754d60b0508bafb2f888170cb99a2d93a3a1617a919ca4ee74034
-        target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
-    actions:
-      onDeploy:
-        before:
-          - cmd: if [ "$(arch)" != "x86_64" ]; then echo "this package architecture is amd64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
-            description: Check that the host architecture matches the package architecture
-            maxRetries: 0
-```
-
+<ExampleYAML example="distros/k3s" component="k3s" />
 </TabItem>
 </Tabs>
 
@@ -130,7 +99,11 @@ Can be when using the `kustomizations` key:
 <Tabs queryString="manifest-examples">
 <TabItem value="Local">
 
-> While this explanation does not showcase it, you can also specify a local directory containing a `kustomization.yaml` file and Zarf will automatically run `kustomize build` on the directory during `zarf package create`, rendering the Kustomization into a single manifest file.
+:::info
+
+While this explanation does not showcase it, you can also specify a local directory containing a `kustomization.yaml` file and Zarf will automatically run `kustomize build` on the directory during `zarf package create`, rendering the Kustomization into a single manifest file.
+
+:::
 
 <ExampleYAML example="dos-games" component="baseline" />
 </TabItem>

@@ -19,7 +19,7 @@ import (
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() error {
-	err := handleOciPackage(p.cfg.DeployOpts.PackagePath, p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency)
+	err := p.handleOciPackage(p.cfg.DeployOpts.PackagePath, p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency)
 	if err != nil {
 		return err
 	}

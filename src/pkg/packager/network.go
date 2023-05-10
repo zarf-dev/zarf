@@ -43,7 +43,7 @@ func (p *Packager) handlePackagePath() error {
 	if utils.IsOCIURL(opts.PackagePath) {
 		ociURL := opts.PackagePath
 		p.cfg.DeployOpts.PackagePath = p.tmp.Base
-		return handleOciPackage(ociURL, p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency)
+		return p.handleOciPackage(ociURL, p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency)
 	}
 
 	// Handle case where deploying remote package validated via sget
@@ -133,8 +133,8 @@ func (p *Packager) handleSgetPackage() error {
 	return nil
 }
 
-func handleOciPackage(url string, out string, concurrency int, components ...string) error {
-	message.Debugf("packager.handleOciPackage(%s, %s)", url, out)
+func (p *Packager) handleOciPackage(url string, out string, concurrency int, components ...string) error {
+	message.Debugf("packager.handleOciPackage(%s, %s, %s, %s)", url, out, concurrency, components)
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, "oci://"))
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI reference: %w", err)
@@ -173,7 +173,8 @@ func handleOciPackage(url string, out string, concurrency int, components ...str
 		return nil
 	}
 	copyOpts.PostCopy = copyOpts.OnCopySkipped
-	if len(components) > 0 {
+	isPartialPull := len(components) > 0
+	if isPartialPull {
 		alwaysPull := []string{"zarf.yaml", "checksums.txt", "zarf.yaml.sig"}
 		components = append(components, alwaysPull...)
 		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {

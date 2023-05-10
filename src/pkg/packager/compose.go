@@ -94,7 +94,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			return child, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
 		}
 
-		err = handleOciPackage(skelURL, cachePath, p.cfg.PublishOpts.CopyOptions.Concurrency, fmt.Sprintf("components/%s.tar", childComponentName))
+		err = p.handleOciPackage(skelURL, cachePath, p.cfg.PublishOpts.CopyOptions.Concurrency, fmt.Sprintf("components/%s.tar", childComponentName))
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
@@ -229,8 +229,8 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 			}
 			// kustomizations can use non-standard urls, so we need to check if the composed path exists on the local filesystem
 			abs, _ := filepath.Abs(composed)
-			dne := utils.InvalidPath(abs)
-			if dne {
+			invalid := utils.InvalidPath(abs)
+			if invalid {
 				child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = kustomization
 			} else {
 				child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = composed

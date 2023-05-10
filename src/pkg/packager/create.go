@@ -422,14 +422,12 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 			}
 		}
 
-		if operation == "create" {
-			info, _ := os.Stat(dst)
+		info, _ := os.Stat(dst)
 
-			if file.Executable || info.IsDir() {
-				_ = os.Chmod(dst, 0700)
-			} else {
-				_ = os.Chmod(dst, 0600)
-			}
+		if file.Executable || info.IsDir() {
+			_ = os.Chmod(dst, 0700)
+		} else {
+			_ = os.Chmod(dst, 0600)
 		}
 	}
 

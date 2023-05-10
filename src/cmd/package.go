@@ -198,8 +198,8 @@ var packageRemoveCmd = &cobra.Command{
 }
 
 var packagePublishCmd = &cobra.Command{
-	Use:     "publish [PACKAGE] [REPOSITORY]",
-	Short:   "Publish a Zarf package to a remote registry",
+	Use:   "publish [PACKAGE|SKELETON DIRECTORY] [REPOSITORY]",
+	Short: "Publish a Zarf package to a remote registry",
 	Example: `
 # Publish a package to a remote registry
 zarf package publish my-package.tar oci://my-registry.com/my-namespace
@@ -207,7 +207,7 @@ zarf package publish my-package.tar oci://my-registry.com/my-namespace
 # Publish a skeleton package to a remote registry
 zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 `,
-	Args:    cobra.ExactArgs(2),
+	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
 
