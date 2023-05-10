@@ -31,8 +31,12 @@ func TestVariables(t *testing.T) {
 	// Deploy nginx
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm", "--set", "SITE_NAME=Lula Web", "--set", "AWS_REGION=unicorn-land", "-l", "trace")
 	require.NoError(t, err, stdOut, stdErr)
-	// Verify that unicorn-land was not included in the log
+	// Verify that the sensitive variable 'unicorn-land' was not printed to the screen
 	require.NotContains(t, stdErr, "unicorn-land")
+
+	logText := e2e.GetLogFileContents(t, stdErr)
+	// Verify that the sensitive variable 'unicorn-land' was not included in the log
+	require.NotContains(t, logText, "unicorn-land")
 
 	// Verify the terraform file was templated correctly
 	outputTF, err := os.ReadFile(tfPath)

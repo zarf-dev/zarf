@@ -47,7 +47,7 @@ var useLogFile bool
 type DebugWriter struct{}
 
 func (d *DebugWriter) Write(raw []byte) (int, error) {
-	Debug(raw)
+	Debug(string(raw))
 	return len(raw), nil
 }
 
@@ -75,16 +75,22 @@ func UseLogFile() {
 	// Prepend the log filename with a timestamp.
 	ts := time.Now().Format("2006-01-02-15-04-05")
 
-	// Try to create a temp log file.
 	var err error
-	if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
-		Error(err, "Error saving a log file")
-	} else {
-		useLogFile = true
+	if logFile != nil {
+		// Use the existing log file if logFile is set
 		logStream := io.MultiWriter(os.Stderr, logFile)
 		pterm.SetDefaultOutput(logStream)
-		message := fmt.Sprintf("Saving log file to %s", logFile.Name())
-		Note(message)
+	} else {
+		// Try to create a temp log file if one hasn't been made already
+		if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
+			Error(err, "Error saving a log file")
+		} else {
+			useLogFile = true
+			logStream := io.MultiWriter(os.Stderr, logFile)
+			pterm.SetDefaultOutput(logStream)
+			message := fmt.Sprintf("Saving log file to %s", logFile.Name())
+			Note(message)
+		}
 	}
 }
 
