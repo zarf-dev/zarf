@@ -1,11 +1,5 @@
 # Ignore file for false positives from protobuf, see the following for more information:
 #   https://github.com/anchore/grype/issues/558
 ignore:
-  # False positive from CPE confusion of svelte and svelte's extension
-  - vulnerability: CVE-2021-29261
-
-  # From rouille - The Zarf injector does not expose endpoints that use multipart form data
-  - vulnerability: GHSA-mc8h-8q98-g5hr
-
-  # From sigs.k8s.io/kustomize/api/krusty - This is a low vulnerability that does not impact Zarf as we do not marshall/unmarshall from protocol buffers
-  - vulnerability: GHSA-hw7c-3rfg-p46j
+  # This vulnerability does not affect Zarf as we do not instantiate a rekor client
+  - vulnerability: GHSA-2h5h-59f5-c5x9
