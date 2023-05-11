@@ -29,10 +29,10 @@ make test-e2e ARCH="[amd64|arm64]"
 APPLIANCE_MODE=true make test-e2e ARCH="[amd64|arm64]"
 
 # If you already have everything build, you can run this inside this folder. This lets you customize the test run.
-go test ./src/test/... -v
+go test ./src/test/... -v -failfast
 
 # Let's say you only want to run one test. You would run:
-go test ./src/test/... -v -run TestFooBarBaz
+go test ./src/test/... -v -failfast -run TestFooBarBaz
 ```
 
 :::note
