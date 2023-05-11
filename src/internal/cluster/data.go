@@ -57,7 +57,12 @@ iterator:
 		message.Debugf("Attempting to inject data into %s", data.Target)
 		source := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
 		if utils.InvalidPath(source) {
+			// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
 			source = filepath.Join(componentPath.DataInjections, fmt.Sprintf("injection-%d", index))
+			if utils.InvalidPath(source) {
+				message.Warnf("Unable to find the data injection source path %s", source)
+				return
+			}
 		}
 
 		target := k8s.PodLookup{

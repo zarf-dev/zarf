@@ -30,6 +30,7 @@ import (
 // ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
 const (
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
+	skeletonSuffix         = "skeleton"
 )
 
 // Publish publishes the package to a registry
@@ -41,17 +42,15 @@ const (
 func (p *Packager) Publish() error {
 	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
 	var ref registry.Reference
+	referenceSuffix := ""
 	if utils.IsDir(p.cfg.PublishOpts.PackagePath) {
+		referenceSuffix = skeletonSuffix
 		err := p.loadSkeleton()
 		if err != nil {
 			return err
 		}
-
-		ref, err = p.ref("skeleton")
-		if err != nil {
-			return err
-		}
 	} else {
+		referenceSuffix = p.cfg.Pkg.Build.Architecture
 		// Extract the first layer of the tarball
 		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract the package: %w", err)
@@ -61,11 +60,12 @@ func (p *Packager) Publish() error {
 		if err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 		}
+	}
 
-		ref, err = p.ref("")
-		if err != nil {
-			return err
-		}
+	// Get a reference to the registry for this package
+	ref, err := p.ref(referenceSuffix)
+	if err != nil {
+		return err
 	}
 
 	if err := p.validatePackageChecksums(); err != nil {
@@ -396,10 +396,7 @@ func (p *Packager) ref(suffix string) (registry.Reference, error) {
 	if len(ver) == 0 {
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
-	arch := p.cfg.Pkg.Build.Architecture
-	if len(suffix) == 0 {
-		suffix = arch
-	}
+
 	ref := registry.Reference{
 		Registry:   p.cfg.PublishOpts.Reference.Registry,
 		Repository: fmt.Sprintf("%s/%s", p.cfg.PublishOpts.Reference.Repository, p.cfg.Pkg.Metadata.Name),

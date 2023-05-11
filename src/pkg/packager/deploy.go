@@ -505,7 +505,11 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
 			if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
 				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
+				if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
+				}
 			}
 		}
 		// Move kustomizations to files now
