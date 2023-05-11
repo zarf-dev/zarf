@@ -354,10 +354,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			Cfg:   p.cfg,
 		}
 
-		if isSkeleton {
-			if chart.URL != "" {
-				continue
-			}
+		if isSkeleton && chart.URL == "" {
 			dst := filepath.Join(componentPath.Charts, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			rel := strings.TrimPrefix(dst, componentPath.Base)
 			err := utils.CreatePathAndCopy(chart.LocalPath, dst)

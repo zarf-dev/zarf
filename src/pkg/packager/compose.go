@@ -6,6 +6,7 @@ package packager
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -142,19 +143,35 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	if parent.Import.URL != "" {
 		dir := filepath.Join(cachePath, "components", child.Name)
 		parent.Import.Path = filepath.Join(parent.Import.Path, "components", child.Name)
-		if !utils.InvalidPath(dir) {
+		checksums, err := os.Open(filepath.Join(cachePath, "checksums.txt"))
+		if err != nil {
+			return child, fmt.Errorf("unable to open checksums.txt: %s", err.Error())
+		}
+		defer checksums.Close()
+		checksumBytes, err := io.ReadAll(checksums)
+		if err != nil {
+			return child, fmt.Errorf("unable to read checksums.txt: %s", err.Error())
+		}
+		componentChecksum := utils.Find(strings.Split(string(checksumBytes), "\n"), func(line string) bool {
+			parts := strings.Split(line, " ")
+			return parts[1] == fmt.Sprintf("components/%s.tar", child.Name)
+		})
+		if componentChecksum == "" {
+			return child, fmt.Errorf("component %s does not exist in the published skeleton package", child.Name)
+		}
+		onDiskChecksum, err := utils.GetSHA256OfFile(fmt.Sprintf("%s.tar", dir))
+		if err != nil {
+			return child, fmt.Errorf("unable to get checksum of %s.tar: %s", dir, err.Error())
+		}
+		if componentChecksum != onDiskChecksum {
 			err = os.RemoveAll(dir)
 			if err != nil {
 				return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
 			}
-		}
-		if utils.InvalidPath(fmt.Sprintf("%s.tar", dir)) {
-			return child, fmt.Errorf("component %s does not exist in the published skeleton package", child.Name)
-		}
-
-		err = archiver.Unarchive(fmt.Sprintf("%s.tar", dir), dir)
-		if err != nil {
-			return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
+			err = archiver.Unarchive(fmt.Sprintf("%s.tar", dir), dir)
+			if err != nil {
+				return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
+			}
 		}
 	}
 

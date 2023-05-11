@@ -134,7 +134,7 @@ func (p *Packager) handleSgetPackage() error {
 }
 
 func (p *Packager) handleOciPackage(url string, out string, concurrency int, components ...string) error {
-	message.Debugf("packager.handleOciPackage(%s, %s, %s, %s)", url, out, concurrency, components)
+	message.Debugf("packager.handleOciPackage(%s, %s, %d, %s)", url, out, concurrency, components)
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, "oci://"))
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI reference: %w", err)
