@@ -276,7 +276,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 }
 
 // Move files onto the host of the machine performing the deployment.
-func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLocation string) error {
+func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocation string) error {
 	// If there are no files to process, return early.
 	if len(component.Files) < 1 {
 		return nil
@@ -287,12 +287,12 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 
 	for index, file := range component.Files {
 		spinner.Updatef("Loading %s", file.Target)
-		sourceFile := filepath.Join(sourceLocation, strconv.Itoa(index))
+		pkgLocationIdx := filepath.Join(pkgLocation, strconv.Itoa(index))
 
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if shasum, _ := utils.GetCryptoHash(sourceFile, crypto.SHA256); shasum != file.Shasum {
+			if shasum, _ := utils.GetCryptoHash(pkgLocationIdx, crypto.SHA256); shasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
 			}
 		}
@@ -300,25 +300,41 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 		// Replace temp target directories
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
 
-		// Check if the file looks like a text file
-		isText, err := utils.IsTextFile(sourceFile)
+		// Determine if the file is a directory
+		pkgLocationInfo, err := os.Stat(pkgLocationIdx)
 		if err != nil {
-			message.Debugf("unable to determine if file %s is a text file: %s", sourceFile, err)
+			message.Debugf("unable to describe file %s: %s", pkgLocationIdx, err)
 		}
 
-		// If the file is a text file, template it
-		if isText {
-			spinner.Updatef("Templating %s", file.Target)
-			if err := valueTemplate.Apply(component, sourceFile, true); err != nil {
-				return fmt.Errorf("unable to template file %s: %w", sourceFile, err)
+		pkgFileList := []string{}
+		if pkgLocationInfo.IsDir() {
+			files, _ := utils.RecursiveFileList(pkgLocationIdx, nil, false, true)
+			pkgFileList = append(pkgFileList, files...)
+		} else {
+			pkgFileList = append(pkgFileList, pkgLocationIdx)
+		}
+
+		for _, pkgFile := range pkgFileList {
+			// Check if the file looks like a text file
+			isText, err := utils.IsTextFile(pkgFile)
+			if err != nil {
+				message.Debugf("unable to determine if file %s is a text file: %s", pkgFile, err)
+			}
+
+			// If the file is a text file, template it
+			if isText {
+				spinner.Updatef("Templating %s", file.Target)
+				if err := valueTemplate.Apply(component, pkgFile, true); err != nil {
+					return fmt.Errorf("unable to template file %s: %w", pkgFile, err)
+				}
 			}
 		}
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err = copy.Copy(sourceFile, file.Target)
+		err = copy.Copy(pkgLocationIdx, file.Target)
 		if err != nil {
-			return fmt.Errorf("unable to copy file %s to %s: %w", sourceFile, file.Target, err)
+			return fmt.Errorf("unable to copy file %s to %s: %w", pkgLocationIdx, file.Target, err)
 		}
 
 		// Loop over all symlinks and create them
@@ -336,7 +352,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 		}
 
 		// Cleanup now to reduce disk pressure
-		_ = os.RemoveAll(sourceFile)
+		_ = os.RemoveAll(pkgLocationIdx)
 	}
 
 	spinner.Success()

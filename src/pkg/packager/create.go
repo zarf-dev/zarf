@@ -388,7 +388,12 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				_ = os.Chmod(dst, 0600)
 			}
 
-			componentSBOM.Files = append(componentSBOM.Files, dst)
+			if info.IsDir() {
+				files, _ := utils.RecursiveFileList(dst, nil, false, true)
+				componentSBOM.Files = append(componentSBOM.Files, files...)
+			} else {
+				componentSBOM.Files = append(componentSBOM.Files, dst)
+			}
 		}
 	}
 
@@ -410,8 +415,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			}
 
 			// Unwrap the dataInjection dir into individual files.
-			pattern := regexp.MustCompile(`(?mi).+$`)
-			files, _ := utils.RecursiveFileList(dst, pattern, false, true)
+			files, _ := utils.RecursiveFileList(dst, nil, false, true)
 			componentSBOM.Files = append(componentSBOM.Files, files...)
 		}
 	}
