@@ -4,6 +4,15 @@ import ExampleYAML from "@site/src/components/ExampleYAML";
 
 This example demonstrates using Zarf to compose existing zarf packages into another package.  It uses the existing [zarf game](../dos-games/) example by simply adding an `import` and `path` in the new [zarf.yaml](zarf.yaml).
 
+## Example Prerequisites
+
+Building this example requires you to have a locally hosted container registry that has had the `helm-local-chart` skeleton package published to it. You can do this by running the following commands:
+
+```bash
+docker run -d -p 5000:5000 --restart=always --name registry registry:2
+zarf package publish examples/helm-local-chart oci://127.0.0.1:5000 --insecure
+```
+
 :::note
 
 Import paths must be statically defined at create time.  You cannot use [variables](../variables/) in them.
