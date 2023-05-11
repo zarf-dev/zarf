@@ -41,6 +41,7 @@ type ZarfBuildData struct {
 	Migrations            []string          `json:"migrations" jsonschema:"description=Any migrations that have been run on this package"`
 	Differential          bool              `json:"differential" jsonschema:"description=Whether this package was created with differential components"`
 	RegistryOverrides     map[string]string `json:"registryOverrides" jsonschema:"description=Any registry domains that were overridden on package create when pulling images"`
+	DifferentialMissing   []string          `json:"differentialMissing,omitempty" jsonschema:"description=List of components that were not included in this package due to differential packaging"`
 	OCIImportedComponents map[string]string `json:"OCIImportedComponents,omitempty" jsonschema:"description=Map of component names to the OCI image reference used to import them"`
 }
 

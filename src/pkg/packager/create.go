@@ -576,6 +576,9 @@ func (p *Packager) loadDifferentialData() error {
 		return nil
 	}
 
+	// Save the fact that this is a differential build into the build data of the package
+	p.cfg.Pkg.Build.Differential = true
+
 	tmpDir, _ := utils.MakeTempDir("")
 	defer os.RemoveAll(tmpDir)
 
@@ -610,6 +613,7 @@ func (p *Packager) loadDifferentialData() error {
 	p.cfg.CreateOpts.DifferentialData.DifferentialImages = allIncludedImagesMap
 	p.cfg.CreateOpts.DifferentialData.DifferentialRepos = allIncludedReposMap
 	p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
+	p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents = differentialZarfConfig.Build.OCIImportedComponents
 
 	return nil
 }
@@ -623,7 +627,26 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 
 	// Loop through all of the components to determine if any of them are using already included images or repos
 	componentMap := make(map[int]types.ZarfComponent)
+	componentsToRemove := []int{}
+	componentsToOCI := make(map[string]string)
+	for ociURL, componentName := range p.cfg.Pkg.Build.OCIImportedComponents {
+		componentsToOCI[componentName] = ociURL
+	}
+
 	for idx, component := range p.cfg.Pkg.Components {
+
+		// if the component is imported from an OCI package and everything is the same, don't include this package
+		if ociURL, exists := componentsToOCI[component.Name]; exists {
+			if _, alsoExists := p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents[ociURL]; alsoExists {
+
+				// If the component spec is not empty, we will still include it in the differential package
+				ignoreImport := true
+				if component.IsEmpty(ignoreImport) {
+					componentsToRemove = append(componentsToRemove, idx)
+				}
+			}
+		}
+
 		newImageList := []string{}
 		newRepoList := []string{}
 
@@ -677,6 +700,23 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 	// Update the package with the new component list
 	for idx, component := range componentMap {
 		p.cfg.Pkg.Components[idx] = component
+	}
+
+	// Remove the components that are already included (via OCI Import) in the reference package
+	if len(componentsToRemove) > 0 {
+		for i, componentIndex := range componentsToRemove {
+			indexToRemove := componentIndex - i
+			componentToRemove := p.cfg.Pkg.Components[indexToRemove]
+
+			// If we are removing a required component, add it to the build metadata and remove it from the list of OCI components for this package
+			if p.cfg.Pkg.Components[indexToRemove].Required {
+				p.cfg.Pkg.Build.DifferentialMissing = append(p.cfg.Pkg.Build.DifferentialMissing, componentToRemove.Name)
+			}
+			delete(p.cfg.Pkg.Build.OCIImportedComponents, componentsToOCI[componentToRemove.Name])
+
+			p.cfg.Pkg.Components = append(p.cfg.Pkg.Components[:indexToRemove], p.cfg.Pkg.Components[indexToRemove+1:]...)
+
+		}
 	}
 
 	return nil

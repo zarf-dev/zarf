@@ -5,6 +5,8 @@
 package types
 
 import (
+	"reflect"
+
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 )
 
@@ -215,4 +217,18 @@ type ZarfComponentImport struct {
 	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
 	// For further explanation see https://regex101.com/r/nxX8vx/1
 	URL string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package to import via OCI,pattern=^oci://(?!.*###ZARF_PKG_TMPL_).*$"`
+}
+
+// isEmpty returns if the component is empty of all content that would be deployed.
+// fields like Name, Description, Default, and Required are ignored and the Import field is optionally ignored
+func (c *ZarfComponent) IsEmpty(ignoreImport bool) bool {
+	listsAreEmpty := len(c.Charts) == 0 && len(c.Images) == 0 && len(c.DataInjections) == 0 && len(c.Files) == 0 && len(c.Manifests) == 0 && len(c.Repos) == 0
+	extensionsAreEmpty := reflect.ValueOf(c.Extensions).IsZero()
+	actionsAreEmpty := reflect.ValueOf(c.Actions).IsZero()
+	scriptsAreEmpty := reflect.ValueOf(c.DeprecatedScripts).IsZero()
+	importIsEmpty := ignoreImport || reflect.ValueOf(c.Import).IsZero()
+	importGroupIsEmpty := c.Group == ""
+	cosignKeyPathIsEmpty := c.CosignKeyPath == ""
+
+	return listsAreEmpty && extensionsAreEmpty && actionsAreEmpty && scriptsAreEmpty && importIsEmpty && importGroupIsEmpty && cosignKeyPathIsEmpty
 }
