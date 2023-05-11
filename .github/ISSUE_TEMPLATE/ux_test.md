@@ -1,16 +1,23 @@
-## Driving Questions ##
-*What are we hoping to validate?*
+---
+name: UX Test
+about: Record something that should be investigated to test User Experience
+title: ''
+labels: 'ux'
+assignees: ''
+---
 
+## Driving Questions
+What are we hoping to validate?
 
-## Testing Plan ##
-User persona:
+## Testing Plan
+User Persona:
 Sample Group:
 
 - [ ] Use Checklist for Tasks
 
-## Additional context ##
-*Screenshot or link to what needs to be tested*
+## Additional context
+Add any other context or screenshots about the UX test here.
 
-Related to issue
+Related to issue: #
 
-## Link to Test & Results ##
+## Link to Test & Results
