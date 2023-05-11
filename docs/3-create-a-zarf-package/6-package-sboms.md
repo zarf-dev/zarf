@@ -1,7 +1,5 @@
 # Package SBOMs
 
-<!-- TODO (@WSTARR) REWRITE -->
-
 Zarf builds [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) into packages to help with the management of software being brought into the air gap.  This page goes into detail of how these SBOMs are created and what within a package will get an associated SBOM.  If you would like to see how to interact with SBOMs after they are built into a package, see the [View SBOMs page](../4-deploy-a-zarf-package/4-view-sboms.md) under Deploy a Zarf Package.
 
 ## How SBOMs are Generated
