@@ -3,3 +3,6 @@
 ignore:
   # This vulnerability does not affect Zarf as we do not instantiate a rekor client
   - vulnerability: GHSA-2h5h-59f5-c5x9
+
+  # From rouille - The Zarf injector does not expose endpoints that use multipart form data
+  - vulnerability: GHSA-mc8h-8q98-g5hr

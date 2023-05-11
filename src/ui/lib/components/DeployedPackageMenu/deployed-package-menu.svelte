@@ -1,11 +1,11 @@
-<!-- 
+<!--
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Kind, type DeployedPackage } from '$lib/api-types';
-	import { IconButton, ListItem, ListItemAdornment, Menu, type SSX } from '@ui';
+	import { IconButton, ListItem, ListItemAdornment, Menu, Typography, type SSX } from '@ui';
 	import { current_component } from 'svelte/internal';
 	import { tunnelStore } from '$lib/store';
 	import RemoveDeployedPackageDialog from './remove-deployed-package-dialog.svelte';
@@ -60,27 +60,39 @@
 />
 <Menu ssx={menuSSX} bind:anchorRef open={toggled} anchorOrigin="bottom-end">
 	{#if hasConnections}
-		<ListItem text="Disconnect..." on:click={toggleDisconnectDialog}>
-			<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined">
+		<ListItem on:click={toggleDisconnectDialog}>
+			<ListItemAdornment slot="leading" class="material-symbols-outlined">
 				signal_disconnected
 			</ListItemAdornment>
+			<Typography>
+				Disconnect...
+			</Typography>
 		</ListItem>
 	{/if}
-	<ListItem text="Connect..." on:click={toggleConnectDialog}>
-		<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined">
+	<ListItem on:click={toggleConnectDialog}>
+		<ListItemAdornment slot="leading" class="material-symbols-outlined">
 			private_connectivity
 		</ListItemAdornment>
+		<Typography>
+			Connect...
+		</Typography>
 	</ListItem>
-	<ListItem text="Update Package..." on:click={() => goto(updateLink)}>
-		<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined">
+	<ListItem on:click={() => goto(updateLink)}>
+		<ListItemAdornment slot="leading" class="material-symbols-outlined">
 			cached
 		</ListItemAdornment>
+		<Typography>
+			Update Package...
+		</Typography>
 	</ListItem>
 	<div class="divider" />
-	<ListItem text="Remove..." on:click={toggleRemoveDialog}>
-		<ListItemAdornment slot="leading-adornment" class="material-symbols-outlined">
+	<ListItem on:click={toggleRemoveDialog}>
+		<ListItemAdornment slot="leading" class="material-symbols-outlined">
 			delete
 		</ListItemAdornment>
+		<Typography>
+			Remove...
+		</Typography>
 	</ListItem>
 </Menu>
 <DisconnectDeployedPackageDialog {pkg} bind:toggleDialog={toggleDisconnectDialog} />
