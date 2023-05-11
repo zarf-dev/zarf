@@ -64,14 +64,17 @@ jobs:
       - name: Run Tests
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
-          sudo rm -rf zarf-sbom
-          sudo rm -rf build/zarf-package-*
-          sudo build/zarf tools clear-cache
           sudo chown $USER /tmp/zarf-*.log
 
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
+
+      - name: Cleanup files
+        run: |
+          sudo rm -rf zarf-sbom /tmp/zarf-*
+          sudo env "PATH=$PATH" CI=true make delete-packages
+          sudo build/zarf tools clear-cache
 
       # Builds init packages since GoReleaser won't handle this for us
       - name: Create release time CVE report
