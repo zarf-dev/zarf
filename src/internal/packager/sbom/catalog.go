@@ -188,7 +188,7 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 		},
 		Source: syftSource.Metadata,
 		Artifacts: sbom.Artifacts{
-			PackageCatalog:    catalog,
+			Packages:          catalog,
 			LinuxDistribution: distro,
 		},
 		Relationships: relationships,
@@ -255,7 +255,7 @@ func (b *Builder) createFileSBOM(componentSBOM types.ComponentSBOM, component st
 		},
 		Source: parentSource.Metadata,
 		Artifacts: sbom.Artifacts{
-			PackageCatalog:    catalog,
+			Packages:          catalog,
 			LinuxDistribution: &linux.Release{},
 		},
 		Relationships: relationships,
