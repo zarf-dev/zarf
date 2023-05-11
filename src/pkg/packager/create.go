@@ -117,7 +117,8 @@ func (p *Packager) Create(baseDir string) error {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
-		err := p.addComponent(idx, component, "create")
+		isSkeleton := false
+		err := p.addComponent(idx, component, isSkeleton)
 		if err != nil {
 			onFailure()
 			return fmt.Errorf("unable to add component: %w", err)
@@ -320,10 +321,7 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 	return &componentSBOM, nil
 }
 
-func (p *Packager) addComponent(index int, component types.ZarfComponent, operation string) error {
-	if operation != "create" && operation != "skeleton" {
-		return fmt.Errorf("unknown operation %s", operation)
-	}
+func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkeleton bool) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	componentPath, err := p.createOrGetComponentPaths(component)
@@ -331,8 +329,17 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 		return fmt.Errorf("unable to create the component paths: %s", err.Error())
 	}
 
+	if isSkeleton && component.CosignKeyPath != "" {
+		dst := filepath.Join(componentPath.Base, "cosign.pub")
+		err := utils.CreatePathAndCopy(component.CosignKeyPath, dst)
+		if err != nil {
+			return err
+		}
+		p.cfg.Pkg.Components[index].CosignKeyPath = "cosign.pub"
+	}
+
 	onCreate := component.Actions.OnCreate
-	if operation == "create" {
+	if !isSkeleton {
 		if err := p.runActions(onCreate.Defaults, onCreate.Before, nil); err != nil {
 			return fmt.Errorf("unable to run component before action: %w", err)
 		}
@@ -347,14 +354,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 			Cfg:   p.cfg,
 		}
 
-		if isGitURL && operation == "create" {
-			_, err = helmCfg.PackageChartFromGit(componentPath.Charts)
-			if err != nil {
-				return fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
-			}
-		} else if len(chart.URL) > 0 && operation == "create" {
-			helmCfg.DownloadPublishedChart(componentPath.Charts)
-		} else if operation == "skeleton" {
+		if isSkeleton {
 			if chart.URL != "" {
 				continue
 			}
@@ -365,6 +365,13 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 				return err
 			}
 			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
+		} else if isGitURL {
+			_, err = helmCfg.PackageChartFromGit(componentPath.Charts)
+			if err != nil {
+				return fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
+			}
+		} else if len(chart.URL) > 0 {
+			helmCfg.DownloadPublishedChart(componentPath.Charts)
 		} else {
 			path := helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
 			zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
@@ -376,7 +383,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 		for valuesIdx, path := range chart.ValuesFiles {
 			dst := fmt.Sprintf("%s-%d", helm.StandardName(componentPath.Values, chart), valuesIdx)
 			if utils.IsURL(path) {
-				if operation == "skeleton" {
+				if isSkeleton {
 					continue
 				}
 				if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
@@ -386,7 +393,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 				if err := utils.CreatePathAndCopy(path, dst); err != nil {
 					return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 				}
-				if operation == "skeleton" {
+				if isSkeleton {
 					rel := strings.TrimPrefix(dst, componentPath.Base)
 					p.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 				}
@@ -399,7 +406,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 		dst := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx))
 
 		if utils.IsURL(file.Source) {
-			if operation == "skeleton" {
+			if isSkeleton {
 				continue
 			}
 			if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
@@ -409,7 +416,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
 				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
 			}
-			if operation == "skeleton" {
+			if isSkeleton {
 				rel := strings.TrimPrefix(dst, componentPath.Base)
 				p.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
 			}
@@ -439,7 +446,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 			dst := filepath.Join(componentPath.DataInjections, fmt.Sprintf("injection-%d", dataIdx))
 			if utils.IsURL(data.Source) {
-				if operation == "skeleton" {
+				if isSkeleton {
 					continue
 				}
 				if err := utils.DownloadToFile(data.Source, dst, component.CosignKeyPath); err != nil {
@@ -449,7 +456,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 				if err := utils.CreatePathAndCopy(data.Source, dst); err != nil {
 					return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
 				}
-				if operation == "skeleton" {
+				if isSkeleton {
 					rel := strings.TrimPrefix(dst, componentPath.Base)
 					p.cfg.Pkg.Components[index].DataInjections[dataIdx].Source = rel
 				}
@@ -477,7 +484,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", path)
 				if utils.IsURL(path) {
-					if operation == "skeleton" {
+					if isSkeleton {
 						continue
 					}
 					if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
@@ -487,7 +494,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 					if err := utils.CreatePathAndCopy(path, dst); err != nil {
 						return fmt.Errorf("unable to copy manifest %s: %w", path, err)
 					}
-					if operation == "skeleton" {
+					if isSkeleton {
 						rel := strings.TrimPrefix(dst, componentPath.Base)
 						p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files[fileIdx] = rel
 					}
@@ -502,12 +509,12 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 				}
-				if operation == "skeleton" {
+				if isSkeleton {
 					rel := strings.TrimPrefix(dst, componentPath.Base)
 					p.cfg.Pkg.Components[index].Manifests[manifestIdx].Kustomizations[kustomizeIdx] = rel
 				}
 			}
-			if operation == "skeleton" {
+			if isSkeleton {
 				// append kustomizations to manifests
 				p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files = append(p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files, p.cfg.Pkg.Components[index].Manifests[manifestIdx].Kustomizations...)
 				// remove kustomizations
@@ -518,7 +525,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 	}
 
 	// Load all specified git repos.
-	if len(component.Repos) > 0 && operation == "create" {
+	if len(component.Repos) > 0 && !isSkeleton {
 		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
 		defer spinner.Stop()
 
@@ -532,7 +539,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, operat
 		spinner.Success()
 	}
 
-	if operation == "create" {
+	if !isSkeleton {
 		if err := p.runActions(onCreate.Defaults, onCreate.After, nil); err != nil {
 			return fmt.Errorf("unable to run component after action: %w", err)
 		}

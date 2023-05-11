@@ -341,7 +341,8 @@ func (p *Packager) loadSkeleton() error {
 
 	for idx, component := range p.cfg.Pkg.Components {
 		componentPath := filepath.Join(p.tmp.Components, component.Name)
-		err := p.addComponent(idx, component, "skeleton")
+		isSkeleton := true
+		err := p.addComponent(idx, component, isSkeleton)
 		if err != nil {
 			return err
 		}
