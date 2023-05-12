@@ -64,13 +64,13 @@ func TestUseCLI(t *testing.T) {
 	assert.Contains(t, stdOut, "nginx:1.16.0", "The chart image should be found by Zarf")
 
 	// Test `zarf prepare find-images` on a chart that has a `kubeVersion` declaration greater than the default (v1.20.0)
-	_, _, err = e2e.ExecZarfCommand("prepare", "find-images", "src/test/test-packages/00-kube-version-override")
-	assert.Error(t, err)
+	_, stdErr, err = e2e.ExecZarfCommand("prepare", "find-images", "src/test/test-packages/00-kube-version-override")
+	require.Contains(t, stdErr, "Problem rendering the helm template for https://charts.jetstack.io/", "The kubeVersion declaration should prevent this from templating")
 
 	// Test `zarf prepare find-images` with `--kube-version` specified and greater than the declared minimum (v1.21.0)
 	stdOut, stdErr, err = e2e.ExecZarfCommand("prepare", "find-images", "--kube-version=v1.22.0", "src/test/test-packages/00-kube-version-override")
-	assert.NoError(t, err, stdOut, stdErr)
-	assert.Contains(t, stdOut, "quay.io/jetstack/cert-manager-controller:v1.11.1", "The chart image should be found by Zarf")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdOut, "quay.io/jetstack/cert-manager-controller:v1.11.1", "The chart image should be found by Zarf")
 
 	// Test for expected failure when given a bad component input
 	_, _, err = e2e.ExecZarfCommand("init", "--confirm", "--components=k3s,foo,logging")
