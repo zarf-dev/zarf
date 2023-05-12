@@ -83,9 +83,13 @@ Notice that in this example the dos-games resources were contained in their own 
 2. You can also now use the `zarf connect` command to connect to the dos-games application. Again it will look something like this.
 ![Connected to the Games](../.images/tutorials/games_connected.png)
 
-3. Again, remember to press `ctrl+c` in your terminal, when you're done with the connection.
+:::note
+
+Again, remember to press `ctrl+c` in your terminal, when you're done with the connection.
 
 <iframe src="/docs/tutorials/resource_adoption_connect.html" width="100%"></iframe>
+
+:::
 
 ## Conclusion
 
