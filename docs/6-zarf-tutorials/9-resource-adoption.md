@@ -58,12 +58,6 @@ You'll notice the dos-games namespace has been excluded from Zarf management as 
 
 The iframe was pointing to the wrong file, and this likely would be better as an admonition.
 
-## Create Zarf Package
-
-1. Create the dos-games package with the `zarf package create` command.
-
-<iframe src="/docs/tutorials/resource_adoption_package.html" width="100%" height="400px"></iframe>
-
 ## Deploy the Package, Adopting the Workloads
 
 1. Use the `zarf package deploy` command with the `--adopt-existing-resources` flag to adopt the existing dos-games resources in the `dos-games` namespace.
