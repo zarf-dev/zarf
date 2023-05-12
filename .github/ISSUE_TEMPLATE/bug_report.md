@@ -4,7 +4,6 @@ about: Create a report to help us improve
 title: ''
 labels: possible-bug
 assignees: ''
-
 ---
 
 ### Environment
@@ -25,3 +24,4 @@ Other:
 ### Severity/Priority
 
 ### Additional Context
+Add any other context or screenshots about the technical debt here.
