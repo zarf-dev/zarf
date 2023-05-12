@@ -363,6 +363,8 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 			message.Debugf("Loading %#v", file)
 			dst := filepath.Join(componentPath.Files, strconv.Itoa(index), filepath.Base(file.Target))
 
+			utils.CreateDirectory(filepath.Join(componentPath.Files, strconv.Itoa(index)), 0700)
+
 			if utils.IsURL(file.Source) {
 				if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
 					return nil, fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
