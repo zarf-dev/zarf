@@ -6,21 +6,26 @@ metadata:
 
 components:
   - name: import-component-local
-    required: false
+    required: true
     import:
       url: oci://localhost:555/import-everything:0.0.1-skeleton
 
   - name: import-component-local-relative
-    required: false
+    required: true
+    import:
+      url: oci://localhost:555/import-everything:0.0.1-skeleton
+
+  - name: import-component-tiny-kafka
+    required: true
     import:
       url: oci://localhost:555/import-everything:0.0.1-skeleton
 
   - name: file-imports
-    required: false
+    required: true
     import:
       url: oci://localhost:555/import-everything:0.0.1-skeleton
 
   - name: import-helm
-    required: false
+    required: true
     import:
       url: oci://localhost:555/import-everything:0.0.1-skeleton

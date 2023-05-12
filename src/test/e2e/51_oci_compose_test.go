@@ -135,6 +135,11 @@ func (suite *SkeletonSuite) Test_3_Deploy_And_Remove_Import_Component_Local_Rela
 	suite.NoError(err)
 }
 
+func (suite *SkeletonSuite) Test_4_Deploy_And_Remove_Import_Component_Tiny_Kafka() {
+	err := deployAndRemove("import-component-tiny-kafka")
+	suite.NoError(err)
+}
+
 func (suite *SkeletonSuite) Test_5_Deploy_And_Remove_Import_Component_OCI() {
 	err := deployAndRemove("import-component-oci")
 	suite.NoError(err)
@@ -152,6 +157,14 @@ func (suite *SkeletonSuite) Test_8_Deploy_And_Remove_Import_Component_Images() {
 
 func (suite *SkeletonSuite) Test_9_Deploy_And_Remove_File_Imports() {
 	err := deployAndRemove("file-imports")
+	suite.NoError(err)
+}
+
+func (suite *SkeletonSuite) Test_10_Deploy_And_Remove_Importception() {
+	p := filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch))
+	_, _, err := e2e.ExecZarfCommand("package", "deploy", p, "--confirm")
+	suite.NoError(err)
+	_, _, err = e2e.ExecZarfCommand("package", "remove", p, "--confirm")
 	suite.NoError(err)
 }
 
