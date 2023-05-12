@@ -361,7 +361,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 		for index, file := range component.Files {
 			message.Debugf("Loading %#v", file)
-			dst := filepath.Join(componentPath.Files, strconv.Itoa(index))
+			dst := filepath.Join(componentPath.Files, strconv.Itoa(index), filepath.Base(file.Target))
 
 			if utils.IsURL(file.Source) {
 				if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {

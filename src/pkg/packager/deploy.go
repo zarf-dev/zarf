@@ -287,7 +287,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 
 	for index, file := range component.Files {
 		spinner.Updatef("Loading %s", file.Target)
-		pkgLocationIdx := filepath.Join(pkgLocation, strconv.Itoa(index))
+		pkgLocationIdx := filepath.Join(pkgLocation, strconv.Itoa(index), filepath.Base(file.Target))
 
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
