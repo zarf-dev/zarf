@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,7 +22,6 @@ import (
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote/errcode"
 )
 
 // handlePackagePath If provided package is a URL download it to a temp directory.
@@ -214,29 +212,6 @@ func (p *Packager) handleOciPackage(url string, out string, concurrency int, com
 	return nil
 }
 
-// isManifestUnsupported returns true if the error is an unsupported artifact manifest error.
-//
-// This function was copied verbatim from https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
-func isManifestUnsupported(err error) bool {
-	var errResp *errcode.ErrorResponse
-	if !errors.As(err, &errResp) || errResp.StatusCode != http.StatusBadRequest {
-		return false
-	}
-
-	var errCode errcode.Error
-	if !errors.As(errResp, &errCode) {
-		return false
-	}
-
-	// As of November 2022, ECR is known to return UNSUPPORTED error when
-	// pulling an OCI artifact manifest.
-	switch errCode.Code {
-	case errcode.ErrorCodeManifestInvalid, errcode.ErrorCodeUnsupported:
-		return true
-	}
-	return false
-}
-
 func getOCIPackageSize(src *utils.OrasRemote) (int64, error) {
 	var total int64
 
@@ -272,21 +247,11 @@ func getLayers(dst *utils.OrasRemote) ([]ocispec.Descriptor, error) {
 		return nil, err
 	}
 	manifest := ocispec.Manifest{}
-	artifact := ocispec.Artifact{}
-	var layers []ocispec.Descriptor
-	// if the manifest is an artifact, unmarshal it as an artifact
-	// otherwise, unmarshal it as a manifest
-	if descriptor.MediaType == ocispec.MediaTypeArtifactManifest {
-		if err = json.Unmarshal(pulled, &artifact); err != nil {
-			return nil, err
-		}
-		layers = artifact.Blobs
-	} else {
-		if err = json.Unmarshal(pulled, &manifest); err != nil {
-			return nil, err
-		}
-		layers = manifest.Layers
+
+	if err = json.Unmarshal(pulled, &manifest); err != nil {
+		return nil, err
 	}
+	layers := manifest.Layers
 
 	return layers, nil
 }
