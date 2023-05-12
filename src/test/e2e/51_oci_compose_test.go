@@ -82,7 +82,7 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	suite.NoError(err, stdOut, stdErr)
 }
 
-func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
+func (suite *SkeletonSuite) Test_00_Publish_Skeletons() {
 	suite.T().Log("E2E: Skeleton Package Publish oci://")
 
 	helmLocal := filepath.Join("examples", "helm-local-chart")
@@ -99,7 +99,7 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_1_Compose() {
+func (suite *SkeletonSuite) Test_01_Compose() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
 	_, _, err := e2e.ExecZarfCommand("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
@@ -125,42 +125,42 @@ func deployAndRemove(component string) error {
 	return nil
 }
 
-func (suite *SkeletonSuite) Test_2_Deploy_And_Remove_Import_Component_Local() {
+func (suite *SkeletonSuite) Test_02_Deploy_And_Remove_Import_Component_Local() {
 	err := deployAndRemove("import-component-local")
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_3_Deploy_And_Remove_Import_Component_Local_Relative() {
+func (suite *SkeletonSuite) Test_03_Deploy_And_Remove_Import_Component_Local_Relative() {
 	err := deployAndRemove("import-component-local-relative")
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_4_Deploy_And_Remove_Import_Component_Tiny_Kafka() {
+func (suite *SkeletonSuite) Test_04_Deploy_And_Remove_Import_Component_Tiny_Kafka() {
 	err := deployAndRemove("import-component-tiny-kafka")
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_5_Deploy_And_Remove_Import_Component_OCI() {
+func (suite *SkeletonSuite) Test_05_Deploy_And_Remove_Import_Component_OCI() {
 	err := deployAndRemove("import-component-oci")
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_6_Deploy_And_Remove_Import_Component_Helm() {
+func (suite *SkeletonSuite) Test_06_Deploy_And_Remove_Import_Component_Helm() {
 	err := deployAndRemove("import-helm")
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_8_Deploy_And_Remove_Import_Component_Images() {
+func (suite *SkeletonSuite) Test_07_Deploy_And_Remove_Import_Component_Images() {
 	err := deployAndRemove("import-images")
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_9_Deploy_And_Remove_File_Imports() {
+func (suite *SkeletonSuite) Test_08_Deploy_And_Remove_File_Imports() {
 	err := deployAndRemove("file-imports")
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_10_Deploy_And_Remove_Importception() {
+func (suite *SkeletonSuite) Test_09_Deploy_And_Remove_Importception() {
 	p := filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch))
 	_, _, err := e2e.ExecZarfCommand("package", "deploy", p, "--confirm")
 	suite.NoError(err)
