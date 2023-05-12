@@ -32,12 +32,17 @@ We're going to use the manifests from the [Deploying a Retro Arcade](./3-deploy-
 
 1. Use the `kubectl port-forward` command to confirm you've deployed the manifests properly.  
 
-2. Navigate to `http://localhost:8000` in your browser to view the dos-games application. It will look something like this.
+<iframe src="/docs/tutorials/resource_adoption_forward.html" width="100%" height="80px"></iframe>
+
+2. Navigate to `http://localhost:8000` in your browser to view the dos-games application. It will look something like this:
+
 ![Connected to the Games](../.images/tutorials/games_connected.png)
 
-3. Remember to press `ctrl+c` in your terminal, when you're done with the port-forward.
+:::note
 
-<iframe src="/docs/tutorials/resource_adoption_forward.html" width="100%" height="80px"></iframe>
+Remember to press `ctrl+c` in your terminal when you're done with the port-forward.
+
+:::
 
 ## Initialize Zarf
 
