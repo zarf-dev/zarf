@@ -19,11 +19,11 @@ Before beginning this tutorial you will need the following:
 
 ## Putting Together a Zarf Package
 
-In order to create a Zarf package you first need to have an idea of what application(s) you want to package.  In this example we will be using the [Wordpress chart from Bitnami](https://artifacthub.io/packages/helm/bitnami/wordpress) but the steps and tools used below are very similar for other applications.
+In order to create a Zarf package you first need to have an idea of what application(s) you want to package.  In this example we will be using the [WordPress chart from Bitnami](https://artifacthub.io/packages/helm/bitnami/wordpress) but the steps and tools used below are very similar for other applications.
 
 ### Creating the Package Definition
 
-A `zarf.yaml` file follows the [Zarf Package Schema](../3-create-a-zarf-package/4-zarf-schema.md) and allows us to specify package metadata and a set of components for us to deploy. We start a package definition with the `kind` of package we are making and `metadata` that describes the package.  You can start our Wordpress package by creating a new `zarf.yaml` with the following content:
+A `zarf.yaml` file follows the [Zarf Package Schema](../3-create-a-zarf-package/4-zarf-schema.md) and allows us to specify package metadata and a set of components for us to deploy. We start a package definition with the `kind` of package we are making and `metadata` that describes the package.  You can start our WordPress package by creating a new `zarf.yaml` with the following content:
 
 ```yaml
 kind: ZarfPackageConfig # ZarfPackageConfig is the package kind for most normal zarf packages
@@ -31,7 +31,7 @@ metadata:
   name: wordpress       # specifies the name of our package and should be unique and unchanging through updates
   version: 16.0.4       # (optional) a version we can track as we release updates or publish to a registry
   description: |        # (optional) a human-readable description of the package that you are creating
-    "A Zarf Package that deploys the Wordpress blogging and content management platform"
+    "A Zarf Package that deploys the WordPress blogging and content management platform"
 ```
 
 :::tip
@@ -40,15 +40,15 @@ If you are using an Integrated Development Environment (such as [VS Code](../3-c
 
 :::
 
-### Adding the Wordpress Component
+### Adding the WordPress Component
 
-Components are the unit of Zarf Packages that define an application stack.  These are defined under the `components` key and allow many different resource types to be brought into a package.  You can learn more about components on the [Understanding Zarf Components](../3-create-a-zarf-package/2-zarf-components.md) page. To add our Wordpress component, add the following to the bottom of our `zarf.yaml`:
+Components are the unit of Zarf Packages that define an application stack.  These are defined under the `components` key and allow many different resource types to be brought into a package.  You can learn more about components on the [Understanding Zarf Components](../3-create-a-zarf-package/2-zarf-components.md) page. To add our WordPress component, add the following to the bottom of our `zarf.yaml`:
 
 ```yaml
 components:
   - name: wordpress  # specifies the name of our component and should be unique and unchanging through updates
     description: |   # (optional) a human-readable description of the component you are defining
-      "Deploys the Bitnami-packaged Wordpress chart into the cluster"
+      "Deploys the Bitnami-packaged WordPress chart into the cluster"
     required: true   # (optional) sets the component as 'required' so that it is always deployed
     charts:
       - name: wordpress
@@ -74,7 +74,7 @@ wordpressBlogName: The Zarf Blog
 metrics:
   enabled: true
 
-# Sets the Wordpress service as a ClusterIP service to not conflict with potential
+# Sets the WordPress service as a ClusterIP service to not conflict with potential
 # pre-existing LoadBalancer services.
 service:
   type: ClusterIP
@@ -123,30 +123,30 @@ variables:
     # The unique name of the variable corresponding to the ###ZARF_VAR_### template
   - name: WORDPRESS_USERNAME
     # A human-readable description of the variable shown during prompting
-    description: The username that is used to login to the Wordpress admin account
+    description: The username that is used to login to the WordPress admin account
     # A default value to take if --confirm is used or the user chooses the default prompt
     default: zarf
     # Whether to prompt for this value interactively if it is not --set on the CLI
     prompt: true
   - name: WORDPRESS_PASSWORD
-    description: The password that is used to login to the Wordpress admin account
+    description: The password that is used to login to the WordPress admin account
     prompt: true
     # Whether to treat this value as sensitive to keep it out of Zarf logs
     sensitive: true
   - name: WORDPRESS_EMAIL
-    description: The email that is used for the Wordpress admin account
+    description: The email that is used for the WordPress admin account
     default: hello@defenseunicorns.com
     prompt: true
   - name: WORDPRESS_FIRST_NAME
-    description: The first name that is used for the Wordpress admin account
+    description: The first name that is used for the WordPress admin account
     default: Zarf
     prompt: true
   - name: WORDPRESS_LAST_NAME
-    description: The last name that is used for the Wordpress admin account
+    description: The last name that is used for the WordPress admin account
     default: The Axolotl
     prompt: true
   - name: WORDPRESS_BLOG_NAME
-    description: The blog name that is used for the Wordpress admin account
+    description: The blog name that is used for the WordPress admin account
     default: The Zarf Blog
     prompt: true
 ```
@@ -183,7 +183,7 @@ metadata:
     # Enables "zarf connect wordpress-blog"
     zarf.dev/connect-name: wordpress-blog
   annotations:
-    zarf.dev/connect-description: "The public facing Wordpress blog site"
+    zarf.dev/connect-description: "The public facing WordPress blog site"
 spec:
   selector:
     app.kubernetes.io/instance: wordpress
@@ -202,7 +202,7 @@ metadata:
     # Enables "zarf connect wordpress-admin"
     zarf.dev/connect-name: wordpress-admin
   annotations:
-    zarf.dev/connect-description: "The login page for the Wordpress admin panel"
+    zarf.dev/connect-description: "The login page for the WordPress admin panel"
     # Sets a URL-suffix to automatically navigate to in the browser
     zarf.dev/connect-url: "/wp-admin"
 spec:
@@ -228,7 +228,7 @@ To add this to our `zarf.yaml` we can simply specify it under our `wordpress` co
 
 ### Creating the Package
 
-Once you have followed the above you should now have a `zarf.yaml` file that matches the one found on the [Wordpress example page](../../examples/wordpress/README.md).
+Once you have followed the above you should now have a `zarf.yaml` file that matches the one found on the [WordPress example page](../../examples/wordpress/README.md).
 
 Creating this package is as simple as running the `zarf package create` command with the directory containing our `zarf.yaml`.  Zarf will show us the `zarf.yaml` one last time asking if we would like to build the package, and will ask us for a maximum package size (useful if you need to split a package across multiple [Compact Discs](https://en.wikipedia.org/wiki/Compact_disc)).  Upon confirmation Zarf will pull down all of the resources and bundle them into a package tarball.
 
@@ -258,7 +258,7 @@ You can learn more about what is going on behind the scenes of this process on t
 
 :::
 
-Congratulations! You've built the Wordpress package. Now, you can learn how to [inspect the SBOMs](../4-deploy-a-zarf-package/4-view-sboms.md) or head straight to [deploying it](./2-deploying-zarf-packages.md)!
+Congratulations! You've built the WordPress package. Now, you can learn how to [inspect the SBOMs](../4-deploy-a-zarf-package/4-view-sboms.md) or head straight to [deploying it](./2-deploying-zarf-packages.md)!
 
 ## Troubleshooting
 
