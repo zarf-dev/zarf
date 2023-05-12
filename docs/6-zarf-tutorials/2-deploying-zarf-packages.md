@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In this tutorial, we are going to deploy the Wordpress package onto your cluster using the package we created in the earlier [create a package](./0-creating-a-zarf-package.md) tutorial and the cluster we initialized in the [initialize a k8s cluster](./1-initializing-a-k8s-cluster.md) tutorial. We will be leveraging that past work to go the extra step of deploying an application we packaged onto our cluster with the `zarf package deploy` command.
+In this tutorial, we are going to deploy the WordPress package onto your cluster using the package we created in the earlier [create a package](./0-creating-a-zarf-package.md) tutorial and the cluster we initialized in the [initialize a k8s cluster](./1-initializing-a-k8s-cluster.md) tutorial. We will be leveraging that past work to go the extra step of deploying an application we packaged onto our cluster with the `zarf package deploy` command.
 
 ## System Requirements
 
@@ -14,9 +14,9 @@ Prior to this tutorial you'll want to have a built package and a working cluster
 
 - Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
 - [An initialized cluster](./1-initializing-a-k8s-cluster.md)
-- The [Wordpress package created](./0-creating-a-zarf-package.md)
+- The [WordPress package created](./0-creating-a-zarf-package.md)
 
-## Deploying the Wordpress package
+## Deploying the WordPress package
 
 1. Use the `zarf package deploy` command to deploy the package you built in a the previous tutorial (see [prerequisites](#prerequisites)).
 
@@ -46,7 +46,7 @@ To accept a default value for a given variable, simply press the `enter` key.  Y
 
 3. Because we included the connect services in the [previous tutorial](./0-creating-a-zarf-package.md#setting-up-a-zarf-connect-service) we can quickly test our package in a browser with `zarf connect wordpress-blog`.
 
-![Zarf Connect Wordpress](../.images/tutorials/wordpress_connected.png)
+![Zarf Connect WordPress](../.images/tutorials/wordpress_connected.png)
 
 4. We can also explore the resources deployed by our package by running the `zarf tools monitor` command to start [`K9s`](../5-dashboard-ui/2-k9s-dashboard.md). Once you are done, hit `ctrl/control c` to exit.
 
@@ -54,7 +54,7 @@ To accept a default value for a given variable, simply press the `enter` key.  Y
 
 ## Removal
 
-1. Use the `zarf package list` command to get a list of the installed packages.  This will give you the name of the Wordpress package to remove it.
+1. Use the `zarf package list` command to get a list of the installed packages.  This will give you the name of the WordPress package to remove it.
 
 <iframe src="/docs/tutorials/package_deploy_wordpress_list.html" height="120px" width="100%"></iframe>
 
