@@ -48,9 +48,15 @@ Remember to press `ctrl+c` in your terminal when you're done with the port-forwa
 
 1. Use the [Initializing a K8s Cluster](./1-initializing-a-k8s-cluster.md) tutorial, to initialize Zarf in the cluster.
 
-2. You'll notice the dos-games namespace has been excluded from Zarf management as it has the `zarf.dev/agent=ignore` label.  This means that Zarf will not manage any resources in this namespace.
+:::note
 
-<iframe src="/docs/tutorials/resource_adoption_namespace.html" width="100%" height="65px"></iframe>
+You'll notice the dos-games namespace has been excluded from Zarf management as it has the `zarf.dev/agent=ignore` label.  This means that Zarf will not manage any resources in this namespace.
+
+<iframe src="/docs/tutorials/resource_adoption_ignored.html" width="100%" height="65px"></iframe>
+
+:::
+
+The iframe was pointing to the wrong file, and this likely would be better as an admonition.
 
 ## Create Zarf Package
 
