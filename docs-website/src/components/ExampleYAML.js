@@ -36,7 +36,7 @@ const FetchExampleYAML = ({ example, component, raw, showLink = true }) => {
           <a href={`/examples/${example}/#zarf.yaml`}>examples/{example}</a>
         </p>
       )}
-      <CodeBlock copy={false} title={`examples/${example}/zarf.yaml`} language="yaml">
+      <CodeBlock copy={false} language="yaml">
         {content}
       </CodeBlock>
     </>

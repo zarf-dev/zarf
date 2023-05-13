@@ -1,12 +1,8 @@
-# Wordpress
+import ExampleYAML from "@site/src/components/ExampleYAML";
+
+# WordPress
 
 This example demonstrates how to use Zarf to deploy a Wordpress blog into a cluster.  It is used as a part of the [Creating a Zarf Package](../../docs/6-zarf-tutorials/0-creating-a-zarf-package.md) and [Deploying a Zarf Package](../../docs/6-zarf-tutorials/2-deploying-zarf-packages.md) tutorials.
-
-:::info
-
-To view the example source code, select the `Edit this page` link below the article and select the parent folder.
-
-:::
 
 ```yaml
 kind: ZarfPackageConfig # ZarfPackageConfig is the package kind for most normal zarf packages
@@ -68,3 +64,13 @@ components:
         files:
           - connect-services.yaml
 ```
+
+## `zarf.yaml` {#zarf.yaml}
+
+:::info
+
+To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
+
+:::
+
+<ExampleYAML example="variables" showLink={false} />

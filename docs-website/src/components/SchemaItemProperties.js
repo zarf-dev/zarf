@@ -26,11 +26,18 @@ const SchemaItemProperties = ({ item, include, invert }) => {
         <tbody>
           {itemSchema &&
             Object.keys(itemSchema.properties)
-              .filter((key) => (include ? (invert ? !include.includes(key) : include.includes(key)) : true))
+              .filter((key) => {
+                if (!include) {
+                  return true;
+                } else if (invert) {
+                  return !include.includes(key);
+                } else {
+                  return include.includes(key);
+                }
+              })
               .sort()
               .sort((key) => (itemSchema.required.includes(key) ? -1 : 1))
               .map((key) => {
-                // console.debug(key, itemSchema.properties[key])
                 return (
                   <tr key={key}>
                     <td>

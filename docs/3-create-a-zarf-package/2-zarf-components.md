@@ -50,7 +50,7 @@ Can be:
 <ExampleYAML example="terraform" component="download-terraform" />
 </TabItem>
 <TabItem value="Remote with SHA sums">
-<ExampleYAML example="distros/k3s" component="k3s" />
+<ExampleYAML example="distros/k3s" component="k3s" showLink={false} />
 </TabItem>
 </Tabs>
 
