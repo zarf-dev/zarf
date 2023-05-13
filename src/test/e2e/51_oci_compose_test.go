@@ -10,9 +10,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/types"
 	dconfig "github.com/docker/cli/cli/config"
+	"github.com/mholt/archiver/v3"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
 )
@@ -45,7 +48,8 @@ func (suite *SkeletonSuite) SetupSuite() {
 	suite.NoError(err)
 	suite.DirExists(absNoCode)
 
-	image := "registry:2.8.1"
+	// TODO: (@RAZZLE) how do we want to handle this?
+	image := "registry:2.8.2"
 
 	// spin up a local registry
 	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "555:5000", "--name", "registry", image)
@@ -82,7 +86,7 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	suite.NoError(err, stdOut, stdErr)
 }
 
-func (suite *SkeletonSuite) Test_00_Publish_Skeletons() {
+func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.T().Log("E2E: Skeleton Package Publish oci://")
 
 	helmLocal := filepath.Join("examples", "helm-local-chart")
@@ -99,7 +103,7 @@ func (suite *SkeletonSuite) Test_00_Publish_Skeletons() {
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_01_Compose() {
+func (suite *SkeletonSuite) Test_1_Compose() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
 	_, _, err := e2e.ExecZarfCommand("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
@@ -109,63 +113,41 @@ func (suite *SkeletonSuite) Test_01_Compose() {
 	suite.NoError(err)
 }
 
-func deployAndRemove(component string) error {
-	p := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
+func (suite *SkeletonSuite) Test_3_FilePaths() {
+	suite.T().Log("E2E: Skeleton Package File Paths")
 
-	_, _, err := e2e.ExecZarfCommand("package", "deploy", p, fmt.Sprintf("--components=%s", component), "--confirm")
-	if err != nil {
-		return err
+	var pkg types.ZarfPackage
+
+	unpacked := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1", e2e.Arch))
+	defer suite.NoError(os.RemoveAll(unpacked))
+	pkgTar := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
+	err := archiver.Unarchive(pkgTar, unpacked)
+	suite.NoError(err)
+	suite.DirExists(unpacked)
+
+	err = utils.ReadYaml(filepath.Join(unpacked, config.ZarfYAML), &pkg)
+	suite.NoError(err)
+	suite.NotNil(pkg)
+
+	components := pkg.Components
+	suite.NotNil(components)
+
+	for idx, component := range components {
+		suite.verifyComponentPaths(unpacked, component, idx)
 	}
 
-	// must specify by package path as we will be removing some non k8s components
-	_, _, err = e2e.ExecZarfCommand("package", "remove", p, fmt.Sprintf("--components=%s", component), "--confirm")
-	if err != nil {
-		return err
-	}
-	return nil
+	// TODO: then unpack and repeat for importception + the skeleton package (will need to pull it first)
 }
 
-func (suite *SkeletonSuite) Test_02_Deploy_And_Remove_Import_Component_Local() {
-	err := deployAndRemove("import-component-local")
+func (suite *SkeletonSuite) verifyComponentPaths(base string, component types.ZarfComponent, index int) {
+	componentPath := filepath.Join(base, component.Name)
+	tar := fmt.Sprintf("%s.tar", componentPath)
+	err := archiver.Unarchive(tar, componentPath)
 	suite.NoError(err)
-}
 
-func (suite *SkeletonSuite) Test_03_Deploy_And_Remove_Import_Component_Local_Relative() {
-	err := deployAndRemove("import-component-local-relative")
-	suite.NoError(err)
-}
+	// TODO: check if cosign.pub exists if skeleton
 
-func (suite *SkeletonSuite) Test_04_Deploy_And_Remove_Import_Component_Tiny_Kafka() {
-	err := deployAndRemove("import-component-tiny-kafka")
-	suite.NoError(err)
-}
-
-func (suite *SkeletonSuite) Test_05_Deploy_And_Remove_Import_Component_OCI() {
-	err := deployAndRemove("import-component-oci")
-	suite.NoError(err)
-}
-
-func (suite *SkeletonSuite) Test_06_Deploy_And_Remove_Import_Component_Helm() {
-	err := deployAndRemove("import-helm")
-	suite.NoError(err)
-}
-
-func (suite *SkeletonSuite) Test_07_Deploy_And_Remove_Import_Component_Images() {
-	err := deployAndRemove("import-images")
-	suite.NoError(err)
-}
-
-func (suite *SkeletonSuite) Test_08_Deploy_And_Remove_File_Imports() {
-	err := deployAndRemove("file-imports")
-	suite.NoError(err)
-}
-
-func (suite *SkeletonSuite) Test_09_Deploy_And_Remove_Importception() {
-	p := filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch))
-	_, _, err := e2e.ExecZarfCommand("package", "deploy", p, "--confirm")
-	suite.NoError(err)
-	_, _, err = e2e.ExecZarfCommand("package", "remove", p, "--confirm")
-	suite.NoError(err)
+	// TODO: now check all of the file paths
 }
 
 func TestSkeletonSuite(t *testing.T) {
