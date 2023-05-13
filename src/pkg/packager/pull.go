@@ -67,14 +67,15 @@ func (p *Packager) pullPackageLayers(packagePath string, targetDir string, layer
 	}
 
 	// get the manifest
-	layers, err := getLayers(dst)
+	manifest, err := getManifest(dst)
 	if err != nil {
 		return err
 	}
+	layers := manifest.Layers
 
 	for _, layerToPull := range layersToPull {
 		layerDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
-			return d.Annotations["org.opencontainers.image.title"] == layerToPull
+			return d.Annotations[ocispec.AnnotationTitle] == layerToPull
 		})
 		if len(layerDesc.Digest) == 0 {
 			return fmt.Errorf("unable to find layer (%s) from the OCI package %s", layerToPull, packagePath)

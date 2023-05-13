@@ -184,16 +184,9 @@ func (p *Packager) Create(baseDir string) error {
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range p.cfg.Pkg.Components {
 		// Make the component a tar archive
-		componentPath := filepath.Join(p.tmp.Components, component.Name)
-		componentName := fmt.Sprintf("%s.%s", component.Name, "tar")
-		componentTarPath := filepath.Join(p.tmp.Components, componentName)
-		if err := archiver.Archive([]string{componentPath}, componentTarPath); err != nil {
-			return fmt.Errorf("unable to create package: %w", err)
-		}
-
-		// Remove the deflated component directory
-		if err := os.RemoveAll(filepath.Join(p.tmp.Components, component.Name)); err != nil {
-			return fmt.Errorf("unable to remove the component directory (%s): %w", componentPath, err)
+		err := p.archiveComponent(component)
+		if err != nil {
+			return fmt.Errorf("unable to archive component: %s", err.Error())
 		}
 	}
 

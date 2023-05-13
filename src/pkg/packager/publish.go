@@ -298,28 +298,15 @@ func (p *Packager) loadSkeleton() error {
 	}
 
 	for idx, component := range p.cfg.Pkg.Components {
-		componentPath := filepath.Join(p.tmp.Components, component.Name)
 		isSkeleton := true
 		err := p.addComponent(idx, component, isSkeleton)
 		if err != nil {
 			return err
 		}
 
-		// if componentPath is not empty, tar it up
-		info, err := os.Stat(componentPath)
+		err = p.archiveComponent(component)
 		if err != nil {
-			return err
-		}
-		if info.Size() > 0 {
-			tarPath := fmt.Sprintf("%s.tar", componentPath)
-			err = archiver.Archive([]string{componentPath + string(os.PathSeparator)}, tarPath)
-			if err != nil {
-				return err
-			}
-		}
-		err = os.RemoveAll(componentPath)
-		if err != nil {
-			return err
+			return fmt.Errorf("unable to archive component: %s", err.Error())
 		}
 	}
 

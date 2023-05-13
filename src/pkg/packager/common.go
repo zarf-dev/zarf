@@ -569,3 +569,23 @@ func promptForSigPassword() ([]byte, error) {
 	// We are returning a nil error here because purposefully avoiding a password input is a valid use condition
 	return nil, nil
 }
+
+func (p *Packager) archiveComponent(component types.ZarfComponent) error {
+	componentPath := filepath.Join(p.tmp.Components, component.Name)
+	info, err := os.Stat(componentPath)
+	if err != nil {
+		return err
+	}
+	if info.Size() > 0 {
+		tar := filepath.Join(componentPath, fmt.Sprintf("%s.tar", component.Name))
+		message.Debugf("Archiving component %s to %s", component.Name, strings.TrimPrefix(tar, p.tmp.Base))
+		err := archiver.Archive([]string{componentPath + string(os.PathSeparator)}, tar)
+		if err != nil {
+			return err
+		}
+	} else {
+		message.Debugf("Component %s is empty, skipping archiving", component.Name)
+		return nil
+	}
+	return os.RemoveAll(componentPath)
+}
