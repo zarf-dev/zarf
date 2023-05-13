@@ -577,8 +577,8 @@ func (p *Packager) archiveComponent(component types.ZarfComponent) error {
 		return err
 	}
 	if info.Size() > 0 {
-		tar := filepath.Join(componentPath, fmt.Sprintf("%s.tar", component.Name))
-		message.Debugf("Archiving component %s to %s", component.Name, strings.TrimPrefix(tar, p.tmp.Base))
+		tar := fmt.Sprintf("%s.tar", componentPath)
+		message.Debugf("Archiving %s to %s", component.Name, tar)
 		err := archiver.Archive([]string{componentPath + string(os.PathSeparator)}, tar)
 		if err != nil {
 			return err
