@@ -79,7 +79,7 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		}
 
 		// add a forward slash to end of path if it does not have one
-		if !strings.HasSuffix(path, "/") {
+		if !strings.HasSuffix(path, string(os.PathSeparator)) {
 			path = filepath.Clean(path) + string(os.PathSeparator)
 		}
 
