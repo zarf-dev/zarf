@@ -1,6 +1,6 @@
 # Component Actions
 
-Component Actions offer several exec entrypoints that allow a component to perform additional logic at key stages of its lifecycle. These actions are executed within the same context as the Zarf binary. For a detailed overview of the execution sequence of component actions, please refer to the Zarf [package create lifecycle documentation](./6-package-create-lifecycle.md), [package deploy lifecycle documentation](../4-deploy-a-zarf-package/2-package-deploy-lifecycle.md). Additionally, you can experiment with the component actions example located in the [Component Actions](../../examples/component-actions/README.md) example page.
+Component Actions offer several exec entrypoints that allow a component to perform additional logic at key stages of its lifecycle. These actions are executed within the same context as the Zarf binary. For a detailed overview of the execution sequence of component actions, please refer to the Zarf [package create lifecycle documentation](./5-package-create-lifecycle.md), [package deploy lifecycle documentation](../4-deploy-a-zarf-package/1-package-deploy-lifecycle.md). Additionally, you can experiment with the component actions example located in the [Component Actions](../../examples/component-actions/README.md) example page.
 
 ## Action Sets
 

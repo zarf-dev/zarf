@@ -2,11 +2,11 @@
 
 ## Introduction
 
-In previous tutorials, we learned how to [create a package](./0-using-zarf-package-create.md), [initialize a cluster](./1-initializing-a-k8s-cluster.md), and [deploy a package](./2-deploying-zarf-packages.md). In this tutorial, we will leverage all that past work and deploy a fun application onto your cluster.
+In previous tutorials, we learned how to [create a package](./0-creating-a-zarf-package.md), [initialize a cluster](./1-initializing-a-k8s-cluster.md), and [deploy a package](./2-deploying-zarf-packages.md). In this tutorial, we will leverage all that past work and deploy a fun application onto your cluster.
 
 ## System Requirements
 
-- You'll need an internet connection to grab the Zarf source code that includes the games example.
+- You'll need an internet connection to grab the Zarf Package for the games example.
 
 ## Prerequisites
 
@@ -33,18 +33,7 @@ You can publish your own packages for deployment too via `oci://`.  See the [Sto
 
 <iframe src="/docs/tutorials/package_deploy_deploy.html" width="100%" height="595px"></iframe>
 
-2. If you do not provide the path to the package as an argument to the `zarf package deploy` command, Zarf will prompt you to choose which package you want to deploy.
-
-<iframe src="/docs/tutorials/package_deploy_suggest.html" width="100%" height="120px"></iframe>
-
-You can list all packages in the current directory by hitting `tab`. Then, use the arrow keys to select which package you want to deploy. If there is only one package available, hitting `tab` will autofill that one option. Since we are deploying the games package in this tutorial, we will select that package and hit `enter`.
-
-<iframe src="/docs/tutorials/package_deploy_suggestions.html" width="100%" height="150px"></iframe>
-As we have seen a few times now, we are going to be prompted to confirm that we want to deploy this package onto our cluster.
-
-<iframe src="/docs/tutorials/package_deploy_deploy.html" width="100%" height="595px"></iframe>
-
-3. If you did not use the `--confirm` flag to automatically confirm that you want to deploy this package, press `y` for yes.  Then hit the `enter` key.
+2. If you did not use the `--confirm` flag to automatically confirm that you want to deploy this package, press `y` for yes.  Then hit the `enter` key.
 
 <iframe src="/docs/tutorials/package_deploy_deploy_bottom.html" width="100%" height="400px"></iframe>
 
@@ -84,11 +73,9 @@ The dos-games package has now been removed from your cluster.
 
 ### Unable to connect to the Kubernetes cluster
 
-#### Example
-
 <iframe src="/docs/tutorials/troubleshoot_unreachable.html" width="100%" height="200px"></iframe>
 
-#### Remediation
+:::info Remediation
 
 If you receive this error, either you don't have a Kubernetes cluster, your cluster is down, or your cluster is unreachable.
 
@@ -101,15 +88,17 @@ If you need to setup a cluster, you can perform the following.
 
 After that you can try deploying the package again.
 
-### Secrets "zarf-state" not found
+:::
 
-#### Example
+### Secrets "zarf-state" not found
 
 <iframe src="/docs/tutorials/troubleshoot_uninitialized.html" width="100%" height="250px"></iframe>
 
-#### Remediation
+:::info Remediation
 
 If you receive this error when zarf is attempting to deploy the `BASELINE COMPONENT`, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this tutorial.  Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) tutorial, then try again.
+
+:::
 
 ## Credits
 

@@ -217,7 +217,10 @@ func (c *Cluster) injectorIsReady(seedImages []transform.Image, spinner *message
 		return false
 	}
 	tunnel.AddSpinner(spinner)
-	tunnel.Connect(ZarfInjector, false)
+	err = tunnel.Connect(ZarfInjector, false)
+	if err != nil {
+		return false
+	}
 	defer tunnel.Close()
 
 	spinner.Updatef("Testing the injector for seed image availability")

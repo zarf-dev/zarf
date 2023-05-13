@@ -33,13 +33,14 @@ type ZarfMetadata struct {
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
-	Terminal     string   `json:"terminal" jsonschema:"description=The machine name that created this package"`
-	User         string   `json:"user" jsonschema:"description=The username who created this package"`
-	Architecture string   `json:"architecture" jsonschema:"description=The architecture this package was created on"`
-	Timestamp    string   `json:"timestamp" jsonschema:"description=The timestamp when this package was created"`
-	Version      string   `json:"version" jsonschema:"description=The version of Zarf used to build this package"`
-	Migrations   []string `json:"migrations" jsonschema:"description=Any migrations that have been run on this package"`
-	Differential bool     `json:"differential" jsonschema:"description=Whether this package was created with differential components"`
+	Terminal          string            `json:"terminal" jsonschema:"description=The machine name that created this package"`
+	User              string            `json:"user" jsonschema:"description=The username who created this package"`
+	Architecture      string            `json:"architecture" jsonschema:"description=The architecture this package was created on"`
+	Timestamp         string            `json:"timestamp" jsonschema:"description=The timestamp when this package was created"`
+	Version           string            `json:"version" jsonschema:"description=The version of Zarf used to build this package"`
+	Migrations        []string          `json:"migrations" jsonschema:"description=Any migrations that have been run on this package"`
+	Differential      bool              `json:"differential" jsonschema:"description=Whether this package was created with differential components"`
+	RegistryOverrides map[string]string `json:"registryOverrides" jsonschema:"description=Any registry domains that were overridden on package create when pulling images"`
 }
 
 // ZarfPackageVariable are variables that can be used to dynamically template K8s resources.

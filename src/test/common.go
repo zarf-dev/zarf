@@ -7,10 +7,13 @@ package test
 import (
 	"context"
 	"os"
+	"regexp"
 	"runtime"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/stretchr/testify/require"
 )
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize.
@@ -20,6 +23,8 @@ type ZarfE2ETest struct {
 	ApplianceMode   bool
 	RunClusterTests bool
 }
+
+var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
 
 // GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run.
 func GetCLIName() string {
@@ -83,6 +88,16 @@ func (e2e *ZarfE2ETest) GetMismatchedArch() string {
 	case "arm64":
 		return "amd64"
 	default:
-		return"arm64"
+		return "arm64"
 	}
+}
+
+// GetLogFileContents gets the log file contents from a given run's std error.
+func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
+	get, err := utils.MatchRegex(logRegex, stdErr)
+	require.NoError(t, err)
+	logFile := get("logFile")
+	logContents, err := os.ReadFile(logFile)
+	require.NoError(t, err)
+	return string(logContents)
 }

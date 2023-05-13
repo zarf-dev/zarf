@@ -247,7 +247,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 	default:
 		if target != "" {
 			if err := tunnel.checkForZarfConnectLabel(target); err != nil {
-				message.Errorf(err, "Problem looking for a zarf connect label in the cluster")
+				return fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
 			}
 		}
 
@@ -273,7 +273,10 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 		message.Debug(err)
 		message.Infof("Delay creating tunnel, waiting %d seconds...", delay)
 		time.Sleep(time.Duration(delay) * time.Second)
-		tunnel.Connect(target, blocking)
+		err = tunnel.Connect(target, blocking)
+		if err != nil {
+			return err
+		}
 	}
 
 	if blocking {
@@ -363,6 +366,8 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 		tunnel.urlSuffix = svc.Annotations[config.ZarfConnectAnnotationURL]
 
 		message.Debugf("tunnel connection match: %s/%s on port %d", svc.Namespace, svc.Name, tunnel.remotePort)
+	} else {
+		return fmt.Errorf("no matching services found for %s", name)
 	}
 
 	return nil

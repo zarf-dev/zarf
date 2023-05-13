@@ -424,6 +424,46 @@ Must be one of:
 </blockquote>
 </details>
 
+<details open>
+<summary>
+<strong> <a name="build_registryOverrides"></a>registryOverrides *</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+  ## build > registryOverrides
+![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** Any registry domains that were overridden on package create when pulling images
+
+|                           |                                                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
+| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
+
+<details>
+<summary>
+<strong> <a name="build_registryOverrides_pattern1"></a>Pattern Property .*</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+:::note
+All properties whose name matches the regular expression
+```.*``` ([Test](https://regex101.com/?regex=.%2A))
+must respect the following conditions
+:::
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 

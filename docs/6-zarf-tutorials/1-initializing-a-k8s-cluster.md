@@ -10,7 +10,7 @@ Before beginning this tutorial you will need the following:
 
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 - Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
-- An init-package built/downloaded: ([init-package Build Instructions](./0-using-zarf-package-create.md)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
+- An init-package downloaded: ([init-package Build Instructions](./0-creating-a-zarf-package.md)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
 - A Kubernetes cluster to work with: ([Local k8s Cluster Instructions](./#setting-up-a-local-kubernetes-cluster))
 
 ## Initializing the Cluster
@@ -26,8 +26,11 @@ $ zarf init
 3. Decline Optional Components
 
 :::info
+
 More information about the init-package and its components can be found [here](../3-create-a-zarf-package/3-zarf-init-package.md)
+
 :::
+
 <iframe src="/docs/tutorials/zarf_init.html" height="800px" width="100%"></iframe>
 
 :::note

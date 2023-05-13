@@ -47,12 +47,16 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class=WHI>$ zarf package list</b>
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-23-10-05-29-1632940529.log</b>
-<b class=YEL></b><b style="color:#55ffff;"></b><b style="color:#55ffff;">     Package  </b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Components                                                 </b>
-     init     <b style="color:#555555;"></b><b style="color:#555555;"> | </b>[zarf-injector zarf-seed-registry zarf-registry zarf-agent]
-     helm-oci-chart<b style="color:#555555;"></b><b style="color:#555555;"> | </b>[helm-oci-chart]
+<b class="WHI">$ zarf prepare find-images</b><br/>
+<b class=YEL>Saving log file to /tmp/zarf-2023-05-06-16-17-52-1241631429.log</b>
+•  <b style="color:#55ffff;">Processing helm chart wordpress:16.0.4 from repo oci://registry-1.docker.io/bitnamicharts/wordpress</b>
+•  <b style="color:#55ffff;">Templating helm chart wordpress</b><br/>
+<b class="WHI">components:</b><br/>
+<b class="WHI">  - name: wordpress</b>
+<b class="WHI">    images:</b>
+<b class="WHI">      - docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2</b>
+<b class="WHI">      - docker.io/bitnami/mariadb:10.11.2-debian-11-r21</b>
+<b class="WHI">      - docker.io/bitnami/wordpress:6.2.0-debian-11-r18</b>
 </pre>
 </body>
 </html>

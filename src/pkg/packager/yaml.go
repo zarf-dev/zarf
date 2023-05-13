@@ -77,5 +77,7 @@ func (p *Packager) writeYaml() error {
 		deprecated.PluralizeSetVariable,
 	}
 
+	p.cfg.Pkg.Build.RegistryOverrides = p.cfg.CreateOpts.RegistryOverrides
+
 	return utils.WriteYaml(p.tmp.ZarfYaml, p.cfg.Pkg, 0400)
 }

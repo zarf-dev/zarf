@@ -366,7 +366,6 @@ func (h *Helm) loadChartData() (*chart.Chart, map[string]any, error) {
 		if err != nil {
 			return loadedChart, nil, fmt.Errorf("unable to parse chart values: %w", err)
 		}
-		message.Debug(chartValues)
 	} else {
 		// Otherwise, use the overrides instead.
 		loadedChart = h.ChartOverride
