@@ -45,7 +45,7 @@ func (p *Packager) handlePackagePath() error {
 	}
 
 	// Handle case where deploying remote package validated via sget
-	if strings.HasPrefix(opts.PackagePath, "sget://") {
+	if strings.HasPrefix(opts.PackagePath, utils.SGETURLPrefix) {
 		return p.handleSgetPackage()
 	}
 
@@ -114,7 +114,7 @@ func (p *Packager) handleSgetPackage() error {
 	defer destinationFile.Close()
 
 	// If this is a DefenseUnicorns package, use an internal sget public key
-	if strings.HasPrefix(opts.PackagePath, "sget://defenseunicorns") {
+	if strings.HasPrefix(opts.PackagePath, fmt.Sprintf("%s://defenseunicorns", utils.SGETURLScheme)) {
 		os.Setenv("DU_SGET_KEY", config.SGetPublicKey)
 		p.cfg.DeployOpts.SGetKeyPath = "env://DU_SGET_KEY"
 	}
@@ -133,7 +133,7 @@ func (p *Packager) handleSgetPackage() error {
 
 func (p *Packager) handleOciPackage(url string, out string, concurrency int, layers ...string) error {
 	message.Debugf("packager.handleOciPackage(%s, %s, %d, %s)", url, out, concurrency, layers)
-	ref, err := registry.ParseReference(strings.TrimPrefix(url, "oci://"))
+	ref, err := registry.ParseReference(strings.TrimPrefix(url, utils.OCIURLPrefix))
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI reference: %w", err)
 	}

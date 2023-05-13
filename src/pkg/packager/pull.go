@@ -56,7 +56,7 @@ func (p *Packager) Pull() error {
 
 // pullPackageSpecLayer pulls the `zarf.yaml` and `zarf.yaml.sig` (if it exists) layers from the published package
 func (p *Packager) pullPackageLayers(packagePath string, targetDir string, layersToPull []string) error {
-	ref, err := registry.ParseReference(strings.TrimPrefix(packagePath, "oci://"))
+	ref, err := registry.ParseReference(strings.TrimPrefix(packagePath, utils.OCIURLPrefix))
 	if err != nil {
 		return err
 	}

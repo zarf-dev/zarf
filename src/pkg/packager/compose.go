@@ -87,14 +87,15 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	var cachePath string
 	if parent.Import.URL != "" {
-		skelURL := strings.TrimPrefix(parent.Import.URL, "oci://")
+		skelURL := strings.TrimPrefix(parent.Import.URL, utils.OCIURLPrefix)
 		cachePath = filepath.Join(config.GetAbsCachePath(), "oci", skelURL)
 		err = os.MkdirAll(cachePath, 0755)
 		if err != nil {
 			return child, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
 		}
 
-		err = p.handleOciPackage(skelURL, cachePath, p.cfg.PublishOpts.CopyOptions.Concurrency, fmt.Sprintf("components/%s.tar", childComponentName))
+		componentLayer := filepath.Join("components", fmt.Sprintf("%s.tar", childComponentName))
+		err = p.handleOciPackage(skelURL, cachePath, p.cfg.PublishOpts.CopyOptions.Concurrency, componentLayer)
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
