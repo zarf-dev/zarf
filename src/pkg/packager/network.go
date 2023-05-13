@@ -131,8 +131,8 @@ func (p *Packager) handleSgetPackage() error {
 	return nil
 }
 
-func (p *Packager) handleOciPackage(url string, out string, concurrency int, components ...string) error {
-	message.Debugf("packager.handleOciPackage(%s, %s, %d, %s)", url, out, concurrency, components)
+func (p *Packager) handleOciPackage(url string, out string, concurrency int, layers ...string) error {
+	message.Debugf("packager.handleOciPackage(%s, %s, %d, %s)", url, out, concurrency, layers)
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, "oci://"))
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI reference: %w", err)
@@ -146,7 +146,7 @@ func (p *Packager) handleOciPackage(url string, out string, concurrency int, com
 		return err
 	}
 
-	estimatedBytes, err := getOCIPackageSize(src)
+	estimatedBytes, err := getOCIPackageSize(src, layers...)
 	if err != nil {
 		return err
 	}
@@ -171,10 +171,10 @@ func (p *Packager) handleOciPackage(url string, out string, concurrency int, com
 		return nil
 	}
 	copyOpts.PostCopy = copyOpts.OnCopySkipped
-	isPartialPull := len(components) > 0
+	isPartialPull := len(layers) > 0
 	if isPartialPull {
 		alwaysPull := []string{"zarf.yaml", "checksums.txt", "zarf.yaml.sig"}
-		components = append(components, alwaysPull...)
+		layers = append(layers, alwaysPull...)
 		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 			nodes, err := content.Successors(ctx, fetcher, desc)
 			if err != nil {
@@ -182,10 +182,8 @@ func (p *Packager) handleOciPackage(url string, out string, concurrency int, com
 			}
 			var ret []ocispec.Descriptor
 			for _, node := range nodes {
-				if utils.SliceContains(components, node.Annotations[ocispec.AnnotationTitle]) {
+				if utils.SliceContains(layers, node.Annotations[ocispec.AnnotationTitle]) {
 					ret = append(ret, node)
-				} else {
-					estimatedBytes -= node.Size
 				}
 			}
 			return ret, nil
@@ -212,18 +210,28 @@ func (p *Packager) handleOciPackage(url string, out string, concurrency int, com
 	return nil
 }
 
-func getOCIPackageSize(src *utils.OrasRemote) (int64, error) {
+func getOCIPackageSize(src *utils.OrasRemote, layers ...string) (int64, error) {
 	var total int64
 
-	layers, err := getLayers(src)
+	manifest, err := getManifest(src)
 	if err != nil {
 		return 0, err
 	}
+	manifestLayers := manifest.Layers
 
 	processedLayers := make(map[string]bool)
-	for _, layer := range layers {
+	for _, layer := range manifestLayers {
 		// Only include this layer's size if we haven't already processed it
-		if !processedLayers[layer.Digest.String()] {
+		hasBeenProcessed := processedLayers[layer.Digest.String()]
+		if !hasBeenProcessed {
+			if len(layers) > 0 {
+				// If we're only pulling a subset of layers, only include the size of the layers we're pulling
+				if utils.SliceContains(layers, layer.Annotations[ocispec.AnnotationTitle]) {
+					total += layer.Size
+					processedLayers[layer.Digest.String()] = true
+					continue
+				}
+			}
 			total += layer.Size
 			processedLayers[layer.Digest.String()] = true
 		}
@@ -232,8 +240,8 @@ func getOCIPackageSize(src *utils.OrasRemote) (int64, error) {
 	return total, nil
 }
 
-// getLayers returns the manifest layers of a Zarf OCI package
-func getLayers(dst *utils.OrasRemote) ([]ocispec.Descriptor, error) {
+// getManifest fetches the manifest from a Zarf OCI package
+func getManifest(dst *utils.OrasRemote) (*ocispec.Manifest, error) {
 	// get the manifest descriptor
 	// ref.Reference can be a tag or a digest
 	descriptor, err := dst.Resolve(dst.Context, dst.Reference.Reference)
@@ -251,9 +259,7 @@ func getLayers(dst *utils.OrasRemote) ([]ocispec.Descriptor, error) {
 	if err = json.Unmarshal(pulled, &manifest); err != nil {
 		return nil, err
 	}
-	layers := manifest.Layers
-
-	return layers, nil
+	return &manifest, nil
 }
 
 // pullLayer fetches a single layer from a Zarf OCI package
