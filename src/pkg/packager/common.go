@@ -284,7 +284,7 @@ func (p *Packager) loadZarfPkg() error {
 		// If the components are tarballs, extract them!
 		componentPath := filepath.Join(p.tmp.Components, component.Name())
 		if !component.IsDir() && strings.HasSuffix(component.Name(), ".tar") {
-			if err := archiver.Unarchive(componentPath, p.tmp.Components); err != nil {
+			if err := archiver.Unarchive(componentPath, strings.TrimSuffix(componentPath, ".tar")); err != nil {
 				return fmt.Errorf("unable to extract the component: %w", err)
 			}
 
@@ -572,20 +572,19 @@ func promptForSigPassword() ([]byte, error) {
 
 func (p *Packager) archiveComponent(component types.ZarfComponent) error {
 	componentPath := filepath.Join(p.tmp.Components, component.Name)
-	info, err := os.Stat(componentPath)
+	size, err := utils.GetDirSize(componentPath)
 	if err != nil {
 		return err
 	}
-	if info.Size() > 0 {
+	if size > 0 {
 		tar := fmt.Sprintf("%s.tar", componentPath)
-		message.Debugf("Archiving %s to %s", component.Name, tar)
+		message.Debugf("Archiving %s to '%s'", component.Name, tar)
 		err := archiver.Archive([]string{componentPath + string(os.PathSeparator)}, tar)
 		if err != nil {
 			return err
 		}
 	} else {
 		message.Debugf("Component %s is empty, skipping archiving", component.Name)
-		return nil
 	}
 	return os.RemoveAll(componentPath)
 }
