@@ -5,6 +5,7 @@
 package tools
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,7 +36,7 @@ var archiverCompressCmd = &cobra.Command{
 	},
 }
 
-var decompressLayers bool
+var unarchiveAll bool
 
 var archiverDecompressCmd = &cobra.Command{
 	Use:     "decompress {ARCHIVE} {DESTINATION}",
@@ -49,35 +50,23 @@ var archiverDecompressCmd = &cobra.Command{
 			message.Fatal(err, lang.CmdToolsArchiverDecompressErr)
 		}
 
-		// Decompress component layers in the destination path
-		if decompressLayers {
-			// Decompress the components
-			layersDir := filepath.Join(destinationPath, "components")
-
-			files, err := os.ReadDir(layersDir)
-			if err != nil {
-				message.Fatalf(err, "failed to read the layers of components")
-			}
-			for _, file := range files {
-				if strings.HasSuffix(file.Name(), ".tar") {
-					if err := archiver.Unarchive(filepath.Join(layersDir, file.Name()), layersDir); err != nil {
-						message.Fatalf(err, "failed to decompress the component layer")
-					} else {
-						// Without unarchive error, delete original tar.zst in component folder
-						// This will leave the tar.zst if their is a failure for post mortem check
-						_ = os.Remove(filepath.Join(layersDir, file.Name()))
+		if unarchiveAll {
+			err := filepath.Walk(destinationPath, func(path string, info os.FileInfo, err error) error {
+				if strings.HasSuffix(path, ".tar") {
+					dst := strings.TrimSuffix(path, ".tar")
+					err := archiver.Unarchive(path, dst)
+					if err != nil {
+						return fmt.Errorf("failed to unarchive %s: %s", path, err.Error())
+					}
+					err = os.Remove(path)
+					if err != nil {
+						return fmt.Errorf("failed to remove %s: %s", path, err.Error())
 					}
 				}
-			}
-
-			// Decompress the SBOMs
-			sbomsTar := filepath.Join(destinationPath, "sboms.tar")
-			_, err = os.Stat(sbomsTar)
-			if err == nil {
-				if err := archiver.Unarchive(sbomsTar, filepath.Join(destinationPath, "sboms")); err != nil {
-					message.Fatalf(err, "failed to decompress the sboms layer")
-				}
-				_ = os.Remove(sbomsTar)
+				return nil
+			})
+			if err != nil {
+				message.Fatalf(err, lang.CmdToolsArchiverUnarchiveAllErr)
 			}
 		}
 	},
@@ -88,5 +77,5 @@ func init() {
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
-	archiverDecompressCmd.Flags().BoolVar(&decompressLayers, "decompress-all", false, "Decompress all layers in the archive")
+	archiverDecompressCmd.Flags().BoolVar(&unarchiveAll, "unarchive-all", false, "Unarchive all tarballs in the archive")
 }
