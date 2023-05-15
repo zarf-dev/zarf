@@ -52,7 +52,7 @@ Remember to press `ctrl+c` in your terminal when you're done with the port-forwa
 
 You'll notice the dos-games namespace has been excluded from Zarf management as it has the `zarf.dev/agent=ignore` label.  This means that Zarf will not manage any resources in this namespace.
 
-<iframe src="/docs/tutorials/resource_adoption_ignored.html" width="100%" height="65px"></iframe>
+<iframe src="/docs/tutorials/resource_adoption_ignored.html" width="100%" height="175px"></iframe>
 
 :::
 
@@ -63,6 +63,7 @@ The iframe was pointing to the wrong file, and this likely would be better as an
 1. Use the `zarf package deploy` command with the `--adopt-existing-resources` flag to adopt the existing dos-games resources in the `dos-games` namespace.
 
 <iframe src="/docs/tutorials/resource_adoption_deploy.html" width="100%" height="600px"></iframe>
+
 :::caution
 
 Notice that in this example the dos-games resources were contained in their own namespace.  When running a deploy with `--adopt-existing-resources` it is recommended that this be the case as you could break other non-Zarf deployments if resources are shared.
