@@ -1183,25 +1183,11 @@ export class Convert {
     }
 }
 
-function invalidValue(typ: any, val: any, key: any, parent: any = ''): never {
-    const prettyTyp = prettyTypeName(typ);
-    const parentText = parent ? ` on ${parent}` : '';
-    const keyText = key ? ` for key "${key}"` : '';
-    throw Error(`Invalid value${keyText}${parentText}. Expected ${prettyTyp} but got ${JSON.stringify(val)}`);
-}
-
-function prettyTypeName(typ: any): string {
-    if (Array.isArray(typ)) {
-        if (typ.length === 2 && typ[0] === undefined) {
-            return `an optional ${prettyTypeName(typ[1])}`;
-        } else {
-            return `one of [${typ.map(a => { return prettyTypeName(a); }).join(", ")}]`;
-        }
-    } else if (typeof typ === "object" && typ.literal !== undefined) {
-        return typ.literal;
-    } else {
-        return typeof typ;
+function invalidValue(typ: any, val: any, key: any = ''): never {
+    if (key) {
+        throw Error(`Invalid value for key "${key}". Expected type ${JSON.stringify(typ)} but got ${JSON.stringify(val)}`);
     }
+    throw Error(`Invalid value ${JSON.stringify(val)} for type ${JSON.stringify(typ)}`, );
 }
 
 function jsonToJSProps(typ: any): any {
@@ -1222,10 +1208,10 @@ function jsToJSONProps(typ: any): any {
     return typ.jsToJSON;
 }
 
-function transform(val: any, typ: any, getProps: any, key: any = '', parent: any = ''): any {
+function transform(val: any, typ: any, getProps: any, key: any = ''): any {
     function transformPrimitive(typ: string, val: any): any {
         if (typeof typ === typeof val) return val;
-        return invalidValue(typ, val, key, parent);
+        return invalidValue(typ, val, key);
     }
 
     function transformUnion(typs: any[], val: any): any {
@@ -1237,17 +1223,17 @@ function transform(val: any, typ: any, getProps: any, key: any = '', parent: any
                 return transform(val, typ, getProps);
             } catch (_) {}
         }
-        return invalidValue(typs, val, key, parent);
+        return invalidValue(typs, val);
     }
 
     function transformEnum(cases: string[], val: any): any {
         if (cases.indexOf(val) !== -1) return val;
-        return invalidValue(cases.map(a => { return l(a); }), val, key, parent);
+        return invalidValue(cases, val);
     }
 
     function transformArray(typ: any, val: any): any {
         // val must be an array with no invalid elements
-        if (!Array.isArray(val)) return invalidValue(l("array"), val, key, parent);
+        if (!Array.isArray(val)) return invalidValue("array", val);
         return val.map(el => transform(el, typ, getProps));
     }
 
@@ -1257,24 +1243,24 @@ function transform(val: any, typ: any, getProps: any, key: any = '', parent: any
         }
         const d = new Date(val);
         if (isNaN(d.valueOf())) {
-            return invalidValue(l("Date"), val, key, parent);
+            return invalidValue("Date", val);
         }
         return d;
     }
 
     function transformObject(props: { [k: string]: any }, additional: any, val: any): any {
         if (val === null || typeof val !== "object" || Array.isArray(val)) {
-            return invalidValue(l(ref || "object"), val, key, parent);
+            return invalidValue("object", val);
         }
         const result: any = {};
         Object.getOwnPropertyNames(props).forEach(key => {
             const prop = props[key];
             const v = Object.prototype.hasOwnProperty.call(val, key) ? val[key] : undefined;
-            result[prop.key] = transform(v, prop.typ, getProps, key, ref);
+            result[prop.key] = transform(v, prop.typ, getProps, prop.key);
         });
         Object.getOwnPropertyNames(val).forEach(key => {
             if (!Object.prototype.hasOwnProperty.call(props, key)) {
-                result[key] = transform(val[key], additional, getProps, key, ref);
+                result[key] = transform(val[key], additional, getProps, key);
             }
         });
         return result;
@@ -1283,12 +1269,10 @@ function transform(val: any, typ: any, getProps: any, key: any = '', parent: any
     if (typ === "any") return val;
     if (typ === null) {
         if (val === null) return val;
-        return invalidValue(typ, val, key, parent);
+        return invalidValue(typ, val);
     }
-    if (typ === false) return invalidValue(typ, val, key, parent);
-    let ref: any = undefined;
+    if (typ === false) return invalidValue(typ, val);
     while (typeof typ === "object" && typ.ref !== undefined) {
-        ref = typ.ref;
         typ = typeMap[typ.ref];
     }
     if (Array.isArray(typ)) return transformEnum(typ, val);
@@ -1296,7 +1280,7 @@ function transform(val: any, typ: any, getProps: any, key: any = '', parent: any
         return typ.hasOwnProperty("unionMembers") ? transformUnion(typ.unionMembers, val)
             : typ.hasOwnProperty("arrayItems")    ? transformArray(typ.arrayItems, val)
             : typ.hasOwnProperty("props")         ? transformObject(getProps(typ), typ.additional, val)
-            : invalidValue(typ, val, key, parent);
+            : invalidValue(typ, val);
     }
     // Numbers can be parsed by Date but shouldn't be.
     if (typ === Date && typeof val !== "number") return transformDate(val);
@@ -1309,10 +1293,6 @@ function cast<T>(val: any, typ: any): T {
 
 function uncast<T>(val: T, typ: any): any {
     return transform(val, typ, jsToJSONProps);
-}
-
-function l(typ: any) {
-    return { literal: typ };
 }
 
 function a(typ: any) {

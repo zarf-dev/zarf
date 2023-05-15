@@ -87,7 +87,7 @@ func init() {
 			url := packager.GetInitPackageRemote("")
 			err := utils.DownloadToFile(url, target, "")
 			if err != nil {
-				message.Fatalf(err, "Unable to download the init package: %s", err.Error())
+				message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 			}
 		},
 	}

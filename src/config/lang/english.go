@@ -292,6 +292,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 
 	CmdToolsDownloadInitShort               = "Download the init package for the current Zarf version into the specified directory."
 	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."
+	CmdToolsDownloadInitErr                 = "Unable to download the init package: %s"
 
 	CmdToolsGenPkiShort       = "Generates a Certificate Authority and PKI chain of trust for the given host"
 	CmdToolsGenPkiSuccess     = "Successfully created a chain of trust for %s"
