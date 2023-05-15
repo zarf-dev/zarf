@@ -6,8 +6,10 @@ components:
   - name: demo-helm-git-chart
     required: true
     charts:
-      - name: bigbang
-        url: https://repo1.dso.mil/big-bang/product/packages/loki.git
-        gitPath: chart
-        version: 5.0.0-bb.3
-        namespace: bigbang
+      - name: podinfo
+        url: https://github.com/stefanprodan/podinfo.git
+        gitPath: charts/podinfo
+        namespace: podinfo-from-git
+        version: 6.3.5
+    images:
+      - "ghcr.io/stefanprodan/podinfo:6.3.5"
