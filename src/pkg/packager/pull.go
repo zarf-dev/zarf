@@ -46,7 +46,12 @@ func (p *Packager) Pull() error {
 		return err
 	}
 
-	name := fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Build.Architecture, p.cfg.Pkg.Metadata.Version)
+	var name string
+	if strings.HasSuffix(p.cfg.DeployOpts.PackagePath, "-skeleton") {
+		name = fmt.Sprintf("zarf-package-%s-skeleton-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Metadata.Version)
+	} else {
+		name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Build.Architecture, p.cfg.Pkg.Metadata.Version)
+	}
 	err = archiver.Archive(allTheLayers, name)
 	if err != nil {
 		return err
