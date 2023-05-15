@@ -8,14 +8,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
 	dconfig "github.com/docker/cli/cli/config"
-	"github.com/mholt/archiver/v3"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
 )
@@ -121,7 +122,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 	unpacked := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1", e2e.Arch))
 	defer suite.NoError(os.RemoveAll(unpacked))
 	pkgTar := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
-	err := archiver.Unarchive(pkgTar, unpacked)
+	_, _, err := e2e.ExecZarfCommand("tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
 	suite.NoError(err)
 	suite.DirExists(unpacked)
 
@@ -132,22 +133,90 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 	components := pkg.Components
 	suite.NotNil(components)
 
-	for idx, component := range components {
-		suite.verifyComponentPaths(unpacked, component, idx)
-	}
+	isSkeleton := false
+	suite.verifyComponentPaths(unpacked, components, isSkeleton)
 
 	// TODO: then unpack and repeat for importception + the skeleton package (will need to pull it first)
 }
 
-func (suite *SkeletonSuite) verifyComponentPaths(base string, component types.ZarfComponent, index int) {
-	componentPath := filepath.Join(base, component.Name)
-	tar := fmt.Sprintf("%s.tar", componentPath)
-	err := archiver.Unarchive(tar, componentPath)
-	suite.NoError(err)
+func (suite *SkeletonSuite) DirOrFileExists(path string) {
+	invalid := utils.InvalidPath(path)
+	suite.Falsef(invalid, "path specified does not exist: %s", path)
+}
 
-	// TODO: check if cosign.pub exists if skeleton
+func (suite *SkeletonSuite) verifyComponentPaths(base string, components []types.ZarfComponent, isSkeleton bool) {
 
-	// TODO: now check all of the file paths
+	componentPaths := types.ComponentPaths{
+		Base:           base,
+		Temp:           filepath.Join(base, "temp"),
+		Files:          filepath.Join(base, "files"),
+		Charts:         filepath.Join(base, "charts"),
+		Repos:          filepath.Join(base, "repos"),
+		Manifests:      filepath.Join(base, "manifests"),
+		DataInjections: filepath.Join(base, "data"),
+		Values:         filepath.Join(base, "values"),
+	}
+
+	if isSkeleton {
+		suite.NoDirExists(filepath.Join(base, "images"))
+		suite.NoDirExists(filepath.Join(base, "sboms"))
+	}
+
+	for _, component := range components {
+		suite.DirExists(filepath.Join(base, component.Name))
+		if isSkeleton && component.CosignKeyPath != "" {
+			suite.FileExists(filepath.Join(base, component.CosignKeyPath))
+		}
+
+		// for chartIdx, chart := range component.Charts {
+		// }
+
+		for filesIdx, file := range component.Files {
+			if isSkeleton && utils.IsURL(file.Source) {
+				continue
+			} else if isSkeleton {
+				suite.FileExists(filepath.Join(componentPaths.Files, file.Source))
+			}
+			suite.DirOrFileExists(filepath.Join(componentPaths.Files, strconv.Itoa(filesIdx)))
+		}
+
+		for dataIdx, data := range component.DataInjections {
+			if isSkeleton && utils.IsURL(data.Source) {
+				continue
+			} else if isSkeleton {
+				suite.DirOrFileExists(filepath.Join(componentPaths.DataInjections, data.Source))
+			}
+			path := filepath.Join(componentPaths.DataInjections, fmt.Sprintf("injection-%d", dataIdx))
+			suite.DirOrFileExists(path)
+		}
+
+		for _, manifest := range component.Manifests {
+			if isSkeleton {
+				suite.Nil(manifest.Kustomizations)
+			}
+			for filesIdx, path := range manifest.Files {
+				if isSkeleton && utils.IsURL(path) {
+					continue
+				} else if isSkeleton {
+					suite.FileExists(filepath.Join(componentPaths.Manifests, path))
+				}
+				suite.FileExists(filepath.Join(componentPaths.Manifests, fmt.Sprintf("%s-%d.yaml", manifest.Name, filesIdx)))
+			}
+			for kustomizeIdx := range manifest.Kustomizations {
+				path := filepath.Join(componentPaths.Manifests, fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx))
+				suite.FileExists(path)
+			}
+		}
+
+		if !isSkeleton {
+			for _, repo := range component.Repos {
+				dir, err := transform.GitTransformURLtoFolderName(repo)
+				suite.NoError(err)
+				suite.DirExists(filepath.Join(componentPaths.Repos, dir))
+			}
+		}
+	}
+
 }
 
 func TestSkeletonSuite(t *testing.T) {
