@@ -135,7 +135,7 @@ Within each of the `action` lists (`before`, `after`, `onSuccess`, and `onFailur
 - `wait` - (required if not a cmd action) the wait parameters.
   - `cluster` - perform a wait operation on a Kubernetes resource (kubectl wait).
     - `kind` - the kind of resource to wait for (required).
-    - `identifier` - the identifier of the resource to wait for (required), can be a name or label selector.
+    - `name` - the name of the resource to wait for (required), can be a name or label selector.
     - `namespace` - the namespace of the resource to wait for.
     - `condition` - the condition to wait for (default: `exists`).
   - `network` - perform a wait operation on a network resource (curl).
