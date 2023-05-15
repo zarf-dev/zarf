@@ -208,9 +208,10 @@ func Notef(format string, a ...any) {
 
 // HeaderInfof prints a large header with a formatted message.
 func HeaderInfof(format string, a ...any) {
-	message := fmt.Sprintf(format, a...)
+	headerWidth := 85
+	message := Truncate(fmt.Sprintf(format, a...), headerWidth)
 	// Ensure the text is consistent for the header width
-	padding := 85 - len(message)
+	padding := headerWidth - len(message)
 	pterm.Println()
 	pterm.DefaultHeader.
 		WithBackgroundStyle(pterm.NewStyle(pterm.BgDarkGray)).
@@ -259,6 +260,17 @@ func PrintDiff(textA, textB string) {
 	diffs = dmp.DiffCleanupSemantic(diffs)
 
 	pterm.Println(dmp.DiffPrettyText(diffs))
+}
+
+// Truncate truncates provided text to the requested length
+func Truncate(text string, length int) string {
+	// Remove newlines and replace with semicolons
+	textEscaped := strings.ReplaceAll(text, "\n", "; ")
+	// Truncate the text if it is longer than length so it isn't too long.
+	if len(textEscaped) > length {
+		textEscaped = textEscaped[:length-3] + "..."
+	}
+	return textEscaped
 }
 
 func debugPrinter(offset int, a ...any) {
