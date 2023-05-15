@@ -144,25 +144,26 @@ func (suite *SkeletonSuite) DirOrFileExists(path string) {
 	suite.Falsef(invalid, "path specified does not exist: %s", path)
 }
 
-func (suite *SkeletonSuite) verifyComponentPaths(base string, components []types.ZarfComponent, isSkeleton bool) {
-
-	componentPaths := types.ComponentPaths{
-		Base:           base,
-		Temp:           filepath.Join(base, "temp"),
-		Files:          filepath.Join(base, "files"),
-		Charts:         filepath.Join(base, "charts"),
-		Repos:          filepath.Join(base, "repos"),
-		Manifests:      filepath.Join(base, "manifests"),
-		DataInjections: filepath.Join(base, "data"),
-		Values:         filepath.Join(base, "values"),
-	}
+func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components []types.ZarfComponent, isSkeleton bool) {
 
 	if isSkeleton {
-		suite.NoDirExists(filepath.Join(base, "images"))
-		suite.NoDirExists(filepath.Join(base, "sboms"))
+		suite.NoDirExists(filepath.Join(unpackedPath, "images"))
+		suite.NoDirExists(filepath.Join(unpackedPath, "sboms"))
 	}
 
 	for _, component := range components {
+		base := filepath.Join(unpackedPath, "components", component.Name)
+		componentPaths := types.ComponentPaths{
+			Base:           base,
+			Temp:           filepath.Join(base, "temp"),
+			Files:          filepath.Join(base, "files"),
+			Charts:         filepath.Join(base, "charts"),
+			Repos:          filepath.Join(base, "repos"),
+			Manifests:      filepath.Join(base, "manifests"),
+			DataInjections: filepath.Join(base, "data"),
+			Values:         filepath.Join(base, "values"),
+		}
+
 		suite.DirExists(filepath.Join(base, component.Name))
 		if isSkeleton && component.CosignKeyPath != "" {
 			suite.FileExists(filepath.Join(base, component.CosignKeyPath))
