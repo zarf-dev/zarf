@@ -38,3 +38,6 @@ memcached:
 
 postgresql:
   enabled: false
+
+image:
+  rootless: true
