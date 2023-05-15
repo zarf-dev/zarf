@@ -18,6 +18,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chartutil"
 
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
@@ -160,7 +161,13 @@ func (h *Helm) TemplateChart() (string, error) {
 	// TODO: Further research this with regular/OCI charts
 	client.Verify = false
 	client.InsecureSkipTLSverify = config.CommonOptions.Insecure
-
+	if h.KubeVersion != "" {
+		parsedKubeVersion, err := chartutil.ParseKubeVersion(h.KubeVersion)
+		if err != nil {
+			return "", fmt.Errorf("invalid kube version '%s': %s", h.KubeVersion, err)
+		}
+		client.KubeVersion = parsedKubeVersion
+	}
 	client.ReleaseName = h.Chart.ReleaseName
 
 	// If no release name is specified, use the chart name.
