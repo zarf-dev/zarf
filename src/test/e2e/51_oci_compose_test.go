@@ -121,10 +121,12 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 func (suite *SkeletonSuite) Test_3_FilePaths() {
 	suite.T().Log("E2E: Skeleton Package File Paths")
 
+	localSkeletonPkgTar := "zarf-package-helm-local-chart-skeleton-0.0.1.tar.zst"
+
 	pkgTars := []string{
 		filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch)),
 		filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
-		"zarf-package-helm-local-chart-0.0.1-skeleton.tar.zst",
+		localSkeletonPkgTar,
 	}
 
 	for _, pkgTar := range pkgTars {
@@ -144,7 +146,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 		suite.NotNil(components)
 
 		isSkeleton := false
-		if pkgTar == "zarf-package-helm-local-chart-0.0.1-skeleton.tar.zst" {
+		if pkgTar == localSkeletonPkgTar {
 			isSkeleton = true
 		}
 		suite.verifyComponentPaths(unpacked, components, isSkeleton)
