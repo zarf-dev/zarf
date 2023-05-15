@@ -14,7 +14,7 @@ To learn more about creating a Zarf package, you can check out the following res
 - [Understanding Zarf Components](./2-zarf-components.md): A breakdown of the primary structure that makes up a Zarf Package.
 - [Zarf Schema Documentation](./4-zarf-schema.md): Documentation that covers the configuration available in a Zarf Package definition.
 - [The Package Create Lifecycle](./5-package-create-lifecycle.md): An overview of the lifecycle of `zarf package create`.
-- [Creating a Zarf Package Tutorial](../6-zarf-tutorials/0-creating-a-zarf-package.md): A tutorial covering how to take an application and create a package for it.
+- [Creating a Zarf Package Tutorial](../5-zarf-tutorials/0-creating-a-zarf-package.md): A tutorial covering how to take an application and create a package for it.
 
 ## Typical Creation Workflow:
 
