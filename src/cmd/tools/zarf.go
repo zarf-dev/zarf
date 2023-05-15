@@ -7,12 +7,14 @@ package tools
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -21,6 +23,7 @@ import (
 
 func init() {
 	var subAltNames []string
+	var outputDirectory string
 
 	readCredsCmd := &cobra.Command{
 		Use:    "get-git-password",
@@ -72,6 +75,20 @@ func init() {
 				message.Fatalf(err, lang.CmdToolsClearCacheErr, config.GetAbsCachePath())
 			}
 			message.Successf(lang.CmdToolsClearCacheSuccess, config.GetAbsCachePath())
+		},
+	}
+
+	downloadInitCmd := &cobra.Command{
+		Use:   "download-init",
+		Short: lang.CmdToolsDownloadInitShort,
+		Run: func(cmd *cobra.Command, args []string) {
+			initPackageName := packager.GetInitPackageName("")
+			target := filepath.Join(outputDirectory, initPackageName)
+			url := packager.GetInitPackageRemote("")
+			err := utils.DownloadToFile(url, target, "")
+			if err != nil {
+				message.Fatalf(err, "Unable to download the init package: %s", err.Error())
+			}
 		},
 	}
 
@@ -172,6 +189,9 @@ func init() {
 
 	toolsCmd.AddCommand(clearCacheCmd)
 	clearCacheCmd.Flags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", config.ZarfDefaultCachePath, lang.CmdToolsClearCacheFlagCachePath)
+
+	toolsCmd.AddCommand(downloadInitCmd)
+	downloadInitCmd.Flags().StringVarP(&outputDirectory, "output-directory", "o", "", lang.CmdToolsDownloadInitFlagOutputDirectory)
 
 	toolsCmd.AddCommand(generatePKICmd)
 	generatePKICmd.Flags().StringArrayVar(&subAltNames, "sub-alt-name", []string{}, lang.CmdToolsGenPkiFlagAltName)

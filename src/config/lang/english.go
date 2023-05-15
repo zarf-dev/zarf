@@ -290,6 +290,9 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
+	CmdToolsDownloadInitShort               = "Download the init package for the current Zarf version into the specified directory."
+	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."
+
 	CmdToolsGenPkiShort       = "Generates a Certificate Authority and PKI chain of trust for the given host"
 	CmdToolsGenPkiSuccess     = "Successfully created a chain of trust for %s"
 	CmdToolsGenPkiFlagAltName = "Specify Subject Alternative Names for the certificate"
