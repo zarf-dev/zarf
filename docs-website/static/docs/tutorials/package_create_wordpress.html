@@ -58,11 +58,11 @@ b.BWHI {background-color: #aaaaaa}
 <b style="color:#55ffff;">kind</b>:<b style="color:#ff55ff;"> ZarfPackageConfig</b>
 <b style="color:#ff55ff;"></b><b style="color:#55ffff;">metadata</b>:<b style="color:#55ffff;"></b>
 <b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> wordpress</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> A Zarf Package that deploys the Wordpress blogging and content management platform</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> A Zarf Package that deploys the WordPress blogging and content management platform</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 16.0.4</b>
 <b style="color:#ff55ff;"></b><b style="color:#55ffff;">components</b>:
 -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> wordpress</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Deploys the Bitnami-packaged Wordpress chart into the cluster</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Deploys the Bitnami-packaged WordPress chart into the cluster</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
 <b style="color:#ffffff;">  </b><b style="color:#55ffff;">charts</b>:
   -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> wordpress</b>
@@ -82,27 +82,27 @@ b.BWHI {background-color: #aaaaaa}
 <b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> docker.io/bitnami/wordpress:6.2.0-debian-11-r18</b>
 <b style="color:#ff55ff;"></b><b style="color:#55ffff;">variables</b>:
 -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_USERNAME</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The username that is used to login to the Wordpress admin account</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The username that is used to login to the WordPress admin account</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> zarf</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
 <b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_PASSWORD</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The password that is used to login to the Wordpress admin account</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The password that is used to login to the WordPress admin account</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
 <b style="color:#ffffff;">  </b><b style="color:#55ffff;">sensitive</b>:<b style="color:#ffffff;"> true</b>
 <b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_EMAIL</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The email that is used for the Wordpress admin account</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The email that is used for the WordPress admin account</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> hello@defenseunicorns.com</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
 <b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_FIRST_NAME</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The first name that is used for the Wordpress admin account</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The first name that is used for the WordPress admin account</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> Zarf</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
 <b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_LAST_NAME</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The last name that is used for the Wordpress admin account</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The last name that is used for the WordPress admin account</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> The Axolotl</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
 <b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_BLOG_NAME</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The blog name that is used for the Wordpress admin account</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The blog name that is used for the WordPress admin account</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> The Zarf Blog</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
 
