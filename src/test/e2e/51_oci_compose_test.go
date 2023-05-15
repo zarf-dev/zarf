@@ -174,14 +174,24 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 			suite.FileExists(filepath.Join(base, component.CosignKeyPath))
 		}
 
-		// for chartIdx, chart := range component.Charts {
-		// }
+		for chartIdx, chart := range component.Charts {
+			if isSkeleton && chart.URL != "" {
+				continue
+			} else if isSkeleton {
+				dir := fmt.Sprintf("%s-%d", chart.Name, chartIdx)
+				suite.DirExists(filepath.Join(componentPaths.Charts, dir))
+				continue
+			}
+			tgz := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
+			suite.FileExists(filepath.Join(componentPaths.Charts, tgz))
+		}
 
 		for filesIdx, file := range component.Files {
 			if isSkeleton && utils.IsURL(file.Source) {
 				continue
 			} else if isSkeleton {
 				suite.FileExists(filepath.Join(componentPaths.Files, file.Source))
+				continue
 			}
 			suite.DirOrFileExists(filepath.Join(componentPaths.Files, strconv.Itoa(filesIdx)))
 		}
@@ -191,6 +201,7 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 				continue
 			} else if isSkeleton {
 				suite.DirOrFileExists(filepath.Join(componentPaths.DataInjections, data.Source))
+				continue
 			}
 			path := filepath.Join(componentPaths.DataInjections, fmt.Sprintf("injection-%d", dataIdx))
 			suite.DirOrFileExists(path)
@@ -205,6 +216,7 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 					continue
 				} else if isSkeleton {
 					suite.FileExists(filepath.Join(componentPaths.Manifests, path))
+					continue
 				}
 				suite.FileExists(filepath.Join(componentPaths.Manifests, fmt.Sprintf("%s-%d.yaml", manifest.Name, filesIdx)))
 			}
