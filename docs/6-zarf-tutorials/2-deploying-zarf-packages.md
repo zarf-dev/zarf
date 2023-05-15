@@ -48,7 +48,7 @@ To accept a default value for a given variable, simply press the `enter` key.  Y
 
 ![Zarf Connect WordPress](../.images/tutorials/wordpress_connected.png)
 
-4. We can also explore the resources deployed by our package by running the `zarf tools monitor` command to start [`K9s`](../5-dashboard-ui/2-k9s-dashboard.md). Once you are done, hit `ctrl/control c` to exit.
+4. We can also explore the resources deployed by our package by running the `zarf tools monitor` command to start [`K9s`](../4-deploy-a-zarf-package/5-k9s-dashboard.md). Once you are done, hit `ctrl/control c` to exit.
 
 ![Zarf Tools Monitor](../.images/tutorials/zarf_tools_monitor.png)
 
