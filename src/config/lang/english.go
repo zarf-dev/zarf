@@ -34,7 +34,7 @@ const (
 		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
 	RootCmdFlagLogLevel    = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
-	RootCmdFlagArch        = "Architecture for OCI images"
+	RootCmdFlagArch        = "Architecture for OCI images and Zarf packages"
 	RootCmdFlagSkipLogFile = "Disable log file creation"
 	RootCmdFlagNoProgress  = "Disable fancy UI progress bars, spinners, logos, etc"
 	RootCmdFlagCachePath   = "Specify the location of the Zarf cache directory"
