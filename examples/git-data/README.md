@@ -36,7 +36,7 @@ Full clones are used in this example with the `stefanprodan/podinfo` repository 
 
 ## Example Usage
 
-This example assumes you have already initialized a Zarf cluster. If that is not the case, refer to the [Initializing the Cluster Tutorial](../../docs/6-zarf-tutorials/1-initializing-a-k8s-cluster.md). Be sure when initializing the Zarf cluster to deploy the `git` component, or be ready to specify an external `git` repository.
+This example assumes you have already initialized a Zarf cluster. If that is not the case, refer to the [Initializing the Cluster Tutorial](../../docs/5-zarf-tutorials/1-initializing-a-k8s-cluster.md). Be sure when initializing the Zarf cluster to deploy the `git` component, or be ready to specify an external `git` repository.
 
 ### Create the Zarf Package
 

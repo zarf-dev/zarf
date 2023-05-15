@@ -28,7 +28,7 @@ import (
 )
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
-func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
+func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOverride string) error {
 
 	var originalDir string
 
@@ -153,11 +153,12 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 					BasePath:          componentPath.Base,
 					Chart:             chart,
 					ChartLoadOverride: override,
+					KubeVersion:       kubeVersionOverride,
 				}
 				template, err := helmCfg.TemplateChart()
 
 				if err != nil {
-					message.Errorf(err, "Problem rendering the helm template for %s", chart.URL)
+					message.Errorf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
 					continue
 				}
 
