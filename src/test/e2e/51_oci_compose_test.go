@@ -152,6 +152,11 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 	}
 
 	for _, component := range components {
+		if len(component.Charts) == 0 && len(component.Files) == 0 && len(component.Manifests) == 0 && len(component.DataInjections) == 0 && len(component.Repos) == 0 {
+			// component has no files to check
+			continue
+		}
+
 		base := filepath.Join(unpackedPath, "components", component.Name)
 		componentPaths := types.ComponentPaths{
 			Base:           base,
