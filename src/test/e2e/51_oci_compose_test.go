@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -102,6 +103,9 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 
 	_, _, err = e2e.ExecZarfCommand("package", "inspect", "oci://"+ref+"/import-everything:0.0.1-skeleton", "--insecure")
 	suite.NoError(err)
+
+	_, _, err = e2e.ExecZarfCommand("package", "pull", "oci://"+ref+"/helm-local-chart:0.0.1-skeleton", "--insecure")
+	suite.NoError(err)
 }
 
 func (suite *SkeletonSuite) Test_1_Compose() {
@@ -117,26 +121,34 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 func (suite *SkeletonSuite) Test_3_FilePaths() {
 	suite.T().Log("E2E: Skeleton Package File Paths")
 
-	var pkg types.ZarfPackage
+	pkgTars := []string{
+		filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch)),
+		filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
+		"zarf-package-helm-local-chart-0.0.1-skeleton.tar.zst",
+	}
 
-	unpacked := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1", e2e.Arch))
-	defer suite.NoError(os.RemoveAll(unpacked))
-	pkgTar := filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
-	_, _, err := e2e.ExecZarfCommand("tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
-	suite.NoError(err)
-	suite.DirExists(unpacked)
+	for _, pkgTar := range pkgTars {
+		var pkg types.ZarfPackage
 
-	err = utils.ReadYaml(filepath.Join(unpacked, config.ZarfYAML), &pkg)
-	suite.NoError(err)
-	suite.NotNil(pkg)
+		unpacked := strings.TrimSuffix(pkgTar, ".tar.zst")
+		defer suite.NoError(os.RemoveAll(unpacked))
+		_, _, err := e2e.ExecZarfCommand("tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
+		suite.NoError(err)
+		suite.DirExists(unpacked)
 
-	components := pkg.Components
-	suite.NotNil(components)
+		err = utils.ReadYaml(filepath.Join(unpacked, config.ZarfYAML), &pkg)
+		suite.NoError(err)
+		suite.NotNil(pkg)
 
-	isSkeleton := false
-	suite.verifyComponentPaths(unpacked, components, isSkeleton)
+		components := pkg.Components
+		suite.NotNil(components)
 
-	// TODO: then unpack and repeat for importception + the skeleton package (will need to pull it first)
+		isSkeleton := false
+		if pkgTar == "zarf-package-helm-local-chart-0.0.1-skeleton.tar.zst" {
+			isSkeleton = true
+		}
+		suite.verifyComponentPaths(unpacked, components, isSkeleton)
+	}
 }
 
 func (suite *SkeletonSuite) DirOrFileExists(path string) {
