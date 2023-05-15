@@ -24,6 +24,7 @@
 
 	const menuSSX: SSX = {
 		$self: {
+			'position': 'fixed',
 			'& .list-item-adornment': { color: 'var(--text-secondary-on-dark)' },
 			'& .divider': { height: '1px', boxShadow: 'inset 0px -1px 0px rgba(255,255,255,0.12)' },
 		},
