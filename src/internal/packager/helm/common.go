@@ -24,6 +24,7 @@ type Helm struct {
 	Component         types.ZarfComponent
 	Cluster           *cluster.Cluster
 	Cfg               *types.PackagerConfig
+	KubeVersion       string
 
 	actionConfig *action.Configuration
 }

@@ -10,7 +10,7 @@ Component Actions have replaced Component Scripts. Zarf will still read scripts 
 
 This example demonstrates how to define actions within your package that can run either on `zarf package create`, `zarf package deploy` or `zarf package remove`. These actions will be executed with the context that the Zarf binary is executed with.
 
-For more details on component actions, see the [component actions](../../docs/3-create-a-zarf-package/6-component-actions.md) documentation.
+For more details on component actions, see the [component actions](../../docs/3-create-a-zarf-package/7-component-actions.md) documentation.
 
 ## `zarf.yaml` {#zarf.yaml}
 

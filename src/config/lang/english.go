@@ -265,6 +265,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPrepareFlagSet           = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
 	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."
+	CmdPrepareFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"

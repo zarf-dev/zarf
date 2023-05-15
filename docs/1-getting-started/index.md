@@ -79,7 +79,7 @@ If you are online on the machine with cluster access you can also run `zarf init
 
 :::note
 
-You can build your own custom 'init' package too if you'd like. For this you should check out the [Creating a Custom 'init' Package Tutorial](../6-zarf-tutorials/8-custom-init-packages.md).
+You can build your own custom 'init' package too if you'd like. For this you should check out the [Creating a Custom 'init' Package Tutorial](../5-zarf-tutorials/8-custom-init-packages.md).
 
 :::
 
@@ -89,7 +89,7 @@ You can build your own custom 'init' package too if you'd like. For this you sho
 
 Depending on how familiar you are with Kubernetes, DevOps, and Zarf, let's find what set of information would be most useful to you.
 
-- If you want to become more familiar with Zarf and it's features, see the [Tutorials](../6-zarf-tutorials/index.md) page.
+- If you want to become more familiar with Zarf and it's features, see the [Tutorials](../5-zarf-tutorials/index.md) page.
 
 - More information about the Zarf CLI is available on the [Zarf CLI](../2-the-zarf-cli/index.md) page, or by browsing through the help descriptions of all the commands available through `zarf --help`.
 

@@ -49,9 +49,9 @@ const config = {
             const sidebarItems = await defaultSidebarItemsGenerator(args);
             if (args.item.dirName === "docs") {
               // This hack places the examples tree at the 7th position in the sidebar
-              sidebarItems.splice(7, 0, {
-                type: "category",
-                label: "Package Examples",
+              sidebarItems.splice(6, 0, {
+                type: 'category',
+                label: 'Package Examples',
                 link: {
                   type: "doc",
                   id: "examples/README",
