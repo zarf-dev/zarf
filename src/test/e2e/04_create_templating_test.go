@@ -69,9 +69,9 @@ func TestCreateTemplating(t *testing.T) {
 	require.Contains(t, string(foldersJson), "numpy")
 	_, err = os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "sbom-viewer-zarf-component-files.html"))
 	require.NoError(t, err)
-	filesJson, err := os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "zarf-component-files.json"))
+	filesJSON, err := os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "zarf-component-files.json"))
 	require.NoError(t, err)
-	require.Contains(t, string(filesJson), "pandas")
+	require.Contains(t, string(filesJSON), "pandas")
 
 	e2e.CleanFiles(cachePath, decompressPath, pkgName, fileFoldersPkgName, sbomPath)
 }
