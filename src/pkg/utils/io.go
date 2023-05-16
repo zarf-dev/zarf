@@ -316,34 +316,6 @@ func IsDir(path string) bool {
 	return info.IsDir()
 }
 
-// MoveContents moves all the files from the source to the destination.
-func MoveContents(src string, dst string) error {
-	// recursively move all the files from the source to the destination
-	err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		// Return errors
-		if err != nil {
-			return err
-		}
-
-		// Skip the root source directory
-		if path == src {
-			return nil
-		}
-
-		// Create the destination path
-		destPath := strings.Replace(path, src, dst, 1)
-
-		// If the path is a directory, create it and return
-		if info.IsDir() {
-			return os.MkdirAll(destPath, info.Mode())
-		}
-
-		// Otherwise, copy the file to the destination
-		return copy.Copy(path, destPath)
-	})
-	return err
-}
-
 // GetSHA256OfFile returns the SHA256 hash of the provided file.
 func GetSHA256OfFile(filePath string) (string, error) {
 	file, err := os.Open(filePath)

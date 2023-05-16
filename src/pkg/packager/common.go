@@ -284,20 +284,8 @@ func (p *Packager) loadZarfPkg() error {
 		// If the components are tarballs, extract them!
 		componentTarball := filepath.Join(p.tmp.Components, component.Name())
 		if !component.IsDir() && strings.HasSuffix(component.Name(), ".tar") {
-			name := strings.TrimSuffix(component.Name(), ".tar")
-			dir := filepath.Join(p.tmp.Components, name)
-			if err := archiver.Unarchive(componentTarball, dir); err != nil {
+			if err := archiver.Unarchive(componentTarball, p.tmp.Components); err != nil {
 				return fmt.Errorf("unable to extract the component: %w", err)
-			}
-			if !utils.InvalidPath(filepath.Join(dir, name, config.ZarfYAML)) {
-				// move the contents of the component into the parent directory
-				if err := utils.MoveContents(filepath.Join(dir, name), dir); err != nil {
-					return fmt.Errorf("unable to move the contents of the component: %w", err)
-				}
-				err = os.Remove(filepath.Join(dir, name))
-				if err != nil {
-					message.Warnf("unable to remove the component directory: %s", err.Error())
-				}
 			}
 
 			// After extracting the component, remove the compressed tarball to release disk space
@@ -591,7 +579,7 @@ func (p *Packager) archiveComponent(component types.ZarfComponent) error {
 	if size > 0 {
 		tar := fmt.Sprintf("%s.tar", componentPath)
 		message.Debugf("Archiving %s to '%s'", component.Name, tar)
-		err := archiver.Archive([]string{componentPath + string(os.PathSeparator)}, tar)
+		err := archiver.Archive([]string{componentPath}, tar)
 		if err != nil {
 			return err
 		}
