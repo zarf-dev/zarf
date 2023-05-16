@@ -48,9 +48,9 @@ func TestDataInjection(t *testing.T) {
 	require.NoError(t, err)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "data-injection-demo", "sbom-viewer-zarf-component-with-init-container.html"))
 	require.NoError(t, err)
-	withInitContainerJson, err := os.ReadFile(filepath.Join(sbomPath, "data-injection-demo", "zarf-component-with-init-container.json"))
+	withInitContainerJSON, err := os.ReadFile(filepath.Join(sbomPath, "data-injection-demo", "zarf-component-with-init-container.json"))
 	require.NoError(t, err)
-	require.Contains(t, string(withInitContainerJson), "pytz")
+	require.Contains(t, string(withInitContainerJSON), "pytz")
 
 	e2e.CleanFiles(sbomPath)
 }
