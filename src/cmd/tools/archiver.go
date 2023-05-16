@@ -53,9 +53,9 @@ var archiverDecompressCmd = &cobra.Command{
 		if unarchiveAll {
 			err := filepath.Walk(destinationPath, func(path string, info os.FileInfo, err error) error {
 				if strings.HasSuffix(path, ".tar") {
-					dst := filepath.Join(strings.TrimSuffix(path, ".tar"))
-					if path == "sboms.tar" {
-						dst = ""
+					dst := filepath.Join(strings.TrimSuffix(path, ".tar"), "..")
+					if info.Name() == "sboms.tar" {
+						dst = strings.TrimSuffix(path, ".tar")
 					}
 					err := archiver.Unarchive(path, dst)
 					if err != nil {
