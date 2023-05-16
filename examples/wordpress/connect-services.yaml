@@ -6,7 +6,7 @@ metadata:
     # Enables "zarf connect wordpress-blog"
     zarf.dev/connect-name: wordpress-blog
   annotations:
-    zarf.dev/connect-description: "The public facing Wordpress blog site"
+    zarf.dev/connect-description: "The public facing WordPress blog site"
 spec:
   selector:
     app.kubernetes.io/instance: wordpress
@@ -25,7 +25,7 @@ metadata:
     # Enables "zarf connect wordpress-admin"
     zarf.dev/connect-name: wordpress-admin
   annotations:
-    zarf.dev/connect-description: "The login page for the Wordpress admin panel"
+    zarf.dev/connect-description: "The login page for the WordPress admin panel"
     # Sets a URL-suffix to automatically navigate to in the browser
     zarf.dev/connect-url: "/wp-admin"
 spec:

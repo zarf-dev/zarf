@@ -48,7 +48,7 @@ Additionally, when adopting resources, you should ensure that the namespaces you
 
 Due to some limitations with how Docker provides access to local image layers, `zarf package create` has to rely on `docker save` under the hood which is [very slow overall](https://github.com/defenseunicorns/zarf/issues/1214) and also takes a long time to report progress. We experimented with many ways to improve this, but for now recommend leveraging a local docker registry to speed up the process.
 
-This can be done by running a local registry and pushing the images to it before running `zarf package create`. This will allow `zarf package create` to pull the images from the local registry instead of Docker. This can also be combined with [component actions](3-create-a-zarf-package/6-component-actions.md) and [`--registry-override`](./2-the-zarf-cli/100-cli-commands/zarf_package_create.md) to make the process automatic. Given an example image of `registry.enterprise.corp/my-giant-image:v2` you could do something like this:
+This can be done by running a local registry and pushing the images to it before running `zarf package create`. This will allow `zarf package create` to pull the images from the local registry instead of Docker. This can also be combined with [component actions](3-create-a-zarf-package/7-component-actions.md) and [`--registry-override`](./2-the-zarf-cli/100-cli-commands/zarf_package_create.md) to make the process automatic. Given an example image of `registry.enterprise.corp/my-giant-image:v2` you could do something like this:
 
 ```sh
 # Create a local registry

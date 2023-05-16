@@ -15,7 +15,7 @@ test.describe.serial('connect the dos-games package @connect', async () => {
 		// Ensure the menu contains the Connect option
 		expect(await menu.textContent()).toContain('Connect...');
 
-		const connect = menu.locator('span:text-is("Connect...")').first();
+		const connect = menu.locator('p:text-is("Connect...")').first();
 
 		// Open Connect Deployed Package Dialog
 		await connect.click();
@@ -41,7 +41,7 @@ test.describe.serial('connect the dos-games package @connect', async () => {
 		// Ensure the menu contains the Disconnect option
 		expect(await menu.textContent()).toContain('Disconnect...');
 
-		const disconnect = menu.locator('span:text-is("Disconnect...")');
+		const disconnect = menu.locator('p:text-is("Disconnect...")');
 
 		// Open Disconnect Deployed Package Dialog
 		await disconnect.click();

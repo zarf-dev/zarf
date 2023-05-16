@@ -24,7 +24,7 @@ This example uses Zalando's Postgres operator as after looking at several altern
 
 4. Build the package using `zarf package create examples/postgres-operator`
 
-5. Create a Zarf cluster as described in the [Initializing a Cluster Tutorial](../../docs/6-zarf-tutorials/1-initializing-a-k8s-cluster.md/)
+5. Create a Zarf cluster as described in the [Initializing a Cluster Tutorial](../../docs/5-zarf-tutorials/1-initializing-a-k8s-cluster.md/)
 
 ## Instructions
 
