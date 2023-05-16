@@ -61,7 +61,7 @@ func (p *Packager) Create(baseDir string) error {
 		p.cfg.IsInitConfig = true
 	}
 
-	// Before we compose the components (and render the imported OCI components), we need to remove any components that are not
+	// Before we compose the components (and render the imported OCI components), we need to remove any components that are not needed for a differential build
 	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
 		if err := p.removeDifferentialComponentsFromPackage(); err != nil {
 			return err
