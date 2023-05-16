@@ -219,8 +219,8 @@ type ZarfComponentImport struct {
 	URL string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package to import via OCI,pattern=^oci://(?!.*###ZARF_PKG_TMPL_).*$"`
 }
 
-// isEmpty returns if the component is empty of all content that would be deployed.
-// fields like Name, Description, Default, and Required are ignored and the Import field is optionally ignored
+// IsEmpty returns if the component is empty of all content that would be deployed.
+// The fields `Name`, `Description`, `Default`, and `Required` are ignored and the `Import` field is optionally ignored
 func (c *ZarfComponent) IsEmpty(ignoreImport bool) bool {
 	listsAreEmpty := len(c.Charts) == 0 && len(c.Images) == 0 && len(c.DataInjections) == 0 && len(c.Files) == 0 && len(c.Manifests) == 0 && len(c.Repos) == 0
 	extensionsAreEmpty := reflect.ValueOf(c.Extensions).IsZero()

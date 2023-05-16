@@ -19,19 +19,24 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
-/*
-HOW TO TEST:
-1. Publish a standard zarf package to the registry
-*/
+// OCIDifferentialSuite validates that OCI imported components get handled correctly when performing a `zarf package create --differential`
 type OCIDifferentialSuite struct {
 	suite.Suite
 	Remote    *utils.OrasRemote
 	Reference registry.Reference
 }
 
-func (suite *OCIDifferentialSuite) SetupSuite() {
+var (
+	tmpPath, _              = utils.MakeTempDir("")
+	differentialPackageName = ""
+	normalPackageName       = ""
+	createOutFlag           = fmt.Sprintf("-o=%s", tmpPath)
+)
 
+func (suite *OCIDifferentialSuite) SetupSuite() {
 	suite.Reference.Registry = "localhost:555"
+	differentialPackageName = fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0-differential-v0.25.0.tar.zst", e2e.Arch)
+	normalPackageName = fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0.tar.zst", e2e.Arch)
 
 	// spin up a local registry
 	registryImage := "registry:2.8.1"
@@ -52,57 +57,57 @@ func (suite *OCIDifferentialSuite) SetupSuite() {
 	suite.NoError(err, stdOut, stdErr)
 
 	// build the package that we are going to publish
-	anotherPackagePath := "src/test/test-packages/oci-differential"
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.24.0", "--confirm")
+	anotherPackagePath := filepath.Join("src", "test", "test-packages", "oci-differential")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.24.0", createOutFlag, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// publish the package that we just built
-	packageName := "zarf-package-podinfo-with-oci-flux-amd64-v0.24.0.tar.zst"
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "publish", packageName, "oci://"+suite.Reference.String(), "--insecure")
+	normalPackagePath := filepath.Join(tmpPath, normalPackageName)
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "publish", normalPackagePath, "oci://"+suite.Reference.String(), "--insecure")
 	suite.NoError(err, stdOut, stdErr)
-
 }
 
 func (suite *OCIDifferentialSuite) TearDownSuite() {
 	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
 	suite.NoError(err)
+
+	os.RemoveAll(tmpPath)
 }
 
-func (suite *OCIDifferentialSuite) Test_0_Publish_SkeletonsXXX() {
+func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.T().Log("E2E: Skeleton Package Publish oci://")
-	differentialPackageName := fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0-differential-v0.25.0.tar.zst", e2e.Arch)
-	normalPackageName := fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0.tar.zst", e2e.Arch)
-	tmpPath, _ := utils.MakeTempDir("")
 
 	// Build without differential
 	anotherPackagePath := "src/test/test-packages/oci-differential"
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.25.0", "--confirm")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.25.0", createOutFlag, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Extract and load the zarf.yaml config for the normally built package
-	err = archiver.Extract(normalPackageName, "zarf.yaml", tmpPath)
+	err = archiver.Extract(filepath.Join(tmpPath, normalPackageName), "zarf.yaml", tmpPath)
 	suite.NoError(err, "unable to extract zarf.yaml from the differential git package")
 	var normalZarfConfig types.ZarfPackage
 	err = utils.ReadYaml(filepath.Join(tmpPath, "zarf.yaml"), &normalZarfConfig)
 	suite.NoError(err, "unable to read zarf.yaml from the differential git package")
 	os.Remove(filepath.Join(tmpPath, "zarf.yaml"))
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", anotherPackagePath, "--differential", "oci://"+suite.Reference.String()+"/podinfo-with-oci-flux:v0.24.0-amd64", "--insecure", "--set=PACKAGE_VERSION=v0.25.0", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", anotherPackagePath, "--differential", "oci://"+suite.Reference.String()+"/podinfo-with-oci-flux:v0.24.0-amd64", "--insecure", "--set=PACKAGE_VERSION=v0.25.0", createOutFlag, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Extract and load the zarf.yaml config for the differentially built package
-	err = archiver.Extract(differentialPackageName, "zarf.yaml", tmpPath)
+	err = archiver.Extract(filepath.Join(tmpPath, differentialPackageName), "zarf.yaml", tmpPath)
 	suite.NoError(err, "unable to extract zarf.yaml from the differential git package")
 	var differentialZarfConfig types.ZarfPackage
 	err = utils.ReadYaml(filepath.Join(tmpPath, "zarf.yaml"), &differentialZarfConfig)
 	suite.NoError(err, "unable to read zarf.yaml from the differential git package")
 
-	// Perform a bunch of asserts around the non-differential package
+	/* Perform a bunch of asserts around the non-differential package */
+	// Check the metadata and build data for the normal package
 	suite.Equal(normalZarfConfig.Metadata.Version, "v0.24.0")
 	suite.False(normalZarfConfig.Build.Differential)
 	suite.Len(normalZarfConfig.Build.OCIImportedComponents, 1)
 	suite.Equal(normalZarfConfig.Build.OCIImportedComponents["oci://127.0.0.1:555/helm-oci-chart:0.0.1-skeleton"], "helm-oci-chart")
 
+	// Check the component data for the normal package
 	suite.Len(normalZarfConfig.Components, 3)
 	suite.Equal(normalZarfConfig.Components[0].Name, "helm-oci-chart")
 	suite.Equal(normalZarfConfig.Components[0].Charts[0].URL, "oci://ghcr.io/stefanprodan/charts/podinfo")
@@ -112,20 +117,21 @@ func (suite *OCIDifferentialSuite) Test_0_Publish_SkeletonsXXX() {
 	suite.Len(normalZarfConfig.Components[2].Images, 1)
 	suite.Len(normalZarfConfig.Components[2].Repos, 3)
 
-	// Perform a bunch of asserts around the differential package
+	/* Perform a bunch of asserts around the differential package */
+	// Check the metadata and build data for the differential package
 	suite.Equal(differentialZarfConfig.Metadata.Version, "v0.25.0")
 	suite.True(differentialZarfConfig.Build.Differential)
 	suite.Len(differentialZarfConfig.Build.DifferentialMissing, 1)
 	suite.Equal(differentialZarfConfig.Build.DifferentialMissing[0], "helm-oci-chart")
 	suite.Len(differentialZarfConfig.Build.OCIImportedComponents, 0)
 
+	// Check the component data for the differential package
 	suite.Len(differentialZarfConfig.Components, 2)
 	suite.Equal(differentialZarfConfig.Components[0].Name, "versioned-assets")
 	suite.Len(differentialZarfConfig.Components[0].Images, 1)
 	suite.Equal(differentialZarfConfig.Components[0].Images[0], "ghcr.io/defenseunicorns/zarf/agent:v0.25.0")
 	suite.Len(differentialZarfConfig.Components[0].Repos, 1)
 	suite.Equal(differentialZarfConfig.Components[0].Repos[0], "https://github.com/defenseunicorns/zarf.git@refs/tags/v0.25.0")
-
 	suite.Len(differentialZarfConfig.Components[1].Images, 1)
 	suite.Len(differentialZarfConfig.Components[1].Repos, 3)
 	suite.Equal(differentialZarfConfig.Components[1].Images[0], "ghcr.io/stefanprodan/podinfo:latest")
