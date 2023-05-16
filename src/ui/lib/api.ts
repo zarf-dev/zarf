@@ -3,6 +3,7 @@
 
 import type {
 	APIDeployedPackageConnection,
+	APIPackageSBOM,
 	APIZarfDeployPayload,
 	APIZarfPackage,
 	ClusterSummary,
@@ -56,6 +57,8 @@ const Packages = {
 		http.del(
 			`/packages/${encodeURIComponent(pkgName)}/disconnect/${encodeURIComponent(connectionName)}`
 		),
+	sbom: (pkg: APIZarfPackage) => http.put<APIPackageSBOM>(`/packages/sbom`, pkg),
+	launchSbom: (name: string) => http.get(`/packages/sbom/${encodeURIComponent(name)}`),
 };
 
 const DeployingComponents = {

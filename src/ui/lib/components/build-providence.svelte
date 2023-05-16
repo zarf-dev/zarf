@@ -5,12 +5,24 @@
 <script lang="ts">
 	import { Box, Typography, type SSX, currentTheme } from '@ui';
 	import type { ZarfBuildData } from '$lib/api-types';
+	import { pkgStore } from '$lib/store';
+	import { Packages } from '$lib/api';
+	import Spinner from './spinner.svelte';
+	import ButtonDense from './button-dense.svelte';
 
 	export let build: ZarfBuildData | undefined;
 	const labels = ['terminal', 'user', 'architecture', 'timestamp', 'version'];
 
 	function getLabelValue(label: string) {
 		return build ? Object(build)[label] ?? '' : '';
+	}
+
+	async function launchSbom() {
+		try {
+			Packages.launchSbom($pkgStore.zarfPackage.metadata!.name!);
+		} catch (error) {
+			console.error(error);
+		}
 	}
 
 	const ssx: SSX = {
@@ -52,4 +64,18 @@
 			{/each}
 		</div>
 	</div>
+	<Typography variant="subtitle2">Sofware Bill of Materials (SBOM)</Typography>
+	{#await Packages.sbom($pkgStore)}
+		<Spinner />
+	{:then sbom}
+		<Typography variant="body2">
+			This package has {sbom.sboms.length} images with software SBOMs included. You can view them now
+			by clicking the button below. (Note: this will launch in default browser)
+		</Typography>
+		<ButtonDense variant="outlined" backgroundColor="white" on:click={launchSbom}>
+			Launch SBOM
+		</ButtonDense>
+	{:catch error}
+		<Typography variant="body2">{error}</Typography>
+	{/await}
 </Box>
