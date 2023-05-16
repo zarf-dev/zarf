@@ -93,7 +93,7 @@ func findInitPackage(initPackageName string) (string, error) {
 
 	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
 	downloadCacheTarget := filepath.Join(config.GetAbsCachePath(), initPackageName)
-	if err := downloadInitPackage(initPackageName, downloadCacheTarget); err != nil {
+	if err := downloadInitPackage(downloadCacheTarget); err != nil {
 		if errors.Is(err, lang.ErrInitNotFound) {
 			message.Fatal(err, err.Error())
 		} else {
@@ -103,7 +103,7 @@ func findInitPackage(initPackageName string) (string, error) {
 	return downloadCacheTarget, nil
 }
 
-func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
+func downloadInitPackage(downloadCacheTarget string) error {
 	if config.CommonOptions.Confirm {
 		return lang.ErrInitNotFound
 	}
@@ -122,7 +122,7 @@ func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
 			Message: lang.CmdInitDownloadConfirm,
 		}
 		if err := survey.AskOne(prompt, &confirmDownload); err != nil {
-			return fmt.Errorf(lang.CmdInitDownloadCancel, err.Error())
+			return fmt.Errorf(lang.CmdInitDownloadErrCancel, err.Error())
 		}
 	}
 
