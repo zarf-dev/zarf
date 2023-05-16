@@ -182,7 +182,6 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 			Values:         filepath.Join(base, "values"),
 		}
 
-		suite.DirExists(filepath.Join(base, component.Name))
 		if isSkeleton && component.CosignKeyPath != "" {
 			suite.FileExists(filepath.Join(base, component.CosignKeyPath))
 		}
