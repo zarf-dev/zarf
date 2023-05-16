@@ -30,7 +30,7 @@ import (
 
 var (
 	hpaModified    bool
-	valueTemplate  template.Values
+	valueTemplate  *template.Values
 	connectStrings = make(types.ConnectStrings)
 )
 
@@ -117,7 +117,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, &valueTemplate); err != nil {
+			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, valueTemplate); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -127,7 +127,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 		}
 
-		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, &valueTemplate); err != nil {
+		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, valueTemplate); err != nil {
 			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -210,7 +210,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	onDeploy := component.Actions.OnDeploy
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, &valueTemplate); err != nil {
+	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -268,7 +268,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.After, &valueTemplate); err != nil {
+	if err = p.runActions(onDeploy.Defaults, onDeploy.After, valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -361,7 +361,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 }
 
 // Fetch the current ZarfState from the k8s cluster and generate a valueTemplate from the state values.
-func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values template.Values, err error) {
+func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values *template.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
@@ -369,14 +369,14 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 	state, err := p.cluster.LoadZarfState()
 	// Return on error if we are not in YOLO mode
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
-		return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
+		return nil, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
 	}
 
 	// Check if the state is empty (uninitialized cluster)
 	if state.Distro == "" {
 		// If this is not a YOLO mode package, return an error
 		if !p.cfg.Pkg.Metadata.YOLO {
-			return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
+			return nil, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
 		}
 
 		// YOLO mode, so minimal state needed
