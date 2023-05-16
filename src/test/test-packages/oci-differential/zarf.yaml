@@ -14,3 +14,8 @@ components:
     import:
       path: ../../test-packages/08-differential-package
       name: versioned-assets
+
+  - name: generalized-assets
+    import:
+      path: ../../test-packages/08-differential-package
+      name: generalized-assets
