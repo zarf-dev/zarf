@@ -243,6 +243,31 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 		child.DataInjections[dataInjectionsIdx].Source = composed
 	}
 
+	var err error
+
+	if child.Actions.OnCreate.OnSuccess, err = p.fixComposedActionFilepaths(pathAncestry, child.Actions.OnCreate.OnSuccess); err != nil {
+		return child, err
+	}
+	if child.Actions.OnCreate.OnFailure, err = p.fixComposedActionFilepaths(pathAncestry, child.Actions.OnCreate.OnFailure); err != nil {
+		return child, err
+	}
+	if child.Actions.OnCreate.Before, err = p.fixComposedActionFilepaths(pathAncestry, child.Actions.OnCreate.Before); err != nil {
+		return child, err
+	}
+	if child.Actions.OnCreate.After, err = p.fixComposedActionFilepaths(pathAncestry, child.Actions.OnCreate.After); err != nil {
+		return child, err
+	}
+
+	totalActions := len(child.Actions.OnCreate.OnSuccess) + len(child.Actions.OnCreate.OnFailure) + len(child.Actions.OnCreate.Before) + len(child.Actions.OnCreate.After)
+
+	if totalActions > 0 {
+		composedDefaultDir, err := p.getComposedFilePath(pathAncestry, child.Actions.OnCreate.Defaults.Dir)
+		if err != nil {
+			return child, err
+		}
+		child.Actions.OnCreate.Defaults.Dir = composedDefaultDir
+	}
+
 	if child.CosignKeyPath != "" {
 		composed, err := p.getComposedFilePath(pathAncestry, child.CosignKeyPath)
 		if err != nil {
@@ -252,6 +277,20 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 	}
 
 	return child, nil
+}
+
+func (p *Packager) fixComposedActionFilepaths(pathAncestry string, actions []types.ZarfComponentAction) ([]types.ZarfComponentAction, error) {
+	for actionIdx, action := range actions {
+		if action.Dir != nil {
+			composedActionDir, err := p.getComposedFilePath(pathAncestry, *action.Dir)
+			if err != nil {
+				return actions, err
+			}
+			actions[actionIdx].Dir = &composedActionDir
+		}
+	}
+
+	return actions, nil
 }
 
 // Sets Name, Default, Required and Description to the original components values.
