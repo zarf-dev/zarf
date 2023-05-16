@@ -149,7 +149,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 				return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
 			}
 		}
-		err = archiver.Unarchive(fmt.Sprintf("%s.tar", dir), dir)
+		err = archiver.Unarchive(fmt.Sprintf("%s.tar", dir), filepath.Join(cachePath, "components"))
 		if err != nil {
 			return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
 		}

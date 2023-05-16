@@ -284,8 +284,7 @@ func (p *Packager) loadZarfPkg() error {
 		// If the components are tarballs, extract them!
 		componentTarball := filepath.Join(p.tmp.Components, component.Name())
 		if !component.IsDir() && strings.HasSuffix(component.Name(), ".tar") {
-			dir := filepath.Join(p.tmp.Components, strings.TrimSuffix(component.Name(), ".tar"))
-			if err := archiver.Unarchive(componentTarball, dir); err != nil {
+			if err := archiver.Unarchive(componentTarball, p.tmp.Components); err != nil {
 				return fmt.Errorf("unable to extract the component: %w", err)
 			}
 
@@ -580,7 +579,7 @@ func (p *Packager) archiveComponent(component types.ZarfComponent) error {
 	if size > 0 {
 		tar := fmt.Sprintf("%s.tar", componentPath)
 		message.Debugf("Archiving %s to '%s'", component.Name, tar)
-		err := archiver.Archive([]string{componentPath + string(os.PathSeparator)}, tar)
+		err := archiver.Archive([]string{componentPath}, tar)
 		if err != nil {
 			return err
 		}
