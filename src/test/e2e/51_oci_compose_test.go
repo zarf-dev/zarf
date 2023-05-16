@@ -104,7 +104,7 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	_, _, err = e2e.ExecZarfCommand("package", "inspect", "oci://"+ref+"/import-everything:0.0.1-skeleton", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.ExecZarfCommand("package", "pull", "oci://"+ref+"/helm-local-chart:0.0.1-skeleton", "--insecure")
+	_, _, err = e2e.ExecZarfCommand("package", "pull", "oci://"+ref+"/helm-local-chart:0.0.1-skeleton", "-o", "build", "--insecure")
 	suite.NoError(err)
 }
 
@@ -121,19 +121,18 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 func (suite *SkeletonSuite) Test_3_FilePaths() {
 	suite.T().Log("E2E: Skeleton Package File Paths")
 
-	localSkeletonPkgTar := "zarf-package-helm-local-chart-skeleton-0.0.1.tar.zst"
-
 	pkgTars := []string{
 		filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch)),
 		filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
-		localSkeletonPkgTar,
+		filepath.Join("build", "zarf-package-helm-local-chart-skeleton-0.0.1.tar.zst"),
 	}
 
 	for _, pkgTar := range pkgTars {
 		var pkg types.ZarfPackage
 
 		unpacked := strings.TrimSuffix(pkgTar, ".tar.zst")
-		defer suite.NoError(os.RemoveAll(unpacked))
+		defer os.RemoveAll(unpacked)
+		defer os.RemoveAll(pkgTar)
 		_, _, err := e2e.ExecZarfCommand("tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
 		suite.NoError(err)
 		suite.DirExists(unpacked)
@@ -146,7 +145,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 		suite.NotNil(components)
 
 		isSkeleton := false
-		if pkgTar == localSkeletonPkgTar {
+		if pkgTar == filepath.Join("build", "zarf-package-helm-local-chart-skeleton-0.0.1.tar.zst") {
 			isSkeleton = true
 		}
 		suite.verifyComponentPaths(unpacked, components, isSkeleton)

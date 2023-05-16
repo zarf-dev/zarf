@@ -6,6 +6,7 @@ package packager
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -19,7 +20,7 @@ import (
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() error {
-	err := p.handleOciPackage(p.cfg.DeployOpts.PackagePath, p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency)
+	err := p.handleOciPackage(p.cfg.DeployOpts.PackagePath, p.tmp.Base, p.cfg.PullOpts.CopyOptions.Concurrency)
 	if err != nil {
 		return err
 	}
@@ -52,7 +53,9 @@ func (p *Packager) Pull() error {
 	} else {
 		name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Build.Architecture, p.cfg.Pkg.Metadata.Version)
 	}
-	err = archiver.Archive(allTheLayers, name)
+	output := filepath.Join(p.cfg.PullOpts.OutputDirectory, name)
+	_ = os.Remove(output)
+	err = archiver.Archive(allTheLayers, output)
 	if err != nil {
 		return err
 	}
