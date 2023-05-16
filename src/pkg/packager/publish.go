@@ -156,27 +156,22 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 
 	var root ocispec.Descriptor
 
-	// try to push an ArtifactManifest first
-	// not every registry supports ArtifactManifests, so fallback to an ImageManifest if the push fails
-	// see https://oras.land/implementors/#registries-supporting-oci-artifacts
-	root, err = p.publishArtifact(dst, src, descs, copyOpts)
-	if err != nil {
-		// reset the progress bar between attempts
-		dst.Transport.ProgressBar.Stop()
+	// reset the progress bar between attempts
+	dst.Transport.ProgressBar.Stop()
 
-		// log the error, the expected error is a 400 manifest invalid
-		message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
+	// log the error, the expected error is a 400 manifest invalid
+	message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
 
-		// if the error returned from the push is not an expected error, then return the error
-		if !isManifestUnsupported(err) {
-			return err
-		}
-		// fallback to an ImageManifest push
-		root, err = p.publishImage(dst, src, descs, copyOpts)
-		if err != nil {
-			return err
-		}
+	// if the error returned from the push is not an expected error, then return the error
+	if !isManifestUnsupported(err) {
+		return err
 	}
+	// fallback to an ImageManifest push
+	root, err = p.publishImage(dst, src, descs, copyOpts)
+	if err != nil {
+		return err
+	}
+
 	dst.Transport.ProgressBar.Successf("Published %s [%s]", ref, root.MediaType)
 	fmt.Println()
 	flags := ""
@@ -189,28 +184,6 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	message.Infof("zarf package pull oci://%s %s", ref, flags)
 
 	return nil
-}
-
-func (p *Packager) publishArtifact(dst *utils.OrasRemote, src *file.Store, descs []ocispec.Descriptor, copyOpts oras.CopyOptions) (root ocispec.Descriptor, err error) {
-	var total int64
-	for _, desc := range descs {
-		total += desc.Size
-	}
-	packOpts := p.cfg.PublishOpts.PackOptions
-
-	// first attempt to do a ArtifactManifest push
-	root, err = p.pack(dst.Context, ocispec.MediaTypeArtifactManifest, descs, src, packOpts)
-	if err != nil {
-		return root, err
-	}
-	total += root.Size
-
-	dst.Transport.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", dst.Reference.Repository, dst.Reference.Reference))
-	defer dst.Transport.ProgressBar.Stop()
-
-	// attempt to push the artifact manifest
-	_, err = oras.Copy(dst.Context, src, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
-	return root, err
 }
 
 func (p *Packager) publishImage(dst *utils.OrasRemote, src *file.Store, descs []ocispec.Descriptor, copyOpts oras.CopyOptions) (root ocispec.Descriptor, err error) {
@@ -257,10 +230,6 @@ func (p *Packager) publishImage(dst *utils.OrasRemote, src *file.Store, descs []
 func (p *Packager) generateAnnotations(artifactType string) map[string]string {
 	annotations := map[string]string{
 		ocispec.AnnotationDescription: p.cfg.Pkg.Metadata.Description,
-	}
-
-	if artifactType == ocispec.MediaTypeArtifactManifest {
-		annotations[ocispec.AnnotationTitle] = p.cfg.Pkg.Metadata.Name
 	}
 
 	if url := p.cfg.Pkg.Metadata.URL; url != "" {

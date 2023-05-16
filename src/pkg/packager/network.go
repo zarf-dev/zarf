@@ -233,21 +233,12 @@ func getOCIPackageSize(src *utils.OrasRemote, ref registry.Reference) (int64, er
 		return 0, err
 	}
 	manifest := ocispec.Manifest{}
-	artifact := ocispec.Artifact{}
 	var layers []ocispec.Descriptor
-	// if the manifest is an artifact, unmarshal it as an artifact
-	// otherwise, unmarshal it as a manifest
-	if descriptor.MediaType == ocispec.MediaTypeArtifactManifest {
-		if err = json.Unmarshal(pulled, &artifact); err != nil {
-			return 0, err
-		}
-		layers = artifact.Blobs
-	} else {
-		if err = json.Unmarshal(pulled, &manifest); err != nil {
-			return 0, err
-		}
-		layers = manifest.Layers
+
+	if err = json.Unmarshal(pulled, &manifest); err != nil {
+		return 0, err
 	}
+	layers = manifest.Layers
 
 	processedLayers := make(map[string]bool)
 	for _, layer := range layers {
@@ -276,21 +267,12 @@ func getLayers(dst *utils.OrasRemote) ([]ocispec.Descriptor, error) {
 		return nil, err
 	}
 	manifest := ocispec.Manifest{}
-	artifact := ocispec.Artifact{}
 	var layers []ocispec.Descriptor
-	// if the manifest is an artifact, unmarshal it as an artifact
-	// otherwise, unmarshal it as a manifest
-	if descriptor.MediaType == ocispec.MediaTypeArtifactManifest {
-		if err = json.Unmarshal(pulled, &artifact); err != nil {
-			return nil, err
-		}
-		layers = artifact.Blobs
-	} else {
-		if err = json.Unmarshal(pulled, &manifest); err != nil {
-			return nil, err
-		}
-		layers = manifest.Layers
+
+	if err = json.Unmarshal(pulled, &manifest); err != nil {
+		return nil, err
 	}
+	layers = manifest.Layers
 
 	return layers, nil
 }
