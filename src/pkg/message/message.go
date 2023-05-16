@@ -31,6 +31,9 @@ const (
 	DebugLevel
 	// TraceLevel level. Designates finer-grained informational events than the Debug.
 	TraceLevel
+
+	// termWidth sets the width of full width elements like progressbars and headers
+	termWidth = 85
 )
 
 // NoProgress tracks whether spinner/progress bars show updates.
@@ -66,7 +69,7 @@ func init() {
 		Text: " •",
 	}
 
-	pterm.DefaultProgressbar.MaxWidth = 85
+	pterm.DefaultProgressbar.MaxWidth = termWidth
 	pterm.SetDefaultOutput(os.Stderr)
 }
 
@@ -208,10 +211,9 @@ func Notef(format string, a ...any) {
 
 // HeaderInfof prints a large header with a formatted message.
 func HeaderInfof(format string, a ...any) {
-	headerWidth := 85
-	message := Truncate(fmt.Sprintf(format, a...), headerWidth)
+	message := Truncate(fmt.Sprintf(format, a...), termWidth)
 	// Ensure the text is consistent for the header width
-	padding := headerWidth - len(message)
+	padding := termWidth - len(message)
 	pterm.Println()
 	pterm.DefaultHeader.
 		WithBackgroundStyle(pterm.NewStyle(pterm.BgDarkGray)).
