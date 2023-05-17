@@ -227,9 +227,7 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 			// kustomizations can use non-standard urls, so we need to check if the composed path exists on the local filesystem
 			abs, _ := filepath.Abs(composed)
 			invalid := utils.InvalidPath(abs)
-			if invalid {
-				child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = kustomization
-			} else {
+			if !invalid {
 				child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = composed
 			}
 		}
