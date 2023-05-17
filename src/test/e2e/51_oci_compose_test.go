@@ -81,8 +81,6 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	suite.NoError(err)
 	err = os.RemoveAll(filepath.Join("files"))
 	suite.NoError(err)
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
-	suite.NoError(err, stdOut, stdErr)
 }
 
 func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
