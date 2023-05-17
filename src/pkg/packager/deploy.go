@@ -6,6 +6,7 @@ package packager
 
 import (
 	"crypto"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
@@ -43,7 +45,11 @@ func (p *Packager) Deploy() error {
 	}
 
 	if err := p.validatePackageArchitecture(); err != nil {
-		return err
+		if errors.Is(err, lang.ErrUnableToCheckArch) {
+			message.Warnf("Unable to validate package architecture: %s", err.Error())
+		} else {
+			return err
+		}
 	}
 
 	if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
