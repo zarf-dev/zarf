@@ -373,6 +373,6 @@ func bindPullFlags() {
 	pullFlags := packagePullCmd.Flags()
 	v.SetDefault(V_PKG_PULL_OUTPUT_DIR, "")
 	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_PULL_OUTPUT_DIR), lang.CmdPackageCreateFlagOutputDirectory)
-	pullFlags.IntVar(&pkgConfig.PullOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+	pullFlags.IntVar(&pkgConfig.PullOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PULL_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_PULL_PUBLIC_KEY), lang.CmdPackagePullPublicKey)
 }
