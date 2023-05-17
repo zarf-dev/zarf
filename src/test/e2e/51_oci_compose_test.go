@@ -68,9 +68,6 @@ func (suite *SkeletonSuite) SetupSuite() {
 
 	suite.Reference.Registry = "localhost:555"
 
-	// re-add gitea
-	stdOut, stdErr, err := e2e.ExecZarfCommand("init", "--components=git-server", "--confirm")
-	suite.NoError(err, stdOut, stdErr)
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
