@@ -95,7 +95,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		}
 
 		componentLayer := filepath.Join("components", fmt.Sprintf("%s.tar", childComponentName))
-		err = p.handleOciPackage(skelURL, cachePath, p.cfg.PublishOpts.CopyOptions.Concurrency, componentLayer)
+		err = p.handleOciPackage(skelURL, cachePath, 3, componentLayer)
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}

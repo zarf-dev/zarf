@@ -22,6 +22,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
+// Nonstandard URL schemes or prefixes
 const (
 	OCIURLScheme  = "oci"
 	OCIURLPrefix  = "oci://"
