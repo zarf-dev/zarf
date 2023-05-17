@@ -1,0 +1,23 @@
+kind: ZarfPackageConfig
+metadata:
+  name: bar
+  version: 0.0.1
+
+components:
+  - name: baz
+    required: true
+    files:
+      - source: ../files/coffee-ipsum.txt
+        target: files/coffee-ipsum.txt
+    actions:
+      onRemove:
+        after:
+          - cmd: rm files/coffee-ipsum.txt
+      onCreate:
+        before:
+          - cmd: cat files/coffee-ipsum.txt
+            dir: "../"
+        after:
+          - cmd: cat ../files/coffee-ipsum.txt
+        onSuccess:
+          - cmd: cat ../files/coffee-ipsum.txt

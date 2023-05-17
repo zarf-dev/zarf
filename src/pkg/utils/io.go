@@ -311,6 +311,15 @@ func GetDirSize(path string) (int64, error) {
 	return dirSize, err
 }
 
+// IsDir returns true if the given path is a directory.
+func IsDir(path string) bool {
+	info, err := os.Stat(filepath.Clean(path))
+	if os.IsNotExist(err) {
+		return false
+	}
+	return info.IsDir()
+}
+
 // GetSHA256OfFile returns the SHA256 hash of the provided file.
 func GetSHA256OfFile(filePath string) (string, error) {
 	file, err := os.Open(filePath)

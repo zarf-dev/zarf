@@ -282,17 +282,21 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		return nil
 	}
 
-	spinner := *message.NewProgressSpinner("Copying %d files", len(component.Files))
+	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
 	defer spinner.Stop()
 
-	for index, file := range component.Files {
+	for fileIdx, file := range component.Files {
 		spinner.Updatef("Loading %s", file.Target)
-		pkgLocationIdx := filepath.Join(pkgLocation, strconv.Itoa(index), filepath.Base(file.Target))
+
+		fileLocation := filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
+		if utils.InvalidPath(fileLocation) {
+			fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
+		}
 
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if shasum, _ := utils.GetCryptoHash(pkgLocationIdx, crypto.SHA256); shasum != file.Shasum {
+			if shasum, _ := utils.GetCryptoHash(fileLocation, crypto.SHA256); shasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
 			}
 		}
@@ -301,40 +305,40 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
 
 		// Determine if the file is a directory
-		pkgLocationInfo, err := os.Stat(pkgLocationIdx)
+		fileLocationInfo, err := os.Stat(fileLocation)
 		if err != nil {
-			message.Debugf("unable to describe file %s: %s", pkgLocationIdx, err)
+			message.Debugf("unable to describe file %s: %s", fileLocation, err)
 		}
 
-		pkgFileList := []string{}
-		if pkgLocationInfo.IsDir() {
-			files, _ := utils.RecursiveFileList(pkgLocationIdx, nil, false, true)
-			pkgFileList = append(pkgFileList, files...)
+		fileList := []string{}
+		if fileLocationInfo.IsDir() {
+			files, _ := utils.RecursiveFileList(fileLocation, nil, false, true)
+			fileList = append(fileList, files...)
 		} else {
-			pkgFileList = append(pkgFileList, pkgLocationIdx)
+			fileList = append(fileList, fileLocation)
 		}
 
-		for _, pkgFile := range pkgFileList {
+		for _, subFile := range fileList {
 			// Check if the file looks like a text file
-			isText, err := utils.IsTextFile(pkgFile)
+			isText, err := utils.IsTextFile(subFile)
 			if err != nil {
-				message.Debugf("unable to determine if file %s is a text file: %s", pkgFile, err)
+				message.Debugf("unable to determine if file %s is a text file: %s", subFile, err)
 			}
 
 			// If the file is a text file, template it
 			if isText {
 				spinner.Updatef("Templating %s", file.Target)
-				if err := valueTemplate.Apply(component, pkgFile, true); err != nil {
-					return fmt.Errorf("unable to template file %s: %w", pkgFile, err)
+				if err := valueTemplate.Apply(component, subFile, true); err != nil {
+					return fmt.Errorf("unable to template file %s: %w", subFile, err)
 				}
 			}
 		}
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err = copy.Copy(pkgLocationIdx, file.Target)
+		err = copy.Copy(fileLocation, file.Target)
 		if err != nil {
-			return fmt.Errorf("unable to copy file %s to %s: %w", pkgLocationIdx, file.Target, err)
+			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
 		}
 
 		// Loop over all symlinks and create them
@@ -352,7 +356,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		}
 
 		// Cleanup now to reduce disk pressure
-		_ = os.RemoveAll(pkgLocationIdx)
+		_ = os.RemoveAll(fileLocation)
 	}
 
 	spinner.Success()
@@ -477,9 +481,9 @@ func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPat
 		message.Info("Loading data injections")
 	}
 
-	for _, data := range dataInjections {
+	for idx, data := range dataInjections {
 		waitGroup.Add(1)
-		go p.cluster.HandleDataInjection(waitGroup, data, componentPath)
+		go p.cluster.HandleDataInjection(waitGroup, data, componentPath, idx)
 	}
 }
 
@@ -491,14 +495,14 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
-			chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
+			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPath.Values, chart), idx)
 			if err := valueTemplate.Apply(component, chartValueName, false); err != nil {
 				return installedCharts, err
 			}
 		}
 
 		// Generate helm templates to pass to gitops engine
-		helmCfg := &helm.Helm{
+		helmCfg := helm.Helm{
 			BasePath:  componentPath.Base,
 			Chart:     chart,
 			Component: component,
@@ -519,10 +523,19 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 	}
 
 	for _, manifest := range component.Manifests {
+		for idx := range manifest.Files {
+			if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
+				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
+				if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
+				}
+			}
+		}
+		// Move kustomizations to files now
 		for idx := range manifest.Kustomizations {
-			// Move kustomizations to files now
-			destination := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-			manifest.Files = append(manifest.Files, destination)
+			kustomization := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+			manifest.Files = append(manifest.Files, kustomization)
 		}
 
 		if manifest.Namespace == "" {

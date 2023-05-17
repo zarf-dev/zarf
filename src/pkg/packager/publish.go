@@ -12,10 +12,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
@@ -25,34 +27,11 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
-// ZarfLayerMediaType<Extension> is the media type for Zarf layers.
+// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
 const (
-	ZarfLayerMediaTypeTarZstd = "application/vnd.zarf.layer.v1.tar+zstd"
-	ZarfLayerMediaTypeTarGzip = "application/vnd.zarf.layer.v1.tar+gzip"
-	ZarfLayerMediaTypeYaml    = "application/vnd.zarf.layer.v1.yaml"
-	ZarfLayerMediaTypeJSON    = "application/vnd.zarf.layer.v1.json"
-	ZarfLayerMediaTypeTxt     = "application/vnd.zarf.layer.v1.txt"
-	ZarfLayerMediaTypeUnknown = "application/vnd.zarf.layer.v1.unknown"
+	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
+	skeletonSuffix         = "skeleton"
 )
-
-// parseZarfLayerMediaType returns the Zarf layer media type for the given filename.
-func parseZarfLayerMediaType(filename string) string {
-	// since we are controlling the filenames, we can just use the extension
-	switch filepath.Ext(filename) {
-	case ".zst":
-		return ZarfLayerMediaTypeTarZstd
-	case ".gz":
-		return ZarfLayerMediaTypeTarGzip
-	case ".yaml":
-		return ZarfLayerMediaTypeYaml
-	case ".json":
-		return ZarfLayerMediaTypeJSON
-	case ".txt":
-		return ZarfLayerMediaTypeTxt
-	default:
-		return ZarfLayerMediaTypeUnknown
-	}
-}
 
 // Publish publishes the package to a registry
 //
@@ -62,14 +41,31 @@ func parseZarfLayerMediaType(filename string) string {
 // Authentication is handled via the Docker config file created w/ `zarf tools registry login`
 func (p *Packager) Publish() error {
 	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
+	var ref registry.Reference
+	referenceSuffix := ""
+	if utils.IsDir(p.cfg.PublishOpts.PackagePath) {
+		referenceSuffix = skeletonSuffix
+		err := p.loadSkeleton()
+		if err != nil {
+			return err
+		}
+	} else {
+		// Extract the first layer of the tarball
+		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
+			return fmt.Errorf("unable to extract the package: %w", err)
+		}
 
-	// Extract the first layer of the tarball
-	if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
-		return fmt.Errorf("unable to extract the package: %w", err)
+		err := p.readYaml(p.tmp.ZarfYaml, true)
+		if err != nil {
+			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
+		}
+		referenceSuffix = p.cfg.Pkg.Build.Architecture
 	}
 
-	if err := p.readYaml(p.tmp.ZarfYaml, true); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
+	// Get a reference to the registry for this package
+	ref, err := p.ref(referenceSuffix)
+	if err != nil {
+		return err
 	}
 
 	if err := p.validatePackageChecksums(); err != nil {
@@ -83,6 +79,15 @@ func (p *Packager) Publish() error {
 			return fmt.Errorf("unable to sign the package: %w", err)
 		}
 	}
+
+	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Reference)
+	return p.publish(ref)
+}
+
+func (p *Packager) publish(ref registry.Reference) error {
+	message.Infof("Publishing package to %s", ref)
+	spinner := message.NewProgressSpinner("")
+	defer spinner.Stop()
 
 	// Get all of the layers in the package
 	paths := []string{}
@@ -101,20 +106,6 @@ func (p *Packager) Publish() error {
 	if err != nil {
 		return fmt.Errorf("unable to get the layers in the package to publish: %w", err)
 	}
-
-	ref, err := p.ref("")
-	if err != nil {
-		return err
-	}
-
-	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Reference)
-	return p.publish(ref, paths)
-}
-
-func (p *Packager) publish(ref registry.Reference, paths []string) error {
-	message.Infof("Publishing package to %s", ref)
-	spinner := message.NewProgressSpinner("")
-	defer spinner.Stop()
 
 	// destination remote
 	dst, err := utils.NewOrasRemote(ref)
@@ -139,7 +130,7 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 		}
 		spinner.Updatef("Preparing layer %d/%d: %s", idx+1, len(paths), name)
 
-		mediaType := parseZarfLayerMediaType(name)
+		mediaType := ZarfLayerMediaTypeBlob
 
 		desc, err := src.Add(ctx, name, mediaType, path)
 		if err != nil {
@@ -154,63 +145,40 @@ func (p *Packager) publish(ref registry.Reference, paths []string) error {
 	copyOpts.OnCopySkipped = utils.PrintLayerExists
 	copyOpts.PostCopy = utils.PrintLayerExists
 
-	var root ocispec.Descriptor
-
-	// try to push an ArtifactManifest first
-	// not every registry supports ArtifactManifests, so fallback to an ImageManifest if the push fails
-	// see https://oras.land/implementors/#registries-supporting-oci-artifacts
-	root, err = p.publishArtifact(dst, src, descs, copyOpts)
+	root, err := p.publishImage(dst, src, descs, copyOpts)
 	if err != nil {
-		// reset the progress bar between attempts
-		dst.Transport.ProgressBar.Stop()
-
-		// log the error, the expected error is a 400 manifest invalid
-		message.Debug("ArtifactManifest push failed with the following error, falling back to an ImageManifest push:", err)
-
-		// if the error returned from the push is not an expected error, then return the error
-		if !isManifestUnsupported(err) {
-			return err
-		}
-		// fallback to an ImageManifest push
-		root, err = p.publishImage(dst, src, descs, copyOpts)
-		if err != nil {
-			return err
-		}
+		return err
 	}
+
 	dst.Transport.ProgressBar.Successf("Published %s [%s]", ref, root.MediaType)
 	fmt.Println()
-	flags := ""
-	if config.CommonOptions.Insecure {
-		flags = "--insecure"
+	if strings.HasSuffix(ref.Reference, skeletonSuffix) {
+		message.Info("Example of importing components from this package:")
+		fmt.Println()
+		ex := []types.ZarfComponent{}
+		for _, c := range p.cfg.Pkg.Components {
+			ex = append(ex, types.ZarfComponent{
+				Name: fmt.Sprintf("import-%s", c.Name),
+				Import: types.ZarfComponentImport{
+					ComponentName: c.Name,
+					URL:           fmt.Sprintf("oci://%s", ref.String()),
+				},
+			})
+		}
+		utils.ColorPrintYAML(ex)
+		fmt.Println()
+	} else {
+		flags := ""
+		if config.CommonOptions.Insecure {
+			flags = "--insecure"
+		}
+		message.Info("To inspect/deploy/pull:")
+		message.Infof("zarf package inspect oci://%s %s", ref, flags)
+		message.Infof("zarf package deploy oci://%s %s", ref, flags)
+		message.Infof("zarf package pull oci://%s %s", ref, flags)
 	}
-	message.Info("To inspect/deploy/pull:")
-	message.Infof("zarf package inspect oci://%s %s", ref, flags)
-	message.Infof("zarf package deploy oci://%s %s", ref, flags)
-	message.Infof("zarf package pull oci://%s %s", ref, flags)
 
 	return nil
-}
-
-func (p *Packager) publishArtifact(dst *utils.OrasRemote, src *file.Store, descs []ocispec.Descriptor, copyOpts oras.CopyOptions) (root ocispec.Descriptor, err error) {
-	var total int64
-	for _, desc := range descs {
-		total += desc.Size
-	}
-	packOpts := p.cfg.PublishOpts.PackOptions
-
-	// first attempt to do a ArtifactManifest push
-	root, err = p.pack(dst.Context, ocispec.MediaTypeArtifactManifest, descs, src, packOpts)
-	if err != nil {
-		return root, err
-	}
-	total += root.Size
-
-	dst.Transport.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", dst.Reference.Repository, dst.Reference.Reference))
-	defer dst.Transport.ProgressBar.Stop()
-
-	// attempt to push the artifact manifest
-	_, err = oras.Copy(dst.Context, src, root.Digest.String(), dst, dst.Reference.Reference, copyOpts)
-	return root, err
 }
 
 func (p *Packager) publishImage(dst *utils.OrasRemote, src *file.Store, descs []ocispec.Descriptor, copyOpts oras.CopyOptions) (root ocispec.Descriptor, err error) {
@@ -312,6 +280,45 @@ func (p *Packager) generateManifestConfigFile() (ocispec.Descriptor, []byte, err
 	return manifestConfigDesc, manifestConfigBytes, nil
 }
 
+func (p *Packager) loadSkeleton() error {
+	base, err := filepath.Abs(p.cfg.PublishOpts.PackagePath)
+	if err != nil {
+		return err
+	}
+	if err := os.Chdir(base); err != nil {
+		return err
+	}
+	if err := p.readYaml(config.ZarfYAML, false); err != nil {
+		return fmt.Errorf("unable to read the zarf.yaml in %s: %s", base, err.Error())
+	}
+
+	err = p.composeComponents()
+	if err != nil {
+		return err
+	}
+
+	for idx, component := range p.cfg.Pkg.Components {
+		isSkeleton := true
+		err := p.addComponent(idx, component, isSkeleton)
+		if err != nil {
+			return err
+		}
+
+		err = p.archiveComponent(component)
+		if err != nil {
+			return fmt.Errorf("unable to archive component: %s", err.Error())
+		}
+	}
+
+	checksumChecksum, err := generatePackageChecksums(p.tmp.Base)
+	if err != nil {
+		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
+	}
+	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
+
+	return p.writeYaml()
+}
+
 // pack creates an artifact/image manifest from the provided descriptors and pushes it to the store
 func (p *Packager) pack(ctx context.Context, artifactType string, descs []ocispec.Descriptor, src *file.Store, packOpts oras.PackOptions) (ocispec.Descriptor, error) {
 	packOpts.ManifestAnnotations = p.generateAnnotations(artifactType)
@@ -328,21 +335,17 @@ func (p *Packager) pack(ctx context.Context, artifactType string, descs []ocispe
 
 // ref returns a registry.Reference using metadata from the package's build config and the PublishOpts
 //
-// if skeleton is not empty, the architecture will be replaced with the skeleton string (e.g. "skeleton")
-func (p *Packager) ref(skeleton string) (registry.Reference, error) {
+// if suffix is not empty, the architecture will be replaced with the suffix string
+func (p *Packager) ref(suffix string) (registry.Reference, error) {
 	ver := p.cfg.Pkg.Metadata.Version
 	if len(ver) == 0 {
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
-	arch := p.cfg.Pkg.Build.Architecture
-	// changes package ref from "name:version-arch" to "name:version-skeleton"
-	if len(skeleton) > 0 {
-		arch = skeleton
-	}
+
 	ref := registry.Reference{
 		Registry:   p.cfg.PublishOpts.Reference.Registry,
 		Repository: fmt.Sprintf("%s/%s", p.cfg.PublishOpts.Reference.Repository, p.cfg.Pkg.Metadata.Name),
-		Reference:  fmt.Sprintf("%s-%s", ver, arch),
+		Reference:  fmt.Sprintf("%s-%s", ver, suffix),
 	}
 	if len(p.cfg.PublishOpts.Reference.Repository) == 0 {
 		ref.Repository = p.cfg.Pkg.Metadata.Name

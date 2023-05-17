@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,7 +22,6 @@ import (
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote/errcode"
 )
 
 // handlePackagePath If provided package is a URL download it to a temp directory.
@@ -41,11 +39,13 @@ func (p *Packager) handlePackagePath() error {
 
 	// Handle case where deploying remote package stored in an OCI registry
 	if utils.IsOCIURL(opts.PackagePath) {
-		return p.handleOciPackage()
+		ociURL := opts.PackagePath
+		p.cfg.DeployOpts.PackagePath = p.tmp.Base
+		return p.handleOciPackage(ociURL, p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency)
 	}
 
 	// Handle case where deploying remote package validated via sget
-	if strings.HasPrefix(opts.PackagePath, "sget://") {
+	if strings.HasPrefix(opts.PackagePath, utils.SGETURLPrefix) {
 		return p.handleSgetPackage()
 	}
 
@@ -114,7 +114,7 @@ func (p *Packager) handleSgetPackage() error {
 	defer destinationFile.Close()
 
 	// If this is a DefenseUnicorns package, use an internal sget public key
-	if strings.HasPrefix(opts.PackagePath, "sget://defenseunicorns") {
+	if strings.HasPrefix(opts.PackagePath, fmt.Sprintf("%s://defenseunicorns", utils.SGETURLScheme)) {
 		os.Setenv("DU_SGET_KEY", config.SGetPublicKey)
 		p.cfg.DeployOpts.SGetKeyPath = "env://DU_SGET_KEY"
 	}
@@ -131,14 +131,13 @@ func (p *Packager) handleSgetPackage() error {
 	return nil
 }
 
-func (p *Packager) handleOciPackage() error {
-	message.Debug("packager.handleOciPackage()")
-	ref, err := registry.ParseReference(strings.TrimPrefix(p.cfg.DeployOpts.PackagePath, "oci://"))
+func (p *Packager) handleOciPackage(url string, out string, concurrency int, layers ...string) error {
+	message.Debugf("packager.handleOciPackage(%s, %s, %d, %s)", url, out, concurrency, layers)
+	ref, err := registry.ParseReference(strings.TrimPrefix(url, utils.OCIURLPrefix))
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI reference: %w", err)
 	}
 
-	outDir := p.tmp.Base
 	message.Debugf("Pulling %s", ref.String())
 	message.Infof("Pulling Zarf package from %s", ref)
 
@@ -147,25 +146,19 @@ func (p *Packager) handleOciPackage() error {
 		return err
 	}
 
-	estimatedBytes, err := getOCIPackageSize(src, ref)
+	estimatedBytes, err := getOCIPackageSize(src, layers...)
 	if err != nil {
 		return err
 	}
 
-	dst, err := file.New(outDir)
+	dst, err := file.New(out)
 	if err != nil {
 		return err
 	}
 	defer dst.Close()
 
-	// Create a thread to update a progress bar as we save the package to disk
-	doneSaving := make(chan int)
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go utils.RenderProgressBarForLocalDirWrite(outDir, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
-
 	copyOpts := oras.DefaultCopyOptions
-	copyOpts.Concurrency = p.cfg.PullOpts.CopyOptions.Concurrency
+	copyOpts.Concurrency = concurrency
 	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		title := desc.Annotations[ocispec.AnnotationTitle]
 		var format string
@@ -178,7 +171,30 @@ func (p *Packager) handleOciPackage() error {
 		return nil
 	}
 	copyOpts.PostCopy = copyOpts.OnCopySkipped
+	isPartialPull := len(layers) > 0
+	if isPartialPull {
+		alwaysPull := []string{"zarf.yaml", "checksums.txt", "zarf.yaml.sig"}
+		layers = append(layers, alwaysPull...)
+		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+			nodes, err := content.Successors(ctx, fetcher, desc)
+			if err != nil {
+				return nil, err
+			}
+			var ret []ocispec.Descriptor
+			for _, node := range nodes {
+				if utils.SliceContains(layers, node.Annotations[ocispec.AnnotationTitle]) {
+					ret = append(ret, node)
+				}
+			}
+			return ret, nil
+		}
+	}
 
+	// Create a thread to update a progress bar as we save the package to disk
+	doneSaving := make(chan int)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go utils.RenderProgressBarForLocalDirWrite(out, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
 	_, err = oras.Copy(src.Context, src.Repository, ref.Reference, dst, ref.Reference, copyOpts)
 	if err != nil {
 		return err
@@ -191,68 +207,31 @@ func (p *Packager) handleOciPackage() error {
 	message.Debugf("Pulled %s", ref.String())
 	message.Successf("Pulled %s", ref.String())
 
-	p.cfg.DeployOpts.PackagePath = outDir
 	return nil
 }
 
-// isManifestUnsupported returns true if the error is an unsupported artifact manifest error.
-//
-// This function was copied verbatim from https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
-func isManifestUnsupported(err error) bool {
-	var errResp *errcode.ErrorResponse
-	if !errors.As(err, &errResp) || errResp.StatusCode != http.StatusBadRequest {
-		return false
-	}
-
-	var errCode errcode.Error
-	if !errors.As(errResp, &errCode) {
-		return false
-	}
-
-	// As of November 2022, ECR is known to return UNSUPPORTED error when
-	// pulling an OCI artifact manifest.
-	switch errCode.Code {
-	case errcode.ErrorCodeManifestInvalid, errcode.ErrorCodeUnsupported:
-		return true
-	}
-	return false
-}
-
-func getOCIPackageSize(src *utils.OrasRemote, ref registry.Reference) (int64, error) {
+func getOCIPackageSize(src *utils.OrasRemote, layers ...string) (int64, error) {
 	var total int64
-	// get the manifest descriptor
-	// ref.Reference can be a tag or a digest
-	descriptor, err := src.Resolve(src.Context, ref.Reference)
-	if err != nil {
-		return 0, err
-	}
 
-	// get the manifest itself
-	pulled, err := content.FetchAll(src.Context, src, descriptor)
+	manifest, err := getManifest(src)
 	if err != nil {
 		return 0, err
 	}
-	manifest := ocispec.Manifest{}
-	artifact := ocispec.Artifact{}
-	var layers []ocispec.Descriptor
-	// if the manifest is an artifact, unmarshal it as an artifact
-	// otherwise, unmarshal it as a manifest
-	if descriptor.MediaType == ocispec.MediaTypeArtifactManifest {
-		if err = json.Unmarshal(pulled, &artifact); err != nil {
-			return 0, err
-		}
-		layers = artifact.Blobs
-	} else {
-		if err = json.Unmarshal(pulled, &manifest); err != nil {
-			return 0, err
-		}
-		layers = manifest.Layers
-	}
+	manifestLayers := manifest.Layers
 
 	processedLayers := make(map[string]bool)
-	for _, layer := range layers {
+	for _, layer := range manifestLayers {
 		// Only include this layer's size if we haven't already processed it
-		if !processedLayers[layer.Digest.String()] {
+		hasBeenProcessed := processedLayers[layer.Digest.String()]
+		if !hasBeenProcessed {
+			if len(layers) > 0 {
+				// If we're only pulling a subset of layers, only include the size of the layers we're pulling
+				if utils.SliceContains(layers, layer.Annotations[ocispec.AnnotationTitle]) {
+					total += layer.Size
+					processedLayers[layer.Digest.String()] = true
+					continue
+				}
+			}
 			total += layer.Size
 			processedLayers[layer.Digest.String()] = true
 		}
@@ -261,8 +240,8 @@ func getOCIPackageSize(src *utils.OrasRemote, ref registry.Reference) (int64, er
 	return total, nil
 }
 
-// getLayers returns the manifest layers of a Zarf OCI package
-func getLayers(dst *utils.OrasRemote) ([]ocispec.Descriptor, error) {
+// getManifest fetches the manifest from a Zarf OCI package
+func getManifest(dst *utils.OrasRemote) (*ocispec.Manifest, error) {
 	// get the manifest descriptor
 	// ref.Reference can be a tag or a digest
 	descriptor, err := dst.Resolve(dst.Context, dst.Reference.Reference)
@@ -276,23 +255,11 @@ func getLayers(dst *utils.OrasRemote) ([]ocispec.Descriptor, error) {
 		return nil, err
 	}
 	manifest := ocispec.Manifest{}
-	artifact := ocispec.Artifact{}
-	var layers []ocispec.Descriptor
-	// if the manifest is an artifact, unmarshal it as an artifact
-	// otherwise, unmarshal it as a manifest
-	if descriptor.MediaType == ocispec.MediaTypeArtifactManifest {
-		if err = json.Unmarshal(pulled, &artifact); err != nil {
-			return nil, err
-		}
-		layers = artifact.Blobs
-	} else {
-		if err = json.Unmarshal(pulled, &manifest); err != nil {
-			return nil, err
-		}
-		layers = manifest.Layers
-	}
 
-	return layers, nil
+	if err = json.Unmarshal(pulled, &manifest); err != nil {
+		return nil, err
+	}
+	return &manifest, nil
 }
 
 // pullLayer fetches a single layer from a Zarf OCI package

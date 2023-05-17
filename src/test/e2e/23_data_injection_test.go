@@ -21,7 +21,7 @@ func TestDataInjection(t *testing.T) {
 	e2e.SetupWithCluster(t)
 	defer e2e.Teardown(t)
 
-	path := fmt.Sprintf("build/zarf-package-data-injection-demo-%s.tar", e2e.Arch)
+	path := fmt.Sprintf("build/zarf-package-data-injection-%s.tar", e2e.Arch)
 
 	sbomPath := filepath.Join(os.TempDir(), ".sbom-location")
 
@@ -38,7 +38,7 @@ func TestDataInjection(t *testing.T) {
 	require.Contains(t, stdOut, "this-is-an-example-file.txt")
 	require.Contains(t, stdOut, ".zarf-injection-")
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "data-injection-demo", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "data-injection", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure that the `requirements.txt` file is discovered correctly

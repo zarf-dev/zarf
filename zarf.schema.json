@@ -617,9 +617,6 @@
       "type": "object"
     },
     "ZarfComponentImport": {
-      "required": [
-        "path"
-      ],
       "properties": {
         "name": {
           "type": "string",
@@ -629,6 +626,11 @@
           "pattern": "^(?!.*###ZARF_PKG_TMPL_).*$",
           "type": "string",
           "description": "The relative path to a directory containing a zarf.yaml to import from"
+        },
+        "url": {
+          "pattern": "^oci://(?!.*###ZARF_PKG_TMPL_).*$",
+          "type": "string",
+          "description": "The URL to a Zarf package to import via OCI"
         }
       },
       "additionalProperties": false,

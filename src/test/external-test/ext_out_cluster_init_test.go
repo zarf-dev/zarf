@@ -69,7 +69,7 @@ func TestExtOutClusterDeploy(t *testing.T) {
 	require.NoError(t, err, "unable to initialize the k8s server with zarf")
 
 	// Deploy the flux example package
-	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-flux-test-amd64.tar.zst", "--confirm"}
+	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-podinfo-flux-amd64.tar.zst", "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 
 	require.NoError(t, err, "unable to deploy flux example package")

@@ -37,7 +37,7 @@ func TestCreateTemplating(t *testing.T) {
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", "examples/variables", "--set", "NGINX_VERSION=1.23.3", "--confirm", "--zarf-cache", cachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("t", "archiver", "decompress", pkgName, decompressPath, "--decompress-all", "-l=trace")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("t", "archiver", "decompress", pkgName, decompressPath, "--unarchive-all", "-l=trace")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the constant in the zarf.yaml is replaced correctly
