@@ -6,16 +6,21 @@ package bigbang
 
 import (
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
+	"helm.sh/helm/v3/pkg/chartutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -34,7 +39,7 @@ var tenMins = metav1.Duration{
 
 // Run Mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
-func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	var err error
 	if err := utils.CreateDirectory(tmpPaths.Temp, 0700); err != nil {
 		return c, fmt.Errorf("unable to component temp directory: %w", err)
@@ -72,8 +77,10 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		// Add the flux manifests to the list of manifests to be pulled down by Zarf.
 		manifests = append(manifests, fluxManifest)
 
-		// Add the images to the list of images to be pulled down by Zarf.
-		c.Images = append(c.Images, images...)
+		if !YOLO {
+			// Add the images to the list of images to be pulled down by Zarf.
+			c.Images = append(c.Images, images...)
+		}
 	}
 
 	// Configure helm to pull down the Big Bang chart.
@@ -101,22 +108,25 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 
 	// Template the chart so we can see what GitRepositories are being referenced in the
 	// manifests created with the provided Helm.
-	template, err := helmCfg.TemplateChart()
+	template, _, err := helmCfg.TemplateChart()
 	if err != nil {
 		return c, fmt.Errorf("unable to template Big Bang Chart: %w", err)
 	}
 
 	// Add the Big Bang repo to the list of repos to be pulled down by Zarf.
-	bbRepo := fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version)
-	c.Repos = append(c.Repos, bbRepo)
-
+	if !YOLO {
+		bbRepo := fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version)
+		c.Repos = append(c.Repos, bbRepo)
+	}
 	// Parse the template for GitRepository objects and add them to the list of repos to be pulled down by Zarf.
 	gitRepos, hrDependencies, hrValues, err := findBBResources(template)
 	if err != nil {
 		return c, fmt.Errorf("unable to find Big Bang resources: %w", err)
 	}
-	for _, gitRepo := range gitRepos {
-		c.Repos = append(c.Repos, gitRepo)
+	if !YOLO {
+		for _, gitRepo := range gitRepos {
+			c.Repos = append(c.Repos, gitRepo)
+		}
 	}
 
 	// Generate a list of HelmReleases that need to be deployed in order.
@@ -200,24 +210,26 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	})
 
 	// Select the images needed to support the repos for this configuration of Big Bang.
-	for _, hr := range hrDependencies {
-		namespacedName := getNamespacedNameFromMeta(hr.Metadata)
-		gitRepo := gitRepos[hr.NamespacedSource]
-		values := hrValues[namespacedName]
+	if !YOLO {
+		for _, hr := range hrDependencies {
+			namespacedName := getNamespacedNameFromMeta(hr.Metadata)
+			gitRepo := gitRepos[hr.NamespacedSource]
+			values := hrValues[namespacedName]
 
-		images, err := helm.FindImagesForChartRepo(gitRepo, "chart", values)
-		if err != nil {
-			return c, fmt.Errorf("unable to find images for chart repo: %w", err)
+			images, err := findImagesforBBChartRepo(gitRepo, values)
+			if err != nil {
+				return c, fmt.Errorf("unable to find images for chart repo: %w", err)
+			}
+
+			c.Images = append(c.Images, images...)
 		}
 
-		c.Images = append(c.Images, images...)
+		// Make sure the list of images is unique.
+		c.Images = utils.Unique(c.Images)
 	}
 
-	// Make sure the list of images is unique.
-	c.Images = utils.Unique(c.Images)
-
 	// Create the flux wrapper around Big Bang for deployment.
-	manifest, err := addBigBangManifests(tmpPaths.Temp, cfg)
+	manifest, err := addBigBangManifests(YOLO, tmpPaths.Temp, cfg)
 	if err != nil {
 		return c, err
 	}
@@ -358,7 +370,7 @@ func findBBResources(t string) (gitRepos map[string]string, helmReleaseDeps map[
 }
 
 // addBigBangManifests creates the manifests component for deploying Big Bang.
-func addBigBangManifests(manifestDir string, cfg *extensions.BigBang) (types.ZarfManifest, error) {
+func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang) (types.ZarfManifest, error) {
 	// Create a manifest component that we add to the zarf package for bigbang.
 	manifest := types.ZarfManifest{
 		Name:      bb,
@@ -386,16 +398,21 @@ func addBigBangManifests(manifestDir string, cfg *extensions.BigBang) (types.Zar
 		return manifest, err
 	}
 
-	// Create the zarf-credentials secret manifest.
-	if err := addManifest("bb-ext-zarf-credentials.yaml", manifestZarfCredentials(cfg.Version)); err != nil {
-		return manifest, err
-	}
+	var hrValues []fluxHelmCtrl.ValuesReference
 
-	// Create the list of values manifests starting with zarf-credentials.
-	hrValues := []fluxHelmCtrl.ValuesReference{{
-		Kind: "Secret",
-		Name: "zarf-credentials",
-	}}
+	// If YOLO mode is enabled, do not include the zarf-credentials secret
+	if !YOLO {
+		// Create the zarf-credentials secret manifest.
+		if err := addManifest("bb-ext-zarf-credentials.yaml", manifestZarfCredentials(cfg.Version)); err != nil {
+			return manifest, err
+		}
+
+		// Create the list of values manifests starting with zarf-credentials.
+		hrValues = []fluxHelmCtrl.ValuesReference{{
+			Kind: "Secret",
+			Name: "zarf-credentials",
+		}}
+	}
 
 	// Loop through the valuesFrom list and create a manifest for each.
 	for _, path := range cfg.ValuesFiles {
@@ -421,4 +438,47 @@ func addBigBangManifests(manifestDir string, cfg *extensions.BigBang) (types.Zar
 	}
 
 	return manifest, nil
+}
+
+// findImagesforBBChartRepo finds and returns the images for the Big Bang chart repo
+func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []string, err error) {
+	matches := strings.Split(repo, "@")
+	if len(matches) < 2 {
+		return images, fmt.Errorf("cannot convert git repo %s to helm chart without a version tag", repo)
+	}
+
+	spinner := message.NewProgressSpinner("Discovering images in %s", repo)
+	defer spinner.Stop()
+
+	chart := types.ZarfChart{
+		Name:    repo,
+		URL:     matches[0],
+		Version: matches[1],
+		GitPath: "chart",
+	}
+
+	helmCfg := helm.Helm{
+		Chart: chart,
+		Cfg: &types.PackagerConfig{
+			State: types.ZarfState{},
+		},
+	}
+
+	gitPath, err := helmCfg.DownloadChartFromGitToTemp(spinner)
+	if err != nil {
+		return images, err
+	}
+	defer os.RemoveAll(gitPath)
+
+	// Set the directory for the chart
+	chartPath := filepath.Join(gitPath, helmCfg.Chart.GitPath)
+
+	images, err = helm.FindAnnotatedImagesForChart(chartPath, values)
+	if err != nil {
+		return images, err
+	}
+
+	spinner.Success()
+
+	return images, err
 }
