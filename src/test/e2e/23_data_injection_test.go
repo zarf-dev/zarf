@@ -44,11 +44,11 @@ func TestDataInjection(t *testing.T) {
 	// Ensure that the `requirements.txt` file is discovered correctly
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "inspect", path, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "data-injection-demo", "compare.html"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "data-injection", "compare.html"))
 	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "data-injection-demo", "sbom-viewer-zarf-component-with-init-container.html"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "data-injection", "sbom-viewer-zarf-component-with-init-container.html"))
 	require.NoError(t, err)
-	withInitContainerJSON, err := os.ReadFile(filepath.Join(sbomPath, "data-injection-demo", "zarf-component-with-init-container.json"))
+	withInitContainerJSON, err := os.ReadFile(filepath.Join(sbomPath, "data-injection", "zarf-component-with-init-container.json"))
 	require.NoError(t, err)
 	require.Contains(t, string(withInitContainerJSON), "pytz")
 
