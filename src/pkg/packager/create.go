@@ -501,7 +501,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				}
 				if isSkeleton {
 					rel := strings.TrimPrefix(dst, componentPath.Base)
-					p.cfg.Pkg.Components[index].Manifests[manifestIdx].Kustomizations[kustomizeIdx] = rel
+					p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files = append(p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files, rel)
 				}
 			}
 			if isSkeleton {
