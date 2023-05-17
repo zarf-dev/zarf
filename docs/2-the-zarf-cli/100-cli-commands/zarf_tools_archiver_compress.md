@@ -28,4 +28,3 @@ zarf tools archiver compress {SOURCES} {ARCHIVE} [flags]
 ## SEE ALSO
 
 * [zarf tools archiver](zarf_tools_archiver.md)	 - Compress/Decompress generic archives, including Zarf packages.
-

@@ -29,4 +29,3 @@ zarf tools gen-pki {HOST} [flags]
 ## SEE ALSO
 
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-

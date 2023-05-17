@@ -29,4 +29,3 @@ Tools to help prepare assets for packaging
 * [zarf prepare patch-git](zarf_prepare_patch-git.md)	 - Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:
 This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook.
 * [zarf prepare sha256sum](zarf_prepare_sha256sum.md)	 - Generate a SHA256SUM for the given file
-

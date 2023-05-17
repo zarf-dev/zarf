@@ -37,4 +37,3 @@ zarf prepare generate-config [FILENAME] [flags]
 ## SEE ALSO
 
 * [zarf prepare](zarf_prepare.md)	 - Tools to help prepare assets for packaging
-

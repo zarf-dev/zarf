@@ -28,4 +28,3 @@ zarf connect list [flags]
 ## SEE ALSO
 
 * [zarf connect](zarf_connect.md)	 - Access services or pods deployed in the cluster.
-
