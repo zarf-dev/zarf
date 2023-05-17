@@ -12,4 +12,3 @@ spec:
     kind: GitRepository
     name: podinfo
   targetNamespace: podinfo
-

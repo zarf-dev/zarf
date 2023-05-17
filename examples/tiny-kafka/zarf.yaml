@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: kafka-strimzi-demo
+  name: tiny-kafka
   description: "Demo tiny Zarf Kafka deployment"
 
 components:
