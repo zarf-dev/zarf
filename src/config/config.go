@@ -135,6 +135,7 @@ func GetCraneOptions(insecure bool, archs ...string) []crane.Option {
 			Architecture: GetArch(archs...),
 		}),
 		crane.WithUserAgent("zarf"),
+		crane.WithJobs(1),
 	)
 
 	return options
