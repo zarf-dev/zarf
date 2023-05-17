@@ -639,8 +639,8 @@ func (p *Packager) removeDifferentialComponentsFromPackage() error {
 				if _, alsoExists := p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents[component.Import.URL]; alsoExists {
 
 					// If the component spec is not empty, we will still include it in the differential package
-					ignoreImport := true
-					if component.IsEmpty(ignoreImport) {
+					// NOTE: We are ignoring fields that are not relevant to the differential build
+					if component.IsEmpty([]string{"Name", "Required", "Description", "Default", "Import"}) {
 						componentsToRemove = append(componentsToRemove, idx)
 					}
 				}
@@ -661,8 +661,8 @@ func (p *Packager) removeDifferentialComponentsFromPackage() error {
 				p.cfg.Pkg.Components = append(p.cfg.Pkg.Components[:indexToRemove], p.cfg.Pkg.Components[indexToRemove+1:]...)
 			}
 		}
-
 	}
+
 	return nil
 }
 

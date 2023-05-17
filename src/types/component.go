@@ -219,16 +219,29 @@ type ZarfComponentImport struct {
 	URL string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package to import via OCI,pattern=^oci://(?!.*###ZARF_PKG_TMPL_).*$"`
 }
 
-// IsEmpty returns if the component is empty of all content that would be deployed.
-// The fields `Name`, `Description`, `Default`, and `Required` are ignored and the `Import` field is optionally ignored
-func (c *ZarfComponent) IsEmpty(ignoreImport bool) bool {
-	listsAreEmpty := len(c.Charts) == 0 && len(c.Images) == 0 && len(c.DataInjections) == 0 && len(c.Files) == 0 && len(c.Manifests) == 0 && len(c.Repos) == 0
-	extensionsAreEmpty := reflect.ValueOf(c.Extensions).IsZero()
-	actionsAreEmpty := reflect.ValueOf(c.Actions).IsZero()
-	scriptsAreEmpty := reflect.ValueOf(c.DeprecatedScripts).IsZero()
-	importIsEmpty := ignoreImport || reflect.ValueOf(c.Import).IsZero()
-	importGroupIsEmpty := c.Group == ""
-	cosignKeyPathIsEmpty := c.CosignKeyPath == ""
+// IsEmpty returns if the components fields (other than the fields we were told to ignore) are empty or set to the types zero-value
+func (c *ZarfComponent) IsEmpty(fieldsToIgnore []string) bool {
+	// Make a map for the fields we are going to ignore
+	ignoredFieldsMap := make(map[string]bool)
+	for _, field := range fieldsToIgnore {
+		ignoredFieldsMap[field] = true
+	}
 
-	return listsAreEmpty && extensionsAreEmpty && actionsAreEmpty && scriptsAreEmpty && importIsEmpty && importGroupIsEmpty && cosignKeyPathIsEmpty
+	// Get a value representation of the component
+	componentReflectValue := reflect.Indirect(reflect.ValueOf(c))
+
+	// Loop through all of the Components struct fields
+	for i := 0; i < componentReflectValue.NumField(); i++ {
+		// If we were told to ignore this field, continue on..
+		if ignoredFieldsMap[componentReflectValue.Type().Field(i).Name] {
+			continue
+		}
+
+		// Check if this field is empty/zero
+		if !componentReflectValue.Field(i).IsZero() {
+			return false
+		}
+	}
+
+	return true
 }
