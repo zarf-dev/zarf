@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: flux-test
+  name: podinfo-flux
   description: "Deploy flux and then podinfo via flux"
 
 components:

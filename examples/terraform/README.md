@@ -1,3 +1,5 @@
+import ExampleYAML from "@site/src/components/ExampleYAML";
+
 # Terraform
 
 This example demonstrates how to use Zarf to execute Terraform code to create an S3 bucket.
@@ -17,3 +19,13 @@ No K8s cluster is necessary, just build with the package with:
 And execute with:
 
 `zarf package deploy <package_name>`
+
+## `zarf.yaml` {#zarf.yaml}
+
+:::info
+
+To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
+
+:::
+
+<ExampleYAML example="terraform" showLink={false} />

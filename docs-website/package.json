@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
+    "prestart": "cp ../zarf.schema.json ./static/zarf.schema.json",
     "start": "docusaurus start",
+    "prebuild": "cp ../zarf.schema.json ./static/zarf.schema.json",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",

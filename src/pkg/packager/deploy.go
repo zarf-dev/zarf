@@ -282,7 +282,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 		return nil
 	}
 
-	spinner := *message.NewProgressSpinner("Copying %d files", len(component.Files))
+	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
 	defer spinner.Stop()
 
 	for index, file := range component.Files {
@@ -461,9 +461,9 @@ func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPat
 		message.Info("Loading data injections")
 	}
 
-	for _, data := range dataInjections {
+	for idx, data := range dataInjections {
 		waitGroup.Add(1)
-		go p.cluster.HandleDataInjection(waitGroup, data, componentPath)
+		go p.cluster.HandleDataInjection(waitGroup, data, componentPath, idx)
 	}
 }
 
@@ -475,14 +475,14 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
-			chartValueName := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
+			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPath.Values, chart), idx)
 			if err := valueTemplate.Apply(component, chartValueName, false); err != nil {
 				return installedCharts, err
 			}
 		}
 
 		// Generate helm templates to pass to gitops engine
-		helmCfg := &helm.Helm{
+		helmCfg := helm.Helm{
 			BasePath:  componentPath.Base,
 			Chart:     chart,
 			Component: component,
@@ -503,10 +503,19 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 	}
 
 	for _, manifest := range component.Manifests {
+		for idx := range manifest.Files {
+			if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
+				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
+				if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
+				}
+			}
+		}
+		// Move kustomizations to files now
 		for idx := range manifest.Kustomizations {
-			// Move kustomizations to files now
-			destination := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-			manifest.Files = append(manifest.Files, destination)
+			kustomization := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+			manifest.Files = append(manifest.Files, kustomization)
 		}
 
 		if manifest.Namespace == "" {

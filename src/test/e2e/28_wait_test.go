@@ -34,7 +34,7 @@ func TestWait(t *testing.T) {
 	e2e.SetupWithCluster(t)
 	defer e2e.Teardown(t)
 
-	path := fmt.Sprintf("build/zarf-package-test-helm-wait-%s.tar.zst", e2e.Arch)
+	path := fmt.Sprintf("build/zarf-package-helm-no-wait-%s.tar.zst", e2e.Arch)
 
 	zarfChannel := make(chan zarfCommandResult, 1)
 	go func() {
@@ -62,6 +62,6 @@ func TestWait(t *testing.T) {
 	}
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "test-helm-wait", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "helm-no-wait", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
