@@ -54,7 +54,7 @@ func (h *Helm) PackageChartFromGit(destination string) (string, error) {
 	client := action.NewPackage()
 
 	// Retrieve the repo containing the chart
-	gitPath, err := h.downloadChartFromGitToTemp(spinner)
+	gitPath, err := h.DownloadChartFromGitToTemp(spinner)
 	if err != nil {
 		return "", err
 	}
@@ -148,7 +148,8 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 	spinner.Success()
 }
 
-func (h *Helm) downloadChartFromGitToTemp(spinner *message.Spinner) (string, error) {
+// DownloadChartFromGitToTemp downloads a chart from git into a temp directory
+func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, error) {
 	// Create the Git configuration and download the repo
 	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
 

@@ -94,7 +94,7 @@ func (p *Packager) Create(baseDir string) error {
 		}
 
 		// Process any extensions.
-		p.cfg.Pkg.Components[i], err = p.processExtensions(componentPath, c)
+		p.cfg.Pkg.Components[i], err = p.processExtensions(p.cfg.Pkg.Metadata.YOLO, componentPath, c)
 		if err != nil {
 			return fmt.Errorf("unable to process extensions: %w", err)
 		}

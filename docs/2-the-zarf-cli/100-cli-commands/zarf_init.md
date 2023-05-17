@@ -63,13 +63,13 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
       --registry-secret string          Registry secret value
       --registry-url string             External registry url address to use for this Zarf cluster
       --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
-      --storage-class string            Specify the storage class to use for the registry.  E.g. --storage-class=standard
+      --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
 ```
 
 ## Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images
+  -a, --architecture string   Architecture for OCI images and Zarf packages
       --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
