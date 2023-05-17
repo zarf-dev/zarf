@@ -10,8 +10,9 @@ zarf tools archiver decompress {ARCHIVE} {DESTINATION} [flags]
 ## Options
 
 ```
-  -h, --help            help for decompress
-      --unarchive-all   Unarchive all tarballs in the archive
+      --decompress-all   Decompress all tarballs in the archive
+  -h, --help             help for decompress
+      --unarchive-all    Unarchive all tarballs in the archive
 ```
 
 ## Options inherited from parent commands
@@ -29,3 +30,4 @@ zarf tools archiver decompress {ARCHIVE} {DESTINATION} [flags]
 ## SEE ALSO
 
 * [zarf tools archiver](zarf_tools_archiver.md)	 - Compress/Decompress generic archives, including Zarf packages.
+

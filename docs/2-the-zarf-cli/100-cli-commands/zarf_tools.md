@@ -35,3 +35,4 @@ Collection of additional tools to make airgap easier
 * [zarf tools registry](zarf_tools_registry.md)	 - Tools for working with container registries using go-containertools.
 * [zarf tools sbom](zarf_tools_sbom.md)	 - Generates a Software Bill of Materials (SBOM) for the given package
 * [zarf tools wait-for](zarf_tools_wait-for.md)	 - Waits for a given Kubernetes resource to be ready
+
