@@ -675,13 +675,7 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 
 	// Loop through all of the components to determine if any of them are using already included images or repos
 	componentMap := make(map[int]types.ZarfComponent)
-	componentsToOCI := make(map[string]string)
-	for ociURL, componentName := range p.cfg.Pkg.Build.OCIImportedComponents {
-		componentsToOCI[componentName] = ociURL
-	}
-
 	for idx, component := range p.cfg.Pkg.Components {
-
 		newImageList := []string{}
 		newRepoList := []string{}
 		// Generate a list of all unique images for this component
