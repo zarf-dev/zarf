@@ -80,6 +80,14 @@ func init() {
 	toolsCmd.AddCommand(archiverCmd)
 
 	archiverCmd.AddCommand(archiverCompressCmd)
+	archiverDecompressCmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
+		// Hide flag for this command, essentially creating an alias
+		command.Flags().MarkHidden("decompress-all")
+		// Call parent help func
+		command.Parent().HelpFunc()(command, strings)
+	})
 	archiverCmd.AddCommand(archiverDecompressCmd)
+	archiverDecompressCmd.Flags().BoolVar(&unarchiveAll, "decompress-all", false, "Decompress all tarballs in the archive")
 	archiverDecompressCmd.Flags().BoolVar(&unarchiveAll, "unarchive-all", false, "Unarchive all tarballs in the archive")
+	archiverDecompressCmd.MarkFlagsMutuallyExclusive("decompress-all", "unarchive-all")
 }
