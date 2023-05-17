@@ -2,7 +2,7 @@ import React from "react";
 import { useEffect, useState } from "react";
 import CodeBlock from "@theme/CodeBlock";
 
-const FetchExampleYAML = ({ example, component, raw, showLink = true }) => {
+const FetchExampleYAML = ({ example, component, raw, showLink = true, rootFolder = "examples" }) => {
   const [content, setContent] = useState(null);
   const url = `/${example}/zarf.yaml`;
 
@@ -33,7 +33,7 @@ const FetchExampleYAML = ({ example, component, raw, showLink = true }) => {
       {showLink && (
         <p>
           This example's full <code>zarf.yaml</code> can be viewed at{" "}
-          <a href={`/examples/${example}/#zarf.yaml`}>examples/{example}</a>
+          <a href={`/${rootFolder}/${example}/#zarf.yaml`}>{rootFolder}/{example}</a>
         </p>
       )}
       <CodeBlock copy={false} language="yaml">
