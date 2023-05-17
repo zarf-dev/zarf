@@ -1,0 +1,15 @@
+# Use Loki instead of EFK
+elasticsearchKibana:
+  enabled: false
+
+eckOperator:
+  enabled: false
+
+fluentbit:
+  enabled: false
+
+loki:
+  enabled: true
+
+promtail:
+  enabled: true
