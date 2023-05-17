@@ -39,4 +39,3 @@ __debug_bin
 everything-external
 docs-website/static/zarf.schema.json
 src/test/test-packages/51-import-everything/charts/
-files/
