@@ -6,7 +6,7 @@ This example demonstrates using Zarf to compose existing zarf packages into anot
 
 ## Example Prerequisites
 
-Building this example requires you to have a locally hosted container registry that has had the `helm-local-chart` skeleton package published to it. You can do this by running the following commands:
+Creating this example requires a locally hosted container registry that has the `helm-local-chart` skeleton package published and available. You can do this by running the following commands:
 
 ```bash
 docker run -d -p 5000:5000 --restart=always --name registry registry:2
