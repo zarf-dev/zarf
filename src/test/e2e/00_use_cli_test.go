@@ -72,6 +72,11 @@ func TestUseCLI(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "quay.io/jetstack/cert-manager-controller:v1.11.1", "The chart image should be found by Zarf")
 
+	// Test `zarf prepare find-images` with a chart that uses helm annotations
+	stdOut, stdErr, err = e2e.ExecZarfCommand("prepare", "find-images", "--kube-version=v1.22.0", "src/test/test-packages/00-helm-annotations")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdOut, "registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.26.4", "The kubectl image should be found by Zarf")
+
 	// Test for expected failure when given a bad component input
 	_, _, err = e2e.ExecZarfCommand("init", "--confirm", "--components=k3s,foo,logging")
 	assert.Error(t, err)
