@@ -31,7 +31,7 @@ There are certain fields that will be common across all component definitions. T
 
 <Properties item="ZarfComponent" include={["actions"]} />
 
-Component actions are explored in the [component actions documentation](6-component-actions.md).
+Component actions are explored in the [component actions documentation](7-component-actions.md).
 
 ### Files
 
