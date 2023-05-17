@@ -13,7 +13,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
-	dconfig "github.com/docker/cli/cli/config"
 	"github.com/mholt/archiver/v3"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
@@ -31,6 +30,8 @@ var (
 	differentialPackageName = ""
 	normalPackageName       = ""
 	createOutFlag           = fmt.Sprintf("-o=%s", tmpPath)
+	examplePackagePath      = filepath.Join("examples", "helm-oci-chart")
+	anotherPackagePath      = filepath.Join("src", "test", "test-packages", "oci-differential")
 )
 
 func (suite *OCIDifferentialSuite) SetupSuite() {
@@ -38,26 +39,13 @@ func (suite *OCIDifferentialSuite) SetupSuite() {
 	differentialPackageName = fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0-differential-v0.25.0.tar.zst", e2e.Arch)
 	normalPackageName = fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0.tar.zst", e2e.Arch)
 
-	// spin up a local registry
-	registryImage := "registry:2.8.1"
-	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "555:5000", "--name", "registry", registryImage)
-	suite.NoError(err)
+	_ = e2e.SetupDockerRegistry(suite.T(), 555)
 
-	// docker config folder
-	cfg, err := dconfig.Load(dconfig.Dir())
-	suite.NoError(err)
-	if !cfg.ContainsAuth() {
-		// make a docker config file w/ some blank creds
-		_, _, err := e2e.ExecZarfCommand("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
-		suite.NoError(err)
-	}
 	// publish one of the example packages to the registry
-	examplePackagePath := filepath.Join("examples", "helm-oci-chart")
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "publish", examplePackagePath, "oci://"+suite.Reference.String(), "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 
 	// build the package that we are going to publish
-	anotherPackagePath := filepath.Join("src", "test", "test-packages", "oci-differential")
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.24.0", createOutFlag, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
@@ -75,10 +63,9 @@ func (suite *OCIDifferentialSuite) TearDownSuite() {
 }
 
 func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
-	suite.T().Log("E2E: Skeleton Package Publish oci://")
+	suite.T().Log("E2E: Test Differential Packages w/ OCI Imports")
 
 	// Build without differential
-	anotherPackagePath := "src/test/test-packages/oci-differential"
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.25.0", createOutFlag, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 

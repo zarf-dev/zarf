@@ -6,6 +6,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"regexp"
 	"runtime"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	dconfig "github.com/docker/cli/cli/config"
+	"github.com/docker/cli/cli/config/configfile"
 	"github.com/stretchr/testify/require"
 )
 
@@ -100,4 +103,22 @@ func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
 	logContents, err := os.ReadFile(logFile)
 	require.NoError(t, err)
 	return string(logContents)
+}
+
+func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) *configfile.ConfigFile {
+	// spin up a local registry
+	registryImage := "registry:2.8.2"
+	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", fmt.Sprintf("%d:5000", port), "--name", "registry", registryImage)
+	require.NoError(t, err)
+
+	// docker config folder
+	cfg, err := dconfig.Load(dconfig.Dir())
+	require.NoError(t, err)
+	if !cfg.ContainsAuth() {
+		// make a docker config file w/ some blank creds
+		_, _, err := e2e.ExecZarfCommand("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
+		require.NoError(t, err)
+	}
+
+	return cfg
 }
