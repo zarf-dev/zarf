@@ -13,3 +13,11 @@ components:
       onRemove:
         after:
           - cmd: rm files/coffee-ipsum.txt
+      onCreate:
+        before:
+          - cmd: cat files/coffee-ipsum.txt
+            dir: "../"
+        after:
+          - cmd: cat ../files/coffee-ipsum.txt
+        onSuccess:
+          - cmd: cat ../files/coffee-ipsum.txt
