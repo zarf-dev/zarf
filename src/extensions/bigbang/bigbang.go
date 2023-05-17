@@ -39,7 +39,7 @@ var tenMins = metav1.Duration{
 
 // Run Mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
-func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	var err error
 	if err := utils.CreateDirectory(tmpPaths.Temp, 0700); err != nil {
 		return c, fmt.Errorf("unable to component temp directory: %w", err)
@@ -77,8 +77,10 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 		// Add the flux manifests to the list of manifests to be pulled down by Zarf.
 		manifests = append(manifests, fluxManifest)
 
-		// Add the images to the list of images to be pulled down by Zarf.
-		c.Images = append(c.Images, images...)
+		if !YOLO {
+			// Add the images to the list of images to be pulled down by Zarf.
+			c.Images = append(c.Images, images...)
+		}
 	}
 
 	// Configure helm to pull down the Big Bang chart.
@@ -112,16 +114,19 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	}
 
 	// Add the Big Bang repo to the list of repos to be pulled down by Zarf.
-	bbRepo := fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version)
-	c.Repos = append(c.Repos, bbRepo)
-
+	if !YOLO {
+		bbRepo := fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version)
+		c.Repos = append(c.Repos, bbRepo)
+	}
 	// Parse the template for GitRepository objects and add them to the list of repos to be pulled down by Zarf.
 	gitRepos, hrDependencies, hrValues, err := findBBResources(template)
 	if err != nil {
 		return c, fmt.Errorf("unable to find Big Bang resources: %w", err)
 	}
-	for _, gitRepo := range gitRepos {
-		c.Repos = append(c.Repos, gitRepo)
+	if !YOLO {
+		for _, gitRepo := range gitRepos {
+			c.Repos = append(c.Repos, gitRepo)
+		}
 	}
 
 	// Generate a list of HelmReleases that need to be deployed in order.
@@ -205,24 +210,26 @@ func Run(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfCompon
 	})
 
 	// Select the images needed to support the repos for this configuration of Big Bang.
-	for _, hr := range hrDependencies {
-		namespacedName := getNamespacedNameFromMeta(hr.Metadata)
-		gitRepo := gitRepos[hr.NamespacedSource]
-		values := hrValues[namespacedName]
+	if !YOLO {
+		for _, hr := range hrDependencies {
+			namespacedName := getNamespacedNameFromMeta(hr.Metadata)
+			gitRepo := gitRepos[hr.NamespacedSource]
+			values := hrValues[namespacedName]
 
-		images, err := findImagesforBBChartRepo(gitRepo, values)
-		if err != nil {
-			return c, fmt.Errorf("unable to find images for chart repo: %w", err)
+      images, err := findImagesforBBChartRepo(gitRepo, values)
+      if err != nil {
+        return c, fmt.Errorf("unable to find images for chart repo: %w", err)
+      }
+
+			c.Images = append(c.Images, images...)
 		}
 
-		c.Images = append(c.Images, images...)
+		// Make sure the list of images is unique.
+		c.Images = utils.Unique(c.Images)
 	}
 
-	// Make sure the list of images is unique.
-	c.Images = utils.Unique(c.Images)
-
 	// Create the flux wrapper around Big Bang for deployment.
-	manifest, err := addBigBangManifests(tmpPaths.Temp, cfg)
+	manifest, err := addBigBangManifests(YOLO, tmpPaths.Temp, cfg)
 	if err != nil {
 		return c, err
 	}
@@ -363,7 +370,7 @@ func findBBResources(t string) (gitRepos map[string]string, helmReleaseDeps map[
 }
 
 // addBigBangManifests creates the manifests component for deploying Big Bang.
-func addBigBangManifests(manifestDir string, cfg *extensions.BigBang) (types.ZarfManifest, error) {
+func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang) (types.ZarfManifest, error) {
 	// Create a manifest component that we add to the zarf package for bigbang.
 	manifest := types.ZarfManifest{
 		Name:      bb,
@@ -391,16 +398,21 @@ func addBigBangManifests(manifestDir string, cfg *extensions.BigBang) (types.Zar
 		return manifest, err
 	}
 
-	// Create the zarf-credentials secret manifest.
-	if err := addManifest("bb-ext-zarf-credentials.yaml", manifestZarfCredentials(cfg.Version)); err != nil {
-		return manifest, err
-	}
+	var hrValues []fluxHelmCtrl.ValuesReference
 
-	// Create the list of values manifests starting with zarf-credentials.
-	hrValues := []fluxHelmCtrl.ValuesReference{{
-		Kind: "Secret",
-		Name: "zarf-credentials",
-	}}
+	// If YOLO mode is enabled, do not include the zarf-credentials secret
+	if !YOLO {
+		// Create the zarf-credentials secret manifest.
+		if err := addManifest("bb-ext-zarf-credentials.yaml", manifestZarfCredentials(cfg.Version)); err != nil {
+			return manifest, err
+		}
+
+		// Create the list of values manifests starting with zarf-credentials.
+		hrValues = []fluxHelmCtrl.ValuesReference{{
+			Kind: "Secret",
+			Name: "zarf-credentials",
+		}}
+	}
 
 	// Loop through the valuesFrom list and create a manifest for each.
 	for _, path := range cfg.ValuesFiles {
