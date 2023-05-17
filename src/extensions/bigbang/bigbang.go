@@ -6,16 +6,21 @@ package bigbang
 
 import (
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
+	"helm.sh/helm/v3/pkg/chartutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -103,7 +108,7 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 
 	// Template the chart so we can see what GitRepositories are being referenced in the
 	// manifests created with the provided Helm.
-	template, err := helmCfg.TemplateChart()
+	template, _, err := helmCfg.TemplateChart()
 	if err != nil {
 		return c, fmt.Errorf("unable to template Big Bang Chart: %w", err)
 	}
@@ -211,7 +216,7 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 			gitRepo := gitRepos[hr.NamespacedSource]
 			values := hrValues[namespacedName]
 
-			images, err := helm.FindImagesForChartRepo(gitRepo, "chart", values)
+			images, err := findImagesforBBChartRepo(gitRepo, values)
 			if err != nil {
 				return c, fmt.Errorf("unable to find images for chart repo: %w", err)
 			}
@@ -433,4 +438,47 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 	}
 
 	return manifest, nil
+}
+
+// findImagesforBBChartRepo finds and returns the images for the Big Bang chart repo
+func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []string, err error) {
+	matches := strings.Split(repo, "@")
+	if len(matches) < 2 {
+		return images, fmt.Errorf("cannot convert git repo %s to helm chart without a version tag", repo)
+	}
+
+	spinner := message.NewProgressSpinner("Discovering images in %s", repo)
+	defer spinner.Stop()
+
+	chart := types.ZarfChart{
+		Name:    repo,
+		URL:     matches[0],
+		Version: matches[1],
+		GitPath: "chart",
+	}
+
+	helmCfg := helm.Helm{
+		Chart: chart,
+		Cfg: &types.PackagerConfig{
+			State: types.ZarfState{},
+		},
+	}
+
+	gitPath, err := helmCfg.DownloadChartFromGitToTemp(spinner)
+	if err != nil {
+		return images, err
+	}
+	defer os.RemoveAll(gitPath)
+
+	// Set the directory for the chart
+	chartPath := filepath.Join(gitPath, helmCfg.Chart.GitPath)
+
+	images, err = helm.FindAnnotatedImagesForChart(chartPath, values)
+	if err != nil {
+		return images, err
+	}
+
+	spinner.Success()
+
+	return images, err
 }
