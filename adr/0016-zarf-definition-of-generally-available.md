@@ -18,6 +18,7 @@ In order to increase this stability we decided on implementing the following:
 
 - Mechanism / branching strategy to backport patch fixes to older minor releases
 - Clear definition of `released`, `beta`, and `alpha` features including a matrix of their support across OSes
+- Clear definition of when backwards compatibility checks are going to be removed with clear messaging to users
 - End to End testing that covers the `released` features outlined in that feature matrix - this should also be done:
   - across operating systems (specifically: Windows, macOS, Linux)
   - across major k8s distros (specifically: K3d, K3s, Minikube, Kind, EKS, AKS, OpenShift)
@@ -25,7 +26,7 @@ In order to increase this stability we decided on implementing the following:
   - across git providers (specifically: Gitea, GitLab)
 - Unit testing that covers our library code (`src/pkg`) for people using Zarf as a library (code coverage metric TBD)
 - Mechanisms and tests to not break compatibility with packages built with older versions of Zarf
-- Mechanisms and tests to notify users when they may need to upgrade the Zarf Agent (or Pepr capability)
+- Mechanisms to notify users when they may need to upgrade the Zarf Agent (or Pepr capability)
 - Mechanisms to ensure users can easily access documentation specific to the version of Zarf they use
 - Mechanisms to ensure a more seamless Zarf install experience (i.e. macOS binary signing, `sudo apk add zarf`, `asdf install zarf X.X.X`)
 - Regularly published/maintained example package(s) for tutorials/quick install
