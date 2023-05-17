@@ -33,6 +33,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use: "zarf [COMMAND]",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		cmd.DisableSuggestions = false
 		// Skip for vendor-only commands
 		if tools.CheckVendorOnly() {
 			return
