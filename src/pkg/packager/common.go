@@ -285,16 +285,16 @@ func (p *Packager) loadZarfPkg() error {
 	if err != nil {
 		return fmt.Errorf("unable to get a list of components... %w", err)
 	}
-	for _, component := range components {
+	for _, path := range components {
 		// If the components are tarballs, extract them!
-		componentTarball := filepath.Join(p.tmp.Components, component.Name())
-		if !component.IsDir() && strings.HasSuffix(component.Name(), ".tar") {
-			if err := archiver.Unarchive(componentTarball, p.tmp.Components); err != nil {
+		componentPath := filepath.Join(p.tmp.Components, path.Name())
+		if !path.IsDir() && strings.HasSuffix(path.Name(), ".tar") {
+			if err := archiver.Unarchive(componentPath, p.tmp.Components); err != nil {
 				return fmt.Errorf("unable to extract the component: %w", err)
 			}
 
 			// After extracting the component, remove the compressed tarball to release disk space
-			_ = os.Remove(filepath.Join(p.tmp.Components, component.Name()))
+			_ = os.Remove(filepath.Join(p.tmp.Components, path.Name()))
 		}
 	}
 
