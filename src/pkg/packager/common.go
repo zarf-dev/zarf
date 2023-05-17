@@ -455,7 +455,7 @@ func (p *Packager) validatePackageArchitecture() error {
 	if cluster, err := cluster.NewCluster(); err == nil {
 		clusterArch, err := cluster.Kube.GetArchitecture()
 		if err != nil {
-			return err
+			return lang.ErrUnableToCheckArch
 		}
 
 		// Check if the package architecture and the cluster architecture are the same.
