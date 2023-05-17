@@ -29,9 +29,12 @@ In order to increase this stability we decided on implementing the following:
 - Mechanisms to ensure users can easily access documentation specific to the version of Zarf they use
 - Mechanisms to ensure a more seamless Zarf install experience (i.e. macOS binary signing, `sudo apk add zarf`, `asdf install zarf X.X.X`)
 - Regularly published/maintained example package(s) for tutorials/quick install
+- Clear definition / strategy for "what Zarf is" including clear docs on how to use `released` features
 
 > ⚠️ **Note**: Some of these items are already addressed in Zarf but were included for completeness.
 
 ## Consequences
 
 Once these are in place we will have many mechanisms to manage Zarf's stability over time but are also signing ourselves up to maintain this promise over the long-term which will increase the burden on the team and reduce our overall velocity - this is good / normal as the project matures but we will need to recognize that we won't have as much flexibility once we reach GA.
+
+This will also affect how Zarf is supported / marketed beyond the core team and we should consider how Zarf "GA" will affect those teams and ensure that they are ready to take on any additional burden as well.
