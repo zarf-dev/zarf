@@ -139,7 +139,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		return child, fmt.Errorf("unable to find the component %s in the imported package", childComponentName)
 	}
 
-	// If its OCI, we need to unpack the component tarball
+	// If it's OCI, we need to unpack the component tarball
 	if parent.Import.URL != "" {
 		dir := filepath.Join(cachePath, "components", child.Name)
 		parent.Import.Path = filepath.Join(parent.Import.Path, "components", child.Name)
