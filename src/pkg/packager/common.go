@@ -119,6 +119,11 @@ func (p *Packager) GetPackageName() string {
 	return fmt.Sprintf("%s.%s", packageFileName, suffix)
 }
 
+// GetInitPackageRemote returns the URL for a remote init package for the given architecture
+func GetInitPackageRemote(arch string) string {
+	return fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", config.GithubProject, config.CLIVersion, GetInitPackageName(arch))
+}
+
 // ClearTempPaths removes the temp directory and any files within it.
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
