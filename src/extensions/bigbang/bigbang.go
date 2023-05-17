@@ -216,10 +216,10 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 			gitRepo := gitRepos[hr.NamespacedSource]
 			values := hrValues[namespacedName]
 
-      images, err := findImagesforBBChartRepo(gitRepo, values)
-      if err != nil {
-        return c, fmt.Errorf("unable to find images for chart repo: %w", err)
-      }
+			images, err := findImagesforBBChartRepo(gitRepo, values)
+			if err != nil {
+				return c, fmt.Errorf("unable to find images for chart repo: %w", err)
+			}
 
 			c.Images = append(c.Images, images...)
 		}
