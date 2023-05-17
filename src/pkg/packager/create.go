@@ -505,8 +505,6 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				}
 			}
 			if isSkeleton {
-				// append kustomizations to manifests
-				p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files = append(p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files, p.cfg.Pkg.Components[index].Manifests[manifestIdx].Kustomizations...)
 				// remove kustomizations
 				p.cfg.Pkg.Components[index].Manifests[manifestIdx].Kustomizations = nil
 			}
