@@ -22,7 +22,7 @@ import (
 
 // HandleDataInjection waits for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now.
-func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath types.ComponentPaths) {
+func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath types.ComponentPaths, index int) {
 	message.Debugf("packager.handleDataInjections(%#v, %#v, %#v)", wg, data, componentPath)
 	defer wg.Done()
 
@@ -56,6 +56,14 @@ iterator:
 	for {
 		message.Debugf("Attempting to inject data into %s", data.Target)
 		source := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
+		if utils.InvalidPath(source) {
+			// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
+			source = filepath.Join(componentPath.DataInjections, fmt.Sprintf("injection-%d", index))
+			if utils.InvalidPath(source) {
+				message.Warnf("Unable to find the data injection source path %s", source)
+				return
+			}
+		}
 
 		target := k8s.PodLookup{
 			Namespace: data.Target.Namespace,

@@ -40,11 +40,12 @@ type ZarfPublishOptions struct {
 
 // ZarfPullOptions tracks the user-defined preferences during a package pull.
 type ZarfPullOptions struct {
-	Reference     registry.Reference `jsonschema:"description=Remote registry reference"`
-	CopyOptions   oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
-	PackOptions   oras.PackOptions   `jsonschema:"description=Options for the pack operation"`
-	PackagePath   string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
-	PublicKeyPath string             `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
+	Reference       registry.Reference `jsonschema:"description=Remote registry reference"`
+	CopyOptions     oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
+	PackOptions     oras.PackOptions   `jsonschema:"description=Options for the pack operation"`
+	PackagePath     string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
+	OutputDirectory string             `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
+	PublicKeyPath   string             `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.

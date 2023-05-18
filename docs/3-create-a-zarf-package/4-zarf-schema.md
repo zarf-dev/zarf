@@ -745,12 +745,10 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="components_items_import_path"></a>path *</strong>
+<strong> <a name="components_items_import_path"></a>path</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The relative path to a directory containing a zarf.yaml to import from
 
@@ -761,6 +759,26 @@ Must be one of:
 | Restrictions                      |                                                                                                                         |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | **Must match regular expression** | ```^(?!.*###ZARF_PKG_TMPL_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_TMPL_%29.%2A%24) |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_import_url"></a>url</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The URL to a Zarf package to import via OCI
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+| Restrictions                      |                                                                                                                                           |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^oci://(?!.*###ZARF_PKG_TMPL_).*$``` [Test](https://regex101.com/?regex=%5Eoci%3A%2F%2F%28%3F%21.%2A%23%23%23ZARF_PKG_TMPL_%29.%2A%24) |
 
 </blockquote>
 </details>
