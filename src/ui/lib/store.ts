@@ -5,6 +5,7 @@ import { getPreferredTheme } from '@defense-unicorns/unicorn-ui';
 import { writable } from 'svelte/store';
 import { Cluster, Packages } from './api';
 import type {
+	APIPackageSBOM,
 	APIDeployedPackageConnection,
 	APIZarfPackage,
 	ClusterSummary,
@@ -13,6 +14,7 @@ import type {
 
 const pkgComponentDeployStore = writable<number[]>([]);
 const pkgStore = writable<APIZarfPackage>();
+const pkgSbomStore = writable<APIPackageSBOM | undefined>();
 
 // Theme Store
 
@@ -80,4 +82,5 @@ export {
 	tunnelStore,
 	themeStore,
 	pkgStore,
+	pkgSbomStore,
 };

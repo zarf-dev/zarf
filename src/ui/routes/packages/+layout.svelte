@@ -5,6 +5,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { Packages } from '$lib/api';
+	import { pkgSbomStore } from '$lib/store';
 	import { Box, Stepper, type SSX } from '@ui';
 	import { onDestroy } from 'svelte';
 
@@ -15,8 +16,9 @@
 		deploy: 4,
 	};
 
-	// Clean any sboms that may have been extracted.
+	// Clean any SBOMs that may have been extracted.
 	onDestroy(() => {
+		pkgSbomStore.set(undefined);
 		Packages.cleanSBOM();
 	});
 

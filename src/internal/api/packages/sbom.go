@@ -22,7 +22,6 @@ import (
 )
 
 var signalChan = make(chan os.Signal, 1)
-var filePaths = make(map[string]string)
 
 // ExtractSBOM Extracts the SBOM from the package and returns the path to the SBOM
 func ExtractSBOM(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +52,6 @@ func cleanupSBOM() error {
 	if err != nil {
 		return err
 	}
-	filePaths = make(map[string]string)
 	return nil
 }
 
@@ -67,67 +65,71 @@ func extractSBOM(escapedPath string) (sbom types.APIPackageSBOM, err error) {
 		return sbom, err
 	}
 
-	// Check if the SBOM has already been extracted
-	if filePaths[path] != "" {
-		sbom, err = getSbomViewFiles(filePaths[path])
-	} else {
-		if err != nil {
-			return sbom, err
-		}
-		// ensure the package exists
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			return sbom, err
-		}
-
-		// Create the Zarf SBOM directory
-		tmpDir, err := utils.MakeTempDir(config.ZarfSBOMDir)
-		if err != nil {
-			return sbom, err
-		}
-
-		// Extract the SBOM tar.gz from the package
-		err = archiver.Extract(path, SBOM, tmpDir)
-		if err != nil {
-			cleanupSBOM()
-			return sbom, err
-		}
-
-		// Unarchive the SBOM tar.gz
-		err = archiver.Unarchive(filepath.Join(tmpDir, SBOM), tmpDir)
-		if err != nil {
-			cleanupSBOM()
-			return sbom, err
-		}
-
-		// Get the SBOM viewer files
-		sbom, err = getSbomViewFiles(tmpDir)
-		if err != nil {
-			cleanupSBOM()
-			return sbom, err
-		}
-
-		// Cleanup the temp directory on exit
-		go func() {
-			signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-			// Wait for a signal to be received
-			<-signalChan
-
-			cleanupSBOM()
-
-			// Exit the program
-			os.Exit(0)
-		}()
-
-		filePaths[path] = tmpDir
+	// Ensure we can get the cwd
+	cwd, err := os.Getwd()
+	if err != nil {
+		return sbom, err
 	}
+
+	// ensure the package exists
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return sbom, err
+	}
+
+	// Join the current working directory with the zarf-sbom directory
+	sbomPath := filepath.Join(cwd, config.ZarfSBOMDir)
+
+	// ensure the zarf-sbom directory is empty
+	if _, err := os.Stat(sbomPath); !os.IsNotExist(err) {
+		cleanupSBOM()
+	}
+
+	// Create the Zarf SBOM directory
+	err = utils.CreateDirectory(sbomPath, 0700)
+	if err != nil {
+		return sbom, err
+	}
+
+	// Extract the SBOM tar.gz from the package
+	err = archiver.Extract(path, SBOM, sbomPath)
+	if err != nil {
+		cleanupSBOM()
+		return sbom, err
+	}
+
+	// Unarchive the SBOM tar.gz
+	err = archiver.Unarchive(filepath.Join(sbomPath, SBOM), sbomPath)
+	if err != nil {
+		cleanupSBOM()
+		return sbom, err
+	}
+
+	// Get the SBOM viewer files
+	sbom, err = getSbomViewFiles(sbomPath)
+	if err != nil {
+		cleanupSBOM()
+		return sbom, err
+	}
+
+	// Cleanup the temp directory on exit
+	go func() {
+		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+		// Wait for a signal to be received
+		<-signalChan
+
+		cleanupSBOM()
+
+		// Exit the program
+		os.Exit(0)
+	}()
+
 	return sbom, err
 }
 
 func getSbomViewFiles(sbomPath string) (sbom types.APIPackageSBOM, err error) {
-	cwd, _ := os.Getwd()
 	sbomViewFiles, err := filepath.Glob(filepath.Join(sbomPath, "sbom-viewer-*"))
 	if len(sbomViewFiles) > 0 {
-		sbom.Path = filepath.Join(cwd, sbomViewFiles[0])
+		sbom.Path = sbomViewFiles[0]
 		sbom.SBOMS = sbomViewFiles
 	}
 	return sbom, err

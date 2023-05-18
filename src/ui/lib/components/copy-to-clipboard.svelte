@@ -27,7 +27,7 @@
 
 <Typography
 	{...$$restProps}
-	aria-roledescription="Copy path to clipboard"
+	title="Copy SBOM path to clipboard"
 	role="button"
 	on:click={copyToClipboard}
 	class={computedClass}
@@ -41,6 +41,6 @@
 		border: 1px solid transparent;
 		border-radius: 100%;
 		padding: 4px;
-		line-height: unset;
+		line-height: unset !important;
 	}
 </style>

@@ -46,13 +46,21 @@ test.describe('initialize a zarf cluster', () => {
 		const deployInit = page.getByTitle('init').first();
 		// click the init package deploy button.
 		await deployInit.click();
+		await page.waitForURL('/packages/init/configure');
+
+		// Validate that the SBOM has been loaded
+		const sbomInfo = await page.locator('#sbom-info').first();
+		expect(sbomInfo).toContainText(/This package has [0-9]+ images with software SBOMs included/);
+
 		// Components (check most functionaliy with k3s component)
 		const k3s = page.locator('.accordion:has-text("k3s")');
 		await expect(k3s.locator('.deploy-component-toggle')).toHaveAttribute('aria-pressed', 'false');
 		await k3s.locator('text=Deploy').click();
 		await expect(k3s.locator('.deploy-component-toggle')).toHaveAttribute('aria-pressed', 'true');
 		await expect(
-			page.locator('.component-accordion-header:has-text("*** REQUIRES ROOT (not sudo) *** Install K3s")')
+			page.locator(
+				'.component-accordion-header:has-text("*** REQUIRES ROOT (not sudo) *** Install K3s")'
+			)
 		).toBeVisible();
 		await expect(k3s.locator('code')).toBeHidden();
 		await k3s.locator('.accordion-toggle').click();
