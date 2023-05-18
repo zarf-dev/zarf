@@ -62,10 +62,10 @@ func CreateDirectory(path string, mode os.FileMode) error {
 	return nil
 }
 
-// InvalidPath checks if the given path exists.
+// InvalidPath checks if the given path is valid.
 func InvalidPath(path string) bool {
 	_, err := os.Stat(path)
-	return os.IsNotExist(err)
+	return err != nil
 }
 
 // ListDirectories returns a list of directories in the given directory.
