@@ -42,10 +42,13 @@ func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths, injectorSeedTa
 	var seedImages []transform.Image
 
 	// Get all the images from the cluster
-	spinner.Updatef("Getting the list of existing cluster images")
-	if images, err = c.Kube.GetAllImages(); err != nil {
+	timeout := 5 * time.Minute
+	spinner.Updatef("Getting the list of existing cluster images (%s timeout)", timeout.String())
+	if images, err = c.Kube.GetAllImages(timeout); err != nil {
 		spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
 	}
+	message.Debugf("Found %d images in the cluster", len(images))
+	message.Debugf("Images: %#v", images)
 
 	spinner.Updatef("Creating the injector configmap")
 	if err = c.createInjectorConfigmap(tempPath); err != nil {
