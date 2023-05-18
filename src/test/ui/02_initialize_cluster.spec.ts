@@ -45,8 +45,10 @@ test.describe('initialize a zarf cluster', () => {
 		// Find first init package deploy button.
 		const deployInit = page.getByTitle('init').first();
 		// click the init package deploy button.
-		await deployInit.click();
-		await page.waitForURL('/packages/init/configure');
+		await Promise.all([
+			page.waitForURL('/packages/init/configure', { waitUntil: 'networkidle' }),
+			deployInit.click(),
+		]);
 
 		// Validate that the SBOM has been loaded
 		const sbomInfo = await page.locator('#sbom-info').first();
