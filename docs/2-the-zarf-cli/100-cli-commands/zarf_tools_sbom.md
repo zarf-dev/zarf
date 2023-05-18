@@ -48,3 +48,4 @@ zarf tools sbom [flags]
 * [zarf tools sbom login](zarf_tools_sbom_login.md)	 - Log in to a registry
 * [zarf tools sbom packages](zarf_tools_sbom_packages.md)	 - Generate a package SBOM
 * [zarf tools sbom version](zarf_tools_sbom_version.md)	 - show the version
+

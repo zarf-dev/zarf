@@ -30,3 +30,4 @@ zarf package remove {PACKAGE_NAME|PACKAGE_FILE} [flags]
 ## SEE ALSO
 
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
+

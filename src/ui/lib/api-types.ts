@@ -235,9 +235,18 @@ export interface ZarfBuildData {
      */
     differential: boolean;
     /**
+     * List of components that were not included in this package due to differential packaging
+     */
+    differentialMissing?: string[];
+    /**
      * Any migrations that have been run on this package
      */
     migrations: string[];
+    /**
+     * Map of components that were imported via OCI. The keys are OCI Package URLs and values
+     * are the component names
+     */
+    OCIImportedComponents?: { [key: string]: string };
     /**
      * Any registry domains that were overridden on package create when pulling images
      */
@@ -1170,6 +1179,7 @@ export interface ZarfCreateOptions {
  */
 export interface DifferentialData {
     DifferentialImages:         { [key: string]: boolean };
+    DifferentialOCIComponents:  { [key: string]: string };
     DifferentialPackagePath:    string;
     DifferentialPackageVersion: string;
     DifferentialRepos:          { [key: string]: boolean };
@@ -1419,7 +1429,9 @@ const typeMap: any = {
     "ZarfBuildData": o([
         { json: "architecture", js: "architecture", typ: "" },
         { json: "differential", js: "differential", typ: true },
+        { json: "differentialMissing", js: "differentialMissing", typ: u(undefined, a("")) },
         { json: "migrations", js: "migrations", typ: a("") },
+        { json: "OCIImportedComponents", js: "OCIImportedComponents", typ: u(undefined, m("")) },
         { json: "registryOverrides", js: "registryOverrides", typ: m("") },
         { json: "terminal", js: "terminal", typ: "" },
         { json: "timestamp", js: "timestamp", typ: "" },
@@ -1732,6 +1744,7 @@ const typeMap: any = {
     ], false),
     "DifferentialData": o([
         { json: "DifferentialImages", js: "DifferentialImages", typ: m(true) },
+        { json: "DifferentialOCIComponents", js: "DifferentialOCIComponents", typ: m("") },
         { json: "DifferentialPackagePath", js: "DifferentialPackagePath", typ: "" },
         { json: "DifferentialPackageVersion", js: "DifferentialPackageVersion", typ: "" },
         { json: "DifferentialRepos", js: "DifferentialRepos", typ: m(true) },

@@ -35,3 +35,4 @@ zarf [COMMAND] [flags]
 * [zarf prepare](zarf_prepare.md)	 - Tools to help prepare assets for packaging
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
 * [zarf version](zarf_version.md)	 - Version of the Zarf binary
+

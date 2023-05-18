@@ -32,3 +32,4 @@ zarf tools sbom version [flags]
 ## SEE ALSO
 
 * [zarf tools sbom](zarf_tools_sbom.md)	 - Generates a Software Bill of Materials (SBOM) for the given package
+

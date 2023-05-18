@@ -43,3 +43,4 @@ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 ## SEE ALSO
 
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
+
