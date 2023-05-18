@@ -57,7 +57,8 @@ const Packages = {
 		http.del(
 			`/packages/${encodeURIComponent(pkgName)}/disconnect/${encodeURIComponent(connectionName)}`
 		),
-	sbom: (pkg: APIZarfPackage) => http.put<APIPackageSBOM>(`/packages/sbom`, pkg),
+	sbom: (path: string) => http.get<APIPackageSBOM>(`/packages/sbom/${encodeURIComponent(path)}`),
+	cleanSBOM: () => http.del('/packages/sbom'),
 };
 
 const DeployingComponents = {

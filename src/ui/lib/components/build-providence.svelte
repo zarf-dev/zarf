@@ -58,11 +58,17 @@
 		</div>
 	</div>
 	<Typography variant="subtitle2">Software Bill of Materials (SBOM)</Typography>
-	{#await Packages.sbom($pkgStore) then sbom}
+	{#await Packages.sbom($pkgStore.path) then sbom}
 		<Typography element="p" variant="body2" color="text-secondary-on-dark">
 			This package has {sbom.sboms.length} images with software SBOMs included. You can view them now
-			in the zarf-sbom folder in your home directory or to go directly to one, open this in your browser:
-			<Typography variant="inherit" element="span" on:click={copyToClipboard}>
+			in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:
+			<Typography
+				color="primary"
+				style="text-decoration: underline; cursor: pointer;"
+				variant="inherit"
+				element="span"
+				on:click={copyToClipboard}
+			>
 				{sbom.path}
 			</Typography>
 			<CopyToClipboard bind:copyToClipboard text={sbom.path} variant="h6" />

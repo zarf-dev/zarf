@@ -98,7 +98,8 @@ func LaunchAPIServer() {
 			r.Delete("/{pkg}/disconnect/{name}", packages.DisconnectTunnel)
 			r.Get("/{pkg}/connections", packages.ListPackageConnections)
 			r.Get("/connections", packages.ListConnections)
-			r.Put("/sbom", packages.ExtractSBOM)
+			r.Get("/sbom/{path}", packages.ExtractSBOM)
+			r.Delete("/sbom", packages.DeleteSBOM)
 		})
 
 		r.Route("/components", func(r chi.Router) {
