@@ -37,7 +37,8 @@ func ExtractSBOM(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func DeleteSBOM(w http.ResponseWriter, r *http.Request) {
+// DeleteSBOM removes the SBOM directory
+func DeleteSBOM(w http.ResponseWriter, _ *http.Request) {
 	err := cleanupSBOM()
 	if err != nil {
 		message.ErrorWebf(err, w, err.Error())
