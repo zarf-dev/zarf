@@ -65,7 +65,7 @@ func CreateDirectory(path string, mode os.FileMode) error {
 // InvalidPath checks if the given path is valid (if it is a permissions error it is there we just don't have access)
 func InvalidPath(path string) bool {
 	_, err := os.Stat(path)
-	return !os.IsPermission(err)
+	return !os.IsPermission(err) && err != nil
 }
 
 // ListDirectories returns a list of directories in the given directory.
