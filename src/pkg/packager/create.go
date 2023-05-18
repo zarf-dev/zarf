@@ -406,8 +406,9 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	for filesIdx, file := range component.Files {
 		message.Debugf("Loading %#v", file)
 
-		dst := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
-		utils.CreateDirectory(filepath.Join(componentPath.Files, strconv.Itoa(filesIdx)), 0700)
+		dstIdxPath := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx))
+		utils.CreateDirectory(dstIdxPath, 0700)
+		dst := filepath.Join(dstIdxPath, filepath.Base(file.Target))
 
 		if utils.IsURL(file.Source) {
 			if isSkeleton {
@@ -447,8 +448,9 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		for dataIdx, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 
-			dst := filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
-			utils.CreateDirectory(filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx)), 0700)
+			dstIdxPath := filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx))
+			utils.CreateDirectory(dstIdxPath, 0700)
+			dst := filepath.Join(dstIdxPath, filepath.Base(data.Target.Path))
 
 			if utils.IsURL(data.Source) {
 				if isSkeleton {

@@ -310,14 +310,8 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		// Replace temp target directories
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
 
-		// Determine if the file is a directory
-		fileLocationInfo, err := os.Stat(fileLocation)
-		if err != nil {
-			message.Debugf("unable to describe file %s: %s", fileLocation, err)
-		}
-
 		fileList := []string{}
-		if fileLocationInfo.IsDir() {
+		if utils.IsDir(fileLocation) {
 			files, _ := utils.RecursiveFileList(fileLocation, nil, false, true)
 			fileList = append(fileList, files...)
 		} else {
@@ -342,7 +336,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err = copy.Copy(fileLocation, file.Target)
+		err := copy.Copy(fileLocation, file.Target)
 		if err != nil {
 			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
 		}
