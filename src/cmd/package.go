@@ -81,8 +81,11 @@ var packageDeployCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
 
-		// Ensure uppercase keys from viper
+		// Ensure uppercase keys from viper and CLI --set
 		viperConfigSetVariables := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
+		pkgConfig.DeployOpts.SetVariables = utils.TransformMapKeys(pkgConfig.DeployOpts.SetVariables, strings.ToUpper)
+
+		// Merge the viper config file variables and provided CLI flag variables (CLI takes precedence))
 		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(viperConfigSetVariables, pkgConfig.DeployOpts.SetVariables)
 
 		// Configure the packager
