@@ -4,7 +4,9 @@
 // Package types contains all the types used by Zarf.
 package types
 
-import "github.com/defenseunicorns/zarf/src/types/extensions"
+import (
+	"github.com/defenseunicorns/zarf/src/types/extensions"
+)
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
 type ZarfComponent struct {
@@ -209,6 +211,8 @@ type ZarfDataInjection struct {
 // ZarfComponentImport structure for including imported Zarf components.
 type ZarfComponentImport struct {
 	ComponentName string `json:"name,omitempty" jsonschema:"description=The name of the component to import from the referenced zarf.yaml"`
-	// For further explanation see https://regex101.com/library/Ldx8yG and https://regex101.com/r/Ldx8yG/1
-	Path string `json:"path" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
+	// For further explanation see https://regex101.com/r/nxX8vx/1
+	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
+	// For further explanation see https://regex101.com/r/nxX8vx/1
+	URL string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package to import via OCI,pattern=^oci://(?!.*###ZARF_PKG_TMPL_).*$"`
 }

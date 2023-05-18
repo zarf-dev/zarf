@@ -39,7 +39,7 @@ func (p *Packager) readYaml(path string, filterByOS bool) error {
 	return nil
 }
 
-// writeYaml adds build information and writes the config to the given path.
+// writeYaml adds build information and writes the config to the temp directory.
 func (p *Packager) writeYaml() error {
 	message.Debug("config.BuildConfig()")
 

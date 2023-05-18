@@ -275,6 +275,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdToolsArchiverCompressErr     = "Unable to perform compression"
 	CmdToolsArchiverDecompressShort = "Decompress an archive or Zarf package based off of the source file extension."
 	CmdToolsArchiverDecompressErr   = "Unable to perform decompression"
+	CmdToolsArchiverUnarchiveAllErr = "Unable to unarchive all nested tarballs"
 
 	CmdToolsRegistryShort = "Tools for working with container registries using go-containertools."
 
@@ -385,7 +386,9 @@ const (
 	PkgValidateErrComponentReqGrouped     = "component %s cannot be both required and grouped"
 	PkgValidateErrComponentYOLO           = "component %s incompatible with the online-only package flag (metadata.yolo): %w"
 	PkgValidateErrConstant                = "invalid package constant: %w"
-	PkgValidateErrImportPathInvalid       = "invalid file path \"%s\" provided directory must contain a valid zarf.yaml file"
+	PkgValidateErrImportPathInvalid       = "invalid file path '%s' provided directory must contain a valid zarf.yaml file"
+	PkgValidateErrImportURLInvalid        = "invalid url '%s' provided"
+	PkgValidateErrImportOptions           = "imported package %s must have either a url or a path"
 	PkgValidateErrImportPathMissing       = "imported package %s must include a path"
 	PkgValidateErrInitNoYOLO              = "sorry, you can't YOLO an init package"
 	PkgValidateErrManifest                = "invalid manifest definition: %w"
@@ -404,5 +407,6 @@ const (
 
 // Collection of reusable error messages.
 var (
-	ErrInitNotFound = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
+	ErrInitNotFound      = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
+	ErrUnableToCheckArch = errors.New("unable to get the configured cluster's architecture")
 )
