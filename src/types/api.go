@@ -49,6 +49,7 @@ type APIZarfDeployPayload struct {
 	InitOpts   *ZarfInitOptions  `json:"initOpts,omitempty"`
 }
 
+// APIPackageSBOM represents the SBOM viewer files for a package
 type APIPackageSBOM struct {
 	Path  string   `json:"path"`
 	SBOMS []string `json:"sboms"`
