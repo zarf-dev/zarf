@@ -117,7 +117,7 @@ func initViper() {
 	if err != nil {
 		// Config file not found; ignore
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			message.Error(err, lang.CmdViperErrLoadingConfigFile)
+			message.Error(err, lang.CmdViperErrLoadingConfigFile, err)
 		}
 	} else {
 		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
