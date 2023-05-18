@@ -15,9 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/go-chi/chi/v5"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -40,21 +38,6 @@ func ExtractSBOM(w http.ResponseWriter, r *http.Request) {
 		common.WriteJSONResponse(w, sbom, http.StatusOK)
 	}
 
-}
-
-// GetSBOM serves the SBOM viewer files
-func GetSBOM(w http.ResponseWriter, r *http.Request) {
-	name := chi.URLParam(r, "name")
-	sbom, err := getSbomViewFiles(filePaths[name])
-
-	if err != nil {
-		message.ErrorWebf(err, w, err.Error())
-		return
-	}
-
-	if err := exec.LaunchURL(sbom.SBOMS[0]); err != nil {
-		message.ErrorWebf(err, w, err.Error())
-	}
 }
 
 // Extracts the SBOM from the package and returns the path to the SBOM

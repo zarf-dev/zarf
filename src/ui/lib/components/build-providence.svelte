@@ -7,22 +7,15 @@
 	import type { ZarfBuildData } from '$lib/api-types';
 	import { pkgStore } from '$lib/store';
 	import { Packages } from '$lib/api';
-	import Spinner from './spinner.svelte';
-	import ButtonDense from './button-dense.svelte';
+	import CopyToClipboard from './copy-to-clipboard.svelte';
 
 	export let build: ZarfBuildData | undefined;
+
+	let copyToClipboard: () => void;
 	const labels = ['terminal', 'user', 'architecture', 'timestamp', 'version'];
 
 	function getLabelValue(label: string) {
 		return build ? Object(build)[label] ?? '' : '';
-	}
-
-	async function launchSbom() {
-		try {
-			Packages.launchSbom($pkgStore.zarfPackage.metadata!.name!);
-		} catch (error) {
-			console.error(error);
-		}
 	}
 
 	const ssx: SSX = {
@@ -64,17 +57,16 @@
 			{/each}
 		</div>
 	</div>
-	<Typography variant="subtitle2">Sofware Bill of Materials (SBOM)</Typography>
-	{#await Packages.sbom($pkgStore)}
-		<Spinner />
-	{:then sbom}
-		<Typography variant="body2">
+	<Typography variant="subtitle2">Software Bill of Materials (SBOM)</Typography>
+	{#await Packages.sbom($pkgStore) then sbom}
+		<Typography element="p" variant="body2" color="text-secondary-on-dark">
 			This package has {sbom.sboms.length} images with software SBOMs included. You can view them now
-			by clicking the button below. (Note: this will launch in default browser)
+			in the zarf-sbom folder in your home directory or to go directly to one, open this in your browser:
+			<Typography variant="inherit" element="span" on:click={copyToClipboard}>
+				{sbom.path}
+			</Typography>
+			<CopyToClipboard bind:copyToClipboard text={sbom.path} variant="h6" />
 		</Typography>
-		<ButtonDense variant="outlined" backgroundColor="white" on:click={launchSbom}>
-			Launch SBOM
-		</ButtonDense>
 	{:catch error}
 		<Typography variant="body2">{error}</Typography>
 	{/await}
