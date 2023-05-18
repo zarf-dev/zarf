@@ -46,9 +46,8 @@ func readPackage(path string) (pkg types.APIZarfPackage, err error) {
 			file, err = ioutil.ReadAll(f)
 			if err != nil {
 				return err
-			} else {
-				return archiver.ErrStopWalk
 			}
+			return archiver.ErrStopWalk
 		}
 
 		return nil
