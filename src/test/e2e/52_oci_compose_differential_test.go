@@ -31,7 +31,7 @@ var (
 	normalPackageName       = ""
 	createOutFlag           = fmt.Sprintf("-o=%s", tmpPath)
 	examplePackagePath      = filepath.Join("examples", "helm-oci-chart")
-	anotherPackagePath      = filepath.Join("src", "test", "test-packages", "oci-differential")
+	anotherPackagePath      = filepath.Join("src", "test", "test-packages", "52-oci-differential")
 )
 
 func (suite *OCIDifferentialSuite) SetupSuite() {

@@ -67,6 +67,9 @@ When executed, the `zarf package create` command locates the `zarf.yaml` file in
 
 The process of defining and creating a package is also elaborated on in detail in the [Creating a Zarf Package Tutorial](../5-zarf-tutorials/0-creating-a-zarf-package.md).
 
+### Creating Differential Packages
+If you have already created a Zarf package and want to create a new package to capture updates that you have made to your package you would normally have to re-create the entire package from scratch, including all of the parts of the package that might not have changed at all. Depending on your workflow, you may only want to create a package that contains the artifacts that have changed since the last time you built your package. This can be achieved by using the `--differential` flag while running the `zarf package create` command. You can use this flag to point to an already built package you have locally or to a package that has been previously [published](../5-zarf-tutorials/7-publish-and-deploy.md#publish-package).
+
 ## Inspecting a Created Package
 
 To inspect the contents of a Zarf Package, you can use the command `zarf package inspect` followed by the path to the package file. This will print out the contents of the `zarf.yaml` file that defines the package. For example, if your package is located at `./path/to/package.tar.zst`, you can run `zarf package inspect ./path/to/package.tar.zst` to view the contents of the `zarf.yaml` file.
