@@ -97,7 +97,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings) {
+func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings) error {
 	// Generate a secret that describes the package that is being deployed
 	packageName := pkg.Metadata.Name
 	deployedPackageSecret := c.Kube.GenerateSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName, corev1.SecretTypeOpaque)
@@ -113,7 +113,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 
 	deployedPackageSecret.Data = map[string][]byte{"data": stateData}
 
-	c.Kube.CreateOrUpdateSecret(deployedPackageSecret)
+	return c.Kube.CreateOrUpdateSecret(deployedPackageSecret)
 }
 
 // EnableRegHPAScaleDown enables the HPA scale down for the Zarf Registry.

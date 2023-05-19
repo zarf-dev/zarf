@@ -134,7 +134,10 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Save deployed package information to k8s
 		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 		if p.cluster != nil {
-			p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings)
+			err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings)
+			if err != nil {
+				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+			}
 		}
 
 		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, valueTemplate); err != nil {
