@@ -117,21 +117,31 @@ func LaunchAPIServer() {
 		message.Infof("Zarf UI connection: http://127.0.0.1:%s/auth?token=%s", devPort, token)
 	}
 
-	// Load the static SBOM Files
+	// Setup the static SBOM server
 	sbomSub := os.DirFS(config.ZarfSBOMDir)
 	sbomFs := http.FileServer(http.FS(sbomSub))
-	// Load the static SBOM Files
+
+	// Serve the SBOM viewer files
 	router.Get("/sbom-viewer/*", func(w http.ResponseWriter, r *http.Request) {
-		message.Debug("api.LaunchAPIServer() - /sbom-viewer/{path}")
+		message.Debug("api.LaunchAPIServer() - /sbom-viewer/*")
+
+		// Extract the file name from the URL
 		file := strings.TrimPrefix(r.URL.Path, "/sbom-viewer/")
+
+		// Ensure SBOM file exists in the config.ZarfSBOMDir
 		if test, err := sbomSub.Open(file); err != nil {
+			// If the file doesn't exist, redirect to the homepage
 			r.URL.Path = "/"
+			http.Redirect(w, r, "/", http.StatusFound)
+			return
 		} else {
-			r.URL.Path = file
+			// If the file exists, close the file and serve it
 			test.Close()
+			r.URL.Path = file
 		}
 		sbomFs.ServeHTTP(w, r)
 	})
+
 	// Load the static UI files
 	if sub, err := fs.Sub(config.UIAssets, "build/ui"); err != nil {
 		message.Error(err, "Unable to load the embedded ui assets")
@@ -141,6 +151,7 @@ func LaunchAPIServer() {
 
 		// Catch all routes
 		router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+			message.Debug("api.LaunchAPIServer() - /*")
 			// If the request is not a real file, serve the index.html instead
 			if test, err := sub.Open(strings.TrimPrefix(r.URL.Path, "/")); err != nil {
 				r.URL.Path = "/"

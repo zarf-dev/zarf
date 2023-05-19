@@ -13,7 +13,7 @@ const config: UserConfig = {
 	server: {
 		proxy: {
 			'/api': backendAPI,
-			'/sbom-viewer': backendAPI,
+			'/sbom-viewer/': backendAPI,
 		},
 		fs: {
 			strict: false,
