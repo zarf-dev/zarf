@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style type="text/css">
+body {background-color: black;}
+pre {
+	font-weight: normal;
+	color: #bbb;
+	white-space: -moz-pre-wrap;
+	white-space: -o-pre-wrap;
+	white-space: -pre-wrap;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+}
+b {font-weight: normal}
+b.BOLD {color: #fff}
+b.ITA {font-style: italic}
+b.UND {text-decoration: underline}
+b.STR {text-decoration: line-through}
+b.UNDSTR {text-decoration: underline line-through}
+b.BLK {color: #000000}
+b.RED {color: #aa0000}
+b.GRN {color: #00aa00}
+b.YEL {color: #aa5500}
+b.BLU {color: #0000aa}
+b.MAG {color: #aa00aa}
+b.CYN {color: #00aaaa}
+b.WHI {color: #aaaaaa}
+b.HIK {color: #555555}
+b.HIR {color: #ff5555}
+b.HIG {color: #55ff55}
+b.HIY {color: #ffff55}
+b.HIB {color: #5555ff}
+b.HIM {color: #ff55ff}
+b.HIC {color: #55ffff}
+b.HIW {color: #ffffff}
+b.BBLK {background-color: #000000}
+b.BRED {background-color: #aa0000}
+b.BGRN {background-color: #00aa00}
+b.BYEL {background-color: #aa5500}
+b.BBLU {background-color: #0000aa}
+b.BMAG {background-color: #aa00aa}
+b.BCYN {background-color: #00aaaa}
+b.BWHI {background-color: #aaaaaa}
+</style>
+</head>
+<body>
+<pre>
+<b class="WHI">
+$ mv zarf.yaml zarf_old.yaml
+$ sed 's/1.4.0/1.4.2/' zarf_old.yaml > zarf.yaml
+$ cat zarf.yaml
+</b>
+kind: ZarfPackageConfig
+metadata:
+  name: longhorn
+  description: "Example package for Longhorn cloud native distributed block storage for Kubernetes"
+  version: "1.4.2"
+components:
+  - name: longhorn-environment-check
+    required: true
+    files:
+      - source: https://raw.githubusercontent.com/longhorn/longhorn/v1.4.2/scripts/environment_check.sh
+        target: environment_check.sh
+        executable: true
+      - source: https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+        target: jq
+        executable: true
+    actions:
+      # Run the Longhorn Environment Check on this cluster's nodes.
+      onDeploy:
+        after:
+          - cmd: |
+              export PATH=$PATH:./
+              awk '{gsub(/kubectl /, "./zarf tools kubectl ")} 1' ./environment_check.sh &gt; tmp &amp;&amp; mv tmp ./environment_check.sh
+              awk '{gsub(/"kubectl" /, "")} 1' ./environment_check.sh &gt; tmp &amp;&amp; mv tmp ./environment_check.sh
+              chmod +x ./environment_check.sh
+              ./environment_check.sh
+  - name: longhorn
+    required: true
+    description: "Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io"
+    actions:
+      # Set the delete confirmation flag for Longhorn
+      onRemove:
+        before:
+          - cmd: "./zarf tools kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
+    manifests:
+      - name: longhorn-connect
+        namespace: longhorn-system
+        files:
+          - connect.yaml
+    charts:
+      - name: longhorn
+        url:  https://charts.longhorn.io
+        version: 1.4.2
+        namespace: longhorn-system
+        valuesFiles:
+        - "values.yaml"
+    images:
+      - longhornio/csi-attacher:v3.4.0
+      - longhornio/csi-provisioner:v2.1.2
+      - longhornio/csi-resizer:v1.3.0
+      - longhornio/csi-snapshotter:v5.0.1
+      - longhornio/csi-node-driver-registrar:v2.5.0
+      - longhornio/livenessprobe:v2.8.0
+      - longhornio/backing-image-manager:v1.4.2
+      - longhornio/longhorn-engine:v1.4.2
+      - longhornio/longhorn-instance-manager:v1.4.2
+      - longhornio/longhorn-manager:v1.4.2
+      - longhornio/longhorn-share-manager:v1.4.2
+      - longhornio/longhorn-ui:v1.4.2
+      - longhornio/support-bundle-kit:v0.0.17
+</pre>
+</body>
+</html>
