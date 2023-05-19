@@ -133,12 +133,11 @@ func LaunchAPIServer() {
 			// If the file doesn't exist, redirect to the homepage
 			r.URL.Path = "/"
 			http.Redirect(w, r, "/", http.StatusFound)
-			return
 		} else {
 			// If the file exists, close the file and serve it
 			test.Close()
-			r.URL.Path = file
 		}
+		r.URL.Path = file
 		sbomFs.ServeHTTP(w, r)
 	})
 
