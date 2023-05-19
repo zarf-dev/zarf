@@ -93,7 +93,8 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	}
 
 	for src, img := range imageMap {
-		progressBar.UpdateTitle(fmt.Sprintf("Pushing %s", src))
+		srcTruncated := message.Truncate(src, 55, true)
+		progressBar.UpdateTitle(fmt.Sprintf("Pushing %s", srcTruncated))
 
 		// If this is not a no checksum image push it for use with the Zarf agent
 		if !i.NoChecksum {
