@@ -1699,7 +1699,7 @@ Must be one of:
 
   ## components > files
 
-**Description:** Files to place on disk during package deployment
+**Description:** Files or folders to place on disk during package deployment
 
 |          |         |
 | -------- | ------- |
@@ -1727,7 +1727,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** Local file path or remote URL to pull into the package
+**Description:** Local folder or file path or remote URL to pull into the package
 
 |          |          |
 | -------- | -------- |
@@ -1743,7 +1743,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Optional SHA256 checksum of the file
+**Description:** (files only) Optional SHA256 checksum of the file
 
 |          |          |
 | -------- | -------- |
@@ -1761,7 +1761,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The absolute or relative path where the file should be copied to during package deploy
+**Description:** The absolute or relative path where the file or folder should be copied to during package deploy
 
 |          |          |
 | -------- | -------- |
@@ -1777,7 +1777,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Determines if the file should be made executable during package deploy
+**Description:** (files only) Determines if the file should be made executable during package deploy
 
 |          |           |
 | -------- | --------- |

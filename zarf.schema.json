@@ -269,7 +269,7 @@
             "$ref": "#/definitions/ZarfFile"
           },
           "type": "array",
-          "description": "Files to place on disk during package deployment"
+          "description": "Files or folders to place on disk during package deployment"
         },
         "charts": {
           "items": {
@@ -755,19 +755,19 @@
       "properties": {
         "source": {
           "type": "string",
-          "description": "Local file path or remote URL to pull into the package"
+          "description": "Local folder or file path or remote URL to pull into the package"
         },
         "shasum": {
           "type": "string",
-          "description": "Optional SHA256 checksum of the file"
+          "description": "(files only) Optional SHA256 checksum of the file"
         },
         "target": {
           "type": "string",
-          "description": "The absolute or relative path where the file should be copied to during package deploy"
+          "description": "The absolute or relative path where the file or folder should be copied to during package deploy"
         },
         "executable": {
           "type": "boolean",
-          "description": "Determines if the file should be made executable during package deploy"
+          "description": "(files only) Determines if the file should be made executable during package deploy"
         },
         "symlinks": {
           "items": {
