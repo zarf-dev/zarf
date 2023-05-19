@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,34 +33,34 @@ func TestUseCLI(t *testing.T) {
 	e2e.CleanFiles(shasumTestFilePath, cachePath, otherTmpPath)
 
 	err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), 0600)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	stdOut, stdErr, err := e2e.ExecZarfCommand("prepare", "sha256sum", shasumTestFilePath)
-	assert.NoError(t, err, stdOut, stdErr)
-	assert.Equal(t, expectedShasum, stdOut, "The expected SHASUM should equal the actual SHASUM")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Equal(t, expectedShasum, stdOut, "The expected SHASUM should equal the actual SHASUM")
 
 	// Test `zarf prepare sha256sum` for a remote asset
 	expectedShasum = "c3cdea0573ba5a058ec090b5d2683bf398e8b1614c37ec81136ed03b78167617\n"
 
 	stdOut, stdErr, err = e2e.ExecZarfCommand("prepare", "sha256sum", "https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/zarf-prepare-shasum-remote-test-file.txt")
-	assert.NoError(t, err, stdOut, stdErr)
-	assert.Contains(t, stdOut, expectedShasum, "The expected SHASUM should equal the actual SHASUM")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdOut, expectedShasum, "The expected SHASUM should equal the actual SHASUM")
 
 	// Test `zarf version`
 	stdOut, _, err = e2e.ExecZarfCommand("version")
-	assert.NoError(t, err)
-	assert.NotEqual(t, len(stdOut), 0, "Zarf version should not be an empty string")
-	assert.NotEqual(t, stdOut, "UnknownVersion", "Zarf version should not be the default value")
+	require.NoError(t, err)
+	require.NotEqual(t, len(stdOut), 0, "Zarf version should not be an empty string")
+	require.NotEqual(t, stdOut, "UnknownVersion", "Zarf version should not be the default value")
 
 	// Test `zarf prepare find-images` for a remote asset
 	stdOut, stdErr, err = e2e.ExecZarfCommand("prepare", "find-images", "examples/helm-alt-release-name")
-	assert.NoError(t, err, stdOut, stdErr)
-	assert.Contains(t, stdOut, "ghcr.io/stefanprodan/podinfo:6.1.6", "The chart image should be found by Zarf")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdOut, "ghcr.io/stefanprodan/podinfo:6.1.6", "The chart image should be found by Zarf")
 
 	// Test `zarf prepare find-images` for a local asset
 	stdOut, stdErr, err = e2e.ExecZarfCommand("prepare", "find-images", "examples/helm-local-chart")
-	assert.NoError(t, err, stdOut, stdErr)
-	assert.Contains(t, stdOut, "nginx:1.16.0", "The chart image should be found by Zarf")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdOut, "nginx:1.16.0", "The chart image should be found by Zarf")
 
 	// Test `zarf prepare find-images` on a chart that has a `kubeVersion` declaration greater than the default (v1.20.0)
 	_, stdErr, err = e2e.ExecZarfCommand("prepare", "find-images", "src/test/test-packages/00-kube-version-override")
@@ -79,7 +78,7 @@ func TestUseCLI(t *testing.T) {
 
 	// Test for expected failure when given a bad component input
 	_, _, err = e2e.ExecZarfCommand("init", "--confirm", "--components=k3s,foo,logging")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// Test that changing the log level actually applies the requested level
 	_, stdErr, _ = e2e.ExecZarfCommand("version", "--log-level=debug")
@@ -88,7 +87,7 @@ func TestUseCLI(t *testing.T) {
 
 	// Test that `zarf package deploy` gives an error if deploying a remote package without the --insecure or --shasum flags
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm")
-	assert.Error(t, err, stdOut, stdErr)
+	require.Error(t, err, stdOut, stdErr)
 
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
@@ -105,7 +104,7 @@ func TestUseCLI(t *testing.T) {
 
 	files, err := os.ReadDir(imageCachePath)
 	require.NoError(t, err, "Encountered an unexpected error when reading image cache path")
-	assert.Greater(t, len(files), 1)
+	require.Greater(t, len(files), 1)
 
 	// Test removal of cache
 	stdOut, stdErr, err = e2e.ExecZarfCommand("tools", "clear-cache", "--zarf-cache", cachePath)
@@ -115,10 +114,10 @@ func TestUseCLI(t *testing.T) {
 	_, err = os.ReadDir(cachePath)
 	if runtime.GOOS == "windows" {
 		msg := fmt.Sprintf("open %s: The system cannot find the file specified.", cachePath)
-		assert.EqualError(t, err, msg, "Did not receive expected error when reading a directory that should not exist")
+		require.EqualError(t, err, msg, "Did not receive expected error when reading a directory that should not exist")
 	} else {
 		msg := fmt.Sprintf("open %s: no such file or directory", cachePath)
-		assert.EqualError(t, err, msg, "Did not receive expected error when reading a directory that should not exist")
+		require.EqualError(t, err, msg, "Did not receive expected error when reading a directory that should not exist")
 	}
 
 	// Test generation of PKI
