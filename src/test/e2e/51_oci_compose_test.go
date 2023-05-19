@@ -17,7 +17,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
-	dconfig "github.com/docker/cli/cli/config"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
 )
@@ -50,22 +49,7 @@ func (suite *SkeletonSuite) SetupSuite() {
 	suite.NoError(err)
 	suite.DirExists(absNoCode)
 
-	// TODO: (@RAZZLE) how do we want to handle this?
-	image := "registry:2.8.2"
-
-	// spin up a local registry
-	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "555:5000", "--name", "registry", image)
-	suite.NoError(err)
-
-	// docker config folder
-	cfg, err := dconfig.Load(dconfig.Dir())
-	suite.NoError(err)
-	if !cfg.ContainsAuth() {
-		// make a docker config file w/ some blank creds
-		_, _, err := e2e.ExecZarfCommand("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
-		suite.NoError(err)
-	}
-
+	e2e.SetupDockerRegistry(suite.T(), 555)
 	suite.Reference.Registry = "localhost:555"
 
 }
