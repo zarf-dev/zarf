@@ -45,14 +45,13 @@ test.describe('initialize a zarf cluster', () => {
 		// Find first init package deploy button.
 		const deployInit = page.getByTitle('init').first();
 		// click the init package deploy button.
-		await Promise.all([
-			page.waitForURL('/packages/init/configure', { waitUntil: 'networkidle' }),
-			deployInit.click(),
-		]);
+		deployInit.click();
 
 		// Validate that the SBOM has been loaded
-		const sbomInfo = await page.locator('#sbom-info').first();
-		expect(sbomInfo).toContainText(/This package has [0-9]+ images with software SBOMs included/);
+		const sbomInfo = await page.waitForSelector('#sbom-info', { timeout: 10000 });
+		expect(await sbomInfo.innerText()).toMatch(
+			/This package has [0-9]+ images with software SBOMs included/
+		);
 
 		// Components (check most functionaliy with k3s component)
 		const k3s = page.locator('.accordion:has-text("k3s")');
