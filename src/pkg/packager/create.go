@@ -295,22 +295,34 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 	if err != nil {
 		return nil, fmt.Errorf("unable to create the component paths: %s", err.Error())
 	}
+
 	// Create an struct to hold the SBOM information for this component.
 	componentSBOM := types.ComponentSBOM{
 		Files:         []string{},
 		ComponentPath: componentPath,
 	}
-	for idx := range component.Files {
-		path := filepath.Join(componentPath.Files, strconv.Itoa(idx))
-		componentSBOM.Files = append(componentSBOM.Files, path)
+
+	appendSBOMFiles := func(path string) {
+		if utils.IsDir(path) {
+			files, _ := utils.RecursiveFileList(path, nil, false, true)
+			componentSBOM.Files = append(componentSBOM.Files, files...)
+		} else {
+			componentSBOM.Files = append(componentSBOM.Files, path)
+		}
 	}
-	for idx := range component.DataInjections {
-		path := filepath.Join(componentPath.DataInjections, fmt.Sprintf("injection-%d", idx))
-		// Unwrap the dataInjection dir into individual files.
-		pattern := regexp.MustCompile(`(?mi).+$`)
-		files, _ := utils.RecursiveFileList(path, pattern, false, true)
-		componentSBOM.Files = append(componentSBOM.Files, files...)
+
+	for filesIdx, file := range component.Files {
+		path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+
+		appendSBOMFiles(path)
 	}
+
+	for dataIdx, data := range component.DataInjections {
+		path := filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+
+		appendSBOMFiles(path)
+	}
+
 	return &componentSBOM, nil
 }
 
@@ -393,7 +405,10 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 	for filesIdx, file := range component.Files {
 		message.Debugf("Loading %#v", file)
-		dst := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx))
+
+		dstIdxPath := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx))
+		utils.CreateDirectory(dstIdxPath, 0700)
+		dst := filepath.Join(dstIdxPath, filepath.Base(file.Target))
 
 		if utils.IsURL(file.Source) {
 			if isSkeleton {
@@ -419,9 +434,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			}
 		}
 
-		info, _ := os.Stat(dst)
-
-		if file.Executable || info.IsDir() {
+		if file.Executable || utils.IsDir(dst) {
 			_ = os.Chmod(dst, 0700)
 		} else {
 			_ = os.Chmod(dst, 0600)
@@ -434,7 +447,11 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		for dataIdx, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-			dst := filepath.Join(componentPath.DataInjections, fmt.Sprintf("injection-%d", dataIdx))
+
+			dstIdxPath := filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx))
+			utils.CreateDirectory(dstIdxPath, 0700)
+			dst := filepath.Join(dstIdxPath, filepath.Base(data.Target.Path))
+
 			if utils.IsURL(data.Source) {
 				if isSkeleton {
 					continue
