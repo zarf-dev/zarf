@@ -105,6 +105,7 @@ func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
 	return string(logContents)
 }
 
+// SetupDockerRegistry uses the host machine's docker daemon to spin up a local registry for testing purposes.
 func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) *configfile.ConfigFile {
 	// spin up a local registry
 	registryImage := "registry:2.8.2"

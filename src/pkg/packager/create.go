@@ -41,10 +41,8 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Load the images and repos from the 'reference' package
-	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
-		if err := p.loadDifferentialData(); err != nil {
-			return err
-		}
+	if err := p.loadDifferentialData(); err != nil {
+		return err
 	}
 
 	// Change the working directory if this run has an alternate base dir.
@@ -62,10 +60,8 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Before we compose the components (and render the imported OCI components), we need to remove any components that are not needed for a differential build
-	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
-		if err := p.removeDifferentialComponentsFromPackage(); err != nil {
-			return err
-		}
+	if err := p.removeDifferentialComponentsFromPackage(); err != nil {
+		return err
 	}
 
 	if err := p.composeComponents(); err != nil {
