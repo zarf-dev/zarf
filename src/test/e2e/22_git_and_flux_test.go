@@ -27,6 +27,7 @@ func TestGitAndFlux(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-git-data-check-secrets-%s-v1.0.0.tar.zst", e2e.Arch)
+	defer e2e.CleanFiles(path)
 
 	// Deploy the gitops example
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
