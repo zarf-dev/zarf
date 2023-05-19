@@ -5,6 +5,8 @@
 package types
 
 import (
+	"reflect"
+
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 )
 
@@ -215,4 +217,31 @@ type ZarfComponentImport struct {
 	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
 	// For further explanation see https://regex101.com/r/nxX8vx/1
 	URL string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package to import via OCI,pattern=^oci://(?!.*###ZARF_PKG_TMPL_).*$"`
+}
+
+// IsEmpty returns if the components fields (other than the fields we were told to ignore) are empty or set to the types zero-value
+func (c *ZarfComponent) IsEmpty(fieldsToIgnore []string) bool {
+	// Make a map for the fields we are going to ignore
+	ignoredFieldsMap := make(map[string]bool)
+	for _, field := range fieldsToIgnore {
+		ignoredFieldsMap[field] = true
+	}
+
+	// Get a value representation of the component
+	componentReflectValue := reflect.Indirect(reflect.ValueOf(c))
+
+	// Loop through all of the Components struct fields
+	for i := 0; i < componentReflectValue.NumField(); i++ {
+		// If we were told to ignore this field, continue on..
+		if ignoredFieldsMap[componentReflectValue.Type().Field(i).Name] {
+			continue
+		}
+
+		// Check if this field is empty/zero
+		if !componentReflectValue.Field(i).IsZero() {
+			return false
+		}
+	}
+
+	return true
 }

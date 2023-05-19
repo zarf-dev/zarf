@@ -120,6 +120,22 @@
           },
           "type": "object",
           "description": "Any registry domains that were overridden on package create when pulling images"
+        },
+        "differentialMissing": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "List of components that were not included in this package due to differential packaging"
+        },
+        "OCIImportedComponents": {
+          "patternProperties": {
+            ".*": {
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "description": "Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names"
         }
       },
       "additionalProperties": false,
