@@ -126,11 +126,6 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 		}
 
-		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, valueTemplate); err != nil {
-			onFailure()
-			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
-		}
-
 		// Deploy the component
 		deployedComponent.InstalledCharts = charts
 		deployedComponents = append(deployedComponents, deployedComponent)
@@ -140,6 +135,11 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 		if p.cluster != nil {
 			p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings)
+		}
+
+		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, valueTemplate); err != nil {
+			onFailure()
+			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
 	}
 
