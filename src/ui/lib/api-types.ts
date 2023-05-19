@@ -296,7 +296,7 @@ export interface ZarfComponent {
      */
     extensions?: ZarfComponentExtensions;
     /**
-     * Files to place on disk during package deployment
+     * Files or folders to place on disk during package deployment
      */
     files?: ZarfFile[];
     /**
@@ -688,15 +688,15 @@ export interface BigBang {
 
 export interface ZarfFile {
     /**
-     * Determines if the file should be made executable during package deploy
+     * (files only) Determines if the file should be made executable during package deploy
      */
     executable?: boolean;
     /**
-     * Optional SHA256 checksum of the file
+     * (files only) Optional SHA256 checksum of the file
      */
     shasum?: string;
     /**
-     * Local file path or remote URL to pull into the package
+     * Local folder or file path or remote URL to pull into the package
      */
     source: string;
     /**
@@ -704,7 +704,8 @@ export interface ZarfFile {
      */
     symlinks?: string[];
     /**
-     * The absolute or relative path where the file should be copied to during package deploy
+     * The absolute or relative path where the file or folder should be copied to during package
+     * deploy
      */
     target: string;
 }

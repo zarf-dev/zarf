@@ -7,7 +7,7 @@ package transform
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var gitURLs = []string{
@@ -66,7 +66,7 @@ func TestMutateGitURLsInText(t *testing.T) {
 	`
 
 	resultingText := MutateGitURLsInText("https://gitlab.com", originalText, "repo-owner")
-	assert.Equal(t, expectedText, resultingText)
+	require.Equal(t, expectedText, resultingText)
 }
 
 func TestGitTransformURLSplitRef(t *testing.T) {
@@ -97,14 +97,14 @@ func TestGitTransformURLSplitRef(t *testing.T) {
 
 	for idx, url := range gitURLs {
 		gitURLNoRef, refPlain, err := GitTransformURLSplitRef(url)
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResult[idx][0], gitURLNoRef)
-		assert.Equal(t, expectedResult[idx][1], refPlain)
+		require.NoError(t, err)
+		require.Equal(t, expectedResult[idx][0], gitURLNoRef)
+		require.Equal(t, expectedResult[idx][1], refPlain)
 	}
 
 	for _, url := range badGitURLs {
 		_, _, err := GitTransformURLSplitRef(url)
-		assert.Error(t, err)
+		require.Error(t, err)
 	}
 }
 
@@ -136,13 +136,13 @@ func TestGitTransformURLtoFolderName(t *testing.T) {
 
 	for idx, url := range gitURLs {
 		repoFolder, err := GitTransformURLtoFolderName(url)
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResult[idx], repoFolder)
+		require.NoError(t, err)
+		require.Equal(t, expectedResult[idx], repoFolder)
 	}
 
 	for _, url := range badGitURLs {
 		_, err := GitTransformURLtoFolderName(url)
-		assert.Error(t, err)
+		require.Error(t, err)
 	}
 }
 
@@ -174,13 +174,13 @@ func TestGitTransformURLtoRepoName(t *testing.T) {
 
 	for idx, url := range gitURLs {
 		repoName, err := GitTransformURLtoRepoName(url)
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResult[idx], repoName)
+		require.NoError(t, err)
+		require.Equal(t, expectedResult[idx], repoName)
 	}
 
 	for _, url := range badGitURLs {
 		_, err := GitTransformURLtoRepoName(url)
-		assert.Error(t, err)
+		require.Error(t, err)
 	}
 }
 
@@ -212,12 +212,12 @@ func TestGitTransformURL(t *testing.T) {
 
 	for idx, url := range gitURLs {
 		repoURL, err := GitTransformURL("https://gitlab.com", url, "repo-owner")
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResult[idx], repoURL.String())
+		require.NoError(t, err)
+		require.Equal(t, expectedResult[idx], repoURL.String())
 	}
 
 	for _, url := range badGitURLs {
 		_, err := GitTransformURL("https://gitlab.com", url, "repo-owner")
-		assert.Error(t, err)
+		require.Error(t, err)
 	}
 }

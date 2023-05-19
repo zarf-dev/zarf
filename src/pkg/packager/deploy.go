@@ -32,7 +32,7 @@ import (
 
 var (
 	hpaModified    bool
-	valueTemplate  template.Values
+	valueTemplate  *template.Values
 	connectStrings = make(types.ConnectStrings)
 )
 
@@ -123,7 +123,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, &valueTemplate); err != nil {
+			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, valueTemplate); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -133,7 +133,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 		}
 
-		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, &valueTemplate); err != nil {
+		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, valueTemplate); err != nil {
 			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -216,7 +216,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	onDeploy := component.Actions.OnDeploy
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, &valueTemplate); err != nil {
+	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -274,7 +274,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.After, &valueTemplate); err != nil {
+	if err = p.runActions(onDeploy.Defaults, onDeploy.After, valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -282,7 +282,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 }
 
 // Move files onto the host of the machine performing the deployment.
-func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLocation string) error {
+func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocation string) error {
 	// If there are no files to process, return early.
 	if len(component.Files) < 1 {
 		return nil
@@ -291,14 +291,18 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
 	defer spinner.Stop()
 
-	for index, file := range component.Files {
+	for fileIdx, file := range component.Files {
 		spinner.Updatef("Loading %s", file.Target)
-		sourceFile := filepath.Join(sourceLocation, strconv.Itoa(index))
+
+		fileLocation := filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
+		if utils.InvalidPath(fileLocation) {
+			fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
+		}
 
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if shasum, _ := utils.GetCryptoHash(sourceFile, crypto.SHA256); shasum != file.Shasum {
+			if shasum, _ := utils.GetCryptoHash(fileLocation, crypto.SHA256); shasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
 			}
 		}
@@ -306,25 +310,35 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 		// Replace temp target directories
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
 
-		// Check if the file looks like a text file
-		isText, err := utils.IsTextFile(sourceFile)
-		if err != nil {
-			message.Debugf("unable to determine if file %s is a text file: %s", sourceFile, err)
+		fileList := []string{}
+		if utils.IsDir(fileLocation) {
+			files, _ := utils.RecursiveFileList(fileLocation, nil, false, true)
+			fileList = append(fileList, files...)
+		} else {
+			fileList = append(fileList, fileLocation)
 		}
 
-		// If the file is a text file, template it
-		if isText {
-			spinner.Updatef("Templating %s", file.Target)
-			if err := valueTemplate.Apply(component, sourceFile, true); err != nil {
-				return fmt.Errorf("unable to template file %s: %w", sourceFile, err)
+		for _, subFile := range fileList {
+			// Check if the file looks like a text file
+			isText, err := utils.IsTextFile(subFile)
+			if err != nil {
+				message.Debugf("unable to determine if file %s is a text file: %s", subFile, err)
+			}
+
+			// If the file is a text file, template it
+			if isText {
+				spinner.Updatef("Templating %s", file.Target)
+				if err := valueTemplate.Apply(component, subFile, true); err != nil {
+					return fmt.Errorf("unable to template file %s: %w", subFile, err)
+				}
 			}
 		}
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err = copy.Copy(sourceFile, file.Target)
+		err := copy.Copy(fileLocation, file.Target)
 		if err != nil {
-			return fmt.Errorf("unable to copy file %s to %s: %w", sourceFile, file.Target, err)
+			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
 		}
 
 		// Loop over all symlinks and create them
@@ -342,7 +356,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 		}
 
 		// Cleanup now to reduce disk pressure
-		_ = os.RemoveAll(sourceFile)
+		_ = os.RemoveAll(fileLocation)
 	}
 
 	spinner.Success()
@@ -351,7 +365,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, sourceLo
 }
 
 // Fetch the current ZarfState from the k8s cluster and generate a valueTemplate from the state values.
-func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values template.Values, err error) {
+func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values *template.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
@@ -359,14 +373,14 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 	state, err := p.cluster.LoadZarfState()
 	// Return on error if we are not in YOLO mode
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
-		return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
+		return nil, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
 	}
 
 	// Check if the state is empty (uninitialized cluster)
 	if state.Distro == "" {
 		// If this is not a YOLO mode package, return an error
 		if !p.cfg.Pkg.Metadata.YOLO {
-			return values, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
+			return nil, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
 		}
 
 		// YOLO mode, so minimal state needed

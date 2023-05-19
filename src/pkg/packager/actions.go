@@ -73,7 +73,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 	if action.Description != "" {
 		cmdEscaped = action.Description
 	} else {
-		cmdEscaped = escapeCmdForPrint(cmd)
+		cmdEscaped = message.Truncate(cmd, 60)
 	}
 
 	spinner := message.NewProgressSpinner("Running \"%s\"", cmdEscaped)
@@ -285,13 +285,4 @@ func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd s
 	}
 
 	return out, err
-}
-
-func escapeCmdForPrint(cmd string) string {
-	cmdEscaped := strings.ReplaceAll(cmd, "\n", "; ")
-	// Truncate the command if it is longer than 60 characters so it isn't too long.
-	if len(cmdEscaped) > 60 {
-		cmdEscaped = cmdEscaped[:57] + "..."
-	}
-	return cmdEscaped
 }
