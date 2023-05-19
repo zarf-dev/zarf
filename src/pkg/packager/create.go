@@ -666,10 +666,8 @@ func (p *Packager) removeDifferentialComponentsFromPackage() error {
 				indexToRemove := componentIndex - i
 				componentToRemove := p.cfg.Pkg.Components[indexToRemove]
 
-				// If we are removing a required component, add it to the build metadata and remove it from the list of OCI components for this package
-				if p.cfg.Pkg.Components[indexToRemove].Required {
-					p.cfg.Pkg.Build.DifferentialMissing = append(p.cfg.Pkg.Build.DifferentialMissing, componentToRemove.Name)
-				}
+				// If we are removing a component, add it to the build metadata and remove it from the list of OCI components for this package
+				p.cfg.Pkg.Build.DifferentialMissing = append(p.cfg.Pkg.Build.DifferentialMissing, componentToRemove.Name)
 
 				p.cfg.Pkg.Components = append(p.cfg.Pkg.Components[:indexToRemove], p.cfg.Pkg.Components[indexToRemove+1:]...)
 			}
