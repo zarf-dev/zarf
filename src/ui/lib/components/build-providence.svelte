@@ -73,15 +73,33 @@
 			This package has {sbom?.sboms.length} images with software SBOMs included. You can view them now
 			in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:
 			<Typography
+				href={`/sbom-viewer/${sbom?.path.split('/').pop()}`}
+				target="_blank"
 				color="primary"
 				style="text-decoration: underline; cursor: pointer;"
 				variant="inherit"
-				element="span"
-				on:click={copyToClipboard}
+				element="a"
 			>
 				{sbom?.path}
 			</Typography>
 			<CopyToClipboard bind:copyToClipboard text={sbom?.path || ''} variant="h6" element="span" />
+		</Typography>
+		<Typography
+			variant="body2"
+			color="text-secondary-on-dark"
+			ssx={{
+				$self: {
+					display: 'flex',
+					alignItems: 'center',
+					gap: '8px',
+					marginTop: '8px',
+				},
+			}}
+		>
+			<span class="material-symbols-outlined">warning</span>
+			<Typography variant="inherit" element="span">
+				This directory will be removed after package deployment.
+			</Typography>
 		</Typography>
 	{:catch error}
 		<Typography variant="body2">{error}</Typography>

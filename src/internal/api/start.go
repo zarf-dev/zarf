@@ -117,6 +117,21 @@ func LaunchAPIServer() {
 		message.Infof("Zarf UI connection: http://127.0.0.1:%s/auth?token=%s", devPort, token)
 	}
 
+	// Load the static SBOM Files
+	sbomSub := os.DirFS(config.ZarfSBOMDir)
+	sbomFs := http.FileServer(http.FS(sbomSub))
+	// Load the static SBOM Files
+	router.Get("/sbom-viewer/*", func(w http.ResponseWriter, r *http.Request) {
+		message.Debug("api.LaunchAPIServer() - /sbom-viewer/{path}")
+		file := strings.TrimPrefix(r.URL.Path, "/sbom-viewer/")
+		if test, err := sbomSub.Open(file); err != nil {
+			r.URL.Path = "/"
+		} else {
+			r.URL.Path = file
+			test.Close()
+		}
+		sbomFs.ServeHTTP(w, r)
+	})
 	// Load the static UI files
 	if sub, err := fs.Sub(config.UIAssets, "build/ui"); err != nil {
 		message.Error(err, "Unable to load the embedded ui assets")
