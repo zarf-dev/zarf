@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -21,10 +22,14 @@ func TestGitAndFlux(t *testing.T) {
 	e2e.SetupWithCluster(t)
 	defer e2e.Teardown(t)
 
-	path := fmt.Sprintf("build/zarf-package-git-data-%s-v1.0.0.tar.zst", e2e.Arch)
+	buildPath := filepath.Join("src", "test", "test-packages", "22-git-and-flux")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", buildPath, "--confirm", "-o=build")
+	require.NoError(t, err, stdOut, stdErr)
+
+	path := fmt.Sprintf("build/zarf-package-git-data-check-secrets-%s-v1.0.0.tar.zst", e2e.Arch)
 
 	// Deploy the gitops example
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	tunnel, err := cluster.NewZarfTunnel()
@@ -41,8 +46,6 @@ func TestGitAndFlux(t *testing.T) {
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "podinfo-flux", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "init", "--components=git-server", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
 }
 
 func testGitServerConnect(t *testing.T, gitURL string) {

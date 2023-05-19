@@ -91,12 +91,6 @@ func (p *Packager) Deploy() error {
 
 	p.printTablesForDeployment(deployedComponents)
 
-	// Save deployed package information to k8s
-	// Note: Not all packages need k8s; check if k8s is being used before saving the secret
-	if p.cluster != nil {
-		p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings)
-	}
-
 	return nil
 }
 
@@ -127,7 +121,6 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
-
 		if err != nil {
 			onFailure()
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
@@ -142,6 +135,12 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		deployedComponent.InstalledCharts = charts
 		deployedComponents = append(deployedComponents, deployedComponent)
 		config.SetDeployingComponents(deployedComponents)
+
+		// Save deployed package information to k8s
+		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
+		if p.cluster != nil {
+			p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings)
+		}
 	}
 
 	config.ClearDeployingComponents()
