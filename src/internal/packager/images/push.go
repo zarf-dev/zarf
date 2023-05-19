@@ -57,42 +57,43 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	pushOptions = append(pushOptions, crane.WithTransport(craneTransport))
 	message.Debugf("crane pushOptions = %#v", pushOptions)
 
+	var (
+		err         error
+		tunnel      *cluster.Tunnel
+		registryURL string
+		target      string
+	)
+
+	if i.RegInfo.InternalRegistry {
+		// Establish a registry tunnel to send the images to the zarf registry
+		if tunnel, err = cluster.NewZarfTunnel(); err != nil {
+			return err
+		}
+		target = cluster.ZarfRegistry
+	} else {
+		svcInfo, err := cluster.ServiceInfoFromNodePortURL(i.RegInfo.Address)
+
+		// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
+		if err == nil {
+			if tunnel, err = cluster.NewTunnel(svcInfo.Namespace, cluster.SvcResource, svcInfo.Name, 0, svcInfo.Port); err != nil {
+				return err
+			}
+		}
+	}
+
+	if tunnel != nil {
+		err = tunnel.Connect(target, false)
+		if err != nil {
+			return err
+		}
+		registryURL = tunnel.Endpoint()
+		defer tunnel.Close()
+	} else {
+		registryURL = i.RegInfo.Address
+	}
+
 	for src, img := range imageMap {
 		progressBar.UpdateTitle(fmt.Sprintf("Pushing %s", src))
-
-		var (
-			err         error
-			tunnel      *cluster.Tunnel
-			registryURL string
-			target      string
-		)
-
-		if i.RegInfo.InternalRegistry {
-			// Establish a registry tunnel to send the images to the zarf registry
-			if tunnel, err = cluster.NewZarfTunnel(); err != nil {
-				return err
-			}
-			target = cluster.ZarfRegistry
-		} else {
-			svcInfo, err := cluster.ServiceInfoFromNodePortURL(i.RegInfo.Address)
-
-			// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
-			if err == nil {
-				if tunnel, err = cluster.NewTunnel(svcInfo.Namespace, cluster.SvcResource, svcInfo.Name, 0, svcInfo.Port); err != nil {
-					return err
-				}
-			}
-		}
-
-		if tunnel != nil {
-			err = tunnel.Connect(target, false)
-			if err != nil {
-				return err
-			}
-			registryURL = tunnel.Endpoint()
-		} else {
-			registryURL = i.RegInfo.Address
-		}
 
 		// If this is not a no checksum image push it for use with the Zarf agent
 		if !i.NoChecksum {
@@ -119,10 +120,6 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 		if err = crane.Push(img, offlineName, pushOptions...); err != nil {
 			return err
-		}
-
-		if tunnel != nil {
-			tunnel.Close()
 		}
 	}
 
