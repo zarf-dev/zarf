@@ -59,6 +59,11 @@ func (p *Packager) Create(baseDir string) error {
 		p.cfg.IsInitConfig = true
 	}
 
+	// Before we compose the components (and render the imported OCI components), we need to remove any components that are not needed for a differential build
+	if err := p.removeDifferentialComponentsFromPackage(); err != nil {
+		return err
+	}
+
 	if err := p.composeComponents(); err != nil {
 		return err
 	}
@@ -295,22 +300,34 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 	if err != nil {
 		return nil, fmt.Errorf("unable to create the component paths: %s", err.Error())
 	}
+
 	// Create an struct to hold the SBOM information for this component.
 	componentSBOM := types.ComponentSBOM{
 		Files:         []string{},
 		ComponentPath: componentPath,
 	}
-	for idx := range component.Files {
-		path := filepath.Join(componentPath.Files, strconv.Itoa(idx))
-		componentSBOM.Files = append(componentSBOM.Files, path)
+
+	appendSBOMFiles := func(path string) {
+		if utils.IsDir(path) {
+			files, _ := utils.RecursiveFileList(path, nil, false, true)
+			componentSBOM.Files = append(componentSBOM.Files, files...)
+		} else {
+			componentSBOM.Files = append(componentSBOM.Files, path)
+		}
 	}
-	for idx := range component.DataInjections {
-		path := filepath.Join(componentPath.DataInjections, fmt.Sprintf("injection-%d", idx))
-		// Unwrap the dataInjection dir into individual files.
-		pattern := regexp.MustCompile(`(?mi).+$`)
-		files, _ := utils.RecursiveFileList(path, pattern, false, true)
-		componentSBOM.Files = append(componentSBOM.Files, files...)
+
+	for filesIdx, file := range component.Files {
+		path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+
+		appendSBOMFiles(path)
 	}
+
+	for dataIdx, data := range component.DataInjections {
+		path := filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+
+		appendSBOMFiles(path)
+	}
+
 	return &componentSBOM, nil
 }
 
@@ -393,7 +410,10 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 	for filesIdx, file := range component.Files {
 		message.Debugf("Loading %#v", file)
-		dst := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx))
+
+		dstIdxPath := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx))
+		utils.CreateDirectory(dstIdxPath, 0700)
+		dst := filepath.Join(dstIdxPath, filepath.Base(file.Target))
 
 		if utils.IsURL(file.Source) {
 			if isSkeleton {
@@ -419,9 +439,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			}
 		}
 
-		info, _ := os.Stat(dst)
-
-		if file.Executable || info.IsDir() {
+		if file.Executable || utils.IsDir(dst) {
 			_ = os.Chmod(dst, 0700)
 		} else {
 			_ = os.Chmod(dst, 0600)
@@ -434,7 +452,11 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		for dataIdx, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-			dst := filepath.Join(componentPath.DataInjections, fmt.Sprintf("injection-%d", dataIdx))
+
+			dstIdxPath := filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx))
+			utils.CreateDirectory(dstIdxPath, 0700)
+			dst := filepath.Join(dstIdxPath, filepath.Base(data.Target.Path))
+
 			if utils.IsURL(data.Source) {
 				if isSkeleton {
 					continue
@@ -576,6 +598,9 @@ func (p *Packager) loadDifferentialData() error {
 		return nil
 	}
 
+	// Save the fact that this is a differential build into the build data of the package
+	p.cfg.Pkg.Build.Differential = true
+
 	tmpDir, _ := utils.MakeTempDir("")
 	defer os.RemoveAll(tmpDir)
 
@@ -610,6 +635,44 @@ func (p *Packager) loadDifferentialData() error {
 	p.cfg.CreateOpts.DifferentialData.DifferentialImages = allIncludedImagesMap
 	p.cfg.CreateOpts.DifferentialData.DifferentialRepos = allIncludedReposMap
 	p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
+	p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents = differentialZarfConfig.Build.OCIImportedComponents
+
+	return nil
+}
+
+// removeDifferentialComponentsFromPackage will remove unchanged OCI imported components from a differential package creation
+func (p *Packager) removeDifferentialComponentsFromPackage() error {
+	// Remove components that were imported and already built into the reference package
+	if len(p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents) > 0 {
+		componentsToRemove := []int{}
+
+		for idx, component := range p.cfg.Pkg.Components {
+			// if the component is imported from an OCI package and everything is the same, don't include this package
+			if utils.IsOCIURL(component.Import.URL) {
+				if _, alsoExists := p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents[component.Import.URL]; alsoExists {
+
+					// If the component spec is not empty, we will still include it in the differential package
+					// NOTE: We are ignoring fields that are not relevant to the differential build
+					if component.IsEmpty([]string{"Name", "Required", "Description", "Default", "Import"}) {
+						componentsToRemove = append(componentsToRemove, idx)
+					}
+				}
+			}
+		}
+
+		// Remove the components that are already included (via OCI Import) in the reference package
+		if len(componentsToRemove) > 0 {
+			for i, componentIndex := range componentsToRemove {
+				indexToRemove := componentIndex - i
+				componentToRemove := p.cfg.Pkg.Components[indexToRemove]
+
+				// If we are removing a component, add it to the build metadata and remove it from the list of OCI components for this package
+				p.cfg.Pkg.Build.DifferentialMissing = append(p.cfg.Pkg.Build.DifferentialMissing, componentToRemove.Name)
+
+				p.cfg.Pkg.Components = append(p.cfg.Pkg.Components[:indexToRemove], p.cfg.Pkg.Components[indexToRemove+1:]...)
+			}
+		}
+	}
 
 	return nil
 }
@@ -626,7 +689,6 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 	for idx, component := range p.cfg.Pkg.Components {
 		newImageList := []string{}
 		newRepoList := []string{}
-
 		// Generate a list of all unique images for this component
 		for _, img := range component.Images {
 			// If a image doesn't have a tag (or is a commonly reused tag), we will include this image in the differential package

@@ -7,7 +7,7 @@ package transform
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var imageRefs = []string{
@@ -38,13 +38,13 @@ func TestImageTransformHost(t *testing.T) {
 
 	for idx, ref := range imageRefs {
 		newRef, err := ImageTransformHost("gitlab.com/project", ref)
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResult[idx], newRef)
+		require.NoError(t, err)
+		require.Equal(t, expectedResult[idx], newRef)
 	}
 
 	for _, ref := range badImageRefs {
 		_, err := ImageTransformHost("gitlab.com/project", ref)
-		assert.Error(t, err)
+		require.Error(t, err)
 	}
 }
 
@@ -60,13 +60,13 @@ func TestImageTransformHostWithoutChecksum(t *testing.T) {
 
 	for idx, ref := range imageRefs {
 		newRef, err := ImageTransformHostWithoutChecksum("gitlab.com/project", ref)
-		assert.NoError(t, err)
-		assert.Equal(t, expectedResult[idx], newRef)
+		require.NoError(t, err)
+		require.Equal(t, expectedResult[idx], newRef)
 	}
 
 	for _, ref := range badImageRefs {
 		_, err := ImageTransformHostWithoutChecksum("gitlab.com/project", ref)
-		assert.Error(t, err)
+		require.Error(t, err)
 	}
 }
 
@@ -82,7 +82,7 @@ func TestParseImageRef(t *testing.T) {
 
 	for idx, ref := range imageRefs {
 		img, err := ParseImageRef(ref)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		tag := expectedResult[idx][2]
 		digest := expectedResult[idx][3]
 		tagOrDigest := ":" + tag
@@ -93,16 +93,16 @@ func TestParseImageRef(t *testing.T) {
 		name := expectedResult[idx][0] + path
 		reference := name + tagOrDigest
 
-		assert.Equal(t, reference, img.Reference)
-		assert.Equal(t, name, img.Name)
-		assert.Equal(t, path, img.Path)
-		assert.Equal(t, tag, img.Tag)
-		assert.Equal(t, digest, img.Digest)
-		assert.Equal(t, tagOrDigest, img.TagOrDigest)
+		require.Equal(t, reference, img.Reference)
+		require.Equal(t, name, img.Name)
+		require.Equal(t, path, img.Path)
+		require.Equal(t, tag, img.Tag)
+		require.Equal(t, digest, img.Digest)
+		require.Equal(t, tagOrDigest, img.TagOrDigest)
 	}
 
 	for _, ref := range badImageRefs {
 		_, err := ParseImageRef(ref)
-		assert.Error(t, err)
+		require.Error(t, err)
 	}
 }
