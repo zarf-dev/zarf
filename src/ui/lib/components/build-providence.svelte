@@ -62,15 +62,13 @@
 		the build and where the package was created. SBOM includes information on all of the code,
 		images, and resources contained in this package.
 	</span>
-	<ButtonDense
-		slot="actions"
-		variant="outlined"
-		href={sbomUrl}
-		target="_blank"
-		backgroundColor="white"
-	>
-		view sbom
-	</ButtonDense>
+	<svelte:fragment slot="actions">
+		{#if sbomUrl}
+			<ButtonDense variant="outlined" href={sbomUrl} target="_blank" backgroundColor="white">
+				view sbom
+			</ButtonDense>
+		{/if}
+	</svelte:fragment>
 </PackageSectionHeader>
 <Box {ssx}>
 	<Typography variant="subtitle2">Build Providence</Typography>
