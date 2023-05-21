@@ -87,6 +87,9 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	var cachePath string
 	if parent.Import.URL != "" {
+		// Save all the OCI imported components into our build data
+		p.cfg.Pkg.Build.OCIImportedComponents[parent.Import.URL] = childComponentName
+
 		skelURL := strings.TrimPrefix(parent.Import.URL, utils.OCIURLPrefix)
 		cachePath = filepath.Join(config.GetAbsCachePath(), "oci", skelURL)
 		err = os.MkdirAll(cachePath, 0755)
