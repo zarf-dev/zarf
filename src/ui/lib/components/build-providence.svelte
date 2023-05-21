@@ -8,6 +8,8 @@
 	import { pkgSbomStore, pkgStore } from '$lib/store';
 	import { Packages } from '$lib/api';
 	import CopyToClipboard from './copy-to-clipboard.svelte';
+	import PackageSectionHeader from './package-section-header.svelte';
+	import ButtonDense from './button-dense.svelte';
 
 	export let build: ZarfBuildData | undefined;
 
@@ -43,10 +45,33 @@
 					flexDirection: 'column',
 				},
 			},
+			'& #sbom-info': {
+				marginBottom: '8px',
+			},
 		},
 	};
+
+	$: sbomUrl = ($pkgSbomStore && `/sbom-viewer/${$pkgSbomStore.path.split('/').pop()}`) || '';
 </script>
 
+<PackageSectionHeader icon="secured_layer">
+	Supply Chain
+	<span slot="tooltip">
+		Supply chain information is used to help determine if a package can be trusted. It includes
+		declarative data regarding how this package was built. Build providence includes metadata about
+		the build and where the package was created. SBOM includes information on all of the code,
+		images, and resources contained in this package.
+	</span>
+	<ButtonDense
+		slot="actions"
+		variant="outlined"
+		href={sbomUrl}
+		target="_blank"
+		backgroundColor="white"
+	>
+		view sbom
+	</ButtonDense>
+</PackageSectionHeader>
 <Box {ssx}>
 	<Typography variant="subtitle2">Build Providence</Typography>
 	<div class="build-data">
@@ -69,22 +94,8 @@
 	</div>
 	<Typography variant="subtitle2">Software Bill of Materials (SBOM)</Typography>
 	{#await getSbom() then sbom}
-		<Typography id="sbom-info" element="p" variant="body2" color="text-secondary-on-dark">
-			This package has {sbom?.sboms.length} images with software SBOMs included. You can view them now
-			in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:
-			<Typography
-				href={`/sbom-viewer/${sbom?.path.split('/').pop()}`}
-				target="_blank"
-				color="primary"
-				style="text-decoration: underline; cursor: pointer;"
-				variant="inherit"
-				element="a"
-			>
-				{sbom?.path}
-			</Typography>
-			<CopyToClipboard bind:copyToClipboard text={sbom?.path || ''} variant="h6" element="span" />
-		</Typography>
 		<Typography
+			id="sbom-info"
 			variant="body2"
 			color="text-secondary-on-dark"
 			ssx={{
@@ -96,10 +107,25 @@
 				},
 			}}
 		>
-			<span class="material-symbols-outlined">warning</span>
+			<span style="color: var(--warning)" class="material-symbols-outlined">warning</span>
 			<Typography variant="inherit" element="span">
-				This directory will be removed after package deployment.
+				{sbom?.sboms.length} artifacts to be reviewed. Review the package SBOM files before continuing.
+				The SBOM files are in a temporary folder that will be removed upon deployment.
 			</Typography>
+		</Typography>
+		<Typography element="p" variant="body2" color="text-secondary-on-dark">
+			To view the SBOM files, open this link:
+			<Typography
+				href={`/sbom-viewer/${sbom?.path.split('/').pop()}`}
+				target="_blank"
+				color="primary"
+				style="text-decoration: underline; cursor: pointer;"
+				variant="inherit"
+				element="a"
+			>
+				{sbom?.path}
+			</Typography>
+			<CopyToClipboard bind:copyToClipboard text={sbom?.path || ''} variant="h6" element="span" />
 		</Typography>
 	{:catch error}
 		<Typography variant="body2">{error}</Typography>
