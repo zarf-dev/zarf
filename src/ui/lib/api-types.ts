@@ -9,6 +9,7 @@
 
 export interface APITypes {
     apiConnections:            { [key: string]: APIDeployedPackageConnection[] };
+    apiPackageSBOM:            APIPackageSBOM;
     apiZarfDeployPayload:      APIZarfDeployPayload;
     apiZarfPackage:            APIZarfPackage;
     apiZarfPackageConnection:  APIDeployedPackageConnection;
@@ -27,6 +28,11 @@ export interface APITypes {
 export interface APIDeployedPackageConnection {
     name: string;
     url?: string;
+}
+
+export interface APIPackageSBOM {
+    path:  string;
+    sboms: string[];
 }
 
 export interface APIZarfDeployPayload {
@@ -1353,6 +1359,7 @@ function r(name: string) {
 const typeMap: any = {
     "APITypes": o([
         { json: "apiConnections", js: "apiConnections", typ: m(a(r("APIDeployedPackageConnection"))) },
+        { json: "apiPackageSBOM", js: "apiPackageSBOM", typ: r("APIPackageSBOM") },
         { json: "apiZarfDeployPayload", js: "apiZarfDeployPayload", typ: r("APIZarfDeployPayload") },
         { json: "apiZarfPackage", js: "apiZarfPackage", typ: r("APIZarfPackage") },
         { json: "apiZarfPackageConnection", js: "apiZarfPackageConnection", typ: r("APIDeployedPackageConnection") },
@@ -1370,6 +1377,10 @@ const typeMap: any = {
     "APIDeployedPackageConnection": o([
         { json: "name", js: "name", typ: "" },
         { json: "url", js: "url", typ: u(undefined, "") },
+    ], false),
+    "APIPackageSBOM": o([
+        { json: "path", js: "path", typ: "" },
+        { json: "sboms", js: "sboms", typ: a("") },
     ], false),
     "APIZarfDeployPayload": o([
         { json: "deployOpts", js: "deployOpts", typ: r("ZarfDeployOptions") },

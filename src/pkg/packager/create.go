@@ -583,7 +583,7 @@ func generatePackageChecksums(basePath string) (string, error) {
 	}
 
 	// Create the checksums file
-	checksumsFilePath := filepath.Join(basePath, "checksums.txt")
+	checksumsFilePath := filepath.Join(basePath, config.ZarfChecksumsTxt)
 	if err := utils.WriteFile(checksumsFilePath, []byte(checksumsData)); err != nil {
 		return "", err
 	}

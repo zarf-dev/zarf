@@ -33,8 +33,6 @@
 </Paper>
 
 <style lang="scss" global>
-	@use '@material/ripple';
-
 	.zarf-chip.paper {
 		border-radius: 16px;
 		display: flex;
@@ -43,15 +41,5 @@
 		word-break: break-all;
 		padding: 4px 8px;
 		gap: 1px;
-	}
-
-	.zarf-chip.paper.ripple {
-		@include ripple.surface;
-		@include ripple.radius-unbounded;
-		@include ripple.states;
-	}
-	.zarf-chip.paper.ripple::before,
-	.zarf-chip.paper.ripple::after {
-		border-radius: 16px;
 	}
 </style>
