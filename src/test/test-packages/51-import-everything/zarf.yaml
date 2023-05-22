@@ -29,15 +29,6 @@ components:
       # name is optional, if not provided the name of the component will be used to import
       name: demo-helm-local-chart
       url: oci://localhost:555/helm-local-chart:0.0.1-skeleton
-    actions:
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: deployment
-                name: local-demo
-                namespace: local-chart
-                condition: available
 
   - name: file-imports
     required: false

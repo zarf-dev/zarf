@@ -98,10 +98,6 @@ func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Pulled "+ref)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-n=helm-oci-demo", "--no-headers")
-	suite.NoError(err, stdErr)
-	suite.Contains(string(stdOut), "podinfo-")
-
 	// Test deploy w/ bad ref.
 	_, stdErr, err = e2e.ExecZarfCommand("package", "deploy", "oci://"+badRef.String(), "--insecure", "--confirm")
 	suite.Error(err, stdErr)
@@ -133,10 +129,6 @@ func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {
 	// Deploy the local package.
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", local, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
-
-	stdOut, stdErr, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-n=helm-oci-demo", "--no-headers")
-	suite.NoError(err, stdErr)
-	suite.Contains(string(stdOut), "podinfo-")
 }
 
 func TestRegistryClientTestSuite(t *testing.T) {

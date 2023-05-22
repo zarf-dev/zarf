@@ -79,10 +79,6 @@ func testHelmLocalChart(t *testing.T) {
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Verify that nginx successfully deploys in the cluster
-	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=local-chart", "rollout", "status", "deployment/local-demo")
-	require.Contains(t, string(kubectlOut), "successfully rolled out")
-
 	// Remove the package.
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "helm-local-chart", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -123,9 +119,7 @@ func testHelmOCIChart(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify that podinfo successfully deploys in the cluster
-	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=helm-oci-demo", "rollout", "status", "deployment/podinfo")
-	require.Contains(t, string(kubectlOut), "successfully rolled out")
-	kubectlOut, _, _ = e2e.ExecZarfCommand("tools", "kubectl", "-n=helm-oci-demo", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}")
+	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=helm-oci-demo", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}")
 	require.Contains(t, string(kubectlOut), "6.3.3")
 
 	// Remove the package.

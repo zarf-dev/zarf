@@ -13,3 +13,12 @@ components:
         version: 0.1.0
     images:
       - nginx:1.16.0
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: local-demo
+                namespace: local-chart
+                condition: available
