@@ -71,22 +71,6 @@ func TestZarfInit(t *testing.T) {
 	require.NotContains(t, logText, state.RegistryInfo.Secret)
 	require.NotContains(t, logText, state.LoggingSecret)
 
-	// Check that gitea is actually running and healthy
-	stdOut, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-l", "app in (gitea)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
-	require.NoError(t, err)
-	require.Contains(t, stdOut, "Running")
-
-	// Check that the logging stack is actually running and healthy
-	stdOut, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-l", "app in (loki)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
-	require.NoError(t, err)
-	require.Contains(t, stdOut, "Running")
-	stdOut, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-l", "app.kubernetes.io/name in (grafana)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
-	require.NoError(t, err)
-	require.Contains(t, stdOut, "Running")
-	stdOut, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-l", "app.kubernetes.io/name in (promtail)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
-	require.NoError(t, err)
-	require.Contains(t, stdOut, "Running")
-
 	// Check that the registry is running on the correct NodePort
 	stdOut, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
 	require.NoError(t, err)

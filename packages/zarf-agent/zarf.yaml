@@ -32,3 +32,11 @@ components:
         before:
           - cmd: "make init-package-local-agent AGENT_IMAGE_TAG=\"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\" ARCH=\"###ZARF_PKG_ARCH###\""
             dir: "../.."
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: pod
+                namespace: zarf
+                name: app=agent-hook
+                condition: Ready

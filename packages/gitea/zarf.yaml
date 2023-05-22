@@ -56,3 +56,9 @@ components:
           - cmd: "./zarf internal create-artifact-registry-token"
             maxRetries: 3
             maxTotalSeconds: 60
+          - wait:
+              cluster:
+                kind: pod
+                namespace: zarf
+                name: app=gitea
+                condition: Ready
