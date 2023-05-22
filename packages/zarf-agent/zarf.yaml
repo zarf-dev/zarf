@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
-  name: "init-package-zarf-agent"
-  description: "Install the zarf agent mutating webhook on a new cluster"
+  name: init-package-zarf-agent
+  description: Install the zarf agent mutating webhook on a new cluster
 
 constants:
   - name: AGENT_IMAGE
@@ -31,7 +31,7 @@ components:
       onCreate:
         before:
           - cmd: "make init-package-local-agent AGENT_IMAGE_TAG=\"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\" ARCH=\"###ZARF_PKG_ARCH###\""
-            dir: "../.."
+            dir: ../..
       onDeploy:
         after:
           - wait:

@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: longhorn
-  description: "Example package for Longhorn cloud native distributed block storage for Kubernetes"
+  description: Example package for Longhorn cloud native distributed block storage for Kubernetes
 components:
   - name: longhorn-environment-check
     required: true
@@ -24,7 +24,7 @@ components:
               ./environment_check.sh
   - name: longhorn
     required: true
-    description: "Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io"
+    description: Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io
     actions:
       # Set the delete confirmation flag for Longhorn
       onRemove:
@@ -41,7 +41,7 @@ components:
         version: 1.4.0
         namespace: longhorn-system
         valuesFiles:
-        - "values.yaml"
+        - values.yaml
     images:
       - longhornio/csi-attacher:v3.4.0
       - longhornio/csi-provisioner:v2.1.2

@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: git-data-check-secrets
   version: v1.0.0
-  description: "Demo Zarf loading resources into a gitops service - while checking that the component secret gets updated with each component"
+  description: Demo Zarf loading resources into a gitops service - while checking that the component secret gets updated with each component
 
 components:
   - name: flux-demo
@@ -23,7 +23,7 @@ components:
         before:
           # Check to verify the package secret has been saved for the already deployed component
           - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-check-secrets -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 1
-            description: "Check that the package secret has been updated with the deployed component"
+            description: Check that the package secret has been updated with the deployed component
             maxRetries: 3
 
   - name: specific-tag
@@ -38,20 +38,20 @@ components:
         before:
           # Check to verify the package secret has been saved for the already deployed component
           - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-check-secrets -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 2
-            description: "Check that the package secret has been updated with the deployed component"
+            description: Check that the package secret has been updated with the deployed component
             maxRetries: 3
 
   - name: specific-branch
     required: true
     repos:
       # Do a branch-provided Git Repo mirror
-      - "https://github.com/DoD-Platform-One/big-bang.git@refs/heads/release-1.54.x"
+      - https://github.com/DoD-Platform-One/big-bang.git@refs/heads/release-1.54.x
     actions:
       onDeploy:
         before:
           # Check to verify the package secret has been saved for the already deployed component
           - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-check-secrets -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 3
-            description: "Check that the package secret has been updated with the deployed component"
+            description: Check that the package secret has been updated with the deployed component
             maxRetries: 3
 
   - name: specific-hash
@@ -66,9 +66,9 @@ components:
         before:
           # Check to verify the package secret has been saved for the already deployed component
           - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-check-secrets -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 4
-            description: "Check that the package secret has been updated with the deployed component"
+            description: Check that the package secret has been updated with the deployed component
             maxRetries: 3
         onSuccess:
           - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-check-secrets -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 5
-            description: "Check that the package secret has been updated with the deployed component"
+            description: Check that the package secret has been updated with the deployed component
             maxRetries: 3

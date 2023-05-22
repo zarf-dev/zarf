@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: yolo
   yolo: true
-  description: "Game example in YOLO (online-only) mode that can be deployed without a Zarf cluster"
+  description: Game example in YOLO (online-only) mode that can be deployed without a Zarf cluster
 
 components:
   - name: yolo-games

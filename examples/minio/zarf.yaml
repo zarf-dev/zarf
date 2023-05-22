@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: minio
-  description: "Deploy minio"
+  description: Deploy minio
   version: 4.3.7
   url: https://operator.min.io/
   image: https://raw.githubusercontent.com/minio/minio/master/.github/logo.svg?sanitize=true

@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: config-file
-  description: 'Test component to demonstrate using a config file to control the cli. Files are generated using "zarf prepare generate-config"'
+  description: Test component to demonstrate using a config file to control the cli. Files are generated using "zarf prepare generate-config"
 
 variables:
   - name: SCORPION
@@ -9,7 +9,7 @@ variables:
 
 components:
   - name: lion
-    description: "By default, only this component will be deployed when using the config file"
+    description: By default, only this component will be deployed when using the config file
     required: true
     manifests:
       - name: config-example-configmap
@@ -17,6 +17,7 @@ components:
           - simple-configmap.yaml
 
   - name: zebra
+    # Notice this string is wrapped in quotes, as Zarf variables use #### as a delimiter, which is also used in YAML for comments
     description: "This is a zebra and they have ###ZARF_PKG_TMPL_ZEBRA###"
 
   - name: leopard

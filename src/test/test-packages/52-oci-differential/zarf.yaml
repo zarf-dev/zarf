@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: podinfo-with-oci-flux
-  description: "Deploy flux and then podinfo via flux"
+  description: Deploy flux and then podinfo via flux
   version: "###ZARF_PKG_TMPL_PACKAGE_VERSION###"
 
 components:

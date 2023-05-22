@@ -1,12 +1,12 @@
 kind: ZarfPackageConfig
 metadata:
   name: composable-packages
-  description: "Demo Zarf package composability"
+  description: Demo Zarf package composability
 
 components:
   - name: games
     required: true
-    description: "Example of a composed package with a unique description for this component"
+    description: Example of a composed package with a unique description for this component
     import:
       path: ../dos-games
       # Example optional custom name to point to in the imported package

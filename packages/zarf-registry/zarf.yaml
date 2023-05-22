@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: "init-package-zarf-registry"
+  name: init-package-zarf-registry
 
 variables:
   - name: REGISTRY_EXISTING_PVC
@@ -8,39 +8,39 @@ variables:
     default: ""
 
   - name: REGISTRY_PVC_SIZE
-    description: "The size of the persistent volume claim for the registry"
-    default: "20Gi"
+    description: The size of the persistent volume claim for the registry
+    default: 20Gi
 
   - name: REGISTRY_PVC_ACCESS_MODE
-    description: "The access mode of the persistent volume claim for the registry"
-    default: "ReadWriteOnce"
+    description: The access mode of the persistent volume claim for the registry
+    default: ReadWriteOnce
 
   - name: REGISTRY_CPU_REQ
-    description: "The CPU request for the registry"
-    default: "100m"
+    description: The CPU request for the registry
+    default: 100m
 
   - name: REGISTRY_MEM_REQ
-    description: "The memory request for the registry"
-    default: "256Mi"
+    description: The memory request for the registry
+    default: 256Mi
 
   - name: REGISTRY_CPU_LIMIT
-    description: "The CPU limit for the registry"
+    description: The CPU limit for the registry
     default: "3"
 
   - name: REGISTRY_MEM_LIMIT
-    description: "The memory limit for the registry"
+    description: The memory limit for the registry
     default: "2Gi"
 
   - name: REGISTRY_HPA_MIN
-    description: "The minimum number of registry replicas"
+    description: The minimum number of registry replicas
     default: "1"
 
   - name: REGISTRY_HPA_MAX
-    description: "The maximum number of registry replicas"
+    description: The maximum number of registry replicas
     default: "5"
 
   - name: REGISTRY_HPA_ENABLE
-    description: "Enable the Horizontal Pod Autoscaler for the registry"
+    description: Enable the Horizontal Pod Autoscaler for the registry
     default: "true"
 
 constants:

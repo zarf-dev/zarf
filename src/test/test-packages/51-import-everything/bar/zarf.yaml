@@ -16,7 +16,7 @@ components:
       onCreate:
         before:
           - cmd: cat files/coffee-ipsum.txt
-            dir: "../"
+            dir: ../
         after:
           - cmd: cat ../files/coffee-ipsum.txt
         onSuccess:

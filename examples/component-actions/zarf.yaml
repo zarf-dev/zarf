@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: component-actions
-  description: "Component actions examples"
+  description: Component actions examples
 
 variables:
   - name: DOG_SOUND
@@ -27,7 +27,7 @@ components:
             dir: ""
             # this environment variable will be set for this action only
             env:
-              - "thing=stuff"
+              - thing=stuff
             # the number of times to retry the action if it fails
             maxRetries: 0
             # the maximum amount of times the action can run before it is killed, including retries
@@ -151,7 +151,7 @@ components:
     manifests:
       - name: test-configmap
         files:
-          - "test-configmap.yaml"
+          - test-configmap.yaml
     actions:
       # runs during "zarf package remove"
       onRemove:
@@ -169,7 +169,7 @@ components:
           - cmd: touch $ZARF_VAR_TEST_FILENAME
             env:
               # this will set the env var ZARF_VAR_TEST_FILENAME - useful for passing information into scripts
-              - "ZARF_VAR_TEST_FILENAME=filename-from-env.txt"
+              - ZARF_VAR_TEST_FILENAME=filename-from-env.txt
 
   - name: on-create-with-network-wait-action
     description: This component will wait for 15 seconds for a network resource to be available
@@ -189,7 +189,7 @@ components:
     manifests:
       - name: test-configmap
         files:
-          - "test-configmap.yaml"
+          - test-configmap.yaml
     actions:
       onDeploy:
         after:

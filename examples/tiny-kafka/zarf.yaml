@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: tiny-kafka
-  description: "Demo tiny Zarf Kafka deployment"
+  description: Demo tiny Zarf Kafka deployment
 
 components:
   - name: baseline

@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: differential-package
   version: "###ZARF_PKG_TMPL_PACKAGE_VERSION###"
-  description: "Demo Zarf loading resources into a gitops service"
+  description: Demo Zarf loading resources into a gitops service
 
 components:
   - name: versioned-assets
@@ -25,4 +25,4 @@ components:
       # Do a full Git Repo Mirror
       - https://github.com/stefanprodan/podinfo.git
       - https://github.com/kelseyhightower/nocode.git
-      - "https://github.com/DoD-Platform-One/big-bang.git@refs/heads/release-1.54.x"
+      - https://github.com/DoD-Platform-One/big-bang.git@refs/heads/release-1.54.x

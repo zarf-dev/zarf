@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: terraform
-  description: "Run terraform/terragrunt code"
+  description: Run terraform/terragrunt code
 
 components:
   - name: download-terraform
@@ -28,8 +28,8 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: "terraform init -plugin-dir=tf-plugins"
-          - cmd: "terraform apply -auto-approve"
+          - cmd: terraform init -plugin-dir=tf-plugins
+          - cmd: terraform apply -auto-approve
       onRemove:
         before:
-          - cmd: "terraform destroy -auto-approve"
+          - cmd: terraform destroy -auto-approve

@@ -13,7 +13,7 @@ components:
         namespace: helm-oci-demo
         url: oci://ghcr.io/stefanprodan/charts/podinfo
     images:
-      - "ghcr.io/stefanprodan/podinfo:6.3.3"
+      - ghcr.io/stefanprodan/podinfo:6.3.3
     actions:
       onDeploy:
         after:

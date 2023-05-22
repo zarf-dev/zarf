@@ -1,14 +1,14 @@
 kind: ZarfPackageConfig
 metadata:
   name: variables
-  description: "Example nginx package to demonstrate Zarf variables"
+  description: Example nginx package to demonstrate Zarf variables
 
 # Constants are defined on package create and do not change on deploy
 # This demonstrates setting the nginx version to bake into the package using a package variable (PKG_TMPL)
 # NOTE: package templates (PKG_TMPL) only apply to zarf.yaml files so defining this here turns into ###ZARF_CONST_NGINX_VERSION### on deploy
 # ALSO NOTE: the PKG_TMPL is surrounded by quotes ("") inside of the zarf.yaml, while this is not required for deploy-time variables, PKG_TMPLs will be removed as comments without them
 constants:
-  - name: "NGINX_VERSION"
+  - name: NGINX_VERSION
     value: "###ZARF_PKG_TMPL_NGINX_VERSION###"
 
 # Demonstrates injecting custom variables into a K8s resource
@@ -24,23 +24,23 @@ variables:
     autoIndent: true
   # SITE_NAME sets the name of the site and will ask the user interactively if it is not set on the CLI or in the config file
   - name: SITE_NAME
-    description: "The name of the site you are deploying (i.e. Lula Website)"
+    description: The name of the site you are deploying (i.e. Lula Website)
     prompt: true
   # ORGANIZATION sets the organization to Defense Unicorns as a default but prompts the user if they would like to override it
   - name: ORGANIZATION
-    description: "The organization providing the site"
-    default: "Defense Unicorns"
+    description: The organization providing the site
+    default: Defense Unicorns
     prompt: true
   # AWS_REGION sets the region to set in the modified-terraform file and sets `sensitive` so that it will not be saved in the log
   - name: AWS_REGION
-    default: "us-east-1"
+    default: us-east-1
     sensitive: true
 
 components:
   # The following component templates the provided .tf file with the defined AWS_REGION
   # NOTE: this component does not actually execute this file in this example (see examples/terraform)
   - name: variables-with-terraform
-    description: "Change a value in a regular file with a Zarf variable. Set AWS_REGION variable to modify the file."
+    description: Change a value in a regular file with a Zarf variable. Set AWS_REGION variable to modify the file.
     required: true
     files:
       - source: simple-terraform.tf

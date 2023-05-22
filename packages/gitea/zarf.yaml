@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: "init-package-git-server"
+  name: init-package-git-server
 
 variables:
   - name: GIT_SERVER_EXISTING_PVC
@@ -8,24 +8,24 @@ variables:
     default: ""
 
   - name: GIT_SERVER_PVC_SIZE
-    description: "The size of the persistent volume claim for git server"
-    default: "10Gi"
+    description: The size of the persistent volume claim for git server
+    default: 10Gi
 
   - name: GIT_SERVER_CPU_REQ
-    description: "The CPU request for git server"
-    default: "200m"
+    description: The CPU request for git server
+    default: 200m
 
   - name: GIT_SERVER_MEM_REQ
-    description: "The memory request for git server"
-    default: "512Mi"
+    description: The memory request for git server
+    default: 512Mi
 
   - name: GIT_SERVER_CPU_LIMIT
-    description: "The CPU limit for git server"
+    description: The CPU limit for git server
     default: "3"
 
   - name: GIT_SERVER_MEM_LIMIT
-    description: "The memory limit for git server"
-    default: "2Gi"
+    description: The memory limit for git server
+    default: 2Gi
 
 components:
   - name: git-server
@@ -50,10 +50,10 @@ components:
     actions:
       onDeploy:
         after:
-          - cmd: "./zarf internal create-read-only-gitea-user"
+          - cmd: ./zarf internal create-read-only-gitea-user
             maxRetries: 3
             maxTotalSeconds: 60
-          - cmd: "./zarf internal create-artifact-registry-token"
+          - cmd: ./zarf internal create-artifact-registry-token
             maxRetries: 3
             maxTotalSeconds: 60
           - wait:

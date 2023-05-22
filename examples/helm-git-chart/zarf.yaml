@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: helm-git-chart
-  description: "Deploys a helm chart from git"
+  description: Deploys a helm chart from git
 components:
   - name: demo-helm-git-chart
     required: true
@@ -12,7 +12,7 @@ components:
         namespace: podinfo-from-git
         version: 6.3.5
     images:
-      - "ghcr.io/stefanprodan/podinfo:6.3.5"
+      - ghcr.io/stefanprodan/podinfo:6.3.5
     actions:
       onDeploy:
         after:

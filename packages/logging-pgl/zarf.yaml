@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: "init-package-logging"
+  name: init-package-logging
 
 components:
   - name: logging

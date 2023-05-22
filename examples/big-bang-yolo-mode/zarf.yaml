@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 
 metadata:
   name: yolo-big-bang
-  description: "Deploy Big Bang Core in YOLO mode"
+  description: Deploy Big Bang Core in YOLO mode
   version: 2.0.0
   url: https://p1.dso.mil/products/big-bang
   architecture: amd64
@@ -10,16 +10,13 @@ metadata:
 
 variables:
   - name: REGISTRY1_USERNAME
-    description: "The username for pulling images from registry1.dso.mil"
-    required: true
+    description: The username for pulling images from registry1.dso.mil
     prompt: true
   - name: REGISTRY1_CLI_SECRET
-    description: "The CLI secret for pulling images from registry1.dso.mil"
-    required: true
+    description: The CLI secret for pulling images from registry1.dso.mil
     prompt: true
   - name: REGISTRY1_AUTH
-    description: "A base64 encoded concatenation of 'REGISTRY1_USERNAME:REGISTRY1_CLI_SECRET'"
-    required: true
+    description: A base64 encoded concatenation of 'REGISTRY1_USERNAME:REGISTRY1_CLI_SECRET'
     prompt: true
 
 components:

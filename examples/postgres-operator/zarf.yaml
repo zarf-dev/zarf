@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: postgres-operator
-  description: "Demo of prod-like Postgres database(s) on an edge cluster"
+  description: Demo of prod-like Postgres database(s) on an edge cluster
 
 variables:
   - name: PGADMIN_PASSWORD

@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: helm-alt-release-name
-  description: "Deploys a helm chart with custom release name"
+  description: Deploys a helm chart with custom release name
 components:
   - name: demo-helm-releasename
     required: true
