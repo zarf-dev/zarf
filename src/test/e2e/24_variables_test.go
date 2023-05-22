@@ -55,11 +55,6 @@ func TestVariables(t *testing.T) {
 	// AWS_REGION should have been templated and also templated into this config map
 	require.Contains(t, string(kubectlOut), "unicorn-land")
 
-	// Verify that the nginx deployment was successful (the NGINX_VERSION constant templated the image correctly)
-	kubectlOut, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-l", "app in (nginx)", "-n", "nginx", "-o", "jsonpath={.items[*].status.phase}")
-	require.NoError(t, err)
-	require.Contains(t, kubectlOut, "Running")
-
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 

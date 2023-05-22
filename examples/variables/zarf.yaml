@@ -71,3 +71,12 @@ components:
           - nginx-configmap.yaml
           - nginx-deployment.yaml
           - nginx-service.yaml
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: pod
+                namespace: nginx
+                name: app=nginx
+                condition: Ready

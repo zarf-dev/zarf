@@ -13,3 +13,12 @@ components:
         version: 6.3.5
     images:
       - "ghcr.io/stefanprodan/podinfo:6.3.5"
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                namespace: podinfo-from-git
+                name: podinfo
+                condition: Available

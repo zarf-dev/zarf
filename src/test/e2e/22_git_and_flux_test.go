@@ -106,7 +106,4 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	path := fmt.Sprintf("build/zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-
-	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=podinfo", "rollout", "status", "deployment/podinfo")
-	require.Contains(t, string(kubectlOut), "successfully rolled out")
 }

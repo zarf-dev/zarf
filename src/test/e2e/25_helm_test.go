@@ -65,10 +65,6 @@ func testHelmGitChartWithRegistryOverride(t *testing.T) {
 	require.Contains(t, string(stdErr), "registryOverrides", "registry overrides was not saved to build data")
 	require.Contains(t, string(stdErr), "docker.io", "docker.io not found in registry overrides")
 
-	// Verify that nginx successfully deploys in the cluster
-	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=podinfo-from-git", "rollout", "status", "deployment/podinfo")
-	require.Contains(t, string(kubectlOut), "successfully rolled out")
-
 	// Remove the package.
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "helm-git-chart", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
