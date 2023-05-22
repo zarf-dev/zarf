@@ -8,6 +8,8 @@ import (
 	"github.com/pterm/pterm"
 )
 
+const padding = "    "
+
 // ProgressBar is a struct used to drive a pterm ProgressbarPrinter.
 type ProgressBar struct {
 	progress  *pterm.ProgressbarPrinter
@@ -23,7 +25,7 @@ func NewProgressBar(total int64, text string) *ProgressBar {
 		progress, _ = pterm.DefaultProgressbar.
 			WithTotal(int(total)).
 			WithShowCount(false).
-			WithTitle("     " + text).
+			WithTitle(padding + text).
 			WithRemoveWhenDone(true).
 			WithMaxWidth(TermWidth).
 			Start()
@@ -37,7 +39,11 @@ func NewProgressBar(total int64, text string) *ProgressBar {
 
 // Update updates the ProgressBar with completed progress and new text.
 func (p *ProgressBar) Update(complete int64, text string) {
-	p.UpdateTitle(text)
+	if NoProgress {
+		Debug(text)
+		return
+	}
+	p.progress.UpdateTitle(padding + text)
 	chunk := int(complete) - p.progress.Current
 	p.Add(chunk)
 }
@@ -48,7 +54,7 @@ func (p *ProgressBar) UpdateTitle(text string) {
 		Debug(text)
 		return
 	}
-	p.progress.UpdateTitle("     " + text)
+	p.progress.UpdateTitle(padding + text)
 }
 
 // Add updates the ProgressBar with completed progress.
