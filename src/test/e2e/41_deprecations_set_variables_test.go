@@ -47,7 +47,7 @@ func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 	// 1. Deploy the setVariable action that should pass and output the variable
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", testPackagePath, "--confirm", "--components=1-test-deprecated-set-variable")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Hello from: Hello Kitteh")
+	require.Contains(t, stdErr, "Hello from Hello Kitteh")
 
 	// 2. Deploy the setVariable action that should pass and output the variable
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", testPackagePath, "--confirm", "--components=2-test-deprecated-pkg-var")
