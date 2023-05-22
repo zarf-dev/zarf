@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/mholt/archiver/v3"
@@ -55,7 +56,7 @@ var archiverDecompressCmd = &cobra.Command{
 				if strings.HasSuffix(path, ".tar") {
 					dst := filepath.Join(strings.TrimSuffix(path, ".tar"), "..")
 					// Unpack sboms.tar differently since it has a different folder structure than components
-					if info.Name() == "sboms.tar" {
+					if info.Name() == config.ZarfSBOMTar {
 						dst = strings.TrimSuffix(path, ".tar")
 					}
 					err := archiver.Unarchive(path, dst)

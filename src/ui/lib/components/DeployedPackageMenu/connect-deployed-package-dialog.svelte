@@ -87,7 +87,7 @@
 					Select which resource you would like Zarf to connect to. Zarf will create a tunnel and
 					open the connection in a new tab
 				</Typography>
-				<List ssx={listSSX}>
+				<List ssx={listSSX} backgroundColor="transparent">
 					{#each connections as connection}
 						<Typography
 							variant="body1"
