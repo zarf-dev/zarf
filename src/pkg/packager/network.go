@@ -217,6 +217,7 @@ func getOCIPackageSize(src *utils.OrasRemote, layers ...string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	manifestLayers := manifest.Layers
 
 	processedLayers := make(map[string]bool)
