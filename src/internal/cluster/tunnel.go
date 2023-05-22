@@ -282,9 +282,15 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 	if blocking {
 		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors.
 		if tunnel.autoOpen {
+			if tunnel.spinner != nil {
+				tunnel.spinner.Updatef("Tunnel established at %s, opening your default web browser (ctrl-c to end)", url)
+			}
+
 			if err := exec.LaunchURL(url); err != nil {
 				message.Debug(err)
 			}
+		} else if tunnel.spinner != nil {
+			tunnel.spinner.Updatef("Tunnel established at %s, waiting for user to interrupt (ctrl-c to end)", url)
 		}
 
 		// Dump the tunnel URL to the console for other tools to use.

@@ -35,18 +35,18 @@ func TestHelm(t *testing.T) {
 func testHelmReleaseName(t *testing.T) {
 	t.Log("E2E: Helm chart releasename")
 
-	path := fmt.Sprintf("build/zarf-package-test-helm-releasename-%s.tar.zst", e2e.Arch)
+	path := fmt.Sprintf("build/zarf-package-helm-alt-release-name-%s.tar.zst", e2e.Arch)
 
 	// Deploy the package.
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify multiple helm installs of different release names were deployed.
-	kubectlOut, _ := exec.Command("kubectl", "get", "pods", "-n=helm-releasename", "--no-headers").Output()
+	kubectlOut, _ := exec.Command("kubectl", "get", "pods", "-n=helm-alt-release-name", "--no-headers").Output()
 	require.Contains(t, string(kubectlOut), "cool-name-podinfo")
 
 	// Remove the package.
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "test-helm-releasename", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "helm-alt-release-name", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
@@ -77,7 +77,7 @@ func testHelmGitChartWithRegistryOverride(t *testing.T) {
 func testHelmLocalChart(t *testing.T) {
 	t.Log("E2E: Local Helm chart")
 
-	path := fmt.Sprintf("build/zarf-package-test-helm-local-chart-%s.tar.zst", e2e.Arch)
+	path := fmt.Sprintf("build/zarf-package-helm-local-chart-%s-0.0.1.tar.zst", e2e.Arch)
 
 	// Deploy the package.
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
@@ -88,7 +88,7 @@ func testHelmLocalChart(t *testing.T) {
 	require.Contains(t, string(kubectlOut), "successfully rolled out")
 
 	// Remove the package.
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "test-helm-local-chart", "--confirm")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "helm-local-chart", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 

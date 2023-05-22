@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: test-helm-wait
+  name: helm-no-wait
   description: "Deploys a pod which never becomes ready"
 components:
   - name: zarf-helm-no-wait
@@ -13,4 +13,3 @@ components:
           - never-ready.pod.yaml
     images:
       - alpine:latest
-

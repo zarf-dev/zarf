@@ -34,7 +34,7 @@ const (
 		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
 	RootCmdFlagLogLevel    = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
-	RootCmdFlagArch        = "Architecture for OCI images"
+	RootCmdFlagArch        = "Architecture for OCI images and Zarf packages"
 	RootCmdFlagSkipLogFile = "Disable log file creation"
 	RootCmdFlagNoProgress  = "Disable fancy UI progress bars, spinners, logos, etc"
 	RootCmdFlagCachePath   = "Specify the location of the Zarf cache directory"
@@ -129,14 +129,14 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdInitDownloadAsk       = "It seems the init package could not be found locally, but can be downloaded from %s"
 	CmdInitDownloadNote      = "Note: This will require an internet connection."
 	CmdInitDownloadConfirm   = "Do you want to download this init package?"
-	CmdInitDownloadCancel    = "confirm selection canceled: %s"
+	CmdInitDownloadErrCancel = "confirm selection canceled: %s"
 	CmdInitDownloadErrManual = "download the init package manually and place it in the current working directory"
 
 	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
 
 	CmdInitFlagConfirm      = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdInitFlagComponents   = "Specify which optional components to install.  E.g. --components=git-server,logging"
-	CmdInitFlagStorageClass = "Specify the storage class to use for the registry.  E.g. --storage-class=standard"
+	CmdInitFlagStorageClass = "Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard"
 
 	CmdInitFlagGitURL      = "External git server url to use for this Zarf cluster"
 	CmdInitFlagGitPushUser = "Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'"
@@ -265,6 +265,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPrepareFlagSet           = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
 	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."
+	CmdPrepareFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"
@@ -274,6 +275,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdToolsArchiverCompressErr     = "Unable to perform compression"
 	CmdToolsArchiverDecompressShort = "Decompress an archive or Zarf package based off of the source file extension."
 	CmdToolsArchiverDecompressErr   = "Unable to perform decompression"
+	CmdToolsArchiverUnarchiveAllErr = "Unable to unarchive all nested tarballs"
 
 	CmdToolsRegistryShort = "Tools for working with container registries using go-containertools."
 
@@ -288,6 +290,10 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdToolsClearCacheErr           = "Unable to clear the cache directory %s"
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
+
+	CmdToolsDownloadInitShort               = "Download the init package for the current Zarf version into the specified directory."
+	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."
+	CmdToolsDownloadInitErr                 = "Unable to download the init package: %s"
 
 	CmdToolsGenPkiShort       = "Generates a Certificate Authority and PKI chain of trust for the given host"
 	CmdToolsGenPkiSuccess     = "Successfully created a chain of trust for %s"
@@ -380,7 +386,9 @@ const (
 	PkgValidateErrComponentReqGrouped     = "component %s cannot be both required and grouped"
 	PkgValidateErrComponentYOLO           = "component %s incompatible with the online-only package flag (metadata.yolo): %w"
 	PkgValidateErrConstant                = "invalid package constant: %w"
-	PkgValidateErrImportPathInvalid       = "invalid file path \"%s\" provided directory must contain a valid zarf.yaml file"
+	PkgValidateErrImportPathInvalid       = "invalid file path '%s' provided directory must contain a valid zarf.yaml file"
+	PkgValidateErrImportURLInvalid        = "invalid url '%s' provided"
+	PkgValidateErrImportOptions           = "imported package %s must have either a url or a path"
 	PkgValidateErrImportPathMissing       = "imported package %s must include a path"
 	PkgValidateErrInitNoYOLO              = "sorry, you can't YOLO an init package"
 	PkgValidateErrManifest                = "invalid manifest definition: %w"
@@ -399,5 +407,6 @@ const (
 
 // Collection of reusable error messages.
 var (
-	ErrInitNotFound = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
+	ErrInitNotFound      = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
+	ErrUnableToCheckArch = errors.New("unable to get the configured cluster's architecture")
 )

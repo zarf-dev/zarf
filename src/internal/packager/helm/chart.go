@@ -18,6 +18,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chartutil"
 
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
@@ -138,7 +139,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 }
 
 // TemplateChart generates a helm template from a given chart.
-func (h *Helm) TemplateChart() (string, error) {
+func (h *Helm) TemplateChart() (string, chartutil.Values, error) {
 	message.Debugf("helm.TemplateChart()")
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.Chart.Name)
 	defer spinner.Stop()
@@ -147,7 +148,7 @@ func (h *Helm) TemplateChart() (string, error) {
 
 	// Setup K8s connection.
 	if err != nil {
-		return "", fmt.Errorf("unable to initialize the K8s client: %w", err)
+		return "", nil, fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
 	// Bind the helm action.
@@ -160,7 +161,13 @@ func (h *Helm) TemplateChart() (string, error) {
 	// TODO: Further research this with regular/OCI charts
 	client.Verify = false
 	client.InsecureSkipTLSverify = config.CommonOptions.Insecure
-
+	if h.KubeVersion != "" {
+		parsedKubeVersion, err := chartutil.ParseKubeVersion(h.KubeVersion)
+		if err != nil {
+			return "", nil, fmt.Errorf("invalid kube version '%s': %s", h.KubeVersion, err)
+		}
+		client.KubeVersion = parsedKubeVersion
+	}
 	client.ReleaseName = h.Chart.ReleaseName
 
 	// If no release name is specified, use the chart name.
@@ -173,13 +180,13 @@ func (h *Helm) TemplateChart() (string, error) {
 
 	loadedChart, chartValues, err := h.loadChartData()
 	if err != nil {
-		return "", fmt.Errorf("unable to load chart data: %w", err)
+		return "", nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
 
 	// Perform the loadedChart installation.
 	templatedChart, err := client.Run(loadedChart, chartValues)
 	if err != nil {
-		return "", fmt.Errorf("error generating helm chart template: %w", err)
+		return "", nil, fmt.Errorf("error generating helm chart template: %w", err)
 	}
 
 	manifest := templatedChart.Manifest
@@ -190,7 +197,7 @@ func (h *Helm) TemplateChart() (string, error) {
 
 	spinner.Success()
 
-	return manifest, nil
+	return manifest, chartValues, nil
 }
 
 // GenerateChart generates a helm chart for a given Zarf manifest.
@@ -340,11 +347,11 @@ func (h *Helm) uninstallChart(name string) (*release.UninstallReleaseResponse, e
 	return client.Run(name)
 }
 
-func (h *Helm) loadChartData() (*chart.Chart, map[string]any, error) {
+func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
 	message.Debugf("helm.loadChartData()")
 	var (
 		loadedChart *chart.Chart
-		chartValues map[string]any
+		chartValues chartutil.Values
 		err         error
 	)
 

@@ -31,6 +31,9 @@ const (
 	DebugLevel
 	// TraceLevel level. Designates finer-grained informational events than the Debug.
 	TraceLevel
+
+	// TermWidth sets the width of full width elements like progressbars and headers
+	TermWidth = 85
 )
 
 // NoProgress tracks whether spinner/progress bars show updates.
@@ -66,7 +69,6 @@ func init() {
 		Text: " •",
 	}
 
-	pterm.DefaultProgressbar.MaxWidth = 85
 	pterm.SetDefaultOutput(os.Stderr)
 }
 
@@ -208,9 +210,9 @@ func Notef(format string, a ...any) {
 
 // HeaderInfof prints a large header with a formatted message.
 func HeaderInfof(format string, a ...any) {
-	message := fmt.Sprintf(format, a...)
+	message := Truncate(fmt.Sprintf(format, a...), TermWidth, false)
 	// Ensure the text is consistent for the header width
-	padding := 85 - len(message)
+	padding := TermWidth - len(message)
 	pterm.Println()
 	pterm.DefaultHeader.
 		WithBackgroundStyle(pterm.NewStyle(pterm.BgDarkGray)).
@@ -259,6 +261,23 @@ func PrintDiff(textA, textB string) {
 	diffs = dmp.DiffCleanupSemantic(diffs)
 
 	pterm.Println(dmp.DiffPrettyText(diffs))
+}
+
+// Truncate truncates provided text to the requested length
+func Truncate(text string, length int, invert bool) string {
+	// Remove newlines and replace with semicolons
+	textEscaped := strings.ReplaceAll(text, "\n", "; ")
+	// Truncate the text if it is longer than length so it isn't too long.
+	if len(textEscaped) > length {
+		if invert {
+			start := len(textEscaped) - length + 3
+			textEscaped = "..." + textEscaped[start:]
+		} else {
+			end := length - 3
+			textEscaped = textEscaped[:end] + "..."
+		}
+	}
+	return textEscaped
 }
 
 func debugPrinter(offset int, a ...any) {

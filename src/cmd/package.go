@@ -81,8 +81,11 @@ var packageDeployCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
 
-		// Ensure uppercase keys from viper
+		// Ensure uppercase keys from viper and CLI --set
 		viperConfigSetVariables := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
+		pkgConfig.DeployOpts.SetVariables = utils.TransformMapKeys(pkgConfig.DeployOpts.SetVariables, strings.ToUpper)
+
+		// Merge the viper config file variables and provided CLI flag variables (CLI takes precedence))
 		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(viperConfigSetVariables, pkgConfig.DeployOpts.SetVariables)
 
 		// Configure the packager
@@ -198,10 +201,16 @@ var packageRemoveCmd = &cobra.Command{
 }
 
 var packagePublishCmd = &cobra.Command{
-	Use:     "publish [PACKAGE] [REPOSITORY]",
-	Short:   "Publish a Zarf package to a remote registry",
-	Example: "  zarf package publish my-package.tar oci://my-registry.com/my-namespace",
-	Args:    cobra.ExactArgs(2),
+	Use:   "publish [PACKAGE|SKELETON DIRECTORY] [REPOSITORY]",
+	Short: "Publish a Zarf package to a remote registry",
+	Example: `
+# Publish a package to a remote registry
+zarf package publish my-package.tar oci://my-registry.com/my-namespace
+
+# Publish a skeleton package to a remote registry
+zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
+`,
+	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
 
@@ -365,6 +374,9 @@ func bindPublishFlags() {
 
 func bindPullFlags() {
 	pullFlags := packagePullCmd.Flags()
-	pullFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+	v.SetDefault(V_PKG_PULL_OUTPUT_DIR, "")
+	v.SetDefault(V_PKG_PULL_OCI_CONCURRENCY, 3)
+	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_PULL_OUTPUT_DIR), lang.CmdPackageCreateFlagOutputDirectory)
+	pullFlags.IntVar(&pkgConfig.PullOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PULL_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_PULL_PUBLIC_KEY), lang.CmdPackagePullPublicKey)
 }

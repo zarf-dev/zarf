@@ -1,12 +1,8 @@
+import ExampleYAML from "@site/src/components/ExampleYAML";
+
 # Tiny Kafka
 
 This example demonstrates using Zarf to deploy a simple operator example, in this case, [Strimzi Kafka](https://strimzi.io/) Operator](https://strimzi.io/).
-
-:::info
-
-To view the example source code, select the `Edit this page` link below the article and select the parent folder.
-
-:::
 
 ## Prerequisites
 
@@ -20,7 +16,7 @@ Before the magic can happen you have to do a few things:
 
 1. Build the package using `zarf package create examples/tiny-kafka`
 
-1. Create a Zarf cluster as described in the [Initializing a Cluster Tutorial](../../docs/6-zarf-tutorials/1-initializing-a-k8s-cluster.md/)
+1. Create a Zarf cluster as described in the [Initializing a Cluster Tutorial](../../docs/5-zarf-tutorials/1-initializing-a-k8s-cluster.md/)
 
 ## Instructions
 
@@ -42,3 +38,11 @@ Testing requires JDK and the Kafka tools: `sudo apt install openjdk-14-jdk-headl
 2. Get the Nodeport: `NODEPORT=$(zarf tools kubectl get service demo-kafka-external-bootstrap -n kafka-demo -o=jsonpath='{.spec.ports[0].nodePort}{"\n"}')`
 3. For pub: `./bin/kafka-console-producer.sh --broker-list localhost:$NODEPORT --topic cool-topic`
 4. For sub: `./bin/kafka-console-consumer.sh --bootstrap-server localhost:$NODEPORT --topic cool-topic`
+
+:::info
+
+To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
+
+:::
+
+<ExampleYAML example="tiny-kafka" showLink={false} />

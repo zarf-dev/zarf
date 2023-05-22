@@ -22,8 +22,9 @@ func TestCreateTemplating(t *testing.T) {
 	// run `zarf package create` with a specified image cache location
 	cachePath := filepath.Join(os.TempDir(), ".cache-location")
 	decompressPath := filepath.Join(os.TempDir(), ".package-decompressed")
+	sbomPath := filepath.Join(os.TempDir(), ".sbom-location")
 
-	e2e.CleanFiles(cachePath, decompressPath)
+	e2e.CleanFiles(cachePath, decompressPath, sbomPath)
 
 	pkgName := fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.Arch)
 
@@ -36,7 +37,7 @@ func TestCreateTemplating(t *testing.T) {
 	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", "examples/variables", "--set", "NGINX_VERSION=1.23.3", "--confirm", "--zarf-cache", cachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("t", "archiver", "decompress", pkgName, decompressPath, "--decompress-all", "-l=trace")
+	stdOut, stdErr, err = e2e.ExecZarfCommand("t", "archiver", "decompress", pkgName, decompressPath, "--unarchive-all", "-l=trace")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the constant in the zarf.yaml is replaced correctly
@@ -44,5 +45,33 @@ func TestCreateTemplating(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(builtConfig), "name: NGINX_VERSION\n  value: 1.23.3")
 
-	e2e.CleanFiles(cachePath, decompressPath, pkgName)
+	// Test that files and file folders template and handle SBOMs correctly
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", "src/test/test-packages/04-file-folders-templating-sbom/", "--confirm", "--sbom-out", sbomPath)
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdErr, "Creating SBOMs for 0 images and 2 components with files.")
+
+	fileFoldersPkgName := fmt.Sprintf("zarf-package-file-folders-templating-sbom-%s.tar.zst", e2e.Arch)
+
+	// Deploy the package and look for the variables in the output
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", fileFoldersPkgName, "--confirm", "--set", "DOGGO=doggy", "--set", "KITTEH=meowza", "--set", "PANDA=pandemonium")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdErr, "A doggy barks!")
+	require.Contains(t, stdErr, "  - meowza")
+	require.Contains(t, stdErr, "# Total pandemonium")
+
+	// Ensure that the `requirements.txt` files are discovered correctly
+	_, err = os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "compare.html"))
+	require.NoError(t, err)
+	_, err = os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "sbom-viewer-zarf-component-folders.html"))
+	require.NoError(t, err)
+	foldersJSON, err := os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "zarf-component-folders.json"))
+	require.NoError(t, err)
+	require.Contains(t, string(foldersJSON), "numpy")
+	_, err = os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "sbom-viewer-zarf-component-files.html"))
+	require.NoError(t, err)
+	filesJSON, err := os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "zarf-component-files.json"))
+	require.NoError(t, err)
+	require.Contains(t, string(filesJSON), "pandas")
+
+	e2e.CleanFiles(cachePath, decompressPath, pkgName, fileFoldersPkgName, sbomPath)
 }

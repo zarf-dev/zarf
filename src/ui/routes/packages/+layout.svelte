@@ -4,7 +4,10 @@
  -->
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { Packages } from '$lib/api';
+	import { pkgSbomStore } from '$lib/store';
 	import { Box, Stepper, type SSX } from '@ui';
+	import { onDestroy } from 'svelte';
 
 	const stepMap: Record<string, number> = {
 		packages: 1,
@@ -12,6 +15,12 @@
 		review: 3,
 		deploy: 4,
 	};
+
+	// Clean any SBOMs that may have been extracted.
+	onDestroy(() => {
+		pkgSbomStore.set(undefined);
+		Packages.cleanSBOM();
+	});
 
 	$: stepName = $page.route.id?.split('/').pop() || '';
 	$: stepNumber = (stepName && stepMap[stepName]) || 500;

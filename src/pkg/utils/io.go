@@ -62,10 +62,10 @@ func CreateDirectory(path string, mode os.FileMode) error {
 	return nil
 }
 
-// InvalidPath checks if the given path exists.
+// InvalidPath checks if the given path is valid (if it is a permissions error it is there we just don't have access)
 func InvalidPath(path string) bool {
 	_, err := os.Stat(path)
-	return os.IsNotExist(err)
+	return !os.IsPermission(err) && err != nil
 }
 
 // ListDirectories returns a list of directories in the given directory.
@@ -305,6 +305,15 @@ func GetDirSize(path string) (int64, error) {
 	})
 
 	return dirSize, err
+}
+
+// IsDir returns true if the given path is a directory.
+func IsDir(path string) bool {
+	info, err := os.Stat(filepath.Clean(path))
+	if os.IsNotExist(err) {
+		return false
+	}
+	return info.IsDir()
 }
 
 // GetSHA256OfFile returns the SHA256 hash of the provided file.

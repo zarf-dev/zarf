@@ -17,24 +17,24 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 ## 📦 Out of the Box Features
 
 - Automate Kubernetes deployments in disconnected environments
-- Automate [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) generation
-- Provide a [web dashboard](https://docs.zarf.dev/docs/dashboard-ui/sbom-dashboard) for viewing SBOM output
+- Automate [Software Bill of Materials (SBOM)](https://docs.zarf.dev/docs/deploy-a-zarf-package/package-sboms) generation
+- Provide a [web dashboard](https://docs.zarf.dev/docs/deploy-a-zarf-package/view-sboms) for viewing SBOM output
 - Create and verify package signatures with [cosign](https://github.com/sigstore/cosign)
-- [Publish](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_package_publish), [pull](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
-- Powerful component lifecycle [actions](https://docs.zarf.dev/docs/user-guide/component-actions)
+- [Publish](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_package_publish), [pull](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
+- Powerful component lifecycle [actions](https://docs.zarf.dev/docs/create-a-zarf-package/component-actions)
 - Deploy a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
 - Builtin logging stack with [Loki](https://grafana.com/oss/loki/)
 - Builtin Git server with [Gitea](https://gitea.com/)
 - Builtin Docker registry
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
 - [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
-- Builtin [command to find images](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a Helm chart
-- Tunneling capability to [connect to Kubernetes resources](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS or Ingress configuration required
+- Builtin [command to find images](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a Helm chart
+- Tunneling capability to [connect to Kubernetes resources](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS or Ingress configuration required
 
 ## 🛠️ Configurable Features
 
 - Customizable [variables and package templates](examples/variables/README.md) with defaults and user prompting
-- [Composable packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/zarf-components#composing-package-components) to include multiple sub-packages/components
+- [Composable packages](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-components#composing-package-components) to include multiple sub-packages/components
 - Component-level OS/architecture filtering
 
 ## Demo
@@ -47,7 +47,7 @@ _<https://www.youtube.com/watch?v=WnOYlFVVKDE>_
 
 To try Zarf out for yourself, visit the ["Try It Now"](https://zarf.dev/install) section on our website, and if you want to learn more about Zarf and its use cases visit [docs.zarf.dev](https://docs.zarf.dev/docs/zarf-overview).
 
-From the docs you can learn more about [installation](https://docs.zarf.dev/docs/getting-started/#installing-zarf), [using the CLI](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/), [making packages](https://docs.zarf.dev/docs/user-guide/zarf-packages/), and the [Zarf package schema](https://docs.zarf.dev/docs/user-guide/zarf-schema).
+From the docs you can learn more about [installation](https://docs.zarf.dev/docs/getting-started/#installing-zarf), [using the CLI](https://docs.zarf.dev/docs/the-zarf-cli/), [making packages](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-packages/), and the [Zarf package schema](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-schema).
 
 Using Zarf in Github workflows? Check out the [setup-zarf](https://github.com/defenseunicorns/setup-zarf) action. Install any version of Zarf and its `init` package with zero added dependencies.
 

@@ -39,7 +39,7 @@ func (p *Packager) readYaml(path string, filterByOS bool) error {
 	return nil
 }
 
-// writeYaml adds build information and writes the config to the given path.
+// writeYaml adds build information and writes the config to the temp directory.
 func (p *Packager) writeYaml() error {
 	message.Debug("config.BuildConfig()")
 
@@ -68,8 +68,6 @@ func (p *Packager) writeYaml() error {
 		// Record the hostname of the package creation terminal.
 		p.cfg.Pkg.Build.Terminal = hostname
 	}
-
-	p.cfg.Pkg.Build.Differential = p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != ""
 
 	// Record the migrations that will be run on the package.
 	p.cfg.Pkg.Build.Migrations = []string{
