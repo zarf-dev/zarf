@@ -63,7 +63,7 @@ func TestUseCLI(t *testing.T) {
 	require.Contains(t, stdOut, "nginx:1.16.0", "The chart image should be found by Zarf")
 
 	// Test `zarf prepare find-images` on a chart that has a `kubeVersion` declaration greater than the default (v1.20.0)
-	_, stdErr, err = e2e.ExecZarfCommand("prepare", "find-images", "src/test/test-packages/00-kube-version-override")
+	_, stdErr, _ = e2e.ExecZarfCommand("prepare", "find-images", "src/test/test-packages/00-kube-version-override")
 	require.Contains(t, stdErr, "Problem rendering the helm template for https://charts.jetstack.io/", "The kubeVersion declaration should prevent this from templating")
 
 	// Test `zarf prepare find-images` with `--kube-version` specified and greater than the declared minimum (v1.21.0)
