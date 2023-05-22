@@ -17,22 +17,29 @@ func init() {
 	// No package information is available so do not pass in a list of architectures
 	cranePlatformOptions := config.GetCraneOptions(false)
 
-	craneLogin := craneCmd.NewCmdAuthLogin()
-	craneLogin.Example = ""
-
 	registryCmd := &cobra.Command{
 		Use:     "registry",
 		Aliases: []string{"r", "crane"},
 		Short:   lang.CmdToolsRegistryShort,
 	}
 
-	toolsCmd.AddCommand(registryCmd)
+	craneLogin := craneCmd.NewCmdAuthLogin()
+	craneLogin.Example = ""
 
 	registryCmd.AddCommand(craneLogin)
 	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
 	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))
-	registryCmd.AddCommand(craneCmd.NewCmdCopy(&cranePlatformOptions))
+
+	craneCopy := craneCmd.NewCmdCopy(&cranePlatformOptions)
+	copyFlags := craneCopy.Flags()
+	copyFlags.Lookup("all-tags").Shorthand = ""
+	craneCopy.ResetFlags()
+	craneCopy.Flags().AddFlagSet(copyFlags)
+
+	registryCmd.AddCommand(craneCopy)
 	registryCmd.AddCommand(zarfCraneCatalog(&cranePlatformOptions))
+
+	toolsCmd.AddCommand(registryCmd)
 }
 
 // Wrap the original crane catalog with a zarf specific version

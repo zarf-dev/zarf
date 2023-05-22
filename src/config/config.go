@@ -135,6 +135,9 @@ func GetCraneOptions(insecure bool, archs ...string) []crane.Option {
 			Architecture: GetArch(archs...),
 		}),
 		crane.WithUserAgent("zarf"),
+		// TODO: (@WSTARR) this is set to limit pushes to registry pods and reduce the likelihood that crane will get stuck.
+		// We should investigate this further in the future to dig into more of what is happening (see https://github.com/defenseunicorns/zarf/issues/1568)
+		crane.WithJobs(1),
 	)
 
 	return options
