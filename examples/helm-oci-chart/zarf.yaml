@@ -20,6 +20,6 @@ components:
           - wait:
               cluster:
                 kind: pod
-                name: app.kubernetes.io/name=oci-demo-podinfo
-                namespace: podinfo
+                name: app.kubernetes.io/name=podinfo
+                namespace: helm-oci-demo
                 condition: ready
