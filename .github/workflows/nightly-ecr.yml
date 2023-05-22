@@ -32,7 +32,10 @@ jobs:
         run: make build-cli-linux-amd
 
       - name: Configure AWS Credentials
-        uses: ./.github/actions/aws-nightly-creds
+        uses: aws-actions/configure-aws-credentials@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        with:
+          role-to-assume: ${{ secrets.AWS_NIGHTLY_ROLE }}
+          aws-region: us-east-1
 
       # NOTE: The aws cli will need to be explicitly installed on self-hosted runners
       - name: Login to the ECR Registry
