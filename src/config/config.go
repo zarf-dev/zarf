@@ -51,7 +51,10 @@ const (
 	ZarfImageCacheDir = "images"
 
 	ZarfYAML          = "zarf.yaml"
+	ZarfYAMLSignature = "zarf.yaml.sig"
+	ZarfChecksumsTxt  = "checksums.txt"
 	ZarfSBOMDir       = "zarf-sbom"
+	ZarfSBOMTar       = "sboms.tar"
 	ZarfPackagePrefix = "zarf-package-"
 
 	ZarfInClusterContainerRegistryNodePort = 31999

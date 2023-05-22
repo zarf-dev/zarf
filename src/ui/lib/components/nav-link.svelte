@@ -16,25 +16,14 @@
 	$: providedClass = $$restProps.class || '';
 </script>
 
-<Typography {...$$restProps} class="nav-link {selectedClass} {providedClass}">
+<Typography {...$$restProps} class="nav-link ripple {selectedClass} {providedClass}">
 	<slot />
 </Typography>
 
 <style lang="scss" global>
-	@use '@material/ripple';
 	.nav-link {
 		width: 100%;
 		padding: 0.75rem 1rem;
-		@include ripple.surface;
-		@include ripple.states;
-		@include ripple.radius-unbounded;
-	}
-	.nav-link::before,
-	.nav-link::after {
-		border-radius: 0px;
-	}
-	.nav-link:hover:not(.nav-link-selected) {
-		background: var(--action-hover-on-dark);
 	}
 	.nav-link-selected {
 		background: var(--shades-primary-16p);

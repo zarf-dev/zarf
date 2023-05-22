@@ -28,15 +28,6 @@
 </SectionHeader>
 <PackageDetails pkg={$pkgStore.zarfPackage} />
 
-<SectionHeader icon="secured_layer">
-	Supply Chain
-	<span slot="tooltip">
-		Supply chain information is used to help determine if a package can be trusted. It includes declarative data
-		regarding how this package was built. Build providence includes metadata about the build and
-		where the package was created. SBOM includes information on all of the code, images, and
-		resources contained in this package.
-	</span>
-</SectionHeader>
 <BuildProvidence build={$pkgStore.zarfPackage.build} />
 
 <SectionHeader icon="cubes">
