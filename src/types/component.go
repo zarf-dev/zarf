@@ -5,6 +5,8 @@
 package types
 
 import (
+	"reflect"
+
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 )
 
@@ -42,7 +44,7 @@ type ZarfComponent struct {
 	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
 
 	// Files are files to place on disk during deploy
-	Files []ZarfFile `json:"files,omitempty" jsonschema:"description=Files to place on disk during package deployment"`
+	Files []ZarfFile `json:"files,omitempty" jsonschema:"description=Files or folders to place on disk during package deployment"`
 
 	// Charts are helm charts to install during package deploy
 	Charts []ZarfChart `json:"charts,omitempty" jsonschema:"description=Helm charts to install during package deploy"`
@@ -77,10 +79,10 @@ type ZarfComponentOnlyCluster struct {
 
 // ZarfFile defines a file to deploy.
 type ZarfFile struct {
-	Source     string   `json:"source" jsonschema:"description=Local file path or remote URL to pull into the package"`
-	Shasum     string   `json:"shasum,omitempty" jsonschema:"description=Optional SHA256 checksum of the file"`
-	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file should be copied to during package deploy"`
-	Executable bool     `json:"executable,omitempty" jsonschema:"description=Determines if the file should be made executable during package deploy"`
+	Source     string   `json:"source" jsonschema:"description=Local folder or file path or remote URL to pull into the package"`
+	Shasum     string   `json:"shasum,omitempty" jsonschema:"description=(files only) Optional SHA256 checksum of the file"`
+	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file or folder should be copied to during package deploy"`
+	Executable bool     `json:"executable,omitempty" jsonschema:"description=(files only) Determines if the file should be made executable during package deploy"`
 	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
 }
 
@@ -215,4 +217,31 @@ type ZarfComponentImport struct {
 	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
 	// For further explanation see https://regex101.com/r/nxX8vx/1
 	URL string `json:"url,omitempty" jsonschema:"description=The URL to a Zarf package to import via OCI,pattern=^oci://(?!.*###ZARF_PKG_TMPL_).*$"`
+}
+
+// IsEmpty returns if the components fields (other than the fields we were told to ignore) are empty or set to the types zero-value
+func (c *ZarfComponent) IsEmpty(fieldsToIgnore []string) bool {
+	// Make a map for the fields we are going to ignore
+	ignoredFieldsMap := make(map[string]bool)
+	for _, field := range fieldsToIgnore {
+		ignoredFieldsMap[field] = true
+	}
+
+	// Get a value representation of the component
+	componentReflectValue := reflect.Indirect(reflect.ValueOf(c))
+
+	// Loop through all of the Components struct fields
+	for i := 0; i < componentReflectValue.NumField(); i++ {
+		// If we were told to ignore this field, continue on..
+		if ignoredFieldsMap[componentReflectValue.Type().Field(i).Name] {
+			continue
+		}
+
+		// Check if this field is empty/zero
+		if !componentReflectValue.Field(i).IsZero() {
+			return false
+		}
+	}
+
+	return true
 }

@@ -137,4 +137,5 @@ type DifferentialData struct {
 	DifferentialPackageVersion string
 	DifferentialImages         map[string]bool
 	DifferentialRepos          map[string]bool
+	DifferentialOCIComponents  map[string]string
 }
