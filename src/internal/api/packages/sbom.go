@@ -58,9 +58,6 @@ func cleanupSBOM() error {
 
 // Extracts the SBOM from the package and returns the path to the SBOM
 func extractSBOM(escapedPath string) (sbom types.APIPackageSBOM, err error) {
-	const sbomDir = "zarf-sbom"
-	const SBOM = "sboms.tar"
-
 	path, err := url.QueryUnescape(escapedPath)
 	if err != nil {
 		return sbom, err
@@ -92,14 +89,14 @@ func extractSBOM(escapedPath string) (sbom types.APIPackageSBOM, err error) {
 	}
 
 	// Extract the SBOM tar.gz from the package
-	err = archiver.Extract(path, SBOM, sbomPath)
+	err = archiver.Extract(path, config.ZarfSBOMTar, sbomPath)
 	if err != nil {
 		cleanupSBOM()
 		return sbom, err
 	}
 
 	// Unarchive the SBOM tar.gz
-	err = archiver.Unarchive(filepath.Join(sbomPath, SBOM), sbomPath)
+	err = archiver.Unarchive(filepath.Join(sbomPath, config.ZarfSBOMTar), sbomPath)
 	if err != nil {
 		cleanupSBOM()
 		return sbom, err

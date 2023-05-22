@@ -173,7 +173,7 @@ func (p *Packager) handleOciPackage(url string, out string, concurrency int, lay
 	copyOpts.PostCopy = copyOpts.OnCopySkipped
 	isPartialPull := len(layers) > 0
 	if isPartialPull {
-		alwaysPull := []string{"zarf.yaml", "checksums.txt", "zarf.yaml.sig"}
+		alwaysPull := []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
 		layers = append(layers, alwaysPull...)
 		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 			nodes, err := content.Successors(ctx, fetcher, desc)
