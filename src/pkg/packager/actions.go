@@ -73,7 +73,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 	if action.Description != "" {
 		cmdEscaped = action.Description
 	} else {
-		cmdEscaped = message.Truncate(cmd, 60)
+		cmdEscaped = message.Truncate(cmd, 60, false)
 	}
 
 	spinner := message.NewProgressSpinner("Running \"%s\"", cmdEscaped)
