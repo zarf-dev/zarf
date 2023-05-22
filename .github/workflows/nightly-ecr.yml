@@ -32,7 +32,7 @@ jobs:
         run: make build-cli-linux-amd
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: aws-actions/configure-aws-credentials@e1e17a757e536f70e52b5a12b2e8d1d1c60e04ef # v2.0.0
         with:
           role-to-assume: ${{ secrets.AWS_NIGHTLY_ROLE }}
           aws-region: us-east-1
