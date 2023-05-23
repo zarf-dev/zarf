@@ -60,16 +60,16 @@ func TestUseCLI(t *testing.T) {
 	require.Contains(t, stdOut, "nginx:1.16.0", "The chart image should be found by Zarf")
 
 	// Test `zarf prepare find-images` on a chart that has a `kubeVersion` declaration greater than the default (v1.20.0)
-	_, stdErr, _ = e2e.Zarf("prepare", "find-images", "src/test/test-packages/00-kube-version-override")
+	_, stdErr, _ = e2e.Zarf("prepare", "find-images", "src/test/packages/00-kube-version-override")
 	require.Contains(t, stdErr, "Problem rendering the helm template for https://charts.jetstack.io/", "The kubeVersion declaration should prevent this from templating")
 
 	// Test `zarf prepare find-images` with `--kube-version` specified and greater than the declared minimum (v1.21.0)
-	stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "--kube-version=v1.22.0", "src/test/test-packages/00-kube-version-override")
+	stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "--kube-version=v1.22.0", "src/test/packages/00-kube-version-override")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "quay.io/jetstack/cert-manager-controller:v1.11.1", "The chart image should be found by Zarf")
 
 	// Test `zarf prepare find-images` with a chart that uses helm annotations
-	stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "src/test/test-packages/00-helm-annotations")
+	stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "src/test/packages/00-helm-annotations")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.26.4", "The kubectl image should be found by Zarf")
 

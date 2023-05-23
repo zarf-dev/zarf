@@ -46,7 +46,7 @@ func TestCreateTemplating(t *testing.T) {
 	require.Contains(t, string(builtConfig), "name: NGINX_VERSION\n  value: 1.23.3")
 
 	// Test that files and file folders template and handle SBOMs correctly
-	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "create", "src/test/test-packages/04-file-folders-templating-sbom/", "--sbom-out", sbomPath)
+	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "create", "src/test/packages/04-file-folders-templating-sbom/", "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Creating SBOMs for 0 images and 2 components with files.")
 

@@ -20,7 +20,7 @@ func TestCreateDifferential(t *testing.T) {
 	t.Log("E2E: Test Differential Package Behavior")
 	tmpPath, _ := utils.MakeTempDir("")
 
-	packagePath := "src/test/test-packages/08-differential-package"
+	packagePath := "src/test/packages/08-differential-package"
 	packageName := "zarf-package-differential-package-amd64-v0.25.0.tar.zst"
 	differentialPackageName := "zarf-package-differential-package-amd64-v0.25.0-differential-v0.26.0.tar.zst"
 	differentialFlag := fmt.Sprintf("--differential=%s", packageName)

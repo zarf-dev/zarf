@@ -28,18 +28,18 @@ type SkeletonSuite struct {
 }
 
 var (
-	importEverything   = filepath.Join("src", "test", "test-packages", "51-import-everything")
-	importception      = filepath.Join("src", "test", "test-packages", "51-import-everything", "inception")
-	everythingExternal = filepath.Join("src", "test", "test-packages", "everything-external")
+	importEverything   = filepath.Join("src", "test", "packages", "51-import-everything")
+	importception      = filepath.Join("src", "test", "packages", "51-import-everything", "inception")
+	everythingExternal = filepath.Join("src", "test", "packages", "everything-external")
 	absNoCode          = filepath.Join("/", "tmp", "nocode")
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
-	err := os.MkdirAll(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts"), 0755)
+	err := os.MkdirAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts"), 0755)
 	suite.NoError(err)
-	err = utils.CreatePathAndCopy(filepath.Join("examples", "helm-charts", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	err = utils.CreatePathAndCopy(filepath.Join("examples", "helm-charts", "chart"), filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
-	suite.DirExists(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	suite.DirExists(filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
 
 	err = utils.CreatePathAndCopy(importEverything, everythingExternal)
 	suite.NoError(err)
@@ -60,7 +60,7 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	suite.NoError(err)
 	err = os.RemoveAll(absNoCode)
 	suite.NoError(err)
-	err = os.RemoveAll(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	err = os.RemoveAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
 	err = os.RemoveAll(filepath.Join("files"))
 	suite.NoError(err)

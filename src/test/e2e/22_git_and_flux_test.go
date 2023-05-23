@@ -22,7 +22,7 @@ func TestGitAndFlux(t *testing.T) {
 	e2e.SetupWithCluster(t)
 	defer e2e.Teardown(t)
 
-	buildPath := filepath.Join("src", "test", "test-packages", "22-git-and-flux")
+	buildPath := filepath.Join("src", "test", "packages", "22-git-and-flux")
 	stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "create", buildPath, "-o=build")
 	require.NoError(t, err, stdOut, stdErr)
 

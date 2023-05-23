@@ -48,10 +48,10 @@ func TestECRPublishing(t *testing.T) {
 	testPackageLocation := filepath.Join(tmpDir, testPackageFileName)
 	registryURL := "oci://public.ecr.aws/t8y5r5z5/zarf-nightly"
 	upstreamPackageURL := fmt.Sprintf("%s/%s:%s-%s", registryURL, testPackageName, testPackageVersion, e2e.Arch)
-	keyFlag := fmt.Sprintf("--key=%s", "./src/test/test-packages/zarf-test.pub")
+	keyFlag := fmt.Sprintf("--key=%s", "./src/test/packages/zarf-test.pub")
 
 	// Build the package with our test signature
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/helm-charts", "--key=./src/test/test-packages/zarf-test.prv-key", "--confirm", fmt.Sprintf("-o=%s", tmpDir))
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/helm-charts", "--key=./src/test/packages/zarf-test.prv-key", "--confirm", fmt.Sprintf("-o=%s", tmpDir))
 	require.NoError(t, err, stdOut, stdErr)
 	require.FileExists(t, testPackageLocation)
 

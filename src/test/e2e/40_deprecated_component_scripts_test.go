@@ -19,7 +19,7 @@ func TestDeprecatedComponentScripts(t *testing.T) {
 	defer e2e.Teardown(t)
 
 	// Note these files will be created in the package directory, not CWD
-	testPackageDirPath := "src/test/test-packages/40-deprecated-component-scripts"
+	testPackageDirPath := "src/test/packages/40-deprecated-component-scripts"
 	prepareArtifact := fmt.Sprintf("%s/test-deprecated-prepare-hook.txt", testPackageDirPath)
 	deployArtifacts := []string{
 		"test-deprecated-deploy-before-hook.txt",

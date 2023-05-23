@@ -88,7 +88,7 @@ func testHelmEscaping(t *testing.T) {
 	t.Log("E2E: Helm chart escaping")
 
 	// Create the package.
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/test-packages/25-evil-templates/", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/25-evil-templates/", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("zarf-package-evil-templates-%s.tar.zst", e2e.Arch)
@@ -131,7 +131,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	evilPath := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
 	// Create the evil package (with the bad configmap).
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/test-packages/25-evil-dos-games/", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/25-evil-dos-games/", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the evil package.
@@ -170,7 +170,7 @@ func testHelmAdoption(t *testing.T) {
 	t.Log("E2E: Helm Adopt a Deployment")
 
 	packagePath := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.Arch)
-	deploymentManifest := "src/test/test-packages/25-manifest-adoption/deployment.yaml"
+	deploymentManifest := "src/test/packages/25-manifest-adoption/deployment.yaml"
 
 	// Deploy dos-games manually into the cluster without Zarf
 	kubectlOut, _, _ := e2e.Zarf("tools", "kubectl", "apply", "-f", deploymentManifest)

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package external_test provides a test for the external init flow.
-package external_test
+// Package external provides a test for the external init flow.
+package external
 
 import (
 	"context"
