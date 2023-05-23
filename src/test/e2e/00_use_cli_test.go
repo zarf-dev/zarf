@@ -53,13 +53,10 @@ func TestUseCLI(t *testing.T) {
 	require.NotEqual(t, stdOut, "UnknownVersion", "Zarf version should not be the default value")
 
 	// Test `zarf prepare find-images` for a remote asset
-	stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "examples/helm-alt-release-name")
-	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "ghcr.io/stefanprodan/podinfo:6.1.6", "The chart image should be found by Zarf")
-
-	// Test `zarf prepare find-images` for a local asset
 	stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "examples/helm-charts")
 	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdOut, "ghcr.io/stefanprodan/podinfo:6.1.6", "The chart image should be found by Zarf")
+	// Test `zarf prepare find-images` for a local asset
 	require.Contains(t, stdOut, "nginx:1.16.0", "The chart image should be found by Zarf")
 
 	// Test `zarf prepare find-images` on a chart that has a `kubeVersion` declaration greater than the default (v1.20.0)
