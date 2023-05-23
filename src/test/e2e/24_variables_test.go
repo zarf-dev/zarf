@@ -42,7 +42,7 @@ func TestVariables(t *testing.T) {
 	require.Contains(t, string(outputTF), "unicorn-land")
 
 	// Verify the configmap was properly templated
-	kubectlOut, _, _ := e2e.Zarf("tools", "kubectl", "-n", "nginx", "get", "configmap", "nginx-configmap", "-o", "jsonpath='{.data.index\\.html}' ")
+	kubectlOut, _, _ := e2e.Kubectl("-n", "nginx", "get", "configmap", "nginx-configmap", "-o", "jsonpath='{.data.index\\.html}' ")
 	// OPTIONAL_FOOTER should remain unset because it was not set during deploy
 	require.Contains(t, string(kubectlOut), "</pre>\n    \n  </body>")
 	// STYLE should take the default value

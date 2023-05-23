@@ -54,7 +54,7 @@ func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
 		t.Skip("")
 	}
 	if runtime.GOOS != "windows" {
-		_, _, _ = e2e.Kubectl("describe", "nodes", "|", "grep", "-A", "99", "Non\\-terminated")
+		_, _, _ = e2e.Kubectl("describe", "nodes", "|", "grep", "-A", "99", "Non-terminated")
 	} else {
 		t.Log("Skipping kubectl describe nodes on Windows")
 	}

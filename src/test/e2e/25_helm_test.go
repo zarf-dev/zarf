@@ -118,7 +118,7 @@ func testHelmOCIChart(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify that podinfo successfully deploys in the cluster
-	kubectlOut, _, _ := e2e.Zarf("tools", "kubectl", "-n=helm-oci-demo", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}")
+	kubectlOut, _, _ := e2e.Kubectl("-n=helm-oci-demo", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}")
 	require.Contains(t, string(kubectlOut), "6.3.5")
 
 	// Remove the package.
@@ -174,7 +174,7 @@ func testHelmAdoption(t *testing.T) {
 	deploymentManifest := "src/test/packages/25-manifest-adoption/deployment.yaml"
 
 	// Deploy dos-games manually into the cluster without Zarf
-	kubectlOut, _, _ := e2e.Zarf("tools", "kubectl", "apply", "-f", deploymentManifest)
+	kubectlOut, _, _ := e2e.Kubectl("apply", "-f", deploymentManifest)
 	require.Contains(t, string(kubectlOut), "deployment.apps/game created")
 
 	// Deploy dos-games into the cluster with Zarf
