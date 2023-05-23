@@ -57,7 +57,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	require.Contains(t, kubectlOut, "6.3.4")
 
 	// We also want to build a new package.
-	zarfCreateArgs := []string{"package", "create", "../../../src/test/upgrade-test", "--set", "PODINFO_VERSION=6.3.5", "--confirm"}
+	zarfCreateArgs := []string{"package", "create", "../../../src/test/upgrade", "--set", "PODINFO_VERSION=6.3.5", "--confirm"}
 	stdOut, stdErr, err = zarf(zarfCreateArgs...)
 	require.NoError(t, err, stdOut, stdErr)
 	newlyBuiltPackage := "zarf-package-test-upgrade-package-amd64-6.3.5.tar.zst"
