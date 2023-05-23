@@ -51,7 +51,10 @@ const (
 	ZarfImageCacheDir = "images"
 
 	ZarfYAML          = "zarf.yaml"
+	ZarfYAMLSignature = "zarf.yaml.sig"
+	ZarfChecksumsTxt  = "checksums.txt"
 	ZarfSBOMDir       = "zarf-sbom"
+	ZarfSBOMTar       = "sboms.tar"
 	ZarfPackagePrefix = "zarf-package-"
 
 	ZarfInClusterContainerRegistryNodePort = 31999
@@ -135,6 +138,9 @@ func GetCraneOptions(insecure bool, archs ...string) []crane.Option {
 			Architecture: GetArch(archs...),
 		}),
 		crane.WithUserAgent("zarf"),
+		// TODO: (@WSTARR) this is set to limit pushes to registry pods and reduce the likelihood that crane will get stuck.
+		// We should investigate this further in the future to dig into more of what is happening (see https://github.com/defenseunicorns/zarf/issues/1568)
+		crane.WithJobs(1),
 	)
 
 	return options

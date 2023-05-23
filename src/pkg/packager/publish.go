@@ -222,13 +222,9 @@ func (p *Packager) publishImage(dst *utils.OrasRemote, src *file.Store, descs []
 	return root, nil
 }
 
-func (p *Packager) generateAnnotations(artifactType string) map[string]string {
+func (p *Packager) generateAnnotations() map[string]string {
 	annotations := map[string]string{
 		ocispec.AnnotationDescription: p.cfg.Pkg.Metadata.Description,
-	}
-
-	if artifactType == ocispec.MediaTypeArtifactManifest {
-		annotations[ocispec.AnnotationTitle] = p.cfg.Pkg.Metadata.Name
 	}
 
 	if url := p.cfg.Pkg.Metadata.URL; url != "" {
@@ -321,7 +317,7 @@ func (p *Packager) loadSkeleton() error {
 
 // pack creates an artifact/image manifest from the provided descriptors and pushes it to the store
 func (p *Packager) pack(ctx context.Context, artifactType string, descs []ocispec.Descriptor, src *file.Store, packOpts oras.PackOptions) (ocispec.Descriptor, error) {
-	packOpts.ManifestAnnotations = p.generateAnnotations(artifactType)
+	packOpts.ManifestAnnotations = p.generateAnnotations()
 	root, err := oras.Pack(ctx, src, artifactType, descs, packOpts)
 	if err != nil {
 		return ocispec.Descriptor{}, err

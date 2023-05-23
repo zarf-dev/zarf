@@ -188,7 +188,7 @@ func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Imag
 
 		// Warn the user if the image is large.
 		if rawImg.Size > 750*1000*1000 {
-			warn := pterm.DefaultParagraph.WithMaxWidth(80).Sprintf("%s is %s and may take a very long time to load via docker. "+
+			warn := pterm.DefaultParagraph.WithMaxWidth(message.TermWidth).Sprintf("%s is %s and may take a very long time to load via docker. "+
 				"See https://docs.zarf.dev/docs/faq for suggestions on how to improve large local image loading operations.",
 				src, utils.ByteFormat(float64(rawImg.Size), 2))
 			spinner.Warnf(warn)

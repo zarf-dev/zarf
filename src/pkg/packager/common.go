@@ -224,11 +224,11 @@ func createPaths() (paths types.TempPaths, err error) {
 		SeedImages:   filepath.Join(basePath, "seed-images"),
 		Images:       filepath.Join(basePath, "images"),
 		Components:   filepath.Join(basePath, "components"),
-		SbomTar:      filepath.Join(basePath, "sboms.tar"),
+		SbomTar:      filepath.Join(basePath, config.ZarfSBOMTar),
 		Sboms:        filepath.Join(basePath, "sboms"),
-		Checksums:    filepath.Join(basePath, "checksums.txt"),
+		Checksums:    filepath.Join(basePath, config.ZarfChecksumsTxt),
 		ZarfYaml:     filepath.Join(basePath, config.ZarfYAML),
-		ZarfSig:      filepath.Join(basePath, "zarf.yaml.sig"),
+		ZarfSig:      filepath.Join(basePath, config.ZarfYAMLSignature),
 	}
 
 	return paths, err
@@ -456,7 +456,7 @@ func (p *Packager) validatePackageChecksums() error {
 	filepathMap[p.tmp.ZarfSig] = true
 
 	// Load the contents of the checksums file
-	checksumsFile, err := os.Open(filepath.Join(p.tmp.Base, "checksums.txt"))
+	checksumsFile, err := os.Open(filepath.Join(p.tmp.Base, config.ZarfChecksumsTxt))
 	if err != nil {
 		return err
 	}
