@@ -28,7 +28,7 @@ func TestUseCLI(t *testing.T) {
 	imageCachePath := filepath.Join(cachePath, "images")
 
 	// run `zarf package create` with a specified tmp location
-	otherTmpPath := filepath.Join(os.TempDir(), "othertmp")
+	otherTmpPath := t.TempDir()
 
 	e2e.CleanFiles(shasumTestFilePath, cachePath, otherTmpPath)
 
@@ -98,6 +98,18 @@ func TestUseCLI(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	e2e.CleanFiles(pkgName)
+
+	// run `zarf package deploy` with a specified tmp location
+	var (
+		firstFile  = "first-choice-file.txt"
+		secondFile = "second-choice-file.txt"
+	)
+
+	pkgName = fmt.Sprintf("build/zarf-package-component-choice-%s.tar.zst", e2e.Arch)
+	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "deploy", pkgName, "--tmpdir", otherTmpPath, "--log-level=debug")
+	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
+	require.NoError(t, err, stdOut, stdErr)
+	e2e.CleanFiles(otherTmpPath, firstFile, secondFile)
 
 	files, err := os.ReadDir(imageCachePath)
 	require.NoError(t, err, "Encountered an unexpected error when reading image cache path")
