@@ -13,7 +13,6 @@ import (
 
 func TestComponentChoice(t *testing.T) {
 	t.Log("E2E: Component choice")
-	e2e.Setup(t)
 
 	var (
 		firstFile  = "first-choice-file.txt"

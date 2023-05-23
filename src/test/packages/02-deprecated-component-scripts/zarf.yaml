@@ -24,4 +24,4 @@ components:
     scripts:
       timeoutSeconds: 1
       before:
-        - sleep 30
+        - sleep 5

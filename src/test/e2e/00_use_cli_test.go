@@ -16,7 +16,6 @@ import (
 
 func TestUseCLI(t *testing.T) {
 	t.Log("E2E: Use CLI")
-	e2e.Setup(t)
 
 	t.Run("zarf prepare sha256sum <local>", func(t *testing.T) {
 		t.Parallel()

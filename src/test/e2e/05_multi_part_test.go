@@ -21,8 +21,6 @@ func TestMultiPartPackage(t *testing.T) {
 		outputFile = "multi-part-demo.dat"
 	)
 
-	e2e.Setup(t)
-
 	e2e.CleanFiles(deployPath, outputFile)
 
 	// Create the package with a max size of 1MB

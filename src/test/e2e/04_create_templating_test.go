@@ -16,14 +16,11 @@ import (
 func TestCreateTemplating(t *testing.T) {
 	t.Log("E2E: Create Templating")
 
-	e2e.Setup(t)
-
 	// run `zarf package create` with a specified image cache location
-	cachePath := filepath.Join(os.TempDir(), ".cache-location")
-	decompressPath := filepath.Join(os.TempDir(), ".package-decompressed")
-	sbomPath := filepath.Join(os.TempDir(), ".sbom-location")
-
-	e2e.CleanFiles(cachePath, decompressPath, sbomPath)
+	tmpdir := t.TempDir()
+	cachePath := filepath.Join(tmpdir, ".cache-location")
+	decompressPath := filepath.Join(tmpdir, ".package-decompressed")
+	sbomPath := filepath.Join(tmpdir, ".sbom-location")
 
 	pkgName := fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.Arch)
 
@@ -70,5 +67,5 @@ func TestCreateTemplating(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(filesJSON), "pandas")
 
-	e2e.CleanFiles(cachePath, decompressPath, pkgName, fileFoldersPkgName, sbomPath)
+	e2e.CleanFiles(pkgName, fileFoldersPkgName)
 }

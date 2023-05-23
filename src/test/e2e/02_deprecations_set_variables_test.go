@@ -14,10 +14,9 @@ import (
 // TestDeprecatedSetAndPackageVariables verifies that deprecated setVariables and PKG_VARs still able to be set.
 func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 	t.Log("E2E: Testing deprecated set variables")
-	e2e.Setup(t)
 
 	// Note prepare script files will be created in the package directory, not CWD
-	testPackageDirPath := "src/test/packages/41-deprecated-set-variable"
+	testPackageDirPath := "src/test/packages/02-deprecated-set-variable"
 	prepareArtifact := fmt.Sprintf("%s/test-deprecated-prepare-hook.txt", testPackageDirPath)
 	deployArtifacts := []string{
 		"test-deprecated-deploy-before-hook.txt",

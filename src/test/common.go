@@ -48,23 +48,16 @@ func GetCLIName() string {
 	return binaryName
 }
 
-// Setup performs actions prior to each test.
-func (e2e *ZarfE2ETest) Setup(t *testing.T) {
-	t.Log("Test setup")
-	// Output list of allocated cluster resources
-	if runtime.GOOS != "windows" {
-		_ = exec.CmdWithPrint("sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
-	} else {
-		t.Log("Skipping kubectl describe nodes on Windows")
-	}
-}
-
 // SetupWithCluster performs actions for each test that requires a K8s cluster.
 func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
 	if !e2e.RunClusterTests {
 		t.Skip("")
 	}
-	e2e.Setup(t)
+	if runtime.GOOS != "windows" {
+		_, _, _ = e2e.Kubectl("describe", "nodes", "|", "grep", "-A", "99", "Non\\-terminated")
+	} else {
+		t.Log("Skipping kubectl describe nodes on Windows")
+	}
 }
 
 // Zarf executes a Zarf command.

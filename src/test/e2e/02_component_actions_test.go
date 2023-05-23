@@ -14,7 +14,6 @@ import (
 
 func TestComponentActions(t *testing.T) {
 	t.Log("E2E: Testing component actions")
-	e2e.Setup(t)
 
 	// Note these files will be created in the package directory, not CWD.
 	createArtifacts := []string{
