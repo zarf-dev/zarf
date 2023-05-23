@@ -68,7 +68,7 @@ func TestComponentActions(t *testing.T) {
 	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "remove", path, "--components=on-deploy-and-remove")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Check that the deploy artifacts were created.
+	// Check that the deploy artifacts were removed.
 	for _, artifact := range deployArtifacts {
 		require.NoFileExists(t, artifact)
 	}

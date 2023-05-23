@@ -59,10 +59,8 @@ func TestCreateTemplating(t *testing.T) {
 	require.Contains(t, stdErr, "# Total pandemonium")
 
 	// Ensure that the `requirements.txt` files are discovered correctly
-	_, err = os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "compare.html"))
-	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "sbom-viewer-zarf-component-folders.html"))
-	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(sbomPath, "file-folders-templating-sbom", "compare.html"))
+	require.FileExists(t, filepath.Join(sbomPath, "file-folders-templating-sbom", "sbom-viewer-zarf-component-folders.html"))
 	foldersJSON, err := os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "zarf-component-folders.json"))
 	require.NoError(t, err)
 	require.Contains(t, string(foldersJSON), "numpy")

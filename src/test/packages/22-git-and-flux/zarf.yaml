@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: git-data-check-secrets
-  version: v1.0.0
+  version: 1.0.0
   description: Demo Zarf loading resources into a gitops service - while checking that the component secret gets updated with each component
 
 components:
