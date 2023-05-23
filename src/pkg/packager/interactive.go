@@ -43,11 +43,12 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 				deprecated.PrintBreakingChanges(initPackage.Data.Build.Version)
 			}
 		}
-
-		message.HorizontalNoteRule()
 	}
 
+	message.HorizontalNoteRule()
+
 	if len(p.warnings) > 0 {
+		pterm.Println()
 		for _, warning := range p.warnings {
 			message.Warn(warning)
 		}
