@@ -18,7 +18,6 @@ var helmChartsPkg = filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts
 func TestHelm(t *testing.T) {
 	t.Log("E2E: Helm chart")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	testHelmReleaseName(t)
 

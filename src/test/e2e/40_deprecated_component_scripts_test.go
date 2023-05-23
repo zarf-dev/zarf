@@ -16,7 +16,6 @@ import (
 func TestDeprecatedComponentScripts(t *testing.T) {
 	t.Log("E2E: Testing deprecated component scripts")
 	e2e.Setup(t)
-	defer e2e.Teardown(t)
 
 	// Note these files will be created in the package directory, not CWD
 	testPackageDirPath := "src/test/packages/40-deprecated-component-scripts"

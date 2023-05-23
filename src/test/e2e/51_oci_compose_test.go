@@ -229,6 +229,6 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 
 func TestSkeletonSuite(t *testing.T) {
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
+
 	suite.Run(t, new(SkeletonSuite))
 }

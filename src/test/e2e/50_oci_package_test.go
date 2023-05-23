@@ -133,6 +133,6 @@ func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {
 
 func TestRegistryClientTestSuite(t *testing.T) {
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
+
 	suite.Run(t, new(RegistryClientTestSuite))
 }

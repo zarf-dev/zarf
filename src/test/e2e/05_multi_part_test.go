@@ -22,7 +22,6 @@ func TestMultiPartPackage(t *testing.T) {
 	)
 
 	e2e.Setup(t)
-	defer e2e.Teardown(t)
 
 	e2e.CleanFiles(deployPath, outputFile)
 

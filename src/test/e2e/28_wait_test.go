@@ -32,7 +32,6 @@ func zarfCommandWStruct(e2e test.ZarfE2ETest, path string) (result zarfCommandRe
 func TestWait(t *testing.T) {
 	t.Log("E2E: Helm Wait")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	// Create the package.
 	stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "create", "src/test/packages/28-helm-no-wait/", "-o=build")

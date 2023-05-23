@@ -16,7 +16,6 @@ import (
 func TestCosignDeploy(t *testing.T) {
 	t.Log("E2E: Cosign deploy")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	// Test with command from https://zarf.dev/install/
 	command := fmt.Sprintf("%s package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m) --confirm", e2e.ZarfBinPath)

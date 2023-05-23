@@ -18,7 +18,6 @@ import (
 func TestZarfInit(t *testing.T) {
 	t.Log("E2E: Zarf init")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	initComponents := "logging,git-server"
 	// Add k3s component in appliance mode
@@ -34,19 +33,19 @@ func TestZarfInit(t *testing.T) {
 	)
 
 	// Build init package with different arch than the cluster arch.
-	stdOut, stdErr, err := e2e.Zarf("package", "create", ".", "--architecture", mismatchedArch)
+	stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "create", ".", "--architecture", mismatchedArch)
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(mismatchedInitPackage)
 
 	// Check that `zarf init` fails in appliance mode when we try to initialize a k3s cluster
 	// on a machine with a different architecture than the package architecture.
 	// We need to use the --architecture flag here to force zarf to find the package.
-	_, stdErr, err = e2e.Zarf("init", "--architecture", mismatchedArch, "--components=k3s")
+	_, stdErr, err = e2e.ZarfWithConfirm("init", "--architecture", mismatchedArch, "--components=k3s")
 	require.Error(t, err, stdErr)
 	require.Contains(t, stdErr, expectedErrorMessage)
 
 	// run `zarf init`
-	_, initStdErr, err := e2e.Zarf("init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace")
+	_, initStdErr, err := e2e.ZarfWithConfirm("init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace")
 	require.NoError(t, err)
 	require.Contains(t, initStdErr, "artifacts with software bill-of-materials (SBOM) included")
 

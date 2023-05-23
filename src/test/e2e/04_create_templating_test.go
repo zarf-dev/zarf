@@ -17,7 +17,6 @@ func TestCreateTemplating(t *testing.T) {
 	t.Log("E2E: Create Templating")
 
 	e2e.Setup(t)
-	defer e2e.Teardown(t)
 
 	// run `zarf package create` with a specified image cache location
 	cachePath := filepath.Join(os.TempDir(), ".cache-location")

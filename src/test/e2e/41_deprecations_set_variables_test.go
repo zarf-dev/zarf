@@ -15,7 +15,6 @@ import (
 func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 	t.Log("E2E: Testing deprecated set variables")
 	e2e.Setup(t)
-	defer e2e.Teardown(t)
 
 	// Note prepare script files will be created in the package directory, not CWD
 	testPackageDirPath := "src/test/packages/41-deprecated-set-variable"

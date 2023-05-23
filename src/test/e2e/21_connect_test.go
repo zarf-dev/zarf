@@ -20,7 +20,6 @@ type RegistryResponse struct {
 func TestConnect(t *testing.T) {
 	t.Log("E2E: Connect")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	// Make the Registry contains the images we expect
 	stdOut, stdErr, err := e2e.Zarf("tools", "registry", "catalog")

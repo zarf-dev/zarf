@@ -14,7 +14,6 @@ import (
 func TestComponentChoice(t *testing.T) {
 	t.Log("E2E: Component choice")
 	e2e.Setup(t)
-	defer e2e.Teardown(t)
 
 	var (
 		firstFile  = "first-choice-file.txt"
@@ -46,5 +45,7 @@ func TestComponentChoice(t *testing.T) {
 	// Verify the file was created
 	require.FileExists(t, secondFile)
 
-	e2e.CleanFiles(firstFile, secondFile)
+	t.Cleanup(func() {
+		e2e.CleanFiles(firstFile, secondFile, path)
+	})
 }

@@ -14,7 +14,6 @@ import (
 func TestComponentActionRemove(t *testing.T) {
 	t.Log("E2E: Component action remove")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.Arch)
 

@@ -128,6 +128,6 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 
 func TestOCIDifferentialSuite(t *testing.T) {
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
+
 	suite.Run(t, new(OCIDifferentialSuite))
 }

@@ -22,7 +22,6 @@ func TestYOLOMode(t *testing.T) {
 	}
 
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	// Destroy the cluster to test Zarf cleaning up after itself
 	stdOut, stdErr, err := e2e.Zarf("destroy", "--confirm", "--remove-components")

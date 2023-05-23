@@ -16,7 +16,6 @@ import (
 func TestMismatchedArchitectures(t *testing.T) {
 	t.Log("E2E: Mismatched architectures")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	var (
 		mismatchedArch         = e2e.GetMismatchedArch()

@@ -17,7 +17,6 @@ import (
 func TestUseCLI(t *testing.T) {
 	t.Log("E2E: Use CLI")
 	e2e.Setup(t)
-	defer e2e.Teardown(t)
 
 	// Test `zarf prepare sha256sum` for a local asset
 	expectedShasum := "61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109\n"
@@ -86,13 +85,12 @@ func TestUseCLI(t *testing.T) {
 	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst")
 	require.Error(t, err, stdOut, stdErr)
 
-	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
-
 	_ = os.Mkdir(otherTmpPath, 0750)
 	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "create", "examples/dos-games", "--zarf-cache", cachePath, "--tmpdir", otherTmpPath, "--log-level=debug")
 	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
 	require.NoError(t, err, stdOut, stdErr)
 
+	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 	stdOut, stdErr, err = e2e.Zarf("package", "inspect", pkgName, "--tmpdir", otherTmpPath, "--log-level=debug")
 	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
 	require.NoError(t, err, stdOut, stdErr)
@@ -104,11 +102,11 @@ func TestUseCLI(t *testing.T) {
 		firstFile  = "first-choice-file.txt"
 		secondFile = "second-choice-file.txt"
 	)
-
 	pkgName = fmt.Sprintf("build/zarf-package-component-choice-%s.tar.zst", e2e.Arch)
 	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "deploy", pkgName, "--tmpdir", otherTmpPath, "--log-level=debug")
 	require.Contains(t, stdErr, otherTmpPath, "The other tmp path should show as being created")
 	require.NoError(t, err, stdOut, stdErr)
+
 	e2e.CleanFiles(otherTmpPath, firstFile, secondFile)
 
 	files, err := os.ReadDir(imageCachePath)
@@ -146,5 +144,5 @@ func TestUseCLI(t *testing.T) {
 	_, err = os.ReadFile(tlsKey)
 	require.NoError(t, err)
 
-	e2e.CleanFiles(shasumTestFilePath, cachePath, otherTmpPath, pkgName, tlsCA, tlsCert, tlsKey)
+	e2e.CleanFiles(shasumTestFilePath, cachePath, otherTmpPath, tlsCA, tlsCert, tlsKey)
 }

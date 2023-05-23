@@ -14,7 +14,6 @@ import (
 func TestChecksumAndSignature(t *testing.T) {
 	t.Log("E2E: Checksum and Signature")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	testPackageDirPath := "examples/dos-games"
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)

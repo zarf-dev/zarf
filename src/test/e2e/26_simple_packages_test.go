@@ -16,7 +16,6 @@ import (
 func TestDosGames(t *testing.T) {
 	t.Log("E2E: Dos games")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
@@ -42,7 +41,6 @@ func TestDosGames(t *testing.T) {
 func TestRemoteManifests(t *testing.T) {
 	t.Log("E2E: Remote Manifests")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-remote-manifests-%s-0.0.1.tar.zst", e2e.Arch)
 

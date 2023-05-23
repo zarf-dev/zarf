@@ -16,7 +16,6 @@ import (
 func TestConfigFile(t *testing.T) {
 	t.Log("E2E: Config file")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	var (
 		path   = fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch)

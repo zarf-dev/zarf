@@ -20,7 +20,6 @@ import (
 func TestGitAndFlux(t *testing.T) {
 	t.Log("E2E: Git and flux")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	buildPath := filepath.Join("src", "test", "packages", "22-git-and-flux")
 	stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "create", buildPath, "-o=build")

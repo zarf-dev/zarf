@@ -67,11 +67,6 @@ func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
 	e2e.Setup(t)
 }
 
-// Teardown performs actions prior to tearing down each test.
-func (e2e *ZarfE2ETest) Teardown(t *testing.T) {
-	t.Log("Test teardown")
-}
-
 // Zarf executes a Zarf command.
 func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
 	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)

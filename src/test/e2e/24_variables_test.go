@@ -15,7 +15,6 @@ import (
 func TestVariables(t *testing.T) {
 	t.Log("E2E: Package variables")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	path := fmt.Sprintf("build/zarf-package-variables-%s.tar.zst", e2e.Arch)
 	tfPath := "modified-terraform.tf"
