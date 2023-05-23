@@ -24,6 +24,6 @@ func TestCosignDeploy(t *testing.T) {
 	stdOut, stdErr, err := exec.CmdWithContext(context.TODO(), exec.PrintCfg(), "sh", "-c", command)
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "dos-games", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

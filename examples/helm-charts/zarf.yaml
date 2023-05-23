@@ -1,0 +1,75 @@
+kind: ZarfPackageConfig
+metadata:
+  name: helm-charts
+  description: Example showcasing mutiple ways to deploy helm charts
+  version: 0.0.1
+
+components:
+  - name: demo-helm-local-chart
+    required: false
+    charts:
+      - name: local-demo
+        version: 0.1.0
+        namespace: local-chart
+        localPath: chart
+    images:
+      - nginx:1.16.0
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: local-demo
+                namespace: local-chart
+                condition: available
+
+  - name: demo-helm-git-chart
+    required: false
+    charts:
+      - name: podinfo
+        version: 6.3.5
+        namespace: podinfo-from-git
+        url: https://github.com/stefanprodan/podinfo.git
+        gitPath: charts/podinfo
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.5
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                namespace: podinfo-from-git
+                name: podinfo
+                condition: available
+
+  - name: demo-helm-oci-chart
+    required: false
+    charts:
+      - name: podinfo
+        version: 6.3.5
+        namespace: podinfo-from-oci
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.5
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: pod
+                name: app.kubernetes.io/name=podinfo
+                namespace: podinfo-from-oci
+                condition: ready
+
+  - name: demo-helm-alt-release-name
+    required: false
+    charts:
+      - name: podinfo
+        version: 6.3.5
+        namespace: helm-alt-release-name
+        url: https://stefanprodan.github.io/podinfo
+        releaseName: cool-name
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.5

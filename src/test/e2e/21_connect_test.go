@@ -23,7 +23,7 @@ func TestConnect(t *testing.T) {
 	defer e2e.Teardown(t)
 
 	// Make the Registry contains the images we expect
-	stdOut, stdErr, err := e2e.ExecZarfCommand("tools", "registry", "catalog")
+	stdOut, stdErr, err := e2e.Zarf("tools", "registry", "catalog")
 	require.NoError(t, err, stdOut, stdErr)
 	registryList := strings.Split(strings.Trim(stdOut, "\n "), "\n")
 
@@ -56,6 +56,6 @@ func TestConnect(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 200, respLog.StatusCode)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "init", "--components=logging", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

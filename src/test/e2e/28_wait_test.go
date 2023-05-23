@@ -25,7 +25,7 @@ type zarfCommandResult struct {
 }
 
 func zarfCommandWStruct(e2e test.ZarfE2ETest, path string) (result zarfCommandResult) {
-	result.stdOut, result.stdErr, result.err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	result.stdOut, result.stdErr, result.err = e2e.Zarf("package", "deploy", path, "--confirm")
 	return result
 }
 
@@ -34,16 +34,16 @@ func TestWait(t *testing.T) {
 	e2e.SetupWithCluster(t)
 	defer e2e.Teardown(t)
 
+	// Create the package.
+	stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "create", "src/test/test-packages/28-helm-no-wait/", "-o=build")
+	require.NoError(t, err, stdOut, stdErr)
+
 	path := fmt.Sprintf("build/zarf-package-helm-no-wait-%s.tar.zst", e2e.Arch)
 
 	zarfChannel := make(chan zarfCommandResult, 1)
 	go func() {
 		zarfChannel <- zarfCommandWStruct(e2e, path)
 	}()
-
-	var stdOut string
-	var stdErr string
-	var err error
 
 	select {
 	case res := <-zarfChannel:
@@ -62,6 +62,6 @@ func TestWait(t *testing.T) {
 	}
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "helm-no-wait", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "helm-no-wait", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

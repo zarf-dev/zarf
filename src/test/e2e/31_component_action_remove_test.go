@@ -18,10 +18,10 @@ func TestComponentActionRemove(t *testing.T) {
 
 	path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.Arch)
 
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm", "--components=on-remove")
+	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm", "--components=on-remove")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", path, "--confirm", "--components=on-remove")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", path, "--confirm", "--components=on-remove")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "NAME")
 	require.Contains(t, stdErr, "DATA")

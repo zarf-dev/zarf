@@ -33,16 +33,16 @@ func TestDataInjection(t *testing.T) {
 	}
 
 	// Verify the file and injection marker were created
-	stdOut, stdErr, err := e2e.ExecZarfCommand("tools", "kubectl", "--namespace=demo", "logs", "--tail=5", "--selector=app=data-injection", "-c=data-injection")
+	stdOut, stdErr, err := e2e.Zarf("tools", "kubectl", "--namespace=demo", "logs", "--tail=5", "--selector=app=data-injection", "-c=data-injection")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "this-is-an-example-file.txt")
 	require.Contains(t, stdOut, ".zarf-injection-")
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "data-injection", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "data-injection", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure that the `requirements.txt` file is discovered correctly
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "inspect", path, "--sbom-out", sbomPath)
+	stdOut, stdErr, err = e2e.Zarf("package", "inspect", path, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "data-injection", "compare.html"))
 	require.NoError(t, err)

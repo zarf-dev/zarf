@@ -72,9 +72,22 @@ func (e2e *ZarfE2ETest) Teardown(t *testing.T) {
 	t.Log("Test teardown")
 }
 
-// ExecZarfCommand executes a Zarf command.
-func (e2e *ZarfE2ETest) ExecZarfCommand(commandString ...string) (string, string, error) {
-	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, commandString...)
+// Zarf executes a Zarf command.
+func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
+	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)
+}
+
+// ZarfWithConfirm executes a Zarf command with the `--confirm` flag.
+func (e2e *ZarfE2ETest) ZarfWithConfirm(args ...string) (string, string, error) {
+	args = append(args, "--confirm")
+	return e2e.Zarf(args...)
+}
+
+// Kubectl executes `zarf tools kubectl ...`
+func (e2e *ZarfE2ETest) Kubectl(args ...string) (string, string, error) {
+	tk := []string{"tools", "kubectl"}
+	args = append(tk, args...)
+	return e2e.Zarf(args...)
 }
 
 // CleanFiles removes files and directories that have been created during the test.
@@ -117,7 +130,7 @@ func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) *configfile.
 	require.NoError(t, err)
 	if !cfg.ContainsAuth() {
 		// make a docker config file w/ some blank creds
-		_, _, err := e2e.ExecZarfCommand("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
+		_, _, err := e2e.Zarf("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
 		require.NoError(t, err)
 	}
 

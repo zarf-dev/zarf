@@ -29,15 +29,15 @@ func TestCreateTemplating(t *testing.T) {
 	pkgName := fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.Arch)
 
 	// Test that not specifying a package variable results in an error
-	_, stdErr, _ := e2e.ExecZarfCommand("package", "create", "examples/variables", "--confirm", "--zarf-cache", cachePath)
+	_, stdErr, _ := e2e.Zarf("package", "create", "examples/variables", "--confirm", "--zarf-cache", cachePath)
 	expectedOutString := "variable 'NGINX_VERSION' must be '--set' when using the '--confirm' flag"
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test a simple package variable example with `--set` (will fail to pull an image if this is not set correctly)
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", "examples/variables", "--set", "NGINX_VERSION=1.23.3", "--confirm", "--zarf-cache", cachePath)
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/variables", "--set", "NGINX_VERSION=1.23.3", "--confirm", "--zarf-cache", cachePath)
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("t", "archiver", "decompress", pkgName, decompressPath, "--unarchive-all", "-l=trace")
+	stdOut, stdErr, err = e2e.Zarf("t", "archiver", "decompress", pkgName, decompressPath, "--unarchive-all", "-l=trace")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the constant in the zarf.yaml is replaced correctly
@@ -46,14 +46,14 @@ func TestCreateTemplating(t *testing.T) {
 	require.Contains(t, string(builtConfig), "name: NGINX_VERSION\n  value: 1.23.3")
 
 	// Test that files and file folders template and handle SBOMs correctly
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", "src/test/test-packages/04-file-folders-templating-sbom/", "--confirm", "--sbom-out", sbomPath)
+	stdOut, stdErr, err = e2e.Zarf("package", "create", "src/test/test-packages/04-file-folders-templating-sbom/", "--confirm", "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Creating SBOMs for 0 images and 2 components with files.")
 
 	fileFoldersPkgName := fmt.Sprintf("zarf-package-file-folders-templating-sbom-%s.tar.zst", e2e.Arch)
 
 	// Deploy the package and look for the variables in the output
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", fileFoldersPkgName, "--confirm", "--set", "DOGGO=doggy", "--set", "KITTEH=meowza", "--set", "PANDA=pandemonium")
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", fileFoldersPkgName, "--confirm", "--set", "DOGGO=doggy", "--set", "KITTEH=meowza", "--set", "PANDA=pandemonium")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "A doggy barks!")
 	require.Contains(t, stdErr, "  - meowza")

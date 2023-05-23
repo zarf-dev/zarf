@@ -30,7 +30,7 @@ var (
 	differentialPackageName = ""
 	normalPackageName       = ""
 	createOutFlag           = fmt.Sprintf("-o=%s", tmpPath)
-	examplePackagePath      = filepath.Join("examples", "helm-oci-chart")
+	examplePackagePath      = filepath.Join("examples", "helm-charts")
 	anotherPackagePath      = filepath.Join("src", "test", "test-packages", "52-oci-differential")
 )
 
@@ -42,16 +42,16 @@ func (suite *OCIDifferentialSuite) SetupSuite() {
 	_ = e2e.SetupDockerRegistry(suite.T(), 555)
 
 	// publish one of the example packages to the registry
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "publish", examplePackagePath, "oci://"+suite.Reference.String(), "--insecure")
+	stdOut, stdErr, err := e2e.Zarf("package", "publish", examplePackagePath, "oci://"+suite.Reference.String(), "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 
 	// build the package that we are going to publish
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.24.0", createOutFlag, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.24.0", createOutFlag, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// publish the package that we just built
 	normalPackagePath := filepath.Join(tmpPath, normalPackageName)
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "publish", normalPackagePath, "oci://"+suite.Reference.String(), "--insecure")
+	stdOut, stdErr, err = e2e.Zarf("package", "publish", normalPackagePath, "oci://"+suite.Reference.String(), "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 }
 
@@ -66,7 +66,7 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.T().Log("E2E: Test Differential Packages w/ OCI Imports")
 
 	// Build without differential
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.25.0", createOutFlag, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.25.0", createOutFlag, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Extract and load the zarf.yaml config for the normally built package
@@ -77,7 +77,7 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.NoError(err, "unable to read zarf.yaml from the differential git package")
 	os.Remove(filepath.Join(tmpPath, "zarf.yaml"))
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", anotherPackagePath, "--differential", "oci://"+suite.Reference.String()+"/podinfo-with-oci-flux:v0.24.0-amd64", "--insecure", "--set=PACKAGE_VERSION=v0.25.0", createOutFlag, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--differential", "oci://"+suite.Reference.String()+"/podinfo-with-oci-flux:v0.24.0-amd64", "--insecure", "--set=PACKAGE_VERSION=v0.25.0", createOutFlag, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Extract and load the zarf.yaml config for the differentially built package
