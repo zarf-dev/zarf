@@ -56,6 +56,6 @@ func TestConnect(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 200, respLog.StatusCode)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
+	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "remove", "init", "--components=logging")
 	require.NoError(t, err, stdOut, stdErr)
 }
