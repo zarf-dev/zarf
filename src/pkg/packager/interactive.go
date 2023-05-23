@@ -20,7 +20,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string, packageWarnings []string) (confirm bool) {
+func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (confirm bool) {
 
 	message.HorizontalRule()
 	utils.ColorPrintYAML(p.cfg.Pkg)
@@ -47,8 +47,8 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string, pac
 		message.HorizontalNoteRule()
 	}
 
-	if len(packageWarnings) > 0 {
-		for _, warning := range packageWarnings {
+	if len(p.warnings) > 0 {
+		for _, warning := range p.warnings {
 			message.Warn(warning)
 		}
 		message.HorizontalNoteRule()

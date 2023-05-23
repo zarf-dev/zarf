@@ -20,9 +20,8 @@ import (
 )
 
 // composeComponents builds the composed components list for the current config.
-func (p *Packager) composeComponents() ([]string, error) {
+func (p *Packager) composeComponents() error {
 	message.Debugf("packager.ComposeComponents()")
-	var packageWarnings = []string{}
 
 	components := []types.ZarfComponent{}
 
@@ -31,14 +30,14 @@ func (p *Packager) composeComponents() ([]string, error) {
 			// Migrate any deprecated component configurations now
 			migratedComponent, warnings := deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
 			components = append(components, migratedComponent)
-			packageWarnings = append(packageWarnings, warnings...)
+			p.warnings = append(p.warnings, warnings...)
 		} else {
 			composedComponent, warnings, err := p.getComposedComponent(component)
 			if err != nil {
-				return packageWarnings, fmt.Errorf("unable to compose component %s: %w", component.Name, err)
+				return fmt.Errorf("unable to compose component %s: %w", component.Name, err)
 			}
 			components = append(components, composedComponent)
-			packageWarnings = append(packageWarnings, warnings...)
+			p.warnings = append(p.warnings, warnings...)
 		}
 	}
 
@@ -46,7 +45,7 @@ func (p *Packager) composeComponents() ([]string, error) {
 	// This is important when the deploy package is created.
 	p.cfg.Pkg.Components = components
 
-	return packageWarnings, nil
+	return nil
 }
 
 // getComposedComponent recursively retrieves a composed Zarf component

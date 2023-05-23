@@ -288,12 +288,12 @@ func (p *Packager) loadSkeleton() error {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %s", base, err.Error())
 	}
 
-	packageWarnings, err := p.composeComponents()
+	err = p.composeComponents()
 	if err != nil {
 		return err
 	}
 
-	for _, warning := range packageWarnings {
+	for _, warning := range p.warnings {
 		message.Warn(warning)
 	}
 

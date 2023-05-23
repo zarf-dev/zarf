@@ -34,23 +34,22 @@ import (
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create(baseDir string) error {
-	var err error
-	var originalDir string
-	var packageWarnings []string
 
-	if err = p.readYaml(filepath.Join(baseDir, config.ZarfYAML)); err != nil {
+	var originalDir string
+
+	if err := p.readYaml(filepath.Join(baseDir, config.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
 	// Load the images and repos from the 'reference' package
-	if err = p.loadDifferentialData(); err != nil {
+	if err := p.loadDifferentialData(); err != nil {
 		return err
 	}
 
 	// Change the working directory if this run has an alternate base dir.
 	if baseDir != "" {
 		originalDir, _ = os.Getwd()
-		if err = os.Chdir(baseDir); err != nil {
+		if err := os.Chdir(baseDir); err != nil {
 			return fmt.Errorf("unable to access directory '%s': %w", baseDir, err)
 		}
 		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
@@ -62,16 +61,16 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Before we compose the components (and render the imported OCI components), we need to remove any components that are not needed for a differential build
-	if err = p.removeDifferentialComponentsFromPackage(); err != nil {
+	if err := p.removeDifferentialComponentsFromPackage(); err != nil {
 		return err
 	}
 
-	if packageWarnings, err = p.composeComponents(); err != nil {
+	if err := p.composeComponents(); err != nil {
 		return err
 	}
 
 	// After components are composed, template the active package.
-	if err = p.fillActiveTemplate(); err != nil {
+	if err := p.fillActiveTemplate(); err != nil {
 		return fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
@@ -107,11 +106,11 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Perform early package validation.
-	if err = validate.Run(p.cfg.Pkg); err != nil {
+	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
-	if !p.confirmAction("Create", nil, packageWarnings) {
+	if !p.confirmAction("Create", nil) {
 		return fmt.Errorf("package creation canceled")
 	}
 

@@ -30,8 +30,6 @@ import (
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOverride string) error {
 
-	var err error
-	var packageWarnings []string
 	var originalDir string
 
 	// Change the working directory if this run has an alternate base dir
@@ -41,20 +39,20 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 		message.Note(fmt.Sprintf("Using base directory %s", baseDir))
 	}
 
-	if err = p.readYaml(config.ZarfYAML); err != nil {
+	if err := p.readYaml(config.ZarfYAML); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
-	if packageWarnings, err = p.composeComponents(); err != nil {
+	if err := p.composeComponents(); err != nil {
 		return err
 	}
 
-	for _, warning := range packageWarnings {
+	for _, warning := range p.warnings {
 		message.Warn(warning)
 	}
 
 	// After components are composed, template the active package
-	if err = p.fillActiveTemplate(); err != nil {
+	if err := p.fillActiveTemplate(); err != nil {
 		return fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
