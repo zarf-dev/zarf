@@ -39,13 +39,18 @@ var breakingChanges = []BreakingChange{
 
 // MigrateComponent runs all migrations on a component.
 // Build should be empty on package create, but include just in case someone copied a zarf.yaml from a zarf package.
-func MigrateComponent(build types.ZarfBuildData, c types.ZarfComponent) types.ZarfComponent {
+func MigrateComponent(build types.ZarfBuildData, c types.ZarfComponent) (types.ZarfComponent, []string) {
+	var packageWarnings = []string{}
+
 	// If the component has already been migrated, clear the deprecated scripts.
 	if utils.SliceContains(build.Migrations, ScriptsToActionsMigrated) {
 		c.DeprecatedScripts = types.DeprecatedZarfComponentScripts{}
 	} else {
 		// Otherwise, run the migration.
-		c = migrateScriptsToActions(c)
+		var warning string
+		if c, warning = migrateScriptsToActions(c); warning != "" {
+			packageWarnings = append(packageWarnings, warning)
+		}
 	}
 
 	// If the component has already been migrated, clear the setVariable definitions.
@@ -53,11 +58,14 @@ func MigrateComponent(build types.ZarfBuildData, c types.ZarfComponent) types.Za
 		c = clearSetVariables(c)
 	} else {
 		// Otherwise, run the migration.
-		c = migrateSetVariableToSetVariables(c)
+		var warning string
+		if c, warning = migrateSetVariableToSetVariables(c); warning != "" {
+			packageWarnings = append(packageWarnings, warning)
+		}
 	}
 
 	// Future migrations here.
-	return c
+	return c, packageWarnings
 }
 
 // PrintBreakingChanges prints the breaking changes between the provided version and the current CLIVersion

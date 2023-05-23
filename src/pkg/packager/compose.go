@@ -20,22 +20,25 @@ import (
 )
 
 // composeComponents builds the composed components list for the current config.
-func (p *Packager) composeComponents() error {
+func (p *Packager) composeComponents() ([]string, error) {
 	message.Debugf("packager.ComposeComponents()")
+	var packageWarnings = []string{}
 
 	components := []types.ZarfComponent{}
 
 	for _, component := range p.cfg.Pkg.Components {
 		if component.Import.Path == "" && component.Import.URL == "" {
 			// Migrate any deprecated component configurations now
-			component = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
-			components = append(components, component)
+			migratedComponent, warnings := deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+			components = append(components, migratedComponent)
+			packageWarnings = append(packageWarnings, warnings...)
 		} else {
-			composedComponent, err := p.getComposedComponent(component)
+			composedComponent, warnings, err := p.getComposedComponent(component)
 			if err != nil {
-				return fmt.Errorf("unable to compose component %s: %w", component.Name, err)
+				return packageWarnings, fmt.Errorf("unable to compose component %s: %w", component.Name, err)
 			}
 			components = append(components, composedComponent)
+			packageWarnings = append(packageWarnings, warnings...)
 		}
 	}
 
@@ -43,7 +46,7 @@ func (p *Packager) composeComponents() error {
 	// This is important when the deploy package is created.
 	p.cfg.Pkg.Components = components
 
-	return nil
+	return packageWarnings, nil
 }
 
 // getComposedComponent recursively retrieves a composed Zarf component
@@ -51,12 +54,12 @@ func (p *Packager) composeComponents() error {
 // For composed components, we build the tree of components starting at the root and adding children as we go;
 // this follows the composite design pattern outlined here: https://en.wikipedia.org/wiki/Composite_pattern
 // where 1 component parent is made up of 0...n composite or leaf children.
-func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (child types.ZarfComponent, err error) {
+func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (child types.ZarfComponent, packageWarnings []string, err error) {
 	message.Debugf("packager.GetComposedComponent(%+v)", parentComponent)
 
 	// Make sure the component we're trying to import can't be accessed.
 	if err := validate.ImportPackage(&parentComponent); err != nil {
-		return child, fmt.Errorf("invalid import definition in the %s component: %w", parentComponent.Name, err)
+		return child, packageWarnings, fmt.Errorf("invalid import definition in the %s component: %w", parentComponent.Name, err)
 	}
 
 	// Keep track of the composed components import path to build nested composed components.
@@ -64,9 +67,9 @@ func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (ch
 
 	// Get the component that we are trying to import.
 	// NOTE: This function is recursive and will continue getting the children until there are no more 'imported' components left.
-	child, err = p.getChildComponent(parentComponent, pathAncestry)
+	child, packageWarnings, err = p.getChildComponent(parentComponent, pathAncestry)
 	if err != nil {
-		return child, fmt.Errorf("unable to get child component: %w", err)
+		return child, packageWarnings, fmt.Errorf("unable to get child component: %w", err)
 	}
 
 	// Merge the overrides from the child that we just received with the parent we were provided.
@@ -75,7 +78,7 @@ func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (ch
 	return
 }
 
-func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry string) (child types.ZarfComponent, err error) {
+func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry string) (child types.ZarfComponent, packageWarnings []string, err error) {
 	message.Debugf("packager.getChildComponent(%+v, %s)", parent, pathAncestry)
 
 	// Figure out which component we are actually importing.
@@ -94,29 +97,29 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		cachePath = filepath.Join(config.GetAbsCachePath(), "oci", skelURL)
 		err = os.MkdirAll(cachePath, 0755)
 		if err != nil {
-			return child, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
+			return child, packageWarnings, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
 		}
 
 		componentLayer := filepath.Join("components", fmt.Sprintf("%s.tar", childComponentName))
 		err = p.handleOciPackage(skelURL, cachePath, 3, componentLayer)
 		if err != nil {
-			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
+			return child, packageWarnings, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
 		cwd, err := os.Getwd()
 		if err != nil {
-			return child, fmt.Errorf("unable to get current working directory: %w", err)
+			return child, packageWarnings, fmt.Errorf("unable to get current working directory: %w", err)
 		}
 
 		rel, err := filepath.Rel(cwd, cachePath)
 		if err != nil {
-			return child, fmt.Errorf("unable to get relative path: %w", err)
+			return child, packageWarnings, fmt.Errorf("unable to get relative path: %w", err)
 		}
 		parent.Import.Path = rel
 	}
 
 	subPkg, err := p.getSubPackage(filepath.Join(pathAncestry, parent.Import.Path))
 	if err != nil {
-		return child, fmt.Errorf("unable to get sub package: %w", err)
+		return child, packageWarnings, fmt.Errorf("unable to get sub package: %w", err)
 	}
 
 	// Find the child component from the imported package that matches our arch.
@@ -139,7 +142,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	// If we didn't find a child component, bail.
 	if child.Name == "" {
-		return child, fmt.Errorf("unable to find the component %s in the imported package", childComponentName)
+		return child, packageWarnings, fmt.Errorf("unable to find the component %s in the imported package", childComponentName)
 	}
 
 	// If it's OCI, we need to unpack the component tarball
@@ -149,12 +152,12 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		if !utils.InvalidPath(dir) {
 			err = os.RemoveAll(dir)
 			if err != nil {
-				return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
+				return child, packageWarnings, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
 			}
 		}
 		err = archiver.Unarchive(fmt.Sprintf("%s.tar", dir), filepath.Join(cachePath, "components"))
 		if err != nil {
-			return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
+			return child, packageWarnings, fmt.Errorf("unable to unpack composed component tarball: %w", err)
 		}
 	}
 
@@ -162,9 +165,9 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	// Check if we need to get more of children.
 	if child.Import.Path != "" {
 		// Recursively call this function to get the next layer of children.
-		grandchildComponent, err := p.getChildComponent(child, pathAncestry)
+		grandchildComponent, warnings, err := p.getChildComponent(child, pathAncestry)
 		if err != nil {
-			return child, err
+			return child, packageWarnings, err
 		}
 
 		// Merge the grandchild values into the child.
@@ -172,16 +175,19 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 		// Set the grandchild as the child component now that we're done with recursively importing.
 		child = grandchildComponent
+		packageWarnings = append(packageWarnings, warnings...)
 	} else {
 		// Fix the filePaths of imported components to be accessible from our current location.
 		child, err = p.fixComposedFilepaths(pathAncestry, child)
 		if err != nil {
-			return child, fmt.Errorf("unable to fix composed filepaths: %s", err.Error())
+			return child, packageWarnings, fmt.Errorf("unable to fix composed filepaths: %s", err.Error())
 		}
 	}
 
 	// Migrate any deprecated component configurations now
-	child = deprecated.MigrateComponent(p.cfg.Pkg.Build, child)
+	var warnings []string
+	child, warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, child)
+	packageWarnings = append(packageWarnings, warnings...)
 
 	return
 }

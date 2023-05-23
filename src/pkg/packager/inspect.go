@@ -37,16 +37,15 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		if err := p.pullPackageLayers(p.cfg.DeployOpts.PackagePath, p.tmp.Base, layersToPull); err != nil {
 			return fmt.Errorf("unable to pull layers for inspect: %w", err)
 		}
-		err := utils.ReadYaml(p.tmp.ZarfYaml, &p.cfg.Pkg)
-		if err != nil {
-			return fmt.Errorf("unable to read the zarf yaml for the inspect: %w", err)
+		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
+			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 		}
 	} else {
 		// This package exists on the local file system - extract the first layer of the tarball
 		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract the package: %w", err)
 		}
-		if err := p.readYaml(p.tmp.ZarfYaml, true); err != nil {
+		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 		}
 

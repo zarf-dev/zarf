@@ -55,7 +55,7 @@ func (p *Packager) Publish() error {
 			return fmt.Errorf("unable to extract the package: %w", err)
 		}
 
-		err := p.readYaml(p.tmp.ZarfYaml, true)
+		err := p.readYaml(p.tmp.ZarfYaml)
 		if err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 		}
@@ -284,13 +284,17 @@ func (p *Packager) loadSkeleton() error {
 	if err := os.Chdir(base); err != nil {
 		return err
 	}
-	if err := p.readYaml(config.ZarfYAML, false); err != nil {
+	if err := p.readYaml(config.ZarfYAML); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %s", base, err.Error())
 	}
 
-	err = p.composeComponents()
+	packageWarnings, err := p.composeComponents()
 	if err != nil {
 		return err
+	}
+
+	for _, warning := range packageWarnings {
+		message.Warn(warning)
 	}
 
 	for idx, component := range p.cfg.Pkg.Components {

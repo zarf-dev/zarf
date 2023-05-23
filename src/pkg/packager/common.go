@@ -242,10 +242,11 @@ func getRequestedComponentList(requestedComponents string) []string {
 	return []string{}
 }
 
-func (p *Packager) loadZarfPkg() error {
+func (p *Packager) loadZarfPkg() ([]string, error) {
+	var packageWarnings = []string{}
 
 	if err := p.handlePackagePath(); err != nil {
-		return fmt.Errorf("unable to handle the provided package path: %w", err)
+		return packageWarnings, fmt.Errorf("unable to handle the provided package path: %w", err)
 	}
 
 	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
@@ -253,12 +254,12 @@ func (p *Packager) loadZarfPkg() error {
 
 	// Make sure the user gave us a package we can work with
 	if utils.InvalidPath(p.cfg.DeployOpts.PackagePath) {
-		return fmt.Errorf("unable to find the package at %s", p.cfg.DeployOpts.PackagePath)
+		return packageWarnings, fmt.Errorf("unable to find the package at %s", p.cfg.DeployOpts.PackagePath)
 	}
 
 	// If packagePath has partial in the name, we need to combine the partials into a single package
 	if err := p.handleIfPartialPkg(); err != nil {
-		return fmt.Errorf("unable to process partial package: %w", err)
+		return packageWarnings, fmt.Errorf("unable to process partial package: %w", err)
 	}
 
 	// If the package was pulled from OCI, there is no need to extract it since it is unpacked already
@@ -266,35 +267,35 @@ func (p *Packager) loadZarfPkg() error {
 		// Extract the archive
 		spinner.Updatef("Extracting the package, this may take a few moments")
 		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
-			return fmt.Errorf("unable to extract the package: %w", err)
+			return packageWarnings, fmt.Errorf("unable to extract the package: %w", err)
 		}
 	}
 
 	// Load the config from the extracted archive zarf.yaml
 	spinner.Updatef("Loading the zarf package config")
 	configPath := p.tmp.ZarfYaml
-	if err := p.readYaml(configPath, true); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
+	if err := p.readYaml(configPath); err != nil {
+		return packageWarnings, fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
 	// Validate the checksums of all the things!!!
 	if p.cfg.Pkg.Metadata.AggregateChecksum != "" {
 		if err := p.validatePackageChecksums(); err != nil {
-			return fmt.Errorf("unable to validate the package checksums: %w", err)
+			return packageWarnings, fmt.Errorf("unable to validate the package checksums: %w", err)
 		}
 	}
 
 	// Get a list of paths for the components of the package
 	components, err := os.ReadDir(p.tmp.Components)
 	if err != nil {
-		return fmt.Errorf("unable to get a list of components... %w", err)
+		return packageWarnings, fmt.Errorf("unable to get a list of components... %w", err)
 	}
 	for _, path := range components {
 		// If the components are tarballs, extract them!
 		componentPath := filepath.Join(p.tmp.Components, path.Name())
 		if !path.IsDir() && strings.HasSuffix(path.Name(), ".tar") {
 			if err := archiver.Unarchive(componentPath, p.tmp.Components); err != nil {
-				return fmt.Errorf("unable to extract the component: %w", err)
+				return packageWarnings, fmt.Errorf("unable to extract the component: %w", err)
 			}
 
 			// After extracting the component, remove the compressed tarball to release disk space
@@ -306,7 +307,7 @@ func (p *Packager) loadZarfPkg() error {
 	_, tarErr := os.Stat(p.tmp.SbomTar)
 	if tarErr == nil {
 		if err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
-			return fmt.Errorf("unable to extract the sbom data from the component: %w", err)
+			return packageWarnings, fmt.Errorf("unable to extract the sbom data from the component: %w", err)
 		}
 	}
 
@@ -318,11 +319,13 @@ func (p *Packager) loadZarfPkg() error {
 
 	// Handle component configuration deprecations
 	for idx, component := range p.cfg.Pkg.Components {
-		p.cfg.Pkg.Components[idx] = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+		var warnings []string
+		p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+		packageWarnings = append(packageWarnings, warnings...)
 	}
 
 	spinner.Success()
-	return nil
+	return packageWarnings, nil
 }
 
 func (p *Packager) handleIfPartialPkg() error {

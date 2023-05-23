@@ -40,11 +40,14 @@ var (
 func (p *Packager) Deploy() error {
 	message.Debug("packager.Deploy()")
 
-	if err := p.loadZarfPkg(); err != nil {
+	var err error
+	var packageWarnings []string
+
+	if packageWarnings, err = p.loadZarfPkg(); err != nil {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
 
-	if err := p.validatePackageArchitecture(); err != nil {
+	if err = p.validatePackageArchitecture(); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
 			message.Warnf("Unable to validate package architecture: %s", err.Error())
 		} else {
@@ -52,7 +55,7 @@ func (p *Packager) Deploy() error {
 		}
 	}
 
-	if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
+	if err = p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
 		return err
 	}
 
@@ -62,12 +65,12 @@ func (p *Packager) Deploy() error {
 	}
 
 	// Confirm the overall package deployment
-	if !p.confirmAction("Deploy", p.cfg.SBOMViewFiles) {
+	if !p.confirmAction("Deploy", p.cfg.SBOMViewFiles, packageWarnings) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
 	// Set variables and prompt if --confirm is not set
-	if err := p.setVariableMapInConfig(); err != nil {
+	if err = p.setVariableMapInConfig(); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
@@ -79,6 +82,9 @@ func (p *Packager) Deploy() error {
 			}
 		}
 	}()
+
+	// Filter out components that are not compatible with this system
+	p.filterComponents(true)
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
