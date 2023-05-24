@@ -78,12 +78,12 @@ func TestComponentActions(t *testing.T) {
 	require.Contains(t, stdErr, "😭😭😭 this action failed because it took too long to run 😭😭😭")
 
 	// Test using a Zarf Variable within the action
-	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "deploy", path, "--components=on-deploy-with-variable", "-l=trace")
+	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "deploy", path, "--components=on-deploy-with-variable")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "the dog says ruff")
 
 	// Test using dynamic and multiple-variables
-	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "deploy", path, "--components=on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "-l=trace")
+	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "deploy", path, "--components=on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "the cat says meow")
 	require.Contains(t, stdErr, "the dog says ruff")
