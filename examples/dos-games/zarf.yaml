@@ -14,3 +14,12 @@ components:
           - manifests/service.yaml
     images:
       - defenseunicorns/zarf-game:multi-tile-dark
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: game
+                namespace: dos-games
+                condition: available

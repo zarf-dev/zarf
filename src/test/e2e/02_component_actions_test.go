@@ -34,7 +34,7 @@ func TestComponentActions(t *testing.T) {
 
 	/* Create */
 	// Try creating the package to test the onCreate actions.
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/component-actions")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/component-actions", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Completed \"touch test-create-before.txt\"")
 	require.Contains(t, stdErr, "multiline!")
