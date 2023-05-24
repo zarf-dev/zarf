@@ -89,7 +89,7 @@ func TestUseCLI(t *testing.T) {
 		t.Parallel()
 		// Test for expected failure when given a bad component input
 		path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.Arch)
-		_, _, err := e2e.ZarfWithConfirm("package", "deploy", path, "--components=on-create,foo,logging")
+		_, _, err := e2e.Zarf("package", "deploy", path, "--components=on-create,foo,logging", "--confirm")
 		require.Error(t, err)
 	})
 
@@ -104,7 +104,7 @@ func TestUseCLI(t *testing.T) {
 	t.Run("bad zarf package deploy w/o --insecure or --shasum", func(t *testing.T) {
 		t.Parallel()
 		// Test that `zarf package deploy` gives an error if deploying a remote package without the --insecure or --shasum flags
-		stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst")
+		stdOut, stdErr, err := e2e.Zarf("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm")
 		require.Error(t, err, stdOut, stdErr)
 	})
 
@@ -112,7 +112,7 @@ func TestUseCLI(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
 		cachePath := filepath.Join(tmpdir, ".cache-location")
-		stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "create", "examples/dos-games", "--zarf-cache", cachePath, "--tmpdir", tmpdir, "--log-level=debug")
+		stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/dos-games", "--zarf-cache", cachePath, "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
 		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
 		require.NoError(t, err, stdOut, stdErr)
 
@@ -139,7 +139,7 @@ func TestUseCLI(t *testing.T) {
 			secondFile = "second-choice-file.txt"
 		)
 		path := fmt.Sprintf("build/zarf-package-component-choice-%s.tar.zst", e2e.Arch)
-		stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "deploy", path, "--tmpdir", tmpdir, "--log-level=debug")
+		stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
 		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
 		require.NoError(t, err, stdOut, stdErr)
 

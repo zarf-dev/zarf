@@ -34,7 +34,7 @@ func TestWait(t *testing.T) {
 	e2e.SetupWithCluster(t)
 
 	// Create the package.
-	stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "create", "src/test/packages/28-helm-no-wait/", "-o=build")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/28-helm-no-wait/", "-o=build", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-helm-no-wait-%s.tar.zst", e2e.Arch)

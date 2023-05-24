@@ -22,14 +22,14 @@ func TestGitAndFlux(t *testing.T) {
 	e2e.SetupWithCluster(t)
 
 	buildPath := filepath.Join("src", "test", "packages", "22-git-and-flux")
-	stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "create", buildPath, "-o=build")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "-o=build", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-git-data-check-secrets-%s-1.0.0.tar.zst", e2e.Arch)
 	defer e2e.CleanFiles(path)
 
 	// Deploy the gitops example
-	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "deploy", path)
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	tunnel, err := cluster.NewZarfTunnel()
@@ -43,9 +43,8 @@ func TestGitAndFlux(t *testing.T) {
 	testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
 	waitFluxPodInfoDeployment(t)
 
-	stdOut, stdErr, err = e2e.ZarfWithConfirm("package", "remove", "podinfo-flux")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "podinfo-flux")
 	require.NoError(t, err, stdOut, stdErr)
-
 }
 
 func testGitServerConnect(t *testing.T, gitURL string) {
@@ -107,6 +106,6 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 func waitFluxPodInfoDeployment(t *testing.T) {
 	// Deploy the flux example and verify that it works
 	path := fmt.Sprintf("build/zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
-	stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "deploy", path)
+	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path)
 	require.NoError(t, err, stdOut, stdErr)
 }

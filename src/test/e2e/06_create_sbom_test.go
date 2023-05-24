@@ -21,16 +21,13 @@ func TestCreateSBOM(t *testing.T) {
 
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
-	stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "create", "examples/dos-games", "--zarf-cache", cachePath, "--sbom-out", sbomPath)
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/dos-games", "--zarf-cache", cachePath, "--sbom-out", sbomPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Creating SBOMs for 1 images and 0 components with files.")
 	// Test that the game package generates the SBOMs we expect (images only)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
-	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "compare.html"))
-	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "defenseunicorns_zarf-game_multi-tile-dark.json"))
-	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(sbomPath, "dos-games", "sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html"))
+	require.FileExists(t, filepath.Join(sbomPath, "dos-games", "compare.html"))
+	require.FileExists(t, filepath.Join(sbomPath, "dos-games", "defenseunicorns_zarf-game_multi-tile-dark.json"))
 
 	// Clean the SBOM path so it is force to be recreated
 	e2e.CleanFiles(sbomPath)

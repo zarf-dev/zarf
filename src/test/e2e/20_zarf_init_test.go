@@ -35,7 +35,7 @@ func TestZarfInit(t *testing.T) {
 		)
 
 		// Build init package with different arch than the cluster arch.
-		stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "create", ".", "--architecture", mismatchedArch)
+		stdOut, stdErr, err := e2e.Zarf("package", "create", ".", "--architecture", mismatchedArch, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		t.Cleanup(func() {
 			e2e.CleanFiles(mismatchedInitPackage)
@@ -47,7 +47,7 @@ func TestZarfInit(t *testing.T) {
 		if e2e.ApplianceMode {
 			componentsFlag = "--components=k3s"
 		}
-		_, stdErr, err = e2e.ZarfWithConfirm("init", "--architecture", mismatchedArch, componentsFlag)
+		_, stdErr, err = e2e.Zarf("init", "--architecture", mismatchedArch, componentsFlag, "--confirm")
 		require.Error(t, err, stdErr)
 		require.Contains(t, stdErr, expectedErrorMessage)
 	})
@@ -55,7 +55,7 @@ func TestZarfInit(t *testing.T) {
 	t.Run("init with components and verify state secrets are sanitzed", func(t *testing.T) {
 		t.Parallel()
 		// run `zarf init`
-		_, initStdErr, err := e2e.ZarfWithConfirm("init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace")
+		_, initStdErr, err := e2e.Zarf("init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
 		require.NoError(t, err)
 		require.Contains(t, initStdErr, "artifacts with software bill-of-materials (SBOM) included")
 

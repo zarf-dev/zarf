@@ -65,12 +65,6 @@ func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
 	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)
 }
 
-// ZarfWithConfirm executes a Zarf command with the `--confirm` flag.
-func (e2e *ZarfE2ETest) ZarfWithConfirm(args ...string) (string, string, error) {
-	args = append(args, "--confirm")
-	return e2e.Zarf(args...)
-}
-
 // Kubectl executes `zarf tools kubectl ...`
 func (e2e *ZarfE2ETest) Kubectl(args ...string) (string, string, error) {
 	tk := []string{"tools", "kubectl"}
