@@ -15,5 +15,5 @@ components:
   - name: chart-via-oci
     required: false
     import:
-      url: oci://localhost:5000/helm-local-chart:0.0.1-skeleton
+      url: oci://localhost:5000/helm-charts:0.0.1-skeleton
       name: demo-helm-local-chart

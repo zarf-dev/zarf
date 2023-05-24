@@ -12,4 +12,4 @@ To view the example in its entirety, select the `Edit this page` link below the 
 
 :::
 
-<ExampleYAML example="helm-local-chart" showLink={false} />
+<ExampleYAML example="helm-charts" showLink={false} />
