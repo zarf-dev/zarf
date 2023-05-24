@@ -498,16 +498,19 @@ func (p *Packager) validatePackageChecksums() error {
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() error {
-	// Attempt to connect to a cluster to get the architecture.
-	if cluster, err := cluster.NewCluster(); err == nil {
-		clusterArch, err := cluster.Kube.GetArchitecture()
-		if err != nil {
-			return lang.ErrUnableToCheckArch
-		}
+	// Ignore this check if the architecture is explicitly "multi"
+	if p.arch != "multi" {
+		// Attempt to connect to a cluster to get the architecture.
+		if cluster, err := cluster.NewCluster(); err == nil {
+			clusterArch, err := cluster.Kube.GetArchitecture()
+			if err != nil {
+				return lang.ErrUnableToCheckArch
+			}
 
-		// Check if the package architecture and the cluster architecture are the same.
-		if p.arch != clusterArch {
-			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+			// Check if the package architecture and the cluster architecture are the same.
+			if p.arch != clusterArch {
+				return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+			}
 		}
 	}
 
