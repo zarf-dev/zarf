@@ -5,10 +5,10 @@ metadata:
   version: "###ZARF_PKG_TMPL_PACKAGE_VERSION###"
 
 components:
-  - name: helm-oci-chart
+  - name: demo-helm-oci-chart
     required: true
     import:
-      url: oci://127.0.0.1:555/helm-oci-chart:0.0.1-skeleton
+      url: oci://127.0.0.1:555/helm-charts:0.0.1-skeleton
 
   - name: versioned-assets
     import:

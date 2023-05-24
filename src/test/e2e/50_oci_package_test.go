@@ -106,7 +106,7 @@ func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 func (suite *RegistryClientTestSuite) Test_3_Inspect() {
 	suite.T().Log("E2E: Package Inspect oci://")
 
-	suite.Reference.Repository = "helm-oci-chart"
+	suite.Reference.Repository = "helm-charts"
 	suite.Reference.Reference = fmt.Sprintf("0.0.1-%s", e2e.Arch)
 	ref := suite.Reference.String()
 	stdOut, stdErr, err := e2e.Zarf("package", "inspect", "oci://"+ref, "--insecure")
