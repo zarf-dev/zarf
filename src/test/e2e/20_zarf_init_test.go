@@ -43,7 +43,11 @@ func TestZarfInit(t *testing.T) {
 		// Check that `zarf init` fails in appliance mode when we try to initialize a k3s cluster
 		// on a machine with a different architecture than the package architecture.
 		// We need to use the --architecture flag here to force zarf to find the package.
-		_, stdErr, err = e2e.ZarfWithConfirm("init", "--architecture", mismatchedArch, "--components=k3s")
+		componentsFlag := ""
+		if e2e.ApplianceMode {
+			componentsFlag = "--components=k3s"
+		}
+		_, stdErr, err = e2e.ZarfWithConfirm("init", "--architecture", mismatchedArch, componentsFlag)
 		require.Error(t, err, stdErr)
 		require.Contains(t, stdErr, expectedErrorMessage)
 	})
