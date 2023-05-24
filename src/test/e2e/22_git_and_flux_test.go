@@ -43,7 +43,7 @@ func TestGitAndFlux(t *testing.T) {
 	testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
 	waitFluxPodInfoDeployment(t)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "podinfo-flux")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "podinfo-flux", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
