@@ -17,12 +17,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
 )
 
 type SkeletonSuite struct {
 	suite.Suite
+	require.Assertions
 	Remote    *utils.OrasRemote
 	Reference registry.Reference
 }

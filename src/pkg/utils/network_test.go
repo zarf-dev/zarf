@@ -10,11 +10,13 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
 type TestNetworkSuite struct {
 	suite.Suite
+	require.Assertions
 	urls testURLs
 }
 

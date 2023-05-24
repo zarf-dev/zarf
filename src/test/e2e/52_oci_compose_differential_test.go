@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
 )
@@ -21,6 +22,7 @@ import (
 // OCIDifferentialSuite validates that OCI imported components get handled correctly when performing a `zarf package create --differential`
 type OCIDifferentialSuite struct {
 	suite.Suite
+	require.Assertions
 	Remote    *utils.OrasRemote
 	Reference registry.Reference
 }
