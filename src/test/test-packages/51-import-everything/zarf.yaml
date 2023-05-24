@@ -17,11 +17,11 @@ components:
       path: ../../../../examples/dos-games
       name: baseline
 
-  - name: import-component-tiny-kafka
+  - name: import-component-wordpress
     required: false
     import:
-      path: ../../../../examples/tiny-kafka
-      name: baseline
+      path: ../../../../examples/wordpress
+      name: wordpress
 
   - name: import-component-oci
     required: false
