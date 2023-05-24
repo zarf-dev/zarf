@@ -25,18 +25,18 @@ type OCIDifferentialSuite struct {
 	require.Assertions
 	Remote    *utils.OrasRemote
 	Reference registry.Reference
+	tmpdir    string
 }
 
 var (
-	tmpPath, _              = utils.MakeTempDir("")
 	differentialPackageName = ""
 	normalPackageName       = ""
-	createOutFlag           = fmt.Sprintf("-o=%s", tmpPath)
 	examplePackagePath      = filepath.Join("examples", "helm-charts")
 	anotherPackagePath      = filepath.Join("src", "test", "packages", "52-oci-differential")
 )
 
 func (suite *OCIDifferentialSuite) SetupSuite() {
+	suite.tmpdir = suite.T().TempDir()
 	suite.Reference.Registry = "localhost:555"
 	differentialPackageName = fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0-differential-v0.25.0.tar.zst", e2e.Arch)
 	normalPackageName = fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0.tar.zst", e2e.Arch)
@@ -48,11 +48,11 @@ func (suite *OCIDifferentialSuite) SetupSuite() {
 	suite.NoError(err, stdOut, stdErr)
 
 	// build the package that we are going to publish
-	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.24.0", createOutFlag, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.24.0", "-o", suite.tmpdir, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// publish the package that we just built
-	normalPackagePath := filepath.Join(tmpPath, normalPackageName)
+	normalPackagePath := filepath.Join(suite.tmpdir, normalPackageName)
 	stdOut, stdErr, err = e2e.Zarf("package", "publish", normalPackagePath, "oci://"+suite.Reference.String(), "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 }
@@ -60,33 +60,31 @@ func (suite *OCIDifferentialSuite) SetupSuite() {
 func (suite *OCIDifferentialSuite) TearDownSuite() {
 	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
 	suite.NoError(err)
-
-	os.RemoveAll(tmpPath)
 }
 
 func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.T().Log("E2E: Test Differential Packages w/ OCI Imports")
 
 	// Build without differential
-	stdOut, stdErr, err := e2e.Zarf("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.25.0", createOutFlag, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.25.0", "-o", suite.tmpdir, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Extract and load the zarf.yaml config for the normally built package
-	err = archiver.Extract(filepath.Join(tmpPath, normalPackageName), "zarf.yaml", tmpPath)
+	err = archiver.Extract(filepath.Join(suite.tmpdir, normalPackageName), "zarf.yaml", suite.tmpdir)
 	suite.NoError(err, "unable to extract zarf.yaml from the differential git package")
 	var normalZarfConfig types.ZarfPackage
-	err = utils.ReadYaml(filepath.Join(tmpPath, "zarf.yaml"), &normalZarfConfig)
+	err = utils.ReadYaml(filepath.Join(suite.tmpdir, "zarf.yaml"), &normalZarfConfig)
 	suite.NoError(err, "unable to read zarf.yaml from the differential git package")
-	os.Remove(filepath.Join(tmpPath, "zarf.yaml"))
+	os.Remove(filepath.Join(suite.tmpdir, "zarf.yaml"))
 
-	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--differential", "oci://"+suite.Reference.String()+"/podinfo-with-oci-flux:v0.24.0-amd64", "--insecure", "--set=PACKAGE_VERSION=v0.25.0", createOutFlag, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--differential", "oci://"+suite.Reference.String()+"/podinfo-with-oci-flux:v0.24.0-amd64", "--insecure", "--set=PACKAGE_VERSION=v0.25.0", "-o", suite.tmpdir, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Extract and load the zarf.yaml config for the differentially built package
-	err = archiver.Extract(filepath.Join(tmpPath, differentialPackageName), "zarf.yaml", tmpPath)
+	err = archiver.Extract(filepath.Join(suite.tmpdir, differentialPackageName), "zarf.yaml", suite.tmpdir)
 	suite.NoError(err, "unable to extract zarf.yaml from the differential git package")
 	var differentialZarfConfig types.ZarfPackage
-	err = utils.ReadYaml(filepath.Join(tmpPath, "zarf.yaml"), &differentialZarfConfig)
+	err = utils.ReadYaml(filepath.Join(suite.tmpdir, "zarf.yaml"), &differentialZarfConfig)
 	suite.NoError(err, "unable to read zarf.yaml from the differential git package")
 
 	/* Perform a bunch of asserts around the non-differential package */
