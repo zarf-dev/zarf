@@ -118,7 +118,7 @@ func testHelmOCIChart(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify that podinfo successfully deploys in the cluster
-	kubectlOut, _, _ := e2e.Kubectl("-n=helm-oci-demo", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}")
+	kubectlOut, _, _ := e2e.Kubectl("-n=podinfo-from-oci", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}")
 	require.Contains(t, string(kubectlOut), "6.3.5")
 
 	// Remove the package.
