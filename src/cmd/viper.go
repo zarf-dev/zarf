@@ -43,6 +43,7 @@ const (
 	V_INIT_REGISTRY_PUSH_PASS = "init.registry.push_password"
 	V_INIT_REGISTRY_PULL_USER = "init.registry.pull_username"
 	V_INIT_REGISTRY_PULL_PASS = "init.registry.pull_password"
+	V_INIT_REGISTRY_TYPE      = "init.registry.type"
 
 	// Init Package config keys
 	V_INIT_ARTIFACT_URL        = "init.artifact.url"

@@ -151,6 +151,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdInitFlagRegPullUser = "Username for pull-only access to the registry"
 	CmdInitFlagRegPullPass = "Password for the pull-only user to access the registry"
 	CmdInitFlagRegSecret   = "Registry secret value"
+	CmdInitFlagRegType     = "Temporary Field: Config to determine if registry is 'ecr' or not"
 
 	CmdInitFlagArtifactURL       = "External artifact registry url to use for this Zarf cluster"
 	CmdInitFlagArtifactPushUser  = "Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts."

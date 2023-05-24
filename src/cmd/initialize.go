@@ -143,7 +143,7 @@ func validateInitFlags() error {
 	}
 
 	// If 'registry-url' is provided, make sure they provided values for the username and password of the push user
-	if pkgConfig.InitOpts.RegistryInfo.Address != "" {
+	if pkgConfig.InitOpts.RegistryInfo.Address != "" && pkgConfig.InitOpts.RegistryInfo.RegistryType == "" {
 		if pkgConfig.InitOpts.RegistryInfo.PushUsername == "" || pkgConfig.InitOpts.RegistryInfo.PushPassword == "" {
 			return fmt.Errorf(lang.CmdInitErrValidateRegistry)
 		}
@@ -206,6 +206,7 @@ func init() {
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(V_INIT_REGISTRY_PULL_USER), lang.CmdInitFlagRegPullUser)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(V_INIT_REGISTRY_PULL_PASS), lang.CmdInitFlagRegPullPass)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Secret, "registry-secret", v.GetString(V_INIT_REGISTRY_SECRET), lang.CmdInitFlagRegSecret)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.RegistryType, "registry-type", v.GetString(V_INIT_REGISTRY_TYPE), lang.CmdInitFlagRegType)
 
 	// Flags for using an external artifact server
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.Address, "artifact-url", v.GetString(V_INIT_ARTIFACT_URL), lang.CmdInitFlagArtifactURL)

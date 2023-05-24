@@ -75,4 +75,6 @@ type RegistryInfo struct {
 	InternalRegistry bool   `json:"internalRegistry" jsonschema:"description=Indicates if we are using a registry that Zarf is directly managing"`
 
 	Secret string `json:"secret" jsonschema:"description=Secret value that the registry was seeded with"`
+
+	RegistryType string `json:"registryType" jsonschema:"description=Type of registry Zarf is configured to use"`
 }
