@@ -46,7 +46,7 @@ func testHelmReleaseName(t *testing.T) {
 	t.Log("E2E: Helm chart releasename")
 
 	// Deploy the package.
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", helmChartsPkg, "--components=demo-helm-alt-release-name")
+	stdOut, stdErr, err := e2e.ZarfWithConfirm("package", "deploy", helmChartsPkg, "--components=demo-helm-alt-release-name")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify multiple helm installs of different release names were deployed.
