@@ -22,9 +22,8 @@ func TestDataInjection(t *testing.T) {
 
 	path := fmt.Sprintf("build/zarf-package-data-injection-%s.tar", e2e.Arch)
 
-	sbomPath := filepath.Join(os.TempDir(), ".sbom-location")
-
-	e2e.CleanFiles(sbomPath)
+	tmpdir := t.TempDir()
+	sbomPath := filepath.Join(tmpdir, ".sbom-location")
 
 	// Repeat the injection action 3 times to ensure the data injection is idempotent and doesn't fail to perform an upgrade
 	for i := 0; i < 3; i++ {
@@ -50,8 +49,6 @@ func TestDataInjection(t *testing.T) {
 	withInitContainerJSON, err := os.ReadFile(filepath.Join(sbomPath, "data-injection", "zarf-component-with-init-container.json"))
 	require.NoError(t, err)
 	require.Contains(t, string(withInitContainerJSON), "pytz")
-
-	e2e.CleanFiles(sbomPath)
 }
 
 func runDataInjection(t *testing.T, path string) {

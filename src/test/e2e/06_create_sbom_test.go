@@ -15,10 +15,9 @@ import (
 )
 
 func TestCreateSBOM(t *testing.T) {
-	cachePath := filepath.Join(os.TempDir(), ".cache-location")
-	sbomPath := filepath.Join(os.TempDir(), ".sbom-location")
-
-	e2e.CleanFiles(cachePath, sbomPath)
+	tmpdir := t.TempDir()
+	cachePath := filepath.Join(tmpdir, ".cache-location")
+	sbomPath := filepath.Join(tmpdir, ".sbom-location")
 
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
@@ -69,5 +68,5 @@ func TestCreateSBOM(t *testing.T) {
 	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "compare.html"))
 	require.NoError(t, err)
 
-	e2e.CleanFiles(cachePath, sbomPath, pkgName)
+	e2e.CleanFiles(pkgName)
 }

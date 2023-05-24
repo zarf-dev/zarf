@@ -6,7 +6,6 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -17,8 +16,8 @@ import (
 func TestCreateGit(t *testing.T) {
 	t.Log("E2E: Test Git Repo Behavior")
 
-	extractDir := filepath.Join(os.TempDir(), ".extracted-git-pkg")
-	e2e.CleanFiles(extractDir)
+	tmpdir := t.TempDir()
+	extractDir := filepath.Join(tmpdir, ".extracted-git-pkg")
 
 	// Extract the test package.
 	path := fmt.Sprintf("build/zarf-package-git-data-%s-1.0.0.tar.zst", e2e.Arch)
