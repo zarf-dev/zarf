@@ -93,7 +93,8 @@ func testConnection(t *testing.T) {
 	require.NoError(t, err)
 
 	// Establish the tunnel connection
-	tunnel.Connect("", false)
+	err = tunnel.Connect("", false)
+	require.NoError(t, err)
 	defer tunnel.Close()
 
 	// Test the connection

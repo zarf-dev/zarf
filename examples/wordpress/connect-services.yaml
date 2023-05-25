@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-connect-blog
+  labels:
+    # Enables "zarf connect wordpress-blog"
+    zarf.dev/connect-name: wordpress-blog
+  annotations:
+    zarf.dev/connect-description: "The public facing WordPress blog site"
+spec:
+  selector:
+    app.kubernetes.io/instance: wordpress
+    app.kubernetes.io/name: wordpress
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-connect-admin
+  labels:
+    # Enables "zarf connect wordpress-admin"
+    zarf.dev/connect-name: wordpress-admin
+  annotations:
+    zarf.dev/connect-description: "The login page for the WordPress admin panel"
+    # Sets a URL-suffix to automatically navigate to in the browser
+    zarf.dev/connect-url: "/wp-admin"
+spec:
+  selector:
+    app.kubernetes.io/instance: wordpress
+    app.kubernetes.io/name: wordpress
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080

@@ -2,8 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
@@ -14,6 +16,9 @@ func PrintCredentialTable(state types.ZarfState, componentsToDeploy []types.Depl
 	if len(componentsToDeploy) == 0 {
 		componentsToDeploy = []types.DeployedComponent{{Name: "logging"}, {Name: "git-server"}}
 	}
+
+	// Set output to os.Stderr to avoid creds being printed in logs
+	pterm.SetDefaultOutput(os.Stderr)
 
 	pterm.Println()
 	loginTableHeader := pterm.TableData{
@@ -42,6 +47,11 @@ func PrintCredentialTable(state types.ZarfState, componentsToDeploy []types.Depl
 	if len(loginTable) > 0 {
 		loginTable = append(loginTableHeader, loginTable...)
 		_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
+	}
+
+	// Restore the log file if it was specified
+	if !config.SkipLogFile {
+		message.UseLogFile()
 	}
 }
 

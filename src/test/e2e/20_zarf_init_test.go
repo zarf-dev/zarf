@@ -5,16 +5,18 @@
 package test
 
 import (
-	"context"
+	"encoding/base64"
+	"fmt"
 	"testing"
-	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"encoding/json"
+
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
 
 func TestZarfInit(t *testing.T) {
-	t.Log("E2E: Zarf init (limit to 10 minutes)")
+	t.Log("E2E: Zarf init")
 	e2e.SetupWithCluster(t)
 	defer e2e.Teardown(t)
 
@@ -24,16 +26,53 @@ func TestZarfInit(t *testing.T) {
 		initComponents = "k3s,logging,git-server"
 	}
 
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Minute)
-	defer cancel()
+	var (
+		mismatchedArch        = e2e.GetMismatchedArch()
+		initPackageVersion    = "UnknownVersion"
+		mismatchedInitPackage = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
+		expectedErrorMessage  = fmt.Sprintf("this package architecture is %s", mismatchedArch)
+	)
+
+	// Build init package with different arch than the cluster arch.
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", ".", "--architecture", mismatchedArch, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	defer e2e.CleanFiles(mismatchedInitPackage)
+
+	// Check that `zarf init` fails in appliance mode when we try to initialize a k3s cluster
+	// on a machine with a different architecture than the package architecture.
+	// We need to use the --architecture flag here to force zarf to find the package.
+	_, stdErr, err = e2e.ExecZarfCommand("init", "--architecture", mismatchedArch, "--components=k3s", "--confirm")
+	require.Error(t, err, stdErr)
+	require.Contains(t, stdErr, expectedErrorMessage)
 
 	// run `zarf init`
-	_, stdErr, err := exec.CmdWithContext(ctx, exec.PrintCfg(), e2e.ZarfBinPath, "init", "--components="+initComponents, "--confirm", "--nodeport", "31337")
-	require.Contains(t, stdErr, "artifacts with software bill-of-materials (SBOM) included")
+	_, initStdErr, err := e2e.ExecZarfCommand("init", "--components="+initComponents, "--confirm", "--nodeport", "31337", "-l", "trace")
 	require.NoError(t, err)
+	require.Contains(t, initStdErr, "artifacts with software bill-of-materials (SBOM) included")
+
+	logText := e2e.GetLogFileContents(t, initStdErr)
+
+	// Verify that any state secrets were not included in the log
+	base64State, _, err := e2e.ExecZarfCommand("tools", "kubectl", "get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
+	require.NoError(t, err)
+	stateJSON, err := base64.StdEncoding.DecodeString(base64State)
+	require.NoError(t, err)
+	state := types.ZarfState{}
+	err = json.Unmarshal(stateJSON, &state)
+	require.NoError(t, err)
+	require.NotContains(t, logText, state.AgentTLS.CA)
+	require.NotContains(t, logText, state.AgentTLS.Cert)
+	require.NotContains(t, logText, state.AgentTLS.Key)
+	require.NotContains(t, logText, state.ArtifactServer.PushToken)
+	require.NotContains(t, logText, state.GitServer.PullPassword)
+	require.NotContains(t, logText, state.GitServer.PushPassword)
+	require.NotContains(t, logText, state.RegistryInfo.PullPassword)
+	require.NotContains(t, logText, state.RegistryInfo.PushPassword)
+	require.NotContains(t, logText, state.RegistryInfo.Secret)
+	require.NotContains(t, logText, state.LoggingSecret)
 
 	// Check that gitea is actually running and healthy
-	stdOut, _, err := e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-l", "app in (gitea)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
+	stdOut, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-l", "app in (gitea)", "-n", "zarf", "-o", "jsonpath={.items[*].status.phase}")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "Running")
 

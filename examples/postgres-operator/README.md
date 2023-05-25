@@ -1,12 +1,8 @@
+import ExampleYAML from "@site/src/components/ExampleYAML";
+
 # Postgres Operator
 
 This example demonstrates deploying a performant and highly available PostgreSQL database to a Zarf airgap cluster. It uses Zalando's [postgres-operator](https://github.com/zalando/postgres-operator) and provides the Postgres Operator UI and a deployment of PGAdmin for demo purposes.
-
-:::info
-
-To view the example source code, select the `Edit this page` link below the article and select the parent folder.
-
-:::
 
 :::note
 
@@ -24,7 +20,7 @@ This example uses Zalando's Postgres operator as after looking at several altern
 
 4. Build the package using `zarf package create examples/postgres-operator`
 
-5. Create a Zarf cluster as described in the [Initializing a Cluster Tutorial](../../docs/6-zarf-tutorials/1-initializing-a-k8s-cluster.md/)
+5. Create a Zarf cluster as described in the [Initializing a Cluster Tutorial](../../docs/5-zarf-tutorials/1-initializing-a-k8s-cluster.md/)
 
 ## Instructions
 
@@ -86,3 +82,13 @@ If you want to run other commands after/during the browsing of the postgres tool
 
 - <https://blog.flant.com/comparing-kubernetes-operators-for-postgresql/>
 - <https://blog.flant.com/our-experience-with-postgres-operator-for-kubernetes-by-zalando/>
+
+## `zarf.yaml` {#zarf.yaml}
+
+:::info
+
+To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
+
+:::
+
+<ExampleYAML example="postgres-operator" showLink={false} />

@@ -5,18 +5,16 @@
 package packages
 
 import (
-	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-chi/chi/v5"
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -35,26 +33,29 @@ func Read(w http.ResponseWriter, r *http.Request) {
 
 // internal function to read a package from the local filesystem.
 func readPackage(path string) (pkg types.APIZarfPackage, err error) {
+	var file []byte
+
 	pkg.Path, err = url.QueryUnescape(path)
 	if err != nil {
 		return pkg, err
 	}
 
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return pkg, fmt.Errorf("unable to create tmpdir:  %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	// Check for zarf.yaml in the package and read into file
+	err = archiver.Walk(pkg.Path, func(f archiver.File) error {
+		if f.Name() == config.ZarfYAML {
+			file, err = ioutil.ReadAll(f)
+			if err != nil {
+				return err
+			}
+			return archiver.ErrStopWalk
+		}
 
-	// Extract the archive
-	err = archiver.Extract(pkg.Path, config.ZarfYAML, tmpDir)
+		return nil
+	})
 	if err != nil {
 		return pkg, err
 	}
 
-	// Read the Zarf yaml
-	configPath := filepath.Join(tmpDir, config.ZarfYAML)
-	err = utils.ReadYaml(configPath, &pkg.ZarfPackage)
-
+	err = goyaml.Unmarshal(file, &pkg.ZarfPackage)
 	return pkg, err
 }

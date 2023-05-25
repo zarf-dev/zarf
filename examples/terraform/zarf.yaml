@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: "terraform"
+  name: terraform
   description: "Run terraform/terragrunt code"
 
 components:

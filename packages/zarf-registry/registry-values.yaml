@@ -2,6 +2,7 @@ persistence:
   storageClass: "###ZARF_STORAGE_CLASS###"
   size: "###ZARF_VAR_REGISTRY_PVC_SIZE###"
   existingClaim: "###ZARF_VAR_REGISTRY_EXISTING_PVC###"
+  accessMode: "###ZARF_VAR_REGISTRY_PVC_ACCESS_MODE###"
 
 image:
   repository: "###ZARF_REGISTRY###/###ZARF_CONST_REGISTRY_IMAGE###"

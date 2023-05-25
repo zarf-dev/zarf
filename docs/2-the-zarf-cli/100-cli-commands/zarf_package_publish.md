@@ -4,13 +4,19 @@
 Publish a Zarf package to a remote registry
 
 ```
-zarf package publish [PACKAGE] [REPOSITORY] [flags]
+zarf package publish [PACKAGE|SKELETON DIRECTORY] [REPOSITORY] [flags]
 ```
 
 ## Examples
 
 ```
-  zarf package publish my-package.tar oci://my-registry.com/my-namespace
+
+# Publish a package to a remote registry
+zarf package publish my-package.tar oci://my-registry.com/my-namespace
+
+# Publish a skeleton package to a remote registry
+zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
+
 ```
 
 ## Options
@@ -25,7 +31,7 @@ zarf package publish [PACKAGE] [REPOSITORY] [flags]
 ## Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images
+  -a, --architecture string   Architecture for OCI images and Zarf packages
       --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation

@@ -41,7 +41,10 @@ var (
 			}
 
 			tunnel.AddSpinner(spinner)
-			tunnel.Connect(target, true)
+			err = tunnel.Connect(target, true)
+			if err != nil {
+				spinner.Fatalf(err, "Unable to connect to the service: %s", err.Error())
+			}
 			spinner.Success()
 		},
 	}

@@ -28,6 +28,7 @@ type DeployedPackage struct {
 	CLIVersion string      `json:"cliVersion"`
 
 	DeployedComponents []DeployedComponent `json:"deployedComponents"`
+	ConnectStrings     ConnectStrings      `json:"connectStrings,omitempty"`
 }
 
 // DeployedComponent contains information about a Zarf Package Component that has been deployed to a cluster.

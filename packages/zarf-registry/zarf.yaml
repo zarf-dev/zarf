@@ -12,6 +12,10 @@ variables:
     default: "20Gi"
     prompt: true
 
+  - name: REGISTRY_PVC_ACCESS_MODE
+    description: "The access mode of the persistent volume claim for the registry"
+    default: "ReadWriteOnce"
+
   - name: REGISTRY_CPU_REQ
     description: "The CPU request for the registry"
     default: "100m"

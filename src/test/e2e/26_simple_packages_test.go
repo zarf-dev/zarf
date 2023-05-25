@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,13 +26,14 @@ func TestDosGames(t *testing.T) {
 
 	tunnel, err := cluster.NewZarfTunnel()
 	require.NoError(t, err)
-	tunnel.Connect("doom", false)
+	err = tunnel.Connect("doom", false)
+	require.NoError(t, err)
 	defer tunnel.Close()
 
 	// Check that 'curl' returns something.
 	resp, err := http.Get(tunnel.HTTPEndpoint())
-	assert.NoError(t, err, resp)
-	assert.Equal(t, 200, resp.StatusCode)
+	require.NoError(t, err, resp)
+	require.Equal(t, 200, resp.StatusCode)
 
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)

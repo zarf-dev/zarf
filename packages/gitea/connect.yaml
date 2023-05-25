@@ -4,7 +4,7 @@ metadata:
   name: zarf-connect-git
   labels:
     # Enables "zarf connect git"
-    zarf.dev/connect-name: git    
+    zarf.dev/connect-name: git
   annotations:
     zarf.dev/connect-description: "Internal Zarf Git Server (Gitea)"
 spec:

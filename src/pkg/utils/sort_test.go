@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type TestDependency struct {
@@ -165,9 +165,9 @@ func TestSortDependencies(t *testing.T) {
 			}
 			result, err := SortDependencies(deps)
 			if tt.success {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			} else {
-				assert.Error(t, err)
+				require.Error(t, err)
 			}
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("expected %v but got %v", tt.expected, result)

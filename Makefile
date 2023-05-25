@@ -25,7 +25,7 @@ else
 	endif
 endif
 
-CLI_VERSION := $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
+CLI_VERSION ?= $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 GIT_SHA := $(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"")
 BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)' -X 'k8s.io/component-base/version.gitVersion=v0.0.0+zarf$(CLI_VERSION)' -X 'k8s.io/component-base/version.gitCommit=$(GIT_SHA)' -X 'k8s.io/component-base/version.buildDate=$(BUILD_DATE)'
@@ -130,19 +130,17 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/variables --set NGINX_VERSION=1.23.3 -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-data-injection-demo-$(ARCH).tar || $(ZARF_BIN) package create examples/data-injection -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-data-injection-$(ARCH).tar || $(ZARF_BIN) package create examples/data-injection -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-git-data-$(ARCH)-v1.0.0.tar.zst || $(ZARF_BIN) package create examples/git-data -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-test-helm-releasename-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-alt-release-name -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-helm-alt-release-name-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-alt-release-name -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-test-helm-local-chart-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-local-chart -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-helm-local-chart-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/helm-local-chart -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-compose-example-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/composable-packages -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
-
-	@test -s ./build/zarf-package-test-helm-wait-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-no-wait -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-helm-no-wait-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/helm-no-wait -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-helm-oci-chart-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/helm-oci-chart -o build -a $(ARCH) --confirm
 
@@ -159,7 +157,7 @@ test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests (builds any d
 test-external: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
-	@test -s ./build/zarf-package-flux-test-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/flux-test -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
 	cd src/test/external-test && go test -failfast -v -timeout 30m
 
 ## NOTE: Requires an existing cluster and

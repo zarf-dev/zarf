@@ -1,0 +1,27 @@
+# Use Kyverno instead of Gatekeeper
+gatekeeper:
+  enabled: false
+clusterAuditor:
+  enabled: false
+kyverno:
+  enabled: true
+kyvernoPolicies:
+  enabled: true
+  values:
+    policies:
+      disallow-shared-subpath-volume-writes:
+        validationFailureAction: audit
+      restrict-host-ports:
+        validationFailureAction: audit
+      restrict-capabilities:
+        validationFailureAction: audit
+      restrict-image-registries:
+        validationFailureAction: audit
+      disallow-host-namespaces:
+        validationFailureAction: audit
+      disallow-privileged-containers:
+        validationFailureAction: audit
+      require-non-root-user:
+        validationFailureAction: audit
+      restrict-host-path-mount-pv:
+        validationFailureAction: audit

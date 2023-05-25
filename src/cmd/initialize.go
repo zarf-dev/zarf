@@ -81,7 +81,7 @@ func findInitPackage(initPackageName string) (string, error) {
 
 	// Create the cache directory if it doesn't exist
 	if utils.InvalidPath(config.GetAbsCachePath()) {
-		if err := os.MkdirAll(config.GetAbsCachePath(), 0755); err != nil {
+		if err := utils.CreateDirectory(config.GetAbsCachePath(), 0755); err != nil {
 			message.Fatalf(err, lang.CmdInitErrUnableCreateCache, config.GetAbsCachePath())
 		}
 	}
@@ -93,7 +93,7 @@ func findInitPackage(initPackageName string) (string, error) {
 
 	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
 	downloadCacheTarget := filepath.Join(config.GetAbsCachePath(), initPackageName)
-	if err := downloadInitPackage(initPackageName, downloadCacheTarget); err != nil {
+	if err := downloadInitPackage(downloadCacheTarget); err != nil {
 		if errors.Is(err, lang.ErrInitNotFound) {
 			message.Fatal(err, err.Error())
 		} else {
@@ -103,13 +103,13 @@ func findInitPackage(initPackageName string) (string, error) {
 	return downloadCacheTarget, nil
 }
 
-func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
+func downloadInitPackage(downloadCacheTarget string) error {
 	if config.CommonOptions.Confirm {
 		return lang.ErrInitNotFound
 	}
 
 	var confirmDownload bool
-	url := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", config.GithubProject, config.CLIVersion, initPackageName)
+	url := packager.GetInitPackageRemote("")
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
 	message.Question(fmt.Sprintf(lang.CmdInitDownloadAsk, url))
@@ -122,7 +122,7 @@ func downloadInitPackage(initPackageName, downloadCacheTarget string) error {
 			Message: lang.CmdInitDownloadConfirm,
 		}
 		if err := survey.AskOne(prompt, &confirmDownload); err != nil {
-			return fmt.Errorf(lang.CmdInitDownloadCancel, err.Error())
+			return fmt.Errorf(lang.CmdInitDownloadErrCancel, err.Error())
 		}
 	}
 

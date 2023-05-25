@@ -1,0 +1,122 @@
+kind: ZarfPackageConfig
+metadata:
+  name: import-everything
+  description: Test nearly every type of import
+  version: 0.0.1
+
+components:
+  - name: import-component-local
+    required: false
+    import:
+      path: foo
+      name: baz
+
+  - name: import-component-local-relative
+    required: false
+    import:
+      path: ../../../../examples/dos-games
+      name: baseline
+
+  - name: import-component-tiny-kafka
+    required: false
+    import:
+      path: ../../../../examples/tiny-kafka
+      name: baseline
+
+  - name: import-component-oci
+    required: false
+    import:
+      # name is optional, if not provided the name of the component will be used to import
+      name: demo-helm-local-chart
+      url: oci://localhost:555/helm-local-chart:0.0.1-skeleton
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: local-demo
+                namespace: local-chart
+                condition: available
+
+  - name: file-imports
+    required: false
+    files:
+      # Import of a file within the current directory
+      - source: files/coffee-ipsum.txt
+        target: files/coffee-ipsum.txt
+        # Import of a file from a relative path external to the current directory
+      - source: ../everything-external/files/coffee-ipsum.txt
+        target: files/latte.txt
+        # Import of a file from a URL
+      - source: https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md
+        target: files/zarf-readme.md
+    actions:
+      onDeploy:
+        after:
+          - cmd: test -f files/coffee-ipsum.txt
+          - cmd: test -f files/latte.txt
+          - cmd: test -f files/zarf-readme.md
+      onRemove:
+        before:
+          - cmd: rm files/coffee-ipsum.txt
+          - cmd: rm files/latte.txt
+          - cmd: rm files/zarf-readme.md
+        after:
+          - cmd: test ! -f files/coffee-ipsum.txt
+          - cmd: test ! -f files/latte.txt
+          - cmd: test ! -f files/zarf-readme.md
+
+  - name: import-helm
+    required: false
+    charts:
+      - name: local-demo
+        localPath: charts/local
+        namespace: local-chart
+        version: 0.1.0
+      - name: local-demo
+        localPath: ../everything-external/charts/local
+        namespace: local-chart-relative
+        version: 0.1.0
+      - name: oci-demo
+        version: 6.3.3
+        namespace: podinfo
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+    images:
+      - nginx:1.16.0
+      - ghcr.io/stefanprodan/podinfo:6.3.3
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: local-demo
+                namespace: local-chart
+                condition: available
+          - wait:
+              cluster:
+                kind: deployment
+                name: local-demo
+                namespace: local-chart-relative
+                condition: available
+          - wait:
+              cluster:
+                kind: pod
+                name: app.kubernetes.io/name=oci-demo-podinfo
+                namespace: podinfo
+                condition: ready
+
+  - name: import-repos
+    required: false
+    repos:
+      # Import a full repo via HTTPS
+      - https://github.com/kelseyhightower/nocode.git
+      # Import a full repo via file:// + absolute path
+      - file:///tmp/nocode
+
+  - name: import-images
+    required: false
+    images:
+      - nginx:1.16.0
+      - ghcr.io/stefanprodan/podinfo:6.3.3
