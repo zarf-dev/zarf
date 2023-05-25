@@ -85,7 +85,7 @@ func UseLogFile() {
 	} else {
 		// Try to create a temp log file if one hasn't been made already
 		if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
-			Error(err, "Error saving a log file")
+			WarnErr(err, "Error saving a log file")
 		} else {
 			useLogFile = true
 			logStream := io.MultiWriter(os.Stderr, logFile)
@@ -120,24 +120,12 @@ func Debugf(format string, a ...any) {
 	Debug(message)
 }
 
-// Error prints an error message.
-func Error(err any, message string) {
-	Debug(err)
-	Warnf(message)
-}
-
 // ErrorWebf prints an error message and returns a web response.
 func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
 	Debug(err)
 	message := fmt.Sprintf(format, a...)
 	Warn(message)
 	http.Error(w, message, http.StatusInternalServerError)
-}
-
-// Errorf prints an error message.
-func Errorf(err any, format string, a ...any) {
-	Debug(err)
-	Warnf(format, a...)
 }
 
 // Warn prints a warning message.
@@ -150,6 +138,18 @@ func Warnf(format string, a ...any) {
 	message := Paragraph(format, a...)
 	pterm.Println()
 	pterm.Warning.Println(message)
+}
+
+// WarnErr prints an error message as a warning.
+func WarnErr(err any, message string) {
+	Debug(err)
+	Warnf(message)
+}
+
+// WarnErrorf prints an error message as a warning.
+func WarnErrorf(err any, format string, a ...any) {
+	Debug(err)
+	Warnf(format, a...)
 }
 
 // Fatal prints a fatal error message and exits with a 1.
