@@ -28,11 +28,23 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 	// Print the location that the user can view the package SBOMs from
 	if len(sbomViewFiles) > 0 {
 		cwd, _ := os.Getwd()
-		link := pterm.FgWhite.Sprint(pterm.Bold.Sprint(filepath.Join(cwd, config.ZarfSBOMDir, filepath.Base(sbomViewFiles[0]))))
-		msg := fmt.Sprintf("This package has %d artifacts with software bill-of-materials (SBOM) included. You can view them now in the zarf-sbom folder in this directory or to go directly to one, open this in your browser: %s", len(sbomViewFiles), link)
-		message.HorizontalNoteRule()
+		link := pterm.FgLightCyan.Sprint(pterm.Bold.Sprint(filepath.Join(cwd, config.ZarfSBOMDir, filepath.Base(sbomViewFiles[0]))))
+		inspect := pterm.BgBlack.Sprint(pterm.FgWhite.Sprint(pterm.Bold.Sprintf("zarf package inspect %s", p.cfg.PkgSourcePath)))
+
+		artifactMsg := pterm.Bold.Sprintf("%d artifacts", len(sbomViewFiles)) + " to be reviewed. These are"
+		if len(sbomViewFiles) == 1 {
+			artifactMsg = pterm.Bold.Sprintf("%d artifact", len(sbomViewFiles)) + " to be reviewed. This is"
+		}
+
+		msg := fmt.Sprintf("This package has %s available in a temporary '%s' folder in this directory and will be removed upon deployment.\n", artifactMsg, pterm.Bold.Sprint("zarf-sbom"))
+		viewNow := fmt.Sprintf("\n- View SBOMs %s by navigating to the '%s' folder or copying this into your browser:\n%s", pterm.Bold.Sprint("now"), pterm.Bold.Sprint("zarf-sbom"), link)
+		viewLater := fmt.Sprintf("\n- View SBOMs %s with: '%s'", pterm.Bold.Sprint("later"), inspect)
+
+		message.HorizontalRule()
+		message.Title("Software Bill of Materials", "an inventory of all software contained in this package")
 		message.Note(msg)
-		message.Note(" * This directory will be removed after package deployment.")
+		pterm.Println(viewNow)
+		pterm.Println(viewLater)
 	}
 
 	// Print any potential breaking changes (if this is a Deploy confirm) between this CLI version and the deployed init package
@@ -45,7 +57,7 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 		}
 	}
 
-	message.HorizontalNoteRule()
+	message.HorizontalRule()
 
 	if len(p.warnings) > 0 {
 		pterm.Println()

@@ -205,7 +205,20 @@ func Note(text string) {
 func Notef(format string, a ...any) {
 	pterm.Println()
 	message := Paragraph(format, a...)
-	pterm.FgYellow.Println(message)
+	notePrefix := pterm.PrefixPrinter{
+		MessageStyle: &pterm.ThemeDefault.InfoMessageStyle,
+		Prefix: pterm.Prefix{
+			Style: &pterm.ThemeDefault.InfoPrefixStyle,
+			Text:  "NOTE",
+		},
+	}
+	notePrefix.Println(message)
+}
+
+func Title(title string, help string) {
+	titleFormatted := pterm.FgBlack.Sprint(pterm.BgWhite.Sprint(title))
+	helpFormatted := pterm.FgGray.Sprint(help)
+	pterm.Printfln("%s  %s", titleFormatted, helpFormatted)
 }
 
 // HeaderInfof prints a large header with a formatted message.

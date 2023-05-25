@@ -48,7 +48,7 @@ func TestZarfInit(t *testing.T) {
 	// run `zarf init`
 	_, initStdErr, err := e2e.ExecZarfCommand("init", "--components="+initComponents, "--confirm", "--nodeport", "31337", "-l", "trace")
 	require.NoError(t, err)
-	require.Contains(t, initStdErr, "artifacts with software bill-of-materials (SBOM) included")
+	require.Contains(t, initStdErr, "an inventory of all software contained in this package")
 
 	logText := e2e.GetLogFileContents(t, initStdErr)
 
