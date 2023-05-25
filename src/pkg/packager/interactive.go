@@ -23,6 +23,7 @@ import (
 func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (confirm bool) {
 
 	message.HorizontalRule()
+	message.Title("Package Configuration", "the package configuration that defines this package")
 	utils.ColorPrintYAML(p.cfg.Pkg)
 
 	// Print the location that the user can view the package SBOMs from
