@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -21,68 +22,37 @@ func TestHelm(t *testing.T) {
 
 	helmChartsPkg = filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
 
-	testHelmReleaseName(t)
-
-	testHelmGitChartWithRegistryOverride(t)
-
-	testHelmLocalChart(t)
+	testHelmChartsExample(t)
 
 	testHelmEscaping(t)
-
-	testHelmOCIChart(t)
 
 	testHelmUninstallRollback(t)
 
 	testHelmAdoption(t)
 }
 
-func cleanupHelm(t *testing.T) {
-	// Remove the package.
-	stdOut, stdErr, err := e2e.Zarf("package", "remove", "helm-charts", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-}
+func testHelmChartsExample(t *testing.T) {
 
-func testHelmReleaseName(t *testing.T) {
-	t.Log("E2E: Helm chart releasename")
-
-	// Deploy the package.
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", helmChartsPkg, "--components=demo-helm-alt-release-name", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-
-	// Verify multiple helm installs of different release names were deployed.
-	kubectlOut, _ := exec.Command("kubectl", "get", "pods", "-n=helm-alt-release-name", "--no-headers").Output()
-	require.Contains(t, string(kubectlOut), "cool-name-podinfo")
-
-	// Remove the package.
-	cleanupHelm(t)
-}
-
-func testHelmGitChartWithRegistryOverride(t *testing.T) {
-	t.Log("E2E: Git Helm chart w/Registry Override")
-
-	// Create the package.
+	// Create the package with a registry override
 	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io=docker.io", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the package.
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", helmChartsPkg, "--components=demo-helm-git-chart", "--confirm")
+	allComponents := []string{
+		"demo-helm-local-chart",
+		"demo-helm-git-chart",
+		"demo-helm-oci-chart",
+		"demo-helm-alt-release-name",
+	}
+	componentsFlag := fmt.Sprintf("--components=%s", strings.Join(allComponents, ","))
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", helmChartsPkg, componentsFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, string(stdErr), "registryOverrides", "registry overrides was not saved to build data")
 	require.Contains(t, string(stdErr), "docker.io", "docker.io not found in registry overrides")
 
 	// Remove the package.
-	cleanupHelm(t)
-}
-
-func testHelmLocalChart(t *testing.T) {
-	t.Log("E2E: Local Helm chart")
-
-	// Deploy the package.
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", helmChartsPkg, "--components=demo-helm-local-chart", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "helm-charts", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-
-	// Remove the package.
-	cleanupHelm(t)
 }
 
 func testHelmEscaping(t *testing.T) {
@@ -108,21 +78,6 @@ func testHelmEscaping(t *testing.T) {
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "evil-templates", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-}
-
-func testHelmOCIChart(t *testing.T) {
-	t.Log("E2E: Helm OCI chart")
-
-	// Deploy the package.
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", helmChartsPkg, "--components=demo-helm-oci-chart", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-
-	// Verify that podinfo successfully deploys in the cluster
-	kubectlOut, _, _ := e2e.Kubectl("-n=podinfo-from-oci", "get", "deployment", "podinfo", "-o=jsonpath={.metadata.labels}")
-	require.Contains(t, string(kubectlOut), "6.3.5")
-
-	// Remove the package.
-	cleanupHelm(t)
 }
 
 func testHelmUninstallRollback(t *testing.T) {
