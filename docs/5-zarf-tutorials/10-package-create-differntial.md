@@ -24,7 +24,7 @@ In this example we're going to use the [Longhorn Example](../../examples/longhor
 
 :::note
 
-You'll notice we're not using a cluster in this example.  That's because this is feature of the Zarf CLI, and does not require a running cluster.
+You'll notice we're not using a cluster in this example.  That's because differential packages only affect package creation and do not require a running cluster to make.
 
 :::
 
