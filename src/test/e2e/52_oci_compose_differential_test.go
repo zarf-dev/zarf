@@ -42,6 +42,15 @@ func (suite *OCIDifferentialSuite) SetupSuite() {
 	normalPackageName = fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0.tar.zst", e2e.Arch)
 
 	_ = e2e.SetupDockerRegistry(suite.T(), 555)
+}
+
+func (suite *OCIDifferentialSuite) TearDownSuite() {
+	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
+	suite.NoError(err)
+}
+
+func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
+	suite.T().Log("E2E: Test Differential Packages w/ OCI Imports")
 
 	// publish one of the example packages to the registry
 	stdOut, stdErr, err := e2e.Zarf("package", "publish", examplePackagePath, "oci://"+suite.Reference.String(), "--insecure")
@@ -55,18 +64,9 @@ func (suite *OCIDifferentialSuite) SetupSuite() {
 	normalPackagePath := filepath.Join(suite.tmpdir, normalPackageName)
 	stdOut, stdErr, err = e2e.Zarf("package", "publish", normalPackagePath, "oci://"+suite.Reference.String(), "--insecure")
 	suite.NoError(err, stdOut, stdErr)
-}
-
-func (suite *OCIDifferentialSuite) TearDownSuite() {
-	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
-	suite.NoError(err)
-}
-
-func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
-	suite.T().Log("E2E: Test Differential Packages w/ OCI Imports")
 
 	// Build without differential
-	stdOut, stdErr, err := e2e.Zarf("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.25.0", "-o", suite.tmpdir, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.25.0", "-o", suite.tmpdir, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Extract and load the zarf.yaml config for the normally built package
