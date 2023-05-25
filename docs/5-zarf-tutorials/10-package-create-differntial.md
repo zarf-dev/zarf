@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In this tutorial, you will create a differential package using Zarf.  This is useful when multiple packages share common registries and container images.  That way those resources will only need to be packaged and deployed once.
+In this tutorial, you will create a differential package using Zarf.  This is useful when deploying updates to a package that shares common git repositories and container images across versions.  Differential packages only pack what has changed, ensuring that those resources will only need to be packaged and deployed once.
 
 ## System Requirements
 
