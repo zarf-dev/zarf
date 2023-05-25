@@ -90,7 +90,6 @@ func PrintBreakingChanges(deployedZarfVersion string) {
 		// Print header information
 		message.HorizontalRule()
 		message.Title("Potential Breaking Changes", "breaking changes that may cause issues with this package")
-		pterm.Println()
 
 		// Print information about the versions
 		format := pterm.FgYellow.Sprint("CLI version ") + "%s" + pterm.FgYellow.Sprint(" is being used to deploy to a cluster that was initialized with ") +

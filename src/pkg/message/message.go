@@ -148,6 +148,7 @@ func Warn(message string) {
 // Warnf prints a warning message.
 func Warnf(format string, a ...any) {
 	message := Paragraph(format, a...)
+	pterm.Println()
 	pterm.Warning.Println(message)
 }
 

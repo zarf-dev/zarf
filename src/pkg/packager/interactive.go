@@ -61,7 +61,6 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 		message.HorizontalRule()
 		message.Title("Package Warnings", "the following warnings were flagged while reading the package")
 		for _, warning := range p.warnings {
-			pterm.Println()
 			message.Warn(warning)
 		}
 	}
