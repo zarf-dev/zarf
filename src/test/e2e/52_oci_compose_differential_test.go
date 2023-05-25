@@ -101,7 +101,7 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.Equal(normalZarfConfig.Components[0].Charts[0].URL, "oci://ghcr.io/stefanprodan/charts/podinfo")
 	suite.Equal(normalZarfConfig.Components[0].Images[0], "ghcr.io/stefanprodan/podinfo:6.3.5")
 	suite.Len(normalZarfConfig.Components[1].Images, 2)
-	suite.Len(normalZarfConfig.Components[1].Repos, 4)
+	suite.Len(normalZarfConfig.Components[1].Repos, 2)
 	suite.Len(normalZarfConfig.Components[2].Images, 1)
 	suite.Len(normalZarfConfig.Components[2].Repos, 3)
 
