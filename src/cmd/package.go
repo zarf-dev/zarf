@@ -88,6 +88,8 @@ var packageDeployCmd = &cobra.Command{
 		// Merge the viper config file variables and provided CLI flag variables (CLI takes precedence))
 		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(viperConfigSetVariables, pkgConfig.DeployOpts.SetVariables)
 
+		pkgConfig.PkgSourcePath = pkgConfig.DeployOpts.PackagePath
+
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()

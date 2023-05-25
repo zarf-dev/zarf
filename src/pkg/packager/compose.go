@@ -28,8 +28,9 @@ func (p *Packager) composeComponents() error {
 	for _, component := range p.cfg.Pkg.Components {
 		if component.Import.Path == "" && component.Import.URL == "" {
 			// Migrate any deprecated component configurations now
-			component = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
-			components = append(components, component)
+			migratedComponent, warnings := deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+			components = append(components, migratedComponent)
+			p.warnings = append(p.warnings, warnings...)
 		} else {
 			composedComponent, err := p.getComposedComponent(component)
 			if err != nil {
@@ -181,7 +182,9 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	}
 
 	// Migrate any deprecated component configurations now
-	child = deprecated.MigrateComponent(p.cfg.Pkg.Build, child)
+	var warnings []string
+	child, warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, child)
+	p.warnings = append(p.warnings, warnings...)
 
 	return
 }

@@ -67,7 +67,7 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 
 		result, err := hook.Execute(review.Request)
 		if err != nil {
-			message.Error(err, lang.AgentErrBindHandler)
+			message.WarnErr(err, lang.AgentErrBindHandler)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -89,7 +89,7 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 			jsonPatchType := v1.PatchTypeJSONPatch
 			patchBytes, err := json.Marshal(result.PatchOps)
 			if err != nil {
-				message.Error(err, lang.AgentErrMarshallJSONPatch)
+				message.WarnErr(err, lang.AgentErrMarshallJSONPatch)
 				http.Error(w, lang.AgentErrMarshallJSONPatch, http.StatusInternalServerError)
 			}
 			admissionResponse.Response.Patch = patchBytes
@@ -98,7 +98,7 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 
 		jsonResponse, err := json.Marshal(admissionResponse)
 		if err != nil {
-			message.Error(err, lang.AgentErrMarshalResponse)
+			message.WarnErr(err, lang.AgentErrMarshalResponse)
 			http.Error(w, lang.AgentErrMarshalResponse, http.StatusInternalServerError)
 			return
 		}
