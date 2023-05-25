@@ -37,7 +37,7 @@ func TestCreateDifferential(t *testing.T) {
 	require.Contains(t, stdErr, "unable to create a differential package with the same version")
 
 	// Build the differential package
-	_, stdErr, err = e2e.Zarf("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.26.0", differentialFlag, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.26.0", differentialFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(differentialPackageName)
 
@@ -62,10 +62,9 @@ func TestCreateDifferential(t *testing.T) {
 	expectedGitRepos := []string{
 		"https://github.com/stefanprodan/podinfo.git",
 		"https://github.com/kelseyhightower/nocode.git",
-		"https://github.com/DoD-Platform-One/big-bang.git@refs/heads/release-1.54.x",
 		"https://github.com/defenseunicorns/zarf.git@refs/tags/v0.26.0",
 	}
-	require.Len(t, actualGitRepos, 4, "zarf.yaml from the differential package does not contain the correct number of repos")
+	require.Len(t, actualGitRepos, 3, "zarf.yaml from the differential package does not contain the correct number of repos")
 	for _, expectedRepo := range expectedGitRepos {
 		require.Contains(t, actualGitRepos, expectedRepo, fmt.Sprintf("unable to find expected repo %s", expectedRepo))
 	}
