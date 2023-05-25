@@ -57,7 +57,7 @@
       ],
       "matchStringsStrategy": "recursive",
       "matchStrings": [
-        "https:\\/\\/github.com\\/(?<depName>[\\w\\/\\-\\.]+?)\\/releases\\/download\\/(?<currentValue>[\\w\\/\\-\\.]+?)\\/"
+        "https:\\/\\/github.com\\/(?<depName>[\\w\\/\\-\\.\\+\\%]+?)\\/releases\\/download\\/(?<currentValue>[\\w\\/\\-\\.\\+\\%]+?)\\/"
       ],
       "datasourceTemplate": "github-releases"
     }
