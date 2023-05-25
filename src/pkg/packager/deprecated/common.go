@@ -39,26 +39,27 @@ var breakingChanges = []BreakingChange{
 
 // MigrateComponent runs all migrations on a component.
 // Build should be empty on package create, but include just in case someone copied a zarf.yaml from a zarf package.
-func MigrateComponent(build types.ZarfBuildData, c types.ZarfComponent) (migratedComponent types.ZarfComponent, warnings []string) {
+func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) (migratedComponent types.ZarfComponent, warnings []string) {
+	migratedComponent = component
+
 	// If the component has already been migrated, clear the deprecated scripts.
 	if utils.SliceContains(build.Migrations, ScriptsToActionsMigrated) {
-		migratedComponent = c
 		migratedComponent.DeprecatedScripts = types.DeprecatedZarfComponentScripts{}
 	} else {
 		// Otherwise, run the migration.
 		var warning string
-		if migratedComponent, warning = migrateScriptsToActions(c); warning != "" {
+		if migratedComponent, warning = migrateScriptsToActions(migratedComponent); warning != "" {
 			warnings = append(warnings, warning)
 		}
 	}
 
 	// If the component has already been migrated, clear the setVariable definitions.
 	if utils.SliceContains(build.Migrations, PluralizeSetVariable) {
-		migratedComponent = clearSetVariables(c)
+		migratedComponent = clearSetVariables(migratedComponent)
 	} else {
 		// Otherwise, run the migration.
 		var warning string
-		if migratedComponent, warning = migrateSetVariableToSetVariables(c); warning != "" {
+		if migratedComponent, warning = migrateSetVariableToSetVariables(migratedComponent); warning != "" {
 			warnings = append(warnings, warning)
 		}
 	}
