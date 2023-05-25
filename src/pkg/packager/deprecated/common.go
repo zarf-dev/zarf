@@ -97,7 +97,7 @@ func PrintBreakingChanges(deployedZarfVersion string) {
 			"%s" + pterm.FgYellow.Sprint(". Between these versions there are the following breaking changes to consider:")
 		cliVersion := pterm.Bold.Sprintf(config.CLIVersion)
 		deployedVersion := pterm.Bold.Sprintf(deployedZarfVersion)
-		pterm.Warning.Printfln("%s", message.Paragraphn(120, format, cliVersion, deployedVersion))
+		message.Warnf(format, cliVersion, deployedVersion)
 
 		// Print each applicable breaking change
 		for idx, applicableBreakingChange := range applicableBreakingChanges {
