@@ -31,6 +31,7 @@ var badRef = registry.Reference{
 }
 
 func (suite *RegistryClientTestSuite) SetupSuite() {
+	suite.Assertions = require.New(suite.T())
 	// spin up a local registry
 	e2e.SetupDockerRegistry(suite.T(), 5000)
 	suite.Reference.Registry = "localhost:5000"

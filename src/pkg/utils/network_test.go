@@ -27,6 +27,7 @@ type testURLs struct {
 }
 
 func (suite *TestNetworkSuite) SetupSuite() {
+	suite.Assertions = require.New(suite.T())
 	suite.urls.good = []string{
 		"https://zarf.dev",
 		"https://docs.zarf.dev",

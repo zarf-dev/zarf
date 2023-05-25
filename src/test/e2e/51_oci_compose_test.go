@@ -37,6 +37,7 @@ var (
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
+	suite.Assertions = require.New(suite.T())
 	err := os.MkdirAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts"), 0755)
 	suite.NoError(err)
 	err = utils.CreatePathAndCopy(filepath.Join("examples", "helm-charts", "chart"), filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
