@@ -333,7 +333,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdVersionLong  = "Displays the version of the Zarf release that the Zarf binary was built from."
 
 	// cmd viper setup
-	CmdViperErrLoadingConfigFile = "failed to load config file: %w"
+	CmdViperErrLoadingConfigFile = "failed to load config file: %s"
 	CmdViperInfoUsingConfigFile  = "Using config file %s"
 )
 
