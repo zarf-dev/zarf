@@ -24,7 +24,7 @@ import (
 
 type SkeletonSuite struct {
 	suite.Suite
-	require.Assertions
+	*require.Assertions
 	Remote    *utils.OrasRemote
 	Reference registry.Reference
 }

@@ -22,7 +22,7 @@ import (
 // OCIDifferentialSuite validates that OCI imported components get handled correctly when performing a `zarf package create --differential`
 type OCIDifferentialSuite struct {
 	suite.Suite
-	require.Assertions
+	*require.Assertions
 	Remote    *utils.OrasRemote
 	Reference registry.Reference
 	tmpdir    string
@@ -98,7 +98,7 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.Len(normalZarfConfig.Components, 3)
 	suite.Equal(normalZarfConfig.Components[0].Name, "demo-helm-oci-chart")
 	suite.Equal(normalZarfConfig.Components[0].Charts[0].URL, "oci://ghcr.io/stefanprodan/charts/podinfo")
-	suite.Equal(normalZarfConfig.Components[0].Images[0], "ghcr.io/stefanprodan/podinfo:6.3.3")
+	suite.Equal(normalZarfConfig.Components[0].Images[0], "ghcr.io/stefanprodan/podinfo:6.3.5")
 	suite.Len(normalZarfConfig.Components[1].Images, 2)
 	suite.Len(normalZarfConfig.Components[1].Repos, 4)
 	suite.Len(normalZarfConfig.Components[2].Images, 1)

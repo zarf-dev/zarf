@@ -16,7 +16,7 @@ import (
 
 type TestNetworkSuite struct {
 	suite.Suite
-	require.Assertions
+	*require.Assertions
 	urls testURLs
 }
 

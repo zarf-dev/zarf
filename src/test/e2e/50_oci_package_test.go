@@ -18,7 +18,7 @@ import (
 
 type RegistryClientTestSuite struct {
 	suite.Suite
-	require.Assertions
+	*require.Assertions
 	Remote      *utils.OrasRemote
 	Reference   registry.Reference
 	PackagesDir string
