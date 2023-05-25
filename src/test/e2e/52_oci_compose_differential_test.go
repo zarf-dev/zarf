@@ -37,6 +37,7 @@ var (
 
 func (suite *OCIDifferentialSuite) SetupSuite() {
 	suite.tmpdir = suite.T().TempDir()
+	suite.Assertions = require.New(suite.T())
 	suite.Reference.Registry = "localhost:555"
 	differentialPackageName = fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0-differential-v0.25.0.tar.zst", e2e.Arch)
 	normalPackageName = fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0.tar.zst", e2e.Arch)
