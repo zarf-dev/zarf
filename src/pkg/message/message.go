@@ -215,6 +215,7 @@ func Notef(format string, a ...any) {
 	notePrefix.Println(message)
 }
 
+// Title prints a title and an optional help description for that section
 func Title(title string, help string) {
 	titleFormatted := pterm.FgBlack.Sprint(pterm.BgWhite.Sprint(title))
 	helpFormatted := pterm.FgGray.Sprint(help)
@@ -238,12 +239,6 @@ func HeaderInfof(format string, a ...any) {
 func HorizontalRule() {
 	pterm.Println()
 	pterm.Println(strings.Repeat("━", 100))
-}
-
-// HorizontalNoteRule prints a yellow horizontal rule to separate the terminal
-func HorizontalNoteRule() {
-	pterm.Println()
-	pterm.FgYellow.Println(strings.Repeat("━", 100))
 }
 
 // JSONValue prints any value as JSON.

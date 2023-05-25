@@ -72,7 +72,7 @@ func MigrateComponent(build types.ZarfBuildData, c types.ZarfComponent) (types.Z
 func PrintBreakingChanges(deployedZarfVersion string) {
 	deployedSemver, err := semver.NewVersion(deployedZarfVersion)
 	if err != nil {
-		message.HorizontalNoteRule()
+		message.HorizontalRule()
 		pterm.Println()
 		message.Warnf("Unable to determine init-package version from %s.  There is potential for breaking changes.", deployedZarfVersion)
 		return
@@ -89,22 +89,22 @@ func PrintBreakingChanges(deployedZarfVersion string) {
 
 	if len(applicableBreakingChanges) > 0 {
 		// Print header information
-		message.HorizontalNoteRule()
-		message.Warn(pterm.Bold.Sprint("Potential Breaking Changes Detected Between Versions"))
+		message.HorizontalRule()
+		message.Title("Potential Breaking Changes", "breaking changes that may cause issues with this package")
+		pterm.Println()
 
 		// Print information about the versions
 		format := pterm.FgYellow.Sprint("CLI version ") + "%s" + pterm.FgYellow.Sprint(" is being used to deploy to a cluster that was initialized with ") +
 			"%s" + pterm.FgYellow.Sprint(". Between these versions there are the following breaking changes to consider:")
 		cliVersion := pterm.Bold.Sprintf(config.CLIVersion)
 		deployedVersion := pterm.Bold.Sprintf(deployedZarfVersion)
-		pterm.Printfln("\n%s", message.Paragraphn(120, format, cliVersion, deployedVersion))
+		pterm.Warning.Printfln("%s", message.Paragraphn(120, format, cliVersion, deployedVersion))
 
 		// Print each applicable breaking change
 		for idx, applicableBreakingChange := range applicableBreakingChanges {
 			titleFormat := pterm.Bold.Sprintf("\n %d. ", idx+1) + "%s"
-			title := pterm.FgYellow.Sprint(applicableBreakingChange.title)
 
-			pterm.Printfln(titleFormat, title)
+			pterm.Printfln(titleFormat, applicableBreakingChange.title)
 
 			mitigationText := message.Paragraphn(96, "%s", pterm.FgLightCyan.Sprint(applicableBreakingChange.mitigation))
 

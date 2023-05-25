@@ -58,9 +58,10 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 	}
 
 	if len(p.warnings) > 0 {
-		message.HorizontalNoteRule()
-		pterm.Println()
+		message.HorizontalRule()
+		message.Title("Package Warnings", "the following warnings were flagged while reading the package")
 		for _, warning := range p.warnings {
+			pterm.Println()
 			message.Warn(warning)
 		}
 	}
@@ -69,6 +70,7 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 
 	// Display prompt if not auto-confirmed
 	if config.CommonOptions.Confirm {
+		pterm.Println()
 		message.Successf("%s Zarf package confirmed", userMessage)
 		return config.CommonOptions.Confirm
 	}
