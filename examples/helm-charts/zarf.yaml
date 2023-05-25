@@ -62,6 +62,13 @@ components:
                 name: app.kubernetes.io/name=podinfo
                 namespace: podinfo-from-oci
                 condition: ready
+          - wait:
+              cluster:
+                kind: deployment
+                # note this version is the same as the chart version
+                name: app.kubernetes.io/version=6.3.5
+                namespace: podinfo-from-oci
+                condition: available
 
   - name: demo-helm-alt-release-name
     required: false
@@ -73,3 +80,12 @@ components:
         releaseName: cool-name
     images:
       - ghcr.io/stefanprodan/podinfo:6.3.5
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: pod
+                name: app.kubernetes.io/name=cool-name-podinfo
+                namespace: helm-alt-release-name
+                condition: ready
