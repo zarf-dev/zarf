@@ -22,9 +22,9 @@ func TestHelm(t *testing.T) {
 
 	helmChartsPkg = filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
 
-	testHelmChartsExample(t)
+	t.Run("helm charts example", testHelmChartsExample)
 
-	testHelmEscaping(t)
+	t.Run("helm escaping", testHelmEscaping)
 
 	testHelmUninstallRollback(t)
 
@@ -32,7 +32,8 @@ func TestHelm(t *testing.T) {
 }
 
 func testHelmChartsExample(t *testing.T) {
-
+	t.Parallel()
+	t.Log("E2E: Helm chart example")
 	// Create the package with a registry override
 	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io=docker.io", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -56,6 +57,7 @@ func testHelmChartsExample(t *testing.T) {
 }
 
 func testHelmEscaping(t *testing.T) {
+	t.Parallel()
 	t.Log("E2E: Helm chart escaping")
 
 	// Create the package.
