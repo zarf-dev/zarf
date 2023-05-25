@@ -57,15 +57,15 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 		}
 	}
 
-	message.HorizontalRule()
-
 	if len(p.warnings) > 0 {
+		message.HorizontalNoteRule()
 		pterm.Println()
 		for _, warning := range p.warnings {
 			message.Warn(warning)
 		}
-		message.HorizontalNoteRule()
 	}
+
+	message.HorizontalRule()
 
 	// Display prompt if not auto-confirmed
 	if config.CommonOptions.Confirm {
