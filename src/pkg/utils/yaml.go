@@ -79,18 +79,35 @@ func ColorPrintYAML(data any, comments map[string]string) {
 	colorizedYAML := p.PrintTokens(tokens)
 
 	for key, value := range comments {
-		colorizedYAML = strings.Replace(colorizedYAML, key, key+value, 1)
+		colorizedYAML = strings.Replace(colorizedYAML, key, value, 1)
 	}
+
+	// TODO (@WSTARR) This is absolutely horrible - it is only here for a mockup
+	colorizedYAML = strings.ReplaceAll(colorizedYAML, fmt.Sprintf(" -%s name", yamlFormat(color.FgHiCyan)), fmt.Sprintf("\t%s name", yamlFormat(color.FgHiCyan)))
+	colorizedYAML = strings.ReplaceAll(colorizedYAML, fmt.Sprintf("-%s name", yamlFormat(color.FgHiCyan)), fmt.Sprintf("\n-%s name", yamlFormat(color.FgHiCyan)))
+	colorizedYAML = strings.ReplaceAll(colorizedYAML, fmt.Sprintf("\t%s name", yamlFormat(color.FgHiCyan)), fmt.Sprintf(" -%s name", yamlFormat(color.FgHiCyan)))
 
 	pterm.Println()
 	pterm.Println(colorizedYAML)
 }
 
-// MakeYamlComment makes a comment string for a given yaml key and value.
-func MakeYamlComment(yamlKey string, yamlValue string, commentFmt string, commentArgs ...any) (string, string) {
-	key := fmt.Sprintf("%s %s%s:%s %s%s", yamlFormat(color.FgHiCyan), yamlKey, yamlFormat(color.Reset), yamlFormat(color.FgHiMagenta), yamlValue, yamlFormat(color.Reset))
-	comment := fmt.Sprintf(" %s# %s%s", yamlFormat(color.FgHiGreen), fmt.Sprintf(commentFmt, commentArgs...), yamlFormat(color.Reset))
-	return key, comment
+// MakeVariableHint makes a hint string for a given variable key and value.
+func MakeVariableHint(hints map[string]string, variableName string, hintText string) map[string]string {
+	key := fmt.Sprintf("-%s name%s:%s %s%s", yamlFormat(color.FgHiCyan), yamlFormat(color.Reset), yamlFormat(color.FgHiMagenta), variableName, yamlFormat(color.Reset))
+	hint := fmt.Sprintf("%s  %s%s", yamlFormat(color.FgHiBlack), hintText, yamlFormat(color.Reset))
+	hints[key] = key + hint
+
+	return hints
+}
+
+// MakeRootHint makes a hint string for a given root key.
+func MakeRootHint(hints map[string]string, rootKey string, hintText string) map[string]string {
+	key := fmt.Sprintf("%s%s%s:", yamlFormat(color.FgHiCyan), rootKey, yamlFormat(color.Reset))
+	newKey := fmt.Sprintf("%s%s:%s", yamlFormat(color.FgBlack)+yamlFormat(color.BgWhite), rootKey, yamlFormat(color.Reset))
+	hint := fmt.Sprintf("%s  %s%s", yamlFormat(color.FgHiBlack), hintText, yamlFormat(color.Reset))
+	hints[key] = "\n" + newKey + hint
+
+	return hints
 }
 
 // ReadYaml reads a yaml file and unmarshals it into a given config.
