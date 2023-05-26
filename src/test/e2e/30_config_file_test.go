@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -55,6 +56,41 @@ func configFileTests(t *testing.T, dir, path string) {
 	require.NoError(t, err)
 	require.Contains(t, string(kubectlOut), "scorpion=iridescent")
 	require.Contains(t, string(kubectlOut), "camel_spider=matte")
+
+	// verify the multiline dummy private key was properly templated
+	// note the leading and trailing single quotes
+	tlsKey := []string{"'-----BEGIN PRIVATE KEY-----",
+		"MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDDvKUzWiZucm6/",
+		"8D2Nx4KVe8t6uHtARpw112f4yGv7xKcOJkbxLbVtor8pj/HS5tRSZq2ziIQl9y98",
+		"8TVAOBezgzPPMDxOqDeyHl5gAtqzpK/eSPmueZIhR88BH2+SMYqa5kxmjn752Rf0",
+		"jVeCrVdQ5MD9rqA00oQi/zO+gQQoz6QSuiEQ2pSKYB3gv9oIoJorIU1n4qLYAezn",
+		"TvFwjmKWPPhRdyslpcAi1rVO+mVX3Y2DKU/CfpWNFVVT+H788Srn4yP6iWUymfQU",
+		"vHOXII1erMnES2H9BDffumrRf3m3IpgueQ3vPhB8ftjFZozURj2t/WSeaKsyQSoZ",
+		"Wr99DWxpAgMBAAECggEAAW8ARsACSAzOgtlfmgo8Cpw9gUiYnn/l5P8O4+OT5uQp",
+		"1RCytFGBYqwuej9zpffK1k+qNgZp8V0+G8wod6/xfH8Zggr4ZhsVTVirmEhtEaPD",
+		"Jf2i1oRNbbD48yknyApU2Y2WQaoJhArzAfeHDI34db83KqR8x+ZC0X7NAjgvr5zS",
+		"b0OfY2tht4oxEWh2m67FzlFgF+cWyszRYyfvHfOFBqLesuCnSfMoOzmbT3SlnxHo",
+		"6GSa1e/kCJVzFJNb74BZTIH0w6Ar/a0QG829VXivqj8lRENU/1xUI2JhNz4RdH7F",
+		"6MeiwQbq4pWjHfh4djuzQFIwOgCnSNRnNuNywOVuAQKBgQDjleEI1XFQawXmHtHu",
+		"6GMhbgptRoSUyutDDdo2MHGvDbxDOIsczIBjxCuYAM47nmGMuWbDJUN+2VQAX32J",
+		"WZagRxWikxnEqv3B7No7tLSQ42rRo/tDBrZPCCuS9u/ZJM4o7MCa/VzTtbicGOCh",
+		"bTIoTeEtT2piIdkrjHFGGlYOLQKBgQDcLNFHrSJCkHfCoz75+zytfYan+2dIxuV/",
+		"MlnrT8XHt33cst4ZwoIQbsE6mv7J4CJqOgUYDvoJpioLV3InUACDxXd+bVY7RwxP",
+		"j25pXzYL++RctVO3IEOCmFkwlq0fNFdrOn8Y/cnRTwd2e60n08rCKgJS8KhEAaO0",
+		"QvVmAHw4rQKBgQDL7hCAnunzuoLFqpZI8tlpKjaTpp3EynO3WSFQb2ZfCvrIbVFS",
+		"U/kz7KN3iDlEeO5GcBeiA7EQaGN6FhbiTXHIWwoK7K8paGMMM1V2LL2kGvQruDm8",
+		"3LXd6Z9KCJXxSKanS0ZnW2KjnnE3Bp+6ZqOMNATzWfckydnUyPrza0PzXQKBgEYS",
+		"1YCUb8Tzqcn+nrp85XDp9INeFh8pfj0fT1L/DpljouEs5Fcaer60ITd/wPuLJCje",
+		"0mQ30AhmJBd7+07bvW4y2LcaIUm4cQiZQ7CxpsfloWaIJ16vHA1iY3B9ZBf8Vp4/",
+		"/dd8XlEJb/ybnB6C35MwP5EaGtOaGfnzHZsbKG35AoGAWm9tpqhuldQ3MCvoAr5Q",
+		"b42JLSKqwpvVjQDiFZPI/0wZTo3WkWm9Rd7CAACheb8S70K1r/JIzsmIcnj0v4xs",
+		"sfd+R35UE+m8MExbDP4lKFParmvi2/UZfb3VFNMmMPTV6AEIBl6N4PmhHMZOsIRs",
+		"H4RxbE+FpmsMAUCpdrzvFkc=",
+		"-----END PRIVATE KEY-----'",
+	}
+	kubectlOut, _, err = e2e.Kubectl("-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath='{.data.tls-key}'")
+	require.NoError(t, err)
+	require.Equal(t, strings.Join(tlsKey, " "), kubectlOut)
 }
 
 func configFileDefaultTests(t *testing.T) {

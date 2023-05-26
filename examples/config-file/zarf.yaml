@@ -6,6 +6,8 @@ metadata:
 variables:
   - name: SCORPION
   - name: CAMEL_SPIDER
+  - name: TLS_KEY
+    autoIndent: true
 
 components:
   - name: lion
