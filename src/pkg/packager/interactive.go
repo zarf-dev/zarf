@@ -35,7 +35,7 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 		if len(sbomViewFiles) > 0 {
 			cwd, _ := os.Getwd()
 			link := pterm.FgLightCyan.Sprint(pterm.Bold.Sprint(filepath.Join(cwd, config.ZarfSBOMDir, filepath.Base(sbomViewFiles[0]))))
-			inspect := pterm.BgBlack.Sprint(pterm.FgWhite.Sprint(pterm.Bold.Sprintf("zarf package inspect %s", p.cfg.PkgSourcePath)))
+			inspect := pterm.BgBlack.Sprint(pterm.FgWhite.Sprint(pterm.Bold.Sprintf("$ zarf package inspect %s", p.cfg.PkgSourcePath)))
 
 			artifactMsg := pterm.Bold.Sprintf("%d artifacts", len(sbomViewFiles)) + " to be reviewed. These are"
 			if len(sbomViewFiles) == 1 {
@@ -43,8 +43,8 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 			}
 
 			msg := fmt.Sprintf("This package has %s available in a temporary '%s' folder in this directory and will be removed upon deployment.\n", artifactMsg, pterm.Bold.Sprint("zarf-sbom"))
-			viewNow := fmt.Sprintf("\n- View SBOMs %s by navigating to the '%s' folder or copying this into your browser:\n%s", pterm.Bold.Sprint("now"), pterm.Bold.Sprint("zarf-sbom"), link)
-			viewLater := fmt.Sprintf("\n- View SBOMs %s with: '%s'", pterm.Bold.Sprint("later"), inspect)
+			viewNow := fmt.Sprintf("\n- View SBOMs %s by navigating to the '%s' folder or copying this link into a browser:\n%s", pterm.Bold.Sprint("now"), pterm.Bold.Sprint("zarf-sbom"), link)
+			viewLater := fmt.Sprintf("\n- View SBOMs %s deployment with this command:\n%s", pterm.Bold.Sprint("after"), inspect)
 
 			message.Note(msg)
 			pterm.Println(viewNow)
