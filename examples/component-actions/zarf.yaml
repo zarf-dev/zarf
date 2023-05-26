@@ -142,7 +142,7 @@ components:
           maxRetries: 3
         before:
           # this action will fail after 1 second
-          - cmd: sleep 30
+          - cmd: sleep 10
         onFailure:
           - cmd: echo "😭😭😭 this action failed because it took too long to run 😭😭😭"
 

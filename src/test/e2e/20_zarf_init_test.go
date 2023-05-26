@@ -52,7 +52,7 @@ func TestZarfInit(t *testing.T) {
 		require.Contains(t, stdErr, expectedErrorMessage)
 	})
 
-	t.Run("init with components and verify state secrets are sanitzed", func(t *testing.T) {
+	t.Run("init with components and verify state secrets are sanitized", func(t *testing.T) {
 		t.Parallel()
 		// run `zarf init`
 		_, initStdErr, err := e2e.Zarf("init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
