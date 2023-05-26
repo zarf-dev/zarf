@@ -1,8 +1,8 @@
 import ExampleYAML from "@site/src/components/ExampleYAML";
 
-# Helm Local Chart
+# Helm Charts
 
-This example shows how you can specify a local chart for a helm source within a component's `charts`.
+This example shows the many ways you can deploy Helm Charts with Zarf.
 
 ## `zarf.yaml` {#zarf.yaml}
 
