@@ -38,6 +38,9 @@ func TestZarfInit(t *testing.T) {
 			mismatchedInitPackage = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
 			expectedErrorMessage  = fmt.Sprintf("this package architecture is %s", mismatchedArch)
 		)
+		t.Cleanup(func() {
+			e2e.CleanFiles(mismatchedInitPackage)
+		})
 
 		// Build init package with different arch than the cluster arch.
 		stdOut, stdErr, err = e2e.Zarf("package", "create", ".", "--architecture", mismatchedArch, "--confirm")
@@ -52,7 +55,6 @@ func TestZarfInit(t *testing.T) {
 		_, stdErr, err = e2e.Zarf("init", "--architecture", mismatchedArch, componentsFlag, "--confirm")
 		require.Error(t, err, stdErr)
 		require.Contains(t, stdErr, expectedErrorMessage)
-		e2e.CleanFiles(mismatchedInitPackage)
 	})
 
 	t.Run("init with components and verify state secrets are sanitized", func(t *testing.T) {
