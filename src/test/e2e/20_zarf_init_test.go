@@ -7,6 +7,7 @@ package test
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"testing"
 
 	"encoding/json"
@@ -27,15 +28,19 @@ func TestZarfInit(t *testing.T) {
 
 	t.Run("init mismatched arch", func(t *testing.T) {
 		t.Parallel()
+		// Get the version of the CLI
+		stdOut, stdErr, err := e2e.Zarf("version")
+		require.NoError(t, err, stdOut, stdErr)
+		initPackageVersion := strings.Trim(stdOut, "\n")
+
 		var (
 			mismatchedArch        = e2e.GetMismatchedArch()
-			initPackageVersion    = "UnknownVersion"
 			mismatchedInitPackage = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
 			expectedErrorMessage  = fmt.Sprintf("this package architecture is %s", mismatchedArch)
 		)
 
 		// Build init package with different arch than the cluster arch.
-		stdOut, stdErr, err := e2e.Zarf("package", "create", ".", "--architecture", mismatchedArch, "--confirm")
+		stdOut, stdErr, err = e2e.Zarf("package", "create", ".", "--architecture", mismatchedArch, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		// Check that `zarf init` fails in appliance mode when we try to initialize a k3s cluster
 		// on a machine with a different architecture than the package architecture.
