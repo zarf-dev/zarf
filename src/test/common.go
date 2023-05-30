@@ -6,11 +6,17 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"regexp"
 	"runtime"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	dconfig "github.com/docker/cli/cli/config"
+	"github.com/docker/cli/cli/config/configfile"
+	"github.com/stretchr/testify/require"
 )
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize.
@@ -20,6 +26,8 @@ type ZarfE2ETest struct {
 	ApplianceMode   bool
 	RunClusterTests bool
 }
+
+var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
 
 // GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run.
 func GetCLIName() string {
@@ -83,6 +91,35 @@ func (e2e *ZarfE2ETest) GetMismatchedArch() string {
 	case "arm64":
 		return "amd64"
 	default:
-		return"arm64"
+		return "arm64"
 	}
+}
+
+// GetLogFileContents gets the log file contents from a given run's std error.
+func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
+	get, err := utils.MatchRegex(logRegex, stdErr)
+	require.NoError(t, err)
+	logFile := get("logFile")
+	logContents, err := os.ReadFile(logFile)
+	require.NoError(t, err)
+	return string(logContents)
+}
+
+// SetupDockerRegistry uses the host machine's docker daemon to spin up a local registry for testing purposes.
+func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) *configfile.ConfigFile {
+	// spin up a local registry
+	registryImage := "registry:2.8.2"
+	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", fmt.Sprintf("%d:5000", port), "--name", "registry", registryImage)
+	require.NoError(t, err)
+
+	// docker config folder
+	cfg, err := dconfig.Load(dconfig.Dir())
+	require.NoError(t, err)
+	if !cfg.ContainsAuth() {
+		// make a docker config file w/ some blank creds
+		_, _, err := e2e.ExecZarfCommand("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
+		require.NoError(t, err)
+	}
+
+	return cfg
 }

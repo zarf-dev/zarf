@@ -48,7 +48,7 @@ func (h *Helm) newRenderer() (*renderer, error) {
 			// Add the passed-in namespace to the list
 			h.Chart.Namespace: h.Cluster.Kube.NewZarfManagedNamespace(h.Chart.Namespace),
 		},
-		values:       valueTemplate,
+		values:       *valueTemplate,
 		actionConfig: h.actionConfig,
 	}, nil
 }

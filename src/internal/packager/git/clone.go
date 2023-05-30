@@ -44,7 +44,7 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
 	// Clone the given repo.
 	repo, err := git.PlainClone(g.GitPath, false, cloneOptions)
 	if err != nil {
-		message.Debugf("Failed to clone repo %s: %s", gitURL, err.Error())
+		message.Warnf("Falling back to host 'git', failed to clone the repo with Zarf - %s: %s", gitURL, err.Error())
 		return g.gitCloneFallback(gitURL, ref)
 	}
 
@@ -56,6 +56,11 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
 			RefSpecs:   []goConfig.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
 			Tags:       git.AllTags,
 		}
+
+		if gitCred != nil {
+			fetchOpts.Auth = &gitCred.Auth
+		}
+
 		if err := repo.Fetch(fetchOpts); err != nil {
 			return err
 		}
@@ -66,8 +71,6 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
 
 // gitCloneFallback is a fallback if go-git fails to clone a repo.
 func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName) error {
-	g.Spinner.Updatef("Falling back to host git for %s", gitURL)
-
 	// If we can't clone with go-git, fallback to the host clone
 	// Only support "all tags" due to the azure clone url format including a username
 	cmdArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, g.GitPath}
@@ -87,6 +90,7 @@ func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName) error 
 		Stdout: g.Spinner,
 		Stderr: g.Spinner,
 	}
+
 	_, _, err := exec.CmdWithContext(context.TODO(), execConfig, "git", cmdArgs...)
 	if err != nil {
 		return err

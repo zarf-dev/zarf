@@ -31,6 +31,9 @@ const (
 	DebugLevel
 	// TraceLevel level. Designates finer-grained informational events than the Debug.
 	TraceLevel
+
+	// TermWidth sets the width of full width elements like progressbars and headers
+	TermWidth = 85
 )
 
 // NoProgress tracks whether spinner/progress bars show updates.
@@ -47,7 +50,7 @@ var useLogFile bool
 type DebugWriter struct{}
 
 func (d *DebugWriter) Write(raw []byte) (int, error) {
-	Debug(raw)
+	Debug(string(raw))
 	return len(raw), nil
 }
 
@@ -66,7 +69,6 @@ func init() {
 		Text: " •",
 	}
 
-	pterm.DefaultProgressbar.MaxWidth = 85
 	pterm.SetDefaultOutput(os.Stderr)
 }
 
@@ -75,16 +77,22 @@ func UseLogFile() {
 	// Prepend the log filename with a timestamp.
 	ts := time.Now().Format("2006-01-02-15-04-05")
 
-	// Try to create a temp log file.
 	var err error
-	if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
-		Error(err, "Error saving a log file")
-	} else {
-		useLogFile = true
+	if logFile != nil {
+		// Use the existing log file if logFile is set
 		logStream := io.MultiWriter(os.Stderr, logFile)
 		pterm.SetDefaultOutput(logStream)
-		message := fmt.Sprintf("Saving log file to %s", logFile.Name())
-		Note(message)
+	} else {
+		// Try to create a temp log file if one hasn't been made already
+		if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
+			Error(err, "Error saving a log file")
+		} else {
+			useLogFile = true
+			logStream := io.MultiWriter(os.Stderr, logFile)
+			pterm.SetDefaultOutput(logStream)
+			message := fmt.Sprintf("Saving log file to %s", logFile.Name())
+			Note(message)
+		}
 	}
 }
 
@@ -207,9 +215,9 @@ func Notef(format string, a ...any) {
 
 // HeaderInfof prints a large header with a formatted message.
 func HeaderInfof(format string, a ...any) {
-	message := fmt.Sprintf(format, a...)
+	message := Truncate(fmt.Sprintf(format, a...), TermWidth, false)
 	// Ensure the text is consistent for the header width
-	padding := 85 - len(message)
+	padding := TermWidth - len(message)
 	pterm.Println()
 	pterm.DefaultHeader.
 		WithBackgroundStyle(pterm.NewStyle(pterm.BgDarkGray)).
@@ -258,6 +266,23 @@ func PrintDiff(textA, textB string) {
 	diffs = dmp.DiffCleanupSemantic(diffs)
 
 	pterm.Println(dmp.DiffPrettyText(diffs))
+}
+
+// Truncate truncates provided text to the requested length
+func Truncate(text string, length int, invert bool) string {
+	// Remove newlines and replace with semicolons
+	textEscaped := strings.ReplaceAll(text, "\n", "; ")
+	// Truncate the text if it is longer than length so it isn't too long.
+	if len(textEscaped) > length {
+		if invert {
+			start := len(textEscaped) - length + 3
+			textEscaped = "..." + textEscaped[start:]
+		} else {
+			end := length - 3
+			textEscaped = textEscaped[:end] + "..."
+		}
+	}
+	return textEscaped
 }
 
 func debugPrinter(offset int, a ...any) {

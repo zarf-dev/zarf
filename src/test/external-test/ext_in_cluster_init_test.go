@@ -11,7 +11,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	test "github.com/defenseunicorns/zarf/src/test"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -58,7 +57,7 @@ func TestExtInClusterDeploy(t *testing.T) {
 	require.NoError(t, err, "unable to initialize the k8s server with zarf")
 
 	// Deploy the flux example package
-	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-flux-test-amd64.tar.zst", "--confirm"}
+	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-podinfo-flux-amd64.tar.zst", "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 
 	require.NoError(t, err, "unable to deploy flux example package")
@@ -67,7 +66,7 @@ func TestExtInClusterDeploy(t *testing.T) {
 	podinfoWaitCmd := []string{"wait", "deployment", "-n=podinfo", "podinfo", "--for", "condition=Available=True", "--timeout=3s"}
 	errorStr := "unable to verify flux deployed the podinfo example"
 	success = verifyKubectlWaitSuccess(t, 2, podinfoWaitCmd, errorStr)
-	assert.True(t, success, errorStr)
+	require.True(t, success, errorStr)
 
 	_, _, err = exec.CmdWithContext(context.TODO(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
 	require.NoError(t, err, "unable to teardown zarf")

@@ -10,7 +10,7 @@ wordpressBlogName: ###ZARF_VAR_WORDPRESS_BLOG_NAME###
 metrics:
   enabled: true
 
-# Sets the Wordpress service as a ClusterIP service to not conflict with potential
+# Sets the WordPress service as a ClusterIP service to not conflict with potential
 # pre-existing LoadBalancer services.
 service:
   type: ClusterIP

@@ -4,3 +4,6 @@ twistlock:
   values:
     init:
       enabled: false
+
+    console:
+      volumeUpgrade: false

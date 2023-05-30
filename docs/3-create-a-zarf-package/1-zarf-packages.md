@@ -65,7 +65,10 @@ The following list outlines the dependencies for creating a Zarf Package:
 
 When executed, the `zarf package create` command locates the `zarf.yaml` file in the current directory and constructs the package from that file. The command utilizes internet or intranet resources to retrieve all the required assets and stores them in a temporary directory. After the required resources have been obtained, Zarf generates a tarball of the temporary directory and performs necessary cleanup actions.  You can learn more about this flow on the [package create lifecycle](./5-package-create-lifecycle.md) page.
 
-The process of defining and creating a package is also elaborated on in detail in the [Creating a Zarf Package Tutorial](../6-zarf-tutorials/0-creating-a-zarf-package.md).
+The process of defining and creating a package is also elaborated on in detail in the [Creating a Zarf Package Tutorial](../5-zarf-tutorials/0-creating-a-zarf-package.md).
+
+### Creating Differential Packages
+If you already have a Zarf package and you want to create an updated package you would normally have to re-create the entire package from scratch, including things that might not have changed. Depending on your workflow, you may  want to create a package that only contains the artifacts that have changed since the last time you built your package. This can be achieved by using the `--differential` flag while running the `zarf package create` command. You can use this flag to point to an already built package you have locally or to a package that has been previously [published](../5-zarf-tutorials/7-publish-and-deploy.md#publish-package) to a registry.
 
 ## Inspecting a Created Package
 

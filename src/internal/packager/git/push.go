@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
@@ -156,8 +157,10 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 
 	if errors.Is(err, git.NoErrAlreadyUpToDate) {
 		message.Debug("Repo already up-to-date")
+	} else if errors.Is(err, plumbing.ErrObjectNotFound) {
+		return fmt.Errorf("unable to push repo due to likely shallow clone: %s", err.Error())
 	} else if err != nil {
-		return fmt.Errorf("unable to push repo to the gitops service: %w", err)
+		return fmt.Errorf("unable to push repo to the gitops service: %s", err.Error())
 	}
 
 	return nil

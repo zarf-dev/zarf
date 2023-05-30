@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: longhorn-example
+  name: longhorn
   description: "Example package for Longhorn cloud native distributed block storage for Kubernetes"
 components:
   - name: longhorn-environment-check

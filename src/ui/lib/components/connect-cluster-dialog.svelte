@@ -63,7 +63,7 @@
 			<Typography variant="body2" color="text-secondary-on-dark">
 				Which cluster would you like Zarf to connect to?
 			</Typography>
-			<List {ssx}>
+			<List {ssx} backgroundColor="transparent">
 				<Typography variant="body1" element="li" value={$clusterStore?.distro}>
 					<IconButton
 						toggleable

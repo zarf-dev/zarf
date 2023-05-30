@@ -27,10 +27,10 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 		layersToPull := []string{config.ZarfYAML}
 		if pullSBOM {
-			layersToPull = append(layersToPull, "sboms.tar")
+			layersToPull = append(layersToPull, config.ZarfSBOMTar)
 		}
 		if pullZarfSig {
-			layersToPull = append(layersToPull, "zarf.yaml.sig")
+			layersToPull = append(layersToPull, config.ZarfYAMLSignature)
 		}
 
 		message.Debugf("Pulling layers %v from %s", layersToPull, p.cfg.DeployOpts.PackagePath)

@@ -65,7 +65,7 @@ Given Zarf's being a "K8s cluster to serve _other_ K8s clusters", the following 
 - Container images: to serve images for the Zarf and downstream clusters to run containers from.
 - Repositories: to serve as the git-based "source of truth" for downstream "GitOps"ed K8s clusters to watch.
 - Pre-compiled binaries: to provide the software necessary to start and support the Zarf cluster.
-- [Component actions](3-create-a-zarf-package/6-component-actions.md): to support scripts and commands that run at various stages of the Zarf [package create lifecycle](./3-create-a-zarf-package/5-package-create-lifecycle.md), and [package deploy lifecycle](./4-deploy-a-zarf-package/1-package-deploy-lifecycle.md).
+- [Component actions](3-create-a-zarf-package/7-component-actions.md): to support scripts and commands that run at various stages of the Zarf [package create lifecycle](./3-create-a-zarf-package/5-package-create-lifecycle.md), and [package deploy lifecycle](./4-deploy-a-zarf-package/1-package-deploy-lifecycle.md).
 - Helm charts, kustomizations, and other K8s manifests: to apply in a Kubernetes cluster.
 - [Data injections](../examples/data-injection/README.md): to declaratively inject data into running containers in a Kubernetes cluster.
 
@@ -85,7 +85,7 @@ Zarf can pull from various places like Docker Hub, Iron Bank, GitHub, and local 
 
 This part of the process requires access to the internet. The `zarf` binary is presented with a `zarf.yaml`, it then begins downloading, packing, and compressing the software that you requested. It then outputs a single, ready-to-move distributable called "a package".
 
-For additional information, see the [Creating a package](./6-zarf-tutorials/0-creating-a-zarf-package.md) section.
+For additional information, see the [Creating a package](./5-zarf-tutorials/0-creating-a-zarf-package.md) section.
 
 ### (2) Ship the Package to the System Location
 
@@ -133,11 +133,11 @@ In the more complex use case, your package consists of updates for many apps/sys
 ### 📦 Out of the Box Features
 
 - Automate Kubernetes deployments in disconnected environments
-- Automate [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) generation
-- Provide a [web dashboard](./5-dashboard-ui/1-sbom-dashboard.md) for viewing SBOM output
+- Automate [Software Bill of Materials (SBOM)](./3-create-a-zarf-package/6-package-sboms.md) generation
+- Provide a [web dashboard](./4-deploy-a-zarf-package/4-view-sboms.md) for viewing SBOM output
 - Create and verify package signatures with [cosign](https://github.com/sigstore/cosign)
 - [Publish](./2-the-zarf-cli/100-cli-commands/zarf_package_publish.md), [pull](./2-the-zarf-cli/100-cli-commands/zarf_package_pull.md), and [deploy](./2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md) packages from an [OCI registry](https://opencontainers.org/)
-- Powerful component lifecycle [actions](./3-create-a-zarf-package/6-component-actions.md)
+- Powerful component lifecycle [actions](./3-create-a-zarf-package/7-component-actions.md)
 - Deploy a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
 - Builtin logging stack with [Loki](https://grafana.com/oss/loki/)
 - Builtin Git server with [Gitea](https://gitea.com/)

@@ -1,21 +1,8 @@
+import ExampleYAML from '@site/src/components/ExampleYAML';
+
 # Big Bang
 
-This package deploys [Big Bang](https://repo1.dso.mil/platform-one/big-bang/bigbang) using the Zarf `bigbang` extension.  An example of this configuration is below:
-
-```yaml
-components:
-  - name: bigbang
-    required: true
-    extensions:
-      bigbang:
-        version: 1.54.0
-        skipFlux: false
-        valuesFiles:
-          - config/minimal.yaml #turns on just istio
-          - config/ingress.yaml # adds istio certs for *.bigbang.dev
-          - config/kyverno.yaml # turns on kyverno
-          - config/loki.yaml # turns on loki and monitoring
-```
+This package deploys [Big Bang](https://repo1.dso.mil/platform-one/big-bang/bigbang) using the Zarf `bigbang` extension.
 
 The `bigbang` noun sits within the `extensions` specification of Zarf and provides the following configuration:
 
@@ -24,4 +11,14 @@ The `bigbang` noun sits within the `extensions` specification of Zarf and provid
 - `skipFlux`    - Whether to skip deploying flux; Defaults to false
 - `valuesFiles` - The list of values files to pass to Big Bang; these will be merged together
 
-To see a tutorial for the creation and deployment of this package see the [Big Bang Tutorial](../../docs/6-zarf-tutorials/6-big-bang.md).
+To see a tutorial for the creation and deployment of this package see the [Big Bang Tutorial](../../docs/5-zarf-tutorials/6-big-bang.md).
+
+## `zarf.yaml` {#zarf.yaml}
+
+:::info
+
+To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
+
+:::
+
+<ExampleYAML example="big-bang" showLink={false} />

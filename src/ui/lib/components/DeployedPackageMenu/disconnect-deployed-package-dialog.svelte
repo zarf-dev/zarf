@@ -74,7 +74,7 @@
 				tunnel.
 			</Typography>
 			{#if connections.length > 0}
-				<List ssx={listSSX}>
+				<List ssx={listSSX} backgroundColor="transparent">
 					{#each connections as connection}
 						<Typography
 							variant="body1"

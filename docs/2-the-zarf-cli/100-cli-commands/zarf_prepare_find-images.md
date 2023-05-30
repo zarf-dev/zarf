@@ -17,6 +17,7 @@ zarf prepare find-images [PACKAGE] [flags]
 
 ```
   -h, --help                     help for find-images
+      --kube-version string      Override the default helm template KubeVersion when performing a package chart template
   -p, --repo-chart-path string   If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"
       --set stringToString       Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]. (default [])
 ```
@@ -24,7 +25,7 @@ zarf prepare find-images [PACKAGE] [flags]
 ## Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images
+  -a, --architecture string   Architecture for OCI images and Zarf packages
       --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation

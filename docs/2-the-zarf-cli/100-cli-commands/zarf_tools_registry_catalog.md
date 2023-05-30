@@ -4,7 +4,7 @@
 List the repos in a registry
 
 ```
-zarf tools registry catalog [REGISTRY] [flags]
+zarf tools registry catalog REGISTRY [flags]
 ```
 
 ## Examples
@@ -20,13 +20,14 @@ zarf tools registry catalog [REGISTRY] [flags]
 ## Options
 
 ```
-  -h, --help   help for catalog
+      --full-ref   (Optional) if true, print the full image reference
+  -h, --help       help for catalog
 ```
 
 ## Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images
+  -a, --architecture string   Architecture for OCI images and Zarf packages
       --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation

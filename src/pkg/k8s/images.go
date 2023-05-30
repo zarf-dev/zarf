@@ -19,8 +19,8 @@ type ImageMap map[string]bool
 type ImageNodeMap map[string][]string
 
 // GetAllImages returns a list of images and their nodes found in pods in the cluster.
-func (k *K8s) GetAllImages() (ImageNodeMap, error) {
-	timeout := time.After(5 * time.Minute)
+func (k *K8s) GetAllImages(timeoutDuration time.Duration) (ImageNodeMap, error) {
+	timeout := time.After(timeoutDuration)
 
 	for {
 		// Delay check 2 seconds.
@@ -44,7 +44,8 @@ func (k *K8s) GetAllImages() (ImageNodeMap, error) {
 	}
 }
 
-// GetImagesWithNodes returns all images and their nodes in a given namespace.
+// GetImagesWithNodes checks for images on schedulable nodes and returns
+// a map of these images and their nodes in a given namespace.
 func (k *K8s) GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
 	result := make(ImageNodeMap)
 
@@ -53,16 +54,27 @@ func (k *K8s) GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
 		return nil, fmt.Errorf("unable to get the list of pods in the cluster")
 	}
 
+	findImages:
 	for _, pod := range pods.Items {
-		node := pod.Spec.NodeName
+		nodeName := pod.Spec.NodeName
+		nodeDetails, err := k.GetNode(nodeName)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get the node %s", pod.Spec.NodeName)
+		}
+
+		for _, taint := range nodeDetails.Spec.Taints {
+			if (taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute) {
+				continue findImages
+			}
+		}
 		for _, container := range pod.Spec.InitContainers {
-			result[container.Image] = append(result[container.Image], node)
+			result[container.Image] = append(result[container.Image], nodeName)
 		}
 		for _, container := range pod.Spec.Containers {
-			result[container.Image] = append(result[container.Image], node)
+			result[container.Image] = append(result[container.Image], nodeName)
 		}
 		for _, container := range pod.Spec.EphemeralContainers {
-			result[container.Image] = append(result[container.Image], node)
+			result[container.Image] = append(result[container.Image], nodeName)
 		}
 	}
 
