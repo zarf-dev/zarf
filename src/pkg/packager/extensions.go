@@ -8,19 +8,24 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
-	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Check for any extensions in use and runs the appropriate functions.
-func (p *Packager) processExtensions(YOLO bool, cPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
-	var err error
+func (p *Packager) processExtensions() error {
+	// Create component paths and process extensions for each component.
+	for i, c := range p.cfg.Pkg.Components {
+		componentPath, err := p.createOrGetComponentPaths(c)
+		if err != nil {
+			return err
+		}
 
-	// Big Bang
-	if c.Extensions.BigBang != nil {
-		if c, err = bigbang.Run(YOLO, cPaths, c); err != nil {
-			return c, fmt.Errorf("unable to process bigbang extension: %w", err)
+		// Big Bang
+		if c.Extensions.BigBang != nil {
+			if p.cfg.Pkg.Components[i], err = bigbang.Run(p.cfg.Pkg.Metadata.YOLO, componentPath, c); err != nil {
+				return fmt.Errorf("unable to process bigbang extension: %s", err.Error())
+			}
 		}
 	}
 
-	return c, nil
+	return nil
 }

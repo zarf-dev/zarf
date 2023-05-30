@@ -28,7 +28,7 @@ import (
 )
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
-func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOverride string) error {
+func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOverride string, inplace bool) error {
 
 	var originalDir string
 

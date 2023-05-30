@@ -90,18 +90,9 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	// Create component paths and process extensions for each component.
-	for i, c := range p.cfg.Pkg.Components {
-		componentPath, err := p.createOrGetComponentPaths(c)
-		if err != nil {
-			return err
-		}
-
-		// Process any extensions.
-		p.cfg.Pkg.Components[i], err = p.processExtensions(p.cfg.Pkg.Metadata.YOLO, componentPath, c)
-		if err != nil {
-			return fmt.Errorf("unable to process extensions: %w", err)
-		}
+	// Process any extensions.
+	if err := p.processExtensions(); err != nil {
+		return fmt.Errorf("unable to process extensions: %s", err.Error())
 	}
 
 	// Perform early package validation.

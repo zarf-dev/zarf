@@ -21,6 +21,8 @@ import (
 )
 
 var repoHelmChartPath, kubeVersionOverride string
+var inplace bool
+
 var prepareCmd = &cobra.Command{
 	Use:     "prepare",
 	Aliases: []string{"prep"},
@@ -109,7 +111,7 @@ var prepareFindImages = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Find all the images the package might need
-		if err := pkgClient.FindImages(baseDir, repoHelmChartPath, kubeVersionOverride); err != nil {
+		if err := pkgClient.FindImages(baseDir, repoHelmChartPath, kubeVersionOverride, inplace); err != nil {
 			message.Fatalf(err, "Unable to find images for the package definition %s", baseDir)
 		}
 	},
@@ -151,6 +153,8 @@ func init() {
 	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPrepareFlagSet)
 	// allow for the override of the default helm KubeVersion
 	prepareFindImages.Flags().StringVar(&kubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
+	// in-place edit the zarf.yaml
+	prepareFindImages.Flags().BoolVarP(&inplace, "inplace", "i", false, lang.CmdPrepareFlagInplace)
 
 	prepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdPrepareFlagGitAccount)
 }

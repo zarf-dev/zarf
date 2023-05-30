@@ -266,6 +266,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."
 	CmdPrepareFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
+	CmdPrepareFlagInplace       = "Perform the patching in-place, overwriting the original zarf.yaml"
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"
