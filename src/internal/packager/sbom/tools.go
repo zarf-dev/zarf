@@ -55,3 +55,13 @@ func OutputSBOMFiles(tmp types.TempPaths, outputDir string, packageName string) 
 
 	return utils.CreatePathAndCopy(tmp.Sboms, packagePath)
 }
+
+func IsSBOMAble(pkg types.ZarfPackage) bool {
+	for _, c := range pkg.Components {
+		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.DataInjections) > 0 {
+			return true
+		}
+	}
+
+	return false
+}
