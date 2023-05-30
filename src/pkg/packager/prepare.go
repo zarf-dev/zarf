@@ -25,6 +25,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"oras.land/oras-go/v2/registry"
 )
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
@@ -236,6 +237,8 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				// Use print because we want this dumped to stdout
 				componentDefinition += fmt.Sprintf("      - %s\n", image)
 			}
+
+			updateComponentImagesInplace(&component, sortedImages)
 		}
 
 		// Handle the "maybes"
@@ -266,6 +269,64 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 	// In case the directory was changed, reset to prevent breaking relative target paths
 	if originalDir != "" {
 		_ = os.Chdir(originalDir)
+	}
+
+	return nil
+}
+
+func updateComponentImagesInplace(component *types.ZarfComponent, images []string) error {
+	b, err := os.ReadFile(config.ZarfYAML)
+	if err != nil {
+		return err
+	}
+	contents := string(b)
+	lines := strings.Split(contents, "\n")
+	cName := component.Name
+
+	imagesLine := regexp.MustCompile(`(?m)^\s{4}images:.*$`)
+	cNameLine := regexp.MustCompile(fmt.Sprintf(`(?m)^\s{2}- name: %s.*$`, cName))
+	imageLineRe := `(?m)^\s{6}- %s.*$`
+	// Find the component in the file
+	for idx, line := range lines {
+		if cNameLine.MatchString(line) {
+			var start int
+			var end int
+			// Find the images section
+			for idx2, line2 := range lines[idx:] {
+				if imagesLine.MatchString(line2) {
+					start = idx + idx2 + 1
+				}
+				// handle if the images section dne
+				if strings.EqualFold(line2, "  - name: ") {
+					start = idx + idx2
+					end = start
+				}
+			}
+			if start != end {
+				for idx3, line3 := range lines[start:end] {
+					// If the line is a comment, skip it
+					if strings.HasPrefix(strings.TrimSpace(line3), "#") {
+						continue
+					}
+					for _, image := range images {
+						// If the image already exists, dont add it
+						imageLine := regexp.MustCompile(fmt.Sprintf(imageLineRe, image))
+						if imageLine.MatchString(line3) {
+							break
+						}
+						// If the image exists, but has a different digest, update it
+						right, err := registry.ParseReference(image)
+						if err != nil {
+							message.Debug("Error parsing image reference: %s :%s", image, err.Error())
+							continue
+						}
+						cleanLine := strings.TrimPrefix("- ", strings.TrimSpace(line3))
+						left, err := registry.ParseReference(cleanLine)
+					}
+				}
+			}
+
+		}
 	}
 
 	return nil
