@@ -34,9 +34,10 @@ import (
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create(baseDir string) error {
+
 	var originalDir string
 
-	if err := p.readYaml(filepath.Join(baseDir, config.ZarfYAML), false); err != nil {
+	if err := p.readYaml(filepath.Join(baseDir, config.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 

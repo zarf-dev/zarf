@@ -234,7 +234,7 @@ func addImageNameAnnotation(ociPath string, digestToTag map[string]string) error
 	// Add an 'org.opencontainers.image.base.name' annotation so we can figure out what the image tag/digest shasum will be during deploy time
 	indexJSON, err := os.Open(indexPath)
 	if err != nil {
-		message.Errorf(err, "Unable to open %s/index.json", ociPath)
+		message.WarnErrorf(err, "Unable to open %s/index.json", ociPath)
 		return err
 	}
 
