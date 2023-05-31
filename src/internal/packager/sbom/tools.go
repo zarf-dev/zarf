@@ -56,6 +56,7 @@ func OutputSBOMFiles(tmp types.TempPaths, outputDir string, packageName string) 
 	return utils.CreatePathAndCopy(tmp.Sboms, packagePath)
 }
 
+// IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections)
 func IsSBOMAble(pkg types.ZarfPackage) bool {
 	for _, c := range pkg.Components {
 		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.DataInjections) > 0 {
