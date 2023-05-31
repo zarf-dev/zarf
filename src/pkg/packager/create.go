@@ -64,6 +64,7 @@ func (p *Packager) Create(baseDir string) error {
 		return err
 	}
 
+	// Compose components into a single zarf.yaml file
 	if err := p.composeComponents(); err != nil {
 		return err
 	}
@@ -73,7 +74,12 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
-	// Remove unnecessary repos and images if we are building a differential package
+	// After templates are filled process any create extensions
+	if err := p.processExtensions(); err != nil {
+		return err
+	}
+
+	// After we have a full zarf.yaml remove unnecessary repos and images if we are building a differential package
 	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
 		// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
 		// If the package versions are the same return an error
@@ -87,20 +93,6 @@ func (p *Packager) Create(baseDir string) error {
 		// Handle any potential differential images/repos before going forward
 		if err := p.removeCopiesFromDifferentialPackage(); err != nil {
 			return err
-		}
-	}
-
-	// Create component paths and process extensions for each component.
-	for i, c := range p.cfg.Pkg.Components {
-		componentPath, err := p.createOrGetComponentPaths(c)
-		if err != nil {
-			return err
-		}
-
-		// Process any extensions.
-		p.cfg.Pkg.Components[i], err = p.processExtensions(p.cfg.Pkg.Metadata.YOLO, componentPath, c)
-		if err != nil {
-			return fmt.Errorf("unable to process extensions: %w", err)
 		}
 	}
 

@@ -293,6 +293,11 @@ func (p *Packager) loadSkeleton() error {
 		return err
 	}
 
+	err = p.skeletonizeExtentions()
+	if err != nil {
+		return err
+	}
+
 	for idx, component := range p.cfg.Pkg.Components {
 		isSkeleton := true
 		err := p.addComponent(idx, component, isSkeleton)

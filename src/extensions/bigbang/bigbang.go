@@ -244,6 +244,30 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 	return c, nil
 }
 
+// Skeletonize Mutates a component so that the valuesFiles can be contained inside a skeleton package
+func Skeletonize(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
+		// Define the name as the file name without the extension.
+		baseName := strings.TrimSuffix(valuesFile, filepath.Ext(valuesFile))
+
+		// Replace non-alphanumeric characters with a dash.
+		baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")
+
+		// Add the skeleton name prefix.
+		skelName := fmt.Sprintf("bb-ext-skeleton-values-%s", baseName)
+
+		dst := filepath.Join(tmpPaths.Temp, skelName)
+
+		if err := utils.CreatePathAndCopy(valuesFile, dst); err != nil {
+			return c, err
+		}
+
+		c.Extensions.BigBang.ValuesFiles[valuesIdx] = dst
+	}
+
+	return c, nil
+}
+
 // isValidVersion check if the version is 1.54.0 or greater.
 func isValidVersion(version string) (bool, error) {
 	specifiedVersion, err := semver.NewVersion(version)
