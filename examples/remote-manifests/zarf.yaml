@@ -42,7 +42,7 @@ components:
                 name: podinfo
                 namespace: podinfo
                 condition: available
-    # image discovery is supported in remote manifests and kustomizations
+    # image discovery is supported in remote manifests and kustomizations using:
     # zarf prepare find-images
     images:
       - nginx:1.14.2

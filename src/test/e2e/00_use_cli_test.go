@@ -27,7 +27,7 @@ func TestUseCLI(t *testing.T) {
 		// run `zarf package create` with a specified tmp location
 		otherTmpPath := t.TempDir()
 
-		e2e.CleanFiles(shasumTestFilePath, otherTmpPath)
+		e2e.CleanFiles(shasumTestFilePath)
 
 		err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), 0600)
 		require.NoError(t, err)

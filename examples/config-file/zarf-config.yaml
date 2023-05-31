@@ -12,6 +12,7 @@ package:
     set:
       scorpion : 'iridescent'
       camel_spider : 'matte'
+      # dummy tls key showcasing multiline variables and autoindent
       tls_key : |-
         -----BEGIN PRIVATE KEY-----
         MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDDvKUzWiZucm6/
