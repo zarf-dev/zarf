@@ -124,7 +124,6 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.Len(differentialZarfConfig.Components[1].Repos, 2)
 	suite.Equal(differentialZarfConfig.Components[1].Images[0], "ghcr.io/stefanprodan/podinfo:latest")
 	suite.Equal(differentialZarfConfig.Components[1].Repos[0], "https://github.com/stefanprodan/podinfo.git")
-
 }
 
 func TestOCIDifferentialSuite(t *testing.T) {

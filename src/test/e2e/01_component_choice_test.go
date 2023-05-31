@@ -18,8 +18,9 @@ func TestComponentChoice(t *testing.T) {
 		firstFile  = "first-choice-file.txt"
 		secondFile = "second-choice-file.txt"
 	)
-
-	e2e.CleanFiles(firstFile, secondFile)
+	t.Cleanup(func() {
+		e2e.CleanFiles(firstFile, secondFile)
+	})
 
 	path := fmt.Sprintf("build/zarf-package-component-choice-%s.tar.zst", e2e.Arch)
 
@@ -43,8 +44,4 @@ func TestComponentChoice(t *testing.T) {
 
 	// Verify the file was created
 	require.FileExists(t, secondFile)
-
-	t.Cleanup(func() {
-		e2e.CleanFiles(firstFile, secondFile, path)
-	})
 }

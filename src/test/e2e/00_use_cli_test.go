@@ -24,10 +24,10 @@ func TestUseCLI(t *testing.T) {
 		expectedShasum := "61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109\n"
 		shasumTestFilePath := "shasum-test-file"
 
-		// run `zarf package create` with a specified tmp location
-		otherTmpPath := t.TempDir()
-
 		e2e.CleanFiles(shasumTestFilePath)
+		t.Cleanup(func() {
+			e2e.CleanFiles(shasumTestFilePath)
+		})
 
 		err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), 0600)
 		require.NoError(t, err)
@@ -35,9 +35,6 @@ func TestUseCLI(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf("prepare", "sha256sum", shasumTestFilePath)
 		require.NoError(t, err, stdOut, stdErr)
 		require.Equal(t, expectedShasum, stdOut, "The expected SHASUM should equal the actual SHASUM")
-		t.Cleanup(func() {
-			e2e.CleanFiles(shasumTestFilePath)
-		})
 	})
 
 	t.Run("zarf prepare sha256sum <remote>", func(t *testing.T) {
@@ -138,14 +135,13 @@ func TestUseCLI(t *testing.T) {
 			firstFile  = "first-choice-file.txt"
 			secondFile = "second-choice-file.txt"
 		)
+		t.Cleanup(func() {
+			e2e.CleanFiles(firstFile, secondFile)
+		})
 		path := fmt.Sprintf("build/zarf-package-component-choice-%s.tar.zst", e2e.Arch)
 		stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
 		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
 		require.NoError(t, err, stdOut, stdErr)
-
-		t.Cleanup(func() {
-			e2e.CleanFiles(firstFile, secondFile)
-		})
 	})
 
 	t.Run("remove cache", func(t *testing.T) {
@@ -172,6 +168,9 @@ func TestUseCLI(t *testing.T) {
 		tlsCA := "tls.ca"
 		tlsCert := "tls.crt"
 		tlsKey := "tls.key"
+		t.Cleanup(func() {
+			e2e.CleanFiles(tlsCA, tlsCert, tlsKey)
+		})
 		stdOut, stdErr, err := e2e.Zarf("tools", "gen-pki", "github.com", "--sub-alt-name", "google.com")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdErr, "Successfully created a chain of trust for github.com")
@@ -182,8 +181,5 @@ func TestUseCLI(t *testing.T) {
 
 		require.FileExists(t, tlsKey)
 
-		t.Cleanup(func() {
-			e2e.CleanFiles(tlsCA, tlsCert, tlsKey)
-		})
 	})
 }

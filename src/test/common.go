@@ -53,11 +53,7 @@ func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
 	if !e2e.RunClusterTests {
 		t.Skip("")
 	}
-	if runtime.GOOS != "windows" {
-		_ = exec.CmdWithPrint("sh", "-c", fmt.Sprintf("%s tools kubectl describe nodes | grep -A 99 Non-terminated", e2e.ZarfBinPath))
-	} else {
-		t.Log("Skipping kubectl describe nodes on Windows")
-	}
+	_ = exec.CmdWithPrint("sh", "-c", fmt.Sprintf("%s tools kubectl describe nodes | grep -A 99 Non-terminated", e2e.ZarfBinPath))
 }
 
 // Zarf executes a Zarf command.
