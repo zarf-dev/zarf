@@ -3,7 +3,6 @@
 
 import type {
 	APIDeployedPackageConnection,
-	APIExplorer,
 	APIPackageSBOM,
 	APIZarfDeployPayload,
 	APIZarfPackage,
@@ -37,8 +36,6 @@ const Cluster = {
 };
 
 const Packages = {
-	explore: (path = '') => http.get<APIExplorer>(`/packages/explore?path=${path}`),
-	exploreInit: (path = '') => http.get<APIExplorer>(`/packages/explore?path=${path}&init=${true}`),
 	find: () => http.get<string[]>('/packages/find'),
 	findInHome: () => http.get<string[]>('/packages/find-in-home'),
 	findInit: () => http.get<string[]>('/packages/find-init'),

@@ -87,7 +87,6 @@ func LaunchAPIServer() {
 
 		r.Route("/packages", func(r chi.Router) {
 			r.Get("/find", packages.Find)
-			r.Get("/explore", packages.Explore)
 			r.Get("/find-in-home", packages.FindInHome)
 			r.Get("/find-init", packages.FindInitPackage)
 			r.Get("/read/{path}", packages.Read)

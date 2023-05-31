@@ -5,12 +5,10 @@
 package packages
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"regexp"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -18,7 +16,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Find zarf-packages on the local system (https://regex101.com/r/TUUftK/1)
@@ -111,79 +108,6 @@ func FindInitPackage(w http.ResponseWriter, _ *http.Request) {
 	} else {
 		message.ErrorCodeWebf(errs, w, http.StatusNotFound, "Unable to find ZarfInitPackages.")
 	}
-}
-
-// Explore returns all files in the given path if it exists and is inside the user's home directory.
-// Optional query parameter: path, defaults to the user's home directory.
-// Optional query parameter: init, if true, only return init packages.
-func Explore(w http.ResponseWriter, r *http.Request) {
-	message.Debug("packages.Explore()")
-	var pattern *regexp.Regexp
-	path := r.URL.Query().Get("path")
-	isInit := r.URL.Query().Get("init")
-
-	if isInit == "true" {
-		pattern = initPackagesPattern
-	} else {
-		pattern = packagePattern
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		message.ErrorWebf(err, w, "Unable to get user home directory.")
-		return
-	}
-
-	// If no path is provided, use the user's home directory
-	if path == "" {
-		path = home
-	}
-
-	// Ensure the path is inside users home directory and is valid
-	if strings.Contains(path, home) == false || utils.InvalidPath(path) {
-		message.ErrorCodeWebf(errors.New("Invalid path"), w, http.StatusNotFound, "Unable to explore %s", path)
-		return
-	}
-
-	files, err := getExplorerFiles(path, pattern)
-
-	if err != nil {
-		message.ErrorCodeWebf(err, w, http.StatusNotFound, "Unable to retrieve files in %s", path)
-	} else {
-		explorer := types.APIExplorer{
-			Dir:   path,
-			Files: files,
-		}
-		common.WriteJSONResponse(w, explorer, http.StatusOK)
-	}
-}
-
-func getExplorerFiles(dir string, pattern *regexp.Regexp) ([]types.APIExplorerFile, error) {
-	matches := make([]types.APIExplorerFile, 0)
-
-	files, err := os.ReadDir(dir)
-
-	for _, file := range files {
-
-		if !file.IsDir() {
-			path := fmt.Sprintf("%s/%s", dir, file.Name())
-			if pattern != nil {
-				if len(pattern.FindStringIndex(path)) > 0 {
-
-					matches = append(matches, types.APIExplorerFile{
-						Path:  path,
-						IsDir: false,
-					})
-				}
-			}
-		} else {
-			matches = append(matches, types.APIExplorerFile{
-				Path:  fmt.Sprintf("%s/%s", dir, file.Name()),
-				IsDir: true,
-			})
-		}
-	}
-	return matches, err
 }
 
 // findFilePaths returns all files matching the pattern in the given path.
