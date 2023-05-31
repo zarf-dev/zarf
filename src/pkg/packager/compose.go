@@ -373,11 +373,6 @@ func (p *Packager) getComposedFilePath(prefix string, path string) string {
 		return path
 	}
 
-	// Return original if it is an absolute path.
-	if filepath.IsAbs(path) {
-		return path
-	}
-
 	// Add prefix for local files.
 	return filepath.Join(prefix, path)
 }

@@ -147,13 +147,13 @@ func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (pat
 
 	paths = types.ComponentPaths{
 		Base:           base,
-		Temp:           filepath.Join(base, "temp"),
-		Files:          filepath.Join(base, "files"),
-		Charts:         filepath.Join(base, "charts"),
-		Repos:          filepath.Join(base, "repos"),
-		Manifests:      filepath.Join(base, "manifests"),
-		DataInjections: filepath.Join(base, "data"),
-		Values:         filepath.Join(base, "values"),
+		Temp:           filepath.Join(base, types.TempFolder),
+		Files:          filepath.Join(base, types.FilesFolder),
+		Charts:         filepath.Join(base, types.ChartsFolder),
+		Repos:          filepath.Join(base, types.ReposFolder),
+		Manifests:      filepath.Join(base, types.ManifestsFolder),
+		DataInjections: filepath.Join(base, types.DataInjectionsFolder),
+		Values:         filepath.Join(base, types.ValuesFolder),
 	}
 
 	if len(component.Files) > 0 {
