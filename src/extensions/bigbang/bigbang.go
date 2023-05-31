@@ -37,7 +37,7 @@ var tenMins = metav1.Duration{
 	Duration: 10 * time.Minute,
 }
 
-// Run Mutates a component that should deploy Big Bang to a set of manifests
+// Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
 func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	var err error
@@ -244,7 +244,7 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 	return c, nil
 }
 
-// Skeletonize Mutates a component so that the valuesFiles can be contained inside a skeleton package
+// Skeletonize mutates a component so that the valuesFiles can be contained inside a skeleton package
 func Skeletonize(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
 		// Define the name as the file name without the extension.
