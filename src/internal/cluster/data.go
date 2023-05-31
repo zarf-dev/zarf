@@ -29,7 +29,7 @@ func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInj
 
 	injectionCompletionMarker := filepath.Join(componentPath.DataInjections, config.GetDataInjectionMarker())
 	if err := utils.WriteFile(injectionCompletionMarker, []byte("🦄")); err != nil {
-		message.Errorf(err, "Unable to create the data injection completion marker")
+		message.WarnErrorf(err, "Unable to create the data injection completion marker")
 		return
 	}
 
@@ -48,7 +48,7 @@ func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInj
 	shell, shellArgs := exec.GetOSShell(types.ZarfComponentActionShell{Windows: "cmd"})
 
 	if _, _, err := exec.Cmd(shell, shellArgs, "tar --version"); err != nil {
-		message.Error(err, "Unable to execute tar on this system.  Please ensure it is installed and on your $PATH.")
+		message.WarnErr(err, "Unable to execute tar on this system.  Please ensure it is installed and on your $PATH.")
 		return
 	}
 
