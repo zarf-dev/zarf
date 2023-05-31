@@ -23,13 +23,17 @@ To view the example in its entirety, select the `Edit this page` link below the 
 
 <ExampleYAML example="big-bang" showLink={false} />
 
-## YOLO Mode
+:::caution
 
-You can learn about YOLO mode [here](https://docs.zarf.dev/docs/faq#what-is-yolo-mode-and-why-would-i-use-it).
+`valuesFiles` are processed in the order provided with Zarf adding an initial values file to populate registry and git server credentials as the first file.  Including credential `values` (even empty ones) will override these values.  This can be used to our advantage however for things like YOLO mode as described below.
 
-The `provision-flux-credentials` component is required to create the necessary secret to pull flux images from [registry1.dso.mil](https://registry1.dso.mil). In the provided `zarf.yaml` for this example, we demonstrate providing account credentials via Zarf Variables, although there are other ways to populate the data in `private-registry.yaml`.
+:::
 
-### Big Bang YOLO `zarf.yaml`
+## Big Bang YOLO Mode Support
+
+The Big Bang extension also supports YOLO mode, provided that you add your own credentials for the image registry. This is accomplished below with the `provision-flux-credentials` component and the `credentials.yaml` values file which allows images to be pulled from [registry1.dso.mil](https://registry1.dso.mil). We demonstrate providing account credentials via Zarf Variables, but there are other ways to populate the data in `private-registry.yaml`.
+
+You can learn about YOLO mode in the [FAQ](../docs/8-faq.md#what-is-yolo-mode-and-why-would-i-use-it) or the [YOLO mode example](../yolo/README.md).
 
 :::info
 
