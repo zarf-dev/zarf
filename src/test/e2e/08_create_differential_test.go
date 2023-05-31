@@ -64,7 +64,7 @@ func TestCreateDifferential(t *testing.T) {
 		"https://github.com/kelseyhightower/nocode.git",
 		"https://github.com/defenseunicorns/zarf.git@refs/tags/v0.26.0",
 	}
-	require.Len(t, actualGitRepos, 3, "zarf.yaml from the differential package does not contain the correct number of repos")
+	require.Len(t, actualGitRepos, 4, "zarf.yaml from the differential package does not contain the correct number of repos")
 	for _, expectedRepo := range expectedGitRepos {
 		require.Contains(t, actualGitRepos, expectedRepo, fmt.Sprintf("unable to find expected repo %s", expectedRepo))
 	}
