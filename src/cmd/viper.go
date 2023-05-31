@@ -36,14 +36,15 @@ const (
 	V_INIT_GIT_PULL_PASS = "init.git.pull_password"
 
 	// Init Registry config keys
-	V_INIT_REGISTRY_URL       = "init.registry.url"
-	V_INIT_REGISTRY_NODEPORT  = "init.registry.nodeport"
-	V_INIT_REGISTRY_SECRET    = "init.registry.secret"
-	V_INIT_REGISTRY_PUSH_USER = "init.registry.push_username"
-	V_INIT_REGISTRY_PUSH_PASS = "init.registry.push_password"
-	V_INIT_REGISTRY_PULL_USER = "init.registry.pull_username"
-	V_INIT_REGISTRY_PULL_PASS = "init.registry.pull_password"
-	V_INIT_REGISTRY_TYPE      = "init.registry.type"
+	V_INIT_REGISTRY_URL         = "init.registry.url"
+	V_INIT_REGISTRY_NODEPORT    = "init.registry.nodeport"
+	V_INIT_REGISTRY_SECRET      = "init.registry.secret"
+	V_INIT_REGISTRY_PUSH_USER   = "init.registry.push_username"
+	V_INIT_REGISTRY_PUSH_PASS   = "init.registry.push_password"
+	V_INIT_REGISTRY_PULL_USER   = "init.registry.pull_username"
+	V_INIT_REGISTRY_PULL_PASS   = "init.registry.pull_password"
+	V_INIT_REGISTRY_TYPE        = "init.registry.type"
+	V_INIT_REGISTRY_REPO_PREFIX = "init.registry.repository_prefix"
 
 	// Init Package config keys
 	V_INIT_ARTIFACT_URL        = "init.artifact.url"

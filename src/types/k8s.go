@@ -70,6 +70,7 @@ type RegistryInfo struct {
 	PullUsername string `json:"pullUsername" jsonschema:"description=Username of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used"`
 	PullPassword string `json:"pullPassword" jsonschema:"description=Password of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used"`
 
+	RepositoryPrefix string `json:"repositoryPrefix" jsonschema:"description=Prefix to use for all repositories in the registry"`
 	Address          string `json:"address" jsonschema:"description=URL address of the registry"`
 	NodePort         int    `json:"nodePort" jsonschema:"description=Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster"`
 	InternalRegistry bool   `json:"internalRegistry" jsonschema:"description=Indicates if we are using a registry that Zarf is directly managing"`
