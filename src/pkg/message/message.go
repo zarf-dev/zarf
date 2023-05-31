@@ -85,7 +85,7 @@ func UseLogFile() {
 	} else {
 		// Try to create a temp log file if one hasn't been made already
 		if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
-			WarnErr(err, "Error saving a log file")
+			WarnErr(err, "Error saving a log file to a temporary directory")
 		} else {
 			useLogFile = true
 			logStream := io.MultiWriter(os.Stderr, logFile)
