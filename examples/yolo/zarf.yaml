@@ -13,3 +13,12 @@ components:
         files:
           - ../dos-games/manifests/deployment.yaml
           - ../dos-games/manifests/service.yaml
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: game
+                namespace: dos-games
+                condition: available

@@ -103,7 +103,7 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.Len(normalZarfConfig.Components[1].Images, 2)
 	suite.Len(normalZarfConfig.Components[1].Repos, 2)
 	suite.Len(normalZarfConfig.Components[2].Images, 1)
-	suite.Len(normalZarfConfig.Components[2].Repos, 2)
+	suite.Len(normalZarfConfig.Components[2].Repos, 3)
 
 	/* Perform a bunch of asserts around the differential package */
 	// Check the metadata and build data for the differential package
@@ -121,7 +121,7 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.Len(differentialZarfConfig.Components[0].Repos, 1)
 	suite.Equal(differentialZarfConfig.Components[0].Repos[0], "https://github.com/defenseunicorns/zarf.git@refs/tags/v0.25.0")
 	suite.Len(differentialZarfConfig.Components[1].Images, 1)
-	suite.Len(differentialZarfConfig.Components[1].Repos, 2)
+	suite.Len(differentialZarfConfig.Components[1].Repos, 3)
 	suite.Equal(differentialZarfConfig.Components[1].Images[0], "ghcr.io/stefanprodan/podinfo:latest")
 	suite.Equal(differentialZarfConfig.Components[1].Repos[0], "https://github.com/stefanprodan/podinfo.git")
 }

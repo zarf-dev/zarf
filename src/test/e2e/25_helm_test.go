@@ -22,13 +22,13 @@ func TestHelm(t *testing.T) {
 
 	helmChartsPkg = filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
 
-	t.Run("helm charts example", testHelmChartsExample)
-
-	t.Run("helm escaping", testHelmEscaping)
-
 	testHelmUninstallRollback(t)
 
 	testHelmAdoption(t)
+
+	t.Run("helm charts example", testHelmChartsExample)
+
+	t.Run("helm escaping", testHelmEscaping)
 }
 
 func testHelmChartsExample(t *testing.T) {
