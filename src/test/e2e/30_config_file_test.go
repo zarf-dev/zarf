@@ -50,6 +50,9 @@ func configFileTests(t *testing.T, dir, path string) {
 	require.NotContains(t, string(stdErr), "📦 LEOPARD COMPONENT")
 	require.NotContains(t, string(stdErr), "📦 ZEBRA COMPONENT")
 
+	// This package does not contain anything SBOMable
+	require.NotContains(t, string(stdErr), "This package does NOT contain an SBOM.")
+
 	// Verify the configmap was properly templated
 	kubectlOut, _, err := e2e.Kubectl("-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath={.data.templateme\\.properties}")
 	require.NoError(t, err)
