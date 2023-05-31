@@ -26,14 +26,14 @@ components:
       - name: private-registry
         namespace: flux-system
         files:
-          - secrets/private-registry.yaml
+          - private-registry.yaml
   - name: bigbang
     required: true
     extensions:
       bigbang:
         version: 2.0.0
         valuesFiles:
-          - config/credentials.yaml
-          - config/ingress.yaml
-          - config/kyverno.yaml
-          - config/loki.yaml
+          - credentials.yaml
+          - ../config/ingress.yaml
+          - ../config/kyverno.yaml
+          - ../config/loki.yaml
