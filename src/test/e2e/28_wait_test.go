@@ -25,8 +25,11 @@ func zarfCommandWStruct(e2e test.ZarfE2ETest, path string) (result zarfCommandRe
 	return result
 }
 
-func TestWait(t *testing.T) {
+func TestNoWait(t *testing.T) {
 	t.Log("E2E: Helm Wait")
+
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/28-helm-no-wait", "-o=build", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-helm-no-wait-%s.tar.zst", e2e.Arch)
 
@@ -35,9 +38,9 @@ func TestWait(t *testing.T) {
 		zarfChannel <- zarfCommandWStruct(e2e, path)
 	}()
 
-	var stdOut string
-	var stdErr string
-	var err error
+	stdOut = ""
+	stdErr = ""
+	err = nil
 
 	select {
 	case res := <-zarfChannel:
