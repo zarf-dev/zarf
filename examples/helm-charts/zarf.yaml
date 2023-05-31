@@ -8,32 +8,32 @@ components:
   - name: demo-helm-local-chart
     required: false
     charts:
-      - name: local-demo
-        version: 0.1.0
-        namespace: local-chart
+      - name: podinfo
+        version: 6.3.5
+        namespace: podinfo-from-local-chart
         localPath: chart
     images:
-      - nginx:1.16.0
+      - ghcr.io/stefanprodan/podinfo:6.3.5
     actions:
       onDeploy:
         after:
           - wait:
               cluster:
                 kind: deployment
-                name: local-demo
-                namespace: local-chart
+                name: podinfo
+                namespace: podinfo-from-local-chart
                 condition: available
 
   - name: demo-helm-git-chart
     required: false
     charts:
       - name: podinfo
-        version: 6.1.6
+        version: 6.3.5
         namespace: podinfo-from-git
         url: https://github.com/stefanprodan/podinfo.git
         gitPath: charts/podinfo
     images:
-      - ghcr.io/stefanprodan/podinfo:6.1.6
+      - ghcr.io/stefanprodan/podinfo:6.3.5
     actions:
       onDeploy:
         after:
