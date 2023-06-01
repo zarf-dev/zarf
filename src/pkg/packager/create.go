@@ -140,7 +140,7 @@ func (p *Packager) Create(baseDir string) error {
 		combinedImageList = append(combinedImageList, component.Images...)
 
 		// Remove the temp directory for this component before archiving.
-		err = os.RemoveAll(filepath.Join(p.tmp.Components, component.Name, "temp"))
+		err = os.RemoveAll(filepath.Join(p.tmp.Components, component.Name, types.TempFolder))
 		if err != nil {
 			message.Warnf("unable to remove temp directory for component %s, component tarball may contain unused artifacts: %s", component.Name, err.Error())
 		}
@@ -358,12 +358,14 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		}
 
 		if isSkeleton && chart.URL == "" {
-			dst := filepath.Join(componentPath.Charts, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
-			rel := strings.TrimPrefix(dst, componentPath.Base)
+			rel := filepath.Join(types.ChartsFolder, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+			dst := filepath.Join(componentPath.Base, rel)
+
 			err := utils.CreatePathAndCopy(chart.LocalPath, dst)
 			if err != nil {
 				return err
 			}
+
 			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
 		} else if isGitURL {
 			_, err = helmCfg.PackageChartFromGit(componentPath.Charts)
@@ -381,7 +383,9 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		}
 
 		for valuesIdx, path := range chart.ValuesFiles {
-			dst := fmt.Sprintf("%s-%d", helm.StandardName(componentPath.Values, chart), valuesIdx)
+			rel := fmt.Sprintf("%s-%d", helm.StandardName(types.ValuesFolder, chart), valuesIdx)
+			dst := filepath.Join(componentPath.Base, rel)
+
 			if utils.IsURL(path) {
 				if isSkeleton {
 					continue
@@ -394,7 +398,6 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 					return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 				}
 				if isSkeleton {
-					rel := strings.TrimPrefix(dst, componentPath.Base)
 					p.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 				}
 			}
@@ -404,9 +407,8 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	for filesIdx, file := range component.Files {
 		message.Debugf("Loading %#v", file)
 
-		dstIdxPath := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx))
-		utils.CreateDirectory(dstIdxPath, 0700)
-		dst := filepath.Join(dstIdxPath, filepath.Base(file.Target))
+		rel := filepath.Join(types.FilesFolder, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		dst := filepath.Join(componentPath.Base, rel)
 
 		if utils.IsURL(file.Source) {
 			if isSkeleton {
@@ -420,7 +422,6 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
 			}
 			if isSkeleton {
-				rel := strings.TrimPrefix(dst, componentPath.Base)
 				p.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
 			}
 		}
@@ -446,9 +447,8 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		for dataIdx, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 
-			dstIdxPath := filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx))
-			utils.CreateDirectory(dstIdxPath, 0700)
-			dst := filepath.Join(dstIdxPath, filepath.Base(data.Target.Path))
+			rel := filepath.Join(types.DataInjectionsFolder, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+			dst := filepath.Join(componentPath.Base, rel)
 
 			if utils.IsURL(data.Source) {
 				if isSkeleton {
@@ -462,7 +462,6 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 					return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
 				}
 				if isSkeleton {
-					rel := strings.TrimPrefix(dst, componentPath.Base)
 					p.cfg.Pkg.Components[index].DataInjections[dataIdx].Source = rel
 				}
 			}
@@ -485,7 +484,9 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		// Iterate over all manifests.
 		for manifestIdx, manifest := range component.Manifests {
 			for fileIdx, path := range manifest.Files {
-				dst := filepath.Join(componentPath.Manifests, fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+				rel := filepath.Join(types.ManifestsFolder, fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+				dst := filepath.Join(componentPath.Base, rel)
+
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", path)
 				if utils.IsURL(path) {
@@ -500,7 +501,6 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 						return fmt.Errorf("unable to copy manifest %s: %w", path, err)
 					}
 					if isSkeleton {
-						rel := strings.TrimPrefix(dst, componentPath.Base)
 						p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files[fileIdx] = rel
 					}
 				}
@@ -509,13 +509,15 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			for kustomizeIdx, path := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
 				spinner.Updatef("Building kustomization for %s", path)
+
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
-				dst := filepath.Join(componentPath.Manifests, kname)
+				rel := filepath.Join(types.ManifestsFolder, kname)
+				dst := filepath.Join(componentPath.Base, rel)
+
 				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 				}
 				if isSkeleton {
-					rel := strings.TrimPrefix(dst, componentPath.Base)
 					p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files = append(p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files, rel)
 				}
 			}
