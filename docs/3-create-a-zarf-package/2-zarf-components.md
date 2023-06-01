@@ -71,13 +71,13 @@ Can be when using the `url` key:
 
 <Tabs queryString="chart-examples">
 <TabItem value="localPath">
-<ExampleYAML example="helm-local-chart" component="demo-helm-local-chart" />
+<ExampleYAML example="helm-charts" component="demo-helm-local-chart" />
 </TabItem>
 <TabItem value="URL (git)">
-<ExampleYAML example="helm-git-chart" component="demo-helm-git-chart" />
+<ExampleYAML example="helm-charts" component="demo-helm-git-chart" />
 </TabItem>
 <TabItem value="URL (oci)">
-<ExampleYAML example="helm-oci-chart" component="helm-oci-chart" />
+<ExampleYAML example="helm-charts" component="demo-helm-oci-chart" />
 </TabItem>
 </Tabs>
 
