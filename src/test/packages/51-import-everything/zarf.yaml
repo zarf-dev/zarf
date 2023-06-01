@@ -61,11 +61,11 @@ components:
   - name: import-helm
     required: false
     charts:
-      - name: local-demo
+      - name: podinfo
         localPath: charts/local
         namespace: local-chart
         version: 6.3.5
-      - name: local-demo
+      - name: podinfo
         localPath: ../everything-external/charts/local
         namespace: local-chart-relative
         version: 6.3.5
@@ -82,13 +82,13 @@ components:
           - wait:
               cluster:
                 kind: deployment
-                name: local-demo
+                name: podinfo
                 namespace: local-chart
                 condition: available
           - wait:
               cluster:
                 kind: deployment
-                name: local-demo
+                name: podinfo
                 namespace: local-chart-relative
                 condition: available
           - wait:
