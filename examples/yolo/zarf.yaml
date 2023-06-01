@@ -20,5 +20,5 @@ components:
               cluster:
                 kind: deployment
                 name: game
-                namespace: dos-games
+                namespace: zarf-yolo-example
                 condition: available
