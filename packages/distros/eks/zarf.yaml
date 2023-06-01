@@ -19,6 +19,12 @@ variables:
   - name: CLUSTER_VERSION
     default: "1.23"
 
+  - name: ZARF_VAR_ECR_REPOSITORY_PREFIX
+
+  - name: ZARF_VAR_ECR_REGION
+    default: us-east-1
+
+
 components:
   - name: load-eksctl
     required: true
@@ -56,6 +62,15 @@ components:
           - cmd: ./eksctl utils write-kubeconfig -c ${ZARF_VAR_CLUSTER_NAME}
           - cmd: ./zarf tools kubectl create namespace zarf
           - cmd: ./zarf tools kubectl create secret generic zarf-eks-yaml -n zarf --from-file=eks.yaml
+
+
+  - name: setup-ecr-registry
+    description: "Create a secret in the cluster so a `zarf init` command knows to configure the cluster to use an ECR registry"
+    manifests:
+      - name: ecr-info
+        namespace: zarf
+        files:
+          - manifests/secret.yaml
 
   - name: teardown-eks-cluster
     description: "Delete the EKS cluster that this package was used to create."
