@@ -30,11 +30,12 @@ import (
 
 // Packager is the main struct for managing packages.
 type Packager struct {
-	cfg      *types.PackagerConfig
-	cluster  *cluster.Cluster
-	tmp      types.TempPaths
-	arch     string
-	warnings []string
+	cfg          *types.PackagerConfig
+	cluster      *cluster.Cluster
+	tmp          types.TempPaths
+	arch         string
+	warnings     []string
+	pluginConfig *types.PluginConfig
 }
 
 /*
@@ -60,7 +61,8 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	var (
 		err       error
 		pkgConfig = &Packager{
-			cfg: cfg,
+			cfg:          cfg,
+			pluginConfig: &types.PluginConfig{},
 		}
 	)
 
