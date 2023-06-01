@@ -58,21 +58,13 @@ components:
           - cmd: test ! -f files/latte.txt
           - cmd: test ! -f files/zarf-readme.md
 
-  - name: import-helm
+  - name: import-helm-local
     required: false
     charts:
       - name: podinfo
         localPath: charts/local
         namespace: local-chart
         version: 6.3.5
-      - name: podinfo
-        localPath: ../everything-external/charts/local
-        namespace: local-chart-relative
-        version: 6.3.5
-      - name: oci-demo
-        version: 6.3.5
-        namespace: podinfo
-        url: oci://ghcr.io/stefanprodan/charts/podinfo
     images:
       - ghcr.io/stefanprodan/podinfo:6.3.5
     actions:
@@ -84,12 +76,38 @@ components:
                 name: podinfo
                 namespace: local-chart
                 condition: available
+
+  - name: import-helm-local-relative
+    required: false
+    charts:
+      - name: podinfo
+        localPath: ../everything-external/charts/local
+        namespace: local-chart-relative
+        version: 6.3.5
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.5
+    actions:
+      onDeploy:
+        after:
           - wait:
               cluster:
                 kind: deployment
                 name: podinfo
                 namespace: local-chart-relative
                 condition: available
+
+  - name: import-helm-oci
+    required: false
+    charts:
+      - name: oci-demo
+        version: 6.3.5
+        namespace: podinfo
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.5
+    actions:
+      onDeploy:
+        after:
           - wait:
               cluster:
                 kind: pod

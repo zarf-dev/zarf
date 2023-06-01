@@ -20,7 +20,17 @@ components:
     import:
       url: oci://localhost:555/import-everything:0.0.1-skeleton
 
-  - name: import-helm
+  - name: import-helm-local
+    required: true
+    import:
+      url: oci://localhost:555/import-everything:0.0.1-skeleton
+
+  - name: import-helm-local-relative
+    required: true
+    import:
+      url: oci://localhost:555/import-everything:0.0.1-skeleton
+
+  - name: import-helm-oci
     required: true
     import:
       url: oci://localhost:555/import-everything:0.0.1-skeleton
