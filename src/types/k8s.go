@@ -50,8 +50,10 @@ type GitServerInfo struct {
 	PullUsername string `json:"pullUsername" jsonschema:"description=Username of a user with pull-only access to the git repository. If not provided for an external repository than the push-user is used"`
 	PullPassword string `json:"pullPassword" jsonschema:"description=Password of a user with pull-only access to the git repository. If not provided for an external repository than the push-user is used"`
 
-	Address        string `json:"address" jsonschema:"description=URL address of the git server"`
-	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a git server that Zarf is directly managing"`
+	Address string `json:"address" jsonschema:"description=URL address of the git server"`
+
+	// TODO: Migrate this to use a GitServerType enum
+	InternalServer bool `json:"internalServer" jsonschema:"description=Indicates if we are using a git server that Zarf is directly managing"`
 }
 
 // ArtifactServerInfo contains information Zarf uses to communicate with a artifact registry to push/pull repositories to.
@@ -59,8 +61,10 @@ type ArtifactServerInfo struct {
 	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the artifact registry"`
 	PushToken    string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the artifact registry"`
 
-	Address        string `json:"address" jsonschema:"description=URL address of the artifact registry"`
-	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a artifact registry that Zarf is directly managing"`
+	Address string `json:"address" jsonschema:"description=URL address of the artifact registry"`
+
+	// TODO: Migrate this to use the ArtifactServerType enum
+	InternalServer bool `json:"internalServer" jsonschema:"description=Indicates if we are using a artifact registry that Zarf is directly managing"`
 }
 
 // RegistryInfo contains information Zarf uses to communicate with a container registry to push/pull images.
@@ -70,12 +74,42 @@ type RegistryInfo struct {
 	PullUsername string `json:"pullUsername" jsonschema:"description=Username of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used"`
 	PullPassword string `json:"pullPassword" jsonschema:"description=Password of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used"`
 
-	RepositoryPrefix string `json:"repositoryPrefix" jsonschema:"description=Prefix to use for all repositories in the registry"`
-	Address          string `json:"address" jsonschema:"description=URL address of the registry"`
-	NodePort         int    `json:"nodePort" jsonschema:"description=Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster"`
-	InternalRegistry bool   `json:"internalRegistry" jsonschema:"description=Indicates if we are using a registry that Zarf is directly managing"`
+	Address  string `json:"address" jsonschema:"description=URL address of the registry"`
+	NodePort int    `json:"nodePort" jsonschema:"description=Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster"`
+
+	// TODO: Migrate this to use the RegistryType enum
+	InternalRegistry bool `json:"internalRegistry" jsonschema:"description=Indicates if we are using a registry that Zarf is directly managing"`
 
 	Secret string `json:"secret" jsonschema:"description=Secret value that the registry was seeded with"`
 
-	RegistryType string `json:"registryType" jsonschema:"description=Type of registry Zarf is configured to use"`
+	RegistryType RegistryType `json:"registryType" jsonschema:"description=Type of registry Zarf is configured to use"`
+}
+
+// Registry type enumerates the different types of registries Zarf can use.
+type RegistryType string
+
+// GitServerType enumerates the different types of git servers Zarf can use.
+type GitSererType string
+
+// ArtifactServerType enumerates the different types of artifact servers Zarf can use.
+type ArtifactServerType string
+
+const (
+	InternalRegistry RegistryType = "internal"
+	ExternalRegistry RegistryType = "external"
+	ECRRegistry      RegistryType = "ECR"
+
+	InternalGitServer GitSererType = "internal"
+	ExternalGitServer GitSererType = "external"
+
+	InternalArtifactServer ArtifactServerType = "internal"
+	ExternalArtifactServer ArtifactServerType = "external"
+)
+
+// ECRInfo contains information Zarf uses to communicate with an ECR registry to push/pull images.
+// NOTE: This information is only relevant if you're initializing Zarf on an EKS cluster that is being configured to use an ECR registry.
+type ECRInfo struct {
+	RegistryURL      string `json:"registryURL" jsonschema:"description=URL address of the ECR registry"`
+	RepositoryPrefix string `json:"repositoryPrefix" jsonschema:"description=Prefix to use for all repositories in the registry"`
+	Region           string `json:"region" jsonschema:"description=AWS region of the ECR registry"`
 }

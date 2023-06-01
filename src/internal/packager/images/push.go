@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -53,7 +54,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	craneTransport := utils.NewTransport(httpTransport, progressBar)
 
 	pushOptions := config.GetCraneOptions(i.Insecure, i.Architectures...)
-	if i.RegInfo.RegistryType != "ecr" {
+	if i.RegInfo.RegistryType != types.ECRRegistry {
 		pushOptions = append(pushOptions, config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword))
 	}
 	pushOptions = append(pushOptions, crane.WithTransport(craneTransport))
