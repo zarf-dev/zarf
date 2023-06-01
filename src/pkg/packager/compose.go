@@ -88,6 +88,10 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	var cachePath string
 	if parent.Import.URL != "" {
+		if !strings.HasSuffix(parent.Import.URL, skeletonSuffix) {
+			return child, fmt.Errorf("import URL must be a 'skeleton' package: %s", parent.Import.URL)
+		}
+
 		// Save all the OCI imported components into our build data
 		p.cfg.Pkg.Build.OCIImportedComponents[parent.Import.URL] = childComponentName
 
