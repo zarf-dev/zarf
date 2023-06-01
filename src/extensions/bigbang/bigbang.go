@@ -254,18 +254,29 @@ func Skeletonize(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.Za
 		baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")
 
 		// Add the skeleton name prefix.
-		skelName := fmt.Sprintf("bb-ext-skeleton-values-%s", baseName)
+		skelName := fmt.Sprintf("bb-ext-skeleton-values-%s.yaml", baseName)
 
-		dst := filepath.Join(tmpPaths.Temp, skelName)
+		rel := filepath.Join(types.TempFolder, skelName)
+		dst := filepath.Join(tmpPaths.Base, rel)
 
 		if err := utils.CreatePathAndCopy(valuesFile, dst); err != nil {
 			return c, err
 		}
 
-		c.Extensions.BigBang.ValuesFiles[valuesIdx] = dst
+		c.Extensions.BigBang.ValuesFiles[valuesIdx] = rel
 	}
 
 	return c, nil
+}
+
+// Compose mutates a component so that the valuesFiles are relative to the parent importing component
+func Compose(pathAncestry string, c types.ZarfComponent) types.ZarfComponent {
+	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
+		parentRel := filepath.Join(pathAncestry, valuesFile)
+		c.Extensions.BigBang.ValuesFiles[valuesIdx] = parentRel
+	}
+
+	return c
 }
 
 // isValidVersion check if the version is 1.54.0 or greater.
