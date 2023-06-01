@@ -340,13 +340,13 @@ func getLayersToPullFromRequestedComponents(url string, requestedComponents []st
 		if err != nil {
 			return nil, err
 		}
-		indexJson := ocispec.Index{}
-		err = json.Unmarshal(indexBytes, &indexJson)
+		index := ocispec.Index{}
+		err = json.Unmarshal(indexBytes, &index)
 		if err != nil {
 			return nil, err
 		}
 		for _, image := range images {
-			manifestDescriptor := utils.Find(indexJson.Manifests, func(layer ocispec.Descriptor) bool {
+			manifestDescriptor := utils.Find(index.Manifests, func(layer ocispec.Descriptor) bool {
 				return layer.Annotations[ocispec.AnnotationBaseImageName] == image
 			})
 			manifestBytes, err := content.FetchAll(src.Context, src, manifestDescriptor)

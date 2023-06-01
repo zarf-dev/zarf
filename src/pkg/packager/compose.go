@@ -98,7 +98,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			return child, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
 		}
 
-		componentLayer := filepath.Join("components", fmt.Sprintf("%s.tar", childComponentName))
+		componentLayer := filepath.Join(config.ZarfComponentsDir, fmt.Sprintf("%s.tar", childComponentName))
 		err = p.handleOciPackage(skelURL, cachePath, 3, componentLayer)
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
@@ -145,15 +145,15 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	// If it's OCI, we need to unpack the component tarball
 	if parent.Import.URL != "" {
-		dir := filepath.Join(cachePath, "components", child.Name)
-		parent.Import.Path = filepath.Join(parent.Import.Path, "components", child.Name)
+		dir := filepath.Join(cachePath, config.ZarfComponentsDir, child.Name)
+		parent.Import.Path = filepath.Join(parent.Import.Path, config.ZarfComponentsDir, child.Name)
 		if !utils.InvalidPath(dir) {
 			err = os.RemoveAll(dir)
 			if err != nil {
 				return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
 			}
 		}
-		err = archiver.Unarchive(fmt.Sprintf("%s.tar", dir), filepath.Join(cachePath, "components"))
+		err = archiver.Unarchive(fmt.Sprintf("%s.tar", dir), filepath.Join(cachePath, config.ZarfComponentsDir))
 		if err != nil {
 			return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
 		}
