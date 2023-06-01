@@ -32,6 +32,7 @@ components:
 
   - name: file-imports
     required: false
+    cosignKeyPath: ../../../../cosign.pub
     files:
       # Import of a file within the current directory
       - source: files/coffee-ipsum.txt

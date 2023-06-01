@@ -71,10 +71,15 @@ func (suite *SkeletonSuite) TearDownSuite() {
 
 func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.T().Log("E2E: Skeleton Package Publish oci://")
-
-	helmLocal := filepath.Join("examples", "helm-charts")
 	ref := suite.Reference.String()
-	_, stdErr, err := e2e.Zarf("package", "publish", helmLocal, "oci://"+ref, "--insecure")
+
+	helmCharts := filepath.Join("examples", "helm-charts")
+	_, stdErr, err := e2e.Zarf("package", "publish", helmCharts, "oci://"+ref, "--insecure")
+	suite.NoError(err)
+	suite.Contains(stdErr, "Published "+ref)
+
+	bigBang := filepath.Join("examples", "big-bang")
+	_, stdErr, err = e2e.Zarf("package", "publish", bigBang, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
@@ -85,7 +90,13 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	_, _, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/import-everything:0.0.1-skeleton", "--insecure")
 	suite.NoError(err)
 
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/import-everything:0.0.1-skeleton", "-o", "build", "--insecure")
+	suite.NoError(err)
+
 	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1-skeleton", "-o", "build", "--insecure")
+	suite.NoError(err)
+
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/big-bang-example:2.0.0-skeleton", "-o", "build", "--insecure")
 	suite.NoError(err)
 }
 
@@ -104,8 +115,10 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 
 	pkgTars := []string{
 		filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch)),
+		filepath.Join("build", "zarf-package-import-everything-skeleton-0.0.1.tar.zst"),
 		filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
 		filepath.Join("build", "zarf-package-helm-charts-skeleton-0.0.1.tar.zst"),
+		filepath.Join("build", "zarf-package-big-bang-example-skeleton-2.0.0.tar.zst"),
 	}
 
 	for _, pkgTar := range pkgTars {
@@ -126,7 +139,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 		suite.NotNil(components)
 
 		isSkeleton := false
-		if pkgTar == filepath.Join("build", "zarf-package-helm-charts-skeleton-0.0.1.tar.zst") {
+		if strings.Contains(pkgTar, "-skeleton-") {
 			isSkeleton = true
 		}
 		suite.verifyComponentPaths(unpacked, components, isSkeleton)
@@ -165,6 +178,12 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 
 		if isSkeleton && component.CosignKeyPath != "" {
 			suite.FileExists(filepath.Join(base, component.CosignKeyPath))
+		}
+
+		if isSkeleton && component.Extensions.BigBang != nil {
+			for _, valuesFile := range component.Extensions.BigBang.ValuesFiles {
+				suite.FileExists(filepath.Join(base, valuesFile))
+			}
 		}
 
 		for chartIdx, chart := range component.Charts {

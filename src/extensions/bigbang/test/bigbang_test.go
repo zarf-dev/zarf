@@ -71,13 +71,13 @@ func TestReleases(t *testing.T) {
 	// Build the latest version
 	bbVersion = fmt.Sprintf("--set=BB_VERSION=%s", latest)
 	bbMajor = fmt.Sprintf("--set=BB_MAJOR=%s", latest[0:1])
-	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, bbMajor, "--confirm")
+	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, bbMajor, "--differential", pkgPath, "--confirm")
 
 	// Clean up zarf cache now that all packages are built to reduce disk pressure
 	zarfExec(t, "tools", "clear-cache")
 
 	// Deploy the latest version
-	pkgPath = fmt.Sprintf("zarf-package-big-bang-test-amd64-%s.tar.zst", latest)
+	pkgPath = fmt.Sprintf("zarf-package-big-bang-test-amd64-%s-differential-%s.tar.zst", previous, latest)
 	zarfExec(t, "package", "deploy", pkgPath, "--confirm")
 
 	// Cluster info
