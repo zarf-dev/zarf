@@ -224,7 +224,7 @@ func createPaths() (paths types.TempPaths, err error) {
 		InjectBinary: filepath.Join(basePath, "zarf-injector"),
 		SeedImages:   filepath.Join(basePath, "seed-images"),
 		Images:       filepath.Join(basePath, "images"),
-		Components:   filepath.Join(basePath, "components"),
+		Components:   filepath.Join(basePath, config.ZarfComponentsDir),
 		SbomTar:      filepath.Join(basePath, config.ZarfSBOMTar),
 		Sboms:        filepath.Join(basePath, "sboms"),
 		Checksums:    filepath.Join(basePath, config.ZarfChecksumsTxt),
@@ -272,7 +272,7 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// Load the config from the extracted archive zarf.yaml
-	spinner.Updatef("Loading the zarf package config")
+	spinner.Updatef("Loading the Zarf package config")
 	configPath := p.tmp.ZarfYaml
 	if err := p.readYaml(configPath); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
@@ -474,7 +474,13 @@ func (p *Packager) validatePackageChecksums() error {
 		itemPath := strs[1]
 		expectedShasum := strs[0]
 
-		actualShasum, err := utils.GetSHA256OfFile(filepath.Join(p.tmp.Base, itemPath))
+		path := filepath.Join(p.tmp.Base, itemPath)
+		if utils.InvalidPath(path) {
+			message.Debugf("skipping checksum of %s as it does not exist", path)
+			continue
+		}
+
+		actualShasum, err := utils.GetSHA256OfFile(path)
 		if err != nil {
 			return err
 		}
@@ -483,7 +489,7 @@ func (p *Packager) validatePackageChecksums() error {
 			return fmt.Errorf("mismatch on the checksum of the %s file (expected: %s, actual: %s)", itemPath, expectedShasum, actualShasum)
 		}
 
-		filepathMap[filepath.Join(p.tmp.Base, itemPath)] = true
+		filepathMap[path] = true
 	}
 
 	for path, processed := range filepathMap {

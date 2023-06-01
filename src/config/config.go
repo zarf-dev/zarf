@@ -57,6 +57,8 @@ const (
 	ZarfSBOMTar       = "sboms.tar"
 	ZarfPackagePrefix = "zarf-package-"
 
+	ZarfComponentsDir = "components"
+
 	ZarfInClusterContainerRegistryNodePort = 31999
 
 	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"

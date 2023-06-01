@@ -17,11 +17,19 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
+	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry"
+)
+
+var (
+	indexPath    = filepath.Join("images", "index.json")
+	ociLayoutPat = filepath.Join("images", "oci-layout")
+	blobsDir     = filepath.Join("images", "blobs", "sha256")
 )
 
 // handlePackagePath If provided package is a URL download it to a temp directory.
@@ -42,12 +50,19 @@ func (p *Packager) handlePackagePath() error {
 		ociURL := opts.PackagePath
 		p.cfg.DeployOpts.PackagePath = p.tmp.Base
 		requestedComponents := getRequestedComponentList(p.cfg.DeployOpts.Components)
-		layersToPull := []string{
-			config.ZarfSBOMTar,
-		}
+		layersToPull := []string{}
 		for _, c := range requestedComponents {
-			// TODO: (@razzle) update this w/ new types.ComponentFolder when it is merged
-			layersToPull = append(layersToPull, filepath.Join("components", fmt.Sprintf("%s.tar", c)))
+			layersToPull = append(layersToPull, filepath.Join(config.ZarfComponentsDir, fmt.Sprintf("%s.tar", c)))
+		}
+		if len(requestedComponents) > 0 {
+			layersToPull = append(layersToPull, config.ZarfSBOMTar)
+			layersToPull = append(layersToPull, ociLayoutPat)
+			layersToPull = append(layersToPull, indexPath)
+			imageLayersToPull, err := getPublishedComponentImageLayers(ociURL, requestedComponents)
+			if err != nil {
+				return fmt.Errorf("unable to get published component image layers: %s", err.Error())
+			}
+			layersToPull = append(layersToPull, imageLayersToPull...)
 		}
 		return p.handleOciPackage(ociURL, p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency, layersToPull...)
 	}
@@ -269,4 +284,79 @@ func pullLayer(dst *utils.OrasRemote, desc ocispec.Descriptor, out string) error
 	}
 	err = utils.WriteFile(out, bytes)
 	return err
+}
+
+func getPublishedComponentImageLayers(url string, requestedComponents []string) ([]string, error) {
+	ref, err := registry.ParseReference(strings.TrimPrefix(url, utils.OCIURLPrefix))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse OCI reference: %w", err)
+	}
+	src, err := utils.NewOrasRemote(ref)
+	if err != nil {
+		return nil, err
+	}
+	manifest, err := getManifest(src)
+	if err != nil {
+		return nil, err
+	}
+	zarfYamlDescriptor := utils.Find(manifest.Layers, func(layer ocispec.Descriptor) bool {
+		return layer.Annotations[ocispec.AnnotationTitle] == config.ZarfYAML
+	})
+	zarfYamlBytes, err := content.FetchAll(src.Context, src, zarfYamlDescriptor)
+	if err != nil {
+		return nil, err
+	}
+	pkg := types.ZarfPackage{}
+	err = goyaml.Unmarshal(zarfYamlBytes, &pkg)
+	if err != nil {
+		return nil, err
+	}
+	images := []string{}
+	for _, name := range requestedComponents {
+		component := utils.Find(pkg.Components, func(component types.ZarfComponent) bool {
+			return component.Name == name
+		})
+		if component.Name == "" {
+			return nil, fmt.Errorf("component %s does not exist in this package", name)
+		}
+		images = append(images, component.Images...)
+	}
+
+	layers := []string{}
+	if len(images) > 0 {
+		indexDescriptor := utils.Find(manifest.Layers, func(layer ocispec.Descriptor) bool {
+			return layer.Annotations[ocispec.AnnotationTitle] == indexPath
+		})
+		indexBytes, err := content.FetchAll(src.Context, src, indexDescriptor)
+		if err != nil {
+			return nil, err
+		}
+		indexJson := ocispec.Index{}
+		err = json.Unmarshal(indexBytes, &indexJson)
+		if err != nil {
+			return nil, err
+		}
+		for _, image := range images {
+			manifestDescriptor := utils.Find(indexJson.Manifests, func(layer ocispec.Descriptor) bool {
+				return layer.Annotations[ocispec.AnnotationBaseImageName] == image
+			})
+			manifestBytes, err := content.FetchAll(src.Context, src, manifestDescriptor)
+			if err != nil {
+				return nil, err
+			}
+			manifest := ocispec.Manifest{}
+			err = json.Unmarshal(manifestBytes, &manifest)
+			if err != nil {
+				return nil, err
+			}
+			layers = append(layers, filepath.Join(blobsDir, strings.TrimPrefix(manifestDescriptor.Digest.String(), "sha256:")))
+			layers = append(layers, filepath.Join(blobsDir, strings.TrimPrefix(manifest.Config.Digest.String(), "sha256:")))
+			for _, layer := range manifest.Layers {
+				pathInPkg := filepath.Join(blobsDir, strings.TrimPrefix(layer.Digest.String(), "sha256:"))
+				layers = append(layers, pathInPkg)
+			}
+		}
+	}
+
+	return layers, nil
 }
