@@ -1,0 +1,21 @@
+kind: ZarfPackageConfig
+metadata:
+  name: podinfo-with-oci-flux
+  description: Deploy flux and then podinfo via flux
+  version: "###ZARF_PKG_TMPL_PACKAGE_VERSION###"
+
+components:
+  - name: demo-helm-oci-chart
+    required: true
+    import:
+      url: oci://127.0.0.1:555/helm-charts:0.0.1-skeleton
+
+  - name: versioned-assets
+    import:
+      path: ../../packages/08-differential-package
+      name: versioned-assets
+
+  - name: generalized-assets
+    import:
+      path: ../../packages/08-differential-package
+      name: generalized-assets

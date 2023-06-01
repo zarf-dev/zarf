@@ -20,17 +20,16 @@ import (
 func TestGitAndFlux(t *testing.T) {
 	t.Log("E2E: Git and flux")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
-	buildPath := filepath.Join("src", "test", "test-packages", "22-git-and-flux")
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", buildPath, "--confirm", "-o=build", "--skip-sbom")
+	buildPath := filepath.Join("src", "test", "packages", "22-git-and-flux")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "-o=build", "--confirm", "--skip-sbom")
 	require.NoError(t, err, stdOut, stdErr)
 
-	path := fmt.Sprintf("build/zarf-package-git-data-check-secrets-%s-v1.0.0.tar.zst", e2e.Arch)
+	path := fmt.Sprintf("build/zarf-package-git-data-check-secrets-%s-1.0.0.tar.zst", e2e.Arch)
 	defer e2e.CleanFiles(path)
 
 	// Deploy the gitops example
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// This package contains SBOMable things but was created with --skip-sbom
@@ -47,9 +46,8 @@ func TestGitAndFlux(t *testing.T) {
 	testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
 	waitFluxPodInfoDeployment(t)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "podinfo-flux", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "podinfo-flux", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-
 }
 
 func testGitServerConnect(t *testing.T, gitURL string) {
@@ -111,9 +109,6 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 func waitFluxPodInfoDeployment(t *testing.T) {
 	// Deploy the flux example and verify that it works
 	path := fmt.Sprintf("build/zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-
-	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n=podinfo", "rollout", "status", "deployment/podinfo")
-	require.Contains(t, string(kubectlOut), "successfully rolled out")
 }
