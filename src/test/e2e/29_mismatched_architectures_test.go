@@ -54,7 +54,7 @@ func TestMismatchedArchitectures(t *testing.T) {
 		})
 
 		// Build init package with different arch than the cluster arch.
-		stdOut, stdErr, err = e2e.Zarf("package", "create", ".", "--architecture", mismatchedArch, "--confirm")
+		stdOut, stdErr, err = e2e.Zarf("package", "create", "src/test/packages/29-mismatched-arch-init", "--architecture", mismatchedArch, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		// Check that `zarf init` fails in appliance mode when we try to initialize a k3s cluster
 		// on a machine with a different architecture than the package architecture.
