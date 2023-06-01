@@ -142,12 +142,16 @@ func validateInitFlags() error {
 		}
 	}
 
-	// If 'registry-url' is provided, make sure they provided values for the username and password of the push user
-	if pkgConfig.InitOpts.RegistryInfo.Address != "" && pkgConfig.InitOpts.RegistryInfo.RegistryType == "" {
-		if pkgConfig.InitOpts.RegistryInfo.PushUsername == "" || pkgConfig.InitOpts.RegistryInfo.PushPassword == "" {
-			return fmt.Errorf(lang.CmdInitErrValidateRegistry)
+	// TODO: @JPERRY Ignoring this for now, until we find a better way to validate these flags
+	//       We now need to check the cluster to see if the ecr-info secret is there before returning an error...
+	/*
+		// If 'registry-url' is provided, make sure they provided values for the username and password of the push user
+		if pkgConfig.InitOpts.RegistryInfo.Address != "" {
+			if pkgConfig.InitOpts.RegistryInfo.PushUsername == "" || pkgConfig.InitOpts.RegistryInfo.PushPassword == "" {
+				return fmt.Errorf(lang.CmdInitErrValidateRegistry)
+			}
 		}
-	}
+	*/
 
 	// If 'artifact-url' is provided, make sure they provided values for the username and password of the push user
 	if pkgConfig.InitOpts.ArtifactServer.Address != "" {
@@ -200,14 +204,12 @@ func init() {
 
 	// Flags for using an external registry
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(V_INIT_REGISTRY_URL), lang.CmdInitFlagRegURL)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.RepositoryPrefix, "repository-prefix", v.GetString(V_INIT_REGISTRY_REPO_PREFIX), lang.CmdInitFlagRegRepoPrefix)
 	initCmd.Flags().IntVar(&pkgConfig.InitOpts.RegistryInfo.NodePort, "nodeport", v.GetInt(V_INIT_REGISTRY_NODEPORT), lang.CmdInitFlagRegNodePort)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(V_INIT_REGISTRY_PUSH_USER), lang.CmdInitFlagRegPushUser)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(V_INIT_REGISTRY_PUSH_PASS), lang.CmdInitFlagRegPushPass)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(V_INIT_REGISTRY_PULL_USER), lang.CmdInitFlagRegPullUser)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(V_INIT_REGISTRY_PULL_PASS), lang.CmdInitFlagRegPullPass)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Secret, "registry-secret", v.GetString(V_INIT_REGISTRY_SECRET), lang.CmdInitFlagRegSecret)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.RegistryType, "registry-type", v.GetString(V_INIT_REGISTRY_TYPE), lang.CmdInitFlagRegType)
 
 	// Flags for using an external artifact server
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.Address, "artifact-url", v.GetString(V_INIT_ARTIFACT_URL), lang.CmdInitFlagArtifactURL)
