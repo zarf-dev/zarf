@@ -74,8 +74,7 @@ components:
         namespace: podinfo
         url: oci://ghcr.io/stefanprodan/charts/podinfo
     images:
-      - nginx:1.16.0
-      - ghcr.io/stefanprodan/podinfo:6.3.3
+      - ghcr.io/stefanprodan/podinfo:6.3.5
     actions:
       onDeploy:
         after:
