@@ -58,11 +58,11 @@ func (p *Packager) handlePackagePath() error {
 			layersToPull = append(layersToPull, config.ZarfSBOMTar)
 			layersToPull = append(layersToPull, ociLayoutPat)
 			layersToPull = append(layersToPull, indexPath)
-			imageLayersToPull, err := getPublishedComponentImageLayers(ociURL, requestedComponents)
+			layers, err := getLayersToPullFromRequestedComponents(ociURL, requestedComponents)
 			if err != nil {
 				return fmt.Errorf("unable to get published component image layers: %s", err.Error())
 			}
-			layersToPull = append(layersToPull, imageLayersToPull...)
+			layersToPull = append(layersToPull, layers...)
 		}
 		return p.handleOciPackage(ociURL, p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency, layersToPull...)
 	}
@@ -286,7 +286,8 @@ func pullLayer(dst *utils.OrasRemote, desc ocispec.Descriptor, out string) error
 	return err
 }
 
-func getPublishedComponentImageLayers(url string, requestedComponents []string) ([]string, error) {
+// getLayersToPullFromRequestedComponents returns a list of layers to pull from a Zarf OCI package given a list of components
+func getLayersToPullFromRequestedComponents(url string, requestedComponents []string) (layers []string, err error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, utils.OCIURLPrefix))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI reference: %w", err)
@@ -319,10 +320,18 @@ func getPublishedComponentImageLayers(url string, requestedComponents []string) 
 		if component.Name == "" {
 			return nil, fmt.Errorf("component %s does not exist in this package", name)
 		}
-		images = append(images, component.Images...)
+	}
+	for _, component := range pkg.Components {
+		// If we requested this component, or it is required, we need to pull its images
+		if utils.SliceContains(requestedComponents, component.Name) || component.Required {
+			images = append(images, component.Images...)
+		}
+		// If we did not request this component, but it is required, we need to pull it
+		if !utils.SliceContains(requestedComponents, component.Name) && component.Required {
+			layers = append(layers, filepath.Join(config.ZarfComponentsDir, component.Name))
+		}
 	}
 
-	layers := []string{}
 	if len(images) > 0 {
 		indexDescriptor := utils.Find(manifest.Layers, func(layer ocispec.Descriptor) bool {
 			return layer.Annotations[ocispec.AnnotationTitle] == indexPath
