@@ -20,20 +20,6 @@ zarf package publish path/containing/package/definition oci://your-registry.com
 
 :::
 
-:::info
-
-As you can see in the example, the `import` key can be combined with other keys to merge components together.  This can be done as many components deep as you wish and in the end will generate one main `zarf.yaml` file with all of the defined resources included.
-
-This is useful if you want to slightly tweak a given component while maintaining a common core.
-
-:::
-
-:::note
-
-The import `path` or `url` must be statically defined at create time.  You cannot use [package templates](../variables/README.md#create-time-package-configuration-templates) within them.
-
-:::
-
 ## `zarf.yaml` {#zarf.yaml}
 
 :::info
@@ -60,3 +46,17 @@ zarf package create examples/composable-packages/ --insecure
 :::
 
 <ExampleYAML example="composable-packages" showLink={false} />
+
+:::info
+
+As you can see in the example, the `import` key can be combined with other keys to merge components together.  This can be done as many components deep as you wish and in the end will generate one main `zarf.yaml` file with all of the defined resources included.
+
+This is useful if you want to slightly tweak a given component while maintaining a common core.
+
+:::
+
+:::note
+
+The import `path` or `url` must be statically defined at create time.  You cannot use [package templates](../variables/README.md#create-time-package-configuration-templates) within them.
+
+:::
