@@ -6,6 +6,7 @@ package packager
 
 import (
 	"crypto"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -15,6 +16,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecrpublic"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -23,6 +28,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/otiai10/copy"
@@ -167,6 +173,23 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
 
+		if p.cluster != nil {
+			// Ignore the error because there might not be a zarf namespace yet
+			// NOTE: This check is specific to initializing EKS clusters to use ECR as it's image registry
+			secret, _ := p.cluster.Kube.GetSecret("zarf", "ecr-info")
+
+			if secret != nil {
+				var ecrInfo types.ECRInfo
+				err = json.Unmarshal(secret.Data["ecrInfo"], &ecrInfo)
+				if err != nil {
+					return charts, fmt.Errorf("unable to load the ecr configuration information from the cluster: %w", err)
+				}
+
+				p.pluginConfig.ECRInfo = ecrInfo
+				p.cfg.InitOpts.RegistryInfo.RegistryType = types.ECRRegistry
+			}
+		}
+
 		p.cluster.InitZarfState(p.cfg.InitOpts)
 	}
 
@@ -175,7 +198,9 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 		hpaModified = true
 	}
 
-	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
+	if hasExternalRegistry && (isInjector || isSeedRegistry || isRegistry) {
+		// Check if there is a secret in the zarf namespace for ecr-info
+
 		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
 		return charts, nil
 	}
@@ -256,6 +281,10 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	}
 
 	if hasImages {
+		if p.cfg.State.RegistryInfo.RegistryType == types.ECRRegistry {
+			CreateTheECRRepos(p.pluginConfig.ECRInfo, component.Images)
+		}
+
 		if err := p.pushImagesToRegistry(component.Images, noImgChecksum); err != nil {
 			return charts, fmt.Errorf("unable to push images to the registry: %w", err)
 		}
@@ -588,4 +617,37 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 		// otherwise, print the init config connection and passwords
 		utils.PrintCredentialTable(p.cfg.State, componentsToDeploy)
 	}
+}
+
+func CreateTheECRRepos(ecrInfo types.ECRInfo, images []string) error {
+	message.Warnf("@JPERRY RegistryAddress: %s", ecrInfo.RegistryURL)
+	for _, image := range images {
+		imageRef, err := transform.ParseImageRef(image)
+		if err != nil {
+			message.Fatal(err, fmt.Sprintf("@JPERRY Well there was an error when trying to parse the image ref: %s", err.Error()))
+		}
+
+		// TODO: @JPERRY we probably shouldn't hardcode region...
+		ecrClient := ecrpublic.New(session.New(&aws.Config{Region: aws.String(ecrInfo.Region)}))
+
+		repositoryName := ecrInfo.RepositoryPrefix
+		if repositoryName != "" {
+			repositoryName += "/"
+		}
+		repositoryName += imageRef.Path
+
+		_, err = ecrClient.CreateRepository(&ecrpublic.CreateRepositoryInput{
+			RepositoryName: aws.String(repositoryName)})
+		if err != nil {
+
+			if aerr, ok := err.(awserr.Error); ok {
+				// Ignore errors if the repository already exists
+				if aerr.Code() != ecrpublic.ErrCodeRepositoryAlreadyExistsException {
+					return fmt.Errorf("unable to create the ECR repository: %w", err)
+				}
+			}
+		}
+	}
+
+	return nil
 }
