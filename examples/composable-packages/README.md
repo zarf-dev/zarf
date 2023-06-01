@@ -10,9 +10,19 @@ The `import` key in Zarf supports two modes to pull in a component:
 
 2. The `url` key allows you to specify an `oci://` URL to a skeleton package that was published to an OCI registry.  Skeleton packages are special package bundles that contain the `zarf.yaml` package definition and any local files referenced by that definition at publish time.  This allows you to version a set of components and import them into multiple packages *across* projects.
 
+:::tip
+
+You can create a skeleton package from a `zarf.yaml` by pointing `zarf package publish` at the directory that contains it:
+
+```bash
+zarf package publish path/containing/package/definition oci://your-registry.com
+```
+
+:::
+
 :::info
 
-As you can see in the example the `import` key can be combined with other keys to merge components together.  This can be done many components deep if you wish and in the end will generate one main `zarf.yaml` with all of the defined resources included.
+As you can see in the example, the `import` key can be combined with other keys to merge components together.  This can be done as many components deep as you wish and in the end will generate one main `zarf.yaml` file with all of the defined resources included.
 
 This is useful if you want to slightly tweak a given component while maintaining a common core.
 
@@ -20,7 +30,7 @@ This is useful if you want to slightly tweak a given component while maintaining
 
 :::note
 
-The import `path` or `url` must be statically defined at create time.  You cannot use [package templates](../variables/README.md#create-time-package-configuration-templates) in them.
+The import `path` or `url` must be statically defined at create time.  You cannot use [package templates](../variables/README.md#create-time-package-configuration-templates) within them.
 
 :::
 
