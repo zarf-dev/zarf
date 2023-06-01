@@ -52,7 +52,7 @@ Creating differential packages without updating the package version will result 
 
 ## Conclusion
 
-You now have learned to create differenential packages with Zarf.  If you would like to see the size you saved.  You can use the `zarf package create` without the `--differential` flag.  You'll notice a size difference in the resulting files, as the all of the images are bundled into the much larger package.
+You have now learned to create differential packages with Zarf.  If you would like to see the size you saved, you can use the `zarf package create` command without the `--differential` flag.  You'll notice a size difference between the two packages since the differential package omits duplicate contents.
 
 <iframe src="/docs/tutorials/differential_package_create_conclusion.html" width="100%" height="600px"></iframe>
 
