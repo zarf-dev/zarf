@@ -41,7 +41,15 @@ func (p *Packager) handlePackagePath() error {
 	if utils.IsOCIURL(opts.PackagePath) {
 		ociURL := opts.PackagePath
 		p.cfg.DeployOpts.PackagePath = p.tmp.Base
-		return p.handleOciPackage(ociURL, p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency)
+		requestedComponents := getRequestedComponentList(p.cfg.DeployOpts.Components)
+		layersToPull := []string{
+			config.ZarfSBOMTar,
+		}
+		for _, c := range requestedComponents {
+			// TODO: (@razzle) update this w/ new types.ComponentFolder when it is merged
+			layersToPull = append(layersToPull, filepath.Join("components", fmt.Sprintf("%s.tar", c)))
+		}
+		return p.handleOciPackage(ociURL, p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency, layersToPull...)
 	}
 
 	// Handle case where deploying remote package validated via sget
@@ -159,18 +167,8 @@ func (p *Packager) handleOciPackage(url string, out string, concurrency int, lay
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency
-	copyOpts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
-		title := desc.Annotations[ocispec.AnnotationTitle]
-		var format string
-		if title != "" {
-			format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
-		} else {
-			format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
-		}
-		message.Successf(format)
-		return nil
-	}
-	copyOpts.PostCopy = copyOpts.OnCopySkipped
+	copyOpts.OnCopySkipped = utils.PrintLayerExists
+	copyOpts.PostCopy = utils.PrintLayerExists
 	isPartialPull := len(layers) > 0
 	if isPartialPull {
 		alwaysPull := []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
