@@ -46,7 +46,7 @@ Creating differential packages without updating the package version will result 
 
 <iframe src="/docs/tutorials/differential_package_edit.html" width="100%" height="600px"></iframe>
 
-3. Use the `zarf package create` with the `--differential` flag.  This will build the differential package omitting, the images and repositories that are already present in zarf package you specify after the `--differential` flag.
+4. Next, use the `zarf package create` command with the `--differential` flag to specify a reference package.  This will build the differential package omitting the images, repositories, and OCI skeleton components that are already present in the specified Zarf package and are pinned to a specific version/shasum.
 
 <iframe src="/docs/tutorials/differential_package_create_differential.html" width="100%" height="600px"></iframe>
 
