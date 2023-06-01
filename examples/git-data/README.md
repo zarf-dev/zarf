@@ -44,9 +44,8 @@ This example assumes you have already initialized a Zarf cluster. If that is not
 
 To create this Zarf package run the below command:
 
-``` bash
-cd <zarf dir>/examples/git-data    # directory with zarf.yaml
-zarf package create                # make the package
+```bash
+zarf package create examples/git-data
 ```
 
 Successful execution will create a package named `zarf-package-git-data-<arch>-<vx.x.x>.tar.zst`.
@@ -57,7 +56,7 @@ To deploy the Zarf package, copy it to a machine that either has a Zarf cluster 
 
 With the Zarf package in the current working directory, execute the below command to deploy the package, uploading the Git repositories to Gitea and the container images to the Docker registry.
 
-``` bash
+```bash
 zarf package deploy zarf-package-git-data-<arch>-<vx.x.x>.tar.zst
 ```
 
@@ -77,7 +76,7 @@ The following assumes you are using the internal Gitea server. If you are using 
 
 :::
 
-``` bash
+```bash
 # Run 'zarf connect' and send it to the background
 zarf connect git&
 
@@ -97,7 +96,7 @@ fg
 
 Clean up simply by just deleting the whole cluster
 
-``` bash
+```bash
 kind delete cluster
 ```
 
