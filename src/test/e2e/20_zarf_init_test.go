@@ -82,7 +82,7 @@ func TestZarfInit(t *testing.T) {
 	require.NotContains(t, logText, state.LoggingSecret)
 
 	// Check that the registry is running on the correct NodePort
-	stdOut, _, err := e2e.Kubectl("get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
+	stdOut, _, err = e2e.Kubectl("get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "31337")
 
