@@ -30,6 +30,9 @@ type PackagerConfig struct {
 	// The package data
 	Pkg ZarfPackage
 
+	// The original source of the package
+	PkgSourcePath string
+
 	// The active zarf state
 	State ZarfState
 

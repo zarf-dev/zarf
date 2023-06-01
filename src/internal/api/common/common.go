@@ -26,7 +26,7 @@ func WriteJSONResponse(w http.ResponseWriter, data any, statusCode int) {
 	if data != nil {
 		encoded, err = json.Marshal(data)
 		if err != nil {
-			message.Error(err, "Error marshalling JSON")
+			message.WarnErr(err, "Error marshalling JSON")
 			panic(err)
 		}
 	}

@@ -143,7 +143,7 @@ func LaunchAPIServer() {
 
 	// Load the static UI files
 	if sub, err := fs.Sub(config.UIAssets, "build/ui"); err != nil {
-		message.Error(err, "Unable to load the embedded ui assets")
+		message.WarnErr(err, "Unable to load the embedded ui assets")
 	} else {
 		// Setup a file server for the static UI files
 		fs := http.FileServer(http.FS(sub))

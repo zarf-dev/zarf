@@ -23,7 +23,7 @@ func TestGitAndFlux(t *testing.T) {
 	defer e2e.Teardown(t)
 
 	buildPath := filepath.Join("src", "test", "test-packages", "22-git-and-flux")
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", buildPath, "--confirm", "-o=build")
+	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", buildPath, "--confirm", "-o=build", "--skip-sbom")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-git-data-check-secrets-%s-v1.0.0.tar.zst", e2e.Arch)
@@ -32,6 +32,9 @@ func TestGitAndFlux(t *testing.T) {
 	// Deploy the gitops example
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// This package contains SBOMable things but was created with --skip-sbom
+	require.Contains(t, string(stdErr), "This package does NOT contain an SBOM.")
 
 	tunnel, err := cluster.NewZarfTunnel()
 	require.NoError(t, err)
