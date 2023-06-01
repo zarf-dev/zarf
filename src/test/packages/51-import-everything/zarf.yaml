@@ -64,13 +64,13 @@ components:
       - name: local-demo
         localPath: charts/local
         namespace: local-chart
-        version: 0.1.0
+        version: 6.3.5
       - name: local-demo
         localPath: ../everything-external/charts/local
         namespace: local-chart-relative
-        version: 0.1.0
+        version: 6.3.5
       - name: oci-demo
-        version: 6.3.3
+        version: 6.3.5
         namespace: podinfo
         url: oci://ghcr.io/stefanprodan/charts/podinfo
     images:
@@ -109,5 +109,4 @@ components:
   - name: import-images
     required: false
     images:
-      - nginx:1.16.0
-      - ghcr.io/stefanprodan/podinfo:6.3.3
+      - ghcr.io/stefanprodan/podinfo:6.3.5
