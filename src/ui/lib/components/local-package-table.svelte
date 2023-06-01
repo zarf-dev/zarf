@@ -42,9 +42,7 @@
 					resolve();
 				},
 			};
-			stream = initPkg
-				? Packages.initPackageStream(eventParams)
-				: Packages.packageStream(eventParams);
+			stream = initPkg ? Packages.findInit(eventParams) : Packages.find(eventParams);
 		});
 	}
 

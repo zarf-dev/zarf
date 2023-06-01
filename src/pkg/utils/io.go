@@ -347,6 +347,28 @@ func IsTextFile(path string) (bool, error) {
 	return hasText || hasJSON || hasXML, nil
 }
 
+// IsTrashBin checks if the given directory path corresponds to an operating system's trash bin.
+func IsTrashBin(dirPath string) bool {
+	dirPath = filepath.Clean(dirPath)
+
+	// Check if the directory path matches a Linux trash bin
+	if strings.HasSuffix(dirPath, "/.Trash") || strings.HasSuffix(dirPath, "/.Trash-1000") {
+		return true
+	}
+
+	// Check if the directory path matches a macOS trash bin
+	if strings.HasSuffix(dirPath, "/.Trash") || strings.HasSuffix(dirPath, "/.Trashes") {
+		return true
+	}
+
+	// Check if the directory path matches a Windows trash bin
+	if strings.HasSuffix(dirPath, "\\$RECYCLE.BIN") {
+		return true
+	}
+
+	return false
+}
+
 // GetDirSize walks through all files and directories in the provided path and returns the total size in bytes.
 func GetDirSize(path string) (int64, error) {
 	dirSize := int64(0)
