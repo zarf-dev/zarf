@@ -5,6 +5,7 @@
 package packages
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -110,6 +111,60 @@ func FindInitPackage(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+func FindInitStream(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	done := make(chan bool)
+	go func() {
+		// stream init packages in the execution directory
+		if execDir, err := os.Getwd(); err == nil {
+			streamDirPackages(execDir, initPackagesPattern, w)
+		} else {
+			streamError(err, w)
+		}
+
+		// Cache directory
+		cachePath := config.GetAbsCachePath()
+		// Create the cache directory if it doesn't exist
+		if utils.InvalidPath(cachePath) {
+			if err := os.MkdirAll(cachePath, 0755); err != nil {
+				streamError(err, w)
+			}
+		}
+		streamDirPackages(cachePath, initPackagesPattern, w)
+
+		// Find init packages in the current working directory
+		if cwd, err := os.Getwd(); err == nil {
+			streamDirPackages(cwd, initPackagesPattern, w)
+		} else {
+			streamError(err, w)
+		}
+		done <- true
+	}()
+	<-done
+}
+
+func FindPackageStream(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	done := make(chan bool)
+
+	go func() {
+		if cwd, err := os.Getwd(); err == nil {
+			streamDirPackages(cwd, packagePattern, w)
+		} else {
+			streamError(err, w)
+		}
+		done <- true
+	}()
+
+	<-done
+	// Find init packages in the current working directory
+}
+
 // findFilePaths returns all files matching the pattern in the given path.
 func findFilePaths(pattern *regexp.Regexp, path string) ([]string, error) {
 	// Find all files matching the pattern
@@ -121,4 +176,41 @@ func findFilePaths(pattern *regexp.Regexp, path string) ([]string, error) {
 		return nil, pkgNotFoundMsg
 	}
 	return files, nil
+}
+
+func streamDirPackages(dir string, pattern *regexp.Regexp, w http.ResponseWriter) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		streamError(err, w)
+	}
+	for _, file := range files {
+		if !file.IsDir() {
+			path := fmt.Sprintf("%s/%s", dir, file.Name())
+			if pattern != nil {
+				if len(pattern.FindStringIndex(path)) > 0 {
+					streamPackage(path, w)
+				}
+			}
+		}
+	}
+}
+
+func streamPackage(path string, w http.ResponseWriter) {
+	pkg, err := utils.ReadPackage(path)
+	if err != nil {
+		streamError(err, w)
+	} else {
+		jsonData, err := json.Marshal(pkg)
+		if err != nil {
+			streamError(err, w)
+		} else {
+			fmt.Fprintf(w, "data: %s\n\n", jsonData)
+			w.(http.Flusher).Flush()
+		}
+	}
+}
+
+func streamError(err error, w http.ResponseWriter) {
+	fmt.Fprintf(w, "data: %s\n\n", err.Error())
+	w.(http.Flusher).Flush()
 }

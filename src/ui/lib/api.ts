@@ -59,6 +59,10 @@ const Packages = {
 		),
 	sbom: (path: string) => http.get<APIPackageSBOM>(`/packages/sbom/${encodeURIComponent(path)}`),
 	cleanSBOM: () => http.del('/packages/sbom'),
+	initPackageStream: (eventParams: EventParams) =>
+		http.eventStream('/packages/find-init-stream', eventParams),
+	packageStream: (eventParams: EventParams) =>
+		http.eventStream('/packages/find-stream', eventParams),
 };
 
 const DeployingComponents = {

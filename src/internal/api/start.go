@@ -100,6 +100,8 @@ func LaunchAPIServer() {
 			r.Get("/connections", packages.ListConnections)
 			r.Get("/sbom/{path}", packages.ExtractSBOM)
 			r.Delete("/sbom", packages.DeleteSBOM)
+			r.Get("/find-init-stream", packages.FindInitStream)
+			r.Get("/find-stream", packages.FindPackageStream)
 		})
 
 		r.Route("/components", func(r chi.Router) {

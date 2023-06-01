@@ -11,14 +11,20 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/types"
+	goyaml "github.com/goccy/go-yaml"
+	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 )
 
@@ -224,6 +230,35 @@ func FileList(dir string, pattern *regexp.Regexp) ([]string, error) {
 	}
 
 	return matches, err
+}
+
+// ReadPackage reads a packages yaml from the local filesystem and returns an APIZarfPackage.
+func ReadPackage(path string) (pkg types.APIZarfPackage, err error) {
+	var file []byte
+
+	pkg.Path, err = url.QueryUnescape(path)
+	if err != nil {
+		return pkg, err
+	}
+
+	// Check for zarf.yaml in the package and read into file
+	err = archiver.Walk(pkg.Path, func(f archiver.File) error {
+		if f.Name() == config.ZarfYAML {
+			file, err = ioutil.ReadAll(f)
+			if err != nil {
+				return err
+			}
+			return archiver.ErrStopWalk
+		}
+
+		return nil
+	})
+	if err != nil {
+		return pkg, err
+	}
+
+	err = goyaml.Unmarshal(file, &pkg.ZarfPackage)
+	return pkg, err
 }
 
 // CreateFilePath creates the parent directory for the given file path.

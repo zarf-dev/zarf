@@ -12,21 +12,40 @@
 	import Tooltip from './tooltip.svelte';
 	import type { APIZarfPackage } from '$lib/api-types';
 	import ZarfChip from './zarf-chip.svelte';
+	import type { EventParams } from '$lib/http';
+	import ZarfDialog from './zarf-dialog.svelte';
+	import ButtonDense from './button-dense.svelte';
+	import { onDestroy } from 'svelte';
 
 	const initPkg = $page.url.searchParams.get('init');
+	let packages: APIZarfPackage[] = [];
+	let stream: AbortController;
+	let noPackagesToggle: () => void;
 
-	async function readPackages(): Promise<APIZarfPackage[]> {
-		const paths = initPkg ? await Packages.findInit() : await Packages.find();
-		// resolve all reads regardless of success or failure.
-		const result = await Promise.allSettled(paths.map((p) => Packages.read(p)));
-		// Filter out failed reads
-		// TODO: Handle and present packages that could not be read.
-		const settledFulfilled = result.filter(
-			(p) => p.status === 'fulfilled'
-		) as PromiseFulfilledResult<APIZarfPackage>[];
-
-		// Return the values from the fulfilled results.
-		return settledFulfilled.map((p) => p.value);
+	async function streamPackages(): Promise<void> {
+		return new Promise((resolve, reject) => {
+			const eventParams: EventParams = {
+				onmessage: (event) => {
+					try {
+						const pkg = JSON.parse(event.data);
+						console.log(pkg);
+						packages = [...packages, pkg];
+					} catch {
+						console.log('here');
+						console.log(event.data);
+					}
+				},
+				onerror: (event) => {
+					reject(event);
+				},
+				onclose: () => {
+					resolve();
+				},
+			};
+			stream = initPkg
+				? Packages.initPackageStream(eventParams)
+				: Packages.packageStream(eventParams);
+		});
 	}
 
 	const ssx: SSX = {
@@ -119,11 +138,18 @@
 		},
 	};
 
+	onDestroy(() => {
+		if (stream) {
+			stream.abort();
+		}
+	});
+
 	const tableLabels = ['name', 'version', 'tags', 'description'];
 	$: initString = (initPkg && 'Init') || '';
 	$: tooltip =
 		(initPkg && 'in the execution, current working, and .zarf-cache directories') ||
 		'in the current working directory';
+	$: console.log(packages);
 </script>
 
 <Box {ssx} class="local-package-list-container">
@@ -145,69 +171,73 @@
 		{/each}
 	</Paper>
 	<Paper class="local-package-list-body" square elevation={1}>
-		{#await readPackages()}
+		{#each packages as pkg}
+			<Paper class="package-table-row" square elevation={1}>
+				<Typography variant="body2" class="package-table-td name" element="span">
+					<span class="material-symbols-outlined" style="color:var(--success);">check_circle</span>
+					<span>{pkg.zarfPackage.metadata?.name}</span>
+				</Typography>
+
+				<Typography variant="body2" class="package-table-td version">
+					{#if !initPkg && pkg.zarfPackage?.metadata?.version}
+						<ZarfChip>
+							{pkg.zarfPackage.metadata.version}
+						</ZarfChip>
+					{:else if initPkg && pkg.zarfPackage?.build?.version}
+						<ZarfChip>
+							{pkg.zarfPackage.build.version}
+						</ZarfChip>
+					{/if}
+				</Typography>
+
+				<Typography variant="body2" class="package-table-td tags">
+					{#if pkg.zarfPackage?.build?.architecture}
+						<ZarfChip>
+							{pkg.zarfPackage.build.architecture}
+						</ZarfChip>
+					{/if}
+					<ZarfChip>
+						{pkg.zarfPackage.kind}
+					</ZarfChip>
+				</Typography>
+				<Typography variant="body2" class="package-table-td description">
+					{pkg.zarfPackage.metadata?.description}
+				</Typography>
+				<Box class="package-table-td deploy">
+					<Button
+						title={pkg.zarfPackage.metadata?.name}
+						backgroundColor="on-surface"
+						on:click={() => {
+							pkgStore.set(pkg);
+							goto(`/packages/${pkg.zarfPackage.metadata?.name}/configure`);
+						}}
+					>
+						deploy
+					</Button>
+				</Box>
+			</Paper>
+		{/each}
+		{#await streamPackages()}
 			<div class="no-packages">
 				<Spinner color="blue-200" />
-				<Typography color="blue-200" variant="body1">
-					Searching your local machine for Zarf{initString} Packages. This may take a minute.
-				</Typography>
+				<Typography color="blue-200" variant="body1">Searching working directory.</Typography>
 			</div>
-		{:then packages}
+		{:then}
 			{#if !packages.length}
-				<div class="no-packages">
-					<Typography color="blue-200" variant="body1">
-						No Zarf{initString} Packages found on local system
+				<ZarfDialog bind:toggleDialog={noPackagesToggle} open titleText="No Packages Found">
+					<Typography variant="body2" color="text-secondary-on-dark">
+						No Zarf packages were found in the current working directory. Would you like to search
+						the home directory?
 					</Typography>
-				</div>
-			{:else}
-				{#each packages as pkg}
-					<Paper class="package-table-row" square elevation={1}>
-						<Typography variant="body2" class="package-table-td name" element="span">
-							<span class="material-symbols-outlined" style="color:var(--success);">
-								check_circle
-							</span>
-							<span>{pkg.zarfPackage.metadata?.name}</span>
-						</Typography>
-
-						<Typography variant="body2" class="package-table-td version">
-							{#if !initPkg && pkg.zarfPackage?.metadata?.version}
-								<ZarfChip>
-									{pkg.zarfPackage.metadata.version}
-								</ZarfChip>
-							{:else if initPkg && pkg.zarfPackage?.build?.version}
-								<ZarfChip>
-									{pkg.zarfPackage.build.version}
-								</ZarfChip>
-							{/if}
-						</Typography>
-
-						<Typography variant="body2" class="package-table-td tags">
-							{#if pkg.zarfPackage?.build?.architecture}
-								<ZarfChip>
-									{pkg.zarfPackage.build.architecture}
-								</ZarfChip>
-							{/if}
-							<ZarfChip>
-								{pkg.zarfPackage.kind}
-							</ZarfChip>
-						</Typography>
-						<Typography variant="body2" class="package-table-td description">
-							{pkg.zarfPackage.metadata?.description}
-						</Typography>
-						<Box class="package-table-td deploy">
-							<Button
-								title={pkg.zarfPackage.metadata?.name}
-								backgroundColor="on-surface"
-								on:click={() => {
-									pkgStore.set(pkg);
-									goto(`/packages/${pkg.zarfPackage.metadata?.name}/configure`);
-								}}
-							>
-								deploy
-							</Button>
-						</Box>
-					</Paper>
-				{/each}
+					<svelte:fragment slot="actions">
+						<ButtonDense on:click={() => goto('/')} variant="outlined" backgroundColor="white">
+							cancel deployment
+						</ButtonDense>
+						<ButtonDense on:click={noPackagesToggle} variant="raised" backgroundColor="primary">
+							Search Directory
+						</ButtonDense>
+					</svelte:fragment>
+				</ZarfDialog>
 			{/if}
 		{:catch err}
 			<div class="no-packages">
