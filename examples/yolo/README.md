@@ -6,13 +6,19 @@ This example demonstrates YOLO mode, an optional mode for using Zarf in a fully 
 
 ## Prerequisites
 
-- A running K8s cluster. _Note that the cluster does not need to have the Zarf init package installed or any other Zarf-related bootstrapping._
+- A running K8s cluster.
+
+:::note
+
+The cluster does not need to have the Zarf init package installed or any other Zarf-related bootstrapping.
+
+:::
 
 ## Instructions
 
 Create the package:
 
-``` bash
+```bash
 zarf package create
 ```
 

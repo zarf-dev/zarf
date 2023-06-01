@@ -17,29 +17,32 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
 )
 
 type SkeletonSuite struct {
 	suite.Suite
+	*require.Assertions
 	Remote    *utils.OrasRemote
 	Reference registry.Reference
 }
 
 var (
-	importEverything   = filepath.Join("src", "test", "test-packages", "51-import-everything")
-	importception      = filepath.Join("src", "test", "test-packages", "51-import-everything", "inception")
-	everythingExternal = filepath.Join("src", "test", "test-packages", "everything-external")
+	importEverything   = filepath.Join("src", "test", "packages", "51-import-everything")
+	importception      = filepath.Join("src", "test", "packages", "51-import-everything", "inception")
+	everythingExternal = filepath.Join("src", "test", "packages", "everything-external")
 	absNoCode          = filepath.Join("/", "tmp", "nocode")
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
-	err := os.MkdirAll(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts"), 0755)
+	suite.Assertions = require.New(suite.T())
+	err := os.MkdirAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts"), 0755)
 	suite.NoError(err)
-	err = utils.CreatePathAndCopy(filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	err = utils.CreatePathAndCopy(filepath.Join("examples", "helm-charts", "chart"), filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
-	suite.DirExists(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	suite.DirExists(filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
 
 	err = utils.CreatePathAndCopy(importEverything, everythingExternal)
 	suite.NoError(err)
@@ -51,7 +54,6 @@ func (suite *SkeletonSuite) SetupSuite() {
 
 	e2e.SetupDockerRegistry(suite.T(), 555)
 	suite.Reference.Registry = "localhost:555"
-
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
@@ -61,7 +63,7 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	suite.NoError(err)
 	err = os.RemoveAll(absNoCode)
 	suite.NoError(err)
-	err = os.RemoveAll(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	err = os.RemoveAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
 	err = os.RemoveAll(filepath.Join("files"))
 	suite.NoError(err)
@@ -70,30 +72,30 @@ func (suite *SkeletonSuite) TearDownSuite() {
 func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.T().Log("E2E: Skeleton Package Publish oci://")
 
-	helmLocal := filepath.Join("examples", "helm-local-chart")
+	helmLocal := filepath.Join("examples", "helm-charts")
 	ref := suite.Reference.String()
-	_, stdErr, err := e2e.ExecZarfCommand("package", "publish", helmLocal, "oci://"+ref, "--insecure")
+	_, stdErr, err := e2e.Zarf("package", "publish", helmLocal, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	_, stdErr, err = e2e.ExecZarfCommand("package", "publish", importEverything, "oci://"+ref, "--insecure")
+	_, stdErr, err = e2e.Zarf("package", "publish", importEverything, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	_, _, err = e2e.ExecZarfCommand("package", "inspect", "oci://"+ref+"/import-everything:0.0.1-skeleton", "--insecure")
+	_, _, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/import-everything:0.0.1-skeleton", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.ExecZarfCommand("package", "pull", "oci://"+ref+"/helm-local-chart:0.0.1-skeleton", "-o", "build", "--insecure")
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1-skeleton", "-o", "build", "--insecure")
 	suite.NoError(err)
 }
 
 func (suite *SkeletonSuite) Test_1_Compose() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
-	_, _, err := e2e.ExecZarfCommand("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
+	_, _, err := e2e.Zarf("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.ExecZarfCommand("package", "create", importception, "--confirm", "-o", "build", "--insecure")
+	_, _, err = e2e.Zarf("package", "create", importception, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
 }
 
@@ -103,7 +105,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 	pkgTars := []string{
 		filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch)),
 		filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
-		filepath.Join("build", "zarf-package-helm-local-chart-skeleton-0.0.1.tar.zst"),
+		filepath.Join("build", "zarf-package-helm-charts-skeleton-0.0.1.tar.zst"),
 	}
 
 	for _, pkgTar := range pkgTars {
@@ -112,7 +114,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 		unpacked := strings.TrimSuffix(pkgTar, ".tar.zst")
 		defer os.RemoveAll(unpacked)
 		defer os.RemoveAll(pkgTar)
-		_, _, err := e2e.ExecZarfCommand("tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
+		_, _, err := e2e.Zarf("tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
 		suite.NoError(err)
 		suite.DirExists(unpacked)
 
@@ -124,7 +126,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 		suite.NotNil(components)
 
 		isSkeleton := false
-		if pkgTar == filepath.Join("build", "zarf-package-helm-local-chart-skeleton-0.0.1.tar.zst") {
+		if pkgTar == filepath.Join("build", "zarf-package-helm-charts-skeleton-0.0.1.tar.zst") {
 			isSkeleton = true
 		}
 		suite.verifyComponentPaths(unpacked, components, isSkeleton)
@@ -230,6 +232,6 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 
 func TestSkeletonSuite(t *testing.T) {
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
+
 	suite.Run(t, new(SkeletonSuite))
 }

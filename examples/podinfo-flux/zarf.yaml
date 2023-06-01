@@ -1,11 +1,11 @@
 kind: ZarfPackageConfig
 metadata:
   name: podinfo-flux
-  description: "Deploy flux and then podinfo via flux"
+  description: Deploy flux and then podinfo via flux
 
 components:
   - name: flux
-    description: "Installs the flux CRDs / controllers to use flux-based deployments in the cluster"
+    description: Installs the flux CRDs / controllers to use flux-based deployments in the cluster
     required: true
     manifests:
       - name: flux-crds
@@ -17,7 +17,7 @@ components:
       - ghcr.io/fluxcd/source-controller:v0.28.0
 
   - name: podinfo-via-flux
-    description: "Example deployment via flux using the famous podinfo example"
+    description: Example deployment via flux using the famous podinfo example
     required: true
     manifests:
       - name: podinfo-via-flux
@@ -33,7 +33,7 @@ components:
       onDeploy:
         after:
           # This will use a wait action to wait for the podinfo pods to be ready
-          - description: "Podinfo pods to be ready via wait action"
+          - description: Podinfo pods to be ready via wait action
             wait:
               cluster:
                 kind: pod
