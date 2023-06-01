@@ -9,3 +9,6 @@ ignore:
 
   # From go-git - Zarf does not use go-git (or its imported crypto libraries) to generate secrets
   - vulnerability: GHSA-2q89-485c-9j2x
+
+  # From go-git - Zarf does not use go-git (or its imported crypto libraries) to generate secrets
+  - vulnerability: CVE-2023-1732

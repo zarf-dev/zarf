@@ -24,6 +24,7 @@ type RestAPI struct {
 	APIZarfPackageConnection      APIDeployedPackageConnection  `json:"apiZarfPackageConnection"`
 	APIDeployedPackageConnections APIDeployedPackageConnections `json:"apiZarfPackageConnections"`
 	APIConnections                APIConnections                `json:"apiConnections"`
+	APIPackageSBOM                APIPackageSBOM                `json:"apiPackageSBOM"`
 }
 
 // ClusterSummary contains the summary of a cluster for the API.
@@ -46,6 +47,12 @@ type APIZarfPackage struct {
 type APIZarfDeployPayload struct {
 	DeployOpts ZarfDeployOptions `json:"deployOpts"`
 	InitOpts   *ZarfInitOptions  `json:"initOpts,omitempty"`
+}
+
+// APIPackageSBOM represents the SBOM viewer files for a package
+type APIPackageSBOM struct {
+	Path  string   `json:"path"`
+	SBOMS []string `json:"sboms"`
 }
 
 // APIConnections represents all of the existing connections

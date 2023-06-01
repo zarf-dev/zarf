@@ -22,6 +22,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
+// Nonstandard URL schemes or prefixes
+const (
+	OCIURLScheme  = "oci"
+	OCIURLPrefix  = "oci://"
+	SGETURLScheme = "sget"
+	SGETURLPrefix = "sget://"
+)
+
 // IsURL is a helper function to check if a URL is valid.
 func IsURL(source string) bool {
 	parsedURL, err := url.Parse(source)
@@ -113,7 +121,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 		return fmt.Errorf("unable to parse the URL: %s", src)
 	}
 	// If the source url starts with the sget protocol use that, otherwise do a typical GET call
-	if parsed.Scheme == "sget" {
+	if parsed.Scheme == SGETURLScheme {
 		err = Sget(context.TODO(), src, cosignKeyPath, file)
 		if err != nil {
 			return fmt.Errorf("unable to download file with sget: %s", src)

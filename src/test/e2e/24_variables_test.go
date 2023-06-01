@@ -9,7 +9,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,15 +45,15 @@ func TestVariables(t *testing.T) {
 	// Verify the configmap was properly templated
 	kubectlOut, _, _ := e2e.ExecZarfCommand("tools", "kubectl", "-n", "nginx", "get", "configmap", "nginx-configmap", "-o", "jsonpath='{.data.index\\.html}' ")
 	// OPTIONAL_FOOTER should remain unset because it was not set during deploy
-	assert.Contains(t, string(kubectlOut), "</pre>\n    \n  </body>")
+	require.Contains(t, string(kubectlOut), "</pre>\n    \n  </body>")
 	// STYLE should take the default value
-	assert.Contains(t, string(kubectlOut), "body { font-family: sans-serif;")
+	require.Contains(t, string(kubectlOut), "body { font-family: sans-serif;")
 	// SITE_NAME should take the set value
-	assert.Contains(t, string(kubectlOut), "Lula Web")
+	require.Contains(t, string(kubectlOut), "Lula Web")
 	// ORGANIZATION should take the created value
-	assert.Contains(t, string(kubectlOut), "Defense Unicorns")
+	require.Contains(t, string(kubectlOut), "Defense Unicorns")
 	// AWS_REGION should have been templated and also templated into this config map
-	assert.Contains(t, string(kubectlOut), "unicorn-land")
+	require.Contains(t, string(kubectlOut), "unicorn-land")
 
 	// Verify that the nginx deployment was successful (the NGINX_VERSION constant templated the image correctly)
 	kubectlOut, _, err = e2e.ExecZarfCommand("tools", "kubectl", "get", "pods", "-l", "app in (nginx)", "-n", "nginx", "-o", "jsonpath={.items[*].status.phase}")

@@ -45,4 +45,8 @@ func TestChecksumAndSignature(t *testing.T) {
 	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", pkgName, publicKeyFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Zarf deployment complete")
+
+	// Remove the package
+	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", pkgName, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }

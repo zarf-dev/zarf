@@ -1,3 +1,5 @@
+import ArchitectureSVG from '../.images/architecture.drawio.svg';
+
 # Zarf Nerd Notes
 
 :::caution Hard Hat Area
@@ -22,4 +24,4 @@ Zarf is written entirely in [go](https://go.dev/), except for a single 868Kb bin
 
 ## Zarf Architecture
 
-![Architecture Diagram](../.images/architecture.drawio.svg)
+<ArchitectureSVG />

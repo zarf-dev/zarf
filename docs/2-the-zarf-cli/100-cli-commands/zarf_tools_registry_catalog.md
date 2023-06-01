@@ -4,7 +4,7 @@
 List the repos in a registry
 
 ```
-zarf tools registry catalog [REGISTRY] [flags]
+zarf tools registry catalog REGISTRY [flags]
 ```
 
 ## Examples
@@ -20,7 +20,8 @@ zarf tools registry catalog [REGISTRY] [flags]
 ## Options
 
 ```
-  -h, --help   help for catalog
+      --full-ref   (Optional) if true, print the full image reference
+  -h, --help       help for catalog
 ```
 
 ## Options inherited from parent commands

@@ -18,8 +18,7 @@ import (
 
 // ViewSBOMFiles opens a browser to view the SBOM files and pauses for user input.
 func ViewSBOMFiles(tmp types.TempPaths) {
-	sbomFilePath := filepath.Join(tmp.Base, "sboms")
-	sbomViewFiles, _ := filepath.Glob(filepath.Join(sbomFilePath, "sbom-viewer-*"))
+	sbomViewFiles, _ := filepath.Glob(filepath.Join(tmp.Sboms, "sbom-viewer-*"))
 
 	if len(sbomViewFiles) > 0 {
 		link := sbomViewFiles[0]
@@ -55,4 +54,15 @@ func OutputSBOMFiles(tmp types.TempPaths, outputDir string, packageName string) 
 	}
 
 	return utils.CreatePathAndCopy(tmp.Sboms, packagePath)
+}
+
+// IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections)
+func IsSBOMAble(pkg types.ZarfPackage) bool {
+	for _, c := range pkg.Components {
+		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.DataInjections) > 0 {
+			return true
+		}
+	}
+
+	return false
 }

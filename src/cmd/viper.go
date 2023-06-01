@@ -74,7 +74,9 @@ const (
 	V_PKG_PUBLISH_SIGNING_KEY_PASSWORD = "package.publish.signing_key_password"
 
 	// Package pull config keys
-	V_PKG_PULL_PUBLIC_KEY = "package.pull.public_key"
+	V_PKG_PULL_OCI_CONCURRENCY = "package.pull.oci_concurrency"
+	V_PKG_PULL_OUTPUT_DIR      = "package.pull.output_directory"
+	V_PKG_PULL_PUBLIC_KEY      = "package.pull.public_key"
 )
 
 func initViper() {
@@ -115,7 +117,7 @@ func initViper() {
 	if err != nil {
 		// Config file not found; ignore
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			message.Error(err, lang.CmdViperErrLoadingConfigFile)
+			message.WarnErrorf(err, lang.CmdViperErrLoadingConfigFile, err.Error())
 		}
 	} else {
 		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())

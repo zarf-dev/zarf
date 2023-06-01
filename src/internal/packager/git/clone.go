@@ -56,6 +56,11 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
 			RefSpecs:   []goConfig.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
 			Tags:       git.AllTags,
 		}
+
+		if gitCred != nil {
+			fetchOpts.Auth = &gitCred.Auth
+		}
+
 		if err := repo.Fetch(fetchOpts); err != nil {
 			return err
 		}
@@ -85,6 +90,7 @@ func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName) error 
 		Stdout: g.Spinner,
 		Stderr: g.Spinner,
 	}
+
 	_, _, err := exec.CmdWithContext(context.TODO(), execConfig, "git", cmdArgs...)
 	if err != nil {
 		return err

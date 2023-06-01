@@ -31,6 +31,9 @@ const (
 	DebugLevel
 	// TraceLevel level. Designates finer-grained informational events than the Debug.
 	TraceLevel
+
+	// TermWidth sets the width of full width elements like progressbars and headers
+	TermWidth = 100
 )
 
 // NoProgress tracks whether spinner/progress bars show updates.
@@ -66,7 +69,6 @@ func init() {
 		Text: " •",
 	}
 
-	pterm.DefaultProgressbar.MaxWidth = 85
 	pterm.SetDefaultOutput(os.Stderr)
 }
 
@@ -83,7 +85,7 @@ func UseLogFile() {
 	} else {
 		// Try to create a temp log file if one hasn't been made already
 		if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
-			Error(err, "Error saving a log file")
+			WarnErr(err, "Error saving a log file to a temporary directory")
 		} else {
 			useLogFile = true
 			logStream := io.MultiWriter(os.Stderr, logFile)
@@ -118,24 +120,12 @@ func Debugf(format string, a ...any) {
 	Debug(message)
 }
 
-// Error prints an error message.
-func Error(err any, message string) {
-	Debug(err)
-	Warnf(message)
-}
-
 // ErrorWebf prints an error message and returns a web response.
 func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
 	Debug(err)
 	message := fmt.Sprintf(format, a...)
 	Warn(message)
 	http.Error(w, message, http.StatusInternalServerError)
-}
-
-// Errorf prints an error message.
-func Errorf(err any, format string, a ...any) {
-	Debug(err)
-	Warnf(format, a...)
 }
 
 // Warn prints a warning message.
@@ -145,8 +135,21 @@ func Warn(message string) {
 
 // Warnf prints a warning message.
 func Warnf(format string, a ...any) {
-	message := Paragraph(format, a...)
+	message := Paragraphn(TermWidth-10, format, a...)
+	pterm.Println()
 	pterm.Warning.Println(message)
+}
+
+// WarnErr prints an error message as a warning.
+func WarnErr(err any, message string) {
+	Debug(err)
+	Warnf(message)
+}
+
+// WarnErrorf prints an error message as a warning.
+func WarnErrorf(err any, format string, a ...any) {
+	Debug(err)
+	Warnf(format, a...)
 }
 
 // Fatal prints a fatal error message and exits with a 1.
@@ -202,15 +205,29 @@ func Note(text string) {
 // Notef prints a formatted yellow message.
 func Notef(format string, a ...any) {
 	pterm.Println()
-	message := Paragraph(format, a...)
-	pterm.FgYellow.Println(message)
+	message := Paragraphn(TermWidth-7, format, a...)
+	notePrefix := pterm.PrefixPrinter{
+		MessageStyle: &pterm.ThemeDefault.InfoMessageStyle,
+		Prefix: pterm.Prefix{
+			Style: &pterm.ThemeDefault.InfoPrefixStyle,
+			Text:  "NOTE",
+		},
+	}
+	notePrefix.Println(message)
+}
+
+// Title prints a title and an optional help description for that section
+func Title(title string, help string) {
+	titleFormatted := pterm.FgBlack.Sprint(pterm.BgWhite.Sprintf(" %s ", title))
+	helpFormatted := pterm.FgGray.Sprint(help)
+	pterm.Printfln("%s  %s", titleFormatted, helpFormatted)
 }
 
 // HeaderInfof prints a large header with a formatted message.
 func HeaderInfof(format string, a ...any) {
-	message := fmt.Sprintf(format, a...)
+	message := Truncate(fmt.Sprintf(format, a...), TermWidth, false)
 	// Ensure the text is consistent for the header width
-	padding := 85 - len(message)
+	padding := TermWidth - len(message)
 	pterm.Println()
 	pterm.DefaultHeader.
 		WithBackgroundStyle(pterm.NewStyle(pterm.BgDarkGray)).
@@ -222,13 +239,7 @@ func HeaderInfof(format string, a ...any) {
 // HorizontalRule prints a white horizontal rule to separate the terminal
 func HorizontalRule() {
 	pterm.Println()
-	pterm.Println(strings.Repeat("━", 100))
-}
-
-// HorizontalNoteRule prints a yellow horizontal rule to separate the terminal
-func HorizontalNoteRule() {
-	pterm.Println()
-	pterm.FgYellow.Println(strings.Repeat("━", 100))
+	pterm.Println(strings.Repeat("━", TermWidth))
 }
 
 // JSONValue prints any value as JSON.
@@ -240,9 +251,9 @@ func JSONValue(value any) string {
 	return string(bytes)
 }
 
-// Paragraph formats text into a 100 column paragraph
+// Paragraph formats text into a paragraph matching the TermWidth
 func Paragraph(format string, a ...any) string {
-	return Paragraphn(100, format, a...)
+	return Paragraphn(TermWidth, format, a...)
 }
 
 // Paragraphn formats text into an n column paragraph
@@ -259,6 +270,23 @@ func PrintDiff(textA, textB string) {
 	diffs = dmp.DiffCleanupSemantic(diffs)
 
 	pterm.Println(dmp.DiffPrettyText(diffs))
+}
+
+// Truncate truncates provided text to the requested length
+func Truncate(text string, length int, invert bool) string {
+	// Remove newlines and replace with semicolons
+	textEscaped := strings.ReplaceAll(text, "\n", "; ")
+	// Truncate the text if it is longer than length so it isn't too long.
+	if len(textEscaped) > length {
+		if invert {
+			start := len(textEscaped) - length + 3
+			textEscaped = "..." + textEscaped[start:]
+		} else {
+			end := length - 3
+			textEscaped = textEscaped[:end] + "..."
+		}
+	}
+	return textEscaped
 }
 
 func debugPrinter(offset int, a ...any) {

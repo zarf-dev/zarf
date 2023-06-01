@@ -7,23 +7,23 @@ package transform
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNoTransformTarget(t *testing.T) {
 	// Properly removes the NoTransform target
 	newURL, err := NoTransformTarget("https://gitlab.com", NoTransform+"/some-path/without-query")
-	assert.NoError(t, err)
-	assert.Equal(t, "https://gitlab.com/some-path/without-query", newURL.String())
+	require.NoError(t, err)
+	require.Equal(t, "https://gitlab.com/some-path/without-query", newURL.String())
 
 	// Passes through without the NoTransform target
 	newURL, err = NoTransformTarget("https://gitlab.com", "/some-path/without-query")
-	assert.NoError(t, err)
-	assert.Equal(t, "https://gitlab.com/some-path/without-query", newURL.String())
+	require.NoError(t, err)
+	require.Equal(t, "https://gitlab.com/some-path/without-query", newURL.String())
 
 	// Returns an error when given a bad base url
 	_, err = NoTransformTarget("https*://gitlab.com", "/some-path/without-query")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestNpmTransformURL(t *testing.T) {
@@ -65,15 +65,15 @@ func TestNpmTransformURL(t *testing.T) {
 	for _, host := range protocolHosts {
 		for _, path := range protocolPaths {
 			newURL, err := NpmTransformURL("https://gitlab.com/project", host+path)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			// For each host/path swap them and add `npm` for compatibility with Gitea/Gitlab
-			assert.Equal(t, "https://gitlab.com/project/npm"+path, newURL.String())
+			require.Equal(t, "https://gitlab.com/project/npm"+path, newURL.String())
 		}
 	}
 
 	// Returns an error when given a bad base url
 	_, err := NpmTransformURL("https*://gitlab.com/project", "https://registry.npmjs.org/npm")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestPipTransformURL(t *testing.T) {
@@ -95,15 +95,15 @@ func TestPipTransformURL(t *testing.T) {
 	for _, host := range protocolHosts {
 		for _, path := range protocolPaths {
 			newURL, err := PipTransformURL("https://gitlab.com/project", host+path)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			// For each host/path swap them and add `pypi` for compatibility with Gitea/Gitlab
-			assert.Equal(t, "https://gitlab.com/project/pypi"+path, newURL.String())
+			require.Equal(t, "https://gitlab.com/project/pypi"+path, newURL.String())
 		}
 	}
 
 	// Returns an error when given a bad base url
 	_, err := PipTransformURL("https*://gitlab.com/project", "https://pypi.org/simple")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestGenTransformURL(t *testing.T) {
@@ -146,12 +146,12 @@ func TestGenTransformURL(t *testing.T) {
 
 	for idx, url := range urls {
 		newURL, err := GenTransformURL("https://gitlab.com/project", url)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		// For each host/path swap them and add `pypi` for compatibility with Gitea/Gitlab
-		assert.Equal(t, expectedURLs[idx], newURL.String())
+		require.Equal(t, expectedURLs[idx], newURL.String())
 	}
 
 	// Returns an error when given a bad base url
 	_, err := GenTransformURL("https*://gitlab.com/project", "http://i.end.in.nothing.com")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
