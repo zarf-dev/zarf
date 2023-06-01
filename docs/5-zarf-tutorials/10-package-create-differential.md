@@ -28,15 +28,17 @@ You'll notice we're not using a cluster in this example.  That's because differe
 
 :::
 
-1. From the examples/longhorn folder, Create the Zarf package with the `zarf package create` command.
+1. From the `examples/longhorn` folder, Create the Zarf package with the `zarf package create` command.
 
 <iframe src="/docs/tutorials/differential_package_create.html" width="100%" height="600px"></iframe>
 
-2. Modify the zarf.yaml file to upgrade all of the 1.4.0 images to version 1.4.2, leave everything else the same.  
+2. Modify the `zarf.yaml` file to upgrade all of the 1.4.0 images to version 1.4.2; leave everything else the same.  
+
+3. Update the version of the package as well in the [metadata.version](/docs/create-a-zarf-package/zarf-schema#metadata) field.
 
 :::caution 
 
-Don't forget to update the version of the package as well in the [metadata > version](/docs/create-a-zarf-package/zarf-schema#metadata) field. If you don't an attempt to create a differential package you'll get an error.
+Creating differential packages without updating the package version will result in an error.
 
 <iframe src="/docs/tutorials/differential_package_error.html" width="100%" height="180px"></iframe>
 
