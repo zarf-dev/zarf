@@ -293,7 +293,7 @@ func (p *Packager) loadSkeleton() error {
 		return err
 	}
 
-	err = p.skeletonizeExtentions()
+	err = p.skeletonizeExtensions()
 	if err != nil {
 		return err
   }
