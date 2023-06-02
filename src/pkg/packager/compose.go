@@ -161,7 +161,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			}
 		} else {
 			// If the tarball doesn't exist (skeleton component had no local resources), we need to create the directory anyways in case there are actions
-			err := utils.CreateDirectory(dir, 0600)
+			err := utils.CreateDirectory(dir, 0700)
 			if err != nil {
 				return child, fmt.Errorf("unable to create composed component cache path %s: %w", cachePath, err)
 			}
