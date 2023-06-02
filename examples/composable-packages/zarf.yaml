@@ -4,8 +4,7 @@ metadata:
   description: Demo Zarf package composability
 
 components:
-  # LOCAL COMPOSE IMPORT
-  - name: games
+  - name: local-games-path
     # The component logic keys ('required', 'group', and 'default') always override those of the imported package
     required: true
     # group: ""         # the initial value overrides the child component
@@ -23,8 +22,7 @@ components:
         files:
           - quake-service.yaml
 
-  # OCI COMPOSE IMPORT
-  - name: wordpress
+  - name: oci-wordpress-url
     # The component logic keys ('required', 'group', and 'default') always override those of the imported package
     # required: false   # the initial value overrides the child component
     # group: ""         # the initial value overrides the child component
@@ -32,6 +30,8 @@ components:
     import:
       # The URL to the skeleton package containing this component's package definition
       url: oci://localhost:5000/wordpress:16.0.4-skeleton
+      # Example optional custom name to point to in the imported package (default is to use this component's name)
+      name: wordpress
     # Array keys are appended to the end of anything the imported component defined (in this case an override of the blog name)
     actions:
       onDeploy:
