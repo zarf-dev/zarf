@@ -15,34 +15,53 @@
 	import type { EventParams } from '$lib/http';
 	import ZarfDialog from './zarf-dialog.svelte';
 	import ButtonDense from './button-dense.svelte';
-	import { onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 
 	const initPkg = $page.url.searchParams.get('init');
-	let packages: APIZarfPackage[] = [];
+	const tableLabels = ['name', 'version', 'tags', 'description'];
+
+	let packageMap: Record<string, APIZarfPackage> = {};
 	let stream: AbortController;
 	let noPackagesToggle: () => void;
+	let doneStreaming: boolean = false;
+	let expandedSearch: boolean = false;
 
-	async function streamPackages(): Promise<void> {
+	function getEventParams(resolve: () => void, reject: (error: any) => void): EventParams {
+		return {
+			onmessage: (event) => {
+				try {
+					const pkg = JSON.parse(event.data) as APIZarfPackage;
+					console.log(pkg.path);
+					packageMap = { ...packageMap, [pkg.path]: pkg };
+				} catch {
+					console.log(event.data);
+				}
+			},
+			onerror: (event) => {
+				doneStreaming = true;
+				reject(event);
+			},
+			onclose: () => {
+				doneStreaming = true;
+				resolve();
+			},
+		};
+	}
+
+	async function findPackages(): Promise<void> {
 		return new Promise((resolve, reject) => {
-			const eventParams: EventParams = {
-				onmessage: (event) => {
-					try {
-						const pkg = JSON.parse(event.data);
-						console.log(pkg);
-						packages = [...packages, pkg];
-					} catch {
-						console.log('here');
-						console.log(event.data);
-					}
-				},
-				onerror: (event) => {
-					reject(event);
-				},
-				onclose: () => {
-					resolve();
-				},
-			};
+			const eventParams = getEventParams(resolve, reject);
 			stream = initPkg ? Packages.findInit(eventParams) : Packages.find(eventParams);
+		});
+	}
+
+	async function findPackagesRecursively(): Promise<void> {
+		doneStreaming = false;
+		expandedSearch = true;
+		return new Promise((resolve, reject) => {
+			const isInit = initPkg ? true : false;
+			const eventParams = getEventParams(resolve, reject);
+			stream = Packages.findHome(eventParams, isInit);
 		});
 	}
 
@@ -51,7 +70,9 @@
 			display: 'flex',
 			flexDirection: 'column',
 			flexGrow: '1',
-			height: '100%',
+			minHeight: '50vh',
+			maxHeight: '75vh',
+			marginBottom: '32px',
 			'& .local-package-list-header': {
 				height: '56px',
 				padding: '16px',
@@ -72,18 +93,10 @@
 				},
 			},
 			'& .local-package-list-body': {
-				minHeight: '100%',
+				height: 'calc(100% - 56px - 48px - 48px)',
 				boxShadow: '0px -1px 0px 0px rgba(255, 255, 255, 0.12) inset',
 				overflowX: 'hidden',
 				overflowY: 'scroll',
-				'& .no-packages': {
-					width: '100%',
-					height: '100%',
-					display: 'flex',
-					gap: '10px',
-					justifyContent: 'center',
-					alignItems: 'center',
-				},
 			},
 			'& .local-package-list-footer': {
 				minHeight: '48px',
@@ -99,6 +112,14 @@
 				display: 'flex',
 				alignItems: 'center',
 				boxShadow: 'inset 0px -1px 0px rgba(255,255,255,0.12)',
+				'& .loading-packages': {
+					display: 'flex',
+					width: '100%',
+					gap: '10px',
+					height: '68px',
+					justifyContent: 'center',
+					alignItems: 'center',
+				},
 				'& .package-table-td': {
 					padding: '8px 16px',
 					'&.name': {
@@ -136,18 +157,23 @@
 		},
 	};
 
-	onDestroy(() => {
-		if (stream) {
-			stream.abort();
-		}
+	onMount(() => {
+		findPackages();
+		return () => {
+			if (stream) {
+				stream.abort();
+			}
+		};
 	});
 
-	const tableLabels = ['name', 'version', 'tags', 'description'];
 	$: initString = (initPkg && 'Init') || '';
 	$: tooltip =
 		(initPkg && 'in the execution, current working, and .zarf-cache directories') ||
 		'in the current working directory';
-	$: console.log(packages);
+	$: searchText =
+		(expandedSearch && 'Searching home directory and subdirectories.') ||
+		'Searching working directory.';
+	$: packages = Object.values(packageMap);
 </script>
 
 <Box {ssx} class="local-package-list-container">
@@ -156,6 +182,16 @@
 		<Tooltip>
 			This table shows all of the Zarf{initString} packages that exist {tooltip}.
 		</Tooltip>
+		{#if doneStreaming || expandedSearch}
+			<ButtonDense
+				variant="outlined"
+				backgroundColor="white"
+				style="margin-left: auto"
+				on:click={findPackagesRecursively}
+			>
+				Expanded Search
+			</ButtonDense>
+		{/if}
 	</Paper>
 	<Paper class="package-table-head-row package-table-row" square elevation={1}>
 		{#each tableLabels as l}
@@ -215,33 +251,41 @@
 				</Box>
 			</Paper>
 		{/each}
-		{#await streamPackages()}
-			<div class="no-packages">
-				<Spinner color="blue-200" />
-				<Typography color="blue-200" variant="body1">Searching working directory.</Typography>
-			</div>
-		{:then}
-			{#if !packages.length}
-				<ZarfDialog bind:toggleDialog={noPackagesToggle} open titleText="No Packages Found">
-					<Typography variant="body2" color="text-secondary-on-dark">
-						No Zarf packages were found in the current working directory. Would you like to search
-						the home directory?
-					</Typography>
-					<svelte:fragment slot="actions">
-						<ButtonDense on:click={() => goto('/')} variant="outlined" backgroundColor="white">
-							cancel deployment
-						</ButtonDense>
-						<ButtonDense on:click={noPackagesToggle} variant="raised" backgroundColor="primary">
-							Search Directory
-						</ButtonDense>
-					</svelte:fragment>
-				</ZarfDialog>
-			{/if}
-		{:catch err}
-			<div class="no-packages">
-				<Typography color="error" variant="body1">{err.message}</Typography>
-			</div>
-		{/await}
+		{#if !doneStreaming}
+			<Paper class="package-table-row" square elevation={1}>
+				<div class="loading-packages">
+					<Spinner color="blue-200" />
+					<Typography color="blue-200" variant="body1">{searchText}</Typography>
+				</div>
+			</Paper>
+		{/if}
+		{#if doneStreaming && !packages.length && expandedSearch}
+			<Paper class="package-table-row" square elevation={1}>
+				<div class="loading-packages">
+					<Typography color="on-surface" variant="body1">No packages found.</Typography>
+				</div>
+			</Paper>
+		{/if}
+		{#if !packages.length && doneStreaming && !expandedSearch}
+			<ZarfDialog bind:toggleDialog={noPackagesToggle} open titleText="No Packages Found">
+				<Typography variant="body2" color="text-secondary-on-dark">
+					No Zarf packages were found in the current working directory. Would you like to search the
+					home directory?
+				</Typography>
+				<svelte:fragment slot="actions">
+					<ButtonDense on:click={() => goto('/')} variant="outlined" backgroundColor="white">
+						cancel deployment
+					</ButtonDense>
+					<ButtonDense
+						on:click={findPackagesRecursively}
+						variant="raised"
+						backgroundColor="on-surface"
+					>
+						Search Directory
+					</ButtonDense>
+				</svelte:fragment>
+			</ZarfDialog>
+		{/if}
 	</Paper>
 	<Paper class="local-package-list-footer" elevation={1} />
 </Box>
