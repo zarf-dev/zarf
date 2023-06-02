@@ -296,7 +296,7 @@ func (p *Packager) loadSkeleton() error {
 	err = p.skeletonizeExtensions()
 	if err != nil {
 		return err
-  }
+	}
 
 	for _, warning := range p.warnings {
 		message.Warn(warning)
