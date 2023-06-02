@@ -55,7 +55,7 @@ func (p *Packager) composeExtentions(pathAncestry string, component types.ZarfCo
 }
 
 // Check for any extensions in use and skeletonize their local files.
-func (p *Packager) skeletonizeExtentions() error {
+func (p *Packager) skeletonizeExtensions() error {
 	message.Debugf("packager.skeletonizeExtentions()")
 
 	components := []types.ZarfComponent{}
