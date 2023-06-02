@@ -170,9 +170,7 @@
 	$: tooltip =
 		(initPkg && 'in the execution, current working, and .zarf-cache directories') ||
 		'in the current working directory';
-	$: searchText =
-		(expandedSearch && 'Searching home directory and subdirectories.') ||
-		'Searching working directory.';
+	$: searchText = (expandedSearch && 'Searching home directory.') || 'Searching working directory.';
 	$: packages = Object.values(packageMap);
 </script>
 
@@ -262,6 +260,7 @@
 		{#if doneStreaming && !packages.length && expandedSearch}
 			<Paper class="package-table-row" square elevation={1}>
 				<div class="loading-packages">
+					<span style="color: var(--warning)" class="material-symbols-outlined">warning</span>
 					<Typography color="on-surface" variant="body1">No packages found.</Typography>
 				</div>
 			</Paper>
