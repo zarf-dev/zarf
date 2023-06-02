@@ -202,20 +202,21 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 			if isSkeleton && utils.IsURL(file.Source) {
 				continue
 			} else if isSkeleton {
-				suite.FileExists(filepath.Join(componentPaths.Files, file.Source))
+				suite.FileExists(filepath.Join(base, file.Source))
 				continue
 			}
-			suite.DirOrFileExists(filepath.Join(componentPaths.Files, strconv.Itoa(filesIdx)))
+			path := filepath.Join(componentPaths.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+			suite.DirOrFileExists(path)
 		}
 
 		for dataIdx, data := range component.DataInjections {
 			if isSkeleton && utils.IsURL(data.Source) {
 				continue
 			} else if isSkeleton {
-				suite.DirOrFileExists(filepath.Join(componentPaths.DataInjections, data.Source))
+				suite.DirOrFileExists(filepath.Join(base, data.Source))
 				continue
 			}
-			path := filepath.Join(componentPaths.DataInjections, fmt.Sprintf("injection-%d", dataIdx))
+			path := filepath.Join(componentPaths.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 			suite.DirOrFileExists(path)
 		}
 
@@ -232,6 +233,7 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 				}
 				suite.FileExists(filepath.Join(componentPaths.Manifests, fmt.Sprintf("%s-%d.yaml", manifest.Name, filesIdx)))
 			}
+			// TODO: WRONG - UNTESTED DEAD CODE
 			for kustomizeIdx := range manifest.Kustomizations {
 				path := filepath.Join(componentPaths.Manifests, fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx))
 				suite.FileExists(path)
