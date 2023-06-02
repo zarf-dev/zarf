@@ -4,4 +4,4 @@ metadata:
   name: override
 
 resources:
-- ../../../../examples/composable-package/quake-service.yaml
+- ../../../../../examples/composable-package/quake-service.yaml
