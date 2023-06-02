@@ -260,7 +260,7 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 		child.CosignKeyPath = composed
 	}
 
-	child = p.composeExtentions(pathAncestry, child)
+	child = p.composeExtensions(pathAncestry, child)
 
 	return child, nil
 }
