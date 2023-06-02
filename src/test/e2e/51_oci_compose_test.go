@@ -233,7 +233,6 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 				}
 				suite.FileExists(filepath.Join(componentPaths.Manifests, fmt.Sprintf("%s-%d.yaml", manifest.Name, filesIdx)))
 			}
-			// TODO: WRONG - UNTESTED DEAD CODE
 			for kustomizeIdx := range manifest.Kustomizations {
 				path := filepath.Join(componentPaths.Manifests, fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx))
 				suite.FileExists(path)
