@@ -56,6 +56,7 @@ const (
 	ZarfSBOMDir       = "zarf-sbom"
 	ZarfSBOMTar       = "sboms.tar"
 	ZarfPackagePrefix = "zarf-package-"
+	ZarfBundlePrefix  = "zarf-bundle-"
 
 	ZarfInClusterContainerRegistryNodePort = 31999
 

@@ -27,6 +27,7 @@ zarf [COMMAND] [flags]
 
 ## SEE ALSO
 
+* [zarf bundle](zarf_bundle.md)	 - Zarf commands for creating, deploying, removing, pulling, and inspecting bundles
 * [zarf completion](zarf_completion.md)	 - Generate the autocompletion script for the specified shell
 * [zarf connect](zarf_connect.md)	 - Access services or pods deployed in the cluster.
 * [zarf destroy](zarf_destroy.md)	 - Tear it all down, we'll miss you Zarf...

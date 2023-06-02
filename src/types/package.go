@@ -4,9 +4,18 @@
 // Package types contains all the types used by Zarf.
 package types
 
+type ZarfPackageKind string
+
+const (
+	// ZarfInitConfig is the kind of Zarf package used during `zarf init`.
+	ZarfInitConfig ZarfPackageKind = "ZarfInitConfig"
+	// ZarfPackageConfig is the default kind of Zarf package, primarily used during `zarf package`.
+	ZarfPackageConfig ZarfPackageKind = "ZarfPackageConfig"
+)
+
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
-	Kind       string                `json:"kind" jsonschema:"description=The kind of Zarf package,enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
+	Kind       ZarfPackageKind       `json:"kind" jsonschema:"description=The kind of Zarf package,enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	Metadata   ZarfMetadata          `json:"metadata,omitempty" jsonschema:"description=Package metadata"`
 	Build      ZarfBuildData         `json:"build,omitempty" jsonschema:"description=Zarf-generated package build data"`
 	Components []ZarfComponent       `json:"components" jsonschema:"description=List of components to deploy in this package"`

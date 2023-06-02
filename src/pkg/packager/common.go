@@ -65,7 +65,7 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	)
 
 	// Create a temp directory for the package
-	if pkgConfig.tmp, err = createPaths(); err != nil {
+	if pkgConfig.tmp, err = createPaths(config.CommonOptions.TempDirectory); err != nil {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
@@ -214,10 +214,10 @@ func isValidFileExtension(filename string) bool {
 	return false
 }
 
-func createPaths() (paths types.TempPaths, err error) {
+func createPaths(base string) (paths types.TempPaths, err error) {
 	message.Debug("packager.createPaths()")
 
-	basePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	basePath, err := utils.MakeTempDir(base)
 	paths = types.TempPaths{
 		Base: basePath,
 

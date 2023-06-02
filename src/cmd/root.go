@@ -23,8 +23,11 @@ var (
 	logLevel string
 	arch     string
 
-	// Default global config for the CLI
+	// Default global config for the packager
 	pkgConfig = types.PackagerConfig{}
+
+	// Default global config for the bundler
+	bndlConfig = types.BundlerConfig{}
 
 	// Viper instance used by the cmd package
 	v *viper.Viper

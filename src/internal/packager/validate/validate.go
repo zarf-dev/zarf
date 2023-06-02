@@ -25,7 +25,7 @@ var (
 
 // Run performs config validations.
 func Run(pkg types.ZarfPackage) error {
-	if pkg.Kind == "ZarfInitConfig" && pkg.Metadata.YOLO {
+	if pkg.Kind == types.ZarfInitConfig && pkg.Metadata.YOLO {
 		return fmt.Errorf(lang.PkgValidateErrInitNoYOLO)
 	}
 

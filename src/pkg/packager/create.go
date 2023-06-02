@@ -55,7 +55,7 @@ func (p *Packager) Create(baseDir string) error {
 		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
 	}
 
-	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
+	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 		p.cfg.IsInitConfig = true
 	}

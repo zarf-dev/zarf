@@ -242,6 +242,23 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 
 	CmdPackagePullPublicKey = "Path to public key file for validating signed packages"
 
+	// zarf bundle
+	CmdBundleShort = "Zarf commands for creating, deploying, removing, pulling, and inspecting bundles"
+
+	CmdBundleCreateShort = "Create a Zarf bundle from a given directory or the current directory"
+	CmdBundleCreateLong  = "" // TODO: (@razzle) Add a description for this command
+
+	CmdBundleDeployShort = "Deploy a Zarf bundle from a local file or URL (runs offline)"
+	CmdBundleDeployLong  = "" // TODO: (@razzle) Add a description for this command
+
+	CmdBundleInspectShort = "Display the zarf.yaml of a compiled Zarf bundle (runs offline)"
+	CmdBundleInspectLong  = "" // TODO: (@razzle) Add a description for this command
+
+	CmdBundleRemoveShort       = "Remove a Zarf bundle or sub-packages that have been deployed already"
+	CmdBundleRemoveTarballErr  = "Invalid tarball path provided"
+	CmdBundleRemoveExtractErr  = "Unable to extract the package contents"
+	CmdBundleRemoveReadZarfErr = "Unable to read zarf.yaml"
+
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"
 

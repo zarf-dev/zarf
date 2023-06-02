@@ -1,5 +1,4 @@
 !.env.example
-./dist/
 .DS_Store
 .env
 .env.*
@@ -22,8 +21,6 @@
 *.zst
 assets/
 build
-bundle/
-clidocs/
 data/
 dist/
 node_modules
