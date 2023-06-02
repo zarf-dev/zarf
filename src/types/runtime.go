@@ -9,6 +9,17 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
+// Constants to keep track of folders within components
+const (
+	TempFolder           = "temp"
+	FilesFolder          = "files"
+	ChartsFolder         = "charts"
+	ReposFolder          = "repos"
+	ManifestsFolder      = "manifests"
+	DataInjectionsFolder = "data"
+	ValuesFolder         = "values"
+)
+
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
 	Confirm       bool   `json:"confirm" jsonschema:"description=Verify that Zarf should perform an action"`

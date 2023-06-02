@@ -16,28 +16,24 @@ import (
 func TestCreateTemplating(t *testing.T) {
 	t.Log("E2E: Create Templating")
 
-	e2e.Setup(t)
-	defer e2e.Teardown(t)
-
 	// run `zarf package create` with a specified image cache location
-	cachePath := filepath.Join(os.TempDir(), ".cache-location")
-	decompressPath := filepath.Join(os.TempDir(), ".package-decompressed")
-	sbomPath := filepath.Join(os.TempDir(), ".sbom-location")
-
-	e2e.CleanFiles(cachePath, decompressPath, sbomPath)
+	tmpdir := t.TempDir()
+	cachePath := filepath.Join(tmpdir, ".cache-location")
+	decompressPath := filepath.Join(tmpdir, ".package-decompressed")
+	sbomPath := filepath.Join(tmpdir, ".sbom-location")
 
 	pkgName := fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.Arch)
 
 	// Test that not specifying a package variable results in an error
-	_, stdErr, _ := e2e.ExecZarfCommand("package", "create", "examples/variables", "--confirm", "--zarf-cache", cachePath)
+	_, stdErr, _ := e2e.Zarf("package", "create", "examples/variables", "--zarf-cache", cachePath, "--confirm")
 	expectedOutString := "variable 'NGINX_VERSION' must be '--set' when using the '--confirm' flag"
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test a simple package variable example with `--set` (will fail to pull an image if this is not set correctly)
-	stdOut, stdErr, err := e2e.ExecZarfCommand("package", "create", "examples/variables", "--set", "NGINX_VERSION=1.23.3", "--confirm", "--zarf-cache", cachePath)
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/variables", "--set", "NGINX_VERSION=1.23.3", "--zarf-cache", cachePath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("t", "archiver", "decompress", pkgName, decompressPath, "--unarchive-all", "-l=trace")
+	stdOut, stdErr, err = e2e.Zarf("t", "archiver", "decompress", pkgName, decompressPath, "--unarchive-all")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the constant in the zarf.yaml is replaced correctly
@@ -46,24 +42,22 @@ func TestCreateTemplating(t *testing.T) {
 	require.Contains(t, string(builtConfig), "name: NGINX_VERSION\n  value: 1.23.3")
 
 	// Test that files and file folders template and handle SBOMs correctly
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "create", "src/test/test-packages/04-file-folders-templating-sbom/", "--confirm", "--sbom-out", sbomPath)
+	stdOut, stdErr, err = e2e.Zarf("package", "create", "src/test/packages/04-file-folders-templating-sbom/", "--sbom-out", sbomPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Creating SBOMs for 0 images and 2 components with files.")
 
 	fileFoldersPkgName := fmt.Sprintf("zarf-package-file-folders-templating-sbom-%s.tar.zst", e2e.Arch)
 
 	// Deploy the package and look for the variables in the output
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", fileFoldersPkgName, "--confirm", "--set", "DOGGO=doggy", "--set", "KITTEH=meowza", "--set", "PANDA=pandemonium")
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", fileFoldersPkgName, "--set", "DOGGO=doggy", "--set", "KITTEH=meowza", "--set", "PANDA=pandemonium", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "A doggy barks!")
 	require.Contains(t, stdErr, "  - meowza")
 	require.Contains(t, stdErr, "# Total pandemonium")
 
 	// Ensure that the `requirements.txt` files are discovered correctly
-	_, err = os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "compare.html"))
-	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "sbom-viewer-zarf-component-folders.html"))
-	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(sbomPath, "file-folders-templating-sbom", "compare.html"))
+	require.FileExists(t, filepath.Join(sbomPath, "file-folders-templating-sbom", "sbom-viewer-zarf-component-folders.html"))
 	foldersJSON, err := os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "zarf-component-folders.json"))
 	require.NoError(t, err)
 	require.Contains(t, string(foldersJSON), "numpy")
@@ -73,5 +67,5 @@ func TestCreateTemplating(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(filesJSON), "pandas")
 
-	e2e.CleanFiles(cachePath, decompressPath, pkgName, fileFoldersPkgName, sbomPath)
+	e2e.CleanFiles(pkgName, fileFoldersPkgName)
 }

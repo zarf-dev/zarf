@@ -30,10 +30,11 @@ import (
 
 // Packager is the main struct for managing packages.
 type Packager struct {
-	cfg     *types.PackagerConfig
-	cluster *cluster.Cluster
-	tmp     types.TempPaths
-	arch    string
+	cfg      *types.PackagerConfig
+	cluster  *cluster.Cluster
+	tmp      types.TempPaths
+	arch     string
+	warnings []string
 }
 
 /*
@@ -147,13 +148,13 @@ func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (pat
 
 	paths = types.ComponentPaths{
 		Base:           base,
-		Temp:           filepath.Join(base, "temp"),
-		Files:          filepath.Join(base, "files"),
-		Charts:         filepath.Join(base, "charts"),
-		Repos:          filepath.Join(base, "repos"),
-		Manifests:      filepath.Join(base, "manifests"),
-		DataInjections: filepath.Join(base, "data"),
-		Values:         filepath.Join(base, "values"),
+		Temp:           filepath.Join(base, types.TempFolder),
+		Files:          filepath.Join(base, types.FilesFolder),
+		Charts:         filepath.Join(base, types.ChartsFolder),
+		Repos:          filepath.Join(base, types.ReposFolder),
+		Manifests:      filepath.Join(base, types.ManifestsFolder),
+		DataInjections: filepath.Join(base, types.DataInjectionsFolder),
+		Values:         filepath.Join(base, types.ValuesFolder),
 	}
 
 	if len(component.Files) > 0 {
@@ -273,7 +274,7 @@ func (p *Packager) loadZarfPkg() error {
 	// Load the config from the extracted archive zarf.yaml
 	spinner.Updatef("Loading the zarf package config")
 	configPath := p.tmp.ZarfYaml
-	if err := p.readYaml(configPath, true); err != nil {
+	if err := p.readYaml(configPath); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
@@ -318,7 +319,9 @@ func (p *Packager) loadZarfPkg() error {
 
 	// Handle component configuration deprecations
 	for idx, component := range p.cfg.Pkg.Components {
-		p.cfg.Pkg.Components[idx] = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+		var warnings []string
+		p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+		p.warnings = append(p.warnings, warnings...)
 	}
 
 	spinner.Success()

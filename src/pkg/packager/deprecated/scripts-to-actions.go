@@ -5,9 +5,9 @@
 package deprecated
 
 import (
+	"fmt"
 	"math"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -18,7 +18,7 @@ import (
 // - Actions.*.OnSuccess
 // - Actions.*.OnFailure
 // - Actions.*.*.Env
-func migrateScriptsToActions(c types.ZarfComponent) types.ZarfComponent {
+func migrateScriptsToActions(c types.ZarfComponent) (types.ZarfComponent, string) {
 	var hasScripts bool
 
 	// Convert a script configs to action defaults.
@@ -63,8 +63,8 @@ func migrateScriptsToActions(c types.ZarfComponent) types.ZarfComponent {
 
 	// Leave deprecated scripts in place, but warn users
 	if hasScripts {
-		message.Warnf("Component '%s' is using scripts which will be removed in a future version of Zarf. Please migrate to actions.", c.Name)
+		return c, fmt.Sprintf("Component '%s' is using scripts which will be removed in a future version of Zarf. Please migrate to actions.", c.Name)
 	}
 
-	return c
+	return c, ""
 }
