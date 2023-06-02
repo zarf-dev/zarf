@@ -228,7 +228,7 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 				if isSkeleton && utils.IsURL(path) {
 					continue
 				} else if isSkeleton {
-					suite.FileExists(filepath.Join(componentPaths.Manifests, path))
+					suite.FileExists(filepath.Join(base, path))
 					continue
 				}
 				suite.FileExists(filepath.Join(componentPaths.Manifests, fmt.Sprintf("%s-%d.yaml", manifest.Name, filesIdx)))
