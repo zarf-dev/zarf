@@ -171,6 +171,7 @@
 		(initPkg && 'in the execution, current working, and .zarf-cache directories') ||
 		'in the current working directory';
 	$: searchText = (expandedSearch && 'Searching home directory.') || 'Searching working directory.';
+	$: expandedSearchButtonText = (expandedSearch && 'Search Again') || 'Expanded Search';
 	$: packages = Object.values(packageMap);
 </script>
 
@@ -187,7 +188,7 @@
 				style="margin-left: auto"
 				on:click={findPackagesRecursively}
 			>
-				Expanded Search
+				{expandedSearchButtonText}
 			</ButtonDense>
 		{/if}
 	</Paper>
