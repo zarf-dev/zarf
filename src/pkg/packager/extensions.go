@@ -43,7 +43,7 @@ func (p *Packager) processExtensions() error {
 }
 
 // Mutate any local files to be relative to the parent
-func (p *Packager) composeExtentions(pathAncestry string, component types.ZarfComponent) types.ZarfComponent {
+func (p *Packager) composeExtensions(pathAncestry string, component types.ZarfComponent) types.ZarfComponent {
 	message.Debugf("packager.composeExtentions()")
 
 	// Big Bang
