@@ -139,14 +139,20 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 		return c, fmt.Errorf("unable to sort Big Bang HelmReleases: %w", err)
 	}
 
-	tenMinsInSecs := 10 * 60
+	// ten minutes in seconds
+	maxTotalSeconds := 10 * 60
+
+	defaultMaxTotalSeconds := c.Actions.OnDeploy.Defaults.MaxTotalSeconds
+	if defaultMaxTotalSeconds != 0 {
+		maxTotalSeconds = defaultMaxTotalSeconds
+	}
 
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
 	for _, hrNamespacedName := range namespacedHelmReleaseNames {
 		hr := hrDependencies[hrNamespacedName]
 		action := types.ZarfComponentAction{
 			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hr.Metadata.Name),
-			MaxTotalSeconds: &tenMinsInSecs,
+			MaxTotalSeconds: &maxTotalSeconds,
 			Wait: &types.ZarfComponentActionWait{
 				Cluster: &types.ZarfComponentActionWaitCluster{
 					Kind:       "HelmRelease",
