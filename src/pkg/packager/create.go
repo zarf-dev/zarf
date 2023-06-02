@@ -309,7 +309,7 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 
 	appendSBOMFiles := func(path string) {
 		if utils.IsDir(path) {
-			files, _ := utils.RecursiveFileList(path, nil, false, true)
+			files, _ := utils.RecursiveFileList(path, nil)
 			componentSBOM.Files = append(componentSBOM.Files, files...)
 		} else {
 			componentSBOM.Files = append(componentSBOM.Files, path)

@@ -174,20 +174,8 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 }
 
 // RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths.
-// the skipPermission flag can be provided to ignore unauthorized files/dirs when true
-// the skipHidden flag can be provided to ignore dot prefixed files/dirs when true
-func RecursiveFileList(dir string, pattern *regexp.Regexp, skipPermission bool, skipHidden bool) (files []string, err error) {
+func RecursiveFileList(dir string, pattern *regexp.Regexp) (files []string, err error) {
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		// ignore files/dirs that it does not have permission to read
-		if err != nil && os.IsPermission(err) && skipPermission {
-			return nil
-		}
-		// Skip hidden directories
-		if skipHidden {
-			if d.IsDir() && d.Name()[0] == dotCharacter {
-				return filepath.SkipDir
-			}
-		}
 
 		// Return errors
 		if err != nil {
@@ -202,34 +190,14 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp, skipPermission bool, 
 			} else {
 				files = append(files, path)
 			}
+			// Skip hidden directories
+		} else if IsHidden(d.Name()) {
+			return filepath.SkipDir
 		}
 
 		return nil
 	})
 	return files, err
-}
-
-// FileList reads a directory and returns a list of filepaths matched against an optional regex.
-func FileList(dir string, pattern *regexp.Regexp) ([]string, error) {
-	var matches []string
-
-	files, err := os.ReadDir(dir)
-
-	for _, file := range files {
-
-		if !file.IsDir() {
-			path := fmt.Sprintf("%s/%s", dir, file.Name())
-			if pattern != nil {
-				if len(pattern.FindStringIndex(path)) > 0 {
-					matches = append(matches, path)
-				}
-			} else {
-				matches = append(matches, path)
-			}
-		}
-	}
-
-	return matches, err
 }
 
 // ReadPackage reads a packages yaml from the local filesystem and returns an APIZarfPackage.
@@ -367,6 +335,11 @@ func IsTrashBin(dirPath string) bool {
 	}
 
 	return false
+}
+
+// IsHidden returns true if the given file name starts with a dot.
+func IsHidden(name string) bool {
+	return name[0] == dotCharacter
 }
 
 // GetDirSize walks through all files and directories in the provided path and returns the total size in bytes.
