@@ -3,5 +3,7 @@ kind: Kustomization
 metadata:
   name: override
 
-resources:
-- ../../../../../examples/composable-packages/quake-service.yaml
+configMapGenerator:
+- name: coffee-ipsum
+  files:
+  - coffee-ipsum.txt

@@ -19,7 +19,7 @@ components:
     manifests:
       - name: override
         kustomizations:
-          - overrides
+          - files
 
   - name: import-component-wordpress
     required: false
