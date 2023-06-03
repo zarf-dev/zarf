@@ -43,8 +43,19 @@ type OrasRemote struct {
 // as well as a few helper functions for locating layers and calculating the size of the layers.
 type ZarfOCIManifest struct {
 	ocispec.Manifest
-	indexPath     string
-	ociLayoutPath string
+	indexPath      string
+	ociLayoutPath  string
+	imagesBlobsDir string
+}
+
+// NewZarfOCIManifest returns a new ZarfOCIManifest.
+func NewZarfOCIManifest(manifest *ocispec.Manifest) *ZarfOCIManifest {
+	return &ZarfOCIManifest{
+		Manifest:       *manifest,
+		indexPath:      filepath.Join("images", "index.json"),
+		ociLayoutPath:  filepath.Join("images", "oci-layout"),
+		imagesBlobsDir: filepath.Join("images", "blobs", "sha256"),
+	}
 }
 
 // Locate returns the descriptor for the layer with the given path.
@@ -192,11 +203,7 @@ func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
 	if err = json.Unmarshal(pulled, &manifest); err != nil {
 		return nil, err
 	}
-	return &ZarfOCIManifest{
-		Manifest:      manifest,
-		indexPath:     filepath.Join("images", "index.json"),
-		ociLayoutPath: filepath.Join("images", "oci-layout"),
-	}, nil
+	return NewZarfOCIManifest(&manifest), nil
 }
 
 // FetchManifest fetches the manifest with the given descriptor from the remote repository.
@@ -322,12 +329,12 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 				return nil, err
 			}
 			// Add the manifest and the manifest config layers
-			layers = append(layers, root.Locate(filepath.Join("images", "blobs", "sha256", manifestDescriptor.Digest.Encoded())))
-			layers = append(layers, root.Locate(filepath.Join("images", "blobs", "sha256", manifest.Config.Digest.Encoded())))
+			layers = append(layers, root.Locate(filepath.Join(root.imagesBlobsDir, manifestDescriptor.Digest.Encoded())))
+			layers = append(layers, root.Locate(filepath.Join(root.imagesBlobsDir, manifest.Config.Digest.Encoded())))
 
 			// Add all the layers from the manifest
 			for _, layer := range manifest.Layers {
-				layerPath := filepath.Join("images", "blobs", "sha256", layer.Digest.Encoded())
+				layerPath := filepath.Join(root.imagesBlobsDir, layer.Digest.Encoded())
 				layers = append(layers, root.Locate(layerPath))
 			}
 		}
