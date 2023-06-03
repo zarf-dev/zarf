@@ -34,8 +34,9 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		}
 
 		message.Debugf("Pulling layers %v from %s", layersToPull, p.cfg.DeployOpts.PackagePath)
-		if err := p.pullPackageLayers(p.cfg.DeployOpts.PackagePath, p.tmp.Base, layersToPull); err != nil {
-			return fmt.Errorf("unable to pull layers for inspect: %w", err)
+
+		if err := p.handleOciPackage(p.cfg.DeployOpts.PackagePath, p.tmp.Base, p.cfg.PullOpts.CopyOptions.Concurrency, layersToPull...); err != nil {
+			return fmt.Errorf("unable to pull the package: %w", err)
 		}
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)

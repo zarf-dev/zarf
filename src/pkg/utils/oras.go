@@ -6,15 +6,24 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
+	"strings"
+	"sync"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
+	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content"
+	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -23,8 +32,59 @@ import (
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
 type OrasRemote struct {
 	*remote.Repository
+	*remote.Registry
 	context.Context
 	Transport *Transport
+}
+
+type ZarfOCIManifest struct {
+	ocispec.Manifest
+	indexPath     string
+	ociLayoutPath string
+}
+
+func (m *ZarfOCIManifest) Locate(path string) ocispec.Descriptor {
+	return Find(m.Layers, func(layer ocispec.Descriptor) bool {
+		return layer.Annotations[ocispec.AnnotationTitle] == path
+	})
+}
+
+// NewOrasRemote returns an oras remote repository client and context for the given reference.
+func NewOrasRemote(url string) (*OrasRemote, error) {
+	ref, err := registry.ParseReference(strings.TrimPrefix(url, OCIURLPrefix))
+	if err != nil {
+		return &OrasRemote{}, fmt.Errorf("failed to parse OCI reference: %w", err)
+	}
+	o := &OrasRemote{}
+	o.Context = context.TODO()
+	// patch docker.io to registry-1.docker.io
+	// this allows end users to use docker.io as an alias for registry-1.docker.io
+	if ref.Registry == "docker.io" {
+		ref.Registry = "registry-1.docker.io"
+	}
+	repo, err := remote.NewRepository(ref.String())
+	if err != nil {
+		return &OrasRemote{}, err
+	}
+	reg, err := remote.NewRegistry(ref.Registry)
+	if err != nil {
+		return &OrasRemote{}, err
+	}
+	reg.PlainHTTP = zarfconfig.CommonOptions.Insecure
+	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
+	authClient, err := o.withAuthClient(ref)
+	if err != nil {
+		return &OrasRemote{}, err
+	}
+	reg.Client = authClient
+	repo.Client = authClient
+	o.Registry = reg
+	o.Repository = repo
+	err = o.CheckAuth()
+	if err != nil {
+		return &OrasRemote{}, fmt.Errorf("unable to authenticate to %s: %s", ref.Registry, err.Error())
+	}
+	return o, nil
 }
 
 // withScopes returns a context with the given scopes.
@@ -92,27 +152,236 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 	return client, nil
 }
 
-// NewOrasRemote returns an oras remote repository client and context for the given reference.
-func NewOrasRemote(ref registry.Reference) (*OrasRemote, error) {
-	o := &OrasRemote{}
-	o.Context = context.TODO()
-	// patch docker.io to registry-1.docker.io
-	// this allows end users to use docker.io as an alias for registry-1.docker.io
-	if ref.Registry == "docker.io" {
-		ref.Registry = "registry-1.docker.io"
-	}
-	repo, err := remote.NewRepository(ref.String())
+// CheckAuth checks if the user is authenticated to the remote registry.
+func (o *OrasRemote) CheckAuth() error {
+	return o.Registry.Ping(o.Context)
+}
+
+// FetchRoot fetches the root manifest from the remote repository.
+func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
+	// get the manifest descriptor
+	// ref.Reference can be a tag or a digest
+	descriptor, err := o.Resolve(o.Context, o.Reference.Reference)
 	if err != nil {
-		return &OrasRemote{}, err
+		return nil, err
 	}
-	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
-	authClient, err := o.withAuthClient(ref)
+
+	// get the manifest itself
+	pulled, err := content.FetchAll(o.Context, o, descriptor)
 	if err != nil {
-		return &OrasRemote{}, err
+		return nil, err
 	}
-	repo.Client = authClient
-	o.Repository = repo
-	return o, nil
+	manifest := ocispec.Manifest{}
+
+	if err = json.Unmarshal(pulled, &manifest); err != nil {
+		return nil, err
+	}
+	return &ZarfOCIManifest{
+		Manifest:      manifest,
+		indexPath:     filepath.Join("images", "index.json"),
+		ociLayoutPath: filepath.Join("images", "oci-layout"),
+	}, nil
+}
+
+func (o *OrasRemote) FetchManifest(desc ocispec.Descriptor) (manifest *ZarfOCIManifest, err error) {
+	bytes, err := o.FetchLayer(desc)
+	if err != nil {
+		return manifest, err
+	}
+	err = json.Unmarshal(bytes, &manifest)
+	if err != nil {
+		return manifest, err
+	}
+	return manifest, nil
+}
+
+func (o *OrasRemote) CalculatePackageSize(manifest ZarfOCIManifest, layersToPull ...ocispec.Descriptor) (int64, error) {
+	var total int64
+	paths := []string{}
+	for _, layer := range layersToPull {
+		paths = append(paths, layer.Annotations[ocispec.AnnotationTitle])
+	}
+	for _, layer := range manifest.Layers {
+		if len(layersToPull) > 0 {
+			layerPath := layer.Annotations[ocispec.AnnotationTitle]
+			// If we're only pulling a subset of layers, only include the size of the layers we're pulling
+			if SliceContains(paths, layerPath) {
+				total += layer.Size
+				continue
+			}
+		}
+		total += layer.Size
+	}
+
+	return total, nil
+}
+
+func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err error) {
+	bytes, err = content.FetchAll(o.Context, o, desc)
+	if err != nil {
+		return bytes, err
+	}
+	return bytes, nil
+}
+
+func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg *types.ZarfPackage, err error) {
+	zarfYamlDescriptor := manifest.Locate(zarfconfig.ZarfYAML)
+	if zarfYamlDescriptor.Digest == "" {
+		return pkg, fmt.Errorf("unable to find %s in the manifest", zarfconfig.ZarfYAML)
+	}
+	zarfYamlBytes, err := o.FetchLayer(zarfYamlDescriptor)
+	if err != nil {
+		return pkg, err
+	}
+	err = goyaml.Unmarshal(zarfYamlBytes, &pkg)
+	if err != nil {
+		return pkg, err
+	}
+	return pkg, nil
+}
+
+func (o *OrasRemote) FetchImagesIndex(manifest *ZarfOCIManifest) (index *ocispec.Index, err error) {
+	indexDescriptor := manifest.Locate(manifest.indexPath)
+	indexBytes, err := o.FetchLayer(indexDescriptor)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(indexBytes, &index)
+	if err != nil {
+		return nil, err
+	}
+	return index, nil
+}
+
+func (o *OrasRemote) CalculateLayersToPullFromRequestedComponents(requestedComponents []string) (layers []ocispec.Descriptor, err error) {
+	manifest, err := o.FetchRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	pkg, err := o.FetchZarfYAML(manifest)
+	if err != nil {
+		return nil, err
+	}
+	images := []string{}
+	for _, name := range requestedComponents {
+		component := Find(pkg.Components, func(component types.ZarfComponent) bool {
+			return component.Name == name
+		})
+		if component.Name == "" {
+			return nil, fmt.Errorf("component %s does not exist in this package", name)
+		}
+		layers = append(layers, manifest.Locate(filepath.Join(zarfconfig.ZarfComponentsDir, component.Name)))
+	}
+	for _, component := range pkg.Components {
+		// If we requested this component, or it is required, we need to pull its images
+		if SliceContains(requestedComponents, component.Name) || component.Required {
+			images = append(images, component.Images...)
+		}
+		// If we did not request this component, but it is required, we need to pull it's tarball
+		if !SliceContains(requestedComponents, component.Name) && component.Required {
+			layers = append(layers, manifest.Locate(filepath.Join(zarfconfig.ZarfComponentsDir, component.Name)))
+		}
+	}
+	if len(images) > 0 {
+		// Add the image index and the oci-layout layers
+		layers = append(layers, manifest.Locate(manifest.indexPath))
+		layers = append(layers, manifest.Locate(manifest.ociLayoutPath))
+		// Append the sbom.tar layer if it exists
+		sbomDescriptor := manifest.Locate(zarfconfig.ZarfSBOMTar)
+		if sbomDescriptor.Digest != "" {
+			layers = append(layers, sbomDescriptor)
+		}
+		index, err := o.FetchImagesIndex(manifest)
+		if err != nil {
+			return nil, err
+		}
+		for _, image := range images {
+			manifestDescriptor := Find(index.Manifests, func(layer ocispec.Descriptor) bool {
+				return layer.Annotations[ocispec.AnnotationBaseImageName] == image
+			})
+			manifest, err := o.FetchManifest(manifestDescriptor)
+			if err != nil {
+				return nil, err
+			}
+			// Add the manifest and the manifest config layers
+			layers = append(layers, manifestDescriptor)
+			layers = append(layers, manifest.Config)
+
+			// Add all the layers from the manifest
+			layers = append(layers, manifest.Layers...)
+		}
+	}
+	return layers, nil
+}
+
+func (o *OrasRemote) PullPackage(out string, concurrency int, layersToPull ...ocispec.Descriptor) error {
+	ref := o.Reference
+	message.Debugf("Pulling %s", ref.String())
+	message.Infof("Pulling Zarf package from %s", ref)
+
+	manifest, err := o.FetchRoot()
+	if err != nil {
+		return err
+	}
+	alwaysPull := []string{zarfconfig.ZarfYAML, zarfconfig.ZarfChecksumsTxt, zarfconfig.ZarfYAMLSignature, manifest.indexPath, manifest.ociLayoutPath}
+	for _, path := range alwaysPull {
+		layersToPull = append(layersToPull, manifest.Locate(path))
+	}
+
+	estimatedBytes, err := o.CalculatePackageSize(*manifest, layersToPull...)
+	if err != nil {
+		return err
+	}
+
+	dst, err := file.New(out)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	copyOpts := oras.DefaultCopyOptions
+	copyOpts.Concurrency = concurrency
+	copyOpts.OnCopySkipped = PrintLayerExists
+	copyOpts.PostCopy = PrintLayerExists
+	isPartialPull := len(layersToPull) > 0
+	if isPartialPull {
+		paths := []string{}
+		for _, layer := range layersToPull {
+			paths = append(paths, layer.Annotations[ocispec.AnnotationTitle])
+		}
+		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+			nodes, err := content.Successors(ctx, fetcher, desc)
+			if err != nil {
+				return nil, err
+			}
+			var ret []ocispec.Descriptor
+			for _, node := range nodes {
+				if SliceContains(paths, node.Annotations[ocispec.AnnotationTitle]) {
+					ret = append(ret, node)
+				}
+			}
+			return ret, nil
+		}
+	}
+
+	// Create a thread to update a progress bar as we save the package to disk
+	doneSaving := make(chan int)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go RenderProgressBarForLocalDirWrite(out, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
+	_, err = oras.Copy(o.Context, o.Repository, ref.String(), dst, ref.String(), copyOpts)
+	if err != nil {
+		return err
+	}
+
+	// Send a signal to the progress bar that we're done and wait for it to finish
+	doneSaving <- 1
+	wg.Wait()
+
+	message.Debugf("Pulled %s", ref.String())
+	message.Successf("Pulled %s", ref.String())
+	return nil
 }
 
 // PrintLayerExists prints a success message to the console when a layer has been successfully published to a registry.

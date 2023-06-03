@@ -601,7 +601,7 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if utils.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		if err := p.pullPackageLayers(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, tmpDir, []string{config.ZarfYAML}); err != nil {
+		if err := p.handleOciPackage(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, tmpDir, 3, config.ZarfYAML); err != nil {
 			return fmt.Errorf("unable to pull the differential zarf package spec: %s", err.Error())
 		}
 	} else {

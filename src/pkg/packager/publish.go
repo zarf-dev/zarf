@@ -81,11 +81,11 @@ func (p *Packager) Publish() error {
 	}
 
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref.Reference)
-	return p.publish(ref)
+	return p.publish(ref.String())
 }
 
-func (p *Packager) publish(ref registry.Reference) error {
-	message.Infof("Publishing package to %s", ref)
+func (p *Packager) publish(url string) error {
+	message.Infof("Publishing package to %s", url)
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 
@@ -108,7 +108,7 @@ func (p *Packager) publish(ref registry.Reference) error {
 	}
 
 	// destination remote
-	dst, err := utils.NewOrasRemote(ref)
+	dst, err := utils.NewOrasRemote(url)
 	if err != nil {
 		return err
 	}
@@ -150,9 +150,9 @@ func (p *Packager) publish(ref registry.Reference) error {
 		return err
 	}
 
-	dst.Transport.ProgressBar.Successf("Published %s [%s]", ref, root.MediaType)
+	dst.Transport.ProgressBar.Successf("Published %s [%s]", url, root.MediaType)
 	fmt.Println()
-	if strings.HasSuffix(ref.Reference, skeletonSuffix) {
+	if strings.HasSuffix(url, skeletonSuffix) {
 		message.Info("Example of importing components from this package:")
 		fmt.Println()
 		ex := []types.ZarfComponent{}
@@ -161,7 +161,7 @@ func (p *Packager) publish(ref registry.Reference) error {
 				Name: fmt.Sprintf("import-%s", c.Name),
 				Import: types.ZarfComponentImport{
 					ComponentName: c.Name,
-					URL:           fmt.Sprintf("oci://%s", ref.String()),
+					URL:           fmt.Sprintf("oci://%s", url),
 				},
 			})
 		}
@@ -173,9 +173,9 @@ func (p *Packager) publish(ref registry.Reference) error {
 			flags = "--insecure"
 		}
 		message.Info("To inspect/deploy/pull:")
-		message.Infof("zarf package inspect oci://%s %s", ref, flags)
-		message.Infof("zarf package deploy oci://%s %s", ref, flags)
-		message.Infof("zarf package pull oci://%s %s", ref, flags)
+		message.Infof("zarf package inspect oci://%s %s", url, flags)
+		message.Infof("zarf package deploy oci://%s %s", url, flags)
+		message.Infof("zarf package pull oci://%s %s", url, flags)
 	}
 
 	return nil

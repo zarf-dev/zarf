@@ -14,13 +14,15 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2/registry"
 )
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() error {
-	err := p.handleOciPackage(p.cfg.DeployOpts.PackagePath, p.tmp.Base, p.cfg.PullOpts.CopyOptions.Concurrency)
+	client, err := utils.NewOrasRemote(p.cfg.DeployOpts.PackagePath)
+	if err != nil {
+		return err
+	}
+	err = client.PullPackage(p.tmp.Base, p.cfg.PullOpts.CopyOptions.Concurrency)
 	if err != nil {
 		return err
 	}
@@ -58,39 +60,6 @@ func (p *Packager) Pull() error {
 	err = archiver.Archive(allTheLayers, output)
 	if err != nil {
 		return err
-	}
-	return nil
-}
-
-// pullPackageSpecLayer pulls the `zarf.yaml` and `zarf.yaml.sig` (if it exists) layers from the published package
-func (p *Packager) pullPackageLayers(packagePath string, targetDir string, layersToPull []string) error {
-	ref, err := registry.ParseReference(strings.TrimPrefix(packagePath, utils.OCIURLPrefix))
-	if err != nil {
-		return err
-	}
-
-	dst, err := utils.NewOrasRemote(ref)
-	if err != nil {
-		return err
-	}
-
-	// get the manifest
-	manifest, err := getManifest(dst)
-	if err != nil {
-		return err
-	}
-	layers := manifest.Layers
-
-	for _, layerToPull := range layersToPull {
-		layerDesc := utils.Find(layers, func(d ocispec.Descriptor) bool {
-			return d.Annotations[ocispec.AnnotationTitle] == layerToPull
-		})
-		if len(layerDesc.Digest) == 0 {
-			return fmt.Errorf("unable to find layer (%s) from the OCI package %s", layerToPull, packagePath)
-		}
-		if err := pullLayer(dst, layerDesc, filepath.Join(targetDir, layerToPull)); err != nil {
-			return fmt.Errorf("unable to pull the layer (%s) from the OCI package %s", layerToPull, packagePath)
-		}
 	}
 	return nil
 }
