@@ -16,6 +16,10 @@ components:
     import:
       path: ../../../../examples/dos-games
       name: baseline
+    manifests:
+      - name: override
+        kustomizations:
+          - files
 
   - name: import-component-wordpress
     required: false
@@ -32,6 +36,7 @@ components:
 
   - name: file-imports
     required: false
+    cosignKeyPath: ../../../../cosign.pub
     files:
       # Import of a file within the current directory
       - source: files/coffee-ipsum.txt
@@ -105,6 +110,13 @@ components:
         url: oci://ghcr.io/stefanprodan/charts/podinfo
     images:
       - ghcr.io/stefanprodan/podinfo:6.3.5
+    dataInjections:
+      - source: files/coffee-ipsum.txt
+        target:
+          namespace: podinfo
+          selector: app.kubernetes.io/name=oci-demo-podinfo
+          container: podinfo
+          path: /files/coffee-ipsum.txt
     actions:
       onDeploy:
         after:
