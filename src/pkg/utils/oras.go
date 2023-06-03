@@ -252,16 +252,17 @@ func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.
 }
 
 func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string) (layers []ocispec.Descriptor, err error) {
-	manifest, err := o.FetchRoot()
+	root, err := o.FetchRoot()
 	if err != nil {
 		return nil, err
 	}
 
-	pkg, err := o.FetchZarfYAML(manifest)
+	pkg, err := o.FetchZarfYAML(root)
 	if err != nil {
 		return nil, err
 	}
 	images := []string{}
+	tarballFormat := "%s.tar"
 	for _, name := range requestedComponents {
 		component := Find(pkg.Components, func(component types.ZarfComponent) bool {
 			return component.Name == name
@@ -269,7 +270,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 		if component.Name == "" {
 			return nil, fmt.Errorf("component %s does not exist in this package", name)
 		}
-		layers = append(layers, manifest.Locate(filepath.Join(zarfconfig.ZarfComponentsDir, component.Name)))
+		layers = append(layers, root.Locate(filepath.Join(zarfconfig.ZarfComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 	}
 	for _, component := range pkg.Components {
 		// If we requested this component, or it is required, we need to pull its images
@@ -278,19 +279,19 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 		}
 		// If we did not request this component, but it is required, we need to pull it's tarball
 		if !SliceContains(requestedComponents, component.Name) && component.Required {
-			layers = append(layers, manifest.Locate(filepath.Join(zarfconfig.ZarfComponentsDir, component.Name)))
+			layers = append(layers, root.Locate(filepath.Join(zarfconfig.ZarfComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 		}
 	}
 	if len(images) > 0 {
 		// Add the image index and the oci-layout layers
-		layers = append(layers, manifest.Locate(manifest.indexPath))
-		layers = append(layers, manifest.Locate(manifest.ociLayoutPath))
+		layers = append(layers, root.Locate(root.indexPath))
+		layers = append(layers, root.Locate(root.ociLayoutPath))
 		// Append the sbom.tar layer if it exists
-		sbomDescriptor := manifest.Locate(zarfconfig.ZarfSBOMTar)
+		sbomDescriptor := root.Locate(zarfconfig.ZarfSBOMTar)
 		if sbomDescriptor.Digest != "" {
 			layers = append(layers, sbomDescriptor)
 		}
-		index, err := o.FetchImagesIndex(manifest)
+		index, err := o.FetchImagesIndex(root)
 		if err != nil {
 			return nil, err
 		}
@@ -303,13 +304,17 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 				return nil, err
 			}
 			// Add the manifest and the manifest config layers
-			layers = append(layers, manifestDescriptor)
-			layers = append(layers, manifest.Config)
+			layers = append(layers, root.Locate(filepath.Join("images", "blobs", "sha256", manifestDescriptor.Digest.Encoded())))
+			layers = append(layers, root.Locate(filepath.Join("images", "blobs", "sha256", manifest.Config.Digest.Encoded())))
 
 			// Add all the layers from the manifest
-			layers = append(layers, manifest.Layers...)
+			for _, layer := range manifest.Layers {
+				layerPath := filepath.Join("images", "blobs", "sha256", layer.Digest.Encoded())
+				layers = append(layers, root.Locate(layerPath))
+			}
 		}
 	}
+	message.Infof("Pulling %+v", layers)
 	return layers, nil
 }
 
@@ -329,7 +334,7 @@ func (o *OrasRemote) PullPackage(out string, concurrency int, layersToPull ...oc
 		for _, desc := range layersToPull {
 			estimatedBytes += desc.Size
 		}
-		alwaysPull := []string{zarfconfig.ZarfYAML, zarfconfig.ZarfChecksumsTxt, zarfconfig.ZarfYAMLSignature, manifest.indexPath, manifest.ociLayoutPath}
+		alwaysPull := []string{zarfconfig.ZarfYAML, zarfconfig.ZarfChecksumsTxt, zarfconfig.ZarfYAMLSignature}
 		for _, path := range alwaysPull {
 			desc := manifest.Locate(path)
 			layersToPull = append(layersToPull, desc)
@@ -338,6 +343,7 @@ func (o *OrasRemote) PullPackage(out string, concurrency int, layersToPull ...oc
 	} else {
 		estimatedBytes = manifest.SumLayersSize()
 	}
+	estimatedBytes += manifest.Config.Size
 
 	dst, err := file.New(out)
 	if err != nil {
