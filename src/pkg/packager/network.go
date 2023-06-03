@@ -42,7 +42,7 @@ func (p *Packager) handlePackagePath() error {
 		requestedComponents := getRequestedComponentList(p.cfg.DeployOpts.Components)
 		layersToPull := []ocispec.Descriptor{}
 		if len(requestedComponents) > 0 {
-			layers, err := client.CalculateLayersToPullFromRequestedComponents(requestedComponents)
+			layers, err := client.LayersFromRequestedComponents(requestedComponents)
 			if err != nil {
 				return fmt.Errorf("unable to get published component image layers: %s", err.Error())
 			}

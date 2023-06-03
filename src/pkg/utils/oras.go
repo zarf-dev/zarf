@@ -253,7 +253,7 @@ func (o *OrasRemote) FetchImagesIndex(manifest *ZarfOCIManifest) (index *ocispec
 	return index, nil
 }
 
-func (o *OrasRemote) CalculateLayersToPullFromRequestedPaths(requestedPaths []string) (layers []ocispec.Descriptor, err error) {
+func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.Descriptor, err error) {
 	manifest, err := o.FetchRoot()
 	if err != nil {
 		return nil, err
@@ -264,7 +264,7 @@ func (o *OrasRemote) CalculateLayersToPullFromRequestedPaths(requestedPaths []st
 	return layers, nil
 }
 
-func (o *OrasRemote) CalculateLayersToPullFromRequestedComponents(requestedComponents []string) (layers []ocispec.Descriptor, err error) {
+func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string) (layers []ocispec.Descriptor, err error) {
 	manifest, err := o.FetchRoot()
 	if err != nil {
 		return nil, err

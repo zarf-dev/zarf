@@ -39,7 +39,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		if err != nil {
 			return err
 		}
-		layersToPull, err := client.CalculateLayersToPullFromRequestedPaths(requestedFiles)
+		layersToPull, err := client.LayersFromPaths(requestedFiles)
 		if err != nil {
 			return err
 		}
