@@ -49,6 +49,14 @@ func (m *ZarfOCIManifest) Locate(path string) ocispec.Descriptor {
 	})
 }
 
+func (m *ZarfOCIManifest) SumLayersSize() int64 {
+	var sum int64
+	for _, layer := range m.Layers {
+		sum += layer.Size
+	}
+	return sum
+}
+
 // NewOrasRemote returns an oras remote repository client and context for the given reference.
 func NewOrasRemote(url string) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, OCIURLPrefix))
@@ -195,27 +203,6 @@ func (o *OrasRemote) FetchManifest(desc ocispec.Descriptor) (manifest *ZarfOCIMa
 	return manifest, nil
 }
 
-func (o *OrasRemote) CalculatePackageSize(manifest ZarfOCIManifest, layersToPull ...ocispec.Descriptor) (int64, error) {
-	var total int64
-	paths := []string{}
-	for _, layer := range layersToPull {
-		paths = append(paths, layer.Annotations[ocispec.AnnotationTitle])
-	}
-	for _, layer := range manifest.Layers {
-		if len(layersToPull) > 0 {
-			layerPath := layer.Annotations[ocispec.AnnotationTitle]
-			// If we're only pulling a subset of layers, only include the size of the layers we're pulling
-			if SliceContains(paths, layerPath) {
-				total += layer.Size
-				continue
-			}
-		}
-		total += layer.Size
-	}
-
-	return total, nil
-}
-
 func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err error) {
 	bytes, err = content.FetchAll(o.Context, o, desc)
 	if err != nil {
@@ -327,6 +314,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 }
 
 func (o *OrasRemote) PullPackage(out string, concurrency int, layersToPull ...ocispec.Descriptor) error {
+	isPartialPull := len(layersToPull) > 0
 	ref := o.Reference
 	message.Debugf("Pulling %s", ref.String())
 	message.Infof("Pulling Zarf package from %s", ref)
@@ -335,14 +323,20 @@ func (o *OrasRemote) PullPackage(out string, concurrency int, layersToPull ...oc
 	if err != nil {
 		return err
 	}
-	alwaysPull := []string{zarfconfig.ZarfYAML, zarfconfig.ZarfChecksumsTxt, zarfconfig.ZarfYAMLSignature, manifest.indexPath, manifest.ociLayoutPath}
-	for _, path := range alwaysPull {
-		layersToPull = append(layersToPull, manifest.Locate(path))
-	}
 
-	estimatedBytes, err := o.CalculatePackageSize(*manifest, layersToPull...)
-	if err != nil {
-		return err
+	estimatedBytes := int64(0)
+	if isPartialPull {
+		for _, desc := range layersToPull {
+			estimatedBytes += desc.Size
+		}
+		alwaysPull := []string{zarfconfig.ZarfYAML, zarfconfig.ZarfChecksumsTxt, zarfconfig.ZarfYAMLSignature, manifest.indexPath, manifest.ociLayoutPath}
+		for _, path := range alwaysPull {
+			desc := manifest.Locate(path)
+			layersToPull = append(layersToPull, desc)
+			estimatedBytes += desc.Size
+		}
+	} else {
+		estimatedBytes = manifest.SumLayersSize()
 	}
 
 	dst, err := file.New(out)
@@ -355,7 +349,6 @@ func (o *OrasRemote) PullPackage(out string, concurrency int, layersToPull ...oc
 	copyOpts.Concurrency = concurrency
 	copyOpts.OnCopySkipped = PrintLayerExists
 	copyOpts.PostCopy = PrintLayerExists
-	isPartialPull := len(layersToPull) > 0
 	if isPartialPull {
 		paths := []string{}
 		for _, layer := range layersToPull {
