@@ -4,16 +4,38 @@ metadata:
   description: Demo Zarf package composability
 
 components:
-  - name: games
+  - name: local-games-path
+    # The component logic keys ('required', 'group', and 'default') always override those of the imported package
     required: true
-    description: Example of a composed package with a unique description for this component
+    # group: ""         # the initial value overrides the child component
+    # default: false    # the initial value overrides the child component
+    description: "Example of a local composed package with a unique description for this component"
     import:
+      # The local relative path to the folder containing this component's package definition
       path: ../dos-games
-      # Example optional custom name to point to in the imported package
+      # Example optional custom name to point to in the imported package (default is to use this component's name)
       name: baseline
+    # Array keys are appended to the end of anything the imported component defined (in this case an extra service)
+    manifests:
+      - name: additional-games
+        namespace: dos-games
+        files:
+          - quake-service.yaml
 
-  - name: chart-via-oci
-    required: false
+  - name: oci-wordpress-url
+    # The component logic keys ('required', 'group', and 'default') always override those of the imported package
+    # required: false   # the initial value overrides the child component
+    # group: ""         # the initial value overrides the child component
+    # default: false    # the initial value overrides the child component
     import:
-      url: oci://localhost:5000/helm-charts:0.0.1-skeleton
-      name: demo-helm-local-chart
+      # The URL to the skeleton package containing this component's package definition
+      url: oci://localhost:5000/wordpress:16.0.4-skeleton
+      # Example optional custom name to point to in the imported package (default is to use this component's name)
+      name: wordpress
+    # Array keys are appended to the end of anything the imported component defined (in this case an override of the blog name)
+    actions:
+      onDeploy:
+        before:
+          - cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}
+            setVariables:
+              - name: WORDPRESS_BLOG_NAME
