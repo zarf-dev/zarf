@@ -224,7 +224,7 @@ func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err erro
 	return bytes, nil
 }
 
-func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg *types.ZarfPackage, err error) {
+func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg types.ZarfPackage, err error) {
 	zarfYamlDescriptor := manifest.Locate(zarfconfig.ZarfYAML)
 	if zarfYamlDescriptor.Digest == "" {
 		return pkg, fmt.Errorf("unable to find %s in the manifest", zarfconfig.ZarfYAML)
@@ -251,6 +251,17 @@ func (o *OrasRemote) FetchImagesIndex(manifest *ZarfOCIManifest) (index *ocispec
 		return nil, err
 	}
 	return index, nil
+}
+
+func (o *OrasRemote) CalculateLayersToPullFromRequestedPaths(requestedPaths []string) (layers []ocispec.Descriptor, err error) {
+	manifest, err := o.FetchRoot()
+	if err != nil {
+		return nil, err
+	}
+	for _, path := range requestedPaths {
+		layers = append(layers, manifest.Locate(path))
+	}
+	return layers, nil
 }
 
 func (o *OrasRemote) CalculateLayersToPullFromRequestedComponents(requestedComponents []string) (layers []ocispec.Descriptor, err error) {

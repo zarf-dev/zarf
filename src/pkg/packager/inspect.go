@@ -25,17 +25,25 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		pullSBOM := includeSBOM || outputSBOM != ""
 		pullZarfSig := inspectPublicKey != ""
 
-		layersToPull := []string{config.ZarfYAML}
+		requestedFiles := []string{config.ZarfYAML}
 		if pullSBOM {
-			layersToPull = append(layersToPull, config.ZarfSBOMTar)
+			requestedFiles = append(requestedFiles, config.ZarfSBOMTar)
 		}
 		if pullZarfSig {
-			layersToPull = append(layersToPull, config.ZarfYAMLSignature)
+			requestedFiles = append(requestedFiles, config.ZarfYAMLSignature)
 		}
 
-		message.Debugf("Pulling layers %v from %s", layersToPull, p.cfg.DeployOpts.PackagePath)
+		message.Debugf("Pulling layers %v from %s", requestedFiles, p.cfg.DeployOpts.PackagePath)
 
-		if err := p.handleOciPackage(p.cfg.DeployOpts.PackagePath, p.tmp.Base, p.cfg.PullOpts.CopyOptions.Concurrency, layersToPull...); err != nil {
+		client, err := utils.NewOrasRemote(p.cfg.DeployOpts.PackagePath)
+		if err != nil {
+			return err
+		}
+		layersToPull, err := client.CalculateLayersToPullFromRequestedPaths(requestedFiles)
+		if err != nil {
+			return err
+		}
+		if err := client.PullPackage(p.tmp.Base, p.cfg.PullOpts.CopyOptions.Concurrency, layersToPull...); err != nil {
 			return fmt.Errorf("unable to pull the package: %w", err)
 		}
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {

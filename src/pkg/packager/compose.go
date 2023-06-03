@@ -103,7 +103,15 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		}
 
 		componentLayer := filepath.Join(config.ZarfComponentsDir, fmt.Sprintf("%s.tar", childComponentName))
-		err = p.handleOciPackage(skelURL, cachePath, 3, componentLayer)
+		client, err := utils.NewOrasRemote(parent.Import.URL)
+		if err != nil {
+			return child, err
+		}
+		manifest, err := client.FetchRoot()
+		if err != nil {
+			return child, err
+		}
+		err = client.PullPackage(cachePath, 3, manifest.Locate(componentLayer))
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
