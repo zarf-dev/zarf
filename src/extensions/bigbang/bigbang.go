@@ -143,7 +143,7 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 	maxTotalSeconds := 10 * 60
 
 	defaultMaxTotalSeconds := c.Actions.OnDeploy.Defaults.MaxTotalSeconds
-	if defaultMaxTotalSeconds != 0 {
+	if defaultMaxTotalSeconds > maxTotalSeconds {
 		maxTotalSeconds = defaultMaxTotalSeconds
 	}
 
