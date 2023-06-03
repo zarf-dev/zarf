@@ -37,18 +37,24 @@ type OrasRemote struct {
 	Transport *Transport
 }
 
+// ZarfOCIManifest is a wrapper around the OCI manifest
+//
+// it includes the path to the index.json, oci-layout, and image blobs.
+// as well as a few helper functions for locating layers and calculating the size of the layers.
 type ZarfOCIManifest struct {
 	ocispec.Manifest
 	indexPath     string
 	ociLayoutPath string
 }
 
+// Locate returns the descriptor for the layer with the given path.
 func (m *ZarfOCIManifest) Locate(path string) ocispec.Descriptor {
 	return Find(m.Layers, func(layer ocispec.Descriptor) bool {
 		return layer.Annotations[ocispec.AnnotationTitle] == path
 	})
 }
 
+// SumLayersSize returns the sum of the size of all the layers in the manifest.
 func (m *ZarfOCIManifest) SumLayersSize() int64 {
 	var sum int64
 	for _, layer := range m.Layers {
@@ -57,7 +63,9 @@ func (m *ZarfOCIManifest) SumLayersSize() int64 {
 	return sum
 }
 
-// NewOrasRemote returns an oras remote repository client and context for the given reference.
+// NewOrasRemote returns an oras remote repository client and context for the given url.
+//
+// Registry auth is handled by the Docker CLI's credential store and checked before returning the client
 func NewOrasRemote(url string) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, OCIURLPrefix))
 	if err != nil {
@@ -191,6 +199,7 @@ func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
 	}, nil
 }
 
+// FetchManifest fetches the manifest with the given descriptor from the remote repository.
 func (o *OrasRemote) FetchManifest(desc ocispec.Descriptor) (manifest *ZarfOCIManifest, err error) {
 	bytes, err := o.FetchLayer(desc)
 	if err != nil {
@@ -203,6 +212,7 @@ func (o *OrasRemote) FetchManifest(desc ocispec.Descriptor) (manifest *ZarfOCIMa
 	return manifest, nil
 }
 
+// FetchLayer fetches the layer with the given descriptor from the remote repository.
 func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err error) {
 	bytes, err = content.FetchAll(o.Context, o, desc)
 	if err != nil {
@@ -211,6 +221,7 @@ func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err erro
 	return bytes, nil
 }
 
+// FetchZarfYAML fetches the zarf.yaml file from the remote repository.
 func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg types.ZarfPackage, err error) {
 	zarfYamlDescriptor := manifest.Locate(zarfconfig.ZarfYAML)
 	if zarfYamlDescriptor.Digest == "" {
@@ -227,6 +238,7 @@ func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg types.ZarfPac
 	return pkg, nil
 }
 
+// FetchImagesIndex fetches the images/index.json file from the remote repository.
 func (o *OrasRemote) FetchImagesIndex(manifest *ZarfOCIManifest) (index *ocispec.Index, err error) {
 	indexDescriptor := manifest.Locate(manifest.indexPath)
 	indexBytes, err := o.FetchLayer(indexDescriptor)
@@ -240,6 +252,7 @@ func (o *OrasRemote) FetchImagesIndex(manifest *ZarfOCIManifest) (index *ocispec
 	return index, nil
 }
 
+// LayersFromPaths returns the descriptors for the given paths from the root manifest.
 func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.Descriptor, err error) {
 	manifest, err := o.FetchRoot()
 	if err != nil {
@@ -251,6 +264,11 @@ func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.
 	return layers, nil
 }
 
+// LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.
+//
+// It also retrieves the descriptors for all image layers that are required by the components.
+//
+// It also respects the `required` flag on components, and will retrieve all necessary layers for required components.
 func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string) (layers []ocispec.Descriptor, err error) {
 	root, err := o.FetchRoot()
 	if err != nil {
@@ -318,6 +336,14 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	return layers, nil
 }
 
+// PullPackage pulls the package from the remote repository and saves it to the given path.
+//
+// layersToPull is an optional parameter that allows the caller to specify which layers to pull.
+//
+// The following layers will ALWAYS be pulled if they exist:
+//   - zarf.yaml
+//   - checksums.txt
+//   - zarf.yaml.sig
 func (o *OrasRemote) PullPackage(out string, concurrency int, layersToPull ...ocispec.Descriptor) error {
 	isPartialPull := len(layersToPull) > 0
 	ref := o.Reference
