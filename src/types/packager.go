@@ -42,7 +42,3 @@ type PackagerConfig struct {
 	// SBOM file paths in the package
 	SBOMViewFiles []string
 }
-
-type PluginConfig struct {
-	ECRInfo ECRInfo
-}

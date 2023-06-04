@@ -105,11 +105,3 @@ const (
 	InternalArtifactServer ArtifactServerType = "internal"
 	ExternalArtifactServer ArtifactServerType = "external"
 )
-
-// ECRInfo contains information Zarf uses to communicate with an ECR registry to push/pull images.
-// NOTE: This information is only relevant if you're initializing Zarf on an EKS cluster that is being configured to use an ECR registry.
-type ECRInfo struct {
-	RegistryURL      string `json:"registryURL" jsonschema:"description=URL address of the ECR registry"`
-	RepositoryPrefix string `json:"repositoryPrefix" jsonschema:"description=Prefix to use for all repositories in the registry"`
-	Region           string `json:"region" jsonschema:"description=AWS region of the ECR registry"`
-}
