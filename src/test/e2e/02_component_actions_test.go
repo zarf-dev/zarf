@@ -111,7 +111,7 @@ func TestComponentActions(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 		require.FileExists(t, deployWithEnvVarArtifact)
 
-		// Remove the templated file at the end of the test
+		// Remove the env var file at the end of the test
 		e2e.CleanFiles(deployWithEnvVarArtifact)
 	})
 
