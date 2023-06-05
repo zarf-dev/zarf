@@ -5,8 +5,11 @@
 package hook
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+
+	b64 "encoding/base64"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -14,32 +17,46 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecrpublic"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
-	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
+	"github.com/docker/cli/cli/config"
+	"github.com/docker/cli/cli/config/configfile"
+	docker_types "github.com/docker/cli/cli/config/types"
 )
 
-func AuthToECR(registryURL string, ecrHook types.HookConfig) error {
-	region := ecrHook.HookData["region"]
-
-	ecrClient := ecrpublic.New(session.New(&aws.Config{Region: aws.String(region.(string))}))
+func AuthToECR(ecrHook types.HookConfig) error {
+	region := ecrHook.HookData["region"].(string)
+	registryURL := ecrHook.HookData["registryURL"].(string)
 
 	/* Auth into ECR */
-	// TODO: @JPERRY Can I check if I'm already authed?
+	ecrClient := ecrpublic.New(session.New(&aws.Config{Region: aws.String(region)}))
 	authToken, err := ecrClient.GetAuthorizationToken(&ecrpublic.GetAuthorizationTokenInput{})
 	if err != nil || authToken == nil || authToken.AuthorizationData == nil {
 		return fmt.Errorf("unable to get the ECR authorization token: %w", err)
 	}
-	craneLogin := craneCmd.NewCmdAuthLogin()
-	usernameErr := craneLogin.Flags().Set("username", "AWS")
-	passwordErr := craneLogin.Flags().Set("password", *authToken.AuthorizationData.AuthorizationToken)
-	if usernameErr != nil || passwordErr != nil {
-		return fmt.Errorf("unable to set the ECR authorization credential")
+
+	data, err := b64.StdEncoding.DecodeString(*authToken.AuthorizationData.AuthorizationToken)
+	if err != nil {
+		return fmt.Errorf("unable to decode the ECR authorization token: %w", err)
+	}
+	username := "AWS"
+	password := strings.Split(string(data), ":")[1]
+
+	cfg, err := config.Load(config.Dir())
+	if err != nil {
+		return err
+	}
+	if !cfg.ContainsAuth() {
+		return errors.New("no docker config file found, run 'zarf tools registry login --help'")
 	}
 
-	// TODO: @JPERRY This is dumb.. crane only accepts strings that follow RFC 3986 URI syntax so I have to strip the Registry URL
+	configs := []*configfile.ConfigFile{cfg}
+
 	registryName := strings.Split(registryURL, "/")[0]
-	err = craneLogin.RunE(craneLogin, []string{registryName})
+	var key = registryName
+
+	authConfig := docker_types.AuthConfig{Username: username, Password: password, ServerAddress: key}
+	err = configs[0].GetCredentialsStore(key).Store(authConfig)
 	if err != nil {
-		return fmt.Errorf("unable to login to the ECR registry: %w", err)
+		return fmt.Errorf("unable to get credentials for %s: %w", key, err)
 	}
 
 	return nil
@@ -66,7 +83,6 @@ func CreateTheECRRepos(ecrHook types.HookConfig, images []string) error {
 		_, err = ecrClient.CreateRepository(&ecrpublic.CreateRepositoryInput{
 			RepositoryName: aws.String(repositoryName)})
 		if err != nil {
-
 			if aerr, ok := err.(awserr.Error); ok {
 				// Ignore errors if the repository already exists
 				if aerr.Code() != ecrpublic.ErrCodeRepositoryAlreadyExistsException {

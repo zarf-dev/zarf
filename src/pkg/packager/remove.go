@@ -40,15 +40,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 		}
 
 		if requested {
-			hasImages := len(component.Images) > 0
-			hasCharts := len(component.Charts) > 0
-			hasManifests := len(component.Manifests) > 0
-			hasRepos := len(component.Repos) > 0
-			hasDataInjections := len(component.DataInjections) > 0
-
-			if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections {
-				requiresCluster = true
-			}
+			requiresCluster = component.RequiresCluster()
 		}
 	}
 

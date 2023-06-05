@@ -6,7 +6,6 @@ package packager
 
 import (
 	"crypto"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -16,19 +15,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecrpublic"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/internal/packager/hook"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/otiai10/copy"
@@ -88,11 +83,43 @@ func (p *Packager) Deploy() error {
 
 	// Filter out components that are not compatible with this system
 	p.filterComponents(true)
+	componentsToDeploy := p.getValidComponents()
 
-	// Get a list of all the components we are deploying and actually deploy them
-	deployedComponents, err := p.deployComponents()
+	// Check if any of the components we are going to deploy require a cluster
+	requiresCluster := false
+	for _, component := range componentsToDeploy {
+		requiresCluster = requiresCluster || component.RequiresCluster()
+	}
+
+	// If we require the cluster for a regular package deployment, check if a hook has been uploaded to the cluster
+	// NOTE: We are not doing this for init packages at this time, init packages will manage hooks on their own.
+	if requiresCluster && !p.cfg.IsInitConfig {
+		// Make sure we have access to the cluster
+		var err error
+		if p.cluster == nil {
+			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, true)
+			if err != nil {
+				return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+			}
+		}
+
+		if err := p.getAllClusterHooks(); err != nil {
+			return fmt.Errorf("unable to get all cluster hooks: %w", err)
+		}
+
+		if err := p.runPreDeployHooks(); err != nil {
+			return fmt.Errorf("unable to run pre-deploy hooks: %w", err)
+		}
+	}
+
+	// Deploy all of the components
+	deployedComponents, err := p.deployComponents(componentsToDeploy)
 	if err != nil {
 		return fmt.Errorf("unable to deploy all components in this Zarf Package: %w", err)
+	}
+
+	if err := p.runPostDeployHooks(); err != nil {
+		return fmt.Errorf("unable to run post-deploy hooks: %w", err)
 	}
 
 	// Notify all the things about the successful deployment
@@ -104,8 +131,7 @@ func (p *Packager) Deploy() error {
 }
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
-func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy := p.getValidComponents()
+func (p *Packager) deployComponents(componentsToDeploy []types.ZarfComponent) (deployedComponents []types.DeployedComponent, err error) {
 	config.SetDeployingComponents(deployedComponents)
 
 	// Generate a value template
@@ -176,16 +202,24 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 		if p.cluster != nil {
 			// Ignore the error because there might not be a zarf namespace yet
 			// NOTE: This check is specific to initializing EKS clusters to use ECR as it's image registry
-			secret, _ := p.cluster.Kube.GetSecret("zarf", "ecr-info")
 
-			if secret != nil {
-				var ecrInfo types.ECRInfo
-				err = json.Unmarshal(secret.Data["ecrInfo"], &ecrInfo)
-				if err != nil {
-					return charts, fmt.Errorf("unable to load the ecr configuration information from the cluster: %w", err)
+			// Get all the hooks
+			err = p.getAllClusterHooks()
+			if err != nil {
+				return charts, fmt.Errorf("unable to get all cluster hooks: %w", err)
+			}
+
+			// If the ECR Hooks is present, authenticate to ECR and push the necessary repositories
+			if hookConfig, ok := p.pluginHooks[types.ECRRepositoryHook]; ok {
+				if err := hook.AuthToECR(hookConfig); err != nil {
+					// Only send a warning because they might have already been authenticated
+					message.Warnf("Unable to authenticate to ECR: %s", err.Error())
 				}
 
-				p.pluginConfig.ECRInfo = ecrInfo
+				if err := hook.CreateTheECRRepos(hookConfig, component.Images); err != nil {
+					return charts, fmt.Errorf("unable to create the ECR repositories: %w", err)
+				}
+
 				p.cfg.InitOpts.RegistryInfo.RegistryType = types.ECRRegistry
 			}
 		}
@@ -238,6 +272,10 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
+	if err := p.runPreComponentHooks(component); err != nil {
+		return charts, fmt.Errorf("unable to run pre-component hooks: %w", err)
+	}
+
 	hasImages := len(component.Images) > 0 && !noImgPush
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
@@ -281,10 +319,6 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	}
 
 	if hasImages {
-		if p.cfg.State.RegistryInfo.RegistryType == types.ECRRegistry {
-			CreateTheECRRepos(p.pluginConfig.ECRInfo, component.Images)
-		}
-
 		if err := p.pushImagesToRegistry(component.Images, noImgChecksum); err != nil {
 			return charts, fmt.Errorf("unable to push images to the registry: %w", err)
 		}
@@ -310,6 +344,10 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	if err = p.runActions(onDeploy.Defaults, onDeploy.After, valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
+	}
+
+	if err = p.runPostComponentHooks(component); err != nil {
+		return charts, fmt.Errorf("unable to run post-component hooks: %w", err)
 	}
 
 	return charts, nil
@@ -617,37 +655,4 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 		// otherwise, print the init config connection and passwords
 		utils.PrintCredentialTable(p.cfg.State, componentsToDeploy)
 	}
-}
-
-func CreateTheECRRepos(ecrInfo types.ECRInfo, images []string) error {
-	message.Warnf("@JPERRY RegistryAddress: %s", ecrInfo.RegistryURL)
-	for _, image := range images {
-		imageRef, err := transform.ParseImageRef(image)
-		if err != nil {
-			message.Fatal(err, fmt.Sprintf("@JPERRY Well there was an error when trying to parse the image ref: %s", err.Error()))
-		}
-
-		// TODO: @JPERRY we probably shouldn't hardcode region...
-		ecrClient := ecrpublic.New(session.New(&aws.Config{Region: aws.String(ecrInfo.Region)}))
-
-		repositoryName := ecrInfo.RepositoryPrefix
-		if repositoryName != "" {
-			repositoryName += "/"
-		}
-		repositoryName += imageRef.Path
-
-		_, err = ecrClient.CreateRepository(&ecrpublic.CreateRepositoryInput{
-			RepositoryName: aws.String(repositoryName)})
-		if err != nil {
-
-			if aerr, ok := err.(awserr.Error); ok {
-				// Ignore errors if the repository already exists
-				if aerr.Code() != ecrpublic.ErrCodeRepositoryAlreadyExistsException {
-					return fmt.Errorf("unable to create the ECR repository: %w", err)
-				}
-			}
-		}
-	}
-
-	return nil
 }

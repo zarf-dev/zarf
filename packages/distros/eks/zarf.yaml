@@ -24,6 +24,8 @@ variables:
   - name: ECR_REGION
     default: us-east-1
 
+  - name: ECR_REGISTRY_URL
+
 
 components:
   - name: load-eksctl

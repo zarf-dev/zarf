@@ -245,3 +245,18 @@ func (c *ZarfComponent) IsEmpty(fieldsToIgnore []string) bool {
 
 	return true
 }
+
+// RequiresCluster returns a boolean indicating if the component requires a cluster to be deployed
+func (c *ZarfComponent) RequiresCluster() bool {
+	hasImages := len(c.Images) > 0
+	hasCharts := len(c.Charts) > 0
+	hasManifests := len(c.Manifests) > 0
+	hasRepos := len(c.Repos) > 0
+	hasDataInjections := len(c.DataInjections) > 0
+
+	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections {
+		return true
+	}
+
+	return false
+}
