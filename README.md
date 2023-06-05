@@ -18,6 +18,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 - Automate Kubernetes deployments in disconnected environments
 - Automate [Software Bill of Materials (SBOM)](https://docs.zarf.dev/docs/deploy-a-zarf-package/package-sboms) generation
+- Build and [publish packages as OCI image artifacts](./5-zarf-tutorials/7-publish-and-deploy.md)
 - Provide a [web dashboard](https://docs.zarf.dev/docs/deploy-a-zarf-package/view-sboms) for viewing SBOM output
 - Create and verify package signatures with [cosign](https://github.com/sigstore/cosign)
 - [Publish](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_package_publish), [pull](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
