@@ -90,7 +90,7 @@ func FindInitStream(w http.ResponseWriter, _ *http.Request) {
 }
 
 // FindPackageStream finds and streams all packages in the current working directory
-func FindPackageStream(w http.ResponseWriter, r *http.Request) {
+func FindPackageStream(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
