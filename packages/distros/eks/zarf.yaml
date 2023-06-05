@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
-  name: "distro-eks"
-  description: "Deploy a EKS K8s cluster"
+  name: distro-eks
+  description: Deploy a EKS K8s cluster
   architecture: multi
   version: 0.0.2
 
@@ -10,8 +10,8 @@ variables:
     prompt: true
 
   - name: INSTANCE_TYPE
-    description: "The instance type for the worker nodes"
-    default: "t3.small"
+    description: The instance type for the worker nodes
+    default: t3.small
 
   - name: CLUSTER_REGION
     default: us-east-1
@@ -45,7 +45,7 @@ components:
         shasum: d40997485a13cfdfa08083bcba96a7e08b545ffb199633bde9a281830d9edfbe
 
   - name: deploy-eks-cluster
-    description: "Create an EKS cluster!"
+    description: Create an EKS cluster!
     actions:
       onDeploy:
         before:
@@ -58,7 +58,7 @@ components:
           - cmd: ./zarf tools kubectl create secret generic zarf-eks-yaml -n zarf --from-file=eks.yaml
 
   - name: teardown-eks-cluster
-    description: "Delete the EKS cluster that this package was used to create."
+    description: Delete the EKS cluster that this package was used to create.
     actions:
       onDeploy:
         before:

@@ -80,6 +80,9 @@ func (p *Packager) Deploy() error {
 		}
 	}()
 
+	// Filter out components that are not compatible with this system
+	p.filterComponents(true)
+
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
 	if err != nil {

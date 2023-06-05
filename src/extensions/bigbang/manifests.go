@@ -116,7 +116,7 @@ func manifestValuesFile(path string) (secret corev1.Secret, err error) {
 	}
 
 	// Define the name as the file name without the extension.
-	baseName := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	baseName := strings.TrimSuffix(path, filepath.Ext(path))
 
 	// Replace non-alphanumeric characters with a dash.
 	baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")

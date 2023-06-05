@@ -1,0 +1,25 @@
+kind: ZarfPackageConfig
+metadata:
+  name: differential-package
+  version: "###ZARF_PKG_TMPL_PACKAGE_VERSION###"
+  description: Demo Zarf loading resources into a gitops service
+
+components:
+  - name: versioned-assets
+    required: true
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.0.0
+      - ghcr.io/defenseunicorns/zarf/agent:###ZARF_PKG_TMPL_PACKAGE_VERSION###
+    repos:
+      - https://github.com/defenseunicorns/zarf.git@c74e2e9626da0400e0a41e78319b3054c53a5d4e
+      - https://github.com/defenseunicorns/zarf.git@refs/tags/###ZARF_PKG_TMPL_PACKAGE_VERSION###
+
+  - name: generalized-assets
+    required: true
+    images:
+      - ghcr.io/stefanprodan/podinfo:latest
+    repos:
+      # Do a full Git Repo Mirror
+      - https://github.com/stefanprodan/podinfo.git
+      - https://github.com/kelseyhightower/nocode.git
+      - https://github.com/defenseunicorns/zarf.git@refs/heads/main
