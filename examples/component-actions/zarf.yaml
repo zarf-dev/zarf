@@ -127,7 +127,7 @@ components:
       # this file will be copied to the target location and the cat, dog, and snake sounds will be replaced with their values
       # requires the on-deploy-with-dynamic-variable and on-deploy-with-multiple-variables components
       - source: test.txt
-        target: templated.txt
+        target: test-templated.txt
 
   - name: on-deploy-with-timeout
     description: This component will fail after 1 second
@@ -169,7 +169,7 @@ components:
           - cmd: touch $ZARF_VAR_TEST_FILENAME
             env:
               # this will set the env var ZARF_VAR_TEST_FILENAME - useful for passing information into scripts
-              - ZARF_VAR_TEST_FILENAME=filename-from-env.txt
+              - ZARF_VAR_TEST_FILENAME=test-filename-from-env.txt
 
   - name: on-create-with-network-wait-action
     description: This component will wait for 15 seconds for a network resource to be available

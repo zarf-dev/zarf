@@ -75,6 +75,9 @@ jobs:
           sudo rm -rf zarf-sbom /tmp/zarf-*
           sudo env "PATH=$PATH" CI=true make delete-packages
           sudo build/zarf tools clear-cache
+          sudo docker system prune --all
+          go clean -cache
+          lsblk -f
 
       # Builds init packages since GoReleaser won't handle this for us
       - name: Create release time CVE report
