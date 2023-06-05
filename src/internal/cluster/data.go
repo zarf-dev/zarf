@@ -56,10 +56,10 @@ iterator:
 	// The eternal loop because some data injections can take a very long time
 	for {
 		message.Debugf("Attempting to inject data into %s", data.Target)
-		source := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
+		source := filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 		if utils.InvalidPath(source) {
-			// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
-			source = filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+			// Pre-v0.27.0 file location
+			source = filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
 			if utils.InvalidPath(source) {
 				message.Warnf("Unable to find the data injection source path %s", source)
 				return

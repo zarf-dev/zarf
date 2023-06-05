@@ -484,7 +484,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		// Iterate over all manifests.
 		for manifestIdx, manifest := range component.Manifests {
 			for fileIdx, path := range manifest.Files {
-				rel := filepath.Join(types.ManifestsFolder, fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+				rel := filepath.Join(types.ManifestsFolder, strconv.Itoa(fileIdx), filepath.Base(path))
 				dst := filepath.Join(componentPath.Base, rel)
 
 				// Copy manifests without any processing.

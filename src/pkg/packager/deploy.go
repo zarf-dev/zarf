@@ -301,6 +301,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 
 		fileLocation := filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
 		if utils.InvalidPath(fileLocation) {
+			// Pre-v0.27.0 file location
 			fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
 		}
 
@@ -528,14 +529,22 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 	}
 
 	for _, manifest := range component.Manifests {
-		for idx := range manifest.Files {
-			if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
-				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
-				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
-				if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
-					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
+		for fileIdx, file := range manifest.Files {
+			fileRel := filepath.Join(strconv.Itoa(fileIdx), filepath.Base(file))
+			fileLocation := filepath.Join(componentPath.Manifests, fileRel)
+
+			if utils.InvalidPath(fileLocation) {
+				// Pre-v0.28.0 file location
+				fileRel = fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx)
+				if utils.InvalidPath(filepath.Join(componentPath.Manifests, fileRel)) {
+					// Pre-v0.27.0 file location
+					if utils.InvalidPath(filepath.Join(componentPath.Manifests, file)) {
+						return installedCharts, fmt.Errorf("unable to find manifest file %s", file)
+					}
 				}
 			}
+
+			manifest.Files[fileIdx] = fileRel
 		}
 		// Move kustomizations to files now
 		for idx := range manifest.Kustomizations {
