@@ -36,17 +36,20 @@ func Generate(cfg *types.PackagerConfig) (*Values, error) {
 
 	regInfo := cfg.State.RegistryInfo
 
-	pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, regInfo.PushPassword)
-	if err != nil {
-		return nil, fmt.Errorf("error generating htpasswd string: %w", err)
-	}
+	// Only calculate this for internal registries to allow longer external passwords
+	if regInfo.InternalRegistry {
+		pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, regInfo.PushPassword)
+		if err != nil {
+			return nil, fmt.Errorf("error generating htpasswd string: %w", err)
+		}
 
-	pullUser, err := utils.GetHtpasswdString(regInfo.PullUsername, regInfo.PullPassword)
-	if err != nil {
-		return nil, fmt.Errorf("error generating htpasswd string: %w", err)
-	}
+		pullUser, err := utils.GetHtpasswdString(regInfo.PullUsername, regInfo.PullPassword)
+		if err != nil {
+			return nil, fmt.Errorf("error generating htpasswd string: %w", err)
+		}
 
-	generated.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
+		generated.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
+	}
 
 	generated.registry = regInfo.Address
 
