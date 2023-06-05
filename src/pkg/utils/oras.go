@@ -295,22 +295,17 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 		if component.Name == "" {
 			return nil, fmt.Errorf("component %s does not exist in this package", name)
 		}
-		layers = append(layers, root.Locate(filepath.Join(zarfconfig.ZarfComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 	}
 	for _, component := range pkg.Components {
-		// If we requested this component, or it is required, we need to pull its images
+		// If we requested this component, or it is required, we need to pull its images and tarball
 		if SliceContains(requestedComponents, component.Name) || component.Required {
 			images = append(images, component.Images...)
-		}
-		// If we did not request this component, but it is required, we need to pull it's tarball
-		if !SliceContains(requestedComponents, component.Name) && component.Required {
 			layers = append(layers, root.Locate(filepath.Join(zarfconfig.ZarfComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 		}
 	}
 	if len(images) > 0 {
 		// Add the image index and the oci-layout layers
-		layers = append(layers, root.Locate(root.indexPath))
-		layers = append(layers, root.Locate(root.ociLayoutPath))
+		layers = append(layers, root.Locate(root.indexPath), root.Locate(root.ociLayoutPath))
 		// Append the sbom.tar layer if it exists
 		sbomDescriptor := root.Locate(zarfconfig.ZarfSBOMTar)
 		if sbomDescriptor.Digest != "" {
