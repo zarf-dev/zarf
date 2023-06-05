@@ -19,7 +19,7 @@ require (
 	github.com/fluxcd/helm-controller/api v0.34.1
 	github.com/fluxcd/source-controller/api v0.36.1
 	github.com/go-chi/chi/v5 v5.0.8
-	github.com/go-git/go-git/v5 v5.7.0
+	github.com/go-git/go-git/v5 v5.6.1
 	github.com/go-logr/logr v1.2.4
 	github.com/goccy/go-yaml v1.11.0
 	github.com/google/go-containerregistry v0.15.2
