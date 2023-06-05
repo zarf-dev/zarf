@@ -118,7 +118,7 @@ In the more complex use case, your package consists of updates for many apps/sys
 ## Why Use Zarf?
 
 - 💸 **Free and Open-Source.** Zarf will always be free to use and maintained by the open-source community.
-- ⭐️ **Zero Dependencies.** As a statically compiled binary, zarf has zero dependencies to run on any machine. 
+- ⭐️ **Zero Dependencies.** As a statically compiled binary, the Zarf CLI has zero dependencies to run on any machine. 
 - 🔓 **No Vendor Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you still can use your helm charts to deploy your software manually.
 - 💻 **OS Agnostic.** Zarf supports numerous operating systems. A full matrix of supported OSes, architectures and featuresets is coming soon.
 - 📦 **Highly Distributable.** Integrate and deploy software from multiple secure development environments including edge, embedded systems, secure cloud, data centers, and even local environments.
