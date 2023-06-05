@@ -142,7 +142,7 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []st
 
 			}
 
-			k.Log("Ready pods", readyPods)
+			k.Log("Ready pods %#v", readyPods)
 			if len(readyPods) > 0 {
 				return readyPods
 			}
