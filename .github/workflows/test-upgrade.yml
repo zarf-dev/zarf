@@ -68,7 +68,6 @@ jobs:
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
           sudo chown $USER /tmp/zarf-*.log
 
-
       - name: Run the upgrade tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
