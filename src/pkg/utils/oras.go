@@ -187,20 +187,19 @@ func (o *OrasRemote) CheckAuth() error {
 // FetchRoot fetches the root manifest from the remote repository.
 func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
 	// get the manifest descriptor
-	// ref.Reference can be a tag or a digest
 	descriptor, err := o.Resolve(o.Context, o.Reference.Reference)
 	if err != nil {
 		return nil, err
 	}
 
 	// get the manifest itself
-	pulled, err := content.FetchAll(o.Context, o, descriptor)
+	bytes, err := o.FetchLayer(descriptor)
 	if err != nil {
 		return nil, err
 	}
 	manifest := ocispec.Manifest{}
 
-	if err = json.Unmarshal(pulled, &manifest); err != nil {
+	if err = json.Unmarshal(bytes, &manifest); err != nil {
 		return nil, err
 	}
 	return NewZarfOCIManifest(&manifest), nil
@@ -221,11 +220,7 @@ func (o *OrasRemote) FetchManifest(desc ocispec.Descriptor) (manifest *ZarfOCIMa
 
 // FetchLayer fetches the layer with the given descriptor from the remote repository.
 func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err error) {
-	bytes, err = content.FetchAll(o.Context, o, desc)
-	if err != nil {
-		return bytes, err
-	}
-	return bytes, nil
+	return content.FetchAll(o.Context, o, desc)
 }
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.
@@ -286,7 +281,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	if err != nil {
 		return nil, err
 	}
-	images := []string{}
+	images := map[string]bool{}
 	tarballFormat := "%s.tar"
 	for _, name := range requestedComponents {
 		component := Find(pkg.Components, func(component types.ZarfComponent) bool {
@@ -299,7 +294,9 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	for _, component := range pkg.Components {
 		// If we requested this component, or it is required, we need to pull its images and tarball
 		if SliceContains(requestedComponents, component.Name) || component.Required {
-			images = append(images, component.Images...)
+			for _, image := range component.Images {
+				images[image] = true
+			}
 			layers = append(layers, root.Locate(filepath.Join(zarfconfig.ZarfComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 		}
 	}
@@ -315,7 +312,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 		if err != nil {
 			return nil, err
 		}
-		for _, image := range images {
+		for image := range images {
 			manifestDescriptor := Find(index.Manifests, func(layer ocispec.Descriptor) bool {
 				return layer.Annotations[ocispec.AnnotationBaseImageName] == image
 			})
@@ -346,7 +343,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 //   - zarf.yaml
 //   - checksums.txt
 //   - zarf.yaml.sig
-func (o *OrasRemote) PullPackage(out string, concurrency int, layersToPull ...ocispec.Descriptor) error {
+func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) error {
 	isPartialPull := len(layersToPull) > 0
 	ref := o.Reference
 	message.Debugf("Pulling %s", ref.String())
@@ -373,7 +370,7 @@ func (o *OrasRemote) PullPackage(out string, concurrency int, layersToPull ...oc
 	}
 	estimatedBytes += manifest.Config.Size
 
-	dst, err := file.New(out)
+	dst, err := file.New(destinationDir)
 	if err != nil {
 		return err
 	}
@@ -407,7 +404,7 @@ func (o *OrasRemote) PullPackage(out string, concurrency int, layersToPull ...oc
 	doneSaving := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go RenderProgressBarForLocalDirWrite(out, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
+	go RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
 	_, err = oras.Copy(o.Context, o.Repository, ref.String(), dst, ref.String(), copyOpts)
 	if err != nil {
 		return err
