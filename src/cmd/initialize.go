@@ -47,6 +47,8 @@ var initCmd = &cobra.Command{
 			message.Fatal(err, err.Error())
 		}
 
+		pkgConfig.PkgSourcePath = pkgConfig.DeployOpts.PackagePath
+
 		// Ensure uppercase keys from viper
 		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
 		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(viperConfig, pkgConfig.DeployOpts.SetVariables)

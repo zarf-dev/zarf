@@ -88,6 +88,10 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	var cachePath string
 	if parent.Import.URL != "" {
+		if !strings.HasSuffix(parent.Import.URL, skeletonSuffix) {
+			return child, fmt.Errorf("import URL must be a 'skeleton' package: %s", parent.Import.URL)
+		}
+
 		// Save all the OCI imported components into our build data
 		p.cfg.Pkg.Build.OCIImportedComponents[parent.Import.URL] = childComponentName
 
@@ -146,16 +150,25 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	// If it's OCI, we need to unpack the component tarball
 	if parent.Import.URL != "" {
 		dir := filepath.Join(cachePath, "components", child.Name)
+		componentTarball := fmt.Sprintf("%s.tar", dir)
 		parent.Import.Path = filepath.Join(parent.Import.Path, "components", child.Name)
-		if !utils.InvalidPath(dir) {
-			err = os.RemoveAll(dir)
-			if err != nil {
-				return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
+		if !utils.InvalidPath(componentTarball) {
+			if !utils.InvalidPath(dir) {
+				err = os.RemoveAll(dir)
+				if err != nil {
+					return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
+				}
 			}
-		}
-		err = archiver.Unarchive(fmt.Sprintf("%s.tar", dir), filepath.Join(cachePath, "components"))
-		if err != nil {
-			return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
+			err = archiver.Unarchive(componentTarball, filepath.Join(cachePath, "components"))
+			if err != nil {
+				return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
+			}
+		} else {
+			// If the tarball doesn't exist (skeleton component had no local resources), we need to create the directory anyways in case there are actions
+			err := utils.CreateDirectory(dir, 0700)
+			if err != nil {
+				return child, fmt.Errorf("unable to create composed component cache path %s: %w", cachePath, err)
+			}
 		}
 	}
 
@@ -255,6 +268,8 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 		composed := p.getComposedFilePath(pathAncestry, child.CosignKeyPath)
 		child.CosignKeyPath = composed
 	}
+
+	child = p.composeExtensions(pathAncestry, child)
 
 	return child, nil
 }

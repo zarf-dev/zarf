@@ -3,7 +3,7 @@ metadata:
   name: wordpress       # specifies the name of our package and should be unique and unchanging through updates
   version: 16.0.4       # (optional) a version we can track as we release updates or publish to a registry
   description: |        # (optional) a human-readable description of the package that you are creating
-    "A Zarf Package that deploys the WordPress blogging and content management platform"
+    A Zarf Package that deploys the WordPress blogging and content management platform
 
 variables:
     # The unique name of the variable corresponding to the ###ZARF_VAR_### template
@@ -39,7 +39,7 @@ variables:
 components:
   - name: wordpress  # specifies the name of our component and should be unique and unchanging through updates
     description: |   # (optional) a human-readable description of the component you are defining
-      "Deploys the Bitnami-packaged WordPress chart into the cluster"
+      Deploys the Bitnami-packaged WordPress chart into the cluster
     required: true   # (optional) sets the component as 'required' so that it is always deployed
     charts:
       - name: wordpress
