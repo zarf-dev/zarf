@@ -25,6 +25,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 	"github.com/pterm/pterm"
 	corev1 "k8s.io/api/core/v1"
@@ -101,7 +102,7 @@ func (p *Packager) Deploy() error {
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
 	componentsToDeploy := p.getValidComponents()
 
-	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
+	if utils.IsOCIURL(p.cfg.PkgSourcePath) {
 		requestedNames := p.getRequestedComponentList(p.cfg.DeployOpts.Components)
 		componentsToPull := []string{}
 		for _, component := range componentsToDeploy {
@@ -117,7 +118,15 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			}
 			err = p.remote.PullPackage(p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency, layersToPull...)
 			if err != nil {
-				message.Fatalf(err, "Unable to pull components from %s: %s", p.cfg.DeployOpts.PackagePath, err.Error())
+				return deployedComponents, fmt.Errorf("unable to pull the package: %w", err)
+			}
+			for _, component := range componentsToPull {
+				tarball := filepath.Join(p.tmp.Components, fmt.Sprintf("%s.tar", component))
+				err := archiver.Unarchive(tarball, p.tmp.Components)
+				if err != nil {
+					return deployedComponents, fmt.Errorf("unable to extract the component: %w", err)
+				}
+				_ = os.Remove(tarball)
 			}
 		}
 	}

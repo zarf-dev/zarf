@@ -142,8 +142,8 @@ func (p *Packager) publish(url string) error {
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = p.cfg.PublishOpts.CopyOptions.Concurrency
-	copyOpts.OnCopySkipped = dst.PrintLayerStatus("exists")
-	copyOpts.PostCopy = dst.PrintLayerStatus("pushed")
+	copyOpts.OnCopySkipped = dst.PrintLayerSuccess
+	copyOpts.PostCopy = dst.PrintLayerSuccess
 
 	root, err := p.publishImage(dst, src, descs, copyOpts)
 	if err != nil {
