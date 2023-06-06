@@ -7,13 +7,10 @@ import "fmt"
 
 // List out all known hooks (these are internal hooks)
 const (
-	HookSecretPrefix   = "zarf-hook-"
-	ECRRepositoryHook  = "ecr-repository"
-	ECRCredentialsHook = "ecr-credentials"
+	HookSecretPrefix   = "zarf-hook"
+	ECRRepositoryHook  = "zarf-hook-ecr-repository"
+	ECRCredentialsHook = "zarf-hook-ecr-credentials"
 )
-
-// AllHookNames is a list of all internal hooks that Zarf will manage execution of.
-var AllHookNames = []string{ECRRepositoryHook, ECRCredentialsHook}
 
 // HookLifecycle defines when a hook should be run. The executing order of hooks are not guaranteed.
 // NOTE: BeforeComponent hooks will always run before any 'beforeAction' component hooks.

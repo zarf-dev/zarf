@@ -50,13 +50,10 @@ func AuthToECR(ecrHook types.HookConfig) error {
 
 	configs := []*configfile.ConfigFile{cfg}
 
-	registryName := strings.Split(registryURL, "/")[0]
-	var key = registryName
-
-	authConfig := docker_types.AuthConfig{Username: username, Password: password, ServerAddress: key}
-	err = configs[0].GetCredentialsStore(key).Store(authConfig)
+	authConfig := docker_types.AuthConfig{Username: username, Password: password, ServerAddress: registryURL}
+	err = configs[0].GetCredentialsStore(registryURL).Store(authConfig)
 	if err != nil {
-		return fmt.Errorf("unable to get credentials for %s: %w", key, err)
+		return fmt.Errorf("unable to get credentials for %s: %w", registryURL, err)
 	}
 
 	return nil

@@ -15,21 +15,22 @@ import (
 
 // GetAllClusterHooks searches the zarf namespace for all hooks and stores them within the Packager
 func (p *Packager) getAllClusterHooks() error {
-	//TODO: @JPERRY this should search for all secrets with a prefix of "zarf-hook-"
-	for _, hookName := range types.AllHookNames {
-		// Ignore errors for now since we don't expect all hooks to be present
-		hookSecret, _ := p.cluster.Kube.GetSecret(cluster.ZarfNamespaceName, fmt.Sprintf("%s%s", types.HookSecretPrefix, hookName))
-		if hookSecret != nil {
-			hookConfig := types.HookConfig{HookName: hookName}
 
-			// Get any data from the hook secret
-			err := json.Unmarshal(hookSecret.Data["data"], &hookConfig)
-			if err != nil {
-				return fmt.Errorf("unable to load the hook configuration for the %s hook: %w", hookName, err)
-			}
+	// Get all secrets with the hook label
+	hookSecrets, err := p.cluster.Kube.GetSecretsWithLabel(cluster.ZarfNamespaceName, types.HookSecretPrefix)
+	if err != nil {
+		return fmt.Errorf("unable to get hook secrets")
+	}
+	for _, hookSecret := range hookSecrets.Items {
+		hookConfig := types.HookConfig{}
 
-			p.pluginHooks[hookName] = hookConfig
+		// Get any data from the hook secret
+		err := json.Unmarshal(hookSecret.Data["data"], &hookConfig)
+		if err != nil {
+			return fmt.Errorf("unable to load the hook configuration for the %s hook: %w", hookSecret.Name, err)
 		}
+
+		p.pluginHooks[hookSecret.Name] = hookConfig
 	}
 
 	return nil
