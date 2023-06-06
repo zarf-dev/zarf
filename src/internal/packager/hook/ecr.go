@@ -25,6 +25,7 @@ import (
 
 const publicECRRegistryURL = "public.ecr.aws"
 
+// AuthToECR fetches credentials for the ECR registry listed in the hook and saves them to the users local default docker config.json location
 func AuthToECR(ecrHook types.HookConfig) error {
 	region := ecrHook.HookData["region"].(string)
 	registryURL := ecrHook.HookData["registryURL"].(string)
@@ -68,7 +69,6 @@ func AuthToECR(ecrHook types.HookConfig) error {
 	return nil
 }
 
-// . TODO: @JPERRY Check my error handling here
 func fetchAuthToPublicECR(registryURL string, region string) (string, error) {
 	ecrClient := ecrpublic.New(session.New(&aws.Config{Region: aws.String(region)}))
 	authToken, err := ecrClient.GetAuthorizationToken(&ecrpublic.GetAuthorizationTokenInput{})
@@ -89,6 +89,7 @@ func fetchAuthToPrivateECR(registryURL string, region string) (string, error) {
 	return *authToken.AuthorizationData[0].AuthorizationToken, err
 }
 
+// CreateTheECRRepos creates an ecr repository for each image provided
 func CreateTheECRRepos(ecrHook types.HookConfig, images []string) error {
 	registryPrefix := ecrHook.HookData["repositoryPrefix"].(string)
 	region := ecrHook.HookData["region"].(string)

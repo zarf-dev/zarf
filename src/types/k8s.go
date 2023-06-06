@@ -52,7 +52,6 @@ type GitServerInfo struct {
 
 	Address string `json:"address" jsonschema:"description=URL address of the git server"`
 
-	// TODO: Migrate this to use a GitServerType enum
 	InternalServer bool `json:"internalServer" jsonschema:"description=Indicates if we are using a git server that Zarf is directly managing"`
 }
 
@@ -63,7 +62,6 @@ type ArtifactServerInfo struct {
 
 	Address string `json:"address" jsonschema:"description=URL address of the artifact registry"`
 
-	// TODO: Migrate this to use the ArtifactServerType enum
 	InternalServer bool `json:"internalServer" jsonschema:"description=Indicates if we are using a artifact registry that Zarf is directly managing"`
 }
 
@@ -77,7 +75,6 @@ type RegistryInfo struct {
 	Address  string `json:"address" jsonschema:"description=URL address of the registry"`
 	NodePort int    `json:"nodePort" jsonschema:"description=Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster"`
 
-	// TODO: Migrate this to use the RegistryType enum
 	InternalRegistry bool `json:"internalRegistry" jsonschema:"description=Indicates if we are using a registry that Zarf is directly managing"`
 
 	Secret string `json:"secret" jsonschema:"description=Secret value that the registry was seeded with"`
