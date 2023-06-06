@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-import { DeployingComponents } from '$lib/api';
+import { Packages } from '$lib/api';
 import type { ZarfComponent } from '$lib/api-types';
 import type { StepProps } from '@defense-unicorns/unicorn-ui/Stepper/stepper.types';
 
@@ -61,7 +61,7 @@ export function finalizeStepState(steps: StepProps[], success: boolean): StepPro
 // Retrieves the components that (as far as we know) have successfully deployed.
 export async function getDeployedComponents(pkgName: string, components: ComponentStepMap): Promise<StepProps[]> {
 	const oldComponents = getComponentStepMapComponents(components);
-	const deployingComponents = await DeployingComponents.list(pkgName);
+	const deployingComponents = await Packages.deployingComponents.list(pkgName);
 	return oldComponents.map((component: StepProps, idx: number) => {
 		if (deployingComponents && deployingComponents[idx]) {
 			return setStepSuccessful(component);

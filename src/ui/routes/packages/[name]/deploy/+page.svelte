@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import type { APIZarfDeployPayload, ZarfDeployOptions } from '$lib/api-types';
+	import type { APIZarfDeployPayload, ZarfDeployOptions, ZarfInitOptions } from '$lib/api-types';
 	import { Dialog, Stepper, Typography, type StepProps } from '@ui';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import bigZarf from '@images/zarf-bubbles-right.png';
@@ -40,11 +40,8 @@
 			components: requestedComponents,
 			sGetKeyPath: '',
 			packagePath: $pkgStore.path,
-			setVariables: {},
-			insecure: false,
-			// "as" will cause the obj to satisfy the type
-			// it is missing "shasum"
-		} as unknown as ZarfDeployOptions,
+			setVariables: {}
+		} as ZarfDeployOptions,
 	};
 
 	if (isInitPkg) {
@@ -69,7 +66,7 @@
 				pushUsername: 'zarf-push',
 				secret: '',
 			},
-		};
+		} as ZarfInitOptions;
 	}
 
 	let successful = false;

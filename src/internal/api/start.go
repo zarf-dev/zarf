@@ -100,10 +100,9 @@ func LaunchAPIServer() {
 			r.Get("/connections", packages.ListConnections)
 			r.Get("/sbom/{path}", packages.ExtractSBOM)
 			r.Delete("/sbom", packages.DeleteSBOM)
-		})
-
-		r.Route("/components", func(r chi.Router) {
-			r.Get("/{name}/deployed", components.ListDeployingComponents)
+			r.Route("/{name}/components", func(r chi.Router) {
+				r.Get("/deployed", components.ListDeployingComponents)
+			})
 		})
 	})
 
