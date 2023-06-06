@@ -32,6 +32,7 @@ import (
 type Packager struct {
 	cfg      *types.PackagerConfig
 	cluster  *cluster.Cluster
+	remote   *utils.OrasRemote
 	tmp      types.TempPaths
 	arch     string
 	warnings []string
@@ -63,6 +64,13 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 			cfg: cfg,
 		}
 	)
+
+	if utils.IsOCIURL(cfg.DeployOpts.PackagePath) {
+		pkgConfig.remote, err = utils.NewOrasRemote(cfg.DeployOpts.PackagePath)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// Create a temp directory for the package
 	if pkgConfig.tmp, err = createPaths(); err != nil {
@@ -235,9 +243,13 @@ func createPaths() (paths types.TempPaths, err error) {
 	return paths, err
 }
 
-func getRequestedComponentList(requestedComponents string) []string {
+func (p *Packager) getRequestedComponentList(requestedComponents string) []string {
 	if requestedComponents != "" {
-		return strings.Split(requestedComponents, ",")
+		split := strings.Split(requestedComponents, ",")
+		for idx, component := range split {
+			split[idx] = strings.ToLower(strings.TrimSpace(component))
+		}
+		return split
 	}
 
 	return []string{}

@@ -79,9 +79,6 @@ var (
 	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
 	ZarfSeedPort string
 
-	// Dirty Solution to getting the real time deployedComponents components.
-	deployedComponents []types.DeployedComponent
-
 	// SkipLogFile is a flag to skip logging to a file
 	SkipLogFile bool
 
@@ -155,24 +152,6 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 			Username: username,
 			Password: secret,
 		}))
-}
-
-// GetDeployingComponents returns the list of deploying components.
-// TODO: (@jeff-mccoy) this should be moved out of config.
-func GetDeployingComponents() []types.DeployedComponent {
-	return deployedComponents
-}
-
-// SetDeployingComponents sets the list of deploying components.
-// TODO: (@jeff-mccoy) this should be moved out of config.
-func SetDeployingComponents(components []types.DeployedComponent) {
-	deployedComponents = components
-}
-
-// ClearDeployingComponents clears the list of deploying components.
-// TODO: (@jeff-mccoy) this should be moved out of config.
-func ClearDeployingComponents() {
-	deployedComponents = []types.DeployedComponent{}
 }
 
 // GetValidPackageExtensions returns the valid package extensions.

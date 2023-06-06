@@ -103,7 +103,7 @@ func LaunchAPIServer() {
 		})
 
 		r.Route("/components", func(r chi.Router) {
-			r.Get("/deployed", components.ListDeployingComponents)
+			r.Get("/deployed/{name}", components.ListDeployingComponents)
 		})
 	})
 

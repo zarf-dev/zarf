@@ -23,14 +23,10 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 		// Download all the layers we need
 		pullSBOM := includeSBOM || outputSBOM != ""
-		pullZarfSig := inspectPublicKey != ""
 
-		requestedFiles := []string{config.ZarfYAML}
+		requestedFiles := []string{}
 		if pullSBOM {
 			requestedFiles = append(requestedFiles, config.ZarfSBOMTar)
-		}
-		if pullZarfSig {
-			requestedFiles = append(requestedFiles, config.ZarfYAMLSignature)
 		}
 
 		message.Debugf("Pulling layers %v from %s", requestedFiles, p.cfg.DeployOpts.PackagePath)

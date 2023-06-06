@@ -100,7 +100,27 @@ func (p *Packager) Deploy() error {
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
 	componentsToDeploy := p.getValidComponents()
-	config.SetDeployingComponents(deployedComponents)
+
+	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
+		requestedNames := p.getRequestedComponentList(p.cfg.DeployOpts.Components)
+		componentsToPull := []string{}
+		for _, component := range componentsToDeploy {
+			alreadyPulled := p.isRequiredOrRequested(component, requestedNames)
+			if !alreadyPulled {
+				componentsToPull = append(componentsToPull, component.Name)
+			}
+		}
+		if len(componentsToPull) > 0 {
+			layersToPull, err := p.remote.LayersFromRequestedComponents(componentsToPull)
+			if err != nil {
+				return deployedComponents, fmt.Errorf("unable to get published component image layers: %s", err.Error())
+			}
+			err = p.remote.PullPackage(p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency, layersToPull...)
+			if err != nil {
+				message.Fatalf(err, "Unable to pull components from %s: %s", p.cfg.DeployOpts.PackagePath, err.Error())
+			}
+		}
+	}
 
 	// Generate a value template
 	if valueTemplate, err = template.Generate(p.cfg); err != nil {
@@ -132,7 +152,6 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Deploy the component
 		deployedComponent.InstalledCharts = charts
 		deployedComponents = append(deployedComponents, deployedComponent)
-		config.SetDeployingComponents(deployedComponents)
 
 		// Save deployed package information to k8s
 		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
@@ -149,7 +168,6 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		}
 	}
 
-	config.ClearDeployingComponents()
 	return deployedComponents, nil
 }
 

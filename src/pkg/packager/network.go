@@ -33,22 +33,17 @@ func (p *Packager) handlePackagePath() error {
 
 	// Handle case where deploying remote package stored in an OCI registry
 	if utils.IsOCIURL(opts.PackagePath) {
-		ociURL := opts.PackagePath
 		p.cfg.DeployOpts.PackagePath = p.tmp.Base
-		client, err := utils.NewOrasRemote(ociURL)
-		if err != nil {
-			return err
-		}
-		requestedComponents := getRequestedComponentList(p.cfg.DeployOpts.Components)
+		requestedComponents := p.getRequestedComponentList(p.cfg.DeployOpts.Components)
 		layersToPull := []ocispec.Descriptor{}
 		if len(requestedComponents) > 0 {
-			layers, err := client.LayersFromRequestedComponents(requestedComponents)
+			layers, err := p.remote.LayersFromRequestedComponents(requestedComponents)
 			if err != nil {
 				return fmt.Errorf("unable to get published component image layers: %s", err.Error())
 			}
 			layersToPull = append(layersToPull, layers...)
 		}
-		return client.PullPackage(p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency, layersToPull...)
+		return p.remote.PullPackage(p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency, layersToPull...)
 	}
 
 	// Handle case where deploying remote package validated via sget

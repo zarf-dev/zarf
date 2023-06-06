@@ -378,8 +378,8 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency
-	copyOpts.OnCopySkipped = PrintLayerExists
-	copyOpts.PostCopy = PrintLayerExists
+	copyOpts.OnCopySkipped = o.PrintLayerStatus("exists")
+	copyOpts.PostCopy = o.PrintLayerStatus("pulled")
 	if isPartialPull {
 		paths := []string{}
 		for _, layer := range layersToPull {
@@ -420,14 +420,16 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 }
 
 // PrintLayerExists prints a success message to the console when a layer has been successfully published to a registry.
-func PrintLayerExists(_ context.Context, desc ocispec.Descriptor) error {
-	title := desc.Annotations[ocispec.AnnotationTitle]
-	var format string
-	if title != "" {
-		format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], First30last30(title))
-	} else {
-		format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
+func (o *OrasRemote) PrintLayerStatus(status string) func(_ context.Context, desc ocispec.Descriptor) error {
+	return func(_ context.Context, desc ocispec.Descriptor) error {
+		title := desc.Annotations[ocispec.AnnotationTitle]
+		var format string
+		if title != "" {
+			format = fmt.Sprintf("%s %s %s", desc.Digest.Encoded()[:12], First30last30(title), status)
+		} else {
+			format = fmt.Sprintf("%s [%s] %s", desc.Digest.Encoded()[:12], desc.MediaType, status)
+		}
+		message.Successf(format)
+		return nil
 	}
-	message.Successf(format)
-	return nil
 }
