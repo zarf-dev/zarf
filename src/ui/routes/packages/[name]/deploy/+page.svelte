@@ -1,4 +1,4 @@
-<!-- 
+<!--
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
@@ -80,9 +80,14 @@
 	let dialogState: { topLine: string; bottomLine: string } = getDialogContent(successful);
 
 	async function updateComponentSteps(): Promise<void> {
-		return getDeployedComponents(components).then((value: StepProps[]) => {
-			componentSteps = value;
-		});
+		if (!$pkgStore.zarfPackage.metadata?.name) {
+			return;
+		}
+		return getDeployedComponents($pkgStore.zarfPackage.metadata.name, components).then(
+			(value: StepProps[]) => {
+				componentSteps = value;
+			}
+		);
 	}
 
 	onMount(async () => {

@@ -62,7 +62,7 @@ const Packages = {
 };
 
 const DeployingComponents = {
-	list: () => http.get<DeployedComponent[]>('/components/deployed'),
+	list: (pkgName: string) => http.get<DeployedComponent[]>(`/components/${encodeURIComponent(pkgName)}/deployed`),
 };
 
 export { Auth, Cluster, Packages, DeployingComponents };

@@ -59,9 +59,9 @@ export function finalizeStepState(steps: StepProps[], success: boolean): StepPro
 }
 
 // Retrieves the components that (as far as we know) have successfully deployed.
-export async function getDeployedComponents(components: ComponentStepMap): Promise<StepProps[]> {
+export async function getDeployedComponents(pkgName: string, components: ComponentStepMap): Promise<StepProps[]> {
 	const oldComponents = getComponentStepMapComponents(components);
-	const deployingComponents = await DeployingComponents.list();
+	const deployingComponents = await DeployingComponents.list(pkgName);
 	return oldComponents.map((component: StepProps, idx: number) => {
 		if (deployingComponents && deployingComponents[idx]) {
 			return setStepSuccessful(component);
