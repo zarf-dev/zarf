@@ -212,15 +212,22 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	// Use the output path if the user specified it.
-	packageName := filepath.Join(p.cfg.CreateOpts.OutputDirectory, p.GetPackageName())
+	if utils.IsOCIURL(p.cfg.CreateOpts.Destination) {
+		err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, p.cfg.CreateOpts.OCIConcurrency)
+		if err != nil {
+			return fmt.Errorf("unable to publish package: %w", err)
+		}
+	} else {
+		// Use the output path if the user specified it.
+		packageName := filepath.Join(p.cfg.CreateOpts.Destination, p.GetPackageName())
 
-	// Try to remove the package if it already exists.
-	_ = os.Remove(packageName)
+		// Try to remove the package if it already exists.
+		_ = os.Remove(packageName)
 
-	// Create the package tarball.
-	if err := p.archivePackage(p.tmp.Base, packageName); err != nil {
-		return fmt.Errorf("unable to archive package: %w", err)
+		// Create the package tarball.
+		if err := p.archivePackage(p.tmp.Base, packageName); err != nil {
+			return fmt.Errorf("unable to archive package: %w", err)
+		}
 	}
 
 	// Output the SBOM files into a directory if specified.

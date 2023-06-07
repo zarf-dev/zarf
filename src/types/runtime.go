@@ -5,7 +5,6 @@
 package types
 
 import (
-	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -37,24 +36,25 @@ type ZarfDeployOptions struct {
 	SetVariables           map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package"`
 	PublicKeyPath          string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 	AdoptExistingResources bool              `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`
+	OCIRemoteOptions
 }
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
 type ZarfPublishOptions struct {
 	Reference          registry.Reference `jsonschema:"description=Remote registry reference"`
-	CopyOptions        oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
 	PackagePath        string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
 	SigningKeyPassword string             `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sign the published package"`
 	SigningKeyPath     string             `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
+	OCIRemoteOptions
 }
 
 // ZarfPullOptions tracks the user-defined preferences during a package pull.
 type ZarfPullOptions struct {
 	Reference       registry.Reference `jsonschema:"description=Remote registry reference"`
-	CopyOptions     oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
 	PackagePath     string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
 	OutputDirectory string             `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
 	PublicKeyPath   string             `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
+	OCIRemoteOptions
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
@@ -73,7 +73,7 @@ type ZarfInitOptions struct {
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
 	SkipSBOM           bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
-	OutputDirectory    string            `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
+	Destination        string            `json:"destination" jsonschema:"description=Location where the finalized Zarf package will be placed"`
 	ViewSBOM           bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
 	SBOMOutputDir      string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
 	SetVariables       map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
@@ -82,6 +82,7 @@ type ZarfCreateOptions struct {
 	SigningKeyPassword string            `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sigh the created package"`
 	DifferentialData   DifferentialData  `json:"differential" jsonschema:"description=A package's differential images and git repositories from a referenced previously built package"`
 	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
+	OCIRemoteOptions
 }
 
 // ZarfPartialPackageData contains info about a partial package.
@@ -147,4 +148,9 @@ type DifferentialData struct {
 	DifferentialImages         map[string]bool
 	DifferentialRepos          map[string]bool
 	DifferentialOCIComponents  map[string]string
+}
+
+// OCIRemoteOptions tracks user-defined options used to interact with a remote OCI registry.
+type OCIRemoteOptions struct {
+	OCIConcurrency int `jsonschema:"description=Number of concurrent layer operations to perform when interacting with a remote package"`
 }

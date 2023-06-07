@@ -60,13 +60,15 @@ const (
 	V_PKG_CREATE_SIGNING_KEY_PASSWORD = "package.create.signing_key_password"
 	V_PKG_CREATE_DIFFERENTIAL         = "package.create.differential"
 	V_PKG_CREATE_REGISTRY_OVERRIDE    = "package.create.registry_override"
+	V_PKG_CREATE_OCI_CONCURRENCY      = "package.create.oci_concurrency"
 
 	// Package deploy config keys
-	V_PKG_DEPLOY_SET        = "package.deploy.set"
-	V_PKG_DEPLOY_COMPONENTS = "package.deploy.components"
-	V_PKG_DEPLOY_SHASUM     = "package.deploy.shasum"
-	V_PKG_DEPLOY_SGET       = "package.deploy.sget"
-	V_PKG_DEPLOY_PUBLIC_KEY = "package.deploy.public_key"
+	V_PKG_DEPLOY_SET             = "package.deploy.set"
+	V_PKG_DEPLOY_COMPONENTS      = "package.deploy.components"
+	V_PKG_DEPLOY_SHASUM          = "package.deploy.shasum"
+	V_PKG_DEPLOY_SGET            = "package.deploy.sget"
+	V_PKG_DEPLOY_PUBLIC_KEY      = "package.deploy.public_key"
+	V_PKG_DEPLOY_OCI_CONCURRENCY = "package.deploy.oci_concurrency"
 
 	// Package publish config keys
 	V_PKG_PUBLISH_OCI_CONCURRENCY      = "package.publish.oci_concurrency"

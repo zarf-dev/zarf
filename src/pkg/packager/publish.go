@@ -68,7 +68,7 @@ func (p *Packager) Publish() error {
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, client.Reference)
 
 	// Publish the package/skeleton to the registry
-	return client.PublishPackage(&p.cfg.Pkg, p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency)
+	return client.PublishPackage(&p.cfg.Pkg, p.tmp.Base, p.cfg.PublishOpts.OCIConcurrency)
 }
 
 func (p *Packager) loadSkeleton() error {

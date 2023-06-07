@@ -43,7 +43,7 @@ func (p *Packager) handlePackagePath() error {
 			}
 			layersToPull = append(layersToPull, layers...)
 		}
-		return p.remote.PullPackage(p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency, layersToPull...)
+		return p.remote.PullPackage(p.tmp.Base, p.cfg.PublishOpts.OCIConcurrency, layersToPull...)
 	}
 
 	// Handle case where deploying remote package validated via sget

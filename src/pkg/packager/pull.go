@@ -22,7 +22,7 @@ func (p *Packager) Pull() error {
 	if err != nil {
 		return err
 	}
-	err = client.PullPackage(p.tmp.Base, p.cfg.PullOpts.CopyOptions.Concurrency)
+	err = client.PullPackage(p.tmp.Base, p.cfg.PullOpts.OCIConcurrency)
 	if err != nil {
 		return err
 	}

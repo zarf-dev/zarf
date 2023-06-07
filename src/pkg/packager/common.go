@@ -70,6 +70,15 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 		if err != nil {
 			return nil, err
 		}
+	} else if utils.IsOCIURL(cfg.CreateOpts.Destination) {
+		pkgConfig.remote, err = utils.NewOrasRemote(cfg.CreateOpts.Destination)
+		if err != nil {
+			return nil, err
+		}
+		err := pkgConfig.remote.SetReferenceFromMetadata(&cfg.Pkg.Metadata, cfg.Pkg.Build.Architecture)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Create a temp directory for the package

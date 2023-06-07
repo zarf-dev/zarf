@@ -510,7 +510,7 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 
 // SetReferenceFromMetadata set the remote's ref using metadata from the package's build config and the PublishOpts
 //
-// if suffix is not empty, the architecture will be replaced with the suffix string
+// appending the provided suffix to the version
 func (o *OrasRemote) SetReferenceFromMetadata(metadata *types.ZarfMetadata, suffix string) error {
 	ver := metadata.Version
 	if len(ver) == 0 {

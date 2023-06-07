@@ -116,7 +116,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			if err != nil {
 				return deployedComponents, fmt.Errorf("unable to get published component image layers: %s", err.Error())
 			}
-			err = p.remote.PullPackage(p.tmp.Base, p.cfg.PublishOpts.CopyOptions.Concurrency, layersToPull...)
+			err = p.remote.PullPackage(p.tmp.Base, p.cfg.PublishOpts.OCIConcurrency, layersToPull...)
 			if err != nil {
 				return deployedComponents, fmt.Errorf("unable to pull the package: %w", err)
 			}
