@@ -24,7 +24,7 @@ require (
 	github.com/goccy/go-yaml v1.11.0
 	github.com/google/go-containerregistry v0.15.2
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/moby/moby v23.0.6+incompatible
+	github.com/moby/moby v24.0.2+incompatible
 	github.com/opencontainers/image-spec v1.1.0-rc3
 	github.com/otiai10/copy v1.11.0
 	github.com/pkg/errors v0.9.1
