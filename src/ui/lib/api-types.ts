@@ -50,6 +50,10 @@ export interface ZarfDeployOptions {
      */
     components: string;
     /**
+     * Number of concurrent layer operations to perform when interacting with a remote package
+     */
+    OCIConcurrency: number;
+    /**
      * Location where a Zarf package to deploy can be found
      */
     packagePath: string;
@@ -1137,6 +1141,10 @@ export interface ZarfCommonOptions {
 
 export interface ZarfCreateOptions {
     /**
+     * Location where the finalized Zarf package will be placed
+     */
+    destination: string;
+    /**
      * A package's differential images and git repositories from a referenced previously built
      * package
      */
@@ -1146,9 +1154,9 @@ export interface ZarfCreateOptions {
      */
     maxPackageSizeMB: number;
     /**
-     * Location where the finalized Zarf package will be placed
+     * Number of concurrent layer operations to perform when interacting with a remote package
      */
-    outputDirectory: string;
+    OCIConcurrency: number;
     /**
      * A map of domains to override on package create when pulling images
      */
@@ -1389,6 +1397,7 @@ const typeMap: any = {
     "ZarfDeployOptions": o([
         { json: "adoptExistingResources", js: "adoptExistingResources", typ: true },
         { json: "components", js: "components", typ: "" },
+        { json: "OCIConcurrency", js: "OCIConcurrency", typ: 0 },
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
@@ -1743,9 +1752,10 @@ const typeMap: any = {
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
+        { json: "destination", js: "destination", typ: "" },
         { json: "differential", js: "differential", typ: r("DifferentialData") },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
-        { json: "outputDirectory", js: "outputDirectory", typ: "" },
+        { json: "OCIConcurrency", js: "OCIConcurrency", typ: 0 },
         { json: "registryOverrides", js: "registryOverrides", typ: m("") },
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },
