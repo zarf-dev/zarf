@@ -24,6 +24,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -41,7 +42,7 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	if utils.IsOCIURL(p.cfg.CreateOpts.Destination) {
-		ref, err := utils.ReferenceFromMetadata(p.cfg.CreateOpts.Destination, &p.cfg.Pkg.Metadata, p.cfg.Pkg.Build.Architecture)
+		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Destination, &p.cfg.Pkg.Metadata, p.cfg.Pkg.Build.Architecture)
 		if err != nil {
 			return err
 		}
@@ -575,7 +576,7 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if utils.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		client, err := utils.NewOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
+		client, err := oci.NewOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
 		if err != nil {
 			return err
 		}

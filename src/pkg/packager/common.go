@@ -24,6 +24,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
@@ -32,7 +33,7 @@ import (
 type Packager struct {
 	cfg      *types.PackagerConfig
 	cluster  *cluster.Cluster
-	remote   *utils.OrasRemote
+	remote   *oci.OrasRemote
 	tmp      types.TempPaths
 	arch     string
 	warnings []string
@@ -666,7 +667,7 @@ func (p *Packager) archivePackage(sourceDir string, destinationTarball string) e
 
 // SetOCIRemote sets the remote OCI client for the package.
 func (p *Packager) SetOCIRemote(url string) error {
-	remote, err := utils.NewOrasRemote(url)
+	remote, err := oci.NewOrasRemote(url)
 	if err != nil {
 		return err
 	}

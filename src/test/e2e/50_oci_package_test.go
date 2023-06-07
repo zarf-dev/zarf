@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -19,7 +18,6 @@ import (
 type RegistryClientTestSuite struct {
 	suite.Suite
 	*require.Assertions
-	Remote      *utils.OrasRemote
 	Reference   registry.Reference
 	PackagesDir string
 }

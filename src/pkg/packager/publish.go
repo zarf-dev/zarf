@@ -11,6 +11,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 )
@@ -24,7 +25,7 @@ import (
 func (p *Packager) Publish() error {
 	var referenceSuffix string
 	if utils.IsDir(p.cfg.PublishOpts.PackagePath) {
-		referenceSuffix = utils.SkeletonSuffix
+		referenceSuffix = oci.SkeletonSuffix
 		err := p.loadSkeleton()
 		if err != nil {
 			return err
@@ -43,7 +44,7 @@ func (p *Packager) Publish() error {
 	}
 
 	// Get a reference to the registry for this package
-	ref, err := utils.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, referenceSuffix)
+	ref, err := oci.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, referenceSuffix)
 	if err != nil {
 		return err
 	}

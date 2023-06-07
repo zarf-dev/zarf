@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 	"github.com/pterm/pterm"
@@ -31,7 +32,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 		message.Debugf("Pulling layers %v from %s", requestedFiles, p.cfg.DeployOpts.PackagePath)
 
-		client, err := utils.NewOrasRemote(p.cfg.DeployOpts.PackagePath)
+		client, err := oci.NewOrasRemote(p.cfg.DeployOpts.PackagePath)
 		if err != nil {
 			return err
 		}

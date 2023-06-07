@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -88,7 +89,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	var cachePath string
 	if parent.Import.URL != "" {
-		if !strings.HasSuffix(parent.Import.URL, utils.SkeletonSuffix) {
+		if !strings.HasSuffix(parent.Import.URL, oci.SkeletonSuffix) {
 			return child, fmt.Errorf("import URL must be a 'skeleton' package: %s", parent.Import.URL)
 		}
 
@@ -103,7 +104,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		}
 
 		componentLayer := filepath.Join(config.ZarfComponentsDir, fmt.Sprintf("%s.tar", childComponentName))
-		client, err := utils.NewOrasRemote(parent.Import.URL)
+		client, err := oci.NewOrasRemote(parent.Import.URL)
 		if err != nil {
 			return child, err
 		}

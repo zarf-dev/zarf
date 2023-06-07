@@ -12,13 +12,14 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 )
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() error {
-	client, err := utils.NewOrasRemote(p.cfg.PullOpts.PackageSource)
+	client, err := oci.NewOrasRemote(p.cfg.PullOpts.PackageSource)
 	if err != nil {
 		return err
 	}
@@ -50,7 +51,7 @@ func (p *Packager) Pull() error {
 	}
 
 	var name string
-	if strings.HasSuffix(p.cfg.PullOpts.PackageSource, utils.SkeletonSuffix) {
+	if strings.HasSuffix(p.cfg.PullOpts.PackageSource, oci.SkeletonSuffix) {
 		name = fmt.Sprintf("zarf-package-%s-skeleton-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Metadata.Version)
 	} else {
 		name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Build.Architecture, p.cfg.Pkg.Metadata.Version)
