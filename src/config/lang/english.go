@@ -274,7 +274,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdToolsArchiverCompressShort   = "Compress a collection of sources based off of the destination file extension."
 	CmdToolsArchiverCompressErr     = "Unable to perform compression"
 	CmdToolsArchiverDecompressShort = "Decompress an archive or Zarf package based off of the source file extension."
-	CmdToolsArchiverDecompressErr   = "Unable to perform decompression"
+	CmdToolsArchiverDecompressErr   = "Unable to perform decompression: %s"
 	CmdToolsArchiverUnarchiveAllErr = "Unable to unarchive all nested tarballs"
 
 	CmdToolsRegistryShort = "Tools for working with container registries using go-containertools."
