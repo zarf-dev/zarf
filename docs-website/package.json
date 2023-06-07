@@ -20,9 +20,7 @@
     "@docusaurus/preset-classic": "2.4.1",
     "@docusaurus/theme-mermaid": "2.4.1",
     "@easyops-cn/docusaurus-search-local": "^0.35.0",
-    "prism-react-renderer": "2.0.4",
-    "react": "17.0.2",
-    "react-dom": "17.0.2"
+    "prism-react-renderer": "2.0.4"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "2.4.1"
