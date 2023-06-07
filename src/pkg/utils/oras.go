@@ -5,11 +5,13 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -27,6 +29,12 @@ import (
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
+)
+
+// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
+const (
+	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
+	SkeletonSuffix         = "skeleton"
 )
 
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
@@ -72,6 +80,16 @@ func (m *ZarfOCIManifest) SumLayersSize() int64 {
 		sum += layer.Size
 	}
 	return sum
+}
+
+// Unless specified, an empty manifest config will be used: `{}`
+// which causes an error on Google Artifact Registry
+// to negate this, we create a simple manifest config with some build metadata
+// the contents of this file are not used by Zarf
+type OCIConfigPartial struct {
+	Architecture string            `json:"architecture"`
+	OCIVersion   string            `json:"ociVersion"`
+	Annotations  map[string]string `json:"annotations,omitempty"`
 }
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
@@ -377,8 +395,8 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency
-	copyOpts.OnCopySkipped = o.PrintLayerSuccess
-	copyOpts.PostCopy = o.PrintLayerSuccess
+	copyOpts.OnCopySkipped = o.printLayerSuccess
+	copyOpts.PostCopy = o.printLayerSuccess
 	if isPartialPull {
 		paths := []string{}
 		for _, layer := range layersToPull {
@@ -418,8 +436,221 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	return nil
 }
 
-// PrintLayerSuccess prints a success message to the console when a layer has been successfully published/pulled to/from a registry.
-func (o *OrasRemote) PrintLayerSuccess(_ context.Context, desc ocispec.Descriptor) error {
+// PushFile pushes the file at the given path to the remote repository.
+func (o *OrasRemote) PushFile(path string) (*ocispec.Descriptor, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return o.PushBytes(b, ZarfLayerMediaTypeBlob)
+}
+
+func (o *OrasRemote) PushBytes(b []byte, mediaType string) (*ocispec.Descriptor, error) {
+	desc := content.NewDescriptorFromBytes(ZarfLayerMediaTypeBlob, b)
+	return &desc, o.Push(o.Context, desc, bytes.NewReader(b))
+}
+
+// PushManifestConfig pushes the manifest config to the remote repository.
+func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata, build *types.ZarfBuildData) (*ocispec.Descriptor, error) {
+	annotations := map[string]string{
+		ocispec.AnnotationTitle:       metadata.Name,
+		ocispec.AnnotationDescription: metadata.Description,
+	}
+	manifestConfig := OCIConfigPartial{
+		Architecture: build.Architecture,
+		OCIVersion:   "1.0.1",
+		Annotations:  annotations,
+	}
+	manifestConfigBytes, err := json.Marshal(manifestConfig)
+	if err != nil {
+		return nil, err
+	}
+	return o.PushBytes(manifestConfigBytes, "application/vnd.unknown.config.v1+json")
+}
+
+func (o *OrasRemote) ManifestAnnotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {
+	annotations := map[string]string{
+		ocispec.AnnotationDescription: metadata.Description,
+	}
+
+	if url := metadata.URL; url != "" {
+		annotations[ocispec.AnnotationURL] = url
+	}
+	if authors := metadata.Authors; authors != "" {
+		annotations[ocispec.AnnotationAuthors] = authors
+	}
+	if documentation := metadata.Documentation; documentation != "" {
+		annotations[ocispec.AnnotationDocumentation] = documentation
+	}
+	if source := metadata.Source; source != "" {
+		annotations[ocispec.AnnotationSource] = source
+	}
+	if vendor := metadata.Vendor; vendor != "" {
+		annotations[ocispec.AnnotationVendor] = vendor
+	}
+
+	return annotations
+}
+
+func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descriptor, configDesc *ocispec.Descriptor) (ocispec.Descriptor, error) {
+	packOpts := oras.PackOptions{}
+	packOpts.ConfigDescriptor = configDesc
+	packOpts.PackImageManifest = true
+
+	root, err := oras.Pack(o.Context, src, ocispec.MediaTypeImageManifest, descs, packOpts)
+	if err != nil {
+		return ocispec.Descriptor{}, err
+	}
+	if err = src.Tag(o.Context, root, root.Digest.String()); err != nil {
+		return ocispec.Descriptor{}, err
+	}
+
+	return root, nil
+}
+
+// SetReferenceFromMetadata set the remote's ref using metadata from the package's build config and the PublishOpts
+//
+// if suffix is not empty, the architecture will be replaced with the suffix string
+func (o *OrasRemote) SetReferenceFromMetadata(metadata *types.ZarfMetadata, suffix string) error {
+	ver := metadata.Version
+	if len(ver) == 0 {
+		return errors.New("version is required for publishing")
+	}
+
+	// p.cfg.PublishOpts.Reference.Registry
+	ref := registry.Reference{
+		Registry:   o.Reference.Registry,
+		Repository: fmt.Sprintf("%s/%s", o.Reference.Repository, metadata.Name),
+		Reference:  fmt.Sprintf("%s-%s", ver, suffix),
+	}
+	if len(o.Reference.Repository) == 0 {
+		ref.Repository = metadata.Name
+	}
+	err := ref.Validate()
+	if err != nil {
+		return err
+	}
+
+	o.Reference = ref
+	return nil
+}
+
+func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, concurrency int) error {
+	ctx := o.Context
+	// source file store
+	src, err := file.New(sourceDir)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	message.Infof("Publishing package to %s", o.Reference.String())
+	spinner := message.NewProgressSpinner("")
+	defer spinner.Stop()
+
+	// Get all of the layers in the package
+	paths := []string{}
+	err = filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
+		// Catch any errors that happened during the walk
+		if err != nil {
+			return err
+		}
+
+		// Add any resource that is not a directory to the paths of objects we will include into the package
+		if !info.IsDir() {
+			paths = append(paths, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("unable to get the layers in the package to publish: %w", err)
+	}
+
+	var descs []ocispec.Descriptor
+	for idx, path := range paths {
+		name, err := filepath.Rel(sourceDir, path)
+		if err != nil {
+			return err
+		}
+		spinner.Updatef("Preparing layer %d/%d: %s", idx+1, len(paths), name)
+
+		mediaType := ZarfLayerMediaTypeBlob
+
+		desc, err := src.Add(ctx, name, mediaType, path)
+		if err != nil {
+			return err
+		}
+		descs = append(descs, desc)
+	}
+	spinner.Successf("Prepared %d layers", len(descs))
+
+	copyOpts := oras.DefaultCopyOptions
+	copyOpts.Concurrency = concurrency
+	copyOpts.OnCopySkipped = o.printLayerSuccess
+	copyOpts.PostCopy = o.printLayerSuccess
+
+	var total int64
+	for _, desc := range descs {
+		total += desc.Size
+	}
+	// assumes referrers API is not supported since OCI artifact
+	// media type is not supported
+	o.SetReferrersCapability(false)
+
+	// push the manifest config
+	// since this config is so tiny, and the content is not used again
+	// it is not logged to the progress, but will error if it fails
+	manifestConfigDesc, err := o.pushManifestConfigFromMetadata(&pkg.Metadata, &pkg.Build)
+	if err != nil {
+		return err
+	}
+	root, err := o.generatePackManifest(src, descs, manifestConfigDesc)
+	if err != nil {
+		return err
+	}
+	total += root.Size + manifestConfigDesc.Size
+
+	o.Transport.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", o.Reference.Repository, o.Reference.Reference))
+	defer o.Transport.ProgressBar.Stop()
+	// attempt to push the image manifest
+	_, err = oras.Copy(ctx, src, root.Digest.String(), o, o.Reference.Reference, copyOpts)
+	if err != nil {
+		return err
+	}
+
+	o.Transport.ProgressBar.Successf("Published %s [%s]", o.Reference, root.MediaType)
+	fmt.Println()
+	if strings.HasSuffix(o.Reference.String(), SkeletonSuffix) {
+		message.Info("Example of importing components from this package:")
+		fmt.Println()
+		ex := []types.ZarfComponent{}
+		for _, c := range pkg.Components {
+			ex = append(ex, types.ZarfComponent{
+				Name: fmt.Sprintf("import-%s", c.Name),
+				Import: types.ZarfComponentImport{
+					ComponentName: c.Name,
+					URL:           fmt.Sprintf("oci://%s", o.Reference),
+				},
+			})
+		}
+		ColorPrintYAML(ex)
+		fmt.Println()
+	} else {
+		flags := ""
+		if zarfconfig.CommonOptions.Insecure {
+			flags = "--insecure"
+		}
+		message.Info("To inspect/deploy/pull:")
+		message.Infof("zarf package inspect oci://%s %s", o.Reference, flags)
+		message.Infof("zarf package deploy oci://%s %s", o.Reference, flags)
+		message.Infof("zarf package pull oci://%s %s", o.Reference, flags)
+	}
+
+	return nil
+}
+
+// printLayerSuccess prints a success message to the console when a layer has been successfully published/pulled to/from a registry.
+func (o *OrasRemote) printLayerSuccess(_ context.Context, desc ocispec.Descriptor) error {
 	title := desc.Annotations[ocispec.AnnotationTitle]
 	var format string
 	if title != "" {

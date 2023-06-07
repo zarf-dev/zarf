@@ -43,7 +43,6 @@ type ZarfDeployOptions struct {
 type ZarfPublishOptions struct {
 	Reference          registry.Reference `jsonschema:"description=Remote registry reference"`
 	CopyOptions        oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
-	PackOptions        oras.PackOptions   `jsonschema:"description=Options for the pack operation"`
 	PackagePath        string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
 	SigningKeyPassword string             `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sign the published package"`
 	SigningKeyPath     string             `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
@@ -53,7 +52,6 @@ type ZarfPublishOptions struct {
 type ZarfPullOptions struct {
 	Reference       registry.Reference `jsonschema:"description=Remote registry reference"`
 	CopyOptions     oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
-	PackOptions     oras.PackOptions   `jsonschema:"description=Options for the pack operation"`
 	PackagePath     string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
 	OutputDirectory string             `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
 	PublicKeyPath   string             `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`

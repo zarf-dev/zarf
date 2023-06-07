@@ -88,7 +88,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	var cachePath string
 	if parent.Import.URL != "" {
-		if !strings.HasSuffix(parent.Import.URL, skeletonSuffix) {
+		if !strings.HasSuffix(parent.Import.URL, utils.SkeletonSuffix) {
 			return child, fmt.Errorf("import URL must be a 'skeleton' package: %s", parent.Import.URL)
 		}
 

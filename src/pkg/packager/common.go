@@ -621,3 +621,54 @@ func (p *Packager) archiveComponent(component types.ZarfComponent) error {
 	}
 	return os.RemoveAll(componentPath)
 }
+
+func (p *Packager) archivePackage(sourceDir string, destinationTarball string) error {
+	// Make the archive
+	archiveSrc := []string{sourceDir + string(os.PathSeparator)}
+	if err := archiver.Archive(archiveSrc, destinationTarball); err != nil {
+		return fmt.Errorf("unable to create package: %w", err)
+	}
+
+	f, err := os.Stat(destinationTarball)
+	if err != nil {
+		return fmt.Errorf("unable to read the package archive: %w", err)
+	}
+
+	// Convert Megabytes to bytes.
+	chunkSize := p.cfg.CreateOpts.MaxPackageSizeMB * 1000 * 1000
+
+	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
+	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && f.Size() > int64(chunkSize) {
+		chunks, sha256sum, err := utils.SplitFile(destinationTarball, chunkSize)
+		if err != nil {
+			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
+		}
+		if len(chunks) > 999 {
+			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
+		}
+
+		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks)+1, sha256sum)
+		_ = os.RemoveAll(destinationTarball)
+
+		// Marshal the data into a json file.
+		jsonData, err := json.Marshal(types.ZarfPartialPackageData{
+			Count:     len(chunks),
+			Bytes:     f.Size(),
+			Sha256Sum: sha256sum,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to marshal the partial package data: %w", err)
+		}
+
+		// Prepend the json data to the first chunk.
+		chunks = append([][]byte{jsonData}, chunks...)
+
+		for idx, chunk := range chunks {
+			path := fmt.Sprintf("%s.part%03d", destinationTarball, idx)
+			if err := os.WriteFile(path, chunk, 0644); err != nil {
+				return fmt.Errorf("unable to write the file %s: %w", path, err)
+			}
+		}
+	}
+	return nil
+}

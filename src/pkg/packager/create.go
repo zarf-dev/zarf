@@ -6,7 +6,6 @@ package packager
 
 import (
 	"crypto"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -219,52 +218,9 @@ func (p *Packager) Create(baseDir string) error {
 	// Try to remove the package if it already exists.
 	_ = os.Remove(packageName)
 
-	// Make the archive
-	archiveSrc := []string{p.tmp.Base + string(os.PathSeparator)}
-	if err := archiver.Archive(archiveSrc, packageName); err != nil {
-		return fmt.Errorf("unable to create package: %w", err)
-	}
-
-	f, err := os.Stat(packageName)
-	if err != nil {
-		return fmt.Errorf("unable to read the package archive: %w", err)
-	}
-
-	// Convert Megabytes to bytes.
-	chunkSize := p.cfg.CreateOpts.MaxPackageSizeMB * 1000 * 1000
-
-	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
-	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && f.Size() > int64(chunkSize) {
-		chunks, sha256sum, err := utils.SplitFile(packageName, chunkSize)
-		if err != nil {
-			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
-		}
-		if len(chunks) > 999 {
-			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
-		}
-
-		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks)+1, sha256sum)
-		_ = os.RemoveAll(packageName)
-
-		// Marshal the data into a json file.
-		jsonData, err := json.Marshal(types.ZarfPartialPackageData{
-			Count:     len(chunks),
-			Bytes:     f.Size(),
-			Sha256Sum: sha256sum,
-		})
-		if err != nil {
-			return fmt.Errorf("unable to marshal the partial package data: %w", err)
-		}
-
-		// Prepend the json data to the first chunk.
-		chunks = append([][]byte{jsonData}, chunks...)
-
-		for idx, chunk := range chunks {
-			path := fmt.Sprintf("%s.part%03d", packageName, idx)
-			if err := os.WriteFile(path, chunk, 0644); err != nil {
-				return fmt.Errorf("unable to write the file %s: %w", path, err)
-			}
-		}
+	// Create the package tarball.
+	if err := p.archivePackage(p.tmp.Base, packageName); err != nil {
+		return fmt.Errorf("unable to archive package: %w", err)
 	}
 
 	// Output the SBOM files into a directory if specified.
