@@ -149,7 +149,7 @@ func (p *Packager) Create(baseDir string) error {
 
 	// Images are handled separately from other component assets.
 	if len(imgList) > 0 {
-		message.HeaderInfof("📦 COMPONENT IMAGES")
+		message.HeaderInfof("📦 IMAGES")
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{

@@ -44,8 +44,6 @@ New creates a new package instance with the provided config.
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
 func New(cfg *types.PackagerConfig) (*Packager, error) {
-	message.Debugf("packager.New(%s)", message.JSONValue(cfg))
-
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
 	}
