@@ -19,7 +19,7 @@ func ListDeployingComponents(w http.ResponseWriter, r *http.Request) {
 	pkgName := chi.URLParam(r, "pkg")
 	dp, err := cluster.NewClusterOrDie().GetDeployedPackage(pkgName)
 	if err != nil {
-		message.ErrorWebf(err, w, lang.ErrLoadState)
+		message.ErrorWebf(err, w, lang.ErrLoadPackageSecret, pkgName)
 	}
 	common.WriteJSONResponse(w, dp.DeployedComponents, http.StatusOK)
 }

@@ -33,7 +33,7 @@ type OrasRemote struct {
 	*remote.Repository
 	*remote.Registry
 	context.Context
-	Transport *Transport
+	Transport *utils.Transport
 }
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
@@ -127,7 +127,7 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig.InsecureSkipVerify = zarfconfig.CommonOptions.Insecure
 
-	o.Transport = NewTransport(transport, nil)
+	o.Transport = utils.NewTransport(transport, nil)
 
 	client := &auth.Client{
 		Credential: auth.StaticCredential(ref.Registry, cred),
