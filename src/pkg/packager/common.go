@@ -63,22 +63,6 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 		}
 	)
 
-	if utils.IsOCIURL(cfg.DeployOpts.PackagePath) {
-		pkgConfig.remote, err = utils.NewOrasRemote(cfg.DeployOpts.PackagePath)
-		if err != nil {
-			return nil, err
-		}
-	} else if utils.IsOCIURL(cfg.CreateOpts.Destination) {
-		pkgConfig.remote, err = utils.NewOrasRemote(cfg.CreateOpts.Destination)
-		if err != nil {
-			return nil, err
-		}
-		err := pkgConfig.remote.SetReferenceFromMetadata(&cfg.Pkg.Metadata, cfg.Pkg.Build.Architecture)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	// Create a temp directory for the package
 	if pkgConfig.tmp, err = createPaths(); err != nil {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
@@ -677,5 +661,15 @@ func (p *Packager) archivePackage(sourceDir string, destinationTarball string) e
 			}
 		}
 	}
+	return nil
+}
+
+// SetOCIRemote sets the remote OCI client for the package.
+func (p *Packager) SetOCIRemote(url string) error {
+	remote, err := utils.NewOrasRemote(url)
+	if err != nil {
+		return err
+	}
+	p.remote = remote
 	return nil
 }

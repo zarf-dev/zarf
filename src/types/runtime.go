@@ -4,10 +4,6 @@
 // Package types contains all the types used by Zarf.
 package types
 
-import (
-	"oras.land/oras-go/v2/registry"
-)
-
 // Constants to keep track of folders within components
 const (
 	TempFolder           = "temp"
@@ -41,19 +37,18 @@ type ZarfDeployOptions struct {
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
 type ZarfPublishOptions struct {
-	Reference          registry.Reference `jsonschema:"description=Remote registry reference"`
-	PackagePath        string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
-	SigningKeyPassword string             `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sign the published package"`
-	SigningKeyPath     string             `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
+	PackageDestination string `json:"packageDestination" jsonschema:"description=Location where the Zarf package will be published to"`
+	PackagePath        string `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
+	SigningKeyPassword string `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sign the published package"`
+	SigningKeyPath     string `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
 	OCIRemoteOptions
 }
 
 // ZarfPullOptions tracks the user-defined preferences during a package pull.
 type ZarfPullOptions struct {
-	Reference       registry.Reference `jsonschema:"description=Remote registry reference"`
-	PackagePath     string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
-	OutputDirectory string             `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
-	PublicKeyPath   string             `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
+	PackageSource   string `json:"packageSource" jsonschema:"description=Location where the Zarf package will be pulled from"`
+	OutputDirectory string `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
+	PublicKeyPath   string `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 	OCIRemoteOptions
 }
 

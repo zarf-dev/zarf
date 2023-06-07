@@ -220,10 +220,16 @@ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
 		}
 		parts := strings.Split(strings.TrimPrefix(args[1], "oci://"), "/")
-		pkgConfig.PublishOpts.Reference = registry.Reference{
+		ref := registry.Reference{
 			Registry:   parts[0],
 			Repository: strings.Join(parts[1:], "/"),
 		}
+		err := ref.ValidateRegistry()
+		if err != nil {
+			message.Fatalf(nil, "%s", err.Error())
+		}
+
+		pkgConfig.PublishOpts.PackageDestination = ref.String()
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -245,7 +251,8 @@ var packagePullCmd = &cobra.Command{
 		if !utils.IsOCIURL(args[0]) {
 			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
 		}
-		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
+		pkgConfig.PullOpts.PackageSource = args[0]
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)

@@ -18,7 +18,7 @@ import (
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() error {
-	client, err := utils.NewOrasRemote(p.cfg.DeployOpts.PackagePath)
+	client, err := utils.NewOrasRemote(p.cfg.PullOpts.PackageSource)
 	if err != nil {
 		return err
 	}

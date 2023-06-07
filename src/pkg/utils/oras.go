@@ -508,31 +508,31 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 	return root, nil
 }
 
-// SetReferenceFromMetadata set the remote's ref using metadata from the package's build config and the PublishOpts
+// ReferenceFromMetadata returns a reference for the given metadata.
+//
+// prepending the provided prefix
 //
 // appending the provided suffix to the version
-func (o *OrasRemote) SetReferenceFromMetadata(metadata *types.ZarfMetadata, suffix string) error {
+func ReferenceFromMetadata(prefix string, metadata *types.ZarfMetadata, suffix string) (*registry.Reference, error) {
 	ver := metadata.Version
 	if len(ver) == 0 {
-		return errors.New("version is required for publishing")
+		return nil, errors.New("version is required for publishing")
 	}
 
-	// p.cfg.PublishOpts.Reference.Registry
-	ref := registry.Reference{
-		Registry:   o.Reference.Registry,
-		Repository: fmt.Sprintf("%s/%s", o.Reference.Repository, metadata.Name),
-		Reference:  fmt.Sprintf("%s-%s", ver, suffix),
+	if !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
 	}
-	if len(o.Reference.Repository) == 0 {
-		ref.Repository = metadata.Name
-	}
-	err := ref.Validate()
+
+	format := "%s%s:%s-%s"
+
+	raw := fmt.Sprintf(format, prefix, metadata.Name, ver, suffix)
+
+	ref, err := registry.ParseReference(raw)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	o.Reference = ref
-	return nil
+	return &ref, nil
 }
 
 func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, concurrency int) error {

@@ -41,6 +41,13 @@ var (
 func (p *Packager) Deploy() error {
 	message.Debug("packager.Deploy()")
 
+	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
+		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)
+		if err != nil {
+			return err
+		}
+	}
+
 	if err := p.loadZarfPkg(); err != nil {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}

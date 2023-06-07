@@ -40,6 +40,17 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
+	if utils.IsOCIURL(p.cfg.CreateOpts.Destination) {
+		ref, err := utils.ReferenceFromMetadata(p.cfg.CreateOpts.Destination, &p.cfg.Pkg.Metadata, p.cfg.Pkg.Build.Architecture)
+		if err != nil {
+			return err
+		}
+		err = p.SetOCIRemote(ref.String())
+		if err != nil {
+			return err
+		}
+	}
+
 	// Load the images and repos from the 'reference' package
 	if err := p.loadDifferentialData(); err != nil {
 		return err

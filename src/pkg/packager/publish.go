@@ -22,12 +22,7 @@ import (
 //
 // Authentication is handled via the Docker config file created w/ `zarf tools registry login`
 func (p *Packager) Publish() error {
-	p.cfg.DeployOpts.PackagePath = p.cfg.PublishOpts.PackagePath
-	client, err := utils.NewOrasRemote(p.cfg.PublishOpts.Reference.String())
-	if err != nil {
-		return err
-	}
-	referenceSuffix := ""
+	var referenceSuffix string
 	if utils.IsDir(p.cfg.PublishOpts.PackagePath) {
 		referenceSuffix = utils.SkeletonSuffix
 		err := p.loadSkeleton()
@@ -36,7 +31,7 @@ func (p *Packager) Publish() error {
 		}
 	} else {
 		// Extract the first layer of the tarball
-		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
+		if err := archiver.Unarchive(p.cfg.PublishOpts.PackagePath, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract the package: %w", err)
 		}
 
@@ -48,7 +43,12 @@ func (p *Packager) Publish() error {
 	}
 
 	// Get a reference to the registry for this package
-	err = client.SetReferenceFromMetadata(&p.cfg.Pkg.Metadata, referenceSuffix)
+	ref, err := utils.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, referenceSuffix)
+	if err != nil {
+		return err
+	}
+
+	err = p.SetOCIRemote(ref.String())
 	if err != nil {
 		return err
 	}
@@ -65,10 +65,10 @@ func (p *Packager) Publish() error {
 		}
 	}
 
-	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, client.Reference)
+	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, p.remote.Reference)
 
 	// Publish the package/skeleton to the registry
-	return client.PublishPackage(&p.cfg.Pkg, p.tmp.Base, p.cfg.PublishOpts.OCIConcurrency)
+	return p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, p.cfg.PublishOpts.OCIConcurrency)
 }
 
 func (p *Packager) loadSkeleton() error {
