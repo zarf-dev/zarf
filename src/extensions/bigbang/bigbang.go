@@ -37,7 +37,7 @@ var tenMins = metav1.Duration{
 	Duration: 10 * time.Minute,
 }
 
-// Run Mutates a component that should deploy Big Bang to a set of manifests
+// Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
 func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	var err error
@@ -139,14 +139,20 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 		return c, fmt.Errorf("unable to sort Big Bang HelmReleases: %w", err)
 	}
 
-	tenMinsInSecs := 10 * 60
+	// ten minutes in seconds
+	maxTotalSeconds := 10 * 60
+
+	defaultMaxTotalSeconds := c.Actions.OnDeploy.Defaults.MaxTotalSeconds
+	if defaultMaxTotalSeconds > maxTotalSeconds {
+		maxTotalSeconds = defaultMaxTotalSeconds
+	}
 
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
 	for _, hrNamespacedName := range namespacedHelmReleaseNames {
 		hr := hrDependencies[hrNamespacedName]
 		action := types.ZarfComponentAction{
 			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hr.Metadata.Name),
-			MaxTotalSeconds: &tenMinsInSecs,
+			MaxTotalSeconds: &maxTotalSeconds,
 			Wait: &types.ZarfComponentActionWait{
 				Cluster: &types.ZarfComponentActionWaitCluster{
 					Kind:       "HelmRelease",
@@ -242,6 +248,41 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 	c.Manifests = append(manifests, c.Manifests...)
 
 	return c, nil
+}
+
+// Skeletonize mutates a component so that the valuesFiles can be contained inside a skeleton package
+func Skeletonize(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
+		// Define the name as the file name without the extension.
+		baseName := strings.TrimSuffix(valuesFile, filepath.Ext(valuesFile))
+
+		// Replace non-alphanumeric characters with a dash.
+		baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")
+
+		// Add the skeleton name prefix.
+		skelName := fmt.Sprintf("bb-ext-skeleton-values-%s.yaml", baseName)
+
+		rel := filepath.Join(types.TempFolder, skelName)
+		dst := filepath.Join(tmpPaths.Base, rel)
+
+		if err := utils.CreatePathAndCopy(valuesFile, dst); err != nil {
+			return c, err
+		}
+
+		c.Extensions.BigBang.ValuesFiles[valuesIdx] = rel
+	}
+
+	return c, nil
+}
+
+// Compose mutates a component so that the valuesFiles are relative to the parent importing component
+func Compose(pathAncestry string, c types.ZarfComponent) types.ZarfComponent {
+	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
+		parentRel := filepath.Join(pathAncestry, valuesFile)
+		c.Extensions.BigBang.ValuesFiles[valuesIdx] = parentRel
+	}
+
+	return c
 }
 
 // isValidVersion check if the version is 1.54.0 or greater.

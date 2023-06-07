@@ -4,11 +4,8 @@ ignore:
   # This vulnerability does not affect Zarf as we do not instantiate a rekor client
   - vulnerability: GHSA-2h5h-59f5-c5x9
 
+  # This vulnerability does not affect Zarf as we do not instantiate a rekor client
+  - vulnerability: GHSA-frqx-jfcm-6jjr
+
   # From rouille - The Zarf injector does not expose endpoints that use multipart form data
   - vulnerability: GHSA-mc8h-8q98-g5hr
-
-  # From go-git - Zarf does not use go-git (or its imported crypto libraries) to generate secrets
-  - vulnerability: GHSA-2q89-485c-9j2x
-
-  # From go-git - Zarf does not use go-git (or its imported crypto libraries) to generate secrets
-  - vulnerability: CVE-2023-1732
