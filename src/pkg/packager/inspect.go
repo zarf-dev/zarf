@@ -45,6 +45,9 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		}
 	} else {
 		// This package exists on the local file system - extract the first layer of the tarball
+		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfChecksumsTxt, p.tmp.Base); err != nil {
+			return fmt.Errorf("unable to extract %s: %w", config.ZarfChecksumsTxt, err)
+		}
 		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAML, err)
 		}
