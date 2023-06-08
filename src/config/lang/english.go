@@ -211,7 +211,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 
 	CmdPackageCreateFlagConfirm            = "Confirm package creation without prompting"
 	CmdPackageCreateFlagSet                = "Specify package variables to set on the command line (KEY=value)"
-	CmdPackageCreateFlagOutputDirectory    = "Specify the output directory for the created Zarf package"
+	CmdPackageCreateFlagOutput             = "Specify the output (either a directory or an oci:// URL) for the created Zarf package"
 	CmdPackageCreateFlagSbom               = "View SBOM contents after creating the package"
 	CmdPackageCreateFlagSbomOut            = "Specify an output directory for the SBOMs from the created Zarf package"
 	CmdPackageCreateFlagSkipSbom           = "Skip generating SBOM for this package"
@@ -241,7 +241,8 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackagePublishFlagSigningKey         = "Path to private key file for signing packages"
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
 
-	CmdPackagePullPublicKey = "Path to public key file for validating signed packages"
+	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
+	CmdPackagePullFlagPublicKey       = "Path to public key file for validating signed packages"
 
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"

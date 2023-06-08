@@ -41,8 +41,8 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
-	if utils.IsOCIURL(p.cfg.CreateOpts.Destination) {
-		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Destination, &p.cfg.Pkg.Metadata, p.cfg.Pkg.Build.Architecture)
+	if utils.IsOCIURL(p.cfg.CreateOpts.Output) {
+		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.cfg.Pkg.Build.Architecture)
 		if err != nil {
 			return err
 		}
@@ -224,14 +224,14 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	if utils.IsOCIURL(p.cfg.CreateOpts.Destination) {
+	if utils.IsOCIURL(p.cfg.CreateOpts.Output) {
 		err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
 	} else {
 		// Use the output path if the user specified it.
-		packageName := filepath.Join(p.cfg.CreateOpts.Destination, p.GetPackageName())
+		packageName := filepath.Join(p.cfg.CreateOpts.Output, p.GetPackageName())
 
 		// Try to remove the package if it already exists.
 		_ = os.Remove(packageName)

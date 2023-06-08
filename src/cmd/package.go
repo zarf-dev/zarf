@@ -322,7 +322,7 @@ func bindCreateFlags() {
 	createFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageCreateFlagConfirm)
 
 	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
-	v.SetDefault(V_PKG_CREATE_OUTPUT_DIR, "")
+	v.SetDefault(V_PKG_CREATE_OUTPUT, "")
 	v.SetDefault(V_PKG_CREATE_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_SBOM_OUTPUT, "")
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
@@ -331,7 +331,8 @@ func bindCreateFlags() {
 
 	createFlags.StringVar(&pkgConfig.CreateOpts.DifferentialData.DifferentialPackagePath, "differential", v.GetString(V_PKG_CREATE_DIFFERENTIAL), lang.CmdPackageCreateFlagDifferential)
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPackageCreateFlagSet)
-	createFlags.StringVarP(&pkgConfig.CreateOpts.Destination, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), lang.CmdPackageCreateFlagOutputDirectory)
+	createFlags.StringVarP(&pkgConfig.CreateOpts.Output, "output", "o", v.GetString(V_PKG_CREATE_OUTPUT), lang.CmdPackageCreateFlagOutput)
+	createFlags.StringVar(&pkgConfig.CreateOpts.Output, "output-directory", v.GetString(V_PKG_CREATE_OUTPUT), lang.CmdPackageCreateFlagOutput)
 	createFlags.BoolVarP(&pkgConfig.CreateOpts.ViewSBOM, "sbom", "s", v.GetBool(V_PKG_CREATE_SBOM), lang.CmdPackageCreateFlagSbom)
 	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), lang.CmdPackageCreateFlagSbomOut)
 	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), lang.CmdPackageCreateFlagSkipSbom)
@@ -339,6 +340,8 @@ func bindCreateFlags() {
 	createFlags.StringVarP(&pkgConfig.CreateOpts.SigningKeyPath, "key", "k", v.GetString(V_PKG_CREATE_SIGNING_KEY), lang.CmdPackageCreateFlagSigningKey)
 	createFlags.StringVar(&pkgConfig.CreateOpts.SigningKeyPassword, "key-pass", v.GetString(V_PKG_CREATE_SIGNING_KEY_PASSWORD), lang.CmdPackageCreateFlagSigningKeyPassword)
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(V_PKG_CREATE_REGISTRY_OVERRIDE), lang.CmdPackageCreateFlagRegistryOverride)
+
+	createFlags.MarkHidden("output-directory")
 }
 
 func bindDeployFlags() {
@@ -386,6 +389,6 @@ func bindPublishFlags() {
 func bindPullFlags() {
 	pullFlags := packagePullCmd.Flags()
 	v.SetDefault(V_PKG_PULL_OUTPUT_DIR, "")
-	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_PULL_OUTPUT_DIR), lang.CmdPackageCreateFlagOutputDirectory)
-	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_PULL_PUBLIC_KEY), lang.CmdPackagePullPublicKey)
+	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_PULL_OUTPUT_DIR), lang.CmdPackagePullFlagOutputDirectory)
+	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_PULL_PUBLIC_KEY), lang.CmdPackagePullFlagPublicKey)
 }
