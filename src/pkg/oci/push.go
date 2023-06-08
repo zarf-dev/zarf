@@ -191,10 +191,9 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	}
 
 	o.Transport.ProgressBar.Successf("Published %s [%s]", o.Reference, root.MediaType)
-	fmt.Println()
+	message.HorizontalRule()
 	if strings.HasSuffix(o.Reference.String(), SkeletonSuffix) {
-		message.Info("Example of importing components from this package:")
-		fmt.Println()
+		message.Title("How to import components from this skeleton:", "")
 		ex := []types.ZarfComponent{}
 		for _, c := range pkg.Components {
 			ex = append(ex, types.ZarfComponent{
@@ -206,17 +205,17 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 			})
 		}
 		utils.ColorPrintYAML(ex)
-		fmt.Println()
 	} else {
 		flags := ""
 		if zarfconfig.CommonOptions.Insecure {
 			flags = "--insecure"
 		}
-		message.Info("To inspect/deploy/pull:")
-		message.Infof("zarf package inspect oci://%s %s", o.Reference, flags)
-		message.Infof("zarf package deploy oci://%s %s", o.Reference, flags)
-		message.Infof("zarf package pull oci://%s %s", o.Reference, flags)
+		message.Title("To inspect/deploy/pull:", "")
+		message.ZarfCommand("package inspect oci://%s %s", o.Reference, flags)
+		message.ZarfCommand("package deploy oci://%s %s", o.Reference, flags)
+		message.ZarfCommand("package pull oci://%s %s", o.Reference, flags)
 	}
+	message.HorizontalRule()
 
 	return nil
 }

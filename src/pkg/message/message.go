@@ -110,6 +110,13 @@ func GetLogLevel() LogLevel {
 	return logLevel
 }
 
+func ZarfCommand(format string, a ...any) {
+	message := Paragraph("$ zarf "+format, a...)
+	pterm.Println()
+	pterm.DefaultBasicText.WithStyle(pterm.NewStyle(pterm.FgWhite, pterm.BgBlack)).Printf(message)
+	pterm.Println()
+}
+
 // Debug prints a debug message.
 func Debug(payload ...any) {
 	debugPrinter(2, payload...)

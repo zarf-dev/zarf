@@ -66,7 +66,7 @@ func (p *Packager) Publish() error {
 		}
 	}
 
-	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, p.remote.Reference)
+	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, p.remote.Reference.Reference)
 
 	// Publish the package/skeleton to the registry
 	return p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, config.CommonOptions.OCIConcurrency)
