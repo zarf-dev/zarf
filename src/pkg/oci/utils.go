@@ -26,19 +26,19 @@ import (
 // prepending the provided prefix
 //
 // appending the provided suffix to the version
-func ReferenceFromMetadata(prefix string, metadata *types.ZarfMetadata, suffix string) (*registry.Reference, error) {
+func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata, suffix string) (*registry.Reference, error) {
 	ver := metadata.Version
 	if len(ver) == 0 {
 		return nil, errors.New("version is required for publishing")
 	}
 
-	if !strings.HasSuffix(prefix, "/") {
-		prefix = prefix + "/"
+	if !strings.HasSuffix(registryLocation, "/") {
+		registryLocation = registryLocation + "/"
 	}
 
 	format := "%s%s:%s-%s"
 
-	raw := fmt.Sprintf(format, prefix, metadata.Name, ver, suffix)
+	raw := fmt.Sprintf(format, registryLocation, metadata.Name, ver, suffix)
 
 	ref, err := registry.ParseReference(raw)
 	if err != nil {
