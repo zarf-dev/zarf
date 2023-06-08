@@ -536,11 +536,14 @@ func (p *Packager) archiveComponent(component types.ZarfComponent) error {
 }
 
 func (p *Packager) archivePackage(sourceDir string, destinationTarball string) error {
+	spinner := message.NewProgressSpinner("Writing %s to %s", sourceDir, destinationTarball)
+	defer spinner.Stop()
 	// Make the archive
 	archiveSrc := []string{sourceDir + string(os.PathSeparator)}
 	if err := archiver.Archive(archiveSrc, destinationTarball); err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
+	spinner.Updatef("Wrote %s to %s", sourceDir, destinationTarball)
 
 	f, err := os.Stat(destinationTarball)
 	if err != nil {
@@ -552,6 +555,7 @@ func (p *Packager) archivePackage(sourceDir string, destinationTarball string) e
 
 	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
 	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && f.Size() > int64(chunkSize) {
+		spinner.Updatef("Package is larger than %dMB, splitting into multiple files", p.cfg.CreateOpts.MaxPackageSizeMB)
 		chunks, sha256sum, err := utils.SplitFile(destinationTarball, chunkSize)
 		if err != nil {
 			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
@@ -560,7 +564,9 @@ func (p *Packager) archivePackage(sourceDir string, destinationTarball string) e
 			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
 		}
 
-		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks)+1, sha256sum)
+		status := fmt.Sprintf("Package split into %d files, original sha256sum is %s", len(chunks)+1, sha256sum)
+		spinner.Updatef(status)
+		message.Debug(status)
 		_ = os.RemoveAll(destinationTarball)
 
 		// Marshal the data into a json file.
@@ -578,11 +584,15 @@ func (p *Packager) archivePackage(sourceDir string, destinationTarball string) e
 
 		for idx, chunk := range chunks {
 			path := fmt.Sprintf("%s.part%03d", destinationTarball, idx)
+			status := fmt.Sprintf("Writing %s", path)
+			spinner.Updatef(status)
+			message.Debug(status)
 			if err := os.WriteFile(path, chunk, 0644); err != nil {
 				return fmt.Errorf("unable to write the file %s: %w", path, err)
 			}
 		}
 	}
+	spinner.Successf("Package tarball successfully written")
 	return nil
 }
 
