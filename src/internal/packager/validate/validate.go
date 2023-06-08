@@ -156,12 +156,21 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 	}
 
 	for _, report := range component.Reports {
+		if utils.IsURL(report.Source) {
+			message.Debug("skipping validation due to remote location - validation will occur during create")
+			return nil
+		}
 		if strings.ToLower(report.Type) == "vex" {
-			if err := validateVex(report); err != nil {
-				return fmt.Errorf(lang.AgentErrInvalidOp, err)
+			if err := validateVex(report.Source); err != nil {
+				return fmt.Errorf(lang.PkgValidateErrVexInvalid, err)
 			}
 		}
-
+		// Validate OSCAL report type
+		// if strings.ToLower(report.Type) == "oscal" {
+		// 	if err := validateOscal(report.Source); err != nil {
+		// 		return fmt.Errorf(lang.PkgValidateErrVexInvalid, err)
+		// 	}
+		// }
 	}
 
 	return nil
@@ -324,15 +333,38 @@ func validateManifest(manifest types.ZarfManifest) error {
 	return nil
 }
 
-func validateVex(component types.ZarfComponentReport) error {
-	// check valid vex document
-	if utils.IsURL(component.Source) {
-		message.Debug("skipping validation due to remote location - validation will occur during create")
-		return nil
-	}
-	_, err := vex.Load(component.Source)
-	if err != nil {
-		return err
+func validateVex(reportSource string) error {
+	path, _ := os.Stat(reportSource)
+	if !path.IsDir() {
+		// check valid vex document
+		_, err := vex.Load(reportSource)
+		if err != nil {
+			return err
+		}
+	} else {
+		message.Debugf("VEX path is a directory!")
+		file, err := os.Open(reportSource)
+
+		if err != nil {
+			return fmt.Errorf(lang.PkgValidateErrPath, err)
+		}
+
+		defer file.Close()
+
+		files, err := file.Readdirnames(0)
+		message.Debugf("Files found are: %s", files)
+
+		if err != nil {
+			return fmt.Errorf(lang.PkgValidateErrPath, err)
+		}
+
+		for _, f := range files {
+			filePath := fmt.Sprintf("%s/%s", reportSource, f)
+			message.Debugf("Attempting to validate %s", filePath)
+			if err := validateVex(filePath); err != nil {
+				return fmt.Errorf(lang.PkgValidateErrVexInvalid, err)
+			}
+		}
 	}
 
 	return nil

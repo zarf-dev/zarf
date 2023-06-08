@@ -562,7 +562,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		}
 
 		for _, report := range component.Reports {
-			var path string
+			var filePath string
 			switch reportType := strings.ToLower(report.Type); reportType {
 			case "vex":
 				dst := fmt.Sprintf("%s/%s", componentPath.Reports, reportType)
@@ -570,43 +570,28 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				if err != nil {
 					return fmt.Errorf("unable to create reports destination directory: %w", err)
 				}
-				message.Debug("Source was identified as a URL")
-				if _, err := os.Stat(dst + report.Name); err == nil {
-					return fmt.Errorf("%s already exists for this component and cannot conflict", dst+report.Name)
-				}
 				if utils.IsURL(report.Source) {
-					path = fmt.Sprintf("%s/%s/%s", componentPath.Reports, reportType, report.Name)
-					if err := utils.DownloadToFile(report.Source, path, component.CosignKeyPath); err != nil {
+					message.Debug("Source was identified as a URL")
+					filePath = fmt.Sprintf("%s/%s/%s", componentPath.Reports, reportType, report.Name)
+					if _, err := os.Stat(filePath); err == nil {
+						return fmt.Errorf("%s already exists for this component and cannot conflict", filePath)
+					}
+					if err := utils.DownloadToFile(report.Source, filePath, component.CosignKeyPath); err != nil {
 						return fmt.Errorf(lang.ErrDownloading, report.Source, err.Error())
 					}
 				} else {
-					path = report.Source
-				}
-
-				doc, err := vex.Load(path)
-				if err != nil {
-					return fmt.Errorf("unable to load vex document %s from %s: %w", report.Name, path, err)
-				}
-
-				// Convert to JSON
-				var b bytes.Buffer
-				if err = doc.ToJSON(&b); err != nil {
-					return fmt.Errorf("unable to write vex doc to JSON for %s: %w", report.Name, err)
-				}
-
-				message.Debugf("Loaded VEX file %s (%d bytes)", report.Name, b.Len())
-
-				// Write VEX file to the vex directory
-				dest := fmt.Sprintf("%s/%s/%s", componentPath.Reports, reportType, report.Name)
-				if err = utils.WriteFile(dest, b.Bytes()); err != nil {
-					return fmt.Errorf("unable to write vex file to %s: %w", dest, err)
+					err = addVexFile(componentPath.Reports, report.Source, report.Name)
+					if err != nil {
+						return fmt.Errorf("unable to add vex file: %w", err)
+					}
 				}
 			default:
 				message.Debugf("Loaded file %s)", reportType)
-
 				dst := filepath.Join(componentPath.Reports, reportType, report.Name)
-
 				if utils.IsURL(report.Source) {
+					if _, err := os.Stat(dst); err == nil {
+						return fmt.Errorf("%s already exists for this component and cannot conflict", dst)
+					}
 					if err := utils.DownloadToFile(report.Source, dst, component.CosignKeyPath); err != nil {
 						return fmt.Errorf(lang.ErrDownloading, report.Source, err.Error())
 					}
@@ -809,5 +794,58 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 		p.cfg.Pkg.Components[idx] = component
 	}
 
+	return nil
+}
+
+// addVexFile will perform vex schema validation and add the given file into the given path
+func addVexFile(componentPath string, path string, reportName string) error {
+	message.Debugf("path is: %s", path)
+	filePath, _ := os.Stat(path)
+	message.Debugf("filepath is: %s", filePath)
+	if !filePath.IsDir() {
+		message.Debugf("Vex path is a single file: %s", path)
+		dest := fmt.Sprintf("%s/%s/%s", componentPath, "vex", reportName)
+		if _, err := os.Stat(dest); err == nil {
+			return fmt.Errorf("%s already exists for this component and cannot conflict", dest)
+		}
+
+		doc, err := vex.Load(path)
+		if err != nil {
+			return fmt.Errorf("unable to load vex document for %s from %s: %w", reportName, path, err)
+		}
+		// Convert to JSON
+		var b bytes.Buffer
+		if err = doc.ToJSON(&b); err != nil {
+			return fmt.Errorf("unable to write vex doc for %s to JSON: %w", reportName, err)
+		}
+		message.Debugf("Loaded VEX file for %s (%d bytes)", reportName, b.Len())
+
+		// Write VEX file to the vex directory
+		if err = utils.WriteFile(dest, b.Bytes()); err != nil {
+			return fmt.Errorf("unable to write vex file to %s: %w", dest, err)
+		}
+	} else {
+		message.Debugf("Vex path is a directory!")
+		file, err := os.Open(path)
+
+		if err != nil {
+			return fmt.Errorf(lang.PkgValidateErrPath, err)
+		}
+
+		defer file.Close()
+
+		files, err := file.Readdirnames(0)
+		if err != nil {
+			return fmt.Errorf(lang.PkgValidateErrPath, err)
+		}
+
+		message.Debugf("VEX files are: %s", files)
+
+		for i, f := range files {
+			filename := fmt.Sprintf("%s-%d.vex.json", reportName, i)
+			filepath := fmt.Sprintf("%s/%s", path, f)
+			addVexFile(componentPath, filepath, filename)
+		}
+	}
 	return nil
 }
