@@ -187,7 +187,16 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 
 	message.Debugf("Pulled %s", ref.String())
 	message.Successf("Pulled %s", ref.String())
-	return nil
+
+	layersToCheck := []string{}
+	if isPartialPull {
+		for _, layer := range layersToPull {
+			if layer.Annotations[ocispec.AnnotationTitle] != "" {
+				layersToCheck = append(layersToCheck, layer.Annotations[ocispec.AnnotationTitle])
+			}
+		}
+	}
+	return utils.ValidatePackageChecksums(destinationDir, layersToCheck)
 }
 
 // PullFileLayer pulls a file layer from the remote repository and saves it to `destinationDir/annotationTitle`.
@@ -223,7 +232,7 @@ func (o *OrasRemote) PullPackageMetadata(destinationDir string) error {
 		return err
 	}
 	if pkg.Metadata.AggregateChecksum != "" {
-		return utils.ValidatePackageChecksums(destinationDir, pkg.Metadata.AggregateChecksum, AlwaysPull)
+		return utils.ValidatePackageChecksums(destinationDir, AlwaysPull)
 	}
 	return nil
 }

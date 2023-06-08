@@ -36,7 +36,8 @@ func (p *Packager) handlePackagePath() error {
 		p.cfg.DeployOpts.PackagePath = p.tmp.Base
 		requestedComponents := p.getRequestedComponentList(p.cfg.DeployOpts.Components)
 		layersToPull := []ocispec.Descriptor{}
-		if len(requestedComponents) > 0 {
+		// only pull specified components and their images if --components AND --confirm are set
+		if len(requestedComponents) > 0 && config.CommonOptions.Confirm {
 			layers, err := p.remote.LayersFromRequestedComponents(requestedComponents)
 			if err != nil {
 				return fmt.Errorf("unable to get published component image layers: %s", err.Error())

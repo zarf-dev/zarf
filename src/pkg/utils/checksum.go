@@ -14,10 +14,11 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // ValidatePackageChecksums validates the checksums of a Zarf package.
-func ValidatePackageChecksums(baseDir string, aggregateChecksum string, pathsToCheck []string) error {
+func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 	spinner := message.NewProgressSpinner("Validating package checksums")
 	defer spinner.Stop()
 
@@ -25,6 +26,12 @@ func ValidatePackageChecksums(baseDir string, aggregateChecksum string, pathsToC
 	if InvalidPath(baseDir) {
 		return fmt.Errorf("invalid base directory: %s", baseDir)
 	}
+	var pkg types.ZarfPackage
+	err := ReadYaml(filepath.Join(baseDir, config.ZarfYAML), &pkg)
+	if err != nil {
+		return err
+	}
+	aggregateChecksum := pkg.Metadata.AggregateChecksum
 	if aggregateChecksum == "" {
 		return fmt.Errorf("unable to validate checksums because of missing metadata checksum signature")
 	}
@@ -33,11 +40,12 @@ func ValidatePackageChecksums(baseDir string, aggregateChecksum string, pathsToC
 	}
 	isPartial := false
 	if len(pathsToCheck) > 0 {
+		pathsToCheck = Unique(pathsToCheck)
 		isPartial = true
+		message.Debugf("Validating checksums for a subset of files in the package - %v", pathsToCheck)
 		for idx, path := range pathsToCheck {
 			pathsToCheck[idx] = filepath.Join(baseDir, path)
 		}
-		message.Debug("Validating checksums for a subset of files in the package - %v", pathsToCheck)
 	}
 
 	pathCheckMap, err := PathCheckMap(baseDir)
@@ -78,7 +86,7 @@ func ValidatePackageChecksums(baseDir string, aggregateChecksum string, pathsToC
 			if !isPartial && !pathCheckMap[path] {
 				return fmt.Errorf("unable to validate checksums because of missing file: %s", rel)
 			} else if SliceContains(pathsToCheck, path) {
-				return fmt.Errorf("unable to validate checksums because of missing file: %s", rel)
+				return fmt.Errorf("unable to validate partial checksums because of missing file: %s", rel)
 			}
 			// it's okay if we're doing a partial check and the file isn't there as long as the path isn't in the list of paths to check
 			return nil
@@ -105,14 +113,14 @@ func ValidatePackageChecksums(baseDir string, aggregateChecksum string, pathsToC
 	if isPartial {
 		for _, path := range pathsToCheck {
 			if !pathCheckMap[path] {
-				return fmt.Errorf("unable to validate checksums because of missing file: %s", path)
+				return fmt.Errorf("unable to validate partial checksums, %s did not get checked", path)
 			}
 		}
 	} else {
 		// Otherwise, make sure we've checked all the files in the package
 		for path, checked := range pathCheckMap {
 			if !checked {
-				return fmt.Errorf("unable to validate checksums because of missing file: %s", path)
+				return fmt.Errorf("unable to validate checksums, %s did not get checked", path)
 			}
 		}
 	}

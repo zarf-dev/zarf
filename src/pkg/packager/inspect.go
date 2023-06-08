@@ -45,13 +45,17 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		}
 	} else {
 		// This package exists on the local file system - extract the first layer of the tarball
-		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
-			return fmt.Errorf("unable to extract the package: %w", err)
+		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
+			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAML, err)
 		}
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 		}
-
+		if wantSBOM {
+			if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfSBOMTar, p.tmp.Base); err != nil {
+				return fmt.Errorf("unable to extract %s: %w", config.ZarfSBOMTar, err)
+			}
+		}
 	}
 
 	pterm.Println()
@@ -59,8 +63,10 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 	utils.ColorPrintYAML(p.cfg.Pkg)
 
-	if err := utils.ValidatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, requestedFiles); err != nil {
-		message.Warnf("Unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
+	if !utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
+		if err := utils.ValidatePackageChecksums(p.tmp.Base, requestedFiles); err != nil {
+			return fmt.Errorf("unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
+		}
 	}
 
 	// Validate the package checksums and signatures if specified, and warn if the package was signed but a key was not provided

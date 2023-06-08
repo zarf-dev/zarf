@@ -252,6 +252,8 @@ func (p *Packager) loadZarfPkg() error {
 		return fmt.Errorf("unable to handle the provided package path: %w", err)
 	}
 
+	wasPulled := p.cfg.DeployOpts.PackagePath == p.tmp.Base
+
 	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
 	defer spinner.Stop()
 
@@ -266,7 +268,7 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// If the package was pulled from OCI, there is no need to extract it since it is unpacked already
-	if p.cfg.DeployOpts.PackagePath != p.tmp.Base {
+	if !wasPulled {
 		// Extract the archive
 		spinner.Updatef("Extracting the package, this may take a few moments")
 		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
@@ -282,8 +284,9 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// Validate the checksums of all the things!!!
-	if p.cfg.Pkg.Metadata.AggregateChecksum != "" {
-		if err := utils.ValidatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, nil); err != nil {
+	// validation is skipped here if the package is from OCI as the checksums are validated after the pull
+	if p.cfg.Pkg.Metadata.AggregateChecksum != "" && !wasPulled {
+		if err := utils.ValidatePackageChecksums(p.tmp.Base, nil); err != nil {
 			return fmt.Errorf("unable to validate the package checksums: %w", err)
 		}
 	}
