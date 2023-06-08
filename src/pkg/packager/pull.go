@@ -19,11 +19,11 @@ import (
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() error {
-	client, err := oci.NewOrasRemote(p.cfg.PullOpts.PackageSource)
+	err := p.SetOCIRemote(p.cfg.PullOpts.PackageSource)
 	if err != nil {
 		return err
 	}
-	err = client.PullPackage(p.tmp.Base, p.cfg.PullOpts.OCIConcurrency)
+	err = p.remote.PullPackage(p.tmp.Base, p.cfg.PullOpts.OCIConcurrency)
 	if err != nil {
 		return err
 	}

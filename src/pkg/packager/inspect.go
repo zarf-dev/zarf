@@ -10,7 +10,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 	"github.com/pterm/pterm"
@@ -30,15 +29,15 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 		message.Debugf("Pulling layers %v from %s", requestedFiles, p.cfg.DeployOpts.PackagePath)
 
-		client, err := oci.NewOrasRemote(p.cfg.DeployOpts.PackagePath)
+		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)
 		if err != nil {
 			return err
 		}
-		layersToPull, err := client.LayersFromPaths(requestedFiles)
+		layersToPull, err := p.remote.LayersFromPaths(requestedFiles)
 		if err != nil {
 			return err
 		}
-		if err := client.PullPackage(p.tmp.Base, p.cfg.PullOpts.OCIConcurrency, layersToPull...); err != nil {
+		if err := p.remote.PullPackage(p.tmp.Base, p.cfg.PullOpts.OCIConcurrency, layersToPull...); err != nil {
 			return fmt.Errorf("unable to pull the package: %w", err)
 		}
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {

@@ -576,15 +576,15 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if utils.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		client, err := oci.NewOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
+		err := p.SetOCIRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
 		if err != nil {
 			return err
 		}
-		manifest, err := client.FetchRoot()
+		manifest, err := p.remote.FetchRoot()
 		if err != nil {
 			return err
 		}
-		pkg, err := client.FetchZarfYAML(manifest)
+		pkg, err := p.remote.FetchZarfYAML(manifest)
 		if err != nil {
 			return err
 		}
