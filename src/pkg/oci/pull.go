@@ -21,6 +21,7 @@ import (
 )
 
 var (
+	// AlwaysPull is a list of paths that will always be pulled from the remote repository.
 	AlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
 )
 
@@ -149,6 +150,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	defer dst.Close()
 
 	copyOpts := o.CopyOpts
+	copyOpts.Concurrency = concurrency
 	if isPartialPull {
 		paths := []string{}
 		for _, layer := range layersToPull {

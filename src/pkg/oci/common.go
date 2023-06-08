@@ -65,7 +65,6 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 	}
 
 	copyOpts := oras.DefaultCopyOptions
-	// copyOpts.Concurrency = concurrency
 	copyOpts.OnCopySkipped = o.printLayerSuccess
 	copyOpts.PostCopy = o.printLayerSuccess
 	o.CopyOpts = copyOpts

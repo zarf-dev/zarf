@@ -160,6 +160,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	spinner.Successf("Prepared %d layers", len(descs))
 
 	copyOpts := o.CopyOpts
+	copyOpts.Concurrency = concurrency
 	var total int64
 	for _, desc := range descs {
 		total += desc.Size
