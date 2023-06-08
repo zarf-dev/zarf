@@ -1,0 +1,4 @@
+something:
+  - a
+  - ###ZARF_VAR_KITTEH###
+  - meows

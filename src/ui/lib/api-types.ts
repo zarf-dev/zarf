@@ -8,17 +8,31 @@
 // match the expected interface, even if the JSON is valid.
 
 export interface APITypes {
-    apiZarfDeployPayload: APIZarfDeployPayload;
-    apiZarfPackage:       APIZarfPackage;
-    clusterSummary:       ClusterSummary;
-    connectStrings:       { [key: string]: ConnectString };
-    deployedPackage:      DeployedPackage;
-    zarfCommonOptions:    ZarfCommonOptions;
-    zarfCreateOptions:    ZarfCreateOptions;
-    zarfDeployOptions:    ZarfDeployOptions;
-    zarfInitOptions:      ZarfInitOptions;
-    zarfPackage:          ZarfPackage;
-    zarfState:            ZarfState;
+    apiConnections:            { [key: string]: APIDeployedPackageConnection[] };
+    apiPackageSBOM:            APIPackageSBOM;
+    apiZarfDeployPayload:      APIZarfDeployPayload;
+    apiZarfPackage:            APIZarfPackage;
+    apiZarfPackageConnection:  APIDeployedPackageConnection;
+    apiZarfPackageConnections: APIDeployedPackageConnection[];
+    clusterSummary:            ClusterSummary;
+    connectStrings:            { [key: string]: ConnectString };
+    deployedPackage:           DeployedPackage;
+    zarfCommonOptions:         ZarfCommonOptions;
+    zarfCreateOptions:         ZarfCreateOptions;
+    zarfDeployOptions:         ZarfDeployOptions;
+    zarfInitOptions:           ZarfInitOptions;
+    zarfPackage:               ZarfPackage;
+    zarfState:                 ZarfState;
+}
+
+export interface APIDeployedPackageConnection {
+    name: string;
+    url?: string;
+}
+
+export interface APIPackageSBOM {
+    path:  string;
+    sboms: string[];
 }
 
 export interface APIZarfDeployPayload {
@@ -223,9 +237,26 @@ export interface ZarfBuildData {
      */
     architecture: string;
     /**
+     * Whether this package was created with differential components
+     */
+    differential: boolean;
+    /**
+     * List of components that were not included in this package due to differential packaging
+     */
+    differentialMissing?: string[];
+    /**
      * Any migrations that have been run on this package
      */
     migrations: string[];
+    /**
+     * Map of components that were imported via OCI. The keys are OCI Package URLs and values
+     * are the component names
+     */
+    OCIImportedComponents?: { [key: string]: string };
+    /**
+     * Any registry domains that were overridden on package create when pulling images
+     */
+    registryOverrides: { [key: string]: string };
     /**
      * The machine name that created this package
      */
@@ -274,7 +305,7 @@ export interface ZarfComponent {
      */
     extensions?: ZarfComponentExtensions;
     /**
-     * Files to place on disk during package deployment
+     * Files or folders to place on disk during package deployment
      */
     files?: ZarfFile[];
     /**
@@ -666,15 +697,15 @@ export interface BigBang {
 
 export interface ZarfFile {
     /**
-     * Determines if the file should be made executable during package deploy
+     * (files only) Determines if the file should be made executable during package deploy
      */
     executable?: boolean;
     /**
-     * Optional SHA256 checksum of the file
+     * (files only) Optional SHA256 checksum of the file
      */
     shasum?: string;
     /**
-     * Local file path or remote URL to pull into the package
+     * Local folder or file path or remote URL to pull into the package
      */
     source: string;
     /**
@@ -682,7 +713,8 @@ export interface ZarfFile {
      */
     symlinks?: string[];
     /**
-     * The absolute or relative path where the file should be copied to during package deploy
+     * The absolute or relative path where the file or folder should be copied to during package
+     * deploy
      */
     target: string;
 }
@@ -698,7 +730,11 @@ export interface ZarfComponentImport {
     /**
      * The relative path to a directory containing a zarf.yaml to import from
      */
-    path: string;
+    path?: string;
+    /**
+     * The URL to a Zarf package to import via OCI
+     */
+    url?: string;
 }
 
 export interface ZarfManifest {
@@ -1063,6 +1099,7 @@ export interface ConnectString {
 
 export interface DeployedPackage {
     cliVersion:         string;
+    connectStrings?:    { [key: string]: ConnectString };
     data:               ZarfPackage;
     deployedComponents: DeployedComponent[];
     name:               string;
@@ -1100,6 +1137,11 @@ export interface ZarfCommonOptions {
 
 export interface ZarfCreateOptions {
     /**
+     * A package's differential images and git repositories from a referenced previously built
+     * package
+     */
+    differential: DifferentialData;
+    /**
      * Size of chunks to use when splitting a zarf package into multiple files in megabytes
      */
     maxPackageSizeMB: number;
@@ -1107,6 +1149,10 @@ export interface ZarfCreateOptions {
      * Location where the finalized Zarf package will be placed
      */
     outputDirectory: string;
+    /**
+     * A map of domains to override on package create when pulling images
+     */
+    registryOverrides: { [key: string]: string };
     /**
      * Whether to pause to allow for viewing the SBOM post-creation
      */
@@ -1132,6 +1178,18 @@ export interface ZarfCreateOptions {
      * Disable the generation of SBOM materials during package creation
      */
     skipSBOM: boolean;
+}
+
+/**
+ * A package's differential images and git repositories from a referenced previously built
+ * package
+ */
+export interface DifferentialData {
+    DifferentialImages:         { [key: string]: boolean };
+    DifferentialOCIComponents:  { [key: string]: string };
+    DifferentialPackagePath:    string;
+    DifferentialPackageVersion: string;
+    DifferentialRepos:          { [key: string]: boolean };
 }
 
 // Converts JSON strings to/from your types
@@ -1300,8 +1358,12 @@ function r(name: string) {
 
 const typeMap: any = {
     "APITypes": o([
+        { json: "apiConnections", js: "apiConnections", typ: m(a(r("APIDeployedPackageConnection"))) },
+        { json: "apiPackageSBOM", js: "apiPackageSBOM", typ: r("APIPackageSBOM") },
         { json: "apiZarfDeployPayload", js: "apiZarfDeployPayload", typ: r("APIZarfDeployPayload") },
         { json: "apiZarfPackage", js: "apiZarfPackage", typ: r("APIZarfPackage") },
+        { json: "apiZarfPackageConnection", js: "apiZarfPackageConnection", typ: r("APIDeployedPackageConnection") },
+        { json: "apiZarfPackageConnections", js: "apiZarfPackageConnections", typ: a(r("APIDeployedPackageConnection")) },
         { json: "clusterSummary", js: "clusterSummary", typ: r("ClusterSummary") },
         { json: "connectStrings", js: "connectStrings", typ: m(r("ConnectString")) },
         { json: "deployedPackage", js: "deployedPackage", typ: r("DeployedPackage") },
@@ -1311,6 +1373,14 @@ const typeMap: any = {
         { json: "zarfInitOptions", js: "zarfInitOptions", typ: r("ZarfInitOptions") },
         { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
+    ], false),
+    "APIDeployedPackageConnection": o([
+        { json: "name", js: "name", typ: "" },
+        { json: "url", js: "url", typ: u(undefined, "") },
+    ], false),
+    "APIPackageSBOM": o([
+        { json: "path", js: "path", typ: "" },
+        { json: "sboms", js: "sboms", typ: a("") },
     ], false),
     "APIZarfDeployPayload": o([
         { json: "deployOpts", js: "deployOpts", typ: r("ZarfDeployOptions") },
@@ -1370,7 +1440,11 @@ const typeMap: any = {
     ], false),
     "ZarfBuildData": o([
         { json: "architecture", js: "architecture", typ: "" },
+        { json: "differential", js: "differential", typ: true },
+        { json: "differentialMissing", js: "differentialMissing", typ: u(undefined, a("")) },
         { json: "migrations", js: "migrations", typ: a("") },
+        { json: "OCIImportedComponents", js: "OCIImportedComponents", typ: u(undefined, m("")) },
+        { json: "registryOverrides", js: "registryOverrides", typ: m("") },
         { json: "terminal", js: "terminal", typ: "" },
         { json: "timestamp", js: "timestamp", typ: "" },
         { json: "user", js: "user", typ: "" },
@@ -1493,7 +1567,8 @@ const typeMap: any = {
     ], false),
     "ZarfComponentImport": o([
         { json: "name", js: "name", typ: u(undefined, "") },
-        { json: "path", js: "path", typ: "" },
+        { json: "path", js: "path", typ: u(undefined, "") },
+        { json: "url", js: "url", typ: u(undefined, "") },
     ], false),
     "ZarfManifest": o([
         { json: "files", js: "files", typ: u(undefined, a("")) },
@@ -1648,6 +1723,7 @@ const typeMap: any = {
     ], false),
     "DeployedPackage": o([
         { json: "cliVersion", js: "cliVersion", typ: "" },
+        { json: "connectStrings", js: "connectStrings", typ: u(undefined, m(r("ConnectString"))) },
         { json: "data", js: "data", typ: r("ZarfPackage") },
         { json: "deployedComponents", js: "deployedComponents", typ: a(r("DeployedComponent")) },
         { json: "name", js: "name", typ: "" },
@@ -1667,14 +1743,23 @@ const typeMap: any = {
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
+        { json: "differential", js: "differential", typ: r("DifferentialData") },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
         { json: "outputDirectory", js: "outputDirectory", typ: "" },
+        { json: "registryOverrides", js: "registryOverrides", typ: m("") },
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "signingKeyPassword", js: "signingKeyPassword", typ: "" },
         { json: "signingKeyPath", js: "signingKeyPath", typ: "" },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
+    ], false),
+    "DifferentialData": o([
+        { json: "DifferentialImages", js: "DifferentialImages", typ: m(true) },
+        { json: "DifferentialOCIComponents", js: "DifferentialOCIComponents", typ: m("") },
+        { json: "DifferentialPackagePath", js: "DifferentialPackagePath", typ: "" },
+        { json: "DifferentialPackageVersion", js: "DifferentialPackageVersion", typ: "" },
+        { json: "DifferentialRepos", js: "DifferentialRepos", typ: m(true) },
     ], false),
     "Protocol": [
         "http",

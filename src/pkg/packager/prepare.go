@@ -28,7 +28,7 @@ import (
 )
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
-func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
+func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOverride string) error {
 
 	var originalDir string
 
@@ -39,12 +39,16 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 		message.Note(fmt.Sprintf("Using base directory %s", baseDir))
 	}
 
-	if err := p.readYaml(config.ZarfYAML, false); err != nil {
+	if err := p.readYaml(config.ZarfYAML); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
 	if err := p.composeComponents(); err != nil {
 		return err
+	}
+
+	for _, warning := range p.warnings {
+		message.Warn(warning)
 	}
 
 	// After components are composed, template the active package
@@ -92,6 +96,10 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 			}
 		}
 
+		// matchedImages holds the collection of images, reset per-component
+		matchedImages := make(k8s.ImageMap)
+		maybeImages := make(k8s.ImageMap)
+
 		// resources are a slice of generic structs that represent parsed K8s resources
 		var resources []*unstructured.Unstructured
 
@@ -100,7 +108,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 			return fmt.Errorf("unable to create component paths: %s", err.Error())
 		}
 
-		chartNames := make(map[string]string)
+		chartOverrides := make(map[string]string)
 
 		if len(component.Charts) > 0 {
 			_ = utils.CreateDirectory(componentPath.Charts, 0700)
@@ -121,7 +129,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 						return fmt.Errorf("unable to download chart from git repo (%s): %w", chart.URL, err)
 					}
 					// track the actual chart path
-					chartNames[chart.Name] = path
+					chartOverrides[chart.Name] = path
 				} else if len(chart.URL) > 0 {
 					helmCfg.DownloadPublishedChart(componentPath.Charts)
 				} else {
@@ -141,29 +149,39 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 					}
 				}
 
-				var override string
-				var ok bool
-
-				if override, ok = chartNames[chart.Name]; ok {
-					chart.Name = "dummy"
-				}
-
 				// Generate helm templates to pass to gitops engine
 				helmCfg = helm.Helm{
 					BasePath:          componentPath.Base,
 					Chart:             chart,
-					ChartLoadOverride: override,
+					ChartLoadOverride: chartOverrides[chart.Name],
+					KubeVersion:       kubeVersionOverride,
 				}
-				template, err := helmCfg.TemplateChart()
+				template, values, err := helmCfg.TemplateChart()
 
 				if err != nil {
-					message.Errorf(err, "Problem rendering the helm template for %s", chart.URL)
+					message.WarnErrorf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
 					continue
 				}
 
 				// Break the template into separate resources
 				yamls, _ := utils.SplitYAML([]byte(template))
 				resources = append(resources, yamls...)
+
+				var chartTarball string
+				if overridePath, ok := chartOverrides[chart.Name]; ok {
+					chartTarball = overridePath
+				} else {
+					chartTarball = helm.StandardName(componentPath.Charts, helmCfg.Chart) + ".tgz"
+				}
+
+				annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
+				if err != nil {
+					message.WarnErrorf(err, "Problem looking for image annotations for %s: %s", chart.URL, err.Error())
+					continue
+				}
+				for _, image := range annotatedImages {
+					matchedImages[image] = true
+				}
 			}
 		}
 
@@ -196,7 +214,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 					// Read the contents of each file
 					contents, err := os.ReadFile(f)
 					if err != nil {
-						message.Errorf(err, "Unable to read the file %s", f)
+						message.WarnErrorf(err, "Unable to read the file %s", f)
 						continue
 					}
 
@@ -209,13 +227,9 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 			}
 		}
 
-		// matchedImages holds the collection of images, reset per-component
-		matchedImages := make(k8s.ImageMap)
-		maybeImages := make(k8s.ImageMap)
-
 		for _, resource := range resources {
-			if matchedImages, maybeImages, err = p.processUnstructured(resource, matchedImages, maybeImages); err != nil {
-				message.Errorf(err, "Problem processing K8s resource %s", resource.GetName())
+			if matchedImages, maybeImages, err = p.processUnstructuredImages(resource, matchedImages, maybeImages); err != nil {
+				message.WarnErrorf(err, "Problem processing K8s resource %s", resource.GetName())
 			}
 		}
 
@@ -261,7 +275,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string) error {
 	return nil
 }
 
-func (p *Packager) processUnstructured(resource *unstructured.Unstructured, matchedImages, maybeImages k8s.ImageMap) (k8s.ImageMap, k8s.ImageMap, error) {
+func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured, matchedImages, maybeImages k8s.ImageMap) (k8s.ImageMap, k8s.ImageMap, error) {
 	var imageSanityCheck = regexp.MustCompile(`(?mi)"image":"([^"]+)"`)
 	var imageFuzzyCheck = regexp.MustCompile(`(?mi)"([a-z0-9\-.\/]+:[\w][\w.\-]{0,127})"`)
 	var json string

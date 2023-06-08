@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 import type {
+	APIDeployedPackageConnection,
+	APIPackageSBOM,
 	APIZarfDeployPayload,
 	APIZarfPackage,
 	ClusterSummary,
@@ -10,6 +12,7 @@ import type {
 	ZarfState,
 } from './api-types';
 import { HTTP, type EventParams } from './http';
+import type { PackageTunnels } from './store';
 
 const http = new HTTP();
 
@@ -42,6 +45,20 @@ const Packages = {
 	deployStream: (eventParams: EventParams) =>
 		http.eventStream('/packages/deploy-stream', eventParams),
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`),
+	listPkgConnections: (name: string) =>
+		http.get(`/packages/${encodeURIComponent(name)}/connections`),
+	listConnections: () => http.get<PackageTunnels>('/packages/connections'),
+	connect: (pkgName: string, connectionName: string) =>
+		http.put<APIDeployedPackageConnection>(
+			`/packages/${encodeURIComponent(pkgName)}/connect/${encodeURIComponent(connectionName)}`,
+			{}
+		),
+	disconnect: (pkgName: string, connectionName: string) =>
+		http.del(
+			`/packages/${encodeURIComponent(pkgName)}/disconnect/${encodeURIComponent(connectionName)}`
+		),
+	sbom: (path: string) => http.get<APIPackageSBOM>(`/packages/sbom/${encodeURIComponent(path)}`),
+	cleanSBOM: () => http.del('/packages/sbom'),
 };
 
 const DeployingComponents = {

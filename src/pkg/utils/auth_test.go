@@ -9,7 +9,7 @@ import (
 
 	mocks "github.com/defenseunicorns/zarf/src/test/mocks"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCredentialParser(t *testing.T) {
@@ -48,7 +48,7 @@ http://google.com`,
 	}
 
 	gitCredentials := credentialParser(credentialsFile)
-	assert.Equal(t, expectedCreds, gitCredentials)
+	require.Equal(t, expectedCreds, gitCredentials)
 }
 
 func TestNetRCParser(t *testing.T) {
@@ -106,5 +106,5 @@ default
 	}
 
 	netrcCredentials := netrcParser(netrcFile)
-	assert.Equal(t, expectedCreds, netrcCredentials)
+	require.Equal(t, expectedCreds, netrcCredentials)
 }

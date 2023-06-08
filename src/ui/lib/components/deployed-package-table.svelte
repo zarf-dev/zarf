@@ -9,7 +9,7 @@
 	import ZarfChip from './zarf-chip.svelte';
 	import { deployedPkgStore } from '$lib/store';
 	import ButtonDense from './button-dense.svelte';
-	import DeployedPackageMenu from './deployed-package-menu.svelte';
+	import DeployedPackageMenu from './DeployedPackageMenu/deployed-package-menu.svelte';
 
 	const ssx: SSX = {
 		$self: {
@@ -123,7 +123,7 @@
 				<Typography color="blue-200" variant="body1">No Packages have been Deployed</Typography>
 			</div>
 		{:else}
-			{#each $deployedPkgStore.pkgs as pkg}
+			{#each $deployedPkgStore.pkgs as pkg, index (`${pkg.name}-${index}`)}
 				<Paper class="package-table-row" square elevation={1}>
 					<Typography variant="body2" class="package-table-td name" element="span">
 						<span class="material-symbols-outlined" style="color:var(--success);">

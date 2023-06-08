@@ -1,6 +1,8 @@
+import ExampleYAML from "@site/src/components/ExampleYAML";
+
 # DOS Games in the Cluster!
 
-This example provides the basis for Zarf's [Doom Walkthrough](../../docs/13-walkthroughs/2-deploying-doom.md) tutorial.  It deploys Doom into the cluster and provides an easy way to connect and play the game.
+This example provides the basis for Zarf's [Retro Arcade](../../docs/5-zarf-tutorials/3-deploy-a-retro-arcade.md) tutorial.  It deploys a Dos Games arcade into the cluster and provides an easy way to connect and play games.
 
 :::note
 
@@ -8,8 +10,12 @@ In this example, there is no "GitOps" service. Zarf is only showing off its abil
 
 :::
 
+## `zarf.yaml` {#zarf.yaml}
+
 :::info
 
-To view the example source code, select the `Edit this page` link below the article and select the parent folder.
+To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
 
 :::
+
+<ExampleYAML example="dos-games" showLink={false} />

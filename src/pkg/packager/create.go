@@ -8,9 +8,9 @@ import (
 	"bytes"
 	"crypto"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -26,15 +26,27 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/mholt/archiver/v3"
 	"github.com/openvex/go-vex/pkg/vex"
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create(baseDir string) error {
+
 	var originalDir string
+
+	if err := p.readYaml(filepath.Join(baseDir, config.ZarfYAML)); err != nil {
+		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
+	}
+
+	// Load the images and repos from the 'reference' package
+	if err := p.loadDifferentialData(); err != nil {
+		return err
+	}
 
 	// Change the working directory if this run has an alternate base dir.
 	if baseDir != "" {
@@ -45,15 +57,17 @@ func (p *Packager) Create(baseDir string) error {
 		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
 	}
 
-	if err := p.readYaml(config.ZarfYAML, false); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
-	}
-
 	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 		p.cfg.IsInitConfig = true
 	}
 
+	// Before we compose the components (and render the imported OCI components), we need to remove any components that are not needed for a differential build
+	if err := p.removeDifferentialComponentsFromPackage(); err != nil {
+		return err
+	}
+
+	// Compose components into a single zarf.yaml file
 	if err := p.composeComponents(); err != nil {
 		return err
 	}
@@ -63,17 +77,25 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
-	// Create component paths and process extensions for each component.
-	for i, c := range p.cfg.Pkg.Components {
-		componentPath, err := p.createOrGetComponentPaths(c)
-		if err != nil {
-			return err
+	// After templates are filled process any create extensions
+	if err := p.processExtensions(); err != nil {
+		return err
+	}
+
+	// After we have a full zarf.yaml remove unnecessary repos and images if we are building a differential package
+	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
+		// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
+		// If the package versions are the same return an error
+		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == p.cfg.Pkg.Metadata.Version {
+			return errors.New(lang.PkgCreateErrDifferentialSameVersion)
+		}
+		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == "" || p.cfg.Pkg.Metadata.Version == "" {
+			return fmt.Errorf("unable to build differential package when either the differential package version or the referenced package version is not set")
 		}
 
-		// Process any extensions.
-		p.cfg.Pkg.Components[i], err = p.processExtensions(componentPath, c)
-		if err != nil {
-			return fmt.Errorf("unable to process extensions: %w", err)
+		// Handle any potential differential images/repos before going forward
+		if err := p.removeCopiesFromDifferentialPackage(); err != nil {
+			return err
 		}
 	}
 
@@ -88,18 +110,23 @@ func (p *Packager) Create(baseDir string) error {
 
 	var combinedImageList []string
 	componentSBOMs := map[string]*types.ComponentSBOM{}
-	for _, component := range p.cfg.Pkg.Components {
-		componentSBOM, err := p.addComponent(component)
+	for idx, component := range p.cfg.Pkg.Components {
 		onCreate := component.Actions.OnCreate
 		onFailure := func() {
 			if err := p.runActions(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
-
+		isSkeleton := false
+		err := p.addComponent(idx, component, isSkeleton)
 		if err != nil {
 			onFailure()
 			return fmt.Errorf("unable to add component: %w", err)
+		}
+		componentSBOM, err := p.getFilesToSBOM(component)
+		if err != nil {
+			onFailure()
+			return fmt.Errorf("unable to create component SBOM: %w", err)
 		}
 
 		if err := p.runActions(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
@@ -115,8 +142,10 @@ func (p *Packager) Create(baseDir string) error {
 		combinedImageList = append(combinedImageList, component.Images...)
 
 		// Remove the temp directory for this component before archiving.
-		tmpPath := path.Join(p.getComponentBasePath(component), "temp")
-		_ = os.RemoveAll(tmpPath)
+		err = os.RemoveAll(filepath.Join(p.tmp.Components, component.Name, types.TempFolder))
+		if err != nil {
+			message.Warnf("unable to remove temp directory for component %s, component tarball may contain unused artifacts: %s", component.Name, err.Error())
+		}
 	}
 
 	imgList := utils.Unique(combinedImageList)
@@ -127,10 +156,11 @@ func (p *Packager) Create(baseDir string) error {
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
-				ImagesPath:    p.tmp.Images,
-				ImgList:       imgList,
-				Insecure:      config.CommonOptions.Insecure,
-				Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
+				ImagesPath:        p.tmp.Images,
+				ImgList:           imgList,
+				Insecure:          config.CommonOptions.Insecure,
+				Architectures:     []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
+				RegistryOverrides: p.cfg.CreateOpts.RegistryOverrides,
 			}
 
 			return imgConfig.PullAll()
@@ -154,16 +184,9 @@ func (p *Packager) Create(baseDir string) error {
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range p.cfg.Pkg.Components {
 		// Make the component a tar archive
-		componentPaths, _ := p.createOrGetComponentPaths(component)
-		componentName := fmt.Sprintf("%s.%s", component.Name, "tar")
-		componentTarPath := filepath.Join(p.tmp.Components, componentName)
-		if err := archiver.Archive([]string{componentPaths.Base}, componentTarPath); err != nil {
-			return fmt.Errorf("unable to create package: %w", err)
-		}
-
-		// Remove the deflated component directory
-		if err := os.RemoveAll(filepath.Join(p.tmp.Components, component.Name)); err != nil {
-			return fmt.Errorf("unable to remove the component directory (%s): %w", componentPaths.Base, err)
+		err := p.archiveComponent(component)
+		if err != nil {
+			return fmt.Errorf("unable to archive component: %s", err.Error())
 		}
 	}
 
@@ -267,12 +290,10 @@ func (p *Packager) Create(baseDir string) error {
 	return nil
 }
 
-func (p *Packager) addComponent(component types.ZarfComponent) (*types.ComponentSBOM, error) {
-	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
-
+func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.ComponentSBOM, error) {
 	componentPath, err := p.createOrGetComponentPaths(component)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create the component paths: %w", err)
+		return nil, fmt.Errorf("unable to create the component paths: %s", err.Error())
 	}
 
 	// Create an struct to hold the SBOM information for this component.
@@ -281,121 +302,176 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		ComponentPath: componentPath,
 	}
 
-	onCreate := component.Actions.OnCreate
+	appendSBOMFiles := func(path string) {
+		if utils.IsDir(path) {
+			files, _ := utils.RecursiveFileList(path, nil, false, true)
+			componentSBOM.Files = append(componentSBOM.Files, files...)
+		} else {
+			componentSBOM.Files = append(componentSBOM.Files, path)
+		}
+	}
 
-	if err := p.runActions(onCreate.Defaults, onCreate.Before, nil); err != nil {
-		return nil, fmt.Errorf("unable to run component before action: %w", err)
+	for filesIdx, file := range component.Files {
+		path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+
+		appendSBOMFiles(path)
+	}
+
+	for dataIdx, data := range component.DataInjections {
+		path := filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+
+		appendSBOMFiles(path)
+	}
+
+	return &componentSBOM, nil
+}
+
+func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkeleton bool) error {
+	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
+
+	componentPath, err := p.createOrGetComponentPaths(component)
+	if err != nil {
+		return fmt.Errorf("unable to create the component paths: %s", err.Error())
+	}
+
+	if isSkeleton && component.CosignKeyPath != "" {
+		dst := filepath.Join(componentPath.Base, "cosign.pub")
+		err := utils.CreatePathAndCopy(component.CosignKeyPath, dst)
+		if err != nil {
+			return err
+		}
+		p.cfg.Pkg.Components[index].CosignKeyPath = "cosign.pub"
+	}
+
+	onCreate := component.Actions.OnCreate
+	if !isSkeleton {
+		if err := p.runActions(onCreate.Defaults, onCreate.Before, nil); err != nil {
+			return fmt.Errorf("unable to run component before action: %w", err)
+		}
 	}
 
 	// If any helm charts are defined, process them.
-	if len(component.Charts) > 0 {
-		_ = utils.CreateDirectory(componentPath.Charts, 0700)
-		_ = utils.CreateDirectory(componentPath.Values, 0700)
+	for chartIdx, chart := range component.Charts {
 		re := regexp.MustCompile(`\.git$`)
+		isGitURL := re.MatchString(chart.URL)
+		helmCfg := helm.Helm{
+			Chart: chart,
+			Cfg:   p.cfg,
+		}
 
-		for _, chart := range component.Charts {
-			isGitURL := re.MatchString(chart.URL)
-			helmCfg := helm.Helm{
-				Chart: chart,
-				Cfg:   p.cfg,
+		if isSkeleton && chart.URL == "" {
+			rel := filepath.Join(types.ChartsFolder, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+			dst := filepath.Join(componentPath.Base, rel)
+
+			err := utils.CreatePathAndCopy(chart.LocalPath, dst)
+			if err != nil {
+				return err
 			}
 
-			if isGitURL {
-				_, err = helmCfg.PackageChartFromGit(componentPath.Charts)
-				if err != nil {
-					return nil, fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
+			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
+		} else if isGitURL {
+			_, err = helmCfg.PackageChartFromGit(componentPath.Charts)
+			if err != nil {
+				return fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
+			}
+		} else if len(chart.URL) > 0 {
+			helmCfg.DownloadPublishedChart(componentPath.Charts)
+		} else {
+			path := helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
+			zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
+			if !strings.HasSuffix(path, zarfFilename) {
+				return fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
+			}
+		}
+
+		for valuesIdx, path := range chart.ValuesFiles {
+			rel := fmt.Sprintf("%s-%d", helm.StandardName(types.ValuesFolder, chart), valuesIdx)
+			dst := filepath.Join(componentPath.Base, rel)
+
+			if utils.IsURL(path) {
+				if isSkeleton {
+					continue
 				}
-			} else if len(chart.URL) > 0 {
-				helmCfg.DownloadPublishedChart(componentPath.Charts)
+				if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+					return fmt.Errorf(lang.ErrDownloading, path, err.Error())
+				}
 			} else {
-				path := helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
-				zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
-				if !strings.HasSuffix(path, zarfFilename) {
-					return nil, fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
+				if err := utils.CreatePathAndCopy(path, dst); err != nil {
+					return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 				}
-			}
-
-			for idx, path := range chart.ValuesFiles {
-				dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
-				if utils.IsURL(path) {
-					if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
-						return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
-					}
-				} else {
-					if err := utils.CreatePathAndCopy(path, dst); err != nil {
-						return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
-					}
+				if isSkeleton {
+					p.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 				}
 			}
 		}
 	}
 
-	if len(component.Files) > 0 {
-		if err = utils.CreateDirectory(componentPath.Files, 0700); err != nil {
-			return nil, fmt.Errorf("unable to create the component files directory: %s", err.Error())
+	for filesIdx, file := range component.Files {
+		message.Debugf("Loading %#v", file)
+
+		rel := filepath.Join(types.FilesFolder, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		dst := filepath.Join(componentPath.Base, rel)
+
+		if utils.IsURL(file.Source) {
+			if isSkeleton {
+				continue
+			}
+			if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+			}
+		} else {
+			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
+				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+			}
+			if isSkeleton {
+				p.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
+			}
 		}
 
-		for index, file := range component.Files {
-			message.Debugf("Loading %#v", file)
-			dst := filepath.Join(componentPath.Files, strconv.Itoa(index))
-
-			if utils.IsURL(file.Source) {
-				if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
-					return nil, fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
-				}
-			} else {
-				if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
-					return nil, fmt.Errorf("unable to copy file %s: %w", file.Source, err)
-				}
+		// Abort packaging on invalid shasum (if one is specified).
+		if file.Shasum != "" {
+			if actualShasum, _ := utils.GetCryptoHash(dst, crypto.SHA256); actualShasum != file.Shasum {
+				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 			}
+		}
 
-			// Abort packaging on invalid shasum (if one is specified).
-			if file.Shasum != "" {
-				if actualShasum, _ := utils.GetCryptoHash(dst, crypto.SHA256); actualShasum != file.Shasum {
-					return nil, fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
-				}
-			}
-
-			info, _ := os.Stat(dst)
-
-			if file.Executable || info.IsDir() {
-				_ = os.Chmod(dst, 0700)
-			} else {
-				_ = os.Chmod(dst, 0600)
-			}
-
-			componentSBOM.Files = append(componentSBOM.Files, dst)
+		if file.Executable || utils.IsDir(dst) {
+			_ = os.Chmod(dst, 0700)
+		} else {
+			_ = os.Chmod(dst, 0600)
 		}
 	}
 
 	if len(component.DataInjections) > 0 {
 		spinner := message.NewProgressSpinner("Loading data injections")
-		defer spinner.Success()
+		defer spinner.Stop()
 
-		for _, data := range component.DataInjections {
+		for dataIdx, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-			dst := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
+
+			rel := filepath.Join(types.DataInjectionsFolder, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+			dst := filepath.Join(componentPath.Base, rel)
+
 			if utils.IsURL(data.Source) {
+				if isSkeleton {
+					continue
+				}
 				if err := utils.DownloadToFile(data.Source, dst, component.CosignKeyPath); err != nil {
-					return nil, fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
+					return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
 				if err := utils.CreatePathAndCopy(data.Source, dst); err != nil {
-					return nil, fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
+					return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
+				}
+				if isSkeleton {
+					p.cfg.Pkg.Components[index].DataInjections[dataIdx].Source = rel
 				}
 			}
-
-			// Unwrap the dataInjection dir into individual files.
-			pattern := regexp.MustCompile(`(?mi).+$`)
-			files, _ := utils.RecursiveFileList(dst, pattern, false, true)
-			componentSBOM.Files = append(componentSBOM.Files, files...)
 		}
+		spinner.Success()
 	}
 
 	if len(component.Manifests) > 0 {
-		if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
-			return nil, fmt.Errorf("unable to create manifest directory %s: %s", componentPath.Manifests, err.Error())
-		}
 		// Get the proper count of total manifests to add.
 		manifestCount := 0
 
@@ -405,58 +481,74 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 		}
 
 		spinner := message.NewProgressSpinner("Loading %d K8s manifests", manifestCount)
-		defer spinner.Success()
+		defer spinner.Stop()
 
 		// Iterate over all manifests.
-		for _, manifest := range component.Manifests {
-			for idx, f := range manifest.Files {
-				var trimmedPath string
-				var destination string
+		for manifestIdx, manifest := range component.Manifests {
+			for fileIdx, path := range manifest.Files {
+				rel := filepath.Join(types.ManifestsFolder, fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+				dst := filepath.Join(componentPath.Base, rel)
+
 				// Copy manifests without any processing.
-				spinner.Updatef("Copying manifest %s", f)
-				if utils.IsURL(f) {
-					mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
-					destination = filepath.Join(componentPath.Manifests, mname)
-					if err := utils.DownloadToFile(f, destination, component.CosignKeyPath); err != nil {
-						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
+				spinner.Updatef("Copying manifest %s", path)
+				if utils.IsURL(path) {
+					if isSkeleton {
+						continue
 					}
-					// Update the manifest path to the new location.
-					manifest.Files[idx] = mname
+					if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
+					}
 				} else {
-					// If using a temp directory, trim the temp directory from the path.
-					trimmedPath = strings.TrimPrefix(f, componentPath.Temp)
-					destination = filepath.Join(componentPath.Manifests, trimmedPath)
-					if err := utils.CreatePathAndCopy(f, destination); err != nil {
-						return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
+					if err := utils.CreatePathAndCopy(path, dst); err != nil {
+						return fmt.Errorf("unable to copy manifest %s: %w", path, err)
 					}
-					// Update the manifest path to the new location.
-					manifest.Files[idx] = trimmedPath
+					if isSkeleton {
+						p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files[fileIdx] = rel
+					}
 				}
 			}
 
-			for idx, k := range manifest.Kustomizations {
+			for kustomizeIdx, path := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
-				spinner.Updatef("Building kustomization for %s", k)
-				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-				destination := filepath.Join(componentPath.Manifests, kname)
-				if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
-					return nil, fmt.Errorf("unable to build kustomization %s: %w", k, err)
+				spinner.Updatef("Building kustomization for %s", path)
+
+				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
+				rel := filepath.Join(types.ManifestsFolder, kname)
+				dst := filepath.Join(componentPath.Base, rel)
+
+				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+					return fmt.Errorf("unable to build kustomization %s: %w", path, err)
+				}
+				if isSkeleton {
+					p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files = append(p.cfg.Pkg.Components[index].Manifests[manifestIdx].Files, rel)
 				}
 			}
+			if isSkeleton {
+				// remove kustomizations
+				p.cfg.Pkg.Components[index].Manifests[manifestIdx].Kustomizations = nil
+			}
 		}
+		spinner.Success()
 	}
 
 	// Load all specified git repos.
-	if len(component.Repos) > 0 {
+	if len(component.Repos) > 0 && !isSkeleton {
 		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
-		defer spinner.Success()
+		defer spinner.Stop()
 
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
 			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
 			if err := gitCfg.Pull(url, componentPath.Repos); err != nil {
-				return nil, fmt.Errorf("unable to pull git repo %s: %w", url, err)
+				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
+		}
+		spinner.Success()
+	}
+
+	if !isSkeleton {
+		if err := p.runActions(onCreate.Defaults, onCreate.After, nil); err != nil {
+			return fmt.Errorf("unable to run component after action: %w", err)
 		}
 	}
 
@@ -466,7 +558,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 		err = utils.CreateDirectory(componentPath.Reports, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("unable to create reports destination directory: %w", err)
+			return fmt.Errorf("unable to create reports destination directory: %w", err)
 		}
 
 		for _, report := range component.Reports {
@@ -476,16 +568,16 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				dst := fmt.Sprintf("%s/%s", componentPath.Reports, reportType)
 				err = utils.CreateDirectory(dst, 0700)
 				if err != nil {
-					return nil, fmt.Errorf("unable to create reports destination directory: %w", err)
+					return fmt.Errorf("unable to create reports destination directory: %w", err)
 				}
 				message.Debug("Source was identified as a URL")
 				if _, err := os.Stat(dst + report.Name); err == nil {
-					return nil, fmt.Errorf("%s already exists for this component and cannot conflict", dst+report.Name)
+					return fmt.Errorf("%s already exists for this component and cannot conflict", dst+report.Name)
 				}
 				if utils.IsURL(report.Source) {
 					path = fmt.Sprintf("%s/%s/%s", componentPath.Reports, reportType, report.Name)
 					if err := utils.DownloadToFile(report.Source, path, component.CosignKeyPath); err != nil {
-						return nil, fmt.Errorf(lang.ErrDownloading, report.Source, err.Error())
+						return fmt.Errorf(lang.ErrDownloading, report.Source, err.Error())
 					}
 				} else {
 					path = report.Source
@@ -493,13 +585,13 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 				doc, err := vex.Load(path)
 				if err != nil {
-					return nil, fmt.Errorf("unable to load vex document %s from %s: %w", report.Name, path, err)
+					return fmt.Errorf("unable to load vex document %s from %s: %w", report.Name, path, err)
 				}
 
 				// Convert to JSON
 				var b bytes.Buffer
 				if err = doc.ToJSON(&b); err != nil {
-					return nil, fmt.Errorf("unable to write vex doc to JSON for %s: %w", report.Name, err)
+					return fmt.Errorf("unable to write vex doc to JSON for %s: %w", report.Name, err)
 				}
 
 				message.Debugf("Loaded VEX file %s (%d bytes)", report.Name, b.Len())
@@ -507,7 +599,7 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 				// Write VEX file to the vex directory
 				dest := fmt.Sprintf("%s/%s/%s", componentPath.Reports, reportType, report.Name)
 				if err = utils.WriteFile(dest, b.Bytes()); err != nil {
-					return nil, fmt.Errorf("unable to write vex file to %s: %w", dest, err)
+					return fmt.Errorf("unable to write vex file to %s: %w", dest, err)
 				}
 			default:
 				message.Debugf("Loaded file %s)", reportType)
@@ -516,11 +608,11 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 
 				if utils.IsURL(report.Source) {
 					if err := utils.DownloadToFile(report.Source, dst, component.CosignKeyPath); err != nil {
-						return nil, fmt.Errorf(lang.ErrDownloading, report.Source, err.Error())
+						return fmt.Errorf(lang.ErrDownloading, report.Source, err.Error())
 					}
 				} else {
 					if err := utils.CreatePathAndCopy(report.Source, dst); err != nil {
-						return nil, fmt.Errorf("unable to copy file %s: %w", report.Source, err)
+						return fmt.Errorf("unable to copy file %s: %w", report.Source, err)
 					}
 				}
 			}
@@ -528,10 +620,10 @@ func (p *Packager) addComponent(component types.ZarfComponent) (*types.Component
 	}
 
 	if err := p.runActions(onCreate.Defaults, onCreate.After, nil); err != nil {
-		return nil, fmt.Errorf("unable to run component after action: %w", err)
+		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 
-	return &componentSBOM, nil
+	return nil
 }
 
 // generateChecksum walks through all of the files starting at the base path and generates a checksum file.
@@ -543,7 +635,7 @@ func generatePackageChecksums(basePath string) (string, error) {
 	// Add a '/' or '\' to the basePath so that the checksums file lists paths from the perspective of the basePath
 	basePathWithModifier := basePath + string(filepath.Separator)
 
-	// Walk through all files in the package path and calculate their checksums
+	// Walk all files in the package path and calculate their checksums
 	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
 			sum, err := utils.GetSHA256OfFile(path)
@@ -559,11 +651,163 @@ func generatePackageChecksums(basePath string) (string, error) {
 	}
 
 	// Create the checksums file
-	checksumsFilePath := filepath.Join(basePath, "checksums.txt")
+	checksumsFilePath := filepath.Join(basePath, config.ZarfChecksumsTxt)
 	if err := utils.WriteFile(checksumsFilePath, []byte(checksumsData)); err != nil {
 		return "", err
 	}
 
 	// Calculate the checksum of the checksum file
 	return utils.GetSHA256OfFile(checksumsFilePath)
+}
+
+// loadDifferentialData extracts the zarf config of a designated 'reference' package that we are building a differential over and creates a list of all images and repos that are in the reference package
+func (p *Packager) loadDifferentialData() error {
+	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath == "" {
+		return nil
+	}
+
+	// Save the fact that this is a differential build into the build data of the package
+	p.cfg.Pkg.Build.Differential = true
+
+	tmpDir, _ := utils.MakeTempDir("")
+	defer os.RemoveAll(tmpDir)
+
+	// Load the package spec of the package we're using as a 'reference' for the differential build
+	if utils.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
+		if err := p.pullPackageLayers(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, tmpDir, []string{config.ZarfYAML}); err != nil {
+			return fmt.Errorf("unable to pull the differential zarf package spec: %s", err.Error())
+		}
+	} else {
+		if err := archiver.Extract(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, config.ZarfYAML, tmpDir); err != nil {
+			return fmt.Errorf("unable to extract the differential zarf package spec: %s", err.Error())
+		}
+	}
+
+	var differentialZarfConfig types.ZarfPackage
+	if err := utils.ReadYaml(filepath.Join(tmpDir, config.ZarfYAML), &differentialZarfConfig); err != nil {
+		return fmt.Errorf("unable to load the differential zarf package spec: %s", err.Error())
+	}
+
+	// Generate a map of all the images and repos that are included in the provided package
+	allIncludedImagesMap := map[string]bool{}
+	allIncludedReposMap := map[string]bool{}
+	for _, component := range differentialZarfConfig.Components {
+		for _, image := range component.Images {
+			allIncludedImagesMap[image] = true
+		}
+		for _, repo := range component.Repos {
+			allIncludedReposMap[repo] = true
+		}
+	}
+
+	p.cfg.CreateOpts.DifferentialData.DifferentialImages = allIncludedImagesMap
+	p.cfg.CreateOpts.DifferentialData.DifferentialRepos = allIncludedReposMap
+	p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
+	p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents = differentialZarfConfig.Build.OCIImportedComponents
+
+	return nil
+}
+
+// removeDifferentialComponentsFromPackage will remove unchanged OCI imported components from a differential package creation
+func (p *Packager) removeDifferentialComponentsFromPackage() error {
+	// Remove components that were imported and already built into the reference package
+	if len(p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents) > 0 {
+		componentsToRemove := []int{}
+
+		for idx, component := range p.cfg.Pkg.Components {
+			// if the component is imported from an OCI package and everything is the same, don't include this package
+			if utils.IsOCIURL(component.Import.URL) {
+				if _, alsoExists := p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents[component.Import.URL]; alsoExists {
+
+					// If the component spec is not empty, we will still include it in the differential package
+					// NOTE: We are ignoring fields that are not relevant to the differential build
+					if component.IsEmpty([]string{"Name", "Required", "Description", "Default", "Import"}) {
+						componentsToRemove = append(componentsToRemove, idx)
+					}
+				}
+			}
+		}
+
+		// Remove the components that are already included (via OCI Import) in the reference package
+		if len(componentsToRemove) > 0 {
+			for i, componentIndex := range componentsToRemove {
+				indexToRemove := componentIndex - i
+				componentToRemove := p.cfg.Pkg.Components[indexToRemove]
+
+				// If we are removing a component, add it to the build metadata and remove it from the list of OCI components for this package
+				p.cfg.Pkg.Build.DifferentialMissing = append(p.cfg.Pkg.Build.DifferentialMissing, componentToRemove.Name)
+
+				p.cfg.Pkg.Components = append(p.cfg.Pkg.Components[:indexToRemove], p.cfg.Pkg.Components[indexToRemove+1:]...)
+			}
+		}
+	}
+
+	return nil
+}
+
+// removeCopiesFromDifferentialPackage will remove any images and repos that are already included in the reference package from the new package
+func (p *Packager) removeCopiesFromDifferentialPackage() error {
+	// If a differential build was not requested, continue on as normal
+	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath == "" {
+		return nil
+	}
+
+	// Loop through all of the components to determine if any of them are using already included images or repos
+	componentMap := make(map[int]types.ZarfComponent)
+	for idx, component := range p.cfg.Pkg.Components {
+		newImageList := []string{}
+		newRepoList := []string{}
+		// Generate a list of all unique images for this component
+		for _, img := range component.Images {
+			// If a image doesn't have a tag (or is a commonly reused tag), we will include this image in the differential package
+			imgRef, err := transform.ParseImageRef(img)
+			if err != nil {
+				return fmt.Errorf("unable to parse image ref %s: %s", img, err.Error())
+			}
+
+			// Only include new images or images that have a commonly overwritten tag
+			imgTag := imgRef.TagOrDigest
+			useImgAnyways := imgTag == ":latest" || imgTag == ":stable" || imgTag == ":nightly"
+			if useImgAnyways || !p.cfg.CreateOpts.DifferentialData.DifferentialImages[img] {
+				newImageList = append(newImageList, img)
+			} else {
+				message.Debugf("Image %s is already included in the differential package", img)
+			}
+		}
+
+		// Generate a list of all unique repos for this component
+		for _, repoURL := range component.Repos {
+			// Split the remote url and the zarf reference
+			_, refPlain, err := transform.GitTransformURLSplitRef(repoURL)
+			if err != nil {
+				return err
+			}
+
+			var ref plumbing.ReferenceName
+			// Parse the ref from the git URL.
+			if refPlain != "" {
+				ref = git.ParseRef(refPlain)
+			}
+
+			// Only include new repos or repos that were not referenced by a specific commit sha or tag
+			useRepoAnyways := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
+			if useRepoAnyways || !p.cfg.CreateOpts.DifferentialData.DifferentialRepos[repoURL] {
+				newRepoList = append(newRepoList, repoURL)
+			} else {
+				message.Debugf("Repo %s is already included in the differential package", repoURL)
+			}
+		}
+
+		// Update the component with the unique lists of repos and images
+		component.Images = newImageList
+		component.Repos = newRepoList
+		componentMap[idx] = component
+	}
+
+	// Update the package with the new component list
+	for idx, component := range componentMap {
+		p.cfg.Pkg.Components[idx] = component
+	}
+
+	return nil
 }

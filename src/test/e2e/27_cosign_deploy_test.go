@@ -16,7 +16,6 @@ import (
 func TestCosignDeploy(t *testing.T) {
 	t.Log("E2E: Cosign deploy")
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	// Test with command from https://zarf.dev/install/
 	command := fmt.Sprintf("%s package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m) --confirm", e2e.ZarfBinPath)
@@ -24,6 +23,6 @@ func TestCosignDeploy(t *testing.T) {
 	stdOut, stdErr, err := exec.CmdWithContext(context.TODO(), exec.PrintCfg(), "sh", "-c", command)
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "dos-games", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

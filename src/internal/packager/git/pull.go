@@ -48,7 +48,7 @@ func (g *Git) Pull(gitURL, targetFolder string) error {
 
 	// Parse the ref from the git URL.
 	if refPlain != emptyRef {
-		ref = g.parseRef(refPlain)
+		ref = ParseRef(refPlain)
 	}
 
 	// Construct a path unique to this git repo

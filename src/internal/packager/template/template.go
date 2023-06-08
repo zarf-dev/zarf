@@ -24,47 +24,50 @@ type Values struct {
 }
 
 // Generate returns a Values struct with the values to be used in the template.
-func Generate(cfg *types.PackagerConfig) (Values, error) {
+func Generate(cfg *types.PackagerConfig) (*Values, error) {
 	message.Debug("template.Generate()")
 	var generated Values
 
 	if cfg == nil {
-		return generated, fmt.Errorf("config is nil")
+		return nil, fmt.Errorf("config is nil")
 	}
 
 	generated.config = cfg
 
 	regInfo := cfg.State.RegistryInfo
 
-	pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, regInfo.PushPassword)
-	if err != nil {
-		return generated, fmt.Errorf("error generating htpasswd string: %w", err)
-	}
+	// Only calculate this for internal registries to allow longer external passwords
+	if regInfo.InternalRegistry {
+		pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, regInfo.PushPassword)
+		if err != nil {
+			return nil, fmt.Errorf("error generating htpasswd string: %w", err)
+		}
 
-	pullUser, err := utils.GetHtpasswdString(regInfo.PullUsername, regInfo.PullPassword)
-	if err != nil {
-		return generated, fmt.Errorf("error generating htpasswd string: %w", err)
-	}
+		pullUser, err := utils.GetHtpasswdString(regInfo.PullUsername, regInfo.PullPassword)
+		if err != nil {
+			return nil, fmt.Errorf("error generating htpasswd string: %w", err)
+		}
 
-	generated.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
+		generated.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
+	}
 
 	generated.registry = regInfo.Address
 
-	return generated, nil
+	return &generated, nil
 }
 
 // Ready returns true if the Values struct is ready to be used in the template.
-func (values Values) Ready() bool {
+func (values *Values) Ready() bool {
 	return values.config.State.Distro != ""
 }
 
 // GetRegistry returns the registry address.
-func (values Values) GetRegistry() string {
+func (values *Values) GetRegistry() string {
 	return values.registry
 }
 
 // GetVariables returns the variables to be used in the template.
-func (values Values) GetVariables(component types.ZarfComponent) (map[string]*utils.TextTemplate, map[string]string) {
+func (values *Values) GetVariables(component types.ZarfComponent) (map[string]*utils.TextTemplate, map[string]string) {
 	regInfo := values.config.State.RegistryInfo
 	gitInfo := values.config.State.GitServer
 
@@ -154,7 +157,7 @@ func (values Values) GetVariables(component types.ZarfComponent) (map[string]*ut
 }
 
 // Apply renders the template and writes the result to the given path.
-func (values Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
+func (values *Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
 	message.Debugf("template.Apply(%#v, %s)", component, path)
 
 	// If Apply() is called before all values are loaded, fail unless ignoreReady is true

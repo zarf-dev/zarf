@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,28 +22,28 @@ func TestYOLOMode(t *testing.T) {
 	}
 
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
 
 	// Destroy the cluster to test Zarf cleaning up after itself
-	stdOut, stdErr, err := e2e.ExecZarfCommand("destroy", "--confirm", "--remove-components")
+	stdOut, stdErr, err := e2e.Zarf("destroy", "--confirm", "--remove-components")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-yolo-%s.tar.zst", e2e.Arch)
 
 	// Deploy the YOLO package
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	tunnel, err := cluster.NewZarfTunnel()
 	require.NoError(t, err)
-	tunnel.Connect("doom", false)
+	err = tunnel.Connect("doom", false)
+	require.NoError(t, err)
 	defer tunnel.Close()
 
 	// Check that 'curl' returns something.
 	resp, err := http.Get(tunnel.HTTPEndpoint())
-	assert.NoError(t, err, resp)
-	assert.Equal(t, 200, resp.StatusCode)
+	require.NoError(t, err, resp)
+	require.Equal(t, 200, resp.StatusCode)
 
-	stdOut, stdErr, err = e2e.ExecZarfCommand("package", "remove", "yolo", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "yolo", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

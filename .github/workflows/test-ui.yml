@@ -11,6 +11,9 @@ on:
       - "docs/**"
       - "CODEOWNERS"
 
+permissions:
+  contents: read
+
 # Abort prior jobs in the same workflow / PR
 concurrency:
   group: e2e-ui-${{ github.ref }}
@@ -21,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       # Have to run early for now since UI tests are a little brittle around cluster state
       - name: Setup K3d
@@ -50,7 +53,8 @@ jobs:
           export NODE_PATH=$(pwd)/src/ui/node_modules &&
           npm --prefix src/ui run test:pre-init &&
           npm --prefix src/ui run test:init &&
-          npm --prefix src/ui run test:post-init
+          npm --prefix src/ui run test:post-init &&
+          npm --prefix src/ui run test:connect
 
       - name: Save logs
         if: always()

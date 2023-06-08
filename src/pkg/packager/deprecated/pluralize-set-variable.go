@@ -5,11 +5,12 @@
 package deprecated
 
 import (
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"fmt"
+
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func migrateSetVariableToSetVariables(c types.ZarfComponent) types.ZarfComponent {
+func migrateSetVariableToSetVariables(c types.ZarfComponent) (types.ZarfComponent, string) {
 	hasSetVariable := false
 
 	migrate := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
@@ -48,10 +49,10 @@ func migrateSetVariableToSetVariables(c types.ZarfComponent) types.ZarfComponent
 
 	// Leave deprecated setVariable in place, but warn users
 	if hasSetVariable {
-		message.Warnf("Component '%s' is using setVariable in actions which will be removed in a future version of Zarf. Please migrate to the list form of setVariables.", c.Name)
+		return c, fmt.Sprintf("Component '%s' is using setVariable in actions which will be removed in a future version of Zarf. Please migrate to the list form of setVariables.", c.Name)
 	}
 
-	return c
+	return c, ""
 }
 
 func clearSetVariables(c types.ZarfComponent) types.ZarfComponent {

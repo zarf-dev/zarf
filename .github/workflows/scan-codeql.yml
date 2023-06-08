@@ -1,5 +1,8 @@
 name: Analyze CodeQL
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: ["main"]
@@ -35,7 +38,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - name: Setup golang
         uses: ./.github/actions/golang
@@ -45,7 +48,7 @@ jobs:
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@83f0fe6c4988d98a455712a27f0255212bba9bd4 # v2.3.6
         env:
           CODEQL_EXTRACTOR_GO_BUILD_TRACING: on
         with:
@@ -56,6 +59,6 @@ jobs:
         run: make build-cli-linux-amd
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@83f0fe6c4988d98a455712a27f0255212bba9bd4 # v2.3.6
         with:
           category: "/language:${{matrix.language}}"

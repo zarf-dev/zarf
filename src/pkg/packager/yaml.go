@@ -16,9 +16,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// readYaml loads the config from the given path and removes.
-// components not matching the current OS if filterByOS is set.
-func (p *Packager) readYaml(path string, filterByOS bool) error {
+// readYaml loads the config from the given path
+func (p *Packager) readYaml(path string) error {
 	if err := utils.ReadYaml(path, &p.cfg.Pkg); err != nil {
 		return err
 	}
@@ -26,6 +25,11 @@ func (p *Packager) readYaml(path string, filterByOS bool) error {
 	// Set the arch from the package config before filtering.
 	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
+	return nil
+}
+
+// filterComponents removes components not matching the current OS if filterByOS is set.
+func (p *Packager) filterComponents(filterByOS bool) {
 	// Filter each component to only compatible platforms.
 	filteredComponents := []types.ZarfComponent{}
 	for _, component := range p.cfg.Pkg.Components {
@@ -35,11 +39,9 @@ func (p *Packager) readYaml(path string, filterByOS bool) error {
 	}
 	// Update the active package with the filtered components.
 	p.cfg.Pkg.Components = filteredComponents
-
-	return nil
 }
 
-// writeYaml adds build information and writes the config to the given path.
+// writeYaml adds build information and writes the config to the temp directory.
 func (p *Packager) writeYaml() error {
 	message.Debug("config.BuildConfig()")
 
@@ -74,6 +76,8 @@ func (p *Packager) writeYaml() error {
 		deprecated.ScriptsToActionsMigrated,
 		deprecated.PluralizeSetVariable,
 	}
+
+	p.cfg.Pkg.Build.RegistryOverrides = p.cfg.CreateOpts.RegistryOverrides
 
 	return utils.WriteYaml(p.tmp.ZarfYaml, p.cfg.Pkg, 0400)
 }

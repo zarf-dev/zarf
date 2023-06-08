@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style type="text/css">
+body {background-color: black;}
+pre {
+	font-weight: normal;
+	color: #bbb;
+	white-space: -moz-pre-wrap;
+	white-space: -o-pre-wrap;
+	white-space: -pre-wrap;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+}
+b {font-weight: normal}
+b.BOLD {color: #fff}
+b.ITA {font-style: italic}
+b.UND {text-decoration: underline}
+b.STR {text-decoration: line-through}
+b.UNDSTR {text-decoration: underline line-through}
+b.BLK {color: #000000}
+b.RED {color: #aa0000}
+b.GRN {color: #00aa00}
+b.YEL {color: #aa5500}
+b.BLU {color: #0000aa}
+b.MAG {color: #aa00aa}
+b.CYN {color: #00aaaa}
+b.WHI {color: #aaaaaa}
+b.HIK {color: #555555}
+b.HIR {color: #ff5555}
+b.HIG {color: #55ff55}
+b.HIY {color: #ffff55}
+b.HIB {color: #5555ff}
+b.HIM {color: #ff55ff}
+b.HIC {color: #55ffff}
+b.HIW {color: #ffffff}
+b.BBLK {background-color: #000000}
+b.BRED {background-color: #aa0000}
+b.BGRN {background-color: #00aa00}
+b.BYEL {background-color: #aa5500}
+b.BBLU {background-color: #0000aa}
+b.BMAG {background-color: #aa00aa}
+b.BCYN {background-color: #00aaaa}
+b.BWHI {background-color: #aaaaaa}
+</style>
+</head>
+<body>
+<pre>
+<b class="WHI">$ zarf package deploy zarf-package-wordpress-amd64-16.0.4.tar.zst</b><br/>
+<b class=YEL>Saving log file to /tmp/zarf-2023-05-06-19-26-21-1235550716.log</b>
+<b class=YEL></b>
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package zarf-package-wordpress-amd64-16.0.4.tar.zst</b>
+<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">All of the checksums matched!</b>
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package zarf-package-wordpress-amd64-16.0.4.tar.zst</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b style="color:#55ffff;">kind</b>:<b style="color:#ff55ff;"> ZarfPackageConfig</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">metadata</b>:<b style="color:#55ffff;"></b>
+<b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> wordpress</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> A Zarf Package that deploys the WordPress blogging and content management platform</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 16.0.4</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> amd64</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">aggregateChecksum</b>:<b style="color:#ff55ff;"> 8375743b716d39346967c70b1bcaf2480a09417c8aa302e4868dd9793663b1ef</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">build</b>:<b style="color:#55ffff;"></b>
+<b style="color:#55ffff;">  terminal</b>:<b style="color:#ff55ff;"> guilty-spark</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">user</b>:<b style="color:#ff55ff;"> wayne</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> amd64</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">timestamp</b>:<b style="color:#ff55ff;"> Sat, 06 May 2023 19:06:43 -0500</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> v0.26.2</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">migrations</b>:
+  -<b style="color:#ff55ff;"> scripts-to-actions</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> pluralize-set-variable</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">differential</b>:<b style="color:#ffffff;"> false</b>
+<b style="color:#ffffff;"></b><b style="color:#55ffff;">components</b>:
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> wordpress</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Deploys the Bitnami-packaged WordPress chart into the cluster</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
+<b style="color:#ffffff;">  </b><b style="color:#55ffff;">charts</b>:
+  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> wordpress</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">url</b>:<b style="color:#ff55ff;"> oci://registry-1.docker.io/bitnamicharts/wordpress</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 16.0.4</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> wordpress</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">valuesFiles</b>:
+    -<b style="color:#ff55ff;"> wordpress-values.yaml</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">manifests</b>:
+  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> connect-services</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> wordpress</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">files</b>:
+    -<b style="color:#ff55ff;"> connect-services.yaml</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
+  -<b style="color:#ff55ff;"> docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> docker.io/bitnami/mariadb:10.11.2-debian-11-r21</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> docker.io/bitnami/wordpress:6.2.0-debian-11-r18</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">variables</b>:
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_USERNAME</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The username that is used to login to the WordPress admin account</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> zarf</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
+<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_PASSWORD</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The password that is used to login to the WordPress admin account</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
+<b style="color:#ffffff;">  </b><b style="color:#55ffff;">sensitive</b>:<b style="color:#ffffff;"> true</b>
+<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_EMAIL</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The email that is used for the WordPress admin account</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> hello@defenseunicorns.com</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
+<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_FIRST_NAME</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The first name that is used for the WordPress admin account</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> Zarf</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
+<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_LAST_NAME</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The last name that is used for the WordPress admin account</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> The Axolotl</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
+<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_BLOG_NAME</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The blog name that is used for the WordPress admin account</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> The Zarf Blog</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
+
+<b class=YEL>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>
+<b class=YEL></b>
+<b class=YEL>This package has 3 artifacts with software bill-of-materials (SBOM) included. You can view them now</b>
+<b class=YEL>in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:</b>
+<b class=YEL></b><b class=WHI></b><b class=HIW>/home/zarf/wordpress/zarf-sbom/sbom-viewer-docker.io_bitnami_apache-exporter_0.13.3-debian-11-r2.html</b><b class=YEL></b><b class=WHI></b><b class=YEL></b>
+<b class=YEL></b>
+<b class=YEL>* This directory will be removed after package deployment.</b>
+<b class=YEL></b>
+<b class=YEL>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>
+<b class=YEL></b>
+<b class="BOLD" style="color:#55ff55;">? </b><b class="BOLD">Deploy this Zarf package? </b><b class=WHI>(y/N) </b>
+</pre>
+</body>
+</html>

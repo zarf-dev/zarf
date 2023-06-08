@@ -13,6 +13,9 @@ on:
       - "package-lock.json"
       - "CODEOWNERS"
 
+permissions:
+  contents: read
+
 # Abort prior jobs in the same workflow / PR
 concurrency:
   group: e2e-upgrade-${{ github.ref }}
@@ -23,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - name: Setup golang
         uses: ./.github/actions/golang
@@ -49,8 +52,8 @@ jobs:
         #       in a previous step. This test run will the current release to create a K3s cluster.
         # chown the logs since they were originally created as root
         run: |
-          zarf package create src/test/upgrade-test --set PODINFO_VERSION=6.3.3 --confirm
-          zarf package create src/test/upgrade-test --set PODINFO_VERSION=6.3.4 --confirm
+          zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.3 --confirm
+          zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.4 --confirm
           sudo env "PATH=$PATH" CI=true zarf package deploy zarf-package-test-upgrade-package-amd64-6.3.3.tar.zst --confirm
           sudo chown $USER /tmp/zarf-*.log
 
@@ -64,7 +67,6 @@ jobs:
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
           sudo chown $USER /tmp/zarf-*.log
-
 
       - name: Run the upgrade tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed

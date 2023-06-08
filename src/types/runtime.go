@@ -9,6 +9,18 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
+// Constants to keep track of folders within components
+const (
+	TempFolder           = "temp"
+	FilesFolder          = "files"
+	ChartsFolder         = "charts"
+	ReposFolder          = "repos"
+	ManifestsFolder      = "manifests"
+	DataInjectionsFolder = "data"
+	ValuesFolder         = "values"
+	ReportsFolder        = "reports"
+)
+
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
 	Confirm       bool   `json:"confirm" jsonschema:"description=Verify that Zarf should perform an action"`
@@ -40,11 +52,12 @@ type ZarfPublishOptions struct {
 
 // ZarfPullOptions tracks the user-defined preferences during a package pull.
 type ZarfPullOptions struct {
-	Reference     registry.Reference `jsonschema:"description=Remote registry reference"`
-	CopyOptions   oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
-	PackOptions   oras.PackOptions   `jsonschema:"description=Options for the pack operation"`
-	PackagePath   string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
-	PublicKeyPath string             `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
+	Reference       registry.Reference `jsonschema:"description=Remote registry reference"`
+	CopyOptions     oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
+	PackOptions     oras.PackOptions   `jsonschema:"description=Options for the pack operation"`
+	PackagePath     string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
+	OutputDirectory string             `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
+	PublicKeyPath   string             `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
@@ -70,6 +83,8 @@ type ZarfCreateOptions struct {
 	MaxPackageSizeMB   int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
 	SigningKeyPath     string            `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
 	SigningKeyPassword string            `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sigh the created package"`
+	DifferentialData   DifferentialData  `json:"differential" jsonschema:"description=A package's differential images and git repositories from a referenced previously built package"`
+	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
 }
 
 // ZarfPartialPackageData contains info about a partial package.
@@ -127,4 +142,13 @@ type TempPaths struct {
 	ZarfYaml     string
 	ZarfSig      string
 	Checksums    string
+}
+
+// DifferentialData contains image and repository information about the package a Differential Package is based on.
+type DifferentialData struct {
+	DifferentialPackagePath    string
+	DifferentialPackageVersion string
+	DifferentialImages         map[string]bool
+	DifferentialRepos          map[string]bool
+	DifferentialOCIComponents  map[string]string
 }

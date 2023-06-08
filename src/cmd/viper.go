@@ -58,6 +58,8 @@ const (
 	V_PKG_CREATE_MAX_PACKAGE_SIZE     = "package.create.max_package_size"
 	V_PKG_CREATE_SIGNING_KEY          = "package.create.signing_key"
 	V_PKG_CREATE_SIGNING_KEY_PASSWORD = "package.create.signing_key_password"
+	V_PKG_CREATE_DIFFERENTIAL         = "package.create.differential"
+	V_PKG_CREATE_REGISTRY_OVERRIDE    = "package.create.registry_override"
 
 	// Package deploy config keys
 	V_PKG_DEPLOY_SET        = "package.deploy.set"
@@ -72,7 +74,9 @@ const (
 	V_PKG_PUBLISH_SIGNING_KEY_PASSWORD = "package.publish.signing_key_password"
 
 	// Package pull config keys
-	V_PKG_PULL_PUBLIC_KEY = "package.pull.public_key"
+	V_PKG_PULL_OCI_CONCURRENCY = "package.pull.oci_concurrency"
+	V_PKG_PULL_OUTPUT_DIR      = "package.pull.output_directory"
+	V_PKG_PULL_PUBLIC_KEY      = "package.pull.public_key"
 )
 
 func initViper() {
@@ -113,7 +117,7 @@ func initViper() {
 	if err != nil {
 		// Config file not found; ignore
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			message.Error(err, lang.CmdViperErrLoadingConfigFile)
+			message.WarnErrorf(err, lang.CmdViperErrLoadingConfigFile, err.Error())
 		}
 	} else {
 		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())

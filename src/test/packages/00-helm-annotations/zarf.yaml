@@ -1,0 +1,14 @@
+kind: ZarfPackageConfig
+metadata:
+  name: loki-repo1
+  description: Helm chart for Grafana Loki in simple, scalable mode
+components:
+- name: loki-repo1-component
+  description: Helm chart for Grafana Loki in simple, scalable mode
+  required: true
+  charts:
+  - name: loki
+    version: 5.0.0-bb.4
+    namespace: loki
+    url: https://repo1.dso.mil/big-bang/product/packages/loki.git
+    gitPath: chart

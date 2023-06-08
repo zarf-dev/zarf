@@ -10,11 +10,13 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
 type TestNetworkSuite struct {
 	suite.Suite
+	*require.Assertions
 	urls testURLs
 }
 
@@ -25,6 +27,7 @@ type testURLs struct {
 }
 
 func (suite *TestNetworkSuite) SetupSuite() {
+	suite.Assertions = require.New(suite.T())
 	suite.urls.good = []string{
 		"https://zarf.dev",
 		"https://docs.zarf.dev",

@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: component-choice
-  description: "Test component to demonstrate grouping components for a user to choose from"
+  description: Test component to demonstrate grouping components for a user to choose from
 
 components:
   - name: first-choice

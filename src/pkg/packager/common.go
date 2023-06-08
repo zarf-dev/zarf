@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -29,10 +30,11 @@ import (
 
 // Packager is the main struct for managing packages.
 type Packager struct {
-	cfg     *types.PackagerConfig
-	cluster *cluster.Cluster
-	tmp     types.TempPaths
-	arch    string
+	cfg      *types.PackagerConfig
+	cluster  *cluster.Cluster
+	tmp      types.TempPaths
+	arch     string
+	warnings []string
 }
 
 /*
@@ -49,6 +51,10 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 
 	if cfg.SetVariableMap == nil {
 		cfg.SetVariableMap = make(map[string]*types.ZarfSetVariable)
+	}
+
+	if cfg.Pkg.Build.OCIImportedComponents == nil {
+		cfg.Pkg.Build.OCIImportedComponents = make(map[string]string)
 	}
 
 	var (
@@ -108,11 +114,19 @@ func (p *Packager) GetPackageName() string {
 		suffix = "tar"
 	}
 
-	if p.cfg.Pkg.Metadata.Version == "" {
-		return fmt.Sprintf("%s%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, suffix)
+	packageFileName := fmt.Sprintf("%s%s-%s", config.ZarfPackagePrefix, packageName, p.arch)
+	if p.cfg.Pkg.Build.Differential {
+		packageFileName = fmt.Sprintf("%s-%s-differential-%s", packageFileName, p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion, p.cfg.Pkg.Metadata.Version)
+	} else if p.cfg.Pkg.Metadata.Version != "" {
+		packageFileName = fmt.Sprintf("%s-%s", packageFileName, p.cfg.Pkg.Metadata.Version)
 	}
 
-	return fmt.Sprintf("%s%s-%s-%s.%s", config.ZarfPackagePrefix, packageName, p.arch, p.cfg.Pkg.Metadata.Version, suffix)
+	return fmt.Sprintf("%s.%s", packageFileName, suffix)
+}
+
+// GetInitPackageRemote returns the URL for a remote init package for the given architecture
+func GetInitPackageRemote(arch string) string {
+	return fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", config.GithubProject, config.CLIVersion, GetInitPackageName(arch))
 }
 
 // ClearTempPaths removes the temp directory and any files within it.
@@ -122,30 +136,70 @@ func (p *Packager) ClearTempPaths() {
 	_ = os.RemoveAll(config.ZarfSBOMDir)
 }
 
-func (p *Packager) getComponentBasePath(component types.ZarfComponent) string {
-	return filepath.Join(p.tmp.Components, component.Name)
-}
-
 func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
-	message.Debugf("packager.createComponentPaths(%s)", message.JSONValue(component))
+	message.Debugf("packager.createOrGetComponentPaths(%s)", message.JSONValue(component))
 
-	basePath := p.getComponentBasePath(component)
+	base := filepath.Join(p.tmp.Components, component.Name)
 
-	if _, err = os.Stat(basePath); os.IsNotExist(err) {
-		// basePath does not exist
-		err = utils.CreateDirectory(basePath, 0700)
+	err = utils.CreateDirectory(base, 0700)
+	if err != nil {
+		return paths, err
 	}
 
 	paths = types.ComponentPaths{
-		Base:           basePath,
-		Temp:           filepath.Join(basePath, "temp"),
-		Files:          filepath.Join(basePath, "files"),
-		Charts:         filepath.Join(basePath, "charts"),
-		Repos:          filepath.Join(basePath, "repos"),
-		Manifests:      filepath.Join(basePath, "manifests"),
-		DataInjections: filepath.Join(basePath, "data"),
-		Values:         filepath.Join(basePath, "values"),
-		Reports:        filepath.Join(basePath, "reports"),
+		Base:           base,
+		Temp:           filepath.Join(base, types.TempFolder),
+		Files:          filepath.Join(base, types.FilesFolder),
+		Charts:         filepath.Join(base, types.ChartsFolder),
+		Repos:          filepath.Join(base, types.ReposFolder),
+		Manifests:      filepath.Join(base, types.ManifestsFolder),
+		DataInjections: filepath.Join(base, types.DataInjectionsFolder),
+		Values:         filepath.Join(base, types.ValuesFolder),
+		Reports:        filepath.Join(base, types.ReportsFolder),
+	}
+
+	if len(component.Files) > 0 {
+		err = utils.CreateDirectory(paths.Files, 0700)
+		if err != nil {
+			return paths, err
+		}
+	}
+
+	if len(component.Charts) > 0 {
+		err = utils.CreateDirectory(paths.Charts, 0700)
+		if err != nil {
+			return paths, err
+		}
+		for _, chart := range component.Charts {
+			if len(chart.ValuesFiles) > 0 {
+				err = utils.CreateDirectory(paths.Values, 0700)
+				if err != nil {
+					return paths, err
+				}
+				break
+			}
+		}
+	}
+
+	if len(component.Repos) > 0 {
+		err = utils.CreateDirectory(paths.Repos, 0700)
+		if err != nil {
+			return paths, err
+		}
+	}
+
+	if len(component.Manifests) > 0 {
+		err = utils.CreateDirectory(paths.Manifests, 0700)
+		if err != nil {
+			return paths, err
+		}
+	}
+
+	if len(component.DataInjections) > 0 {
+		err = utils.CreateDirectory(paths.DataInjections, 0700)
+		if err != nil {
+			return paths, err
+		}
 	}
 
 	return paths, err
@@ -172,11 +226,11 @@ func createPaths() (paths types.TempPaths, err error) {
 		SeedImages:   filepath.Join(basePath, "seed-images"),
 		Images:       filepath.Join(basePath, "images"),
 		Components:   filepath.Join(basePath, "components"),
-		SbomTar:      filepath.Join(basePath, "sboms.tar"),
+		SbomTar:      filepath.Join(basePath, config.ZarfSBOMTar),
 		Sboms:        filepath.Join(basePath, "sboms"),
-		Checksums:    filepath.Join(basePath, "checksums.txt"),
+		Checksums:    filepath.Join(basePath, config.ZarfChecksumsTxt),
 		ZarfYaml:     filepath.Join(basePath, config.ZarfYAML),
-		ZarfSig:      filepath.Join(basePath, "zarf.yaml.sig"),
+		ZarfSig:      filepath.Join(basePath, config.ZarfYAMLSignature),
 	}
 
 	return paths, err
@@ -221,7 +275,7 @@ func (p *Packager) loadZarfPkg() error {
 	// Load the config from the extracted archive zarf.yaml
 	spinner.Updatef("Loading the zarf package config")
 	configPath := p.tmp.ZarfYaml
-	if err := p.readYaml(configPath, true); err != nil {
+	if err := p.readYaml(configPath); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
@@ -237,16 +291,16 @@ func (p *Packager) loadZarfPkg() error {
 	if err != nil {
 		return fmt.Errorf("unable to get a list of components... %w", err)
 	}
-	for _, component := range components {
+	for _, path := range components {
 		// If the components are tarballs, extract them!
-		componentPath := filepath.Join(p.tmp.Components, component.Name())
-		if !component.IsDir() && strings.HasSuffix(component.Name(), ".tar") {
+		componentPath := filepath.Join(p.tmp.Components, path.Name())
+		if !path.IsDir() && strings.HasSuffix(path.Name(), ".tar") {
 			if err := archiver.Unarchive(componentPath, p.tmp.Components); err != nil {
 				return fmt.Errorf("unable to extract the component: %w", err)
 			}
 
 			// After extracting the component, remove the compressed tarball to release disk space
-			_ = os.Remove(filepath.Join(p.tmp.Components, component.Name()))
+			_ = os.Remove(filepath.Join(p.tmp.Components, path.Name()))
 		}
 	}
 
@@ -266,7 +320,9 @@ func (p *Packager) loadZarfPkg() error {
 
 	// Handle component configuration deprecations
 	for idx, component := range p.cfg.Pkg.Components {
-		p.cfg.Pkg.Components[idx] = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+		var warnings []string
+		p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+		p.warnings = append(p.warnings, warnings...)
 	}
 
 	spinner.Success()
@@ -404,7 +460,7 @@ func (p *Packager) validatePackageChecksums() error {
 	filepathMap[p.tmp.ZarfSig] = true
 
 	// Load the contents of the checksums file
-	checksumsFile, err := os.Open(filepath.Join(p.tmp.Base, "checksums.txt"))
+	checksumsFile, err := os.Open(filepath.Join(p.tmp.Base, config.ZarfChecksumsTxt))
 	if err != nil {
 		return err
 	}
@@ -438,6 +494,27 @@ func (p *Packager) validatePackageChecksums() error {
 	}
 
 	message.Successf("All of the checksums matched!")
+	return nil
+}
+
+// validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
+func (p *Packager) validatePackageArchitecture() error {
+	// Ignore this check if the architecture is explicitly "multi"
+	if p.arch != "multi" {
+		// Attempt to connect to a cluster to get the architecture.
+		if cluster, err := cluster.NewCluster(); err == nil {
+			clusterArch, err := cluster.Kube.GetArchitecture()
+			if err != nil {
+				return lang.ErrUnableToCheckArch
+			}
+
+			// Check if the package architecture and the cluster architecture are the same.
+			if p.arch != clusterArch {
+				return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -507,4 +584,23 @@ func promptForSigPassword() ([]byte, error) {
 
 	// We are returning a nil error here because purposefully avoiding a password input is a valid use condition
 	return nil, nil
+}
+
+func (p *Packager) archiveComponent(component types.ZarfComponent) error {
+	componentPath := filepath.Join(p.tmp.Components, component.Name)
+	size, err := utils.GetDirSize(componentPath)
+	if err != nil {
+		return err
+	}
+	if size > 0 {
+		tar := fmt.Sprintf("%s.tar", componentPath)
+		message.Debugf("Archiving %s to '%s'", component.Name, tar)
+		err := archiver.Archive([]string{componentPath}, tar)
+		if err != nil {
+			return err
+		}
+	} else {
+		message.Debugf("Component %s is empty, skipping archiving", component.Name)
+	}
+	return os.RemoveAll(componentPath)
 }

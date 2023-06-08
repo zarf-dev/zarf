@@ -40,6 +40,9 @@ func CheckVendorOnly() bool {
 		"wait-for",
 		"wait",
 		"w",
+		"crane",
+		"registry",
+		"r",
 	}
 
 	// Check for "zarf tools|t <cmd>" where <cmd> is in the vendorCmd list

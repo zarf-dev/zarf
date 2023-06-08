@@ -1,12 +1,8 @@
+import ExampleYAML from "@site/src/components/ExampleYAML";
+
 # Git Data
 
 This example shows how to package `git` repositories within a Zarf package.  This package does not deploy anything itself but pushes assets to the specified `git` service to be consumed as desired.  Within Zarf, there are a few ways to include `git` repositories (as described below).
-
-:::info
-
-To view the example source code, select the `Edit this page` link below the article and select the parent folder.
-
-:::
 
 ## Tag-Based Git Repository Clone
 
@@ -17,6 +13,12 @@ A tag-based clone only mirrors the tag defined in the Zarf definition. The tag w
 :::note
 
 If you would like to use a protocol scheme other than http/https, you can do so with something like the following: `ssh://git@github.com/defenseunicorns/zarf.git@v0.15.0`.  Using this you can also clone from a local repo to help you manage larger git repositories: `file:///home/zarf/workspace/zarf@v0.15.0`.
+
+:::
+
+:::caution
+
+Because Zarf creates long-lived mirrors of repositories in the air gap, it does not support shallow clones (i.e. `git clone --depth x`).  These may be present in build environments (i.e. [GitLab runners](https://github.com/defenseunicorns/zarf/issues/1698)) and should be avoided.  To learn more about shallow and partial clones see the [GitHub blog on the topic](https://github.blog/2020-12-21-get-up-to-speed-with-partial-clone-and-shallow-clone).
 
 :::
 
@@ -36,15 +38,14 @@ Full clones are used in this example with the `stefanprodan/podinfo` repository 
 
 ## Example Usage
 
-This example assumes you have already initialized a Zarf cluster. If that is not the case, refer to the [Initializing the Cluster Walkthrough](../../docs/13-walkthroughs/1-initializing-a-k8s-cluster.md). Be sure when initializing the Zarf cluster to deploy the `git` component, or be ready to specify an external `git` repository.
+This example assumes you have already initialized a Zarf cluster. If that is not the case, refer to the [Initializing the Cluster Tutorial](../../docs/5-zarf-tutorials/1-initializing-a-k8s-cluster.md). Be sure when initializing the Zarf cluster to deploy the `git` component, or be ready to specify an external `git` repository.
 
 ### Create the Zarf Package
 
 To create this Zarf package run the below command:
 
-``` bash
-cd <zarf dir>/examples/git-data    # directory with zarf.yaml
-zarf package create                # make the package
+```bash
+zarf package create examples/git-data
 ```
 
 Successful execution will create a package named `zarf-package-git-data-<arch>-<vx.x.x>.tar.zst`.
@@ -55,7 +56,7 @@ To deploy the Zarf package, copy it to a machine that either has a Zarf cluster 
 
 With the Zarf package in the current working directory, execute the below command to deploy the package, uploading the Git repositories to Gitea and the container images to the Docker registry.
 
-``` bash
+```bash
 zarf package deploy zarf-package-git-data-<arch>-<vx.x.x>.tar.zst
 ```
 
@@ -75,7 +76,7 @@ The following assumes you are using the internal Gitea server. If you are using 
 
 :::
 
-``` bash
+```bash
 # Run 'zarf connect' and send it to the background
 zarf connect git&
 
@@ -95,6 +96,16 @@ fg
 
 Clean up simply by just deleting the whole cluster
 
-``` bash
+```bash
 kind delete cluster
 ```
+
+## `zarf.yaml` {#zarf.yaml}
+
+:::info
+
+To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
+
+:::
+
+<ExampleYAML example="git-data" showLink={false} />

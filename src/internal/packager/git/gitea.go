@@ -35,7 +35,10 @@ func (g *Git) CreateReadOnlyUser() error {
 	if err != nil {
 		return err
 	}
-	tunnel.Connect(cluster.ZarfGit, false)
+	err = tunnel.Connect(cluster.ZarfGit, false)
+	if err != nil {
+		return err
+	}
 	defer tunnel.Close()
 
 	tunnelURL := tunnel.HTTPEndpoint()
@@ -120,7 +123,10 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	if err != nil {
 		return CreateTokenResponse{}, err
 	}
-	tunnel.Connect(cluster.ZarfGit, false)
+	err = tunnel.Connect(cluster.ZarfGit, false)
+	if err != nil {
+		return CreateTokenResponse{}, err
+	}
 	defer tunnel.Close()
 
 	tunnelURL := tunnel.Endpoint()

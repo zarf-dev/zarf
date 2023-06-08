@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import ZarfLogoDark from '@images/png/global-navigation-zarf-logo.png';
+	import ZarfLogoDark from '@images/zarf-logo.png';
 
 	import { Paper, type SSX } from '@ui';
 	import ThemeToggle from './theme-toggle.svelte';
@@ -34,7 +34,9 @@
 	square
 >
 	<div class="nav-right">
-		<a href="/"><img src={ZarfLogoDark} alt="Zarf logo link to home" /></a>
+		<a href="/">
+			<img src={ZarfLogoDark} height="48px" width="107px" alt="Zarf logo link to home" />
+		</a>
 	</div>
 	<div class="nav-left"><ThemeToggle /></div>
 </Paper>

@@ -124,7 +124,7 @@ func ServiceInfoFromNodePortURL(nodePortURL string) (*ServiceInfo, error) {
 		return nil, fmt.Errorf("node port services should use the port range 30000-32767")
 	}
 
-	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
+	kube, err := k8s.NewWithWait(message.Debugf, labels, DefaultTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func ServiceInfoFromServiceURL(serviceURL string) (*ServiceInfo, error) {
 func NewTunnel(namespace, resourceType, resourceName string, local, remote int) (*Tunnel, error) {
 	message.Debugf("tunnel.NewTunnel(%s, %s, %s, %d, %d)", namespace, resourceType, resourceName, local, remote)
 
-	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
+	kube, err := k8s.NewWithWait(message.Debugf, labels, DefaultTimeout)
 	if err != nil {
 		return &Tunnel{}, err
 	}
@@ -247,7 +247,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 	default:
 		if target != "" {
 			if err := tunnel.checkForZarfConnectLabel(target); err != nil {
-				message.Errorf(err, "Problem looking for a zarf connect label in the cluster")
+				return fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
 			}
 		}
 
@@ -273,15 +273,24 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 		message.Debug(err)
 		message.Infof("Delay creating tunnel, waiting %d seconds...", delay)
 		time.Sleep(time.Duration(delay) * time.Second)
-		tunnel.Connect(target, blocking)
+		err = tunnel.Connect(target, blocking)
+		if err != nil {
+			return err
+		}
 	}
 
 	if blocking {
 		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors.
 		if tunnel.autoOpen {
+			if tunnel.spinner != nil {
+				tunnel.spinner.Updatef("Tunnel established at %s, opening your default web browser (ctrl-c to end)", url)
+			}
+
 			if err := exec.LaunchURL(url); err != nil {
 				message.Debug(err)
 			}
+		} else if tunnel.spinner != nil {
+			tunnel.spinner.Updatef("Tunnel established at %s, waiting for user to interrupt (ctrl-c to end)", url)
 		}
 
 		// Dump the tunnel URL to the console for other tools to use.
@@ -316,6 +325,11 @@ func (tunnel *Tunnel) Endpoint() string {
 func (tunnel *Tunnel) HTTPEndpoint() string {
 	message.Debug("tunnel.HTTPEndpoint()")
 	return fmt.Sprintf("http://%s", tunnel.Endpoint())
+}
+
+// FullURL returns the tunnel endpoint as a HTTP URL string with the urlSuffix appended.
+func (tunnel *Tunnel) FullURL() string {
+	return fmt.Sprintf("%s%s", tunnel.HTTPEndpoint(), tunnel.urlSuffix)
 }
 
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
@@ -358,6 +372,8 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 		tunnel.urlSuffix = svc.Annotations[config.ZarfConnectAnnotationURL]
 
 		message.Debugf("tunnel connection match: %s/%s on port %d", svc.Namespace, svc.Name, tunnel.remotePort)
+	} else {
+		return fmt.Errorf("no matching services found for %s", name)
 	}
 
 	return nil
@@ -405,7 +421,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 		message.Debug(spinnerMessage)
 	}
 
-	kube, err := k8s.NewWithWait(message.Debugf, labels, defaultTimeout)
+	kube, err := k8s.NewWithWait(message.Debugf, labels, DefaultTimeout)
 	if err != nil {
 		return "", fmt.Errorf("unable to connect to the cluster: %w", err)
 	}
