@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"bufio"
 	"crypto"
 	"encoding/json"
 	"fmt"
@@ -284,7 +283,7 @@ func (p *Packager) loadZarfPkg() error {
 
 	// Validate the checksums of all the things!!!
 	if p.cfg.Pkg.Metadata.AggregateChecksum != "" {
-		if err := p.validatePackageChecksums(); err != nil {
+		if err := utils.ValidatePackageChecksums(p.tmp.Base, p.tmp.Checksums, p.cfg.Pkg.Metadata.AggregateChecksum, nil); err != nil {
 			return fmt.Errorf("unable to validate the package checksums: %w", err)
 		}
 	}
@@ -422,87 +421,6 @@ func (p *Packager) handleIfPartialPkg() error {
 
 	// Success, update the package path
 	p.cfg.DeployOpts.PackagePath = destination
-	return nil
-}
-
-func (p *Packager) validatePackageChecksums() error {
-
-	// Run pre-checks to make sure we have what we need to validate the checksums
-	_, err := os.Stat(p.tmp.Checksums)
-	if err != nil {
-		return fmt.Errorf("unable to validate checksums as we are unable to find checksums.txt file within the package")
-	}
-	if p.cfg.Pkg.Metadata.AggregateChecksum == "" {
-		return fmt.Errorf("unable to validate checksums because of missing metadata checksum signature")
-	}
-
-	// Create a map of all the files in the package so we can track which files we have processed
-	filepathMap := make(map[string]bool)
-	err = filepath.Walk(p.tmp.Base, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			filepathMap[path] = false
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	// Verify the that checksums.txt file matches the aggregated checksum provided
-	actualAggregateChecksum, err := utils.GetSHA256OfFile(p.tmp.Checksums)
-	if err != nil {
-		return fmt.Errorf("unable to get the checksum of the checksums.txt file: %w", err)
-	}
-	if actualAggregateChecksum != p.cfg.Pkg.Metadata.AggregateChecksum {
-		return fmt.Errorf("mismatch on the checksum of the checksums.txt file, the checksums.txt file might have been tampered with")
-	}
-
-	// Check off all the files that we can trust given the checksum and signing checks
-	filepathMap[p.tmp.Checksums] = true
-	filepathMap[p.tmp.ZarfYaml] = true
-	filepathMap[p.tmp.ZarfSig] = true
-
-	// Load the contents of the checksums file
-	checksumsFile, err := os.Open(filepath.Join(p.tmp.Base, config.ZarfChecksumsTxt))
-	if err != nil {
-		return err
-	}
-	defer checksumsFile.Close()
-
-	/* Process every line in the checksums file */
-	scanner := bufio.NewScanner(checksumsFile)
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		// Separate the checksum from the file path
-		strs := strings.Split(scanner.Text(), " ")
-		itemPath := strs[1]
-		expectedShasum := strs[0]
-
-		path := filepath.Join(p.tmp.Base, itemPath)
-		if utils.InvalidPath(path) {
-			message.Debugf("skipping checksum of %s as it does not exist", path)
-			continue
-		}
-
-		actualShasum, err := utils.GetSHA256OfFile(path)
-		if err != nil {
-			return err
-		}
-
-		if expectedShasum != actualShasum {
-			return fmt.Errorf("mismatch on the checksum of the %s file (expected: %s, actual: %s)", itemPath, expectedShasum, actualShasum)
-		}
-
-		filepathMap[path] = true
-	}
-
-	for path, processed := range filepathMap {
-		if !processed {
-			return fmt.Errorf("the file %s was present in the Zarf package but not specified in the checksums.txt, the package might have been tampered with", path)
-		}
-	}
-
-	message.Successf("All of the checksums matched!")
 	return nil
 }
 

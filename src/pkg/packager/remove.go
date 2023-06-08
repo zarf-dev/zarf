@@ -7,7 +7,6 @@ package packager
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -23,8 +22,23 @@ func (p *Packager) Remove(packageName string) (err error) {
 	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()
 
+	if utils.IsOCIURL(packageName) {
+		err := p.SetOCIRemote(packageName)
+		if err != nil {
+			message.Fatalf(err, "Unable to set OCI remote: %s", err.Error())
+		}
+
+		// pull the package from the remote
+		if err = p.remote.PullPackageMetadata(p.tmp.Base); err != nil {
+			return fmt.Errorf("unable to pull the package from the remote: %w", err)
+		}
+		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
+			return err
+		}
+	}
+
 	// If components were provided; just remove the things we were asked to remove
-	requestedComponents := strings.Split(p.cfg.DeployOpts.Components, ",")
+	requestedComponents := p.getRequestedComponentList(p.cfg.DeployOpts.Components)
 	partialRemove := len(requestedComponents) > 0 && requestedComponents[0] != ""
 
 	// Determine if we need the cluster

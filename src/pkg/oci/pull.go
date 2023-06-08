@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	zarfconfig "github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -18,6 +18,10 @@ import (
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
+)
+
+var (
+	AlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
 )
 
 // LayersFromPaths returns the descriptors for the given paths from the root manifest.
@@ -63,15 +67,15 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			for _, image := range component.Images {
 				images[image] = true
 			}
-			layers = append(layers, root.Locate(filepath.Join(zarfconfig.ZarfComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
+			layers = append(layers, root.Locate(filepath.Join(config.ZarfComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 		}
 	}
 	if len(images) > 0 {
 		// Add the image index and the oci-layout layers
 		layers = append(layers, root.Locate(root.indexPath), root.Locate(root.ociLayoutPath))
 		// Append the sbom.tar layer if it exists
-		sbomDescriptor := root.Locate(zarfconfig.ZarfSBOMTar)
-		if sbomDescriptor.Digest != "" {
+		sbomDescriptor := root.Locate(config.ZarfSBOMTar)
+		if !o.isEmptyDescriptor(sbomDescriptor) {
 			layers = append(layers, sbomDescriptor)
 		}
 		index, err := o.FetchImagesIndex(root)
@@ -124,8 +128,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 		for _, desc := range layersToPull {
 			estimatedBytes += desc.Size
 		}
-		alwaysPull := []string{zarfconfig.ZarfYAML, zarfconfig.ZarfChecksumsTxt, zarfconfig.ZarfYAMLSignature}
-		for _, path := range alwaysPull {
+		for _, path := range AlwaysPull {
 			desc := manifest.Locate(path)
 			layersToPull = append(layersToPull, desc)
 			estimatedBytes += desc.Size
@@ -181,5 +184,43 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 
 	message.Debugf("Pulled %s", ref.String())
 	message.Successf("Pulled %s", ref.String())
+	return nil
+}
+
+// PullFileLayer pulls a file layer from the remote repository and saves it to `destinationDir/annotationTitle`.
+func (o *OrasRemote) PullFileLayer(desc ocispec.Descriptor, destinationDir string) error {
+	if desc.MediaType != ZarfLayerMediaTypeBlob {
+		return fmt.Errorf("invalid media type for file layer: %s", desc.MediaType)
+	}
+	b, err := o.FetchLayer(desc)
+	if err != nil {
+		return err
+	}
+	return utils.WriteFile(filepath.Join(destinationDir, desc.Annotations[ocispec.AnnotationTitle]), b)
+}
+
+// PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
+func (o *OrasRemote) PullPackageMetadata(destinationDir string) error {
+	root, err := o.FetchRoot()
+	if err != nil {
+		return err
+	}
+	for _, path := range AlwaysPull {
+		desc := root.Locate(path)
+		if !o.isEmptyDescriptor(desc) {
+			err = o.PullFileLayer(desc, destinationDir)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	var pkg types.ZarfPackage
+	err = utils.ReadYaml(filepath.Join(destinationDir, config.ZarfYAML), &pkg)
+	if err != nil {
+		return err
+	}
+	if pkg.Metadata.AggregateChecksum != "" {
+		return utils.ValidatePackageChecksums(destinationDir, filepath.Join(destinationDir, config.ZarfChecksumsTxt), pkg.Metadata.AggregateChecksum, AlwaysPull)
+	}
 	return nil
 }

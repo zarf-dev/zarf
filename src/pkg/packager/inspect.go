@@ -6,7 +6,6 @@ package packager
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
@@ -19,14 +18,13 @@ import (
 
 // Inspect list the contents of a package.
 func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string) error {
+	wantSBOM := includeSBOM || outputSBOM != ""
+
 	// Handle OCI packages that have been published to a registry
 	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
 
-		// Download all the layers we need
-		pullSBOM := includeSBOM || outputSBOM != ""
-
 		requestedFiles := []string{}
-		if pullSBOM {
+		if wantSBOM {
 			requestedFiles = append(requestedFiles, config.ZarfSBOMTar)
 		}
 
@@ -62,30 +60,28 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 	utils.ColorPrintYAML(p.cfg.Pkg)
 
-	// Attempt to validate the checksums, or explain why we cannot validate them
-	if !utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
-		// If the package is not a remote OCI package, we can validate the checksums
-		if err := p.validatePackageChecksums(); err != nil {
-			message.Warnf("Unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
-		}
-	} else {
-		message.Warnf("Zarf is unable to validate the checksums of remote OCI packages. We are unable to determine the integrity of the package without downloading the entire package.")
+	pathsToCheck := []string{}
+	if wantSBOM {
+		pathsToCheck = append(pathsToCheck, config.ZarfSBOMTar)
+	}
+	if err := utils.ValidatePackageChecksums(p.tmp.Base, p.tmp.Checksums, p.cfg.Pkg.Metadata.AggregateChecksum, pathsToCheck); err != nil {
+		message.Warnf("Unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
 	}
 
 	// Validate the package checksums and signatures if specified, and warn if the package was signed but a key was not provided
-	_, sigExistErr := os.Stat(p.tmp.ZarfSig)
+	sigExist := !utils.InvalidPath(p.tmp.ZarfSig)
 	if inspectPublicKey != "" {
 		if err := p.validatePackageSignature(inspectPublicKey); err != nil {
 			return fmt.Errorf("unable to validate the package signature: %w", err)
 		}
-	} else if sigExistErr == nil {
+	} else if sigExist == false {
 		message.Warnf("The package you are inspecting has been signed but a public key was not provided.")
 	}
 
-	if includeSBOM || outputSBOM != "" {
+	if wantSBOM {
 		// Extract the SBOM files from the sboms.tar file
-		_, tarErr := os.Stat(p.tmp.SbomTar)
-		if tarErr == nil {
+		tarExists := !utils.InvalidPath(p.tmp.SbomTar)
+		if tarExists {
 			if err := archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
 				return fmt.Errorf("unable to extract the SBOM files: %w", err)
 			}

@@ -39,7 +39,7 @@ func (p *Packager) Pull() error {
 	}
 
 	if p.cfg.Pkg.Metadata.AggregateChecksum != "" {
-		if err = p.validatePackageChecksums(); err != nil {
+		if err = utils.ValidatePackageChecksums(p.tmp.Base, p.tmp.Checksums, p.cfg.Pkg.Metadata.AggregateChecksum, nil); err != nil {
 			return fmt.Errorf("unable to validate the package checksums: %w", err)
 		}
 	}
