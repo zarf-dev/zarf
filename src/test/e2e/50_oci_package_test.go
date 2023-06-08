@@ -40,10 +40,7 @@ func (suite *RegistryClientTestSuite) TearDownSuite() {
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
 	e2e.CleanFiles(local)
 
-	stdOut, stdErr, err := e2e.Zarf("package", "remove", "helm-charts", "--confirm")
-	suite.NoError(err, stdOut, stdErr)
-
-	_, _, err = exec.Cmd("docker", "rm", "-f", "registry")
+	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
 	suite.NoError(err)
 }
 
@@ -98,6 +95,10 @@ func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", "oci://"+ref, "--components=demo-helm-oci-chart", "--insecure", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Pulled "+ref)
+
+	// Remove the package via OCI.
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "oci://"+ref, "--insecure", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
 
 	// Test deploy w/ bad ref.
 	_, stdErr, err = e2e.Zarf("package", "deploy", "oci://"+badRef.String(), "--insecure", "--confirm")
