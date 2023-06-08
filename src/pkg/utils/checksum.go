@@ -37,6 +37,7 @@ func ValidatePackageChecksums(baseDir string, aggregateChecksum string, pathsToC
 		for idx, path := range pathsToCheck {
 			pathsToCheck[idx] = filepath.Join(baseDir, path)
 		}
+		message.Debug("Validating checksums for a subset of files in the package - %v", pathsToCheck)
 	}
 
 	pathCheckMap, err := PathCheckMap(baseDir)
@@ -76,9 +77,11 @@ func ValidatePackageChecksums(baseDir string, aggregateChecksum string, pathsToC
 		if InvalidPath(path) {
 			if !isPartial && !pathCheckMap[path] {
 				return fmt.Errorf("unable to validate checksums because of missing file: %s", rel)
-			} else if isPartial && !SliceContains(pathsToCheck, path) {
+			} else if SliceContains(pathsToCheck, path) {
 				return fmt.Errorf("unable to validate checksums because of missing file: %s", rel)
 			}
+			// it's okay if we're doing a partial check and the file isn't there as long as the path isn't in the list of paths to check
+			return nil
 		}
 
 		actualSHA, err := GetSHA256OfFile(path)
@@ -114,7 +117,7 @@ func ValidatePackageChecksums(baseDir string, aggregateChecksum string, pathsToC
 		}
 	}
 
-	spinner.Successf("All of the checksums matched!")
+	spinner.Successf("Checksums validated!")
 	return nil
 }
 

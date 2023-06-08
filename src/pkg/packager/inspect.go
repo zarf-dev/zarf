@@ -20,13 +20,13 @@ import (
 func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string) error {
 	wantSBOM := includeSBOM || outputSBOM != ""
 
+	requestedFiles := []string{config.ZarfYAML}
+	if wantSBOM {
+		requestedFiles = append(requestedFiles, config.ZarfSBOMTar)
+	}
+
 	// Handle OCI packages that have been published to a registry
 	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
-
-		requestedFiles := []string{}
-		if wantSBOM {
-			requestedFiles = append(requestedFiles, config.ZarfSBOMTar)
-		}
 
 		message.Debugf("Pulling layers %v from %s", requestedFiles, p.cfg.DeployOpts.PackagePath)
 
@@ -60,11 +60,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 	utils.ColorPrintYAML(p.cfg.Pkg)
 
-	pathsToCheck := []string{}
-	if wantSBOM {
-		pathsToCheck = append(pathsToCheck, config.ZarfSBOMTar)
-	}
-	if err := utils.ValidatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, pathsToCheck); err != nil {
+	if err := utils.ValidatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, requestedFiles); err != nil {
 		message.Warnf("Unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
 	}
 
@@ -74,7 +70,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		if err := p.validatePackageSignature(inspectPublicKey); err != nil {
 			return fmt.Errorf("unable to validate the package signature: %w", err)
 		}
-	} else if sigExist == false {
+	} else if sigExist {
 		message.Warnf("The package you are inspecting has been signed but a public key was not provided.")
 	}
 

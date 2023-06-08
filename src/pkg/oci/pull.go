@@ -31,7 +31,11 @@ func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.
 		return nil, err
 	}
 	for _, path := range requestedPaths {
-		layers = append(layers, manifest.Locate(path))
+		layer := manifest.Locate(path)
+		if o.isEmptyDescriptor(layer) {
+			return nil, fmt.Errorf("path %s does not exist in this package", path)
+		}
+		layers = append(layers, layer)
 	}
 	return layers, nil
 }
