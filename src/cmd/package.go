@@ -195,7 +195,7 @@ var packageRemoveCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		if err := pkgClient.Remove(pkgName); err != nil {
-			message.Fatalf(err, "Unable to remove the package with an error of: %#v", err)
+			message.Fatalf(err, "Unable to remove the package with an error of: %s", err.Error())
 		}
 	},
 }

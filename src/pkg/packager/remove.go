@@ -35,6 +35,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 			return err
 		}
+		packageName = p.cfg.Pkg.Metadata.Name
 	}
 
 	// If components were provided; just remove the things we were asked to remove
@@ -85,7 +86,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 
 		deployedPackage, err = p.cluster.GetDeployedPackage(packageName)
 		if err != nil {
-			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %w", err)
+			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())
 		}
 	} else {
 		// If we do not need the cluster, create a deployed components object based on the info we have
