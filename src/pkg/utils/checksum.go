@@ -17,16 +17,13 @@ import (
 )
 
 // ValidatePackageChecksums validates the checksums of a Zarf package.
-func ValidatePackageChecksums(baseDir string, checksumPath string, aggregateChecksum string, pathsToCheck []string) error {
+func ValidatePackageChecksums(baseDir string, aggregateChecksum string, pathsToCheck []string) error {
 	spinner := message.NewProgressSpinner("Validating package checksums")
 	defer spinner.Stop()
 
 	// Run pre-checks to make sure we have what we need to validate the checksums
 	if InvalidPath(baseDir) {
 		return fmt.Errorf("invalid base directory: %s", baseDir)
-	}
-	if InvalidPath(checksumPath) {
-		return fmt.Errorf("invalid checksum file path: %s", checksumPath)
 	}
 	if aggregateChecksum == "" {
 		return fmt.Errorf("unable to validate checksums because of missing metadata checksum signature")
@@ -37,6 +34,9 @@ func ValidatePackageChecksums(baseDir string, checksumPath string, aggregateChec
 	isPartial := false
 	if len(pathsToCheck) > 0 {
 		isPartial = true
+		for idx, path := range pathsToCheck {
+			pathsToCheck[idx] = filepath.Join(baseDir, path)
+		}
 	}
 
 	pathCheckMap, err := PathCheckMap(baseDir)
@@ -44,6 +44,7 @@ func ValidatePackageChecksums(baseDir string, checksumPath string, aggregateChec
 		return err
 	}
 
+	checksumPath := filepath.Join(baseDir, config.ZarfChecksumsTxt)
 	actualAggregateChecksum, err := GetSHA256OfFile(checksumPath)
 	if err != nil {
 		return fmt.Errorf("unable to get checksum of: %s", err.Error())
@@ -52,9 +53,9 @@ func ValidatePackageChecksums(baseDir string, checksumPath string, aggregateChec
 		return fmt.Errorf("invalid aggregate checksum: (expected: %s, received: %s)", aggregateChecksum, actualAggregateChecksum)
 	}
 
-	// this checksum will not match as the checksums.txt's checksum is added to zarf.yaml after the checksums.txt is generated
-	pathCheckMap[config.ZarfYAML] = true
-	pathCheckMap[config.ZarfYAMLSignature] = true
+	pathCheckMap[filepath.Join(baseDir, config.ZarfChecksumsTxt)] = true
+	pathCheckMap[filepath.Join(baseDir, config.ZarfYAML)] = true
+	pathCheckMap[filepath.Join(baseDir, config.ZarfYAMLSignature)] = true
 
 	err = LineByLine(checksumPath, func(line string) error {
 		split := strings.Split(line, " ")
@@ -73,11 +74,11 @@ func ValidatePackageChecksums(baseDir string, checksumPath string, aggregateChec
 		spinner.Updatef(status)
 
 		if InvalidPath(path) {
-			if isPartial && SliceContains(pathsToCheck, rel) {
+			if !isPartial && !pathCheckMap[path] {
+				return fmt.Errorf("unable to validate checksums because of missing file: %s", rel)
+			} else if isPartial && !SliceContains(pathsToCheck, path) {
 				return fmt.Errorf("unable to validate checksums because of missing file: %s", rel)
 			}
-			message.Debugf("Skipping checksum validation for missing file: %s", rel)
-			return nil
 		}
 
 		actualSHA, err := GetSHA256OfFile(path)

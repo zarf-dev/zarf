@@ -47,7 +47,7 @@ func (o *OrasRemote) PushFile(path string) (*ocispec.Descriptor, error) {
 
 // PushBytes pushes the given bytes to the remote repository.
 func (o *OrasRemote) PushBytes(b []byte, mediaType string) (*ocispec.Descriptor, error) {
-	desc := content.NewDescriptorFromBytes(ZarfLayerMediaTypeBlob, b)
+	desc := content.NewDescriptorFromBytes(mediaType, b)
 	return &desc, o.Push(o.Context, desc, bytes.NewReader(b))
 }
 
@@ -65,7 +65,7 @@ func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata
 	if err != nil {
 		return nil, err
 	}
-	return o.PushBytes(manifestConfigBytes, "application/vnd.unknown.config.v1+json")
+	return o.PushBytes(manifestConfigBytes, ocispec.MediaTypeImageConfig)
 }
 
 func (o *OrasRemote) manifestAnnotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {

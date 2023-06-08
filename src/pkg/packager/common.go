@@ -283,7 +283,7 @@ func (p *Packager) loadZarfPkg() error {
 
 	// Validate the checksums of all the things!!!
 	if p.cfg.Pkg.Metadata.AggregateChecksum != "" {
-		if err := utils.ValidatePackageChecksums(p.tmp.Base, p.tmp.Checksums, p.cfg.Pkg.Metadata.AggregateChecksum, nil); err != nil {
+		if err := utils.ValidatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, nil); err != nil {
 			return fmt.Errorf("unable to validate the package checksums: %w", err)
 		}
 	}

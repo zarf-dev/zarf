@@ -64,7 +64,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	if wantSBOM {
 		pathsToCheck = append(pathsToCheck, config.ZarfSBOMTar)
 	}
-	if err := utils.ValidatePackageChecksums(p.tmp.Base, p.tmp.Checksums, p.cfg.Pkg.Metadata.AggregateChecksum, pathsToCheck); err != nil {
+	if err := utils.ValidatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, pathsToCheck); err != nil {
 		message.Warnf("Unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
 	}
 

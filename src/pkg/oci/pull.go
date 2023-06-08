@@ -220,7 +220,7 @@ func (o *OrasRemote) PullPackageMetadata(destinationDir string) error {
 		return err
 	}
 	if pkg.Metadata.AggregateChecksum != "" {
-		return utils.ValidatePackageChecksums(destinationDir, filepath.Join(destinationDir, config.ZarfChecksumsTxt), pkg.Metadata.AggregateChecksum, AlwaysPull)
+		return utils.ValidatePackageChecksums(destinationDir, pkg.Metadata.AggregateChecksum, AlwaysPull)
 	}
 	return nil
 }
