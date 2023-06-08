@@ -334,9 +334,15 @@ func validateVex(reportSource string) error {
 	}
 	if !path.IsDir() {
 		// check valid vex document
-		_, err := vex.Load(reportSource)
+		vexDoc, err := vex.Load(reportSource)
 		if err != nil {
 			return err
+		}
+		for _, s := range vexDoc.Statements {
+			err := vex.Statement.Validate(s)
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		message.Debugf("VEX path is a directory!")
