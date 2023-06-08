@@ -22,7 +22,7 @@ import (
 var packagePattern = regexp.MustCompile(`zarf-package[^\s\\\/]*\.tar(\.zst)?$`)
 
 // Find zarf-init packages on the local system
-var currentInitPattern = regexp.MustCompile(packager.GetInitPackageName(""))
+var currentInitPattern = regexp.MustCompile(packager.GetInitPackageName("") + "$")
 
 // FindInHomeStream returns all packages in the user's home directory.
 // If the init query parameter is true, only init packages will be returned.
@@ -62,7 +62,7 @@ func FindInitStream(w http.ResponseWriter, _ *http.Request) {
 	done := make(chan bool)
 	go func() {
 		// stream init packages in the execution directory
-		if execDir, err := os.Getwd(); err == nil {
+		if execDir, err := utils.GetFinalExecutablePath(); err == nil {
 			streamDirPackages(execDir, currentInitPattern, w)
 		} else {
 			streamError(err, w)
@@ -117,19 +117,22 @@ func recursivePackageStream(dir string, pattern *regexp.Regexp, w http.ResponseW
 			return nil
 		}
 
+		// Return error if the pattern is invalid
+		if pattern == nil {
+			return filepath.ErrBadPattern
+		}
+
 		// Return errors
 		if err != nil {
 			return err
 		}
 
 		if !d.IsDir() {
-			if pattern != nil {
-				if len(pattern.FindStringIndex(path)) > 0 {
-					streamPackage(path, w)
-				}
+			if len(pattern.FindStringIndex(path)) > 0 {
+				streamPackage(path, w)
 			}
 			// Skip the trash bin and hidden directories
-		} else if utils.IsTrashBin(path) || utils.IsHidden(d.Name()) {
+		} else if utils.IsTrashBin(path) {
 			return filepath.SkipDir
 		}
 
@@ -160,7 +163,7 @@ func streamDirPackages(dir string, pattern *regexp.Regexp, w http.ResponseWriter
 
 // streamPackage streams the package at the given path
 func streamPackage(path string, w http.ResponseWriter) {
-	pkg, err := utils.ReadPackage(path)
+	pkg, err := ReadPackage(path)
 	if err != nil {
 		streamError(err, w)
 	} else {

@@ -11,20 +11,14 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
-	goyaml "github.com/goccy/go-yaml"
-	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 )
 
@@ -174,7 +168,8 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 }
 
 // RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths.
-func RecursiveFileList(dir string, pattern *regexp.Regexp) (files []string, err error) {
+// If skipHidden is true, hidden directories will be skipped.
+func RecursiveFileList(dir string, pattern *regexp.Regexp, skipHidden bool) (files []string, err error) {
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 
 		// Return errors
@@ -191,42 +186,13 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp) (files []string, err 
 				files = append(files, path)
 			}
 			// Skip hidden directories
-		} else if IsHidden(d.Name()) {
+		} else if skipHidden && IsHidden(d.Name()) {
 			return filepath.SkipDir
 		}
 
 		return nil
 	})
 	return files, err
-}
-
-// ReadPackage reads a packages yaml from the local filesystem and returns an APIZarfPackage.
-func ReadPackage(path string) (pkg types.APIZarfPackage, err error) {
-	var file []byte
-
-	pkg.Path, err = url.QueryUnescape(path)
-	if err != nil {
-		return pkg, err
-	}
-
-	// Check for zarf.yaml in the package and read into file
-	err = archiver.Walk(pkg.Path, func(f archiver.File) error {
-		if f.Name() == config.ZarfYAML {
-			file, err = ioutil.ReadAll(f)
-			if err != nil {
-				return err
-			}
-			return archiver.ErrStopWalk
-		}
-
-		return nil
-	})
-	if err != nil {
-		return pkg, err
-	}
-
-	err = goyaml.Unmarshal(file, &pkg.ZarfPackage)
-	return pkg, err
 }
 
 // CreateFilePath creates the parent directory for the given file path.
@@ -320,12 +286,12 @@ func IsTrashBin(dirPath string) bool {
 	dirPath = filepath.Clean(dirPath)
 
 	// Check if the directory path matches a Linux trash bin
-	if strings.HasSuffix(dirPath, "/.Trash") || strings.HasSuffix(dirPath, "/.Trash-1000") {
+	if strings.HasSuffix(dirPath, "/Trash") || strings.HasSuffix(dirPath, "/.Trash-1000") {
 		return true
 	}
 
 	// Check if the directory path matches a macOS trash bin
-	if strings.HasSuffix(dirPath, "/.Trash") || strings.HasSuffix(dirPath, "/.Trashes") {
+	if strings.HasSuffix(dirPath, "./Trash") || strings.HasSuffix(dirPath, "/.Trashes") {
 		return true
 	}
 
