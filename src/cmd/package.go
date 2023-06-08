@@ -310,9 +310,9 @@ func init() {
 }
 
 func bindPackageFlags() {
-	packageFlags := packageCmd.Flags()
+	packageFlags := packageCmd.PersistentFlags()
 	v.SetDefault(V_PKG_OCI_CONCURRENCY, 3)
-	packageFlags.IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(V_PKG_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
+	packageFlags.IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(V_PKG_OCI_CONCURRENCY), lang.CmdPackageFlagConcurrency)
 }
 
 func bindCreateFlags() {

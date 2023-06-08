@@ -185,7 +185,8 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdInternalIsValidHostnameShort = "Checks if the current machine's hostname is RFC1123 compliant"
 
 	// zarf package
-	CmdPackageShort = "Zarf package commands for creating, deploying, and inspecting packages"
+	CmdPackageShort           = "Zarf package commands for creating, deploying, and inspecting packages"
+	CmdPackageFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
 
 	CmdPackageCreateShort = "Use to create a Zarf package from a given directory or the current directory"
 	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the active directory.\n" +
@@ -237,7 +238,6 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
 
-	CmdPackagePublishFlagConcurrency        = "Number of concurrent layer operations to perform when interacting with a remote package."
 	CmdPackagePublishFlagSigningKey         = "Path to private key file for signing packages"
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
 
