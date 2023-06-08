@@ -225,7 +225,7 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	if utils.IsOCIURL(p.cfg.CreateOpts.Destination) {
-		err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, p.cfg.CreateOpts.OCIConcurrency)
+		err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}

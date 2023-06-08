@@ -129,12 +129,12 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 
 	estimatedBytes := int64(0)
 	if isPartialPull {
-		for _, desc := range layersToPull {
-			estimatedBytes += desc.Size
-		}
 		for _, path := range AlwaysPull {
 			desc := manifest.Locate(path)
 			layersToPull = append(layersToPull, desc)
+			estimatedBytes += desc.Size
+		}
+		for _, desc := range layersToPull {
 			estimatedBytes += desc.Size
 		}
 	} else {
@@ -148,10 +148,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	}
 	defer dst.Close()
 
-	copyOpts := oras.DefaultCopyOptions
-	copyOpts.Concurrency = concurrency
-	copyOpts.OnCopySkipped = o.printLayerSuccess
-	copyOpts.PostCopy = o.printLayerSuccess
+	copyOpts := o.CopyOpts
 	if isPartialPull {
 		paths := []string{}
 		for _, layer := range layersToPull {

@@ -23,7 +23,7 @@ func (p *Packager) Pull() error {
 	if err != nil {
 		return err
 	}
-	err = p.remote.PullPackage(p.tmp.Base, p.cfg.PullOpts.OCIConcurrency)
+	err = p.remote.PullPackage(p.tmp.Base, config.CommonOptions.OCIConcurrency)
 	if err != nil {
 		return err
 	}

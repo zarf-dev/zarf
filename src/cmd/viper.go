@@ -49,6 +49,9 @@ const (
 	V_INIT_ARTIFACT_PUSH_USER  = "init.artifact.push_username"
 	V_INIT_ARTIFACT_PUSH_TOKEN = "init.artifact.push_token"
 
+	// Package config keys
+	V_PKG_OCI_CONCURRENCY = "package.oci_concurrency"
+
 	// Package create config keys
 	V_PKG_CREATE_SET                  = "package.create.set"
 	V_PKG_CREATE_OUTPUT_DIR           = "package.create.output_directory"
@@ -60,25 +63,21 @@ const (
 	V_PKG_CREATE_SIGNING_KEY_PASSWORD = "package.create.signing_key_password"
 	V_PKG_CREATE_DIFFERENTIAL         = "package.create.differential"
 	V_PKG_CREATE_REGISTRY_OVERRIDE    = "package.create.registry_override"
-	V_PKG_CREATE_OCI_CONCURRENCY      = "package.create.oci_concurrency"
 
 	// Package deploy config keys
-	V_PKG_DEPLOY_SET             = "package.deploy.set"
-	V_PKG_DEPLOY_COMPONENTS      = "package.deploy.components"
-	V_PKG_DEPLOY_SHASUM          = "package.deploy.shasum"
-	V_PKG_DEPLOY_SGET            = "package.deploy.sget"
-	V_PKG_DEPLOY_PUBLIC_KEY      = "package.deploy.public_key"
-	V_PKG_DEPLOY_OCI_CONCURRENCY = "package.deploy.oci_concurrency"
+	V_PKG_DEPLOY_SET        = "package.deploy.set"
+	V_PKG_DEPLOY_COMPONENTS = "package.deploy.components"
+	V_PKG_DEPLOY_SHASUM     = "package.deploy.shasum"
+	V_PKG_DEPLOY_SGET       = "package.deploy.sget"
+	V_PKG_DEPLOY_PUBLIC_KEY = "package.deploy.public_key"
 
 	// Package publish config keys
-	V_PKG_PUBLISH_OCI_CONCURRENCY      = "package.publish.oci_concurrency"
 	V_PKG_PUBLISH_SIGNING_KEY          = "package.publish.signing_key"
 	V_PKG_PUBLISH_SIGNING_KEY_PASSWORD = "package.publish.signing_key_password"
 
 	// Package pull config keys
-	V_PKG_PULL_OCI_CONCURRENCY = "package.pull.oci_concurrency"
-	V_PKG_PULL_OUTPUT_DIR      = "package.pull.output_directory"
-	V_PKG_PULL_PUBLIC_KEY      = "package.pull.public_key"
+	V_PKG_PULL_OUTPUT_DIR = "package.pull.output_directory"
+	V_PKG_PULL_PUBLIC_KEY = "package.pull.public_key"
 )
 
 func initViper() {

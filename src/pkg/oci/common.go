@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
+	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -31,9 +32,10 @@ const (
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
 type OrasRemote struct {
 	*remote.Repository
-	*remote.Registry
 	context.Context
 	Transport *utils.Transport
+	CopyOpts  oras.CopyOptions
+	client    *auth.Client
 }
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
@@ -42,7 +44,7 @@ type OrasRemote struct {
 func NewOrasRemote(url string) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, utils.OCIURLPrefix))
 	if err != nil {
-		return &OrasRemote{}, fmt.Errorf("failed to parse OCI reference: %w", err)
+		return nil, fmt.Errorf("failed to parse OCI reference: %w", err)
 	}
 	o := &OrasRemote{}
 	o.Context = context.TODO()
@@ -51,29 +53,42 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 	if ref.Registry == "docker.io" {
 		ref.Registry = "registry-1.docker.io"
 	}
-	repo, err := remote.NewRepository(ref.String())
+
+	err = o.WithRepository(ref)
 	if err != nil {
-		return &OrasRemote{}, err
+		return nil, err
 	}
-	reg, err := remote.NewRegistry(ref.Registry)
-	if err != nil {
-		return &OrasRemote{}, err
-	}
-	reg.PlainHTTP = zarfconfig.CommonOptions.Insecure
-	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
-	authClient, err := o.withAuthClient(ref)
-	if err != nil {
-		return &OrasRemote{}, err
-	}
-	reg.Client = authClient
-	repo.Client = authClient
-	o.Registry = reg
-	o.Repository = repo
+
 	err = o.CheckAuth()
 	if err != nil {
-		return &OrasRemote{}, fmt.Errorf("unable to authenticate to %s: %s", ref.Registry, err.Error())
+		return nil, fmt.Errorf("unable to authenticate to %s: %s", ref.Registry, err.Error())
 	}
+
+	copyOpts := oras.DefaultCopyOptions
+	// copyOpts.Concurrency = concurrency
+	copyOpts.OnCopySkipped = o.printLayerSuccess
+	copyOpts.PostCopy = o.printLayerSuccess
+	o.CopyOpts = copyOpts
+
 	return o, nil
+}
+
+// WithRepository sets the repository for the remote as well as the auth client.
+func (o *OrasRemote) WithRepository(ref registry.Reference) error {
+	client, err := o.withAuthClient(ref)
+	if err != nil {
+		return err
+	}
+	o.client = client
+
+	repo, err := remote.NewRepository(ref.String())
+	if err != nil {
+		return err
+	}
+	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
+	repo.Client = o.client
+	o.Repository = repo
+	return nil
 }
 
 // withScopes returns a context with the given scopes.
@@ -143,5 +158,11 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 
 // CheckAuth checks if the user is authenticated to the remote registry.
 func (o *OrasRemote) CheckAuth() error {
-	return o.Registry.Ping(o.Context)
+	reg, err := remote.NewRegistry(o.Repository.Reference.Registry)
+	if err != nil {
+		return err
+	}
+	reg.PlainHTTP = zarfconfig.CommonOptions.Insecure
+	reg.Client = o.client
+	return reg.Ping(o.Context)
 }

@@ -22,7 +22,7 @@ import (
 	"oras.land/oras-go/v2/content/file"
 )
 
-// OCIConfigPartial is a partial OCI config that is used to create the manifest config.
+// ConfigPartial is a partial OCI config that is used to create the manifest config.
 //
 // Unless specified, an empty manifest config will be used: `{}`
 // which causes an error on Google Artifact Registry
@@ -30,7 +30,7 @@ import (
 // to negate this, we create a simple manifest config with some build metadata
 //
 // the contents of this file are not used by Zarf
-type OCIConfigPartial struct {
+type ConfigPartial struct {
 	Architecture string            `json:"architecture"`
 	OCIVersion   string            `json:"ociVersion"`
 	Annotations  map[string]string `json:"annotations,omitempty"`
@@ -56,7 +56,7 @@ func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,
 	}
-	manifestConfig := OCIConfigPartial{
+	manifestConfig := ConfigPartial{
 		Architecture: build.Architecture,
 		OCIVersion:   "1.0.1",
 		Annotations:  annotations,
@@ -159,11 +159,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	}
 	spinner.Successf("Prepared %d layers", len(descs))
 
-	copyOpts := oras.DefaultCopyOptions
-	copyOpts.Concurrency = concurrency
-	copyOpts.OnCopySkipped = o.printLayerSuccess
-	copyOpts.PostCopy = o.printLayerSuccess
-
+	copyOpts := o.CopyOpts
 	var total int64
 	for _, desc := range descs {
 		total += desc.Size

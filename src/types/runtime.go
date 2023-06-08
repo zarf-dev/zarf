@@ -17,10 +17,11 @@ const (
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
-	Confirm       bool   `json:"confirm" jsonschema:"description=Verify that Zarf should perform an action"`
-	Insecure      bool   `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
-	CachePath     string `json:"cachePath" jsonschema:"description=Path to use to cache images and git repos on package create"`
-	TempDirectory string `json:"tempDirectory" jsonschema:"description=Location Zarf should use as a staging ground when managing files and images for package creation and deployment"`
+	Confirm        bool   `json:"confirm" jsonschema:"description=Verify that Zarf should perform an action"`
+	Insecure       bool   `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
+	CachePath      string `json:"cachePath" jsonschema:"description=Path to use to cache images and git repos on package create"`
+	TempDirectory  string `json:"tempDirectory" jsonschema:"description=Location Zarf should use as a staging ground when managing files and images for package creation and deployment"`
+	OCIConcurrency int    `jsonschema:"description=Number of concurrent layer operations to perform when interacting with a remote package"`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment.
@@ -32,7 +33,6 @@ type ZarfDeployOptions struct {
 	SetVariables           map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package"`
 	PublicKeyPath          string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 	AdoptExistingResources bool              `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`
-	OCIRemoteOptions
 }
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
@@ -41,7 +41,6 @@ type ZarfPublishOptions struct {
 	PackagePath        string `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
 	SigningKeyPassword string `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sign the published package"`
 	SigningKeyPath     string `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
-	OCIRemoteOptions
 }
 
 // ZarfPullOptions tracks the user-defined preferences during a package pull.
@@ -49,7 +48,6 @@ type ZarfPullOptions struct {
 	PackageSource   string `json:"packageSource" jsonschema:"description=Location where the Zarf package will be pulled from"`
 	OutputDirectory string `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
 	PublicKeyPath   string `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
-	OCIRemoteOptions
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
@@ -77,7 +75,6 @@ type ZarfCreateOptions struct {
 	SigningKeyPassword string            `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sigh the created package"`
 	DifferentialData   DifferentialData  `json:"differential" jsonschema:"description=A package's differential images and git repositories from a referenced previously built package"`
 	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
-	OCIRemoteOptions
 }
 
 // ZarfPartialPackageData contains info about a partial package.
@@ -143,9 +140,4 @@ type DifferentialData struct {
 	DifferentialImages         map[string]bool
 	DifferentialRepos          map[string]bool
 	DifferentialOCIComponents  map[string]string
-}
-
-// OCIRemoteOptions tracks user-defined options used to interact with a remote OCI registry.
-type OCIRemoteOptions struct {
-	OCIConcurrency int `jsonschema:"description=Number of concurrent layer operations to perform when interacting with a remote package"`
 }

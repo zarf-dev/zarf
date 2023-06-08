@@ -37,7 +37,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		if err != nil {
 			return err
 		}
-		if err := p.remote.PullPackage(p.tmp.Base, p.cfg.PullOpts.OCIConcurrency, layersToPull...); err != nil {
+		if err := p.remote.PullPackage(p.tmp.Base, config.CommonOptions.OCIConcurrency, layersToPull...); err != nil {
 			return fmt.Errorf("unable to pull the package: %w", err)
 		}
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {

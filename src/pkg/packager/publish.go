@@ -69,7 +69,7 @@ func (p *Packager) Publish() error {
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, p.remote.Reference)
 
 	// Publish the package/skeleton to the registry
-	return p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, p.cfg.PublishOpts.OCIConcurrency)
+	return p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, config.CommonOptions.OCIConcurrency)
 }
 
 func (p *Packager) loadSkeleton() error {
