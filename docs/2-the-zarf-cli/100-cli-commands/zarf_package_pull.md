@@ -18,7 +18,6 @@ zarf package pull [REFERENCE] [flags]
 ```
   -h, --help                      help for pull
   -k, --key string                Path to public key file for validating signed packages
-      --oci-concurrency int       Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
   -o, --output-directory string   Specify the output directory for the created Zarf package
 ```
 
@@ -30,6 +29,7 @@ zarf package pull [REFERENCE] [flags]
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
       --tmpdir string         Specify the temporary directory to use for intermediate files
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```

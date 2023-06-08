@@ -22,7 +22,6 @@ zarf package create [DIRECTORY] [flags]
   -k, --key string                         Path to private key file for signing packages
       --key-pass string                    Password to the private key file used for signing packages
   -m, --max-package-size int               Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting.
-      --oci-concurrency int                Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
   -o, --output-directory string            Specify the output directory for the created Zarf package
       --registry-override stringToString   Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet) (default [])
   -s, --sbom                               View SBOM contents after creating the package
@@ -39,6 +38,7 @@ zarf package create [DIRECTORY] [flags]
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
       --tmpdir string         Specify the temporary directory to use for intermediate files
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
