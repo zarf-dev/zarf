@@ -1141,10 +1141,6 @@ export interface ZarfCommonOptions {
 
 export interface ZarfCreateOptions {
     /**
-     * Location where the finalized Zarf package will be placed
-     */
-    destination: string;
-    /**
      * A package's differential images and git repositories from a referenced previously built
      * package
      */
@@ -1153,6 +1149,10 @@ export interface ZarfCreateOptions {
      * Size of chunks to use when splitting a zarf package into multiple files in megabytes
      */
     maxPackageSizeMB: number;
+    /**
+     * Location where the finalized Zarf package will be placed
+     */
+    output: string;
     /**
      * A map of domains to override on package create when pulling images
      */
@@ -1748,9 +1748,9 @@ const typeMap: any = {
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
-        { json: "destination", js: "destination", typ: "" },
         { json: "differential", js: "differential", typ: r("DifferentialData") },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
+        { json: "output", js: "output", typ: "" },
         { json: "registryOverrides", js: "registryOverrides", typ: m("") },
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },

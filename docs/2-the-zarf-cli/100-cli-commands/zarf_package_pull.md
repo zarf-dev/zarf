@@ -18,7 +18,7 @@ zarf package pull [REFERENCE] [flags]
 ```
   -h, --help                      help for pull
   -k, --key string                Path to public key file for validating signed packages
-  -o, --output-directory string   Specify the output directory for the created Zarf package
+  -o, --output-directory string   Specify the output directory for the pulled Zarf package
 ```
 
 ## Options inherited from parent commands
