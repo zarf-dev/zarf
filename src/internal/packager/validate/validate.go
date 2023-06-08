@@ -162,15 +162,9 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		}
 		if strings.ToLower(report.Type) == "vex" {
 			if err := validateVex(report.Source); err != nil {
-				return fmt.Errorf(lang.PkgValidateErrVexInvalid, err)
+				return fmt.Errorf(lang.PkgValidateErrVexInvalid, report.Name, err)
 			}
 		}
-		// Validate OSCAL report type
-		// if strings.ToLower(report.Type) == "oscal" {
-		// 	if err := validateOscal(report.Source); err != nil {
-		// 		return fmt.Errorf(lang.PkgValidateErrVexInvalid, err)
-		// 	}
-		// }
 	}
 
 	return nil
@@ -334,7 +328,10 @@ func validateManifest(manifest types.ZarfManifest) error {
 }
 
 func validateVex(reportSource string) error {
-	path, _ := os.Stat(reportSource)
+	path, err := os.Stat(reportSource)
+	if err != nil {
+		return fmt.Errorf(lang.PkgValidateErrPath, err)
+	}
 	if !path.IsDir() {
 		// check valid vex document
 		_, err := vex.Load(reportSource)

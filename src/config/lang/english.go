@@ -401,7 +401,7 @@ const (
 	PkgValidateErrPkgConstantName         = "constant name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrPkgName                 = "package name '%s' must be all lowercase and contain no special characters except -"
 	PkgValidateErrVariable                = "invalid package variable: %w"
-	PkgValidateErrVexInvalid              = "invalid vex document: %s"
+	PkgValidateErrVexInvalid              = "%s containes invalid vex document: %w"
 	PkgValidateErrYOLONoArch              = "cluster architecture not allowed"
 	PkgValidateErrYOLONoDistro            = "cluster distros not allowed"
 	PkgValidateErrYOLONoGit               = "git repos not allowed"
