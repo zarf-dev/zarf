@@ -85,7 +85,7 @@ func (report *ZarfReport) ValidateSource() bool {
 	return false
 }
 
-// ValidateVexType validates the type of report
+// ValidateType validates the type of report
 func (report *ZarfReport) ValidateType() error {
 	// TODO - add more validation for Type
 	var err error

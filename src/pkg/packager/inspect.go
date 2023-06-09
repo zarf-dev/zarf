@@ -107,7 +107,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 		componentTars, err := utils.RecursiveFileList(p.tmp.Components, nil, true, true)
 		if err != nil {
-			message.Warnf("The package being inspected does not contain components: %w", err)
+			message.Warnf("The package being inspected does not contain components: %s", err)
 		}
 
 		for _, componentTar := range componentTars {
@@ -120,14 +120,14 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 			reportPath := filepath.Join(componentDir, "reports", inspectType)
 
 			if _, err := os.Stat(reportPath); err != nil {
-				message.Debugf("Unable to read reports of type %s from component %s: %w", componentName, inspectType, err)
+				message.Debugf("Unable to read reports of type %s from component %s: %s", componentName, inspectType, err)
 				message.Infof("Component '%s' does not have '%s' reports", componentName, inspectType)
 				continue
 			}
 
 			reportFiles, err := utils.RecursiveFileList(reportPath, nil, true, true)
 			if err != nil {
-				message.Debugf("Unable to read reports of type %s from component %s: %w", componentName, inspectType, err)
+				message.Debugf("Unable to read reports of type %s from component %s: %s", componentName, inspectType, err)
 				continue
 			}
 
@@ -142,14 +142,14 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 				isTextFile, err := utils.IsTextFile(reportFile)
 				if err != nil {
-					message.Warnf("Unable to open %s: %w", reportFile, err)
+					message.Warnf("Unable to open %s: %s", reportFile, err)
 					continue
 				}
 
 				if isTextFile {
 					file, err := os.Open(reportFile)
 					if err != nil {
-						message.Warnf("Unable to open %s: %w", reportFile, err)
+						message.Warnf("Unable to open %s: %s", reportFile, err)
 					}
 					defer file.Close()
 

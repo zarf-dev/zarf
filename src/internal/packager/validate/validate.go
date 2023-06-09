@@ -163,7 +163,7 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 
 		message.Debugf("Build zarfReport Wrapper: %u+v", zarfReport)
 
-		if is_url := zarfReport.ValidateSource(); is_url {
+		if isURL := zarfReport.ValidateSource(); isURL {
 			return nil
 		}
 
