@@ -23,7 +23,7 @@ type ZarfReport struct {
 	ZarfComponentReport types.ZarfComponentReport
 }
 
-// Valid the file path
+// ValidateReportSource valides the reportsource
 func (report *ZarfReport) ValidateReportSource(filePath string) error {
 	// overload method to allow for file_path to be passed in or be the report source
 	if filePath == "" {
@@ -73,6 +73,8 @@ func (report *ZarfReport) ValidateReportSource(filePath string) error {
 
 	return nil
 }
+
+// ValidateSource validates the source of the report
 func (report *ZarfReport) ValidateSource() bool {
 	// TODO - add more validation for URL Source
 	if IsURL(report.ZarfComponentReport.Source) {
@@ -83,7 +85,7 @@ func (report *ZarfReport) ValidateSource() bool {
 	return false
 }
 
-// TODO ValidateVexType
+// ValidateVexType validates the type of report
 func (report *ZarfReport) ValidateType() error {
 	// TODO - add more validation for Type
 	var err error
@@ -98,7 +100,7 @@ func (report *ZarfReport) ValidateType() error {
 	return err
 }
 
-// TODO HasValidVexFields
+// HasCorrectFields ensures the correct fields on ZarfReport
 func (report *ZarfReport) HasCorrectFields() bool {
 	if report.ZarfComponentReport.Name == "" {
 		return false
