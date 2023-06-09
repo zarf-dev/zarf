@@ -155,16 +155,22 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		return fmt.Errorf(lang.PkgValidateErrActionVariables, component.Name)
 	}
 
+	// change to ZarfReport for testability/composability
 	for _, report := range component.Reports {
-		if utils.IsURL(report.Source) {
-			message.Debug("skipping validation due to remote location - validation will occur during create")
+		zarfReport := &utils.ZarfReport{
+			ZarfComponentReport: report,
+		}
+
+		message.Debugf("Build zarfReport Wrapper: %u+v", zarfReport)
+
+		if isURL := zarfReport.ValidateSource(); isURL {
 			return nil
 		}
-		if strings.ToLower(report.Type) == "vex" {
-			if err := validateVex(report.Source); err != nil {
-				return fmt.Errorf(lang.PkgValidateErrVexInvalid, report.Name, err)
-			}
+
+		if err := zarfReport.ValidateType(); err != nil {
+			return err
 		}
+
 	}
 
 	return nil
