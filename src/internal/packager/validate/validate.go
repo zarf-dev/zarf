@@ -167,7 +167,7 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 			return nil
 		}
 
-		if err := zarfReport.ValidateReportSource(""); err != nil {
+		if err := zarfReport.ValidateType(); err != nil {
 			return err
 		}
 

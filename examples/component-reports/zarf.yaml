@@ -18,9 +18,9 @@ components:
       - name: test-component-vex.vex.json
         source: ./vex/test-component.vex-1.json
         type: vex
-      # - name: randomtext.txt
-      #   source: ./test.txt
-      #   type: text
+      - name: randomtext.txt
+        source: ./test.txt
+        type: text
       - name: component-oscal.yaml
         source: ./oscal/oscal-component.yaml
         type: oscal
