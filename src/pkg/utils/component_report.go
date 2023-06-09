@@ -23,8 +23,8 @@ type ZarfReport struct {
 	ZarfComponentReport types.ZarfComponentReport
 }
 
-// ValidateReportSource valides the reportsource
-func (report *ZarfReport) ValidateReportSource(filePath string) error {
+// ValidateReportSource validates vex type reports
+func (report *ZarfReport) ValidateVexReport(filePath string) error {
 	// overload method to allow for file_path to be passed in or be the report source
 	if filePath == "" {
 		filePath = report.ZarfComponentReport.Source
@@ -65,8 +65,8 @@ func (report *ZarfReport) ValidateReportSource(filePath string) error {
 		for _, f := range files {
 			filePath := fmt.Sprintf("%s/%s", report.ZarfComponentReport.Source, f)
 			message.Debugf("Attempting to validate %s", filePath)
-			if err := report.ValidateReportSource(filePath); err != nil {
-				return fmt.Errorf(lang.PkgValidateErrVexInvalid1, err)
+			if err := report.ValidateVexReport(filePath); err != nil {
+				return fmt.Errorf(lang.PkgValidateErrVexInvalid, err)
 			}
 		}
 	}
@@ -91,7 +91,7 @@ func (report *ZarfReport) ValidateType() error {
 	var err error
 
 	if report.ZarfComponentReport.Type == strings.ToLower(VexType) {
-		if err = report.ValidateReportSource(report.ZarfComponentReport.Source); err != nil {
+		if err = report.ValidateVexReport(report.ZarfComponentReport.Source); err != nil {
 			message.Debugf("Error validating VEX report: %s", err)
 			return err
 		}

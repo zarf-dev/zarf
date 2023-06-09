@@ -19,7 +19,7 @@ func TestValidateReportSource(t *testing.T) {
 			Type:   "vex",
 		},
 	}
-	err := report.ValidateReportSource("")
+	err := report.ValidateVexReport("")
 	if err != nil {
 		t.Errorf("Expected ValidateReportSource to return nil, but got error: %v", err)
 	}
@@ -32,7 +32,7 @@ func TestValidateReportSource(t *testing.T) {
 			Type:   "vex",
 		},
 	}
-	err = report.ValidateReportSource("")
+	err = report.ValidateVexReport("")
 	if err != nil {
 		t.Errorf("Expected ValidateReportSource to return nil, but got error: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestValidateReportSource(t *testing.T) {
 			Type:   "vex",
 		},
 	}
-	err = report.ValidateReportSource("")
+	err = report.ValidateVexReport("")
 	if err == nil {
 		t.Error("Expected ValidateReportSource to return an error, but got nil")
 	}
@@ -58,7 +58,7 @@ func TestValidateReportSource(t *testing.T) {
 			Type:   "vex",
 		},
 	}
-	err = report.ValidateReportSource("")
+	err = report.ValidateVexReport("")
 	if err == nil {
 		t.Error("Expected ValidateReportSource to return an error, but got nil")
 	}

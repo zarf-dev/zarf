@@ -401,14 +401,11 @@ const (
 	PkgValidateErrPkgConstantName         = "constant name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrPkgName                 = "package name '%s' must be all lowercase and contain no special characters except -"
 	PkgValidateErrVariable                = "invalid package variable: %w"
-	// Failing in tests, making a new one below, feel free to fix
-	// src/pkg/utils/component_report.go:67:12: fmt.Errorf format %w reads arg #2, but call has 1 arg
-	PkgValidateErrVexInvalid   = "%s containes invalid vex document: %w"
-	PkgValidateErrVexInvalid1  = "%s containes invalid vex document"
-	PkgValidateErrYOLONoArch   = "cluster architecture not allowed"
-	PkgValidateErrYOLONoDistro = "cluster distros not allowed"
-	PkgValidateErrYOLONoGit    = "git repos not allowed"
-	PkgValidateErrYOLONoOCI    = "OCI images not allowed"
+	PkgValidateErrVexInvalid              = "invalid vex document: %s"
+	PkgValidateErrYOLONoArch              = "cluster architecture not allowed"
+	PkgValidateErrYOLONoDistro            = "cluster distros not allowed"
+	PkgValidateErrYOLONoGit               = "git repos not allowed"
+	PkgValidateErrYOLONoOCI               = "OCI images not allowed"
 )
 
 // Collection of reusable error messages.

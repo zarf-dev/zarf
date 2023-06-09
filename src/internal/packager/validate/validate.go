@@ -5,6 +5,7 @@
 package validate
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,7 +17,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/openvex/go-vex/pkg/vex"
 )
 
 var (
@@ -161,10 +161,14 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 			ZarfComponentReport: report,
 		}
 
-		message.Debugf("Build zarfReport Wrapper: %u+v", zarfReport)
+		message.Debugf("Build zarfReport Wrapper: %+v", zarfReport)
 
 		if isURL := zarfReport.ValidateSource(); isURL {
 			return nil
+		}
+
+		if hasCorrectFields := zarfReport.HasCorrectFields(); !hasCorrectFields {
+			return errors.New("report is missing required field")
 		}
 
 		if err := zarfReport.ValidateType(); err != nil {
@@ -328,52 +332,6 @@ func validateManifest(manifest types.ZarfManifest) error {
 	// Require files in manifest
 	if len(manifest.Files) < 1 && len(manifest.Kustomizations) < 1 {
 		return fmt.Errorf(lang.PkgValidateErrManifestFileOrKustomize, manifest.Name)
-	}
-
-	return nil
-}
-
-func validateVex(reportSource string) error {
-	path, err := os.Stat(reportSource)
-	if err != nil {
-		return fmt.Errorf(lang.PkgValidateErrPath, err)
-	}
-	if !path.IsDir() {
-		// check valid vex document
-		vexDoc, err := vex.Load(reportSource)
-		if err != nil {
-			return err
-		}
-		for _, s := range vexDoc.Statements {
-			err := vex.Statement.Validate(s)
-			if err != nil {
-				return err
-			}
-		}
-	} else {
-		message.Debugf("VEX path is a directory!")
-		file, err := os.Open(reportSource)
-
-		if err != nil {
-			return fmt.Errorf(lang.PkgValidateErrPath, err)
-		}
-
-		defer file.Close()
-
-		files, err := file.Readdirnames(0)
-		message.Debugf("Files found are: %s", files)
-
-		if err != nil {
-			return fmt.Errorf(lang.PkgValidateErrPath, err)
-		}
-
-		for _, f := range files {
-			filePath := fmt.Sprintf("%s/%s", reportSource, f)
-			message.Debugf("Attempting to validate %s", filePath)
-			if err := validateVex(filePath); err != nil {
-				return fmt.Errorf(lang.PkgValidateErrVexInvalid, err)
-			}
-		}
 	}
 
 	return nil
