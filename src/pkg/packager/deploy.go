@@ -568,7 +568,7 @@ func (p *Packager) pushReportsToRegistry(reportsPath string, name string) error 
 		return err
 	}
 
-	spinner.Successf("Pushed reports to zarf registry as OCI artifact: %s", "/zarf-reports/"+name+":latest")
+	spinner.Successf("Pushed reports to zarf registry as OCI artifact: %s", "zarf-reports/"+name+":latest")
 	return nil
 }
 
