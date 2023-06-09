@@ -18,23 +18,24 @@ import (
 // VexType is the type of report that is a VEX document
 const VexType = "vex"
 
-// Extend src/types.ZarfComponentReport to add a HasCorrectFields() method
+// ZarfReport Extends src/types.ZarfComponentReport to add methods
 type ZarfReport struct {
 	ZarfComponentReport types.ZarfComponentReport
 }
 
-func (report *ZarfReport) ValidateReportSource(file_path string) error {
+// Valid the file path
+func (report *ZarfReport) ValidateReportSource(filePath string) error {
 	// overload method to allow for file_path to be passed in or be the report source
-	if file_path == "" {
-		file_path = report.ZarfComponentReport.Source
+	if filePath == "" {
+		filePath = report.ZarfComponentReport.Source
 	}
-	path, err := os.Stat(file_path)
+	path, err := os.Stat(filePath)
 	if err != nil {
 		return fmt.Errorf(lang.PkgValidateErrPath, err)
 	}
 	if !path.IsDir() {
 		// check valid vex document
-		vexDoc, err := vex.Load(file_path)
+		vexDoc, err := vex.Load(filePath)
 		if err != nil {
 			return err
 		}
@@ -46,7 +47,7 @@ func (report *ZarfReport) ValidateReportSource(file_path string) error {
 		}
 	} else {
 		message.Debugf("VEX path is a directory!")
-		file, err := os.Open(file_path)
+		file, err := os.Open(filePath)
 
 		if err != nil {
 			return fmt.Errorf(lang.PkgValidateErrPath, err)
@@ -87,7 +88,7 @@ func (report *ZarfReport) ValidateType() error {
 	// TODO - add more validation for Type
 	var err error
 
-	if report.ZarfComponentReport.Type == strings.ToLower(VEX_TYPE) {
+	if report.ZarfComponentReport.Type == strings.ToLower(VexType) {
 		if err = report.ValidateReportSource(report.ZarfComponentReport.Source); err != nil {
 			message.Debugf("Error validating VEX report: %s", err)
 			return err
