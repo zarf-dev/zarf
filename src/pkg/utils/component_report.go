@@ -19,13 +19,13 @@ const VEX_TYPE = "vex"
 
 // Extend src/types.ZarfComponentReport to add a HasCorrectFields() method
 type ZarfReport struct {
-	types.ZarfComponentReport
+	ZarfComponentReport types.ZarfComponentReport
 }
 
 func (report *ZarfReport) ValidateReportSource(file_path string) error {
 	// overload method to allow for file_path to be passed in or be the report source
 	if file_path == "" {
-		file_path = report.Source
+		file_path = report.ZarfComponentReport.Source
 	}
 	path, err := os.Stat(file_path)
 	if err != nil {
@@ -61,7 +61,7 @@ func (report *ZarfReport) ValidateReportSource(file_path string) error {
 		}
 
 		for _, f := range files {
-			filePath := fmt.Sprintf("%s/%s", report.Source, f)
+			filePath := fmt.Sprintf("%s/%s", report.ZarfComponentReport.Source, f)
 			message.Debugf("Attempting to validate %s", filePath)
 			if err := report.ValidateReportSource(filePath); err != nil {
 				return fmt.Errorf(lang.PkgValidateErrVexInvalid1, err)
@@ -73,7 +73,7 @@ func (report *ZarfReport) ValidateReportSource(file_path string) error {
 }
 func (report *ZarfReport) ValidateSource() bool {
 	// TODO - add more validation for URL Source
-	if IsURL(report.Source) {
+	if IsURL(report.ZarfComponentReport.Source) {
 		message.Debug("skipping validation due to remote location - validation will occur during create")
 		return true
 	}
@@ -86,8 +86,8 @@ func (report *ZarfReport) ValidateType() error {
 	// TODO - add more validation for Type
 	var err error
 
-	if report.Type == strings.ToLower(VEX_TYPE) {
-		if err = report.ValidateReportSource(report.Source); err != nil {
+	if report.ZarfComponentReport.Type == strings.ToLower(VEX_TYPE) {
+		if err = report.ValidateReportSource(report.ZarfComponentReport.Source); err != nil {
 			message.Debugf("Error validating VEX report: %s", err)
 			return err
 		}
@@ -98,13 +98,13 @@ func (report *ZarfReport) ValidateType() error {
 
 // TODO HasValidVexFields
 func (report *ZarfReport) HasCorrectFields() bool {
-	if report.Name == "" {
+	if report.ZarfComponentReport.Name == "" {
 		return false
 	}
-	if report.Source == "" {
+	if report.ZarfComponentReport.Source == "" {
 		return false
 	}
-	if report.Type == "" {
+	if report.ZarfComponentReport.Type == "" {
 		return false
 	}
 
