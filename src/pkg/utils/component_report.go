@@ -15,8 +15,8 @@ import (
 	"github.com/openvex/go-vex/pkg/vex"
 )
 
-// VEX_TYPE is the type of report that is a VEX document
-const VEX_TYPE = "vex"
+// VexType is the type of report that is a VEX document
+const VexType = "vex"
 
 // Extend src/types.ZarfComponentReport to add a HasCorrectFields() method
 type ZarfReport struct {
