@@ -136,6 +136,7 @@ type TempPaths struct {
 	InjectBinary string
 	SeedImages   string
 	Images       string
+	Reports      string
 	Components   string
 	SbomTar      string
 	Sboms        string

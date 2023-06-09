@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"context"
 	"crypto"
 	"errors"
 	"fmt"
@@ -28,6 +29,13 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/pterm/pterm"
 	corev1 "k8s.io/api/core/v1"
+
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content/file"
+	"oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
 var (
@@ -218,6 +226,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
+	hasReports := len(component.Reports) > 0
 
 	onDeploy := component.Actions.OnDeploy
 
@@ -229,7 +238,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to process the component files: %w", err)
 	}
 
-	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections) {
+	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasReports) {
 
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
@@ -246,7 +255,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
-		if hasImages && !hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
+		if (hasImages || hasReports) && !hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
 			if err := p.cluster.DisableRegHPAScaleDown(); err != nil {
 				message.Debugf("unable to disable the registry HPA scale down: %s", err.Error())
 			} else {
@@ -258,6 +267,12 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	if hasImages {
 		if err := p.pushImagesToRegistry(component.Images, noImgChecksum); err != nil {
 			return charts, fmt.Errorf("unable to push images to the registry: %w", err)
+		}
+	}
+
+	if hasReports {
+		if err := p.pushReportsToRegistry(componentPath.Reports, component.Name); err != nil {
+			return charts, fmt.Errorf("unable to push reports to the registry: %w", err)
 		}
 	}
 
@@ -442,6 +457,119 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	return utils.Retry(func() error {
 		return imgConfig.PushToZarfRegistry()
 	}, 3, 5*time.Second)
+}
+
+func (p *Packager) pushReportsToRegistry(reportsPath string, name string) error {
+	message.Debug("deploy.pushReportsToRegistry()")
+	spinner := message.NewProgressSpinner("Pushing reports for %s to registry", name)
+	reportFiles, err := utils.RecursiveFileList(reportsPath, nil, true, true)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+
+	fs, err := file.New(p.tmp.Reports)
+	if err != nil {
+		spinner.Fatalf(err, "Unable to create temp file: %s", err.Error())
+		return err
+	}
+	defer fs.Close()
+
+	mediaType := "zarf/reportfile"
+	fileDescriptors := make([]ocispec.Descriptor, 0, len(reportFiles))
+	for _, filePath := range reportFiles {
+		fileName := filepath.Base(filePath)
+		fileDescriptor, err := fs.Add(ctx, fileName, mediaType, filePath)
+		if err != nil {
+			spinner.Fatalf(err, "Unable to add file to OCI bundle: %s", err.Error())
+			return err
+		}
+		fileDescriptors = append(fileDescriptors, fileDescriptor)
+	}
+
+	artifactType := "zarf/report"
+	manifestDescriptor, err := oras.Pack(ctx, fs, artifactType, fileDescriptors, oras.PackOptions{
+		PackImageManifest: true,
+	})
+	if err != nil {
+		spinner.Fatalf(err, "Unable to pack up OCI bundle: %s", err.Error())
+		return err
+	}
+
+	tag := "latest"
+	if err = fs.Tag(ctx, manifestDescriptor, tag); err != nil {
+		spinner.Fatalf(err, "Unable to tag OCI bundle: %s", err.Error())
+		return err
+	}
+
+	var (
+		tunnel      *cluster.Tunnel
+		registryURL string
+		target      string
+	)
+
+	if p.cfg.State.RegistryInfo.InternalRegistry {
+		// Establish a registry tunnel to send the images to the zarf registry
+		if tunnel, err = cluster.NewZarfTunnel(); err != nil {
+			spinner.Fatalf(err, "Unable to tunnel to zarf registry: %s", err.Error())
+			return err
+		}
+		target = cluster.ZarfRegistry
+	} else {
+		svcInfo, err := cluster.ServiceInfoFromNodePortURL(p.cfg.State.RegistryInfo.Address)
+
+		// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
+		if err == nil {
+			if tunnel, err = cluster.NewTunnel(svcInfo.Namespace, cluster.SvcResource, svcInfo.Name, 0, svcInfo.Port); err != nil {
+				spinner.Fatalf(err, "Unable to tunnel to zarf registry: %s", err.Error())
+				return err
+			}
+		}
+	}
+
+	if tunnel != nil {
+		err = tunnel.Connect(target, false)
+		if err != nil {
+			spinner.Fatalf(err, "Unable to tunnel to zarf registry: %s", err.Error())
+			return err
+		}
+		registryURL = tunnel.Endpoint()
+		defer tunnel.Close()
+	} else {
+		registryURL = p.cfg.State.RegistryInfo.Address
+	}
+
+	repo, err := remote.NewRepository(registryURL + "/zarf-reports/" + name)
+	if err != nil {
+		spinner.Fatalf(err, "Unable to create new repository in registry: %s", err.Error())
+		return err
+	}
+
+	// TODO: Not sure this logic is right
+	if p.cfg.State.RegistryInfo.InternalRegistry {
+		repo.PlainHTTP = true
+	} else {
+		repo.PlainHTTP = config.CommonOptions.Insecure
+	}
+
+	repo.Client = &auth.Client{
+		Client: retry.DefaultClient,
+		Cache:  auth.DefaultCache,
+		Credential: auth.StaticCredential(registryURL, auth.Credential{
+			Username: p.cfg.State.RegistryInfo.PushUsername,
+			Password: p.cfg.State.RegistryInfo.PushPassword,
+		}),
+	}
+
+	_, err = oras.Copy(ctx, fs, tag, repo, tag, oras.DefaultCopyOptions)
+	if err != nil {
+		spinner.Fatalf(err, "Unable to push reports to registry: %s", err.Error())
+		return err
+	}
+
+	spinner.Successf("Pushed reports to zarf registry as OCI artifact: %s", "/zarf-reports/"+name+":latest")
+	return nil
 }
 
 // Push all of the components git repos to the configured git server.
