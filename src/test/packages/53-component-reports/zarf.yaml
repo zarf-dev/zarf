@@ -1,0 +1,33 @@
+kind: ZarfPackageConfig
+metadata:
+  name: vex-example
+  description: 'Demo Zarf package composability with reports'
+
+components:
+  - name: test-component-dir
+    required: true
+    description: 'Example component that has reports in a directory'
+    reports:
+      - name: test-component-vex-dir
+        source: ./vex
+        type: vex
+  - name: test-component-multiple-reports
+    required: true
+    description: 'Example component that has reports of 3 different types'
+    reports:
+      - name: test-component-vex.vex.json
+        source: ./vex/test-component.vex-1.json
+        type: vex
+      - name: randomtext.txt
+        source: ./test.txt
+        type: text
+      - name: component-oscal.yaml
+        source: ./oscal/oscal-component.yaml
+        type: oscal
+  - name: test-component-remote
+    required: true
+    description: 'Example component that has a remote report'
+    reports:
+      - name: test-component-vex.vex.json
+        source: https://raw.githubusercontent.com/defenseunicorns/zarf/0ac2215a8db45bcb81fdafd5e5a00d6300c3ab29/examples/component-reports/vex/test-component.vex.json
+        type: vex
