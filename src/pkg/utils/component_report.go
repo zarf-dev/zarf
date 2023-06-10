@@ -46,7 +46,7 @@ func (report *ZarfReport) ValidateVexReport(filePath string) error {
 			}
 		}
 	} else {
-		message.Debugf("VEX path is a directory!")
+		message.Debugf("vex source %s is a directory", filePath)
 		file, err := os.Open(filePath)
 
 		if err != nil {
