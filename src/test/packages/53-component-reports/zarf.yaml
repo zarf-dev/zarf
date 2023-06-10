@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: vex-example
   description: 'Demo Zarf package composability with reports'
-
+  version: 0.0.1
 components:
   - name: test-component-dir
     required: true
