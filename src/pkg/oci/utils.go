@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 
-	zarfconfig "github.com/defenseunicorns/zarf/src/config"
+	config "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -89,9 +89,9 @@ func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err erro
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.
 func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg types.ZarfPackage, err error) {
-	zarfYamlDescriptor := manifest.Locate(zarfconfig.ZarfYAML)
+	zarfYamlDescriptor := manifest.Locate(config.ZarfYAML)
 	if zarfYamlDescriptor.Digest == "" {
-		return pkg, fmt.Errorf("unable to find %s in the manifest", zarfconfig.ZarfYAML)
+		return pkg, fmt.Errorf("unable to find %s in the manifest", config.ZarfYAML)
 	}
 	zarfYamlBytes, err := o.FetchLayer(zarfYamlDescriptor)
 	if err != nil {

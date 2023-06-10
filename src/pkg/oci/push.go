@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	zarfconfig "github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -207,7 +207,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 		utils.ColorPrintYAML(ex)
 	} else {
 		flags := ""
-		if zarfconfig.CommonOptions.Insecure {
+		if config.CommonOptions.Insecure {
 			flags = "--insecure"
 		}
 		message.Title("To inspect/deploy/pull:", "")
