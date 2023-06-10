@@ -23,7 +23,7 @@ type ZarfReport struct {
 	ZarfComponentReport types.ZarfComponentReport
 }
 
-// ValidateReportSource validates vex type reports
+// ValidateVexReport validates vex type reports
 func (report *ZarfReport) ValidateVexReport(filePath string) error {
 	// overload method to allow for file_path to be passed in or be the report source
 	if filePath == "" {
