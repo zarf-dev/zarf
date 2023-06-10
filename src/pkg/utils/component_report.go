@@ -7,6 +7,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -63,7 +64,7 @@ func (report *ZarfReport) ValidateVexReport(filePath string) error {
 		}
 
 		for _, f := range files {
-			filePath := fmt.Sprintf("%s/%s", report.Source, f)
+			filePath := filepath.Join(report.Source, f)
 			message.Debugf("Attempting to validate %s", filePath)
 			if err := report.ValidateVexReport(filePath); err != nil {
 				return fmt.Errorf(lang.PkgValidateErrVexInvalid, err)

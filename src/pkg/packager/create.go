@@ -565,14 +565,14 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			var filePath string
 			switch reportType := strings.ToLower(report.Type); reportType {
 			case "vex":
-				dst := fmt.Sprintf("%s/%s", componentPath.Reports, reportType)
+				dst := filepath.Join(componentPath.Reports, reportType)
 				err = utils.CreateDirectory(dst, 0700)
 				if err != nil {
 					return fmt.Errorf("unable to create reports destination directory: %w", err)
 				}
 				if utils.IsURL(report.Source) {
 					message.Debugf("Source %s was identified as a URL", report.Source)
-					filePath = fmt.Sprintf("%s/%s/%s", componentPath.Reports, reportType, report.Name)
+					filePath = filepath.Join(componentPath.Reports, reportType, report.Name)
 					if _, err := os.Stat(filePath); err == nil {
 						return fmt.Errorf("%s already exists for this component and cannot conflict", filePath)
 					}
