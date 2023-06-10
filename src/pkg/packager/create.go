@@ -804,7 +804,7 @@ func addVexFile(componentPath string, path string, reportName string) error {
 	message.Debugf("filepath is: %s", filePath)
 	if !filePath.IsDir() {
 		message.Debugf("Vex path is a single file: %s", path)
-		dest := fmt.Sprintf("%s/%s/%s", componentPath, "vex", reportName)
+		dest := filepath.Join(componentPath, "vex", reportName)
 		if _, err := os.Stat(dest); err == nil {
 			return fmt.Errorf("%s already exists for this component and cannot conflict", dest)
 		}
@@ -843,7 +843,7 @@ func addVexFile(componentPath string, path string, reportName string) error {
 
 		for i, f := range files {
 			filename := fmt.Sprintf("%s-%d.vex.json", reportName, i)
-			filepath := fmt.Sprintf("%s/%s", path, f)
+			filepath := filepath.Join(path, f)
 			addVexFile(componentPath, filepath, filename)
 		}
 	}
