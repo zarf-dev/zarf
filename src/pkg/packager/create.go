@@ -571,7 +571,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 					return fmt.Errorf("unable to create reports destination directory: %w", err)
 				}
 				if utils.IsURL(report.Source) {
-					message.Debug("Source was identified as a URL")
+					message.Debugf("Source %s was identified as a URL", report.Source)
 					filePath = fmt.Sprintf("%s/%s/%s", componentPath.Reports, reportType, report.Name)
 					if _, err := os.Stat(filePath); err == nil {
 						return fmt.Errorf("%s already exists for this component and cannot conflict", filePath)
