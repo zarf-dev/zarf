@@ -15,7 +15,7 @@ func TestValidateReportSource(t *testing.T) {
 	report := &ZarfReport{
 		types.ZarfComponentReport{
 			Name:   "Test Name",
-			Source: "../../../examples/component-reports/vex/test-component.vex-1.json",
+			Source: "../../test/packages/53-component-reports/vex/test-component.vex-1.json",
 			Type:   "vex",
 		},
 	}
@@ -28,7 +28,7 @@ func TestValidateReportSource(t *testing.T) {
 	report = &ZarfReport{
 		types.ZarfComponentReport{
 			Name:   "Test Name",
-			Source: "../../../examples/component-reports/vex/",
+			Source: "../../test/packages/53-component-reports/vex/",
 			Type:   "vex",
 		},
 	}
