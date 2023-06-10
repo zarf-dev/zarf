@@ -20,14 +20,14 @@ const VexType = "vex"
 
 // ZarfReport Extends src/types.ZarfComponentReport to add methods
 type ZarfReport struct {
-	ZarfComponentReport types.ZarfComponentReport
+	types.ZarfComponentReport
 }
 
 // ValidateVexReport validates vex type reports
 func (report *ZarfReport) ValidateVexReport(filePath string) error {
 	// overload method to allow for file_path to be passed in or be the report source
 	if filePath == "" {
-		filePath = report.ZarfComponentReport.Source
+		filePath = report.Source
 	}
 	path, err := os.Stat(filePath)
 	if err != nil {
@@ -63,7 +63,7 @@ func (report *ZarfReport) ValidateVexReport(filePath string) error {
 		}
 
 		for _, f := range files {
-			filePath := fmt.Sprintf("%s/%s", report.ZarfComponentReport.Source, f)
+			filePath := fmt.Sprintf("%s/%s", report.Source, f)
 			message.Debugf("Attempting to validate %s", filePath)
 			if err := report.ValidateVexReport(filePath); err != nil {
 				return fmt.Errorf(lang.PkgValidateErrVexInvalid, err)
@@ -77,7 +77,7 @@ func (report *ZarfReport) ValidateVexReport(filePath string) error {
 // ValidateSource validates the source of the report
 func (report *ZarfReport) ValidateSource() bool {
 	// TODO - add more validation for URL Source
-	if IsURL(report.ZarfComponentReport.Source) {
+	if IsURL(report.Source) {
 		message.Debug("skipping validation due to remote location - validation will occur during create")
 		return true
 	}
@@ -90,8 +90,8 @@ func (report *ZarfReport) ValidateType() error {
 	// TODO - add more validation for Type
 	var err error
 
-	if report.ZarfComponentReport.Type == strings.ToLower(VexType) {
-		if err = report.ValidateVexReport(report.ZarfComponentReport.Source); err != nil {
+	if report.Type == strings.ToLower(VexType) {
+		if err = report.ValidateVexReport(report.Source); err != nil {
 			message.Debugf("Error validating VEX report: %s", err)
 			return err
 		}
@@ -102,13 +102,13 @@ func (report *ZarfReport) ValidateType() error {
 
 // HasCorrectFields ensures the correct fields on ZarfReport
 func (report *ZarfReport) HasCorrectFields() bool {
-	if report.ZarfComponentReport.Name == "" {
+	if report.Name == "" {
 		return false
 	}
-	if report.ZarfComponentReport.Source == "" {
+	if report.Source == "" {
 		return false
 	}
-	if report.ZarfComponentReport.Type == "" {
+	if report.Type == "" {
 		return false
 	}
 
