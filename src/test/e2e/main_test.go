@@ -38,13 +38,6 @@ func TestMain(m *testing.M) {
 		fmt.Println(err) //nolint:forbidigo
 	}
 
-	// Print out the command history
-	pterm.Println("::group::Zarf Command Log")
-	for _, cmd := range e2e.CommandLog {
-		message.ZarfCommand(cmd)
-	}
-	pterm.Println("::endgroup::")
-
 	os.Exit(retCode)
 }
 
@@ -72,6 +65,17 @@ func doAllTheThings(m *testing.M) (int, error) {
 
 	// Run the tests, with the cluster cleanup being deferred to the end of the function call
 	returnCode := m.Run()
+
+	isCi := os.Getenv("CI") == "true"
+	if isCi {
+		pterm.Println("::notice::Zarf Command Log")
+		// Print out the command history
+		pterm.Println("::group::Zarf Command Log")
+		for _, cmd := range e2e.CommandLog {
+			message.ZarfCommand(cmd)
+		}
+		pterm.Println("::endgroup::")
+	}
 
 	return returnCode, nil
 }
