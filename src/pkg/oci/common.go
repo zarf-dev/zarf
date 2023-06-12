@@ -48,11 +48,6 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 	}
 	o := &OrasRemote{}
 	o.Context = context.TODO()
-	// patch docker.io to registry-1.docker.io
-	// this allows end users to use docker.io as an alias for registry-1.docker.io
-	if ref.Registry == "docker.io" {
-		ref.Registry = "registry-1.docker.io"
-	}
 
 	err = o.WithRepository(ref)
 	if err != nil {
@@ -74,6 +69,11 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 
 // WithRepository sets the repository for the remote as well as the auth client.
 func (o *OrasRemote) WithRepository(ref registry.Reference) error {
+	// patch docker.io to registry-1.docker.io
+	// this allows end users to use docker.io as an alias for registry-1.docker.io
+	if ref.Registry == "docker.io" {
+		ref.Registry = "registry-1.docker.io"
+	}
 	client, err := o.withAuthClient(ref)
 	if err != nil {
 		return err
@@ -108,10 +108,10 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 	message.Debugf("Loading docker config file from default config location: %s", config.Dir())
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
-		return &auth.Client{}, err
+		return nil, err
 	}
 	if !cfg.ContainsAuth() {
-		return &auth.Client{}, errors.New("no docker config file found, run 'zarf tools registry login --help'")
+		return nil, errors.New("no docker config file found, run 'zarf tools registry login --help'")
 	}
 
 	configs := []*configfile.ConfigFile{cfg}
@@ -124,7 +124,7 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 
 	authConf, err := configs[0].GetCredentialsStore(key).Get(key)
 	if err != nil {
-		return &auth.Client{}, fmt.Errorf("unable to get credentials for %s: %w", key, err)
+		return nil, fmt.Errorf("unable to get credentials for %s: %w", key, err)
 	}
 
 	if authConf.ServerAddress != "" {
