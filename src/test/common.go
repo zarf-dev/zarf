@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -25,6 +26,7 @@ type ZarfE2ETest struct {
 	Arch            string
 	ApplianceMode   bool
 	RunClusterTests bool
+	CommandHistory  []string
 }
 
 var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
@@ -58,6 +60,7 @@ func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
 
 // Zarf executes a Zarf command.
 func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
+	e2e.CommandHistory = append(e2e.CommandHistory, strings.Join(args, " "))
 	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)
 }
 

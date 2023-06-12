@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/test"
 )
 
@@ -35,6 +36,14 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		fmt.Println(err) //nolint:forbidigo
 	}
+
+	// Print out the command history
+	message.HorizontalRule()
+	message.Title("Zarf Command History:", "")
+	for _, cmd := range e2e.CommandHistory {
+		message.ZarfCommand(cmd) //nolint:forbidigo
+	}
+
 	os.Exit(retCode)
 }
 

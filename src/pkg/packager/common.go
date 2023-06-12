@@ -7,6 +7,7 @@ package packager
 import (
 	"crypto"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -448,6 +449,13 @@ func (p *Packager) validatePackageArchitecture() error {
 	return nil
 }
 
+var (
+	// ErrPkgKeyButNoSig is returned when a key was provided but the package is not signed
+	ErrPkgKeyButNoSig = errors.New("a key was provided but the package is not signed - remove the --key flag and run the command again")
+	// ErrPkgSigButNoKey is returned when a package is signed but no key was provided
+	ErrPkgSigButNoKey = errors.New("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
+)
+
 func (p *Packager) validatePackageSignature(publicKeyPath string) error {
 
 	// If the insecure flag was provided, ignore the signature validation
@@ -456,20 +464,16 @@ func (p *Packager) validatePackageSignature(publicKeyPath string) error {
 	}
 
 	// Handle situations where there is no signature within the package
-	_, sigCheckErr := os.Stat(p.tmp.ZarfSig)
-	if sigCheckErr != nil {
+	sigExist := !utils.InvalidPath(p.tmp.ZarfSig)
+	if !sigExist && publicKeyPath == "" {
 		// Nobody was expecting a signature, so we can just return
-		if publicKeyPath == "" {
-			return nil
-		}
-
-		// We were expecting a signature, but there wasn't one..
-		return fmt.Errorf("package is not signed but a key was provided")
-	}
-
-	// Validate the signature of the package
-	if publicKeyPath == "" {
-		return fmt.Errorf("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
+		return nil
+	} else if sigExist && publicKeyPath == "" {
+		// The package is signed but no key was provided
+		return ErrPkgSigButNoKey
+	} else if !sigExist && publicKeyPath != "" {
+		// A key was provided but there is no signature
+		return ErrPkgKeyButNoSig
 	}
 
 	// Validate the signature with the key we were provided

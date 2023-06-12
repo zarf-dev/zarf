@@ -51,6 +51,9 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAML, err)
 		}
+		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfYAMLSignature, p.tmp.Base); err != nil {
+			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAMLSignature, err)
+		}
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 		}
@@ -73,13 +76,12 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	}
 
 	// Validate the package checksums and signatures if specified, and warn if the package was signed but a key was not provided
-	sigExist := !utils.InvalidPath(p.tmp.ZarfSig)
-	if inspectPublicKey != "" {
-		if err := p.validatePackageSignature(inspectPublicKey); err != nil {
+	if err := p.validatePackageSignature(inspectPublicKey); err != nil {
+		if err == ErrPkgSigButNoKey {
+			message.Warn("The package was signed but no public key was provided, skipping signature validation")
+		} else {
 			return fmt.Errorf("unable to validate the package signature: %w", err)
 		}
-	} else if sigExist {
-		message.Warnf("The package you are inspecting has been signed but a public key was not provided.")
 	}
 
 	if wantSBOM {
