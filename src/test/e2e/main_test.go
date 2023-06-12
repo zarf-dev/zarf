@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/test"
+	"github.com/pterm/pterm"
 )
 
 var (
@@ -38,11 +39,11 @@ func TestMain(m *testing.M) {
 	}
 
 	// Print out the command history
-	message.HorizontalRule()
-	message.Title("Zarf Command Log:", "")
+	message.Title("::group:: Zarf Command Log:", "")
 	for _, cmd := range e2e.CommandLog {
 		message.ZarfCommand(cmd)
 	}
+	pterm.Println("::endgroup::")
 
 	os.Exit(retCode)
 }
