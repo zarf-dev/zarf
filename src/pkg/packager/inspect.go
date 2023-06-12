@@ -12,7 +12,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
-	"github.com/pterm/pterm"
 )
 
 // Inspect list the contents of a package.
@@ -64,9 +63,6 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		}
 	}
 
-	pterm.Println()
-	pterm.Println()
-
 	utils.ColorPrintYAML(p.cfg.Pkg)
 
 	if !utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
@@ -86,11 +82,8 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 	if wantSBOM {
 		// Extract the SBOM files from the sboms.tar file
-		tarExists := !utils.InvalidPath(p.tmp.SbomTar)
-		if tarExists {
-			if err := archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
-				return fmt.Errorf("unable to extract the SBOM files: %w", err)
-			}
+		if err := archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
+			return fmt.Errorf("unable to extract the SBOM files: %w", err)
 		}
 	}
 

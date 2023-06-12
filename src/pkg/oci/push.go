@@ -215,7 +215,6 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 		message.ZarfCommand("package deploy oci://%s %s", o.Reference, flags)
 		message.ZarfCommand("package pull oci://%s %s", o.Reference, flags)
 	}
-	message.HorizontalRule()
 
 	return nil
 }

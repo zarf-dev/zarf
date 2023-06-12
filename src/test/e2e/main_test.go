@@ -39,9 +39,9 @@ func TestMain(m *testing.M) {
 
 	// Print out the command history
 	message.HorizontalRule()
-	message.Title("Zarf Command History:", "")
-	for _, cmd := range e2e.CommandHistory {
-		message.ZarfCommand(cmd) //nolint:forbidigo
+	message.Title("Zarf Command Log:", "")
+	for _, cmd := range e2e.CommandLog {
+		message.ZarfCommand(cmd)
 	}
 
 	os.Exit(retCode)
