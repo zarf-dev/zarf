@@ -33,7 +33,7 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 	}
 	aggregateChecksum := pkg.Metadata.AggregateChecksum
 	if aggregateChecksum == "" {
-		return fmt.Errorf("unable to validate checksums because of missing metadata checksum signature")
+		return fmt.Errorf("missing aggregate checksum")
 	}
 	if len(aggregateChecksum) != 64 {
 		return fmt.Errorf("invalid aggregate checksum: %s", aggregateChecksum)
@@ -76,17 +76,13 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 		path := filepath.Join(baseDir, rel)
 
 		status := fmt.Sprintf("Validating checksum of %s", rel)
-		if len(status) > message.TermWidth {
-			max := message.TermWidth - 3
-			status = fmt.Sprintf("%s...", status[:max])
-		}
-		spinner.Updatef(status)
+		spinner.Updatef(message.Truncate(status, message.TermWidth, false))
 
 		if InvalidPath(path) {
 			if !isPartial && !pathCheckMap[path] {
-				return fmt.Errorf("unable to validate checksums because of missing file: %s", rel)
+				return fmt.Errorf("unable to validate checksums - missing file: %s", rel)
 			} else if SliceContains(pathsToCheck, path) {
-				return fmt.Errorf("unable to validate partial checksums because of missing file: %s", rel)
+				return fmt.Errorf("unable to validate partial checksums - missing file: %s", rel)
 			}
 			// it's okay if we're doing a partial check and the file isn't there as long as the path isn't in the list of paths to check
 			return nil
