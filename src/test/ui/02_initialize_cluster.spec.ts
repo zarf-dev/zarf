@@ -7,12 +7,20 @@ test.beforeEach(async ({ page }) => {
 	page.on('pageerror', (err) => console.log(err.message));
 });
 
+const expandedSearch = async (page) => {
+	const expanded = (await page.locator('.button-label:has-text("Search Directory")')).first();
+	if (expanded.isVisible()) {
+		await expanded.click();
+	}
+};
+
 const getToSelectPage = async (page) => {
 	await page.goto('/auth?token=insecure&next=/packages?init=true', { waitUntil: 'networkidle' });
 };
 
 const getToConfigurePage = async (page) => {
 	await getToSelectPage(page);
+	await expandedSearch(page);
 	// Find first init package deploy button.
 	const deployInit = page.getByTitle('init').first();
 	// click the init package deploy button.
@@ -42,8 +50,10 @@ test.describe('initialize a zarf cluster', () => {
 			'4 Deploy',
 		]);
 
+		await expandedSearch(page);
+
 		// Find first init package deploy button.
-		const deployInit = page.getByTitle('init').first();
+		let deployInit = page.getByTitle('init').first();
 		// click the init package deploy button.
 		deployInit.click();
 
