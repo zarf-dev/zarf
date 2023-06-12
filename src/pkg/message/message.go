@@ -92,7 +92,6 @@ func UseLogFile() {
 			pterm.SetDefaultOutput(logStream)
 			message := fmt.Sprintf("Saving log file to %s", logFile.Name())
 			Note(message)
-			pterm.Println()
 		}
 	}
 }
