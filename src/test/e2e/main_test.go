@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// Print out the command history
-	pterm.Println("::group:: Zarf Command Log")
+	pterm.Println("::group::Zarf Command Log")
 	for _, cmd := range e2e.CommandLog {
 		message.ZarfCommand(cmd)
 	}
