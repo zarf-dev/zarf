@@ -194,11 +194,16 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** List of package authors (including contact info)
+**Description:** Comma-separated list of package authors (including contact info)
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+**Example:**
+
+<code>
+"Doug <hello@defenseunicorns.com>&#44; Pepr <hello@defenseunicorns.com>"</code>
 
 </blockquote>
 </details>

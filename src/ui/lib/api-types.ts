@@ -884,7 +884,7 @@ export interface ZarfMetadata {
      */
     architecture?: string;
     /**
-     * List of package authors (including contact info)
+     * Comma-separated list of package authors (including contact info)
      */
     authors?: string;
     /**

@@ -863,7 +863,10 @@
         },
         "authors": {
           "type": "string",
-          "description": "List of package authors (including contact info)"
+          "description": "Comma-separated list of package authors (including contact info)",
+          "examples": [
+            "Doug \u003chello@defenseunicorns.com\u003e\u0026#44; Pepr \u003chello@defenseunicorns.com\u003e"
+          ]
         },
         "documentation": {
           "type": "string",
