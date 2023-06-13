@@ -76,14 +76,16 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			layers = append(layers, root.Locate(filepath.Join(config.ZarfComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 		}
 	}
+	// Append the sboms.tar layer if it exists
+	//
+	// Since sboms.tar is not a heavy addition 99% of the time, we'll just always pull it
+	sbomsDescriptor := root.Locate(config.ZarfSBOMTar)
+	if !o.isEmptyDescriptor(sbomsDescriptor) {
+		layers = append(layers, sbomsDescriptor)
+	}
 	if len(images) > 0 {
 		// Add the image index and the oci-layout layers
 		layers = append(layers, root.Locate(root.indexPath), root.Locate(root.ociLayoutPath))
-		// Append the sbom.tar layer if it exists
-		sbomDescriptor := root.Locate(config.ZarfSBOMTar)
-		if !o.isEmptyDescriptor(sbomDescriptor) {
-			layers = append(layers, sbomDescriptor)
-		}
 		index, err := o.FetchImagesIndex(root)
 		if err != nil {
 			return nil, err
