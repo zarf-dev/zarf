@@ -24,7 +24,7 @@ func (p *Packager) Pull() error {
 	if err != nil {
 		return err
 	}
-	err = utils.ReadYaml(p.tmp.ZarfYaml, &p.cfg.Pkg)
+	err = p.readYaml(p.tmp.ZarfYaml)
 	if err != nil {
 		return err
 	}

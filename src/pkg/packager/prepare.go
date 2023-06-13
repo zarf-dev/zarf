@@ -70,10 +70,11 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 	componentDefinition := "\ncomponents:\n"
 
-	for _, component := range p.cfg.Pkg.Components {
+	for componentIdx, component := range p.cfg.Pkg.Components {
 
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
+			message.Debug("Skipping component", component.Name)
 			continue
 		}
 
@@ -245,7 +246,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 			}
 
 			if inplace {
-				err := updateComponentImagesInplace(&component.Name, sortedImages)
+				err := p.updateComponentImagesInplace(componentIdx, sortedImages)
 				if err != nil {
 					return err
 				}
@@ -261,7 +262,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 					message.Debugf("Suspected image does not appear to be valid: %#v", err)
 				} else {
 					// Otherwise, add to the list of images
-					message.Debugf("Imaged digest found: %s", descriptor.Digest)
+					message.Debugf("Image digest found: %s", descriptor.Digest)
 					validImages = append(validImages, image)
 				}
 			}
@@ -277,6 +278,18 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 	fmt.Println(componentDefinition)
 
+	if inplace {
+		info, err := os.Stat(config.ZarfYAML)
+		if err != nil {
+			return err
+		}
+		perms := info.Mode().Perm()
+		err = utils.WriteYaml(config.ZarfYAML, &p.cfg.Pkg, p.cfg.CommentMap, perms)
+		if err != nil {
+			return err
+		}
+	}
+
 	// In case the directory was changed, reset to prevent breaking relative target paths
 	if originalDir != "" {
 		_ = os.Chdir(originalDir)
@@ -285,87 +298,74 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 	return nil
 }
 
-func updateComponentImagesInplace(componentName *string, images []string) error {
-	b, err := os.ReadFile(config.ZarfYAML)
-	if err != nil {
-		return err
-	}
-	var pkg types.ZarfPackage
-	comments := goyaml.CommentMap{}
-	err = goyaml.UnmarshalWithOptions(b, &pkg, goyaml.CommentToMap(comments))
-	if err != nil {
-		return err
-	}
+func (p *Packager) updateComponentImagesInplace(index int, images []string) error {
+	component := p.cfg.Pkg.Components[index]
 
-	// Find the component
-	for componentIdx, component := range pkg.Components {
-		if component.Name == *componentName {
-			for imageIdx, image := range component.Images {
-				commentsPath := fmt.Sprintf("$.components[%d].images[%d]", componentIdx, imageIdx)
-				imageComments := comments[commentsPath]
+	for imageIdx, image := range component.Images {
+		commentsPath := fmt.Sprintf("$.components[%d].images[%d]", index, imageIdx)
+		imageComments := p.cfg.CommentMap[commentsPath]
 
-				left, err := transform.ParseImageRef(image)
-				if err != nil {
-					return err
-				}
-				var right transform.Image
-				for _, newImage := range images {
-					right, err = transform.ParseImageRef(newImage)
-					if err != nil {
-						return err
-					}
-					if left.Host == right.Host && left.Path == right.Path && left.Name == right.Name {
-						break
-					}
-				}
-				// If the image is not found, remove it, unless it has a special comment
-				if right == (transform.Image{}) {
-					ignore := false
-					for _, comment := range imageComments {
-						if comment.Position == goyaml.CommentLinePosition {
-							if utils.SliceContains(comment.Texts, "zarf-find-images:ignore") {
-								// do nothing
-								ignore = true
-							}
-						}
-					}
-					if !ignore {
-						// remove the image
-						component.Images = append(component.Images[:imageIdx], component.Images[imageIdx+1:]...)
-						continue
-						// TODO: add a comment to the component that the image was removed
-						// and figure out how to shift the comments up
-					}
-				}
-
-				// If the registry and repository are the same, update the tag
-				if left.TagOrDigest != right.TagOrDigest {
-					// check the comment map for a do not update comment
-					ignore := false
-					for _, comment := range imageComments {
-						if comment.Position == goyaml.CommentLinePosition {
-							if utils.SliceContains(comment.Texts, "zarf-find-images:ignore") {
-								// do nothing
-								ignore = true
-							}
-						}
-					}
-					if !ignore {
-						component.Images[imageIdx] = right.String()
-					}
-				}
-				// Otherwise, append the new image
-				component.Images = append(component.Images, right.String())
+		left, err := transform.ParseImageRef(image)
+		if err != nil {
+			return err
+		}
+		var right transform.Image
+		for _, newImage := range images {
+			right, err = transform.ParseImageRef(newImage)
+			if err != nil {
+				return err
+			}
+			if left.Host == right.Host && left.Path == right.Path && left.Name == right.Name {
+				break
 			}
 		}
-	}
+		// If the image is not found, remove it, unless it has a special comment
+		if right == (transform.Image{}) {
+			ignore := false
+			for _, comment := range imageComments {
+				if comment.Position == goyaml.CommentLinePosition {
+					if utils.SliceContains(comment.Texts, "zarf-find-images:ignore") {
+						// do nothing
+						ignore = true
+					}
+				}
+			}
+			if !ignore {
+				// remove the image
+				component.Images = append(component.Images[:imageIdx], component.Images[imageIdx+1:]...)
+				continue
+				// TODO: add a comment to the component that the image was removed
+				// and figure out how to shift the comments up
+			}
+		}
 
-	// marshall it back up
-	marshalled, err := goyaml.MarshalWithOptions(pkg, goyaml.Indent(2), goyaml.IndentSequence(true), goyaml.WithComment(comments))
-	if err != nil {
-		return err
+		// If left == right, do nothing
+		if left == right {
+			continue
+		}
+
+		// If the registry and repository are the same, update the tag
+		if left.TagOrDigest != right.TagOrDigest {
+			// check the comment map for a do not update comment
+			ignore := false
+			for _, comment := range imageComments {
+				if comment.Position == goyaml.CommentLinePosition {
+					if utils.SliceContains(comment.Texts, "zarf-find-images:ignore") {
+						// do nothing
+						ignore = true
+					}
+				}
+			}
+			if !ignore {
+				component.Images[imageIdx] = right.String()
+				continue
+			}
+		}
+		// Otherwise, append the new image
+		component.Images = append(component.Images, right.String())
 	}
-	return utils.WriteFile(config.ZarfYAML, marshalled)
+	p.cfg.Pkg.Components[index] = component
+	return nil
 }
 
 func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured, matchedImages, maybeImages k8s.ImageMap) (k8s.ImageMap, k8s.ImageMap, error) {

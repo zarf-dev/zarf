@@ -131,7 +131,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 		suite.NoError(err)
 		suite.DirExists(unpacked)
 
-		err = utils.ReadYaml(filepath.Join(unpacked, config.ZarfYAML), &pkg)
+		err = utils.ReadYaml(filepath.Join(unpacked, config.ZarfYAML), &pkg, nil)
 		suite.NoError(err)
 		suite.NotNil(pkg)
 

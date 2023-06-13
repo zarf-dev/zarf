@@ -81,26 +81,26 @@ func ColorPrintYAML(data any) {
 }
 
 // ReadYaml reads a yaml file and unmarshals it into a given config.
-func ReadYaml(path string, destConfig any) error {
-	message.Debugf("Loading zarf config %s", path)
-	file, err := os.ReadFile(path)
+func ReadYaml(path string, value any, commentMap goyaml.CommentMap) error {
+	message.Debugf("Loading Zarf config %s", path)
+	b, err := os.ReadFile(path)
 
 	if err != nil {
 		return err
 	}
 
-	return goyaml.Unmarshal(file, destConfig)
+	return goyaml.UnmarshalWithOptions(b, value, goyaml.CommentToMap(commentMap))
 }
 
 // WriteYaml writes a given config to a yaml file on disk.
-func WriteYaml(path string, srcConfig any, perm fs.FileMode) error {
+func WriteYaml(path string, value any, commentMap goyaml.CommentMap, perm fs.FileMode) error {
 	// Save the parsed output to the config path given
-	content, err := goyaml.Marshal(srcConfig)
+	marshalled, err := goyaml.MarshalWithOptions(value, goyaml.Indent(2), goyaml.IndentSequence(true), goyaml.WithComment(commentMap))
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(path, content, perm)
+	return os.WriteFile(path, marshalled, perm)
 }
 
 // ReloadYamlTemplate marshals a given config, replaces strings and unmarshals it back.

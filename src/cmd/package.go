@@ -184,7 +184,7 @@ var packageRemoveCmd = &cobra.Command{
 
 			var pkg types.ZarfPackage
 			configPath := filepath.Join(tempPath, config.ZarfYAML)
-			if err := utils.ReadYaml(configPath, &pkg); err != nil {
+			if err := utils.ReadYaml(configPath, &pkg, nil); err != nil {
 				message.Fatalf(err, lang.CmdPackageRemoveReadZarfErr)
 			}
 

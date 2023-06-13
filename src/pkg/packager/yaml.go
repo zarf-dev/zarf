@@ -18,9 +18,11 @@ import (
 
 // readYaml loads the config from the given path
 func (p *Packager) readYaml(path string) error {
-	if err := utils.ReadYaml(path, &p.cfg.Pkg); err != nil {
+	if err := utils.ReadYaml(path, &p.cfg.Pkg, p.cfg.CommentMap); err != nil {
 		return err
 	}
+
+	message.Debug(message.JSONValue(p.cfg.CommentMap))
 
 	// Set the arch from the package config before filtering.
 	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
@@ -43,7 +45,7 @@ func (p *Packager) filterComponents(filterByOS bool) {
 
 // writeYaml adds build information and writes the config to the temp directory.
 func (p *Packager) writeYaml() error {
-	message.Debug("config.BuildConfig()")
+	message.Debug("Writing zarf.yaml")
 
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue.
@@ -79,5 +81,5 @@ func (p *Packager) writeYaml() error {
 
 	p.cfg.Pkg.Build.RegistryOverrides = p.cfg.CreateOpts.RegistryOverrides
 
-	return utils.WriteYaml(p.tmp.ZarfYaml, p.cfg.Pkg, 0400)
+	return utils.WriteYaml(p.tmp.ZarfYaml, p.cfg.Pkg, p.cfg.CommentMap, 0400)
 }

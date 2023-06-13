@@ -20,6 +20,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/types"
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -47,6 +48,10 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
+	}
+
+	if cfg.CommentMap == nil {
+		cfg.CommentMap = goyaml.CommentMap{}
 	}
 
 	if cfg.SetVariableMap == nil {
