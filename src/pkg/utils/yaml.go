@@ -89,11 +89,10 @@ func ReadYaml(path string, value any, commentMap goyaml.CommentMap) error {
 		return err
 	}
 
-	if commentMap == nil {
-		commentMap = goyaml.CommentMap{}
+	if commentMap != nil {
+		return goyaml.UnmarshalWithOptions(b, value, goyaml.CommentToMap(commentMap))
 	}
-
-	return goyaml.UnmarshalWithOptions(b, value, goyaml.CommentToMap(commentMap))
+	return goyaml.Unmarshal(b, value)
 }
 
 // WriteYaml writes a given config to a yaml file on disk.

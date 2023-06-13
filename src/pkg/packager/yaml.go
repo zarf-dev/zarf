@@ -22,8 +22,6 @@ func (p *Packager) readYaml(path string) error {
 		return err
 	}
 
-	message.Debug(message.JSONValue(p.cfg.CommentMap))
-
 	// Set the arch from the package config before filtering.
 	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
