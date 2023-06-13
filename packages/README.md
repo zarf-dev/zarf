@@ -3,11 +3,11 @@
 This folder contains packages maintained by the [Zarf team](https://github.com/defenseunicorns/zarf/graphs/contributors).  Some of these packages are used by `zarf init` for new cluster initialization.
 
 **Packages**
-- [distros]
-- [gitea]
-- [logging-pgl]
-- [zarf-agent]
-- [zarf-registry]
+- [distros](#distros)
+- [gitea](#distros)
+- [logging-pgl](#logging-pgl)
+- [zarf-agent](#zarf-agent)
+- [zarf-registry](#zarf-registry)
 
 ### Distros
 
