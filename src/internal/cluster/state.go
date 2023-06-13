@@ -242,12 +242,12 @@ func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.Reg
 	}
 
 	// Generate a push-user password if not provided by init flag
-	if containerRegistry.PushPassword == "" && containerRegistry.RegistryType != types.ECRRegistry {
+	if containerRegistry.PushPassword == "" && containerRegistry.InternalRegistry {
 		containerRegistry.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 	}
 
 	// Set pull-username if not provided by init flag
-	if containerRegistry.PullUsername == "" && containerRegistry.RegistryType != types.ECRRegistry {
+	if containerRegistry.PullUsername == "" {
 		if containerRegistry.InternalRegistry {
 			containerRegistry.PullUsername = config.ZarfRegistryPullUser
 		} else {

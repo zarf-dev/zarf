@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	b64 "encoding/base64"
+	"encoding/json"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -17,7 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecrpublic"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/defenseunicorns/zarf/src/types/hooks"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	docker_types "github.com/docker/cli/cli/config/types"
@@ -25,28 +26,53 @@ import (
 
 const publicECRRegistryURL = "public.ecr.aws"
 
-// AuthToECR fetches credentials for the ECR registry listed in the hook and saves them to the users local default docker config.json location
-func AuthToECR(ecrHook types.HookConfig) error {
-	region := ecrHook.HookData["region"].(string)
-	registryURL := ecrHook.HookData["registryURL"].(string)
+type ECRHookData struct {
+	Region         string `json:"region" jsonschema:"description=AWS region of the ECR registry"`
+	RegistryURL    string `json:"registryURL" jsonschema:"description=URL of the ECR registry"`
+	RegistryPrefix string `json:"registryPrefix" jsonschema:"description=Prefix of the ECR registry"`
+}
+
+// PopulateHookData populates the ECRHookData struct with the data from hook data map
+func NewECRHookData(hookData map[string]interface{}) (ECRHookData, error) {
+	ecrHookData := ECRHookData{}
+	hookDataBytes, err := json.Marshal(hookData)
+	if err != nil {
+		return ecrHookData, err
+	}
+
+	err = json.Unmarshal(hookDataBytes, &ecrHookData)
+	if err != nil {
+		return ecrHookData, err
+	}
+
+	return ecrHookData, err
+}
+
+// AuthToECR fetches credentials for the ECR registry listed in the hook and saves them
+// to the users local default docker config.json location
+func AuthToECR(ecrHook hooks.HookConfig) error {
+	ecrHookData, err := NewECRHookData(ecrHook.HookData)
+	if err != nil {
+		return fmt.Errorf("unable to parse ecr hook data: %w", err)
+	}
 
 	var authToken string
-	var err error
-	if strings.Contains(registryURL, publicECRRegistryURL) {
-		authToken, err = fetchAuthToPublicECR(registryURL, region)
+	if strings.Contains(ecrHookData.RegistryURL, publicECRRegistryURL) {
+		authToken, err = fetchAuthToPublicECR(ecrHookData.Region)
 	} else {
-		authToken, err = fetchAuthToPrivateECR(registryURL, region)
+		authToken, err = fetchAuthToPrivateECR(ecrHookData.Region)
 	}
 	if err != nil {
 		return err
 	}
 
 	// Get the username and password from the auth token
+	// NOTE: The auth token is base64 encoded and contains the {USERNAME}:{PASSWORD}
 	data, err := b64.StdEncoding.DecodeString(authToken)
 	if err != nil {
 		return fmt.Errorf("unable to decode the ECR authorization token: %w", err)
 	}
-	username := "AWS"
+	username := strings.Split(string(data), ":")[0]
 	password := strings.Split(string(data), ":")[1]
 
 	// Load the default docker.config file
@@ -60,16 +86,17 @@ func AuthToECR(ecrHook types.HookConfig) error {
 
 	// Save the credentials to the docker.config file
 	configs := []*configfile.ConfigFile{cfg}
-	authConfig := docker_types.AuthConfig{Username: username, Password: password, ServerAddress: registryURL}
-	err = configs[0].GetCredentialsStore(registryURL).Store(authConfig)
+	authConfig := docker_types.AuthConfig{Username: username, Password: password, ServerAddress: ecrHookData.RegistryURL}
+	err = configs[0].GetCredentialsStore(ecrHookData.RegistryURL).Store(authConfig)
 	if err != nil {
-		return fmt.Errorf("unable to get credentials for %s: %w", registryURL, err)
+		return fmt.Errorf("unable to get credentials for %s: %w", ecrHookData.RegistryURL, err)
 	}
 
 	return nil
 }
 
-func fetchAuthToPublicECR(registryURL string, region string) (string, error) {
+// fetchAuthToPublicECR uses the ECR public client to fetch a 12 hour auth token
+func fetchAuthToPublicECR(region string) (string, error) {
 	ecrClient := ecrpublic.New(session.New(&aws.Config{Region: aws.String(region)}))
 	authToken, err := ecrClient.GetAuthorizationToken(&ecrpublic.GetAuthorizationTokenInput{})
 	if err != nil || authToken == nil || authToken.AuthorizationData == nil {
@@ -79,7 +106,11 @@ func fetchAuthToPublicECR(registryURL string, region string) (string, error) {
 	return *authToken.AuthorizationData.AuthorizationToken, nil
 }
 
-func fetchAuthToPrivateECR(registryURL string, region string) (string, error) {
+// fetchAuthToPrivateECR uses the ECR private client to fetch a 12 hour auth token
+// NOTE: The ECR private client has a slightly different API than the public client and returns a list of authData
+//
+//	The AWS docs say the ReistryIDs list is deprecated and to just use the first element in the list
+func fetchAuthToPrivateECR(region string) (string, error) {
 	ecrClient := ecr.New(session.New(&aws.Config{Region: aws.String(region)}))
 	authToken, err := ecrClient.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
 	if err != nil || len(authToken.AuthorizationData) == 0 || authToken.AuthorizationData[0] == nil {
@@ -90,22 +121,25 @@ func fetchAuthToPrivateECR(registryURL string, region string) (string, error) {
 }
 
 // CreateTheECRRepos creates an ecr repository for each image provided
-func CreateTheECRRepos(ecrHook types.HookConfig, images []string) error {
-	registryPrefix := ecrHook.HookData["repositoryPrefix"].(string)
-	region := ecrHook.HookData["region"].(string)
-	registryURL := ecrHook.HookData["registryURL"].(string)
+func CreateTheECRRepos(ecrHook hooks.HookConfig, images []string) error {
+	ecrHookData, err := NewECRHookData(ecrHook.HookData)
+	if err != nil {
+		return fmt.Errorf("unable to parse ecr hook data: %w", err)
+	}
 
-	if registryPrefix != "" {
+	// If a prefix was provided, add a trailing slash to it if it doesn't already have one
+	registryPrefix := ecrHookData.RegistryPrefix
+	if ecrHookData.RegistryPrefix != "" && !strings.HasSuffix(ecrHookData.RegistryPrefix, "/") {
 		registryPrefix += "/"
 	}
 
 	// Create the ECR client
 	var ecrClient *ecr.ECR
 	var ecrPublicClient *ecrpublic.ECRPublic
-	if strings.Contains(registryURL, publicECRRegistryURL) {
-		ecrPublicClient = ecrpublic.New(session.New(&aws.Config{Region: aws.String(region)}))
+	if strings.Contains(ecrHookData.RegistryURL, publicECRRegistryURL) {
+		ecrPublicClient = ecrpublic.New(session.New(&aws.Config{Region: aws.String(ecrHookData.Region)}))
 	} else {
-		ecrClient = ecr.New(session.New(&aws.Config{Region: aws.String(region)}))
+		ecrClient = ecr.New(session.New(&aws.Config{Region: aws.String(ecrHookData.Region)}))
 	}
 
 	for _, image := range images {
@@ -116,10 +150,12 @@ func CreateTheECRRepos(ecrHook types.HookConfig, images []string) error {
 		}
 
 		repositoryName := registryPrefix + imageRef.Path
-		if strings.Contains(registryURL, publicECRRegistryURL) {
-			_, err = ecrPublicClient.CreateRepository(&ecrpublic.CreateRepositoryInput{RepositoryName: aws.String(repositoryName)})
+		if strings.Contains(ecrHookData.RegistryURL, publicECRRegistryURL) {
+			createRepositoryInput := &ecrpublic.CreateRepositoryInput{RepositoryName: aws.String(repositoryName)}
+			_, err = ecrPublicClient.CreateRepository(createRepositoryInput)
 		} else {
-			_, err = ecrClient.CreateRepository(&ecr.CreateRepositoryInput{RepositoryName: aws.String(repositoryName)})
+			createRepositoryInput := &ecr.CreateRepositoryInput{RepositoryName: aws.String(repositoryName)}
+			_, err = ecrClient.CreateRepository(createRepositoryInput)
 		}
 		if aerr, ok := err.(awserr.Error); ok {
 			// Ignore errors if the repository already exists

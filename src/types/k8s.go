@@ -85,20 +85,8 @@ type RegistryInfo struct {
 // Registry type enumerates the different types of registries Zarf can use.
 type RegistryType string
 
-// GitServerType enumerates the different types of git servers Zarf can use.
-type GitSererType string
-
-// ArtifactServerType enumerates the different types of artifact servers Zarf can use.
-type ArtifactServerType string
-
 const (
 	InternalRegistry RegistryType = "internal"
 	ExternalRegistry RegistryType = "external"
 	ECRRegistry      RegistryType = "ECR"
-
-	InternalGitServer GitSererType = "internal"
-	ExternalGitServer GitSererType = "external"
-
-	InternalArtifactServer ArtifactServerType = "internal"
-	ExternalArtifactServer ArtifactServerType = "external"
 )

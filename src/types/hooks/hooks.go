@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package types
+package hooks
 
 import "fmt"
 
@@ -17,6 +17,7 @@ const (
 // NOTE: AfterComponent hooks will always run after all 'afterAction' component hooks.
 type HookLifecycle string
 
+// Constants for hook lifecycle management
 const (
 	BeforePackage HookLifecycle = "before-package"
 	AfterPackage  HookLifecycle = "after-package"

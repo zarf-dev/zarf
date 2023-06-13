@@ -20,7 +20,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/internal/packager/hook"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -88,7 +87,10 @@ func (p *Packager) Deploy() error {
 	// Check if any of the components we are going to deploy require a cluster
 	requiresCluster := false
 	for _, component := range componentsToDeploy {
-		requiresCluster = requiresCluster || component.RequiresCluster()
+		if component.RequiresCluster() {
+			requiresCluster = true
+			break
+		}
 	}
 
 	// If we require the cluster for a regular package deployment, check if a hook has been uploaded to the cluster
@@ -202,26 +204,15 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 		if p.cluster != nil {
 			// Ignore the error because there might not be a zarf namespace yet
 			// NOTE: This check is specific to initializing EKS clusters to use ECR as it's image registry
-
 			// Get all the hooks
 			err = p.getAllClusterHooks()
 			if err != nil {
 				return charts, fmt.Errorf("unable to get all cluster hooks: %w", err)
 			}
 
-			// If the ECR Hooks is present, authenticate to ECR and push the necessary repositories
-			if hookConfig, ok := p.pluginHooks[types.ECRRepositoryHook]; ok {
-				if err := hook.AuthToECR(hookConfig); err != nil {
-					// Only send a warning because they might have already been authenticated
-					message.Warnf("Unable to authenticate to ECR: %s", err.Error())
-				}
-
-				if err := hook.CreateTheECRRepos(hookConfig, component.Images); err != nil {
-					return charts, fmt.Errorf("unable to create the ECR repositories: %w", err)
-				}
-
-				p.cfg.InitOpts.RegistryInfo.RegistryType = types.ECRRegistry
-			}
+			// Run all the hooks (package and component!)
+			p.runPreDeployHooks()
+			p.runPreComponentHooks(component)
 		}
 
 		p.cluster.InitZarfState(p.cfg.InitOpts)

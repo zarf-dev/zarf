@@ -20,6 +20,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/defenseunicorns/zarf/src/types/hooks"
 	"github.com/mholt/archiver/v3"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -30,12 +31,12 @@ import (
 
 // Packager is the main struct for managing packages.
 type Packager struct {
-	cfg         *types.PackagerConfig
-	cluster     *cluster.Cluster
-	tmp         types.TempPaths
-	arch        string
-	warnings    []string
-	pluginHooks map[string]types.HookConfig
+	cfg      *types.PackagerConfig
+	cluster  *cluster.Cluster
+	tmp      types.TempPaths
+	arch     string
+	warnings []string
+	hooks    map[string]hooks.HookConfig
 }
 
 /*
@@ -61,8 +62,8 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	var (
 		err       error
 		pkgConfig = &Packager{
-			cfg:         cfg,
-			pluginHooks: make(map[string]types.HookConfig),
+			cfg:   cfg,
+			hooks: make(map[string]hooks.HookConfig),
 		}
 	)
 

@@ -54,10 +54,12 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	craneTransport := utils.NewTransport(httpTransport, progressBar)
 
 	pushOptions := config.GetCraneOptions(i.Insecure, i.Architectures...)
+	pushOptions = append(pushOptions, crane.WithTransport(craneTransport))
+
+	// If we are using an ECR registry, don't add a pushOption for auth so Crane will use the default auth config
 	if i.RegInfo.RegistryType != types.ECRRegistry {
 		pushOptions = append(pushOptions, config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword))
 	}
-	pushOptions = append(pushOptions, crane.WithTransport(craneTransport))
 	message.Debugf("crane pushOptions = %#v", pushOptions)
 
 	var (

@@ -144,16 +144,7 @@ func validateInitFlags() error {
 		}
 	}
 
-	// TODO: @JPERRY Ignoring this for now, until we find a better way to validate these flags
-	//       We now need to check the cluster to see if the ecr-info secret is there before returning an error...
-	/*
-		// If 'registry-url' is provided, make sure they provided values for the username and password of the push user
-		if pkgConfig.InitOpts.RegistryInfo.Address != "" {
-			if pkgConfig.InitOpts.RegistryInfo.PushUsername == "" || pkgConfig.InitOpts.RegistryInfo.PushPassword == "" {
-				return fmt.Errorf(lang.CmdInitErrValidateRegistry)
-			}
-		}
-	*/
+	//TODO: Figure out a better way to validate the image registry username/password was provided when using an external registry
 
 	// If 'artifact-url' is provided, make sure they provided values for the username and password of the push user
 	if pkgConfig.InitOpts.ArtifactServer.Address != "" {

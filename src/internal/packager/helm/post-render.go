@@ -198,8 +198,10 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			}
 		}
 
-		// If the package is marked as YOLO and the state is empty, skip the secret creation
-		if (r.options.Cfg.Pkg.Metadata.YOLO && r.options.Cfg.State.Distro == "YOLO") || (r.options.Cfg.State.RegistryInfo.RegistryType == types.ECRRegistry) {
+		isYOLO := r.options.Cfg.Pkg.Metadata.YOLO && r.options.Cfg.State.Distro == "YOLO"
+		isECR := r.options.Cfg.State.RegistryInfo.RegistryType == types.ECRRegistry
+		// If the package is YOLO OR if we're using an ECR registry, skip the secret creation
+		if isYOLO || isECR {
 			break
 		}
 

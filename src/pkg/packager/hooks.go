@@ -11,18 +11,19 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	internalHook "github.com/defenseunicorns/zarf/src/internal/packager/hook"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/defenseunicorns/zarf/src/types/hooks"
 )
 
 // GetAllClusterHooks searches the zarf namespace for all hooks and stores them within the Packager
 func (p *Packager) getAllClusterHooks() error {
 
 	// Get all secrets with the hook label
-	hookSecrets, err := p.cluster.Kube.GetSecretsWithLabel(cluster.ZarfNamespaceName, types.HookSecretPrefix)
+	hookSecrets, err := p.cluster.Kube.GetSecretsWithLabel(cluster.ZarfNamespaceName, hooks.HookSecretPrefix)
 	if err != nil {
 		return fmt.Errorf("unable to get hook secrets")
 	}
 	for _, hookSecret := range hookSecrets.Items {
-		hookConfig := types.HookConfig{}
+		hookConfig := hooks.HookConfig{}
 
 		// Get any data from the hook secret
 		err := json.Unmarshal(hookSecret.Data["data"], &hookConfig)
@@ -30,36 +31,36 @@ func (p *Packager) getAllClusterHooks() error {
 			return fmt.Errorf("unable to load the hook configuration for the %s hook: %w", hookSecret.Name, err)
 		}
 
-		p.pluginHooks[hookSecret.Name] = hookConfig
+		p.hooks[hookSecret.Name] = hookConfig
 	}
 
 	return nil
 }
 
 func (p *Packager) runPreDeployHooks() error {
-	return p.runPackageHooks(types.BeforePackage)
+	return p.runPackageHooks(hooks.BeforePackage)
 }
 
 func (p *Packager) runPostDeployHooks() error {
-	return p.runPackageHooks(types.AfterPackage)
+	return p.runPackageHooks(hooks.AfterPackage)
 }
 
 func (p *Packager) runPreComponentHooks(component types.ZarfComponent) error {
-	return p.runComponentHooks(types.BeforeComponent, component)
+	return p.runComponentHooks(hooks.BeforeComponent, component)
 }
 
 func (p *Packager) runPostComponentHooks(component types.ZarfComponent) error {
-	return p.runComponentHooks(types.AfterComponent, component)
+	return p.runComponentHooks(hooks.AfterComponent, component)
 }
 
-func (p *Packager) runPackageHooks(lifecycle types.HookLifecycle) error {
+func (p *Packager) runPackageHooks(lifecycle hooks.HookLifecycle) error {
 
 	// If we are not able to run the hooks, return early
-	if p.cluster == nil || p.pluginHooks == nil {
+	if p.cluster == nil || p.hooks == nil {
 		return nil
 	}
 
-	for _, hookConfig := range p.pluginHooks {
+	for _, hookConfig := range p.hooks {
 		if hookConfig.Lifecycle == lifecycle {
 			if hookConfig.Internal {
 				if err := runInternalPackageHook(hookConfig); err != nil {
@@ -75,13 +76,13 @@ func (p *Packager) runPackageHooks(lifecycle types.HookLifecycle) error {
 	return nil
 }
 
-func (p *Packager) runComponentHooks(lifecycle types.HookLifecycle, component types.ZarfComponent) error {
+func (p *Packager) runComponentHooks(lifecycle hooks.HookLifecycle, component types.ZarfComponent) error {
 
 	// If we are not able to run the hooks, return early
-	if p.cluster == nil || p.pluginHooks == nil {
+	if p.cluster == nil || p.hooks == nil {
 		return nil
 	}
-	for _, hookConfig := range p.pluginHooks {
+	for _, hookConfig := range p.hooks {
 		if hookConfig.Lifecycle == lifecycle {
 			if hookConfig.Internal {
 				if err := runInternalComponentHook(hookConfig, component); err != nil {
@@ -97,8 +98,8 @@ func (p *Packager) runComponentHooks(lifecycle types.HookLifecycle, component ty
 	return nil
 }
 
-func runInternalPackageHook(hook types.HookConfig) error {
-	if hook.HookName == types.ECRCredentialsHook {
+func runInternalPackageHook(hook hooks.HookConfig) error {
+	if hook.HookName == hooks.ECRCredentialsHook {
 		if err := internalHook.AuthToECR(hook); err != nil {
 			return err
 		}
@@ -107,8 +108,8 @@ func runInternalPackageHook(hook types.HookConfig) error {
 	return nil
 }
 
-func runInternalComponentHook(hook types.HookConfig, component types.ZarfComponent) error {
-	if hook.HookName == types.ECRRepositoryHook {
+func runInternalComponentHook(hook hooks.HookConfig, component types.ZarfComponent) error {
+	if hook.HookName == hooks.ECRRepositoryHook {
 		if err := internalHook.CreateTheECRRepos(hook, component.Images); err != nil {
 			return err
 		}
