@@ -120,7 +120,7 @@ Images can either be discovered manually, or automatically by using [`zarf prepa
 
 :::note
 
-`zarf prepare find-images` has some known limitations due to the numerous ways images can be defined in Kubernetes resources, but should work for most standard manifests, kustomizations, and helm charts.
+`zarf prepare find-images` will find images for most standard manifests, kustomizations, and helm charts, however some images cannot be discovered this way as some upstream resources (like operators) may bury image definitions inside.  For these images, `zarf prepare find-images` also offers support for the draft [Helm Improvement Proposal 15](https://github.com/helm/community/blob/main/hips/hip-0015.md) which allows chart creators to annotate any hidden images in their charts along with the [values conditions](https://github.com/helm/community/issues/277) that will cause those images to be used.
 
 :::
 

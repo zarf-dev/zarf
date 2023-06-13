@@ -836,7 +836,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The URL to a Zarf package to import via OCI
+**Description:** [beta] The URL to a Zarf package to import via OCI
 
 |          |          |
 | -------- | -------- |

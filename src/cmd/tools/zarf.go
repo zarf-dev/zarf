@@ -38,7 +38,7 @@ func init() {
 			}
 
 			message.Note(lang.CmdToolsGetGitPasswdInfo)
-			message.Warn(lang.CmdToolGetGitDeprecation)
+			message.Warn(lang.CmdToolsGetGitPasswdDeprecation)
 			utils.PrintComponentCredential(state, "git")
 		},
 	}

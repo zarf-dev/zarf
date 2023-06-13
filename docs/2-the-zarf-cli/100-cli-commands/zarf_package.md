@@ -24,10 +24,10 @@ Zarf package commands for creating, deploying, and inspecting packages
 ## SEE ALSO
 
 * [zarf](zarf.md)	 - DevSecOps for Airgap
-* [zarf package create](zarf_package_create.md)	 - Use to create a Zarf package from a given directory or the current directory
-* [zarf package deploy](zarf_package_deploy.md)	 - Use to deploy a Zarf package from a local file or URL (runs offline)
-* [zarf package inspect](zarf_package_inspect.md)	 - Lists the payload of a Zarf package (runs offline)
-* [zarf package list](zarf_package_list.md)	 - List out all of the packages that have been deployed to the cluster
-* [zarf package publish](zarf_package_publish.md)	 - Publish a Zarf package to a remote registry
-* [zarf package pull](zarf_package_pull.md)	 - Pull a Zarf package from a remote registry and save to the local file system
-* [zarf package remove](zarf_package_remove.md)	 - Use to remove a Zarf package that has been deployed already
+* [zarf package create](zarf_package_create.md)	 - Creates a Zarf package from a given directory or the current directory
+* [zarf package deploy](zarf_package_deploy.md)	 - Deploys a Zarf package from a local file or URL (runs offline)
+* [zarf package inspect](zarf_package_inspect.md)	 - Displays the definition of a Zarf package (runs offline)
+* [zarf package list](zarf_package_list.md)	 - Lists out all of the packages that have been deployed to the cluster (runs offline)
+* [zarf package publish](zarf_package_publish.md)	 - Publishes a Zarf package to a remote registry
+* [zarf package pull](zarf_package_pull.md)	 - Pulls a Zarf package from a remote registry and save to the local file system
+* [zarf package remove](zarf_package_remove.md)	 - Removes a Zarf package that has been deployed already (runs offline)

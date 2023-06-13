@@ -28,10 +28,10 @@ zarf [COMMAND] [flags]
 ## SEE ALSO
 
 * [zarf completion](zarf_completion.md)	 - Generate the autocompletion script for the specified shell
-* [zarf connect](zarf_connect.md)	 - Access services or pods deployed in the cluster.
-* [zarf destroy](zarf_destroy.md)	 - Tear it all down, we'll miss you Zarf...
+* [zarf connect](zarf_connect.md)	 - Accesses services or pods deployed in the cluster
+* [zarf destroy](zarf_destroy.md)	 - Destroys everything that Zarf created or deployed in the environment
 * [zarf init](zarf_init.md)	 - Prepares a k8s cluster for the deployment of Zarf packages
 * [zarf package](zarf_package.md)	 - Zarf package commands for creating, deploying, and inspecting packages
 * [zarf prepare](zarf_prepare.md)	 - Tools to help prepare assets for packaging
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-* [zarf version](zarf_version.md)	 - Version of the Zarf binary
+* [zarf version](zarf_version.md)	 - Shows the version of the running Zarf binary

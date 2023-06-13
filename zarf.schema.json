@@ -646,7 +646,7 @@
         "url": {
           "pattern": "^oci://(?!.*###ZARF_PKG_TMPL_).*$",
           "type": "string",
-          "description": "The URL to a Zarf package to import via OCI"
+          "description": "[beta] The URL to a Zarf package to import via OCI"
         }
       },
       "additionalProperties": false,

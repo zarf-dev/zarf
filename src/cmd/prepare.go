@@ -38,7 +38,7 @@ var prepareTransformGitLinks = &cobra.Command{
 		// Read the contents of the given file
 		content, err := os.ReadFile(fileName)
 		if err != nil {
-			message.Fatalf(err, "Unable to read the file %s", fileName)
+			message.Fatalf(err, lang.CmdPreparePatchGitFileReadErr, fileName)
 		}
 
 		pkgConfig.InitOpts.GitServer.Address = host
@@ -53,10 +53,10 @@ var prepareTransformGitLinks = &cobra.Command{
 		// Ask the user before this destructive action
 		confirm := false
 		prompt := &survey.Confirm{
-			Message: "Overwrite the file " + fileName + " with these changes?",
+			Message: fmt.Sprintf(lang.CmdPreparePatchGitOverwritePrompt, fileName),
 		}
 		if err := survey.AskOne(prompt, &confirm); err != nil {
-			message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
+			message.Fatalf(nil, lang.CmdPreparePatchGitOverwriteErr, err.Error())
 		}
 
 		if confirm {
@@ -110,7 +110,7 @@ var prepareFindImages = &cobra.Command{
 
 		// Find all the images the package might need
 		if err := pkgClient.FindImages(baseDir, repoHelmChartPath, kubeVersionOverride); err != nil {
-			message.Fatalf(err, "Unable to find images for the package definition %s", baseDir)
+			message.Fatalf(err, lang.CmdPrepareFindImagesErr, baseDir)
 		}
 	},
 }
@@ -130,7 +130,7 @@ var prepareGenerateConfigFile = &cobra.Command{
 		}
 
 		if err := v.SafeWriteConfigAs(fileName); err != nil {
-			message.Fatalf(err, "Unable to write the config file %s, make sure the file doesn't already exist", fileName)
+			message.Fatalf(err, lang.CmdPrepareGenerateConfigErr, fileName)
 		}
 	},
 }
