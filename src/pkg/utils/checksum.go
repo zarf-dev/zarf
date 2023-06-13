@@ -97,7 +97,7 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 			return fmt.Errorf("invalid checksum for %s: (expected: %s, received: %s)", path, sha, actualSHA)
 		}
 
-		pathCheckMap[path] = true
+		checkedMap[path] = true
 
 		return nil
 	})
