@@ -865,7 +865,7 @@
           "type": "string",
           "description": "Comma-separated list of package authors (including contact info)",
           "examples": [
-            "Doug \u003chello@defenseunicorns.com\u003e\u0026#44; Pepr \u003chello@defenseunicorns.com\u003e"
+            "Doug \u003chello\u0026#64;defenseunicorns.com\u003e\u0026#44; Pepr \u003chello\u0026#64;defenseunicorns.com\u003e"
           ]
         },
         "documentation": {

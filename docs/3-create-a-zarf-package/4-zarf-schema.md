@@ -203,7 +203,7 @@ Must be one of:
 **Example:**
 
 <code>
-"Doug <hello@defenseunicorns.com>&#44; Pepr <hello@defenseunicorns.com>"</code>
+"Doug <hello&#64;defenseunicorns.com>&#44; Pepr <hello&#64;defenseunicorns.com>"</code>
 
 </blockquote>
 </details>
