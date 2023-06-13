@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	goyaml "github.com/goccy/go-yaml"
-	"oras.land/oras-go/v2/registry"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -21,6 +20,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -244,7 +244,12 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				componentDefinition += fmt.Sprintf("      - %s\n", image)
 			}
 
-			updateComponentImagesInplace(&component.Name, sortedImages)
+			if inplace {
+				err := updateComponentImagesInplace(&component.Name, sortedImages)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		// Handle the "maybes"
@@ -299,50 +304,55 @@ func updateComponentImagesInplace(componentName *string, images []string) error 
 				commentsPath := fmt.Sprintf("$.components[%d].images[%d]", componentIdx, imageIdx)
 				imageComments := comments[commentsPath]
 
-				left, err := registry.ParseReference(image)
+				left, err := transform.ParseImageRef(image)
 				if err != nil {
 					return err
 				}
-				var right registry.Reference
+				var right transform.Image
 				for _, newImage := range images {
-					right, err = registry.ParseReference(newImage)
+					right, err = transform.ParseImageRef(newImage)
 					if err != nil {
 						return err
 					}
-					if left.Registry == right.Registry && left.Repository == right.Repository {
+					if left.Host == right.Host && left.Path == right.Path && left.Name == right.Name {
 						break
 					}
 				}
 				// If the image is not found, remove it, unless it has a special comment
-				if right == (registry.Reference{}) {
-					// check the comment map for a do not remove comment
+				if right == (transform.Image{}) {
+					ignore := false
 					for _, comment := range imageComments {
 						if comment.Position == goyaml.CommentLinePosition {
-							if utils.SliceContains(comment.Texts, "zarf: do not remove") {
+							if utils.SliceContains(comment.Texts, "zarf-find-images:ignore") {
 								// do nothing
-								continue
+								ignore = true
 							}
 						}
 					}
-					// remove the image
-					component.Images = append(component.Images[:imageIdx], component.Images[imageIdx+1:]...)
-					continue
-					// TODO: add a comment to the component that the image was removed
-					// and figure out how to shift the comments up
+					if !ignore {
+						// remove the image
+						component.Images = append(component.Images[:imageIdx], component.Images[imageIdx+1:]...)
+						continue
+						// TODO: add a comment to the component that the image was removed
+						// and figure out how to shift the comments up
+					}
 				}
 
 				// If the registry and repository are the same, update the tag
-				if left.Reference != right.Reference {
+				if left.TagOrDigest != right.TagOrDigest {
 					// check the comment map for a do not update comment
+					ignore := false
 					for _, comment := range imageComments {
 						if comment.Position == goyaml.CommentLinePosition {
-							if utils.SliceContains(comment.Texts, "zarf: do not update") {
+							if utils.SliceContains(comment.Texts, "zarf-find-images:ignore") {
 								// do nothing
-								continue
+								ignore = true
 							}
 						}
 					}
-					component.Images[imageIdx] = right.String()
+					if !ignore {
+						component.Images[imageIdx] = right.String()
+					}
 				}
 				// Otherwise, append the new image
 				component.Images = append(component.Images, right.String())
@@ -351,7 +361,7 @@ func updateComponentImagesInplace(componentName *string, images []string) error 
 	}
 
 	// marshall it back up
-	marshalled, err := goyaml.MarshalWithOptions(pkg, goyaml.Indent(2), goyaml.WithComment(comments))
+	marshalled, err := goyaml.MarshalWithOptions(pkg, goyaml.Indent(2), goyaml.IndentSequence(true), goyaml.WithComment(comments))
 	if err != nil {
 		return err
 	}

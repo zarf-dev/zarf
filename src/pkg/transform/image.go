@@ -22,6 +22,10 @@ type Image struct {
 	TagOrDigest string
 }
 
+func (i *Image) String() string {
+	return fmt.Sprintf("%s/%s%s", i.Host, i.Path, i.TagOrDigest)
+}
+
 // ImageTransformHost replaces the base url for an image and adds a crc32 of the original url to the end of the src (note image refs are not full URLs).
 func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	image, err := ParseImageRef(srcReference)
