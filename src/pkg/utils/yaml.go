@@ -84,7 +84,6 @@ func ColorPrintYAML(data any) {
 func ReadYaml(path string, value any, commentMap goyaml.CommentMap) error {
 	message.Debugf("Loading Zarf config %s", path)
 	b, err := os.ReadFile(path)
-
 	if err != nil {
 		return err
 	}
