@@ -133,13 +133,9 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 		for _, path := range AlwaysPull {
 			desc := manifest.Locate(path)
 			layersToPull = append(layersToPull, desc)
-			estimatedBytes += desc.Size
 		}
 		for _, desc := range layersToPull {
-			path := desc.Annotations[ocispec.AnnotationTitle]
-			if !utils.SliceContains(AlwaysPull, path) {
-				estimatedBytes += desc.Size
-			}
+			estimatedBytes += desc.Size
 		}
 	} else {
 		estimatedBytes = manifest.SumLayersSize()
