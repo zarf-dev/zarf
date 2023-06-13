@@ -59,8 +59,11 @@ func (p *Packager) Deploy() error {
 		}
 	}
 
-	if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
-		return err
+	// older packages did not have an aggregate checksum so we need to check if it exists before validating
+	if p.cfg.Pkg.Metadata.AggregateChecksum != "" {
+		if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
+			return err
+		}
 	}
 
 	// Now that we have read the zarf.yaml, check the package kind
