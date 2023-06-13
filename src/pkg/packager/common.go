@@ -458,8 +458,8 @@ var (
 
 func (p *Packager) validatePackageSignature(publicKeyPath string) error {
 
-	// If the insecure flag was provided, ignore the signature validation
-	if config.CommonOptions.Insecure {
+	// If the insecure flag was provided, or there is no aggregate checksum, ignore the signature validation
+	if config.CommonOptions.Insecure || p.cfg.Pkg.Metadata.AggregateChecksum == "" {
 		return nil
 	}
 
