@@ -89,6 +89,10 @@ func ReadYaml(path string, value any, commentMap goyaml.CommentMap) error {
 		return err
 	}
 
+	if commentMap == nil {
+		commentMap = goyaml.CommentMap{}
+	}
+
 	return goyaml.UnmarshalWithOptions(b, value, goyaml.CommentToMap(commentMap))
 }
 
