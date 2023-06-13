@@ -253,7 +253,7 @@ func (p *Packager) loadZarfPkg() error {
 		return fmt.Errorf("unable to handle the provided package path: %w", err)
 	}
 
-	wasPulled := p.cfg.DeployOpts.PackagePath == p.tmp.Base
+	extractedToTmp := p.cfg.DeployOpts.PackagePath == p.tmp.Base
 
 	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
 	defer spinner.Stop()
