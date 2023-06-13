@@ -15,7 +15,7 @@ import (
 )
 
 // ListDeployingComponents writes a list of packages that have been deployed to the connected cluster.
-func ListDeployingComponents(w http.ResponseWriter, r *http.Request) {
+func ListDeployedComponents(w http.ResponseWriter, r *http.Request) {
 	pkgName := chi.URLParam(r, "pkg")
 	dp, err := cluster.NewClusterOrDie().GetDeployedPackage(pkgName)
 	if err != nil {
