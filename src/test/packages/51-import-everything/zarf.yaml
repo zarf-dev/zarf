@@ -1,0 +1,141 @@
+kind: ZarfPackageConfig
+metadata:
+  name: import-everything
+  description: Test nearly every type of import
+  version: 0.0.1
+
+components:
+  - name: import-component-local
+    required: false
+    import:
+      path: foo
+      name: baz
+
+  - name: import-component-local-relative
+    required: false
+    import:
+      path: ../../../../examples/dos-games
+      name: baseline
+    manifests:
+      - name: override
+        kustomizations:
+          - files
+
+  - name: import-component-wordpress
+    required: false
+    import:
+      path: ../../../../examples/wordpress
+      name: wordpress
+
+  - name: import-component-oci
+    required: false
+    import:
+      # name is optional, if not provided the name of the component will be used to import
+      name: demo-helm-local-chart
+      url: oci://localhost:555/helm-charts:0.0.1-skeleton
+
+  - name: file-imports
+    required: false
+    cosignKeyPath: ../../../../cosign.pub
+    files:
+      # Import of a file within the current directory
+      - source: files/coffee-ipsum.txt
+        target: files/coffee-ipsum.txt
+        # Import of a file from a relative path external to the current directory
+      - source: ../everything-external/files/coffee-ipsum.txt
+        target: files/latte.txt
+        # Import of a file from a URL
+      - source: https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md
+        target: files/zarf-readme.md
+    actions:
+      onDeploy:
+        after:
+          - cmd: test -f files/coffee-ipsum.txt
+          - cmd: test -f files/latte.txt
+          - cmd: test -f files/zarf-readme.md
+      onRemove:
+        before:
+          - cmd: rm files/coffee-ipsum.txt
+          - cmd: rm files/latte.txt
+          - cmd: rm files/zarf-readme.md
+        after:
+          - cmd: test ! -f files/coffee-ipsum.txt
+          - cmd: test ! -f files/latte.txt
+          - cmd: test ! -f files/zarf-readme.md
+
+  - name: import-helm-local
+    required: false
+    charts:
+      - name: podinfo
+        localPath: charts/local
+        namespace: local-chart
+        version: 6.3.5
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.5
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: podinfo
+                namespace: local-chart
+                condition: available
+
+  - name: import-helm-local-relative
+    required: false
+    charts:
+      - name: podinfo
+        localPath: ../everything-external/charts/local
+        namespace: local-chart-relative
+        version: 6.3.5
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.5
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: podinfo
+                namespace: local-chart-relative
+                condition: available
+
+  - name: import-helm-oci
+    required: false
+    charts:
+      - name: oci-demo
+        version: 6.3.5
+        namespace: podinfo
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.5
+    dataInjections:
+      - source: files/coffee-ipsum.txt
+        target:
+          namespace: podinfo
+          selector: app.kubernetes.io/name=oci-demo-podinfo
+          container: podinfo
+          path: /files/coffee-ipsum.txt
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: pod
+                name: app.kubernetes.io/name=oci-demo-podinfo
+                namespace: podinfo
+                condition: ready
+
+  - name: import-repos
+    required: false
+    repos:
+      # Import a full repo via HTTPS
+      - https://github.com/kelseyhightower/nocode.git
+      # Import a full repo via file:// + absolute path
+      - file:///tmp/nocode
+
+  - name: import-images
+    required: false
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.5

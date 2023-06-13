@@ -36,9 +36,6 @@ const Cluster = {
 };
 
 const Packages = {
-	find: () => http.get<string[]>('/packages/find'),
-	findInHome: () => http.get<string[]>('/packages/find-in-home'),
-	findInit: () => http.get<string[]>('/packages/find-init'),
 	read: (name: string) => http.get<APIZarfPackage>(`/packages/read/${encodeURIComponent(name)}`),
 	getDeployedPackages: () => http.get<DeployedPackage[]>('/packages/list'),
 	deploy: (options: APIZarfDeployPayload) => http.put<boolean>(`/packages/deploy`, options),
@@ -59,6 +56,11 @@ const Packages = {
 		),
 	sbom: (path: string) => http.get<APIPackageSBOM>(`/packages/sbom/${encodeURIComponent(path)}`),
 	cleanSBOM: () => http.del('/packages/sbom'),
+	find: (eventParams: EventParams) => http.eventStream('/packages/find/stream', eventParams),
+	findInit: (eventParams: EventParams) =>
+		http.eventStream('/packages/find/stream/init', eventParams),
+	findHome: (eventParams: EventParams, init: boolean) =>
+		http.eventStream(`/packages/find/stream/home?init=${init}`, eventParams),
 };
 
 const DeployingComponents = {

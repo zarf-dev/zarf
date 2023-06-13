@@ -13,6 +13,10 @@ const getToSelectPage = async (page) => {
 
 const getToReview = async (page) => {
 	await getToSelectPage(page);
+	const expanded = (await page.locator('.button-label:has-text("Search Directory")')).first();
+	if (expanded.isVisible()) {
+		await expanded.click();
+	}
 	// Find first dos-games package deploy button.
 	const dosGames = page.getByTitle('dos-games').first();
 	// click the dos-games package deploy button.

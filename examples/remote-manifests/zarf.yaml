@@ -11,12 +11,10 @@ components:
         namespace: nginx
         files:
           # to verify integrity of a remote manifest, you can use the sha256sum of the file
-          # append the sha256sum to the end of the url, separated by an @
+          # appended to the end of the url, separated by an @
           # example:
           - https://k8s.io/examples/application/deployment.yaml@c57f73449b26eae02ca2a549c388807d49ef6d3f2dc040a9bbb1290128d97157
-          # this sha256 can be discovered using the following:
-          # curl -s https://k8s.io/examples/application/deployment.yaml | sha256sum
-          # or
+          # this sha256 can be discovered using:
           # zarf prepare sha256sum https://k8s.io/examples/application/deployment.yaml
       - name: podinfo
         namespace: podinfo
@@ -44,8 +42,7 @@ components:
                 name: podinfo
                 namespace: podinfo
                 condition: available
-    # image discovery is supported in remote manifests and kustomizations
-    # using the following command:
+    # image discovery is supported in remote manifests and kustomizations using:
     # zarf prepare find-images
     images:
       - nginx:1.14.2
