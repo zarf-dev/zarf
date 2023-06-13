@@ -33,7 +33,8 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 	}
 	aggregateChecksum := pkg.Metadata.AggregateChecksum
 	if aggregateChecksum == "" {
-		return fmt.Errorf("missing aggregate checksum")
+		spinner.Updatef("Package does not have an aggregate checksum, skipping checksums validation")
+		return nil
 	}
 	if len(aggregateChecksum) != 64 {
 		return fmt.Errorf("invalid aggregate checksum: %s", aggregateChecksum)
