@@ -48,7 +48,7 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 		}
 	}
 
-	pathCheckMap, err := PathCheckMap(baseDir)
+	checkedMap, err := PathCheckMap(baseDir)
 	if err != nil {
 		return err
 	}
@@ -62,9 +62,9 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 		return fmt.Errorf("invalid aggregate checksum: (expected: %s, received: %s)", aggregateChecksum, actualAggregateChecksum)
 	}
 
-	pathCheckMap[filepath.Join(baseDir, config.ZarfChecksumsTxt)] = true
-	pathCheckMap[filepath.Join(baseDir, config.ZarfYAML)] = true
-	pathCheckMap[filepath.Join(baseDir, config.ZarfYAMLSignature)] = true
+	checkedMap[filepath.Join(baseDir, config.ZarfChecksumsTxt)] = true
+	checkedMap[filepath.Join(baseDir, config.ZarfYAML)] = true
+	checkedMap[filepath.Join(baseDir, config.ZarfYAMLSignature)] = true
 
 	err = LineByLine(checksumPath, func(line string) error {
 		split := strings.Split(line, " ")
@@ -79,7 +79,7 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 		spinner.Updatef(message.Truncate(status, message.TermWidth, false))
 
 		if InvalidPath(path) {
-			if !isPartial && !pathCheckMap[path] {
+			if !isPartial && !checkedMap[path] {
 				return fmt.Errorf("unable to validate checksums - missing file: %s", rel)
 			} else if SliceContains(pathsToCheck, path) {
 				return fmt.Errorf("unable to validate partial checksums - missing file: %s", rel)
@@ -108,13 +108,13 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 	// If we're doing a partial check, make sure we've checked all the files we were asked to check
 	if isPartial {
 		for _, path := range pathsToCheck {
-			if !pathCheckMap[path] {
+			if !checkedMap[path] {
 				return fmt.Errorf("unable to validate partial checksums, %s did not get checked", path)
 			}
 		}
 	} else {
 		// Otherwise, make sure we've checked all the files in the package
-		for path, checked := range pathCheckMap {
+		for path, checked := range checkedMap {
 			if !checked {
 				return fmt.Errorf("unable to validate checksums, %s did not get checked", path)
 			}

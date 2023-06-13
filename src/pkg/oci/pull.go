@@ -219,7 +219,7 @@ func (o *OrasRemote) PullPackageMetadata(destinationDir string) error {
 	for _, path := range AlwaysPull {
 		desc := root.Locate(path)
 		if !o.isEmptyDescriptor(desc) {
-			err = o.PullFileLayer(desc, destinationDir)
+			err = o.PullLayer(desc, destinationDir)
 			if err != nil {
 				return err
 			}
