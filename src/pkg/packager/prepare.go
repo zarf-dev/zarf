@@ -12,6 +12,9 @@ import (
 	"strconv"
 	"strings"
 
+	goyaml "github.com/goccy/go-yaml"
+	"oras.land/oras-go/v2/registry"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
@@ -25,7 +28,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"oras.land/oras-go/v2/registry"
 )
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
@@ -242,7 +244,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				componentDefinition += fmt.Sprintf("      - %s\n", image)
 			}
 
-			updateComponentImagesInplace(&component, sortedImages)
+			updateComponentImagesInplace(&component.Name, sortedImages)
 		}
 
 		// Handle the "maybes"
@@ -278,62 +280,82 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 	return nil
 }
 
-func updateComponentImagesInplace(component *types.ZarfComponent, images []string) error {
+func updateComponentImagesInplace(componentName *string, images []string) error {
 	b, err := os.ReadFile(config.ZarfYAML)
 	if err != nil {
 		return err
 	}
-	contents := string(b)
-	lines := strings.Split(contents, "\n")
-	cName := component.Name
+	var pkg types.ZarfPackage
+	comments := goyaml.CommentMap{}
+	err = goyaml.UnmarshalWithOptions(b, &pkg, goyaml.CommentToMap(comments))
+	if err != nil {
+		return err
+	}
 
-	imagesLine := regexp.MustCompile(`(?m)^\s{4}images:.*$`)
-	cNameLine := regexp.MustCompile(fmt.Sprintf(`(?m)^\s{2}- name: %s.*$`, cName))
-	imageLineRe := `(?m)^\s{6}- %s.*$`
-	// Find the component in the file
-	for idx, line := range lines {
-		if cNameLine.MatchString(line) {
-			var start int
-			var end int
-			// Find the images section
-			for idx2, line2 := range lines[idx:] {
-				if imagesLine.MatchString(line2) {
-					start = idx + idx2 + 1
+	// Find the component
+	for componentIdx, component := range pkg.Components {
+		if component.Name == *componentName {
+			for imageIdx, image := range component.Images {
+				commentsPath := fmt.Sprintf("$.components[%d].images[%d]", componentIdx, imageIdx)
+				imageComments := comments[commentsPath]
+
+				left, err := registry.ParseReference(image)
+				if err != nil {
+					return err
 				}
-				// handle if the images section dne
-				if strings.EqualFold(line2, "  - name: ") {
-					start = idx + idx2
-					end = start
-				}
-			}
-			if start != end {
-				for idx3, line3 := range lines[start:end] {
-					// If the line is a comment, skip it
-					if strings.HasPrefix(strings.TrimSpace(line3), "#") {
-						continue
+				var right registry.Reference
+				for _, newImage := range images {
+					right, err = registry.ParseReference(newImage)
+					if err != nil {
+						return err
 					}
-					for _, image := range images {
-						// If the image already exists, dont add it
-						imageLine := regexp.MustCompile(fmt.Sprintf(imageLineRe, image))
-						if imageLine.MatchString(line3) {
-							break
-						}
-						// If the image exists, but has a different digest, update it
-						right, err := registry.ParseReference(image)
-						if err != nil {
-							message.Debug("Error parsing image reference: %s :%s", image, err.Error())
-							continue
-						}
-						cleanLine := strings.TrimPrefix("- ", strings.TrimSpace(line3))
-						left, err := registry.ParseReference(cleanLine)
+					if left.Registry == right.Registry && left.Repository == right.Repository {
+						break
 					}
 				}
-			}
+				// If the image is not found, remove it, unless it has a special comment
+				if right == (registry.Reference{}) {
+					// check the comment map for a do not remove comment
+					for _, comment := range imageComments {
+						if comment.Position == goyaml.CommentLinePosition {
+							if utils.SliceContains(comment.Texts, "zarf: do not remove") {
+								// do nothing
+								continue
+							}
+						}
+					}
+					// remove the image
+					component.Images = append(component.Images[:imageIdx], component.Images[imageIdx+1:]...)
+					continue
+					// TODO: add a comment to the component that the image was removed
+					// and figure out how to shift the comments up
+				}
 
+				// If the registry and repository are the same, update the tag
+				if left.Reference != right.Reference {
+					// check the comment map for a do not update comment
+					for _, comment := range imageComments {
+						if comment.Position == goyaml.CommentLinePosition {
+							if utils.SliceContains(comment.Texts, "zarf: do not update") {
+								// do nothing
+								continue
+							}
+						}
+					}
+					component.Images[imageIdx] = right.String()
+				}
+				// Otherwise, append the new image
+				component.Images = append(component.Images, right.String())
+			}
 		}
 	}
 
-	return nil
+	// marshall it back up
+	marshalled, err := goyaml.MarshalWithOptions(pkg, goyaml.Indent(2), goyaml.WithComment(comments))
+	if err != nil {
+		return err
+	}
+	return utils.WriteFile(config.ZarfYAML, marshalled)
 }
 
 func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured, matchedImages, maybeImages k8s.ImageMap) (k8s.ImageMap, k8s.ImageMap, error) {
