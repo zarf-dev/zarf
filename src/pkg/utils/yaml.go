@@ -98,12 +98,21 @@ func ReadYaml(path string, value any, commentMap goyaml.CommentMap) error {
 // WriteYaml writes a given config to a yaml file on disk.
 func WriteYaml(path string, value any, commentMap goyaml.CommentMap, perm fs.FileMode) error {
 	// Save the parsed output to the config path given
-	marshalled, err := goyaml.MarshalWithOptions(value, goyaml.Indent(2), goyaml.IndentSequence(true), goyaml.WithComment(commentMap))
-	if err != nil {
-		return err
+	var marshaled []byte
+	var err error
+	if commentMap != nil {
+		marshaled, err = goyaml.MarshalWithOptions(value, goyaml.Indent(2), goyaml.IndentSequence(true), goyaml.WithComment(commentMap))
+		if err != nil {
+			return err
+		}
+	} else {
+		marshaled, err = goyaml.Marshal(value)
+		if err != nil {
+			return err
+		}
 	}
 
-	return os.WriteFile(path, marshalled, perm)
+	return os.WriteFile(path, marshaled, perm)
 }
 
 // ReloadYamlTemplate marshals a given config, replaces strings and unmarshals it back.

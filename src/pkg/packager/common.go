@@ -278,8 +278,7 @@ func (p *Packager) loadZarfPkg() error {
 
 	// Load the config from the extracted archive zarf.yaml
 	spinner.Updatef("Loading the zarf package config")
-	configPath := p.tmp.ZarfYaml
-	if err := p.readYaml(configPath); err != nil {
+	if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
