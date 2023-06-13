@@ -5,52 +5,180 @@
 package packages
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 
-	"github.com/defenseunicorns/zarf/src/internal/api/common"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
 // Find zarf-packages on the local system (https://regex101.com/r/TUUftK/1)
 var packagePattern = regexp.MustCompile(`zarf-package[^\s\\\/]*\.tar(\.zst)?$`)
-// Find zarf-init packages on the local system (https://regex101.com/r/6aTl3O/2)
-var initPattern = regexp.MustCompile(`zarf-init[^\s\\\/]*\.tar(\.zst)?$`)
 
-// Find returns all packages anywhere down the directory tree of the working directory.
-func Find(w http.ResponseWriter, _ *http.Request) {
-	message.Debug("packages.Find()")
-	findPackage(packagePattern, w, os.Getwd)
+// Find zarf-init packages on the local system
+var currentInitPattern = regexp.MustCompile(packager.GetInitPackageName("") + "$")
+
+// FindInHomeStream returns all packages in the user's home directory.
+// If the init query parameter is true, only init packages will be returned.
+func FindInHomeStream(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	init := r.URL.Query().Get("init")
+	regexp := packagePattern
+	if init == "true" {
+		regexp = currentInitPattern
+	}
+
+	done := make(chan bool)
+	go func() {
+		// User home directory
+		homePath, err := os.UserHomeDir()
+		if err != nil {
+			streamError(err, w)
+		} else {
+			// Recursively search for and stream packages in the home directory
+			recursivePackageStream(homePath, regexp, w)
+		}
+		close(done)
+	}()
+
+	<-done
 }
 
-// FindInHome returns all packages in the user's home directory.
-func FindInHome(w http.ResponseWriter, _ *http.Request) {
-	message.Debug("packages.FindInHome()")
-	findPackage(packagePattern, w, os.UserHomeDir)
+// FindInitStream finds and streams all init packages in the current working directory, the cache directory, and execution directory
+func FindInitStream(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	done := make(chan bool)
+	go func() {
+		// stream init packages in the execution directory
+		if execDir, err := utils.GetFinalExecutablePath(); err == nil {
+			streamDirPackages(execDir, currentInitPattern, w)
+		} else {
+			streamError(err, w)
+		}
+
+		// Cache directory
+		cachePath := config.GetAbsCachePath()
+		// Create the cache directory if it doesn't exist
+		if utils.InvalidPath(cachePath) {
+			if err := os.MkdirAll(cachePath, 0755); err != nil {
+				streamError(err, w)
+			}
+		}
+		streamDirPackages(cachePath, currentInitPattern, w)
+
+		// Find init packages in the current working directory
+		if cwd, err := os.Getwd(); err == nil {
+			streamDirPackages(cwd, currentInitPattern, w)
+		} else {
+			streamError(err, w)
+		}
+		close(done)
+	}()
+	<-done
 }
 
-// FindInitPackage returns all init packages anywhere down the directory tree of the users home directory.
-func FindInitPackage(w http.ResponseWriter, _ *http.Request) {
-	message.Debug("packages.FindInitPackage()")
-	findPackage(initPattern, w, os.UserHomeDir)
+// FindPackageStream finds and streams all packages in the current working directory
+func FindPackageStream(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	done := make(chan bool)
+
+	go func() {
+		if cwd, err := os.Getwd(); err == nil {
+			streamDirPackages(cwd, packagePattern, w)
+		} else {
+			streamError(err, w)
+		}
+		close(done)
+	}()
+
+	<-done
+	// Find init packages in the current working directory
 }
 
-func findPackage(pattern *regexp.Regexp, w http.ResponseWriter, setDir func() (string, error)) {
-	targetDir, err := setDir()
+// recursivePackageStream recursively searches for and streams packages in the given directory
+func recursivePackageStream(dir string, pattern *regexp.Regexp, w http.ResponseWriter) {
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		// ignore files/dirs that it does not have permission to read
+		if err != nil && os.IsPermission(err) {
+			return nil
+		}
+
+		// Return error if the pattern is invalid
+		if pattern == nil {
+			return filepath.ErrBadPattern
+		}
+
+		// Return errors
+		if err != nil {
+			return err
+		}
+
+		if !d.IsDir() {
+			if len(pattern.FindStringIndex(path)) > 0 {
+				streamPackage(path, w)
+			}
+			// Skip the trash bin and hidden directories
+		} else if utils.IsTrashBin(path) {
+			return filepath.SkipDir
+		}
+
+		return nil
+	})
 	if err != nil {
-		message.ErrorWebf(err, w, "Error getting directory")
-		return
+		streamError(err, w)
 	}
+}
 
-	// Skip permission errors, search dot-prefixed directories.
-	files, err := utils.RecursiveFileList(targetDir, pattern, true, false)
-	if err != nil || len(files) == 0 {
-		pkgNotFoundMsg := fmt.Sprintf("Unable to locate the package: %s", pattern.String())
-		message.ErrorWebf(err, w, pkgNotFoundMsg)
-		return
+// streamDirPackages streams all packages in the given directory
+func streamDirPackages(dir string, pattern *regexp.Regexp, w http.ResponseWriter) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		streamError(err, w)
 	}
-	common.WriteJSONResponse(w, files, http.StatusOK)
+	for _, file := range files {
+		if !file.IsDir() {
+			path := fmt.Sprintf("%s/%s", dir, file.Name())
+			if pattern != nil {
+				if len(pattern.FindStringIndex(path)) > 0 {
+					streamPackage(path, w)
+				}
+			}
+		}
+	}
+}
+
+// streamPackage streams the package at the given path
+func streamPackage(path string, w http.ResponseWriter) {
+	pkg, err := ReadPackage(path)
+	if err != nil {
+		streamError(err, w)
+	} else {
+		jsonData, err := json.Marshal(pkg)
+		if err != nil {
+			streamError(err, w)
+		} else {
+			fmt.Fprintf(w, "data: %s\n\n", jsonData)
+			w.(http.Flusher).Flush()
+		}
+	}
+}
+
+// streamError streams the given error to the client
+func streamError(err error, w http.ResponseWriter) {
+	fmt.Fprintf(w, "data: %s\n\n", err.Error())
+	w.(http.Flusher).Flush()
 }

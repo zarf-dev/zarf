@@ -321,7 +321,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 
 		fileList := []string{}
 		if utils.IsDir(fileLocation) {
-			files, _ := utils.RecursiveFileList(fileLocation, nil, false, true)
+			files, _ := utils.RecursiveFileList(fileLocation, nil, false)
 			fileList = append(fileList, files...)
 		} else {
 			fileList = append(fileList, fileLocation)
