@@ -65,6 +65,7 @@ func (p *Packager) Create(baseDir string) error {
 		return err
 	}
 
+	// Compose components into a single zarf.yaml file
 	if err := p.composeComponents(); err != nil {
 		return err
 	}
@@ -74,7 +75,12 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
-	// Remove unnecessary repos and images if we are building a differential package
+	// After templates are filled process any create extensions
+	if err := p.processExtensions(); err != nil {
+		return err
+	}
+
+	// After we have a full zarf.yaml remove unnecessary repos and images if we are building a differential package
 	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
 		// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
 		// If the package versions are the same return an error
@@ -89,11 +95,6 @@ func (p *Packager) Create(baseDir string) error {
 		if err := p.removeCopiesFromDifferentialPackage(); err != nil {
 			return err
 		}
-	}
-
-	// Process any extensions.
-	if err := p.processExtensions(); err != nil {
-		return fmt.Errorf("unable to process extensions: %s", err.Error())
 	}
 
 	// Perform early package validation.
@@ -301,7 +302,7 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 
 	appendSBOMFiles := func(path string) {
 		if utils.IsDir(path) {
-			files, _ := utils.RecursiveFileList(path, nil, false, true)
+			files, _ := utils.RecursiveFileList(path, nil, false)
 			componentSBOM.Files = append(componentSBOM.Files, files...)
 		} else {
 			componentSBOM.Files = append(componentSBOM.Files, path)

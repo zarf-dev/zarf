@@ -164,11 +164,11 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 <Properties item="ZarfComponent" include={["import"]} />
 
 <Tabs queryString="import-examples">
-<TabItem value="Path">
+<TabItem value="Local Path">
 <ExampleYAML example="composable-packages" component="games" />
 </TabItem>
-<TabItem value="OCI">
-<ExampleYAML example="composable-packages" component="chart-via-oci" />
+<TabItem value="OCI URL">
+<ExampleYAML example="composable-packages" component="wordpress" />
 </TabItem>
 </Tabs>
 

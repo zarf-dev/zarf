@@ -168,20 +168,9 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 }
 
 // RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths.
-// the skipPermission flag can be provided to ignore unauthorized files/dirs when true
-// the skipHidden flag can be provided to ignore dot prefixed files/dirs when true
-func RecursiveFileList(dir string, pattern *regexp.Regexp, skipPermission bool, skipHidden bool) (files []string, err error) {
+// If skipHidden is true, hidden directories will be skipped.
+func RecursiveFileList(dir string, pattern *regexp.Regexp, skipHidden bool) (files []string, err error) {
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		// ignore files/dirs that it does not have permission to read
-		if err != nil && os.IsPermission(err) && skipPermission {
-			return nil
-		}
-		// Skip hidden directories
-		if skipHidden {
-			if d.IsDir() && d.Name()[0] == dotCharacter {
-				return filepath.SkipDir
-			}
-		}
 
 		// Return errors
 		if err != nil {
@@ -196,6 +185,9 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp, skipPermission bool, 
 			} else {
 				files = append(files, path)
 			}
+			// Skip hidden directories
+		} else if skipHidden && IsHidden(d.Name()) {
+			return filepath.SkipDir
 		}
 
 		return nil
@@ -287,6 +279,33 @@ func IsTextFile(path string) (bool, error) {
 	hasXML := strings.Contains(mimeType, "xml")
 
 	return hasText || hasJSON || hasXML, nil
+}
+
+// IsTrashBin checks if the given directory path corresponds to an operating system's trash bin.
+func IsTrashBin(dirPath string) bool {
+	dirPath = filepath.Clean(dirPath)
+
+	// Check if the directory path matches a Linux trash bin
+	if strings.HasSuffix(dirPath, "/Trash") || strings.HasSuffix(dirPath, "/.Trash-1000") {
+		return true
+	}
+
+	// Check if the directory path matches a macOS trash bin
+	if strings.HasSuffix(dirPath, "./Trash") || strings.HasSuffix(dirPath, "/.Trashes") {
+		return true
+	}
+
+	// Check if the directory path matches a Windows trash bin
+	if strings.HasSuffix(dirPath, "\\$RECYCLE.BIN") {
+		return true
+	}
+
+	return false
+}
+
+// IsHidden returns true if the given file name starts with a dot.
+func IsHidden(name string) bool {
+	return name[0] == dotCharacter
 }
 
 // GetDirSize walks through all files and directories in the provided path and returns the total size in bytes.

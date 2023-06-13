@@ -293,6 +293,11 @@ func (p *Packager) loadSkeleton() error {
 		return err
 	}
 
+	err = p.skeletonizeExtensions()
+	if err != nil {
+		return err
+	}
+
 	for _, warning := range p.warnings {
 		message.Warn(warning)
 	}

@@ -1,4 +1,4 @@
-# Store & Deploy Packages with OCI
+# Publish & Deploy Packages w/OCI
 
 ## Introduction
 
@@ -68,6 +68,14 @@ Your package tarball may be named differently based on your machine's architectu
 The name and reference of this OCI artifact is derived from the package metadata, e.g.: `helm-oci-chart:0.0.1-arm64`
 
 To modify, edit `zarf.yaml` and re-run `zarf package create .`
+
+:::
+
+:::info
+
+The above publish command publishes a fully-built package that is ready to deploy to a cluster, but this isn't the only kind of package you can publish to an OCI registry.
+
+If you specify a path to a directory containing a `zarf.yaml` (as you would on `zarf package create`) you can create a `skeleton` package that is importable into other packages using [component composability](../../examples/composable-packages/README.md).  These can be inspected like normal Zarf packages but cannot be deployed as they haven't been fully created yet.
 
 :::
 

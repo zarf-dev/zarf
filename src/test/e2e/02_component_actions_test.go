@@ -24,11 +24,8 @@ func TestComponentActions(t *testing.T) {
 		"test-deploy-before.txt",
 		"test-deploy-after.txt",
 	}
-	deployWithEnvVarArtifact := "filename-from-env.txt"
 
 	allArtifacts := append(deployArtifacts, createArtifacts...)
-	allArtifacts = append(allArtifacts, deployWithEnvVarArtifact)
-	allArtifacts = append(allArtifacts, "templated.txt")
 	e2e.CleanFiles(allArtifacts...)
 	defer e2e.CleanFiles(allArtifacts...)
 
@@ -107,33 +104,43 @@ func TestComponentActions(t *testing.T) {
 
 	t.Run("action on-deploy-with-env-var", func(t *testing.T) {
 		t.Parallel()
+		deployWithEnvVarArtifact := "test-filename-from-env.txt"
+
 		// Test using environment variables
 		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=on-deploy-with-env-var", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		require.FileExists(t, deployWithEnvVarArtifact)
+
+		// Remove the env var file at the end of the test
+		e2e.CleanFiles(deployWithEnvVarArtifact)
 	})
 
 	t.Run("action on-deploy-with-template", func(t *testing.T) {
 		t.Parallel()
+		deployTemplatedArtifact := "test-templated.txt"
+
 		// Test using a templated file but without dynamic variables
 		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=on-deploy-with-template-use-of-variable", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
-		outTemplated, err := os.ReadFile("templated.txt")
+		outTemplated, err := os.ReadFile(deployTemplatedArtifact)
 		require.NoError(t, err)
 		require.Contains(t, string(outTemplated), "The dog says ruff")
 		require.Contains(t, string(outTemplated), "The cat says ###ZARF_VAR_CAT_SOUND###")
 		require.Contains(t, string(outTemplated), "The snake says ###ZARF_VAR_SNAKE_SOUND###")
 
 		// Remove the templated file so we can test with dynamic variables
-		e2e.CleanFiles("templated.txt")
+		e2e.CleanFiles(deployTemplatedArtifact)
 
 		// Test using a templated file with dynamic variables
 		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=on-deploy-with-template-use-of-variable,on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
-		outTemplated, err = os.ReadFile("templated.txt")
+		outTemplated, err = os.ReadFile(deployTemplatedArtifact)
 		require.NoError(t, err)
 		require.Contains(t, string(outTemplated), "The dog says ruff")
 		require.Contains(t, string(outTemplated), "The cat says meow")
 		require.Contains(t, string(outTemplated), "The snake says hiss")
+
+		// Remove the templated file at the end of the test
+		e2e.CleanFiles(deployTemplatedArtifact)
 	})
 }

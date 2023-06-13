@@ -34,3 +34,8 @@ components:
     required: true
     import:
       url: oci://localhost:555/import-everything:0.0.1-skeleton
+
+  - name: import-images
+    required: true
+    import:
+      url: oci://localhost:555/import-everything:0.0.1-skeleton
