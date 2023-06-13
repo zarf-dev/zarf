@@ -1,0 +1,15 @@
+kind: ZarfPackageConfig
+metadata:
+  name: retrieve-images
+  version: 0.0.1
+
+components:
+  - name: gitlab-images
+    required: true
+    description: "Get images from the repo1 gitlab chart"
+    extensions:
+      retrieveImages:
+        fromGitChart:
+          - url: https://repo1.dso.mil/big-bang/product/packages/gitlab.git
+            path: chart
+            tag: 6.11.3-bb.0

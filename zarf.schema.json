@@ -69,6 +69,60 @@
       "additionalProperties": false,
       "type": "object"
     },
+    "FromGitChart": {
+      "required": [
+        "url",
+        "path"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "The URL of the chart git repository"
+        },
+        "path": {
+          "type": "string",
+          "description": "The path to the chart in the git repository"
+        },
+        "tag": {
+          "type": "string",
+          "description": "The tag of the repository to pull"
+        },
+        "branch": {
+          "type": "string",
+          "description": "The branch of the repository to pull"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "RetrieveImages": {
+      "properties": {
+        "fromGitChart": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/FromGitChart"
+          },
+          "type": "array",
+          "description": "Charts in git repositories to retrieve images from"
+        },
+        "fromHelmChart": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "List of chart names declared in this component to retrieve images from"
+        },
+        "fromManifest": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "List of manifests declared in this component to retrieve images from"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "ZarfBuildData": {
       "required": [
         "terminal",
@@ -627,6 +681,11 @@
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/BigBang",
           "description": "Configurations for installing Big Bang and Flux in the cluster"
+        },
+        "retrieveImages": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/RetrieveImages",
+          "description": "Configurations for automatically adding images to a component"
         }
       },
       "additionalProperties": false,

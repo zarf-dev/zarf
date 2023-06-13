@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
+	"github.com/defenseunicorns/zarf/src/extensions/retrieve_images"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -29,6 +30,14 @@ func (p *Packager) processExtensions() error {
 		if c.Extensions.BigBang != nil {
 			if c, err = bigbang.Run(p.cfg.Pkg.Metadata.YOLO, componentPaths, c); err != nil {
 				return fmt.Errorf("unable to process bigbang extension: %w", err)
+			}
+		}
+
+		// Auto Image
+		message.Infof("%v", c.Extensions.RetrieveImages)
+		if c.Extensions.RetrieveImages != nil {
+			if c, err = retrieve_images.Run(componentPaths, c, p.cfg); err != nil {
+				return fmt.Errorf("unable to process retrieveImages extension: %w", err)
 			}
 		}
 

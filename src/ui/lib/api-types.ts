@@ -671,6 +671,10 @@ export interface ZarfComponentExtensions {
      * Configurations for installing Big Bang and Flux in the cluster
      */
     bigbang?: BigBang;
+    /**
+     * Configurations for automatically adding images to a component
+     */
+    retrieveImages?: RetrieveImages;
 }
 
 /**
@@ -693,6 +697,43 @@ export interface BigBang {
      * The version of Big Bang to use
      */
     version: string;
+}
+
+/**
+ * Configurations for automatically adding images to a component
+ */
+export interface RetrieveImages {
+    /**
+     * Charts in git repositories to retrieve images from
+     */
+    fromGitChart?: FromGitChart[];
+    /**
+     * List of chart names declared in this component to retrieve images from
+     */
+    fromHelmChart?: string[];
+    /**
+     * List of manifests declared in this component to retrieve images from
+     */
+    fromManifest?: string[];
+}
+
+export interface FromGitChart {
+    /**
+     * The branch of the repository to pull
+     */
+    branch?: string;
+    /**
+     * The path to the chart in the git repository
+     */
+    path: string;
+    /**
+     * The tag of the repository to pull
+     */
+    tag?: string;
+    /**
+     * The URL of the chart git repository
+     */
+    url: string;
 }
 
 export interface ZarfFile {
@@ -1551,12 +1592,24 @@ const typeMap: any = {
     ], false),
     "ZarfComponentExtensions": o([
         { json: "bigbang", js: "bigbang", typ: u(undefined, r("BigBang")) },
+        { json: "retrieveImages", js: "retrieveImages", typ: u(undefined, r("RetrieveImages")) },
     ], false),
     "BigBang": o([
         { json: "repo", js: "repo", typ: u(undefined, "") },
         { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
         { json: "version", js: "version", typ: "" },
+    ], false),
+    "RetrieveImages": o([
+        { json: "fromGitChart", js: "fromGitChart", typ: u(undefined, a(r("FromGitChart"))) },
+        { json: "fromHelmChart", js: "fromHelmChart", typ: u(undefined, a("")) },
+        { json: "fromManifest", js: "fromManifest", typ: u(undefined, a("")) },
+    ], false),
+    "FromGitChart": o([
+        { json: "branch", js: "branch", typ: u(undefined, "") },
+        { json: "path", js: "path", typ: "" },
+        { json: "tag", js: "tag", typ: u(undefined, "") },
+        { json: "url", js: "url", typ: "" },
     ], false),
     "ZarfFile": o([
         { json: "executable", js: "executable", typ: u(undefined, true) },
