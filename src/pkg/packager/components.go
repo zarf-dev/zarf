@@ -27,7 +27,7 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 	componentGroups := make(map[string][]types.ZarfComponent)
 
 	// The component list is comma-delimited list
-	requestedNames := p.getRequestedComponentList(p.cfg.DeployOpts.Components)
+	requestedNames := getRequestedComponentList(p.cfg.DeployOpts.Components)
 
 	// Break up components into choice groups
 	for _, component := range p.cfg.Pkg.Components {

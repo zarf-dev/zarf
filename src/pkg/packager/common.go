@@ -235,7 +235,7 @@ func createPaths() (paths types.TempPaths, err error) {
 	return paths, err
 }
 
-func (p *Packager) getRequestedComponentList(requestedComponents string) []string {
+func getRequestedComponentList(requestedComponents string) []string {
 	if requestedComponents != "" {
 		split := strings.Split(requestedComponents, ",")
 		for idx, component := range split {
@@ -286,7 +286,7 @@ func (p *Packager) loadZarfPkg() error {
 
 	// Validate the checksums of all the things!!!
 	// validation is skipped here if the package is from OCI as the checksums are validated after the pull
-	if p.cfg.Pkg.Metadata.AggregateChecksum != "" && !extractedToTmp {
+	if !extractedToTmp {
 		if err := utils.ValidatePackageChecksums(p.tmp.Base, nil); err != nil {
 			return fmt.Errorf("unable to validate the package checksums: %w", err)
 		}

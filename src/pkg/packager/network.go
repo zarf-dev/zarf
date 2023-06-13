@@ -34,7 +34,7 @@ func (p *Packager) handlePackagePath() error {
 	// Handle case where deploying remote package stored in an OCI registry
 	if utils.IsOCIURL(opts.PackagePath) {
 		p.cfg.DeployOpts.PackagePath = p.tmp.Base
-		requestedComponents := p.getRequestedComponentList(p.cfg.DeployOpts.Components)
+		requestedComponents := getRequestedComponentList(p.cfg.DeployOpts.Components)
 		layersToPull := []ocispec.Descriptor{}
 		// only pull specified components and their images if --components AND --confirm are set
 		if len(requestedComponents) > 0 && config.CommonOptions.Confirm {

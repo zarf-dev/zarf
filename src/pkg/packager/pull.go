@@ -38,10 +38,8 @@ func (p *Packager) Pull() error {
 		message.Successf("Package signature is valid")
 	}
 
-	if p.cfg.Pkg.Metadata.AggregateChecksum != "" {
-		if err = utils.ValidatePackageChecksums(p.tmp.Base, nil); err != nil {
-			return fmt.Errorf("unable to validate the package checksums: %w", err)
-		}
+	if err = utils.ValidatePackageChecksums(p.tmp.Base, nil); err != nil {
+		return fmt.Errorf("unable to validate the package checksums: %w", err)
 	}
 
 	// Get all the layers from within the temp directory

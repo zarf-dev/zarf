@@ -329,10 +329,16 @@ func bindCreateFlags() {
 	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 0)
 	v.SetDefault(V_PKG_CREATE_SIGNING_KEY, "")
 
+	outputDirectory := v.GetString("package.create.output_directory")
+	output := v.GetString(V_PKG_CREATE_OUTPUT)
+	if outputDirectory != "" && output == "" {
+		v.Set(V_PKG_CREATE_OUTPUT, outputDirectory)
+	}
+	createFlags.StringVarP(&pkgConfig.CreateOpts.Output, "output", "o", v.GetString(V_PKG_CREATE_OUTPUT), lang.CmdPackageCreateFlagOutput)
+	createFlags.StringVar(&pkgConfig.CreateOpts.OutputDirectory, "output-directory", v.GetString("package.create.output_directory"), lang.CmdPackageCreateFlagOutput)
+
 	createFlags.StringVar(&pkgConfig.CreateOpts.DifferentialData.DifferentialPackagePath, "differential", v.GetString(V_PKG_CREATE_DIFFERENTIAL), lang.CmdPackageCreateFlagDifferential)
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPackageCreateFlagSet)
-	createFlags.StringVarP(&pkgConfig.CreateOpts.Output, "output", "o", v.GetString(V_PKG_CREATE_OUTPUT), lang.CmdPackageCreateFlagOutput)
-	createFlags.StringVar(&pkgConfig.CreateOpts.Output, "output-directory", v.GetString(V_PKG_CREATE_OUTPUT), lang.CmdPackageCreateFlagOutput)
 	createFlags.BoolVarP(&pkgConfig.CreateOpts.ViewSBOM, "sbom", "s", v.GetBool(V_PKG_CREATE_SBOM), lang.CmdPackageCreateFlagSbom)
 	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), lang.CmdPackageCreateFlagSbomOut)
 	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), lang.CmdPackageCreateFlagSkipSbom)

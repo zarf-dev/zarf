@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
@@ -120,6 +121,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) error {
 	isPartialPull := len(layersToPull) > 0
 	ref := o.Reference
+	pterm.Println()
 	message.Debugf("Pulling %s", ref.String())
 	message.Infof("Pulling Zarf package from %s", ref)
 
@@ -230,8 +232,5 @@ func (o *OrasRemote) PullPackageMetadata(destinationDir string) error {
 	if err != nil {
 		return err
 	}
-	if pkg.Metadata.AggregateChecksum != "" {
-		return utils.ValidatePackageChecksums(destinationDir, AlwaysPull)
-	}
-	return nil
+	return utils.ValidatePackageChecksums(destinationDir, AlwaysPull)
 }
