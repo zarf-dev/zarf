@@ -1,3 +1,83 @@
 # Zarf Packages
 
 This folder contains packages maintained by the [Zarf team](https://github.com/defenseunicorns/zarf/graphs/contributors).  Some of these packages are used by `zarf init` for new cluster initialization.
+
+**Packages**
+- [distros]
+- [gitea]
+- [logging-pgl]
+- [zarf-agent]
+- [zarf-registry]
+
+### Distros
+
+The distros package adds optional capabilities for spinning up and tearing down clusters.  Currently, the following distros are supported:
+
+- [EKS](https://aws.amazon.com/eks/) - Zarf deploys and tears down using the `eksctl` binary under the hood. See how it's done in the EKS package's `zarf.yaml`(./distros/eks/zarf.yaml) and checkout the [EKS package's config](./distros/eks/eks.yaml) for more information.
+
+- [k3s](https://k3s.io/) - Zarf deploys and tears down using the `k3s` service under the hood. See how it's done in the k3s package's [`zarf.yaml`](./distros/k3s/common/zarf.yaml).
+
+
+#### Usage Examples
+
+**EKS**  - Create/Deploy EKS cluster. (requirees eksctl credentials)
+
+```bash
+zarf package create packages/distros/eks -o build --confirm
+
+zarf package deploy build/zarf-package-distro-eks-multi-x.x.x.tar.zst --components=deploy-eks-cluster --set=CLUSTER_NAME='zarf-nightly-eks-e2e-test',INSTANCE_TYPE='t3.medium' --confirm
+```
+
+See the [nightly-eks test](../.github/workflows/nightly-eks.yml) for another example.
+
+**k3s** - Create/Deploy a k3s cluster.
+
+
+```bash
+zarf package create packages/distros/k3s -o build --confirm
+
+zarf package deploy build/zarf-init-arm64-vx.x.x.tar.zst --confirm
+```
+
+### Gitea
+
+Users who rely heavily on GitOps find it useful to deploy an internal Git repository.  Zarf uses [Gitea](https://gitea.io/en-us/) to provide this functionality.  The Gitea package deploys a Gitea instance to the cluster and configures it to use the credentials in the `private-git-server` secret in the zarf namespace.
+
+_usage_
+
+```bash
+zarf init --components=git-server
+```
+
+### Logging PGL
+
+The Logging PGL package deploys the Promtail Grafana & Loki stack which aggreates logs from different containers and presents them in a web dashboard.
+
+_usage_
+
+```bash
+zarf init --components=logging
+```
+
+### Zarf Agent
+
+The Zarf agent is a mutating admission controller used to modify the image property within the PodSpec. The purpose is to redirect it to Zarf's configured registry instead of the the original registry (such as DockerHub, GCR, or Quay). Additionally, the webhook attaches the appropriate `ImagePullSecret` for the seed registry to the pod. This configuration allows the pod to successfully retrieve the image from the seed registry, even when operating in an air-gapped environment.
+
+```bash
+kubectl get deploy -n zarf agent-hook 
+```
+
+output
+
+```bash
+NAME         READY   UP-TO-DATE   AVAILABLE   AGE
+agent-hook   2/2     2            2           17m
+```
+
+See the code:
+- [zarf-agent](../src/internal/agent)
+- [transform-library](../src/pkg/transform)
+
+### Zarf Registry
+
+The Zarf internal registry is utilized to store container images for use in air-gapped environments.  The registry is deployed as a deployment with a single replica.  The registry is configured to use a persistent volume claim to store the images. The registry is configured to use basic authentication.  The username and password are stored in a secret in the zarf namespace.
