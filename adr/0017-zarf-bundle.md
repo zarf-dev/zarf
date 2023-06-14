@@ -35,10 +35,12 @@ There are currently three proposed solutions to this, each with their own pros a
 Uses OCI and a separate Zarf schema / declarative YAML definition to pull packages into a single artifact and orchestrate them together.
 
 Pros:
+
 - maintains efficient OCI layering / deduping of shared package resources
 - allows flexibility in defining what `zarf bundle` (or a separate command) would look like as its own command without polluting `zarf package`
 
 Cons:
+
 - variables set within packages with `setVariables` may be difficult to share across packages
 - package sources in bundles would be OCI _only_, and would not support local packages.
 
@@ -47,9 +49,11 @@ Cons:
 Adds a packages key or another way to overlay packages into a larger package with the same internal structure as current Zarf packages.
 
 Pros:
+
 - packages would maintain the same syntax under `zarf package` between normal / meta packages.
 
 Cons:
+
 - it would be difficult to properly scope things like variables and helm chart names properly across packages.
 - this continues to add to `zarf package` making it more complex and harder to test
 
@@ -58,10 +62,12 @@ Cons:
 Uses a separate binary (not `zarf`) to pull and manage packages together - this would also include dependency declaration and resolution between packages.
 
 Pros:
+
 - this is a familiar/expressive way to solve the package problem and would be familiar to developers and system administrators
 - allows flexibility in defining what the package manager would look like as its own command without polluting `zarf package`
 
 Cons:
+
 - dependencies may be difficult to determine whether they are "installed"/"deployed" - particularly for pre-cluster resources
 - variables set within packages with `setVariables` may be difficult to share across packages
 - this would necessitate a separate binary with it's own CLI that would need its own release schedule and maintenance
@@ -85,13 +91,13 @@ packages:
   - repository: ghcr.io/defenseunicorns/packages/dubbd
     ref: 0.0.1 # OCI spec compliant reference
     # arch is not needed as it will use w/e arch is set in the bundle's metadata
-    components:
-      - "*" # grab all components
+    optional-components: # by default, all required components will be included
+      - "*" # include all optional components
   - repository: docker.io/<namespace>/<name>
     ref: 0.0.1
-    components:
-      - first-component
-      - another-component
+    optional-components:
+      - preflight
+      - aws-* # include all optional components that start with "aws-"
 ```
 
 Bundle would be a new top-level command in Zarf with a full compliment of sub-commands (mirroring the pattern of `zarf package`):
@@ -107,5 +113,7 @@ Bundle would be a new top-level command in Zarf with a full compliment of sub-co
 ## Consequences
 
 This does add complexity to the Zarf codebase, as it is the addition of an entire suite of commands, JSON schema, schema docs, CLI docs, and chunk of library code + tests.  It is a good litmus test of the current packager and OCI codebase to see how ready it is to be consumed as a library.
+
+Additionally, this does add a new layer of complexity to the Zarf ecosystem, as meta-package maintainers must now also be aware of this bundling process, syntax and schema.  This is a necessary evil however, as the current pattern of using `zarf package deploy` to deploy multiple packages is not sustainable at the scale we are seeing.
 
 There is also the hard requirement that packages bundled must be first published to a registry available to the person performing the bundle operation. This removes some ability to develop bundles on an air gapped environment, but the team believes that in such scenarios, the air gapped environment should be _receiving_ a bundle, rather than developing one internally.  If this assumption is incorrect however there are options for us to allow the creation of bundles from OCI directories on local systems if we need to or we could provide more provisions within Zarf to make it easier to connect to airgap registries to mirror bundles.
