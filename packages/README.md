@@ -13,14 +13,14 @@ This folder contains packages maintained by the [Zarf team](https://github.com/d
 
 The distros package adds optional capabilities for spinning up and tearing down clusters.  Currently, the following distros are supported:
 
-- [EKS](https://aws.amazon.com/eks/) - Zarf deploys and tears down using the `eksctl` binary under the hood. See how it's done in the EKS package's [`zarf.yaml`](./distros/eks/zarf.yaml) and checkout the [EKS package's config](./distros/eks/eks.yaml) for more information.
+- [EKS](https://aws.amazon.com/eks/) - Zarf deploys and tears down using the `eksctl` binary under the hood. See how it's done in the EKS package's [`zarf.yaml`](./distros/eks/zarf.yaml) and checkout the [EKS package's config](./distros/eks/eks.yaml) for more information. 
 
-- [k3s](https://k3s.io/) - Zarf deploys and tears down using the `k3s` service under the hood. See how it's done in the k3s package's [`zarf.yaml`](./distros/k3s/common/zarf.yaml).
+- [k3s](https://k3s.io/) - Zarf deploys and tears down using the `k3s` service under the hood. See how it's done in the k3s package's [`zarf.yaml`](./distros/k3s/common/zarf.yaml). (**Note** - This only works when you are running as a `root` user on a linux machine.)
 
 
 #### Usage Examples  
   
-**EKS**  - Create/Deploy EKS cluster. (requires `eksctl` credentials, and a root user on a linux machine)
+**EKS**  - Create/Deploy EKS cluster. (requires `eksctl` credentials)
 
 ```bash
 zarf package create packages/distros/eks -o build --confirm
