@@ -33,9 +33,8 @@ See the [nightly-eks test](../.github/workflows/nightly-eks.yml) for another exa
 **k3s** - Create/Deploy a k3s cluster.
 
 ```bash
-zarf package create packages/distros/k3s -o build --confirm
-
-zarf package deploy build/zarf-init-arm64-vx.x.x.tar.zst --confirm
+# Linux with `systemd` and `root` access only (no `sudo`)
+zarf init --components=git-server
 ```
 
 ### Gitea
