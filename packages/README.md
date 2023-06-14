@@ -39,7 +39,7 @@ zarf init --components=k3s
 
 ### Gitea
 
-Users who rely heavily on GitOps find it useful to deploy an internal Git repository.  Zarf uses [Gitea](https://gitea.io/en-us/) to provide this functionality.  The Gitea package deploys a Gitea instance to the cluster and configures it to use the credentials in the `private-git-server` secret in the zarf namespace.
+Users who rely heavily on GitOps find it useful to deploy an internal Git repository.  Zarf uses [Gitea](https://gitea.io/en-us/) to provide this functionality.  The Gitea package deploys a Gitea instance to the cluster and configures it to use the credentials in the `private-git-server` secret in the Zarf namespace.
 
 _usage_
 
