@@ -8,7 +8,7 @@ Pending
 
 ## Context
 
-Zarf packages already have the concept of `actions` that can execute commands on the host machine's shell during certain package lifecycle events. As `actions` gain more adoption, the team has noticed they are being used to add functionality to Zarf in unexpected ways.  We want `actions` to be a tool that extends upon the functionality of Zarf and its packages, not a tool that works around missing or clunky functionality.
+The idea of `hooks` is to provide a way for cluster maintainers to register functionality that runs during the deployment lifecycle. Zarf packages already have the concept of `actions` that can execute commands on the host machine's shell during certain package lifecycle events. As `actions` gain more adoption, the team has noticed they are being used to add functionality to Zarf in unexpected ways. We want `actions` to be a tool that extends upon the functionality of Zarf and its packages, not a tool that works around missing or clunky functionality.
 
 
 We want package creators to be able to create system agnostic packages by leveraging core Zarf functionality. The following is one such scenario:
@@ -28,16 +28,13 @@ Currently there are 2 solutions:
 
 Neither one of these current solutions are ideal. We don't want to require overly complex external + prior actions for Zarf package deployments, and we don't want package creators to have to create and distribute packages that are specific to ECR.
 
+## Approaches Considered
 
-## Decision
+### Internal Zarf Implementation
+ Clusters that have hooks will have `zarf-hook-*` secret(s) in the 'zarf' namespace. This secret will contain the hook's configuration and any other required metadata. As part of the package deployment process, Zarf will check if the cluster has any hooks and run them if they exist. Given the scenario above, there is no longer a need for an ECR specific Zarf package to be created. An ECR hook would perform the proper configuration for any package deployed onto that cluster; thereby requiring no extra manual intervention from the package deployer.
 
-The idea of `hooks` is to provide a way for cluster maintainers to register functionality that runs during the deployment lifecycle. Clusters that have hooks will have `zarf-hook-*` secret(s) in the 'zarf' namespace. This secret will contain the hook's configuration and any other required metadata. As part of the package deployment process, Zarf will check if the cluster has any hooks and run them if they exist. Given the scenario above, there is no longer a need for an ECR specific Zarf package to be created. An ECR hook would perform the proper configuration for any package deployed onto that cluster; thereby requiring no extra actions from the package deployer.
 
-
-## Implementation
-
-Zarf HookConfig state information:
-
+Zarf HookConfig state information struct:
 ```go
 type HookConfig struct {
 	HookName     string                 `json:"hookName" jsonschema:"description=Name of the hook"`
@@ -46,16 +43,61 @@ type HookConfig struct {
 	HookData     map[string]interface{} `json:"hookData" jsonschema:"description=Generic data map used for the hook. The data is obtained from a secret in the Zarf namespace"`
 	OCIReference string                 `json:"ociReference" jsonschema:"description=Optional OCI reference to the hook image to run"`
 }
-
 ```
 
-Zarf hooks will have two forms of execution via `Internal` and `External` hooks. Internal hooks will be hooks that are built into the Zarf CLI and run internal code when executed. External hooks will reference a container image that will be downloaded and run. HookData will either be used by the internal hook or passed as a map to the external hook.
+Example Secret Data:
+```yaml
+hookName: ecr-repository
+internal: true
+lifecycle: before-component
+hookData:
+  registryURL: public.ecr.aws/abcdefg/zarf-ecr-registry
+  region: us-east-1
+  repositoryPrefix: ecr-zarf-registry
+```
 
-Hooks lifecycle options will be before/after a package deployment and before/after a component deployment.
+For this solution, hooks have to be 'installed' onto a cluster before they are used. When Zarf is deploying a package onto a cluster, it will look for any secrets with the `zarf-hook` label in the `zarf` namespace.  If hooks are found, Zarf will run any 'package' level hooks before deploying a component and run any 'component' level hook for each component that is getting deployed. The hook lifecycle options will be before/after a package deployment and before/after a component deployment.
  - NOTE: The order of hook execution is nearly random. If there are multiple hooks for a lifecycle there is no guarantee that they will be executed in a certain order.
  - NOTE: The `package` lifecycle might be changed to a `run-once` lifecycle. This would benefit packages that don't have kube context information when the deployment starts.
 
-Hooks have to be 'installed' onto a cluster before they are used. When Zarf is deploying a package onto a cluster, it will look for any secrets with the `zarf-hook` label in the `zarf` namespace. If hooks are found, Zarf will run any 'package' level hooks before deploying a component and run any 'component' level hook for each component that is getting deployed.
+Zarf hooks will have two forms of execution via `Internal` and `External` hooks.
+### Internal Hooks
+Internal hooks will be hooks that are built into the Zarf CLI and run internal code when executed. The logic for these hooks would be built into the Zarf CLI and would be updated with new releases of the CLI.
+
+### External Hooks
+There are a few approaches for external hooks.
+1. Have the hook metadata reference an OCI image that is downloaded and run.
+ - The hook metadata can reference the shasum of the image to ensure the image is not tampered with.
+ - We can pass metadata from the secret to the image.
+2. Have the hook metadata reference an image/endpoint that we call via a gRPC call.
+ - This would require a lot of consideration to security since we will be executing code from an external source.
+3. Have the hook metadata contain a script or list of shell commands that can get run.
+ - This would be the simplest solution but would require the most work from the hook creator. This also has the most potential security issues.
+
+
+
+**PROS**
+ - Implementing Hooks internally means we don't have to deal with any bootstrapping issues.
+ - Internally managed hooks can leverage Zarf internal code.
+
+**CONS**
+ - Since 'Internal' hooks are built into the CLI, the only way to get updates for the hook is to update the CLI.
+ - External hooks will have a few security concerns that we will have to work through.
+
+
+
+### Pepr
+Pepr is a K8s controller that enables Kubernetes mutations. We are (or will be) considering using Pepr to replace the `Zarf Agent`. Pepr is capable to accomplishing most of what Zarf wants to do with the concept of Hooks. Zarf hook configuration could be saved as secrets that Zarf will be able to use
+
+**PROS**
+ - Pepr as a solution would be more ?flexible?? than internal Zarf implementation of Hooks.
+ - Using Pepr would reduce the complexity of Zarf's codebase.
+ - It will be easier to secure third party hooks when Pepr is the one running them.
+ - Lifecycle management would be a lot easier with a webhook solution like Pepr.
+
+**CONS**
+ - Pepr is a new project that hasn't been stress tested in production yet (but neither has Hooks).
+ - The Pepr image needs to be pushed to an image registry before it is deployed. This will require a new bootstrapping solution to solve the ECR problem we identified above.
 
 
 ## Consequences
