@@ -28,7 +28,7 @@ zarf package create packages/distros/eks -o build --confirm
 zarf package deploy build/zarf-package-distro-eks-multi-x.x.x.tar.zst --components=deploy-eks-cluster --set=CLUSTER_NAME='zarf-nightly-eks-e2e-test',INSTANCE_TYPE='t3.medium' --confirm
 ```
 
-See the [nightly-eks test](../.github/workflows/nightly-eks.yml) for another example.
+See the [nightly-eks test](../.github/workflows/nightly-eks.yml) for another example. (**Note**: This only works when you're running as root on a linux machine.)
 
 **k3s** - Create/Deploy a k3s cluster.
 
