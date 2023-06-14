@@ -8,7 +8,7 @@ Pending
 
 ## Context
 
-Zarf packages already has the concept of `actions` that can execute commands on the host machine's shell. This is a powerful feature that enables package creators to perform more granular actions on several different lifecycle hooks. We want `actions` to be a tool that extends upon the functionality of Zarf and its packages, not a tool that works around missing or clunky functionality.
+Zarf packages already have the concept of `actions` that can execute commands on the host machine's shell during certain package lifecycle events. As `actions` gain more adoption, the team has noticed they are being used to add functionality to Zarf in unexpected ways.  We want `actions` to be a tool that extends upon the functionality of Zarf and its packages, not a tool that works around missing or clunky functionality.
 
 
 We want package creators to be able to create each package without worrying about what system the package will be deployed onto. One of the scenarios we were considering when designing this feature was when users want to initialize a cluster to use ECR as its remote image registry. Using ECR as a remote registry creates 2 problems:
