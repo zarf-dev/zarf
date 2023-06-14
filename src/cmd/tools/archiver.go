@@ -48,7 +48,7 @@ var archiverDecompressCmd = &cobra.Command{
 		sourceArchive, destinationPath := args[0], args[1]
 		err := archiver.Unarchive(sourceArchive, destinationPath)
 		if err != nil {
-			message.Fatal(err, lang.CmdToolsArchiverDecompressErr)
+			message.Fatalf(err, lang.CmdToolsArchiverDecompressErr, err.Error())
 		}
 
 		if unarchiveAll {
