@@ -62,12 +62,8 @@ zarf init --components=logging
 The Zarf Agent is a mutating admission controller used to modify the image property within a PodSpec. The purpose is to redirect it to Zarf's configured registry instead of the the original registry (such as DockerHub, GHCR, or Quay). Additionally, the webhook attaches the appropriate `ImagePullSecret` for the seed registry to the pod. This configuration allows the pod to successfully retrieve the image from the seed registry, even when operating in an air-gapped environment.
 
 ```bash
-kubectl get deploy -n zarf agent-hook 
-```
+$ kubectl get deploy -n zarf agent-hook 
 
-output
-
-```bash
 NAME         READY   UP-TO-DATE   AVAILABLE   AGE
 agent-hook   2/2     2            2           17m
 ```
