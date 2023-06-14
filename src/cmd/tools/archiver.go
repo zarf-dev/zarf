@@ -32,7 +32,7 @@ var archiverCompressCmd = &cobra.Command{
 		sourceFiles, destinationArchive := args[:len(args)-1], args[len(args)-1]
 		err := archiver.Archive(sourceFiles, destinationArchive)
 		if err != nil {
-			message.Fatal(err, lang.CmdToolsArchiverCompressErr)
+			message.Fatalf(err, lang.CmdToolsArchiverCompressErr, err.Error())
 		}
 	},
 }
@@ -61,11 +61,11 @@ var archiverDecompressCmd = &cobra.Command{
 					}
 					err := archiver.Unarchive(path, dst)
 					if err != nil {
-						return fmt.Errorf("failed to unarchive %s: %s", path, err.Error())
+						return fmt.Errorf(lang.ErrUnarchive, path, err.Error())
 					}
 					err = os.Remove(path)
 					if err != nil {
-						return fmt.Errorf("failed to remove %s: %s", path, err.Error())
+						return fmt.Errorf(lang.ErrRemoveFile, path, err.Error())
 					}
 				}
 				return nil

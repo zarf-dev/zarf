@@ -22,9 +22,11 @@ const (
 	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
 	ErrTunnelFailed        = "Failed to create a tunnel to the Kubernetes cluster."
 	ErrUnmarshal           = "failed to unmarshal file: %w"
-	ErrWritingFile         = "failed to write the file %s: %s"
+	ErrWritingFile         = "failed to write file %s: %s"
 	ErrDownloading         = "failed to download %s: %s"
 	ErrCreatingDir         = "failed to create directory %s: %s"
+	ErrRemoveFile          = "failed to remove file %s: %s"
+	ErrUnarchive           = "failed to unarchive %s: %s"
 )
 
 // Zarf CLI commands.
@@ -271,12 +273,12 @@ const (
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
 	CmdPackagePublishErr                    = "Failed to publish package: %s"
 
-	CmdPackagePullShort     = "Pulls a Zarf package from a remote registry and save to the local file system"
-	CmdPackagePullExample   = "	zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64"
-	CmdPackagePullPublicKey = "Path to public key file for validating signed packages"
+	CmdPackagePullShort               = "Pulls a Zarf package from a remote registry and save to the local file system"
+	CmdPackagePullExample             = "	zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64"
+	CmdPackagePullPublicKey           = "Path to public key file for validating signed packages"
 	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
 	CmdPackagePullFlagPublicKey       = "Path to public key file for validating signed packages"
-	CmdPackagePullErr       = "Failed to pull package: %s"
+	CmdPackagePullErr                 = "Failed to pull package: %s"
 
 	CmdPackageChoose    = "Choose or type the package file"
 	CmdPackageChooseErr = "Package path selection canceled: %s"
@@ -316,9 +318,9 @@ const (
 
 	CmdToolsArchiverShort           = "Compresses/Decompresses generic archives, including Zarf packages"
 	CmdToolsArchiverCompressShort   = "Compresses a collection of sources based off of the destination file extension."
-	CmdToolsArchiverCompressErr     = "Unable to perform compression"
+	CmdToolsArchiverCompressErr     = "Unable to perform compression: %s"
 	CmdToolsArchiverDecompressShort = "Decompresses an archive or Zarf package based off of the source file extension."
-  CmdToolsArchiverDecompressErr   = "Unable to perform decompression: %s"
+	CmdToolsArchiverDecompressErr   = "Unable to perform decompression: %s"
 
 	CmdToolsArchiverUnarchiveAllErr = "Unable to unarchive all nested tarballs"
 
@@ -339,6 +341,7 @@ const (
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s"
 
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory"
+	CmdToolsClearCacheDir           = "Cache directory set to: %s"
 	CmdToolsClearCacheErr           = "Unable to clear the cache directory %s"
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"

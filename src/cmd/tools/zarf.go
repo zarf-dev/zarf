@@ -70,7 +70,7 @@ func init() {
 		Aliases: []string{"c"},
 		Short:   lang.CmdToolsClearCacheShort,
 		Run: func(cmd *cobra.Command, args []string) {
-			message.Debugf("Cache directory set to: %s", config.GetAbsCachePath())
+			message.Notef(lang.CmdToolsClearCacheDir, config.GetAbsCachePath())
 			if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
 				message.Fatalf(err, lang.CmdToolsClearCacheErr, config.GetAbsCachePath())
 			}
