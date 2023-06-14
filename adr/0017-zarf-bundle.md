@@ -112,7 +112,7 @@ Bundle would be a new top-level command in Zarf with a full compliment of sub-co
 
 ## Consequences
 
-This does add complexity to the Zarf codebase, as it is the addition of an entire suite of commands, JSON schema, schema docs, CLI docs, and chunk of library code + tests.  It is a good litmus test of the current packager and OCI codebase to see how ready it is to be consumed as a library.
+This does add complexity to the Zarf codebase, as it is the addition of an entire suite of commands, JSON schema, schema docs, CLI docs, and a chunk of library code + tests.  It is a good litmus test of the current packager and OCI codebase to see how ready it is to be consumed as a library.
 
 Additionally, this does add a new layer of complexity to the Zarf ecosystem, as meta-package maintainers must now also be aware of this bundling process, syntax and schema.  This is a necessary evil however, as the current pattern of using `zarf package deploy` to deploy multiple packages is not sustainable at the scale we are seeing.
 
