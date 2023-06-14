@@ -8,9 +8,9 @@ Pending
 
 ## Context
 
-Orchestrating Zarf packages into meta-packages is a current weakpoint of Zarf. The core of Zarf was oriented around components as capabilities, but as Zarf packages have scaled, it has been discovered that entire packages are now rapidly becoming modularized capabilities.
+Orchestrating capabilities from multiple Zarf packages into meta-packages is a current weakpoint for Zarf. The core of Zarf was built around components as capabilities, but as Zarf packages have scaled, there has been a need to create a new boundary to manage these capabilities efficiently.
 
-Currently there is no official way to enable the deployment, publishing, pulling, and creation of these Zarf packages. Due to this shortfalling, it has led to the community developing such antipatterns as:
+Currently there is no official way to enable the deployment, publishing, pulling, and creation of multiple Zarf packages together, and due to this some in the community have resorted to patterns such as:
 
 ```yaml
 - name: init
@@ -24,7 +24,7 @@ Currently there is no official way to enable the deployment, publishing, pulling
         - cmd: zarf package deploy zarf-init-amd64-v0.27.0.tar.zst --components git-server --confirm -l warn
 ```
 
-While this _does_ fulfill the need to deploy two packages in one command, it does so in such a way that is very brittle and creates bloated and inefficient packages.
+While this _does_ fulfill the need to deploy two packages in one command, it does so in such a way that is verbose within the `zarf.yaml`, brittle across Zarf versions, inefficient within the package structure (it doesn't share layers), and is difficult to use `variables` with.
 
 ### Proposed Solutions
 
@@ -32,23 +32,41 @@ There are currently three proposed solutions to this, each with their own pros a
 
 #### Zarf Bundle
 
-Uses OCI and a separate zarf schema / declarative YAML definition to pull packages into a single artifact and orchestrate them together.
+Uses OCI and a separate Zarf schema / declarative YAML definition to pull packages into a single artifact and orchestrate them together.
 
-Biggest problem to solve is how to handle variables and whether/how those should be shared between packages.
+Pros:
+- maintains efficient OCI layering / deduping of shared package resources
+- allows flexibility in defining what `zarf bundle` (or a separate command) would look like as its own command without polluting `zarf package`
 
-Package sources in bundles would be OCI _only_, and would not support local packages.
+Cons:
+- variables set within packages with `setVariables` may be difficult to share across packages
+- package sources in bundles would be OCI _only_, and would not support local packages.
 
 #### Super Zarf Packages
 
-Add a packages key or another way to overlay packages into a larger package with the same internal structure.
+Adds a packages key or another way to overlay packages into a larger package with the same internal structure as current Zarf packages.
 
-Biggest problem here is how we would scope things after layering things together such as how we might need to change Helm chart name generation or other package level things (like deployed package secrets)
+Pros:
+- packages would maintain the same syntax under `zarf package` between normal / meta packages.
+
+Cons:
+- it would be difficult to properly scope things like variables and helm chart names properly across packages.
+- this continues to add to `zarf package` making it more complex and harder to test
 
 #### Zarf Package Manager
 
-Have a separate binary pull and manage packages together - this would also likely include dependency declaration and resolution between packages.
+Uses a separate binary (not `zarf`) to pull and manage packages together - this would also include dependency declaration and resolution between packages.
 
-Biggest problem is how do we define dependencies and know what is "installed" for a Zarf package.  Variable orchestration would also be an issue. The added workload of supporting an entire separate binary would also place strain on the Zarf team.
+Pros:
+- this is a familiar/expressive way to solve the package problem and would be familiar to developers and system administrators
+- allows flexibility in defining what the package manager would look like as its own command without polluting `zarf package`
+
+Cons:
+- dependencies may be difficult to determine whether they are "installed"/"deployed" - particularly for pre-cluster resources
+- variables set within packages with `setVariables` may be difficult to share across packages
+- this would necessitate a separate binary with it's own CLI that would need its own release schedule and maintenance
+
+> :warning: **NOTE**: The package manager could also be made to be OCI-only but would come with the same OCI pros/cons.
 
 ## Decision
 
@@ -90,4 +108,4 @@ Bundle would be a new top-level command in Zarf with a full compliment of sub-co
 
 This does add complexity to the Zarf codebase, as it is the addition of an entire suite of commands, JSON schema, schema docs, CLI docs, and chunk of library code + tests.  It is a good litmus test of the current packager and OCI codebase to see how ready it is to be consumed as a library.
 
-There is also the hard requirement that packages bundled must be first published to a registry available to the person performing the bundle operation. This removes some ability to develop bundles on an air gapped environment, but the team believes that in such scenarios, the air gapped environment should be _receiving_ a bundle, rather than developing one internal.
+There is also the hard requirement that packages bundled must be first published to a registry available to the person performing the bundle operation. This removes some ability to develop bundles on an air gapped environment, but the team believes that in such scenarios, the air gapped environment should be _receiving_ a bundle, rather than developing one internally.  If this assumption is incorrect however there are options for us to allow the creation of bundles from OCI directories on local systems if we need to or we could provide more provisions within Zarf to make it easier to connect to airgap registries to mirror bundles.
