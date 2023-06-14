@@ -49,7 +49,7 @@ zarf init --components=git-server
 
 ### Logging PGL
 
-The Logging PGL package deploys the Promtail Grafana & Loki stack which aggreates logs from different containers and presents them in a web dashboard.
+The Logging PGL package deploys the Promtail Grafana & Loki stack which aggreates logs from different containers and presents them in a web dashboard.  This is useful as a quick way to get logging into a cluster when you otherwise wouldn't be bringing over a logging stack.
 
 _usage_
 
