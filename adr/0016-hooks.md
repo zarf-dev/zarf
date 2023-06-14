@@ -19,7 +19,14 @@ Using ECR as a remote registry creates 2 problems that Zarf will need to solve:
  1. ECR authentication tokens expire after 12 hours and need to be refreshed. This means the cluster will need to constantly be refreshing its tokens and the user deploying packages will need to make sure they have a valid token.
  2. ECR Image Repositories do not support 'push-to-create'. This means we will need to explicitly create an image repository for every image that is being pushed within the Zarf package.
 
-Packages that get deployed onto a cluster initialized with ECR as its remote registry will need to make sure it solves these 2 problems, either by having the package deployer do something prior to deploying the package or by having the package itself solve these problems with `actions` that are custom built for ECR clusters. Neither one of these current solutions are ideal. We don't want package deployers to have to do something outside of Zarf to get a Zarf package to work, and we don't want package creators to have to create packages that are specific to a certain image registry.
+Packages that get deployed onto a cluster initialized with ECR as its remote registry will need to make sure it solves these 2 problems.
+
+Currently there are 2 solutions:
+
+1. The package deployer solves the problem pre-deployment (creating needed repos, secrets, etc...)
+2. The package itself solves these problems with `actions` that are custom built for ECR clusters.
+
+Neither one of these current solutions are ideal. We don't want to require overly complex external + prior actions for Zarf package deployments, and we don't want package creators to have to create and distribute packages that are specific to ECR.
 
 
 ## Decision
