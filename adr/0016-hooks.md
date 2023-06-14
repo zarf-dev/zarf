@@ -31,7 +31,7 @@ Neither one of these current solutions are ideal. We don't want to require overl
 
 ## Decision
 
-The idea of `hooks` is to provide a way for packages to define functionality that runs on a package and component deployment lifecycle. Clusters that have a hook(s) will have a `zarf-hook-*` secret in the 'zarf' namespace. This secret will contain the hook's configuration and any other information that the hook needs to run. As part of the package deployment process, Zarf will check if the cluster has any hook secrets and run them if they exist. Given the scenario we considered above, having hooks will mean that instead need custom packages with ECR specific `actions`, we can have install hooks that will perform the ECR configuration for every package we deploy onto that cluster in the future.
+The idea of `hooks` is to provide a way for cluster maintainers to register functionality that runs during the deployment lifecycle. Clusters that have hooks will have `zarf-hook-*` secret(s) in the 'zarf' namespace. This secret will contain the hook's configuration and any other required metadata. As part of the package deployment process, Zarf will check if the cluster has any hooks and run them if they exist. Given the scenario above, there is no longer a need for an ECR specific Zarf package to be created. An ECR hook would perform the proper configuration for any package deployed onto that cluster; thereby requiring no extra actions from the package deployer.
 
 
 ## Implementation
