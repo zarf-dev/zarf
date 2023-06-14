@@ -73,7 +73,7 @@ const (
 	CmdConnectFlagCliOnly    = "Disable browser auto-open"
 
 	// zarf destroy
-	CmdDestroyShort = "Destroys everything that Zarf created or deployed in the environment"
+	CmdDestroyShort = "Tears down Zarf and removes its components from the environment"
 	CmdDestroyLong  = "Tear down Zarf.\n\n" +
 		"Deletes everything in the 'zarf' namespace within your connected k8s cluster.\n\n" +
 		"If Zarf deployed your k8s cluster, this command will also tear your cluster down by " +
