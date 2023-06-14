@@ -8,7 +8,7 @@ Pending
 
 ## Context
 
-Orchestrating capabilities from multiple Zarf packages into meta-packages is a current weakpoint for Zarf. The core of Zarf was built around components as capabilities, but as Zarf packages have scaled, there has been a need to create a new boundary to manage these capabilities efficiently.
+Orchestrating capabilities from multiple Zarf packages into meta-packages is a current weak point for Zarf. The core of Zarf was built around components as capabilities, but as Zarf packages have scaled, there has been a need to create a new boundary to manage these capabilities efficiently.
 
 Currently there is no official way to enable the deployment, publishing, pulling, and creation of multiple Zarf packages together, and due to this some in the community have resorted to patterns such as:
 
