@@ -34,7 +34,7 @@ See the [nightly-eks test](../.github/workflows/nightly-eks.yml) for another exa
 
 ```bash
 # Linux with `systemd` and `root` access only (no `sudo`)
-zarf init --components=git-server
+zarf init --components=k3s
 ```
 
 ### Gitea
