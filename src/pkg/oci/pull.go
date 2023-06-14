@@ -202,7 +202,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	return utils.ValidatePackageChecksums(destinationDir, layersToCheck)
 }
 
-// PullFileLayer pulls a file layer from the remote repository and saves it to `destinationDir/annotationTitle`.
+// PullLayer pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
 func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) error {
 	if desc.MediaType != ZarfLayerMediaTypeBlob {
 		return fmt.Errorf("invalid media type for file layer: %s", desc.MediaType)

@@ -14,7 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// ListDeployingComponents writes a list of packages that have been deployed to the connected cluster.
+// ListDeployedComponents writes a list of packages that have been deployed to the connected cluster.
 func ListDeployedComponents(w http.ResponseWriter, r *http.Request) {
 	pkgName := chi.URLParam(r, "pkg")
 	dp, err := cluster.NewClusterOrDie().GetDeployedPackage(pkgName)
