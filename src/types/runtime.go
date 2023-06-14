@@ -4,11 +4,6 @@
 // Package types contains all the types used by Zarf.
 package types
 
-import (
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/registry"
-)
-
 // Constants to keep track of folders within components
 const (
 	TempFolder           = "temp"
@@ -22,10 +17,11 @@ const (
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
-	Confirm       bool   `json:"confirm" jsonschema:"description=Verify that Zarf should perform an action"`
-	Insecure      bool   `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
-	CachePath     string `json:"cachePath" jsonschema:"description=Path to use to cache images and git repos on package create"`
-	TempDirectory string `json:"tempDirectory" jsonschema:"description=Location Zarf should use as a staging ground when managing files and images for package creation and deployment"`
+	Confirm        bool   `json:"confirm" jsonschema:"description=Verify that Zarf should perform an action"`
+	Insecure       bool   `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
+	CachePath      string `json:"cachePath" jsonschema:"description=Path to use to cache images and git repos on package create"`
+	TempDirectory  string `json:"tempDirectory" jsonschema:"description=Location Zarf should use as a staging ground when managing files and images for package creation and deployment"`
+	OCIConcurrency int    `jsonschema:"description=Number of concurrent layer operations to perform when interacting with a remote package"`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deployment.
@@ -41,22 +37,17 @@ type ZarfDeployOptions struct {
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
 type ZarfPublishOptions struct {
-	Reference          registry.Reference `jsonschema:"description=Remote registry reference"`
-	CopyOptions        oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
-	PackOptions        oras.PackOptions   `jsonschema:"description=Options for the pack operation"`
-	PackagePath        string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
-	SigningKeyPassword string             `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sign the published package"`
-	SigningKeyPath     string             `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
+	PackageDestination string `json:"packageDestination" jsonschema:"description=Location where the Zarf package will be published to"`
+	PackagePath        string `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
+	SigningKeyPassword string `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sign the published package"`
+	SigningKeyPath     string `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
 }
 
 // ZarfPullOptions tracks the user-defined preferences during a package pull.
 type ZarfPullOptions struct {
-	Reference       registry.Reference `jsonschema:"description=Remote registry reference"`
-	CopyOptions     oras.CopyOptions   `jsonschema:"description=Options for the copy operation"`
-	PackOptions     oras.PackOptions   `jsonschema:"description=Options for the pack operation"`
-	PackagePath     string             `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
-	OutputDirectory string             `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
-	PublicKeyPath   string             `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
+	PackageSource   string `json:"packageSource" jsonschema:"description=Location where the Zarf package will be pulled from"`
+	OutputDirectory string `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
+	PublicKeyPath   string `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
@@ -75,7 +66,7 @@ type ZarfInitOptions struct {
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
 	SkipSBOM           bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
-	OutputDirectory    string            `json:"outputDirectory" jsonschema:"description=Location where the finalized Zarf package will be placed"`
+	Output             string            `json:"output" jsonschema:"description=Location where the finalized Zarf package will be placed"`
 	ViewSBOM           bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
 	SBOMOutputDir      string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
 	SetVariables       map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
