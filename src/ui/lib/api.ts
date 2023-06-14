@@ -41,6 +41,10 @@ const Packages = {
 	deploy: (options: APIZarfDeployPayload) => http.put<boolean>(`/packages/deploy`, options),
 	deployStream: (eventParams: EventParams) =>
 		http.eventStream('/packages/deploy-stream', eventParams),
+	deployingComponents: {
+		list: (pkgName: string) =>
+			http.get<DeployedComponent[]>(`/packages/${encodeURIComponent(pkgName)}/components/deployed`),
+	},
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`),
 	listPkgConnections: (name: string) =>
 		http.get(`/packages/${encodeURIComponent(name)}/connections`),
@@ -63,8 +67,4 @@ const Packages = {
 		http.eventStream(`/packages/find/stream/home?init=${init}`, eventParams),
 };
 
-const DeployingComponents = {
-	list: () => http.get<DeployedComponent[]>('/components/deployed'),
-};
-
-export { Auth, Cluster, Packages, DeployingComponents };
+export { Auth, Cluster, Packages };

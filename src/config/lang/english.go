@@ -17,6 +17,7 @@ import "errors"
 const (
 	ErrLoadingConfig       = "failed to load config: %w"
 	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
+	ErrLoadPackageSecret   = "Failed to load %s's secret from the Kubernetes cluster"
 	ErrMarshal             = "failed to marshal file: %w"
 	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
 	ErrTunnelFailed        = "Failed to create a tunnel to the Kubernetes cluster."
@@ -198,7 +199,8 @@ const (
 	CmdInternalIsValidHostnameErr   = "The hostname '%s' is not valid. Ensure the hostname meets RFC1123 requirements https://www.rfc-editor.org/rfc/rfc1123.html."
 
 	// zarf package
-	CmdPackageShort = "Zarf package commands for creating, deploying, and inspecting packages"
+	CmdPackageShort           = "Zarf package commands for creating, deploying, and inspecting packages"
+	CmdPackageFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
 	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +
@@ -222,7 +224,7 @@ const (
 
 	CmdPackageCreateFlagConfirm            = "Confirm package creation without prompting"
 	CmdPackageCreateFlagSet                = "Specify package variables to set on the command line (KEY=value)"
-	CmdPackageCreateFlagOutputDirectory    = "Specify the output directory for the created Zarf package"
+	CmdPackageCreateFlagOutput             = "Specify the output (either a directory or an oci:// URL) for the created Zarf package"
 	CmdPackageCreateFlagSbom               = "View SBOM contents after creating the package"
 	CmdPackageCreateFlagSbomOut            = "Specify an output directory for the SBOMs from the created Zarf package"
 	CmdPackageCreateFlagSkipSbom           = "Skip generating SBOM for this package"
@@ -265,7 +267,6 @@ const (
 	# Publish a skeleton package to a remote registry
 	zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 `
-	CmdPackagePublishFlagConcurrency        = "Number of concurrent layer operations to perform when interacting with a remote package."
 	CmdPackagePublishFlagSigningKey         = "Path to private key file for signing packages"
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
 	CmdPackagePublishErr                    = "Failed to publish package: %s"
@@ -273,6 +274,8 @@ const (
 	CmdPackagePullShort     = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample   = "	zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64"
 	CmdPackagePullPublicKey = "Path to public key file for validating signed packages"
+	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
+	CmdPackagePullFlagPublicKey       = "Path to public key file for validating signed packages"
 	CmdPackagePullErr       = "Failed to pull package: %s"
 
 	CmdPackageChoose    = "Choose or type the package file"
@@ -315,7 +318,8 @@ const (
 	CmdToolsArchiverCompressShort   = "Compresses a collection of sources based off of the destination file extension."
 	CmdToolsArchiverCompressErr     = "Unable to perform compression"
 	CmdToolsArchiverDecompressShort = "Decompresses an archive or Zarf package based off of the source file extension."
-	CmdToolsArchiverDecompressErr   = "Unable to perform decompression"
+  CmdToolsArchiverDecompressErr   = "Unable to perform decompression: %s"
+
 	CmdToolsArchiverUnarchiveAllErr = "Unable to unarchive all nested tarballs"
 
 	CmdToolsRegistryShort          = "Tools for working with container registries using go-containertools"

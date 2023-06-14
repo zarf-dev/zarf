@@ -94,8 +94,6 @@ var packageDeployCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		pterm.Println()
-
 		// Deploy the package
 		if err := pkgClient.Deploy(); err != nil {
 			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
@@ -214,10 +212,16 @@ var packagePublishCmd = &cobra.Command{
 			message.Fatal(nil, lang.CmdPackageRegistryPrefixErr)
 		}
 		parts := strings.Split(strings.TrimPrefix(args[1], utils.OCIURLPrefix), "/")
-		pkgConfig.PublishOpts.Reference = registry.Reference{
+		ref := registry.Reference{
 			Registry:   parts[0],
 			Repository: strings.Join(parts[1:], "/"),
 		}
+		err := ref.ValidateRegistry()
+		if err != nil {
+			message.Fatalf(nil, "%s", err.Error())
+		}
+
+		pkgConfig.PublishOpts.PackageDestination = ref.String()
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -239,7 +243,8 @@ var packagePullCmd = &cobra.Command{
 		if !utils.IsOCIURL(args[0]) {
 			message.Fatal(nil, lang.CmdPackageRegistryPrefixErr)
 		}
-		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
+		pkgConfig.PullOpts.PackageSource = args[0]
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -289,12 +294,19 @@ func init() {
 	packageCmd.AddCommand(packagePublishCmd)
 	packageCmd.AddCommand(packagePullCmd)
 
+	bindPackageFlags()
 	bindCreateFlags()
 	bindDeployFlags()
 	bindInspectFlags()
 	bindRemoveFlags()
 	bindPublishFlags()
 	bindPullFlags()
+}
+
+func bindPackageFlags() {
+	packageFlags := packageCmd.PersistentFlags()
+	v.SetDefault(V_PKG_OCI_CONCURRENCY, 3)
+	packageFlags.IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(V_PKG_OCI_CONCURRENCY), lang.CmdPackageFlagConcurrency)
 }
 
 func bindCreateFlags() {
@@ -304,16 +316,23 @@ func bindCreateFlags() {
 	createFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageCreateFlagConfirm)
 
 	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
-	v.SetDefault(V_PKG_CREATE_OUTPUT_DIR, "")
+	v.SetDefault(V_PKG_CREATE_OUTPUT, "")
 	v.SetDefault(V_PKG_CREATE_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_SBOM_OUTPUT, "")
 	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
 	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 0)
 	v.SetDefault(V_PKG_CREATE_SIGNING_KEY, "")
 
+	outputDirectory := v.GetString("package.create.output_directory")
+	output := v.GetString(V_PKG_CREATE_OUTPUT)
+	if outputDirectory != "" && output == "" {
+		v.Set(V_PKG_CREATE_OUTPUT, outputDirectory)
+	}
+	createFlags.StringVar(&pkgConfig.CreateOpts.Output, "output-directory", v.GetString("package.create.output_directory"), lang.CmdPackageCreateFlagOutput)
+	createFlags.StringVarP(&pkgConfig.CreateOpts.Output, "output", "o", v.GetString(V_PKG_CREATE_OUTPUT), lang.CmdPackageCreateFlagOutput)
+
 	createFlags.StringVar(&pkgConfig.CreateOpts.DifferentialData.DifferentialPackagePath, "differential", v.GetString(V_PKG_CREATE_DIFFERENTIAL), lang.CmdPackageCreateFlagDifferential)
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPackageCreateFlagSet)
-	createFlags.StringVarP(&pkgConfig.CreateOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_CREATE_OUTPUT_DIR), lang.CmdPackageCreateFlagOutputDirectory)
 	createFlags.BoolVarP(&pkgConfig.CreateOpts.ViewSBOM, "sbom", "s", v.GetBool(V_PKG_CREATE_SBOM), lang.CmdPackageCreateFlagSbom)
 	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), lang.CmdPackageCreateFlagSbomOut)
 	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), lang.CmdPackageCreateFlagSkipSbom)
@@ -321,6 +340,8 @@ func bindCreateFlags() {
 	createFlags.StringVarP(&pkgConfig.CreateOpts.SigningKeyPath, "key", "k", v.GetString(V_PKG_CREATE_SIGNING_KEY), lang.CmdPackageCreateFlagSigningKey)
 	createFlags.StringVar(&pkgConfig.CreateOpts.SigningKeyPassword, "key-pass", v.GetString(V_PKG_CREATE_SIGNING_KEY_PASSWORD), lang.CmdPackageCreateFlagSigningKeyPassword)
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(V_PKG_CREATE_REGISTRY_OVERRIDE), lang.CmdPackageCreateFlagRegistryOverride)
+
+	createFlags.MarkHidden("output-directory")
 }
 
 func bindDeployFlags() {
@@ -336,14 +357,12 @@ func bindDeployFlags() {
 	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")
 	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
-	v.SetDefault(V_PKG_PUBLISH_OCI_CONCURRENCY, 3)
 	v.SetDefault(V_PKG_DEPLOY_PUBLIC_KEY, "")
 
 	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
-	deployFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 	deployFlags.StringVarP(&pkgConfig.DeployOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageDeployFlagPublicKey)
 }
 
@@ -363,7 +382,6 @@ func bindRemoveFlags() {
 
 func bindPublishFlags() {
 	publishFlags := packagePublishCmd.Flags()
-	publishFlags.IntVar(&pkgConfig.PublishOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PUBLISH_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
 	publishFlags.StringVarP(&pkgConfig.PublishOpts.SigningKeyPath, "key", "k", v.GetString(V_PKG_PUBLISH_SIGNING_KEY), lang.CmdPackagePublishFlagSigningKey)
 	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "key-pass", v.GetString(V_PKG_PUBLISH_SIGNING_KEY_PASSWORD), lang.CmdPackagePublishFlagSigningKeyPassword)
 }
@@ -371,8 +389,6 @@ func bindPublishFlags() {
 func bindPullFlags() {
 	pullFlags := packagePullCmd.Flags()
 	v.SetDefault(V_PKG_PULL_OUTPUT_DIR, "")
-	v.SetDefault(V_PKG_PULL_OCI_CONCURRENCY, 3)
-	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_PULL_OUTPUT_DIR), lang.CmdPackageCreateFlagOutputDirectory)
-	pullFlags.IntVar(&pkgConfig.PullOpts.CopyOptions.Concurrency, "oci-concurrency", v.GetInt(V_PKG_PULL_OCI_CONCURRENCY), lang.CmdPackagePublishFlagConcurrency)
-	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_PULL_PUBLIC_KEY), lang.CmdPackagePullPublicKey)
+	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_PULL_OUTPUT_DIR), lang.CmdPackagePullFlagOutputDirectory)
+	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_PULL_PUBLIC_KEY), lang.CmdPackagePullFlagPublicKey)
 }

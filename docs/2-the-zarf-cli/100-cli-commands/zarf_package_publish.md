@@ -22,10 +22,9 @@ zarf package publish [PACKAGE|SKELETON DIRECTORY] [REPOSITORY] [flags]
 ## Options
 
 ```
-  -h, --help                  help for publish
-  -k, --key string            Path to private key file for signing packages
-      --key-pass string       Password to the private key file used for publishing packages
-      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
+  -h, --help              help for publish
+  -k, --key string        Path to private key file for signing packages
+      --key-pass string   Password to the private key file used for publishing packages
 ```
 
 ## Options inherited from parent commands
@@ -36,6 +35,7 @@ zarf package publish [PACKAGE|SKELETON DIRECTORY] [REPOSITORY] [flags]
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
       --tmpdir string         Specify the temporary directory to use for intermediate files
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```

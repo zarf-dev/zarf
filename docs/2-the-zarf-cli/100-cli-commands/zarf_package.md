@@ -6,7 +6,8 @@ Zarf package commands for creating, deploying, and inspecting packages
 ## Options
 
 ```
-  -h, --help   help for package
+  -h, --help                  help for package
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
 ```
 
 ## Options inherited from parent commands
