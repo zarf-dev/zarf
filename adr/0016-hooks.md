@@ -60,7 +60,7 @@ Hooks have to be 'installed' onto a cluster before they are used. When Zarf is d
 
 ## Consequences
 
-- External hooks will likely not be implemented in the first pass of this feature. Handling external hooks will be an interesting challenge as we'll have to download the hook image and run execute it. Security will be something we consider heavily when implementing this feature.
+- External hooks will likely not be implemented in the first pass of this feature. Handling external hooks will be an interesting challenge as we'll have to download the hook image and run / execute it. Security will be something we consider heavily when implementing this feature.
 
 - While hooks don't introduce raw schema changes to Zarf, it does add complexity where side affects are happening during package deployments that might not be obvious to the package deployer. This is especially the case if the person who deployed the hooks is different from the person who is deploying the subsequent packages.
 
