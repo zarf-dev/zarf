@@ -122,7 +122,7 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-remote-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/remote-manifests -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-component-actions-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-actions -o build -a $(ARCH) --confirm
 

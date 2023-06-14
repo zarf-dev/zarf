@@ -98,17 +98,20 @@ Can be when using the `kustomizations` key:
 
 <Tabs queryString="manifest-examples">
 <TabItem value="Local">
+<ExampleYAML example="manifests" component="httpd-local" />
+</TabItem>
+<TabItem value="Remote">
+<ExampleYAML example="manifests" component="nginx-remote" />
+</TabItem>
+<TabItem value="Kustomizations">
 
 :::info
 
-While this explanation does not showcase it, you can also specify a local directory containing a `kustomization.yaml` file and Zarf will automatically run `kustomize build` on the directory during `zarf package create`, rendering the Kustomization into a single manifest file.
+Kustomizations are handled a bit differently than normal manifests in that Zarf will automatically run `kustomize build` on them during `zarf package create`, thus rendering the Kustomization into a single manifest file.  This prevents needing to grab any remote Kustomization resources during `zarf package deploy` but also means that any Zarf [`variables`](../../examples/variables/README.md#deploy-time-variables-and-constants) will only apply to the rendered manifest not the `kustomize build` process.
 
 :::
 
-<ExampleYAML example="dos-games" component="baseline" />
-</TabItem>
-<TabItem value="Remote">
-<ExampleYAML example="remote-manifests" component="remote-manifests-and-kustomizations" />
+<ExampleYAML example="manifests" component="podinfo-kustomize" />
 </TabItem>
 </Tabs>
 
