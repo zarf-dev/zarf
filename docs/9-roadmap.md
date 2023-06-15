@@ -12,7 +12,7 @@ We also accept contributions from the community (regardless of where a particula
 
 ## Feature Stability
 
-Zarf has three levels of feature stability that are defined below but generally follow existing Kubernetes conventions.  These communicate how a feature may change in the future as well as expectations for *ilities like documentation.
+Zarf has three levels of feature stability that are defined below but generally follow existing Kubernetes conventions.  These communicate how a feature may change in the future as well as expectations for [*ilities](https://en.wiktionary.org/wiki/ility) like documentation.
 
 ### `alpha`
 
@@ -40,12 +40,12 @@ Stable features are features that the Zarf team has committed to maintaining sta
 
 :::note
 
-While Zarf is pre-GA (see below) the above feature stability guidelines should be considered notionally what our expectations are for different Zarf features.  There may be individual cases where *ilities are not met as we work to shore things up for GA.
+While Zarf is pre-General Availability (see below) the above feature stability guidelines should be considered notionally what our expectations are for different Zarf features.  There may be individual cases where *ilities are not met as we work to shore things up for GA.
 
 :::
 
-## GA Release
+## General Availability Release
 
-Right now, Zarf itself is still in its 'beta' phase. We are working on some final things before we release the official 1.0 general availability (GA) release. The work still needed for the GA release can be found in our issues with [this filter](https://github.com/defenseunicorns/zarf/issues?q=is%3Aopen+is%3Aissue+label%3Aga).
+Right now, Zarf itself is still in its 'beta' phase. We are working on some final things before we release the official 1.0 General Availability (GA) release. The work still needed for the GA release can be found in our issues with [this filter](https://github.com/defenseunicorns/zarf/issues?q=is%3Aopen+is%3Aissue+label%3Aga).
 
 We are currently targeting Q4 2023 to have Zarf be generally available and will be pushing weekly releases until then to add necessary features and fix bugs as well as improve docs, architecture and test coverage behind the scenes.
