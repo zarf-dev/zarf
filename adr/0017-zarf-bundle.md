@@ -42,7 +42,7 @@ Pros:
 Cons:
 
 - variables set within packages with `setVariables` may be difficult to share across packages
-- package sources in bundles would be OCI _only_, and would not support local packages.
+- package sources in bundles would be OCI _only_, and would not support local packages. (this may change in the future, but for an intial POC it would be out of scope)
 
 #### Super Zarf Packages
 
