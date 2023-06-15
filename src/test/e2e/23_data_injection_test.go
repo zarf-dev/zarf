@@ -7,7 +7,6 @@ package test
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -20,7 +19,7 @@ func TestDataInjection(t *testing.T) {
 	t.Log("E2E: Data injection")
 	e2e.SetupWithCluster(t)
 
-	path := fmt.Sprintf("build/zarf-package-data-injection-%s.tar", e2e.Arch)
+	path := fmt.Sprintf("build/zarf-package-kiwix-%s-3.5.0.tar", e2e.Arch)
 
 	tmpdir := t.TempDir()
 	sbomPath := filepath.Join(tmpdir, ".sbom-location")
@@ -31,24 +30,21 @@ func TestDataInjection(t *testing.T) {
 	}
 
 	// Verify the file and injection marker were created
-	stdOut, stdErr, err := e2e.Kubectl("--namespace=demo", "logs", "--tail=5", "--selector=app=data-injection", "-c=data-injection")
+	stdOut, stdErr, err := e2e.Kubectl("--namespace=demo", "logs", "--tail=5", "--selector=app=kiwix-serve", "-c=kiwix-serve")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "this-is-an-example-file.txt")
+	require.Contains(t, stdOut, "devops.stackexchange.com_en_all_2023-05.zim")
 	require.Contains(t, stdOut, ".zarf-injection-")
 
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "data-injection", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "kiwix", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure that the `requirements.txt` file is discovered correctly
 	stdOut, stdErr, err = e2e.Zarf("package", "inspect", path, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "data-injection", "compare.html"))
-	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "data-injection", "sbom-viewer-zarf-component-with-init-container.html"))
-	require.NoError(t, err)
-	withInitContainerJSON, err := os.ReadFile(filepath.Join(sbomPath, "data-injection", "zarf-component-with-init-container.json"))
-	require.NoError(t, err)
-	require.Contains(t, string(withInitContainerJSON), "pytz")
+	require.FileExists(t, filepath.Join(sbomPath, "kiwix", "compare.html"), "A compare.html file should have been made")
+
+	require.FileExists(t, filepath.Join(sbomPath, "kiwix", "sbom-viewer-zarf-component-kiwix-serve.html"), "The data-injection component should have an SBOM viewer")
+	require.FileExists(t, filepath.Join(sbomPath, "kiwix", "zarf-component-kiwix-serve.json"), "The data-injection component should have an SBOM json")
 }
 
 func runDataInjection(t *testing.T, path string) {
