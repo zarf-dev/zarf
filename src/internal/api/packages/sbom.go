@@ -88,14 +88,14 @@ func extractSBOM(escapedPath string) (sbom types.APIPackageSBOM, err error) {
 		return sbom, err
 	}
 
-	// Extract the SBOM tar.gz from the package
-	err = archiver.Extract(path, config.ZarfSBOMTar, sbomPath)
+	// Extract the sbom.tar from the package
+	err = utils.ExtractFileFromArchive(path, config.ZarfSBOMTar, sbomPath)
 	if err != nil {
 		cleanupSBOM()
 		return sbom, err
 	}
 
-	// Unarchive the SBOM tar.gz
+	// Unarchive the sbom.tar
 	err = archiver.Unarchive(filepath.Join(sbomPath, config.ZarfSBOMTar), sbomPath)
 	if err != nil {
 		cleanupSBOM()

@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 )
 
@@ -349,4 +350,27 @@ func GetSHA256OfFile(filePath string) (string, error) {
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// ExtractFileFromArchive pulls a single file from an archive into a filepath
+func ExtractFileFromArchive(archive string, filename string, destination string) error {
+	err := archiver.Walk(archive, func(f archiver.File) error {
+		if f.Name() == filename {
+			dst, err := os.Create(filepath.Join(destination, filename))
+			if err != nil {
+				return err
+			}
+
+			_, err = io.Copy(dst, f)
+			if err != nil {
+				return err
+			}
+
+			return archiver.ErrStopWalk
+		}
+
+		return nil
+	})
+
+	return err
 }
