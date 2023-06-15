@@ -6,10 +6,6 @@ metadata:
   uncompressed: true
   version: 3.5.0
 
-variables:
-  # (optional) The storageClassName to use for persistence
-  - name: KIWIX_STORAGE_CLASS
-
 components:
   - name: kiwix-serve
     required: true
