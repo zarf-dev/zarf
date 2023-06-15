@@ -44,7 +44,7 @@ While Zarf is pre-General Availability (see below) the above feature stability g
 
 :::
 
-## General Availability Release
+## General Availability (GA) Release
 
 Right now, Zarf itself is still in its 'beta' phase. We are working on some final things before we release the official 1.0 General Availability (GA) release. The work still needed for the GA release can be found in our issues with [this filter](https://github.com/defenseunicorns/zarf/issues?q=is%3Aopen+is%3Aissue+label%3Aga).
 
