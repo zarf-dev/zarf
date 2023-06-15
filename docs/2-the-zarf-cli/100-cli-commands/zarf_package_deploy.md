@@ -19,7 +19,6 @@ zarf package deploy [PACKAGE] [flags]
       --confirm                    Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
   -h, --help                       help for deploy
   -k, --key string                 Path to public key file for validating signed packages
-      --oci-concurrency int        Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
       --set stringToString         Specify deployment variables to set on the command line (KEY=value) (default [])
       --sget string                Path to public sget key file for remote packages signed via cosign
       --shasum string              Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
@@ -33,6 +32,7 @@ zarf package deploy [PACKAGE] [flags]
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
       --tmpdir string         Specify the temporary directory to use for intermediate files
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
