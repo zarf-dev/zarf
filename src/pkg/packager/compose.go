@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -88,6 +89,10 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	var cachePath string
 	if parent.Import.URL != "" {
+		if !strings.HasSuffix(parent.Import.URL, oci.SkeletonSuffix) {
+			return child, fmt.Errorf("import URL must be a 'skeleton' package: %s", parent.Import.URL)
+		}
+
 		// Save all the OCI imported components into our build data
 		p.cfg.Pkg.Build.OCIImportedComponents[parent.Import.URL] = childComponentName
 
@@ -98,8 +103,16 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			return child, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
 		}
 
-		componentLayer := filepath.Join("components", fmt.Sprintf("%s.tar", childComponentName))
-		err = p.handleOciPackage(skelURL, cachePath, 3, componentLayer)
+		componentLayer := filepath.Join(config.ZarfComponentsDir, fmt.Sprintf("%s.tar", childComponentName))
+		err = p.SetOCIRemote(parent.Import.URL)
+		if err != nil {
+			return child, err
+		}
+		manifest, err := p.remote.FetchRoot()
+		if err != nil {
+			return child, err
+		}
+		err = p.remote.PullPackage(cachePath, 3, manifest.Locate(componentLayer))
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
@@ -145,17 +158,26 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	// If it's OCI, we need to unpack the component tarball
 	if parent.Import.URL != "" {
-		dir := filepath.Join(cachePath, "components", child.Name)
-		parent.Import.Path = filepath.Join(parent.Import.Path, "components", child.Name)
-		if !utils.InvalidPath(dir) {
-			err = os.RemoveAll(dir)
-			if err != nil {
-				return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
+		dir := filepath.Join(cachePath, config.ZarfComponentsDir, child.Name)
+		componentTarball := fmt.Sprintf("%s.tar", dir)
+		parent.Import.Path = filepath.Join(parent.Import.Path, config.ZarfComponentsDir, child.Name)
+		if !utils.InvalidPath(componentTarball) {
+			if !utils.InvalidPath(dir) {
+				err = os.RemoveAll(dir)
+				if err != nil {
+					return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
+				}
 			}
-		}
-		err = archiver.Unarchive(fmt.Sprintf("%s.tar", dir), filepath.Join(cachePath, "components"))
-		if err != nil {
-			return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
+			err = archiver.Unarchive(componentTarball, filepath.Join(cachePath, config.ZarfComponentsDir))
+			if err != nil {
+				return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
+			}
+		} else {
+			// If the tarball doesn't exist (skeleton component had no local resources), we need to create the directory anyways in case there are actions
+			err := utils.CreateDirectory(dir, 0700)
+			if err != nil {
+				return child, fmt.Errorf("unable to create composed component cache path %s: %w", cachePath, err)
+			}
 		}
 	}
 
@@ -193,43 +215,28 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 	message.Debugf("packager.fixComposedFilepaths(%+v, %+v)", pathAncestry, child)
 
 	for fileIdx, file := range child.Files {
-		composed, err := p.getComposedFilePath(pathAncestry, file.Source)
-		if err != nil {
-			return child, err
-		}
+		composed := p.getComposedFilePath(pathAncestry, file.Source)
 		child.Files[fileIdx].Source = composed
 	}
 
 	for chartIdx, chart := range child.Charts {
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
-			composed, err := p.getComposedFilePath(pathAncestry, valuesFile)
-			if err != nil {
-				return child, err
-			}
+			composed := p.getComposedFilePath(pathAncestry, valuesFile)
 			child.Charts[chartIdx].ValuesFiles[valuesIdx] = composed
 		}
 		if child.Charts[chartIdx].LocalPath != "" {
-			composed, err := p.getComposedFilePath(pathAncestry, child.Charts[chartIdx].LocalPath)
-			if err != nil {
-				return child, err
-			}
+			composed := p.getComposedFilePath(pathAncestry, child.Charts[chartIdx].LocalPath)
 			child.Charts[chartIdx].LocalPath = composed
 		}
 	}
 
 	for manifestIdx, manifest := range child.Manifests {
 		for fileIdx, file := range manifest.Files {
-			composed, err := p.getComposedFilePath(pathAncestry, file)
-			if err != nil {
-				return child, err
-			}
+			composed := p.getComposedFilePath(pathAncestry, file)
 			child.Manifests[manifestIdx].Files[fileIdx] = composed
 		}
 		for kustomizeIdx, kustomization := range manifest.Kustomizations {
-			composed, err := p.getComposedFilePath(pathAncestry, kustomization)
-			if err != nil {
-				return child, err
-			}
+			composed := p.getComposedFilePath(pathAncestry, kustomization)
 			// kustomizations can use non-standard urls, so we need to check if the composed path exists on the local filesystem
 			abs, _ := filepath.Abs(composed)
 			invalid := utils.InvalidPath(abs)
@@ -240,10 +247,7 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 	}
 
 	for dataInjectionsIdx, dataInjection := range child.DataInjections {
-		composed, err := p.getComposedFilePath(pathAncestry, dataInjection.Source)
-		if err != nil {
-			return child, err
-		}
+		composed := p.getComposedFilePath(pathAncestry, dataInjection.Source)
 		child.DataInjections[dataInjectionsIdx].Source = composed
 	}
 
@@ -265,20 +269,16 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 	totalActions := len(child.Actions.OnCreate.OnSuccess) + len(child.Actions.OnCreate.OnFailure) + len(child.Actions.OnCreate.Before) + len(child.Actions.OnCreate.After)
 
 	if totalActions > 0 {
-		composedDefaultDir, err := p.getComposedFilePath(pathAncestry, child.Actions.OnCreate.Defaults.Dir)
-		if err != nil {
-			return child, err
-		}
+		composedDefaultDir := p.getComposedFilePath(pathAncestry, child.Actions.OnCreate.Defaults.Dir)
 		child.Actions.OnCreate.Defaults.Dir = composedDefaultDir
 	}
 
 	if child.CosignKeyPath != "" {
-		composed, err := p.getComposedFilePath(pathAncestry, child.CosignKeyPath)
-		if err != nil {
-			return child, err
-		}
+		composed := p.getComposedFilePath(pathAncestry, child.CosignKeyPath)
 		child.CosignKeyPath = composed
 	}
+
+	child = p.composeExtensions(pathAncestry, child)
 
 	return child, nil
 }
@@ -286,10 +286,7 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 func (p *Packager) fixComposedActionFilepaths(pathAncestry string, actions []types.ZarfComponentAction) ([]types.ZarfComponentAction, error) {
 	for actionIdx, action := range actions {
 		if action.Dir != nil {
-			composedActionDir, err := p.getComposedFilePath(pathAncestry, *action.Dir)
-			if err != nil {
-				return actions, err
-			}
+			composedActionDir := p.getComposedFilePath(pathAncestry, *action.Dir)
 			actions[actionIdx].Dir = &composedActionDir
 		}
 	}
@@ -395,31 +392,14 @@ func (p *Packager) getSubPackage(packagePath string) (importedPackage types.Zarf
 }
 
 // Prefix file path with importPath if original file path is not a url.
-func (p *Packager) getComposedFilePath(prefix string, path string) (string, error) {
+func (p *Packager) getComposedFilePath(prefix string, path string) string {
 	message.Debugf("packager.getComposedFilePath(%s, %s)", prefix, path)
 
 	// Return original if it is a remote file.
 	if utils.IsURL(path) {
-		return path, nil
+		return path
 	}
 
 	// Add prefix for local files.
-	relativeToParent := filepath.Join(prefix, path)
-
-	abs, err := filepath.Abs(relativeToParent)
-	if err != nil {
-		return "", err
-	}
-	if utils.InvalidPath(abs) {
-		pathAbs, err := filepath.Abs(path)
-		if err != nil {
-			return "", err
-		}
-		if !utils.InvalidPath(pathAbs) {
-			return "", fmt.Errorf("imported path %s does not exist, please update %s to be relative to the imported component", relativeToParent, path)
-		}
-		return "", fmt.Errorf("imported path %s does not exist", relativeToParent)
-	}
-
-	return relativeToParent, nil
+	return filepath.Join(prefix, path)
 }

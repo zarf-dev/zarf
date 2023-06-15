@@ -48,7 +48,7 @@ You can learn more about the testing of Zarf [here](docs/12-contribute-to-zarf/2
 
 ### Updating Our Documentation
 
-Our documentation is auto-generated from the `src/types` and `src/cmd` go packages.  This includes the [Zarf package jsonschema](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json), the [Zarf schema docs](https://docs.zarf.dev/docs/user-guide/zarf-schema), the [Zarf CLI docs](https://docs.zarf.dev/docs/user-guide/the-zarf-cli/), and our [front-end API types](https://github.com/defenseunicorns/zarf/blob/main/src/ui/lib/api-types.ts).   When an update to types or the CLI commands is made you will need to run `make docs-and-schema` locally to regenerate the schema and documentation. CI checks if this was ran, and will fail if it wasn't.
+Our documentation is auto-generated from the `src/types` and `src/cmd` go packages.  This includes the [Zarf package jsonschema](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json), the [Zarf schema docs](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-schema), the [Zarf CLI docs](https://docs.zarf.dev/docs/the-zarf-cli/), and our [front-end API types](https://github.com/defenseunicorns/zarf/blob/main/src/ui/lib/api-types.ts).   When an update to types or the CLI commands is made you will need to run `make docs-and-schema` locally to regenerate the schema and documentation. CI checks if this was ran, and will fail if it wasn't.
 
 We do this so that there is a git commit signature from a person on the commit for better traceability, rather than a non-person entity (e.g. GitHub CI token).
 

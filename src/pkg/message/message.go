@@ -33,7 +33,7 @@ const (
 	TraceLevel
 
 	// TermWidth sets the width of full width elements like progressbars and headers
-	TermWidth = 85
+	TermWidth = 100
 )
 
 // NoProgress tracks whether spinner/progress bars show updates.
@@ -85,7 +85,7 @@ func UseLogFile() {
 	} else {
 		// Try to create a temp log file if one hasn't been made already
 		if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
-			WarnErr(err, "Error saving a log file")
+			WarnErr(err, "Error saving a log file to a temporary directory")
 		} else {
 			useLogFile = true
 			logStream := io.MultiWriter(os.Stderr, logFile)
@@ -107,6 +107,13 @@ func SetLogLevel(lvl LogLevel) {
 // GetLogLevel returns the current log level.
 func GetLogLevel() LogLevel {
 	return logLevel
+}
+
+// ZarfCommand prints a zarf terminal command.
+func ZarfCommand(format string, a ...any) {
+	cmd := Paragraph("$ zarf "+format, a...)
+	style := pterm.NewStyle(pterm.FgWhite, pterm.BgBlack)
+	style.Println(cmd)
 }
 
 // Debug prints a debug message.
@@ -135,7 +142,7 @@ func Warn(message string) {
 
 // Warnf prints a warning message.
 func Warnf(format string, a ...any) {
-	message := Paragraph(format, a...)
+	message := Paragraphn(TermWidth-10, format, a...)
 	pterm.Println()
 	pterm.Warning.Println(message)
 }
@@ -205,7 +212,7 @@ func Note(text string) {
 // Notef prints a formatted yellow message.
 func Notef(format string, a ...any) {
 	pterm.Println()
-	message := Paragraph(format, a...)
+	message := Paragraphn(TermWidth-7, format, a...)
 	notePrefix := pterm.PrefixPrinter{
 		MessageStyle: &pterm.ThemeDefault.InfoMessageStyle,
 		Prefix: pterm.Prefix{
@@ -218,7 +225,7 @@ func Notef(format string, a ...any) {
 
 // Title prints a title and an optional help description for that section
 func Title(title string, help string) {
-	titleFormatted := pterm.FgBlack.Sprint(pterm.BgWhite.Sprint(title))
+	titleFormatted := pterm.FgBlack.Sprint(pterm.BgWhite.Sprintf(" %s ", title))
 	helpFormatted := pterm.FgGray.Sprint(help)
 	pterm.Printfln("%s  %s", titleFormatted, helpFormatted)
 }
@@ -239,7 +246,7 @@ func HeaderInfof(format string, a ...any) {
 // HorizontalRule prints a white horizontal rule to separate the terminal
 func HorizontalRule() {
 	pterm.Println()
-	pterm.Println(strings.Repeat("━", 100))
+	pterm.Println(strings.Repeat("━", TermWidth))
 }
 
 // JSONValue prints any value as JSON.
@@ -251,9 +258,9 @@ func JSONValue(value any) string {
 	return string(bytes)
 }
 
-// Paragraph formats text into a 100 column paragraph
+// Paragraph formats text into a paragraph matching the TermWidth
 func Paragraph(format string, a ...any) string {
-	return Paragraphn(100, format, a...)
+	return Paragraphn(TermWidth, format, a...)
 }
 
 // Paragraphn formats text into an n column paragraph

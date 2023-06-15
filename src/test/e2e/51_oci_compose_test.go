@@ -17,29 +17,31 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
 )
 
 type SkeletonSuite struct {
 	suite.Suite
-	Remote    *utils.OrasRemote
+	*require.Assertions
 	Reference registry.Reference
 }
 
 var (
-	importEverything   = filepath.Join("src", "test", "test-packages", "51-import-everything")
-	importception      = filepath.Join("src", "test", "test-packages", "51-import-everything", "inception")
-	everythingExternal = filepath.Join("src", "test", "test-packages", "everything-external")
+	importEverything   = filepath.Join("src", "test", "packages", "51-import-everything")
+	importception      = filepath.Join("src", "test", "packages", "51-import-everything", "inception")
+	everythingExternal = filepath.Join("src", "test", "packages", "everything-external")
 	absNoCode          = filepath.Join("/", "tmp", "nocode")
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
-	err := os.MkdirAll(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts"), 0755)
+	suite.Assertions = require.New(suite.T())
+	err := os.MkdirAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts"), 0755)
 	suite.NoError(err)
-	err = utils.CreatePathAndCopy(filepath.Join("examples", "helm-local-chart", "chart"), filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	err = utils.CreatePathAndCopy(filepath.Join("examples", "helm-charts", "chart"), filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
-	suite.DirExists(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	suite.DirExists(filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
 
 	err = utils.CreatePathAndCopy(importEverything, everythingExternal)
 	suite.NoError(err)
@@ -51,7 +53,6 @@ func (suite *SkeletonSuite) SetupSuite() {
 
 	e2e.SetupDockerRegistry(suite.T(), 555)
 	suite.Reference.Registry = "localhost:555"
-
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
@@ -61,7 +62,7 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	suite.NoError(err)
 	err = os.RemoveAll(absNoCode)
 	suite.NoError(err)
-	err = os.RemoveAll(filepath.Join("src", "test", "test-packages", "51-import-everything", "charts", "local"))
+	err = os.RemoveAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
 	err = os.RemoveAll(filepath.Join("files"))
 	suite.NoError(err)
@@ -69,31 +70,42 @@ func (suite *SkeletonSuite) TearDownSuite() {
 
 func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.T().Log("E2E: Skeleton Package Publish oci://")
-
-	helmLocal := filepath.Join("examples", "helm-local-chart")
 	ref := suite.Reference.String()
-	_, stdErr, err := e2e.ExecZarfCommand("package", "publish", helmLocal, "oci://"+ref, "--insecure")
+
+	helmCharts := filepath.Join("examples", "helm-charts")
+	_, stdErr, err := e2e.Zarf("package", "publish", helmCharts, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	_, stdErr, err = e2e.ExecZarfCommand("package", "publish", importEverything, "oci://"+ref, "--insecure")
+	bigBang := filepath.Join("examples", "big-bang")
+	_, stdErr, err = e2e.Zarf("package", "publish", bigBang, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	_, _, err = e2e.ExecZarfCommand("package", "inspect", "oci://"+ref+"/import-everything:0.0.1-skeleton", "--insecure")
+	_, stdErr, err = e2e.Zarf("package", "publish", importEverything, "oci://"+ref, "--insecure")
+	suite.NoError(err)
+	suite.Contains(stdErr, "Published "+ref)
+
+	_, _, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/import-everything:0.0.1-skeleton", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.ExecZarfCommand("package", "pull", "oci://"+ref+"/helm-local-chart:0.0.1-skeleton", "-o", "build", "--insecure")
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/import-everything:0.0.1-skeleton", "-o", "build", "--insecure")
+	suite.NoError(err)
+
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1-skeleton", "-o", "build", "--insecure")
+	suite.NoError(err)
+
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/big-bang-example:2.0.0-skeleton", "-o", "build", "--insecure")
 	suite.NoError(err)
 }
 
 func (suite *SkeletonSuite) Test_1_Compose() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
-	_, _, err := e2e.ExecZarfCommand("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
+	_, _, err := e2e.Zarf("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.ExecZarfCommand("package", "create", importception, "--confirm", "-o", "build", "--insecure")
+	_, _, err = e2e.Zarf("package", "create", importception, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
 }
 
@@ -102,8 +114,10 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 
 	pkgTars := []string{
 		filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch)),
+		filepath.Join("build", "zarf-package-import-everything-skeleton-0.0.1.tar.zst"),
 		filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
-		filepath.Join("build", "zarf-package-helm-local-chart-skeleton-0.0.1.tar.zst"),
+		filepath.Join("build", "zarf-package-helm-charts-skeleton-0.0.1.tar.zst"),
+		filepath.Join("build", "zarf-package-big-bang-example-skeleton-2.0.0.tar.zst"),
 	}
 
 	for _, pkgTar := range pkgTars {
@@ -112,7 +126,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 		unpacked := strings.TrimSuffix(pkgTar, ".tar.zst")
 		defer os.RemoveAll(unpacked)
 		defer os.RemoveAll(pkgTar)
-		_, _, err := e2e.ExecZarfCommand("tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
+		_, _, err := e2e.Zarf("tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
 		suite.NoError(err)
 		suite.DirExists(unpacked)
 
@@ -124,7 +138,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 		suite.NotNil(components)
 
 		isSkeleton := false
-		if pkgTar == filepath.Join("build", "zarf-package-helm-local-chart-skeleton-0.0.1.tar.zst") {
+		if strings.Contains(pkgTar, "-skeleton-") {
 			isSkeleton = true
 		}
 		suite.verifyComponentPaths(unpacked, components, isSkeleton)
@@ -152,17 +166,23 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 		base := filepath.Join(unpackedPath, "components", component.Name)
 		componentPaths := types.ComponentPaths{
 			Base:           base,
-			Temp:           filepath.Join(base, "temp"),
-			Files:          filepath.Join(base, "files"),
-			Charts:         filepath.Join(base, "charts"),
-			Repos:          filepath.Join(base, "repos"),
-			Manifests:      filepath.Join(base, "manifests"),
-			DataInjections: filepath.Join(base, "data"),
-			Values:         filepath.Join(base, "values"),
+			Temp:           filepath.Join(base, types.TempFolder),
+			Files:          filepath.Join(base, types.FilesFolder),
+			Charts:         filepath.Join(base, types.ChartsFolder),
+			Repos:          filepath.Join(base, types.ReposFolder),
+			Manifests:      filepath.Join(base, types.ManifestsFolder),
+			DataInjections: filepath.Join(base, types.DataInjectionsFolder),
+			Values:         filepath.Join(base, types.ValuesFolder),
 		}
 
 		if isSkeleton && component.CosignKeyPath != "" {
 			suite.FileExists(filepath.Join(base, component.CosignKeyPath))
+		}
+
+		if isSkeleton && component.Extensions.BigBang != nil {
+			for _, valuesFile := range component.Extensions.BigBang.ValuesFiles {
+				suite.FileExists(filepath.Join(base, valuesFile))
+			}
 		}
 
 		for chartIdx, chart := range component.Charts {
@@ -181,20 +201,21 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 			if isSkeleton && utils.IsURL(file.Source) {
 				continue
 			} else if isSkeleton {
-				suite.FileExists(filepath.Join(componentPaths.Files, file.Source))
+				suite.FileExists(filepath.Join(base, file.Source))
 				continue
 			}
-			suite.DirOrFileExists(filepath.Join(componentPaths.Files, strconv.Itoa(filesIdx)))
+			path := filepath.Join(componentPaths.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+			suite.DirOrFileExists(path)
 		}
 
 		for dataIdx, data := range component.DataInjections {
 			if isSkeleton && utils.IsURL(data.Source) {
 				continue
 			} else if isSkeleton {
-				suite.DirOrFileExists(filepath.Join(componentPaths.DataInjections, data.Source))
+				suite.DirOrFileExists(filepath.Join(base, data.Source))
 				continue
 			}
-			path := filepath.Join(componentPaths.DataInjections, fmt.Sprintf("injection-%d", dataIdx))
+			path := filepath.Join(componentPaths.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 			suite.DirOrFileExists(path)
 		}
 
@@ -206,7 +227,7 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 				if isSkeleton && utils.IsURL(path) {
 					continue
 				} else if isSkeleton {
-					suite.FileExists(filepath.Join(componentPaths.Manifests, path))
+					suite.FileExists(filepath.Join(base, path))
 					continue
 				}
 				suite.FileExists(filepath.Join(componentPaths.Manifests, fmt.Sprintf("%s-%d.yaml", manifest.Name, filesIdx)))
@@ -230,6 +251,6 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 
 func TestSkeletonSuite(t *testing.T) {
 	e2e.SetupWithCluster(t)
-	defer e2e.Teardown(t)
+
 	suite.Run(t, new(SkeletonSuite))
 }

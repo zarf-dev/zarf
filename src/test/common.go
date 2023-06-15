@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -25,6 +26,7 @@ type ZarfE2ETest struct {
 	Arch            string
 	ApplianceMode   bool
 	RunClusterTests bool
+	CommandLog      []string
 }
 
 var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
@@ -48,33 +50,25 @@ func GetCLIName() string {
 	return binaryName
 }
 
-// Setup performs actions prior to each test.
-func (e2e *ZarfE2ETest) Setup(t *testing.T) {
-	t.Log("Test setup")
-	// Output list of allocated cluster resources
-	if runtime.GOOS != "windows" {
-		_ = exec.CmdWithPrint("sh", "-c", "kubectl describe nodes |grep -A 99 Non\\-terminated")
-	} else {
-		t.Log("Skipping kubectl describe nodes on Windows")
-	}
-}
-
 // SetupWithCluster performs actions for each test that requires a K8s cluster.
 func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
 	if !e2e.RunClusterTests {
 		t.Skip("")
 	}
-	e2e.Setup(t)
+	_ = exec.CmdWithPrint("sh", "-c", fmt.Sprintf("%s tools kubectl describe nodes | grep -A 99 Non-terminated", e2e.ZarfBinPath))
 }
 
-// Teardown performs actions prior to tearing down each test.
-func (e2e *ZarfE2ETest) Teardown(t *testing.T) {
-	t.Log("Test teardown")
+// Zarf executes a Zarf command.
+func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
+	e2e.CommandLog = append(e2e.CommandLog, strings.Join(args, " "))
+	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)
 }
 
-// ExecZarfCommand executes a Zarf command.
-func (e2e *ZarfE2ETest) ExecZarfCommand(commandString ...string) (string, string, error) {
-	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, commandString...)
+// Kubectl executes `zarf tools kubectl ...`
+func (e2e *ZarfE2ETest) Kubectl(args ...string) (string, string, error) {
+	tk := []string{"tools", "kubectl"}
+	args = append(tk, args...)
+	return e2e.Zarf(args...)
 }
 
 // CleanFiles removes files and directories that have been created during the test.
@@ -117,7 +111,7 @@ func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) *configfile.
 	require.NoError(t, err)
 	if !cfg.ContainsAuth() {
 		// make a docker config file w/ some blank creds
-		_, _, err := e2e.ExecZarfCommand("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
+		_, _, err := e2e.Zarf("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
 		require.NoError(t, err)
 	}
 

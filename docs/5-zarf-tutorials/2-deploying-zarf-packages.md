@@ -28,7 +28,7 @@ If you do not provide the path to the package as an argument to the `zarf packag
 
 <iframe src="/docs/tutorials/package_deploy_suggest.html" width="100%" height="120px"></iframe>
 
-By hitting 'tab', you can use the arrow keys to select which package you want to deploy. Since we are deploying the Helm OCI chart package in this tutorial, we will select that package and hit 'enter'.
+By hitting 'tab', you can use the arrow keys to select which package you want to deploy. Since we are deploying the WordPress package in this tutorial, we will select that package and hit 'enter'.
 
 <iframe src="/docs/tutorials/package_deploy_wordpress_suggestions.html" width="100%" height="150px"></iframe>
 

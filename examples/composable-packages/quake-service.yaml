@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: quake
+  annotations:
+    zarf.dev/connect-description: "Play quake!!!"
+    zarf.dev/connect-url: "?quake"
+  labels:
+    # Enables "zarf connect quake"
+    zarf.dev/connect-name: quake
+spec:
+  selector:
+    app: game
+  ports:
+    - name: http
+      port: 8000
+      protocol: TCP
+      targetPort: 8000
