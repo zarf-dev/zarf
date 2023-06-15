@@ -42,7 +42,7 @@ spec:
             [
               "sh",
               "-c",
-              "kiwix-serve -v /data/*.zim",
+              "ls /data/*.zim && kiwix-serve -v /data/*.zim",
             ]
           ports:
             - name: http
