@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -44,7 +45,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 	defer pkgClient.ClearTempPaths()
 
 	if err := pkgClient.Deploy(); err != nil {
-		message.ErrorWebf(err, w, "Unable to deploy the zarf package to the cluster")
+		message.ErrorWebf(err, w, err.Error())
 		return
 	}
 
@@ -59,30 +60,29 @@ func StreamDeployPackage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 
 	pr, pw, _ := os.Pipe()
+	logStream := io.MultiWriter(message.LogStream, pw)
+	pterm.SetDefaultOutput(logStream)
 
-	pterm.SetDefaultOutput(pw)
-	pterm.DisableStyling()
-
-	scanner := bufio.NewScanner(pr)
+	scanner := bufio.NewReader(pr)
 	done := r.Context().Done()
 
 	for {
 		select {
 		case (<-done):
-			pterm.SetDefaultOutput(os.Stderr)
+			pterm.SetDefaultOutput(message.LogStream)
 			pterm.EnableStyling()
 			return
 		default:
-			n := scanner.Scan()
-			if err := scanner.Err(); err != nil {
+			line, _, err := scanner.ReadLine()
+			if err != nil {
 				message.ErrorWebf(err, w, "Error reading stdout: %v", err)
 				return
 			}
-			if n {
+			if line != nil {
 				// TODO: dig in to alternatives to trim
 				// Some output is not sent unless trimmed
 				// Specifically the output from the loading spinner.
-				trimmed := strings.TrimSpace(scanner.Text())
+				trimmed := strings.TrimSpace(string(line))
 				fmt.Fprintf(w, "data: %s\n\n", trimmed)
 				w.(http.Flusher).Flush()
 			}

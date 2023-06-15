@@ -4,7 +4,7 @@
  -->
 <script lang="ts">
 	import type { APIZarfDeployPayload, ZarfDeployOptions, ZarfInitOptions } from '$lib/api-types';
-	import { Dialog, Stepper, Typography, type StepProps } from '@ui';
+	import { Dialog, Stepper, Typography, type StepProps, Box } from '@ui';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import bigZarf from '@images/zarf-bubbles-right.png';
 	import { FitAddon } from 'xterm-addon-fit';
@@ -19,6 +19,7 @@
 		getDeployedComponents,
 		createComponentStepMap,
 		getComponentStepMapComponents,
+		setStepError,
 	} from './deploy-utils';
 
 	const POLL_TIME = 5000;
@@ -40,7 +41,7 @@
 			components: requestedComponents,
 			sGetKeyPath: '',
 			packagePath: $pkgStore.path,
-			setVariables: {}
+			setVariables: {},
 		} as ZarfDeployOptions,
 	};
 
@@ -92,6 +93,7 @@
 			disableStdin: true,
 			convertEol: true,
 			customGlyphs: true,
+			cols: 120,
 			theme: { background: '#1E1E1E' },
 		});
 		const fitAddon = new FitAddon();
@@ -105,6 +107,16 @@
 		const deployStream = Packages.deployStream({
 			onmessage: (e) => {
 				term.writeln(e.data);
+				// if (e.data.includes(`WARNING`)) {
+				// 	errMsg = e.data;
+				// 	componentSteps = componentSteps.map((step) => {
+				// 		if (step.variant === undefined && step.disabled === false) {
+				// 			step.subtitle = errMsg;
+				// 			setStepError(step);
+				// 		}
+				// 		return step;
+				// 	});
+				// }
 			},
 			onerror: (e) => {
 				term.writeln(e.message);
@@ -141,9 +153,11 @@
 				disabled: false,
 			},
 		];
-		dialogOpen = true;
+		if (successful) {
+			dialogOpen = true;
+		}
 		setTimeout(() => {
-			goto('/');
+			if (successful) goto('/');
 		}, POLL_TIME);
 	}
 	$: if (successful) {
@@ -159,7 +173,20 @@
 </section>
 <section class="deployment-steps">
 	<Stepper orientation="vertical" color="on-background" steps={componentSteps} />
-	<div id="terminal" />
+	<Box
+		ssx={{
+			$self: {
+				padding: '8px',
+				width: '50%',
+				backgroundColor: '#1E1E1E',
+				'& .xterm-viewport': {
+					backgroundColor: 'transparent !important',
+				},
+			},
+		}}
+	>
+		<div id="terminal" />
+	</Box>
 </section>
 <Dialog open={dialogOpen}>
 	<section class="success-dialog" slot="content">
@@ -176,7 +203,7 @@
 <style>
 	.deployment-steps {
 		display: flex;
-		justify-content: space-evenly;
+		justify-content: space-between;
 	}
 	.success-dialog {
 		display: flex;
@@ -192,11 +219,5 @@
 	.zarf-logo {
 		width: 64px;
 		height: 62.67px;
-	}
-
-	#terminal {
-		width: 751px;
-		height: 688px;
-		padding: 8px;
 	}
 </style>
