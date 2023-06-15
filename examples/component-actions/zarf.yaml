@@ -32,7 +32,7 @@ components:
             description: Create a test file
             # dir is the directory to run the command in
             dir: ""
-            # env sets this environment variable for this action only
+            # env sets environment variables for this action only
             env:
               - thing=stuff
             # maxRetries is the number of times to retry the action if it fails
