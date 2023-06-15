@@ -22,6 +22,7 @@ spec:
             [
               "sh",
               "-c",
+              # This command looks for the Zarf "data injection marker" which is a timestamped file that is injected after everything else and marks the injection as complete.
               'while [ ! -f /data/###ZARF_DATA_INJECTION_MARKER### ]; do echo "waiting for zarf data sync" && sleep 1; done; echo "we are done waiting!"',
             ]
           resources:
