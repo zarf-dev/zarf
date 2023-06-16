@@ -15,12 +15,14 @@ The distros package adds optional capabilities for spinning up and tearing down 
 
 - [EKS](https://aws.amazon.com/eks/) - Zarf deploys and tears down using the `eksctl` binary under the hood. See how it's done in the EKS package's [`zarf.yaml`](./distros/eks/zarf.yaml) and checkout the [EKS package's config](./distros/eks/eks.yaml) for more information. 
 
-- [k3s](https://k3s.io/) - Zarf deploys and tears down using the `k3s` service under the hood. See how it's done in the k3s package's [`zarf.yaml`](./distros/k3s/common/zarf.yaml). (**Note** - This only works when you are running as a `root` user on a linux machine.)
+- [k3s](https://k3s.io/) - Zarf deploys and tears down using the `k3s` service under the hood. See how it's done in the k3s package's [`zarf.yaml`](./distros/k3s/common/zarf.yaml). 
 
 
 #### Usage Examples  
   
-**EKS**  - Create/Deploy EKS cluster. (requires `eksctl` credentials)
+**EKS**  - Create/Deploy EKS cluster.  
+
+> **Note** - requires `eksctl` credentials.
 
 ```bash
 zarf package create packages/distros/eks -o build --confirm
@@ -30,10 +32,11 @@ zarf package deploy build/zarf-package-distro-eks-multi-x.x.x.tar.zst --componen
 
 See the [nightly-eks test](../.github/workflows/nightly-eks.yml) for another example.
 
-**k3s** - Create/Deploy a k3s cluster.
+**k3s** - Create/Deploy a k3s cluster.  
+
+> **Note** - requires `systemd` and `root` access only (no `sudo`) on a linux machine.
 
 ```bash
-# Linux with `systemd` and `root` access only (no `sudo`)
 zarf init --components=k3s
 ```
 
