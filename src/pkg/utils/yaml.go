@@ -34,9 +34,18 @@ func yamlFormat(attr color.Attribute) string {
 }
 
 // ColorPrintYAML pretty prints a yaml file to the console.
-func ColorPrintYAML(data any, hints map[string]string) {
+func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) {
 	text, _ := goyaml.Marshal(data)
 	tokens := lexer.Tokenize(string(text))
+
+	if spaceRootLists {
+		for idx := range tokens {
+			// Check that this is a dash after a newline (i.e. is a root list)
+			if tokens[idx].Origin == "\n-" || (tokens[idx].Origin == "-" && tokens[idx].Prev != nil && strings.HasSuffix(tokens[idx].Prev.Origin, "\n")) {
+				tokens[idx].Origin = "\n" + tokens[idx].Origin
+			}
+		}
+	}
 
 	var p printer.Printer
 	p.Bool = func() *printer.Property {
@@ -78,22 +87,18 @@ func ColorPrintYAML(data any, hints map[string]string) {
 
 	colorizedYAML := p.PrintTokens(tokens)
 
+	// Inject the hints into the colorized YAML
 	for key, value := range hints {
 		colorizedYAML = strings.Replace(colorizedYAML, key, value, 1)
 	}
-
-	// TODO (@WSTARR) This is absolutely horrible - it is only here for a mockup
-	colorizedYAML = strings.ReplaceAll(colorizedYAML, fmt.Sprintf(" -%s name", yamlFormat(color.FgHiCyan)), fmt.Sprintf("\t%s name", yamlFormat(color.FgHiCyan)))
-	colorizedYAML = strings.ReplaceAll(colorizedYAML, fmt.Sprintf("-%s name", yamlFormat(color.FgHiCyan)), fmt.Sprintf("\n-%s name", yamlFormat(color.FgHiCyan)))
-	colorizedYAML = strings.ReplaceAll(colorizedYAML, fmt.Sprintf("\t%s name", yamlFormat(color.FgHiCyan)), fmt.Sprintf(" -%s name", yamlFormat(color.FgHiCyan)))
 
 	pterm.Println()
 	pterm.Println(colorizedYAML)
 }
 
-// MakeVariableHint makes a hint string for a given variable key and value.
-func MakeVariableHint(hints map[string]string, variableName string, hintText string) map[string]string {
-	key := fmt.Sprintf("-%s name%s:%s %s%s", yamlFormat(color.FgHiCyan), yamlFormat(color.Reset), yamlFormat(color.FgHiMagenta), variableName, yamlFormat(color.Reset))
+// MakeRootListHint makes a hint string for a given root list key and value.
+func MakeRootListHint(listKey string, listValue string, hints map[string]string, hintText string) map[string]string {
+	key := fmt.Sprintf("-%s %s%s:%s %s%s", yamlFormat(color.FgHiCyan), listKey, yamlFormat(color.Reset), yamlFormat(color.FgHiMagenta), listValue, yamlFormat(color.Reset))
 	hint := fmt.Sprintf("%s  %s%s", yamlFormat(color.FgHiBlack), hintText, yamlFormat(color.Reset))
 	hints[key] = key + hint
 

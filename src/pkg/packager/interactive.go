@@ -26,7 +26,7 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 	message.HorizontalRule()
 
 	message.Title("Package Configuration", "the package configuration that defines this package")
-	utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints())
+	utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(), true)
 
 	// Print any potential breaking changes (if this is a Deploy confirm) between this CLI version and the deployed init package
 	if userMessage == "Deploy" {
@@ -152,11 +152,11 @@ func (p *Packager) getPackageYAMLHints() map[string]string {
 		if variable.Sensitive {
 			value = "'**sanitized**'"
 		}
-		hints = utils.MakeVariableHint(hints, variable.Name, fmt.Sprintf("currently set to %s", value))
+		hints = utils.MakeRootListHint("name", variable.Name, hints, fmt.Sprintf("currently set to %s", value))
 	}
 
-	hints = utils.MakeRootHint(hints, "metadata", "information about this package")
-	hints = utils.MakeRootHint(hints, "build", "information about how this package was built")
+	hints = utils.MakeRootHint(hints, "metadata", "information about this package\n")
+	hints = utils.MakeRootHint(hints, "build", "information about how this package was built\n")
 	hints = utils.MakeRootHint(hints, "components", "individual elements of this package")
 	hints = utils.MakeRootHint(hints, "constants", "constant values set by the package author")
 	hints = utils.MakeRootHint(hints, "variables", "package values that are set for a given deployment")

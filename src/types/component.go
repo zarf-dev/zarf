@@ -40,9 +40,6 @@ type ZarfComponent struct {
 	// (Deprecated) DeprecatedScripts are custom commands that run before or after package deployment
 	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=[Deprecated] (replaced by actions) Custom commands to run before or after package deployment,deprecated=true"`
 
-	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
-	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
-
 	// Files are files to place on disk during deploy
 	Files []ZarfFile `json:"files,omitempty" jsonschema:"description=Files or folders to place on disk during package deployment"`
 
@@ -63,6 +60,9 @@ type ZarfComponent struct {
 
 	// Extensions provide additional functionality to a component
 	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
+
+	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
+	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.

@@ -64,7 +64,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		}
 	}
 
-	utils.ColorPrintYAML(p.cfg.Pkg, nil)
+	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 
 	if !utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
 		if err := utils.ValidatePackageChecksums(p.tmp.Base, requestedFiles); err != nil {
