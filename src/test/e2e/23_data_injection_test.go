@@ -53,6 +53,6 @@ func runDataInjection(t *testing.T, path string) {
 	defer cancel()
 
 	// Deploy the data injection example
-	stdOut, stdErr, err := exec.CmdWithContext(ctx, exec.PrintCfg(), e2e.ZarfBinPath, "package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := exec.CmdWithContext(ctx, exec.PrintCfg(), e2e.ZarfBinPath, "package", "deploy", path, "-l", "trace", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
