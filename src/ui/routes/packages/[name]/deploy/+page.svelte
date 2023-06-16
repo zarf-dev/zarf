@@ -7,12 +7,10 @@
 	import { Dialog, Stepper, Typography, type StepProps, Box } from '@ui';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import bigZarf from '@images/zarf-bubbles-right.png';
-	import { FitAddon } from 'xterm-addon-fit';
 	import { goto } from '$app/navigation';
 	import { Packages } from '$lib/api';
 	import { onMount } from 'svelte';
-	import { Terminal } from 'xterm';
-	import 'xterm/css/xterm.css';
+	import Convert from 'ansi-to-html';
 	import {
 		getDialogContent,
 		finalizeStepState,
@@ -89,40 +87,19 @@
 	}
 
 	onMount(async () => {
-		const term = new Terminal({
-			disableStdin: true,
-			convertEol: true,
-			customGlyphs: true,
-			cols: 120,
-			theme: { background: '#1E1E1E' },
-		});
-		const fitAddon = new FitAddon();
-		term.loadAddon(fitAddon);
+		const convert = new Convert({ newline: true });
 
 		const termElement = document.getElementById('terminal');
-		if (termElement) {
-			term.open(termElement);
-			fitAddon.fit();
-		}
+		const scrollAnchor = termElement?.lastElementChild;
+
 		const deployStream = Packages.deployStream({
 			onmessage: (e) => {
-				term.writeln(e.data);
-				// if (e.data.includes(`WARNING`)) {
-				// 	errMsg = e.data;
-				// 	componentSteps = componentSteps.map((step) => {
-				// 		if (step.variant === undefined && step.disabled === false) {
-				// 			step.subtitle = errMsg;
-				// 			setStepError(step);
-				// 		}
-				// 		return step;
-				// 	});
-				// }
+				let html = convert.toHtml(e.data);
+				html = `<div class="zarf-terminal-line">${html}</div>`;
+				scrollAnchor?.insertAdjacentHTML('beforebegin', html);
+				scrollAnchor?.scrollIntoView();
 			},
-			onerror: (e) => {
-				term.writeln(e.message);
-				finishedDeploying = true;
-				successful = false;
-			},
+			onerror: (e) => {},
 		});
 		Packages.deploy(options).then(
 			(value: boolean) => {
@@ -174,18 +151,32 @@
 <section class="deployment-steps">
 	<Stepper orientation="vertical" color="on-background" steps={componentSteps} />
 	<Box
+		element="pre"
+		on:scroll={() => {
+			console.log('scroll');
+		}}
 		ssx={{
 			$self: {
-				padding: '8px',
-				width: '50%',
+				display: 'flex',
+				flexDirection: 'column',
 				backgroundColor: '#1E1E1E',
-				'& .xterm-viewport': {
-					backgroundColor: 'transparent !important',
+				padding: '8px',
+				overflow: 'scroll',
+				height: '688px',
+				width: '751px',
+				'& .zarf-terminal-line': {
+					width: '100%',
+					margin: '0px',
+					padding: '0px',
+					'&:last-child': {
+						marginBottom: '0px',
+					},
 				},
 			},
 		}}
+		id="terminal"
 	>
-		<div id="terminal" />
+		<div class="scroll-anchor" />
 	</Box>
 </section>
 <Dialog open={dialogOpen}>
@@ -204,6 +195,9 @@
 	.deployment-steps {
 		display: flex;
 		justify-content: space-between;
+	}
+	.deployment-steps > :global(.stepper) {
+		max-width: 244px;
 	}
 	.success-dialog {
 		display: flex;
