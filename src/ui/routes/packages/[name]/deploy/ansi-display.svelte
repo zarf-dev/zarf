@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { type StepProps, Box, type SSX } from '@ui';
+	import { Box, type SSX } from '@ui';
 	import { onMount } from 'svelte';
 	import Convert from 'ansi-to-html';
 
 	const convert = new Convert({
 		newline: true,
+		stream: true,
 		colors: {
 			0: '#000000',
 			1: '#C23621',

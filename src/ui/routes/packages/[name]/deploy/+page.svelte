@@ -4,7 +4,7 @@
  -->
 <script lang="ts">
 	import type { APIZarfDeployPayload, ZarfDeployOptions, ZarfInitOptions } from '$lib/api-types';
-	import { Dialog, Stepper, Typography, type StepProps, Box } from '@ui';
+	import { Dialog, Stepper, Typography, type StepProps } from '@ui';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import bigZarf from '@images/zarf-bubbles-right.png';
 	import { goto } from '$app/navigation';
@@ -16,9 +16,10 @@
 		getDeployedComponents,
 		createComponentStepMap,
 		getComponentStepMapComponents,
-		setStepError,
+		type DeployedSteps,
 	} from './deploy-utils';
 	import AnsiDisplay from './ansi-display.svelte';
+	import stripAnsi from 'strip-ansi';
 
 	const POLL_TIME = 5000;
 
@@ -74,6 +75,8 @@
 	let pollDeployed: NodeJS.Timer;
 	let componentSteps: StepProps[] = getComponentStepMapComponents(components);
 	let dialogState: { topLine: string; bottomLine: string } = getDialogContent(successful);
+	let activeIndex: number = 0;
+	let hasError: boolean = false;
 	let addMessage: (message: string) => void;
 
 	async function updateComponentSteps(): Promise<void> {
@@ -81,8 +84,9 @@
 			return;
 		}
 		return getDeployedComponents($pkgStore.zarfPackage.metadata.name, components).then(
-			(value: StepProps[]) => {
-				componentSteps = value;
+			(value: DeployedSteps) => {
+				componentSteps = value.steps;
+				activeIndex = value.activeStep;
 			}
 		);
 	}
@@ -91,8 +95,22 @@
 		const deployStream = Packages.deployStream({
 			onmessage: (e) => {
 				addMessage(e.data);
+				if (e.data.includes('WARNING') || e.data.includes('ERROR')) {
+					hasError = true;
+					if (e.data.includes('ERROR')) {
+						componentSteps[activeIndex].variant = 'error';
+					} else {
+						componentSteps[activeIndex].variant = 'warning';
+					}
+					componentSteps[activeIndex].iconContent = '';
+					componentSteps[activeIndex].subtitle = stripAnsi(
+						e.data.replace('WARNING', '').replace('ERROR', '')
+					);
+				}
 			},
-			onerror: (e) => {},
+			onerror: (e) => {
+				addMessage(e.message);
+			},
 		});
 		Packages.deploy(options).then(
 			(value: boolean) => {
@@ -115,20 +133,20 @@
 
 	$: if (finishedDeploying) {
 		pollDeployed && clearInterval(pollDeployed);
-		componentSteps = [
-			...finalizeStepState(componentSteps, successful),
-			{
-				title: successful ? 'Deployment Succeeded' : 'Deployment Failed',
-				variant: successful ? 'success' : 'error',
-				disabled: false,
-			},
-		];
-		if (successful) {
+		if (successful && !hasError) {
+			componentSteps = [
+				...finalizeStepState(componentSteps, successful),
+				{
+					title: successful ? 'Deployment Succeeded' : 'Deployment Failed',
+					variant: successful ? 'success' : 'error',
+					disabled: false,
+				},
+			];
 			dialogOpen = true;
+			setTimeout(() => {
+				goto('/');
+			}, POLL_TIME);
 		}
-		setTimeout(() => {
-			// if (successful) goto('/');
-		}, POLL_TIME);
 	}
 	$: if (successful) {
 		dialogState = getDialogContent(successful);
