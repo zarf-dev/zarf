@@ -9,4 +9,5 @@ import "errors"
 var (
 	ErrBundlerNilConfig             = errors.New("bundler.New() called with nil config")
 	ErrBundlerUnableToCreateTempDir = "bundler unable to create temp directory: %s"
+	ErrBundlerFS                    = "error in BundlerFS operation: %w"
 )
