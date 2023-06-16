@@ -44,7 +44,7 @@ components:
           - cmd: rm podinfo-cosign.pub
           - wait:
               cluster:
-                kind: pod
-                name: app.kubernetes.io/name=podinfo-upgrade
+                kind: deployment
+                name: podinfo-upgrade
                 namespace: podinfo-upgrade
-                condition: ready
+                condition: available
