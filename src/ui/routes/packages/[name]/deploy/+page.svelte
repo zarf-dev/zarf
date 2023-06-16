@@ -10,7 +10,6 @@
 	import { goto } from '$app/navigation';
 	import { Packages } from '$lib/api';
 	import { onMount } from 'svelte';
-	import Convert from 'ansi-to-html';
 	import {
 		getDialogContent,
 		finalizeStepState,
@@ -19,6 +18,7 @@
 		getComponentStepMapComponents,
 		setStepError,
 	} from './deploy-utils';
+	import AnsiDisplay from './ansi-display.svelte';
 
 	const POLL_TIME = 5000;
 
@@ -74,6 +74,7 @@
 	let pollDeployed: NodeJS.Timer;
 	let componentSteps: StepProps[] = getComponentStepMapComponents(components);
 	let dialogState: { topLine: string; bottomLine: string } = getDialogContent(successful);
+	let addMessage: (message: string) => void;
 
 	async function updateComponentSteps(): Promise<void> {
 		if (!$pkgStore.zarfPackage.metadata?.name) {
@@ -87,17 +88,9 @@
 	}
 
 	onMount(async () => {
-		const convert = new Convert({ newline: true });
-
-		const termElement = document.getElementById('terminal');
-		const scrollAnchor = termElement?.lastElementChild;
-
 		const deployStream = Packages.deployStream({
 			onmessage: (e) => {
-				let html = convert.toHtml(e.data);
-				html = `<div class="zarf-terminal-line">${html}</div>`;
-				scrollAnchor?.insertAdjacentHTML('beforebegin', html);
-				scrollAnchor?.scrollIntoView();
+				addMessage(e.data);
 			},
 			onerror: (e) => {},
 		});
@@ -134,7 +127,7 @@
 			dialogOpen = true;
 		}
 		setTimeout(() => {
-			if (successful) goto('/');
+			// if (successful) goto('/');
 		}, POLL_TIME);
 	}
 	$: if (successful) {
@@ -150,34 +143,7 @@
 </section>
 <section class="deployment-steps">
 	<Stepper orientation="vertical" color="on-background" steps={componentSteps} />
-	<Box
-		element="pre"
-		on:scroll={() => {
-			console.log('scroll');
-		}}
-		ssx={{
-			$self: {
-				display: 'flex',
-				flexDirection: 'column',
-				backgroundColor: '#1E1E1E',
-				padding: '8px',
-				overflow: 'scroll',
-				height: '688px',
-				width: '751px',
-				'& .zarf-terminal-line': {
-					width: '100%',
-					margin: '0px',
-					padding: '0px',
-					'&:last-child': {
-						marginBottom: '0px',
-					},
-				},
-			},
-		}}
-		id="terminal"
-	>
-		<div class="scroll-anchor" />
-	</Box>
+	<AnsiDisplay width="100ch" bind:addMessage />
 </section>
 <Dialog open={dialogOpen}>
 	<section class="success-dialog" slot="content">
@@ -194,10 +160,10 @@
 <style>
 	.deployment-steps {
 		display: flex;
-		justify-content: space-between;
+		gap: 240px;
 	}
 	.deployment-steps > :global(.stepper) {
-		max-width: 244px;
+		width: 240px;
 	}
 	.success-dialog {
 		display: flex;
