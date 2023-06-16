@@ -34,7 +34,7 @@ func yamlFormat(attr color.Attribute) string {
 }
 
 // ColorPrintYAML pretty prints a yaml file to the console.
-func ColorPrintYAML(data any, comments map[string]string) {
+func ColorPrintYAML(data any, hints map[string]string) {
 	text, _ := goyaml.Marshal(data)
 	tokens := lexer.Tokenize(string(text))
 
@@ -78,7 +78,7 @@ func ColorPrintYAML(data any, comments map[string]string) {
 
 	colorizedYAML := p.PrintTokens(tokens)
 
-	for key, value := range comments {
+	for key, value := range hints {
 		colorizedYAML = strings.Replace(colorizedYAML, key, value, 1)
 	}
 
