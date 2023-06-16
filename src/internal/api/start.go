@@ -86,9 +86,6 @@ func LaunchAPIServer() {
 		})
 
 		r.Route("/packages", func(r chi.Router) {
-			r.Get("/find", packages.Find)
-			r.Get("/find-in-home", packages.FindInHome)
-			r.Get("/find-init", packages.FindInitPackage)
 			r.Get("/read/{path}", packages.Read)
 			r.Get("/list", packages.ListDeployedPackages)
 			r.Put("/deploy", packages.DeployPackage)
@@ -97,13 +94,17 @@ func LaunchAPIServer() {
 			r.Put("/{pkg}/connect/{name}", packages.ConnectTunnel)
 			r.Delete("/{pkg}/disconnect/{name}", packages.DisconnectTunnel)
 			r.Get("/{pkg}/connections", packages.ListPackageConnections)
+			r.Get("/{pkg}/components/deployed", components.ListDeployedComponents)
 			r.Get("/connections", packages.ListConnections)
 			r.Get("/sbom/{path}", packages.ExtractSBOM)
 			r.Delete("/sbom", packages.DeleteSBOM)
-		})
-
-		r.Route("/components", func(r chi.Router) {
-			r.Get("/deployed", components.ListDeployingComponents)
+			r.Route("/find", func(r chi.Router) {
+				r.Route("/stream", func(r chi.Router) {
+					r.Get("/", packages.FindPackageStream)
+					r.Get("/init", packages.FindInitStream)
+					r.Get("/home", packages.FindInHomeStream)
+				})
+			})
 		})
 	})
 

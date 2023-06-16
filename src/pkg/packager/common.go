@@ -5,9 +5,9 @@
 package packager
 
 import (
-	"bufio"
 	"crypto"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -24,6 +24,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
@@ -32,6 +33,7 @@ import (
 type Packager struct {
 	cfg      *types.PackagerConfig
 	cluster  *cluster.Cluster
+	remote   *oci.OrasRemote
 	tmp      types.TempPaths
 	arch     string
 	warnings []string
@@ -43,8 +45,6 @@ New creates a new package instance with the provided config.
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
 func New(cfg *types.PackagerConfig) (*Packager, error) {
-	message.Debugf("packager.New(%s)", message.JSONValue(cfg))
-
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
 	}
@@ -224,7 +224,7 @@ func createPaths(base string) (paths types.TempPaths, err error) {
 		InjectBinary: filepath.Join(basePath, "zarf-injector"),
 		SeedImages:   filepath.Join(basePath, "seed-images"),
 		Images:       filepath.Join(basePath, "images"),
-		Components:   filepath.Join(basePath, "components"),
+		Components:   filepath.Join(basePath, config.ZarfComponentsDir),
 		SbomTar:      filepath.Join(basePath, config.ZarfSBOMTar),
 		Sboms:        filepath.Join(basePath, "sboms"),
 		Checksums:    filepath.Join(basePath, config.ZarfChecksumsTxt),
@@ -237,7 +237,11 @@ func createPaths(base string) (paths types.TempPaths, err error) {
 
 func getRequestedComponentList(requestedComponents string) []string {
 	if requestedComponents != "" {
-		return strings.Split(requestedComponents, ",")
+		split := strings.Split(requestedComponents, ",")
+		for idx, component := range split {
+			split[idx] = strings.ToLower(strings.TrimSpace(component))
+		}
+		return split
 	}
 
 	return []string{}
@@ -248,6 +252,8 @@ func (p *Packager) loadZarfPkg() error {
 	if err := p.handlePackagePath(); err != nil {
 		return fmt.Errorf("unable to handle the provided package path: %w", err)
 	}
+
+	extractedToTmp := p.cfg.DeployOpts.PackagePath == p.tmp.Base
 
 	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
 	defer spinner.Stop()
@@ -263,7 +269,7 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// If the package was pulled from OCI, there is no need to extract it since it is unpacked already
-	if p.cfg.DeployOpts.PackagePath != p.tmp.Base {
+	if !extractedToTmp {
 		// Extract the archive
 		spinner.Updatef("Extracting the package, this may take a few moments")
 		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
@@ -272,15 +278,16 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// Load the config from the extracted archive zarf.yaml
-	spinner.Updatef("Loading the zarf package config")
+	spinner.Updatef("Loading the Zarf package config")
 	configPath := p.tmp.ZarfYaml
 	if err := p.readYaml(configPath); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	}
 
 	// Validate the checksums of all the things!!!
-	if p.cfg.Pkg.Metadata.AggregateChecksum != "" {
-		if err := p.validatePackageChecksums(); err != nil {
+	// validation is skipped here if the package is from OCI as the checksums are validated after the pull
+	if !extractedToTmp {
+		if err := utils.ValidatePackageChecksums(p.tmp.Base, nil); err != nil {
 			return fmt.Errorf("unable to validate the package checksums: %w", err)
 		}
 	}
@@ -421,81 +428,6 @@ func (p *Packager) handleIfPartialPkg() error {
 	return nil
 }
 
-func (p *Packager) validatePackageChecksums() error {
-
-	// Run pre-checks to make sure we have what we need to validate the checksums
-	_, err := os.Stat(p.tmp.Checksums)
-	if err != nil {
-		return fmt.Errorf("unable to validate checksums as we are unable to find checksums.txt file within the package")
-	}
-	if p.cfg.Pkg.Metadata.AggregateChecksum == "" {
-		return fmt.Errorf("unable to validate checksums because of missing metadata checksum signature")
-	}
-
-	// Create a map of all the files in the package so we can track which files we have processed
-	filepathMap := make(map[string]bool)
-	err = filepath.Walk(p.tmp.Base, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			filepathMap[path] = false
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	// Verify the that checksums.txt file matches the aggregated checksum provided
-	actualAggregateChecksum, err := utils.GetSHA256OfFile(p.tmp.Checksums)
-	if err != nil {
-		return fmt.Errorf("unable to get the checksum of the checksums.txt file: %w", err)
-	}
-	if actualAggregateChecksum != p.cfg.Pkg.Metadata.AggregateChecksum {
-		return fmt.Errorf("mismatch on the checksum of the checksums.txt file, the checksums.txt file might have been tampered with")
-	}
-
-	// Check off all the files that we can trust given the checksum and signing checks
-	filepathMap[p.tmp.Checksums] = true
-	filepathMap[p.tmp.ZarfYaml] = true
-	filepathMap[p.tmp.ZarfSig] = true
-
-	// Load the contents of the checksums file
-	checksumsFile, err := os.Open(filepath.Join(p.tmp.Base, config.ZarfChecksumsTxt))
-	if err != nil {
-		return err
-	}
-	defer checksumsFile.Close()
-
-	/* Process every line in the checksums file */
-	scanner := bufio.NewScanner(checksumsFile)
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		// Separate the checksum from the file path
-		strs := strings.Split(scanner.Text(), " ")
-		itemPath := strs[1]
-		expectedShasum := strs[0]
-
-		actualShasum, err := utils.GetSHA256OfFile(filepath.Join(p.tmp.Base, itemPath))
-		if err != nil {
-			return err
-		}
-
-		if expectedShasum != actualShasum {
-			return fmt.Errorf("mismatch on the checksum of the %s file (expected: %s, actual: %s)", itemPath, expectedShasum, actualShasum)
-		}
-
-		filepathMap[filepath.Join(p.tmp.Base, itemPath)] = true
-	}
-
-	for path, processed := range filepathMap {
-		if !processed {
-			return fmt.Errorf("the file %s was present in the Zarf package but not specified in the checksums.txt, the package might have been tampered with", path)
-		}
-	}
-
-	message.Successf("All of the checksums matched!")
-	return nil
-}
-
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() error {
 	// Ignore this check if the architecture is explicitly "multi"
@@ -517,28 +449,31 @@ func (p *Packager) validatePackageArchitecture() error {
 	return nil
 }
 
+var (
+	// ErrPkgKeyButNoSig is returned when a key was provided but the package is not signed
+	ErrPkgKeyButNoSig = errors.New("a key was provided but the package is not signed - remove the --key flag and run the command again")
+	// ErrPkgSigButNoKey is returned when a package is signed but no key was provided
+	ErrPkgSigButNoKey = errors.New("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
+)
+
 func (p *Packager) validatePackageSignature(publicKeyPath string) error {
 
-	// If the insecure flag was provided, ignore the signature validation
-	if config.CommonOptions.Insecure {
+	// If the insecure flag was provided, or there is no aggregate checksum, ignore the signature validation
+	if config.CommonOptions.Insecure || p.cfg.Pkg.Metadata.AggregateChecksum == "" {
 		return nil
 	}
 
 	// Handle situations where there is no signature within the package
-	_, sigCheckErr := os.Stat(p.tmp.ZarfSig)
-	if sigCheckErr != nil {
+	sigExist := !utils.InvalidPath(p.tmp.ZarfSig)
+	if !sigExist && publicKeyPath == "" {
 		// Nobody was expecting a signature, so we can just return
-		if publicKeyPath == "" {
-			return nil
-		}
-
-		// We were expecting a signature, but there wasn't one..
-		return fmt.Errorf("package is not signed but a key was provided")
-	}
-
-	// Validate the signature of the package
-	if publicKeyPath == "" {
-		return fmt.Errorf("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
+		return nil
+	} else if sigExist && publicKeyPath == "" {
+		// The package is signed but no key was provided
+		return ErrPkgSigButNoKey
+	} else if !sigExist && publicKeyPath != "" {
+		// A key was provided but there is no signature
+		return ErrPkgKeyButNoSig
 	}
 
 	// Validate the signature with the key we were provided
@@ -602,4 +537,75 @@ func (p *Packager) archiveComponent(component types.ZarfComponent) error {
 		message.Debugf("Component %s is empty, skipping archiving", component.Name)
 	}
 	return os.RemoveAll(componentPath)
+}
+
+func (p *Packager) archivePackage(sourceDir string, destinationTarball string) error {
+	spinner := message.NewProgressSpinner("Writing %s to %s", sourceDir, destinationTarball)
+	defer spinner.Stop()
+	// Make the archive
+	archiveSrc := []string{sourceDir + string(os.PathSeparator)}
+	if err := archiver.Archive(archiveSrc, destinationTarball); err != nil {
+		return fmt.Errorf("unable to create package: %w", err)
+	}
+	spinner.Updatef("Wrote %s to %s", sourceDir, destinationTarball)
+
+	f, err := os.Stat(destinationTarball)
+	if err != nil {
+		return fmt.Errorf("unable to read the package archive: %w", err)
+	}
+
+	// Convert Megabytes to bytes.
+	chunkSize := p.cfg.CreateOpts.MaxPackageSizeMB * 1000 * 1000
+
+	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
+	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && f.Size() > int64(chunkSize) {
+		spinner.Updatef("Package is larger than %dMB, splitting into multiple files", p.cfg.CreateOpts.MaxPackageSizeMB)
+		chunks, sha256sum, err := utils.SplitFile(destinationTarball, chunkSize)
+		if err != nil {
+			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
+		}
+		if len(chunks) > 999 {
+			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
+		}
+
+		status := fmt.Sprintf("Package split into %d files, original sha256sum is %s", len(chunks)+1, sha256sum)
+		spinner.Updatef(status)
+		message.Debug(status)
+		_ = os.RemoveAll(destinationTarball)
+
+		// Marshal the data into a json file.
+		jsonData, err := json.Marshal(types.ZarfPartialPackageData{
+			Count:     len(chunks),
+			Bytes:     f.Size(),
+			Sha256Sum: sha256sum,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to marshal the partial package data: %w", err)
+		}
+
+		// Prepend the json data to the first chunk.
+		chunks = append([][]byte{jsonData}, chunks...)
+
+		for idx, chunk := range chunks {
+			path := fmt.Sprintf("%s.part%03d", destinationTarball, idx)
+			status := fmt.Sprintf("Writing %s", path)
+			spinner.Updatef(status)
+			message.Debug(status)
+			if err := os.WriteFile(path, chunk, 0644); err != nil {
+				return fmt.Errorf("unable to write the file %s: %w", path, err)
+			}
+		}
+	}
+	spinner.Successf("Package tarball successfully written")
+	return nil
+}
+
+// SetOCIRemote sets the remote OCI client for the package.
+func (p *Packager) SetOCIRemote(url string) error {
+	remote, err := oci.NewOrasRemote(url)
+	if err != nil {
+		return err
+	}
+	p.remote = remote
+	return nil
 }

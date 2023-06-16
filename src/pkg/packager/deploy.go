@@ -40,6 +40,13 @@ var (
 func (p *Packager) Deploy() error {
 	message.Debug("packager.Deploy()")
 
+	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
+		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)
+		if err != nil {
+			return err
+		}
+	}
+
 	if err := p.loadZarfPkg(); err != nil {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
@@ -100,7 +107,6 @@ func (p *Packager) Deploy() error {
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
 	componentsToDeploy := p.getValidComponents()
-	config.SetDeployingComponents(deployedComponents)
 
 	// Generate a value template
 	if valueTemplate, err = template.Generate(p.cfg); err != nil {
@@ -132,7 +138,6 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Deploy the component
 		deployedComponent.InstalledCharts = charts
 		deployedComponents = append(deployedComponents, deployedComponent)
-		config.SetDeployingComponents(deployedComponents)
 
 		// Save deployed package information to k8s
 		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
@@ -149,7 +154,6 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		}
 	}
 
-	config.ClearDeployingComponents()
 	return deployedComponents, nil
 }
 
@@ -317,7 +321,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 
 		fileList := []string{}
 		if utils.IsDir(fileLocation) {
-			files, _ := utils.RecursiveFileList(fileLocation, nil, false, true)
+			files, _ := utils.RecursiveFileList(fileLocation, nil, false)
 			fileList = append(fileList, files...)
 		} else {
 			fileList = append(fileList, fileLocation)

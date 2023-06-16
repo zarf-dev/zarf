@@ -17,6 +17,7 @@ import "errors"
 const (
 	ErrLoadingConfig       = "failed to load config: %w"
 	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
+	ErrLoadPackageSecret   = "Failed to load %s's secret from the Kubernetes cluster"
 	ErrMarshal             = "failed to marshal file: %w"
 	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
 	ErrTunnelFailed        = "Failed to create a tunnel to the Kubernetes cluster."
@@ -184,7 +185,8 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdInternalIsValidHostnameShort = "Checks if the current machine's hostname is RFC1123 compliant"
 
 	// zarf package
-	CmdPackageShort = "Zarf package commands for creating, deploying, and inspecting packages"
+	CmdPackageShort           = "Zarf package commands for creating, deploying, and inspecting packages"
+	CmdPackageFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
 
 	CmdPackageCreateShort = "Use to create a Zarf package from a given directory or the current directory"
 	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the active directory.\n" +
@@ -209,7 +211,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 
 	CmdPackageCreateFlagConfirm            = "Confirm package creation without prompting"
 	CmdPackageCreateFlagSet                = "Specify package variables to set on the command line (KEY=value)"
-	CmdPackageCreateFlagOutputDirectory    = "Specify the output directory for the created Zarf package"
+	CmdPackageCreateFlagOutput             = "Specify the output (either a directory or an oci:// URL) for the created Zarf package"
 	CmdPackageCreateFlagSbom               = "View SBOM contents after creating the package"
 	CmdPackageCreateFlagSbomOut            = "Specify an output directory for the SBOMs from the created Zarf package"
 	CmdPackageCreateFlagSkipSbom           = "Skip generating SBOM for this package"
@@ -236,11 +238,11 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
 
-	CmdPackagePublishFlagConcurrency        = "Number of concurrent layer operations to perform when interacting with a remote package."
 	CmdPackagePublishFlagSigningKey         = "Path to private key file for signing packages"
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
 
-	CmdPackagePullPublicKey = "Path to public key file for validating signed packages"
+	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
+	CmdPackagePullFlagPublicKey       = "Path to public key file for validating signed packages"
 
 	// zarf bundle
 	CmdBundleShort = "Zarf commands for creating, deploying, removing, pulling, and inspecting bundles"
@@ -291,7 +293,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdToolsArchiverCompressShort   = "Compress a collection of sources based off of the destination file extension."
 	CmdToolsArchiverCompressErr     = "Unable to perform compression"
 	CmdToolsArchiverDecompressShort = "Decompress an archive or Zarf package based off of the source file extension."
-	CmdToolsArchiverDecompressErr   = "Unable to perform decompression"
+	CmdToolsArchiverDecompressErr   = "Unable to perform decompression: %s"
 	CmdToolsArchiverUnarchiveAllErr = "Unable to unarchive all nested tarballs"
 
 	CmdToolsRegistryShort = "Tools for working with container registries using go-containertools."
