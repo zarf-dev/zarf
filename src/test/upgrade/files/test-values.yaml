@@ -7,4 +7,4 @@ resources:
     cpu: 1m
     memory: 16Mi
     # Add some ephemeral storage for data injections
-    ephemeral-storage: "16Mi"
+    ephemeral-storage: 16Mi
