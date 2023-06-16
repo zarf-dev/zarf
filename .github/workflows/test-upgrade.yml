@@ -47,7 +47,7 @@ jobs:
           sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server,logging --confirm
           sudo chown $USER /tmp/zarf-*.log
 
-      - name: Create the upgrade test packages
+      - name: Create and deploy the upgrade test packages
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
         # chown the logs since they were originally created as root
@@ -55,6 +55,8 @@ jobs:
           zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.3 --confirm
           zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.4 --confirm
           sudo env "PATH=$PATH" CI=true zarf package deploy zarf-package-test-upgrade-package-amd64-6.3.3.tar.zst --confirm
+          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe deployments -n=podinfo-upgrade
+          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
           sudo chown $USER /tmp/zarf-*.log
 
       - name: Build PR binary and zarf packages
@@ -73,6 +75,8 @@ jobs:
         #       in a previous step. This test run will the current release to create a K3s cluster.
         # chown the logs since they were originally created as root
         run: |
+          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe deployments -n=podinfo-upgrade
+          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
           sudo env "PATH=$PATH" CI=true make test-upgrade ARCH=amd64
           sudo chown $USER /tmp/zarf-*.log
 

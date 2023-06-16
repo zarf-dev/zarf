@@ -164,7 +164,7 @@ var packageRemoveCmd = &cobra.Command{
 		pkgName := args[0]
 
 		// If the user input is a path to a package, extract the name from the package
-		isTarball := regexp.MustCompile(`.*zarf-package-.*\.tar\.zst$`).MatchString
+		isTarball := regexp.MustCompile(`.*zarf-package-.*\.tar(\.zst)?$`).MatchString
 		if isTarball(pkgName) {
 			if utils.InvalidPath(pkgName) {
 				message.Fatalf(nil, lang.CmdPackageRemoveTarballErr)
