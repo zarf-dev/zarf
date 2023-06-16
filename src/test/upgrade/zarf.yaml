@@ -14,7 +14,7 @@ components:
         namespace: podinfo-upgrade
         url: oci://ghcr.io/stefanprodan/charts/podinfo
         valuesFiles:
-          - files/data-injection-values.yaml
+          - files/test-values.yaml
     manifests:
       - name: connect-service
         namespace: podinfo-upgrade
