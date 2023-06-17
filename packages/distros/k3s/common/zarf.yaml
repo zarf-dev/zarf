@@ -31,7 +31,7 @@ components:
           # Configure K3s systemd service
           - cmd: systemctl daemon-reload
           - cmd: systemctl enable k3s
-          - cmd: systemctl start k3s
+          - cmd: systemctl restart k3s
     files:
       # K3s removal script
       - source: zarf-clean-k3s.sh
