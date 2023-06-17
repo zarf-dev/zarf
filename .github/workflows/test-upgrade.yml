@@ -75,6 +75,7 @@ jobs:
           sudo rm -rf zarf-sbom /tmp/zarf-*/
           sudo env "PATH=$PATH" CI=true make delete-packages
           sudo build/zarf tools clear-cache
+          sudo env "PATH=$PATH" CI=true zarf tools kubectl taint nodes --all node.kubernetes.io/disk-pressure:NoSchedule- || exit 0
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe deployments -n=podinfo-upgrade
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
 
