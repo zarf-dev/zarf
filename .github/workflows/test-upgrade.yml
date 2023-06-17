@@ -72,12 +72,16 @@ jobs:
       - name: "Cleanup after running tests"
         # NOTE: This reduces disk pressure before the upgrade-specific tests begin
         run: |
+          sudo lsblk -f
+          sudo k3s crictl images
+          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe nodes
+          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe deployments -n=podinfo-upgrade
+          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
+
+          sudo k3s crictl rmi --prune
           sudo rm -rf zarf-sbom /tmp/zarf-*/
           sudo env "PATH=$PATH" CI=true make delete-packages
           sudo build/zarf tools clear-cache
-          sudo env "PATH=$PATH" CI=true zarf tools kubectl taint nodes --all node.kubernetes.io/disk-pressure:NoSchedule- || exit 0
-          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe deployments -n=podinfo-upgrade
-          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
 
       - name: Run the upgrade tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
