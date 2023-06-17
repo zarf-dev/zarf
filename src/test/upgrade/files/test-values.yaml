@@ -3,7 +3,7 @@ podAnnotations:
 
 tolerations:
   - key: node.kubernetes.io/disk-pressure
-    effect: NoExecute
+    effect: NoSchedule
 
 resources:
   limits:
