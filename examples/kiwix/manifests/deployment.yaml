@@ -58,8 +58,6 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
-              initialDelaySeconds: 1
-              periodSeconds: 1
           readinessProbe:
             httpGet:
               path: /
