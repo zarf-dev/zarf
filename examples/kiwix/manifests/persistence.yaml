@@ -3,8 +3,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: kiwix-data
 spec:
-  # Use the configured storage class as defined on `zarf init`` in Zarf State
-  storageClassName: "###ZARF_STORAGE_CLASS###"
   accessModes:
     - ReadWriteOnce
   resources:
