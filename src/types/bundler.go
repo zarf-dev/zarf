@@ -7,36 +7,48 @@ package types
 // BundlerConfig is the main struct that the bundler uses to hold high-level options.
 type BundlerConfig struct {
 	// CreateOpts tracks the user-defined options used to create the package
-	CreateOpts ZarfCreateOptions
+	CreateOpts BundlerCreateOptions
 
 	// DeployOpts tracks user-defined values for the active deployment
-	// for a bundle, this is a combination of the deploy and init options
-	// since a bundle can contain both.
 	DeployOpts BundlerDeployOptions
 
 	// PullOpts tracks user-defined options used to pull packages
-	PullOpts ZarfPullOptions
+	PullOpts BundlerPullOptions
 
-	// Track if CLI prompts should be generated
-	IsInteractive bool
+	InspectOpts BundlerInspectOptions
+
+	RemoveOpts BundlerRemoveOptions
 
 	// The bundle data
 	Bndl ZarfBundle
-
-	// The original source of the bundle
-	BndlSource string
 
 	// The active zarf state
 	State ZarfState
 
 	// Variables set by the user
 	SetVariableMap map[string]*ZarfSetVariable
+}
 
-	// SBOM file paths in the bundle
-	SBOMViewFiles []string
+type BundlerCreateOptions struct {
+	SourceDirectory string
+	SetVariables    map[string]string
 }
 
 type BundlerDeployOptions struct {
-	ZarfDeployOptions
-	ZarfInitOptions
+	Source       string
+	SetVariables map[string]string
+}
+
+type BundlerInspectOptions struct {
+	Source string
+}
+
+type BundlerPullOptions struct {
+	Source          string
+	OutputDirectory string
+	Packages        []string
+}
+
+type BundlerRemoveOptions struct {
+	Source string
 }

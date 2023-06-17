@@ -4,6 +4,11 @@
 // Package bundler contains functions for interacting with, managing and deploying Zarf bundles.
 package bundler
 
-func (b *Bundler) Remove(name string) error {
+// Remove should do the same as previous code
+//
+// really this is prob just gonna loop over the packages and call `p.Remove()`
+//
+// should this support some form of `--components`?
+func (b *Bundler) Remove() error {
 	return nil
 }

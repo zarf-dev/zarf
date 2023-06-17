@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -45,6 +46,11 @@ func (bfs *BundlerFS) SetPaths(base string) {
 func (bfs *BundlerFS) ClearPaths() {
 	_ = os.RemoveAll(bfs.tmp.Base)
 	_ = os.RemoveAll(config.ZarfSBOMDir)
+}
+
+func (bfs *BundlerFS) ExtractPackage(name string) error {
+	message.Infof("Extracting %s to %s", name, bfs.tmp.Base)
+	return nil
 }
 
 func (bfs *BundlerFS) Error(err error) error {

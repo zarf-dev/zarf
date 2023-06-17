@@ -21,9 +21,6 @@ type PackagerConfig struct {
 	// PullOpts tracks user-defined options used to pull packages
 	PullOpts ZarfPullOptions
 
-	// Track if CLI prompts should be generated
-	IsInteractive bool
-
 	// Track if the package is an init package
 	IsInitConfig bool
 

@@ -89,7 +89,7 @@ var prepareComputeFileSha256sum = &cobra.Command{
 var prepareFindImages = &cobra.Command{
 	Use:     "find-images [PACKAGE]",
 	Aliases: []string{"f"},
-	Args:    cobra.MaximumNArgs(1),
+	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdPrepareFindImagesShort,
 	Long:    lang.CmdPrepareFindImagesLong,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -136,8 +136,6 @@ var prepareGenerateConfigFile = &cobra.Command{
 }
 
 func init() {
-	initViper()
-
 	rootCmd.AddCommand(prepareCmd)
 	prepareCmd.AddCommand(prepareTransformGitLinks)
 	prepareCmd.AddCommand(prepareComputeFileSha256sum)

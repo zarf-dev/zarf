@@ -22,8 +22,7 @@ import (
 
 // DeployPackage deploys a package to the Zarf cluster.
 func DeployPackage(w http.ResponseWriter, r *http.Request) {
-	config := types.PackagerConfig{}
-	config.IsInteractive = false
+	cfg := types.PackagerConfig{}
 
 	var body types.APIZarfDeployPayload
 
@@ -34,13 +33,13 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if body.InitOpts != nil {
-		config.InitOpts = *body.InitOpts
+		cfg.InitOpts = *body.InitOpts
 	}
-	config.DeployOpts = body.DeployOpts
+	cfg.DeployOpts = body.DeployOpts
 
 	globalConfig.CommonOptions.Confirm = true
 
-	pkgClient := packager.NewOrDie(&config)
+	pkgClient := packager.NewOrDie(&cfg)
 	defer pkgClient.ClearTempPaths()
 
 	if err := pkgClient.Deploy(); err != nil {

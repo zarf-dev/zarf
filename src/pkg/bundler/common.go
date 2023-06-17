@@ -6,10 +6,13 @@ package bundler
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -17,6 +20,7 @@ type Bundler struct {
 	p   packager.Packager
 	cfg *types.BundlerConfig
 	fs  BundlerFS
+	cp  oci.Copier
 }
 
 func New(cfg *types.BundlerConfig) (*Bundler, error) {
@@ -50,7 +54,20 @@ func NewOrDie(cfg *types.BundlerConfig) *Bundler {
 		bundler *Bundler
 	)
 	if bundler, err = New(cfg); err != nil {
-		message.Fatalf(err, "Unable to setup the bundler config: %s", err.Error())
+		message.Fatalf(err, ErrBundlerNewOrDie, err)
 	}
 	return bundler
+}
+
+func (b *Bundler) ClearPaths() {
+	b.fs.ClearPaths()
+}
+
+func MergeVariables(left map[string]string, right map[string]string) map[string]string {
+	// Ensure uppercase keys from viper and CLI --set
+	leftUpper := utils.TransformMapKeys(left, strings.ToUpper)
+	rightUpper := utils.TransformMapKeys(right, strings.ToUpper)
+
+	// Merge the viper config file variables and provided CLI flag variables (CLI takes precedence))
+	return utils.MergeMap(leftUpper, rightUpper)
 }

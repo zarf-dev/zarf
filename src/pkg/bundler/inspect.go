@@ -6,9 +6,9 @@ package bundler
 
 // Inspect should do the sme as previous code
 //
-// : retrieve the `zarf.yaml`, `checksum.txt`, and `zarf.yaml.sig`
+// : retrieve the `zarf-bundle.yaml`, `checksum.txt`, and `zarf.yaml.sig`
 // : verify sigs / checksums
-// : show the `zarf.yaml`
+// : show the `zarf-bundle.yaml`
 // : have an option to download + persist the SBOMs
 func (b *Bundler) Inspect(inspectPublicKey string) error {
 	return nil

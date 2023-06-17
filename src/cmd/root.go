@@ -49,7 +49,7 @@ var rootCmd = &cobra.Command{
 	},
 	Short: lang.RootCmdShort,
 	Long:  lang.RootCmdLong,
-	Args:  cobra.MaximumNArgs(1),
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
@@ -80,7 +80,7 @@ func init() {
 		return
 	}
 
-	initViper()
+	cobra.OnInitialize(initViper)
 
 	v.SetDefault(V_LOG_LEVEL, "info")
 	v.SetDefault(V_ARCHITECTURE, "")
