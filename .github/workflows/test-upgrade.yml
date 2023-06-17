@@ -83,6 +83,9 @@ jobs:
           sudo env "PATH=$PATH" CI=true make delete-packages
           sudo build/zarf tools clear-cache
 
+          sudo lsblk -f
+          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe nodes
+
       - name: Run the upgrade tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
