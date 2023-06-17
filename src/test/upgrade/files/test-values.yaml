@@ -1,6 +1,10 @@
 podAnnotations:
   zarf.dev/dataInjections: ###ZARF_DATA_INJECTION_MARKER###
 
+tolerations:
+  - key: node.kubernetes.io/disk-pressure
+    effect: NoExecute
+
 resources:
   limits:
   requests:
