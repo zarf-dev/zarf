@@ -38,11 +38,9 @@ var bundleCreateCmd = &cobra.Command{
 
 		bndlConfig.CreateOpts.SetVariables = bundler.MergeVariables(v.GetStringMapString(V_PKG_CREATE_SET), bndlConfig.CreateOpts.SetVariables)
 
-		// Configure the bundler
 		bndlClient := bundler.NewOrDie(&bndlConfig)
 		defer bndlClient.ClearPaths()
 
-		// Create the bundle
 		if err := bndlClient.Create(); err != nil {
 			message.Fatalf(err, "Failed to create bundle: %s", err.Error())
 		}
@@ -66,11 +64,9 @@ var bundleDeployCmd = &cobra.Command{
 
 		bndlConfig.DeployOpts.SetVariables = bundler.MergeVariables(v.GetStringMapString(V_PKG_DEPLOY_SET), bndlConfig.DeployOpts.SetVariables)
 
-		// Configure the bundler
 		bndlClient := bundler.NewOrDie(&bndlConfig)
 		defer bndlClient.ClearPaths()
 
-		// Deploy the bundle
 		if err := bndlClient.Deploy(); err != nil {
 			message.Fatalf(err, "Failed to deploy bundle: %s", err.Error())
 		}
@@ -92,11 +88,9 @@ var bundleInspectCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		bndlConfig.InspectOpts.Source = args[0]
 
-		// Configure the bundler
 		bndlClient := bundler.NewOrDie(&bndlConfig)
 		defer bndlClient.ClearPaths()
 
-		// Inspect the bundle
 		if err := bndlClient.Inspect(inspectPublicKey); err != nil {
 			message.Fatalf(err, "Failed to inspect bundle: %s", err.Error())
 		}
@@ -117,7 +111,6 @@ var bundleRemoveCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		bndlConfig.RemoveOpts.Source = args[0]
 
-		// Configure the bundler
 		bndlClient := bundler.NewOrDie(&bndlConfig)
 		defer bndlClient.ClearPaths()
 
@@ -141,11 +134,9 @@ var bundlePullCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		bndlConfig.PullOpts.Source = args[0]
 
-		// Configure the bundler
 		bndlClient := bundler.NewOrDie(&bndlConfig)
 		defer bndlClient.ClearPaths()
 
-		// Pull the bundle
 		if err := bndlClient.Pull(); err != nil {
 			message.Fatalf(err, "Failed to pull bundle: %s", err.Error())
 		}
@@ -153,6 +144,7 @@ var bundlePullCmd = &cobra.Command{
 }
 
 func init() {
+	initViper()
 	rootCmd.AddCommand(bundleCmd)
 	bundleCmd.AddCommand(bundleCreateCmd)
 	bundleCmd.AddCommand(bundleDeployCmd)

@@ -289,6 +289,7 @@ func choosePackage(args []string) string {
 }
 
 func init() {
+	initViper()
 	rootCmd.AddCommand(packageCmd)
 	packageCmd.AddCommand(packageCreateCmd)
 	packageCmd.AddCommand(packageDeployCmd)

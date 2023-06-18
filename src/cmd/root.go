@@ -80,7 +80,7 @@ func init() {
 		return
 	}
 
-	cobra.OnInitialize(initViper)
+	initViper()
 
 	v.SetDefault(V_LOG_LEVEL, "info")
 	v.SetDefault(V_ARCHITECTURE, "")

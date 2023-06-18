@@ -136,6 +136,7 @@ var prepareGenerateConfigFile = &cobra.Command{
 }
 
 func init() {
+	initViper()
 	rootCmd.AddCommand(prepareCmd)
 	prepareCmd.AddCommand(prepareTransformGitLinks)
 	prepareCmd.AddCommand(prepareComputeFileSha256sum)
