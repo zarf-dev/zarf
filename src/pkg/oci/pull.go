@@ -22,8 +22,10 @@ import (
 )
 
 var (
-	// AlwaysPull is a list of paths that will always be pulled from the remote repository.
-	AlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
+	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
+	PackageAlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
+	// BundleAlwaysPull is a list of paths that will always be pulled from the remote repository.
+	BundleAlwaysPull = []string{config.ZarfBundleYAML, config.ZarfYAMLSignature}
 )
 
 // LayersFromPaths returns the descriptors for the given paths from the root manifest.
@@ -134,7 +136,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 
 	estimatedBytes := int64(0)
 	if isPartialPull {
-		for _, path := range AlwaysPull {
+		for _, path := range PackageAlwaysPull {
 			desc := manifest.Locate(path)
 			layersToPull = append(layersToPull, desc)
 		}
@@ -220,7 +222,7 @@ func (o *OrasRemote) PullPackageMetadata(destinationDir string) error {
 	if err != nil {
 		return err
 	}
-	for _, path := range AlwaysPull {
+	for _, path := range PackageAlwaysPull {
 		desc := root.Locate(path)
 		if !o.isEmptyDescriptor(desc) {
 			err = o.PullLayer(desc, destinationDir)
@@ -229,10 +231,23 @@ func (o *OrasRemote) PullPackageMetadata(destinationDir string) error {
 			}
 		}
 	}
-	var pkg types.ZarfPackage
-	err = utils.ReadYaml(filepath.Join(destinationDir, config.ZarfYAML), &pkg)
+	return utils.ValidatePackageChecksums(destinationDir, PackageAlwaysPull)
+}
+
+// PullBundleMetadata pulls the bundle metadata from the remote repository and saves it to `destinationDir`.
+func (o *OrasRemote) PullBundleMetadata(destinationDir string) error {
+	root, err := o.FetchRoot()
 	if err != nil {
 		return err
 	}
-	return utils.ValidatePackageChecksums(destinationDir, AlwaysPull)
+	for _, path := range PackageAlwaysPull {
+		desc := root.Locate(path)
+		if !o.isEmptyDescriptor(desc) {
+			err = o.PullLayer(desc, destinationDir)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

@@ -91,7 +91,7 @@ var bundleInspectCmd = &cobra.Command{
 		bndlClient := bundler.NewOrDie(&bndlConfig)
 		defer bndlClient.ClearPaths()
 
-		if err := bndlClient.Inspect(inspectPublicKey); err != nil {
+		if err := bndlClient.Inspect(); err != nil {
 			message.Fatalf(err, "Failed to inspect bundle: %s", err.Error())
 		}
 	},
