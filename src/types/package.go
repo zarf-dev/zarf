@@ -4,6 +4,7 @@
 // Package types contains all the types used by Zarf.
 package types
 
+// ZarfPackageKind is an enum of the different kinds of Zarf packages.
 type ZarfPackageKind string
 
 const (

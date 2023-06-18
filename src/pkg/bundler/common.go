@@ -12,20 +12,21 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// Bundler handles bundler operations
 type Bundler struct {
-	pkgr   packager.Packager
+	// pkgr   packager.Packager
 	cfg    *types.BundlerConfig
 	bundle types.ZarfBundle
 	remote *oci.OrasRemote
-	fs     BundlerFS
-	copier oci.Copier
+	fs     BFS
+	// copier oci.Copier
 }
 
+// New creates a new Bundler
 func New(cfg *types.BundlerConfig) (*Bundler, error) {
 	message.Debugf("bundler.New(%s)", message.JSONValue(cfg))
 
@@ -51,21 +52,24 @@ func New(cfg *types.BundlerConfig) (*Bundler, error) {
 	return bundler, nil
 }
 
+// NewOrDie creates a new Bundler or dies
 func NewOrDie(cfg *types.BundlerConfig) *Bundler {
 	var (
 		err     error
 		bundler *Bundler
 	)
 	if bundler, err = New(cfg); err != nil {
-		message.Fatalf(err, "bundler unable to setup, bad config: %w", err)
+		message.Fatalf(err, "bundler unable to setup, bad config: %s", err.Error())
 	}
 	return bundler
 }
 
+// ClearPaths clears out the paths used by Bundler
 func (b *Bundler) ClearPaths() {
 	b.fs.ClearPaths()
 }
 
+// ValidateBundle validates the bundle
 func (b *Bundler) ValidateBundle() error {
 	if b.bundle.Metadata.Version == "" {
 		return fmt.Errorf("zarf-bundle.yaml is missing required field: metadata.version")
@@ -117,6 +121,7 @@ func (b *Bundler) ValidateBundle() error {
 	return nil
 }
 
+// MergeVariables merges the variables from the config file and the CLI
 func MergeVariables(left map[string]string, right map[string]string) map[string]string {
 	// Ensure uppercase keys from viper and CLI --set
 	leftUpper := utils.TransformMapKeys(left, strings.ToUpper)

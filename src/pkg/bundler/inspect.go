@@ -10,6 +10,6 @@ package bundler
 // : verify sigs / checksums
 // : show the `zarf-bundle.yaml`
 // : have an option to download + persist the SBOMs
-func (b *Bundler) Inspect(inspectPublicKey string) error {
+func (b *Bundler) Inspect() error {
 	return nil
 }

@@ -29,6 +29,7 @@ type BundlerConfig struct {
 	SetVariableMap map[string]*ZarfSetVariable
 }
 
+// BundlerCreateOptions is the options for the bundler.Create() function
 type BundlerCreateOptions struct {
 	SourceDirectory    string
 	Output             string
@@ -37,21 +38,25 @@ type BundlerCreateOptions struct {
 	SetVariables       map[string]string
 }
 
+// BundlerDeployOptions is the options for the bundler.Deploy() function
 type BundlerDeployOptions struct {
 	Source       string
 	SetVariables map[string]string
 }
 
+// BundlerInspectOptions is the options for the bundler.Inspect() function
 type BundlerInspectOptions struct {
 	Source string
 }
 
+// BundlerPullOptions is the options for the bundler.Pull() function
 type BundlerPullOptions struct {
 	Source          string
 	OutputDirectory string
 	Packages        []string
 }
 
+// BundlerRemoveOptions is the options for the bundler.Remove() function
 type BundlerRemoveOptions struct {
 	Source string
 }

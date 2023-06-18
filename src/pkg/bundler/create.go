@@ -10,6 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 )
 
+// Create creates a bundle
 func (b *Bundler) Create() error {
 	message.Infof("Creating bundle from %s", b.cfg.CreateOpts.SourceDirectory)
 

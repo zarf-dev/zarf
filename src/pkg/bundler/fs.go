@@ -15,12 +15,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-type BundlerFS struct {
+// BFS is a struct that contains the paths used by Bundler
+type BFS struct {
 	tmp types.TempPaths
 	rel types.TempPaths
 }
 
-func (bfs *BundlerFS) MakeTemp(prefix string) error {
+// MakeTemp creates a temporary directory for BundlerFS
+func (bfs *BFS) MakeTemp(prefix string) error {
 	base, err := utils.MakeTempDir(prefix)
 	if err != nil {
 		return bfs.Error(err)
@@ -29,7 +31,8 @@ func (bfs *BundlerFS) MakeTemp(prefix string) error {
 	return nil
 }
 
-func (bfs *BundlerFS) SetPaths(base string) {
+// SetPaths sets the paths used by BundlerFS
+func (bfs *BFS) SetPaths(base string) {
 	bfs.tmp = types.TempPaths{
 		Base:      base,
 		Checksums: filepath.Join(base, config.ZarfChecksumsTxt),
@@ -43,25 +46,30 @@ func (bfs *BundlerFS) SetPaths(base string) {
 	}
 }
 
-func (bfs *BundlerFS) ClearPaths() {
+// ClearPaths clears out the paths used by BundlerFS
+func (bfs *BFS) ClearPaths() {
 	_ = os.RemoveAll(bfs.tmp.Base)
 	_ = os.RemoveAll(config.ZarfSBOMDir)
 }
 
-func (bfs *BundlerFS) CD(path string) error {
+// CD is a wrapper around os.Chdir
+func (bfs *BFS) CD(path string) error {
 	message.Debugf("bfs.CD - %s", path)
 	return os.Chdir(path)
 }
 
-func (bfs *BundlerFS) ReadBundleYaml(path string, bndl *types.ZarfBundle) error {
+// ReadBundleYaml is a wrapper around utils.ReadYaml
+func (bfs *BFS) ReadBundleYaml(path string, bndl *types.ZarfBundle) error {
 	return utils.ReadYaml(path, bndl)
 }
 
-func (bfs *BundlerFS) ExtractPackage(name string) error {
+// ExtractPackage should extract a package from a bundle
+func (bfs *BFS) ExtractPackage(name string) error {
 	message.Infof("Extracting %s to %s", name, bfs.tmp.Base)
 	return nil
 }
 
-func (bfs *BundlerFS) Error(err error) error {
+// Error is a helper function to wrap errors from BundlerFS operations
+func (bfs *BFS) Error(err error) error {
 	return fmt.Errorf("error in BundlerFS operation: %w", err)
 }

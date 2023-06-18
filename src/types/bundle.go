@@ -11,6 +11,7 @@ type ZarfBundle struct {
 	Packages []ZarfPackageImport `json:"packages" jsonschema:"description=List of packages to import"`
 }
 
+// ZarfPackageImport is a package import statement in a Zarf bundle file.
 type ZarfPackageImport struct {
 	Repository string   `json:"repository" jsonschema:"description=The repository to import the package from"`
 	Ref        string   `json:"ref"`

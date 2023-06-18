@@ -15,6 +15,7 @@ import (
 	"oras.land/oras-go/v2/content"
 )
 
+// Bundle pushes the given bundle to the remote repository.
 func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd string) error {
 	layers := []ocispec.Descriptor{}
 	for _, pkg := range bundle.Packages {
@@ -41,6 +42,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 	// TODO: push + append the zarf-bundle.yaml to the layers, w/ proper path
 	// TODO: push + append the zarf-bundle.yaml.sig to the layers, w/ proper path
 	// TODO: strip the zarf.sig.yaml from each package + remove from checksums.txt + modify the zarf.yaml?
+	message.Debug("TODO: signing bundle w/ %s - %s", sigPath, sigPsswd)
 	manifest.Annotations = o.manifestAnnotationsFromMetadata(&bundle.Metadata)
 	b, err := json.Marshal(manifest)
 	if err != nil {
