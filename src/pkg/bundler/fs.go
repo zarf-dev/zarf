@@ -48,6 +48,15 @@ func (bfs *BundlerFS) ClearPaths() {
 	_ = os.RemoveAll(config.ZarfSBOMDir)
 }
 
+func (bfs *BundlerFS) CD(path string) error {
+	message.Debugf("bfs.CD - %s", path)
+	return os.Chdir(path)
+}
+
+func (bfs *BundlerFS) ReadBundleYaml(path string, bndl *types.ZarfBundle) error {
+	return utils.ReadYaml(path, bndl)
+}
+
 func (bfs *BundlerFS) ExtractPackage(name string) error {
 	message.Infof("Extracting %s to %s", name, bfs.tmp.Base)
 	return nil

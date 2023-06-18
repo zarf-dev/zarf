@@ -17,10 +17,12 @@ import (
 )
 
 type Bundler struct {
-	p   packager.Packager
-	cfg *types.BundlerConfig
-	fs  BundlerFS
-	cp  oci.Copier
+	pkgr   packager.Packager
+	cfg    *types.BundlerConfig
+	bundle types.ZarfBundle
+	remote *oci.OrasRemote
+	fs     BundlerFS
+	copier oci.Copier
 }
 
 func New(cfg *types.BundlerConfig) (*Bundler, error) {
@@ -61,6 +63,57 @@ func NewOrDie(cfg *types.BundlerConfig) *Bundler {
 
 func (b *Bundler) ClearPaths() {
 	b.fs.ClearPaths()
+}
+
+func (b *Bundler) ValidateBundle() error {
+	if b.bundle.Metadata.Version == "" {
+		return fmt.Errorf("zarf-bundle.yaml is missing required field: metadata.version")
+	}
+	if b.bundle.Metadata.Name == "" {
+		return fmt.Errorf("zarf-bundle.yaml is missing required field: metadata.name")
+	}
+	if len(b.bundle.Packages) == 0 {
+		return fmt.Errorf("zarf-bundle.yaml is missing required list: packages")
+	}
+	for idx, pkg := range b.bundle.Packages {
+		if pkg.Repository == "" {
+			return fmt.Errorf("zarf-bundle.yaml .packages[%d] is missing required field: repository", idx)
+		}
+		if pkg.Ref == "" {
+			return fmt.Errorf("zarf-bundle.yaml .packages[%s] is missing required field: ref", pkg.Repository)
+		}
+		url := fmt.Sprintf("%s:%s", pkg.Repository, pkg.Ref)
+		// validate access to packages as well as components referenced in the package
+		remote, err := oci.NewOrasRemote(url)
+		if err != nil {
+			// remote performs access verification upon instantiation
+			return err
+		}
+		err = remote.PullPackageMetadata(b.fs.tmp.Base)
+		if err != nil {
+			return err
+		}
+		defer b.fs.ClearPaths()
+		// TODO: validate signatures here
+		// TODO: are we gonna re-sign the packages within a bundle?
+		requestedComponents := pkg.Components
+		if len(requestedComponents) > 0 {
+			zarfYAML := types.ZarfPackage{}
+			err := utils.ReadYaml(b.fs.tmp.ZarfYaml, &zarfYAML)
+			if err != nil {
+				return err
+			}
+			for _, component := range requestedComponents {
+				c := utils.Find(zarfYAML.Components, func(c types.ZarfComponent) bool {
+					return c.Name == component
+				})
+				if c.Name == "" {
+					return fmt.Errorf("zarf-bundle.yaml .packages[%s].components[%s] does not exist in upstream: %s", pkg.Repository, component, url)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func MergeVariables(left map[string]string, right map[string]string) map[string]string {

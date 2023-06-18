@@ -30,8 +30,11 @@ type BundlerConfig struct {
 }
 
 type BundlerCreateOptions struct {
-	SourceDirectory string
-	SetVariables    map[string]string
+	SourceDirectory    string
+	Output             string
+	SigningKeyPath     string
+	SigningKeyPassword string
+	SetVariables       map[string]string
 }
 
 type BundlerDeployOptions struct {
