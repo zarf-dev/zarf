@@ -37,21 +37,21 @@ type ConfigPartial struct {
 }
 
 // PushFile pushes the file at the given path to the remote repository.
-func (o *OrasRemote) PushFile(path string) (*ocispec.Descriptor, error) {
+func (o *OrasRemote) PushFile(path string) (ocispec.Descriptor, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return ocispec.Descriptor{}, err
 	}
 	return o.PushBytes(b, ZarfLayerMediaTypeBlob)
 }
 
 // PushBytes pushes the given bytes to the remote repository.
-func (o *OrasRemote) PushBytes(b []byte, mediaType string) (*ocispec.Descriptor, error) {
+func (o *OrasRemote) PushBytes(b []byte, mediaType string) (ocispec.Descriptor, error) {
 	desc := content.NewDescriptorFromBytes(mediaType, b)
-	return &desc, o.Push(o.Context, desc, bytes.NewReader(b))
+	return desc, o.Push(o.Context, desc, bytes.NewReader(b))
 }
 
-func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata, build *types.ZarfBuildData) (*ocispec.Descriptor, error) {
+func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata, build *types.ZarfBuildData) (ocispec.Descriptor, error) {
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,
@@ -63,7 +63,7 @@ func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata
 	}
 	manifestConfigBytes, err := json.Marshal(manifestConfig)
 	if err != nil {
-		return nil, err
+		return ocispec.Descriptor{}, err
 	}
 	return o.PushBytes(manifestConfigBytes, ocispec.MediaTypeImageConfig)
 }
@@ -176,7 +176,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	if err != nil {
 		return err
 	}
-	root, err := o.generatePackManifest(src, descs, manifestConfigDesc, &pkg.Metadata)
+	root, err := o.generatePackManifest(src, descs, &manifestConfigDesc, &pkg.Metadata)
 	if err != nil {
 		return err
 	}

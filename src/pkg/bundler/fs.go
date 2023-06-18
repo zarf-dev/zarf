@@ -17,8 +17,9 @@ import (
 
 // BFS is a struct that contains the paths used by Bundler
 type BFS struct {
-	tmp types.TempPaths
-	rel types.TempPaths
+	SourceTarball string
+	tmp           types.TempPaths
+	rel           types.TempPaths
 }
 
 // MakeTemp creates a temporary directory for BundlerFS
@@ -64,9 +65,12 @@ func (bfs *BFS) ReadBundleYaml(path string, bndl *types.ZarfBundle) error {
 }
 
 // ExtractPackage should extract a package from a bundle
-func (bfs *BFS) ExtractPackage(name string) error {
-	message.Infof("Extracting %s to %s", name, bfs.tmp.Base)
+func (bfs *BFS) ExtractPackage(name string, out string) error {
+	message.Infof("Extracting %s to %s", name, out)
 	return nil
+	// read the index.json from the bfs.SourceTarball
+	// get all the layers for the package
+	// extract the layers to the output directory
 }
 
 // ValidateBundleSignature validates the bundle signature

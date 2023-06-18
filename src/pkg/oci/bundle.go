@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -18,6 +19,7 @@ import (
 // Bundle pushes the given bundle to the remote repository.
 func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd string) error {
 	layers := []ocispec.Descriptor{}
+	index := ocispec.Index{}
 	for _, pkg := range bundle.Packages {
 		url := fmt.Sprintf(pkg.Repository, pkg.Ref)
 		remote, err := NewOrasRemote(url)
@@ -28,6 +30,16 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 		if err != nil {
 			return err
 		}
+		manifestBytes, err := json.Marshal(root)
+		if err != nil {
+			return err
+		}
+		// push the manifest into the bundle
+		manifestDesc, err := o.PushBytes(manifestBytes, ocispec.MediaTypeImageManifest)
+		if err != nil {
+			return err
+		}
+		index.Manifests = append(index.Manifests, manifestDesc)
 		if remote.Reference.Registry != o.Reference.Registry {
 			message.Infof("Copying layers from %s to %s", remote.Reference, o.Reference)
 			// stream copy the blobs from remote to o (if needed), otherwise do a blob mount
@@ -37,12 +49,36 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 		}
 		layers = append(layers, root.Layers...)
 	}
+	// push the index.json
+	indexBytes, err := json.Marshal(index)
+	if err != nil {
+		return err
+	}
+	indexDesc, err := o.PushBytes(indexBytes, ocispec.MediaTypeImageIndex)
+	if err != nil {
+		return err
+	}
+	// when doing an oras.Copy, the annotation title is used as the filepath to download to
+	indexDesc.Annotations = map[string]string{
+		ocispec.AnnotationTitle: "index.json",
+	}
 	manifest := ocispec.Manifest{}
 	manifest.Layers = layers
+	for idx, layer := range manifest.Layers {
+		// when doing an oras.Copy, the annotation title is used as the filepath to download to
+		// this makes it so it downloads all of the package layers to blobs/sha256/<layer-digest>
+		// just like a real OCI image
+		manifest.Layers[idx].Annotations = map[string]string{
+			ocispec.AnnotationTitle: filepath.Join("blobs", "sha256", layer.Digest.Encoded()),
+		}
+	}
+	manifest.Layers = append(manifest.Layers, indexDesc)
+
 	// TODO: push + append the zarf-bundle.yaml to the layers, w/ proper path
 	// TODO: push + append the zarf-bundle.yaml.sig to the layers, w/ proper path
 	// TODO: strip the zarf.sig.yaml from each package + remove from checksums.txt + modify the zarf.yaml?
 	message.Debug("TODO: signing bundle w/ %s - %s", sigPath, sigPsswd)
+
 	manifest.Annotations = o.manifestAnnotationsFromMetadata(&bundle.Metadata)
 	b, err := json.Marshal(manifest)
 	if err != nil {
