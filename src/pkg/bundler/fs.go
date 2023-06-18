@@ -63,5 +63,5 @@ func (bfs *BundlerFS) ExtractPackage(name string) error {
 }
 
 func (bfs *BundlerFS) Error(err error) error {
-	return fmt.Errorf(ErrBundlerFS, err)
+	return fmt.Errorf("error in BundlerFS operation: %w", err)
 }

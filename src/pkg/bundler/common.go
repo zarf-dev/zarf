@@ -5,6 +5,7 @@
 package bundler
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -29,7 +30,7 @@ func New(cfg *types.BundlerConfig) (*Bundler, error) {
 	message.Debugf("bundler.New(%s)", message.JSONValue(cfg))
 
 	if cfg == nil {
-		return nil, ErrBundlerNilConfig
+		return nil, errors.New("bundler.New() called with nil config")
 	}
 
 	if cfg.SetVariableMap == nil {
@@ -44,7 +45,7 @@ func New(cfg *types.BundlerConfig) (*Bundler, error) {
 	)
 
 	if err = bundler.fs.MakeTemp(config.CommonOptions.TempDirectory); err != nil {
-		return nil, fmt.Errorf(ErrBundlerUnableToCreateTempDir, err)
+		return nil, fmt.Errorf("bundler unable to create temp directory: %w", err)
 	}
 
 	return bundler, nil
@@ -56,7 +57,7 @@ func NewOrDie(cfg *types.BundlerConfig) *Bundler {
 		bundler *Bundler
 	)
 	if bundler, err = New(cfg); err != nil {
-		message.Fatalf(err, ErrBundlerNewOrDie, err)
+		message.Fatalf(err, "bundler unable to setup, bad config: %w", err)
 	}
 	return bundler
 }
