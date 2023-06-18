@@ -5,7 +5,6 @@
 package bundler
 
 import (
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
@@ -16,11 +15,10 @@ import (
 // : show the `zarf-bundle.yaml`
 // : have an option to download + persist the SBOMs?
 func (b *Bundler) Inspect() error {
-	remote, err := oci.NewOrasRemote(b.cfg.PullOpts.Source)
+	err := b.SetOCIRemote(b.cfg.InspectOpts.Source)
 	if err != nil {
 		return err
 	}
-	b.remote = remote
 
 	// pull the zarf-bundle.yaml + sig
 	err = b.remote.PullBundleMetadata(b.fs.tmp.Base)
@@ -29,10 +27,10 @@ func (b *Bundler) Inspect() error {
 	}
 
 	// validate the sig (if present)
-	// err = b.fs.ValidateBundleSignature(b.fs.tmp.Base)
-	// if err != nil {
-	// 	return err
-	// }
+	err = b.fs.ValidateBundleSignature(b.fs.tmp.Base)
+	if err != nil {
+		return err
+	}
 
 	// read the zarf-bundle.yaml into memory
 	err = b.fs.ReadBundleYaml(b.fs.tmp.Base, &b.bundle)

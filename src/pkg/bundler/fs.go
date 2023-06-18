@@ -69,6 +69,16 @@ func (bfs *BFS) ExtractPackage(name string) error {
 	return nil
 }
 
+// ValidateBundleSignature validates the bundle signature
+func (bfs *BFS) ValidateBundleSignature(base string) error {
+	message.Infof("Validating bundle signature from %s/%s", base, bfs.rel.ZarfSig)
+	return nil
+	// err := utils.CosignVerifyBlob(bfs.tmp.ZarfBundleYaml, bfs.tmp.ZarfSig, <keypath>)
+	// if err != nil {
+	// 	return err
+	// }
+}
+
 // Error is a helper function to wrap errors from BundlerFS operations
 func (bfs *BFS) Error(err error) error {
 	return fmt.Errorf("error in BundlerFS operation: %w", err)

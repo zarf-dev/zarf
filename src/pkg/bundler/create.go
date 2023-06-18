@@ -19,11 +19,10 @@ func (b *Bundler) Create() error {
 	if err != nil {
 		return err
 	}
-	remote, err := oci.NewOrasRemote(ref.String())
+	err = b.SetOCIRemote(ref.String())
 	if err != nil {
 		return err
 	}
-	b.remote = remote
 
 	// cd into base
 	if err := b.fs.CD(b.cfg.CreateOpts.SourceDirectory); err != nil {

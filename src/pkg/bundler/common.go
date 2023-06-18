@@ -121,6 +121,16 @@ func (b *Bundler) ValidateBundle() error {
 	return nil
 }
 
+// SetOCIRemote sets the remote for the Bundler
+func (b *Bundler) SetOCIRemote(url string) error {
+	remote, err := oci.NewOrasRemote(url)
+	if err != nil {
+		return err
+	}
+	b.remote = remote
+	return nil
+}
+
 // MergeVariables merges the variables from the config file and the CLI
 func MergeVariables(left map[string]string, right map[string]string) map[string]string {
 	// Ensure uppercase keys from viper and CLI --set
