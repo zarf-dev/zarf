@@ -7,7 +7,10 @@ package bundler
 import (
 	"errors"
 	"fmt"
+	"os"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -22,7 +25,7 @@ type Bundler struct {
 	cfg    *types.BundlerConfig
 	bundle types.ZarfBundle
 	remote *oci.OrasRemote
-	fs     BFS
+	FS     BFS
 	// copier oci.Copier
 }
 
@@ -45,7 +48,7 @@ func New(cfg *types.BundlerConfig) (*Bundler, error) {
 		}
 	)
 
-	if err = bundler.fs.MakeTemp(config.CommonOptions.TempDirectory); err != nil {
+	if err = bundler.FS.MakeTemp(config.CommonOptions.TempDirectory); err != nil {
 		return nil, fmt.Errorf("bundler unable to create temp directory: %w", err)
 	}
 
@@ -66,7 +69,7 @@ func NewOrDie(cfg *types.BundlerConfig) *Bundler {
 
 // ClearPaths clears out the paths used by Bundler
 func (b *Bundler) ClearPaths() {
-	b.fs.ClearPaths()
+	b.FS.ClearPaths()
 }
 
 // ValidateBundle validates the bundle
@@ -94,17 +97,17 @@ func (b *Bundler) ValidateBundle() error {
 			// remote performs access verification upon instantiation
 			return err
 		}
-		err = remote.PullPackageMetadata(b.fs.tmp.Base)
+		err = remote.PullPackageMetadata(b.FS.tmp.Base)
 		if err != nil {
 			return err
 		}
-		defer b.fs.ClearPaths()
+		defer b.FS.ClearPaths()
 		// TODO: validate signatures here
 		// TODO: are we gonna re-sign the packages within a bundle?
 		requestedComponents := pkg.Components
 		if len(requestedComponents) > 0 {
 			zarfYAML := types.ZarfPackage{}
-			err := utils.ReadYaml(b.fs.tmp.ZarfYaml, &zarfYAML)
+			err := utils.ReadYaml(b.FS.tmp.ZarfYaml, &zarfYAML)
 			if err != nil {
 				return err
 			}
@@ -118,6 +121,38 @@ func (b *Bundler) ValidateBundle() error {
 			}
 		}
 	}
+	return nil
+}
+
+// CalculateBuildInfo calculates the build info for the bundle
+//
+// this is mainly mirrored from packager.writeYaml()
+func (b *Bundler) CalculateBuildInfo() error {
+	now := time.Now()
+
+	// Just use $USER env variable to avoid CGO issue.
+	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
+	// Record the name of the user creating the package.
+	if runtime.GOOS == "windows" {
+		b.bundle.Build.User = os.Getenv("USERNAME")
+	} else {
+		b.bundle.Build.User = os.Getenv("USER")
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+	b.bundle.Build.Terminal = hostname
+
+	// TODO: investigate the best way forward for determining arch
+	b.bundle.Metadata.Architecture = runtime.GOARCH
+	b.bundle.Build.Architecture = runtime.GOARCH
+
+	b.bundle.Build.Timestamp = now.Format(time.RFC1123Z)
+
+	b.bundle.Build.Version = config.CLIVersion
+
 	return nil
 }
 

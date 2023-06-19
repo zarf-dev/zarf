@@ -14,6 +14,19 @@ import (
 func (b *Bundler) Create() error {
 	message.Infof("Creating bundle from %s", b.cfg.CreateOpts.SourceDirectory)
 
+	// cd into base
+	if err := b.FS.CD(b.cfg.CreateOpts.SourceDirectory); err != nil {
+		return err
+	}
+	// read zarf-bundle.yaml into memory
+	if err := b.FS.ReadBundleYaml(config.ZarfBundleYAML, &b.bundle); err != nil {
+		return err
+	}
+	// validate bundle / verify access to all repositories
+	if err := b.ValidateBundle(); err != nil {
+		return err
+	}
+
 	// validate access to the output directory / OCI ref
 	ref, err := oci.ReferenceFromMetadata(b.cfg.CreateOpts.Output, &b.bundle.Metadata, b.bundle.Metadata.Architecture)
 	if err != nil {
@@ -24,16 +37,8 @@ func (b *Bundler) Create() error {
 		return err
 	}
 
-	// cd into base
-	if err := b.fs.CD(b.cfg.CreateOpts.SourceDirectory); err != nil {
-		return err
-	}
-	// read zarf-bundle.yaml into memory
-	if err := b.fs.ReadBundleYaml(config.ZarfBundleYAML, &b.bundle); err != nil {
-		return err
-	}
-	// validate bundle / verify access to all repositories
-	if err := b.ValidateBundle(); err != nil {
+	// make the bundle's build information
+	if err := b.CalculateBuildInfo(); err != nil {
 		return err
 	}
 
