@@ -6,24 +6,12 @@ package types
 
 // BundlerConfig is the main struct that the bundler uses to hold high-level options.
 type BundlerConfig struct {
-	// CreateOpts tracks the user-defined options used to create the package
-	CreateOpts BundlerCreateOptions
-
-	// DeployOpts tracks user-defined values for the active deployment
-	DeployOpts BundlerDeployOptions
-
-	// PullOpts tracks user-defined options used to pull packages
-	PullOpts BundlerPullOptions
-
+	CreateOpts  BundlerCreateOptions
+	DeployOpts  BundlerDeployOptions
+	PullOpts    BundlerPullOptions
 	InspectOpts BundlerInspectOptions
-
-	RemoveOpts BundlerRemoveOptions
-
-	// The bundle data
-	Bndl ZarfBundle
-
-	// The active zarf state
-	State ZarfState
+	RemoveOpts  BundlerRemoveOptions
+	State       ZarfState
 
 	// Variables set by the user
 	SetVariableMap map[string]*ZarfSetVariable
