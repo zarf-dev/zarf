@@ -27,7 +27,6 @@ var bundleCreateCmd = &cobra.Command{
 	Aliases: []string{"c"},
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdBundleCreateShort,
-	Long:    lang.CmdBundleCreateLong,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		if !utils.IsDir(args[0]) {
 			return fmt.Errorf("first argument must be a valid path to a directory")
@@ -49,10 +48,9 @@ var bundleCreateCmd = &cobra.Command{
 }
 
 var bundleDeployCmd = &cobra.Command{
-	Use:     "deploy [PACKAGE]",
+	Use:     "deploy [BUNDLE]",
 	Aliases: []string{"d"},
 	Short:   lang.CmdBundleDeployShort,
-	Long:    lang.CmdBundleDeployLong,
 	Args:    cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		if !utils.IsOCIURL(args[0]) && !bundler.IsValidTarballPath(args[0]) {
@@ -75,10 +73,9 @@ var bundleDeployCmd = &cobra.Command{
 }
 
 var bundleInspectCmd = &cobra.Command{
-	Use:     "inspect [PACKAGE]",
+	Use:     "inspect [BUNDLE]",
 	Aliases: []string{"i"},
 	Short:   lang.CmdBundleInspectShort,
-	Long:    lang.CmdBundleInspectLong,
 	Args:    cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		if !utils.IsOCIURL(args[0]) && !bundler.IsValidTarballPath(args[0]) {
@@ -99,7 +96,7 @@ var bundleInspectCmd = &cobra.Command{
 }
 
 var bundleRemoveCmd = &cobra.Command{
-	Use:     "remove {PACKAGE_NAME|PACKAGE_FILE}",
+	Use:     "remove [BUNDLE_NAME|BUNDLE_TARBALL|OCI_REF]",
 	Aliases: []string{"u"},
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdBundleRemoveShort,
@@ -122,10 +119,9 @@ var bundleRemoveCmd = &cobra.Command{
 }
 
 var bundlePullCmd = &cobra.Command{
-	Use:     "pull [REFERENCE]",
-	Short:   "Pull a Zarf bundle from a remote registry and save to the local file system",
-	Example: "  zarf bundle pull oci://my-registry.com/my-namespace/my-bundle:0.0.1-arm64",
-	Args:    cobra.ExactArgs(1),
+	Use:   "pull [OCI_REF]",
+	Short: lang.CmdBundlePullShort,
+	Args:  cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return oci.ValidateReference(args[0])
 	},
