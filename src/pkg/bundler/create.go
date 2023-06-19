@@ -42,8 +42,5 @@ func (b *Bundler) Create() error {
 	}
 
 	// create + publish the bundle
-	if err := b.remote.Bundle(&b.bundle, b.cfg.CreateOpts.SigningKeyPath, b.cfg.CreateOpts.SigningKeyPassword); err != nil {
-		return err
-	}
-	return nil
+	return b.remote.Bundle(&b.bundle, b.cfg.CreateOpts.SigningKeyPath, b.cfg.CreateOpts.SigningKeyPassword)
 }
