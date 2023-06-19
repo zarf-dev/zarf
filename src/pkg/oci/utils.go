@@ -134,3 +134,13 @@ func (o *OrasRemote) printLayerSuccess(_ context.Context, desc ocispec.Descripto
 func (o *OrasRemote) isEmptyDescriptor(desc ocispec.Descriptor) bool {
 	return desc.Digest == "" && desc.Size == 0
 }
+
+// ValidateReference validates the given url is a valid OCI reference.
+func ValidateReference(url string) error {
+	if !strings.HasPrefix(url, "oci://") {
+		return fmt.Errorf("oci url reference must begin with oci://")
+	}
+	sansPrefix := strings.TrimPrefix(url, "oci://")
+	_, err := registry.ParseReference(sansPrefix)
+	return err
+}

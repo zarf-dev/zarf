@@ -10,7 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/bundler"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"oras.land/oras-go/v2/registry"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/spf13/cobra"
@@ -58,11 +58,7 @@ var bundleDeployCmd = &cobra.Command{
 		if !utils.IsOCIURL(args[0]) && !bundler.IsValidTarballPath(args[0]) {
 			return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
 		}
-		if utils.IsOCIURL(args[0]) {
-			_, err := registry.ParseReference(args[0])
-			return err
-		}
-		return nil
+		return oci.ValidateReference(args[0])
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		bndlConfig.DeployOpts.Source = args[0]
@@ -88,11 +84,7 @@ var bundleInspectCmd = &cobra.Command{
 		if !utils.IsOCIURL(args[0]) && !bundler.IsValidTarballPath(args[0]) {
 			return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
 		}
-		if utils.IsOCIURL(args[0]) {
-			_, err := registry.ParseReference(args[0])
-			return err
-		}
-		return nil
+		return oci.ValidateReference(args[0])
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		bndlConfig.InspectOpts.Source = args[0]
@@ -115,11 +107,7 @@ var bundleRemoveCmd = &cobra.Command{
 		if !utils.IsOCIURL(args[0]) && utils.InvalidPath(args[0]) {
 			return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
 		}
-		if utils.IsOCIURL(args[0]) {
-			_, err := registry.ParseReference(args[0])
-			return err
-		}
-		return nil
+		return oci.ValidateReference(args[0])
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		bndlConfig.RemoveOpts.Source = args[0]
@@ -139,11 +127,7 @@ var bundlePullCmd = &cobra.Command{
 	Example: "  zarf bundle pull oci://my-registry.com/my-namespace/my-bundle:0.0.1-arm64",
 	Args:    cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.IsOCIURL(args[0]) {
-			return fmt.Errorf("invalid 'oci://...' reference: %s", args[0])
-		}
-		_, err := registry.ParseReference(args[0])
-		return err
+		return oci.ValidateReference(args[0])
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		bndlConfig.PullOpts.Source = args[0]
