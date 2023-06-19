@@ -162,6 +162,7 @@ func validateInitFlags() error {
 
 func init() {
 	initViper()
+
 	rootCmd.AddCommand(initCmd)
 
 	// Init package variables

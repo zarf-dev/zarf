@@ -379,12 +379,10 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="build_migrations"></a>migrations *</strong>
+<strong> <a name="build_migrations"></a>migrations</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** Any migrations that have been run on this package
 
@@ -408,12 +406,10 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="build_differential"></a>differential *</strong>
+<strong> <a name="build_differential"></a>differential</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** Whether this package was created with differential components
 
@@ -426,13 +422,12 @@ Must be one of:
 
 <details open>
 <summary>
-<strong> <a name="build_registryOverrides"></a>registryOverrides *</strong>
+<strong> <a name="build_registryOverrides"></a>registryOverrides</strong>
 </summary>
 &nbsp;
 <blockquote>
 
   ## build > registryOverrides
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** Any registry domains that were overridden on package create when pulling images
 
