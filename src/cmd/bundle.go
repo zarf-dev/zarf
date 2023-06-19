@@ -55,7 +55,7 @@ var bundleDeployCmd = &cobra.Command{
 	Long:    lang.CmdBundleDeployLong,
 	Args:    cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.IsOCIURL(args[0]) || !bundler.IsValidTarballPath(args[0]) {
+		if !utils.IsOCIURL(args[0]) && !bundler.IsValidTarballPath(args[0]) {
 			return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
 		}
 		if utils.IsOCIURL(args[0]) {
@@ -85,7 +85,7 @@ var bundleInspectCmd = &cobra.Command{
 	Long:    lang.CmdBundleInspectLong,
 	Args:    cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.IsOCIURL(args[0]) || !bundler.IsValidTarballPath(args[0]) {
+		if !utils.IsOCIURL(args[0]) && !bundler.IsValidTarballPath(args[0]) {
 			return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
 		}
 		if utils.IsOCIURL(args[0]) {
@@ -112,8 +112,12 @@ var bundleRemoveCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdBundleRemoveShort,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.IsOCIURL(args[0]) || utils.InvalidPath(args[0]) {
+		if !utils.IsOCIURL(args[0]) && utils.InvalidPath(args[0]) {
 			return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
+		}
+		if utils.IsOCIURL(args[0]) {
+			_, err := registry.ParseReference(args[0])
+			return err
 		}
 		return nil
 	},
@@ -138,11 +142,8 @@ var bundlePullCmd = &cobra.Command{
 		if !utils.IsOCIURL(args[0]) {
 			return fmt.Errorf("invalid 'oci://...' reference: %s", args[0])
 		}
-		if utils.IsOCIURL(args[0]) {
-			_, err := registry.ParseReference(args[0])
-			return err
-		}
-		return nil
+		_, err := registry.ParseReference(args[0])
+		return err
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		bndlConfig.PullOpts.Source = args[0]
