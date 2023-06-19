@@ -32,8 +32,7 @@ func (b *Bundler) Create() error {
 	if err != nil {
 		return err
 	}
-	err = b.SetOCIRemote(ref.String())
-	if err != nil {
+	if err := b.SetOCIRemote(ref.String()); err != nil {
 		return err
 	}
 
@@ -43,8 +42,7 @@ func (b *Bundler) Create() error {
 	}
 
 	// create + publish the bundle
-	err = b.remote.Bundle(&b.bundle, b.cfg.CreateOpts.SigningKeyPath, b.cfg.CreateOpts.SigningKeyPassword)
-	if err != nil {
+	if err := b.remote.Bundle(&b.bundle, b.cfg.CreateOpts.SigningKeyPath, b.cfg.CreateOpts.SigningKeyPassword); err != nil {
 		return err
 	}
 	return nil

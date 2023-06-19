@@ -10,6 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/bundler"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"oras.land/oras-go/v2/registry"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/spf13/cobra"
@@ -28,7 +29,7 @@ var bundleCreateCmd = &cobra.Command{
 	Short:   lang.CmdBundleCreateShort,
 	Long:    lang.CmdBundleCreateLong,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if utils.InvalidPath(args[0]) || !utils.IsDir(args[0]) {
+		if !utils.IsDir(args[0]) {
 			return fmt.Errorf("first argument must be a valid path to a directory")
 		}
 		return nil
@@ -54,8 +55,12 @@ var bundleDeployCmd = &cobra.Command{
 	Long:    lang.CmdBundleDeployLong,
 	Args:    cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.IsOCIURL(args[0]) || utils.InvalidPath(args[0]) {
+		if !utils.IsOCIURL(args[0]) || !bundler.IsValidTarballPath(args[0]) {
 			return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
+		}
+		if utils.IsOCIURL(args[0]) {
+			_, err := registry.ParseReference(args[0])
+			return err
 		}
 		return nil
 	},
@@ -80,8 +85,12 @@ var bundleInspectCmd = &cobra.Command{
 	Long:    lang.CmdBundleInspectLong,
 	Args:    cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.IsOCIURL(args[0]) || utils.InvalidPath(args[0]) {
+		if !utils.IsOCIURL(args[0]) || !bundler.IsValidTarballPath(args[0]) {
 			return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
+		}
+		if utils.IsOCIURL(args[0]) {
+			_, err := registry.ParseReference(args[0])
+			return err
 		}
 		return nil
 	},
@@ -128,6 +137,10 @@ var bundlePullCmd = &cobra.Command{
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		if !utils.IsOCIURL(args[0]) {
 			return fmt.Errorf("invalid 'oci://...' reference: %s", args[0])
+		}
+		if utils.IsOCIURL(args[0]) {
+			_, err := registry.ParseReference(args[0])
+			return err
 		}
 		return nil
 	},

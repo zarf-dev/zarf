@@ -26,7 +26,6 @@ type Bundler struct {
 	bundle types.ZarfBundle
 	remote *oci.OrasRemote
 	FS     BFS
-	// copier oci.Copier
 }
 
 // New creates a new Bundler
@@ -174,4 +173,12 @@ func MergeVariables(left map[string]string, right map[string]string) map[string]
 
 	// Merge the viper config file variables and provided CLI flag variables (CLI takes precedence))
 	return utils.MergeMap(leftUpper, rightUpper)
+}
+
+// IsValidTarballPath returns true if the path is a valid tarball path to a bundle tarball
+func IsValidTarballPath(path string) bool {
+	if utils.InvalidPath(path) || utils.IsDir(path) {
+		return false
+	}
+	return true // TODO: insert tarball regex here
 }

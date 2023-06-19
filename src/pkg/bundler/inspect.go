@@ -15,26 +15,22 @@ import (
 // : show the `zarf-bundle.yaml`
 // : have an option to download + persist the SBOMs?
 func (b *Bundler) Inspect() error {
-	err := b.SetOCIRemote(b.cfg.InspectOpts.Source)
-	if err != nil {
+	if err := b.SetOCIRemote(b.cfg.InspectOpts.Source); err != nil {
 		return err
 	}
 
 	// pull the zarf-bundle.yaml + sig
-	err = b.remote.PullBundleMetadata(b.FS.tmp.Base)
-	if err != nil {
+	if err := b.remote.PullBundleMetadata(b.FS.tmp.Base); err != nil {
 		return err
 	}
 
 	// validate the sig (if present)
-	err = b.FS.ValidateBundleSignature(b.FS.tmp.Base)
-	if err != nil {
+	if err := b.FS.ValidateBundleSignature(b.FS.tmp.Base); err != nil {
 		return err
 	}
 
 	// read the zarf-bundle.yaml into memory
-	err = b.FS.ReadBundleYaml(b.FS.tmp.Base, &b.bundle)
-	if err != nil {
+	if err := b.FS.ReadBundleYaml(b.FS.tmp.Base, &b.bundle); err != nil {
 		return err
 	}
 	// show the zarf-bundle.yaml
