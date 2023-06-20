@@ -26,8 +26,7 @@ func (p *Packager) getAllClusterHooks() error {
 		hookConfig := hooks.HookConfig{}
 
 		// Get any data from the hook secret
-		err := json.Unmarshal(hookSecret.Data["data"], &hookConfig)
-		if err != nil {
+		if err := json.Unmarshal(hookSecret.Data["data"], &hookConfig); err != nil {
 			return fmt.Errorf("unable to load the hook configuration for the %s hook: %w", hookSecret.Name, err)
 		}
 

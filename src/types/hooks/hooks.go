@@ -9,8 +9,8 @@ import "fmt"
 // List out all known hooks (these are internal hooks)
 const (
 	HookSecretPrefix   = "zarf-hook"
-	ECRRepositoryHook  = "zarf-hook-ecr-repository"
-	ECRCredentialsHook = "zarf-hook-ecr-credentials"
+	ECRRepositoryHook  = "ecr-repository"
+	ECRCredentialsHook = "ecr-credentials"
 )
 
 // HookLifecycle defines when a hook should be run. The executing order of hooks are not guaranteed.

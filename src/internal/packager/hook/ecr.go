@@ -22,13 +22,14 @@ import (
 	docker_types "github.com/docker/cli/cli/config/types"
 )
 
-const publicECRRegistryURL = "public.ecr.aws"
+const PublicECRRegistryURL = "public.ecr.aws"
+const PrivateECRRegistryURL = "amazonaws.com"
 
 // ECRHookData contains the data for the ECR hook
 type ECRHookData struct {
 	Region         string `json:"region" jsonschema:"description=AWS region of the ECR registry"`
 	RegistryURL    string `json:"registryURL" jsonschema:"description=URL of the ECR registry"`
-	RegistryPrefix string `json:"registryPrefix" jsonschema:"description=Prefix of the ECR registry"`
+	RegistryPrefix string `json:"repositoryPrefix" jsonschema:"description=Prefix of the ECR registry"`
 }
 
 // NewECRHookData creates a new ECRHookData struct with the data from hook data map
@@ -56,7 +57,7 @@ func AuthToECR(ecrHook hooks.HookConfig) error {
 	}
 
 	var authToken string
-	if strings.Contains(ecrHookData.RegistryURL, publicECRRegistryURL) {
+	if strings.Contains(ecrHookData.RegistryURL, PublicECRRegistryURL) {
 		authToken, err = fetchAuthToPublicECR(ecrHookData.Region)
 	} else {
 		authToken, err = fetchAuthToPrivateECR(ecrHookData.Region)
@@ -120,7 +121,7 @@ func CreateTheECRRepos(ecrHook hooks.HookConfig, images []string) error {
 	// Create the ECR client
 	var ecrClient *ecr.ECR
 	var ecrPublicClient *ecrpublic.ECRPublic
-	if strings.Contains(ecrHookData.RegistryURL, publicECRRegistryURL) {
+	if strings.Contains(ecrHookData.RegistryURL, PublicECRRegistryURL) {
 		ecrPublicClient = ecrpublic.New(session.New(&aws.Config{Region: aws.String(ecrHookData.Region)}))
 	} else {
 		ecrClient = ecr.New(session.New(&aws.Config{Region: aws.String(ecrHookData.Region)}))
@@ -134,7 +135,7 @@ func CreateTheECRRepos(ecrHook hooks.HookConfig, images []string) error {
 		}
 
 		repositoryName := registryPrefix + imageRef.Path
-		if strings.Contains(ecrHookData.RegistryURL, publicECRRegistryURL) {
+		if strings.Contains(ecrHookData.RegistryURL, PublicECRRegistryURL) {
 			createRepositoryInput := &ecrpublic.CreateRepositoryInput{RepositoryName: aws.String(repositoryName)}
 			_, err = ecrPublicClient.CreateRepository(createRepositoryInput)
 		} else {

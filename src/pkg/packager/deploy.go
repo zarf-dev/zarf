@@ -205,8 +205,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 			// Ignore the error because there might not be a zarf namespace yet
 			// NOTE: This check is specific to initializing EKS clusters to use ECR as it's image registry
 			// Get all the hooks
-			err = p.getAllClusterHooks()
-			if err != nil {
+			if err := p.getAllClusterHooks(); err != nil {
 				return charts, fmt.Errorf("unable to get all cluster hooks: %w", err)
 			}
 

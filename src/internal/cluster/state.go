@@ -7,9 +7,11 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/hook"
 	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
@@ -238,7 +240,17 @@ func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.Reg
 	// Set default url if an external registry was not provided
 	if containerRegistry.Address == "" {
 		containerRegistry.InternalRegistry = true
+		containerRegistry.RegistryType = types.InternalRegistry
 		containerRegistry.Address = fmt.Sprintf("%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
+	} else {
+		containerRegistry.InternalRegistry = false
+		containerRegistry.RegistryType = types.ExternalRegistry
+
+		// If the address provided matches known ECR registry URLs, set the registry type to ECR
+		if strings.Contains(containerRegistry.Address, hook.PrivateECRRegistryURL) ||
+			strings.Contains(containerRegistry.Address, hook.PublicECRRegistryURL) {
+			containerRegistry.RegistryType = types.ECRRegistry
+		}
 	}
 
 	// Generate a push-user password if not provided by init flag
