@@ -4,7 +4,7 @@
  -->
 <script lang="ts">
 	import type { APIZarfDeployPayload, ZarfDeployOptions, ZarfInitOptions } from '$lib/api-types';
-	import { Dialog, Stepper, Typography, type StepProps, Button, Box } from '@ui';
+	import { Dialog, Stepper, Typography, type StepProps } from '@ui';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import bigZarf from '@images/zarf-bubbles-right.png';
 	import { goto } from '$app/navigation';
@@ -70,11 +70,11 @@
 		} as ZarfInitOptions;
 	}
 
+	let activeIndex = 0;
+	let hasError = false;
 	let successful = false;
 	let dialogOpen = false;
-	let activeIndex: number = 0;
 	let finishedDeploying = false;
-	let hasError: boolean = false;
 	let pollDeployed: NodeJS.Timer;
 	let addMessage: (message: string) => void;
 	let componentSteps: StepProps[] = getComponentStepMapComponents(components);

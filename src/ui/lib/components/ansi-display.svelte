@@ -32,10 +32,10 @@
 	let termElement: HTMLElement | null;
 	let scrollAnchor: Element | null | undefined;
 
-	export let height: string = '688px';
-	export let width: string = 'auto';
-	export let minWidth: string = '';
-	export let maxWidth: string = '';
+	export let height = '688px';
+	export let width = 'auto';
+	export let minWidth = '';
+	export let maxWidth = '';
 	export const addMessage = (message: string) => {
 		let html = convert.toHtml(message);
 		html = `<div class="zarf-terminal-line">${html}</div>`;

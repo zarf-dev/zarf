@@ -3,10 +3,10 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import { Drawer, IconButton, Box, Typography, type SSX } from '@defense-unicorns/unicorn-ui';
+	import { Drawer, IconButton, Typography, type SSX } from '@defense-unicorns/unicorn-ui';
 	import { YamlCode } from '.';
 	export let code: any = undefined;
-	export let title: string = 'Package YAML';
+	export let title = 'Package YAML';
 	export let drawerOpen = false;
 	export let toggleDrawer = () => {
 		drawerOpen = !drawerOpen;
