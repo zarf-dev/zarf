@@ -7,6 +7,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/bundler"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -139,10 +140,32 @@ var bundlePullCmd = &cobra.Command{
 
 func init() {
 	initViper()
+
 	rootCmd.AddCommand(bundleCmd)
+	v.SetDefault(V_BNDL_OCI_CONCURRENCY, 3)
+	bundleCmd.PersistentFlags().IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(V_BNDL_OCI_CONCURRENCY), lang.CmdBundleFlagConcurrency)
+
 	bundleCmd.AddCommand(bundleCreateCmd)
+	bundleCreateCmd.Flags().StringVarP(&bndlConfig.CreateOpts.Output, "output", "o", v.GetString(V_BNDL_CREATE_OUTPUT), lang.CmdBundleCreateFlagOutput)
+	bundleCreateCmd.Flags().StringVarP(&bndlConfig.CreateOpts.SigningKeyPath, "signing-key", "k", v.GetString(V_BNDL_CREATE_SIGNING_KEY), lang.CmdBundleCreateFlagSigningKey)
+	bundleCreateCmd.Flags().StringVarP(&bndlConfig.CreateOpts.SigningKeyPassword, "signing-key-password", "p", v.GetString(V_BNDL_CREATE_SIGNING_KEY_PASSWORD), lang.CmdBundleCreateFlagSigningKeyPassword)
+	bundleCreateCmd.Flags().StringToStringVarP(&bndlConfig.CreateOpts.SetVariables, "set", "s", v.GetStringMapString(V_BNDL_CREATE_SET), lang.CmdBundleCreateFlagSet)
+
 	bundleCmd.AddCommand(bundleDeployCmd)
+	bundleDeployCmd.Flags().StringSliceVarP(&bndlConfig.DeployOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_DEPLOY_PACKAGES), lang.CmdBundleDeployFlagPackage)
+	bundleDeployCmd.Flags().StringToStringVarP(&bndlConfig.DeployOpts.SetVariables, "set", "s", v.GetStringMapString(V_BNDL_DEPLOY_SET), lang.CmdBundleDeployFlagSet)
+
 	bundleCmd.AddCommand(bundleInspectCmd)
+	bundleInspectCmd.Flags().StringVarP(&bndlConfig.InspectOpts.PublicKey, "key", "k", v.GetString(V_BNDL_INSPECT_KEY), lang.CmdBundleInspectFlagKey)
+
 	bundleCmd.AddCommand(bundleRemoveCmd)
+	// confirm does not use the Viper config
+	bundleRemoveCmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdBundleRemoveFlagConfirm)
+	bundleRemoveCmd.Flags().StringSliceVarP(&bndlConfig.RemoveOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_REMOVE_PACKAGES), lang.CmdBundleRemoveFlagPackages)
+	_ = bundleRemoveCmd.MarkFlagRequired("confirm")
+
 	bundleCmd.AddCommand(bundlePullCmd)
+	bundlePullCmd.Flags().StringVarP(&bndlConfig.PullOpts.OutputDirectory, "output", "o", v.GetString(V_BNDL_PULL_OUTPUT), lang.CmdBundlePullFlagOutput)
+	bundlePullCmd.Flags().StringSliceP(&bndlConfig.PullOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_PULL_PACKAGES), lang.CmdBundlePullFlagPackage)
+	bundlePullCmd.Flags().StringVarP(&bndlConfig.PullOpts.PublicKey, "key", "k", v.GetString(V_BNDL_PULL_KEY), lang.CmdBundlePullFlagKey)
 }

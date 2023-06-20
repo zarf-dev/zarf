@@ -1,6 +1,8 @@
 - [ ] re-signing packages?
 - [ ] keychains?
 - [ ] fs?
+- [ ] how to handle differentials?
+- [ ] separate SBOM?
 
 ```text
 structure of a bundle tarball:

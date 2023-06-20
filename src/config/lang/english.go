@@ -245,7 +245,8 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackagePullFlagPublicKey       = "Path to public key file for validating signed packages"
 
 	// zarf bundle
-	CmdBundleShort = "Zarf commands for creating, deploying, removing, pulling, and inspecting bundles"
+	CmdBundleShort           = "Zarf commands for creating, deploying, removing, pulling, and inspecting bundles"
+	CmdBundleFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote bundle."
 
 	CmdBundleCreateShort = "Create a Zarf bundle from a given directory or the current directory"
 

@@ -78,6 +78,30 @@ const (
 	// Package pull config keys
 	V_PKG_PULL_OUTPUT_DIR = "package.pull.output_directory"
 	V_PKG_PULL_PUBLIC_KEY = "package.pull.public_key"
+
+	// Bundle config keys
+	V_BNDL_OCI_CONCURRENCY = "bundle.oci_concurrency"
+
+	// Bundle create config keys
+	V_BNDL_CREATE_OUTPUT               = "bundle.create.output"
+	V_BNDL_CREATE_SIGNING_KEY          = "bundle.create.signing_key"
+	V_BNDL_CREATE_SIGNING_KEY_PASSWORD = "bundle.create.signing_key_password"
+	V_BNDL_CREATE_SET                  = "bundle.create.set"
+
+	// Bundle deploy config keys
+	V_BNDL_DEPLOY_PACKAGES = "bundle.deploy.packages"
+	V_BNDL_DEPLOY_SET      = "bundle.deploy.set"
+
+	// Bundle inspect config keys
+	V_BNDL_INSPECT_KEY = "bundle.inspect.key"
+
+	// Bundle remove config keys
+	V_BNDL_REMOVE_PACKAGES = "bundle.remove.packages"
+
+	// Bundle pull config keys
+	V_BNDL_PULL_OUTPUT   = "bundle.pull.output"
+	V_BNDL_PULL_PACKAGES = "bundle.pull.packages"
+	V_BNDL_PULL_KEY      = "bundle.pull.key"
 )
 
 func initViper() {
