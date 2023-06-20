@@ -49,14 +49,27 @@ jobs:
       - name: Build the eks package
         run: ./build/zarf package create packages/distros/eks -o build --confirm
 
+      # Create the EKS cluster and pass in the flag to create the secrets for the ECR hook
       - name: Deploy the eks package
-        run: ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst --components=deploy-eks-cluster --set=CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }},INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} --confirm
+        run: |
+          ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst \
+            --components=deploy-eks-cluster,setup-ecr-registry \
+            --set=CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
+            --set=INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} \
+            --set=ECR_REGISTRY_URL=public.ecr.aws/t8y5r5z5/zarf-ecr-registry \
+            --confirm
 
       # NOTE: We are copying the secret because part of the e2e process destroys the `zarf` namespace. We still want to test the remove-ability of the eks cluster via the package.
       - name: Copy the eks secret into a local file
         run: |
           rm -f eks.yaml
           ./build/zarf tools kubectl get secret -n zarf zarf-eks-yaml -o jsonpath='{.data.*}' | base64 -d > eks.yaml
+
+      # Ensure that we use the external registry for this test
+      - name: Update Config Flags For Init
+        run: |
+          echo "[init.registry]" >> zarf-config.toml
+          echo "url = 'public.ecr.aws/t8y5r5z5/zarf-ecr-registry'" >> zarf-config.toml
 
       - name: Run tests
         run: make test-e2e ARCH=amd64
