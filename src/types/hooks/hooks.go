@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package hooks contains the types for loading and running hooks.
 package hooks
 
 import "fmt"
@@ -19,6 +20,8 @@ type HookLifecycle string
 
 // Constants for hook lifecycle management
 const (
+	// TODO: Consider changing the package lifecycle to a more generic 'run once' lifecycle that gets run as soon as possible
+	//       This would solve issues where the package doesn't have kube-context until after one of the first components run
 	BeforePackage HookLifecycle = "before-package"
 	AfterPackage  HookLifecycle = "after-package"
 

@@ -26,13 +26,14 @@ import (
 
 const publicECRRegistryURL = "public.ecr.aws"
 
+// ECRHookData contains the data for the ECR hook
 type ECRHookData struct {
 	Region         string `json:"region" jsonschema:"description=AWS region of the ECR registry"`
 	RegistryURL    string `json:"registryURL" jsonschema:"description=URL of the ECR registry"`
 	RegistryPrefix string `json:"registryPrefix" jsonschema:"description=Prefix of the ECR registry"`
 }
 
-// PopulateHookData populates the ECRHookData struct with the data from hook data map
+// NewECRHookData creates a new ECRHookData struct with the data from hook data map
 func NewECRHookData(hookData map[string]interface{}) (ECRHookData, error) {
 	ecrHookData := ECRHookData{}
 	hookDataBytes, err := json.Marshal(hookData)
