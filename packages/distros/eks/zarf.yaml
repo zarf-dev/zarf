@@ -4,6 +4,7 @@ metadata:
   description: Deploy a EKS K8s cluster
   architecture: multi
   version: 0.0.2
+  yolo: true
 
 variables:
   - name: CLUSTER_NAME
@@ -67,14 +68,10 @@ components:
 
   - name: setup-ecr-registry
     description: "Create a secret in the cluster so a `zarf init` command knows to configure the cluster to use an ECR registry"
-    files:
-      - source: files/secret.yaml
-        target: ecr-info-secret.yaml
-    actions:
-      onDeploy:
-        after:
-          - cmd: ./zarf tools kubectl create namespace zarf --dry-run=client -o yaml | ./zarf tools kubectl apply -f -
-          - cmd: ./zarf tools kubectl apply -f ecr-info-secret.yaml -n zarf
+    manifests:
+      - name: ecr-info-secret
+        files:
+          - manifests/secret.yaml
 
   - name: teardown-eks-cluster
     description: Delete the EKS cluster that this package was used to create.
