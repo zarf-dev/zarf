@@ -5,7 +5,6 @@
 package hook
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -18,9 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecrpublic"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types/hooks"
-	"github.com/docker/cli/cli/config"
-	"github.com/docker/cli/cli/config/configfile"
 	docker_types "github.com/docker/cli/cli/config/types"
 )
 
@@ -75,25 +73,10 @@ func AuthToECR(ecrHook hooks.HookConfig) error {
 	}
 	username := strings.Split(string(data), ":")[0]
 	password := strings.Split(string(data), ":")[1]
-
-	// Load the default docker.config file
-	cfg, err := config.Load(config.Dir())
-	if err != nil {
-		return err
-	}
-	if !cfg.ContainsAuth() {
-		return errors.New("no docker config file found, run 'zarf tools registry login --help'")
-	}
-
-	// Save the credentials to the docker.config file
-	configs := []*configfile.ConfigFile{cfg}
 	authConfig := docker_types.AuthConfig{Username: username, Password: password, ServerAddress: ecrHookData.RegistryURL}
-	err = configs[0].GetCredentialsStore(ecrHookData.RegistryURL).Store(authConfig)
-	if err != nil {
-		return fmt.Errorf("unable to get credentials for %s: %w", ecrHookData.RegistryURL, err)
-	}
 
-	return nil
+	// Save the auth config to the users docker config.json
+	return utils.SaveDockerCredential(ecrHookData.RegistryURL, authConfig)
 }
 
 // fetchAuthToPublicECR uses the ECR public client to fetch a 12 hour auth token
