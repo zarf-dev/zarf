@@ -5,7 +5,7 @@
 <script lang="ts">
 	import Prism from 'prismjs';
 	import 'prismjs/components/prism-yaml';
-	import 'prismjs/themes/prism-okaidia.css';
+	import '$lib/zarf-prism-theme.css';
 	import { stringify } from 'yaml';
 
 	import { onMount } from 'svelte';

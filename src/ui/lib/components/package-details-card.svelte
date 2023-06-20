@@ -4,7 +4,7 @@
  -->
 <script lang="ts">
 	import type { ZarfPackage } from '$lib/api-types';
-	import { Typography, type SSX, Box } from '@ui';
+	import { Typography, type SSX, Box, Drawer } from '@ui';
 	import ZarfChip from './zarf-chip.svelte';
 	export let pkg: ZarfPackage;
 

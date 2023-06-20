@@ -4,7 +4,7 @@
  -->
 <script lang="ts">
 	import type { APIZarfDeployPayload, ZarfDeployOptions, ZarfInitOptions } from '$lib/api-types';
-	import { Dialog, Stepper, Typography, type StepProps } from '@ui';
+	import { Dialog, Stepper, Typography, type StepProps, Button, Box } from '@ui';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import bigZarf from '@images/zarf-bubbles-right.png';
 	import { goto } from '$app/navigation';
@@ -18,8 +18,9 @@
 		getComponentStepMapComponents,
 		type DeployedSteps,
 	} from './deploy-utils';
-	import AnsiDisplay from './ansi-display.svelte';
-	import stripAnsi from 'strip-ansi';
+	import AnsiDisplay from '../../../../lib/components/ansi-display.svelte';
+	import DeploymentActions from '$lib/components/deployment-actions.svelte';
+	import ButtonDense from '$lib/components/button-dense.svelte';
 
 	const POLL_TIME = 5000;
 
@@ -70,14 +71,14 @@
 	}
 
 	let successful = false;
-	let finishedDeploying = false;
 	let dialogOpen = false;
+	let activeIndex: number = 0;
+	let finishedDeploying = false;
+	let hasError: boolean = false;
 	let pollDeployed: NodeJS.Timer;
+	let addMessage: (message: string) => void;
 	let componentSteps: StepProps[] = getComponentStepMapComponents(components);
 	let dialogState: { topLine: string; bottomLine: string } = getDialogContent(successful);
-	let activeIndex: number = 0;
-	let hasError: boolean = false;
-	let addMessage: (message: string) => void;
 
 	async function updateComponentSteps(): Promise<void> {
 		if (!$pkgStore.zarfPackage.metadata?.name) {
@@ -99,13 +100,12 @@
 					hasError = true;
 					if (e.data.includes('ERROR')) {
 						componentSteps[activeIndex].variant = 'error';
+						componentSteps[activeIndex].subtitle = 'Error: See log stream for detals.';
 					} else {
 						componentSteps[activeIndex].variant = 'warning';
+						componentSteps[activeIndex].subtitle = 'Warning: See log stream for details.';
 					}
 					componentSteps[activeIndex].iconContent = '';
-					componentSteps[activeIndex].subtitle = stripAnsi(
-						e.data.replace('WARNING', '').replace('ERROR', '')
-					);
 				}
 			},
 			onerror: (e) => {
@@ -114,7 +114,6 @@
 		});
 		Packages.deploy(options).then(
 			(value: boolean) => {
-				deployStream.abort();
 				finishedDeploying = true;
 				successful = value;
 			},
@@ -133,7 +132,7 @@
 
 	$: if (finishedDeploying) {
 		pollDeployed && clearInterval(pollDeployed);
-		if (successful && !hasError) {
+		if (successful) {
 			componentSteps = [
 				...finalizeStepState(componentSteps, successful),
 				{
@@ -161,8 +160,20 @@
 </section>
 <section class="deployment-steps">
 	<Stepper orientation="vertical" color="on-background" steps={componentSteps} />
-	<AnsiDisplay width="100ch" bind:addMessage />
+	<AnsiDisplay minWidth="100ch" bind:addMessage />
 </section>
+{#if finishedDeploying && hasError}
+	<DeploymentActions>
+		<ButtonDense
+			style="margin-left: auto;"
+			variant="raised"
+			backgroundColor="white"
+			on:click={() => goto('/')}
+		>
+			Return to Packages
+		</ButtonDense>
+	</DeploymentActions>
+{/if}
 <Dialog open={dialogOpen}>
 	<section class="success-dialog" slot="content">
 		<img class="zarf-logo" src={bigZarf} alt="zarf-logo" />
@@ -179,9 +190,10 @@
 	.deployment-steps {
 		display: flex;
 		gap: 240px;
+		justify-content: space-between;
 	}
 	.deployment-steps > :global(.stepper) {
-		width: 240px;
+		min-width: 240px;
 	}
 	.success-dialog {
 		display: flex;

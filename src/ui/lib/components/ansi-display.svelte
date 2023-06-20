@@ -1,3 +1,7 @@
+<!-- 
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+ -->
 <script lang="ts">
 	import { Box, type SSX } from '@ui';
 	import { onMount } from 'svelte';
@@ -29,7 +33,9 @@
 	let scrollAnchor: Element | null | undefined;
 
 	export let height: string = '688px';
-	export let width: string = '751px';
+	export let width: string = 'auto';
+	export let minWidth: string = '';
+	export let maxWidth: string = '';
 	export const addMessage = (message: string) => {
 		let html = convert.toHtml(message);
 		html = `<div class="zarf-terminal-line">${html}</div>`;
@@ -48,6 +54,8 @@
 			overflowX: 'hidden',
 			height: height,
 			width: width,
+			maxWidth: maxWidth,
+			minWidth: minWidth,
 			'& .zarf-terminal-line': {
 				whiteSpace: 'pre-wrap',
 				wordBreak: 'break-all',

@@ -31,13 +31,13 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, error) {
 	for _, secret := range secrets.Items {
 		var deployedPackage types.DeployedPackage
 		err := json.Unmarshal(secret.Data["data"], &deployedPackage)
+		// Don't break out of the loop if we can't unmarshal a secret, just log it
 		if err != nil {
-			message.Warnf("Unable to unmarshal package secret")
-
-			return deployedPackages, err
+			message.Warnf("Unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name)
+		} else {
+			deployedPackages = append(deployedPackages, deployedPackage)
 		}
 
-		deployedPackages = append(deployedPackages, deployedPackage)
 	}
 
 	return deployedPackages, nil

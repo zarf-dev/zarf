@@ -36,7 +36,7 @@ export function setStepActive(step: StepProps): StepProps {
 }
 
 export function setStepSuccessful(step: StepProps): StepProps {
-	return { ...step, variant: 'success', disabled: false, iconContent: undefined };
+	return { ...step, variant: 'success', disabled: false, iconContent: '' };
 }
 
 export function setStepError(step: StepProps): StepProps {
