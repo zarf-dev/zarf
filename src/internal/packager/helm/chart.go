@@ -15,10 +15,13 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/types"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/releaseutil"
 
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
@@ -116,6 +119,13 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		case nil:
 			// Otherwise, there is a prior release so upgrade it.
 			spinner.Updatef("Attempting chart upgrade")
+
+			if len(releases) > 0 {
+				// Migrate any deprecated APIs (if applicable)
+				// TODO (@WSTARR) Handle any errors here in this loop
+				h.migrateDeprecatedAPIs(releases[len(releases)-1])
+			}
+
 			output, err = h.upgradeChart(postRender)
 
 		default:
@@ -373,4 +383,64 @@ func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
 	}
 
 	return loadedChart, chartValues, nil
+}
+
+func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
+	// TODO (@WSTARR) - In the real world we will need the k8s version - this is how we get it
+	// kubeVersion, err := h.Cluster.Kube.Clientset.ServerVersion()
+	// if err != nil {
+	// 	return err
+	// }
+
+	// Use helm to re-split the manifest byte (same call used by helm to pass this data to postRender)
+	_, resources, err := releaseutil.SortManifests(map[string]string{"manifest": latestRelease.Manifest}, nil, releaseutil.InstallOrder)
+
+	if err != nil {
+		return fmt.Errorf("error re-rendering helm output: %w", err)
+	}
+
+	modifiedManifest := ""
+	modified := false
+
+	// Otherwise, loop over the resources,
+	for _, resource := range resources {
+
+		// parse to unstructured to have access to more data than just the name
+		rawData := &unstructured.Unstructured{}
+		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
+			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
+		}
+
+		// TODO (@WSTARR) PodSecurityPolicy kinds aren't the only thing to handle here
+		if rawData.GetKind() != "PodSecurityPolicy" {
+			// If this is not a bad object, place it back into the manifest
+			modifiedManifest += fmt.Sprintf("---\n%s\n", resource.Content)
+		} else {
+			modified = true
+		}
+	}
+
+	if modified {
+		message.Warnf("Zarf detected deprecated APIs for the '%s' helm release.  Attempting automatic upgrade.", latestRelease.Name)
+
+		// Update current release version to be superseded (same as the helm mapkubeapis plugin)
+		latestRelease.Info.Status = release.StatusSuperseded
+		if err := h.actionConfig.Releases.Update(latestRelease); err != nil {
+			return err
+		}
+
+		// Using a shallow copy of current release version to update the object with the modification
+		// and then store this new version (same as the helm mapkubeapis plugin)
+		var newRelease = latestRelease
+		newRelease.Manifest = modifiedManifest
+		newRelease.Info.Description = "Kubernetes deprecated API upgrade - DO NOT rollback from this version"
+		newRelease.Info.LastDeployed = h.actionConfig.Now()
+		newRelease.Version = latestRelease.Version + 1
+		newRelease.Info.Status = release.StatusDeployed
+		if err := h.actionConfig.Releases.Create(newRelease); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
