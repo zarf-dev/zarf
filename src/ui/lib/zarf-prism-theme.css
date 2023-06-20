@@ -21,7 +21,8 @@ pre[class*='language-'] {
 	-ms-hyphens: none;
 	hyphens: none;
 
-	font-family: 'Operator Mono', 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+	font-family: 'Operator Mono', 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono',
+		monospace;
 	font-weight: 400;
 	font-size: 17px;
 	line-height: 25px;
@@ -38,7 +39,7 @@ pre[class*='language-'] ::selection,
 code[class*='language-']::selection,
 code[class*='language-'] ::selection {
 	color: inherit;
-	background: #1E1E1E;
+	background: #1e1e1e;
 }
 
 /* Code blocks. */
@@ -50,7 +51,7 @@ pre[class*='language-'] {
 
 :not(pre) > code[class*='language-'],
 pre[class*='language-'] {
-	background: #1E1E1E;
+	background: #1e1e1e;
 }
 
 /* Inline code */
@@ -77,8 +78,6 @@ pre[class*='language-'] {
 	color: rgba(51, 187, 200, 1);
 }
 
-
-
 .token.operator,
 .token.attr-name {
 	color: rgb(255, 180, 84);
@@ -89,7 +88,7 @@ pre[class*='language-'] {
 }
 
 .token.boolean {
-	color: rgba(203, 204, 205, 1)
+	color: rgba(203, 204, 205, 1);
 }
 
 .token.tag,

@@ -24,7 +24,7 @@
 
 	const menuSSX: SSX = {
 		$self: {
-			'position': 'fixed',
+			position: 'fixed',
 			'& .list-item-adornment': { color: 'var(--text-secondary-on-dark)' },
 			'& .divider': { height: '1px', boxShadow: 'inset 0px -1px 0px rgba(255,255,255,0.12)' },
 		},
@@ -65,35 +65,23 @@
 			<ListItemAdornment slot="leading" class="material-symbols-outlined">
 				signal_disconnected
 			</ListItemAdornment>
-			<Typography>
-				Disconnect...
-			</Typography>
+			<Typography>Disconnect...</Typography>
 		</ListItem>
 	{/if}
 	<ListItem on:click={toggleConnectDialog}>
 		<ListItemAdornment slot="leading" class="material-symbols-outlined">
 			private_connectivity
 		</ListItemAdornment>
-		<Typography>
-			Connect...
-		</Typography>
+		<Typography>Connect...</Typography>
 	</ListItem>
 	<ListItem on:click={() => goto(updateLink)}>
-		<ListItemAdornment slot="leading" class="material-symbols-outlined">
-			cached
-		</ListItemAdornment>
-		<Typography>
-			Update Package...
-		</Typography>
+		<ListItemAdornment slot="leading" class="material-symbols-outlined">cached</ListItemAdornment>
+		<Typography>Update Package...</Typography>
 	</ListItem>
 	<div class="divider" />
 	<ListItem on:click={toggleRemoveDialog}>
-		<ListItemAdornment slot="leading" class="material-symbols-outlined">
-			delete
-		</ListItemAdornment>
-		<Typography>
-			Remove...
-		</Typography>
+		<ListItemAdornment slot="leading" class="material-symbols-outlined">delete</ListItemAdornment>
+		<Typography>Remove...</Typography>
 	</ListItem>
 </Menu>
 <DisconnectDeployedPackageDialog {pkg} bind:toggleDialog={toggleDisconnectDialog} />

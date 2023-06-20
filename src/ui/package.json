@@ -13,7 +13,7 @@
 		"test:connect": "playwright test -x --reporter github,html --grep @connect",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"format": "prettier --write \"src/ui/**/*.{ts,js,svelte}\""
+		"format": "prettier --write ."
 	},
 	"nodemonConfig": {
 		"delay": 5000,
