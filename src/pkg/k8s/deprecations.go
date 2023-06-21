@@ -33,9 +33,9 @@ func (k *K8s) HandleDeprecations(rawData *unstructured.Unstructured, kubernetesV
 				if deprecation.ReplacementAPI != "" {
 					rawData.SetAPIVersion(deprecation.ReplacementAPI)
 					return rawData, true, nil
-				} else {
-					return nil, true, nil
 				}
+
+				return nil, true, nil
 			}
 		}
 	}

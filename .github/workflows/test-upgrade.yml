@@ -45,7 +45,7 @@ jobs:
           sudo mkdir -p /mnt/kubelet-data
           echo >> zarf-config.toml
           echo [package.deploy.set] >> zarf-config.toml
-          echo "k3s_args = '--disable traefik --kubelet-arg \"root-dir=/mnt/kubelet-data\"'" >> zarf-config.toml
+          echo "k3s_args = '--disable traefik --kubelet-arg \"eviction-hard=imagefs.available<1%,nodefs.available<1%\" --kubelet-arg \"eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%\"'" >> zarf-config.toml
 
       - name: Initialize the cluster with the release version
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
