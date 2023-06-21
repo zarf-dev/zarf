@@ -16,6 +16,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
+	"strings"
 )
 
 func init() {
@@ -69,6 +70,7 @@ func init() {
 
 	registryCmd.AddCommand(craneCopy)
 	registryCmd.AddCommand(zarfCraneCatalog(&craneOptions))
+	registryCmd.AddCommand(zarfCraneList(&cranePlatformOptions))
 
 	registryCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
 	registryCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
@@ -117,4 +119,51 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 	}
 
 	return craneCatalog
+}
+
+// Wrap the original crane list with a zarf specific version
+func zarfCraneList(cranePlatformOptions *[]crane.Option) *cobra.Command {
+	craneList := craneCmd.NewCmdList(cranePlatformOptions)
+
+	eg := `  # list the repos internal to Zarf
+  $ zarf tools registry ls internal/stefanprodan/podinfo
+
+  # list the repos for reg.example.com
+  $ zarf tools registry ls reg.example.com/stefanprodan/podinfo`
+
+	craneList.Example = eg
+	craneList.Args = nil
+
+	originalListFn := craneList.RunE
+
+	craneList.RunE = func(cmd *cobra.Command, args []string) error {
+		if !strings.HasPrefix(args[0], "internal/") {
+			return originalListFn(cmd, args)
+		}
+
+		// Load Zarf state
+		zarfState, err := cluster.NewClusterOrDie().LoadZarfState()
+		if err != nil {
+			return err
+		}
+
+		// Open a tunnel to the Zarf registry
+		tunnelReg, err := cluster.NewZarfTunnel()
+		if err != nil {
+			return err
+		}
+		err = tunnelReg.Connect(cluster.ZarfRegistry, false)
+		if err != nil {
+			return err
+		}
+
+		// Add the correct authentication to the crane command options
+		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PullUsername, zarfState.RegistryInfo.PullPassword)
+		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
+		registryEndpoint := tunnelReg.Endpoint()
+
+		return originalListFn(cmd, []string{strings.Replace(args[0], "internal/", registryEndpoint+"/", 1)})
+	}
+
+	return craneList
 }
