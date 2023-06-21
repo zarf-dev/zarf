@@ -4,7 +4,7 @@
 Generates a Certificate Authority and PKI chain of trust for the given host
 
 ```
-zarf tools gen-pki {HOST} [flags]
+zarf tools gen-pki HOST [flags]
 ```
 
 ## Options

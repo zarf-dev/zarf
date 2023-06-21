@@ -4,7 +4,7 @@
 Decompresses an archive or Zarf package based off of the source file extension.
 
 ```
-zarf tools archiver decompress {ARCHIVE} {DESTINATION} [flags]
+zarf tools archiver decompress ARCHIVE DESTINATION [flags]
 ```
 
 ## Options

@@ -28,7 +28,7 @@ var prepareCmd = &cobra.Command{
 }
 
 var prepareTransformGitLinks = &cobra.Command{
-	Use:     "patch-git [HOST] [FILE]",
+	Use:     "patch-git HOST FILE",
 	Aliases: []string{"p"},
 	Short:   lang.CmdPreparePatchGitShort,
 	Args:    cobra.ExactArgs(2),
@@ -71,7 +71,7 @@ var prepareTransformGitLinks = &cobra.Command{
 }
 
 var prepareComputeFileSha256sum = &cobra.Command{
-	Use:     "sha256sum [FILE|URL]",
+	Use:     "sha256sum { FILE | URL }",
 	Aliases: []string{"s"},
 	Short:   lang.CmdPrepareSha256sumShort,
 	Args:    cobra.ExactArgs(1),
@@ -87,7 +87,7 @@ var prepareComputeFileSha256sum = &cobra.Command{
 }
 
 var prepareFindImages = &cobra.Command{
-	Use:     "find-images [PACKAGE]",
+	Use:     "find-images [ PACKAGE ]",
 	Aliases: []string{"f"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPrepareFindImagesShort,
@@ -116,7 +116,7 @@ var prepareFindImages = &cobra.Command{
 }
 
 var prepareGenerateConfigFile = &cobra.Command{
-	Use:     "generate-config [FILENAME]",
+	Use:     "generate-config [ FILENAME ]",
 	Aliases: []string{"gc"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPrepareGenerateConfigShort,

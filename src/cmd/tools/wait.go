@@ -28,7 +28,7 @@ var (
 )
 
 var waitForCmd = &cobra.Command{
-	Use:     "wait-for {KIND|PROTOCOL} {NAME|SELECTOR|URI} {CONDITION|HTTP_CODE}",
+	Use:     "wait-for { KIND | PROTOCOL } { NAME | SELECTOR | URI } { CONDITION | HTTP_CODE }",
 	Aliases: []string{"w", "wait"},
 	Short:   lang.CmdToolsWaitForShort,
 	Long:    lang.CmdToolsWaitForLong,

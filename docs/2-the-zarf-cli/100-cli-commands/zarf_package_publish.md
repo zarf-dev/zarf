@@ -4,7 +4,7 @@
 Publishes a Zarf package to a remote registry
 
 ```
-zarf package publish [PACKAGE|SKELETON DIRECTORY] [REPOSITORY] [flags]
+zarf package publish { PACKAGE | SKELETON DIRECTORY } REPOSITORY [flags]
 ```
 
 ## Examples

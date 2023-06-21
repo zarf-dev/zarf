@@ -93,7 +93,7 @@ func init() {
 	}
 
 	generatePKICmd := &cobra.Command{
-		Use:     "gen-pki {HOST}",
+		Use:     "gen-pki HOST",
 		Aliases: []string{"pki"},
 		Short:   lang.CmdToolsGenPkiShort,
 		Args:    cobra.ExactArgs(1),

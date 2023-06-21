@@ -9,7 +9,7 @@ Zarf eliminates the complexity of air gap software delivery for Kubernetes clust
 using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
 
 ```
-zarf [COMMAND] [flags]
+zarf COMMAND [flags]
 ```
 
 ## Options

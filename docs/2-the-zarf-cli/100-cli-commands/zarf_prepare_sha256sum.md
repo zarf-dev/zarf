@@ -4,7 +4,7 @@
 Generates a SHA256SUM for the given file
 
 ```
-zarf prepare sha256sum [FILE|URL] [flags]
+zarf prepare sha256sum { FILE | URL } [flags]
 ```
 
 ## Options

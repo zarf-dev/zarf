@@ -5,7 +5,7 @@ Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern 
 This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook.
 
 ```
-zarf prepare patch-git [HOST] [FILE] [flags]
+zarf prepare patch-git HOST FILE [flags]
 ```
 
 ## Options

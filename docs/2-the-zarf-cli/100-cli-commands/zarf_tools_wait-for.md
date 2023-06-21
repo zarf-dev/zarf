@@ -12,7 +12,7 @@ You can also wait for arbitrary network endpoints using REST or TCP checks.
 
 
 ```
-zarf tools wait-for {KIND|PROTOCOL} {NAME|SELECTOR|URI} {CONDITION|HTTP_CODE} [flags]
+zarf tools wait-for { KIND | PROTOCOL } { NAME | SELECTOR | URI } { CONDITION | HTTP_CODE } [flags]
 ```
 
 ## Examples

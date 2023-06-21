@@ -24,7 +24,7 @@ var archiverCmd = &cobra.Command{
 }
 
 var archiverCompressCmd = &cobra.Command{
-	Use:     "compress {SOURCES} {ARCHIVE}",
+	Use:     "compress SOURCES ARCHIVE",
 	Aliases: []string{"c"},
 	Short:   lang.CmdToolsArchiverCompressShort,
 	Args:    cobra.MinimumNArgs(2),
@@ -40,7 +40,7 @@ var archiverCompressCmd = &cobra.Command{
 var unarchiveAll bool
 
 var archiverDecompressCmd = &cobra.Command{
-	Use:     "decompress {ARCHIVE} {DESTINATION}",
+	Use:     "decompress ARCHIVE DESTINATION",
 	Aliases: []string{"d"},
 	Short:   lang.CmdToolsArchiverDecompressShort,
 	Args:    cobra.ExactArgs(2),

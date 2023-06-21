@@ -14,7 +14,7 @@ If Zarf deployed your k8s cluster, this command will also tear your cluster down
 If Zarf did not deploy your k8s cluster, this command will delete the Zarf namespace, delete secrets and labels that only Zarf cares about, and optionally uninstall components that Zarf deployed onto the cluster. Since this is a cleanup operation, Zarf will not stop the uninstalls if one of the resources produce an error while being deleted.
 
 ```
-zarf destroy [flags]
+zarf destroy --confirm [flags]
 ```
 
 ## Options

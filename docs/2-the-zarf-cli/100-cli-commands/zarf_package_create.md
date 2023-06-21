@@ -10,7 +10,7 @@ Private registries and repositories are accessed via credentials in your local '
 
 
 ```
-zarf package create [DIRECTORY] [flags]
+zarf package create [ DIRECTORY ] [flags]
 ```
 
 ## Options
