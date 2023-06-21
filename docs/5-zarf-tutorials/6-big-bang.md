@@ -193,7 +193,7 @@ zarf tools k9s
 
 ## Package Removal
 
-The Big Bang package is not fully integrated into the Zarf package remove lifecycle (see [known issues](#known-issues)). To get around this limitation, an onRemove.before action has been added to the bigbang component in the zarf.yaml file that ensures all the Big Bang resources are torn down in the correct order when Zarf is used to remove the package:
+The Big Bang extension is not fully integrated into the Zarf package remove lifecycle (see [known issues](#known-issues)). To get around this limitation, an onRemove.before action has been added to the bigbang component in the zarf.yaml file that ensures all the Big Bang resources are torn down in the correct order when Zarf is used to remove the package:
 
 ```bash
 zarf package remove big-bang-example --confirm
