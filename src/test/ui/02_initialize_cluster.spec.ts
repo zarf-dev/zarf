@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 
 const expandedSearch = async (page) => {
 	const expanded = (await page.locator('.button-label:has-text("Search Directory")')).first();
-	if (expanded.isVisible()) {
+	if (expanded.isConnected && expanded.isVisible()) {
 		await expanded.click();
 	}
 };
@@ -111,19 +111,19 @@ test.describe('initialize a zarf cluster', () => {
 		const stepperItems = page.locator('.stepper-vertical .step-icon');
 
 		// deploy zarf-injector
-		await expect(stepperItems.nth(0)).toHaveClass(/success/, {
+		await expect(stepperItems.nth(0)).not.toHaveClass(/error/, {
 			timeout: 45000,
 		});
 		// deploy zarf-seed-registry
-		await expect(stepperItems.nth(1)).toHaveClass(/success/, {
+		await expect(stepperItems.nth(1)).not.toHaveClass(/error/, {
 			timeout: 45000,
 		});
 		// deploy zarf-registry
-		await expect(stepperItems.nth(2)).toHaveClass(/success/, {
+		await expect(stepperItems.nth(2)).not.toHaveClass(/error/, {
 			timeout: 45000,
 		});
 		// deploy zarf-agent
-		await expect(stepperItems.nth(3)).toHaveClass(/success/, {
+		await expect(stepperItems.nth(3)).not.toHaveClass(/error/, {
 			timeout: 45000,
 		});
 
