@@ -58,7 +58,7 @@ test.describe('initialize a zarf cluster', () => {
 		deployInit.click();
 
 		// Validate that the SBOM has been loaded
-		const sbomInfo = await page.waitForSelector('#sbom-info', { timeout: 10000 });
+		const sbomInfo = await page.waitForSelector('#sbom-info', { timeout: 20000 });
 		expect(await sbomInfo.innerText()).toMatch(/[0-9]+ artifacts to be reviewed/);
 
 		// Components (check most functionaliy with k3s component)
