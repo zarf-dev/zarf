@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/blang/semver/v4"
+	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -394,7 +394,7 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 		return err
 	}
 
-	kubeGitVersion, err := semver.Parse(kubeVersion.GitVersion)
+	kubeGitVersion, err := semver.NewVersion(kubeVersion.GitVersion)
 	if err != nil {
 		return err
 	}
@@ -417,11 +417,16 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
 		}
 
-		// TODO (@WSTARR) PodSecurityPolicy kinds aren't the only thing to handle here
-		if rawData.GetKind() != "PodSecurityPolicy" || kubeGitVersion.LT(semver.Version{Major: 1, Minor: 25}) {
-			// If this is not a bad object, place it back into the manifest
-			modifiedManifest += fmt.Sprintf("---\n%s\n", resource.Content)
-		} else {
+		rawData, manifestModified, err := h.Cluster.Kube.HandleDeprecations(rawData, *kubeGitVersion)
+		manifestContent, err := yaml.Marshal(rawData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %#v", err)
+		}
+
+		// If this is not a bad object, place it back into the manifest
+		modifiedManifest += fmt.Sprintf("---\n# Source: %s\n%s\n", resource.Name, manifestContent)
+
+		if manifestModified {
 			modified = true
 		}
 	}
