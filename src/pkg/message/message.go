@@ -39,6 +39,9 @@ const (
 // NoProgress tracks whether spinner/progress bars show updates.
 var NoProgress bool
 
+// Create a line of ━ as wide as the terminal
+var RuleLine = strings.Repeat("━", TermWidth)
+
 var logLevel = InfoLevel
 
 // Write logs to stderr and a buffer for logFile generation.
@@ -246,7 +249,7 @@ func HeaderInfof(format string, a ...any) {
 // HorizontalRule prints a white horizontal rule to separate the terminal
 func HorizontalRule() {
 	pterm.Println()
-	pterm.Println(strings.Repeat("━", TermWidth))
+	pterm.Println(RuleLine)
 }
 
 // JSONValue prints any value as JSON.

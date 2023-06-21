@@ -6,14 +6,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2/registry"
 
@@ -22,7 +20,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 )
 
@@ -162,33 +159,6 @@ var packageRemoveCmd = &cobra.Command{
 	Short:   lang.CmdPackageRemoveShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgName := args[0]
-
-		// If the user input is a path to a package, extract the name from the package
-		isTarball := regexp.MustCompile(`.*zarf-package-.*\.tar\.zst$`).MatchString
-		if isTarball(pkgName) {
-			if utils.InvalidPath(pkgName) {
-				message.Fatalf(nil, lang.CmdPackageRemoveTarballErr)
-			}
-
-			tempPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-			if err != nil {
-				message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
-			}
-			defer os.RemoveAll(tempPath)
-
-			if err := archiver.Extract(pkgName, config.ZarfYAML, tempPath); err != nil {
-				message.Fatalf(err, lang.CmdPackageRemoveExtractErr)
-			}
-
-			var pkg types.ZarfPackage
-			configPath := filepath.Join(tempPath, config.ZarfYAML)
-			if err := utils.ReadYaml(configPath, &pkg); err != nil {
-				message.Fatalf(err, lang.CmdPackageRemoveReadZarfErr)
-			}
-
-			pkgName = pkg.Metadata.Name
-			pkgConfig.Pkg = pkg
-		}
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)

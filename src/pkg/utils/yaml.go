@@ -110,7 +110,7 @@ func MakeRootHint(hints map[string]string, rootKey string, hintText string) map[
 	key := fmt.Sprintf("%s%s%s:", yamlFormat(color.FgHiCyan), rootKey, yamlFormat(color.Reset))
 	newKey := fmt.Sprintf("%s%s:%s", yamlFormat(color.FgBlack)+yamlFormat(color.BgWhite), rootKey, yamlFormat(color.Reset))
 	hint := fmt.Sprintf("%s  %s%s", yamlFormat(color.FgHiBlack), hintText, yamlFormat(color.Reset))
-	hints[key] = "\n" + newKey + hint
+	hints[key] = "\n" + message.RuleLine + "\n" + newKey + hint
 
 	return hints
 }

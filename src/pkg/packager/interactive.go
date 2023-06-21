@@ -23,9 +23,8 @@ import (
 
 func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (confirm bool) {
 
-	message.HorizontalRule()
-
-	message.Title("Package Configuration", "the package configuration that defines this package")
+	pterm.Println()
+	message.HeaderInfof("📦 PACKAGE DEFINITION")
 	utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(), true)
 
 	// Print any potential breaking changes (if this is a Deploy confirm) between this CLI version and the deployed init package
@@ -156,9 +155,9 @@ func (p *Packager) getPackageYAMLHints() map[string]string {
 	}
 
 	hints = utils.MakeRootHint(hints, "metadata", "information about this package\n")
-	hints = utils.MakeRootHint(hints, "build", "information about how this package was built\n")
-	hints = utils.MakeRootHint(hints, "components", "individual elements of this package")
-	hints = utils.MakeRootHint(hints, "constants", "constant values set by the package author")
+	hints = utils.MakeRootHint(hints, "build", "information about how this package was built and where it came from\n")
+	hints = utils.MakeRootHint(hints, "components", "individual elements / capabilities of this package")
+	hints = utils.MakeRootHint(hints, "constants", "static values set by the package author")
 	hints = utils.MakeRootHint(hints, "variables", "package values that are set for a given deployment")
 
 	return hints

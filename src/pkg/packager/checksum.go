@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 // Package utils provides generic helper functions.
-package utils
+package packager
 
 import (
 	"bufio"
@@ -14,24 +14,19 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-// ValidatePackageChecksums validates the checksums of a Zarf package.
-func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
+// validatePackageChecksums validates the checksums of a Zarf package.
+func (p *Packager) validatePackageChecksums(baseDir string, aggregateChecksum string, pathsToCheck []string) error {
 	spinner := message.NewProgressSpinner("Validating package checksums")
 	defer spinner.Stop()
 
 	// Run pre-checks to make sure we have what we need to validate the checksums
-	if InvalidPath(baseDir) {
+	if utils.InvalidPath(baseDir) {
 		return fmt.Errorf("invalid base directory: %s", baseDir)
 	}
-	var pkg types.ZarfPackage
-	err := ReadYaml(filepath.Join(baseDir, config.ZarfYAML), &pkg)
-	if err != nil {
-		return err
-	}
-	aggregateChecksum := pkg.Metadata.AggregateChecksum
+
 	if aggregateChecksum == "" {
 		spinner.Updatef("Package does not have an aggregate checksum, skipping checksums validation")
 		return nil
@@ -39,9 +34,10 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 	if len(aggregateChecksum) != 64 {
 		return fmt.Errorf("invalid aggregate checksum: %s", aggregateChecksum)
 	}
+
 	isPartial := false
 	if len(pathsToCheck) > 0 {
-		pathsToCheck = Unique(pathsToCheck)
+		pathsToCheck = utils.Unique(pathsToCheck)
 		isPartial = true
 		message.Debugf("Validating checksums for a subset of files in the package - %v", pathsToCheck)
 		for idx, path := range pathsToCheck {
@@ -49,13 +45,13 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 		}
 	}
 
-	checkedMap, err := PathCheckMap(baseDir)
+	checkedMap, err := pathCheckMap(baseDir)
 	if err != nil {
 		return err
 	}
 
 	checksumPath := filepath.Join(baseDir, config.ZarfChecksumsTxt)
-	actualAggregateChecksum, err := GetSHA256OfFile(checksumPath)
+	actualAggregateChecksum, err := utils.GetSHA256OfFile(checksumPath)
 	if err != nil {
 		return fmt.Errorf("unable to get checksum of: %s", err.Error())
 	}
@@ -67,7 +63,7 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 	checkedMap[filepath.Join(baseDir, config.ZarfYAML)] = true
 	checkedMap[filepath.Join(baseDir, config.ZarfYAMLSignature)] = true
 
-	err = LineByLine(checksumPath, func(line string) error {
+	err = lineByLine(checksumPath, func(line string) error {
 		split := strings.Split(line, " ")
 		sha := split[0]
 		rel := split[1]
@@ -79,17 +75,17 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 		status := fmt.Sprintf("Validating checksum of %s", rel)
 		spinner.Updatef(message.Truncate(status, message.TermWidth, false))
 
-		if InvalidPath(path) {
+		if utils.InvalidPath(path) {
 			if !isPartial && !checkedMap[path] {
 				return fmt.Errorf("unable to validate checksums - missing file: %s", rel)
-			} else if SliceContains(pathsToCheck, path) {
+			} else if utils.SliceContains(pathsToCheck, path) {
 				return fmt.Errorf("unable to validate partial checksums - missing file: %s", rel)
 			}
 			// it's okay if we're doing a partial check and the file isn't there as long as the path isn't in the list of paths to check
 			return nil
 		}
 
-		actualSHA, err := GetSHA256OfFile(path)
+		actualSHA, err := utils.GetSHA256OfFile(path)
 		if err != nil {
 			return fmt.Errorf("unable to get checksum of: %s", err.Error())
 		}
@@ -113,21 +109,25 @@ func ValidatePackageChecksums(baseDir string, pathsToCheck []string) error {
 				return fmt.Errorf("unable to validate partial checksums, %s did not get checked", path)
 			}
 		}
-	} else {
-		// Otherwise, make sure we've checked all the files in the package
-		for path, checked := range checkedMap {
-			if !checked {
-				return fmt.Errorf("unable to validate checksums, %s did not get checked", path)
-			}
+	}
+
+	for path, checked := range checkedMap {
+		if !checked {
+			return fmt.Errorf("unable to validate checksums, %s did not get checked", path)
 		}
 	}
 
-	spinner.Successf("Checksums validated!")
+	if isPartial {
+		spinner.Successf("Partial package checksums validated")
+	} else {
+		spinner.Successf("Full package checksums validated")
+	}
+
 	return nil
 }
 
-// PathCheckMap returns a map of all the files in a directory and a boolean to use for checking status.
-func PathCheckMap(dir string) (map[string]bool, error) {
+// pathCheckMap returns a map of all the files in a directory and a boolean to use for checking status.
+func pathCheckMap(dir string) (map[string]bool, error) {
 	filepathMap := make(map[string]bool)
 	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 		if info.IsDir() {
@@ -139,8 +139,8 @@ func PathCheckMap(dir string) (map[string]bool, error) {
 	return filepathMap, err
 }
 
-// LineByLine reads a file line by line and calls a callback function for each line.
-func LineByLine(path string, cb func(line string) error) error {
+// lineByLine reads a file line by line and calls a callback function for each line.
+func lineByLine(path string, cb func(line string) error) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return err

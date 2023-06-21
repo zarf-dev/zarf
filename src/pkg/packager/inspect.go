@@ -16,6 +16,7 @@ import (
 
 // Inspect list the contents of a package.
 func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string) error {
+	var partialPaths []string
 	wantSBOM := includeSBOM || outputSBOM != ""
 
 	requestedFiles := []string{config.ZarfYAML}
@@ -36,7 +37,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		if err != nil {
 			return err
 		}
-		if err := p.remote.PullPackage(p.tmp.Base, config.CommonOptions.OCIConcurrency, layersToPull...); err != nil {
+		if partialPaths, err = p.remote.PullPackage(p.tmp.Base, config.CommonOptions.OCIConcurrency, layersToPull...); err != nil {
 			return fmt.Errorf("unable to pull the package: %w", err)
 		}
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
@@ -66,10 +67,8 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 
-	if !utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
-		if err := utils.ValidatePackageChecksums(p.tmp.Base, requestedFiles); err != nil {
-			return fmt.Errorf("unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
-		}
+	if err := p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, partialPaths); err != nil {
+		return fmt.Errorf("unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
 	}
 
 	// Validate the package checksums and signatures if specified, and warn if the package was signed but a key was not provided

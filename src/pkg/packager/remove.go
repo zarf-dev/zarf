@@ -7,13 +7,17 @@ package packager
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -22,6 +26,27 @@ func (p *Packager) Remove(packageName string) (err error) {
 	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()
 
+	var partialPaths []string
+
+	// If the user input is a path to a package, extract the package
+	isTarball := regexp.MustCompile(`.*zarf-package-.*\.tar\.zst$`).MatchString
+	if isTarball(packageName) {
+		if utils.InvalidPath(packageName) {
+			message.Fatalf(nil, lang.CmdPackageRemoveTarballErr)
+		}
+
+		tempPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
+		}
+		defer os.RemoveAll(tempPath)
+
+		if err := archiver.Extract(packageName, config.ZarfYAML, tempPath); err != nil {
+			message.Fatalf(err, lang.CmdPackageRemoveExtractErr)
+		}
+	}
+
+	// If the user input is a path to a oci, pull the package
 	if utils.IsOCIURL(packageName) {
 		err := p.SetOCIRemote(packageName)
 		if err != nil {
@@ -29,10 +54,17 @@ func (p *Packager) Remove(packageName string) (err error) {
 		}
 
 		// pull the package from the remote
-		if err = p.remote.PullPackageMetadata(p.tmp.Base); err != nil {
+		if partialPaths, err = p.remote.PullPackageMetadata(p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to pull the package from the remote: %w", err)
 		}
+	}
+
+	// If this came from a real package, read the package config and reset the packageName
+	if isTarball(packageName) || utils.IsOCIURL(packageName) {
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
+			return err
+		}
+		if err := p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, partialPaths); err != nil {
 			return err
 		}
 		packageName = p.cfg.Pkg.Metadata.Name

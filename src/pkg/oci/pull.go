@@ -120,16 +120,17 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 //   - zarf.yaml
 //   - checksums.txt
 //   - zarf.yaml.sig
-func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) error {
+func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (partialPaths []string, err error) {
 	isPartialPull := len(layersToPull) > 0
 	ref := o.Reference
+
 	pterm.Println()
 	message.Debugf("Pulling %s", ref.String())
 	message.Infof("Pulling Zarf package from %s", ref)
 
 	manifest, err := o.FetchRoot()
 	if err != nil {
-		return err
+		return partialPaths, err
 	}
 
 	estimatedBytes := int64(0)
@@ -148,7 +149,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 
 	dst, err := file.New(destinationDir)
 	if err != nil {
-		return err
+		return partialPaths, err
 	}
 	defer dst.Close()
 
@@ -181,7 +182,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
 	_, err = oras.Copy(o.Context, o.Repository, ref.String(), dst, ref.String(), copyOpts)
 	if err != nil {
-		return err
+		return partialPaths, err
 	}
 
 	// Send a signal to the progress bar that we're done and wait for it to finish
@@ -191,15 +192,15 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	message.Debugf("Pulled %s", ref.String())
 	message.Successf("Pulled %s", ref.String())
 
-	layersToCheck := []string{}
 	if isPartialPull {
 		for _, layer := range layersToPull {
 			if layer.Annotations[ocispec.AnnotationTitle] != "" {
-				layersToCheck = append(layersToCheck, layer.Annotations[ocispec.AnnotationTitle])
+				partialPaths = append(partialPaths, layer.Annotations[ocispec.AnnotationTitle])
 			}
 		}
 	}
-	return utils.ValidatePackageChecksums(destinationDir, layersToCheck)
+
+	return partialPaths, nil
 }
 
 // PullLayer pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
@@ -215,24 +216,21 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 }
 
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
-func (o *OrasRemote) PullPackageMetadata(destinationDir string) error {
+func (o *OrasRemote) PullPackageMetadata(destinationDir string) (partialPaths []string, err error) {
+	partialPaths = AlwaysPull
+
 	root, err := o.FetchRoot()
 	if err != nil {
-		return err
+		return partialPaths, err
 	}
 	for _, path := range AlwaysPull {
 		desc := root.Locate(path)
 		if !o.isEmptyDescriptor(desc) {
 			err = o.PullLayer(desc, destinationDir)
 			if err != nil {
-				return err
+				return partialPaths, err
 			}
 		}
 	}
-	var pkg types.ZarfPackage
-	err = utils.ReadYaml(filepath.Join(destinationDir, config.ZarfYAML), &pkg)
-	if err != nil {
-		return err
-	}
-	return utils.ValidatePackageChecksums(destinationDir, AlwaysPull)
+	return partialPaths, nil
 }
