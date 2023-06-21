@@ -137,6 +137,10 @@ func zarfCraneList(cranePlatformOptions *[]crane.Option) *cobra.Command {
 	originalListFn := craneList.RunE
 
 	craneList.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			message.Fatal(nil, lang.CmdToolsCraneListNoRepoSpecified)
+		}
+
 		if !strings.HasPrefix(args[0], "internal/") {
 			return originalListFn(cmd, args)
 		}

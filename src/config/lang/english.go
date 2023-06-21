@@ -351,6 +351,8 @@ const (
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
+	CmdToolsCraneListNoRepoSpecified = "You must specify a repository name to return a list of tags for."
+
 	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
 	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."
 	CmdToolsDownloadInitErr                 = "Unable to download the init package: %s"
