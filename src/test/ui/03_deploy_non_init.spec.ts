@@ -27,6 +27,11 @@ const getToReview = async (page) => {
 
 test('deploy the dos-games package @post-init', async ({ page }) => {
 	await getToReview(page);
+
+	// Validate that the SBOM has been loaded
+	const sbomInfo = await page.waitForSelector('#sbom-info', { timeout: 20000 });
+	expect(await sbomInfo.innerText()).toMatch(/[0-9]+ artifacts to be reviewed/);
+
 	await page.getByRole('link', { name: 'deploy package' }).click();
 	await page.waitForURL('/packages/dos-games/deploy', { waitUntil: 'networkidle' });
 
