@@ -39,6 +39,14 @@ jobs:
         with:
           download-init-package: true
 
+      # Note we move the kubelet data to reduce the chance for disk pressure during the tests
+      - name: Move the kubelet root directory for 'k3s'
+        run: |
+          sudo mkdir -p /mnt/kubelet-data
+          echo >> zarf-config.toml
+          echo [package.deploy.set] >> zarf-config.toml
+          echo "k3s_args = '--disable traefik --kubelet-arg \"root-dir=/mnt/kubelet-data\"'" >> zarf-config.toml
+
       - name: Initialize the cluster with the release version
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
