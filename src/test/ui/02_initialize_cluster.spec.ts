@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 
 const expandedSearch = async (page) => {
 	const expanded = (await page.locator('.button-label:has-text("Search Directory")')).first();
-	if (expanded.isConnected && expanded.isVisible()) {
+	if (expanded.isVisible()) {
 		await expanded.click();
 	}
 };
