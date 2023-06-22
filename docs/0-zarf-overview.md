@@ -67,7 +67,7 @@ Given Zarf's being a "K8s cluster to serve _other_ K8s clusters", the following 
 - Pre-compiled binaries: to provide the software necessary to start and support the Zarf cluster.
 - [Component actions](3-create-a-zarf-package/7-component-actions.md): to support scripts and commands that run at various stages of the Zarf [package create lifecycle](./3-create-a-zarf-package/5-package-create-lifecycle.md), and [package deploy lifecycle](./4-deploy-a-zarf-package/1-package-deploy-lifecycle.md).
 - Helm charts, kustomizations, and other K8s manifests: to apply in a Kubernetes cluster.
-- [Data injections](../examples/data-injection/README.md): to declaratively inject data into running containers in a Kubernetes cluster.
+- [Data injections](../examples/kiwix/README.md): to declaratively inject data into running containers in a Kubernetes cluster.
 
 ## How To Use Zarf
 
