@@ -49,7 +49,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 	}
 
 	// If this came from a real package, read the package config and reset the packageName
-	if isTarball(packageName) || utils.IsOCIURL(packageName) {
+	if ZarfPackagePattern.MatchString(packageName) || utils.IsOCIURL(packageName) {
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 			return err
 		}
