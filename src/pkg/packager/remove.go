@@ -25,8 +25,6 @@ func (p *Packager) Remove(packageName string) (err error) {
 	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()
 
-	var partialPaths []string
-
 	// If the user input is a path to a package, extract the package
 	isTarball := regexp.MustCompile(`.*zarf-package-.*\.tar\.zst$`).MatchString
 	if isTarball(packageName) {
@@ -47,7 +45,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 		}
 
 		// pull the package from the remote
-		if partialPaths, err = p.remote.PullPackageMetadata(p.tmp.Base); err != nil {
+		if _, err = p.remote.PullPackageMetadata(p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to pull the package from the remote: %w", err)
 		}
 	}
@@ -55,9 +53,6 @@ func (p *Packager) Remove(packageName string) (err error) {
 	// If this came from a real package, read the package config and reset the packageName
 	if isTarball(packageName) || utils.IsOCIURL(packageName) {
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
-			return err
-		}
-		if err := p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, partialPaths); err != nil {
 			return err
 		}
 		packageName = p.cfg.Pkg.Metadata.Name
