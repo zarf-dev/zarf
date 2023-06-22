@@ -216,21 +216,19 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 }
 
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
-func (o *OrasRemote) PullPackageMetadata(destinationDir string) (partialPaths []string, err error) {
-	partialPaths = AlwaysPull
-
+func (o *OrasRemote) PullPackageMetadata(destinationDir string) (err error) {
 	root, err := o.FetchRoot()
 	if err != nil {
-		return partialPaths, err
+		return err
 	}
 	for _, path := range AlwaysPull {
 		desc := root.Locate(path)
 		if !o.isEmptyDescriptor(desc) {
 			err = o.PullLayer(desc, destinationDir)
 			if err != nil {
-				return partialPaths, err
+				return err
 			}
 		}
 	}
-	return partialPaths, nil
+	return nil
 }
