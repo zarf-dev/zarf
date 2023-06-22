@@ -7,7 +7,6 @@ package packager
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -35,13 +34,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 			message.Fatalf(nil, lang.CmdPackageRemoveTarballErr)
 		}
 
-		tempPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-		if err != nil {
-			message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
-		}
-		defer os.RemoveAll(tempPath)
-
-		if err := archiver.Extract(packageName, config.ZarfYAML, tempPath); err != nil {
+		if err := archiver.Extract(packageName, config.ZarfYAML, p.tmp.Base); err != nil {
 			message.Fatalf(err, lang.CmdPackageRemoveExtractErr)
 		}
 	}
