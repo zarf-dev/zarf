@@ -24,7 +24,7 @@ var confirmDestroy bool
 var removeComponents bool
 
 var destroyCmd = &cobra.Command{
-	Use:     "destroy",
+	Use:     "destroy --confirm",
 	Aliases: []string{"d"},
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,

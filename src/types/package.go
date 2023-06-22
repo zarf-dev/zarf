@@ -24,7 +24,7 @@ type ZarfMetadata struct {
 	Uncompressed      bool   `json:"uncompressed,omitempty" jsonschema:"description=Disable compression of this package"`
 	Architecture      string `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture for this package,example=arm64,example=amd64"`
 	YOLO              bool   `json:"yolo,omitempty" jsonschema:"description=Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries."`
-	Authors           string `json:"authors,omitempty" jsonschema:"description=List of package authors (including contact info)"`
+	Authors           string `json:"authors,omitempty" jsonschema:"description=Comma-separated list of package authors (including contact info),example=Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"`
 	Documentation     string `json:"documentation,omitempty" jsonschema:"description=Link to package documentation when online"`
 	Source            string `json:"source,omitempty" jsonschema:"description=Link to package source code when online"`
 	Vendor            string `json:"vendor,omitempty" jsonschema_description:"Name of the distributing entity, organization or individual."`
