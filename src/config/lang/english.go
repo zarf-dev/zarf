@@ -218,6 +218,7 @@ const (
 
 	CmdPackageListShort         = "Lists out all of the packages that have been deployed to the cluster (runs offline)"
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
+	CmdPackageListUnmarshalErr  = "Unable to read all of the packages deployed to the cluster"
 
 	CmdPackageCreateFlagConfirm            = "Confirm package creation without prompting"
 	CmdPackageCreateFlagSet                = "Specify package variables to set on the command line (KEY=value)"

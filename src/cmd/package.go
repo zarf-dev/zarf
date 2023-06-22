@@ -124,9 +124,9 @@ var packageListCmd = &cobra.Command{
 	Short:   lang.CmdPackageListShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get all the deployed packages
-		deployedZarfPackages, err := cluster.NewClusterOrDie().GetDeployedZarfPackages()
-		if err != nil {
-			message.Fatalf(err, lang.CmdPackageListNoPackageWarn)
+		deployedZarfPackages, errs := cluster.NewClusterOrDie().GetDeployedZarfPackages()
+		if len(errs) > 0 && len(deployedZarfPackages) == 0 {
+			message.Fatalf(errs, lang.CmdPackageListNoPackageWarn)
 		}
 
 		// Populate a pterm table of all the deployed packages
@@ -149,6 +149,11 @@ var packageListCmd = &cobra.Command{
 
 		// Print out the table for the user
 		_ = pterm.DefaultTable.WithHasHeader().WithData(packageTable).Render()
+
+		// Print out any unmarshalling errors
+		if len(errs) > 0 {
+			message.Fatalf(errs, lang.CmdPackageListUnmarshalErr)
+		}
 	},
 }
 

@@ -7,19 +7,20 @@
 	import { Dialog, Stepper, Typography, type StepProps } from '@ui';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import bigZarf from '@images/zarf-bubbles-right.png';
-	import { FitAddon } from 'xterm-addon-fit';
-	import { goto } from '$app/navigation';
+	import { beforeNavigate, goto } from '$app/navigation';
 	import { Packages } from '$lib/api';
 	import { onMount } from 'svelte';
-	import { Terminal } from 'xterm';
-	import 'xterm/css/xterm.css';
 	import {
 		getDialogContent,
 		finalizeStepState,
 		getDeployedComponents,
 		createComponentStepMap,
 		getComponentStepMapComponents,
+		type DeployedSteps,
 	} from './deploy-utils';
+	import AnsiDisplay from '../../../../lib/components/ansi-display.svelte';
+	import DeploymentActions from '$lib/components/deployment-actions.svelte';
+	import ButtonDense from '$lib/components/button-dense.svelte';
 
 	const POLL_TIME = 5000;
 
@@ -40,7 +41,7 @@
 			components: requestedComponents,
 			sGetKeyPath: '',
 			packagePath: $pkgStore.path,
-			setVariables: {}
+			setVariables: {},
 		} as ZarfDeployOptions,
 	};
 
@@ -69,10 +70,14 @@
 		} as ZarfInitOptions;
 	}
 
+	let activeIndex = 0;
+	let hasError = false;
 	let successful = false;
-	let finishedDeploying = false;
 	let dialogOpen = false;
+	let deployStream: AbortController;
+	let finishedDeploying = false;
 	let pollDeployed: NodeJS.Timer;
+	let addMessage: (message: string) => void;
 	let componentSteps: StepProps[] = getComponentStepMapComponents(components);
 	let dialogState: { topLine: string; bottomLine: string } = getDialogContent(successful);
 
@@ -81,40 +86,40 @@
 			return;
 		}
 		return getDeployedComponents($pkgStore.zarfPackage.metadata.name, components).then(
-			(value: StepProps[]) => {
-				componentSteps = value;
+			(value: DeployedSteps) => {
+				componentSteps = value.steps;
+				activeIndex = value.activeStep;
 			}
 		);
 	}
 
-	onMount(async () => {
-		const term = new Terminal({
-			disableStdin: true,
-			convertEol: true,
-			customGlyphs: true,
-			theme: { background: '#1E1E1E' },
-		});
-		const fitAddon = new FitAddon();
-		term.loadAddon(fitAddon);
+	beforeNavigate(() => {
+		deployStream?.abort();
+		clearInterval(pollDeployed);
+	});
 
-		const termElement = document.getElementById('terminal');
-		if (termElement) {
-			term.open(termElement);
-			fitAddon.fit();
-		}
-		const deployStream = Packages.deployStream({
+	onMount(async () => {
+		deployStream = Packages.deployStream({
 			onmessage: (e) => {
-				term.writeln(e.data);
+				addMessage(e.data);
+				if (e.data.includes('WARNING') || e.data.includes('ERROR')) {
+					hasError = true;
+					if (e.data.includes('ERROR')) {
+						componentSteps[activeIndex].variant = 'error';
+						componentSteps[activeIndex].subtitle = 'Error: See log stream for detals.';
+					} else {
+						componentSteps[activeIndex].variant = 'warning';
+						componentSteps[activeIndex].subtitle = 'Warning: See log stream for details.';
+					}
+					componentSteps[activeIndex].iconContent = '';
+				}
 			},
 			onerror: (e) => {
-				term.writeln(e.message);
-				finishedDeploying = true;
-				successful = false;
+				addMessage(e.message);
 			},
 		});
 		Packages.deploy(options).then(
 			(value: boolean) => {
-				deployStream.abort();
 				finishedDeploying = true;
 				successful = value;
 			},
@@ -133,18 +138,20 @@
 
 	$: if (finishedDeploying) {
 		pollDeployed && clearInterval(pollDeployed);
-		componentSteps = [
-			...finalizeStepState(componentSteps, successful),
-			{
-				title: successful ? 'Deployment Succeeded' : 'Deployment Failed',
-				variant: successful ? 'success' : 'error',
-				disabled: false,
-			},
-		];
-		dialogOpen = true;
-		setTimeout(() => {
-			goto('/');
-		}, POLL_TIME);
+		if (successful) {
+			componentSteps = [
+				...finalizeStepState(componentSteps, successful),
+				{
+					title: successful ? 'Deployment Succeeded' : 'Deployment Failed',
+					variant: successful ? 'success' : 'error',
+					disabled: false,
+				},
+			];
+			dialogOpen = true;
+			setTimeout(() => {
+				goto('/');
+			}, POLL_TIME);
+		}
 	}
 	$: if (successful) {
 		dialogState = getDialogContent(successful);
@@ -159,8 +166,20 @@
 </section>
 <section class="deployment-steps">
 	<Stepper orientation="vertical" color="on-background" steps={componentSteps} />
-	<div id="terminal" />
+	<AnsiDisplay minWidth="100ch" bind:addMessage />
 </section>
+{#if finishedDeploying && hasError}
+	<DeploymentActions>
+		<ButtonDense
+			style="margin-left: auto;"
+			variant="raised"
+			backgroundColor="white"
+			on:click={() => goto('/')}
+		>
+			Return to Packages
+		</ButtonDense>
+	</DeploymentActions>
+{/if}
 <Dialog open={dialogOpen}>
 	<section class="success-dialog" slot="content">
 		<img class="zarf-logo" src={bigZarf} alt="zarf-logo" />
@@ -176,7 +195,11 @@
 <style>
 	.deployment-steps {
 		display: flex;
-		justify-content: space-evenly;
+		gap: 240px;
+		justify-content: space-between;
+	}
+	.deployment-steps > :global(.stepper) {
+		min-width: 240px;
 	}
 	.success-dialog {
 		display: flex;
@@ -192,11 +215,5 @@
 	.zarf-logo {
 		width: 64px;
 		height: 62.67px;
-	}
-
-	#terminal {
-		width: 751px;
-		height: 688px;
-		padding: 8px;
 	}
 </style>

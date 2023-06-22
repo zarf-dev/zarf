@@ -42,6 +42,9 @@ var NoProgress bool
 // RuleLine creates a line of ━ as wide as the terminal
 var RuleLine = strings.Repeat("━", TermWidth)
 
+// LogWriter is the stream to write logs to.
+var LogWriter io.Writer = os.Stderr
+
 var logLevel = InfoLevel
 
 // Write logs to stderr and a buffer for logFile generation.
@@ -83,16 +86,16 @@ func UseLogFile() {
 	var err error
 	if logFile != nil {
 		// Use the existing log file if logFile is set
-		logStream := io.MultiWriter(os.Stderr, logFile)
-		pterm.SetDefaultOutput(logStream)
+		LogWriter = io.MultiWriter(os.Stderr, logFile)
+		pterm.SetDefaultOutput(LogWriter)
 	} else {
 		// Try to create a temp log file if one hasn't been made already
 		if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
 			WarnErr(err, "Error saving a log file to a temporary directory")
 		} else {
 			useLogFile = true
-			logStream := io.MultiWriter(os.Stderr, logFile)
-			pterm.SetDefaultOutput(logStream)
+			LogWriter = io.MultiWriter(os.Stderr, logFile)
+			pterm.SetDefaultOutput(LogWriter)
 			message := fmt.Sprintf("Saving log file to %s", logFile.Name())
 			Note(message)
 		}
