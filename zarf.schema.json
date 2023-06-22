@@ -258,11 +258,6 @@
           "$ref": "#/definitions/DeprecatedZarfComponentScripts",
           "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment"
         },
-        "actions": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentActions",
-          "description": "Custom commands to run at various stages of a package lifecycle"
-        },
         "files": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
@@ -313,6 +308,11 @@
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentExtensions",
           "description": "Extend component functionality with additional features"
+        },
+        "actions": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfComponentActions",
+          "description": "Custom commands to run at various stages of a package lifecycle"
         }
       },
       "additionalProperties": false,
@@ -921,14 +921,6 @@
           "type": "array",
           "description": "List of components to deploy in this package"
         },
-        "variables": {
-          "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfPackageVariable"
-          },
-          "type": "array",
-          "description": "Variable template values applied on deploy for K8s resources"
-        },
         "constants": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
@@ -936,6 +928,14 @@
           },
           "type": "array",
           "description": "Constant template values applied on deploy for K8s resources"
+        },
+        "variables": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfPackageVariable"
+          },
+          "type": "array",
+          "description": "Variable template values applied on deploy for K8s resources"
         }
       },
       "additionalProperties": false,
