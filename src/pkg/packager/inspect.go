@@ -16,24 +16,23 @@ import (
 
 // Inspect list the contents of a package.
 func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string) error {
-	var partialPaths []string
 	wantSBOM := includeSBOM || outputSBOM != ""
 
-	requestedFiles := []string{config.ZarfYAML}
+	partialPaths := []string{config.ZarfYAML}
 	if wantSBOM {
-		requestedFiles = append(requestedFiles, config.ZarfSBOMTar)
+		partialPaths = append(partialPaths, config.ZarfSBOMTar)
 	}
 
 	// Handle OCI packages that have been published to a registry
 	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
 
-		message.Debugf("Pulling layers %v from %s", requestedFiles, p.cfg.DeployOpts.PackagePath)
+		message.Debugf("Pulling layers %v from %s", partialPaths, p.cfg.DeployOpts.PackagePath)
 
 		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)
 		if err != nil {
 			return err
 		}
-		layersToPull, err := p.remote.LayersFromPaths(requestedFiles)
+		layersToPull, err := p.remote.LayersFromPaths(partialPaths)
 		if err != nil {
 			return err
 		}
