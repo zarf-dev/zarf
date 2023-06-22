@@ -42,6 +42,7 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, []error) {
 
 	}
 
+    // TODO: If we move this function out of `internal` we should return a more standard singular error.
 	return deployedPackages, errorList
 }
 
