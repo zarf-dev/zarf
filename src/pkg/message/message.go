@@ -39,8 +39,8 @@ const (
 // NoProgress tracks whether spinner/progress bars show updates.
 var NoProgress bool
 
-// LogStream is the stream to write logs to.
-var LogStream io.Writer = os.Stderr
+// LogWriter is the stream to write logs to.
+var LogWriter io.Writer = os.Stderr
 
 var logLevel = InfoLevel
 
@@ -83,16 +83,16 @@ func UseLogFile() {
 	var err error
 	if logFile != nil {
 		// Use the existing log file if logFile is set
-		LogStream = io.MultiWriter(os.Stderr, logFile)
-		pterm.SetDefaultOutput(LogStream)
+		LogWriter = io.MultiWriter(os.Stderr, logFile)
+		pterm.SetDefaultOutput(LogWriter)
 	} else {
 		// Try to create a temp log file if one hasn't been made already
 		if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
 			WarnErr(err, "Error saving a log file to a temporary directory")
 		} else {
 			useLogFile = true
-			LogStream = io.MultiWriter(os.Stderr, logFile)
-			pterm.SetDefaultOutput(LogStream)
+			LogWriter = io.MultiWriter(os.Stderr, logFile)
+			pterm.SetDefaultOutput(LogWriter)
 			message := fmt.Sprintf("Saving log file to %s", logFile.Name())
 			Note(message)
 		}

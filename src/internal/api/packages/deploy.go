@@ -61,7 +61,7 @@ func StreamDeployPackage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 
 	pr, pw, _ := os.Pipe()
-	logStream := io.MultiWriter(message.LogStream, pw)
+	logStream := io.MultiWriter(message.LogWriter, pw)
 	pterm.SetDefaultOutput(logStream)
 
 	scanner := bufio.NewScanner(pr)
@@ -73,7 +73,7 @@ func StreamDeployPackage(w http.ResponseWriter, r *http.Request) {
 		select {
 		// If the context is done, reset the output and return
 		case (<-done):
-			pterm.SetDefaultOutput(message.LogStream)
+			pterm.SetDefaultOutput(message.LogWriter)
 			return
 		default:
 			err := scanner.Err()
