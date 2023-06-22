@@ -46,13 +46,7 @@ func init() {
 func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 	craneCatalog := craneCmd.NewCmdCatalog(cranePlatformOptions)
 
-	eg := `  # list the repos internal to Zarf
-  $ zarf tools registry catalog
-
-  # list the repos for reg.example.com
-  $ zarf tools registry catalog reg.example.com`
-
-	craneCatalog.Example = eg
+	craneCatalog.Example = lang.CmdToolsRegistryCatalogExample
 	craneCatalog.Args = nil
 
 	originalCatalogFn := craneCatalog.RunE
