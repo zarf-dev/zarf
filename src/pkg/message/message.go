@@ -39,7 +39,7 @@ const (
 // NoProgress tracks whether spinner/progress bars show updates.
 var NoProgress bool
 
-// Create a line of ━ as wide as the terminal
+// RuleLine creates a line of ━ as wide as the terminal
 var RuleLine = strings.Repeat("━", TermWidth)
 
 var logLevel = InfoLevel
