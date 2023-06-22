@@ -253,7 +253,7 @@ func (p *Packager) loadZarfPkg() error {
 		return fmt.Errorf("unable to handle the provided package path: %w", err)
 	}
 
-	preExtracted := p.cfg.DeployOpts.PackagePath == p.tmp.Base
+	alreadyExtracted := p.cfg.DeployOpts.PackagePath == p.tmp.Base
 
 	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
 	defer spinner.Stop()
@@ -269,7 +269,7 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// If the package was pulled from OCI, there is no need to extract it since it is unpacked already
-	if !preExtracted {
+	if !alreadyExtracted {
 		// Extract the archive
 		spinner.Updatef("Extracting the package, this may take a few moments")
 		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
