@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -38,6 +39,15 @@ type Packager struct {
 	arch     string
 	warnings []string
 }
+
+// Zarf Packager Variables.
+var (
+	// Find zarf-packages on the local system (https://regex101.com/r/TUUftK/1)
+	ZarfPackagePattern = regexp.MustCompile(`zarf-package[^\s\\\/]*\.tar(\.zst)?$`)
+
+	// Find zarf-init packages on the local system
+	ZarfInitPattern = regexp.MustCompile(GetInitPackageName("") + "$")
+)
 
 /*
 New creates a new package instance with the provided config.

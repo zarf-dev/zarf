@@ -7,7 +7,6 @@ package packager
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -26,8 +25,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 	defer spinner.Stop()
 
 	// If the user input is a path to a package, extract the package
-	isTarball := regexp.MustCompile(`.*zarf-package-.*\.tar\.zst$`).MatchString
-	if isTarball(packageName) {
+	if ZarfPackagePattern.MatchString(packageName) {
 		if utils.InvalidPath(packageName) {
 			message.Fatalf(nil, lang.CmdPackageRemoveTarballErr)
 		}
