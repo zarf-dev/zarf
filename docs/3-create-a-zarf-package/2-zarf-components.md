@@ -160,7 +160,7 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 
 <Properties item="ZarfComponent" include={["dataInjections"]} />
 
-<ExampleYAML example="data-injection" component="with-init-container" />
+<ExampleYAML example="kiwix" component="kiwix-serve" />
 
 ### Component Imports
 
