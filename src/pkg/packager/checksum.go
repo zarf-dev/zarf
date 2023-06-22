@@ -117,11 +117,7 @@ func (p *Packager) validatePackageChecksums(baseDir string, aggregateChecksum st
 		}
 	}
 
-	if isPartial {
-		spinner.Successf("Partial package checksums validated")
-	} else {
-		spinner.Successf("Full package checksums validated")
-	}
+	spinner.Successf("Checksums validated!")
 
 	return nil
 }
