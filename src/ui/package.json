@@ -4,7 +4,9 @@
 	"type": "module",
 	"version": "0.0.1",
 	"scripts": {
-		"dev": "../../hack/ui-dev.sh",
+		"dev": "concurrently --names ui,api -c gray.bold,yellow 'npm run dev:ui' 'npm run dev:api'",
+		"dev:ui": "vite dev",
+		"dev:api": "nodemon -e go -x 'cd ../.. && make test-ui-dev-server || exit 1'",
 		"build": "vite build",
 		"test": "playwright test -x --reporter github,html",
 		"test:pre-init": "playwright test -x --reporter github,html --grep @pre-init",

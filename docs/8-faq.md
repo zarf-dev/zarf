@@ -131,3 +131,9 @@ YOLO Mode is a special package metadata designation that be added to a package p
 Typically you should not deploy a Zarf package in YOLO mode if the cluster has already been initialized with Zarf. This could lead to an [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) if the resources in the package do not include the `zarf.dev/agent: ignore` label and are not already available in the Zarf Registry.
 
 :::
+
+## What is a `skeleton` Zarf Package?
+
+A `skeleton` package is a bare-bones Zarf package definition alongside its associated local files and manifests that has been published to an OCI registry.  These packages are intended for use with [component composability](../examples/composable-packages/README.md) to provide versioned imports for components that you wish to mix and match or modify with merge-overrides across multiple separate packages.
+
+Skeleton packages have not been run through the `zarf package create` process yet, and thus do not have any remote resources included (no images, repos, or remote manifests and files) thereby retaining any [create-time package configuration templates](../examples/variables/README.md#create-time-package-configuration-templates) as they were defined in the original `zarf.yaml` (i.e. untemplated).
