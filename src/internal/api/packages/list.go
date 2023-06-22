@@ -20,8 +20,8 @@ func ListDeployedPackages(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 
-	deployedPackages, err := c.GetDeployedZarfPackages()
-	if err != nil {
+	deployedPackages, errs := c.GetDeployedZarfPackages()
+	if len(errs) > 0 && len(deployedPackages) == 0 {
 		message.ErrorWebf(err, w, "Unable to get a list of the deployed Zarf packages")
 		return
 	}

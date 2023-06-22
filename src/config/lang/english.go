@@ -203,6 +203,7 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 
 	CmdPackageListShort         = "List out all of the packages that have been deployed to the cluster"
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
+	CmdPackageListUnmarshalErr  = "Unable to unmarshal all of the packages deployed to the cluster"
 
 	CmdPackageRemoveShort       = "Use to remove a Zarf package that has been deployed already"
 	CmdPackageRemoveTarballErr  = "Invalid tarball path provided"

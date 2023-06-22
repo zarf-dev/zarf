@@ -7,6 +7,7 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -18,29 +19,30 @@ import (
 
 // GetDeployedZarfPackages gets metadata information about packages that have been deployed to the cluster.
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
-func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, error) {
+// Returns a list of DeployedPackage structs and a list of errors.
+func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, []error) {
 	var deployedPackages = []types.DeployedPackage{}
-
+	var errorList []error
 	// Get the secrets that describe the deployed packages
 	secrets, err := c.Kube.GetSecretsWithLabel(ZarfNamespaceName, ZarfPackageInfoLabel)
 	if err != nil {
-		return deployedPackages, err
+		return deployedPackages, append(errorList, err)
 	}
 
 	// Process the k8s secret into our internal structs
 	for _, secret := range secrets.Items {
 		var deployedPackage types.DeployedPackage
 		err := json.Unmarshal(secret.Data["data"], &deployedPackage)
-		// Don't break out of the loop if we can't unmarshal a secret, just log it
+		// add the error to the error list
 		if err != nil {
-			message.Warnf("Unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name)
+			errorList = append(errorList, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
 		} else {
 			deployedPackages = append(deployedPackages, deployedPackage)
 		}
 
 	}
 
-	return deployedPackages, nil
+	return deployedPackages, errorList
 }
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
