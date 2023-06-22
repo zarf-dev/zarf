@@ -1,4 +1,4 @@
-# Getting started - Github Action
+# Getting Started - Github Action
 
 The [setup-zarf](https://github.com/defenseunicorns/setup-zarf) Github action is an officially supported action to install any version of Zarf and it's `init` package with zero added dependencies.
 

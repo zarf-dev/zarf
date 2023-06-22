@@ -646,7 +646,7 @@
         "url": {
           "pattern": "^oci://(?!.*###ZARF_PKG_TMPL_).*$",
           "type": "string",
-          "description": "The URL to a Zarf package to import via OCI"
+          "description": "[beta] The URL to a Zarf package to import via OCI"
         }
       },
       "additionalProperties": false,
@@ -863,7 +863,10 @@
         },
         "authors": {
           "type": "string",
-          "description": "List of package authors (including contact info)"
+          "description": "Comma-separated list of package authors (including contact info)",
+          "examples": [
+            "Doug \u0026#60;hello@defenseunicorns.com\u0026#62;\u0026#44; Pepr \u0026#60;hello@defenseunicorns.com\u0026#62;"
+          ]
         },
         "documentation": {
           "type": "string",

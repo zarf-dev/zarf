@@ -38,7 +38,7 @@ func init() {
 			}
 
 			message.Note(lang.CmdToolsGetGitPasswdInfo)
-			message.Warn(lang.CmdToolGetGitDeprecation)
+			message.Warn(lang.CmdToolsGetGitPasswdDeprecation)
 			utils.PrintComponentCredential(state, "git")
 		},
 	}
@@ -70,7 +70,7 @@ func init() {
 		Aliases: []string{"c"},
 		Short:   lang.CmdToolsClearCacheShort,
 		Run: func(cmd *cobra.Command, args []string) {
-			message.Debugf("Cache directory set to: %s", config.GetAbsCachePath())
+			message.Notef(lang.CmdToolsClearCacheDir, config.GetAbsCachePath())
 			if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
 				message.Fatalf(err, lang.CmdToolsClearCacheErr, config.GetAbsCachePath())
 			}
@@ -93,7 +93,7 @@ func init() {
 	}
 
 	generatePKICmd := &cobra.Command{
-		Use:     "gen-pki {HOST}",
+		Use:     "gen-pki HOST",
 		Aliases: []string{"pki"},
 		Short:   lang.CmdToolsGenPkiShort,
 		Args:    cobra.ExactArgs(1),

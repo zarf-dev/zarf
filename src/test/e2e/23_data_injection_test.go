@@ -35,7 +35,8 @@ func TestDataInjection(t *testing.T) {
 	require.Contains(t, stdOut, "devops.stackexchange.com_en_all_2023-05.zim")
 	require.Contains(t, stdOut, ".zarf-injection-")
 
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "kiwix", "--confirm")
+	// Remove the data injection example
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure that the `requirements.txt` file is discovered correctly
