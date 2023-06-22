@@ -100,7 +100,7 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) {
 func AddRootListHint(hints map[string]string, listKey string, listValue string, hintText string) map[string]string {
 	key := fmt.Sprintf("-%s %s%s:%s %s%s", yamlFormat(color.FgHiCyan), listKey, yamlFormat(color.Reset), yamlFormat(color.FgHiMagenta), listValue, yamlFormat(color.Reset))
 	hint := fmt.Sprintf("%s  %s%s", yamlFormat(color.FgHiBlack), hintText, yamlFormat(color.Reset))
-	hints[key] = key + hint
+	hints[key] = fmt.Sprintf("%s%s", key, hint)
 
 	return hints
 }
@@ -110,7 +110,7 @@ func AddRootHint(hints map[string]string, rootKey string, hintText string) map[s
 	key := fmt.Sprintf("%s%s%s:", yamlFormat(color.FgHiCyan), rootKey, yamlFormat(color.Reset))
 	newKey := fmt.Sprintf("%s%s:%s", yamlFormat(color.FgBlack)+yamlFormat(color.BgWhite), rootKey, yamlFormat(color.Reset))
 	hint := fmt.Sprintf("%s  %s%s", yamlFormat(color.FgHiBlack), hintText, yamlFormat(color.Reset))
-	hints[key] = "\n" + message.RuleLine + "\n" + newKey + hint
+	hints[key] = fmt.Sprintf("\n%s\n%s%s", message.RuleLine, newKey, hint)
 
 	return hints
 }
