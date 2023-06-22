@@ -6,13 +6,13 @@
 	import { Typography, Box, type SSX, Dialog, DialogActions } from '@ui';
 	import ZarfHappy from '../../images/png/zarf-kube-config-found.png';
 	import ZarfSad from '../../images/png/zarf-kube-not-found.png';
-	export let open: boolean = false;
-	export let toggleDialog: () => void;
-	export let happyZarf = true;
-	export let titleText = 'Zarf Dialog';
-	export let ssx: SSX = {};
-	export let clickAway = true;
+	export let open = false;
 	export let zarfAlt = '';
+	export let ssx: SSX = {};
+	export let happyZarf = true;
+	export let clickAway = true;
+	export let toggleDialog: () => void;
+	export let titleText = 'Zarf Dialog';
 	let titleAltPrefix: string;
 	let titleImage: string;
 

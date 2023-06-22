@@ -4,8 +4,8 @@
  -->
 <script lang="ts">
 	import { makeThemeColor, type ThemeColors } from '@defense-unicorns/unicorn-ui';
-	export let diameter: string = '20px';
-	export let thickness: string = '2px';
+	export let diameter = '20px';
+	export let thickness = '2px';
 	export let color: ThemeColors = 'primary';
 
 	// Need this to force-enable first onload animation to avoid ugly flash on very fast REST calls

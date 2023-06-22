@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import { Typography, Box, Button, type SSX, Dialog, List, IconButton, DialogActions } from '@ui';
+	import { Typography, Box, Button, type SSX, List, IconButton } from '@ui';
 	import { clusterStore } from '$lib/store';
 	import ZarfDialog from './zarf-dialog.svelte';
 

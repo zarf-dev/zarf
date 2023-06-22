@@ -14,6 +14,10 @@
 	import { page } from '$app/stores';
 	import BuildProvidence from '$lib/components/build-providence.svelte';
 	import DeploymentActions from '$lib/components/deployment-actions.svelte';
+	import ButtonDense from '$lib/components/button-dense.svelte';
+	import YamlDrawer from '$lib/components/yaml-drawer.svelte';
+
+	let toggleDrawer: () => void;
 </script>
 
 <svelte:head>
@@ -24,6 +28,9 @@
 <SectionHeader>
 	Package Details
 	<span slot="tooltip">At-a-glance simple metadata about the package</span>
+	<ButtonDense slot="actions" variant="outlined" backgroundColor="white" on:click={toggleDrawer}>
+		Code
+	</ButtonDense>
 </SectionHeader>
 <PackageDetails pkg={$pkgStore.zarfPackage} />
 
@@ -60,3 +67,4 @@
 		review deployment
 	</Button>
 </DeploymentActions>
+<YamlDrawer code={$pkgStore.zarfPackage} bind:toggleDrawer />

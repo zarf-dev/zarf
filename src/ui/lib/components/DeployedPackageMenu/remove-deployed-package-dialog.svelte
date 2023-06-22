@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Typography, TextField, ListItem, ListItemAdornment } from '@ui';
+	import { Typography, TextField } from '@ui';
 	import { Packages } from '$lib/api';
 	import ZarfDialog from '../zarf-dialog.svelte';
 	import ButtonDense from '../button-dense.svelte';

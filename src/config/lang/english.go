@@ -218,6 +218,7 @@ const (
 
 	CmdPackageListShort         = "Lists out all of the packages that have been deployed to the cluster (runs offline)"
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
+	CmdPackageListUnmarshalErr  = "Unable to read all of the packages deployed to the cluster"
 
 	CmdPackageRemoveShort       = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveTarballErr  = "Invalid tarball path provided"
