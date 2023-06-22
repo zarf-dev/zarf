@@ -13,7 +13,7 @@ Accepted extensions are json, toml, yaml.
 NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml.
 
 ```
-zarf prepare generate-config [FILENAME] [flags]
+zarf prepare generate-config [ FILENAME ] [flags]
 ```
 
 ## Options

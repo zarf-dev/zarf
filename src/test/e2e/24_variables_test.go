@@ -54,6 +54,7 @@ func TestVariables(t *testing.T) {
 	// AWS_REGION should have been templated and also templated into this config map
 	require.Contains(t, string(kubectlOut), "unicorn-land")
 
+	// Remove the variables example
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
