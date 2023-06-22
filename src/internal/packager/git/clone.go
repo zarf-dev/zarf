@@ -17,7 +17,7 @@ import (
 )
 
 // clone performs a `git clone` of a given repo.
-func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
+func (g *Git) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) error {
 	cloneOptions := &git.CloneOptions{
 		URL:        gitURL,
 		Progress:   g.Spinner,
@@ -36,6 +36,11 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
 		cloneOptions.ReferenceName = ref
 	}
 
+	// If this is a shallow clone set the depth to 1
+	if shallow {
+		cloneOptions.Depth = 1
+	}
+
 	// Setup git credentials if we have them, ignore if we don't.
 	gitCred := utils.FindAuthForHost(gitURL)
 	if gitCred != nil {
@@ -46,7 +51,7 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
 	repo, err := git.PlainClone(g.GitPath, false, cloneOptions)
 	if err != nil {
 		message.Warnf("Falling back to host 'git', failed to clone the repo with Zarf - %s: %s", gitURL, err.Error())
-		return g.gitCloneFallback(gitURL, ref)
+		return g.gitCloneFallback(gitURL, ref, shallow)
 	}
 
 	// If we're cloning the whole repo, we need to also fetch the other branches besides the default.
@@ -71,7 +76,7 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
 }
 
 // gitCloneFallback is a fallback if go-git fails to clone a repo.
-func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName) error {
+func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName, shallow bool) error {
 	// If we can't clone with go-git, fallback to the host clone
 	// Only support "all tags" due to the azure clone url format including a username
 	cloneArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, g.GitPath}
@@ -85,6 +90,11 @@ func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName) error 
 	if ref.IsBranch() {
 		cloneArgs = append(cloneArgs, "-b", ref.Short())
 		cloneArgs = append(cloneArgs, "--single-branch")
+	}
+
+	// If this is a shallow clone set the depth to 1
+	if shallow {
+		cloneArgs = append(cloneArgs, "--depth", "1")
 	}
 
 	cloneExecConfig := exec.Config{
