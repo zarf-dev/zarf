@@ -64,11 +64,11 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		}
 	}
 
-	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
-
 	if err := p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, partialPaths); err != nil {
 		return fmt.Errorf("unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
 	}
+
+	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 
 	// Validate the package checksums and signatures if specified, and warn if the package was signed but a key was not provided
 	if err := p.validatePackageSignature(inspectPublicKey); err != nil {
