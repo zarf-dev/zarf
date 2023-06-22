@@ -14,10 +14,14 @@
 
 	const ssx: SSX = {
 		$self: {
-			width: '45vw',
+			minWidth: '80ch',
+			width: 'max-content',
+			maxWidth: '120ch',
 			height: 'calc(100% - 3.5rem)',
 			marginTop: '3.5rem',
 			'& .mdc-drawer__content': {
+				flexDirection: 'column',
+				flexGrow: 1,
 				overflow: 'hidden',
 			},
 			'& .yaml-drawer-header': {
@@ -28,9 +32,11 @@
 				padding: '0px 16px',
 			},
 			'& .yaml-drawer-code': {
+				paddingBottom: '48px',
 				height: 'calc(100% - 48px)',
 				overflow: 'auto',
 				'& > pre': {
+					height: '100%',
 					padding: '16px',
 				},
 			},

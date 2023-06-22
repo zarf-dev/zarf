@@ -11,6 +11,7 @@
 	import RemoveDeployedPackageDialog from './remove-deployed-package-dialog.svelte';
 	import ConnectDeployedPackageDialog from './connect-deployed-package-dialog.svelte';
 	import DisconnectDeployedPackageDialog from './disconnect-deployed-package-dialog.svelte';
+	import YamlDrawer from '../yaml-drawer.svelte';
 
 	export let pkg: DeployedPackage;
 
@@ -18,6 +19,7 @@
 	let toggleRemoveDialog: () => void;
 	let toggleConnectDialog: () => void;
 	let toggleDisconnectDialog: () => void;
+	let toggleYamlDrawer: () => void;
 
 	let updateLink = '';
 	let toggled = false;
@@ -79,6 +81,13 @@
 		<Typography>Update Package...</Typography>
 	</ListItem>
 	<div class="divider" />
+	<ListItem on:click={toggleYamlDrawer}>
+		<ListItemAdornment slot="leading" class="material-symbols-outlined">
+			code_blocks
+		</ListItemAdornment>
+		<Typography>View Code</Typography>
+	</ListItem>
+	<div class="divider" />
 	<ListItem on:click={toggleRemoveDialog}>
 		<ListItemAdornment slot="leading" class="material-symbols-outlined">delete</ListItemAdornment>
 		<Typography>Remove...</Typography>
@@ -87,3 +96,4 @@
 <DisconnectDeployedPackageDialog {pkg} bind:toggleDialog={toggleDisconnectDialog} />
 <ConnectDeployedPackageDialog {pkg} bind:toggleDialog={toggleConnectDialog} />
 <RemoveDeployedPackageDialog {pkg} bind:toggleDialog={toggleRemoveDialog} />
+<YamlDrawer code={pkg.data} bind:toggleDrawer={toggleYamlDrawer} />

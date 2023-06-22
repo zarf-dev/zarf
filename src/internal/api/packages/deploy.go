@@ -74,7 +74,6 @@ func StreamDeployPackage(w http.ResponseWriter, r *http.Request) {
 		// If the context is done, reset the output and return
 		case (<-done):
 			pterm.SetDefaultOutput(message.LogStream)
-			pterm.EnableStyling()
 			return
 		default:
 			err := scanner.Err()
