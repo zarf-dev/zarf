@@ -53,9 +53,11 @@ components:
           - cmd: ./zarf internal create-read-only-gitea-user
             maxRetries: 3
             maxTotalSeconds: 60
+            description: Create the read-only Gitea user
           - cmd: ./zarf internal create-artifact-registry-token
             maxRetries: 3
             maxTotalSeconds: 60
+            description: Create an artifact registry token
           - wait:
               cluster:
                 kind: pod

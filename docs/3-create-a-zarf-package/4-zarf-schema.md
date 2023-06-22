@@ -194,11 +194,16 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** List of package authors (including contact info)
+**Description:** Comma-separated list of package authors (including contact info)
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+**Example:**
+
+<code>
+"Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"</code>
 
 </blockquote>
 </details>
@@ -836,7 +841,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The URL to a Zarf package to import via OCI
+**Description:** [beta] The URL to a Zarf package to import via OCI
 
 |          |          |
 | -------- | -------- |

@@ -122,7 +122,7 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-remote-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/remote-manifests -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-component-actions-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-actions -o build -a $(ARCH) --confirm
 
@@ -168,8 +168,25 @@ test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg and the bigb
 	cd src/pkg && go test ./... -failfast -v -timeout 30m
 	cd src/extensions/bigbang && go test ./. -failfast -v timeout 30m
 
-.PHONY: test-built-ui
-test-built-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first)
+.PHONY: test-ui
+test-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first) (run with env CI=true to use build/zarf)
+	export NODE_PATH=$(CURDIR)/src/ui/node_modules && \
+	npm --prefix src/ui run test:pre-init && \
+	npm --prefix src/ui run test:init && \
+	npm --prefix src/ui run test:post-init && \
+	npm --prefix src/ui run test:connect
+
+.PHONY: test-ui-dev-server
+# INTERNAL: used to start a dev version of the API server for the Zarf Web UI tests (locally)
+test-ui-dev-server:
+	API_DEV_PORT=5173 \
+		API_PORT=3333 \
+		API_TOKEN=insecure \
+		go run -ldflags="$(BUILD_ARGS)" main.go dev ui -l=trace
+
+.PHONY: test-ui-build-server
+# INTERNAL: used to start the built version of the API server for the Zarf Web UI (in CI)
+test-ui-build-server: 
 	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR
