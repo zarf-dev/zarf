@@ -6,7 +6,7 @@ package tools
 
 import (
 	"os"
-
+	"fmt"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -141,14 +141,21 @@ func zarfCraneList(cranePlatformOptions *[]crane.Option) *cobra.Command {
 			message.Fatal(nil, lang.CmdToolsCraneListNoRepoSpecified)
 		}
 
-		if !strings.HasPrefix(args[0], "internal/") {
+		// Try to connect to a Zarf initialized cluster otherwise then pass it down to crane.
+		zarfCluster, err := cluster.NewCluster()
+		if err != nil {
 			return originalListFn(cmd, args)
 		}
 
-		// Load Zarf state
-		zarfState, err := cluster.NewClusterOrDie().LoadZarfState()
+		// Load the state
+		zarfState, err := zarfCluster.LoadZarfState()
 		if err != nil {
 			return err
+		}
+
+		// Check to see if it matches the existing internal address.
+		if !strings.HasPrefix(args[0], zarfState.RegistryInfo.Address) {
+			return originalListFn(cmd, args)
 		}
 
 		// Open a tunnel to the Zarf registry
@@ -166,7 +173,8 @@ func zarfCraneList(cranePlatformOptions *[]crane.Option) *cobra.Command {
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
 		registryEndpoint := tunnelReg.Endpoint()
 
-		return originalListFn(cmd, []string{strings.Replace(args[0], "internal/", registryEndpoint+"/", 1)})
+		return originalListFn(cmd, []string{strings.Replace(args[0],
+			fmt.Sprintf("%s/", zarfState.RegistryInfo.Address), fmt.Sprintf("%s/", registryEndpoint), 1)})
 	}
 
 	return craneList
