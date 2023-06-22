@@ -7,7 +7,7 @@
 	import { Dialog, Stepper, Typography, type StepProps } from '@ui';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import bigZarf from '@images/zarf-bubbles-right.png';
-	import { goto } from '$app/navigation';
+	import { beforeNavigate, goto } from '$app/navigation';
 	import { Packages } from '$lib/api';
 	import { onMount } from 'svelte';
 	import {
@@ -74,6 +74,7 @@
 	let hasError = false;
 	let successful = false;
 	let dialogOpen = false;
+	let deployStream: AbortController;
 	let finishedDeploying = false;
 	let pollDeployed: NodeJS.Timer;
 	let addMessage: (message: string) => void;
@@ -92,8 +93,13 @@
 		);
 	}
 
+	beforeNavigate(() => {
+		deployStream?.abort();
+		clearInterval(pollDeployed);
+	});
+
 	onMount(async () => {
-		const deployStream = Packages.deployStream({
+		deployStream = Packages.deployStream({
 			onmessage: (e) => {
 				addMessage(e.data);
 				if (e.data.includes('WARNING') || e.data.includes('ERROR')) {
