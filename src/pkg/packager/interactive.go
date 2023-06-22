@@ -152,15 +152,15 @@ func (p *Packager) getPackageYAMLHints(stage string) map[string]string {
 			if variable.Sensitive {
 				value = "'**sanitized**'"
 			}
-			hints = utils.MakeRootListHint("name", variable.Name, hints, fmt.Sprintf("currently set to %s", value))
+			hints = utils.AddRootListHint(hints, "name", variable.Name, fmt.Sprintf("currently set to %s", value))
 		}
 	}
 
-	hints = utils.MakeRootHint(hints, "metadata", "information about this package\n")
-	hints = utils.MakeRootHint(hints, "build", "info about the machine, zarf version, and user that created this package\n")
-	hints = utils.MakeRootHint(hints, "components", "definition of capabilities this package deploys")
-	hints = utils.MakeRootHint(hints, "constants", "static values set by the package author")
-	hints = utils.MakeRootHint(hints, "variables", "deployment-specific values that are set on each package deployment")
+	hints = utils.AddRootHint(hints, "metadata", "information about this package\n")
+	hints = utils.AddRootHint(hints, "build", "info about the machine, zarf version, and user that created this package\n")
+	hints = utils.AddRootHint(hints, "components", "definition of capabilities this package deploys")
+	hints = utils.AddRootHint(hints, "constants", "static values set by the package author")
+	hints = utils.AddRootHint(hints, "variables", "deployment-specific values that are set on each package deployment")
 
 	return hints
 }

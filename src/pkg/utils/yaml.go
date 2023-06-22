@@ -96,8 +96,8 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) {
 	pterm.Println(colorizedYAML)
 }
 
-// MakeRootListHint makes a hint string for a given root list key and value.
-func MakeRootListHint(listKey string, listValue string, hints map[string]string, hintText string) map[string]string {
+// AddRootListHint adds a hint string for a given root list key and value.
+func AddRootListHint(hints map[string]string, listKey string, listValue string, hintText string) map[string]string {
 	key := fmt.Sprintf("-%s %s%s:%s %s%s", yamlFormat(color.FgHiCyan), listKey, yamlFormat(color.Reset), yamlFormat(color.FgHiMagenta), listValue, yamlFormat(color.Reset))
 	hint := fmt.Sprintf("%s  %s%s", yamlFormat(color.FgHiBlack), hintText, yamlFormat(color.Reset))
 	hints[key] = key + hint
@@ -105,8 +105,8 @@ func MakeRootListHint(listKey string, listValue string, hints map[string]string,
 	return hints
 }
 
-// MakeRootHint makes a hint string for a given root key.
-func MakeRootHint(hints map[string]string, rootKey string, hintText string) map[string]string {
+// AddRootHint adds a hint string for a given root key.
+func AddRootHint(hints map[string]string, rootKey string, hintText string) map[string]string {
 	key := fmt.Sprintf("%s%s%s:", yamlFormat(color.FgHiCyan), rootKey, yamlFormat(color.Reset))
 	newKey := fmt.Sprintf("%s%s:%s", yamlFormat(color.FgBlack)+yamlFormat(color.BgWhite), rootKey, yamlFormat(color.Reset))
 	hint := fmt.Sprintf("%s  %s%s", yamlFormat(color.FgHiBlack), hintText, yamlFormat(color.Reset))
