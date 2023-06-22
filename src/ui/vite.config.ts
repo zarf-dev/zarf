@@ -23,7 +23,6 @@ const config: UserConfig = {
 		include: [
 			'prismjs',
 			'ansi-to-html',
-			'strip-ansi',
 			'@floating-ui/dom',
 			'prismjs/components/prism-yaml',
 			'yaml',
