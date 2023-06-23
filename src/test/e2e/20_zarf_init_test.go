@@ -55,9 +55,11 @@ func TestZarfInit(t *testing.T) {
 	require.Error(t, err, stdErr)
 	require.Contains(t, stdErr, expectedErrorMessage)
 
-	// throw a pending pod into the cluster to ensure we can properly ignore them when selecting images
-	_, _, err = e2e.Kubectl("apply", "-f", "https://raw.githubusercontent.com/kubernetes/website/main/content/en/examples/pods/pod-with-node-affinity.yaml")
-	require.NoError(t, err)
+	if !e2e.ApplianceMode {
+		// throw a pending pod into the cluster to ensure we can properly ignore them when selecting images
+		_, _, err = e2e.Kubectl("apply", "-f", "https://raw.githubusercontent.com/kubernetes/website/main/content/en/examples/pods/pod-with-node-affinity.yaml")
+		require.NoError(t, err)
+	}
 
 	// run `zarf init`
 	_, initStdErr, err := e2e.Zarf("init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
