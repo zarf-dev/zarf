@@ -57,6 +57,7 @@ jobs:
             --set=CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
             --set=INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} \
             --set=ECR_REGISTRY_URL=public.ecr.aws/t8y5r5z5/zarf-ecr-registry \
+            --set=ECR_REPOSITORY_PREFIX=zarf-ecr-registry \
             --confirm
 
       # NOTE: We are copying the secret because part of the e2e process destroys the `zarf` namespace. We still want to test the remove-ability of the eks cluster via the package.
