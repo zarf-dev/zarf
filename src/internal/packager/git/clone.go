@@ -24,16 +24,11 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) err
 		RemoteName: onlineRemoteName,
 	}
 
-	// Don't clone all tags if we're cloning a specific tag.
-	if ref.IsTag() {
+	// Don't clone all tags / refs if we're cloning a specific tag or branch.
+	if ref.IsTag() || ref.IsBranch() {
 		cloneOptions.Tags = git.NoTags
 		cloneOptions.ReferenceName = ref
-	}
-
-	// Use a single branch if we're cloning a specific branch.
-	if ref.IsBranch() {
 		cloneOptions.SingleBranch = true
-		cloneOptions.ReferenceName = ref
 	}
 
 	// If this is a shallow clone set the depth to 1
@@ -81,13 +76,9 @@ func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName, shallo
 	// Only support "all tags" due to the azure clone url format including a username
 	cloneArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, g.GitPath}
 
-	// Don't clone all tags if we're cloning a specific tag.
-	if ref.IsTag() {
+	// Don't clone all tags / refs if we're cloning a specific tag or branch.
+	if ref.IsTag() || ref.IsBranch() {
 		cloneArgs = append(cloneArgs, "--no-tags")
-	}
-
-	// Use a single branch if we're cloning a specific branch.
-	if ref.IsBranch() {
 		cloneArgs = append(cloneArgs, "-b", ref.Short())
 		cloneArgs = append(cloneArgs, "--single-branch")
 	}
