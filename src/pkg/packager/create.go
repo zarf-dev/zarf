@@ -113,7 +113,7 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
-	if !p.confirmAction("Create", nil) {
+	if !p.confirmAction(config.ZarfCreateStage, nil) {
 		return fmt.Errorf("package creation canceled")
 	}
 

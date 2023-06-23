@@ -9,11 +9,13 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -22,6 +24,18 @@ func (p *Packager) Remove(packageName string) (err error) {
 	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()
 
+	// If the user input is a path to a package, extract the package
+	if ZarfPackagePattern.MatchString(packageName) {
+		if utils.InvalidPath(packageName) {
+			message.Fatalf(nil, lang.CmdPackageRemoveTarballErr)
+		}
+
+		if err := archiver.Extract(packageName, config.ZarfYAML, p.tmp.Base); err != nil {
+			message.Fatalf(err, lang.CmdPackageRemoveExtractErr)
+		}
+	}
+
+	// If the user input is a path to a oci, pull the package
 	if utils.IsOCIURL(packageName) {
 		err := p.SetOCIRemote(packageName)
 		if err != nil {
@@ -32,6 +46,10 @@ func (p *Packager) Remove(packageName string) (err error) {
 		if err = p.remote.PullPackageMetadata(p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to pull the package from the remote: %w", err)
 		}
+	}
+
+	// If this came from a real package, read the package config and reset the packageName
+	if ZarfPackagePattern.MatchString(packageName) || utils.IsOCIURL(packageName) {
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 			return err
 		}

@@ -204,7 +204,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 				},
 			})
 		}
-		utils.ColorPrintYAML(ex)
+		utils.ColorPrintYAML(ex, nil, true)
 	} else {
 		flags := ""
 		if config.CommonOptions.Insecure {

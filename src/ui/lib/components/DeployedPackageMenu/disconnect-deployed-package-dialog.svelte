@@ -16,7 +16,7 @@
 
 	let open: boolean;
 	let selectedConnection = '';
-	let errMessage: string = '';
+	let errMessage = '';
 
 	const listSSX: SSX = {
 		$self: {

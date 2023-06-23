@@ -69,7 +69,7 @@ func (p *Packager) Deploy() error {
 	}
 
 	// Confirm the overall package deployment
-	if !p.confirmAction("Deploy", p.cfg.SBOMViewFiles) {
+	if !p.confirmAction(config.ZarfDeployStage, p.cfg.SBOMViewFiles) {
 		return fmt.Errorf("deployment cancelled")
 	}
 

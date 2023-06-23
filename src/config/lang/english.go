@@ -218,11 +218,7 @@ const (
 
 	CmdPackageListShort         = "Lists out all of the packages that have been deployed to the cluster (runs offline)"
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
-
-	CmdPackageRemoveShort       = "Removes a Zarf package that has been deployed already (runs offline)"
-	CmdPackageRemoveTarballErr  = "Invalid tarball path provided"
-	CmdPackageRemoveExtractErr  = "Unable to extract the package contents"
-	CmdPackageRemoveReadZarfErr = "Unable to read zarf.yaml"
+	CmdPackageListUnmarshalErr  = "Unable to read all of the packages deployed to the cluster"
 
 	CmdPackageCreateFlagConfirm            = "Confirm package creation without prompting"
 	CmdPackageCreateFlagSet                = "Specify package variables to set on the command line (KEY=value)"
@@ -254,9 +250,11 @@ const (
 	CmdPackageInspectFlagPublicKey = "Path to a public key file that will be used to validate a signed package"
 	CmdPackageInspectErr           = "Failed to inspect package: %s"
 
+	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
-	CmdPackageRemoteTmpDirErr      = "Unable to create temporary directory at %s: %s"
+	CmdPackageRemoveTarballErr     = "Invalid tarball path provided"
+	CmdPackageRemoveExtractErr     = "Unable to extract the package contents"
 	CmdPackageRemoveErr            = "Unable to remove the package with an error of: %s"
 
 	CmdPackageRegistryPrefixErr = "Registry must be prefixed with 'oci://'"
