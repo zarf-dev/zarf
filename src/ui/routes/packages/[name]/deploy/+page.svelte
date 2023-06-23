@@ -106,7 +106,7 @@
 					hasError = true;
 					if (e.data.includes('ERROR')) {
 						componentSteps[activeIndex].variant = 'error';
-						componentSteps[activeIndex].subtitle = 'Error: See log stream for detals.';
+						componentSteps[activeIndex].subtitle = 'Error: See log stream for details.';
 					} else {
 						componentSteps[activeIndex].variant = 'warning';
 						componentSteps[activeIndex].subtitle = 'Warning: See log stream for details.';
