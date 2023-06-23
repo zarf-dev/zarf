@@ -19,7 +19,7 @@
 	let open: boolean;
 	let currentWindow: Window;
 	let selectedConnection = '';
-	let errMessage: string = '';
+	let errMessage = '';
 	const connections: string[] = Object.keys(pkg.connectStrings || {}) || [];
 
 	const listSSX: SSX = {

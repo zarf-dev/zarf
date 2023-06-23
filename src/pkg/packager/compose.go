@@ -88,6 +88,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	}
 
 	var cachePath string
+	var checkSumPaths []string
 	if parent.Import.URL != "" {
 		if !strings.HasSuffix(parent.Import.URL, oci.SkeletonSuffix) {
 			return child, fmt.Errorf("import URL must be a 'skeleton' package: %s", parent.Import.URL)
@@ -112,7 +113,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		if err != nil {
 			return child, err
 		}
-		err = p.remote.PullPackage(cachePath, 3, manifest.Locate(componentLayer))
+		checkSumPaths, err = p.remote.PullPackage(cachePath, 3, manifest.Locate(componentLayer))
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
@@ -128,7 +129,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		parent.Import.Path = rel
 	}
 
-	subPkg, err := p.getSubPackage(filepath.Join(pathAncestry, parent.Import.Path))
+	subPkg, err := p.getSubPackage(filepath.Join(pathAncestry, parent.Import.Path), checkSumPaths)
 	if err != nil {
 		return child, fmt.Errorf("unable to get sub package: %w", err)
 	}
@@ -370,7 +371,7 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 }
 
 // Reads the locally imported zarf.yaml.
-func (p *Packager) getSubPackage(packagePath string) (importedPackage types.ZarfPackage, err error) {
+func (p *Packager) getSubPackage(packagePath string, checkSumPaths []string) (importedPackage types.ZarfPackage, err error) {
 	message.Debugf("packager.getSubPackage(%s)", packagePath)
 
 	path := filepath.Join(packagePath, config.ZarfYAML)
@@ -386,6 +387,10 @@ func (p *Packager) getSubPackage(packagePath string) (importedPackage types.Zarf
 	// Merge in child package constants (only if the constant does not exist in parent).
 	for _, importedConstant := range importedPackage.Constants {
 		p.injectImportedConstant(importedConstant)
+	}
+
+	if len(checkSumPaths) > 0 {
+		p.validatePackageChecksums(packagePath, importedPackage.Metadata.AggregateChecksum, checkSumPaths)
 	}
 
 	return

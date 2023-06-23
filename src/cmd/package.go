@@ -6,14 +6,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2/registry"
 
@@ -22,7 +20,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +34,7 @@ var packageCmd = &cobra.Command{
 }
 
 var packageCreateCmd = &cobra.Command{
-	Use:     "create [DIRECTORY]",
+	Use:     "create [ DIRECTORY ]",
 	Aliases: []string{"c"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageCreateShort,
@@ -53,7 +50,7 @@ var packageCreateCmd = &cobra.Command{
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 		if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
-			message.Warnf("Invalid characters in Zarf cache path, defaulting to %s", config.ZarfDefaultCachePath)
+			message.Warnf(lang.CmdPackageCreateCleanPathErr, config.ZarfDefaultCachePath)
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
@@ -67,13 +64,13 @@ var packageCreateCmd = &cobra.Command{
 
 		// Create the package
 		if err := pkgClient.Create(baseDir); err != nil {
-			message.Fatalf(err, "Failed to create package: %s", err.Error())
+			message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
 		}
 	},
 }
 
 var packageDeployCmd = &cobra.Command{
-	Use:     "deploy [PACKAGE]",
+	Use:     "deploy [ PACKAGE ]",
 	Aliases: []string{"d"},
 	Short:   lang.CmdPackageDeployShort,
 	Long:    lang.CmdPackageDeployLong,
@@ -96,13 +93,13 @@ var packageDeployCmd = &cobra.Command{
 
 		// Deploy the package
 		if err := pkgClient.Deploy(); err != nil {
-			message.Fatalf(err, "Failed to deploy package: %s", err.Error())
+			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
 		}
 	},
 }
 
 var packageInspectCmd = &cobra.Command{
-	Use:     "inspect [PACKAGE]",
+	Use:     "inspect [ PACKAGE ]",
 	Aliases: []string{"i"},
 	Short:   lang.CmdPackageInspectShort,
 	Long:    lang.CmdPackageInspectLong,
@@ -116,7 +113,7 @@ var packageInspectCmd = &cobra.Command{
 
 		// Inspect the package
 		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM, inspectPublicKey); err != nil {
-			message.Fatalf(err, "Failed to inspect package: %s", err.Error())
+			message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
 		}
 	},
 }
@@ -127,9 +124,9 @@ var packageListCmd = &cobra.Command{
 	Short:   lang.CmdPackageListShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get all the deployed packages
-		deployedZarfPackages, err := cluster.NewClusterOrDie().GetDeployedZarfPackages()
-		if err != nil {
-			message.Fatalf(err, lang.CmdPackageListNoPackageWarn)
+		deployedZarfPackages, errs := cluster.NewClusterOrDie().GetDeployedZarfPackages()
+		if len(errs) > 0 && len(deployedZarfPackages) == 0 {
+			message.Fatalf(errs, lang.CmdPackageListNoPackageWarn)
 		}
 
 		// Populate a pterm table of all the deployed packages
@@ -152,72 +149,44 @@ var packageListCmd = &cobra.Command{
 
 		// Print out the table for the user
 		_ = pterm.DefaultTable.WithHasHeader().WithData(packageTable).Render()
+
+		// Print out any unmarshalling errors
+		if len(errs) > 0 {
+			message.Fatalf(errs, lang.CmdPackageListUnmarshalErr)
+		}
 	},
 }
 
 var packageRemoveCmd = &cobra.Command{
-	Use:     "remove {PACKAGE_NAME|PACKAGE_FILE}",
+	Use:     "remove { PACKAGE_NAME | PACKAGE_FILE } --confirm",
 	Aliases: []string{"u"},
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgName := args[0]
 
-		// If the user input is a path to a package, extract the name from the package
-		isTarball := regexp.MustCompile(`.*zarf-package-.*\.tar\.zst$`).MatchString
-		if isTarball(pkgName) {
-			if utils.InvalidPath(pkgName) {
-				message.Fatalf(nil, lang.CmdPackageRemoveTarballErr)
-			}
-
-			tempPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-			if err != nil {
-				message.Fatalf(err, "Unable to create tmpdir: %s", config.CommonOptions.TempDirectory)
-			}
-			defer os.RemoveAll(tempPath)
-
-			if err := archiver.Extract(pkgName, config.ZarfYAML, tempPath); err != nil {
-				message.Fatalf(err, lang.CmdPackageRemoveExtractErr)
-			}
-
-			var pkg types.ZarfPackage
-			configPath := filepath.Join(tempPath, config.ZarfYAML)
-			if err := utils.ReadYaml(configPath, &pkg); err != nil {
-				message.Fatalf(err, lang.CmdPackageRemoveReadZarfErr)
-			}
-
-			pkgName = pkg.Metadata.Name
-			pkgConfig.Pkg = pkg
-		}
-
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
 		if err := pkgClient.Remove(pkgName); err != nil {
-			message.Fatalf(err, "Unable to remove the package with an error of: %s", err.Error())
+			message.Fatalf(err, lang.CmdPackageRemoveErr, err.Error())
 		}
 	},
 }
 
 var packagePublishCmd = &cobra.Command{
-	Use:   "publish [PACKAGE|SKELETON DIRECTORY] [REPOSITORY]",
-	Short: "Publish a Zarf package to a remote registry",
-	Example: `
-# Publish a package to a remote registry
-zarf package publish my-package.tar oci://my-registry.com/my-namespace
-
-# Publish a skeleton package to a remote registry
-zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
-`,
-	Args: cobra.ExactArgs(2),
+	Use:     "publish { PACKAGE | SKELETON DIRECTORY } REPOSITORY",
+	Short:   lang.CmdPackagePublishShort,
+	Example: lang.CmdPackagePublishExample,
+	Args:    cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
 
 		if !utils.IsOCIURL(args[1]) {
-			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
+			message.Fatal(nil, lang.CmdPackageRegistryPrefixErr)
 		}
-		parts := strings.Split(strings.TrimPrefix(args[1], "oci://"), "/")
+		parts := strings.Split(strings.TrimPrefix(args[1], utils.OCIURLPrefix), "/")
 		ref := registry.Reference{
 			Registry:   parts[0],
 			Repository: strings.Join(parts[1:], "/"),
@@ -235,19 +204,19 @@ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 
 		// Publish the package
 		if err := pkgClient.Publish(); err != nil {
-			message.Fatalf(err, "Failed to publish package: %s", err.Error())
+			message.Fatalf(err, lang.CmdPackagePublishErr, err.Error())
 		}
 	},
 }
 
 var packagePullCmd = &cobra.Command{
-	Use:     "pull [REFERENCE]",
-	Short:   "Pull a Zarf package from a remote registry and save to the local file system",
-	Example: "  zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64",
+	Use:     "pull REFERENCE",
+	Short:   lang.CmdPackagePullShort,
+	Example: lang.CmdPackagePullExample,
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if !utils.IsOCIURL(args[0]) {
-			message.Fatalf(nil, "Registry must be prefixed with 'oci://'")
+			message.Fatal(nil, lang.CmdPackageRegistryPrefixErr)
 		}
 
 		pkgConfig.PullOpts.PackageSource = args[0]
@@ -258,7 +227,7 @@ var packagePullCmd = &cobra.Command{
 
 		// Pull the package
 		if err := pkgClient.Pull(); err != nil {
-			message.Fatalf(err, "Failed to pull package: %s", err.Error())
+			message.Fatalf(err, lang.CmdPackagePullErr, err.Error())
 		}
 	},
 }
@@ -269,7 +238,7 @@ func choosePackage(args []string) string {
 	}
 	var path string
 	prompt := &survey.Input{
-		Message: "Choose or type the package file",
+		Message: lang.CmdPackageChoose,
 		Suggest: func(toComplete string) []string {
 			files, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.tar")
 			gzFiles, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.tar.zst")
@@ -282,7 +251,7 @@ func choosePackage(args []string) string {
 	}
 
 	if err := survey.AskOne(prompt, &path, survey.WithValidator(survey.Required)); err != nil {
-		message.Fatalf(nil, "Package path selection canceled: %s", err.Error())
+		message.Fatalf(nil, lang.CmdPackageChooseErr, err.Error())
 	}
 
 	return path

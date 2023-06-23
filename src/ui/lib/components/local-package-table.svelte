@@ -23,8 +23,8 @@
 	let packageMap: Record<string, APIZarfPackage> = {};
 	let stream: AbortController;
 	let noPackagesToggle: () => void;
-	let doneStreaming: boolean = false;
-	let expandedSearch: boolean = false;
+	let doneStreaming = false;
+	let expandedSearch = false;
 
 	function getEventParams(resolve: () => void, reject: (error: any) => void): EventParams {
 		return {

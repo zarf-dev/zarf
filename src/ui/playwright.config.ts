@@ -19,7 +19,7 @@ const config: PlaywrightTestConfig = {
 		 * Maximum time expect() should wait for the condition to be met.
 		 * For example in `await expect(locator).toHaveText();`
 		 */
-		timeout: 15 * 1000
+		timeout: 15 * 1000,
 	},
 	/* Run tests in files in parallel */
 	fullyParallel: false,
@@ -43,7 +43,7 @@ const config: PlaywrightTestConfig = {
 
 		screenshot: 'only-on-failure',
 
-		video: 'on'
+		video: 'on',
 	},
 
 	/* Configure projects for major browsers */
@@ -75,11 +75,11 @@ const config: PlaywrightTestConfig = {
 
 	/* Run your local dev server before starting the tests */
 	webServer: {
-		command: process.env.CI ? 'cd ../.. && make test-built-ui' : 'npm run dev',
+		command: process.env.CI ? 'cd ../.. && make test-ui-build-server' : 'npm run dev',
 		port: 3333,
 		reuseExistingServer: true,
-		timeout: 120 * 1000
-	}
+		timeout: 120 * 1000,
+	},
 };
 
 export default config;

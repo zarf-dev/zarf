@@ -18,12 +18,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-// Find zarf-packages on the local system (https://regex101.com/r/TUUftK/1)
-var packagePattern = regexp.MustCompile(`zarf-package[^\s\\\/]*\.tar(\.zst)?$`)
-
-// Find zarf-init packages on the local system
-var currentInitPattern = regexp.MustCompile(packager.GetInitPackageName("") + "$")
-
 // FindInHomeStream returns all packages in the user's home directory.
 // If the init query parameter is true, only init packages will be returned.
 func FindInHomeStream(w http.ResponseWriter, r *http.Request) {
@@ -32,9 +26,9 @@ func FindInHomeStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 
 	init := r.URL.Query().Get("init")
-	regexp := packagePattern
+	regexp := packager.ZarfPackagePattern
 	if init == "true" {
-		regexp = currentInitPattern
+		regexp = packager.ZarfInitPattern
 	}
 
 	done := make(chan bool)
@@ -63,7 +57,7 @@ func FindInitStream(w http.ResponseWriter, _ *http.Request) {
 	go func() {
 		// stream init packages in the execution directory
 		if execDir, err := utils.GetFinalExecutablePath(); err == nil {
-			streamDirPackages(execDir, currentInitPattern, w)
+			streamDirPackages(execDir, packager.ZarfInitPattern, w)
 		} else {
 			streamError(err, w)
 		}
@@ -76,11 +70,11 @@ func FindInitStream(w http.ResponseWriter, _ *http.Request) {
 				streamError(err, w)
 			}
 		}
-		streamDirPackages(cachePath, currentInitPattern, w)
+		streamDirPackages(cachePath, packager.ZarfInitPattern, w)
 
 		// Find init packages in the current working directory
 		if cwd, err := os.Getwd(); err == nil {
-			streamDirPackages(cwd, currentInitPattern, w)
+			streamDirPackages(cwd, packager.ZarfInitPattern, w)
 		} else {
 			streamError(err, w)
 		}
@@ -98,7 +92,7 @@ func FindPackageStream(w http.ResponseWriter, _ *http.Request) {
 
 	go func() {
 		if cwd, err := os.Getwd(); err == nil {
-			streamDirPackages(cwd, packagePattern, w)
+			streamDirPackages(cwd, packager.ZarfPackagePattern, w)
 		} else {
 			streamError(err, w)
 		}

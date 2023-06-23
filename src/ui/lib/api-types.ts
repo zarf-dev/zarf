@@ -732,7 +732,7 @@ export interface ZarfComponentImport {
      */
     path?: string;
     /**
-     * The URL to a Zarf package to import via OCI
+     * [beta] The URL to a Zarf package to import via OCI
      */
     url?: string;
 }
@@ -884,7 +884,7 @@ export interface ZarfMetadata {
      */
     architecture?: string;
     /**
-     * List of package authors (including contact info)
+     * Comma-separated list of package authors (including contact info)
      */
     authors?: string;
     /**

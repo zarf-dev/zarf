@@ -6,8 +6,10 @@ package packages
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -44,7 +46,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 	defer pkgClient.ClearTempPaths()
 
 	if err := pkgClient.Deploy(); err != nil {
-		message.ErrorWebf(err, w, "Unable to deploy the zarf package to the cluster")
+		message.ErrorWebf(err, w, err.Error())
 		return
 	}
 
@@ -59,33 +61,60 @@ func StreamDeployPackage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 
 	pr, pw, _ := os.Pipe()
-
-	pterm.SetDefaultOutput(pw)
-	pterm.DisableStyling()
+	logStream := io.MultiWriter(message.LogWriter, pw)
+	pterm.SetDefaultOutput(logStream)
 
 	scanner := bufio.NewScanner(pr)
+	scanner.Split(splitStreamLines)
 	done := r.Context().Done()
 
-	for {
+	// Loop through the scanner and send each line to the stream
+	for scanner.Scan() {
 		select {
+		// If the context is done, reset the output and return
 		case (<-done):
-			pterm.SetDefaultOutput(os.Stderr)
-			pterm.EnableStyling()
+			pterm.SetDefaultOutput(message.LogWriter)
 			return
 		default:
-			n := scanner.Scan()
-			if err := scanner.Err(); err != nil {
-				message.ErrorWebf(err, w, "Error reading stdout: %v", err)
+			err := scanner.Err()
+			if err != nil {
+				message.ErrorWebf(err, w, "Unable to read the stream")
 				return
 			}
-			if n {
-				// TODO: dig in to alternatives to trim
-				// Some output is not sent unless trimmed
-				// Specifically the output from the loading spinner.
-				trimmed := strings.TrimSpace(scanner.Text())
-				fmt.Fprintf(w, "data: %s\n\n", trimmed)
-				w.(http.Flusher).Flush()
-			}
+			line := scanner.Text()
+
+			// Clean up the line and send it to the stream
+			trimmed := strings.TrimSpace(line)
+
+			fmt.Fprintf(w, "data: %s\n\n", trimmed)
+			w.(http.Flusher).Flush()
 		}
 	}
+}
+
+// Splits scanner lines on '\n', '\r', and '\r\n' line endings to ensure the progress and spinner lines show up correctly
+func splitStreamLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	// If data ends with '\n', return the line without '\n' or '\r\n'
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		// Drop the preceding carriage return if it exists
+		if i > 0 && data[i-1] == '\r' {
+			return i + 1, data[:i-1], nil
+		}
+
+		return i + 1, data[:i], nil
+	}
+	// if data ends with '\r', return the line without '\r'
+	if i := bytes.IndexByte(data, '\r'); i >= 0 {
+		return i + 1, data[:i], nil
+	}
+
+	// If we're at EOF and we have a final non-terminated line. Return it.
+	if atEOF {
+		return len(data), data, nil
+	}
+
+	return 0, nil, nil
 }

@@ -13,47 +13,54 @@ components:
     actions:
       # runs during "zarf package create"
       onCreate:
-        # defaults are applied to all actions in this actionSet
+        # defaults are applied to all actions in this action set - below are the default defaults
         defaults:
           dir: ""
           env: []
           maxRetries: 0
-          maxTotalSeconds: 30
+          maxTotalSeconds: 300
+          mute: false
+          shell:
+            darwin: sh
+            linux: sh
+            windows: powershell
         # runs before the component is created
         before:
-          # on Windows, touch is replaced with New-Item
+          # on Windows with `pwsh` or `powershell`, `touch` is replaced with New-Item
           - cmd: touch test-create-before.txt
+            # description shows a more user friendly message when waiting for the command
+            description: Create a test file
             # dir is the directory to run the command in
             dir: ""
-            # this environment variable will be set for this action only
+            # env sets environment variables for this action only
             env:
               - thing=stuff
-            # the number of times to retry the action if it fails
+            # maxRetries is the number of times to retry the action if it fails
             maxRetries: 0
-            # the maximum amount of times the action can run before it is killed, including retries
+            # maxTotalSeconds is the maximum amount of times the action can run before it is killed, including retries
             maxTotalSeconds: 30
-            # determine if actions output should be printed to the console
+            # mute determine if actions output should be printed to the console
             mute: false
-        # runs after the component is deployed
-        after:
-          - cmd: touch test-create-after.txt
-          - cmd: sleep 1
-          - cmd: echo "I can print!"
-            # prefer to run the above command in "cmd" instead of "powershell" on Windows
+            # shell sets the preferred shell across operating systems, in this case "pwsh" instead of "powershell" on Windows
             shell:
-              windows: cmd
-          - cmd: sleep 1
+              windows: pwsh
+        # runs after the component is created
+        after:
+          # actions in a list run in order
+          - cmd: touch test-create-after.txt
+          - cmd: sleep 0.5
+          - cmd: echo "I can print!"
+          - cmd: sleep 0.5
+          # cmd actions can also specify a multiline string to run like a script
           - cmd: |
               echo "multiline!"
-              sleep 1
+              sleep 0.5
               echo "updates!"
-              sleep 3
+              sleep 1
               echo "in!"
-              sleep 1
+              sleep 0.5
               echo "realtime!"
-              sleep 1
-            description: multiline & description demo
-          - cmd: sleep 1
+              sleep 0.5
 
   - name: on-deploy-and-remove
     actions:
@@ -105,18 +112,21 @@ components:
           # setting this variable will allow it to be used in other actions with additional variables
           # set in other actions or components
           - cmd: echo "hiss"
+            # setVariables defines a list of variables to set from the `cmd` standard out.
             setVariables:
               - name: SNAKE_SOUND
-                # You can also mark variables as sensitive to prevent them from being output in the Zarf log
+                # marks this variable as sensitive to prevent it from being output in the Zarf log
                 sensitive: true
+                # autoIndent tells Zarf to maintain spacing for any newlines when templating into a yaml file 
+                autoIndent: true
         # onSuccess will only run if steps in this component are successful
         onSuccess:
-          # this action will have access to the variables set in a previous component
+          # this action will print the CAT_SOUND variable that was set in a previous component
           - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
-          # this action will have access to the variables set at the top of the zarf.yaml file
+          # this action will print the DOG_SOUND variable set at the top of the zarf.yaml file
           - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
-          # this action will have access to the variables set within this component
-          # NOTE: when including a variable in a command output this will be written to the log regardless of the sensitive setting
+          # this action will print the SNAKE_SOUND variable set within this component
+          # > NOTE: when including a variable in a command output this will be written to the log regardless of the sensitive setting
           # - use `mute` if you want to silence the command output for sensitive variables
           - cmd: echo "the snake says ${ZARF_VAR_SNAKE_SOUND}"
           # variables are also exposed as TF_VAR_name for terraform, note the lowercase variable name
@@ -147,7 +157,7 @@ components:
           - cmd: echo "😭😭😭 this action failed because it took too long to run 😭😭😭"
 
   - name: on-remove
-    # A manifest so we can test the onRemove action
+    # A manifest that we expect to be removed by Zarf
     manifests:
       - name: test-configmap
         files:
@@ -156,10 +166,10 @@ components:
       # runs during "zarf package remove"
       onRemove:
         before:
-          # because this runs before remove this should be found
+          # because this runs before the manifest is removed this should return our manifest
           - cmd: ./zarf tools kubectl get configmap -n zarf remove-test-configmap || echo "Not Found"
         after:
-          # because this runs after remove this should no longer be found
+          # because this runs after the manifest is removed this should no longer be found
           - cmd: ./zarf tools kubectl get configmap -n zarf remove-test-configmap || echo "Not Found"
 
   - name: on-deploy-with-env-var
@@ -179,6 +189,7 @@ components:
           - description: Cloudflare 1.1.1.1 site to be available
             maxTotalSeconds: 15
             wait:
+              # wait for a network address to return a 200 OK response
               network:
                 protocol: https
                 address: 1.1.1.1
@@ -196,6 +207,7 @@ components:
           - description: The simple-configmap to exist
             maxTotalSeconds: 5
             wait:
+              # wait for the configmap to be available in the cluster
               cluster:
                 kind: configmap
                 name: simple-configmap

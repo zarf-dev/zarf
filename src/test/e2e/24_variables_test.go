@@ -29,6 +29,10 @@ func TestVariables(t *testing.T) {
 	// Deploy nginx
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm", "--set", "SITE_NAME=Lula Web", "--set", "AWS_REGION=unicorn-land", "-l", "trace")
 	require.NoError(t, err, stdOut, stdErr)
+	// Verify that the variables were shown to the user in the formats we expect
+	require.Contains(t, stdErr, "currently set to 'Defense Unicorns' (default)")
+	require.Contains(t, stdErr, "currently set to 'Lula Web'")
+	require.Contains(t, stdErr, "currently set to '**sanitized**'")
 	// Verify that the sensitive variable 'unicorn-land' was not printed to the screen
 	require.NotContains(t, stdErr, "unicorn-land")
 
@@ -54,6 +58,7 @@ func TestVariables(t *testing.T) {
 	// AWS_REGION should have been templated and also templated into this config map
 	require.Contains(t, string(kubectlOut), "unicorn-land")
 
+	// Remove the variables example
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 

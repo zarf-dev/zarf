@@ -1,6 +1,6 @@
 import ExampleYAML from "@site/src/components/ExampleYAML";
 
-# Git Data
+# Git Repositories
 
 This example shows how to package `git` repositories within a Zarf package.  This package does not deploy anything itself but pushes assets to the specified `git` service to be consumed as desired.  Within Zarf, there are a few ways to include `git` repositories (as described below).
 

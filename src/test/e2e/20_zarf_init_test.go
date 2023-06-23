@@ -81,6 +81,13 @@ func TestZarfInit(t *testing.T) {
 	require.NotContains(t, logText, state.RegistryInfo.Secret)
 	require.NotContains(t, logText, state.LoggingSecret)
 
+	if e2e.ApplianceMode {
+		// make sure that we upgraded `k3s` correctly and are running the correct version - this should match that found in `packages/distros/k3s`
+		kubeletVersion, _, err := e2e.Kubectl("get", "nodes", "-o", "jsonpath={.items[0].status.nodeInfo.kubeletVersion}")
+		require.NoError(t, err)
+		require.Contains(t, kubeletVersion, "v1.27.2+k3s1")
+	}
+
 	// Check that the registry is running on the correct NodePort
 	stdOut, _, err = e2e.Kubectl("get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
 	require.NoError(t, err)

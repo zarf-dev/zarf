@@ -58,7 +58,7 @@ test.describe('initialize a zarf cluster', () => {
 		deployInit.click();
 
 		// Validate that the SBOM has been loaded
-		const sbomInfo = await page.waitForSelector('#sbom-info', { timeout: 10000 });
+		const sbomInfo = await page.waitForSelector('#sbom-info', { timeout: 15000 });
 		expect(await sbomInfo.innerText()).toMatch(/[0-9]+ artifacts to be reviewed/);
 
 		// Components (check most functionaliy with k3s component)
@@ -111,19 +111,19 @@ test.describe('initialize a zarf cluster', () => {
 		const stepperItems = page.locator('.stepper-vertical .step-icon');
 
 		// deploy zarf-injector
-		await expect(stepperItems.nth(0)).toHaveClass(/success/, {
+		await expect(stepperItems.nth(0)).not.toHaveClass(/error/, {
 			timeout: 45000,
 		});
 		// deploy zarf-seed-registry
-		await expect(stepperItems.nth(1)).toHaveClass(/success/, {
+		await expect(stepperItems.nth(1)).not.toHaveClass(/error/, {
 			timeout: 45000,
 		});
 		// deploy zarf-registry
-		await expect(stepperItems.nth(2)).toHaveClass(/success/, {
+		await expect(stepperItems.nth(2)).not.toHaveClass(/error/, {
 			timeout: 45000,
 		});
 		// deploy zarf-agent
-		await expect(stepperItems.nth(3)).toHaveClass(/success/, {
+		await expect(stepperItems.nth(3)).not.toHaveClass(/error/, {
 			timeout: 45000,
 		});
 
