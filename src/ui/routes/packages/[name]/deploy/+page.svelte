@@ -115,6 +115,8 @@
 				}
 			},
 			onerror: (e) => {
+				successful = false;
+				finishedDeploying = true;
 				addMessage(e.message);
 			},
 		});
@@ -124,6 +126,7 @@
 				successful = value;
 			},
 			() => {
+				successful = false;
 				finishedDeploying = true;
 			}
 		);
@@ -138,19 +141,20 @@
 
 	$: if (finishedDeploying) {
 		pollDeployed && clearInterval(pollDeployed);
+		deployStream?.abort();
+		componentSteps = [
+			...finalizeStepState(componentSteps, successful),
+			{
+				title: successful ? 'Deployment Succeeded' : 'Deployment Failed',
+				variant: successful ? 'success' : 'error',
+				disabled: false,
+			},
+		];
 		if (successful) {
-			componentSteps = [
-				...finalizeStepState(componentSteps, successful),
-				{
-					title: successful ? 'Deployment Succeeded' : 'Deployment Failed',
-					variant: successful ? 'success' : 'error',
-					disabled: false,
-				},
-			];
 			dialogOpen = true;
-			setTimeout(() => {
-				goto('/');
-			}, POLL_TIME);
+			// setTimeout(() => {
+			// 	goto('/');
+			// }, POLL_TIME);
 		}
 	}
 	$: if (successful) {
