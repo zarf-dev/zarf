@@ -200,6 +200,8 @@ const (
 	CmdInternalIsValidHostnameShort = "Checks if the current machine's hostname is RFC1123 compliant"
 	CmdInternalIsValidHostnameErr   = "The hostname '%s' is not valid. Ensure the hostname meets RFC1123 requirements https://www.rfc-editor.org/rfc/rfc1123.html."
 
+	CmdInternalCrc32Short = "Generates a decimal CRC32 for the given text"
+
 	// zarf package
 	CmdPackageShort           = "Zarf package commands for creating, deploying, and inspecting packages"
 	CmdPackageFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
@@ -292,7 +294,7 @@ const (
 	CmdPreparePatchGitFileWriteErr    = "Unable to write the changes back to the file"
 
 	CmdPrepareSha256sumShort   = "Generates a SHA256SUM for the given file"
-	CmdPrepareSha256sumHashErr = "Unable to compute the hash"
+	CmdPrepareSha256sumHashErr = "Unable to compute the SHA256SUM hash"
 
 	CmdPrepareFindImagesShort = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests"
 	CmdPrepareFindImagesLong  = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +

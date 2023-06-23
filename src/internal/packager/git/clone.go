@@ -59,7 +59,7 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) err
 		fetchOpts := &git.FetchOptions{
 			RemoteName: onlineRemoteName,
 			Progress:   g.Spinner,
-			RefSpecs:   []goConfig.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
+			RefSpecs:   []goConfig.RefSpec{"refs/*:refs/*"},
 			Tags:       git.AllTags,
 		}
 
@@ -111,7 +111,7 @@ func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName, shallo
 
 	// If we're cloning the whole repo, we need to also fetch the other branches besides the default.
 	if ref == emptyRef {
-		fetchArgs := []string{"fetch", "--tags", "--update-head-ok", onlineRemoteName, "refs/*:refs/*", "HEAD:refs/heads/HEAD"}
+		fetchArgs := []string{"fetch", "--tags", "--update-head-ok", onlineRemoteName, "refs/*:refs/*"}
 
 		fetchExecConfig := exec.Config{
 			Stdout: g.Spinner,
