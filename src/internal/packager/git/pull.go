@@ -24,10 +24,9 @@ func (g *Git) DownloadRepoToTemp(gitURL string) error {
 		return fmt.Errorf("unable to create tmpdir: %w", err)
 	}
 
-	// If downloading to temp, grab all tags since the repo isn't being
-	// packaged anyway, and it saves us from having to fetch the tags
-	// later if we need them.
-	if err = g.Pull(gitURL, path); err != nil {
+	// If downloading to temp, set this as a shallow clone to only pull the exact
+	// gitURL w/ ref that was specified since we will throw away git history anyway
+	if err = g.Pull(gitURL, path, true); err != nil {
 		return fmt.Errorf("unable to pull the git repo at %s: %w", gitURL, err)
 	}
 
@@ -35,7 +34,7 @@ func (g *Git) DownloadRepoToTemp(gitURL string) error {
 }
 
 // Pull clones or updates a git repository into the target folder.
-func (g *Git) Pull(gitURL, targetFolder string) error {
+func (g *Git) Pull(gitURL, targetFolder string, shallow bool) error {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
 	// Split the remote url and the zarf reference
@@ -60,7 +59,7 @@ func (g *Git) Pull(gitURL, targetFolder string) error {
 	g.GitPath = path.Join(targetFolder, repoFolder)
 
 	// Clone the git repository.
-	err = g.clone(gitURLNoRef, ref)
+	err = g.clone(gitURLNoRef, ref, shallow)
 	if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to clone (%s): %w", gitURL, err)
 	}

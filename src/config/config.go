@@ -76,8 +76,8 @@ var (
 	// CommonOptions tracks user-defined values that apply across commands.
 	CommonOptions types.ZarfCommonOptions
 
-	// CliArch is the computer architecture of the device executing the CLI commands
-	CliArch string
+	// CLIArch is the computer architecture of the device executing the CLI commands
+	CLIArch string
 
 	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
 	ZarfSeedPort string
@@ -98,7 +98,7 @@ var (
 // GetArch returns the arch based on a priority list with options for overriding.
 func GetArch(archs ...string) string {
 	// List of architecture overrides.
-	priority := append([]string{CliArch}, archs...)
+	priority := append([]string{CLIArch}, archs...)
 
 	// Find the first architecture that is specified.
 	for _, arch := range priority {
