@@ -4,7 +4,7 @@
  -->
 <script lang="ts">
 	import type { APIZarfDeployPayload, ZarfDeployOptions, ZarfInitOptions } from '$lib/api-types';
-	import { Dialog, Stepper, Typography, type StepProps } from '@ui';
+	import { Dialog, Stepper, Typography, type StepProps, Box } from '@ui';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import bigZarf from '@images/zarf-bubbles-right.png';
 	import { beforeNavigate, goto } from '$app/navigation';
@@ -94,11 +94,13 @@
 	}
 
 	beforeNavigate(() => {
+		// Kill the stream and polling before navigating away
 		deployStream?.abort();
 		clearInterval(pollDeployed);
 	});
 
 	onMount(async () => {
+		// Set up the log stream
 		deployStream = Packages.deployStream({
 			onmessage: (e) => {
 				addMessage(e.data);
@@ -112,14 +114,20 @@
 						componentSteps[activeIndex].subtitle = 'Warning: See log stream for details.';
 					}
 					componentSteps[activeIndex].iconContent = '';
+					componentSteps = [...componentSteps];
 				}
 			},
 			onerror: (e) => {
+				// Add the error message to the log stream
+				addMessage(e.message);
+
+				// Set the error state.
 				successful = false;
 				finishedDeploying = true;
-				addMessage(e.message);
 			},
 		});
+
+		// Deploy the package
 		Packages.deploy(options).then(
 			(value: boolean) => {
 				finishedDeploying = true;
@@ -130,9 +138,13 @@
 				finishedDeploying = true;
 			}
 		);
+
+		// Poll for deployed components
 		pollDeployed = setInterval(() => {
 			updateComponentSteps();
 		}, POLL_TIME);
+
+		// Kill the stream and polling onDestroy
 		return () => {
 			deployStream.abort();
 			clearInterval(pollDeployed);
@@ -140,10 +152,14 @@
 	});
 
 	$: if (finishedDeploying) {
-		pollDeployed && clearInterval(pollDeployed);
+		// Kill the stream and polling
 		deployStream?.abort();
+		pollDeployed && clearInterval(pollDeployed);
+
+		// set all steps to success or error based on successful
 		componentSteps = [
 			...finalizeStepState(componentSteps, successful),
+			// Add the success/failure step
 			{
 				title: successful ? 'Deployment Succeeded' : 'Deployment Failed',
 				variant: successful ? 'success' : 'error',
@@ -151,8 +167,8 @@
 			},
 		];
 		if (successful) {
-			dialogState = getDialogContent(successful);
 			dialogOpen = true;
+			dialogState = getDialogContent(successful);
 			setTimeout(() => {
 				goto('/');
 			}, POLL_TIME);
@@ -166,10 +182,33 @@
 <section class="page-header">
 	<Typography variant="h5">Deploy Package - {$pkgStore.zarfPackage.metadata?.name}</Typography>
 </section>
-<section class="deployment-steps">
-	<Stepper orientation="vertical" color="on-background" steps={componentSteps} />
+<Box
+	ssx={{
+		$self: {
+			display: 'flex',
+			gap: '240px',
+			justifyContent: 'space-between',
+			'& > .stepper': {
+				minWidth: '240px',
+			},
+			// TODO: Remove this once the Stepper component is fixed to update colors correctly.
+			// link to issue: https://github.com/defenseunicorns/UnicornUI/issues/229
+			'& .step-icon.error': {
+				backgroundColor: 'var(--error)',
+			},
+			'& .step-icon.success': {
+				backgroundColor: 'var(--success)',
+			},
+			'& .step-icon.warning': {
+				backgroundColor: 'var(--warning)',
+			},
+		},
+	}}
+	class="deployment-steps"
+>
+	<Stepper orientation="vertical" color="on-background" steps={[...componentSteps]} />
 	<AnsiDisplay minWidth="100ch" bind:addMessage />
-</section>
+</Box>
 {#if finishedDeploying && hasError}
 	<DeploymentActions>
 		<ButtonDense
@@ -195,14 +234,6 @@
 </Dialog>
 
 <style>
-	.deployment-steps {
-		display: flex;
-		gap: 240px;
-		justify-content: space-between;
-	}
-	.deployment-steps > :global(.stepper) {
-		min-width: 240px;
-	}
 	.success-dialog {
 		display: flex;
 		padding: 24px 16px;
