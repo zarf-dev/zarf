@@ -159,6 +159,18 @@ var isValidHostname = &cobra.Command{
 	},
 }
 
+var computeCrc32 = &cobra.Command{
+	Use:     "crc32 TEXT",
+	Aliases: []string{"c"},
+	Short:   lang.CmdInternalCrc32Short,
+	Args:    cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		text := args[0]
+		hash := utils.GetCRCHash(text)
+		fmt.Printf("%d\n", hash)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(internalCmd)
 
@@ -171,4 +183,5 @@ func init() {
 	internalCmd.AddCommand(createPackageRegistryToken)
 	internalCmd.AddCommand(uiCmd)
 	internalCmd.AddCommand(isValidHostname)
+	internalCmd.AddCommand(computeCrc32)
 }
