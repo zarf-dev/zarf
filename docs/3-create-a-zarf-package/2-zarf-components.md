@@ -168,10 +168,10 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 
 <Tabs queryString="import-examples">
 <TabItem value="Local Path">
-<ExampleYAML example="composable-packages" component="games" />
+<ExampleYAML example="composable-packages" component="local-games-path" />
 </TabItem>
 <TabItem value="OCI URL">
-<ExampleYAML example="composable-packages" component="wordpress" />
+<ExampleYAML example="composable-packages" component="oci-wordpress-url" />
 </TabItem>
 </Tabs>
 
