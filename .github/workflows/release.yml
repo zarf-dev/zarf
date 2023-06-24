@@ -74,7 +74,7 @@ jobs:
       - name: Create release time CVE report
         run: "make cve-report"
 
-      # Before we run goreleaser we need to aggressively cleanup files to reduce disk pressure
+      # Before we run GoReleaser we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
         run: |
           lsblk -f
