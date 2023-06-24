@@ -23,11 +23,7 @@ builds:
 # Save the built artifacts as binaries (instead of wrapping them in a tarball)
 archives:
   - format: binary
-    name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
+    name_template: "{{ .ProjectName }}_{{ .Tag }}_{{- title .Os }}_{{ .Arch }}"
 
 # generate a sha256 checksum of all release artifacts
 # NOTE: We are explicitly adding the init-packages that are built prior to GoReleaser stage in the GitHub Actions workflow
