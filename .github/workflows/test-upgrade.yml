@@ -23,6 +23,9 @@ concurrency:
 
 jobs:
   validate:
+    env:
+      # Reduce the kubelet eviction minimums reduce the chance for disk pressure causing evictions during the tests
+      ZARF_PACKAGE_DEPLOY_SET_K3S_ARGS: --disable traefik --kubelet-arg "eviction-hard=imagefs.available<1%,nodefs.available<1%" --kubelet-arg "eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -38,14 +41,6 @@ jobs:
         uses: defenseunicorns/setup-zarf@main
         with:
           download-init-package: true
-
-      # Note we move the kubelet data to reduce the chance for disk pressure during the tests
-      - name: Move the kubelet root directory for 'k3s'
-        run: |
-          sudo mkdir -p /mnt/kubelet-data
-          echo >> zarf-config.toml
-          echo [package.deploy.set] >> zarf-config.toml
-          echo "k3s_args = '--disable traefik --kubelet-arg \"eviction-hard=imagefs.available<1%,nodefs.available<1%\" --kubelet-arg \"eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%\"'" >> zarf-config.toml
 
       - name: Initialize the cluster with the release version
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
@@ -80,18 +75,19 @@ jobs:
       - name: "Cleanup after running tests"
         # NOTE: This reduces disk pressure before the upgrade-specific tests begin
         run: |
-          sudo lsblk -f
+          lsblk -f
           sudo k3s crictl images
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe nodes
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe deployments -n=podinfo-upgrade
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
 
-          sudo k3s crictl rmi --prune
-          sudo rm -rf zarf-sbom /tmp/zarf-*/
+          sudo rm -rf zarf-sbom /tmp/zarf-*/ src/ui/node_modules
           sudo env "PATH=$PATH" CI=true make delete-packages
           sudo build/zarf tools clear-cache
+          sudo docker system prune --all --force
+          sudo k3s crictl rmi --prune
 
-          sudo lsblk -f
+          lsblk -f
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe nodes
 
       - name: Run the upgrade tests
