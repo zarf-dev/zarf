@@ -36,6 +36,8 @@ checksum:
 # generate sboms for each binary artifact
 sboms:
   - artifacts: binary
+    documents:
+      - "sbom_{{ .ProjectName }}_{{ .Tag }}_{{- title .Os }}_{{ .Arch }}.sbom"
 
 snapshot:
   name_template: "{{ incpatch .Version }}-snapshot"
