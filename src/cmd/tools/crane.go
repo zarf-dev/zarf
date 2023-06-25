@@ -5,39 +5,78 @@
 package tools
 
 import (
+	"os"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/go-containerregistry/pkg/logs"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
 )
 
 func init() {
+	verbose := false
+	insecure := false
+	ndlayers := false
+	platform := "all"
+
 	// No package information is available so do not pass in a list of architectures
-	cranePlatformOptions := config.GetCraneOptions(false)
+	craneOptions := []crane.Option{}
 
 	registryCmd := &cobra.Command{
 		Use:     "registry",
 		Aliases: []string{"r", "crane"},
 		Short:   lang.CmdToolsRegistryShort,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			craneOptions = append(craneOptions, crane.WithContext(cmd.Context()))
+			// TODO(jonjohnsonjr): crane.Verbose option?
+			if verbose {
+				logs.Debug.SetOutput(os.Stderr)
+			}
+			if insecure {
+				craneOptions = append(craneOptions, crane.Insecure)
+			}
+			if ndlayers {
+				craneOptions = append(craneOptions, crane.WithNondistributable())
+			}
+
+			var err error
+			var v1Platform *v1.Platform
+			if platform != "all" {
+				v1Platform, err = v1.ParsePlatform(platform)
+				if err != nil {
+					message.Fatalf(err, "Invalid platform '%s':%s", err.Error())
+				}
+			}
+
+			craneOptions = append(craneOptions, crane.WithPlatform(v1Platform))
+		},
 	}
 
 	craneLogin := craneCmd.NewCmdAuthLogin()
 	craneLogin.Example = ""
 
 	registryCmd.AddCommand(craneLogin)
-	registryCmd.AddCommand(craneCmd.NewCmdPull(&cranePlatformOptions))
-	registryCmd.AddCommand(craneCmd.NewCmdPush(&cranePlatformOptions))
+	registryCmd.AddCommand(craneCmd.NewCmdPull(&craneOptions))
+	registryCmd.AddCommand(craneCmd.NewCmdPush(&craneOptions))
 
-	craneCopy := craneCmd.NewCmdCopy(&cranePlatformOptions)
+	craneCopy := craneCmd.NewCmdCopy(&craneOptions)
 	copyFlags := craneCopy.Flags()
 	copyFlags.Lookup("all-tags").Shorthand = ""
 	craneCopy.ResetFlags()
 	craneCopy.Flags().AddFlagSet(copyFlags)
 
 	registryCmd.AddCommand(craneCopy)
-	registryCmd.AddCommand(zarfCraneCatalog(&cranePlatformOptions))
+	registryCmd.AddCommand(zarfCraneCatalog(&craneOptions))
+
+	registryCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable debug logs")
+	registryCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, "Allow image references to be fetched without TLS")
+	registryCmd.PersistentFlags().BoolVar(&ndlayers, "allow-nondistributable-artifacts", false, "Allow pushing non-distributable (foreign) layers")
+	registryCmd.PersistentFlags().StringVar(&platform, "platform", "all", "Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64).")
 
 	toolsCmd.AddCommand(registryCmd)
 }

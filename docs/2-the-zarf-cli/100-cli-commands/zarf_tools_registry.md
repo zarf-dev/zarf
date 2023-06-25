@@ -6,14 +6,17 @@ Tools for working with container registries using go-containertools
 ## Options
 
 ```
-  -h, --help   help for registry
+      --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
+  -h, --help                               help for registry
+      --insecure                           Allow image references to be fetched without TLS
+      --platform string                    Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64). (default "all")
+  -v, --verbose                            Enable debug logs
 ```
 
 ## Options inherited from parent commands
 
 ```
   -a, --architecture string   Architecture for OCI images and Zarf packages
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
