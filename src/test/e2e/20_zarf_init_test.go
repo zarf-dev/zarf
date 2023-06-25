@@ -64,7 +64,7 @@ func TestZarfInit(t *testing.T) {
 	// Check for any old secrets to ensure that they don't get saved in the init log
 	oldState := types.ZarfState{}
 	base64State, _, err := e2e.Kubectl("get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
-	if err != nil {
+	if err == nil {
 		oldStateJSON, err := base64.StdEncoding.DecodeString(base64State)
 		require.NoError(t, err)
 		err = json.Unmarshal(oldStateJSON, &oldState)
@@ -116,8 +116,11 @@ func TestZarfInit(t *testing.T) {
 
 func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.ZarfState) {
 	require.NotContains(t, logText, zarfState.AgentTLS.CA)
+	require.NotContains(t, logText, string(zarfState.AgentTLS.CA))
 	require.NotContains(t, logText, zarfState.AgentTLS.Cert)
+	require.NotContains(t, logText, string(zarfState.AgentTLS.Cert))
 	require.NotContains(t, logText, zarfState.AgentTLS.Key)
+	require.NotContains(t, logText, string(zarfState.AgentTLS.Key))
 	require.NotContains(t, logText, zarfState.ArtifactServer.PushToken)
 	require.NotContains(t, logText, zarfState.GitServer.PullPassword)
 	require.NotContains(t, logText, zarfState.GitServer.PushPassword)
