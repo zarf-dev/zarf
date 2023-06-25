@@ -6,12 +6,29 @@ package tools
 
 import (
 	"os"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/spf13/cobra"
 )
+
+var vendorCmds = []string{
+	"kubectl",
+	"k",
+	"syft",
+	"sbom",
+	"s",
+	"k9s",
+	"monitor",
+	"wait-for",
+	"wait",
+	"w",
+	"crane",
+	"registry",
+	"r",
+}
 
 var toolsCmd = &cobra.Command{
 	Use:     "tools",
@@ -27,34 +44,24 @@ func Include(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(toolsCmd)
 }
 
-// CheckVendorOnly checks if the command is being run as a vendor-only command
-func CheckVendorOnly() bool {
-	vendorCmd := []string{
-		"kubectl",
-		"k",
-		"syft",
-		"sbom",
-		"s",
-		"k9s",
-		"monitor",
-		"wait-for",
-		"wait",
-		"w",
-		"crane",
-		"registry",
-		"r",
-	}
-
+// CheckVendorOnlyFromArgs checks if the command being run is a vendor-only command
+func CheckVendorOnlyFromArgs() bool {
 	// Check for "zarf tools|t <cmd>" where <cmd> is in the vendorCmd list
-	return isVendorCmd(vendorCmd)
+	return isVendorCmd(os.Args, vendorCmds)
+}
+
+// CheckVendorOnlyFromArgs checks if the command being run is a vendor-only command
+func CheckVendorOnlyFromPath(cmd *cobra.Command) bool {
+	args := strings.Split(cmd.CommandPath(), " ")
+	// Check for "zarf tools|t <cmd>" where <cmd> is in the vendorCmd list
+	return isVendorCmd(args, vendorCmds)
 }
 
 // isVendorCmd checks if the command is a vendor command.
-func isVendorCmd(cmd []string) bool {
-	a := os.Args
-	if len(a) > 2 {
-		if a[1] == "tools" || a[1] == "t" {
-			if utils.SliceContains(cmd, a[2]) {
+func isVendorCmd(args []string, vendoredCmds []string) bool {
+	if len(args) > 2 {
+		if args[1] == "tools" || args[1] == "t" {
+			if utils.SliceContains(vendoredCmds, args[2]) {
 				return true
 			}
 		}

@@ -32,6 +32,7 @@ func init() {
 		Aliases: []string{"r", "crane"},
 		Short:   lang.CmdToolsRegistryShort,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// The crane options loading here comes from the rootCmd of crane
 			craneOptions = append(craneOptions, crane.WithContext(cmd.Context()))
 			// TODO(jonjohnsonjr): crane.Verbose option?
 			if verbose {
@@ -49,7 +50,7 @@ func init() {
 			if platform != "all" {
 				v1Platform, err = v1.ParsePlatform(platform)
 				if err != nil {
-					message.Fatalf(err, "Invalid platform '%s':%s", err.Error())
+					message.Fatalf(err, lang.CmdToolsRegistryInvalidPlatformErr, err.Error())
 				}
 			}
 
@@ -65,18 +66,14 @@ func init() {
 	registryCmd.AddCommand(craneCmd.NewCmdPush(&craneOptions))
 
 	craneCopy := craneCmd.NewCmdCopy(&craneOptions)
-	copyFlags := craneCopy.Flags()
-	copyFlags.Lookup("all-tags").Shorthand = ""
-	craneCopy.ResetFlags()
-	craneCopy.Flags().AddFlagSet(copyFlags)
 
 	registryCmd.AddCommand(craneCopy)
 	registryCmd.AddCommand(zarfCraneCatalog(&craneOptions))
 
-	registryCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable debug logs")
-	registryCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, "Allow image references to be fetched without TLS")
-	registryCmd.PersistentFlags().BoolVar(&ndlayers, "allow-nondistributable-artifacts", false, "Allow pushing non-distributable (foreign) layers")
-	registryCmd.PersistentFlags().StringVar(&platform, "platform", "all", "Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64).")
+	registryCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
+	registryCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
+	registryCmd.PersistentFlags().BoolVar(&ndlayers, "allow-nondistributable-artifacts", false, lang.CmdToolsRegistryFlagNonDist)
+	registryCmd.PersistentFlags().StringVar(&platform, "platform", "all", lang.CmdToolsRegistryFlagPlatform)
 
 	toolsCmd.AddCommand(registryCmd)
 }

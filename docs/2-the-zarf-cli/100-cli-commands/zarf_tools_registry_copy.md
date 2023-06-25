@@ -10,7 +10,7 @@ zarf tools registry copy SRC DST [flags]
 ## Options
 
 ```
-      --all-tags     (Optional) if true, copy all tags from SRC to DST
+  -a, --all-tags     (Optional) if true, copy all tags from SRC to DST
   -h, --help         help for copy
   -j, --jobs int     (Optional) The maximum number of concurrent copies, defaults to GOMAXPROCS
   -n, --no-clobber   (Optional) if true, avoid overwriting existing tags in DST
@@ -20,15 +20,9 @@ zarf tools registry copy SRC DST [flags]
 
 ```
       --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
-  -a, --architecture string                Architecture for OCI images and Zarf packages
       --insecure                           Allow image references to be fetched without TLS
-  -l, --log-level string                   Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-log-file                        Disable log file creation
-      --no-progress                        Disable fancy UI progress bars, spinners, logos, etc
       --platform string                    Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64). (default "all")
-      --tmpdir string                      Specify the temporary directory to use for intermediate files
   -v, --verbose                            Enable debug logs
-      --zarf-cache string                  Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
 ## SEE ALSO

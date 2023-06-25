@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/jsonschema"
+	"github.com/defenseunicorns/zarf/src/cmd/tools"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
 	"github.com/defenseunicorns/zarf/src/internal/api"
@@ -53,6 +54,24 @@ var generateCLIDocs = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// Don't include the datestamp in the output
 		rootCmd.DisableAutoGenTag = true
+
+		for _, cmd := range rootCmd.Commands() {
+			if cmd.Use == "tools" {
+				for _, toolCmd := range cmd.Commands() {
+					// If the command is a vendored command, add a dummy flag to hide root flags from the docs
+					if tools.CheckVendorOnlyFromPath(toolCmd) {
+						addHiddenDummyFlag(toolCmd, "log-level")
+						addHiddenDummyFlag(toolCmd, "architecture")
+						addHiddenDummyFlag(toolCmd, "no-log-file")
+						addHiddenDummyFlag(toolCmd, "no-progress")
+						addHiddenDummyFlag(toolCmd, "zarf-cache")
+						addHiddenDummyFlag(toolCmd, "tmpdir")
+						addHiddenDummyFlag(toolCmd, "insecure")
+					}
+				}
+			}
+		}
+
 		//Generate markdown of the Zarf command (and all of its child commands)
 		if err := os.RemoveAll("./docs/2-the-zarf-cli/100-cli-commands"); err != nil {
 			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
@@ -184,4 +203,12 @@ func init() {
 	internalCmd.AddCommand(uiCmd)
 	internalCmd.AddCommand(isValidHostname)
 	internalCmd.AddCommand(computeCrc32)
+}
+
+func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
+	if cmd.PersistentFlags().Lookup(flagDummy) == nil {
+		var dummyStr string
+		cmd.PersistentFlags().StringVar(&dummyStr, flagDummy, "", "")
+		cmd.PersistentFlags().MarkHidden(flagDummy)
+	}
 }
