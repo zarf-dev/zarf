@@ -6,6 +6,15 @@
   "ignoreDeps": [
     "sigs.k8s.io/kustomize/kyaml"
   ],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__fixtures__/**"
+  ],
   "packageRules": [
     {
       "matchUpdateTypes": [
