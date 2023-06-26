@@ -21,7 +21,6 @@ import (
 
 var (
 	logLevel string
-	arch     string
 
 	// Default global config for the CLI
 	pkgConfig = types.PackagerConfig{}
@@ -31,7 +30,7 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use: "zarf [COMMAND]",
+	Use: "zarf COMMAND",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Skip for vendor-only commands
 		if tools.CheckVendorOnly() {
@@ -88,7 +87,7 @@ func init() {
 	v.SetDefault(V_TMP_DIR, "")
 
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(V_LOG_LEVEL), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVarP(&arch, "architecture", "a", v.GetString(V_ARCHITECTURE), lang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(V_ARCHITECTURE), lang.RootCmdFlagArch)
 	rootCmd.PersistentFlags().BoolVar(&config.SkipLogFile, "no-log-file", v.GetBool(V_NO_LOG_FILE), lang.RootCmdFlagSkipLogFile)
 	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(V_NO_PROGRESS), lang.RootCmdFlagNoProgress)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(V_ZARF_CACHE), lang.RootCmdFlagCachePath)
@@ -97,8 +96,6 @@ func init() {
 }
 
 func cliSetup() {
-	config.CliArch = arch
-
 	match := map[string]message.LogLevel{
 		"warn":  message.WarnLevel,
 		"info":  message.InfoLevel,

@@ -95,7 +95,7 @@
 		<Typography
 			id="sbom-info"
 			variant="body2"
-			color="text-secondary-on-dark"
+			color="text-secondary-on-background"
 			ssx={{
 				$self: {
 					display: 'flex',
@@ -111,7 +111,7 @@
 				The SBOM files are in a temporary folder that will be removed upon deployment.
 			</Typography>
 		</Typography>
-		<Typography element="p" variant="body2" color="text-secondary-on-dark">
+		<Typography element="p" variant="body2" color="text-secondary-on-background">
 			To view the SBOM files, open this link:
 			<Typography
 				href={`/sbom-viewer/${sbom?.path.split('/').pop()}`}

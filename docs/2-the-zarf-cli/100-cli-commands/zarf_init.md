@@ -21,32 +21,33 @@ zarf init [flags]
 ## Examples
 
 ```
-# Initializing without any optional components:
-zarf init
 
-# Initializing w/ Zarfs internal git server:
-zarf init --components=git-server
+	# Initializing without any optional components:
+	zarf init
 
-# Initializing w/ Zarfs internal git server and PLG stack:
-zarf init --components=git-server,logging
+	# Initializing w/ Zarfs internal git server:
+	zarf init --components=git-server
 
-# Initializing w/ an internal registry but with a different nodeport:
-zarf init --nodeport=30333
+	# Initializing w/ Zarfs internal git server and PLG stack:
+	zarf init --components=git-server,logging
 
-# Initializing w/ an external registry:
-zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
+	# Initializing w/ an internal registry but with a different nodeport:
+	zarf init --nodeport=30333
 
-# Initializing w/ an external git server:
-zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
+	# Initializing w/ an external registry:
+	zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
+
+	# Initializing w/ an external git server:
+	zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 
 ```
 
 ## Options
 
 ```
-      --artifact-push-token string      API Token for the push-user to access the artifact registry
-      --artifact-push-username string   Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
-      --artifact-url string             External artifact registry url to use for this Zarf cluster
+      --artifact-push-token string      [alpha] API Token for the push-user to access the artifact registry
+      --artifact-push-username string   [alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
+      --artifact-url string             [alpha] External artifact registry url to use for this Zarf cluster
       --components string               Specify which optional components to install.  E.g. --components=git-server,logging
       --confirm                         Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
       --git-pull-password string        Password for the pull-only user to access the git server

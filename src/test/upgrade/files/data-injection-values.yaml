@@ -1,2 +1,0 @@
-podAnnotations:
-  zarf.dev/dataInjections: ###ZARF_DATA_INJECTION_MARKER###

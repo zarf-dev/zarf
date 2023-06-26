@@ -193,7 +193,8 @@ Follow these guidelines for standardizing Defense Unicorn's spelling and grammar
 * Zarf Package
 * Open-source
 * Air gap/Air-gapped
-* K8/K8s
-* K9/K9s
-* K3d/K3ds
+* K8s
+* K9s
+* K3d
+* K3s
 * High side/Low side

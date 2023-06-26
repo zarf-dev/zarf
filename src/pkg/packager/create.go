@@ -113,7 +113,7 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
-	if !p.confirmAction("Create", nil) {
+	if !p.confirmAction(config.ZarfCreateStage, nil) {
 		return fmt.Errorf("package creation canceled")
 	}
 
@@ -512,7 +512,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
 			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
-			if err := gitCfg.Pull(url, componentPath.Repos); err != nil {
+			if err := gitCfg.Pull(url, componentPath.Repos, false); err != nil {
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}

@@ -54,16 +54,22 @@ func (k *K8s) GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
 		return nil, fmt.Errorf("unable to get the list of pods in the cluster")
 	}
 
-	findImages:
+findImages:
 	for _, pod := range pods.Items {
 		nodeName := pod.Spec.NodeName
+
+		// If this pod doesn't have a node (i.e. is Pending), skip it
+		if nodeName == "" {
+			continue
+		}
+
 		nodeDetails, err := k.GetNode(nodeName)
 		if err != nil {
 			return nil, fmt.Errorf("unable to get the node %s", pod.Spec.NodeName)
 		}
 
 		for _, taint := range nodeDetails.Spec.Taints {
-			if (taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute) {
+			if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
 				continue findImages
 			}
 		}
