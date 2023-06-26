@@ -29,7 +29,9 @@ type ZarfE2ETest struct {
 	CommandLog      []string
 }
 
-var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
+// NOTE: This will not work for windows
+// https://regex101.com/r/Et1DEq/1
+var logRegex = regexp.MustCompile(`Saving log file to[^\/]+(?P<logFile>[^\\\n]+\.log)`)
 
 // GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run.
 func GetCLIName() string {
@@ -95,7 +97,7 @@ func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
 	require.NoError(t, err)
 	logFile := get("logFile")
 	logContents, err := os.ReadFile(logFile)
-	require.NoError(t, err)
+	require.NoError(t, err, "error when trying to read the log file")
 	return string(logContents)
 }
 
