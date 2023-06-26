@@ -50,7 +50,7 @@ func CheckVendorOnlyFromArgs() bool {
 	return isVendorCmd(os.Args, vendorCmds)
 }
 
-// CheckVendorOnlyFromPath checks if the cobra command being is a vendor-only command
+// CheckVendorOnlyFromPath checks if the cobra command is a vendor-only command
 func CheckVendorOnlyFromPath(cmd *cobra.Command) bool {
 	args := strings.Split(cmd.CommandPath(), " ")
 	// Check for "zarf tools|t <cmd>" where <cmd> is in the vendorCmd list
