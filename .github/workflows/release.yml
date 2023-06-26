@@ -70,22 +70,25 @@ jobs:
         if: always()
         uses: ./.github/actions/save-logs
 
-      - name: Cleanup files
-        run: |
-          sudo rm -rf zarf-sbom /tmp/zarf-*
-          sudo env "PATH=$PATH" CI=true make delete-packages
-          sudo build/zarf tools clear-cache
-          sudo docker system prune --all
-          go clean -cache
-          lsblk -f
-
       # Builds init packages since GoReleaser won't handle this for us
       - name: Create release time CVE report
         run: "make cve-report"
 
+      # Before we run GoReleaser we need to aggressively cleanup files to reduce disk pressure
+      - name: Cleanup files
+        run: |
+          lsblk -f
+          sudo rm -rf zarf-sbom /tmp/zarf-* src/ui/node_modules
+          sudo env "PATH=$PATH" CI=true make delete-packages
+          sudo build/zarf tools clear-cache
+          sudo docker system prune --all --force
+          sudo k3s crictl rmi --prune
+          go clean -cache
+          lsblk -f
+
       # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
       - name: Set AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e1e17a757e536f70e52b5a12b2e8d1d1c60e04ef # v2-node16
+        uses: aws-actions/configure-aws-credentials@5727f247b64f324ec403ac56ae05e220fd02b65f # v2-node16
         with:
           aws-access-key-id: ${{ secrets.AWS_GOV_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}

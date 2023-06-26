@@ -7,14 +7,15 @@ package packager
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -23,8 +24,40 @@ func (p *Packager) Remove(packageName string) (err error) {
 	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()
 
+	// If the user input is a path to a package, extract the package
+	if ZarfPackagePattern.MatchString(packageName) {
+		if utils.InvalidPath(packageName) {
+			message.Fatalf(nil, lang.CmdPackageRemoveTarballErr)
+		}
+
+		if err := archiver.Extract(packageName, config.ZarfYAML, p.tmp.Base); err != nil {
+			message.Fatalf(err, lang.CmdPackageRemoveExtractErr)
+		}
+	}
+
+	// If the user input is a path to a oci, pull the package
+	if utils.IsOCIURL(packageName) {
+		err := p.SetOCIRemote(packageName)
+		if err != nil {
+			message.Fatalf(err, "Unable to set OCI remote: %s", err.Error())
+		}
+
+		// pull the package from the remote
+		if err = p.remote.PullPackageMetadata(p.tmp.Base); err != nil {
+			return fmt.Errorf("unable to pull the package from the remote: %w", err)
+		}
+	}
+
+	// If this came from a real package, read the package config and reset the packageName
+	if ZarfPackagePattern.MatchString(packageName) || utils.IsOCIURL(packageName) {
+		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
+			return err
+		}
+		packageName = p.cfg.Pkg.Metadata.Name
+	}
+
 	// If components were provided; just remove the things we were asked to remove
-	requestedComponents := strings.Split(p.cfg.DeployOpts.Components, ",")
+	requestedComponents := getRequestedComponentList(p.cfg.DeployOpts.Components)
 	partialRemove := len(requestedComponents) > 0 && requestedComponents[0] != ""
 
 	// Determine if we need the cluster
@@ -63,7 +96,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 
 		deployedPackage, err = p.cluster.GetDeployedPackage(packageName)
 		if err != nil {
-			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %w", err)
+			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())
 		}
 	} else {
 		// If we do not need the cluster, create a deployed components object based on the info we have

@@ -5,7 +5,7 @@
 package packages
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -24,15 +24,15 @@ func Read(w http.ResponseWriter, r *http.Request) {
 
 	path := chi.URLParam(r, "path")
 
-	if pkg, err := readPackage(path); err != nil {
+	if pkg, err := ReadPackage(path); err != nil {
 		message.ErrorWebf(err, w, "Unable to read the package at: `%s`", path)
 	} else {
 		common.WriteJSONResponse(w, pkg, http.StatusOK)
 	}
 }
 
-// internal function to read a package from the local filesystem.
-func readPackage(path string) (pkg types.APIZarfPackage, err error) {
+// ReadPackage reads a packages yaml from the local filesystem and returns an APIZarfPackage.
+func ReadPackage(path string) (pkg types.APIZarfPackage, err error) {
 	var file []byte
 
 	pkg.Path, err = url.QueryUnescape(path)
@@ -43,7 +43,7 @@ func readPackage(path string) (pkg types.APIZarfPackage, err error) {
 	// Check for zarf.yaml in the package and read into file
 	err = archiver.Walk(pkg.Path, func(f archiver.File) error {
 		if f.Name() == config.ZarfYAML {
-			file, err = ioutil.ReadAll(f)
+			file, err = io.ReadAll(f)
 			if err != nil {
 				return err
 			}

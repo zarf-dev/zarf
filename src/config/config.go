@@ -57,10 +57,15 @@ const (
 	ZarfSBOMTar       = "sboms.tar"
 	ZarfPackagePrefix = "zarf-package-"
 
+	ZarfComponentsDir = "components"
+
 	ZarfInClusterContainerRegistryNodePort = 31999
 
 	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+
+	ZarfDeployStage = "Deploy"
+	ZarfCreateStage = "Create"
 )
 
 // Zarf Global Configuration Variables.
@@ -71,14 +76,11 @@ var (
 	// CommonOptions tracks user-defined values that apply across commands.
 	CommonOptions types.ZarfCommonOptions
 
-	// CliArch is the computer architecture of the device executing the CLI commands
-	CliArch string
+	// CLIArch is the computer architecture of the device executing the CLI commands
+	CLIArch string
 
 	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
 	ZarfSeedPort string
-
-	// Dirty Solution to getting the real time deployedComponents components.
-	deployedComponents []types.DeployedComponent
 
 	// SkipLogFile is a flag to skip logging to a file
 	SkipLogFile bool
@@ -96,7 +98,7 @@ var (
 // GetArch returns the arch based on a priority list with options for overriding.
 func GetArch(archs ...string) string {
 	// List of architecture overrides.
-	priority := append([]string{CliArch}, archs...)
+	priority := append([]string{CLIArch}, archs...)
 
 	// Find the first architecture that is specified.
 	for _, arch := range priority {
@@ -155,24 +157,6 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 		}))
 }
 
-// GetDeployingComponents returns the list of deploying components.
-// TODO: (@jeff-mccoy) this should be moved out of config.
-func GetDeployingComponents() []types.DeployedComponent {
-	return deployedComponents
-}
-
-// SetDeployingComponents sets the list of deploying components.
-// TODO: (@jeff-mccoy) this should be moved out of config.
-func SetDeployingComponents(components []types.DeployedComponent) {
-	deployedComponents = components
-}
-
-// ClearDeployingComponents clears the list of deploying components.
-// TODO: (@jeff-mccoy) this should be moved out of config.
-func ClearDeployingComponents() {
-	deployedComponents = []types.DeployedComponent{}
-}
-
 // GetValidPackageExtensions returns the valid package extensions.
 func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".zip"}
@@ -180,10 +164,15 @@ func GetValidPackageExtensions() [3]string {
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.
 func GetAbsCachePath() string {
+	return GetAbsHomePath(CommonOptions.CachePath)
+}
+
+// GetAbsHomePath replaces ~ with the absolute path to a user's home dir
+func GetAbsHomePath(path string) string {
 	homePath, _ := os.UserHomeDir()
 
-	if strings.HasPrefix(CommonOptions.CachePath, "~") {
-		return strings.Replace(CommonOptions.CachePath, "~", homePath, 1)
+	if strings.HasPrefix(path, "~") {
+		return strings.Replace(path, "~", homePath, 1)
 	}
-	return CommonOptions.CachePath
+	return path
 }

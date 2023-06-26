@@ -40,6 +40,13 @@ var (
 func (p *Packager) Deploy() error {
 	message.Debug("packager.Deploy()")
 
+	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
+		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)
+		if err != nil {
+			return err
+		}
+	}
+
 	if err := p.loadZarfPkg(); err != nil {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
@@ -62,7 +69,7 @@ func (p *Packager) Deploy() error {
 	}
 
 	// Confirm the overall package deployment
-	if !p.confirmAction("Deploy", p.cfg.SBOMViewFiles) {
+	if !p.confirmAction(config.ZarfDeployStage, p.cfg.SBOMViewFiles) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
@@ -134,7 +141,6 @@ func (p *Packager) Deploy() error {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents(componentsToDeploy []types.ZarfComponent) (deployedComponents []types.DeployedComponent, err error) {
-	config.SetDeployingComponents(deployedComponents)
 
 	// Generate a value template
 	if valueTemplate, err = template.Generate(p.cfg); err != nil {
@@ -166,7 +172,6 @@ func (p *Packager) deployComponents(componentsToDeploy []types.ZarfComponent) (d
 		// Deploy the component
 		deployedComponent.InstalledCharts = charts
 		deployedComponents = append(deployedComponents, deployedComponent)
-		config.SetDeployingComponents(deployedComponents)
 
 		// Save deployed package information to k8s
 		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
@@ -183,7 +188,6 @@ func (p *Packager) deployComponents(componentsToDeploy []types.ZarfComponent) (d
 		}
 	}
 
-	config.ClearDeployingComponents()
 	return deployedComponents, nil
 }
 
@@ -369,12 +373,13 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 			}
 		}
 
-		// Replace temp target directories
+		// Replace temp target directory and home directory
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
+		file.Target = config.GetAbsHomePath(file.Target)
 
 		fileList := []string{}
 		if utils.IsDir(fileLocation) {
-			files, _ := utils.RecursiveFileList(fileLocation, nil, false, true)
+			files, _ := utils.RecursiveFileList(fileLocation, nil, false)
 			fileList = append(fileList, files...)
 		} else {
 			fileList = append(fileList, fileLocation)

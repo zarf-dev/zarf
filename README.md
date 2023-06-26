@@ -29,15 +29,15 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 ## 📦 Out of the Box Features
 
 - Automate Kubernetes deployments in disconnected environments
-- Automate [Software Bill of Materials (SBOM)](https://docs.zarf.dev/docs/deploy-a-zarf-package/package-sboms) generation
-- Build and [publish packages as OCI image artifacts](./5-zarf-tutorials/7-publish-and-deploy.md)
+- Automate [Software Bill of Materials (SBOM)](https://docs.zarf.dev/docs/create-a-zarf-package/package-sboms) generation
+- Build and [publish packages as OCI image artifacts](https://docs.zarf.dev/docs/zarf-tutorials/publish-and-deploy)
 - Provide a [web dashboard](https://docs.zarf.dev/docs/deploy-a-zarf-package/view-sboms) for viewing SBOM output
 - Create and verify package signatures with [cosign](https://github.com/sigstore/cosign)
 - [Publish](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_package_publish), [pull](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
 - Powerful component lifecycle [actions](https://docs.zarf.dev/docs/create-a-zarf-package/component-actions)
 - Deploy a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
 - Builtin logging stack with [Loki](https://grafana.com/oss/loki/)
-- Builtin Git server with [Gitea](https://gitea.com/)
+- Builtin Git server with [Gitea](https://gitea.io/en-us/)
 - Builtin Docker registry
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
 - [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
@@ -46,7 +46,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 ## 🛠️ Configurable Features
 
-- Customizable [variables and package templates](examples/variables/README.md) with defaults and user prompting
+- Customizable [variables and package templates](https://docs.zarf.dev/examples/variables/) with defaults and user prompting
 - [Composable packages](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-components#composing-package-components) to include multiple sub-packages/components
 - Component-level OS/architecture filtering
 

@@ -11,6 +11,7 @@
 	import RemoveDeployedPackageDialog from './remove-deployed-package-dialog.svelte';
 	import ConnectDeployedPackageDialog from './connect-deployed-package-dialog.svelte';
 	import DisconnectDeployedPackageDialog from './disconnect-deployed-package-dialog.svelte';
+	import YamlDrawer from '../yaml-drawer.svelte';
 
 	export let pkg: DeployedPackage;
 
@@ -18,13 +19,14 @@
 	let toggleRemoveDialog: () => void;
 	let toggleConnectDialog: () => void;
 	let toggleDisconnectDialog: () => void;
+	let toggleYamlDrawer: () => void;
 
 	let updateLink = '';
 	let toggled = false;
 
 	const menuSSX: SSX = {
 		$self: {
-			'position': 'fixed',
+			position: 'fixed',
 			'& .list-item-adornment': { color: 'var(--text-secondary-on-dark)' },
 			'& .divider': { height: '1px', boxShadow: 'inset 0px -1px 0px rgba(255,255,255,0.12)' },
 		},
@@ -65,37 +67,33 @@
 			<ListItemAdornment slot="leading" class="material-symbols-outlined">
 				signal_disconnected
 			</ListItemAdornment>
-			<Typography>
-				Disconnect...
-			</Typography>
+			<Typography>Disconnect...</Typography>
 		</ListItem>
 	{/if}
 	<ListItem on:click={toggleConnectDialog}>
 		<ListItemAdornment slot="leading" class="material-symbols-outlined">
 			private_connectivity
 		</ListItemAdornment>
-		<Typography>
-			Connect...
-		</Typography>
+		<Typography>Connect...</Typography>
 	</ListItem>
 	<ListItem on:click={() => goto(updateLink)}>
+		<ListItemAdornment slot="leading" class="material-symbols-outlined">cached</ListItemAdornment>
+		<Typography>Update Package...</Typography>
+	</ListItem>
+	<div class="divider" />
+	<ListItem on:click={toggleYamlDrawer}>
 		<ListItemAdornment slot="leading" class="material-symbols-outlined">
-			cached
+			code_blocks
 		</ListItemAdornment>
-		<Typography>
-			Update Package...
-		</Typography>
+		<Typography>View Code</Typography>
 	</ListItem>
 	<div class="divider" />
 	<ListItem on:click={toggleRemoveDialog}>
-		<ListItemAdornment slot="leading" class="material-symbols-outlined">
-			delete
-		</ListItemAdornment>
-		<Typography>
-			Remove...
-		</Typography>
+		<ListItemAdornment slot="leading" class="material-symbols-outlined">delete</ListItemAdornment>
+		<Typography>Remove...</Typography>
 	</ListItem>
 </Menu>
 <DisconnectDeployedPackageDialog {pkg} bind:toggleDialog={toggleDisconnectDialog} />
 <ConnectDeployedPackageDialog {pkg} bind:toggleDialog={toggleConnectDialog} />
 <RemoveDeployedPackageDialog {pkg} bind:toggleDialog={toggleRemoveDialog} />
+<YamlDrawer code={pkg.data} bind:toggleDrawer={toggleYamlDrawer} />

@@ -21,9 +21,8 @@ const config: UserConfig = {
 	},
 	optimizeDeps: {
 		include: [
-			'xterm',
-			'xterm-addon-fit',
 			'prismjs',
+			'ansi-to-html',
 			'@floating-ui/dom',
 			'prismjs/components/prism-yaml',
 			'yaml',

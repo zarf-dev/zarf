@@ -36,14 +36,15 @@ const Cluster = {
 };
 
 const Packages = {
-	find: () => http.get<string[]>('/packages/find'),
-	findInHome: () => http.get<string[]>('/packages/find-in-home'),
-	findInit: () => http.get<string[]>('/packages/find-init'),
 	read: (name: string) => http.get<APIZarfPackage>(`/packages/read/${encodeURIComponent(name)}`),
 	getDeployedPackages: () => http.get<DeployedPackage[]>('/packages/list'),
 	deploy: (options: APIZarfDeployPayload) => http.put<boolean>(`/packages/deploy`, options),
 	deployStream: (eventParams: EventParams) =>
 		http.eventStream('/packages/deploy-stream', eventParams),
+	deployingComponents: {
+		list: (pkgName: string) =>
+			http.get<DeployedComponent[]>(`/packages/${encodeURIComponent(pkgName)}/components/deployed`),
+	},
 	remove: (name: string) => http.del(`/packages/remove/${encodeURIComponent(name)}`),
 	listPkgConnections: (name: string) =>
 		http.get(`/packages/${encodeURIComponent(name)}/connections`),
@@ -59,10 +60,11 @@ const Packages = {
 		),
 	sbom: (path: string) => http.get<APIPackageSBOM>(`/packages/sbom/${encodeURIComponent(path)}`),
 	cleanSBOM: () => http.del('/packages/sbom'),
+	find: (eventParams: EventParams) => http.eventStream('/packages/find/stream', eventParams),
+	findInit: (eventParams: EventParams) =>
+		http.eventStream('/packages/find/stream/init', eventParams),
+	findHome: (eventParams: EventParams, init: boolean) =>
+		http.eventStream(`/packages/find/stream/home?init=${init}`, eventParams),
 };
 
-const DeployingComponents = {
-	list: () => http.get<DeployedComponent[]>('/components/deployed'),
-};
-
-export { Auth, Cluster, Packages, DeployingComponents };
+export { Auth, Cluster, Packages };

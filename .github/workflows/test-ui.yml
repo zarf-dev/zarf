@@ -46,15 +46,10 @@ jobs:
           key: ${{ runner.os }}-browsers
 
       - name: Ensure playright is installed
-        run: npx playwright install
+        run: npx --prefix src/ui playwright install
 
       - name: Run UI tests
-        run: >
-          export NODE_PATH=$(pwd)/src/ui/node_modules &&
-          npm --prefix src/ui run test:pre-init &&
-          npm --prefix src/ui run test:init &&
-          npm --prefix src/ui run test:post-init &&
-          npm --prefix src/ui run test:connect
+        run: make test-ui
 
       - name: Save logs
         if: always()
@@ -65,5 +60,5 @@ jobs:
         if: always()
         with:
           name: playwright-report
-          path: playwright-report/
+          path: src/ui/playwright-report/
           retention-days: 30

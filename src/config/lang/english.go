@@ -17,13 +17,16 @@ import "errors"
 const (
 	ErrLoadingConfig       = "failed to load config: %w"
 	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
+	ErrLoadPackageSecret   = "Failed to load %s's secret from the Kubernetes cluster"
 	ErrMarshal             = "failed to marshal file: %w"
 	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
 	ErrTunnelFailed        = "Failed to create a tunnel to the Kubernetes cluster."
 	ErrUnmarshal           = "failed to unmarshal file: %w"
-	ErrWritingFile         = "failed to write the file %s: %s"
+	ErrWritingFile         = "failed to write file %s: %s"
 	ErrDownloading         = "failed to download %s: %s"
 	ErrCreatingDir         = "failed to create directory %s: %s"
+	ErrRemoveFile          = "failed to remove file %s: %s"
+	ErrUnarchive           = "failed to unarchive %s: %s"
 )
 
 // Zarf CLI commands.
@@ -47,7 +50,7 @@ const (
 	RootCmdErrInvalidLogLevel = "Invalid log level. Valid options are: warn, info, debug, trace."
 
 	// zarf connect
-	CmdConnectShort = "Access services or pods deployed in the cluster."
+	CmdConnectShort = "Accesses services or pods deployed in the cluster"
 	CmdConnectLong  = "Uses a k8s port-forward to connect to resources within the cluster referenced by your kube-context.\n" +
 		"Three default options for this command are <REGISTRY|LOGGING|GIT>. These will connect to the Zarf created resources " +
 		"(assuming they were selected when performing the `zarf init` command).\n\n" +
@@ -60,7 +63,7 @@ const (
 		"to whatever resource you are trying to connect to."
 
 	// zarf connect list
-	CmdConnectListShort = "List all available connection shortcuts."
+	CmdConnectListShort = "Lists all available connection shortcuts"
 
 	CmdConnectFlagName       = "Specify the resource name.  E.g. name=unicorns or name=unicorn-pod-7448499f4d-b5bk6"
 	CmdConnectFlagNamespace  = "Specify the namespace.  E.g. namespace=default"
@@ -70,7 +73,7 @@ const (
 	CmdConnectFlagCliOnly    = "Disable browser auto-open"
 
 	// zarf destroy
-	CmdDestroyShort = "Tear it all down, we'll miss you Zarf..."
+	CmdDestroyShort = "Tears down Zarf and removes its components from the environment"
 	CmdDestroyLong  = "Tear down Zarf.\n\n" +
 		"Deletes everything in the 'zarf' namespace within your connected k8s cluster.\n\n" +
 		"If Zarf deployed your k8s cluster, this command will also tear your cluster down by " +
@@ -100,23 +103,24 @@ const (
 		"the current directory, Zarf will failover and attempt to find a zarf-init package in the directory " +
 		"that the Zarf binary is located in.\n\n\n\n"
 
-	CmdInitExample = `# Initializing without any optional components:
-zarf init
+	CmdInitExample = `
+	# Initializing without any optional components:
+	zarf init
 
-# Initializing w/ Zarfs internal git server:
-zarf init --components=git-server
+	# Initializing w/ Zarfs internal git server:
+	zarf init --components=git-server
 
-# Initializing w/ Zarfs internal git server and PLG stack:
-zarf init --components=git-server,logging
+	# Initializing w/ Zarfs internal git server and PLG stack:
+	zarf init --components=git-server,logging
 
-# Initializing w/ an internal registry but with a different nodeport:
-zarf init --nodeport=30333
+	# Initializing w/ an internal registry but with a different nodeport:
+	zarf init --nodeport=30333
 
-# Initializing w/ an external registry:
-zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
+	# Initializing w/ an external registry:
+	zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
 
-# Initializing w/ an external git server:
-zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
+	# Initializing w/ an external git server:
+	zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 `
 
 	CmdInitErrFlags             = "Invalid command flags were provided."
@@ -152,9 +156,9 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdInitFlagRegPullPass = "Password for the pull-only user to access the registry"
 	CmdInitFlagRegSecret   = "Registry secret value"
 
-	CmdInitFlagArtifactURL       = "External artifact registry url to use for this Zarf cluster"
-	CmdInitFlagArtifactPushUser  = "Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts."
-	CmdInitFlagArtifactPushToken = "API Token for the push-user to access the artifact registry"
+	CmdInitFlagArtifactURL       = "[alpha] External artifact registry url to use for this Zarf cluster"
+	CmdInitFlagArtifactPushUser  = "[alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts."
+	CmdInitFlagArtifactPushToken = "[alpha] API Token for the push-user to access the artifact registry"
 
 	// zarf internal
 	CmdInternalShort = "Internal tools used by zarf"
@@ -164,8 +168,14 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 		"This command starts up a http webhook that Zarf deployments use to mutate pods to conform " +
 		"with the Zarf container registry and Gitea server URLs."
 
+	CmdInternalProxyShort = "[alpha] Runs the zarf agent http proxy"
+	CmdInternalProxyLong  = "[alpha] NOTE: This command is a hidden command and generally shouldn't be run by a human.\n" +
+		"This command starts up a http proxy that can be used by running pods to transform queries " +
+		"that conform to Gitea / Gitlab repository and package URLs in the airgap."
+
 	CmdInternalGenerateCliDocsShort   = "Creates auto-generated markdown of all the commands for the CLI"
 	CmdInternalGenerateCliDocsSuccess = "Successfully created the CLI documentation"
+	CmdInternalGenerateCliDocsErr     = "Unable to generate the CLI documentation: %s"
 
 	CmdInternalConfigSchemaShort = "Generates a JSON schema for the zarf.yaml configuration"
 	CmdInternalConfigSchemaErr   = "Unable to generate the zarf config schema"
@@ -176,48 +186,55 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdInternalCreateReadOnlyGiteaUserShort = "Creates a read-only user in Gitea"
 	CmdInternalCreateReadOnlyGiteaUserLong  = "Creates a read-only user in Gitea by using the Gitea API. " +
 		"This is called internally by the supported Gitea package component."
-	CmdInternalCreateReadOnlyGiteaUserLoadErr = "Unable to load the Zarf state"
-	CmdInternalCreateReadOnlyGiteaUserErr     = "Unable to create a read-only user in the Gitea service."
+	CmdInternalCreateReadOnlyGiteaUserErr = "Unable to create a read-only user in the Gitea service."
 
-	CmdInternalUIShort = "Launch the experimental Zarf UI"
+	CmdInternalArtifactRegistryGiteaTokenShort = "Creates an artifact registry token for Gitea"
+	CmdInternalArtifactRegistryGiteaTokenLong  = "Creates an artifact registry token in Gitea using the Gitea API. " +
+		"This is called internally by the supported Gitea package component."
+	CmdInternalArtifactRegistryGiteaTokenErr = "Unable to create an artifact registry token for the Gitea service."
+
+	CmdInternalUIShort = "[beta] Launches the Zarf Web UI"
+	CmdInternalUILong  = "[beta] This command launches the Zarf deployment Web UI to connect to clusters and deploy packages" +
+		"using a Web GUI instead of the CLI."
 
 	CmdInternalIsValidHostnameShort = "Checks if the current machine's hostname is RFC1123 compliant"
+	CmdInternalIsValidHostnameErr   = "The hostname '%s' is not valid. Ensure the hostname meets RFC1123 requirements https://www.rfc-editor.org/rfc/rfc1123.html."
+
+	CmdInternalCrc32Short = "Generates a decimal CRC32 for the given text"
 
 	// zarf package
-	CmdPackageShort = "Zarf package commands for creating, deploying, and inspecting packages"
+	CmdPackageShort           = "Zarf package commands for creating, deploying, and inspecting packages"
+	CmdPackageFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
 
-	CmdPackageCreateShort = "Use to create a Zarf package from a given directory or the current directory"
-	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the active directory.\n" +
+	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
+	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +
 		"Private registries and repositories are accessed via credentials in your local '~/.docker/config.json', " +
 		"'~/.git-credentials' and '~/.netrc'.\n"
 
-	CmdPackageDeployShort = "Use to deploy a Zarf package from a local file or URL (runs offline)"
-	CmdPackageDeployLong  = "Uses current kubecontext to deploy the packaged tarball onto a k8s cluster."
+	CmdPackageDeployShort = "Deploys a Zarf package from a local file or URL (runs offline)"
+	CmdPackageDeployLong  = "Unpacks resources and dependencies from a Zarf package archive and deploys them onto the target system.\n" +
+		"Kubernetes clusters are accessed via credentials in your current kubecontext defined in '~/.kube/config'"
 
-	CmdPackageInspectShort = "Lists the payload of a Zarf package (runs offline)"
-	CmdPackageInspectLong  = "Lists the payload of a compiled package file (runs offline)\n" +
-		"Unpacks the package tarball into a temp directory and displays the " +
-		"contents of the archive."
+	CmdPackageInspectShort = "Displays the definition of a Zarf package (runs offline)"
+	CmdPackageInspectLong  = "Displays the 'zarf.yaml' definition for the specified package and optionally allows SBOMs to be viewed"
 
-	CmdPackageListShort         = "List out all of the packages that have been deployed to the cluster"
+	CmdPackageListShort         = "Lists out all of the packages that have been deployed to the cluster (runs offline)"
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
-
-	CmdPackageRemoveShort       = "Use to remove a Zarf package that has been deployed already"
-	CmdPackageRemoveTarballErr  = "Invalid tarball path provided"
-	CmdPackageRemoveExtractErr  = "Unable to extract the package contents"
-	CmdPackageRemoveReadZarfErr = "Unable to read zarf.yaml"
+	CmdPackageListUnmarshalErr  = "Unable to read all of the packages deployed to the cluster"
 
 	CmdPackageCreateFlagConfirm            = "Confirm package creation without prompting"
 	CmdPackageCreateFlagSet                = "Specify package variables to set on the command line (KEY=value)"
-	CmdPackageCreateFlagOutputDirectory    = "Specify the output directory for the created Zarf package"
+	CmdPackageCreateFlagOutput             = "Specify the output (either a directory or an oci:// URL) for the created Zarf package"
 	CmdPackageCreateFlagSbom               = "View SBOM contents after creating the package"
 	CmdPackageCreateFlagSbomOut            = "Specify an output directory for the SBOMs from the created Zarf package"
 	CmdPackageCreateFlagSkipSbom           = "Skip generating SBOM for this package"
 	CmdPackageCreateFlagMaxPackageSize     = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting."
 	CmdPackageCreateFlagSigningKey         = "Path to private key file for signing packages"
 	CmdPackageCreateFlagSigningKeyPassword = "Password to the private key file used for signing packages"
-	CmdPackageCreateFlagDifferential       = "Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
+	CmdPackageCreateFlagDifferential       = "[beta] Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
 	CmdPackageCreateFlagRegistryOverride   = "Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)"
+	CmdPackageCreateCleanPathErr           = "Invalid characters in Zarf cache path, defaulting to %s"
+	CmdPackageCreateErr                    = "Failed to create package: %s"
 
 	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdPackageDeployFlagAdoptExistingResources = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
@@ -227,40 +244,69 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdPackageDeployFlagSget                   = "Path to public sget key file for remote packages signed via cosign"
 	CmdPackageDeployFlagPublicKey              = "Path to public key file for validating signed packages"
 	CmdPackageDeployValidateArchitectureErr    = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
+	CmdPackageDeployErr                        = "Failed to deploy package: %s"
 
 	CmdPackageInspectFlagSbom      = "View SBOM contents while inspecting the package"
 	CmdPackageInspectFlagSbomOut   = "Specify an output directory for the SBOMs from the inspected Zarf package"
 	CmdPackageInspectFlagValidate  = "Validate any checksums and signatures while inspecting the package"
 	CmdPackageInspectFlagPublicKey = "Path to a public key file that will be used to validate a signed package"
+	CmdPackageInspectErr           = "Failed to inspect package: %s"
 
+	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
+	CmdPackageRemoveTarballErr     = "Invalid tarball path provided"
+	CmdPackageRemoveExtractErr     = "Unable to extract the package contents"
+	CmdPackageRemoveErr            = "Unable to remove the package with an error of: %s"
 
-	CmdPackagePublishFlagConcurrency        = "Number of concurrent layer operations to perform when interacting with a remote package."
+	CmdPackageRegistryPrefixErr = "Registry must be prefixed with 'oci://'"
+
+	CmdPackagePublishShort   = "Publishes a Zarf package to a remote registry"
+	CmdPackagePublishExample = `
+	# Publish a package to a remote registry
+	zarf package publish my-package.tar oci://my-registry.com/my-namespace
+
+	# Publish a skeleton package to a remote registry
+	zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
+`
 	CmdPackagePublishFlagSigningKey         = "Path to private key file for signing packages"
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
+	CmdPackagePublishErr                    = "Failed to publish package: %s"
 
-	CmdPackagePullPublicKey = "Path to public key file for validating signed packages"
+	CmdPackagePullShort               = "Pulls a Zarf package from a remote registry and save to the local file system"
+	CmdPackagePullExample             = "	zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64"
+	CmdPackagePullPublicKey           = "Path to public key file for validating signed packages"
+	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
+	CmdPackagePullFlagPublicKey       = "Path to public key file for validating signed packages"
+	CmdPackagePullErr                 = "Failed to pull package: %s"
+
+	CmdPackageChoose    = "Choose or type the package file"
+	CmdPackageChooseErr = "Package path selection canceled: %s"
 
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"
 
 	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
-	CmdPreparePatchGitFileWriteErr = "Unable to write the changes back to the file"
+	CmdPreparePatchGitOverwritePrompt = "Overwrite the file %s with these changes?"
+	CmdPreparePatchGitOverwriteErr    = "Confirm overwrite canceled: %s"
+	CmdPreparePatchGitFileReadErr     = "Unable to read the file %s"
+	CmdPreparePatchGitFileWriteErr    = "Unable to write the changes back to the file"
 
-	CmdPrepareSha256sumShort   = "Generate a SHA256SUM for the given file"
-	CmdPrepareSha256sumHashErr = "Unable to compute the hash"
+	CmdPrepareSha256sumShort   = "Generates a SHA256SUM for the given file"
+	CmdPrepareSha256sumHashErr = "Unable to compute the SHA256SUM hash"
 
 	CmdPrepareFindImagesShort = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests"
 	CmdPrepareFindImagesLong  = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
 		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
+	CmdPrepareFindImagesErr = "Unable to find images for the package definition %s"
 
 	CmdPrepareGenerateConfigShort = "Generates a config file for Zarf"
 	CmdPrepareGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
 		"The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc.\n" +
 		"Accepted extensions are json, toml, yaml.\n\n" +
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
+	CmdPrepareGenerateConfigErr = "Unable to write the config file %s, make sure the file doesn't already exist"
 
 	CmdPrepareFlagSet           = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
 	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
@@ -270,28 +316,42 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"
 
-	CmdToolsArchiverShort           = "Compress/Decompress generic archives, including Zarf packages."
-	CmdToolsArchiverCompressShort   = "Compress a collection of sources based off of the destination file extension."
-	CmdToolsArchiverCompressErr     = "Unable to perform compression"
-	CmdToolsArchiverDecompressShort = "Decompress an archive or Zarf package based off of the source file extension."
-	CmdToolsArchiverDecompressErr   = "Unable to perform decompression"
+	CmdToolsArchiverShort           = "Compresses/Decompresses generic archives, including Zarf packages"
+	CmdToolsArchiverCompressShort   = "Compresses a collection of sources based off of the destination file extension."
+	CmdToolsArchiverCompressErr     = "Unable to perform compression: %s"
+	CmdToolsArchiverDecompressShort = "Decompresses an archive or Zarf package based off of the source file extension."
+	CmdToolsArchiverDecompressErr   = "Unable to perform decompression: %s"
+
 	CmdToolsArchiverUnarchiveAllErr = "Unable to unarchive all nested tarballs"
 
-	CmdToolsRegistryShort = "Tools for working with container registries using go-containertools."
+	CmdToolsRegistryShort          = "Tools for working with container registries using go-containertools"
+	CmdToolsRegistryCatalogExample = `
+	# list the repos internal to Zarf
+	$ zarf tools registry catalog
+  
+	# list the repos for reg.example.com
+	$ zarf tools registry catalog reg.example.com
+`
+	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s': %s"
+	CmdToolsRegistryFlagVerbose        = "Enable debug logs"
+	CmdToolsRegistryFlagInsecure       = "Allow image references to be fetched without TLS"
+	CmdToolsRegistryFlagNonDist        = "Allow pushing non-distributable (foreign) layers"
+	CmdToolsRegistryFlagPlatform       = "Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64)."
 
-	CmdToolGetGitDeprecation  = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in a future release."
-	CmdToolsGetGitPasswdShort = "Returns the push user's password for the Git server"
-	CmdToolsGetGitPasswdLong  = "Reads the password for a user with push access to the configured Git server from the zarf-state secret in the zarf namespace"
-	CmdToolsGetGitPasswdInfo  = "Git Server Push Password: "
+	CmdToolsGetGitPasswdShort       = "Returns the push user's password for the Git server"
+	CmdToolsGetGitPasswdLong        = "Reads the password for a user with push access to the configured Git server from the zarf-state secret in the zarf namespace"
+	CmdToolsGetGitPasswdInfo        = "Git Server Push Password: "
+	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in a future release."
 
-	CmdToolsMonitorShort = "Launch a terminal UI to monitor the connected cluster using K9s."
+	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
-	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory."
+	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory"
+	CmdToolsClearCacheDir           = "Cache directory set to: %s"
 	CmdToolsClearCacheErr           = "Unable to clear the cache directory %s"
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
-	CmdToolsDownloadInitShort               = "Download the init package for the current Zarf version into the specified directory."
+	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
 	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."
 	CmdToolsDownloadInitErr                 = "Unable to download the init package: %s"
 
@@ -316,6 +376,23 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment.\n" +
 		"This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator.\n" +
 		"You can also wait for arbitrary network endpoints using REST or TCP checks.\n\n"
+	CmdToolsWaitForExample = `
+	Wait for Kubernetes resources:
+		zarf tools wait-for pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to be ready
+		zarf tools wait-for p cool-pod-name ready -n cool                     #  wait for pod (using p alias) cool-pod-name in namespace cool to be ready
+		zarf tools wait-for deployment podinfo available -n podinfo           #  wait for deployment podinfo in namespace podinfo to be available
+		zarf tools wait-for pod app=podinfo ready -n podinfo                  #  wait for pod with label app=podinfo in namespace podinfo to be ready
+		zarf tools wait-for svc zarf-docker-registry exists -n zarf           #  wait for service zarf-docker-registry in namespace zarf to exist
+		zarf tools wait-for svc zarf-docker-registry -n zarf                  #  same as above, except exists is the default condition
+		zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
+
+	Wait for network endpoints:
+		zarf tools wait-for http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
+		zarf tools wait-for tcp localhost:8080                                #  wait for a connection to be established on localhost:8080
+		zarf tools wait-for https 1.1.1.1 200                                 #  wait for a 200 response from https://1.1.1.1
+		zarf tools wait-for http google.com                                   #  wait for any 2xx response from http://google.com
+		zarf tools wait-for http google.com success                           #  wait for any 2xx response from http://google.com
+`
 	CmdToolsWaitForFlagTimeout        = "Specify the timeout duration for the wait command."
 	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration. Please use a valid duration string (e.g. 1s, 2m, 3h)."
 	CmdToolsWaitForErrTimeout         = "Wait timed out."
@@ -325,12 +402,12 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 
 	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
 
-	CmdToolsGetCredsShort = "Display a Table of credentials for deployed components. Pass a component name to get a single credential."
+	CmdToolsGetCredsShort = "Displays a Table of credentials for deployed components. Pass a component name to get a single credential"
 	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry'"
 
 	// zarf version
-	CmdVersionShort = "Version of the Zarf binary"
-	CmdVersionLong  = "Displays the version of the Zarf release that the Zarf binary was built from."
+	CmdVersionShort = "Shows the version of the running Zarf binary"
+	CmdVersionLong  = "Displays the version of the Zarf release that the current binary was built from."
 
 	// cmd viper setup
 	CmdViperErrLoadingConfigFile = "failed to load config file: %s"

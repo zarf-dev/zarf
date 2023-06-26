@@ -24,7 +24,7 @@ var confirmDestroy bool
 var removeComponents bool
 
 var destroyCmd = &cobra.Command{
-	Use:     "destroy",
+	Use:     "destroy --confirm",
 	Aliases: []string{"d"},
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
@@ -52,7 +52,7 @@ var destroyCmd = &cobra.Command{
 
 			// Run all the scripts!
 			pattern := regexp.MustCompile(`(?mi)zarf-clean-.+\.sh$`)
-			scripts, _ := utils.RecursiveFileList(config.ZarfCleanupScriptsPath, pattern, false, true)
+			scripts, _ := utils.RecursiveFileList(config.ZarfCleanupScriptsPath, pattern, true)
 			// Iterate over all matching zarf-clean scripts and exec them
 			for _, script := range scripts {
 				// Run the matched script

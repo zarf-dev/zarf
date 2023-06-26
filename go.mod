@@ -15,6 +15,7 @@ require (
 	github.com/derailed/k9s v0.27.4
 	github.com/distribution/distribution v2.8.2+incompatible
 	github.com/docker/cli v24.0.2+incompatible
+	github.com/fairwindsops/pluto/v5 v5.17.0
 	github.com/fatih/color v1.15.0
 	github.com/fluxcd/helm-controller/api v0.34.1
 	github.com/fluxcd/source-controller/api v0.36.1
@@ -24,7 +25,7 @@ require (
 	github.com/goccy/go-yaml v1.11.0
 	github.com/google/go-containerregistry v0.15.2
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/moby/moby v23.0.6+incompatible
+	github.com/moby/moby v24.0.2+incompatible
 	github.com/opencontainers/image-spec v1.1.0-rc3
 	github.com/otiai10/copy v1.11.0
 	github.com/pkg/errors v0.9.1
@@ -73,7 +74,7 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
-	github.com/Masterminds/squirrel v1.5.3 // indirect
+	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230518184743-7afd39499903 // indirect
@@ -152,7 +153,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
+	github.com/emicklei/go-restful/v3 v3.10.2 // indirect
 	github.com/emicklei/proto v1.10.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
@@ -172,12 +173,12 @@ require (
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.4.1 // indirect
-	github.com/go-gorp/gorp/v3 v3.0.5 // indirect
+	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/analysis v0.21.4 // indirect
 	github.com/go-openapi/errors v0.20.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
-	github.com/go-openapi/jsonreference v0.20.1 // indirect
+	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/loads v0.21.2 // indirect
 	github.com/go-openapi/runtime v0.24.2 // indirect
 	github.com/go-openapi/spec v0.20.7 // indirect
@@ -198,7 +199,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/certificate-transparency-go v1.1.6 // indirect
-	github.com/google/gnostic v0.5.7-v3refs // indirect
+	github.com/google/gnostic v0.6.9 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/go-github/v45 v45.2.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
@@ -294,7 +295,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rs/zerolog v1.29.1 // indirect
-	github.com/rubenv/sql-migrate v1.3.1 // indirect
+	github.com/rubenv/sql-migrate v1.4.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
 	github.com/sassoftware/go-rpmutils v0.2.0 // indirect
@@ -356,7 +357,7 @@ require (
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/oauth2 v0.7.0 // indirect
+	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
@@ -379,9 +380,9 @@ require (
 	k8s.io/apiserver v0.27.2 // indirect
 	k8s.io/cli-runtime v0.27.2 // indirect
 	k8s.io/component-helpers v0.27.2 // indirect
-	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f // indirect
+	k8s.io/kube-openapi v0.0.0-20230525220651-2546d827e515 // indirect
 	k8s.io/metrics v0.27.2 // indirect
-	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5 // indirect
+	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
 	oras.land/oras-go v1.2.2 // indirect
 	sigs.k8s.io/controller-runtime v0.15.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect

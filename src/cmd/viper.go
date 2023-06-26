@@ -49,9 +49,12 @@ const (
 	V_INIT_ARTIFACT_PUSH_USER  = "init.artifact.push_username"
 	V_INIT_ARTIFACT_PUSH_TOKEN = "init.artifact.push_token"
 
+	// Package config keys
+	V_PKG_OCI_CONCURRENCY = "package.oci_concurrency"
+
 	// Package create config keys
 	V_PKG_CREATE_SET                  = "package.create.set"
-	V_PKG_CREATE_OUTPUT_DIR           = "package.create.output_directory"
+	V_PKG_CREATE_OUTPUT               = "package.create.output"
 	V_PKG_CREATE_SBOM                 = "package.create.sbom"
 	V_PKG_CREATE_SBOM_OUTPUT          = "package.create.sbom_output"
 	V_PKG_CREATE_SKIP_SBOM            = "package.create.skip_sbom"
@@ -69,14 +72,12 @@ const (
 	V_PKG_DEPLOY_PUBLIC_KEY = "package.deploy.public_key"
 
 	// Package publish config keys
-	V_PKG_PUBLISH_OCI_CONCURRENCY      = "package.publish.oci_concurrency"
 	V_PKG_PUBLISH_SIGNING_KEY          = "package.publish.signing_key"
 	V_PKG_PUBLISH_SIGNING_KEY_PASSWORD = "package.publish.signing_key_password"
 
 	// Package pull config keys
-	V_PKG_PULL_OCI_CONCURRENCY = "package.pull.oci_concurrency"
-	V_PKG_PULL_OUTPUT_DIR      = "package.pull.output_directory"
-	V_PKG_PULL_PUBLIC_KEY      = "package.pull.public_key"
+	V_PKG_PULL_OUTPUT_DIR = "package.pull.output_directory"
+	V_PKG_PULL_PUBLIC_KEY = "package.pull.public_key"
 )
 
 func initViper() {
@@ -88,7 +89,7 @@ func initViper() {
 	v = viper.New()
 
 	// Skip for vendor-only commands
-	if tools.CheckVendorOnly() {
+	if tools.CheckVendorOnlyFromArgs() {
 		return
 	}
 
