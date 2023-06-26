@@ -89,7 +89,7 @@ func initViper() {
 	v = viper.New()
 
 	// Skip for vendor-only commands
-	if tools.CheckVendorOnly() {
+	if tools.CheckVendorOnlyFromArgs() {
 		return
 	}
 

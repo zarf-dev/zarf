@@ -33,7 +33,7 @@ var rootCmd = &cobra.Command{
 	Use: "zarf COMMAND",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Skip for vendor-only commands
-		if tools.CheckVendorOnly() {
+		if tools.CheckVendorOnlyFromPath(cmd) {
 			return
 		}
 
@@ -72,7 +72,7 @@ func init() {
 	tools.Include(rootCmd)
 
 	// Skip for vendor-only commands
-	if tools.CheckVendorOnly() {
+	if tools.CheckVendorOnlyFromArgs() {
 		return
 	}
 

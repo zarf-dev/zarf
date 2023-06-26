@@ -332,13 +332,18 @@ const (
 	# list the repos for reg.example.com
 	$ zarf tools registry catalog reg.example.com
 `
+	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s': %s"
+	CmdToolsRegistryFlagVerbose        = "Enable debug logs"
+	CmdToolsRegistryFlagInsecure       = "Allow image references to be fetched without TLS"
+	CmdToolsRegistryFlagNonDist        = "Allow pushing non-distributable (foreign) layers"
+	CmdToolsRegistryFlagPlatform       = "Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64)."
 
 	CmdToolsGetGitPasswdShort       = "Returns the push user's password for the Git server"
 	CmdToolsGetGitPasswdLong        = "Reads the password for a user with push access to the configured Git server from the zarf-state secret in the zarf namespace"
 	CmdToolsGetGitPasswdInfo        = "Git Server Push Password: "
 	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in a future release."
 
-	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s"
+	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory"
 	CmdToolsClearCacheDir           = "Cache directory set to: %s"

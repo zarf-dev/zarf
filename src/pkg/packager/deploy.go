@@ -316,8 +316,9 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 			}
 		}
 
-		// Replace temp target directories
+		// Replace temp target directory and home directory
 		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
+		file.Target = config.GetAbsHomePath(file.Target)
 
 		fileList := []string{}
 		if utils.IsDir(fileLocation) {

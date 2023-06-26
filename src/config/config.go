@@ -164,10 +164,15 @@ func GetValidPackageExtensions() [3]string {
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.
 func GetAbsCachePath() string {
+	return GetAbsHomePath(CommonOptions.CachePath)
+}
+
+// GetAbsHomePath replaces ~ with the absolute path to a user's home dir
+func GetAbsHomePath(path string) string {
 	homePath, _ := os.UserHomeDir()
 
-	if strings.HasPrefix(CommonOptions.CachePath, "~") {
-		return strings.Replace(CommonOptions.CachePath, "~", homePath, 1)
+	if strings.HasPrefix(path, "~") {
+		return strings.Replace(path, "~", homePath, 1)
 	}
-	return CommonOptions.CachePath
+	return path
 }
