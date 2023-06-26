@@ -152,23 +152,27 @@ func zarfCraneList(cranePlatformOptions *[]crane.Option) *cobra.Command {
 			return originalListFn(cmd, args)
 		}
 
-		// Open a tunnel to the Zarf registry
-		tunnelReg, err := cluster.NewZarfTunnel()
-		if err != nil {
-			return err
-		}
-		err = tunnelReg.Connect(cluster.ZarfRegistry, false)
-		if err != nil {
-			return err
+		if zarfState.RegistryInfo.InternalRegistry {
+			// Open a tunnel to the Zarf registry
+			tunnelReg, err := cluster.NewZarfTunnel()
+			if err != nil {
+				return err
+			}
+			err = tunnelReg.Connect(cluster.ZarfRegistry, false)
+			if err != nil {
+				return err
+			}
+
+			givenAddress := fmt.Sprintf("%s/", zarfState.RegistryInfo.Address)
+			tunnelAddress := fmt.Sprintf("%s/", tunnelReg.Endpoint())
+			args[0] = strings.Replace(args[0], givenAddress, tunnelAddress, 1)
 		}
 
 		// Add the correct authentication to the crane command options
 		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PullUsername, zarfState.RegistryInfo.PullPassword)
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
-		registryEndpoint := tunnelReg.Endpoint()
 
-		return originalListFn(cmd, []string{strings.Replace(args[0],
-			fmt.Sprintf("%s/", zarfState.RegistryInfo.Address), fmt.Sprintf("%s/", registryEndpoint), 1)})
+		return originalListFn(cmd, args)
 	}
 
 	return craneList
