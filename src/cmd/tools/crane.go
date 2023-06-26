@@ -5,7 +5,6 @@
 package tools
 
 import (
-	"os"
 	"fmt"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -16,6 +15,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
+	"os"
 	"strings"
 )
 
@@ -70,7 +70,7 @@ func init() {
 
 	registryCmd.AddCommand(craneCopy)
 	registryCmd.AddCommand(zarfCraneCatalog(&craneOptions))
-	registryCmd.AddCommand(zarfCraneList(&cranePlatformOptions))
+	registryCmd.AddCommand(zarfCraneList(&craneOptions))
 
 	registryCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
 	registryCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
