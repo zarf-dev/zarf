@@ -125,13 +125,7 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 func zarfCraneList(cranePlatformOptions *[]crane.Option) *cobra.Command {
 	craneList := craneCmd.NewCmdList(cranePlatformOptions)
 
-	eg := `  # list the tags for a repo internal to Zarf
-  $ zarf tools registry ls 127.0.0.1:31999/stefanprodan/podinfo
-
-  # list the tags for a repo hosted at reg.example.com
-  $ zarf tools registry ls reg.example.com/stefanprodan/podinfo`
-
-	craneList.Example = eg
+	craneList.Example = lang.CmdToolsRegistryListExample
 	craneList.Args = nil
 
 	originalListFn := craneList.RunE

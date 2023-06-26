@@ -328,10 +328,18 @@ const (
 	CmdToolsRegistryCatalogExample = `
 	# list the repos internal to Zarf
 	$ zarf tools registry catalog
-  
+
 	# list the repos for reg.example.com
 	$ zarf tools registry catalog reg.example.com
 `
+	CmdToolsRegistryListExample = `
+	# list the tags for a repo internal to Zarf
+	$ zarf tools registry ls 127.0.0.1:31999/stefanprodan/podinfo
+
+	# list the tags for a repo hosted at reg.example.com
+	$ zarf tools registry ls reg.example.com/stefanprodan/podinfo
+`
+
 	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s': %s"
 	CmdToolsRegistryFlagVerbose        = "Enable debug logs"
 	CmdToolsRegistryFlagInsecure       = "Allow image references to be fetched without TLS"
