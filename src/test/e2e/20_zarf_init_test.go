@@ -61,6 +61,15 @@ func TestZarfInit(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	// Check for any old secrets to ensure that they don't get saved in the init log
+	oldState := types.ZarfState{}
+	base64State, _, err := e2e.Kubectl("get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
+	if err == nil {
+		oldStateJSON, err := base64.StdEncoding.DecodeString(base64State)
+		require.NoError(t, err)
+		err = json.Unmarshal(oldStateJSON, &oldState)
+	}
+
 	// run `zarf init`
 	_, initStdErr, err := e2e.Zarf("init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
 	require.NoError(t, err)
@@ -69,23 +78,19 @@ func TestZarfInit(t *testing.T) {
 	logText := e2e.GetLogFileContents(t, initStdErr)
 
 	// Verify that any state secrets were not included in the log
-	base64State, _, err := e2e.Kubectl("get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
+	state := types.ZarfState{}
+	base64State, _, err = e2e.Kubectl("get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
 	require.NoError(t, err)
 	stateJSON, err := base64.StdEncoding.DecodeString(base64State)
 	require.NoError(t, err)
-	state := types.ZarfState{}
 	err = json.Unmarshal(stateJSON, &state)
 	require.NoError(t, err)
-	require.NotContains(t, logText, state.AgentTLS.CA)
-	require.NotContains(t, logText, state.AgentTLS.Cert)
-	require.NotContains(t, logText, state.AgentTLS.Key)
-	require.NotContains(t, logText, state.ArtifactServer.PushToken)
-	require.NotContains(t, logText, state.GitServer.PullPassword)
-	require.NotContains(t, logText, state.GitServer.PushPassword)
-	require.NotContains(t, logText, state.RegistryInfo.PullPassword)
-	require.NotContains(t, logText, state.RegistryInfo.PushPassword)
-	require.NotContains(t, logText, state.RegistryInfo.Secret)
-	require.NotContains(t, logText, state.LoggingSecret)
+	checkLogForSensitiveState(t, logText, state)
+
+	// Check the old state values as well (if they exist) to ensure they weren't printed and then updated during init
+	if oldState.LoggingSecret != "" {
+		checkLogForSensitiveState(t, logText, oldState)
+	}
 
 	if e2e.ApplianceMode {
 		// make sure that we upgraded `k3s` correctly and are running the correct version - this should match that found in `packages/distros/k3s`
@@ -107,4 +112,20 @@ func TestZarfInit(t *testing.T) {
 	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
 	_, _, _ = e2e.Kubectl("scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")
 	_, _, _ = e2e.Kubectl("scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")
+}
+
+func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.ZarfState) {
+	require.NotContains(t, logText, zarfState.AgentTLS.CA)
+	require.NotContains(t, logText, string(zarfState.AgentTLS.CA))
+	require.NotContains(t, logText, zarfState.AgentTLS.Cert)
+	require.NotContains(t, logText, string(zarfState.AgentTLS.Cert))
+	require.NotContains(t, logText, zarfState.AgentTLS.Key)
+	require.NotContains(t, logText, string(zarfState.AgentTLS.Key))
+	require.NotContains(t, logText, zarfState.ArtifactServer.PushToken)
+	require.NotContains(t, logText, zarfState.GitServer.PullPassword)
+	require.NotContains(t, logText, zarfState.GitServer.PushPassword)
+	require.NotContains(t, logText, zarfState.RegistryInfo.PullPassword)
+	require.NotContains(t, logText, zarfState.RegistryInfo.PushPassword)
+	require.NotContains(t, logText, zarfState.RegistryInfo.Secret)
+	require.NotContains(t, logText, zarfState.LoggingSecret)
 }
