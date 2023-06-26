@@ -332,7 +332,7 @@ const (
 	# list the repos for reg.example.com
 	$ zarf tools registry catalog reg.example.com
 `
-	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s':%s"
+	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s': %s"
 	CmdToolsRegistryFlagVerbose        = "Enable debug logs"
 	CmdToolsRegistryFlagInsecure       = "Allow image references to be fetched without TLS"
 	CmdToolsRegistryFlagNonDist        = "Allow pushing non-distributable (foreign) layers"
