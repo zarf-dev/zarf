@@ -332,6 +332,14 @@ const (
 	# list the repos for reg.example.com
 	$ zarf tools registry catalog reg.example.com
 `
+	CmdToolsRegistryListExample = `
+	# list the tags for a repo internal to Zarf
+	$ zarf tools registry ls 127.0.0.1:31999/stefanprodan/podinfo
+
+	# list the tags for a repo hosted at reg.example.com
+	$ zarf tools registry ls reg.example.com/stefanprodan/podinfo
+`
+
 	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s': %s"
 	CmdToolsRegistryFlagVerbose        = "Enable debug logs"
 	CmdToolsRegistryFlagInsecure       = "Allow image references to be fetched without TLS"
@@ -350,6 +358,8 @@ const (
 	CmdToolsClearCacheErr           = "Unable to clear the cache directory %s"
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
+
+	CmdToolsCraneListNoRepoSpecified = "You must specify a repository name to return a list of tags for."
 
 	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
 	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."

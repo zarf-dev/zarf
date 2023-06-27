@@ -5,8 +5,7 @@
 package tools
 
 import (
-	"os"
-
+	"fmt"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -16,6 +15,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
+	"os"
+	"strings"
 )
 
 func init() {
@@ -69,6 +70,7 @@ func init() {
 
 	registryCmd.AddCommand(craneCopy)
 	registryCmd.AddCommand(zarfCraneCatalog(&craneOptions))
+	registryCmd.AddCommand(zarfCraneList(&craneOptions))
 
 	registryCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
 	registryCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
@@ -117,4 +119,61 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 	}
 
 	return craneCatalog
+}
+
+// Wrap the original crane list with a zarf specific version
+func zarfCraneList(cranePlatformOptions *[]crane.Option) *cobra.Command {
+	craneList := craneCmd.NewCmdList(cranePlatformOptions)
+
+	craneList.Example = lang.CmdToolsRegistryListExample
+	craneList.Args = nil
+
+	originalListFn := craneList.RunE
+
+	craneList.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			message.Fatal(nil, lang.CmdToolsCraneListNoRepoSpecified)
+		}
+
+		// Try to connect to a Zarf initialized cluster otherwise then pass it down to crane.
+		zarfCluster, err := cluster.NewCluster()
+		if err != nil {
+			return originalListFn(cmd, args)
+		}
+
+		// Load the state
+		zarfState, err := zarfCluster.LoadZarfState()
+		if err != nil {
+			return err
+		}
+
+		// Check to see if it matches the existing internal address.
+		if !strings.HasPrefix(args[0], zarfState.RegistryInfo.Address) {
+			return originalListFn(cmd, args)
+		}
+
+		if zarfState.RegistryInfo.InternalRegistry {
+			// Open a tunnel to the Zarf registry
+			tunnelReg, err := cluster.NewZarfTunnel()
+			if err != nil {
+				return err
+			}
+			err = tunnelReg.Connect(cluster.ZarfRegistry, false)
+			if err != nil {
+				return err
+			}
+
+			givenAddress := fmt.Sprintf("%s/", zarfState.RegistryInfo.Address)
+			tunnelAddress := fmt.Sprintf("%s/", tunnelReg.Endpoint())
+			args[0] = strings.Replace(args[0], givenAddress, tunnelAddress, 1)
+		}
+
+		// Add the correct authentication to the crane command options
+		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PullUsername, zarfState.RegistryInfo.PullPassword)
+		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
+
+		return originalListFn(cmd, args)
+	}
+
+	return craneList
 }
