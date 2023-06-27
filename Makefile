@@ -117,10 +117,21 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
+# INTERNAL used to build the dos games packages for release
+build-release-packages:
+	$(ZARF_BIN) package create -o build -a amd64 examples/dos-game --confirm
+	$(ZARF_BIN) package create -o build -a arm64 examples/dos-game --confirm
+
+
+# INTERNAL used to publish the dos games packages to GHCR
+publish-release-packages:
+	$(ZARF_BIN) package publish ./build/zarf-package-dos-games-amd64-0.0.1.tar.zst oci://ghcr.io/defenseunicorns/zarf-package/dos-games
+	$(ZARF_BIN) package publish ./build/zarf-package-dos-games-arm64-0.0.1.tar.zst oci://ghcr.io/defenseunicorns/zarf-package/dos-games
+
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
-	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-dos-games-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
 
@@ -186,7 +197,7 @@ test-ui-dev-server:
 
 .PHONY: test-ui-build-server
 # INTERNAL: used to start the built version of the API server for the Zarf Web UI (in CI)
-test-ui-build-server: 
+test-ui-build-server:
 	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR

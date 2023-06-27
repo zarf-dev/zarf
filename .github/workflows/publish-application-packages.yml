@@ -1,0 +1,43 @@
+name: Zarf Injector Rust Binaries
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      branchName:
+        description: "Branch to build the injector from"
+        required: true
+
+jobs:
+  build-injector:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repo"
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        with:
+          ref: ${{ github.event.inputs.branchName }}
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
+      - name: Build CLI
+        run: |
+          make build-cli-linux-amd
+
+      - name: "Login to GHCR"
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.1.0
+        with:
+          registry: ghcr.io
+          username: dummy
+          password: ${{ github.token }}
+
+      - name: Build And Publish Application Packages
+        # TODO: Add package signing to this step
+        run: |
+          make build-application-packages
+          make publish-application-packages
