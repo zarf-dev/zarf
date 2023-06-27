@@ -61,7 +61,7 @@ func (suite *RegistryClientTestSuite) Test_0_Publish() {
 
 	// Inline publish package.
 	dir := filepath.Join("examples", "helm-charts")
-	stdOut, stdErr, err = e2e.Zarf("package", "create", dir, "-o", "oci://"+ref, "--insecure", "--oci-concurrency=5")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", dir, "-o", "oci://"+ref, "--insecure", "--oci-concurrency=5", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 }
 

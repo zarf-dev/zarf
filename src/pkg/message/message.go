@@ -117,7 +117,7 @@ func GetLogLevel() LogLevel {
 
 // ZarfCommand prints a zarf terminal command.
 func ZarfCommand(format string, a ...any) {
-	Command("zarf"+format, a...)
+	Command("zarf "+format, a...)
 }
 
 // Command prints a zarf terminal command.
