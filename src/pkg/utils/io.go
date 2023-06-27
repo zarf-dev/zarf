@@ -62,6 +62,13 @@ func CreateDirectory(path string, mode os.FileMode) error {
 	return nil
 }
 
+// CreateFile creates an empty file at the given path.
+func CreateFile(filepath string) error {
+	f, err := os.Create(filepath)
+	defer f.Close()
+	return err
+}
+
 // InvalidPath checks if the given path is valid (if it is a permissions error it is there we just don't have access)
 func InvalidPath(path string) bool {
 	_, err := os.Stat(path)
@@ -207,7 +214,17 @@ func CreatePathAndCopy(source string, destination string) error {
 		return err
 	}
 
-	return copy.Copy(source, destination)
+	// Copy all the source data into the destination location
+	if err := copy.Copy(source, destination); err != nil {
+		return err
+	}
+
+	// If the path doesn't exist yet then this is an empty file and we should create it
+	if InvalidPath(destination) {
+		return CreateFile(destination)
+	}
+
+	return nil
 }
 
 // GetFinalExecutablePath returns the absolute path to the Zarf executable, following any symlinks along the way.

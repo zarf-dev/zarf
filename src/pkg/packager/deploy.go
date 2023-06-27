@@ -25,7 +25,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/otiai10/copy"
 	"github.com/pterm/pterm"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -346,7 +345,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err := copy.Copy(fileLocation, file.Target)
+		err := utils.CreatePathAndCopy(fileLocation, file.Target)
 		if err != nil {
 			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
 		}
