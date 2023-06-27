@@ -17,7 +17,7 @@ func TestDosGames(t *testing.T) {
 	t.Log("E2E: Dos games")
 	e2e.SetupWithCluster(t)
 
-	path := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.Arch)
+	path := fmt.Sprintf("build/zarf-package-dos-games-%s-0.0.1.tar.zst", e2e.Arch)
 
 	// Deploy the game
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
