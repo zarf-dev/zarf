@@ -6,6 +6,8 @@ package test
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/types"
 	dconfig "github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/stretchr/testify/require"
@@ -118,4 +121,18 @@ func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) *configfile.
 	}
 
 	return cfg
+}
+
+// GetZarfState uses the vendored kubectl get get the state from the cluster.
+func (e2e *ZarfE2ETest) GetZarfState(t *testing.T) types.ZarfState {
+	state := types.ZarfState{}
+	base64State, _, err := e2e.Kubectl("get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
+	if err == nil {
+		sateJSON, err := base64.StdEncoding.DecodeString(base64State)
+		require.NoError(t, err)
+		err = json.Unmarshal(sateJSON, &state)
+		require.NoError(t, err)
+	}
+
+	return state
 }

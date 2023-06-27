@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,15 +22,19 @@ func TestConnect(t *testing.T) {
 	t.Log("E2E: Connect")
 	e2e.SetupWithCluster(t)
 
-	// Make the Registry contains the images we expect
-	stdOut, stdErr, err := e2e.Zarf("tools", "registry", "catalog")
-	require.NoError(t, err, stdOut, stdErr)
-	registryList := strings.Split(strings.Trim(stdOut, "\n "), "\n")
+	// Unless we're using an ECR registry, verify the registry contains the images we expect
+	state := e2e.GetZarfState(t)
+	if state.RegistryInfo.RegistryType != types.ECRRegistry {
+		// Make the Registry contains the images we expect
+		stdOut, stdErr, err := e2e.Zarf("tools", "registry", "catalog")
+		require.NoError(t, err, stdOut, stdErr)
+		registryList := strings.Split(strings.Trim(stdOut, "\n "), "\n")
 
-	// We assert greater than or equal to since the base init has 12 images
-	// HOWEVER during an upgrade we could have mismatched versions/names resulting in more images
-	require.GreaterOrEqual(t, len(registryList), 7)
-	require.Contains(t, stdOut, "gitea/gitea")
+		// We assert greater than or equal to since the base init has 12 images
+		// HOWEVER during an upgrade we could have mismatched versions/names resulting in more images
+		require.GreaterOrEqual(t, len(registryList), 7)
+		require.Contains(t, stdOut, "gitea/gitea")
+	}
 
 	// Connect to Gitea
 	tunnelGit, err := cluster.NewZarfTunnel()
@@ -55,6 +60,6 @@ func TestConnect(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 200, respLog.StatusCode)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

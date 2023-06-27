@@ -5,12 +5,9 @@
 package test
 
 import (
-	"encoding/base64"
 	"fmt"
 	"strings"
 	"testing"
-
-	"encoding/json"
 
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
@@ -62,13 +59,7 @@ func TestZarfInit(t *testing.T) {
 	}
 
 	// Check for any old secrets to ensure that they don't get saved in the init log
-	oldState := types.ZarfState{}
-	base64State, _, err := e2e.Kubectl("get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
-	if err == nil {
-		oldStateJSON, err := base64.StdEncoding.DecodeString(base64State)
-		require.NoError(t, err)
-		err = json.Unmarshal(oldStateJSON, &oldState)
-	}
+	oldState := e2e.GetZarfState(t)
 
 	// run `zarf init`
 	_, initStdErr, err := e2e.Zarf("init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
@@ -78,13 +69,7 @@ func TestZarfInit(t *testing.T) {
 	logText := e2e.GetLogFileContents(t, initStdErr)
 
 	// Verify that any state secrets were not included in the log
-	state := types.ZarfState{}
-	base64State, _, err = e2e.Kubectl("get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
-	require.NoError(t, err)
-	stateJSON, err := base64.StdEncoding.DecodeString(base64State)
-	require.NoError(t, err)
-	err = json.Unmarshal(stateJSON, &state)
-	require.NoError(t, err)
+	state := e2e.GetZarfState(t)
 	checkLogForSensitiveState(t, logText, state)
 
 	// Check the old state values as well (if they exist) to ensure they weren't printed and then updated during init
