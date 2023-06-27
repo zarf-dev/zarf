@@ -99,7 +99,7 @@ func TestZarfInit(t *testing.T) {
 		require.Contains(t, kubeletVersion, "v1.27.2+k3s1")
 	}
 
-	if state.ArtifactServer.InternalServer {
+	if state.RegistryInfo.InternalRegistry {
 		// Check that the registry is running on the correct NodePort
 		stdOut, _, err = e2e.Kubectl("get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
 		require.NoError(t, err)
