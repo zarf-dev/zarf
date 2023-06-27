@@ -6,7 +6,6 @@ package packager
 
 import (
 	"crypto"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -25,6 +24,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -39,6 +39,17 @@ func (p *Packager) Create(baseDir string) error {
 
 	if err := p.readYaml(filepath.Join(baseDir, config.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
+	}
+
+	if utils.IsOCIURL(p.cfg.CreateOpts.Output) {
+		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.cfg.Pkg.Build.Architecture)
+		if err != nil {
+			return err
+		}
+		err = p.SetOCIRemote(ref.String())
+		if err != nil {
+			return err
+		}
 	}
 
 	// Load the images and repos from the 'reference' package
@@ -102,7 +113,7 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
-	if !p.confirmAction("Create", nil) {
+	if !p.confirmAction(config.ZarfCreateStage, nil) {
 		return fmt.Errorf("package creation canceled")
 	}
 
@@ -150,7 +161,7 @@ func (p *Packager) Create(baseDir string) error {
 
 	// Images are handled separately from other component assets.
 	if len(imgList) > 0 {
-		message.HeaderInfof("📦 COMPONENT IMAGES")
+		message.HeaderInfof("📦 PACKAGE IMAGES")
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
@@ -213,57 +224,21 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	// Use the output path if the user specified it.
-	packageName := filepath.Join(p.cfg.CreateOpts.OutputDirectory, p.GetPackageName())
-
-	// Try to remove the package if it already exists.
-	_ = os.Remove(packageName)
-
-	// Make the archive
-	archiveSrc := []string{p.tmp.Base + string(os.PathSeparator)}
-	if err := archiver.Archive(archiveSrc, packageName); err != nil {
-		return fmt.Errorf("unable to create package: %w", err)
-	}
-
-	f, err := os.Stat(packageName)
-	if err != nil {
-		return fmt.Errorf("unable to read the package archive: %w", err)
-	}
-
-	// Convert Megabytes to bytes.
-	chunkSize := p.cfg.CreateOpts.MaxPackageSizeMB * 1000 * 1000
-
-	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
-	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && f.Size() > int64(chunkSize) {
-		chunks, sha256sum, err := utils.SplitFile(packageName, chunkSize)
+	if utils.IsOCIURL(p.cfg.CreateOpts.Output) {
+		err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, config.CommonOptions.OCIConcurrency)
 		if err != nil {
-			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
+			return fmt.Errorf("unable to publish package: %w", err)
 		}
-		if len(chunks) > 999 {
-			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
-		}
+	} else {
+		// Use the output path if the user specified it.
+		packageName := filepath.Join(p.cfg.CreateOpts.Output, p.GetPackageName())
 
-		message.Infof("Package split into %d files, original sha256sum is %s", len(chunks)+1, sha256sum)
-		_ = os.RemoveAll(packageName)
+		// Try to remove the package if it already exists.
+		_ = os.Remove(packageName)
 
-		// Marshal the data into a json file.
-		jsonData, err := json.Marshal(types.ZarfPartialPackageData{
-			Count:     len(chunks),
-			Bytes:     f.Size(),
-			Sha256Sum: sha256sum,
-		})
-		if err != nil {
-			return fmt.Errorf("unable to marshal the partial package data: %w", err)
-		}
-
-		// Prepend the json data to the first chunk.
-		chunks = append([][]byte{jsonData}, chunks...)
-
-		for idx, chunk := range chunks {
-			path := fmt.Sprintf("%s.part%03d", packageName, idx)
-			if err := os.WriteFile(path, chunk, 0644); err != nil {
-				return fmt.Errorf("unable to write the file %s: %w", path, err)
-			}
+		// Create the package tarball.
+		if err := p.archivePackage(p.tmp.Base, packageName); err != nil {
+			return fmt.Errorf("unable to archive package: %w", err)
 		}
 	}
 
@@ -537,7 +512,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
 			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
-			if err := gitCfg.Pull(url, componentPath.Repos); err != nil {
+			if err := gitCfg.Pull(url, componentPath.Repos, false); err != nil {
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
@@ -601,8 +576,21 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if utils.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		if err := p.pullPackageLayers(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, tmpDir, []string{config.ZarfYAML}); err != nil {
-			return fmt.Errorf("unable to pull the differential zarf package spec: %s", err.Error())
+		err := p.SetOCIRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
+		if err != nil {
+			return err
+		}
+		manifest, err := p.remote.FetchRoot()
+		if err != nil {
+			return err
+		}
+		pkg, err := p.remote.FetchZarfYAML(manifest)
+		if err != nil {
+			return err
+		}
+		err = utils.WriteYaml(filepath.Join(tmpDir, config.ZarfYAML), pkg, 0600)
+		if err != nil {
+			return err
 		}
 	} else {
 		if err := archiver.Extract(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, config.ZarfYAML, tmpDir); err != nil {

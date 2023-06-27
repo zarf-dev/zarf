@@ -6,6 +6,7 @@ package git
 
 import (
 	"context"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -16,23 +17,23 @@ import (
 )
 
 // clone performs a `git clone` of a given repo.
-func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
+func (g *Git) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) error {
 	cloneOptions := &git.CloneOptions{
 		URL:        gitURL,
 		Progress:   g.Spinner,
 		RemoteName: onlineRemoteName,
 	}
 
-	// Don't clone all tags if we're cloning a specific tag.
-	if ref.IsTag() {
+	// Don't clone all tags / refs if we're cloning a specific tag or branch.
+	if ref.IsTag() || ref.IsBranch() {
 		cloneOptions.Tags = git.NoTags
 		cloneOptions.ReferenceName = ref
+		cloneOptions.SingleBranch = true
 	}
 
-	// Use a single branch if we're cloning a specific branch.
-	if ref.IsBranch() {
-		cloneOptions.SingleBranch = true
-		cloneOptions.ReferenceName = ref
+	// If this is a shallow clone set the depth to 1
+	if shallow {
+		cloneOptions.Depth = 1
 	}
 
 	// Setup git credentials if we have them, ignore if we don't.
@@ -45,15 +46,15 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
 	repo, err := git.PlainClone(g.GitPath, false, cloneOptions)
 	if err != nil {
 		message.Warnf("Falling back to host 'git', failed to clone the repo with Zarf - %s: %s", gitURL, err.Error())
-		return g.gitCloneFallback(gitURL, ref)
+		return g.gitCloneFallback(gitURL, ref, shallow)
 	}
 
-	// If we're cloning the whole repo or a commit hash, we need to also fetch the other branches besides the default.
+	// If we're cloning the whole repo, we need to also fetch the other branches besides the default.
 	if ref == emptyRef {
 		fetchOpts := &git.FetchOptions{
 			RemoteName: onlineRemoteName,
 			Progress:   g.Spinner,
-			RefSpecs:   []goConfig.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
+			RefSpecs:   []goConfig.RefSpec{"refs/*:refs/*"},
 			Tags:       git.AllTags,
 		}
 
@@ -70,30 +71,51 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName) error {
 }
 
 // gitCloneFallback is a fallback if go-git fails to clone a repo.
-func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName) error {
+func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName, shallow bool) error {
 	// If we can't clone with go-git, fallback to the host clone
 	// Only support "all tags" due to the azure clone url format including a username
-	cmdArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, g.GitPath}
+	cloneArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, g.GitPath}
 
-	// Don't clone all tags if we're cloning a specific tag.
-	if ref.IsTag() {
-		cmdArgs = append(cmdArgs, "--no-tags")
+	// Don't clone all tags / refs if we're cloning a specific tag or branch.
+	if ref.IsTag() || ref.IsBranch() {
+		cloneArgs = append(cloneArgs, "--no-tags")
+		cloneArgs = append(cloneArgs, "-b", ref.Short())
+		cloneArgs = append(cloneArgs, "--single-branch")
 	}
 
-	// Use a single branch if we're cloning a specific branch.
-	if ref.IsBranch() {
-		cmdArgs = append(cmdArgs, "-b", ref.String())
-		cmdArgs = append(cmdArgs, "--single-branch")
+	// If this is a shallow clone set the depth to 1
+	if shallow {
+		cloneArgs = append(cloneArgs, "--depth", "1")
 	}
 
-	execConfig := exec.Config{
+	cloneExecConfig := exec.Config{
 		Stdout: g.Spinner,
 		Stderr: g.Spinner,
 	}
 
-	_, _, err := exec.CmdWithContext(context.TODO(), execConfig, "git", cmdArgs...)
+	message.Command("git %s", strings.Join(cloneArgs, " "))
+
+	_, _, err := exec.CmdWithContext(context.TODO(), cloneExecConfig, "git", cloneArgs...)
 	if err != nil {
 		return err
+	}
+
+	// If we're cloning the whole repo, we need to also fetch the other branches besides the default.
+	if ref == emptyRef {
+		fetchArgs := []string{"fetch", "--tags", "--update-head-ok", onlineRemoteName, "refs/*:refs/*"}
+
+		fetchExecConfig := exec.Config{
+			Stdout: g.Spinner,
+			Stderr: g.Spinner,
+			Dir:    g.GitPath,
+		}
+
+		message.Command("git %s", strings.Join(fetchArgs, " "))
+
+		_, _, err := exec.CmdWithContext(context.TODO(), fetchExecConfig, "git", fetchArgs...)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

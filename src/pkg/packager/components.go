@@ -7,7 +7,6 @@ package packager
 import (
 	"fmt"
 	"runtime"
-	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -161,7 +160,7 @@ func (p *Packager) isRequiredOrRequested(component types.ZarfComponent, requeste
 	if len(requestedComponentNames) > 0 || config.CommonOptions.Confirm {
 		for _, requestedComponent := range requestedComponentNames {
 			// If the component name matches one of the requested components, then return true
-			if strings.ToLower(requestedComponent) == component.Name {
+			if requestedComponent == component.Name {
 				return true
 			}
 		}
@@ -184,7 +183,7 @@ func (p *Packager) confirmOptionalComponent(component types.ZarfComponent) (conf
 
 	displayComponent := component
 	displayComponent.Description = ""
-	utils.ColorPrintYAML(displayComponent)
+	utils.ColorPrintYAML(displayComponent, nil, false)
 	if component.Description != "" {
 		message.Question(component.Description)
 	}

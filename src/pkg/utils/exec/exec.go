@@ -13,8 +13,10 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync"
 
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -99,9 +101,7 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 
 	// If we're printing, print the command.
 	if config.Print {
-		cmdString := fmt.Sprintf("%s%s %s%v%s%s",
-			colorGreen, command, colorCyan, args, colorWhite, colorReset)
-		fmt.Println(cmdString)
+		message.Command("%s %s", command, strings.Join(args, " "))
 	}
 
 	// Start the command.

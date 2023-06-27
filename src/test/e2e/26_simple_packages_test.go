@@ -38,17 +38,17 @@ func TestDosGames(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func TestRemoteManifests(t *testing.T) {
-	t.Log("E2E: Remote Manifests")
+func TestManifests(t *testing.T) {
+	t.Log("E2E: Local, Remote, and Kustomize Manifests")
 	e2e.SetupWithCluster(t)
 
-	path := fmt.Sprintf("build/zarf-package-remote-manifests-%s-0.0.1.tar.zst", e2e.Arch)
+	path := fmt.Sprintf("build/zarf-package-manifests-%s-0.0.1.tar.zst", e2e.Arch)
 
 	// Deploy the package
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Remove the package
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "remote-manifests", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "manifests", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

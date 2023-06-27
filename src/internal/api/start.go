@@ -94,6 +94,7 @@ func LaunchAPIServer() {
 			r.Put("/{pkg}/connect/{name}", packages.ConnectTunnel)
 			r.Delete("/{pkg}/disconnect/{name}", packages.DisconnectTunnel)
 			r.Get("/{pkg}/connections", packages.ListPackageConnections)
+			r.Get("/{pkg}/components/deployed", components.ListDeployedComponents)
 			r.Get("/connections", packages.ListConnections)
 			r.Get("/sbom/{path}", packages.ExtractSBOM)
 			r.Delete("/sbom", packages.DeleteSBOM)
@@ -104,10 +105,6 @@ func LaunchAPIServer() {
 					r.Get("/home", packages.FindInHomeStream)
 				})
 			})
-		})
-
-		r.Route("/components", func(r chi.Router) {
-			r.Get("/deployed", components.ListDeployingComponents)
 		})
 	})
 

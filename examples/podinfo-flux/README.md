@@ -1,6 +1,6 @@
 import ExampleYAML from "@site/src/components/ExampleYAML";
 
-# Podinfo via Flux
+# Flux (with Podinfo)
 
 This example demonstrates how to use flux with Zarf to deploy the `stefanprodan/podinfo` app using GitOps.
 

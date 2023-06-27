@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/jsonschema"
+	"github.com/defenseunicorns/zarf/src/cmd/tools"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
 	"github.com/defenseunicorns/zarf/src/internal/api"
@@ -40,10 +41,8 @@ var agentCmd = &cobra.Command{
 
 var httpProxyCmd = &cobra.Command{
 	Use:   "http-proxy",
-	Short: "Runs the zarf agent http proxy",
-	Long: "[EXPERIMENTAL] NOTE: This command is a hidden command and generally shouldn't be run by a human.\n" +
-		"This command starts up a http proxy that can be used by running pods to transform queries " +
-		"that conform to Gitea server URLs in the airgap",
+	Short: lang.CmdInternalProxyShort,
+	Long:  lang.CmdInternalProxyLong,
 	Run: func(cmd *cobra.Command, args []string) {
 		agent.StartHTTPProxy()
 	},
@@ -55,17 +54,35 @@ var generateCLIDocs = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// Don't include the datestamp in the output
 		rootCmd.DisableAutoGenTag = true
+
+		for _, cmd := range rootCmd.Commands() {
+			if cmd.Use == "tools" {
+				for _, toolCmd := range cmd.Commands() {
+					// If the command is a vendored command, add a dummy flag to hide root flags from the docs
+					if tools.CheckVendorOnlyFromPath(toolCmd) {
+						addHiddenDummyFlag(toolCmd, "log-level")
+						addHiddenDummyFlag(toolCmd, "architecture")
+						addHiddenDummyFlag(toolCmd, "no-log-file")
+						addHiddenDummyFlag(toolCmd, "no-progress")
+						addHiddenDummyFlag(toolCmd, "zarf-cache")
+						addHiddenDummyFlag(toolCmd, "tmpdir")
+						addHiddenDummyFlag(toolCmd, "insecure")
+					}
+				}
+			}
+		}
+
 		//Generate markdown of the Zarf command (and all of its child commands)
 		if err := os.RemoveAll("./docs/2-the-zarf-cli/100-cli-commands"); err != nil {
-			message.Fatalf("Unable to generate the CLI documentation: %s", err.Error())
+			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
 		}
 		if err := os.Mkdir("./docs/2-the-zarf-cli/100-cli-commands", 0775); err != nil {
-			message.Fatalf("Unable to generate the CLI documentation: %s", err.Error())
+			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
 		}
 		if err := doc.GenMarkdownTree(rootCmd, "./docs/2-the-zarf-cli/100-cli-commands"); err != nil {
-			message.Fatalf("Unable to generate the CLI documentation: %s", err.Error())
+			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
 		} else {
-			message.Successf(lang.CmdInternalGenerateCliDocsSuccess)
+			message.Success(lang.CmdInternalGenerateCliDocsSuccess)
 		}
 	},
 }
@@ -105,7 +122,7 @@ var createReadOnlyGiteaUser = &cobra.Command{
 		// Load the state so we can get the credentials for the admin git user
 		state, err := cluster.NewClusterOrDie().LoadZarfState()
 		if err != nil {
-			message.WarnErr(err, lang.CmdInternalCreateReadOnlyGiteaUserErr)
+			message.WarnErr(err, lang.ErrLoadState)
 		}
 
 		// Create the non-admin user
@@ -117,27 +134,26 @@ var createReadOnlyGiteaUser = &cobra.Command{
 
 var createPackageRegistryToken = &cobra.Command{
 	Use:   "create-artifact-registry-token",
-	Short: "Creates an artifact registry token for Gitea",
-	Long: "Creates an artifact registry token in Gitea using the Gitea API. " +
-		"This is called internally by the supported Gitea package component.",
+	Short: lang.CmdInternalArtifactRegistryGiteaTokenShort,
+	Long:  lang.CmdInternalArtifactRegistryGiteaTokenLong,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Load the state so we can get the credentials for the admin git user
-		cluster := cluster.NewClusterOrDie()
-		state, err := cluster.LoadZarfState()
+		c := cluster.NewClusterOrDie()
+		state, err := c.LoadZarfState()
 		if err != nil {
-			message.WarnErr(err, "Unable to load the Zarf state")
+			message.WarnErr(err, lang.ErrLoadState)
 		}
 
 		// If we are setup to use an internal artifact server, create the artifact registry token
 		if state.ArtifactServer.InternalServer {
 			token, err := git.New(state.GitServer).CreatePackageRegistryToken()
 			if err != nil {
-				message.WarnErr(err, "Unable to create an artifact registry token for the Gitea service.")
+				message.WarnErr(err, lang.CmdInternalArtifactRegistryGiteaTokenErr)
 			}
 
 			state.ArtifactServer.PushToken = token.Sha1
 
-			cluster.SaveZarfState(state)
+			c.SaveZarfState(state)
 		}
 	},
 }
@@ -145,6 +161,7 @@ var createPackageRegistryToken = &cobra.Command{
 var uiCmd = &cobra.Command{
 	Use:   "ui",
 	Short: lang.CmdInternalUIShort,
+	Long:  lang.CmdInternalUILong,
 	Run: func(cmd *cobra.Command, args []string) {
 		api.LaunchAPIServer()
 	},
@@ -156,8 +173,20 @@ var isValidHostname = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if valid := utils.IsValidHostName(); !valid {
 			hostname, _ := os.Hostname()
-			message.Fatalf(nil, "The hostname '%s' is not valid. Ensure the hostname meets RFC1123 requirements https://www.rfc-editor.org/rfc/rfc1123.html.", hostname)
+			message.Fatalf(nil, lang.CmdInternalIsValidHostnameErr, hostname)
 		}
+	},
+}
+
+var computeCrc32 = &cobra.Command{
+	Use:     "crc32 TEXT",
+	Aliases: []string{"c"},
+	Short:   lang.CmdInternalCrc32Short,
+	Args:    cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		text := args[0]
+		hash := utils.GetCRCHash(text)
+		fmt.Printf("%d\n", hash)
 	},
 }
 
@@ -173,4 +202,13 @@ func init() {
 	internalCmd.AddCommand(createPackageRegistryToken)
 	internalCmd.AddCommand(uiCmd)
 	internalCmd.AddCommand(isValidHostname)
+	internalCmd.AddCommand(computeCrc32)
+}
+
+func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
+	if cmd.PersistentFlags().Lookup(flagDummy) == nil {
+		var dummyStr string
+		cmd.PersistentFlags().StringVar(&dummyStr, flagDummy, "", "")
+		cmd.PersistentFlags().MarkHidden(flagDummy)
+	}
 }

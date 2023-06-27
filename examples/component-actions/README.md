@@ -4,7 +4,7 @@ import ExampleYAML from '@site/src/components/ExampleYAML';
 
 :::note
 
-Component Actions have replaced Component Scripts. Zarf will still read scripts entries, but will convert them to actions. Component Scripts will be removed in a future release. Please update your package configurations to use Component Actions instead.
+Component Actions have replaced Component Scripts. Zarf will still read `scripts` entries, but will convert them to `actions`. Component Scripts will be removed in a future release. Please update your package configurations to use Component Actions instead.
 
 :::
 
