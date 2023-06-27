@@ -60,6 +60,6 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: if [ "$(uname -m)" != "aarch64" || "$(uname -m)" != "arm64" ]; then echo "this package architecture is arm64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
+          - cmd: if [ "$(uname -m)" != "aarch64" ] && [ "$(uname -m)" != "arm64" ]; then echo "this package architecture is arm64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
             description: Check that the host architecture matches the package architecture
             maxRetries: 0
