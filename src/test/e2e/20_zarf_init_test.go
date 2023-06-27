@@ -115,17 +115,37 @@ func TestZarfInit(t *testing.T) {
 }
 
 func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.ZarfState) {
-	require.NotContains(t, logText, zarfState.AgentTLS.CA)
-	require.NotContains(t, logText, string(zarfState.AgentTLS.CA))
-	require.NotContains(t, logText, zarfState.AgentTLS.Cert)
-	require.NotContains(t, logText, string(zarfState.AgentTLS.Cert))
-	require.NotContains(t, logText, zarfState.AgentTLS.Key)
-	require.NotContains(t, logText, string(zarfState.AgentTLS.Key))
-	require.NotContains(t, logText, zarfState.ArtifactServer.PushToken)
-	require.NotContains(t, logText, zarfState.GitServer.PullPassword)
-	require.NotContains(t, logText, zarfState.GitServer.PushPassword)
-	require.NotContains(t, logText, zarfState.RegistryInfo.PullPassword)
-	require.NotContains(t, logText, zarfState.RegistryInfo.PushPassword)
-	require.NotContains(t, logText, zarfState.RegistryInfo.Secret)
-	require.NotContains(t, logText, zarfState.LoggingSecret)
+	if len(zarfState.AgentTLS.CA) > 0 {
+		require.NotContains(t, logText, zarfState.AgentTLS.CA)
+		require.NotContains(t, logText, string(zarfState.AgentTLS.CA))
+	}
+	if len(zarfState.AgentTLS.Cert) > 0 {
+		require.NotContains(t, logText, zarfState.AgentTLS.Cert)
+		require.NotContains(t, logText, string(zarfState.AgentTLS.Cert))
+	}
+	if len(zarfState.AgentTLS.Key) > 0 {
+		require.NotContains(t, logText, zarfState.AgentTLS.Key)
+		require.NotContains(t, logText, string(zarfState.AgentTLS.Key))
+	}
+	if len(zarfState.ArtifactServer.PushToken) > 0 {
+		require.NotContains(t, logText, zarfState.ArtifactServer.PushToken)
+	}
+	if zarfState.GitServer.PullPassword != "" {
+		require.NotContains(t, logText, zarfState.GitServer.PullPassword)
+	}
+	if zarfState.GitServer.PushPassword != "" {
+		require.NotContains(t, logText, zarfState.GitServer.PushPassword)
+	}
+	if zarfState.RegistryInfo.PullPassword != "" {
+		require.NotContains(t, logText, zarfState.RegistryInfo.PullPassword)
+	}
+	if zarfState.RegistryInfo.PushPassword != "" {
+		require.NotContains(t, logText, zarfState.RegistryInfo.PushPassword)
+	}
+	if zarfState.RegistryInfo.Secret != "" {
+		require.NotContains(t, logText, zarfState.RegistryInfo.Secret)
+	}
+	if zarfState.LoggingSecret != "" {
+		require.NotContains(t, logText, zarfState.LoggingSecret)
+	}
 }
