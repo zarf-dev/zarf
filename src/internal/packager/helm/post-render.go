@@ -202,7 +202,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		isECR := r.options.Cfg.State.RegistryInfo.RegistryType == types.ECRRegistry
 		// If the package is YOLO OR if we're using an ECR registry, skip the secret creation
 		if isYOLO || isECR {
-			break
+			continue
 		}
 
 		// Create the secret
