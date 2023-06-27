@@ -11,7 +11,7 @@
 	import ZarfChip from './zarf-chip.svelte';
 
 	export let idx: number;
-	export let readOnly: boolean = true;
+	export let readOnly = true;
 	export let component: ZarfComponent;
 
 	const toggleComponentDeployment = (list: number[], idx: number) => {

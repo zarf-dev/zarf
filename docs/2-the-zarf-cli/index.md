@@ -138,7 +138,9 @@ The `zarf package deploy` command is used to deploy an already built tar.zst pac
 
 ## Using a config file to make CLI command flags declarative
 
-Users can configure the `zarf init`, `zarf package create`, `zarf package deploy` command flags, as well as any global flags, through a config file. By default, Zarf searches for a config file named `zarf-config.toml` in the current working directory. You can generate a config template for use by Zarf by executing the command `zarf prepare generate-config`, with an optional filename, in any of the supported formats, including `toml`, `json`, `yaml`, `ini` and `props`. For instance, to create a template config file with the `my-cool-env` in the yaml format, you can use the command `zarf prepare generate-config my-cool-env.yaml`.
+Users can configure the `zarf init`, `zarf package create`, and `zarf package deploy` command flags, as well as global flags (with the exception of `--confirm`), through a config file to help execute commands more declaratively.
+
+By default, Zarf searches for a config file named `zarf-config.toml` in the current working directory. You can generate a config template for use by Zarf by executing the command `zarf prepare generate-config`, with an optional filename, in any of the supported formats, including `toml`, `json`, `yaml`, `ini` and `props`. For instance, to create a template config file with the `my-cool-env` in the yaml format, you can use the command `zarf prepare generate-config my-cool-env.yaml`.
 
 To use a custom config file, set the `ZARF_CONFIG` environment variable to the path of the desired config file. For example, to use the `my-cool-env.yaml` config file, you can set the `ZARF_CONFIG` environment variable to `my-cool-env.yaml`. The `ZARF_CONFIG` environment variable can be set either in the shell or in the `.env` file in the current working directory. Note that the `ZARF_CONFIG` environment variable takes precedence over the default config file.
 

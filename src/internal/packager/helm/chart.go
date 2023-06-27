@@ -13,12 +13,16 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/types"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/releaseutil"
 
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
@@ -107,18 +111,19 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 
 		spinner.Updatef("Checking for existing helm deployment")
 
-		switch histErr {
-		case driver.ErrReleaseNotFound:
+		if histErr == driver.ErrReleaseNotFound {
 			// No prior release, try to install it.
 			spinner.Updatef("Attempting chart installation")
-			output, err = h.installChart(postRender)
 
-		case nil:
+			output, err = h.installChart(postRender)
+		} else if histErr == nil && len(releases) > 0 {
 			// Otherwise, there is a prior release so upgrade it.
 			spinner.Updatef("Attempting chart upgrade")
-			output, err = h.upgradeChart(postRender)
 
-		default:
+			lastRelease := releases[len(releases)-1]
+
+			output, err = h.upgradeChart(lastRelease, postRender)
+		} else {
 			// 😭 things aren't working
 			return nil, "", fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 		}
@@ -298,11 +303,18 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 	return client.Run(loadedChart, chartValues)
 }
 
-func (h *Helm) upgradeChart(postRender *renderer) (*release.Release, error) {
+func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) (*release.Release, error) {
 	// Print the postRender object piece by piece to not print the htpasswd
 	message.Debugf("helm.upgradeChart(%#v, %#v, %#v, %#v, %s)", postRender.actionConfig, postRender.connectStrings,
 		postRender.namespaces, postRender.options, fmt.Sprintf("values:template.Values{ registry: \"%s\" }", postRender.values.GetRegistry()))
 
+	// Migrate any deprecated APIs (if applicable)
+	err := h.migrateDeprecatedAPIs(lastRelease)
+	if err != nil {
+		return nil, fmt.Errorf("unable to check for API deprecations: %w", err)
+	}
+
+	// Setup a new upgrade action
 	client := action.NewUpgrade(h.actionConfig)
 
 	// Let each chart run for the default timeout.
@@ -373,4 +385,74 @@ func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
 	}
 
 	return loadedChart, chartValues, nil
+}
+
+func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
+	// Get the Kubernetes version from the current cluster
+	kubeVersion, err := h.Cluster.Kube.Clientset.ServerVersion()
+	if err != nil {
+		return err
+	}
+
+	kubeGitVersion, err := semver.NewVersion(kubeVersion.GitVersion)
+	if err != nil {
+		return err
+	}
+
+	// Use helm to re-split the manifest byte (same call used by helm to pass this data to postRender)
+	_, resources, err := releaseutil.SortManifests(map[string]string{"manifest": latestRelease.Manifest}, nil, releaseutil.InstallOrder)
+
+	if err != nil {
+		return fmt.Errorf("error re-rendering helm output: %w", err)
+	}
+
+	modifiedManifest := ""
+	modified := false
+
+	// Loop over the resources from the lastRelease manifest to check for deprecations
+	for _, resource := range resources {
+		// parse to unstructured to have access to more data than just the name
+		rawData := &unstructured.Unstructured{}
+		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
+			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
+		}
+
+		rawData, manifestModified, err := h.Cluster.Kube.HandleDeprecations(rawData, *kubeGitVersion)
+		manifestContent, err := yaml.Marshal(rawData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %#v", err)
+		}
+
+		// If this is not a bad object, place it back into the manifest
+		modifiedManifest += fmt.Sprintf("---\n# Source: %s\n%s\n", resource.Name, manifestContent)
+
+		if manifestModified {
+			modified = true
+		}
+	}
+
+	// If the release was modified in the above loop, save it back to the cluster
+	if modified {
+		message.Warnf("Zarf detected deprecated APIs for the '%s' helm release.  Attempting automatic upgrade.", latestRelease.Name)
+
+		// Update current release version to be superseded (same as the helm mapkubeapis plugin)
+		latestRelease.Info.Status = release.StatusSuperseded
+		if err := h.actionConfig.Releases.Update(latestRelease); err != nil {
+			return err
+		}
+
+		// Use a shallow copy of current release version to update the object with the modification
+		// and then store this new version (same as the helm mapkubeapis plugin)
+		var newRelease = latestRelease
+		newRelease.Manifest = modifiedManifest
+		newRelease.Info.Description = "Kubernetes deprecated API upgrade - DO NOT rollback from this version"
+		newRelease.Info.LastDeployed = h.actionConfig.Now()
+		newRelease.Version = latestRelease.Version + 1
+		newRelease.Info.Status = release.StatusDeployed
+		if err := h.actionConfig.Releases.Create(newRelease); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

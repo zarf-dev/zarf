@@ -5,6 +5,7 @@
 package helm
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -153,16 +154,12 @@ func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, err
 	// Create the Git configuration and download the repo
 	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
 
-	// Download the git repo to a temporary directory
-	err := gitCfg.DownloadRepoToTemp(h.Chart.URL)
-	if err != nil {
-		spinner.Errorf(err, "Unable to download the git repo %s", h.Chart.URL)
-		return "", err
-	}
+	gitRepoWithRef := fmt.Sprintf("%s@%s", h.Chart.URL, h.Chart.Version)
 
-	// Switch to the correct tag as specified by the chart version
-	if err = gitCfg.CheckoutTag(h.Chart.Version); err != nil {
-		spinner.Errorf(err, "Unable to checkout provided git reference: %v@%v", h.Chart.URL, h.Chart.Version)
+	// Download the git repo to a temporary directory
+	err := gitCfg.DownloadRepoToTemp(gitRepoWithRef)
+	if err != nil {
+		spinner.Errorf(err, "Unable to download the git repo %s", gitRepoWithRef)
 		return "", err
 	}
 

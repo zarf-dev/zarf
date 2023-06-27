@@ -21,14 +21,14 @@ import (
 	"github.com/pterm/pterm"
 )
 
-func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (confirm bool) {
+func (p *Packager) confirmAction(stage string, sbomViewFiles []string) (confirm bool) {
 
-	message.HorizontalRule()
-	message.Title("Package Configuration", "the package configuration that defines this package")
-	utils.ColorPrintYAML(p.cfg.Pkg)
+	pterm.Println()
+	message.HeaderInfof("📦 PACKAGE DEFINITION")
+	utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
 
 	// Print any potential breaking changes (if this is a Deploy confirm) between this CLI version and the deployed init package
-	if userMessage == "Deploy" {
+	if stage == config.ZarfDeployStage {
 		if sbom.IsSBOMAble(p.cfg.Pkg) {
 			// Print the location that the user can view the package SBOMs from
 			message.HorizontalRule()
@@ -78,12 +78,12 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 	// Display prompt if not auto-confirmed
 	if config.CommonOptions.Confirm {
 		pterm.Println()
-		message.Successf("%s Zarf package confirmed", userMessage)
+		message.Successf("%s Zarf package confirmed", stage)
 		return config.CommonOptions.Confirm
 	}
 
 	prompt := &survey.Confirm{
-		Message: userMessage + " this Zarf package?",
+		Message: stage + " this Zarf package?",
 	}
 
 	pterm.Println()
@@ -96,7 +96,7 @@ func (p *Packager) confirmAction(userMessage string, sbomViewFiles []string) (co
 
 	// On create in interactive mode, prompt for max package size if it is still the default value of 0
 	// Note: it will not be 0 if the user has provided a value via the --max-package-size flag or Viper config
-	if userMessage == "Create" && p.cfg.CreateOpts.MaxPackageSizeMB == 0 {
+	if stage == config.ZarfCreateStage && p.cfg.CreateOpts.MaxPackageSizeMB == 0 {
 		value, err := p.promptVariable(types.ZarfPackageVariable{
 			Name:        "Maximum Package Size",
 			Description: "Specify a maximum file size for this package in Megabytes. Above this size, the package will be split into multiple files. 0 will disable this feature.",
@@ -136,4 +136,31 @@ func (p *Packager) promptVariable(variable types.ZarfPackageVariable) (value str
 	}
 
 	return value, nil
+}
+
+func (p *Packager) getPackageYAMLHints(stage string) map[string]string {
+	hints := map[string]string{}
+
+	if stage == config.ZarfDeployStage {
+		for _, variable := range p.cfg.Pkg.Variables {
+			value, present := p.cfg.DeployOpts.SetVariables[variable.Name]
+			if !present {
+				value = fmt.Sprintf("'%s' (default)", message.Truncate(variable.Default, 20, false))
+			} else {
+				value = fmt.Sprintf("'%s'", message.Truncate(value, 20, false))
+			}
+			if variable.Sensitive {
+				value = "'**sanitized**'"
+			}
+			hints = utils.AddRootListHint(hints, "name", variable.Name, fmt.Sprintf("currently set to %s", value))
+		}
+	}
+
+	hints = utils.AddRootHint(hints, "metadata", "information about this package\n")
+	hints = utils.AddRootHint(hints, "build", "info about the machine, zarf version, and user that created this package\n")
+	hints = utils.AddRootHint(hints, "components", "definition of capabilities this package deploys")
+	hints = utils.AddRootHint(hints, "constants", "static values set by the package author")
+	hints = utils.AddRootHint(hints, "variables", "deployment-specific values that are set on each package deployment")
+
+	return hints
 }
