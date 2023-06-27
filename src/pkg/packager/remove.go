@@ -25,7 +25,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 	defer spinner.Stop()
 
 	// If the user input is a path to a package, extract the package
-	if ZarfPackagePattern.MatchString(packageName) {
+	if ZarfPackagePattern.MatchString(packageName) || ZarfInitPattern.MatchString(packageName) {
 		if utils.InvalidPath(packageName) {
 			message.Fatalf(nil, lang.CmdPackageRemoveTarballErr)
 		}
@@ -49,7 +49,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 	}
 
 	// If this came from a real package, read the package config and reset the packageName
-	if ZarfPackagePattern.MatchString(packageName) || utils.IsOCIURL(packageName) {
+	if ZarfPackagePattern.MatchString(packageName) || ZarfInitPattern.MatchString(packageName) || utils.IsOCIURL(packageName) {
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 			return err
 		}
@@ -62,6 +62,9 @@ func (p *Packager) Remove(packageName string) (err error) {
 
 	// Determine if we need the cluster
 	requiresCluster := false
+
+	// Filter out components that are not compatible with this system if we have loaded from a tarball
+	p.filterComponents(true)
 
 	// If we have package components check them for images, charts, manifests, etc
 	for _, component := range p.cfg.Pkg.Components {
