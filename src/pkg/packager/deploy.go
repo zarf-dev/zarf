@@ -31,9 +31,10 @@ import (
 )
 
 var (
-	hpaModified    bool
-	valueTemplate  *template.Values
-	connectStrings = make(types.ConnectStrings)
+	stateInitialized bool
+	hpaModified      bool
+	valueTemplate    *template.Values
+	connectStrings   = make(types.ConnectStrings)
 )
 
 // Deploy attempts to deploy the given PackageConfig.
@@ -164,14 +165,19 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	isInjector := component.Name == "zarf-injector"
 	isAgent := component.Name == "zarf-agent"
 
-	// Always init the state on the seed registry component
-	if isSeedRegistry {
+	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
+	if p.requiresCluster(component) && !stateInitialized {
 		p.cluster, err = cluster.NewClusterWithWait(5*time.Minute, true)
 		if err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
 
-		p.cluster.InitZarfState(p.cfg.InitOpts)
+		err = p.cluster.InitZarfState(p.cfg.InitOpts)
+		if err != nil {
+			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
+		}
+
+		stateInitialized = true
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
