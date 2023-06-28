@@ -199,9 +199,26 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 		isYOLO := r.options.Cfg.Pkg.Metadata.YOLO && r.options.Cfg.State.Distro == "YOLO"
+		// If the package is YOLO skip the secret creation
+		if isYOLO {
+			continue
+		}
+
+		// Generate the git server secret
+		gitServerSecret := c.Kube.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
+		gitServerSecret.StringData = map[string]string{
+			"username": r.options.Cfg.State.GitServer.PullUsername,
+			"password": r.options.Cfg.State.GitServer.PullPassword,
+		}
+
+		// Create or update the git server secret
+		if err := c.Kube.CreateOrUpdateSecret(gitServerSecret); err != nil {
+			message.WarnErrorf(err, "Problem creating git server secret for the %s namespace", name)
+		}
+
 		isECR := r.options.Cfg.State.RegistryInfo.RegistryType == types.ECRRegistry
-		// If the package is YOLO OR if we're using an ECR registry, skip the secret creation
-		if isYOLO || isECR {
+		if isECR {
+			// NOTE: We are explicitly skipping the generation of the registry secret for ECR registries
 			continue
 		}
 
@@ -219,17 +236,6 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				message.WarnErrorf(err, "Problem creating registry secret for the %s namespace", name)
 			}
 
-			// Generate the git server secret
-			gitServerSecret := c.Kube.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
-			gitServerSecret.StringData = map[string]string{
-				"username": r.options.Cfg.State.GitServer.PullUsername,
-				"password": r.options.Cfg.State.GitServer.PullPassword,
-			}
-
-			// Create or update the git server secret
-			if err := c.Kube.CreateOrUpdateSecret(gitServerSecret); err != nil {
-				message.WarnErrorf(err, "Problem creating git server secret for the %s namespace", name)
-			}
 		}
 
 	}
