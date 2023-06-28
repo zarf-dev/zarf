@@ -64,9 +64,14 @@ func CreateDirectory(path string, mode os.FileMode) error {
 
 // CreateFile creates an empty file at the given path.
 func CreateFile(filepath string) error {
-	f, err := os.Create(filepath)
-	defer f.Close()
-	return err
+	if InvalidPath(filepath) {
+		f, err := os.Create(filepath)
+		f.Close()
+		return err
+	}
+
+	return nil
+
 }
 
 // InvalidPath checks if the given path is valid (if it is a permissions error it is there we just don't have access)
