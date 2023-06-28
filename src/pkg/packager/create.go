@@ -584,11 +584,7 @@ func (p *Packager) loadDifferentialData() error {
 		if err != nil {
 			return err
 		}
-		pkg, err := p.remote.FetchZarfYAML(manifest)
-		if err != nil {
-			return err
-		}
-		err = utils.WriteYaml(filepath.Join(tmpDir, config.ZarfYAML), pkg, 0600)
+		err = p.remote.PullLayer(manifest.Locate(config.ZarfYAML), tmpDir)
 		if err != nil {
 			return err
 		}
