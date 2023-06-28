@@ -174,14 +174,14 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 		p.cluster.InitZarfState(p.cfg.InitOpts)
 	}
 
-	if isRegistry {
-		// If we are deploying the registry then mark the HPA as "modifed" to set it to Min later
-		hpaModified = true
-	}
-
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
 		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
 		return charts, nil
+	}
+
+	if isRegistry {
+		// If we are deploying the registry then mark the HPA as "modifed" to set it to Min later
+		hpaModified = true
 	}
 
 	// Before deploying the seed registry, start the injector
