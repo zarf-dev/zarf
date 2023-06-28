@@ -225,11 +225,7 @@ func CreatePathAndCopy(source string, destination string) error {
 	}
 
 	// If the path doesn't exist yet then this is an empty file and we should create it
-	if InvalidPath(destination) {
-		return CreateFile(destination)
-	}
-
-	return nil
+	return CreateFile(destination)
 }
 
 // GetFinalExecutablePath returns the absolute path to the Zarf executable, following any symlinks along the way.
