@@ -118,6 +118,7 @@ func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) *configfile.
 	return cfg
 }
 
+// GetZarfVersion returns the current build/zarf version
 func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
 	// Get the version of the CLI
 	stdOut, stdErr, err := e2e.Zarf("version")
