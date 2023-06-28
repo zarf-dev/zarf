@@ -40,7 +40,7 @@ func (p *Packager) Publish() error {
 		if err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 		}
-		referenceSuffix = p.cfg.Pkg.Build.Architecture
+		referenceSuffix = p.arch
 	}
 
 	// Get a reference to the registry for this package
