@@ -43,7 +43,7 @@ To view the example in its entirety, select the `Edit this page` link below the 
 
 <ExampleYAML example="big-bang/yolo" showLink={false} />
 
-## Big Bang Scrape Zarf Agent Metrics
+## Big Bang Zarf Agent Metrics Support
 
 The Zarf Agent emits Prometheus metrics that can be scraped by Big Bang's Prometheus Operator. To enable this, set `monitoring.enabled` to true in the `config/disable-all.yaml`, and uncomment the `disable-all.yaml` under the `components.extentions.bigbang.valuesFiles` section in `zarf.yaml`.
 
