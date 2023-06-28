@@ -218,6 +218,9 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	hasImages := len(component.Images) > 0 && !noImgPush
+	hasCharts := len(component.Charts) > 0
+	hasManifests := len(component.Manifests) > 0
+	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
 
 	onDeploy := component.Actions.OnDeploy
@@ -255,12 +258,16 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err := p.pushImagesToRegistry(component.Images, noImgChecksum); err != nil {
-		return charts, fmt.Errorf("unable to push images to the registry: %w", err)
+	if hasImages {
+		if err := p.pushImagesToRegistry(component.Images, noImgChecksum); err != nil {
+			return charts, fmt.Errorf("unable to push images to the registry: %w", err)
+		}
 	}
 
-	if err = p.pushReposToRepository(componentPath.Repos, component.Repos); err != nil {
-		return charts, fmt.Errorf("unable to push the repos to the repository: %w", err)
+	if hasRepos {
+		if err = p.pushReposToRepository(componentPath.Repos, component.Repos); err != nil {
+			return charts, fmt.Errorf("unable to push the repos to the repository: %w", err)
+		}
 	}
 
 	if hasDataInjections {
@@ -269,8 +276,10 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		p.performDataInjections(&waitGroup, componentPath, component.DataInjections)
 	}
 
-	if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
-		return charts, fmt.Errorf("unable to install helm chart(s): %w", err)
+	if hasCharts || hasManifests {
+		if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
+			return charts, fmt.Errorf("unable to install helm chart(s): %w", err)
+		}
 	}
 
 	if err = p.runActions(onDeploy.Defaults, onDeploy.After, valueTemplate); err != nil {
