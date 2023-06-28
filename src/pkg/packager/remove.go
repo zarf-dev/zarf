@@ -6,6 +6,7 @@ package packager
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -16,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
+	"helm.sh/helm/v3/pkg/storage/driver"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -123,7 +125,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 		}
 
 		if deployedPackage, err = p.removeComponent(deployedPackage, c, spinner); err != nil {
-			return fmt.Errorf("unable to remove the component (%s): %w", c.Name, err)
+			return fmt.Errorf("unable to remove the component '%s': %w", c.Name, err)
 		}
 	}
 
@@ -146,7 +148,7 @@ func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, pa
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
-			message.Warnf("Unable to update the %s package secret: %s (this may be normal if the cluster was removed)", secretName, err.Error())
+			message.Warnf("Unable to update the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 		}
 	}
 }
@@ -171,13 +173,17 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 	}
 
 	for _, chart := range utils.Reverse(deployedComponent.InstalledCharts) {
-		spinner.Updatef("Uninstalling chart (%s) from the (%s) component", chart.ChartName, deployedComponent.Name)
+		spinner.Updatef("Uninstalling chart '%s' from the '%s' component", chart.ChartName, deployedComponent.Name)
 
 		helmCfg := helm.Helm{}
 		if err := helmCfg.RemoveChart(chart.Namespace, chart.ChartName, spinner); err != nil {
-			onFailure()
-			return deployedPackage, fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w",
-				chart.ChartName, chart.Namespace, err)
+			if !errors.Is(err, driver.ErrReleaseNotFound) {
+				onFailure()
+				return deployedPackage, fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w",
+					chart.ChartName, chart.Namespace, err)
+			}
+			message.Warnf("Helm release for helm chart '%s' in the namespace '%s' was not found.  Was it already removed?",
+				chart.ChartName, chart.Namespace)
 		}
 
 		// Remove the uninstalled chart from the list of installed charts
@@ -213,11 +219,11 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
-			message.Warnf("Unable to delete the %s package secret: %s (this may be normal if the cluster was removed)", secretName, err.Error())
+			message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 		} else {
 			err = p.cluster.Kube.DeleteSecret(packageSecret)
 			if err != nil {
-				message.Warnf("Unable to delete the %s package secret: %s (this may be normal if the cluster was removed)", secretName, err.Error())
+				message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 			}
 		}
 	} else {
