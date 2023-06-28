@@ -61,10 +61,10 @@ For this solution, hooks have to be 'installed' onto a cluster before they are u
  - NOTE: The `package` lifecycle might be changed to a `run-once` lifecycle. This would benefit packages that don't have kube context information when the deployment starts.
 
 Zarf hooks will have two forms of execution via `Internal` and `External` hooks.
-### Internal Hooks
+#### Internal Hooks
 Internal hooks will be hooks that are built into the Zarf CLI and run internal code when executed. The logic for these hooks would be built into the Zarf CLI and would be updated with new releases of the CLI.
 
-### External Hooks
+#### External Hooks
 There are a few approaches for external hooks.
 1. Have the hook metadata reference an OCI image that is downloaded and run.
  - The hook metadata can reference the shasum of the image to ensure the image is not tampered with.
