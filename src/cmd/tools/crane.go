@@ -63,14 +63,14 @@ func init() {
 	craneLogin.Example = ""
 
 	registryCmd.AddCommand(craneLogin)
-	registryCmd.AddCommand(craneCmd.NewCmdPull(&craneOptions))
-	registryCmd.AddCommand(craneCmd.NewCmdPush(&craneOptions))
 
 	craneCopy := craneCmd.NewCmdCopy(&craneOptions)
 
 	registryCmd.AddCommand(craneCopy)
 	registryCmd.AddCommand(zarfCraneCatalog(&craneOptions))
-	registryCmd.AddCommand(zarfCraneList(&craneOptions))
+	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdList, &craneOptions, lang.CmdToolsRegistryListExample, 0))
+	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPush, &craneOptions, lang.CmdToolsRegistryPushExample, 1))
+	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
 
 	registryCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
 	registryCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
@@ -122,17 +122,17 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 }
 
 // Wrap the original crane list with a zarf specific version
-func zarfCraneList(cranePlatformOptions *[]crane.Option) *cobra.Command {
-	craneList := craneCmd.NewCmdList(cranePlatformOptions)
+func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command, cranePlatformOptions *[]crane.Option, exampleText string, imageNameArgumentIndex int) *cobra.Command {
+	wrappedCommand := commandToWrap(cranePlatformOptions)
 
-	craneList.Example = lang.CmdToolsRegistryListExample
-	craneList.Args = nil
+	wrappedCommand.Example = exampleText
+	wrappedCommand.Args = nil
 
-	originalListFn := craneList.RunE
+	originalListFn := wrappedCommand.RunE
 
-	craneList.RunE = func(cmd *cobra.Command, args []string) error {
-		if len(args) < 1 {
-			message.Fatal(nil, lang.CmdToolsCraneListNoRepoSpecified)
+	wrappedCommand.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) < imageNameArgumentIndex+1 {
+			message.Fatal(nil, lang.CmdToolsCraneNotEnoughArgumentsSpecified)
 		}
 
 		// Try to connect to a Zarf initialized cluster otherwise then pass it down to crane.
@@ -148,7 +148,7 @@ func zarfCraneList(cranePlatformOptions *[]crane.Option) *cobra.Command {
 		}
 
 		// Check to see if it matches the existing internal address.
-		if !strings.HasPrefix(args[0], zarfState.RegistryInfo.Address) {
+		if !strings.HasPrefix(args[imageNameArgumentIndex], zarfState.RegistryInfo.Address) {
 			return originalListFn(cmd, args)
 		}
 
@@ -165,7 +165,7 @@ func zarfCraneList(cranePlatformOptions *[]crane.Option) *cobra.Command {
 
 			givenAddress := fmt.Sprintf("%s/", zarfState.RegistryInfo.Address)
 			tunnelAddress := fmt.Sprintf("%s/", tunnelReg.Endpoint())
-			args[0] = strings.Replace(args[0], givenAddress, tunnelAddress, 1)
+			args[imageNameArgumentIndex] = strings.Replace(args[imageNameArgumentIndex], givenAddress, tunnelAddress, 1)
 		}
 
 		// Add the correct authentication to the crane command options
@@ -175,5 +175,5 @@ func zarfCraneList(cranePlatformOptions *[]crane.Option) *cobra.Command {
 		return originalListFn(cmd, args)
 	}
 
-	return craneList
+	return wrappedCommand
 }
