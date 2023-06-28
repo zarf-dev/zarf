@@ -79,4 +79,4 @@ components:
     # image discovery is supported in all manifests and charts using:
     # zarf prepare find-images
     images:
-      - ghcr.io/stefanprodan/podinfo:6.3.5
+      - ghcr.io/stefanprodan/podinfo:6.4.0
