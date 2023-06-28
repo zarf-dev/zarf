@@ -76,7 +76,6 @@ jobs:
         # NOTE: This reduces disk pressure before the upgrade-specific tests begin
         run: |
           lsblk -f
-          sudo k3s crictl images
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe nodes
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe deployments -n=podinfo-upgrade
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
@@ -85,7 +84,6 @@ jobs:
           sudo env "PATH=$PATH" CI=true make delete-packages
           sudo build/zarf tools clear-cache
           sudo docker system prune --all --force
-          sudo k3s crictl rmi --prune
 
           lsblk -f
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe nodes
