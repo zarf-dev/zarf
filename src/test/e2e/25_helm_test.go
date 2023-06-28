@@ -85,7 +85,7 @@ func testHelmEscaping(t *testing.T) {
 func testHelmUninstallRollback(t *testing.T) {
 	t.Log("E2E: Helm Uninstall and Rollback")
 
-	goodPath := fmt.Sprintf("build/zarf-package-dos-games-%s-0.0.1.tar.zst", e2e.Arch)
+	goodPath := fmt.Sprintf("build/zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 	evilPath := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
 	// Create the evil package (with the bad configmap).
@@ -127,7 +127,7 @@ func testHelmUninstallRollback(t *testing.T) {
 func testHelmAdoption(t *testing.T) {
 	t.Log("E2E: Helm Adopt a Deployment")
 
-	packagePath := fmt.Sprintf("build/zarf-package-dos-games-%s-0.0.1.tar.zst", e2e.Arch)
+	packagePath := fmt.Sprintf("build/zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 	deploymentManifest := "src/test/packages/25-manifest-adoption/deployment.yaml"
 
 	// Deploy dos-games manually into the cluster without Zarf

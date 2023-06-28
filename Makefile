@@ -125,13 +125,13 @@ build-release-packages:
 
 # INTERNAL used to publish the dos games packages to GHCR
 publish-release-packages:
-	$(ZARF_BIN) package publish ./build/zarf-package-dos-games-amd64-0.0.1.tar.zst oci://ghcr.io/defenseunicorns/zarf-package/dos-games
-	$(ZARF_BIN) package publish ./build/zarf-package-dos-games-arm64-0.0.1.tar.zst oci://ghcr.io/defenseunicorns/zarf-package/dos-games
+	$(ZARF_BIN) package publish ./build/zarf-package-dos-games-amd64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/zarf-package/dos-games
+	$(ZARF_BIN) package publish ./build/zarf-package-dos-games-arm64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/zarf-package/dos-games
 
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
-	@test -s ./build/zarf-package-dos-games-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-dos-games-$(ARCH)-1.0.0.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
 
