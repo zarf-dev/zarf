@@ -3,6 +3,7 @@
 
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
+TIMEOUT ?= 30m
 ######################################################################################
 
 # Figure out which Zarf binary we should use based on the operating system we are on
@@ -144,7 +145,7 @@ build-examples: ## Build all of the example packages
 .PHONY: test-e2e
 test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
-	cd src/test/e2e && go test -failfast -v -timeout 30m
+	cd src/test/e2e && go test -failfast -v -timeout $(TIMEOUT)
 
 ## NOTE: Requires an existing cluster
 .PHONY: test-external
@@ -186,7 +187,7 @@ test-ui-dev-server:
 
 .PHONY: test-ui-build-server
 # INTERNAL: used to start the built version of the API server for the Zarf Web UI (in CI)
-test-ui-build-server: 
+test-ui-build-server:
 	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR

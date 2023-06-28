@@ -73,7 +73,7 @@ jobs:
           echo "url = 'public.ecr.aws/t8y5r5z5/zarf-ecr-registry'" >> zarf-config.toml
 
       - name: Run tests
-        run: make test-e2e ARCH=amd64
+        run: make test-e2e ARCH=amd64 TIMEOUT=60m
 
       # NOTE: We are copying the secret because part of the e2e process destroys the `zarf` namespace. We still want to test the remove-ability of the eks cluster via the package.
       - name: Re-create zarf namespace with eks.yaml secret
