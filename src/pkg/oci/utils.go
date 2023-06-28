@@ -27,6 +27,8 @@ import (
 //
 // appending the provided suffix to the version
 func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata, suffix string) (*registry.Reference, error) {
+	registryLocation = strings.TrimPrefix(registryLocation, utils.OCIURLPrefix)
+
 	ver := metadata.Version
 	if len(ver) == 0 {
 		return nil, errors.New("version is required for publishing")
@@ -39,6 +41,8 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 	format := "%s%s:%s-%s"
 
 	raw := fmt.Sprintf(format, registryLocation, metadata.Name, ver, suffix)
+
+	message.Debugf("raw OCI reference from metadata: %s", raw)
 
 	ref, err := registry.ParseReference(raw)
 	if err != nil {
