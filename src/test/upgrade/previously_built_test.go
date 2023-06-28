@@ -5,6 +5,7 @@
 package upgrade
 
 import (
+	"context"
 	"path"
 	"testing"
 
@@ -21,7 +22,7 @@ func kubectl(args ...string) (string, string, error) {
 
 func zarf(args ...string) (string, string, error) {
 	zarfBinPath := path.Join("../../../build", test.GetCLIName())
-	return exec.Cmd(zarfBinPath, args...)
+	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), zarfBinPath, args...)
 }
 
 func TestPreviouslyBuiltZarfPackage(t *testing.T) {
@@ -29,11 +30,9 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	t.Log("Upgrade: Previously Built Zarf Package")
 
 	// For the upgrade test, podinfo-upgrade should already be in the cluster (version 6.3.3) (see .github/workflows/test-upgrade.yml)
-	kubeCtlRolloutArgs := []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade"}
-	kubectlOut, _, _ := kubectl(kubeCtlRolloutArgs...)
+	kubectlOut, _, _ := kubectl("-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade")
 	require.Contains(t, kubectlOut, "successfully rolled out")
-	kubeCtlGetArgs := []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}"}
-	kubectlOut, _, _ = kubectl(kubeCtlGetArgs...)
+	kubectlOut, _, _ = kubectl("-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}")
 	require.Contains(t, kubectlOut, "6.3.3")
 
 	// We also expect a 6.3.4 package to have been previously built
@@ -49,22 +48,18 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
 
 	// Verify that podinfo-upgrade successfully deploys in the cluster (version 6.3.4)
-	kubeCtlRolloutArgs = []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade"}
-	kubectlOut, _, _ = kubectl(kubeCtlRolloutArgs...)
+	kubectlOut, _, _ = kubectl("-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade")
 	require.Contains(t, kubectlOut, "successfully rolled out")
-	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}"}
-	kubectlOut, _, _ = kubectl(kubeCtlGetArgs...)
+	kubectlOut, _, _ = kubectl("-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}")
 	require.Contains(t, kubectlOut, "6.3.4")
 
 	// We also want to build a new package.
-	zarfCreateArgs := []string{"package", "create", "../../../src/test/upgrade", "--set", "PODINFO_VERSION=6.3.5", "--confirm"}
-	stdOut, stdErr, err = zarf(zarfCreateArgs...)
+	stdOut, stdErr, err = zarf("package", "create", "../../../src/test/upgrade", "--set", "PODINFO_VERSION=6.3.5", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	newlyBuiltPackage := "zarf-package-test-upgrade-package-amd64-6.3.5.tar.zst"
 
 	// Deploy the package.
-	zarfDeployArgs = []string{"package", "deploy", newlyBuiltPackage, "--confirm"}
-	stdOut, stdErr, err = zarf(zarfDeployArgs...)
+	stdOut, stdErr, err = zarf("package", "deploy", newlyBuiltPackage, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// [DEPRECATIONS] We expect any deprecated things to work from the new package
@@ -72,15 +67,12 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
 
 	// Verify that podinfo-upgrade successfully deploys in the cluster (version 6.3.5)
-	kubeCtlRolloutArgs = []string{"-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade"}
-	kubectlOut, _, _ = kubectl(kubeCtlRolloutArgs...)
+	kubectlOut, _, _ = kubectl("-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade")
 	require.Contains(t, kubectlOut, "successfully rolled out")
-	kubeCtlGetArgs = []string{"-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}"}
-	kubectlOut, _, _ = kubectl(kubeCtlGetArgs...)
+	kubectlOut, _, _ = kubectl("-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}")
 	require.Contains(t, kubectlOut, "6.3.5")
 
 	// Remove the package.
-	zarfRemoveArgs := []string{"package", "remove", "test-upgrade-package", "--confirm"}
-	stdOut, stdErr, err = zarf(zarfRemoveArgs...)
+	stdOut, stdErr, err = zarf("package", "remove", "test-upgrade-package", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

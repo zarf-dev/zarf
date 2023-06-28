@@ -34,9 +34,18 @@ func yamlFormat(attr color.Attribute) string {
 }
 
 // ColorPrintYAML pretty prints a yaml file to the console.
-func ColorPrintYAML(data any) {
+func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) {
 	text, _ := goyaml.Marshal(data)
 	tokens := lexer.Tokenize(string(text))
+
+	if spaceRootLists {
+		for idx := range tokens {
+			// Check that this is a dash after a newline (i.e. is a root list)
+			if tokens[idx].Origin == "\n-" || (tokens[idx].Origin == "-" && tokens[idx].Prev != nil && strings.HasSuffix(tokens[idx].Prev.Origin, "\n")) {
+				tokens[idx].Origin = "\n" + tokens[idx].Origin
+			}
+		}
+	}
 
 	var p printer.Printer
 	p.Bool = func() *printer.Property {
@@ -76,8 +85,34 @@ func ColorPrintYAML(data any) {
 		}
 	}
 
+	colorizedYAML := p.PrintTokens(tokens)
+
+	// Inject the hints into the colorized YAML
+	for key, value := range hints {
+		colorizedYAML = strings.Replace(colorizedYAML, key, value, 1)
+	}
+
 	pterm.Println()
-	pterm.Println(p.PrintTokens(tokens))
+	pterm.Println(colorizedYAML)
+}
+
+// AddRootListHint adds a hint string for a given root list key and value.
+func AddRootListHint(hints map[string]string, listKey string, listValue string, hintText string) map[string]string {
+	key := fmt.Sprintf("-%s %s%s:%s %s%s", yamlFormat(color.FgHiCyan), listKey, yamlFormat(color.Reset), yamlFormat(color.FgHiMagenta), listValue, yamlFormat(color.Reset))
+	hint := fmt.Sprintf("%s  %s%s", yamlFormat(color.FgHiBlack), hintText, yamlFormat(color.Reset))
+	hints[key] = fmt.Sprintf("%s%s", key, hint)
+
+	return hints
+}
+
+// AddRootHint adds a hint string for a given root key.
+func AddRootHint(hints map[string]string, rootKey string, hintText string) map[string]string {
+	key := fmt.Sprintf("%s%s%s:", yamlFormat(color.FgHiCyan), rootKey, yamlFormat(color.Reset))
+	newKey := fmt.Sprintf("%s%s:%s", yamlFormat(color.FgBlack)+yamlFormat(color.BgWhite), rootKey, yamlFormat(color.Reset))
+	hint := fmt.Sprintf("%s  %s%s", yamlFormat(color.FgHiBlack), hintText, yamlFormat(color.Reset))
+	hints[key] = fmt.Sprintf("\n%s\n%s%s", message.RuleLine, newKey, hint)
+
+	return hints
 }
 
 // ReadYaml reads a yaml file and unmarshals it into a given config.

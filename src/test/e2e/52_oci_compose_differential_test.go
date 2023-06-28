@@ -23,7 +23,6 @@ import (
 type OCIDifferentialSuite struct {
 	suite.Suite
 	*require.Assertions
-	Remote    *utils.OrasRemote
 	Reference registry.Reference
 	tmpdir    string
 }

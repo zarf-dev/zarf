@@ -39,6 +39,12 @@ const (
 // NoProgress tracks whether spinner/progress bars show updates.
 var NoProgress bool
 
+// RuleLine creates a line of ━ as wide as the terminal
+var RuleLine = strings.Repeat("━", TermWidth)
+
+// LogWriter is the stream to write logs to.
+var LogWriter io.Writer = os.Stderr
+
 var logLevel = InfoLevel
 
 // Write logs to stderr and a buffer for logFile generation.
@@ -80,16 +86,16 @@ func UseLogFile() {
 	var err error
 	if logFile != nil {
 		// Use the existing log file if logFile is set
-		logStream := io.MultiWriter(os.Stderr, logFile)
-		pterm.SetDefaultOutput(logStream)
+		LogWriter = io.MultiWriter(os.Stderr, logFile)
+		pterm.SetDefaultOutput(LogWriter)
 	} else {
 		// Try to create a temp log file if one hasn't been made already
 		if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
 			WarnErr(err, "Error saving a log file to a temporary directory")
 		} else {
 			useLogFile = true
-			logStream := io.MultiWriter(os.Stderr, logFile)
-			pterm.SetDefaultOutput(logStream)
+			LogWriter = io.MultiWriter(os.Stderr, logFile)
+			pterm.SetDefaultOutput(LogWriter)
 			message := fmt.Sprintf("Saving log file to %s", logFile.Name())
 			Note(message)
 		}
@@ -109,12 +115,23 @@ func GetLogLevel() LogLevel {
 	return logLevel
 }
 
+// ZarfCommand prints a zarf terminal command.
+func ZarfCommand(format string, a ...any) {
+	Command("zarf "+format, a...)
+}
+
+// Command prints a zarf terminal command.
+func Command(format string, a ...any) {
+	style := pterm.NewStyle(pterm.FgWhite, pterm.BgBlack)
+	style.Printfln("$ "+format, a...)
+}
+
 // Debug prints a debug message.
 func Debug(payload ...any) {
 	debugPrinter(2, payload...)
 }
 
-// Debugf prints a debug message.
+// Debugf prints a debug message with a given format.
 func Debugf(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
 	Debug(message)
@@ -133,7 +150,7 @@ func Warn(message string) {
 	Warnf("%s", message)
 }
 
-// Warnf prints a warning message.
+// Warnf prints a warning message with a given format.
 func Warnf(format string, a ...any) {
 	message := Paragraphn(TermWidth-10, format, a...)
 	pterm.Println()
@@ -146,7 +163,7 @@ func WarnErr(err any, message string) {
 	Warnf(message)
 }
 
-// WarnErrorf prints an error message as a warning.
+// WarnErrorf prints an error message as a warning with a given format.
 func WarnErrorf(err any, format string, a ...any) {
 	Debug(err)
 	Warnf(format, a...)
@@ -160,7 +177,7 @@ func Fatal(err any, message string) {
 	os.Exit(1)
 }
 
-// Fatalf prints a fatal error message and exits with a 1.
+// Fatalf prints a fatal error message and exits with a 1 with a given format.
 func Fatalf(err any, format string, a ...any) {
 	message := Paragraph(format, a...)
 	Fatal(err, message)
@@ -171,7 +188,7 @@ func Info(message string) {
 	Infof("%s", message)
 }
 
-// Infof prints an info message.
+// Infof prints an info message with a given format.
 func Infof(format string, a ...any) {
 	if logLevel > 0 {
 		message := Paragraph(format, a...)
@@ -179,30 +196,35 @@ func Infof(format string, a ...any) {
 	}
 }
 
-// Successf prints a success message.
+// Success prints a success message.
+func Success(message string) {
+	Successf("%s", message)
+}
+
+// Successf prints a success message with a given format.
 func Successf(format string, a ...any) {
 	message := Paragraph(format, a...)
 	pterm.Success.Println(message)
 }
 
-// Question prints a formatted message used in conjunction with a user prompt.
+// Question prints a user prompt description message.
 func Question(text string) {
 	Questionf("%s", text)
 }
 
-// Questionf prints a formatted message used in conjunction with a user prompt.
+// Questionf prints a user prompt description message with a given format.
 func Questionf(format string, a ...any) {
 	pterm.Println()
 	message := Paragraph(format, a...)
 	pterm.FgLightGreen.Println(message)
 }
 
-// Note prints a formatted yellow message.
+// Note prints a note message.
 func Note(text string) {
 	Notef("%s", text)
 }
 
-// Notef prints a formatted yellow message.
+// Notef prints a note message  with a given format.
 func Notef(format string, a ...any) {
 	pterm.Println()
 	message := Paragraphn(TermWidth-7, format, a...)
@@ -239,7 +261,7 @@ func HeaderInfof(format string, a ...any) {
 // HorizontalRule prints a white horizontal rule to separate the terminal
 func HorizontalRule() {
 	pterm.Println()
-	pterm.Println(strings.Repeat("━", TermWidth))
+	pterm.Println(RuleLine)
 }
 
 // JSONValue prints any value as JSON.

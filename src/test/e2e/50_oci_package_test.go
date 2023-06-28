@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -19,7 +18,6 @@ import (
 type RegistryClientTestSuite struct {
 	suite.Suite
 	*require.Assertions
-	Remote      *utils.OrasRemote
 	Reference   registry.Reference
 	PackagesDir string
 }
@@ -42,10 +40,7 @@ func (suite *RegistryClientTestSuite) TearDownSuite() {
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
 	e2e.CleanFiles(local)
 
-	stdOut, stdErr, err := e2e.Zarf("package", "remove", "helm-charts", "--confirm")
-	suite.NoError(err, stdOut, stdErr)
-
-	_, _, err = exec.Cmd("docker", "rm", "-f", "registry")
+	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
 	suite.NoError(err)
 }
 
@@ -63,6 +58,11 @@ func (suite *RegistryClientTestSuite) Test_0_Publish() {
 	example = filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch))
 	_, stdErr, err = e2e.Zarf("package", "publish", example, "oci://"+ref, "--insecure")
 	suite.Error(err, stdErr)
+
+	// Inline publish package.
+	dir := filepath.Join("examples", "helm-charts")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", dir, "-o", "oci://"+ref, "--insecure", "--oci-concurrency=5", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
 }
 
 func (suite *RegistryClientTestSuite) Test_1_Pull() {
@@ -101,6 +101,10 @@ func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Pulled "+ref)
 
+	// Remove the package via OCI.
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "oci://"+ref, "--insecure", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+
 	// Test deploy w/ bad ref.
 	_, stdErr, err = e2e.Zarf("package", "deploy", "oci://"+badRef.String(), "--insecure", "--confirm")
 	suite.Error(err, stdErr)
@@ -114,7 +118,6 @@ func (suite *RegistryClientTestSuite) Test_3_Inspect() {
 	ref := suite.Reference.String()
 	stdOut, stdErr, err := e2e.Zarf("package", "inspect", "oci://"+ref, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
-	suite.Contains(stdErr, "without downloading the entire package.")
 
 	// Test inspect w/ bad ref.
 	_, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+badRef.String(), "--insecure")

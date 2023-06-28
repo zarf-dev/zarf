@@ -732,7 +732,7 @@ export interface ZarfComponentImport {
      */
     path?: string;
     /**
-     * The URL to a Zarf package to import via OCI
+     * [beta] The URL to a Zarf package to import via OCI
      */
     url?: string;
 }
@@ -884,7 +884,7 @@ export interface ZarfMetadata {
      */
     architecture?: string;
     /**
-     * List of package authors (including contact info)
+     * Comma-separated list of package authors (including contact info)
      */
     authors?: string;
     /**
@@ -1129,6 +1129,10 @@ export interface ZarfCommonOptions {
      */
     insecure: boolean;
     /**
+     * Number of concurrent layer operations to perform when interacting with a remote package
+     */
+    OCIConcurrency: number;
+    /**
      * Location Zarf should use as a staging ground when managing files and images for package
      * creation and deployment
      */
@@ -1148,7 +1152,7 @@ export interface ZarfCreateOptions {
     /**
      * Location where the finalized Zarf package will be placed
      */
-    outputDirectory: string;
+    output: string;
     /**
      * A map of domains to override on package create when pulling images
      */
@@ -1740,12 +1744,13 @@ const typeMap: any = {
         { json: "cachePath", js: "cachePath", typ: "" },
         { json: "confirm", js: "confirm", typ: true },
         { json: "insecure", js: "insecure", typ: true },
+        { json: "OCIConcurrency", js: "OCIConcurrency", typ: 0 },
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
         { json: "differential", js: "differential", typ: r("DifferentialData") },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
-        { json: "outputDirectory", js: "outputDirectory", typ: "" },
+        { json: "output", js: "output", typ: "" },
         { json: "registryOverrides", js: "registryOverrides", typ: m("") },
         { json: "sbom", js: "sbom", typ: true },
         { json: "sbomOutput", js: "sbomOutput", typ: "" },

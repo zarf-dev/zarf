@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -87,8 +88,9 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	}
 
 	var cachePath string
+	var checkSumPaths []string
 	if parent.Import.URL != "" {
-		if !strings.HasSuffix(parent.Import.URL, skeletonSuffix) {
+		if !strings.HasSuffix(parent.Import.URL, oci.SkeletonSuffix) {
 			return child, fmt.Errorf("import URL must be a 'skeleton' package: %s", parent.Import.URL)
 		}
 
@@ -102,8 +104,16 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			return child, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
 		}
 
-		componentLayer := filepath.Join("components", fmt.Sprintf("%s.tar", childComponentName))
-		err = p.handleOciPackage(skelURL, cachePath, 3, componentLayer)
+		componentLayer := filepath.Join(config.ZarfComponentsDir, fmt.Sprintf("%s.tar", childComponentName))
+		err = p.SetOCIRemote(parent.Import.URL)
+		if err != nil {
+			return child, err
+		}
+		manifest, err := p.remote.FetchRoot()
+		if err != nil {
+			return child, err
+		}
+		checkSumPaths, err = p.remote.PullPackage(cachePath, 3, manifest.Locate(componentLayer))
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
@@ -119,7 +129,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		parent.Import.Path = rel
 	}
 
-	subPkg, err := p.getSubPackage(filepath.Join(pathAncestry, parent.Import.Path))
+	subPkg, err := p.getSubPackage(filepath.Join(pathAncestry, parent.Import.Path), checkSumPaths)
 	if err != nil {
 		return child, fmt.Errorf("unable to get sub package: %w", err)
 	}
@@ -149,9 +159,9 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	// If it's OCI, we need to unpack the component tarball
 	if parent.Import.URL != "" {
-		dir := filepath.Join(cachePath, "components", child.Name)
+		dir := filepath.Join(cachePath, config.ZarfComponentsDir, child.Name)
 		componentTarball := fmt.Sprintf("%s.tar", dir)
-		parent.Import.Path = filepath.Join(parent.Import.Path, "components", child.Name)
+		parent.Import.Path = filepath.Join(parent.Import.Path, config.ZarfComponentsDir, child.Name)
 		if !utils.InvalidPath(componentTarball) {
 			if !utils.InvalidPath(dir) {
 				err = os.RemoveAll(dir)
@@ -159,7 +169,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 					return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
 				}
 			}
-			err = archiver.Unarchive(componentTarball, filepath.Join(cachePath, "components"))
+			err = archiver.Unarchive(componentTarball, filepath.Join(cachePath, config.ZarfComponentsDir))
 			if err != nil {
 				return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
 			}
@@ -361,7 +371,7 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 }
 
 // Reads the locally imported zarf.yaml.
-func (p *Packager) getSubPackage(packagePath string) (importedPackage types.ZarfPackage, err error) {
+func (p *Packager) getSubPackage(packagePath string, checkSumPaths []string) (importedPackage types.ZarfPackage, err error) {
 	message.Debugf("packager.getSubPackage(%s)", packagePath)
 
 	path := filepath.Join(packagePath, config.ZarfYAML)
@@ -377,6 +387,10 @@ func (p *Packager) getSubPackage(packagePath string) (importedPackage types.Zarf
 	// Merge in child package constants (only if the constant does not exist in parent).
 	for _, importedConstant := range importedPackage.Constants {
 		p.injectImportedConstant(importedConstant)
+	}
+
+	if len(checkSumPaths) > 0 {
+		p.validatePackageChecksums(packagePath, importedPackage.Metadata.AggregateChecksum, checkSumPaths)
 	}
 
 	return
