@@ -61,9 +61,8 @@ components:
         kustomizations:
           # kustomizations can be specified relative to the `zarf.yaml` or as remoteBuild resources with the
           # following syntax: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md:
-          - github.com/stefanprodan/podinfo//kustomize?ref=0647aea75b85755411b007a290b9321668370be5
-          # this has a specific commit hash (essentially the same thing as sha256summ'ing the kustomization)
-          # and while ?ref= is not a requirement, it is recommended to use a specific commit hash / git tag to
+          - github.com/stefanprodan/podinfo//kustomize?ref=6.4.0
+          # while ?ref= is not a requirement, it is recommended to use a specific commit hash / git tag to
           # ensure that the kustomization is not changed in a way that breaks your deployment.
     actions:
       onDeploy:
