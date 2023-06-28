@@ -31,7 +31,7 @@ Neither one of these current solutions are ideal. We don't want to require overl
 ## Approaches Considered
 
 ### Internal Zarf Implementation
- Clusters that have hooks will have `zarf-hook-*` secret(s) in the 'zarf' namespace. This secret will contain the hook's configuration and any other required metadata. As part of the package deployment process, Zarf will check if the cluster has any hooks and run them if they exist. Given the scenario above, there is no longer a need for an ECR specific Zarf package to be created. An ECR hook would perform the proper configuration for any package deployed onto that cluster; thereby requiring no extra manual intervention from the package deployer.
+Clusters that have hooks will have `zarf-hook-*` secret(s) in the 'zarf' namespace. This secret will contain the hook's configuration and any other required metadata. As part of the package deployment process, Zarf will check if the cluster has any hooks and run them if they exist. Given the scenario above, there is no longer a need for an ECR specific Zarf package to be created. An ECR hook would perform the proper configuration for any package deployed onto that cluster; thereby requiring no extra manual intervention from the package deployer.
 
 
 Zarf HookConfig state information struct:
