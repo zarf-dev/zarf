@@ -58,6 +58,11 @@ func (suite *RegistryClientTestSuite) Test_0_Publish() {
 	example = filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch))
 	_, stdErr, err = e2e.Zarf("package", "publish", example, "oci://"+ref, "--insecure")
 	suite.Error(err, stdErr)
+
+	// Inline publish package.
+	dir := filepath.Join("examples", "helm-charts")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", dir, "-o", "oci://"+ref, "--insecure", "--oci-concurrency=5", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
 }
 
 func (suite *RegistryClientTestSuite) Test_1_Pull() {
