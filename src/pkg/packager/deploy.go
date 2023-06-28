@@ -218,9 +218,6 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	hasImages := len(component.Images) > 0 && !noImgPush
-	hasCharts := len(component.Charts) > 0
-	hasManifests := len(component.Manifests) > 0
-	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
 
 	onDeploy := component.Actions.OnDeploy
@@ -233,8 +230,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to process the component files: %w", err)
 	}
 
-	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections) {
-
+	if !valueTemplate.Ready() && p.requiresCluster(component) {
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
 			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, true)
@@ -259,16 +255,12 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if hasImages {
-		if err := p.pushImagesToRegistry(component.Images, noImgChecksum); err != nil {
-			return charts, fmt.Errorf("unable to push images to the registry: %w", err)
-		}
+	if err := p.pushImagesToRegistry(component.Images, noImgChecksum); err != nil {
+		return charts, fmt.Errorf("unable to push images to the registry: %w", err)
 	}
 
-	if hasRepos {
-		if err = p.pushReposToRepository(componentPath.Repos, component.Repos); err != nil {
-			return charts, fmt.Errorf("unable to push the repos to the repository: %w", err)
-		}
+	if err = p.pushReposToRepository(componentPath.Repos, component.Repos); err != nil {
+		return charts, fmt.Errorf("unable to push the repos to the repository: %w", err)
 	}
 
 	if hasDataInjections {
@@ -277,10 +269,8 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		p.performDataInjections(&waitGroup, componentPath, component.DataInjections)
 	}
 
-	if hasCharts || hasManifests {
-		if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
-			return charts, fmt.Errorf("unable to install helm chart(s): %w", err)
-		}
+	if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
+		return charts, fmt.Errorf("unable to install helm chart(s): %w", err)
 	}
 
 	if err = p.runActions(onDeploy.Defaults, onDeploy.After, valueTemplate); err != nil {
@@ -452,7 +442,6 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 // Push all of the components git repos to the configured git server.
 func (p *Packager) pushReposToRepository(reposPath string, repos []string) error {
 	for _, repoURL := range repos {
-
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
 			gitClient := git.New(p.cfg.State.GitServer)
