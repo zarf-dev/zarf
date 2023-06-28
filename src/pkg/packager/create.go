@@ -42,7 +42,7 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	if utils.IsOCIURL(p.cfg.CreateOpts.Output) {
-		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.cfg.Pkg.Build.Architecture)
+		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.arch)
 		if err != nil {
 			return err
 		}
