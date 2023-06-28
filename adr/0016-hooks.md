@@ -56,7 +56,11 @@ hookData:
   repositoryPrefix: ecr-zarf-registry
 ```
 
-For this solution, hooks have to be 'installed' onto a cluster before they are used. When Zarf is deploying a package onto a cluster, it will look for any secrets with the `zarf-hook` label in the `zarf` namespace.  If hooks are found, Zarf will run any 'package' level hooks before deploying a component and run any 'component' level hook for each component that is getting deployed. The hook lifecycle options will be before/after a package deployment and before/after a component deployment.
+For this solution, hooks have to be 'installed' onto a cluster before they are used. When Zarf is deploying a package onto a cluster, it will look for any secrets with the `zarf-hook` label in the `zarf` namespace.  If hooks are found, Zarf will run any 'package' level hooks before deploying a component and run any 'component' level hook for each component that is getting deployed. The hook lifecycle options will be:
+1. Before a package deployment
+2. After a package deployment
+3. Before a component deployment
+4. After a component deployment
  - NOTE: The order of hook execution is nearly random. If there are multiple hooks for a lifecycle there is no guarantee that they will be executed in a certain order.
  - NOTE: The `package` lifecycle might be changed to a `run-once` lifecycle. This would benefit packages that don't have kube context information when the deployment starts.
 
@@ -83,14 +87,15 @@ There are a few approaches for external hooks.
 **CONS**
  - Since 'Internal' hooks are built into the CLI, the only way to get updates for the hook is to update the CLI.
  - External hooks will have a few security concerns that we will have to work through.
+ - Implementing hooks internally adds more complexity to the Zarf CLI. This is especially true if wwe end up using WASM as the execution engine for hooks.
 
 
 
-### Pepr
-Pepr is a K8s controller that enables Kubernetes mutations. We are (or will be) considering using Pepr to replace the `Zarf Agent`. Pepr is capable to accomplishing most of what Zarf wants to do with the concept of Hooks. Zarf hook configuration could be saved as secrets that Zarf will be able to use
+### Webhooks
+Webhooks, such as Pepr, can act as a K8s controller that enables Kubernetes mutations. We are (or will be) considering using Pepr to replace the `Zarf Agent`. Pepr is capable to accomplishing most of what Zarf wants to do with the concept of Hooks. Zarf hook configuration could be saved as secrets that Zarf will be able to use. As Zarf is deploying packages onto a cluster, it can check for secrets the represent hooks (as it would if hook execution is handled internally as stated above) and get information on how to run the webhook from the secret. This would likely mean that the secret that describes the hook would have a `URL` instead of an `OCIReference` as well as config information that it would pass through to the hook. With the webhook approach, lifecycle management is a lot more flexible as the webhook can operate on native kubernetes events such as a secret getting created / updated.
 
 **PROS**
- - Pepr as a solution would be more ?flexible?? than internal Zarf implementation of Hooks.
+ - Pepr as a solution would be more flexible than the internal Zarf implementation of Hooks since the webhook could be anywhere.
  - Using Pepr would reduce the complexity of Zarf's codebase.
  - It will be easier to secure third party hooks when Pepr is the one running them.
  - Lifecycle management would be a lot easier with a webhook solution like Pepr.
