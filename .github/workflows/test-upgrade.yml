@@ -69,7 +69,7 @@ jobs:
         #       in a previous step. This test run will use this PR's Zarf to create a K3s cluster.
         # chown the logs since they were originally created as root
         run: |
-          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true APPLIANCE_MODE_KEEP=true make test-e2e ARCH=amd64
           sudo chown $USER /tmp/zarf-*.log
 
       - name: "Cleanup after running tests"

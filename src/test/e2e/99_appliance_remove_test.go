@@ -15,7 +15,7 @@ func TestApplianceRemove(t *testing.T) {
 	t.Log("E2E: Appliance Remove")
 
 	// Don't run this test in appliance mode
-	if !e2e.ApplianceMode {
+	if !e2e.ApplianceMode || e2e.ApplianceModeKeep {
 		return
 	}
 

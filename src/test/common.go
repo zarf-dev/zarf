@@ -22,11 +22,12 @@ import (
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize.
 type ZarfE2ETest struct {
-	ZarfBinPath     string
-	Arch            string
-	ApplianceMode   bool
-	RunClusterTests bool
-	CommandLog      []string
+	ZarfBinPath       string
+	Arch              string
+	ApplianceMode     bool
+	ApplianceModeKeep bool
+	RunClusterTests   bool
+	CommandLog        []string
 }
 
 var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
