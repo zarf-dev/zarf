@@ -131,7 +131,7 @@ var packageListCmd = &cobra.Command{
 
 		// Populate a pterm table of all the deployed packages
 		packageTable := pterm.TableData{
-			{"     Package ", "Components"},
+			{"     Package ", "Version", "Components"},
 		}
 
 		for _, pkg := range deployedZarfPackages {
@@ -143,6 +143,7 @@ var packageListCmd = &cobra.Command{
 
 			packageTable = append(packageTable, pterm.TableData{{
 				fmt.Sprintf("     %s", pkg.Name),
+				fmt.Sprintf("%s", pkg.Data.Metadata.Version),
 				fmt.Sprintf("%v", components),
 			}}...)
 		}
