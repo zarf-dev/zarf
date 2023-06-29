@@ -19,10 +19,12 @@ zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
       --file string              file to write the default report output to (default is STDOUT)
   -h, --help                     help for attest
   -k, --key string               the key to use for the attestation
-      --name string              set the name of the target being analyzed
+      --name string              set the name of the target being analyzed (DEPRECATED: use: source-name)
   -o, --output stringArray       report output format, options=[syft-json cyclonedx-xml cyclonedx-json github-json spdx-tag-value spdx-json syft-table syft-text template] (default [syft-table])
       --platform string          an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')
   -s, --scope string             selection of layers to catalog, options=[Squashed AllLayers] (default "Squashed")
+      --source-name string       set the name of the target being analyzed
+      --source-version string    set the name of the target being analyzed
   -t, --template string          specify the path to a Go template file
 ```
 

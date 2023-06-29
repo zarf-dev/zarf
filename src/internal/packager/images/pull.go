@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,7 +36,7 @@ func (i *ImgConfig) PullAll() error {
 		imgCount    = len(i.ImgList)
 		imageMap    = map[string]v1.Image{}
 		tagToImage  = map[name.Tag]v1.Image{}
-		digestToTag = make(map[string]string)
+		tagToDigest = make(map[string]string)
 	)
 
 	// Give some additional user feedback on larger image sets
@@ -123,7 +122,6 @@ func (i *ImgConfig) PullAll() error {
 	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &wg, doneSaving, fmt.Sprintf("Pulling %d images", imgCount))
 
 	for tag, img := range tagToImage {
-
 		// Save the image
 		err := crane.SaveOCI(img, i.ImagesPath)
 		if err != nil {
@@ -139,10 +137,10 @@ func (i *ImgConfig) PullAll() error {
 		if err != nil {
 			return err
 		}
-		digestToTag[imgDigest.String()] = tag.String()
+		tagToDigest[tag.String()] = imgDigest.String()
 	}
 
-	if err := addImageNameAnnotation(i.ImagesPath, digestToTag); err != nil {
+	if err := addImageNameAnnotation(i.ImagesPath, tagToDigest); err != nil {
 		return fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
@@ -228,50 +226,44 @@ type IndexJSON struct {
 }
 
 // addImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image tag <-> digest shasum will be.
-func addImageNameAnnotation(ociPath string, digestToTag map[string]string) error {
+func addImageNameAnnotation(ociPath string, tagToDigest map[string]string) error {
 	indexPath := filepath.Join(ociPath, "index.json")
-
-	// Add an 'org.opencontainers.image.base.name' annotation so we can figure out what the image tag/digest shasum will be during deploy time
-	indexJSON, err := os.Open(indexPath)
-	if err != nil {
-		message.WarnErrorf(err, "Unable to open %s/index.json", ociPath)
-		return err
-	}
 
 	// Read the file contents and turn it into a usable struct that we can manipulate
 	var index IndexJSON
-	byteValue, err := io.ReadAll(indexJSON)
+	byteValue, err := os.ReadFile(indexPath)
 	if err != nil {
 		return fmt.Errorf("unable to read the contents of the file (%s) so we can add an annotation: %w", indexPath, err)
 	}
-	indexJSON.Close()
 	if err = json.Unmarshal(byteValue, &index); err != nil {
 		return fmt.Errorf("unable to process the conents of the file (%s): %w", indexPath, err)
 	}
+
+	// Loop through the manifests and add the appropriate OCI Base Image Name Annotation
 	for idx, manifest := range index.Manifests {
 		if manifest.Annotations == nil {
 			manifest.Annotations = make(map[string]string)
 		}
-		manifest.Annotations[ocispec.AnnotationBaseImageName] = digestToTag[manifest.Digest]
-		index.Manifests[idx] = manifest
+
+		var baseImageName string
+
+		for tag, digest := range tagToDigest {
+			if digest == manifest.Digest {
+				baseImageName = tag
+			}
+		}
+
+		if baseImageName != "" {
+			manifest.Annotations[ocispec.AnnotationBaseImageName] = baseImageName
+			index.Manifests[idx] = manifest
+			delete(tagToDigest, baseImageName)
+		}
 	}
 
-	// Remove any file that might already exist
-	_ = os.Remove(indexPath)
-
-	// Create the index.json file and save the data to it
-	indexJSON, err = os.Create(indexPath)
-	if err != nil {
-		return err
-	}
+	// Write the file back to the package
 	indexJSONBytes, err := json.Marshal(index)
 	if err != nil {
 		return err
 	}
-	_, err = indexJSON.Write(indexJSONBytes)
-	if err != nil {
-		return err
-	}
-
-	return indexJSON.Close()
+	return os.WriteFile(indexPath, indexJSONBytes, 0600)
 }
