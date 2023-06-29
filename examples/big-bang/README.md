@@ -50,7 +50,7 @@ The Zarf Agent emits Prometheus metrics that can be scraped by Big Bang's Promet
 Finally, create a `ServiceMonitor` for the Zarf Agent. Since this the Zarf Agent exposes an `https` port, we need to provide the `bearerTokenFile` and `tlsConfig` to specify the TLS settings for scraping agaist the service. 
 
 ```yaml
-kubectl create -f -<<EOF
+zarf tools kubectl create -f -<<EOF
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
