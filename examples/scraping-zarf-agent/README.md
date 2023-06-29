@@ -48,7 +48,7 @@ zarf package deploy
 ? Deploy this Zarf package? (y/N) [y]
 ```
 
-Wait for the `prometheus-k8s`'s StatefulSet's replicas to become ready:
+Wait for the `prometheus-k8s` StatefulSet's replicas to become ready:
 
 ```bash
 zarf tools kubectl wait --for=jsonpath='{.status.availableReplicas}'=1  sts/prometheus-k8s -n monitoring --timeout=180s
