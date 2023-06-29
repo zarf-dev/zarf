@@ -252,7 +252,7 @@ func (p *Packager) appendIfNotExists(slice []string, item string) []string {
 	return append(slice, item)
 }
 
-func (p *Packager) requiresCluster(component types.ZarfComponent) (confirmComponent bool) {
+func (p *Packager) requiresCluster(component types.ZarfComponent) bool {
 	hasImages := len(component.Images) > 0
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
