@@ -9,3 +9,6 @@ ignore:
 
   # From rouille - The Zarf injector does not expose endpoints that use multipart form data
   - vulnerability: GHSA-mc8h-8q98-g5hr
+
+  # From semver - This comes through nodemon which is only used for development
+  - vulnerability: GHSA-c2qf-rxjj-qqgw

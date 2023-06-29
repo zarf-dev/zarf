@@ -9,11 +9,11 @@ components:
     required: false
     charts:
       - name: podinfo
-        version: 6.3.5
+        version: 6.4.0
         namespace: podinfo-from-local-chart
         localPath: chart
     images:
-      - ghcr.io/stefanprodan/podinfo:6.3.5
+      - ghcr.io/stefanprodan/podinfo:6.4.0
     actions:
       onDeploy:
         after:
@@ -28,12 +28,12 @@ components:
     required: false
     charts:
       - name: podinfo
-        version: 6.3.5
+        version: 6.4.0
         namespace: podinfo-from-git
         url: https://github.com/stefanprodan/podinfo.git
         gitPath: charts/podinfo
     images:
-      - ghcr.io/stefanprodan/podinfo:6.3.5
+      - ghcr.io/stefanprodan/podinfo:6.4.0
     actions:
       onDeploy:
         after:
@@ -48,11 +48,11 @@ components:
     required: false
     charts:
       - name: podinfo
-        version: 6.3.5
+        version: 6.4.0
         namespace: podinfo-from-oci
         url: oci://ghcr.io/stefanprodan/charts/podinfo
     images:
-      - ghcr.io/stefanprodan/podinfo:6.3.5
+      - ghcr.io/stefanprodan/podinfo:6.4.0
     actions:
       onDeploy:
         after:
@@ -66,7 +66,7 @@ components:
               cluster:
                 kind: deployment
                 # note this version is the same as the chart version
-                name: app.kubernetes.io/version=6.3.5
+                name: app.kubernetes.io/version=6.4.0
                 namespace: podinfo-from-oci
                 condition: available
 
@@ -74,12 +74,12 @@ components:
     required: false
     charts:
       - name: podinfo
-        version: 6.3.5
+        version: 6.4.0
         namespace: helm-alt-release-name
         url: https://stefanprodan.github.io/podinfo
         releaseName: cool-name
     images:
-      - ghcr.io/stefanprodan/podinfo:6.3.5
+      - ghcr.io/stefanprodan/podinfo:6.4.0
     actions:
       onDeploy:
         after:
