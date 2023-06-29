@@ -7,7 +7,6 @@ package test
 import (
 	"encoding/base64"
 	"fmt"
-	"strings"
 	"testing"
 
 	"encoding/json"
@@ -26,10 +25,7 @@ func TestZarfInit(t *testing.T) {
 		initComponents = "k3s,logging,git-server"
 	}
 
-	// Get the version of the CLI
-	stdOut, stdErr, err := e2e.Zarf("version")
-	require.NoError(t, err, stdOut, stdErr)
-	initPackageVersion := strings.Trim(stdOut, "\n")
+	initPackageVersion := e2e.GetZarfVersion(t)
 
 	var (
 		mismatchedArch        = e2e.GetMismatchedArch()
@@ -41,7 +37,7 @@ func TestZarfInit(t *testing.T) {
 	})
 
 	// Build init package with different arch than the cluster arch.
-	stdOut, stdErr, err = e2e.Zarf("package", "create", "src/test/packages/20-mismatched-arch-init", "--architecture", mismatchedArch, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/20-mismatched-arch-init", "--architecture", mismatchedArch, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	// Check that `zarf init` returns an error because of the mismatched architectures.
 	// We need to use the --architecture flag here to force zarf to find the package.

@@ -37,6 +37,10 @@ components:
             description: Enable 'k3s' to run at system boot
           - cmd: systemctl restart k3s
             description: Start the 'k3s' system service
+      onRemove:
+        before:
+          - cmd: /opt/zarf/zarf-clean-k3s.sh
+            description: Remove 'k3s' from the system
     files:
       # K3s removal script
       - source: zarf-clean-k3s.sh
