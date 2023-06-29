@@ -61,14 +61,14 @@ metadata:
 spec:
   endpoints:
   - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
-    targetPort: 443
+    port: https
     path: /metrics
     scheme: https
     tlsConfig:
       caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
       insecureSkipVerify: false
       # host name for the TLS handshake
-      serverName: zarf-agent.zarf.svc.cluster.local 
+      serverName: agent-hook.zarf.svc.cluster.local 
   jobLabel: zarf-agent
   namespaceSelector:
     matchNames:

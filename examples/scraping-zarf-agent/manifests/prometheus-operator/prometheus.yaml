@@ -1,0 +1,17 @@
+kind: Prometheus
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  name: k8s
+  namespace: default
+spec:
+  serviceMonitorSelector: {}
+  serviceMonitorNamespaceSelector: {}
+  logLevel: debug
+  logFormat: json
+  replicas: 1
+  image: quay.io/prometheus/prometheus:v2.45.0
+  serviceAccountName: prometheus-operator
+  resources:
+    requests:
+      memory: 400Mi
+

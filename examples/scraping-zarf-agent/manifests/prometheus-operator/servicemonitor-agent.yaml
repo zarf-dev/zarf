@@ -1,0 +1,25 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    artifact: monitoring-agent-hook
+  name: monitoring-agent-hook
+  namespace: default
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    port: https
+    targetPort: 443
+    scheme: https
+    tlsConfig:
+      caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      insecureSkipVerify: true
+      # host name for the TLS handshake
+      serverName: agent-hook.zarf.svc.cluster.local 
+  jobLabel: zarf-agent
+  namespaceSelector:
+    matchNames:
+    - zarf
+  selector:
+    matchLabels:
+      app: agent-hook
