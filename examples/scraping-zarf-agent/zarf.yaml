@@ -1,43 +1,19 @@
 kind: ZarfPackageConfig
 metadata:
-  name: hello-zarf-metrics
+  name: scrape-zarf-agent
   yolo: false
-  description: Scrape Zarf Agent example with Hello Zarf side application.
+  description: Scrape Zarf Agent with Prometheus Operator.
 
 components:
-  - name: hello-zarf
+  - name: prometheus-deps
     required: true
     manifests:
-      - name: hello-zarf
-        namespace: webserver
+      - name: prometheus-deps
+        namespace: monitoring
         files:
-          - ./manifests/hello-zarf/deployment.yaml
-          - ./manifests/hello-zarf/service.yaml
-          - ./manifests/hello-zarf/namespace.yaml
-    images:
-      - docker.io/cmwylie19/hello-zarf
-    actions:
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: deployment
-                name: hello-zarf
-                namespace: webserver
-                condition: available
-  - name: prometheus-operator
-    required: true
-    manifests:
-      - name: prometheus-operator
-        namespace: default
-        files:
-        # try to add the create command here in the array
-        # see if i can move the default to another ns
-          - ./manifests/prometheus-operator/bundle.yaml
+          - manifests/prometheus-deps/bundle.yaml
     images:
       - quay.io/prometheus-operator/prometheus-operator:v0.66.0
-      - quay.io/prometheus/prometheus:v2.45.0
-      - quay.io/prometheus-operator/prometheus-config-reloader:v0.66.0
     actions:
       onDeploy:
         after:
@@ -45,17 +21,18 @@ components:
               cluster:
                 kind: deployment
                 name: prometheus-operator
-                namespace: default
+                namespace: monitoring
                 condition: available
-          - cmd: |
-              ./zarf tools kubectl create -f ./manifests/prometheus-operator/prometheus.yaml
-              ./zarf tools kubectl create -f ./manifests/prometheus-operator/servicemonitor-agent.yaml
-              ./zarf tools kubectl create -f ./manifests/prometheus-operator/servicemonitor-hello-zarf.yaml
-              ./zarf tools kubectl create -f ./manifests/prometheus-operator/clusterrole.yaml
-              ./zarf tools kubectl create -f ./manifests/prometheus-operator/clusterrolebinding.yaml
-          # - wait:
-          #     cluster:
-          #       kind: statefulset
-          #       name: prometheus-k8s
-          #       namespace: default
-          #       condition: available
+  - name: prometheus-operator
+    required: true
+    manifests:
+      - name: prometheus-operator
+        namespace: monitoring
+        files:
+        - manifests/prometheus-operator/prometheus.yaml
+        - manifests/prometheus-operator/servicemonitor-agent.yaml
+        - manifests/prometheus-operator/clusterrole.yaml
+        - manifests/prometheus-operator/clusterrolebinding.yaml
+    images:
+      - quay.io/prometheus/prometheus:v2.45.0
+      - quay.io/prometheus-operator/prometheus-config-reloader:v0.66.0

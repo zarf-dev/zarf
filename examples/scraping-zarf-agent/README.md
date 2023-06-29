@@ -1,6 +1,6 @@
 import ExampleYAML from "@site/src/components/ExampleYAML";
 
-# Hello Zarf Scrape Agent
+# Scrape Zarf Agent
 
 This example demonstrates how to scrape the Zarf Agent container image from the Prometheus Operator.
 
@@ -42,11 +42,28 @@ zarf package deploy
 
 # Choose the yolo package from the list
 ? Choose or type the package file [tab for suggestions]
-> zarf-package-hello-zarf-metrics-<ARCH>.tar.zst
+> zarf-package-scrape-zarf-agent-<ARCH>.tar.zst
 
 # Confirm the deployment
 ? Deploy this Zarf package? (y/N) [y]
 ```
+
+Wait for the `prometheus-k8s`'s StatefulSet's replicas to become ready:
+
+```bash
+zarf tools kubectl wait --for=jsonpath='{.status.availableReplicas}'=1  sts/prometheus-k8s -n monitoring --timeout=180s
+```
+
+Port-forward the Prometheus Operator's Prometheus instance:
+
+```bash
+zarf connect --name=prometheus-operated --namespace monitoring --remote-port 9090 --local-port=9090
+```
+
+Navigate to the [Prometheus UI targets](http://localhost:9090/targets) at http://localhost:9090/targets.
+
+Checkout metrics emitted by the Zarf Agent by querying against the `agent-hook` job. Click this [link](http://localhost:9090/graph?g0.expr=%7Bjob%3D%22agent-hook%22%7D&g0.tab=1&g0.stacked=0&g0.show_exemplars=0&g0.range_input=1h) to see the Zarf Agent metrics while port-forwarding.
+
 
 ## `zarf.yaml` {#zarf.yaml}
 
@@ -56,4 +73,4 @@ To view the example in its entirety, select the `Edit this page` link below the 
 
 :::
 
-<ExampleYAML example="yolo" showLink={false} />
+<ExampleYAML example="scraping-zarf-agent" showLink={false} />

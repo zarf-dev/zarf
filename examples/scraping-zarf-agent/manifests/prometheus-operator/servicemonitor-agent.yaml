@@ -4,18 +4,18 @@ metadata:
   labels:
     artifact: monitoring-agent-hook
   name: monitoring-agent-hook
-  namespace: default
+  namespace: monitoring
 spec:
   endpoints:
   - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     port: https
-    targetPort: 443
+    # targetPort: 443
     scheme: https
     tlsConfig:
       caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
       insecureSkipVerify: true
       # host name for the TLS handshake
-      serverName: agent-hook.zarf.svc.cluster.local 
+      serverName: agent-hook.zarf.svc
   jobLabel: zarf-agent
   namespaceSelector:
     matchNames:

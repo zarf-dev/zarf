@@ -2,7 +2,7 @@ kind: Prometheus
 apiVersion: monitoring.coreos.com/v1
 metadata:
   name: k8s
-  namespace: default
+  namespace: monitoring
 spec:
   serviceMonitorSelector: {}
   serviceMonitorNamespaceSelector: {}
