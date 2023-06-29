@@ -83,7 +83,7 @@ At this point, we can curl against the Prometheus API to ensure the Zarf Agent t
 
 ```bash
 # terminal 1
-$ kubectl port-forward svc/prometheus-operated 9090 -n monitoring
+$ zarf connect --name=prometheus-operated --namespace monitoring --remote-port 9090 --local-port=9090
 
 # terminal 2 
 $ curl http://localhost:9090/api/v1/targets | jq | grep -A 28 -B 10 '__meta_kubernetes_pod_name": "agent-hook'
