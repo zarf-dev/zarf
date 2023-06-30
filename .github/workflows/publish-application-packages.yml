@@ -1,4 +1,4 @@
-name: Zarf Injector Rust Binaries
+name: Zarf Application Package Publishing
 
 permissions:
   contents: read
@@ -7,11 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       branchName:
-        description: "Branch to build the injector from"
+        description: "Branch to build the packages from"
         required: true
+        default: "main"
 
 jobs:
-  build-injector:
+  publish-packages:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Repo"
@@ -25,9 +26,8 @@ jobs:
       - name: Setup NodeJS
         uses: ./.github/actions/node
 
-      - name: Build CLI
-        run: |
-          make build-cli-linux-amd
+      - name: Install The Latest Release Version of Zarf
+        uses: defenseunicorns/setup-zarf@main
 
       - name: "Login to GHCR"
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.1.0
