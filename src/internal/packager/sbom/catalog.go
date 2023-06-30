@@ -70,30 +70,52 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 	}
 	builder.jsonList = json
 
-	// Generate SBOM for each image
-	currImage := 1
+	// Generate SBOM for all images at once using goroutines
+
+	// Create channel for letting us know when an image's SBOM is done
+	imageProgress := make(chan string, len(imgList))
+
+	// Create channel for letting us know when there was an error generating an SBOM
+	imageError := make(chan error, len(imgList))
+
+	// Call a goroutine for each image
 	for _, tag := range imgList {
-		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
+		go func(currentTag string) {
+			// Get the image that we are creating an SBOM for
+			img, err := utils.LoadOCIImage(tmpPaths.Images, currentTag)
+			if err != nil {
+				builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
+				imageError <- err
+			}
 
-		// Get the image that we are creating an SBOM for
-		img, err := utils.LoadOCIImage(tmpPaths.Images, tag)
-		if err != nil {
+			// Generate the SBOM JSON for the given image
+			jsonData, err := builder.createImageSBOM(img, currentTag)
+			if err != nil {
+				builder.spinner.Errorf(err, "Unable to create SBOM for image %s", currentTag)
+				imageError <- err
+			}
+
+			// Create the SBOM viewer HTML for the given image
+			if err = builder.createSBOMViewerAsset(currentTag, jsonData); err != nil {
+				builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", currentTag)
+				imageError <- err
+			}
+			// Call the imageProgress channel to let us know that the SBOM generation is done for this image
+			imageProgress <- currentTag
+		}(tag)
+	}
+
+	// Wait for all images to be done generating SBOMs
+	for i := 0; i < len(imgList); i++ {
+		select {
+		// If there was an error generating an SBOM, write the error to the spinner
+		case err := <-imageError:
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
-			return err
+		// If there is a string in the imageProgress channel we know that an SBOM 
+		// was generated for an image and we can update the spinner
+		case tag := <-imageProgress:
+			builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", i, len(imgList), tag)
 		}
-
-		jsonData, err := builder.createImageSBOM(img, tag)
-		if err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", tag)
-			return err
-		}
-
-		if err = builder.createSBOMViewerAsset(tag, jsonData); err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", tag)
-			return err
-		}
-
-		currImage++
 	}
 
 	currComponent := 1
