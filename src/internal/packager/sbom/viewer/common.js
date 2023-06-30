@@ -9,14 +9,14 @@ const mailtoMaintainerReplace = `&nbsp;|&nbsp;&nbsp;<a href="mailto:$1">$1</a>`;
 
 document.body.appendChild(artifactsTable);
 
-function fileList(metadata) {
-	if (metadata) {
-		const list = (metadata.files || []).map((file) => file.path || '').filter((test) => test);
+function fileList(files, artifactName) {
+	if (files) {
+		const list = (files || []).map((file) => file.path || '').filter((test) => test);
 
 		if (list.length > 0) {
 			flatList = list.sort().join('<br>');
 			return `<a href="#" onClick="showModal('${
-				metadata.package || metadata.name
+				artifactName
 			}','${flatList}')">${list.length} files</a>`;
 		}
 	}
