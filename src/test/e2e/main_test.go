@@ -21,8 +21,9 @@ var (
 )
 
 const (
-	applianceModeEnvVar = "APPLIANCE_MODE"
-	skipK8sEnvVar       = "SKIP_K8S"
+	applianceModeEnvVar     = "APPLIANCE_MODE"
+	applianceModeKeepEnvVar = "APPLIANCE_MODE_KEEP"
+	skipK8sEnvVar           = "SKIP_K8S"
 )
 
 // TestMain lets us customize the test run. See https://medium.com/goingogo/why-use-testmain-for-testing-in-go-dafb52b406bc.
@@ -54,6 +55,7 @@ func doAllTheThings(m *testing.M) (int, error) {
 	e2e.Arch = config.GetArch()
 	e2e.ZarfBinPath = path.Join("build", test.GetCLIName())
 	e2e.ApplianceMode = os.Getenv(applianceModeEnvVar) == "true"
+	e2e.ApplianceModeKeep = os.Getenv(applianceModeKeepEnvVar) == "true"
 	e2e.RunClusterTests = os.Getenv(skipK8sEnvVar) != "true"
 
 	// Validate that the Zarf binary exists. If it doesn't that means the dev hasn't built it, usually by running

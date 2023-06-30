@@ -69,14 +69,13 @@ jobs:
         #       in a previous step. This test run will use this PR's Zarf to create a K3s cluster.
         # chown the logs since they were originally created as root
         run: |
-          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true APPLIANCE_MODE_KEEP=true make test-e2e ARCH=amd64
           sudo chown $USER /tmp/zarf-*.log
 
       - name: "Cleanup after running tests"
         # NOTE: This reduces disk pressure before the upgrade-specific tests begin
         run: |
           lsblk -f
-          sudo k3s crictl images
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe nodes
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe deployments -n=podinfo-upgrade
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
@@ -85,7 +84,6 @@ jobs:
           sudo env "PATH=$PATH" CI=true make delete-packages
           sudo build/zarf tools clear-cache
           sudo docker system prune --all --force
-          sudo k3s crictl rmi --prune
 
           lsblk -f
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe nodes
