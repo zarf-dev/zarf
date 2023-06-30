@@ -84,11 +84,8 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 	imageError := make(chan errorWithMessage, len(imgList))
 
 	// Call a goroutine for each image
-	for idx, tag := range imgList {
+	for _, tag := range imgList {
 		currentTag := tag
-		if idx == 3 || idx == 2 {
-			currentTag = currentTag + "54h3j5h43jk2l"
-		}
 		go func() {
 			// Get the image that we are creating an SBOM for
 			img, err := utils.LoadOCIImage(tmpPaths.Images, currentTag)
