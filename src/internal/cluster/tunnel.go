@@ -38,13 +38,12 @@ var globalMutex sync.Mutex
 
 // Zarf Tunnel Configuration Constants.
 const (
-	PodResource    = "pod"
-	SvcResource    = "svc"
-	ZarfRegistry   = "REGISTRY"
-	ZarfLogging    = "LOGGING"
-	ZarfGit        = "GIT"
-	ZarfInjector   = "INJECTOR"
-	ZarfPrometheus = "PROMETHEUS"
+	PodResource  = "pod"
+	SvcResource  = "svc"
+	ZarfRegistry = "REGISTRY"
+	ZarfLogging  = "LOGGING"
+	ZarfGit      = "GIT"
+	ZarfInjector = "INJECTOR"
 
 	// See https://regex101.com/r/OWVfAO/1.
 	serviceURLPattern = `^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`
@@ -206,10 +205,6 @@ func NewTunnel(namespace, resourceType, resourceName string, local, remote int) 
 	}, nil
 }
 
-func NewPrometheusTunnel() (*Tunnel, error) {
-	return NewTunnel(MonitoringNamespaceName, SvcResource, "prometheus-operator", 8888, 8080)
-}
-
 // NewZarfTunnel will create a new Tunnel struct for the Zarf namespace.
 func NewZarfTunnel() (*Tunnel, error) {
 	return NewTunnel(ZarfNamespaceName, SvcResource, "", 0, 0)
@@ -248,10 +243,6 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 	case ZarfInjector:
 		tunnel.resourceName = "zarf-injector"
 		tunnel.remotePort = 5000
-
-	case ZarfPrometheus:
-		tunnel.resourceName = "prometheus-operator"
-		tunnel.remotePort = 8888
 
 	default:
 		if target != "" {

@@ -23,7 +23,6 @@ import (
 // Zarf Cluster Constants.
 const (
 	ZarfNamespaceName       = "zarf"
-	MonitoringNamespaceName = "monitoring"
 	ZarfStateSecretName     = "zarf-state"
 	ZarfStateDataKey        = "state"
 	ZarfPackageInfoLabel    = "package-deploy-info"

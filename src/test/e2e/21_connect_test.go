@@ -55,6 +55,7 @@ func TestConnect(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 200, respLog.StatusCode)
 
+<<<<<<< HEAD
 	// Coonect to Prometheus
 	tunnelProm, err := cluster.NewPrometheusTunnel()
 	require.NoError(t, err)
@@ -70,4 +71,8 @@ func TestConnect(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
+=======
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+>>>>>>> parent of 5932a5a3 ([TEST] e2e test for Prometheus)
 }
