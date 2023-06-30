@@ -13,6 +13,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestPrometheus(t *testing.T) {
+	t.Log("E2E: Prometheus")
+	e2e.SetupWithCluster(t)
+
+	path := fmt.Sprintf("build/zarf-package-scrape-zarf-agent-%s.tar.zst", e2e.Arch)
+
+	// Deploy Prometheus
+	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// tunnel, err := cluster.NewTunnel("monitoring", "svc", "prometheus-operator", 8080, 8080)
+	tunnel, err := cluster.NewTunnel("monitoring", "svc", "", 8080, 0)
+	require.NoError(t, err)
+	err = tunnel.Connect("PROMETHEUS", false)
+	require.NoError(t, err)
+	defer tunnel.Close()
+
+	// Check that 'curl' returns something.
+	resp, err := http.Get(tunnel.HTTPEndpoint() + "/healthz")
+	require.NoError(t, err, resp)
+	require.Equal(t, 200, resp.StatusCode)
+
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "scrape-zarf-agent", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+}
 func TestDosGames(t *testing.T) {
 	t.Log("E2E: Dos games")
 	e2e.SetupWithCluster(t)

@@ -44,6 +44,7 @@ const (
 	ZarfLogging  = "LOGGING"
 	ZarfGit      = "GIT"
 	ZarfInjector = "INJECTOR"
+	Prometheus   = "PROMETHEUS"
 
 	// See https://regex101.com/r/OWVfAO/1.
 	serviceURLPattern = `^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`
@@ -243,6 +244,10 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 	case ZarfInjector:
 		tunnel.resourceName = "zarf-injector"
 		tunnel.remotePort = 5000
+
+	case Prometheus:
+		tunnel.resourceName = "prometheus-operator"
+		tunnel.remotePort = 8080
 
 	default:
 		if target != "" {

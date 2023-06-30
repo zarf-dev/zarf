@@ -39610,6 +39610,7 @@ metadata:
     app.kubernetes.io/component: controller
     app.kubernetes.io/name: prometheus-operator
     app.kubernetes.io/version: 0.66.0
+    zarf.dev/connect-name: prometheus
   name: prometheus-operator
   namespace: monitoring
 spec:
