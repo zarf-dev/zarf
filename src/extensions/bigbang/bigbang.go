@@ -147,37 +147,8 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 		maxTotalSeconds = defaultMaxTotalSeconds
 	}
 
-	// Add wait actions for each of the helm releases in generally the order they should be deployed.
-	for _, hrNamespacedName := range namespacedHelmReleaseNames {
-		hr := hrDependencies[hrNamespacedName]
-		action := types.ZarfComponentAction{
-			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hr.Metadata.Name),
-			MaxTotalSeconds: &maxTotalSeconds,
-			Wait: &types.ZarfComponentActionWait{
-				Cluster: &types.ZarfComponentActionWaitCluster{
-					Kind:       "HelmRelease",
-					Identifier: hr.Metadata.Name,
-					Namespace:  hr.Metadata.Namespace,
-					Condition:  "ready",
-				},
-			},
-		}
-
-		// In Big Bang the metrics-server is a special case that only deploy if needed.
-		// The check it, we need to look for the existence of APIService instead of the HelmRelease, which
-		// may not ever be created. See links below for more details.
-		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
-		if hr.Metadata.Name == "metrics-server" {
-			action.Description = "K8s metric server to exist or be deployed by Big Bang"
-			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
-				Kind: "APIService",
-				// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
-				Identifier: "v1beta1.metrics.k8s.io",
-			}
-		}
-
-		c.Actions.OnDeploy.OnSuccess = append(c.Actions.OnDeploy.OnSuccess, action)
-	}
+	suspendFluxResourcesBeforeDeploy(&c, namespacedHelmReleaseNames)
+	resumeFluxResourcesAfterDeploy(&c, namespacedHelmReleaseNames)
 
 	t := true
 	failureGeneral := []string{
@@ -522,4 +493,170 @@ func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []st
 	spinner.Success()
 
 	return images, err
+}
+
+// suspendFluxResourcesBeforeDeploy suspends the Big Bang GitRepo, HelmChart and related HelmReleases if they exist
+func suspendFluxResourcesBeforeDeploy(c *types.ZarfComponent, namespacedHelmReleaseNames []string) {
+	t := true
+	c.Actions.OnDeploy.Before = append(c.Actions.OnDeploy.Before, types.ZarfComponentAction{
+		Description: "Suspending bigbang GitRepo",
+		Cmd: fmt.Sprintf("./zarf tools kubectl patch gitrepo bigbang -n bigbang " +
+			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": true}]' || true"),
+		Mute: &t,
+	})
+
+	c.Actions.OnDeploy.Before = append(c.Actions.OnDeploy.Before, types.ZarfComponentAction{
+		Description: "Suspending bigbang-bigbang HelmChart",
+		Cmd: fmt.Sprintf("./zarf tools kubectl patch helmchart bigbang-bigbang -n bigbang " +
+			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": true}]' || true"),
+		Mute: &t,
+	})
+	c.Actions.OnDeploy.Before = append(c.Actions.OnDeploy.Before, types.ZarfComponentAction{
+		Description: "Suspending bigbang HelmRelease",
+		Cmd: fmt.Sprintf("./zarf tools kubectl patch helmrelease bigbang -n bigbang " +
+			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": true}]' || true"),
+		Mute: &t,
+	})
+
+	for _, hrNamespacedName := range namespacedHelmReleaseNames {
+		hrName := strings.Split(hrNamespacedName, "bigbang.")[1]
+		c.Actions.OnDeploy.Before = append(c.Actions.OnDeploy.Before, types.ZarfComponentAction{
+			Description: fmt.Sprintf("Suspending %s HelmRelease", hrName),
+			Cmd: fmt.Sprintf("./zarf tools kubectl patch helmrelease %s -n bigbang "+
+				"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": true}]' || true", hrName),
+			Mute: &t,
+		})
+	}
+}
+
+// resumeFluxResourcesAfterDeploy resumes the Big Bang GitRepo, HelmChart and related HelmReleases
+func resumeFluxResourcesAfterDeploy(c *types.ZarfComponent, namespacedHelmReleaseNames []string) {
+	t := true
+	maxTotalSeconds := 10 * 60 // 10 minutes
+	maxRetries := 3
+	ns := "bigbang"
+
+	//c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
+	//	Description: "Resuming bigbang GitRepo",
+	//	Cmd: fmt.Sprintf("./zarf tools kubectl patch gitrepo bigbang -n bigbang " +
+	//		"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'"),
+	//	Mute:       &t,
+	//	MaxRetries: &maxRetries,
+	//})
+
+	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
+		Description: "Resuming bigbang GitRepo",
+		Cmd: "./zarf tools kubectl patch gitrepo bigbang -n bigbang --type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'\n" +
+			"GENERATION=$(./zarf tools kubectl get gitrepo bigbang -n bigbang -o jsonpath={.metadata.generation})\n" +
+			"./zarf tools kubectl wait gitrepo bigbang -n bigbang --for jsonpath={.status.conditions[0].observedGeneration}=$GENERATION\n",
+		Mute:       &t,
+		MaxRetries: &maxRetries,
+	})
+
+	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
+		Description:     fmt.Sprintf("Big Bang GitRepository to be ready"),
+		MaxTotalSeconds: &maxTotalSeconds,
+		Wait: &types.ZarfComponentActionWait{
+			Cluster: &types.ZarfComponentActionWaitCluster{
+				Kind:       "GitRepository",
+				Identifier: "bigbang",
+				Namespace:  ns,
+				Condition:  "ready",
+			},
+		},
+	})
+
+	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
+		Description: "Resuming bigbang HelmRelease",
+		Cmd: fmt.Sprintf("./zarf tools kubectl patch helmrelease bigbang -n bigbang " +
+			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'"),
+		Mute:       &t,
+		MaxRetries: &maxRetries,
+	})
+
+	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
+		Description: "Resuming bigbang-bigbang HelmChart",
+		Cmd: fmt.Sprintf("./zarf tools kubectl patch helmchart bigbang-bigbang -n bigbang " +
+			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'"),
+		Mute:       &t,
+		MaxRetries: &maxRetries,
+	})
+
+	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
+		Description:     fmt.Sprintf("Big Bang HelmChart to be ready"),
+		MaxTotalSeconds: &maxTotalSeconds,
+		MaxRetries:      &maxRetries,
+		Wait: &types.ZarfComponentActionWait{
+			Cluster: &types.ZarfComponentActionWaitCluster{
+				Kind:       "HelmChart",
+				Identifier: "bigbang-bigbang",
+				Namespace:  ns,
+				Condition:  "ready",
+			},
+		},
+	})
+
+	// Need to cycle HelmRelease again, see: https://github.com/fluxcd/flux2/issues/937#issuecomment-971590425
+	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
+		Description: "Cycle bigbang HelmRelease",
+		Cmd: fmt.Sprintf("./zarf tools kubectl patch helmrelease bigbang -n bigbang " +
+			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": true}]' && " +
+			"./zarf tools kubectl patch helmrelease bigbang -n bigbang " +
+			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'"),
+		Mute:       &t,
+		MaxRetries: &maxRetries,
+	})
+
+	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
+		Description:     fmt.Sprintf("Big Bang HelmRelease to be ready"),
+		MaxTotalSeconds: &maxTotalSeconds,
+		MaxRetries:      &maxRetries,
+		Wait: &types.ZarfComponentActionWait{
+			Cluster: &types.ZarfComponentActionWaitCluster{
+				Kind:       "HelmRelease",
+				Identifier: "bigbang",
+				Namespace:  ns,
+				Condition:  "ready",
+			},
+		},
+	})
+
+	for _, hrNamespacedName := range namespacedHelmReleaseNames {
+		hrName := strings.Split(hrNamespacedName, "bigbang.")[1]
+		c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
+			Description: fmt.Sprintf("Resuming %s HelmRelease", hrName),
+			Cmd: fmt.Sprintf("./zarf tools kubectl patch helmrelease %s -n bigbang "+
+				"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'", hrName),
+			Mute:       &t,
+			MaxRetries: &maxRetries,
+		})
+
+		waitAction := types.ZarfComponentAction{
+			Description:     fmt.Sprintf("%s HelmRelease to be ready", hrName),
+			MaxTotalSeconds: &maxTotalSeconds,
+			Wait: &types.ZarfComponentActionWait{
+				Cluster: &types.ZarfComponentActionWaitCluster{
+					Kind:       "HelmRelease",
+					Identifier: hrName,
+					Namespace:  ns,
+					Condition:  "ready",
+				},
+			},
+		}
+
+		// In Big Bang the metrics-server is a special case that only deploy if needed.
+		// The check it, we need to look for the existence of APIService instead of the HelmRelease, which
+		// may not ever be created. See links below for more details.
+		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
+		if hrName == "metrics-server" {
+			waitAction.Description = "K8s metric server to exist or be deployed by Big Bang"
+			waitAction.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
+				Kind: "APIService",
+				// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
+				Identifier: "v1beta1.metrics.k8s.io",
+			}
+		}
+
+		c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, waitAction)
+	}
 }
