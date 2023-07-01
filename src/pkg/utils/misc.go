@@ -7,8 +7,19 @@ package utils
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 )
+
+func IsJSONPathWaitType(condition string) bool {
+	if len(condition) < 2 {
+		return false
+	} else if condition[0] != '{' || !strings.Contains(condition, "=") || !strings.Contains(condition, "}") {
+		return false
+	}
+
+	return true
+}
 
 // Unique returns a new slice with only unique elements.
 func Unique[T comparable](s []T) (r []T) {

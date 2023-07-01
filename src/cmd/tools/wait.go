@@ -25,6 +25,7 @@ import (
 var (
 	waitTimeout   string
 	waitNamespace string
+	waitType      string
 )
 
 var waitForCmd = &cobra.Command{
@@ -48,6 +49,13 @@ var waitForCmd = &cobra.Command{
 		condition := ""
 		if len(args) > 2 {
 			condition = args[2]
+		}
+
+		// Check if waitType is JSONPath or condition
+		if utils.IsJSONPathWaitType(condition) {
+			waitType = "jsonpath="
+		} else {
+			waitType = "condition="
 		}
 
 		// Handle network endpoints.
@@ -83,6 +91,7 @@ var waitForCmd = &cobra.Command{
 		conditionMsg := fmt.Sprintf("Waiting for %s%s%s to be %s.", kind, identifierMsg, namespaceMsg, condition)
 		existMsg := fmt.Sprintf("Waiting for %s%s%s to exist.", kind, identifierMsg, namespaceMsg)
 		spinner := message.NewProgressSpinner(existMsg)
+
 		defer spinner.Stop()
 
 		for {
@@ -112,7 +121,7 @@ var waitForCmd = &cobra.Command{
 				spinner.Updatef(conditionMsg)
 				// Wait for the resource to meet the given condition.
 				args = []string{"tools", "kubectl", "wait", "-n", waitNamespace,
-					kind, identifier, "--for", "condition=" + condition,
+					kind, identifier, "--for", waitType + condition,
 					"--timeout=" + waitTimeout}
 
 				// If there is an error, log it and try again.
