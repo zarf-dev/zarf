@@ -5,7 +5,7 @@ import TabItem from '@theme/TabItem';
 
 # Package Components
 
-:::warning
+:::note
 
 The following examples are not all-inclusive and are only meant to showcase the different types of resources that can be defined in a component. For a full list of fields and their options, please see the [component schema documentation](4-zarf-schema.md#components).
 
@@ -47,10 +47,10 @@ Can be:
 
 <Tabs queryString="file-examples">
 <TabItem value="Local">
-<ExampleYAML example="component-actions" component="on-deploy-with-template-use-of-variable" />
+<ExampleYAML src={require('../../examples/component-actions/zarf.yaml')} component="on-deploy-with-template-use-of-variable" />
 </TabItem>
 <TabItem value="Remote with SHA sums">
-<ExampleYAML example="distros/k3s" component="k3s" rootFolder="packages" />
+<ExampleYAML src={require('../../packages/distros/k3s/zarf.yaml')} component="k3s" />
 </TabItem>
 </Tabs>
 
@@ -71,13 +71,13 @@ Can be when using the `url` key:
 
 <Tabs queryString="chart-examples">
 <TabItem value="localPath">
-<ExampleYAML example="helm-charts" component="demo-helm-local-chart" />
+<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-local-chart" />
 </TabItem>
 <TabItem value="URL (git)">
-<ExampleYAML example="helm-charts" component="demo-helm-git-chart" />
+<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-git-chart" />
 </TabItem>
 <TabItem value="URL (oci)">
-<ExampleYAML example="helm-charts" component="demo-helm-oci-chart" />
+<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-oci-chart" />
 </TabItem>
 </Tabs>
 
@@ -98,10 +98,10 @@ Can be when using the `kustomizations` key:
 
 <Tabs queryString="manifest-examples">
 <TabItem value="Local">
-<ExampleYAML example="manifests" component="httpd-local" />
+<ExampleYAML src={require('../../examples/manifests/zarf.yaml')} component="httpd-local" />
 </TabItem>
 <TabItem value="Remote">
-<ExampleYAML example="manifests" component="nginx-remote" />
+<ExampleYAML src={require('../../examples/manifests/zarf.yaml')} component="nginx-remote" />
 </TabItem>
 <TabItem value="Kustomizations">
 
@@ -111,7 +111,7 @@ Kustomizations are handled a bit differently than normal manifests in that Zarf 
 
 :::
 
-<ExampleYAML example="manifests" component="podinfo-kustomize" />
+<ExampleYAML src={require('../../examples/manifests/zarf.yaml')} component="podinfo-kustomize" />
 </TabItem>
 </Tabs>
 
@@ -129,7 +129,7 @@ Images can either be discovered manually, or automatically by using [`zarf prepa
 
 #### Image Examples
 
-<ExampleYAML example="podinfo-flux" component="flux" />
+<ExampleYAML src={require('../../examples/podinfo-flux/zarf.yaml')} component="flux" />
 
 ### Git Repositories
 
@@ -143,16 +143,16 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 
 <Tabs queryString="git-repo-examples">
 <TabItem value="Full Mirror">
-<ExampleYAML example="git-data" component="full-repo" />
+<ExampleYAML src={require('../../examples/git-data/zarf.yaml')} component="full-repo" />
 </TabItem>
 <TabItem value="Specific Tag">
-<ExampleYAML example="git-data" component="specific-tag" />
+<ExampleYAML src={require('../../examples/git-data/zarf.yaml')} component="specific-tag" />
 </TabItem>
 <TabItem value="Specific Branch">
-<ExampleYAML example="git-data" component="specific-branch" />
+<ExampleYAML src={require('../../examples/git-data/zarf.yaml')} component="specific-branch" />
 </TabItem>
 <TabItem value="Specific Hash">
-<ExampleYAML example="git-data" component="specific-hash" />
+<ExampleYAML src={require('../../examples/git-data/zarf.yaml')} component="specific-hash" />
 </TabItem>
 </Tabs>
 
@@ -160,7 +160,7 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 
 <Properties item="ZarfComponent" include={["dataInjections"]} />
 
-<ExampleYAML example="kiwix" component="kiwix-serve" />
+<ExampleYAML src={require('../../examples/kiwix/zarf.yaml')} component="kiwix-serve" />
 
 ### Component Imports
 
@@ -168,10 +168,10 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 
 <Tabs queryString="import-examples">
 <TabItem value="Local Path">
-<ExampleYAML example="composable-packages" component="local-games-path" />
+<ExampleYAML src={require('../../examples/composable-packages/zarf.yaml')} component="local-games-path" />
 </TabItem>
 <TabItem value="OCI URL">
-<ExampleYAML example="composable-packages" component="oci-wordpress-url" />
+<ExampleYAML src={require('../../examples/composable-packages/zarf.yaml')} component="oci-wordpress-url" />
 </TabItem>
 </Tabs>
 
@@ -187,7 +187,7 @@ This process will also merge `variables` and `constants` defined in the imported
 
 <Properties item="ZarfComponent" include={["extensions"]} />
 
-<ExampleYAML example="big-bang" component="bigbang" />
+<ExampleYAML src={require('../../examples/big-bang/zarf.yaml')} component="bigbang" />
 
 ## Deploying Components
 
