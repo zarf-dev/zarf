@@ -46,8 +46,8 @@ Can be:
 #### File Examples
 
 <Tabs queryString="file-examples">
-<TabItem value="Local and Remote">
-<ExampleYAML example="terraform" component="download-terraform" />
+<TabItem value="Local">
+<ExampleYAML example="component-actions" component="on-deploy-with-template-use-of-variable" />
 </TabItem>
 <TabItem value="Remote with SHA sums">
 <ExampleYAML example="distros/k3s" component="k3s" rootFolder="packages" />
