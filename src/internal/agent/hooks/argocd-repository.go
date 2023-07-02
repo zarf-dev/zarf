@@ -5,8 +5,10 @@
 package hooks
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/internal/agent/state"
@@ -17,29 +19,23 @@ import (
 	v1 "k8s.io/api/admission/v1"
 )
 
-type Source struct {
-	Path           string `json:"path"`
-	RepoURL        string `json:"repoURL,omitempty"`
-	TargetRevision string `json:"targetRevision,omitempty"`
-}
-
-type ArgoApplication struct {
-	Spec struct {
-		Source Source `json:"source"`
+type ArgoRepository struct {
+	Data struct {
+		URL string `json:"url"`
 	}
 }
 
-// NewApplicationMutationHook creates a new instance of the ArgoCD Application mutation hook.
-func NewApplicationMutationHook() operations.Hook {
-	message.Debug("hooks.NewApplicationMutationHook()")
+// NewRepositoryMutationHook creates a new instance of the ArgoCD Repository mutation hook.
+func NewRepositoryMutationHook() operations.Hook {
+	message.Debug("hooks.NewRepositoryMutationHook()")
 	return operations.Hook{
-		Create: mutateApplication,
-		Update: mutateApplication,
+		Create: mutateRepository,
+		Update: mutateRepository,
 	}
 }
 
 // mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
-func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err error) {
+func mutateRepository(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	var (
 		zarfState types.ZarfState
@@ -55,21 +51,26 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the ArgoCD Application", zarfState.GitServer.Address)
+	message.Debugf("Using the url of (%s) to mutate the ArgoCD Repository Secret", zarfState.GitServer.Address)
 
 	// parse to simple struct to read the git url
-	src := &ArgoApplication{}
+	src := &ArgoRepository{}
 
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
-	patchedURL := src.Spec.Source.RepoURL
+	decodedURL, err := base64.StdEncoding.DecodeString(src.Data.URL)
+	if err != nil {
+		message.Fatalf("Error decoding URL from Repository Secret %s", src.Data.URL)
+	}
+	src.Data.URL = string(decodedURL)
+	patchedURL := src.Data.URL
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
-	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
+	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different from the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
 	if isUpdate {
-		isPatched, err = utils.DoHostnamesMatch(zarfState.GitServer.Address, src.Spec.Source.RepoURL)
+		isPatched, err = utils.DoHostnamesMatch(zarfState.GitServer.Address, src.Data.URL)
 		if err != nil {
 			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}
@@ -80,14 +81,14 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
 		transformedURL, err := transform.GitTransformURL(zarfState.GitServer.Address, patchedURL, zarfState.GitServer.PushUsername)
 		if err != nil {
-			message.Warnf("Unable to transform the repoURL, using the original url we have: %s", patchedURL)
+			message.Warnf("Unable to transform the url, using the original url we have: %s", patchedURL)
 		}
 		patchedURL = transformedURL.String()
-		message.Debugf("original repoURL of (%s) got mutated to (%s)", src.Spec.Source.RepoURL, patchedURL)
+		message.Debugf("original url of (%s) got mutated to (%s)", src.Data.URL, patchedURL)
 	}
 
 	// Patch updates of the repo spec
-	patches = populateArgoPatchOperations(patchedURL)
+	patches = populateArgoRepositoryPatchOperations(patchedURL, zarfState.GitServer.PullPassword)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -95,10 +96,12 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 	}, nil
 }
 
-// Patch updates of the Argo source spec.
-func populateArgoPatchOperations(repoURL string) []operations.PatchOperation {
+// Patch updates of the Argo Repository Secret.
+func populateArgoRepositoryPatchOperations(repoURL string, zarfGitPullPassword string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
-	patches = append(patches, operations.ReplacePatchOperation("/spec/source/repoURL", repoURL))
+	patches = append(patches, operations.ReplacePatchOperation("/data/url", base64.StdEncoding.EncodeToString([]byte(repoURL))))
+	patches = append(patches, operations.ReplacePatchOperation("/data/username", base64.StdEncoding.EncodeToString([]byte(config.ZarfGitReadUser))))
+	patches = append(patches, operations.ReplacePatchOperation("/data/password", base64.StdEncoding.EncodeToString([]byte(zarfGitPullPassword))))
 
 	return patches
 }

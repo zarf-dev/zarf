@@ -21,6 +21,7 @@ func NewAdmissionServer(port string) *http.Server {
 	podsMutation := hooks.NewPodMutationHook()
 	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook()
 	argocdApplicationMutation := hooks.NewApplicationMutationHook()
+	argocdRepositoryMutation := hooks.NewRepositoryMutationHook()
 
 	// Routers
 	ah := newAdmissionHandler()
@@ -29,6 +30,7 @@ func NewAdmissionServer(port string) *http.Server {
 	mux.Handle("/mutate/pod", ah.Serve(podsMutation))
 	mux.Handle("/mutate/flux-gitrepository", ah.Serve(fluxGitRepositoryMutation))
 	mux.Handle("/mutate/argocd-application", ah.Serve(argocdApplicationMutation))
+	mux.Handle("/mutate/argocd-repository", ah.Serve(argocdRepositoryMutation))
 	mux.Handle("/metrics", promhttp.Handler())
 
 	return &http.Server{
