@@ -45,7 +45,7 @@ func Run(_ bool, arch string, _ types.ComponentPaths, c types.ZarfComponent) (ty
 	}
 
 	if c.Only.LocalOS == runtime.GOOS {
-		terraformGetCmd := fmt.Sprintf("%s/terraform%s get", terraformDst, fileExtension)
+		terraformGetCmd := fmt.Sprintf("%s/terraform%s get -update", terraformDst, fileExtension)
 		terraformGetAction := types.ZarfComponentAction{
 			Cmd: terraformGetCmd,
 			Dir: &c.Extensions.Terraform.Source,
