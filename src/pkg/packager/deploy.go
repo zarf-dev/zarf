@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -305,72 +306,74 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 	defer spinner.Stop()
 
 	for fileIdx, file := range component.Files {
-		spinner.Updatef("Loading %s", file.Target)
+		if file.LocalOS == "" || file.LocalOS == runtime.GOOS {
+			spinner.Updatef("Loading %s", file.Target)
 
-		fileLocation := filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
-		if utils.InvalidPath(fileLocation) {
-			fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
-		}
-
-		// If a shasum is specified check it again on deployment as well
-		if file.Shasum != "" {
-			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if shasum, _ := utils.GetCryptoHash(fileLocation, crypto.SHA256); shasum != file.Shasum {
-				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
-			}
-		}
-
-		// Replace temp target directory and home directory
-		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
-		file.Target = config.GetAbsHomePath(file.Target)
-
-		fileList := []string{}
-		if utils.IsDir(fileLocation) {
-			files, _ := utils.RecursiveFileList(fileLocation, nil, false)
-			fileList = append(fileList, files...)
-		} else {
-			fileList = append(fileList, fileLocation)
-		}
-
-		for _, subFile := range fileList {
-			// Check if the file looks like a text file
-			isText, err := utils.IsTextFile(subFile)
-			if err != nil {
-				message.Debugf("unable to determine if file %s is a text file: %s", subFile, err)
+			fileLocation := filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
+			if utils.InvalidPath(fileLocation) {
+				fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
 			}
 
-			// If the file is a text file, template it
-			if isText {
-				spinner.Updatef("Templating %s", file.Target)
-				if err := valueTemplate.Apply(component, subFile, true); err != nil {
-					return fmt.Errorf("unable to template file %s: %w", subFile, err)
+			// If a shasum is specified check it again on deployment as well
+			if file.Shasum != "" {
+				spinner.Updatef("Validating SHASUM for %s", file.Target)
+				if shasum, _ := utils.GetCryptoHash(fileLocation, crypto.SHA256); shasum != file.Shasum {
+					return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
 				}
 			}
-		}
 
-		// Copy the file to the destination
-		spinner.Updatef("Saving %s", file.Target)
-		err := utils.CreatePathAndCopy(fileLocation, file.Target)
-		if err != nil {
-			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
-		}
+			// Replace temp target directory and home directory
+			file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
+			file.Target = config.GetAbsHomePath(file.Target)
 
-		// Loop over all symlinks and create them
-		for _, link := range file.Symlinks {
-			spinner.Updatef("Adding symlink %s->%s", link, file.Target)
-			// Try to remove the filepath if it exists
-			_ = os.RemoveAll(link)
-			// Make sure the parent directory exists
-			_ = utils.CreateFilePath(link)
-			// Create the symlink
-			err := os.Symlink(file.Target, link)
-			if err != nil {
-				return fmt.Errorf("unable to create symlink %s->%s: %w", link, file.Target, err)
+			fileList := []string{}
+			if utils.IsDir(fileLocation) {
+				files, _ := utils.RecursiveFileList(fileLocation, nil, false)
+				fileList = append(fileList, files...)
+			} else {
+				fileList = append(fileList, fileLocation)
 			}
-		}
 
-		// Cleanup now to reduce disk pressure
-		_ = os.RemoveAll(fileLocation)
+			for _, subFile := range fileList {
+				// Check if the file looks like a text file
+				isText, err := utils.IsTextFile(subFile)
+				if err != nil {
+					message.Debugf("unable to determine if file %s is a text file: %s", subFile, err)
+				}
+
+				// If the file is a text file, template it
+				if isText {
+					spinner.Updatef("Templating %s", file.Target)
+					if err := valueTemplate.Apply(component, subFile, true); err != nil {
+						return fmt.Errorf("unable to template file %s: %w", subFile, err)
+					}
+				}
+			}
+
+			// Copy the file to the destination
+			spinner.Updatef("Saving %s", file.Target)
+			err := utils.CreatePathAndCopy(fileLocation, file.Target)
+			if err != nil {
+				return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
+			}
+
+			// Loop over all symlinks and create them
+			for _, link := range file.Symlinks {
+				spinner.Updatef("Adding symlink %s->%s", link, file.Target)
+				// Try to remove the filepath if it exists
+				_ = os.RemoveAll(link)
+				// Make sure the parent directory exists
+				_ = utils.CreateFilePath(link)
+				// Create the symlink
+				err := os.Symlink(file.Target, link)
+				if err != nil {
+					return fmt.Errorf("unable to create symlink %s->%s: %w", link, file.Target, err)
+				}
+			}
+
+			// Cleanup now to reduce disk pressure
+			_ = os.RemoveAll(fileLocation)
+		}
 	}
 
 	spinner.Success()
