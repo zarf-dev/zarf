@@ -12,7 +12,7 @@ import (
 )
 
 // Run mutates a component that should deploy Terraform
-func Run(YOLO bool, arch string, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Run(_ bool, arch string, _ types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	if c.Only.LocalOS == "" {
 		return c, fmt.Errorf("the terraform extension requires that you set only.localOS to pull the correct terraform binary for this system")
 	}
