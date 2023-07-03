@@ -20,17 +20,17 @@ func (b *Bundler) Inspect() error {
 	}
 
 	// pull the zarf-bundle.yaml + sig
-	if err := b.remote.PullBundleMetadata(b.FS.tmp.Base); err != nil {
+	if err := b.remote.PullBundleMetadata(b.tmp); err != nil {
 		return err
 	}
 
 	// validate the sig (if present)
-	if err := b.FS.ValidateBundleSignature(b.FS.tmp.Base); err != nil {
+	if err := b.ValidateBundleSignature(b.tmp); err != nil {
 		return err
 	}
 
 	// read the zarf-bundle.yaml into memory
-	if err := b.FS.ReadBundleYaml(b.FS.tmp.Base, &b.bundle); err != nil {
+	if err := b.ReadBundleYaml(b.tmp, &b.bundle); err != nil {
 		return err
 	}
 	// show the zarf-bundle.yaml

@@ -5,6 +5,8 @@
 package bundler
 
 import (
+	"os"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
@@ -15,11 +17,11 @@ func (b *Bundler) Create() error {
 	message.Infof("Creating bundle from %s", b.cfg.CreateOpts.SourceDirectory)
 
 	// cd into base
-	if err := b.FS.CD(b.cfg.CreateOpts.SourceDirectory); err != nil {
+	if err := os.Chdir(b.cfg.CreateOpts.SourceDirectory); err != nil {
 		return err
 	}
 	// read zarf-bundle.yaml into memory
-	if err := b.FS.ReadBundleYaml(config.ZarfBundleYAML, &b.bundle); err != nil {
+	if err := b.ReadBundleYaml(config.ZarfBundleYAML, &b.bundle); err != nil {
 		return err
 	}
 	// validate bundle / verify access to all repositories

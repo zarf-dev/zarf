@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -25,7 +26,7 @@ type Bundler struct {
 	cfg    *types.BundlerConfig
 	bundle types.ZarfBundle
 	remote *oci.OrasRemote
-	FS     BFS
+	tmp    string
 }
 
 // New creates a new Bundler
@@ -41,15 +42,16 @@ func New(cfg *types.BundlerConfig) (*Bundler, error) {
 	}
 
 	var (
-		err     error
 		bundler = &Bundler{
 			cfg: cfg,
 		}
 	)
 
-	if err = bundler.FS.MakeTemp(config.CommonOptions.TempDirectory); err != nil {
+	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
 		return nil, fmt.Errorf("bundler unable to create temp directory: %w", err)
 	}
+	bundler.tmp = tmp
 
 	return bundler, nil
 }
@@ -68,7 +70,22 @@ func NewOrDie(cfg *types.BundlerConfig) *Bundler {
 
 // ClearPaths clears out the paths used by Bundler
 func (b *Bundler) ClearPaths() {
-	b.FS.ClearPaths()
+	_ = os.RemoveAll(b.tmp)
+	_ = os.RemoveAll(config.ZarfSBOMDir)
+}
+
+// ReadBundleYaml is a wrapper around utils.ReadYaml
+func (b *Bundler) ReadBundleYaml(path string, bndl *types.ZarfBundle) error {
+	return utils.ReadYaml(path, bndl)
+}
+
+// ExtractPackage should extract a package from a bundle
+func (b *Bundler) ExtractPackage(name string, out string) error {
+	message.Infof("Extracting %s to %s", name, out)
+	return nil
+	// read the index.json from the bfs.SourceTarball
+	// get all the layers for the package
+	// extract the layers to the output directory
 }
 
 // ValidateBundle validates the bundle
@@ -96,17 +113,19 @@ func (b *Bundler) ValidateBundle() error {
 			// remote performs access verification upon instantiation
 			return err
 		}
-		err = remote.PullPackageMetadata(b.FS.tmp.Base)
+		err = remote.PullPackageMetadata(b.tmp)
 		if err != nil {
 			return err
 		}
-		defer b.FS.ClearPaths()
+		defer b.ClearPaths()
 		// TODO: validate signatures here
 		// TODO: are we gonna re-sign the packages within a bundle?
+		// not re-signing @wayne
 		requestedComponents := pkg.Components
 		if len(requestedComponents) > 0 {
 			zarfYAML := types.ZarfPackage{}
-			err := utils.ReadYaml(b.FS.tmp.ZarfYaml, &zarfYAML)
+			zarfYAMLPath := filepath.Join(b.tmp, config.ZarfYAML)
+			err := utils.ReadYaml(zarfYAMLPath, &zarfYAML)
 			if err != nil {
 				return err
 			}
@@ -121,6 +140,16 @@ func (b *Bundler) ValidateBundle() error {
 		}
 	}
 	return nil
+}
+
+// ValidateBundleSignature validates the bundle signature
+func (b *Bundler) ValidateBundleSignature(base string) error {
+	message.Infof("Validating bundle signature from %s/%s", base, config.ZarfYAMLSignature)
+	return nil
+	// err := utils.CosignVerifyBlob(bfs.tmp.ZarfBundleYaml, bfs.tmp.ZarfSig, <keypath>)
+	// if err != nil {
+	// 	return err
+	// }
 }
 
 // CalculateBuildInfo calculates the build info for the bundle
@@ -145,6 +174,7 @@ func (b *Bundler) CalculateBuildInfo() error {
 	b.bundle.Build.Terminal = hostname
 
 	// TODO: investigate the best way forward for determining arch
+	// follow p.arch
 	b.bundle.Metadata.Architecture = runtime.GOARCH
 	b.bundle.Build.Architecture = runtime.GOARCH
 

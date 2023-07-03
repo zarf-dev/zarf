@@ -76,7 +76,6 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 
 	// TODO: push + append the zarf-bundle.yaml to the layers, w/ proper path
 	// TODO: push + append the zarf-bundle.yaml.sig to the layers, w/ proper path
-	// TODO: strip the zarf.sig.yaml from each package + remove from checksums.txt + modify the zarf.yaml?
 	message.Debug("TODO: signing bundle w/ %s - %s", sigPath, sigPsswd)
 
 	manifest.Annotations = o.manifestAnnotationsFromMetadata(&bundle.Metadata)
