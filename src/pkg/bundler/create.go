@@ -34,7 +34,7 @@ func (b *Bundler) Create() error {
 	if err != nil {
 		return err
 	}
-	if err := b.SetOCIRemote(ref.String()); err != nil {
+	if err := b.SetOCIRemote(ref); err != nil {
 		return err
 	}
 

@@ -46,7 +46,7 @@ func (p *Packager) Create(baseDir string) error {
 		if err != nil {
 			return err
 		}
-		err = p.SetOCIRemote(ref.String())
+		err = p.SetOCIRemote(ref)
 		if err != nil {
 			return err
 		}

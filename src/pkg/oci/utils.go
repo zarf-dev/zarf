@@ -26,10 +26,10 @@ import (
 // prepending the provided prefix
 //
 // appending the provided suffix to the version
-func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata, suffix string) (*registry.Reference, error) {
+func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata, suffix string) (string, error) {
 	ver := metadata.Version
 	if len(ver) == 0 {
-		return nil, errors.New("version is required for publishing")
+		return "", errors.New("version is required for publishing")
 	}
 
 	if !strings.HasSuffix(registryLocation, "/") {
@@ -42,10 +42,10 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 
 	ref, err := registry.ParseReference(raw)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &ref, nil
+	return ref.String(), nil
 }
 
 // FetchRoot fetches the root manifest from the remote repository.

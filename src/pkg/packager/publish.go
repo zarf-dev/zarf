@@ -49,7 +49,7 @@ func (p *Packager) Publish() error {
 		return err
 	}
 
-	err = p.SetOCIRemote(ref.String())
+	err = p.SetOCIRemote(ref)
 	if err != nil {
 		return err
 	}
