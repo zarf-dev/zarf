@@ -241,7 +241,7 @@ const (
 	CmdPackageDeployFlagSet                    = "Specify deployment variables to set on the command line (KEY=value)"
 	CmdPackageDeployFlagComponents             = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
 	CmdPackageDeployFlagShasum                 = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
-	CmdPackageDeployFlagSget                   = "Path to public sget key file for remote packages signed via cosign"
+	CmdPackageDeployFlagSget                   = "(DEPRECATED) Path to public sget key file for remote packages signed via cosign. This flag will be removed in v0.29.0, please use the --key flag instead."
 	CmdPackageDeployFlagPublicKey              = "Path to public key file for validating signed packages"
 	CmdPackageDeployValidateArchitectureErr    = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
 	CmdPackageDeployErr                        = "Failed to deploy package: %s"
@@ -328,7 +328,7 @@ const (
 	CmdToolsRegistryCatalogExample = `
 	# list the repos internal to Zarf
 	$ zarf tools registry catalog
-  
+
 	# list the repos for reg.example.com
 	$ zarf tools registry catalog reg.example.com
 `
@@ -512,4 +512,9 @@ const (
 var (
 	ErrInitNotFound      = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
 	ErrUnableToCheckArch = errors.New("unable to get the configured cluster's architecture")
+)
+
+// Collection of reusable warn messages.
+var (
+	WarnSGetDeprecation = "Using sget to download resources is being deprecated and will removed in the v0.29.0 release of Zarf. Please use {@JPERRY} instead."
 )
