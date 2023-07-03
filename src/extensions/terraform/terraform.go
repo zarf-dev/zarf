@@ -55,8 +55,9 @@ func Run(_ bool, arch string, _ types.ComponentPaths, c types.ZarfComponent) (ty
 	}
 
 	terraformBinary := types.ZarfFile{
-		Source: fmt.Sprintf("%s/terraform%s", terraformDst, fileExtension),
-		Target: "~/.zarf/bin/terraform",
+		Source:     fmt.Sprintf("%s/terraform%s", terraformDst, fileExtension),
+		Target:     "~/.zarf/bin/terraform",
+		Executable: true,
 	}
 
 	terraformFiles := types.ZarfFile{
