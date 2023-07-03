@@ -1707,6 +1707,60 @@ Must be one of:
 </blockquote>
 </details>
 
+<details open>
+<summary>
+<strong> <a name="components_items_extensions_terraform"></a>terraform</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+  ## components > extensions > terraform
+
+**Description:** Configurations for installing and managing Terraform
+
+|                           |                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                 |
+| **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
+| **Defined in**            | #/definitions/Terraform                                                                                  |
+
+<details>
+<summary>
+<strong> <a name="components_items_extensions_terraform_source"></a>source</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The source directory containing your Terraform files
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_extensions_terraform_version"></a>version *</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+![Required](https://img.shields.io/badge/Required-red)
+
+**Description:** The version of Terraform to install (if specified)
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 

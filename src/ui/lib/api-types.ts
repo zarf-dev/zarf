@@ -671,6 +671,10 @@ export interface ZarfComponentExtensions {
      * Configurations for installing Big Bang and Flux in the cluster
      */
     bigbang?: BigBang;
+    /**
+     * Configurations for installing and managing Terraform
+     */
+    terraform?: Terraform;
 }
 
 /**
@@ -691,6 +695,20 @@ export interface BigBang {
     valuesFiles?: string[];
     /**
      * The version of Big Bang to use
+     */
+    version: string;
+}
+
+/**
+ * Configurations for installing and managing Terraform
+ */
+export interface Terraform {
+    /**
+     * The source directory containing your Terraform files
+     */
+    source?: string;
+    /**
+     * The version of Terraform to install (if specified)
      */
     version: string;
 }
@@ -1555,11 +1573,16 @@ const typeMap: any = {
     ], false),
     "ZarfComponentExtensions": o([
         { json: "bigbang", js: "bigbang", typ: u(undefined, r("BigBang")) },
+        { json: "terraform", js: "terraform", typ: u(undefined, r("Terraform")) },
     ], false),
     "BigBang": o([
         { json: "repo", js: "repo", typ: u(undefined, "") },
         { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
+        { json: "version", js: "version", typ: "" },
+    ], false),
+    "Terraform": o([
+        { json: "source", js: "source", typ: u(undefined, "") },
         { json: "version", js: "version", typ: "" },
     ], false),
     "ZarfFile": o([

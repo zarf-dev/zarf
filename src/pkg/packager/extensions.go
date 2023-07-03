@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
+	"github.com/defenseunicorns/zarf/src/extensions/terraform"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -27,8 +28,15 @@ func (p *Packager) processExtensions() error {
 
 		// Big Bang
 		if c.Extensions.BigBang != nil {
-			if c, err = bigbang.Run(p.cfg.Pkg.Metadata.YOLO, componentPaths, c); err != nil {
+			if c, err = bigbang.Run(p.cfg.Pkg.Metadata.YOLO, p.arch, componentPaths, c); err != nil {
 				return fmt.Errorf("unable to process bigbang extension: %w", err)
+			}
+		}
+
+		// Terraform
+		if c.Extensions.Terraform != nil {
+			if c, err = terraform.Run(p.cfg.Pkg.Metadata.YOLO, p.arch, componentPaths, c); err != nil {
+				return fmt.Errorf("unable to process terraform extension: %w", err)
 			}
 		}
 

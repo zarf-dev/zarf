@@ -39,7 +39,7 @@ var tenMins = metav1.Duration{
 
 // Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
-func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Run(YOLO bool, arch string, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	var err error
 	if err := utils.CreateDirectory(tmpPaths.Temp, 0700); err != nil {
 		return c, fmt.Errorf("unable to component temp directory: %w", err)

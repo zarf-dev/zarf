@@ -69,6 +69,23 @@
       "additionalProperties": false,
       "type": "object"
     },
+    "Terraform": {
+      "required": [
+        "version"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "The source directory containing your Terraform files"
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of Terraform to install (if specified)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "ZarfBuildData": {
       "required": [
         "terminal",
@@ -627,6 +644,11 @@
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/BigBang",
           "description": "Configurations for installing Big Bang and Flux in the cluster"
+        },
+        "terraform": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/Terraform",
+          "description": "Configurations for installing and managing Terraform"
         }
       },
       "additionalProperties": false,

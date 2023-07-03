@@ -8,4 +8,6 @@ package extensions
 type ZarfComponentExtensions struct {
 	// Big Bang Configurations
 	BigBang *BigBang `json:"bigbang,omitempty" jsonschema:"description=Configurations for installing Big Bang and Flux in the cluster"`
+	// Terraform Configurations
+	Terraform *Terraform `json:"terraform,omitempty" jsonschema:"description=Configurations for installing and managing Terraform"`
 }

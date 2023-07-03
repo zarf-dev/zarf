@@ -393,6 +393,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 			}
 		} else {
+			file.Source = config.GetAbsHomePath(file.Source)
 			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
 				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
 			}
