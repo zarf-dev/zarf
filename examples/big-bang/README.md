@@ -21,7 +21,7 @@ To view the example in its entirety, select the `Edit this page` link below the 
 
 :::
 
-<ExampleYAML example="big-bang" showLink={false} />
+<ExampleYAML src={require('./zarf.yaml')} showLink={false} />
 
 :::caution
 
@@ -41,4 +41,4 @@ To view the example in its entirety, select the `Edit this page` link below the 
 
 :::
 
-<ExampleYAML example="big-bang/yolo" showLink={false} />
+<ExampleYAML src={require('./yolo/zarf.yaml')} showLink={false} />
