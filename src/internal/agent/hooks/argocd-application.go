@@ -18,9 +18,7 @@ import (
 )
 
 type Source struct {
-	Path           string `json:"path"`
-	RepoURL        string `json:"repoURL,omitempty"`
-	TargetRevision string `json:"targetRevision,omitempty"`
+	RepoURL        string `json:"repoURL"`
 }
 
 type ArgoApplication struct {
