@@ -152,7 +152,7 @@ func init() {
 	bundleCreateCmd.Flags().StringToStringVarP(&bndlConfig.CreateOpts.SetVariables, "set", "s", v.GetStringMapString(V_BNDL_CREATE_SET), lang.CmdBundleCreateFlagSet)
 
 	bundleCmd.AddCommand(bundleDeployCmd)
-	bundleDeployCmd.Flags().StringSliceVarP(&bndlConfig.DeployOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_DEPLOY_PACKAGES), lang.CmdBundleDeployFlagPackage)
+	bundleDeployCmd.Flags().StringSliceVarP(&bndlConfig.DeployOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_DEPLOY_PACKAGES), lang.CmdBundleDeployFlagPackages)
 	bundleDeployCmd.Flags().StringToStringVarP(&bndlConfig.DeployOpts.SetVariables, "set", "s", v.GetStringMapString(V_BNDL_DEPLOY_SET), lang.CmdBundleDeployFlagSet)
 
 	bundleCmd.AddCommand(bundleInspectCmd)
@@ -166,6 +166,6 @@ func init() {
 
 	bundleCmd.AddCommand(bundlePullCmd)
 	bundlePullCmd.Flags().StringVarP(&bndlConfig.PullOpts.OutputDirectory, "output", "o", v.GetString(V_BNDL_PULL_OUTPUT), lang.CmdBundlePullFlagOutput)
-	bundlePullCmd.Flags().StringSliceP(&bndlConfig.PullOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_PULL_PACKAGES), lang.CmdBundlePullFlagPackage)
+	bundlePullCmd.Flags().StringSliceVarP(&bndlConfig.PullOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_PULL_PACKAGES), lang.CmdBundlePullFlagPackages)
 	bundlePullCmd.Flags().StringVarP(&bndlConfig.PullOpts.PublicKey, "key", "k", v.GetString(V_BNDL_PULL_KEY), lang.CmdBundlePullFlagKey)
 }

@@ -248,15 +248,27 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdBundleShort           = "Zarf commands for creating, deploying, removing, pulling, and inspecting bundles"
 	CmdBundleFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote bundle."
 
-	CmdBundleCreateShort = "Create a Zarf bundle from a given directory or the current directory"
+	CmdBundleCreateShort                  = "Create a Zarf bundle from a given directory or the current directory"
+	CmdBundleCreateFlagOutput             = "Specify the output (an oci:// URL) for the created Zarf bundle"
+	CmdBundleCreateFlagSigningKey         = "Path to private key file for signing bundles"
+	CmdBundleCreateFlagSigningKeyPassword = "Password to the private key file used for signing bundles"
+	CmdBundleCreateFlagSet                = "Specify package variables to set on the command line (KEY=value)"
 
-	CmdBundleDeployShort = "Deploy a Zarf bundle from a local file or URL (runs offline)"
+	CmdBundleDeployShort        = "Deploy a Zarf bundle from a local file or URL (runs offline)"
+	CmdBundleDeployFlagPackages = "Specify the package(s) to deploy from the bundle.  E.g. packages=cluster-init,bigbang"
+	CmdBundleDeployFlagSet      = "Specify deployment variables to set on the command line (KEY=value)"
 
-	CmdBundleInspectShort = "Display the zarf.yaml of a compiled Zarf bundle (runs offline)"
+	CmdBundleInspectShort   = "Display the zarf.yaml of a compiled Zarf bundle (runs offline)"
+	CmdBundleInspectFlagKey = "Path to a public key file that will be used to validate a signed bundle"
 
-	CmdBundleRemoveShort = "Remove a Zarf bundle or sub-packages that have been deployed already"
+	CmdBundleRemoveShort        = "Remove a Zarf bundle or sub-packages that have been deployed already"
+	CmdBundleRemoveFlagConfirm  = "REQUIRED. Confirm the removal action to prevent accidental deletions"
+	CmdBundleRemoveFlagPackages = "Specify the package(s) to remove from the bundle.  E.g. packages=cluster-init,bigbang"
 
-	CmdBundlePullShort = "Pull a Zarf bundle from a remote reigstry and save to the local file system"
+	CmdBundlePullShort        = "Pull a Zarf bundle from a remote reigstry and save to the local file system"
+	CmdBundlePullFlagOutput   = "Specify the output directory for the pulled Zarf bundle"
+	CmdBundlePullFlagPackages = "Specify the package(s) to pull from the bundle.  E.g. packages=cluster-init,bigbang"
+	CmdBundlePullFlagKey      = "Path to a public key file that will be used to validate a signed bundle"
 
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"
