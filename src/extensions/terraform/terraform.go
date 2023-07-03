@@ -19,7 +19,7 @@ func Run(_ bool, arch string, _ types.ComponentPaths, c types.ZarfComponent) (ty
 
 	terraformVersion := c.Extensions.Terraform.Version
 	terraformFilePath := fmt.Sprintf("terraform_%s_%s_%s", terraformVersion, c.Only.LocalOS, arch)
-	terraformUrl := fmt.Sprintf("https://releases.hashicorp.com/terraform/%s/%s.zip", terraformVersion, terraformFilePath)
+	terraformURL := fmt.Sprintf("https://releases.hashicorp.com/terraform/%s/%s.zip", terraformVersion, terraformFilePath)
 	terraformDst := fmt.Sprintf("~/.zarf-cache/bin/%s", terraformFilePath)
 
 	prepareCmd := fmt.Sprintf("rm -r -f %s %s.zip && mkdir -p ~/.zarf-cache/bin", terraformDst, terraformDst)
@@ -27,7 +27,7 @@ func Run(_ bool, arch string, _ types.ComponentPaths, c types.ZarfComponent) (ty
 		Cmd: prepareCmd,
 	}
 
-	downloadCmd := fmt.Sprintf("curl %s -o %s.zip", terraformUrl, terraformDst)
+	downloadCmd := fmt.Sprintf("curl %s -o %s.zip", terraformURL, terraformDst)
 	downloadAction := types.ZarfComponentAction{
 		Cmd: downloadCmd,
 	}
@@ -39,19 +39,19 @@ func Run(_ bool, arch string, _ types.ComponentPaths, c types.ZarfComponent) (ty
 
 	c.Actions.OnCreate.Before = append(c.Actions.OnCreate.Before, prepareAction, downloadAction, decompressAction)
 
+	fileExtension := ""
+	if c.Only.LocalOS == "windows" {
+		fileExtension = ".exe"
+	}
+
 	if c.Only.LocalOS == runtime.GOOS {
-		terraformGetCmd := fmt.Sprintf("%s/terraform get", terraformDst)
+		terraformGetCmd := fmt.Sprintf("%s/terraform%s get", terraformDst, fileExtension)
 		terraformGetAction := types.ZarfComponentAction{
 			Cmd: terraformGetCmd,
 			Dir: &c.Extensions.Terraform.Source,
 		}
 
 		c.Actions.OnCreate.Before = append(c.Actions.OnCreate.Before, terraformGetAction)
-	}
-
-	fileExtension := ""
-	if c.Only.LocalOS == "windows" {
-		fileExtension = ".exe"
 	}
 
 	terraformBinary := types.ZarfFile{
