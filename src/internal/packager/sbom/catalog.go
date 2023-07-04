@@ -72,7 +72,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 
 	// Generate SBOM for all images at once using goroutines
 	// Use the ConcurrencyTools part of the utils package to help with concurrency
-	imageSBOMConcurrency := utils.NewConcurrencyTools[string](len(imgList))
+	imageSBOMConcurrency := utils.NewConcurrencyTools[string, message.ErrorWithMessage](len(imgList))
 
 	// Make sure cancel is always called
 	defer imageSBOMConcurrency.Cancel()
@@ -148,7 +148,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 	builder.spinner.Updatef("Creating component file SBOMs (0 of %d)", len(componentSBOMs))
 
 	// Use the ConcurrencyTools part of the utils package to help with concurrency
-	fileSBOMConcurrency := utils.NewConcurrencyTools[string](len(componentSBOMs))
+	fileSBOMConcurrency := utils.NewConcurrencyTools[string, message.ErrorWithMessage](len(componentSBOMs))
 
 	for component := range componentSBOMs {
 		currentComponent := component
