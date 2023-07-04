@@ -13,18 +13,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// Copier is a struct for copying descriptors between OCI registries
-type Copier struct {
-	src *OrasRemote
-	dst *OrasRemote
-}
-
 // CopyPackage copies a package from one OCI registry to another
-func (c *Copier) CopyPackage(concurrency int) error {
+func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 	// make a new context and apply it to both remotes
 	ctx := context.TODO()
 
-	srcRoot, err := c.src.FetchRoot()
+	srcRoot, err := src.FetchRoot()
 	if err != nil {
 		return err
 	}
@@ -36,8 +30,9 @@ func (c *Copier) CopyPackage(concurrency int) error {
 		size += layer.Size
 	}
 
-	title := fmt.Sprintf("Copying from %s to %s", c.src.Reference, c.dst.Reference)
+	title := fmt.Sprintf("Copying from %s to %s", src.Reference, dst.Reference)
 	progressBar := message.NewProgressBar(size, title)
+	defer progressBar.Successf("Finished copying from %s to %s", src.Reference, dst.Reference)
 
 	// TODO: goroutine this w/ semaphores
 	for _, layer := range layers {
@@ -47,7 +42,7 @@ func (c *Copier) CopyPackage(concurrency int) error {
 		wg.Add(2)
 
 		// fetch the layer from the source
-		rc, err := c.src.Fetch(ctx, layer)
+		rc, err := src.Fetch(ctx, layer)
 		if err != nil {
 			return err
 		}
@@ -61,7 +56,7 @@ func (c *Copier) CopyPackage(concurrency int) error {
 
 			// get data from the TeeReader and push it to the destination
 			// push the layer to the destination
-			err = c.dst.Push(ctx, layer, tr)
+			err = dst.Push(ctx, layer, tr)
 			if err != nil {
 				message.Fatal(err, "failed to push layer")
 			}

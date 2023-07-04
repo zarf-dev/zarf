@@ -13,7 +13,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
@@ -50,11 +49,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 		// stream copy the blobs from remote to o, otherwise do a blob mount
 		if remote.Reference.Registry != o.Reference.Registry {
 			message.Infof("Streaming layers from %s --> %s", remote.Reference, o.Reference)
-			copier := oci.Copier{
-				Source:      remote,
-				Destination: o,
-			}
-			if err := copier.CopyPackage(config.CommonOptions.OCIConcurrency); err != nil {
+			if err := CopyPackage(remote, o, config.CommonOptions.OCIConcurrency); err != nil {
 				return err
 			}
 		} else {
