@@ -148,7 +148,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 	builder.spinner.Updatef("Creating component file SBOMs (0 of %d)", len(componentSBOMs))
 
 	// Use the ConcurrencyTools part of the utils package to help with concurrency
-	fileSBOMConcurrency := utils.NewConcurrencyTools[string](len(imgList))
+	fileSBOMConcurrency := utils.NewConcurrencyTools[string](len(componentSBOMs))
 
 	for component := range componentSBOMs {
 		currentComponent := component
