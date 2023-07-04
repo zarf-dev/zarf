@@ -61,9 +61,11 @@ func (b *Bundler) Create() error {
 
 // adapted from p.confirmAction
 func (b *Bundler) confirmBundleCreation() (confirm bool) {
-	message.HorizontalRule()
-	message.Title("Bundle Configuration", "the bundle configuration that defines this bundle")
-	utils.ColorPrintYAML(b.bundle)
+
+	pterm.Println()
+	message.HeaderInfof("🎁 BUNDLE DEFINITION")
+	utils.ColorPrintYAML(b.bundle, nil, true)
+
 	message.HorizontalRule()
 
 	// Display prompt if not auto-confirmed
