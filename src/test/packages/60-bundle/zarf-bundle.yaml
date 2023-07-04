@@ -6,7 +6,7 @@ metadata:
 
 packages:
   - repository: localhost:888/init
-    ref: "###ZARF_BNDL_TMPL_VERSION###"
+    ref: "###ZARF_BNDL_TMPL_INIT_VERSION###"
     components:
       - k3s
       - injector
