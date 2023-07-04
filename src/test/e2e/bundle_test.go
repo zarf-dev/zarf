@@ -20,18 +20,24 @@ func publish(t *testing.T, path string, reg string) {
 
 func TestBundle(t *testing.T) {
 	e2e.SetupDockerRegistry(t, 888)
+	defer e2e.TeardownRegistry(t, 888)
 	e2e.SetupDockerRegistry(t, 889)
+	defer e2e.TeardownRegistry(t, 889)
 
-	ver := "0.0.1"
+	stdOut, _, err := e2e.Zarf("version")
+	require.NoError(t, err)
+	cliver := strings.TrimSpace(stdOut)
+
 	arch := e2e.Arch
-	pkg := fmt.Sprintf("build/zarf-package-dos-games-%s-%s.tar.zst", arch, ver)
+	pkg := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", arch, cliver)
 	publish(t, pkg, "localhost:888")
 
-	pkg = fmt.Sprintf("build/zarf-package-remote-manifests-%s-%s.tar.zst", arch, ver)
+	ver := "0.0.1"
+	pkg = fmt.Sprintf("build/zarf-package-manifests-%s-%s.tar.zst", arch, ver)
 	publish(t, pkg, "localhost:889")
 
 	dir := "src/test/packages/60-bundle"
 	cmd := strings.Split(fmt.Sprintf("bundle create %s -o oci://%s --confirm", dir, "localhost:888"), " ")
-	_, _, err := e2e.Zarf(cmd...)
+	_, _, err = e2e.Zarf(cmd...)
 	require.NoError(t, err)
 }

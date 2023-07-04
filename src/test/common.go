@@ -119,6 +119,13 @@ func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) *configfile.
 	return cfg
 }
 
+// TeardownRegistry removes the local registry.
+func (e2e *ZarfE2ETest) TeardownRegistry(t *testing.T, port int) {
+	// remove the local registry
+	err := exec.CmdWithPrint("docker", "rm", "-f", fmt.Sprintf("registry-%d", port))
+	require.NoError(t, err)
+}
+
 // GetZarfVersion returns the current build/zarf version
 func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
 	// Get the version of the CLI
