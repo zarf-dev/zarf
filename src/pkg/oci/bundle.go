@@ -8,9 +8,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"path/filepath"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
@@ -44,12 +47,27 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 			ocispec.AnnotationTitle: url,
 		}
 		index.Manifests = append(index.Manifests, manifestDesc)
+		// stream copy the blobs from remote to o, otherwise do a blob mount
 		if remote.Reference.Registry != o.Reference.Registry {
-			message.Infof("Copying layers from %s to %s", remote.Reference, o.Reference)
-			// stream copy the blobs from remote to o (if needed), otherwise do a blob mount
+			message.Infof("Streaming layers from %s --> %s", remote.Reference, o.Reference)
+			copier := oci.Copier{
+				Source:      remote,
+				Destination: o,
+			}
+			if err := copier.CopyPackage(config.CommonOptions.OCIConcurrency); err != nil {
+				return err
+			}
 		} else {
-			message.Infof("Blob mounting layers from %s to %s", remote.Reference, o.Reference)
-			// mount the blobs from remote to o (if needed)
+			message.Infof("Performing a cross repository blob mount on %s from %s --> %s", remote.Reference.Registry, remote.Reference.Repository, o.Reference.Repository)
+			for _, layer := range root.Layers {
+				err := o.Mount(o.Context, layer, remote.Reference.Repository, func() (io.ReadCloser, error) {
+					// TODO: how does this handle auth?
+					return remote.Fetch(o.Context, layer)
+				})
+				if err != nil {
+					return err
+				}
+			}
 		}
 		layers = append(layers, root.Layers...)
 	}

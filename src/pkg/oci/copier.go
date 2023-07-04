@@ -4,16 +4,82 @@
 // Package oci contains functions for interacting with Zarf packages stored in OCI registries.
 package oci
 
-import "github.com/defenseunicorns/zarf/src/pkg/message"
+import (
+	"context"
+	"fmt"
+	"io"
+	"sync"
+
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+)
 
 // Copier is a struct for copying descriptors between OCI registries
 type Copier struct {
-	src OrasRemote
-	dst OrasRemote
+	src *OrasRemote
+	dst *OrasRemote
 }
 
 // CopyPackage copies a package from one OCI registry to another
-func (c *Copier) CopyPackage() error {
-	message.Infof("Copying from %s to %s", c.src.Reference, c.dst.Reference)
+func (c *Copier) CopyPackage(concurrency int) error {
+	// make a new context and apply it to both remotes
+	ctx := context.TODO()
+
+	srcRoot, err := c.src.FetchRoot()
+	if err != nil {
+		return err
+	}
+	layers := srcRoot.Layers
+	layers = append(layers, srcRoot.Config)
+
+	size := int64(0)
+	for _, layer := range layers {
+		size += layer.Size
+	}
+
+	title := fmt.Sprintf("Copying from %s to %s", c.src.Reference, c.dst.Reference)
+	progressBar := message.NewProgressBar(size, title)
+
+	// TODO: goroutine this w/ semaphores
+	for _, layer := range layers {
+		pr, pw := io.Pipe()
+
+		wg := sync.WaitGroup{}
+		wg.Add(2)
+
+		// fetch the layer from the source
+		rc, err := c.src.Fetch(ctx, layer)
+		if err != nil {
+			return err
+		}
+		// TeeReader gets the data from the fetching layer and writes it to the PipeWriter
+		tr := io.TeeReader(rc, pw)
+
+		// this goroutine is responsible for pushing the layer to the destination
+		go func() {
+			defer wg.Done()
+			defer pw.Close()
+
+			// get data from the TeeReader and push it to the destination
+			// push the layer to the destination
+			err = c.dst.Push(ctx, layer, tr)
+			if err != nil {
+				message.Fatal(err, "failed to push layer")
+			}
+		}()
+
+		// this goroutine is responsible for updating the progressbar
+		go func() {
+			defer wg.Done()
+
+			// read from the PipeReader to the progressbar
+			if _, err := io.Copy(progressBar, pr); err != nil {
+				message.Fatal(err, "failed to copy layer")
+			}
+		}()
+
+		// wait for the goroutines to finish
+		wg.Wait()
+	}
+
 	return nil
 }
