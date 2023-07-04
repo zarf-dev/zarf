@@ -12,18 +12,18 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-type ConcurrencyTools struct {
-	ProgressChan chan string
+type ConcurrencyTools[T any] struct {
+	ProgressChan chan T
 	ErrorChan    chan message.ErrorWithMessage
 	Context      context.Context
 	Cancel       context.CancelFunc
 	WaitGroup    *sync.WaitGroup
 }
 
-func NewConcurrencyTools(length int) *ConcurrencyTools {
+func NewConcurrencyTools[T any](length int) *ConcurrencyTools[T] {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	progressChan := make(chan string, length)
+	progressChan := make(chan T, length)
 
 	errorChan := make(chan message.ErrorWithMessage, length)
 
@@ -31,7 +31,7 @@ func NewConcurrencyTools(length int) *ConcurrencyTools {
 
 	waitGroup.Add(length)
 
-	concurrencyTools :=  ConcurrencyTools{
+	concurrencyTools :=  ConcurrencyTools[T]{
 		ProgressChan: progressChan,
 		ErrorChan:    errorChan,
 		Context:      ctx,
