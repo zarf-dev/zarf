@@ -18,7 +18,6 @@ import (
 
 // Create creates a bundle
 func (b *Bundler) Create() error {
-	message.Infof("Creating bundle from %s", b.cfg.CreateOpts.SourceDirectory)
 
 	// cd into base
 	if err := os.Chdir(b.cfg.CreateOpts.SourceDirectory); err != nil {
@@ -39,6 +38,11 @@ func (b *Bundler) Create() error {
 		return fmt.Errorf("bundle creation cancelled")
 	}
 
+	// make the bundle's build information
+	if err := b.CalculateBuildInfo(); err != nil {
+		return err
+	}
+
 	// validate bundle / verify access to all repositories
 	if err := b.ValidateBundle(); err != nil {
 		return err
@@ -53,11 +57,6 @@ func (b *Bundler) Create() error {
 		return err
 	}
 
-	// make the bundle's build information
-	if err := b.CalculateBuildInfo(); err != nil {
-		return err
-	}
-
 	// create + publish the bundle
 	return b.remote.Bundle(&b.bundle, b.cfg.CreateOpts.SigningKeyPath, b.cfg.CreateOpts.SigningKeyPassword)
 }
@@ -65,9 +64,8 @@ func (b *Bundler) Create() error {
 // adapted from p.confirmAction
 func (b *Bundler) confirmBundleCreation() (confirm bool) {
 
-	pterm.Println()
 	message.HeaderInfof("🎁 BUNDLE DEFINITION")
-	utils.ColorPrintYAML(b.bundle, nil, true)
+	utils.ColorPrintYAML(b.bundle, nil, false)
 
 	message.HorizontalRule()
 

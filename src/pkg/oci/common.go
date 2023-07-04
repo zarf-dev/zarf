@@ -44,7 +44,7 @@ type OrasRemote struct {
 func NewOrasRemote(url string) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, utils.OCIURLPrefix))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse OCI reference: %w", err)
+		return nil, fmt.Errorf("failed to parse OCI reference %s: %w", url, err)
 	}
 	o := &OrasRemote{}
 	o.Context = context.TODO()

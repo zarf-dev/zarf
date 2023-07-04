@@ -131,6 +131,8 @@ func (b *Bundler) ValidateBundle() error {
 				return err
 			}
 			for _, component := range requestedComponents {
+				// TODO: filter out components from packages before creation that do not match the architecture
+				// error or just filter out?
 				c := utils.Find(zarfYAML.Components, func(c types.ZarfComponent) bool {
 					return c.Name == component
 				})
@@ -174,10 +176,12 @@ func (b *Bundler) CalculateBuildInfo() error {
 	}
 	b.bundle.Build.Terminal = hostname
 
-	// TODO: investigate the best way forward for determining arch
-	// follow p.arch
-	b.bundle.Metadata.Architecture = runtime.GOARCH
-	b.bundle.Build.Architecture = runtime.GOARCH
+	// Set the arch from the package config before filtering.
+	b.bundle.Build.Architecture = b.bundle.Metadata.Architecture
+	if config.CLIArch != b.bundle.Metadata.Architecture {
+		b.bundle.Build.Architecture = config.CLIArch
+		b.bundle.Metadata.Architecture = config.CLIArch
+	}
 
 	b.bundle.Build.Timestamp = now.Format(time.RFC1123Z)
 
