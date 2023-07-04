@@ -55,6 +55,12 @@ var useLogFile bool
 // DebugWriter represents a writer interface that writes to message.Debug
 type DebugWriter struct{}
 
+// ErrorWithMessage is a simple struct of an error and a string primarily intended for use with channels
+type ErrorWithMessage struct {
+	Error   error
+	Message string
+}
+
 func (d *DebugWriter) Write(raw []byte) (int, error) {
 	Debug(string(raw))
 	return len(raw), nil
