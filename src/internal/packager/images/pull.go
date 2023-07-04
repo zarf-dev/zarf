@@ -24,6 +24,9 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/cache"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/moby/moby/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pterm/pterm"
@@ -52,31 +55,61 @@ func (i *ImgConfig) PullAll() error {
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	for idx, src := range i.ImgList {
-		spinner.Updatef("Fetching image metadata (%d of %d): %s", idx+1, imgCount, src)
+	type srcAndImg struct {
+		src  string
+		img  v1.Image
+	}
 
-		srcParsed, err := transform.ParseImageRef(src)
-		if err != nil {
-			return fmt.Errorf("failed to parse image ref %s: %w", src, err)
-		}
+	metadataImageConcurrency := utils.NewConcurrencyTools[srcAndImg, error](imgCount)
 
-		actualSrc := src
-		if overrideHost, present := i.RegistryOverrides[srcParsed.Host]; present {
-			actualSrc, err = transform.ImageTransformHostWithoutChecksum(overrideHost, src)
+	defer metadataImageConcurrency.Cancel()
+
+	spinner.Updatef("Fetching image metadata (0 of %d)", imgCount)
+
+	// Spawn a goroutine for each image to load its metadata
+	for _, src := range i.ImgList {
+		// Create a closure so that we can pass the src into the goroutine
+		src := src
+		go func() {
+			// Make sure to call Done() on the WaitGroup when the goroutine finishes
+			defer metadataImageConcurrency.WaitGroup.Done()
+
+			srcParsed, err := transform.ParseImageRef(src)
 			if err != nil {
-				return fmt.Errorf("failed to swap override host %s for %s: %w", overrideHost, src, err)
+				metadataImageConcurrency.ErrorChan <-  fmt.Errorf("failed to parse image ref %s: %w", src, err)
+				return
 			}
-		}
 
-		img, err := i.PullImage(actualSrc, spinner)
-		if err != nil {
-			return fmt.Errorf("failed to pull image %s: %w", actualSrc, err)
-		}
-		imageMap[src] = img
+			actualSrc := src
+			if overrideHost, present := i.RegistryOverrides[srcParsed.Host]; present {
+				actualSrc, err = transform.ImageTransformHostWithoutChecksum(overrideHost, src)
+				if err != nil {
+					metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to swap override host %s for %s: %w", overrideHost, src, err)
+					return
+				}
+			}
+
+			img, err := i.PullImage(actualSrc, spinner)
+			if err != nil {
+				metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to pull image %s: %w", actualSrc, err)
+				return
+			}
+			metadataImageConcurrency.ProgressChan <- srcAndImg{src: src, img: img}
+		}()
+	}
+
+	progressFunc := func(finishedImage srcAndImg, iteration int) {
+		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, imgCount, finishedImage.src)
+		imageMap[finishedImage.src] = finishedImage.img
+	}
+
+	err := utils.WaitForConcurrencyTools(metadataImageConcurrency, progressFunc, utils.ReturnError)
+	if err != nil {
+		return err
 	}
 
 	// Create the ImagePath directory
-	err := os.Mkdir(i.ImagesPath, 0755)
+	err = os.Mkdir(i.ImagesPath, 0755)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
@@ -121,22 +154,83 @@ func (i *ImgConfig) PullAll() error {
 	wg.Add(1)
 	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &wg, doneSaving, fmt.Sprintf("Pulling %d images", imgCount))
 
-	for tag, img := range tagToImage {
-		// Save the image
-		err := crane.SaveOCI(img, i.ImagesPath)
+	type digestAndTag struct {
+		digest string
+		tag    string
+	}
+
+	// Create special sauce crane Path object
+
+	// If it already exists use it
+	cranePath, err := layout.FromPath(i.ImagesPath)
+	// Use crane pattern for creating OCI layout if it doesn't exist
+	if err != nil {
+		// If it doesn't exist create it
+		cranePath, err = layout.Write(i.ImagesPath, empty.Index)
 		if err != nil {
-			// Check if the cache has been invalidated, and warn the user if so
-			if strings.HasPrefix(err.Error(), "error writing layer: expected blob size") {
-				message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
+			return err
+		}
+	}
+
+	imageSavingConcurrency := utils.NewConcurrencyTools[digestAndTag, error](len(tagToImage))
+
+	defer imageSavingConcurrency.Cancel()
+
+	// Spawn a goroutine for each image to write it's layers/manifests/etc to disk using crane
+	for tag, img := range tagToImage {
+		// Create a closure so that we can pass the tag and img into the goroutine
+		tag, img := tag, img
+		go func() {
+			// Make sure to call Done() on the WaitGroup when the goroutine finishes
+			defer imageSavingConcurrency.WaitGroup.Done()
+			// Save the image via crane
+			err := cranePath.WriteImage(img)
+			if err != nil {
+				// Check if the cache has been invalidated, and warn the user if so
+				if strings.HasPrefix(err.Error(), "error writing layer: expected blob size") {
+					message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
+				}
+				imageSavingConcurrency.ErrorChan <- fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
+				return
 			}
-			return fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
+
+			// Get the image digest so we can set an annotation in the image.json later
+			imgDigest, err := img.Digest()
+			if err != nil {
+				imageSavingConcurrency.ErrorChan <- err
+				return
+			}
+			imageSavingConcurrency.ProgressChan <- digestAndTag{digest: imgDigest.String(), tag: tag.String()}
+		}()
+	}
+
+	imageProgressFunc := func(finishedImage digestAndTag, iteration int) {
+		tagToDigest[finishedImage.tag] = finishedImage.digest
+	}
+
+	err = utils.WaitForConcurrencyTools(imageSavingConcurrency, imageProgressFunc, utils.ReturnError)
+	if err != nil {
+		return err
+	}
+
+	// for every image sequentially append OCI descriptor
+
+	for tag, img := range tagToImage {
+		desc, err := partial.Descriptor(img)
+		if err != nil {
+			return err
 		}
 
-		// Get the image digest so we can set an annotation in the image.json later
+		cranePath.AppendDescriptor(*desc)
+		if err != nil {
+			return err
+		}
+
 		imgDigest, err := img.Digest()
 		if err != nil {
 			return err
 		}
+
 		tagToDigest[tag.String()] = imgDigest.String()
 	}
 
