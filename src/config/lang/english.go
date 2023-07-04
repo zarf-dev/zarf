@@ -288,10 +288,11 @@ const (
 	CmdBundleFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote bundle."
 
 	CmdBundleCreateShort                  = "Create a Zarf bundle from a given directory or the current directory"
+	CmdBundleCreateFlagConfirm            = "Confirm bundle creation without prompting"
 	CmdBundleCreateFlagOutput             = "Specify the output (an oci:// URL) for the created Zarf bundle"
 	CmdBundleCreateFlagSigningKey         = "Path to private key file for signing bundles"
 	CmdBundleCreateFlagSigningKeyPassword = "Password to the private key file used for signing bundles"
-	CmdBundleCreateFlagSet                = "Specify package variables to set on the command line (KEY=value)"
+	CmdBundleCreateFlagSet                = "Specify bundle template variables to set on the command line (KEY=value)"
 
 	CmdBundleDeployShort        = "Deploy a Zarf bundle from a local file or URL (runs offline)"
 	CmdBundleDeployFlagPackages = "Specify the package(s) to deploy from the bundle.  E.g. packages=cluster-init,bigbang"
