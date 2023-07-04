@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
@@ -211,4 +212,58 @@ func IsValidTarballPath(path string) bool {
 		return false
 	}
 	return true // TODO: insert tarball regex here
+}
+
+// adapted from p.fillActiveTemplate
+func (b *Bundler) templateBundleYaml() error {
+	templateMap := map[string]string{}
+	setFromCLIConfig := b.cfg.CreateOpts.SetVariables
+	yamlTemplates, err := utils.FindYamlTemplates(&b.bundle, "###ZARF_BNDL_TMPL_", "###")
+	if err != nil {
+		return err
+	}
+
+	for key := range yamlTemplates {
+		_, present := setFromCLIConfig[key]
+		if !present && !config.CommonOptions.Confirm {
+			setVal, err := b.promptVariable(types.ZarfPackageVariable{
+				Name:    key,
+				Default: "",
+			})
+
+			if err == nil {
+				setFromCLIConfig[key] = setVal
+			} else {
+				return err
+			}
+		} else if !present {
+			return fmt.Errorf("template '%s' must be '--set' when using the '--confirm' flag", key)
+		}
+	}
+	for key, value := range setFromCLIConfig {
+		templateMap[fmt.Sprintf("###ZARF_BNDL_TMPL_%s###", key)] = value
+	}
+
+	templateMap["###ZARF_PKG_ARCH###"] = b.bundle.Metadata.Architecture
+
+	return utils.ReloadYamlTemplate(&b.bundle, templateMap)
+}
+
+// mirrored from p.promptVariable()
+func (b *Bundler) promptVariable(variable types.ZarfPackageVariable) (value string, err error) {
+
+	if variable.Description != "" {
+		message.Question(variable.Description)
+	}
+
+	prompt := &survey.Input{
+		Message: fmt.Sprintf("Please provide a value for \"%s\"", variable.Name),
+		Default: variable.Default,
+	}
+
+	if err = survey.AskOne(prompt, &value); err != nil {
+		return "", err
+	}
+
+	return value, nil
 }

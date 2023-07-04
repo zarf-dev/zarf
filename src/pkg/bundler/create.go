@@ -30,6 +30,9 @@ func (b *Bundler) Create() error {
 	}
 
 	// TODO: implement p.fillActiveTemplate() from packager/variables.go
+	if err := b.templateBundleYaml(); err != nil {
+		return err
+	}
 
 	// confirm creation
 	if ok := b.confirmBundleCreation(); !ok {

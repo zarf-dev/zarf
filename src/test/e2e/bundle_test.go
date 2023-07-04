@@ -13,7 +13,7 @@ import (
 )
 
 func publish(t *testing.T, path string, reg string) {
-	cmd := strings.Split(fmt.Sprintf("package publish %s oci://%s", path, reg), " ")
+	cmd := strings.Split(fmt.Sprintf("package publish %s oci://%s --insecure", path, reg), " ")
 	_, _, err := e2e.Zarf(cmd...)
 	require.NoError(t, err)
 }
@@ -37,7 +37,7 @@ func TestBundle(t *testing.T) {
 	publish(t, pkg, "localhost:889")
 
 	dir := "src/test/packages/60-bundle"
-	cmd := strings.Split(fmt.Sprintf("bundle create %s -o oci://%s --confirm", dir, "localhost:888"), " ")
+	cmd := strings.Split(fmt.Sprintf("bundle create %s -o oci://%s --set INIT_VERSION=%s --confirm", dir, "localhost:888", cliver), " ")
 	_, _, err = e2e.Zarf(cmd...)
 	require.NoError(t, err)
 }

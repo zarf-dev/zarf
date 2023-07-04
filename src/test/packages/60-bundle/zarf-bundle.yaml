@@ -6,11 +6,11 @@ metadata:
 
 packages:
   - repository: localhost:888/init
-    ref: 0.0.1
+    ref: "###ZARF_BNDL_VAR_INIT_VERSION###"
     components:
       - k3s
       - injector
-  - repository: localhost:889/remote-manifests
+  - repository: localhost:889/manifests
     ref: 0.0.1
     components:
       - "*" # grab all components
