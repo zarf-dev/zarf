@@ -42,7 +42,6 @@ type BundlerInspectOptions struct {
 // BundlerPullOptions is the options for the bundler.Pull() function
 type BundlerPullOptions struct {
 	OutputDirectory string
-	Packages        []string
 	PublicKey       string
 	Source          string
 }

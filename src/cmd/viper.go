@@ -99,9 +99,8 @@ const (
 	V_BNDL_REMOVE_PACKAGES = "bundle.remove.packages"
 
 	// Bundle pull config keys
-	V_BNDL_PULL_OUTPUT   = "bundle.pull.output"
-	V_BNDL_PULL_PACKAGES = "bundle.pull.packages"
-	V_BNDL_PULL_KEY      = "bundle.pull.key"
+	V_BNDL_PULL_OUTPUT = "bundle.pull.output"
+	V_BNDL_PULL_KEY    = "bundle.pull.key"
 )
 
 func initViper() {

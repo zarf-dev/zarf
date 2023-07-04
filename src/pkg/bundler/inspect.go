@@ -24,15 +24,16 @@ func (b *Bundler) Inspect() error {
 		return err
 	}
 
+	// read the zarf-bundle.yaml into memory
+	if err := b.ReadBundleYaml(b.tmp, &b.bundle); err != nil {
+		return err
+	}
+
 	// validate the sig (if present)
 	if err := b.ValidateBundleSignature(b.tmp); err != nil {
 		return err
 	}
 
-	// read the zarf-bundle.yaml into memory
-	if err := b.ReadBundleYaml(b.tmp, &b.bundle); err != nil {
-		return err
-	}
 	// show the zarf-bundle.yaml
 	utils.ColorPrintYAML(b.bundle)
 	return nil

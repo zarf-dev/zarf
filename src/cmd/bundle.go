@@ -166,6 +166,5 @@ func init() {
 
 	bundleCmd.AddCommand(bundlePullCmd)
 	bundlePullCmd.Flags().StringVarP(&bndlConfig.PullOpts.OutputDirectory, "output", "o", v.GetString(V_BNDL_PULL_OUTPUT), lang.CmdBundlePullFlagOutput)
-	bundlePullCmd.Flags().StringSliceVarP(&bndlConfig.PullOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_PULL_PACKAGES), lang.CmdBundlePullFlagPackages)
 	bundlePullCmd.Flags().StringVarP(&bndlConfig.PullOpts.PublicKey, "key", "k", v.GetString(V_BNDL_PULL_KEY), lang.CmdBundlePullFlagKey)
 }

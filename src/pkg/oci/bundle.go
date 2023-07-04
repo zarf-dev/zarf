@@ -21,7 +21,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 	layers := []ocispec.Descriptor{}
 	index := ocispec.Index{}
 	for _, pkg := range bundle.Packages {
-		url := fmt.Sprintf(pkg.Repository, pkg.Ref)
+		url := fmt.Sprintf("%s:%s", pkg.Repository, pkg.Ref)
 		remote, err := NewOrasRemote(url)
 		if err != nil {
 			return err
@@ -38,6 +38,10 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 		manifestDesc, err := o.PushBytes(manifestBytes, ocispec.MediaTypeImageManifest)
 		if err != nil {
 			return err
+		}
+		// add the package name to the manifest's annotations to make it easier to find
+		manifestDesc.Annotations = map[string]string{
+			ocispec.AnnotationTitle: url,
 		}
 		index.Manifests = append(index.Manifests, manifestDesc)
 		if remote.Reference.Registry != o.Reference.Registry {

@@ -265,10 +265,9 @@ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-ur
 	CmdBundleRemoveFlagConfirm  = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdBundleRemoveFlagPackages = "Specify the package(s) to remove from the bundle.  E.g. packages=cluster-init,bigbang"
 
-	CmdBundlePullShort        = "Pull a Zarf bundle from a remote reigstry and save to the local file system"
-	CmdBundlePullFlagOutput   = "Specify the output directory for the pulled Zarf bundle"
-	CmdBundlePullFlagPackages = "Specify the package(s) to pull from the bundle.  E.g. packages=cluster-init,bigbang"
-	CmdBundlePullFlagKey      = "Path to a public key file that will be used to validate a signed bundle"
+	CmdBundlePullShort      = "Pull a Zarf bundle from a remote reigstry and save to the local file system"
+	CmdBundlePullFlagOutput = "Specify the output directory for the pulled Zarf bundle"
+	CmdBundlePullFlagKey    = "Path to a public key file that will be used to validate a signed bundle"
 
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"

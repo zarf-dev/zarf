@@ -2,15 +2,15 @@ metadata:
   name: bundle
   description: a bundle
   version: 0.0.1
-  architecture: amd64
+  # architecture: amd64
 
 packages:
-  - repository: oci://localhost:555/init
+  - repository: localhost:888/init
     ref: 0.0.1
     components:
       - k3s
       - injector
-  - repository: oci://localhost:555/helm-charts
-    ref: 0.0.1 # anything that satisfies registry.ParseReference
+  - repository: localhost:889/remote-manifests
+    ref: 0.0.1
     components:
       - "*" # grab all components

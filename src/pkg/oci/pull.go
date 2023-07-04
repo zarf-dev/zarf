@@ -6,6 +6,7 @@ package oci
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"sync"
@@ -248,6 +249,38 @@ func (o *OrasRemote) PullBundleMetadata(destinationDir string) error {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+// TODO: implement this
+func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requestedPackages []string) error {
+	manifest, err := o.FetchRoot()
+	if err != nil {
+		return err
+	}
+
+	// fetch the index.json
+	indexBytes, err := o.FetchLayer(manifest.Locate("index.json"))
+	if err != nil {
+		return err
+	}
+	index := ocispec.Index{}
+	err = json.Unmarshal(indexBytes, &index)
+	if err != nil {
+		return err
+	}
+
+	packageManifests := make(map[string]ZarfOCIManifest)
+
+	// map the package names to their manifests
+	for _, manifestDesc := range index.Manifests {
+		manifest, err := o.FetchManifest(manifestDesc)
+		if err != nil {
+			return err
+		}
+		// the "repo:ref" is stored in the manifest's title annotation
+		packageManifests[manifestDesc.Annotations[ocispec.AnnotationTitle]] = *manifest
 	}
 	return nil
 }

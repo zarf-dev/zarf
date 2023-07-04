@@ -5,11 +5,15 @@
 package bundler
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/pterm/pterm"
 )
 
 // Create creates a bundle
@@ -24,6 +28,14 @@ func (b *Bundler) Create() error {
 	if err := b.ReadBundleYaml(config.ZarfBundleYAML, &b.bundle); err != nil {
 		return err
 	}
+
+	// TODO: implement p.fillActiveTemplate() from packager/variables.go
+
+	// confirm creation
+	if ok := b.confirmBundleCreation(); !ok {
+		return fmt.Errorf("bundle creation cancelled")
+	}
+
 	// validate bundle / verify access to all repositories
 	if err := b.ValidateBundle(); err != nil {
 		return err
@@ -45,4 +57,30 @@ func (b *Bundler) Create() error {
 
 	// create + publish the bundle
 	return b.remote.Bundle(&b.bundle, b.cfg.CreateOpts.SigningKeyPath, b.cfg.CreateOpts.SigningKeyPassword)
+}
+
+// adapted from p.confirmAction
+func (b *Bundler) confirmBundleCreation() (confirm bool) {
+	message.HorizontalRule()
+	message.Title("Bundle Configuration", "the bundle configuration that defines this bundle")
+	utils.ColorPrintYAML(b.bundle)
+	message.HorizontalRule()
+
+	// Display prompt if not auto-confirmed
+	if config.CommonOptions.Confirm {
+		return config.CommonOptions.Confirm
+	}
+
+	prompt := &survey.Confirm{
+		Message: "Create this Zarf bundle?",
+	}
+
+	pterm.Println()
+
+	// Prompt the user for confirmation, on abort return false
+	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
+		// User aborted or declined, cancel the action
+		return false
+	}
+	return true
 }
