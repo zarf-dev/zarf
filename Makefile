@@ -107,7 +107,7 @@ build-local-agent-image: ## Build the Zarf agent image to be used in a locally b
 	@ if [ "$(ARCH)" = "amd64" ]; then cp build/zarf build/zarf-linux-amd64; fi
 	@ if [ "$(ARCH)" = "arm64" ] && [ ! -s ./build/zarf-arm ]; then $(MAKE) build-cli-linux-arm; fi
 	@ if [ "$(ARCH)" = "arm64" ]; then cp build/zarf-arm build/zarf-linux-arm64; fi
-	docker buildx build --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
+	docker buildx build --load --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
 
 init-package: ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
@@ -122,7 +122,7 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-remote-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/remote-manifests -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-component-actions-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-actions -o build -a $(ARCH) --confirm
 
@@ -130,7 +130,7 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/variables --set NGINX_VERSION=1.23.3 -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-data-injection-$(ARCH).tar || $(ZARF_BIN) package create examples/data-injection -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-kiwix-$(ARCH)-3.5.0.tar || $(ZARF_BIN) package create examples/kiwix -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-git-data-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/git-data -o build -a $(ARCH) --confirm
 
@@ -168,8 +168,25 @@ test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg and the bigb
 	cd src/pkg && go test ./... -failfast -v -timeout 30m
 	cd src/extensions/bigbang && go test ./. -failfast -v timeout 30m
 
-.PHONY: test-built-ui
-test-built-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first)
+.PHONY: test-ui
+test-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first) (run with env CI=true to use build/zarf)
+	export NODE_PATH=$(CURDIR)/src/ui/node_modules && \
+	npm --prefix src/ui run test:pre-init && \
+	npm --prefix src/ui run test:init && \
+	npm --prefix src/ui run test:post-init && \
+	npm --prefix src/ui run test:connect
+
+.PHONY: test-ui-dev-server
+# INTERNAL: used to start a dev version of the API server for the Zarf Web UI tests (locally)
+test-ui-dev-server:
+	API_DEV_PORT=5173 \
+		API_PORT=3333 \
+		API_TOKEN=insecure \
+		go run -ldflags="$(BUILD_ARGS)" main.go dev ui -l=trace
+
+.PHONY: test-ui-build-server
+# INTERNAL: used to start the built version of the API server for the Zarf Web UI (in CI)
+test-ui-build-server:
 	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR

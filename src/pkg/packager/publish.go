@@ -40,7 +40,7 @@ func (p *Packager) Publish() error {
 		if err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 		}
-		referenceSuffix = p.cfg.Pkg.Build.Architecture
+		referenceSuffix = p.arch
 	}
 
 	// Get a reference to the registry for this package
@@ -54,7 +54,7 @@ func (p *Packager) Publish() error {
 		return err
 	}
 
-	if err := utils.ValidatePackageChecksums(p.tmp.Base, nil); err != nil {
+	if err := p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, nil); err != nil {
 		return fmt.Errorf("unable to publish package because checksums do not match: %w", err)
 	}
 

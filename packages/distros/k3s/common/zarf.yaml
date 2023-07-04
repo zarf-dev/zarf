@@ -23,15 +23,24 @@ components:
         before:
           - cmd: ./zarf internal is-valid-hostname
             maxRetries: 0
+            description: Check if the current system has a, RFC1123 compliant hostname
           # If running RHEL variant, disable firewalld
           # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
           # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
           - cmd: "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
+            description: If running a RHEL variant, disable 'firewalld' per k3s docs
         after:
           # Configure K3s systemd service
           - cmd: systemctl daemon-reload
+            description: Reload the system services
           - cmd: systemctl enable k3s
-          - cmd: systemctl start k3s
+            description: Enable 'k3s' to run at system boot
+          - cmd: systemctl restart k3s
+            description: Start the 'k3s' system service
+      onRemove:
+        before:
+          - cmd: /opt/zarf/zarf-clean-k3s.sh
+            description: Remove 'k3s' from the system
     files:
       # K3s removal script
       - source: zarf-clean-k3s.sh

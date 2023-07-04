@@ -6,6 +6,7 @@ import type { ZarfComponent } from '$lib/api-types';
 import type { StepProps } from '@defense-unicorns/unicorn-ui/Stepper/stepper.types';
 
 export type ComponentStepMap = Map<string, StepProps>;
+export type DeployedSteps = { steps: StepProps[]; activeStep: number };
 
 // Returns a map of the component to deploy name as key and StepProps as value.
 export function createComponentStepMap(
@@ -35,7 +36,7 @@ export function setStepActive(step: StepProps): StepProps {
 }
 
 export function setStepSuccessful(step: StepProps): StepProps {
-	return { ...step, variant: 'success', disabled: false, iconContent: undefined };
+	return { ...step, variant: 'success', disabled: false, iconContent: '' };
 }
 
 export function setStepError(step: StepProps): StepProps {
@@ -59,17 +60,22 @@ export function finalizeStepState(steps: StepProps[], success: boolean): StepPro
 }
 
 // Retrieves the components that (as far as we know) have successfully deployed.
-export async function getDeployedComponents(pkgName: string, components: ComponentStepMap): Promise<StepProps[]> {
+export async function getDeployedComponents(
+	pkgName: string,
+	components: ComponentStepMap
+): Promise<DeployedSteps> {
 	const oldComponents = getComponentStepMapComponents(components);
 	const deployingComponents = await Packages.deployingComponents.list(pkgName);
-	return oldComponents.map((component: StepProps, idx: number) => {
-		if (deployingComponents && deployingComponents[idx]) {
+	const activeStep = deployingComponents.length;
+	const steps = oldComponents.map((component: StepProps, idx: number) => {
+		if (deployingComponents && deployingComponents[idx] && component.iconContent) {
 			return setStepSuccessful(component);
 		} else if (idx === deployingComponents.length) {
 			return setStepActive(component);
 		}
 		return component;
 	});
+	return { steps, activeStep };
 }
 
 export function getDialogContent(success: boolean): { topLine: string; bottomLine: string } {

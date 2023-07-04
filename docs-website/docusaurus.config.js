@@ -10,7 +10,7 @@ const config = {
   tagline: "Airgap is hard. Zarf makes it easy.",
   url: "https://zarf.dev",
   baseUrl: "/",
-  onBrokenLinks: "warn",
+  onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "throw",
   favicon: "img/favicon.svg",
   organizationName: "Defense Unicorns", // Usually your GitHub org/user name.
@@ -18,11 +18,14 @@ const config = {
   markdown: {
     mermaid: true,
   },
+  plugins: [
+    'custom-loaders'
+  ],
   themes: [
     [require.resolve("@easyops-cn/docusaurus-search-local"), { hashed: true }],
     [require.resolve("@docusaurus/theme-mermaid"), { hashed: true }],
   ],
-  staticDirectories: ["static", "../examples", "../packages"],
+  staticDirectories: ["static"],
   presets: [
     [
       "classic",

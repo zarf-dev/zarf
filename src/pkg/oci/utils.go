@@ -40,6 +40,8 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 
 	raw := fmt.Sprintf(format, registryLocation, metadata.Name, ver, suffix)
 
+	message.Debugf("raw OCI reference from metadata: %s", raw)
+
 	ref, err := registry.ParseReference(raw)
 	if err != nil {
 		return "", err

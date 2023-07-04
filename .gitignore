@@ -19,6 +19,7 @@
 *.tgz
 *.vbox
 *.zst
+*.zim
 assets/
 build
 data/

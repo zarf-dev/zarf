@@ -18,25 +18,25 @@ import (
 func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string) error {
 	wantSBOM := includeSBOM || outputSBOM != ""
 
-	requestedFiles := []string{config.ZarfYAML}
+	partialPaths := []string{config.ZarfYAML}
 	if wantSBOM {
-		requestedFiles = append(requestedFiles, config.ZarfSBOMTar)
+		partialPaths = append(partialPaths, config.ZarfSBOMTar)
 	}
 
 	// Handle OCI packages that have been published to a registry
 	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
 
-		message.Debugf("Pulling layers %v from %s", requestedFiles, p.cfg.DeployOpts.PackagePath)
+		message.Debugf("Pulling layers %v from %s", partialPaths, p.cfg.DeployOpts.PackagePath)
 
 		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)
 		if err != nil {
 			return err
 		}
-		layersToPull, err := p.remote.LayersFromPaths(requestedFiles)
+		layersToPull, err := p.remote.LayersFromPaths(partialPaths)
 		if err != nil {
 			return err
 		}
-		if err := p.remote.PullPackage(p.tmp.Base, config.CommonOptions.OCIConcurrency, layersToPull...); err != nil {
+		if partialPaths, err = p.remote.PullPackage(p.tmp.Base, config.CommonOptions.OCIConcurrency, layersToPull...); err != nil {
 			return fmt.Errorf("unable to pull the package: %w", err)
 		}
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
@@ -47,6 +47,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfChecksumsTxt, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract %s: %w", config.ZarfChecksumsTxt, err)
 		}
+
 		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAML, err)
 		}
@@ -63,13 +64,11 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		}
 	}
 
-	utils.ColorPrintYAML(p.cfg.Pkg)
-
-	if !utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
-		if err := utils.ValidatePackageChecksums(p.tmp.Base, requestedFiles); err != nil {
-			return fmt.Errorf("unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
-		}
+	if err := p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, partialPaths); err != nil {
+		return fmt.Errorf("unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
 	}
+
+	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 
 	// Validate the package checksums and signatures if specified, and warn if the package was signed but a key was not provided
 	if err := p.validatePackageSignature(inspectPublicKey); err != nil {

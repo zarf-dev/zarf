@@ -183,7 +183,7 @@ func (p *Packager) confirmOptionalComponent(component types.ZarfComponent) (conf
 
 	displayComponent := component
 	displayComponent.Description = ""
-	utils.ColorPrintYAML(displayComponent)
+	utils.ColorPrintYAML(displayComponent, nil, false)
 	if component.Description != "" {
 		message.Question(component.Description)
 	}
@@ -250,4 +250,18 @@ func (p *Packager) appendIfNotExists(slice []string, item string) []string {
 		}
 	}
 	return append(slice, item)
+}
+
+func (p *Packager) requiresCluster(component types.ZarfComponent) bool {
+	hasImages := len(component.Images) > 0
+	hasCharts := len(component.Charts) > 0
+	hasManifests := len(component.Manifests) > 0
+	hasRepos := len(component.Repos) > 0
+	hasDataInjections := len(component.DataInjections) > 0
+
+	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections {
+		return true
+	}
+
+	return false
 }

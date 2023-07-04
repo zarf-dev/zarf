@@ -5,7 +5,7 @@ import TabItem from '@theme/TabItem';
 
 # Package Components
 
-:::warning
+:::note
 
 The following examples are not all-inclusive and are only meant to showcase the different types of resources that can be defined in a component. For a full list of fields and their options, please see the [component schema documentation](4-zarf-schema.md#components).
 
@@ -46,11 +46,11 @@ Can be:
 #### File Examples
 
 <Tabs queryString="file-examples">
-<TabItem value="Local and Remote">
-<ExampleYAML example="terraform" component="download-terraform" />
+<TabItem value="Local">
+<ExampleYAML src={require('../../examples/component-actions/zarf.yaml')} component="on-deploy-with-template-use-of-variable" />
 </TabItem>
 <TabItem value="Remote with SHA sums">
-<ExampleYAML example="distros/k3s" component="k3s" rootFolder="packages" />
+<ExampleYAML src={require('../../packages/distros/k3s/zarf.yaml')} component="k3s" />
 </TabItem>
 </Tabs>
 
@@ -71,13 +71,13 @@ Can be when using the `url` key:
 
 <Tabs queryString="chart-examples">
 <TabItem value="localPath">
-<ExampleYAML example="helm-charts" component="demo-helm-local-chart" />
+<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-local-chart" />
 </TabItem>
 <TabItem value="URL (git)">
-<ExampleYAML example="helm-charts" component="demo-helm-git-chart" />
+<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-git-chart" />
 </TabItem>
 <TabItem value="URL (oci)">
-<ExampleYAML example="helm-charts" component="demo-helm-oci-chart" />
+<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-oci-chart" />
 </TabItem>
 </Tabs>
 
@@ -98,17 +98,20 @@ Can be when using the `kustomizations` key:
 
 <Tabs queryString="manifest-examples">
 <TabItem value="Local">
+<ExampleYAML src={require('../../examples/manifests/zarf.yaml')} component="httpd-local" />
+</TabItem>
+<TabItem value="Remote">
+<ExampleYAML src={require('../../examples/manifests/zarf.yaml')} component="nginx-remote" />
+</TabItem>
+<TabItem value="Kustomizations">
 
 :::info
 
-While this explanation does not showcase it, you can also specify a local directory containing a `kustomization.yaml` file and Zarf will automatically run `kustomize build` on the directory during `zarf package create`, rendering the Kustomization into a single manifest file.
+Kustomizations are handled a bit differently than normal manifests in that Zarf will automatically run `kustomize build` on them during `zarf package create`, thus rendering the Kustomization into a single manifest file.  This prevents needing to grab any remote Kustomization resources during `zarf package deploy` but also means that any Zarf [`variables`](../../examples/variables/README.md#deploy-time-variables-and-constants) will only apply to the rendered manifest not the `kustomize build` process.
 
 :::
 
-<ExampleYAML example="dos-games" component="baseline" />
-</TabItem>
-<TabItem value="Remote">
-<ExampleYAML example="remote-manifests" component="remote-manifests-and-kustomizations" />
+<ExampleYAML src={require('../../examples/manifests/zarf.yaml')} component="podinfo-kustomize" />
 </TabItem>
 </Tabs>
 
@@ -120,13 +123,13 @@ Images can either be discovered manually, or automatically by using [`zarf prepa
 
 :::note
 
-`zarf prepare find-images` has some known limitations due to the numerous ways images can be defined in Kubernetes resources, but should work for most standard manifests, kustomizations, and helm charts.
+`zarf prepare find-images` will find images for most standard manifests, kustomizations, and helm charts, however some images cannot be discovered this way as some upstream resources (like operators) may bury image definitions inside.  For these images, `zarf prepare find-images` also offers support for the draft [Helm Improvement Proposal 15](https://github.com/helm/community/blob/main/hips/hip-0015.md) which allows chart creators to annotate any hidden images in their charts along with the [values conditions](https://github.com/helm/community/issues/277) that will cause those images to be used.
 
 :::
 
 #### Image Examples
 
-<ExampleYAML example="podinfo-flux" component="flux" />
+<ExampleYAML src={require('../../examples/podinfo-flux/zarf.yaml')} component="flux" />
 
 ### Git Repositories
 
@@ -140,16 +143,16 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 
 <Tabs queryString="git-repo-examples">
 <TabItem value="Full Mirror">
-<ExampleYAML example="git-data" component="full-repo" />
+<ExampleYAML src={require('../../examples/git-data/zarf.yaml')} component="full-repo" />
 </TabItem>
 <TabItem value="Specific Tag">
-<ExampleYAML example="git-data" component="specific-tag" />
+<ExampleYAML src={require('../../examples/git-data/zarf.yaml')} component="specific-tag" />
 </TabItem>
 <TabItem value="Specific Branch">
-<ExampleYAML example="git-data" component="specific-branch" />
+<ExampleYAML src={require('../../examples/git-data/zarf.yaml')} component="specific-branch" />
 </TabItem>
 <TabItem value="Specific Hash">
-<ExampleYAML example="git-data" component="specific-hash" />
+<ExampleYAML src={require('../../examples/git-data/zarf.yaml')} component="specific-hash" />
 </TabItem>
 </Tabs>
 
@@ -157,7 +160,7 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 
 <Properties item="ZarfComponent" include={["dataInjections"]} />
 
-<ExampleYAML example="data-injection" component="with-init-container" />
+<ExampleYAML src={require('../../examples/kiwix/zarf.yaml')} component="kiwix-serve" />
 
 ### Component Imports
 
@@ -165,10 +168,10 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 
 <Tabs queryString="import-examples">
 <TabItem value="Local Path">
-<ExampleYAML example="composable-packages" component="games" />
+<ExampleYAML src={require('../../examples/composable-packages/zarf.yaml')} component="local-games-path" />
 </TabItem>
 <TabItem value="OCI URL">
-<ExampleYAML example="composable-packages" component="wordpress" />
+<ExampleYAML src={require('../../examples/composable-packages/zarf.yaml')} component="oci-wordpress-url" />
 </TabItem>
 </Tabs>
 
@@ -184,7 +187,7 @@ This process will also merge `variables` and `constants` defined in the imported
 
 <Properties item="ZarfComponent" include={["extensions"]} />
 
-<ExampleYAML example="big-bang" component="bigbang" />
+<ExampleYAML src={require('../../examples/big-bang/zarf.yaml')} component="bigbang" />
 
 ## Deploying Components
 

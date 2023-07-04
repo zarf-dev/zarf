@@ -22,11 +22,12 @@ import (
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize.
 type ZarfE2ETest struct {
-	ZarfBinPath     string
-	Arch            string
-	ApplianceMode   bool
-	RunClusterTests bool
-	CommandLog      []string
+	ZarfBinPath       string
+	Arch              string
+	ApplianceMode     bool
+	ApplianceModeKeep bool
+	RunClusterTests   bool
+	CommandLog        []string
 }
 
 var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
@@ -116,4 +117,12 @@ func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) *configfile.
 	}
 
 	return cfg
+}
+
+// GetZarfVersion returns the current build/zarf version
+func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
+	// Get the version of the CLI
+	stdOut, stdErr, err := e2e.Zarf("version")
+	require.NoError(t, err, stdOut, stdErr)
+	return strings.Trim(stdOut, "\n")
 }

@@ -183,6 +183,9 @@ func (c *Cluster) sanitizeZarfState(state types.ZarfState) types.ZarfState {
 	sanitizedState.RegistryInfo.PullPassword = "**sanitized**"
 	sanitizedState.RegistryInfo.Secret = "**sanitized**"
 
+	// Overwrite the ArtifactServer secret
+	sanitizedState.ArtifactServer.PushToken = "**sanitized**"
+
 	// Overwrite the Logging secret
 	sanitizedState.LoggingSecret = "**sanitized**"
 

@@ -66,6 +66,9 @@ const (
 
 	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+
+	ZarfDeployStage = "Deploy"
+	ZarfCreateStage = "Create"
 )
 
 // Zarf Global Configuration Variables.
@@ -76,8 +79,8 @@ var (
 	// CommonOptions tracks user-defined values that apply across commands.
 	CommonOptions types.ZarfCommonOptions
 
-	// CliArch is the computer architecture of the device executing the CLI commands
-	CliArch string
+	// CLIArch is the computer architecture of the device executing the CLI commands
+	CLIArch string
 
 	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
 	ZarfSeedPort string
@@ -98,7 +101,7 @@ var (
 // GetArch returns the arch based on a priority list with options for overriding.
 func GetArch(archs ...string) string {
 	// List of architecture overrides.
-	priority := append([]string{CliArch}, archs...)
+	priority := append([]string{CLIArch}, archs...)
 
 	// Find the first architecture that is specified.
 	for _, arch := range priority {
@@ -140,6 +143,7 @@ func GetCraneOptions(insecure bool, archs ...string) []crane.Option {
 			Architecture: GetArch(archs...),
 		}),
 		crane.WithUserAgent("zarf"),
+		crane.WithNoClobber(true),
 		// TODO: (@WSTARR) this is set to limit pushes to registry pods and reduce the likelihood that crane will get stuck.
 		// We should investigate this further in the future to dig into more of what is happening (see https://github.com/defenseunicorns/zarf/issues/1568)
 		crane.WithJobs(1),
@@ -164,10 +168,15 @@ func GetValidPackageExtensions() [3]string {
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.
 func GetAbsCachePath() string {
+	return GetAbsHomePath(CommonOptions.CachePath)
+}
+
+// GetAbsHomePath replaces ~ with the absolute path to a user's home dir
+func GetAbsHomePath(path string) string {
 	homePath, _ := os.UserHomeDir()
 
-	if strings.HasPrefix(CommonOptions.CachePath, "~") {
-		return strings.Replace(CommonOptions.CachePath, "~", homePath, 1)
+	if strings.HasPrefix(path, "~") {
+		return strings.Replace(path, "~", homePath, 1)
 	}
-	return CommonOptions.CachePath
+	return path
 }

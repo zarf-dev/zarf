@@ -5,7 +5,7 @@
 package packages
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -43,7 +43,7 @@ func ReadPackage(path string) (pkg types.APIZarfPackage, err error) {
 	// Check for zarf.yaml in the package and read into file
 	err = archiver.Walk(pkg.Path, func(f archiver.File) error {
 		if f.Name() == config.ZarfYAML {
-			file, err = ioutil.ReadAll(f)
+			file, err = io.ReadAll(f)
 			if err != nil {
 				return err
 			}

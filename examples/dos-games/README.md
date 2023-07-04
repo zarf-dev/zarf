@@ -1,6 +1,6 @@
 import ExampleYAML from "@site/src/components/ExampleYAML";
 
-# DOS Games in the Cluster!
+# Retro Arcade
 
 This example provides the basis for Zarf's [Retro Arcade](../../docs/5-zarf-tutorials/3-deploy-a-retro-arcade.md) tutorial.  It deploys a Dos Games arcade into the cluster and provides an easy way to connect and play games.
 
@@ -18,4 +18,4 @@ To view the example in its entirety, select the `Edit this page` link below the 
 
 :::
 
-<ExampleYAML example="dos-games" showLink={false} />
+<ExampleYAML src={require('./zarf.yaml')} showLink={false} />
