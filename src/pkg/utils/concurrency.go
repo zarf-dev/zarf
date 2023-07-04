@@ -16,6 +16,7 @@ type ConcurrencyTools[P any, E any] struct {
 	Context      context.Context
 	Cancel       context.CancelFunc
 	WaitGroup    *sync.WaitGroup
+	RoutineCount int
 }
 
 func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
@@ -35,6 +36,7 @@ func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
 		Context:      ctx,
 		Cancel:       cancel,
 		WaitGroup:    &waitGroup,
+		RoutineCount: length,
 	}
 
 	return &concurrencyTools
@@ -47,4 +49,24 @@ func ContextDone(ctx context.Context) bool {
 	default:
 		return false
 	}
+}
+
+func ReturnError(err error) error {
+	return err
+}
+
+func WaitForConcurrencyTools[P any, E any, PF func(P, int), EF func(E) error](concurrencyTools *ConcurrencyTools[P, E], progressFunc PF, errorFunc EF) error {
+	for i := 0; i < concurrencyTools.RoutineCount; i++ {
+		select {
+		case err := <-concurrencyTools.ErrorChan:
+			concurrencyTools.Cancel()
+			errResult := errorFunc(err)
+			concurrencyTools.WaitGroup.Done()
+			return errResult
+		case progress := <-concurrencyTools.ProgressChan:
+			progressFunc(progress, i)
+		}
+	}
+	concurrencyTools.WaitGroup.Wait()
+	return nil
 }
