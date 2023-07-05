@@ -20,7 +20,7 @@ import (
 
 // IsJSONPathWaitType checks if the condition is a JSONPath or condition.
 func IsJSONPathWaitType(condition string) bool {
-	if condition[0] != '{' || !strings.Contains(condition, "=") || !strings.Contains(condition, "}") {
+	if len(condition) == 0 || condition[0] != '{' || !strings.Contains(condition, "=") || !strings.Contains(condition, "}") {
 		return false
 	}
 
