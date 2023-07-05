@@ -53,3 +53,4 @@ zarf completion bash
 ## SEE ALSO
 
 * [zarf completion](zarf_completion.md)	 - Generate the autocompletion script for the specified shell
+

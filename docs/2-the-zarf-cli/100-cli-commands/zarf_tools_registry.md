@@ -22,3 +22,4 @@ Tools for working with container registries using go-containertools
 * [zarf tools registry ls](zarf_tools_registry_ls.md)	 - List the tags in a repo
 * [zarf tools registry pull](zarf_tools_registry_pull.md)	 - Pull remote images by reference and store their contents locally
 * [zarf tools registry push](zarf_tools_registry_push.md)	 - Push local image contents to a remote registry
+

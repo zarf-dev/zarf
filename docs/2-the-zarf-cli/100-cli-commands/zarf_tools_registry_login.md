@@ -28,3 +28,4 @@ zarf tools registry login [OPTIONS] [SERVER] [flags]
 ## SEE ALSO
 
 * [zarf tools registry](zarf_tools_registry.md)	 - Tools for working with container registries using go-containertools
+

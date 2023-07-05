@@ -29,3 +29,4 @@ zarf tools archiver decompress ARCHIVE DESTINATION [flags]
 ## SEE ALSO
 
 * [zarf tools archiver](zarf_tools_archiver.md)	 - Compresses/Decompresses generic archives, including Zarf packages
+
