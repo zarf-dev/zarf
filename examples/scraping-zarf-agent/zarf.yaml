@@ -1,7 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
   name: scrape-zarf-agent
-  yolo: false
   description: Scrape Zarf Agent with Prometheus Operator.
 
 components:
