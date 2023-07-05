@@ -18,8 +18,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-// IsJSONPathWaitType checks if the condition is a JSONPath or condition.
-func IsJSONPathWaitType(condition string) bool {
+// isJSONPathWaitType checks if the condition is a JSONPath or condition.
+func isJSONPathWaitType(condition string) bool {
 	if len(condition) == 0 || condition[0] != '{' || !strings.Contains(condition, "=") || !strings.Contains(condition, "}") {
 		return false
 	}
@@ -32,7 +32,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 	// Handle network endpoints.
 	switch kind {
 	case "http", "https", "tcp":
-		WaitForNetworkEndpoint(kind, identifier, condition, timeout)
+		waitForNetworkEndpoint(kind, identifier, condition, timeout)
 		return
 	}
 
@@ -40,7 +40,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 	var waitType string
 
 	// Check if waitType is JSONPath or condition
-	if IsJSONPathWaitType(condition) {
+	if isJSONPathWaitType(condition) {
 		waitType = "jsonpath="
 	} else {
 		waitType = "condition="
@@ -118,8 +118,8 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 	}
 }
 
-// WaitForNetworkEndpoint waits for a network endpoint to respond.
-func WaitForNetworkEndpoint(resource, name, condition string, timeout time.Duration) {
+// waitForNetworkEndpoint waits for a network endpoint to respond.
+func waitForNetworkEndpoint(resource, name, condition string, timeout time.Duration) {
 	// Set the timeout for the wait-for command.
 	expired := time.After(timeout)
 

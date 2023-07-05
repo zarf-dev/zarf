@@ -5,6 +5,9 @@
 package utils
 
 import (
+	"testing"
+
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -38,9 +41,14 @@ func (suite *TestIsJSONPathWaitTypeSuite) SetupSuite() {
 
 func (suite *TestIsJSONPathWaitTypeSuite) Test_0_IsJSONPathWaitType() {
 	for _, waitType := range suite.waitTypes.conditionType {
-		suite.True(IsJSONPathWaitType(waitType), "Expected %s to be a JSONPath wait type", waitType)
+		suite.False(isJSONPathWaitType(waitType), "Expected %s not to be a JSONPath wait type", waitType)
 	}
 	for _, waitType := range suite.waitTypes.jsonPathType {
-		suite.False(IsJSONPathWaitType(waitType), "Expected %s not to be a JSONPath wait type", waitType)
+		suite.True(isJSONPathWaitType(waitType), "Expected %s to be a JSONPath wait type", waitType)
 	}
+}
+
+func TestIsJSONPathWaitType(t *testing.T) {
+	message.SetLogLevel(message.DebugLevel)
+	suite.Run(t, new(TestIsJSONPathWaitTypeSuite))
 }
