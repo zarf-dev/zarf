@@ -55,7 +55,7 @@
 		"eslint-plugin-svelte": "2.32.0",
 		"nodemon": "2.0.22",
 		"playwright": "1.35.1",
-		"prettier": "2.8.8",
+		"prettier": "3.0.0",
 		"prettier-plugin-svelte": "2.10.1",
 		"quicktype": "23.0.48",
 		"sass": "1.63.6",
