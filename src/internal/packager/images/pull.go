@@ -60,11 +60,11 @@ func (i *ImgConfig) PullAll() error {
 		img  v1.Image
 	}
 
-	metadataImageConcurrency := utils.NewConcurrencyTools[srcAndImg, error](imgCount)
+	metadataImageConcurrency := utils.NewConcurrencyTools[srcAndImg, error](len(i.ImgList))
 
 	defer metadataImageConcurrency.Cancel()
 
-	spinner.Updatef("Fetching image metadata (0 of %d)", imgCount)
+	spinner.Updatef("Fetching image metadata (0 of %d)", len(i.ImgList))
 
 	// Spawn a goroutine for each image to load its metadata
 	for _, src := range i.ImgList {
@@ -99,7 +99,7 @@ func (i *ImgConfig) PullAll() error {
 	}
 
 	progressFunc := func(finishedImage srcAndImg, iteration int) {
-		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, imgCount, finishedImage.src)
+		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImgList), finishedImage.src)
 		imageMap[finishedImage.src] = finishedImage.img
 	}
 
