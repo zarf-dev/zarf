@@ -218,13 +218,12 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 	return utils.WriteFile(filepath.Join(destinationDir, desc.Annotations[ocispec.AnnotationTitle]), b)
 }
 
-// PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
-func (o *OrasRemote) PullPackageMetadata(destinationDir string) (err error) {
+func (o *OrasRemote) PullMultipleFiles(paths []string, destinationDir string) error {
 	root, err := o.FetchRoot()
 	if err != nil {
 		return err
 	}
-	for _, path := range PackageAlwaysPull {
+	for _, path := range paths {
 		desc := root.Locate(path)
 		if !o.isEmptyDescriptor(desc) {
 			err = o.PullLayer(desc, destinationDir)
@@ -236,22 +235,14 @@ func (o *OrasRemote) PullPackageMetadata(destinationDir string) (err error) {
 	return nil
 }
 
+// PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
+func (o *OrasRemote) PullPackageMetadata(destinationDir string) (err error) {
+	return o.PullMultipleFiles(PackageAlwaysPull, destinationDir)
+}
+
 // PullBundleMetadata pulls the bundle metadata from the remote repository and saves it to `destinationDir`.
 func (o *OrasRemote) PullBundleMetadata(destinationDir string) error {
-	root, err := o.FetchRoot()
-	if err != nil {
-		return err
-	}
-	for _, path := range BundleAlwaysPull {
-		desc := root.Locate(path)
-		if !o.isEmptyDescriptor(desc) {
-			err = o.PullLayer(desc, destinationDir)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	return o.PullMultipleFiles(BundleAlwaysPull, destinationDir)
 }
 
 // TODO: implement this
