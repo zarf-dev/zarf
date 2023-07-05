@@ -42,3 +42,11 @@ To view the example in its entirety, select the `Edit this page` link below the 
 :::
 
 <ExampleYAML src={require('./yolo/zarf.yaml')} showLink={false} />
+
+## Big Bang Zarf Agent Metrics Support
+
+:::info
+
+Using Big Bang's Prometheus instance, we can easily add a `ServiceMonitor` to scrape the Zarf Agent's metrics. Check out the [scraping-zarf-agent example](../scraping-zarf-agent/README.md) for more details. Make sure monitoring in enabled.
+
+:::

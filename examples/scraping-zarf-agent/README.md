@@ -57,7 +57,7 @@ zarf tools kubectl wait --for=jsonpath='{.status.availableReplicas}'=1  sts/prom
 Port-forward the Prometheus Operator's Prometheus instance:
 
 ```bash
-zarf connect --name=prometheus-operated --namespace monitoring --remote-port 9090 --local-port=9090
+zarf connect --name=prometheus-operated --namespace monitoring --local-port 9090 --remote-port=9090
 ```
 
 Navigate to the [Prometheus UI targets](http://localhost:9090/targets) at http://localhost:9090/targets.

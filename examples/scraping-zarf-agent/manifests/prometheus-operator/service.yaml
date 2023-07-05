@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    operated-prometheus: "true"
+    zarf.dev/connect-name: prometheus-operated-agent
+  annotations:
+    zarf.dev/connect-description: "The prometheus service."
+    # Sets a URL-suffix to automatically navigate to in the browser
+    zarf.dev/connect-url: "/targets"
+  name: prometheus-operated-agent
+  namespace: monitoring
+spec:
+  clusterIP: None
+  clusterIPs:
+  - None
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: web
+    port: 9090
+    protocol: TCP
+    targetPort: web
+  selector:
+    app.kubernetes.io/name: prometheus
+  sessionAffinity: None
+  type: ClusterIP
