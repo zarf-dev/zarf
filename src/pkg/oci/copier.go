@@ -32,7 +32,7 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 
 	title := fmt.Sprintf("Copying from %s to %s", src.Reference, dst.Reference)
 	progressBar := message.NewProgressBar(size, title)
-	defer progressBar.Successf("Finished copying from %s to %s", src.Reference, dst.Reference)
+	defer progressBar.Successf("%s into %s", src.Reference, dst.Reference)
 
 	// TODO: goroutine this w/ semaphores
 	for _, layer := range layers {

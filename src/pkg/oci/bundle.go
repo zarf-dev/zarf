@@ -23,23 +23,6 @@ import (
 func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd string) error {
 	message.Debug("Bundling", bundle.Metadata.Name, "to", o.Reference)
 	layers := []ocispec.Descriptor{}
-
-	zarfBundleYamlBytes, err := goyaml.Marshal(bundle)
-	if err != nil {
-		return err
-	}
-	zarfBundleYamlDesc, err := o.PushBytes(zarfBundleYamlBytes, ZarfLayerMediaTypeBlob)
-	if err != nil {
-		return err
-	}
-	zarfBundleYamlDesc.Annotations = map[string]string{
-		ocispec.AnnotationTitle: "zarf-bundle.yaml",
-	}
-
-	message.Debug("Pushed zarf-bundle.yaml:", message.JSONValue(zarfBundleYamlDesc))
-
-	layers = append(layers, zarfBundleYamlDesc)
-
 	index := ocispec.Index{}
 
 	for _, pkg := range bundle.Packages {
@@ -65,7 +48,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 		manifestDesc.Annotations = map[string]string{
 			ocispec.AnnotationBaseImageName: url,
 		}
-		message.Debug("Pushed %s sub-manifest into %s:", url, o.Reference, message.JSONValue(manifestDesc))
+		message.Debugf("Pushed %s sub-manifest into %s: %s", url, o.Reference, message.JSONValue(manifestDesc))
 		index.Manifests = append(index.Manifests, manifestDesc)
 		// stream copy the blobs from remote to o, otherwise do a blob mount
 		if remote.Reference.Registry != o.Reference.Registry {
@@ -106,6 +89,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 	indexDesc.Annotations = map[string]string{
 		ocispec.AnnotationTitle: "index.json",
 	}
+
 	manifest := ocispec.Manifest{}
 	manifest.Layers = layers
 	for idx, layer := range manifest.Layers {
@@ -117,10 +101,26 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 	}
 	manifest.Layers = append(manifest.Layers, indexDesc)
 
-	// TODO: push + append the zarf-bundle.yaml to the layers, w/ proper path
+	// push the zarf-bundle.yaml
+	zarfBundleYamlBytes, err := goyaml.Marshal(bundle)
+	if err != nil {
+		return err
+	}
+	zarfBundleYamlDesc, err := o.PushBytes(zarfBundleYamlBytes, ZarfLayerMediaTypeBlob)
+	if err != nil {
+		return err
+	}
+	zarfBundleYamlDesc.Annotations = map[string]string{
+		ocispec.AnnotationTitle: "zarf-bundle.yaml",
+	}
+
+	message.Debug("Pushed zarf-bundle.yaml:", message.JSONValue(zarfBundleYamlDesc))
+	manifest.Layers = append(manifest.Layers, zarfBundleYamlDesc)
+
 	// TODO: push + append the zarf-bundle.yaml.sig to the layers, w/ proper path
 	message.Debug("TODO: signing bundle w/ %s - %s", sigPath, sigPsswd)
 
+	// push the manifest config
 	configDesc, err := o.pushManifestConfigFromMetadata(&bundle.Metadata, &bundle.Build)
 	if err != nil {
 		return err
@@ -141,5 +141,25 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 
 	message.Debug("Pushing manifest:", message.JSONValue(expected))
 
-	return o.Manifests().PushReference(o.Context, expected, bytes.NewReader(b), o.Reference.Reference)
+	o.Transport.ProgressBar = message.NewProgressBar(expected.Size, "Pushing manifest")
+	defer o.Transport.ProgressBar.Stop()
+
+	if err := o.Manifests().PushReference(o.Context, expected, bytes.NewReader(b), o.Reference.Reference); err != nil {
+		return fmt.Errorf("failed to push manifest: %w", err)
+	}
+
+	o.Transport.ProgressBar.Successf("Published %s [%s]", o.Reference, expected.MediaType)
+	o.Transport.ProgressBar = nil
+
+	message.HorizontalRule()
+	flags := ""
+	if config.CommonOptions.Insecure {
+		flags = "--insecure"
+	}
+	message.Title("To inspect/deploy/pull:", "")
+	message.ZarfCommand("bundle inspect oci://%s %s", o.Reference, flags)
+	message.ZarfCommand("bundle deploy oci://%s %s", o.Reference, flags)
+	message.ZarfCommand("bundle pull oci://%s %s", o.Reference, flags)
+
+	return nil
 }

@@ -242,7 +242,7 @@ func (o *OrasRemote) PullBundleMetadata(destinationDir string) error {
 	if err != nil {
 		return err
 	}
-	for _, path := range PackageAlwaysPull {
+	for _, path := range BundleAlwaysPull {
 		desc := root.Locate(path)
 		if !o.isEmptyDescriptor(desc) {
 			err = o.PullLayer(desc, destinationDir)

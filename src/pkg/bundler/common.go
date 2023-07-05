@@ -181,7 +181,7 @@ func (b *Bundler) ValidateBundle() error {
 // TODO:
 // ValidateBundleSignature validates the bundle signature
 func (b *Bundler) ValidateBundleSignature(base string) error {
-	message.Infof("Validating bundle signature from %s/%s", base, config.ZarfYAMLSignature)
+	message.Debugf("Validating bundle signature from %s/%s", base, config.ZarfYAMLSignature)
 	return nil
 	// err := utils.CosignVerifyBlob(bfs.tmp.ZarfBundleYaml, bfs.tmp.ZarfSig, <keypath>)
 	// if err != nil {

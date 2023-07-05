@@ -5,6 +5,9 @@
 package bundler
 
 import (
+	"path/filepath"
+
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
@@ -25,7 +28,7 @@ func (b *Bundler) Inspect() error {
 	}
 
 	// read the zarf-bundle.yaml into memory
-	if err := b.ReadBundleYaml(b.tmp, &b.bundle); err != nil {
+	if err := b.ReadBundleYaml(filepath.Join(b.tmp, config.ZarfBundleYAML), &b.bundle); err != nil {
 		return err
 	}
 
