@@ -11,13 +11,13 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/anchore/stereoscope v0.0.0-20230609190519-5b5049bf4d3a
-	github.com/anchore/syft v0.84.0
+	github.com/anchore/syft v0.84.1
 	github.com/derailed/k9s v0.27.4
 	github.com/distribution/distribution v2.8.2+incompatible
 	github.com/docker/cli v24.0.2+incompatible
 	github.com/fairwindsops/pluto/v5 v5.17.0
 	github.com/fatih/color v1.15.0
-	github.com/fluxcd/helm-controller/api v0.34.2
+	github.com/fluxcd/helm-controller/api v0.35.0
 	github.com/fluxcd/source-controller/api v0.36.1
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-git/go-git/v5 v5.7.0
@@ -26,7 +26,7 @@ require (
 	github.com/google/go-containerregistry v0.15.2
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/moby/moby v24.0.2+incompatible
-	github.com/opencontainers/image-spec v1.1.0-rc3
+	github.com/opencontainers/image-spec v1.1.0-rc4
 	github.com/otiai10/copy v1.12.0
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.62
@@ -35,7 +35,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/crypto v0.10.0
+	golang.org/x/crypto v0.11.0
 	helm.sh/helm/v3 v3.12.1
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.3
@@ -43,8 +43,8 @@ require (
 	k8s.io/component-base v0.27.3
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/kubectl v0.27.3
-	oras.land/oras-go/v2 v2.2.0
-	sigs.k8s.io/kustomize/api v0.13.4
+	oras.land/oras-go/v2 v2.2.1
+	sigs.k8s.io/kustomize/api v0.14.0
 	sigs.k8s.io/kustomize/kyaml v0.14.2
 	sigs.k8s.io/yaml v1.3.0
 )
