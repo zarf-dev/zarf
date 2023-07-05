@@ -26,7 +26,7 @@ var (
 	pkgConfig = types.PackagerConfig{}
 
 	// Default global config for the bundler
-	bndlConfig = types.BundlerConfig{}
+	bundleCfg = types.BundlerConfig{}
 
 	// Viper instance used by the cmd package
 	v *viper.Viper

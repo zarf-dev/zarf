@@ -35,11 +35,11 @@ var bundleCreateCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		bndlConfig.CreateOpts.SourceDirectory = args[0]
+		bundleCfg.CreateOpts.SourceDirectory = args[0]
 
-		bndlConfig.CreateOpts.SetVariables = bundler.MergeVariables(v.GetStringMapString(V_PKG_CREATE_SET), bndlConfig.CreateOpts.SetVariables)
+		bundleCfg.CreateOpts.SetVariables = bundler.MergeVariables(v.GetStringMapString(V_PKG_CREATE_SET), bundleCfg.CreateOpts.SetVariables)
 
-		bndlClient := bundler.NewOrDie(&bndlConfig)
+		bndlClient := bundler.NewOrDie(&bundleCfg)
 		defer bndlClient.ClearPaths()
 
 		if err := bndlClient.Create(); err != nil {
@@ -53,18 +53,13 @@ var bundleDeployCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   lang.CmdBundleDeployShort,
 	Args:    cobra.ExactArgs(1),
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.IsOCIURL(args[0]) && !bundler.IsValidTarballPath(args[0]) {
-			return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
-		}
-		return oci.ValidateReference(args[0])
-	},
+	PreRunE: firstArgIsEitherOCIorTarball,
 	Run: func(cmd *cobra.Command, args []string) {
-		bndlConfig.DeployOpts.Source = args[0]
+		bundleCfg.DeployOpts.Source = args[0]
 
-		bndlConfig.DeployOpts.SetVariables = bundler.MergeVariables(v.GetStringMapString(V_PKG_DEPLOY_SET), bndlConfig.DeployOpts.SetVariables)
+		bundleCfg.DeployOpts.SetVariables = bundler.MergeVariables(v.GetStringMapString(V_PKG_DEPLOY_SET), bundleCfg.DeployOpts.SetVariables)
 
-		bndlClient := bundler.NewOrDie(&bndlConfig)
+		bndlClient := bundler.NewOrDie(&bundleCfg)
 		defer bndlClient.ClearPaths()
 
 		if err := bndlClient.Deploy(); err != nil {
@@ -78,16 +73,11 @@ var bundleInspectCmd = &cobra.Command{
 	Aliases: []string{"i"},
 	Short:   lang.CmdBundleInspectShort,
 	Args:    cobra.ExactArgs(1),
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.IsOCIURL(args[0]) && !bundler.IsValidTarballPath(args[0]) {
-			return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
-		}
-		return oci.ValidateReference(args[0])
-	},
+	PreRunE: firstArgIsEitherOCIorTarball,
 	Run: func(cmd *cobra.Command, args []string) {
-		bndlConfig.InspectOpts.Source = args[0]
+		bundleCfg.InspectOpts.Source = args[0]
 
-		bndlClient := bundler.NewOrDie(&bndlConfig)
+		bndlClient := bundler.NewOrDie(&bundleCfg)
 		defer bndlClient.ClearPaths()
 
 		if err := bndlClient.Inspect(); err != nil {
@@ -101,16 +91,11 @@ var bundleRemoveCmd = &cobra.Command{
 	Aliases: []string{"u"},
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdBundleRemoveShort,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if !utils.IsOCIURL(args[0]) && utils.InvalidPath(args[0]) {
-			return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
-		}
-		return oci.ValidateReference(args[0])
-	},
+	RunE:    firstArgIsEitherOCIorTarball,
 	Run: func(cmd *cobra.Command, args []string) {
-		bndlConfig.RemoveOpts.Source = args[0]
+		bundleCfg.RemoveOpts.Source = args[0]
 
-		bndlClient := bundler.NewOrDie(&bndlConfig)
+		bndlClient := bundler.NewOrDie(&bundleCfg)
 		defer bndlClient.ClearPaths()
 
 		if err := bndlClient.Remove(); err != nil {
@@ -127,15 +112,22 @@ var bundlePullCmd = &cobra.Command{
 		return oci.ValidateReference(args[0])
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		bndlConfig.PullOpts.Source = args[0]
+		bundleCfg.PullOpts.Source = args[0]
 
-		bndlClient := bundler.NewOrDie(&bndlConfig)
+		bndlClient := bundler.NewOrDie(&bundleCfg)
 		defer bndlClient.ClearPaths()
 
 		if err := bndlClient.Pull(); err != nil {
 			message.Fatalf(err, "Failed to pull bundle: %s", err.Error())
 		}
 	},
+}
+
+func firstArgIsEitherOCIorTarball(cmd *cobra.Command, args []string) error {
+	if !utils.IsOCIURL(args[0]) && !bundler.IsValidTarballPath(args[0]) {
+		return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
+	}
+	return oci.ValidateReference(args[0])
 }
 
 func init() {
@@ -147,25 +139,25 @@ func init() {
 
 	bundleCmd.AddCommand(bundleCreateCmd)
 	bundleCreateCmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdBundleRemoveFlagConfirm)
-	bundleCreateCmd.Flags().StringVarP(&bndlConfig.CreateOpts.Output, "output", "o", v.GetString(V_BNDL_CREATE_OUTPUT), lang.CmdBundleCreateFlagOutput)
-	bundleCreateCmd.Flags().StringVarP(&bndlConfig.CreateOpts.SigningKeyPath, "signing-key", "k", v.GetString(V_BNDL_CREATE_SIGNING_KEY), lang.CmdBundleCreateFlagSigningKey)
-	bundleCreateCmd.Flags().StringVarP(&bndlConfig.CreateOpts.SigningKeyPassword, "signing-key-password", "p", v.GetString(V_BNDL_CREATE_SIGNING_KEY_PASSWORD), lang.CmdBundleCreateFlagSigningKeyPassword)
-	bundleCreateCmd.Flags().StringToStringVarP(&bndlConfig.CreateOpts.SetVariables, "set", "s", v.GetStringMapString(V_BNDL_CREATE_SET), lang.CmdBundleCreateFlagSet)
+	bundleCreateCmd.Flags().StringVarP(&bundleCfg.CreateOpts.Output, "output", "o", v.GetString(V_BNDL_CREATE_OUTPUT), lang.CmdBundleCreateFlagOutput)
+	bundleCreateCmd.Flags().StringVarP(&bundleCfg.CreateOpts.SigningKeyPath, "signing-key", "k", v.GetString(V_BNDL_CREATE_SIGNING_KEY), lang.CmdBundleCreateFlagSigningKey)
+	bundleCreateCmd.Flags().StringVarP(&bundleCfg.CreateOpts.SigningKeyPassword, "signing-key-password", "p", v.GetString(V_BNDL_CREATE_SIGNING_KEY_PASSWORD), lang.CmdBundleCreateFlagSigningKeyPassword)
+	bundleCreateCmd.Flags().StringToStringVarP(&bundleCfg.CreateOpts.SetVariables, "set", "s", v.GetStringMapString(V_BNDL_CREATE_SET), lang.CmdBundleCreateFlagSet)
 
 	bundleCmd.AddCommand(bundleDeployCmd)
-	bundleDeployCmd.Flags().StringSliceVarP(&bndlConfig.DeployOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_DEPLOY_PACKAGES), lang.CmdBundleDeployFlagPackages)
-	bundleDeployCmd.Flags().StringToStringVarP(&bndlConfig.DeployOpts.SetVariables, "set", "s", v.GetStringMapString(V_BNDL_DEPLOY_SET), lang.CmdBundleDeployFlagSet)
+	bundleDeployCmd.Flags().StringSliceVarP(&bundleCfg.DeployOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_DEPLOY_PACKAGES), lang.CmdBundleDeployFlagPackages)
+	bundleDeployCmd.Flags().StringToStringVarP(&bundleCfg.DeployOpts.SetVariables, "set", "s", v.GetStringMapString(V_BNDL_DEPLOY_SET), lang.CmdBundleDeployFlagSet)
 
 	bundleCmd.AddCommand(bundleInspectCmd)
-	bundleInspectCmd.Flags().StringVarP(&bndlConfig.InspectOpts.PublicKey, "key", "k", v.GetString(V_BNDL_INSPECT_KEY), lang.CmdBundleInspectFlagKey)
+	bundleInspectCmd.Flags().StringVarP(&bundleCfg.InspectOpts.PublicKey, "key", "k", v.GetString(V_BNDL_INSPECT_KEY), lang.CmdBundleInspectFlagKey)
 
 	bundleCmd.AddCommand(bundleRemoveCmd)
 	// confirm does not use the Viper config
 	bundleRemoveCmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdBundleRemoveFlagConfirm)
-	bundleRemoveCmd.Flags().StringSliceVarP(&bndlConfig.RemoveOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_REMOVE_PACKAGES), lang.CmdBundleRemoveFlagPackages)
+	bundleRemoveCmd.Flags().StringSliceVarP(&bundleCfg.RemoveOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_REMOVE_PACKAGES), lang.CmdBundleRemoveFlagPackages)
 	_ = bundleRemoveCmd.MarkFlagRequired("confirm")
 
 	bundleCmd.AddCommand(bundlePullCmd)
-	bundlePullCmd.Flags().StringVarP(&bndlConfig.PullOpts.OutputDirectory, "output", "o", v.GetString(V_BNDL_PULL_OUTPUT), lang.CmdBundlePullFlagOutput)
-	bundlePullCmd.Flags().StringVarP(&bndlConfig.PullOpts.PublicKey, "key", "k", v.GetString(V_BNDL_PULL_KEY), lang.CmdBundlePullFlagKey)
+	bundlePullCmd.Flags().StringVarP(&bundleCfg.PullOpts.OutputDirectory, "output", "o", v.GetString(V_BNDL_PULL_OUTPUT), lang.CmdBundlePullFlagOutput)
+	bundlePullCmd.Flags().StringVarP(&bundleCfg.PullOpts.PublicKey, "key", "k", v.GetString(V_BNDL_PULL_KEY), lang.CmdBundlePullFlagKey)
 }
