@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
 // validatePackageChecksums validates the checksums of a Zarf package.
@@ -37,7 +38,7 @@ func (p *Packager) validatePackageChecksums(baseDir string, aggregateChecksum st
 
 	isPartial := false
 	if len(pathsToCheck) > 0 {
-		pathsToCheck = utils.Unique(pathsToCheck)
+		pathsToCheck = helpers.Unique(pathsToCheck)
 		isPartial = true
 		message.Debugf("Validating checksums for a subset of files in the package - %v", pathsToCheck)
 		for idx, path := range pathsToCheck {
@@ -78,7 +79,7 @@ func (p *Packager) validatePackageChecksums(baseDir string, aggregateChecksum st
 		if utils.InvalidPath(path) {
 			if !isPartial && !checkedMap[path] {
 				return fmt.Errorf("unable to validate checksums - missing file: %s", rel)
-			} else if utils.SliceContains(pathsToCheck, path) {
+			} else if helpers.SliceContains(pathsToCheck, path) {
 				return fmt.Errorf("unable to validate partial checksums - missing file: %s", rel)
 			}
 			// it's okay if we're doing a partial check and the file isn't there as long as the path isn't in the list of paths to check

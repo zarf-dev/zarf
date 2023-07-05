@@ -10,7 +10,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 )
@@ -43,7 +43,7 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 	migratedComponent = component
 
 	// If the component has already been migrated, clear the deprecated scripts.
-	if utils.SliceContains(build.Migrations, ScriptsToActionsMigrated) {
+	if helpers.SliceContains(build.Migrations, ScriptsToActionsMigrated) {
 		migratedComponent.DeprecatedScripts = types.DeprecatedZarfComponentScripts{}
 	} else {
 		// Otherwise, run the migration.
@@ -54,7 +54,7 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 	}
 
 	// If the component has already been migrated, clear the setVariable definitions.
-	if utils.SliceContains(build.Migrations, PluralizeSetVariable) {
+	if helpers.SliceContains(build.Migrations, PluralizeSetVariable) {
 		migratedComponent = clearSetVariables(migratedComponent)
 	} else {
 		// Otherwise, run the migration.

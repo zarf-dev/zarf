@@ -27,6 +27,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/mholt/archiver/v3"
@@ -157,7 +158,7 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	imgList := utils.Unique(combinedImageList)
+	imgList := helpers.Unique(combinedImageList)
 
 	// Images are handled separately from other component assets.
 	if len(imgList) > 0 {
@@ -175,7 +176,7 @@ func (p *Packager) Create(baseDir string) error {
 			return imgConfig.PullAll()
 		}
 
-		if err := utils.Retry(doPull, 3, 5*time.Second); err != nil {
+		if err := helpers.Retry(doPull, 3, 5*time.Second); err != nil {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 	}
@@ -403,7 +404,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			if actualShasum, _ := utils.GetCryptoHash(dst, crypto.SHA256); actualShasum != file.Shasum {
+			if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 			}
 		}

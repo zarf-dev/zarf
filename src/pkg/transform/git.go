@@ -10,7 +10,7 @@ import (
 	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
 // For further explanation: https://regex101.com/r/YxpfhC/3
@@ -32,7 +32,7 @@ func MutateGitURLsInText(targetBaseURL string, text string, pushUser string) str
 
 // GitTransformURLSplitRef takes a git url and returns a separated source url and zarf reference.
 func GitTransformURLSplitRef(sourceURL string) (string, string, error) {
-	get, err := utils.MatchRegex(gitURLRegex, sourceURL)
+	get, err := helpers.MatchRegex(gitURLRegex, sourceURL)
 
 	if err != nil {
 		return "", "", fmt.Errorf("unable to get extract the source url and ref from the url %s", sourceURL)
@@ -46,7 +46,7 @@ func GitTransformURLSplitRef(sourceURL string) (string, string, error) {
 
 // GitTransformURLtoFolderName takes a git url and returns the folder name for the repo in the Zarf package.
 func GitTransformURLtoFolderName(sourceURL string) (string, error) {
-	get, err := utils.MatchRegex(gitURLRegex, sourceURL)
+	get, err := helpers.MatchRegex(gitURLRegex, sourceURL)
 
 	if err != nil {
 		// Unable to find a substring match for the regex
@@ -58,7 +58,7 @@ func GitTransformURLtoFolderName(sourceURL string) (string, error) {
 	// Add crc32 hash of the repoName to the end of the repo
 	gitURL := fmt.Sprintf("%s%s/%s%s%s", get("proto"), get("hostPath"), get("repo"), get("git"), get("atRef"))
 
-	checksum := utils.GetCRCHash(gitURL)
+	checksum := helpers.GetCRCHash(gitURL)
 
 	newRepoName := fmt.Sprintf("%s-%d", repoName, checksum)
 
@@ -67,7 +67,7 @@ func GitTransformURLtoFolderName(sourceURL string) (string, error) {
 
 // GitTransformURLtoRepoName takes a git url and returns the name of the repo in the remote airgap repository.
 func GitTransformURLtoRepoName(sourceURL string) (string, error) {
-	get, err := utils.MatchRegex(gitURLRegex, sourceURL)
+	get, err := helpers.MatchRegex(gitURLRegex, sourceURL)
 
 	if err != nil {
 		// Unable to find a substring match for the regex
@@ -80,7 +80,7 @@ func GitTransformURLtoRepoName(sourceURL string) (string, error) {
 	sanitizedURL := fmt.Sprintf("%s/%s", get("hostPath"), repoName)
 
 	// Add crc32 hash of the repoName to the end of the repo
-	checksum := utils.GetCRCHash(sanitizedURL)
+	checksum := helpers.GetCRCHash(sanitizedURL)
 
 	newRepoName := fmt.Sprintf("%s-%d", repoName, checksum)
 
