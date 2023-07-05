@@ -19,7 +19,6 @@ import (
 var (
 	waitTimeout   string
 	waitNamespace string
-	waitType      string
 )
 
 var waitForCmd = &cobra.Command{

@@ -45,4 +45,3 @@ zarf connect { REGISTRY | LOGGING | GIT | connect-name } [flags]
 
 * [zarf](zarf.md)	 - DevSecOps for Airgap
 * [zarf connect list](zarf_connect_list.md)	 - Lists all available connection shortcuts
-
