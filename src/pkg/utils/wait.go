@@ -167,7 +167,7 @@ func WaitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 				// Convert the condition to an int and check if it's a valid HTTP status code.
 				code, err := strconv.Atoi(condition)
 				if err != nil || http.StatusText(code) == "" {
-					message.Fatalf(err, lang.CmdToolsWaitForErrConditionString, condition)
+					message.Fatal(err, lang.CmdToolsWaitForErrConditionString)
 				}
 
 				// Try to get the URL and check the status code.
