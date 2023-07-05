@@ -5,10 +5,15 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,31 +23,87 @@ func publish(t *testing.T, path string, reg string) {
 	require.NoError(t, err)
 }
 
+var cliver string
+
 func TestBundle(t *testing.T) {
 	e2e.SetupDockerRegistry(t, 888)
 	defer e2e.TeardownRegistry(t, 888)
 	e2e.SetupDockerRegistry(t, 889)
 	defer e2e.TeardownRegistry(t, 889)
 
-	stdOut, _, err := e2e.Zarf("version")
-	require.NoError(t, err)
-	cliver := strings.TrimSpace(stdOut)
+	cliver = e2e.GetZarfVersion(t)
 
-	arch := e2e.Arch
-	pkg := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", arch, cliver)
+	pkg := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", e2e.Arch, cliver)
 	publish(t, pkg, "localhost:888")
 
-	ver := "0.0.1"
-	pkg = fmt.Sprintf("build/zarf-package-manifests-%s-%s.tar.zst", arch, ver)
+	pkg = fmt.Sprintf("build/zarf-package-manifests-%s-0.0.1.tar.zst", e2e.Arch)
 	publish(t, pkg, "localhost:889")
 
+	testCreate(t)
+
+	testInspect(t)
+
+	testPull(t)
+}
+
+func testCreate(t *testing.T) {
 	dir := "src/test/packages/60-bundle"
 	cmd := strings.Split(fmt.Sprintf("bundle create %s -o oci://%s --set INIT_VERSION=%s --confirm --insecure -l=debug", dir, "localhost:888", cliver), " ")
+	_, _, err := e2e.Zarf(cmd...)
+	require.NoError(t, err)
+}
+
+func testInspect(t *testing.T) {
+	ref := fmt.Sprintf("localhost:888/bundle:0.0.1-%s", e2e.Arch)
+	cmd := strings.Split(fmt.Sprintf("bundle inspect oci://%s --insecure", ref), " ")
+	_, _, err := e2e.Zarf(cmd...)
+	require.NoError(t, err)
+}
+
+func shasMatch(t *testing.T, path string, expected string) {
+	actual, err := utils.GetSHA256OfFile(path)
+	require.NoError(t, err)
+	require.Equal(t, expected, actual)
+}
+
+func testPull(t *testing.T) {
+	ref := fmt.Sprintf("localhost:888/bundle:0.0.1-%s", e2e.Arch)
+	cmd := strings.Split(fmt.Sprintf("bundle pull oci://%s -o build --insecure --oci-concurrency=10", ref), " ")
+	_, _, err := e2e.Zarf(cmd...)
+	require.NoError(t, err)
+
+	decompressed := "build/decompress-bundle"
+	cmd = []string{"tools", "archiver", "decompress", fmt.Sprintf("build/zarf-bundle-%s-0.0.1.tar.zst", e2e.Arch), "-o", decompressed}
 	_, _, err = e2e.Zarf(cmd...)
 	require.NoError(t, err)
 
-	ref := fmt.Sprintf("localhost:888/bundle:%s-%s", ver, arch)
-	cmd = strings.Split(fmt.Sprintf("bundle inspect oci://%s --insecure", ref), " ")
-	_, _, err = e2e.Zarf(cmd...)
+	index := ocispec.Index{}
+	b, err := os.ReadFile(filepath.Join(decompressed, "index.json"))
 	require.NoError(t, err)
+	err = json.Unmarshal(b, &index)
+	require.NoError(t, err)
+
+	require.Equal(t, 2, len(index.Manifests))
+
+	blobsDir := filepath.Join(decompressed, "blobs", "sha256")
+
+	for _, desc := range index.Manifests {
+		sha := desc.Digest.Encoded()
+		require.FileExists(t, filepath.Join(blobsDir, sha))
+		shasMatch(t, filepath.Join(blobsDir, sha), desc.Digest.Encoded())
+
+		manifest := ocispec.Manifest{}
+		b, err := os.ReadFile(filepath.Join(blobsDir, sha))
+		require.NoError(t, err)
+		err = json.Unmarshal(b, &manifest)
+		require.NoError(t, err)
+
+		require.FileExists(t, filepath.Join(blobsDir, manifest.Config.Digest.Encoded()))
+
+		for _, layer := range manifest.Layers {
+			sha := layer.Digest.Encoded()
+			require.FileExists(t, filepath.Join(blobsDir, sha))
+			shasMatch(t, filepath.Join(blobsDir, sha), layer.Digest.Encoded())
+		}
+	}
 }
