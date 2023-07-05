@@ -147,7 +147,8 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 		if err != nil {
 			return err
 		}
-		spinner.Updatef("Preparing layer %d/%d: %s", idx+1, len(paths), name)
+		status := fmt.Sprintf("Preparing layer %d/%d: %s", idx+1, len(paths), name)
+		spinner.Updatef(message.Truncate(status, message.TermWidth, false))
 
 		mediaType := ZarfLayerMediaTypeBlob
 

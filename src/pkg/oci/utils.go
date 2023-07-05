@@ -35,12 +35,13 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 	if !strings.HasSuffix(registryLocation, "/") {
 		registryLocation = registryLocation + "/"
 	}
+	registryLocation = strings.TrimPrefix(registryLocation, utils.OCIURLPrefix)
 
 	format := "%s%s:%s-%s"
 
 	raw := fmt.Sprintf(format, registryLocation, metadata.Name, ver, suffix)
 
-	message.Debug("raw OCI reference from metadata:", raw)
+	message.Debug("Raw OCI reference from metadata:", raw)
 
 	ref, err := registry.ParseReference(raw)
 	if err != nil {

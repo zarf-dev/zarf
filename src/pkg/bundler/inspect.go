@@ -35,6 +35,6 @@ func (b *Bundler) Inspect() error {
 	}
 
 	// show the zarf-bundle.yaml
-	utils.ColorPrintYAML(b.bundle, nil, true)
+	utils.ColorPrintYAML(b.bundle, nil, false)
 	return nil
 }

@@ -40,4 +40,9 @@ func TestBundle(t *testing.T) {
 	cmd := strings.Split(fmt.Sprintf("bundle create %s -o oci://%s --set INIT_VERSION=%s --confirm --insecure -l=debug", dir, "localhost:888", cliver), " ")
 	_, _, err = e2e.Zarf(cmd...)
 	require.NoError(t, err)
+
+	ref := fmt.Sprintf("localhost:888/bundle:0.0.1-%s", cliver)
+	cmd = strings.Split(fmt.Sprintf("bundle inspect oci://%s --insecure", ref), " ")
+	_, _, err = e2e.Zarf(cmd...)
+	require.NoError(t, err)
 }
