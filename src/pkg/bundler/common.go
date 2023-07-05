@@ -139,11 +139,26 @@ func (b *Bundler) ValidateBundle() error {
 			return err
 		}
 		if len(pkg.OptionalComponents) > 0 {
+			// make sure if a wildcard is given, it is the first and only element
+			for idx, component := range pkg.OptionalComponents {
+				if (component == "*" && idx != 0) || (component == "*" && len(pkg.OptionalComponents) > 1) {
+					return fmt.Errorf("zarf-bundle.yaml .packages[%s].optional-components[%d] wildcard '*' must be first and only item", pkg.Repository, idx)
+				}
+			}
 			zarfYAML := types.ZarfPackage{}
 			zarfYAMLPath := filepath.Join(tmp, config.ZarfYAML)
 			err := utils.ReadYaml(zarfYAMLPath, &zarfYAML)
 			if err != nil {
 				return err
+			}
+			if pkg.OptionalComponents[0] == "*" {
+				// a wildcard has been given, so all optional components will be included
+				for _, c := range zarfYAML.Components {
+					if c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == b.bundle.Metadata.Architecture {
+						pkg.OptionalComponents = append(pkg.OptionalComponents, c.Name)
+					}
+				}
+				continue
 			}
 			for _, component := range pkg.OptionalComponents {
 				c := utils.Find(zarfYAML.Components, func(c types.ZarfComponent) bool {
