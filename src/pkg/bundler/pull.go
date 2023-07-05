@@ -4,6 +4,13 @@
 // Package bundler contains functions for interacting with, managing and deploying Zarf bundles.
 package bundler
 
+import (
+	"os"
+
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/mholt/archiver/v3"
+)
+
 // Pull pulls a bundle and saves it locally + caches it
 //
 // : retrieve the `zarf-bundle.yaml`, `checksum.txt`, and `zarf.yaml.sig`
@@ -14,24 +21,17 @@ func (b *Bundler) Pull() error {
 		return err
 	}
 
-	// pull the zarf-bundle.yaml + sig
-	if err := b.remote.PullBundleMetadata(b.tmp); err != nil {
+	// TODO: figure out the best path to check the signature before we pull the bundle
+
+	// pull the bundle
+	if err := b.remote.PullBundle(b.tmp, config.CommonOptions.OCIConcurrency, nil); err != nil {
 		return err
 	}
 
-	// read the zarf-bundle.yaml into memory
-	if err := b.ReadBundleYaml(b.tmp, &b.bundle); err != nil {
+	// tarball the bundle
+	if err := archiver.Archive([]string{b.tmp + string(os.PathSeparator)}, b.cfg.PullOpts.OutputDirectory); err != nil {
 		return err
 	}
-
-	// validate the sig (if present)
-	if err := b.ValidateBundleSignature(b.tmp); err != nil {
-		return err
-	}
-
-	// if err := b.remote.PullBundle(b.tmp, config.CommonOptions.OCIConcurrency, &b.bundle); err != nil {
-	// 	return err
-	// }
 
 	return nil
 }

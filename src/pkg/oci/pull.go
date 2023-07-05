@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -26,7 +27,7 @@ var (
 	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
 	PackageAlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
 	// BundleAlwaysPull is a list of paths that will always be pulled from the remote repository.
-	BundleAlwaysPull = []string{config.ZarfBundleYAML, config.ZarfYAMLSignature}
+	BundleAlwaysPull = []string{config.ZarfBundleYAML, config.ZarfYAMLSignature, "index.json"}
 )
 
 // LayersFromPaths returns the descriptors for the given paths from the root manifest.
@@ -245,15 +246,16 @@ func (o *OrasRemote) PullBundleMetadata(destinationDir string) error {
 	return o.PullMultipleFiles(BundleAlwaysPull, destinationDir)
 }
 
-// TODO: implement this
+// PullBundle pulls the bundle from the remote repository and saves it to the given path.
 func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requestedPackages []string) error {
-	manifest, err := o.FetchRoot()
-	if err != nil {
+	isPartial := len(requestedPackages) > 0
+
+	if err := o.PullBundleMetadata(destinationDir); err != nil {
 		return err
 	}
 
 	// fetch the index.json
-	indexBytes, err := o.FetchLayer(manifest.Locate("index.json"))
+	indexBytes, err := os.ReadFile(filepath.Join(destinationDir, "index.json"))
 	if err != nil {
 		return err
 	}
@@ -274,5 +276,22 @@ func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requeste
 		// the "repo:ref" is stored in the manifest's title annotation
 		packageManifests[manifestDesc.Annotations[ocispec.AnnotationTitle]] = *manifest
 	}
+
+	for pkg, manifest := range packageManifests {
+		if !isPartial || utils.SliceContains(requestedPackages, pkg) {
+			pkgDestinationDir := filepath.Join(destinationDir, pkg)
+			// TODO: are these the right perms?
+			if err := utils.CreateDirectory(pkgDestinationDir, 0755); err != nil {
+				return err
+			}
+			_, err := o.PullPackage(pkgDestinationDir, concurrency, manifest.Layers...)
+			if err != nil {
+				return err
+			}
+			// TODO: run checksum validation here
+			// TODO: run signature validation here
+		}
+	}
+
 	return nil
 }
