@@ -111,6 +111,14 @@ func (b *Bundler) ValidateBundle() error {
 		return fmt.Errorf("zarf-bundle.yaml is missing required list: packages")
 	}
 	for idx, pkg := range b.bundle.Packages {
+		message.Debug("Validating package:", message.JSONValue(pkg))
+
+		tmp, err := utils.MakeTempDir("")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(tmp)
+
 		if pkg.Repository == "" {
 			return fmt.Errorf("zarf-bundle.yaml .packages[%d] is missing required field: repository", idx)
 		}
@@ -124,18 +132,15 @@ func (b *Bundler) ValidateBundle() error {
 			// remote performs access verification upon instantiation
 			return err
 		}
-		if err := remote.PullPackageMetadata(b.tmp); err != nil {
+		if err := remote.PullPackageMetadata(tmp); err != nil {
 			return err
 		}
-		if err := packager.ValidatePackageSignature(b.tmp, pkg.PublicKey); err != nil {
+		if err := packager.ValidatePackageSignature(tmp, pkg.PublicKey); err != nil {
 			return err
 		}
-		// TODO: validate signatures here
-		// TODO: are we gonna re-sign the packages within a bundle?
-		// not re-signing @wayne
 		if len(pkg.OptionalComponents) > 0 {
 			zarfYAML := types.ZarfPackage{}
-			zarfYAMLPath := filepath.Join(b.tmp, config.ZarfYAML)
+			zarfYAMLPath := filepath.Join(tmp, config.ZarfYAML)
 			err := utils.ReadYaml(zarfYAMLPath, &zarfYAML)
 			if err != nil {
 				return err
@@ -154,11 +159,11 @@ func (b *Bundler) ValidateBundle() error {
 				}
 			}
 		}
-		b.ClearPaths()
 	}
 	return nil
 }
 
+// TODO:
 // ValidateBundleSignature validates the bundle signature
 func (b *Bundler) ValidateBundleSignature(base string) error {
 	message.Infof("Validating bundle signature from %s/%s", base, config.ZarfYAMLSignature)
@@ -204,6 +209,7 @@ func (b *Bundler) CalculateBuildInfo() error {
 
 // SetOCIRemote sets the remote for the Bundler
 func (b *Bundler) SetOCIRemote(url string) error {
+	message.Debug("Setting OCI remote URL to:", url)
 	remote, err := oci.NewOrasRemote(url)
 	if err != nil {
 		return err
@@ -232,6 +238,8 @@ func IsValidTarballPath(path string) bool {
 
 // adapted from p.fillActiveTemplate
 func (b *Bundler) templateBundleYaml() error {
+	message.Debug("Templating zarf-bundle.yaml w/:", message.JSONValue(b.cfg.CreateOpts.SetVariables))
+
 	templateMap := map[string]string{}
 	setFromCLIConfig := b.cfg.CreateOpts.SetVariables
 	yamlTemplates, err := utils.FindYamlTemplates(&b.bundle, "###ZARF_BNDL_TMPL_", "###")

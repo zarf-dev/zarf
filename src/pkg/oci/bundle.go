@@ -20,6 +20,7 @@ import (
 
 // Bundle pushes the given bundle to the remote repository.
 func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd string) error {
+	message.Debug("Bundling", bundle.Metadata.Name, "to", o.Reference)
 	layers := []ocispec.Descriptor{}
 	index := ocispec.Index{}
 	for _, pkg := range bundle.Packages {
@@ -48,12 +49,12 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 		index.Manifests = append(index.Manifests, manifestDesc)
 		// stream copy the blobs from remote to o, otherwise do a blob mount
 		if remote.Reference.Registry != o.Reference.Registry {
-			message.Infof("Streaming layers from %s --> %s", remote.Reference, o.Reference)
+			message.Debugf("Streaming layers from %s --> %s", remote.Reference, o.Reference)
 			if err := CopyPackage(remote, o, config.CommonOptions.OCIConcurrency); err != nil {
 				return err
 			}
 		} else {
-			message.Infof("Performing a cross repository blob mount on %s from %s --> %s", remote.Reference.Registry, remote.Reference.Repository, o.Reference.Repository)
+			message.Debugf("Performing a cross repository blob mount on %s from %s --> %s", remote.Reference.Registry, remote.Reference.Repository, o.Reference.Repository)
 			for _, layer := range root.Layers {
 				err := o.Mount(o.Context, layer, remote.Reference.Repository, func() (io.ReadCloser, error) {
 					// TODO: how does this handle auth?
