@@ -1,6 +1,6 @@
 import ExampleYAML from "@site/src/components/ExampleYAML";
 
-# Scrape Zarf Agent
+# Zarf Agent Metrics (Prometheus)
 
 This example demonstrates how to scrape the Zarf Agent container image from the Prometheus Operator.
 
