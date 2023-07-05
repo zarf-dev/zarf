@@ -29,6 +29,13 @@ func IsJSONPathWaitType(condition string) bool {
 
 // ExecuteWait executes the wait-for command.
 func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) {
+	// Handle network endpoints.
+	switch kind {
+	case "http", "https", "tcp":
+		WaitForNetworkEndpoint(kind, identifier, condition, timeout)
+		return
+	}
+
 	// Type of wait, condition or JSONPath
 	var waitType string
 
@@ -37,13 +44,6 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 		waitType = "jsonpath="
 	} else {
 		waitType = "condition="
-	}
-
-	// Handle network endpoints.
-	switch kind {
-	case "http", "https", "tcp":
-		WaitForNetworkEndpoint(kind, identifier, condition, timeout)
-		return
 	}
 
 	// Get the Zarf executable path.
