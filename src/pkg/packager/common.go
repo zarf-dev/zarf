@@ -463,15 +463,15 @@ var (
 	ErrPkgSigButNoKey = errors.New("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
 )
 
-func (p *Packager) validatePackageSignature(publicKeyPath string) error {
+func ValidatePackageSignature(directory string, publicKeyPath string) error {
 
-	// If the insecure flag was provided, or there is no aggregate checksum, ignore the signature validation
-	if config.CommonOptions.Insecure || p.cfg.Pkg.Metadata.AggregateChecksum == "" {
+	// If the insecure flag was provided, ignore the signature validation
+	if config.CommonOptions.Insecure {
 		return nil
 	}
 
 	// Handle situations where there is no signature within the package
-	sigExist := !utils.InvalidPath(p.tmp.ZarfSig)
+	sigExist := !utils.InvalidPath(filepath.Join(directory, config.ZarfYAMLSignature))
 	if !sigExist && publicKeyPath == "" {
 		// Nobody was expecting a signature, so we can just return
 		return nil
@@ -484,7 +484,7 @@ func (p *Packager) validatePackageSignature(publicKeyPath string) error {
 	}
 
 	// Validate the signature with the key we were provided
-	if err := utils.CosignVerifyBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, publicKeyPath); err != nil {
+	if err := utils.CosignVerifyBlob(filepath.Join(directory, config.ZarfYAML), filepath.Join(directory, config.ZarfYAMLSignature), publicKeyPath); err != nil {
 		return fmt.Errorf("package signature did not match the provided key: %w", err)
 	}
 

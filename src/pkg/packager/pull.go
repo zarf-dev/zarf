@@ -32,7 +32,7 @@ func (p *Packager) Pull() error {
 		return err
 	}
 
-	if err = p.validatePackageSignature(p.cfg.PullOpts.PublicKeyPath); err != nil {
+	if err = ValidatePackageSignature(p.tmp.Base, p.cfg.PullOpts.PublicKeyPath); err != nil {
 		return err
 	} else if !config.CommonOptions.Insecure {
 		message.Successf("Package signature is valid")

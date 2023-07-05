@@ -7,10 +7,9 @@ metadata:
 packages:
   - repository: localhost:888/init
     ref: "###ZARF_BNDL_TMPL_INIT_VERSION###"
-    components:
-      - k3s
-      - injector
+    optional-components:
+      - git-server
   - repository: localhost:889/manifests
     ref: 0.0.1
-    components:
+    optional-components:
       - "*" # grab all components

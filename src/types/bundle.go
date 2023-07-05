@@ -13,7 +13,8 @@ type ZarfBundle struct {
 
 // ZarfPackageImport is a package import statement in a Zarf bundle file.
 type ZarfPackageImport struct {
-	Repository string   `json:"repository" jsonschema:"description=The repository to import the package from"`
-	Ref        string   `json:"ref"`
-	Components []string `json:"components,omitempty" jsonschema:"description=List of components to include from the package"`
+	Repository         string   `json:"repository" jsonschema:"description=The repository to import the package from"`
+	Ref                string   `json:"ref"`
+	OptionalComponents []string `json:"optional-components,omitempty" jsonschema:"description=List of optional components to include from the package (required components are always included)"`
+	PublicKey          string   `json:"public-key,omitempty" jsonschema:"description=The public key to use to verify the package"`
 }

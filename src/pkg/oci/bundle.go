@@ -23,7 +23,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 	layers := []ocispec.Descriptor{}
 	index := ocispec.Index{}
 	for _, pkg := range bundle.Packages {
-		url := fmt.Sprintf("%s:%s", pkg.Repository, pkg.Ref)
+		url := fmt.Sprintf("%s:%s-%s", pkg.Repository, pkg.Ref, bundle.Metadata.Architecture)
 		remote, err := NewOrasRemote(url)
 		if err != nil {
 			return err

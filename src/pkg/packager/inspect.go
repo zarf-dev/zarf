@@ -71,7 +71,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 
 	// Validate the package checksums and signatures if specified, and warn if the package was signed but a key was not provided
-	if err := p.validatePackageSignature(inspectPublicKey); err != nil {
+	if err := ValidatePackageSignature(p.tmp.Base, inspectPublicKey); err != nil {
 		if err == ErrPkgSigButNoKey {
 			message.Warn("The package was signed but no public key was provided, skipping signature validation")
 		} else {

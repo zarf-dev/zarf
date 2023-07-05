@@ -59,7 +59,7 @@ func (p *Packager) Deploy() error {
 		}
 	}
 
-	if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
+	if err := ValidatePackageSignature(p.tmp.Base, p.cfg.DeployOpts.PublicKeyPath); err != nil {
 		return err
 	}
 

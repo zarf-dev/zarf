@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -91,6 +92,15 @@ func (b *Bundler) ExtractPackage(name string, out string) error {
 
 // ValidateBundle validates the bundle
 func (b *Bundler) ValidateBundle() error {
+	if b.bundle.Metadata.Architecture == "" {
+		// ValidateBundle was erroneously called before CalculateBuildInfo
+		if err := b.CalculateBuildInfo(); err != nil {
+			return err
+		}
+		if b.bundle.Metadata.Architecture == "" {
+			return errors.New("unable to determine architecture")
+		}
+	}
 	if b.bundle.Metadata.Version == "" {
 		return fmt.Errorf("zarf-bundle.yaml is missing required field: metadata.version")
 	}
@@ -107,40 +117,44 @@ func (b *Bundler) ValidateBundle() error {
 		if pkg.Ref == "" {
 			return fmt.Errorf("zarf-bundle.yaml .packages[%s] is missing required field: ref", pkg.Repository)
 		}
-		url := fmt.Sprintf("%s:%s", pkg.Repository, pkg.Ref)
+		url := fmt.Sprintf("%s:%s-%s", pkg.Repository, pkg.Ref, b.bundle.Metadata.Architecture)
 		// validate access to packages as well as components referenced in the package
 		remote, err := oci.NewOrasRemote(url)
 		if err != nil {
 			// remote performs access verification upon instantiation
 			return err
 		}
-		err = remote.PullPackageMetadata(b.tmp)
-		if err != nil {
+		if err := remote.PullPackageMetadata(b.tmp); err != nil {
 			return err
 		}
-		defer b.ClearPaths()
+		if err := packager.ValidatePackageSignature(b.tmp, pkg.PublicKey); err != nil {
+			return err
+		}
 		// TODO: validate signatures here
 		// TODO: are we gonna re-sign the packages within a bundle?
 		// not re-signing @wayne
-		requestedComponents := pkg.Components
-		if len(requestedComponents) > 0 {
+		if len(pkg.OptionalComponents) > 0 {
 			zarfYAML := types.ZarfPackage{}
 			zarfYAMLPath := filepath.Join(b.tmp, config.ZarfYAML)
 			err := utils.ReadYaml(zarfYAMLPath, &zarfYAML)
 			if err != nil {
 				return err
 			}
-			for _, component := range requestedComponents {
-				// TODO: filter out components from packages before creation that do not match the architecture
-				// error or just filter out?
+			for _, component := range pkg.OptionalComponents {
 				c := utils.Find(zarfYAML.Components, func(c types.ZarfComponent) bool {
 					return c.Name == component
 				})
+				// make sure the component exists
 				if c.Name == "" {
 					return fmt.Errorf("zarf-bundle.yaml .packages[%s].components[%s] does not exist in upstream: %s", pkg.Repository, component, url)
 				}
+				// make sure the component supports the bundle's target architecture
+				if c.Only.Cluster.Architecture != "" && c.Only.Cluster.Architecture != b.bundle.Metadata.Architecture {
+					return fmt.Errorf("zarf-bundle.yaml .packages[%s].components[%s] does not support architecture: %s", pkg.Repository, component, b.bundle.Metadata.Architecture)
+				}
 			}
 		}
+		b.ClearPaths()
 	}
 	return nil
 }
@@ -177,11 +191,9 @@ func (b *Bundler) CalculateBuildInfo() error {
 	b.bundle.Build.Terminal = hostname
 
 	// Set the arch from the package config before filtering.
-	b.bundle.Build.Architecture = b.bundle.Metadata.Architecture
-	if config.CLIArch != b.bundle.Metadata.Architecture {
-		b.bundle.Build.Architecture = config.CLIArch
-		b.bundle.Metadata.Architecture = config.CLIArch
-	}
+	// --architecture flag > metadata.arch > build.arch / runtime.GOARCH (default)
+	b.bundle.Build.Architecture = config.GetArch(b.bundle.Metadata.Architecture, b.bundle.Build.Architecture)
+	b.bundle.Metadata.Architecture = b.bundle.Build.Architecture
 
 	b.bundle.Build.Timestamp = now.Format(time.RFC1123Z)
 

@@ -37,7 +37,7 @@ func TestBundle(t *testing.T) {
 	publish(t, pkg, "localhost:889")
 
 	dir := "src/test/packages/60-bundle"
-	cmd := strings.Split(fmt.Sprintf("bundle create %s -o oci://%s --set INIT_VERSION=%s --confirm", dir, "localhost:888", cliver), " ")
+	cmd := strings.Split(fmt.Sprintf("bundle create %s -o oci://%s --set INIT_VERSION=%s --confirm --insecure", dir, "localhost:888", cliver), " ")
 	_, _, err = e2e.Zarf(cmd...)
 	require.NoError(t, err)
 }
