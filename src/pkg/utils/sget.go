@@ -26,6 +26,12 @@ import (
 	"github.com/sigstore/cosign/pkg/cosign"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/pkg/signature"
+
+	// Register the provider-specific plugins
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
 // Sget performs a cosign signature verification on a given image using the specified public key.
@@ -191,7 +197,7 @@ func CosignVerifyBlob(blobPath string, sigPath string, keyPath string) error {
 
 // CosignSignBlob signs the provide binary and returns the signature
 func CosignSignBlob(blobPath string, outputSigPath string, keyPath string, passwordFunc func(bool) ([]byte, error)) ([]byte, error) {
-	rootOptions := &options.RootOptions{Verbose: false}
+	rootOptions := &options.RootOptions{Verbose: false, Timeout: options.DefaultTimeout}
 
 	regOptions := options.RegistryOptions{
 		AllowInsecure:      true,
