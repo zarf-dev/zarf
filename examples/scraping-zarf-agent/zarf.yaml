@@ -39,7 +39,8 @@ components:
         version: 47.3.0
         namespace: monitoring
         url: https://github.com/prometheus-community/helm-charts.git
-        releaseName: charts/kube-prometheus-stack
+        gitPath: charts/kube-prometheus-stack
+        releaseName: kube-prometheus-stack
         valuesFiles: 
         - config/values.yaml
       # Helm Charts Repo
