@@ -10,7 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
 )
 
@@ -61,7 +61,7 @@ func CheckVendorOnlyFromPath(cmd *cobra.Command) bool {
 func isVendorCmd(args []string, vendoredCmds []string) bool {
 	if len(args) > 2 {
 		if args[1] == "tools" || args[1] == "t" {
-			if utils.SliceContains(vendoredCmds, args[2]) {
+			if helpers.SliceContains(vendoredCmds, args[2]) {
 				return true
 			}
 		}

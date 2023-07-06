@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic helper functions.
-package utils
+// Package helpers provides generic helper functions with no external imports
+package helpers
 
 import (
 	"fmt"
