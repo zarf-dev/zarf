@@ -198,9 +198,9 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			}
 		}
 
-		// If the package is marked as YOLO and the state is empty, skip the secret creation
+		// If the package is marked as YOLO and the state is empty, skip the secret creation for this namespace
 		if r.options.Cfg.Pkg.Metadata.YOLO && r.options.Cfg.State.Distro == "YOLO" {
-			break
+			continue
 		}
 
 		// Create the secret

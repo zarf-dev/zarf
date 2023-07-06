@@ -45,7 +45,7 @@ zarf package create examples/composable-packages/ --insecure
 
 :::
 
-<ExampleYAML example="composable-packages" showLink={false} />
+<ExampleYAML src={require('./zarf.yaml')} showLink={false} />
 
 :::info
 

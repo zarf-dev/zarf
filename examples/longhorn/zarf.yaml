@@ -9,9 +9,11 @@ components:
     files:
       - source: https://raw.githubusercontent.com/longhorn/longhorn/v1.4.0/scripts/environment_check.sh
         target: environment_check.sh
+        shasum: 4df400fa81e65e51d83db8ff8e4f513ddd32c124619bb36c94319e71ca4d0a4d
         executable: true
       - source: https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
         target: jq
+        shasum: af986793a515d500ab2d35f8d2aecd656e764504b789b66d7e1a0b727a124c44
         executable: true
     actions:
       # Run the Longhorn Environment Check on this cluster's nodes.
