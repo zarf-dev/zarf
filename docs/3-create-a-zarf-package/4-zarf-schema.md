@@ -2297,7 +2297,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The condition to wait for; defaults to exist
+**Description:** The condition or jsonpath state to wait for; defaults to exist
 
 |          |          |
 | -------- | -------- |
