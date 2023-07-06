@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -24,6 +23,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 	message.Debug("Bundling", bundle.Metadata.Name, "to", o.Reference)
 	layers := []ocispec.Descriptor{}
 	index := ocispec.Index{}
+	index.SchemaVersion = 2
 
 	for _, pkg := range bundle.Packages {
 		url := fmt.Sprintf("%s:%s-%s", pkg.Repository, pkg.Ref, bundle.Metadata.Architecture)
@@ -92,13 +92,6 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 
 	manifest := ocispec.Manifest{}
 	manifest.Layers = layers
-	for idx, layer := range manifest.Layers {
-		// when doing an oras.Copy, the annotation title is used as the filepath to download to
-		// this makes it so it downloads all of the package layers to blobs/sha256/<layer-digest>
-		manifest.Layers[idx].Annotations = map[string]string{
-			ocispec.AnnotationTitle: filepath.Join("blobs", "sha256", layer.Digest.Encoded()),
-		}
-	}
 	manifest.Layers = append(manifest.Layers, indexDesc)
 
 	// push the zarf-bundle.yaml

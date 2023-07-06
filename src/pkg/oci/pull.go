@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -129,8 +130,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	ref := o.Reference
 
 	pterm.Println()
-	message.Debugf("Pulling %s", ref.String())
-	message.Infof("Pulling Zarf package from %s", ref)
+	message.Debug("Pulling", ref)
 
 	manifest, err := o.FetchRoot()
 	if err != nil {
@@ -140,8 +140,16 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	estimatedBytes := int64(0)
 	if isPartialPull {
 		for _, path := range PackageAlwaysPull {
-			desc := manifest.Locate(path)
-			layersToPull = append(layersToPull, desc)
+			exists := false
+			for _, layer := range layersToPull {
+				if layer.Annotations[ocispec.AnnotationTitle] == path {
+					exists = true
+				}
+			}
+			if !exists {
+				desc := manifest.Locate(path)
+				layersToPull = append(layersToPull, desc)
+			}
 		}
 		for _, desc := range layersToPull {
 			estimatedBytes += desc.Size
@@ -160,9 +168,11 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 	if isPartialPull {
-		paths := []string{}
 		for _, layer := range layersToPull {
-			paths = append(paths, layer.Annotations[ocispec.AnnotationTitle])
+			path := layer.Annotations[ocispec.AnnotationTitle]
+			if len(path) > 0 {
+				partialPaths = append(partialPaths, path)
+			}
 		}
 		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 			nodes, err := content.Successors(ctx, fetcher, desc)
@@ -171,7 +181,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 			}
 			var ret []ocispec.Descriptor
 			for _, node := range nodes {
-				if utils.SliceContains(paths, node.Annotations[ocispec.AnnotationTitle]) {
+				if len(node.Annotations[ocispec.AnnotationTitle]) > 0 && utils.SliceContains(partialPaths, node.Annotations[ocispec.AnnotationTitle]) {
 					ret = append(ret, node)
 				}
 			}
@@ -183,7 +193,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	doneSaving := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
+	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling")
 	_, err = oras.Copy(o.Context, o.Repository, ref.String(), dst, ref.String(), copyOpts)
 	if err != nil {
 		return partialPaths, err
@@ -193,16 +203,8 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	doneSaving <- 1
 	wg.Wait()
 
-	message.Debugf("Pulled %s", ref.String())
-	message.Successf("Pulled %s", ref.String())
-
-	if isPartialPull {
-		for _, layer := range layersToPull {
-			if layer.Annotations[ocispec.AnnotationTitle] != "" {
-				partialPaths = append(partialPaths, layer.Annotations[ocispec.AnnotationTitle])
-			}
-		}
-	}
+	message.Debugf("Pulled %s", ref)
+	message.Successf("Pulled %s", ref)
 
 	return partialPaths, nil
 }
@@ -267,14 +269,21 @@ func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requeste
 
 	packageManifests := make(map[string]ZarfOCIManifest)
 
+	// TODO: is this really the best way to do this?
+	sanitizeRefForDirname := func(ref string) string {
+		return strings.ReplaceAll(strings.ReplaceAll(ref, "/", "-"), ":", "-")
+	}
+
 	// map the package names to their manifests
 	for _, manifestDesc := range index.Manifests {
 		manifest, err := o.FetchManifest(manifestDesc)
 		if err != nil {
 			return err
 		}
-		// the "repo:ref" is stored in the manifest's title annotation
-		packageManifests[manifestDesc.Annotations[ocispec.AnnotationTitle]] = *manifest
+		// the "repo:ref" is stored in the manifest's basename annotation
+		pkgRef := manifestDesc.Annotations[ocispec.AnnotationBaseImageName]
+		cleaned := sanitizeRefForDirname(pkgRef)
+		packageManifests[cleaned] = *manifest
 	}
 
 	for pkg, manifest := range packageManifests {
