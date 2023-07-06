@@ -497,17 +497,17 @@ func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []st
 
 // suspendFluxResourcesBeforeDeploy suspends the Big Bang GitRepo, HelmChart and related HelmReleases if they exist
 func suspendFluxResourcesBeforeDeploy(c *types.ZarfComponent, namespacedHelmReleaseNames []string) {
-	t := true
+	t := false
 	c.Actions.OnDeploy.Before = append(c.Actions.OnDeploy.Before, types.ZarfComponentAction{
 		Description: "Suspending bigbang GitRepo",
-		Cmd: fmt.Sprintf("./zarf tools kubectl patch gitrepo bigbang -n bigbang " +
+		Cmd: fmt.Sprintf("./zarf tools kubectl patch gitrepositories.source.toolkit.fluxcd.io bigbang -n bigbang " +
 			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": true}]' || true"),
 		Mute: &t,
 	})
 
 	c.Actions.OnDeploy.Before = append(c.Actions.OnDeploy.Before, types.ZarfComponentAction{
 		Description: "Suspending bigbang-bigbang HelmChart",
-		Cmd: fmt.Sprintf("./zarf tools kubectl patch helmchart bigbang-bigbang -n bigbang " +
+		Cmd: fmt.Sprintf("./zarf tools kubectl patch helmcharts.source.toolkit.fluxcd.io bigbang-bigbang -n bigbang " +
 			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": true}]' || true"),
 		Mute: &t,
 	})
@@ -531,16 +531,16 @@ func suspendFluxResourcesBeforeDeploy(c *types.ZarfComponent, namespacedHelmRele
 
 // resumeFluxResourcesAfterDeploy resumes the Big Bang GitRepo, HelmChart and related HelmReleases
 func resumeFluxResourcesAfterDeploy(c *types.ZarfComponent, namespacedHelmReleaseNames []string) {
-	t := true
+	t := false
 	maxTotalSeconds := 10 * 60 // 10 minutes
 	maxRetries := 3
 	ns := "bigbang"
 
 	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
 		Description: "Resuming bigbang GitRepo",
-		Cmd: "./zarf tools kubectl patch gitrepo bigbang -n bigbang --type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'\n" +
-			"GENERATION=$(./zarf tools kubectl get gitrepo bigbang -n bigbang -o jsonpath={.metadata.generation})\n" +
-			"./zarf tools kubectl wait gitrepo bigbang -n bigbang --for jsonpath={.status.conditions[0].observedGeneration}=$GENERATION\n",
+		Cmd: "./zarf tools kubectl patch gitrepositories.source.toolkit.fluxcd.io bigbang -n bigbang --type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'\n" +
+			"GENERATION=$(./zarf tools kubectl get gitrepositories.source.toolkit.fluxcd.io bigbang -n bigbang -o jsonpath={.metadata.generation})\n" +
+			"./zarf tools kubectl wait gitrepositories.source.toolkit.fluxcd.io bigbang -n bigbang --for jsonpath={.status.conditions[0].observedGeneration}=$GENERATION\n",
 		Mute:       &t,
 		MaxRetries: &maxRetries,
 	})
@@ -550,7 +550,7 @@ func resumeFluxResourcesAfterDeploy(c *types.ZarfComponent, namespacedHelmReleas
 		MaxTotalSeconds: &maxTotalSeconds,
 		Wait: &types.ZarfComponentActionWait{
 			Cluster: &types.ZarfComponentActionWaitCluster{
-				Kind:       "GitRepository",
+				Kind:       "gitrepository.source.toolkit.fluxcd.io",
 				Identifier: "bigbang",
 				Namespace:  ns,
 				Condition:  "ready",
@@ -560,9 +560,9 @@ func resumeFluxResourcesAfterDeploy(c *types.ZarfComponent, namespacedHelmReleas
 
 	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
 		Description: "Resuming bigbang-bigbang HelmChart",
-		Cmd: "./zarf tools kubectl patch helmchart bigbang-bigbang -n bigbang --type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'\n" +
-			"GENERATION=$(./zarf tools kubectl get helmchart bigbang-bigbang -n bigbang -o jsonpath={.metadata.generation})\n" +
-			"./zarf tools kubectl wait helmchart bigbang-bigbang -n bigbang --for jsonpath={.status.conditions[0].observedGeneration}=$GENERATION\n",
+		Cmd: "./zarf tools kubectl patch helmcharts.source.toolkit.fluxcd.io bigbang-bigbang -n bigbang --type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'\n" +
+			"GENERATION=$(./zarf tools kubectl get helmcharts.source.toolkit.fluxcd.io bigbang-bigbang -n bigbang -o jsonpath={.metadata.generation})\n" +
+			"./zarf tools kubectl wait helmcharts.source.toolkit.fluxcd.io bigbang-bigbang -n bigbang --for jsonpath={.status.conditions[0].observedGeneration}=$GENERATION\n",
 		Mute:       &t,
 		MaxRetries: &maxRetries,
 	})
@@ -573,7 +573,7 @@ func resumeFluxResourcesAfterDeploy(c *types.ZarfComponent, namespacedHelmReleas
 		MaxRetries:      &maxRetries,
 		Wait: &types.ZarfComponentActionWait{
 			Cluster: &types.ZarfComponentActionWaitCluster{
-				Kind:       "HelmChart",
+				Kind:       "helmcharts.source.toolkit.fluxcd.io",
 				Identifier: "bigbang-bigbang",
 				Namespace:  ns,
 				Condition:  "ready",
@@ -585,7 +585,7 @@ func resumeFluxResourcesAfterDeploy(c *types.ZarfComponent, namespacedHelmReleas
 		Description: "Resuming bigbang HelmRelease",
 		Cmd: "./zarf tools kubectl patch helmrelease bigbang -n bigbang --type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'\n" +
 			"GENERATION=$(./zarf tools kubectl get helmrelease bigbang -n bigbang -o jsonpath={.metadata.generation})\n" +
-			"./zarf tools kubectl wait helmrelease bigbang -n bigbang --for jsonpath={.status.conditions[0].observedGeneration}=$GENERATION\n",
+			"./zarf tools kubectl wait helmrelease bigbang -n bigbang --for jsonpath={.status.observedGeneration}=$GENERATION\n",
 		Mute:       &t,
 		MaxRetries: &maxRetries,
 	})
@@ -611,7 +611,7 @@ func resumeFluxResourcesAfterDeploy(c *types.ZarfComponent, namespacedHelmReleas
 			Cmd: fmt.Sprintf(
 				"./zarf tools kubectl patch helmrelease %s -n bigbang --type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'\n"+
 					"GENERATION=$(./zarf tools kubectl get helmrelease %s -n bigbang -o jsonpath={.metadata.generation})\n"+
-					"./zarf tools kubectl wait helmrelease %s -n bigbang --for jsonpath={.status.conditions[0].observedGeneration}=$GENERATION\n",
+					"./zarf tools kubectl wait helmrelease %s -n bigbang --for jsonpath={.status.observedGeneration}=$GENERATION\n",
 				hrName, hrName, hrName),
 			Mute:       &t,
 			MaxRetries: &maxRetries,
