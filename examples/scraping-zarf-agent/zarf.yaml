@@ -4,35 +4,89 @@ metadata:
   description: Scrape Zarf Agent with Prometheus Operator.
 
 components:
-  - name: prometheus-deps
+  - name: namespace
     required: true
     manifests:
-      - name: prometheus-deps
+      - name: namespace
         namespace: monitoring
         files:
-          - manifests/prometheus-deps/bundle.yaml
-    images:
-      - quay.io/prometheus-operator/prometheus-operator:v0.66.0
+          - manifests/prometheus-deps/namespace.yaml
     actions:
       onDeploy:
         after:
           - wait:
               cluster:
-                kind: deployment
-                name: prometheus-operator
-                namespace: monitoring
-                condition: available
-  - name: prometheus-operator
+                kind: namespace
+                name: monitoring
+                namespace: namespace
+                condition: exists
+
+
+  - name: prep-manifests
     required: true
-    manifests:
-      - name: prometheus-operator
+    # files:
+    #   # this file will be copied to the target location and the cat, dog, and snake sounds will be replaced with their values
+    #   # requires the on-deploy-with-dynamic-variable and on-deploy-with-multiple-variables components
+    #   - source: https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
+    #     target: ./manifests/prom-bundle/bundle.yaml
+    # actions:
+    #   onDeploy:   
+    #     after:
+    #     - cmd: sh ./manifests/prom-bundle/replace.sh
+         #   sed -i 's/namespace: default/namespace: monitoring/' ./prom-bundle/bundle.yaml
+    charts:
+      - name: kube-prometheus-stack
+        version: 47.3.0
         namespace: monitoring
-        files:
-        - manifests/prometheus-operator/prometheus.yaml
-        - manifests/prometheus-operator/servicemonitor-agent.yaml
-        - manifests/prometheus-operator/clusterrole.yaml
-        - manifests/prometheus-operator/clusterrolebinding.yaml
-        - manifests/prometheus-operator/service.yaml
-    images:
-      - quay.io/prometheus/prometheus:v2.45.0
-      - quay.io/prometheus-operator/prometheus-config-reloader:v0.66.0
+        url: https://github.com/prometheus-community/helm-charts.git
+        releaseName: charts/kube-prometheus-stack
+        valuesFiles: 
+        - config/values.yaml
+      # Helm Charts Repo
+      # - name: kube-prometheus-stack
+      #   version: 47.3.0
+      #   namespace: monitoring
+      #   url: https://prometheus-community.github.io/helm-charts # chart-repo
+      #   releaseName: kube-prometheus-stack
+      #   valuesFiles: 
+      #   - config/values.yaml
+    # images:
+    #   # - quay.io/prometheus/alertmanager:v0.25.0
+    #   - quay.io/prometheus-operator/prometheus-config-reloader:v0.66.0
+    #   - quay.io/prometheus-operator/prometheus-operator:v0.66.0
+    #   - quay.io/prometheus/prometheus:v2.45.0
+    # actions:
+    #   onDeploy:
+    #     after:
+    #       # - wait:
+    #       #     cluster:
+    #       #       kind: deployment
+    #       #       namespace: kube-prometheus-grafana
+    #       #       name: podinfo
+    #       #       condition: available
+    #       - wait:
+    #           cluster:
+    #             kind: deployment
+    #             namespace: metrics
+    #             name: kube-prometheus-kube-prome-operator 
+    #             condition: available
+    #       - wait:
+    #           cluster:
+    #             kind: deployment
+    #             namespace: metrics
+    #             name: kube-prometheus-kube-state-metrics
+    #             condition: available
+
+    # required: true
+    # manifests:
+    #   - name: prometheus-operator
+    #     namespace: monitoring
+    #     files:
+    #     - manifests/prometheus-operator/prometheus.yaml
+    #     - manifests/prometheus-operator/servicemonitor-agent.yaml
+    #     - manifests/prometheus-operator/clusterrole.yaml
+    #     - manifests/prometheus-operator/clusterrolebinding.yaml
+    #     - manifests/prometheus-operator/service.yaml
+    # images:
+    #   - quay.io/prometheus/prometheus:v2.45.0
+    #   - quay.io/prometheus-operator/prometheus-config-reloader:v0.66.0
