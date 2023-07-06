@@ -29,6 +29,7 @@ const (
 	tmpPathPrefix = "zarf-"
 )
 
+// GetCryptoHashFromFile returns the computed SHA256 Sum of a given file
 func GetCryptoHashFromFile(path string, hashName crypto.Hash) (string, error) {
 	var data io.ReadCloser
 	var err error
