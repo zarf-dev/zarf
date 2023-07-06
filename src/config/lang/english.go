@@ -411,6 +411,7 @@ const (
 		zarf tools wait-for svc zarf-docker-registry exists -n zarf           #  wait for service zarf-docker-registry in namespace zarf to exist
 		zarf tools wait-for svc zarf-docker-registry -n zarf                  #  same as above, except exists is the default condition
 		zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
+		zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
 
 	Wait for network endpoints:
 		zarf tools wait-for http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080

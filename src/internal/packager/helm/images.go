@@ -2,7 +2,7 @@ package helm
 
 import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/goccy/go-yaml"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -27,7 +27,7 @@ func FindAnnotatedImagesForChart(chartPath string, values chartutil.Values) (ima
 	if err != nil {
 		return images, err
 	}
-	values = utils.MergeMapRecursive(chart.Values, values)
+	values = helpers.MergeMapRecursive(chart.Values, values)
 
 	imageAnnotation := chart.Metadata.Annotations["helm.sh/images"]
 
