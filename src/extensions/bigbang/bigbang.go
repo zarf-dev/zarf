@@ -536,14 +536,6 @@ func resumeFluxResourcesAfterDeploy(c *types.ZarfComponent, namespacedHelmReleas
 	maxRetries := 3
 	ns := "bigbang"
 
-	//c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
-	//	Description: "Resuming bigbang GitRepo",
-	//	Cmd: fmt.Sprintf("./zarf tools kubectl patch gitrepo bigbang -n bigbang " +
-	//		"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'"),
-	//	Mute:       &t,
-	//	MaxRetries: &maxRetries,
-	//})
-
 	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
 		Description: "Resuming bigbang GitRepo",
 		Cmd: "./zarf tools kubectl patch gitrepo bigbang -n bigbang --type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'\n" +
@@ -567,17 +559,10 @@ func resumeFluxResourcesAfterDeploy(c *types.ZarfComponent, namespacedHelmReleas
 	})
 
 	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
-		Description: "Resuming bigbang HelmRelease",
-		Cmd: fmt.Sprintf("./zarf tools kubectl patch helmrelease bigbang -n bigbang " +
-			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'"),
-		Mute:       &t,
-		MaxRetries: &maxRetries,
-	})
-
-	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
 		Description: "Resuming bigbang-bigbang HelmChart",
-		Cmd: fmt.Sprintf("./zarf tools kubectl patch helmchart bigbang-bigbang -n bigbang " +
-			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'"),
+		Cmd: "./zarf tools kubectl patch helmchart bigbang-bigbang -n bigbang --type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'\n" +
+			"GENERATION=$(./zarf tools kubectl get helmchart bigbang-bigbang -n bigbang -o jsonpath={.metadata.generation})\n" +
+			"./zarf tools kubectl wait helmchart bigbang-bigbang -n bigbang --for jsonpath={.status.conditions[0].observedGeneration}=$GENERATION\n",
 		Mute:       &t,
 		MaxRetries: &maxRetries,
 	})
@@ -596,13 +581,11 @@ func resumeFluxResourcesAfterDeploy(c *types.ZarfComponent, namespacedHelmReleas
 		},
 	})
 
-	// Need to cycle HelmRelease again, see: https://github.com/fluxcd/flux2/issues/937#issuecomment-971590425
 	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
-		Description: "Cycle bigbang HelmRelease",
-		Cmd: fmt.Sprintf("./zarf tools kubectl patch helmrelease bigbang -n bigbang " +
-			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": true}]' && " +
-			"./zarf tools kubectl patch helmrelease bigbang -n bigbang " +
-			"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'"),
+		Description: "Resuming bigbang HelmRelease",
+		Cmd: "./zarf tools kubectl patch helmrelease bigbang -n bigbang --type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'\n" +
+			"GENERATION=$(./zarf tools kubectl get helmrelease bigbang -n bigbang -o jsonpath={.metadata.generation})\n" +
+			"./zarf tools kubectl wait helmrelease bigbang -n bigbang --for jsonpath={.status.conditions[0].observedGeneration}=$GENERATION\n",
 		Mute:       &t,
 		MaxRetries: &maxRetries,
 	})
@@ -625,8 +608,11 @@ func resumeFluxResourcesAfterDeploy(c *types.ZarfComponent, namespacedHelmReleas
 		hrName := strings.Split(hrNamespacedName, "bigbang.")[1]
 		c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{
 			Description: fmt.Sprintf("Resuming %s HelmRelease", hrName),
-			Cmd: fmt.Sprintf("./zarf tools kubectl patch helmrelease %s -n bigbang "+
-				"--type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'", hrName),
+			Cmd: fmt.Sprintf(
+				"./zarf tools kubectl patch helmrelease %s -n bigbang --type json -p '[{\"op\": \"add\", \"path\": \"/spec/suspend\", \"value\": false}]'\n"+
+					"GENERATION=$(./zarf tools kubectl get helmrelease %s -n bigbang -o jsonpath={.metadata.generation})\n"+
+					"./zarf tools kubectl wait helmrelease %s -n bigbang --for jsonpath={.status.conditions[0].observedGeneration}=$GENERATION\n",
+				hrName, hrName, hrName),
 			Mute:       &t,
 			MaxRetries: &maxRetries,
 		})
