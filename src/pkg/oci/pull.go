@@ -168,12 +168,18 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 	if isPartialPull {
+		shas := []string{}
 		for _, layer := range layersToPull {
 			path := layer.Annotations[ocispec.AnnotationTitle]
 			if len(path) > 0 {
 				partialPaths = append(partialPaths, path)
 			}
+			if len(layer.Digest.String()) > 0 {
+				shas = append(shas, layer.Digest.Encoded())
+			}
 		}
+		partialPaths = utils.Unique(partialPaths)
+
 		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 			nodes, err := content.Successors(ctx, fetcher, desc)
 			if err != nil {
@@ -181,7 +187,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 			}
 			var ret []ocispec.Descriptor
 			for _, node := range nodes {
-				if len(node.Annotations[ocispec.AnnotationTitle]) > 0 && utils.SliceContains(partialPaths, node.Annotations[ocispec.AnnotationTitle]) {
+				if utils.SliceContains(shas, node.Digest.Encoded()) {
 					ret = append(ret, node)
 				}
 			}

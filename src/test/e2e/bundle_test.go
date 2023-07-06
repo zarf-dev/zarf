@@ -26,10 +26,10 @@ func publish(t *testing.T, path string, reg string) {
 var cliver string
 
 func TestBundle(t *testing.T) {
-	// e2e.SetupDockerRegistry(t, 888)
-	// defer e2e.TeardownRegistry(t, 888)
-	// e2e.SetupDockerRegistry(t, 889)
-	// defer e2e.TeardownRegistry(t, 889)
+	e2e.SetupDockerRegistry(t, 888)
+	defer e2e.TeardownRegistry(t, 888)
+	e2e.SetupDockerRegistry(t, 889)
+	defer e2e.TeardownRegistry(t, 889)
 
 	cliver = e2e.GetZarfVersion(t)
 
@@ -73,7 +73,7 @@ func testPull(t *testing.T) {
 	require.NoError(t, err)
 
 	decompressed := "build/decompress-bundle"
-	// defer e2e.CleanFiles(decompressed)
+	defer e2e.CleanFiles(decompressed)
 
 	cmd = []string{"tools", "archiver", "decompress", fmt.Sprintf("build/zarf-bundle-bundle-%s-0.0.1.tar.zst", e2e.Arch), decompressed}
 	_, _, err = e2e.Zarf(cmd...)
