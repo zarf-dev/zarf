@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/registry"
@@ -164,4 +165,19 @@ func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, err
 	}
 
 	return gitCfg.GitPath, nil
+}
+
+// Helper function src/pkg/packager/prepare.goL118 src/pkg/packager/create.goL328
+func (h *Helm) TransformGitURL(charts string) (string, error) {
+	// calling GitTransformURLSplitRef() to see if refPlain is empty
+	_, refPlain, _ := transform.GitTransformURLSplitRef(h.Chart.URL)
+
+	// if it is append chart version as if its a tag
+	if refPlain == "" {
+		h.Chart.URL = fmt.Sprintf("%s@%s", h.Chart.URL, h.Chart.Version)
+	}
+
+	// reduce code duplication
+	return h.PackageChartFromGit(charts)
+
 }

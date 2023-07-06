@@ -113,9 +113,11 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 		if len(component.Charts) > 0 {
 			_ = utils.CreateDirectory(componentPath.Charts, 0700)
 			_ = utils.CreateDirectory(componentPath.Values, 0700)
-			re := regexp.MustCompile(`\.git$`)
+			// https://regex101.com/r/jYLoUy/1
+			re := regexp.MustCompile(`\.git@`)
 
 			for _, chart := range component.Charts {
+				// check if the chart is a git url with a ref
 				isGitURL := re.MatchString(chart.URL)
 				helmCfg := helm.Helm{
 					Chart: chart,
@@ -124,7 +126,8 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 				helmCfg.Cfg.State = types.ZarfState{}
 				if isGitURL {
-					path, err := helmCfg.PackageChartFromGit(componentPath.Charts)
+					path, err := helmCfg.TransformGitURL(componentPath.Charts)
+					// path, err := helmCfg.PackageChartFromGit(componentPath.Charts)
 					if err != nil {
 						return fmt.Errorf("unable to download chart from git repo (%s): %w", chart.URL, err)
 					}

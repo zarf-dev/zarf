@@ -326,7 +326,9 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
-		re := regexp.MustCompile(`\.git$`)
+		// https://regex101.com/r/jYLoUy/1
+		re := regexp.MustCompile(`\.git@`)
+		// check if the chart is a git url with a ref
 		isGitURL := re.MatchString(chart.URL)
 		helmCfg := helm.Helm{
 			Chart: chart,
@@ -344,7 +346,8 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
 		} else if isGitURL {
-			_, err = helmCfg.PackageChartFromGit(componentPath.Charts)
+			_, err = helmCfg.TransformGitURL(componentPath.Charts)
+			// _, err = helmCfg.PackageChartFromGit(componentPath.Charts)
 			if err != nil {
 				return fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
 			}
