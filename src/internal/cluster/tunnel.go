@@ -367,6 +367,10 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 		tunnel.namespace = svc.Namespace
 		// Only support a service with a single port.
 		tunnel.remotePort = svc.Spec.Ports[0].TargetPort.IntValue()
+		// if targetPort == 0, look for Port (which is required)
+		if tunnel.remotePort == 0 && svc.Spec.Ports[0].Port != 0 {
+			tunnel.remotePort = int(svc.Spec.Ports[0].Port)
+		}
 
 		// Add the url suffix too.
 		tunnel.urlSuffix = svc.Annotations[config.ZarfConnectAnnotationURL]
