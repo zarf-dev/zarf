@@ -192,10 +192,10 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 			}()
 		}
 
-		// fileSBOMConcurrency.OnError = func(erroredComponent message.ErrorWithMessage) error {
-		// 	builder.spinner.Errorf(erroredComponent.Error, erroredComponent.Message)
-		// 	return erroredComponent.Error
-		// }
+		fileSBOMConcurrency.OnError = func(erroredComponent message.ErrorWithMessage) error {
+			builder.spinner.Errorf(erroredComponent.Error, erroredComponent.Message)
+			return erroredComponent.Error
+		}
 
 		fileSBOMConcurrency.OnProgress = func(component string, i int) {
 			builder.spinner.Updatef("Creating component file SBOMs (%d of %d): %s", i, len(componentSBOMs), component)
