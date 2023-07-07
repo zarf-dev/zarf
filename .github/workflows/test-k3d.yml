@@ -34,6 +34,13 @@ jobs:
       - name: Setup NodeJS
         uses: ./.github/actions/node
 
+      - name: Login to GHCR
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
+        with:
+          registry: ghcr.io
+          username: dummy
+          password: ${{ github.token }}
+
       - name: Build binary and zarf packages
         uses: ./.github/actions/packages
 
