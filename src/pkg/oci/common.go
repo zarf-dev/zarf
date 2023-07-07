@@ -54,9 +54,11 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 		return nil, err
 	}
 
-	err = o.CheckAuth()
-	if err != nil {
-		return nil, fmt.Errorf("unable to authenticate to %s: %s", ref.Registry, err.Error())
+	if auth.GetScopes(o.Context) != nil {
+		err = o.CheckAuth()
+		if err != nil {
+			return nil, fmt.Errorf("unable to authenticate to %s: %s", ref.Registry, err.Error())
+		}
 	}
 
 	copyOpts := oras.DefaultCopyOptions
