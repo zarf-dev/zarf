@@ -10,6 +10,7 @@ import (
 	"sync"
 )
 
+// ConcurrencyTools is a struct that contains channels and a context for use in concurrent routines.
 type ConcurrencyTools[P any, E any] struct {
 	ProgressChan chan P
 	ErrorChan    chan E
@@ -19,6 +20,7 @@ type ConcurrencyTools[P any, E any] struct {
 	routineCount int
 }
 
+// NewConcurrencyTools creates a new ConcurrencyTools struct.
 func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -42,6 +44,7 @@ func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
 	return &concurrencyTools
 }
 
+// IsDone returns true if the context is done.
 func (ct *ConcurrencyTools[P, E]) IsDone() bool {
 	ctx := ct.context
 	select {
@@ -52,10 +55,16 @@ func (ct *ConcurrencyTools[P, E]) IsDone() bool {
 	}
 }
 
+// WaitGroupDone decrements the internal WaitGroup counter by one.
 func (ct *ConcurrencyTools[P, E]) WaitGroupDone() {
 	ct.waitGroup.Done()
 }
 
+// WaitWithProgress waits for all routines to finish
+//
+// onProgress is a callback function that is called when a routine sends a progress update
+//
+// onError is a callback function that is called when a routine sends an error
 func (ct *ConcurrencyTools[P, E]) WaitWithProgress(onProgress func(P, int), onError func(E) error) error {
 	for i := 0; i < ct.routineCount; i++ {
 		select {
