@@ -6,6 +6,7 @@ package utils
 
 import (
 	"bufio"
+	"crypto"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -19,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/otiai10/copy"
 )
 
@@ -26,6 +28,27 @@ const (
 	dotCharacter  = 46
 	tmpPathPrefix = "zarf-"
 )
+
+// GetCryptoHashFromFile returns the computed SHA256 Sum of a given file
+func GetCryptoHashFromFile(path string, hashName crypto.Hash) (string, error) {
+	var data io.ReadCloser
+	var err error
+
+	if IsURL(path) {
+		// Handle download from URL
+		message.Warn("This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link.")
+		data = Fetch(path)
+	} else {
+		// Handle local file
+		data, err = os.Open(path)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	defer data.Close()
+	return helpers.GetCryptoHash(data, hashName)
+}
 
 // TextTemplate represents a value to be templated into a text file.
 type TextTemplate struct {
@@ -60,6 +83,18 @@ func CreateDirectory(path string, mode os.FileMode) error {
 		return os.MkdirAll(path, mode)
 	}
 	return nil
+}
+
+// CreateFile creates an empty file at the given path.
+func CreateFile(filepath string) error {
+	if InvalidPath(filepath) {
+		f, err := os.Create(filepath)
+		f.Close()
+		return err
+	}
+
+	return nil
+
 }
 
 // InvalidPath checks if the given path is valid (if it is a permissions error it is there we just don't have access)
@@ -207,7 +242,13 @@ func CreatePathAndCopy(source string, destination string) error {
 		return err
 	}
 
-	return copy.Copy(source, destination)
+	// Copy all the source data into the destination location
+	if err := copy.Copy(source, destination); err != nil {
+		return err
+	}
+
+	// If the path doesn't exist yet then this is an empty file and we should create it
+	return CreateFile(destination)
 }
 
 // GetFinalExecutablePath returns the absolute path to the Zarf executable, following any symlinks along the way.

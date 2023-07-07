@@ -15,7 +15,8 @@ function initData() {
 			artifact.type,
 			artifact.name,
 			artifact.version,
-			fileList(artifact.metadata),
+			fileList(artifact.locations, artifact.name),
+			(artifact.metadata && fileList(artifact.metadata.files, artifact.name)) || '-',
 			(artifact.metadata && artifact.metadata.description) || '-',
 			((artifact.metadata && artifact.metadata.maintainer) || '-').replace(
 				/\u003c(.*)\u003e/,
@@ -26,7 +27,7 @@ function initData() {
 	});
 
 	const data = {
-		headings: ['Type', 'Name', 'Version', 'Files', 'Notes', 'Maintainer', 'Size'],
+		headings: ['Type', 'Name', 'Version', 'Sources', 'Package Files', 'Notes', 'Maintainer', 'Size'],
 		data: transformedData
 	};
 

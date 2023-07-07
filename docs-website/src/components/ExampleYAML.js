@@ -2,12 +2,12 @@ import React from "react";
 import { useEffect, useState } from "react";
 import CodeBlock from "@theme/CodeBlock";
 
-const FetchExampleYAML = ({ example, component, raw, showLink = true, rootFolder = "examples" }) => {
+const FetchExampleYAML = ({ src, component, raw, showLink = true }) => {
   const [content, setContent] = useState(null);
-  const url = `/${example}/zarf.yaml`;
+  const linkBaseUrl = `${src}`.replace(/^\/build\/\.\.\//gm,'').replace(/\/zarf\.yaml.+?$/gm,'');
 
   useEffect(() => {
-    fetch(url)
+    fetch(src)
       .then((res) => res.text())
       .then(async (text) => {
         if (component) {
@@ -22,7 +22,7 @@ const FetchExampleYAML = ({ example, component, raw, showLink = true, rootFolder
   }, []);
 
   if (!content) {
-    console.log(`Unable to fetch example YAML ${url}`)
+    console.log(`Unable to fetch example YAML ${src}`)
     return <></>
   }
   if (raw) {
@@ -33,7 +33,7 @@ const FetchExampleYAML = ({ example, component, raw, showLink = true, rootFolder
       {showLink && (
         <p>
           This example's full <code>zarf.yaml</code> can be viewed at{" "}
-          <a href={`/${rootFolder}/${example}/#zarf.yaml`}>{rootFolder}/{example}</a>
+          <a href={`/${linkBaseUrl}/#zarf.yaml`}>{linkBaseUrl}</a>
         </p>
       )}
       <CodeBlock copy={false} language="yaml">

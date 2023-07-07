@@ -11,6 +11,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
@@ -149,7 +150,7 @@ func composeValues(hr HelmReleaseDependency, secrets map[string]corev1.Secret, c
 			return nil, fmt.Errorf("unable to read values from key '%s' in %s '%s': %w", v.GetValuesKey(), v.Kind, hr.Name(), err)
 		}
 
-		valuesMap = utils.MergeMapRecursive(valuesMap, values)
+		valuesMap = helpers.MergeMapRecursive(valuesMap, values)
 	}
 
 	return valuesMap, nil
