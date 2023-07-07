@@ -112,6 +112,8 @@ func cliSetup() {
 		message.DisableColor()
 	}
 
+	printViperConfigUsed()
+
 	// No log level set, so use the default
 	if logLevel != "" {
 		if lvl, ok := match[logLevel]; ok {

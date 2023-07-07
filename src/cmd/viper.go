@@ -117,6 +117,11 @@ func initViper() {
 	v.SetEnvPrefix("zarf")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
+}
+
+func printViperConfigUsed() {
+	// Confirm initialization
+	initViper()
 
 	// Optional, so ignore errors
 	err := v.ReadInConfig()
