@@ -554,7 +554,7 @@
         },
         "condition": {
           "type": "string",
-          "description": "The condition to wait for; defaults to exist",
+          "description": "The condition or jsonpath state to wait for; defaults to exist",
           "examples": [
             "Ready",
             "Available"

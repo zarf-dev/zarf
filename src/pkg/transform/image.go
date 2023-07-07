@@ -7,7 +7,7 @@ package transform
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/distribution/distribution/reference"
 )
 
@@ -30,7 +30,7 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	}
 
 	// Generate a crc32 hash of the image host + name
-	checksum := utils.GetCRCHash(image.Name)
+	checksum := helpers.GetCRCHash(image.Name)
 
 	// If this image is specified by digest then don't add a checksum it as it will already be a specific SHA
 	if image.Digest != "" {
