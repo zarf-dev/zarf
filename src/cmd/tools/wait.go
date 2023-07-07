@@ -10,6 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/spf13/cobra"
 
 	// Import to initialize client auth plugins.
@@ -29,6 +30,7 @@ var waitForCmd = &cobra.Command{
 	Example: lang.CmdToolsWaitForExample,
 	Args:    cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
+		exec.ExitOnInterrupt(1, lang.ErrInterrupt)
 		// Parse the timeout string
 		timeout, err := time.ParseDuration(waitTimeout)
 		if err != nil {
