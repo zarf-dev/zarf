@@ -261,6 +261,7 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 	}
 
 	syftSource, err := source.NewFromImage(syftImage, "")
+	// defer syftSource.Image.Cleanup()
 	if err != nil {
 		return nil, err
 	}
