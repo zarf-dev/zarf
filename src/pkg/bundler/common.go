@@ -284,7 +284,7 @@ func (b *Bundler) templateBundleYaml() error {
 		templateMap[fmt.Sprintf("###ZARF_BNDL_TMPL_%s###", key)] = value
 	}
 
-	templateMap["###ZARF_PKG_ARCH###"] = b.bundle.Metadata.Architecture
+	templateMap["###ZARF_BNDL_ARCH###"] = b.bundle.Metadata.Architecture
 
 	return utils.ReloadYamlTemplate(&b.bundle, templateMap)
 }

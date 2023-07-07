@@ -28,7 +28,7 @@ func (b *Bundler) Create() error {
 		return err
 	}
 
-	// TODO: implement p.fillActiveTemplate() from packager/variables.go
+	// replace BNDL_TMPL_* variables
 	if err := b.templateBundleYaml(); err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (b *Bundler) Create() error {
 		return err
 	}
 
-	// validate access to the output directory / OCI ref
+	// set the remote's reference from the bundle's metadata
 	ref, err := oci.ReferenceFromMetadata(b.cfg.CreateOpts.Output, &b.bundle.Metadata, b.bundle.Metadata.Architecture)
 	if err != nil {
 		return err
