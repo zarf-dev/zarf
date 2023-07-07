@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/anchore/stereoscope"
 	"github.com/anchore/stereoscope/pkg/file"
 	"github.com/anchore/stereoscope/pkg/image"
 	"github.com/anchore/syft/syft"
@@ -27,6 +28,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
+	"github.com/wagoodman/go-partybus"
 )
 
 // Builder is the main struct used to build SBOM artifacts.
@@ -69,6 +71,19 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 		return err
 	}
 	builder.jsonList = json
+
+	eventBus := partybus.NewBus()
+	stereoscope.SetBus(eventBus)
+	syft.SetBus(eventBus)
+	subscription := eventBus.Subscribe()
+	defer eventBus.Unsubscribe(subscription)
+
+	events := subscription.Events()
+	go func() {
+		for event := range events {
+			message.Debug("syft", message.JSONValue(event))
+		}
+	}()
 
 	if len(imgList) > 0 {
 		// Generate SBOM for all images at once using goroutines

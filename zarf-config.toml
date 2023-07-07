@@ -1,3 +1,4 @@
+log_level = 'debug'
 [package.create.set]
 # The image reference to use for the Zarf agent, defaults to a locally built image
 agent_image_domain = 'ghcr.io/'
