@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/anchore/go-logger"
+	"github.com/anchore/go-logger/adapter/logrus"
 	"github.com/anchore/stereoscope"
 	"github.com/anchore/stereoscope/pkg/file"
 	"github.com/anchore/stereoscope/pkg/image"
@@ -78,10 +80,17 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 	subscription := eventBus.Subscribe()
 	defer eventBus.Unsubscribe(subscription)
 
+	cfg := logrus.Config{
+		Level: logger.DebugLevel,
+	}
+	log, _ := logrus.New(cfg)
+	syft.SetLogger(log)
+	stereoscope.SetLogger(log.Nested("steroscope"))
+
 	events := subscription.Events()
 	go func() {
 		for event := range events {
-			message.Debug("syft", message.JSONValue(event))
+			message.Debug("syft||stereoscope", message.JSONValue(event))
 		}
 	}()
 
