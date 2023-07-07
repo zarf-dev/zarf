@@ -98,7 +98,7 @@ func (g *Git) prepRepoForPush() (*git.Repository, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}
-
+	message.Debugf("Rewrite git URL: %s -> %s", remoteURL, targetURL.String())
 	// Remove any preexisting offlineRemotes (happens when a retry is triggered)
 	_ = repo.DeleteRemote(offlineRemoteName)
 

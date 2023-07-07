@@ -7,7 +7,7 @@ package oci
 import (
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -34,7 +34,7 @@ func NewZarfOCIManifest(manifest *ocispec.Manifest) *ZarfOCIManifest {
 
 // Locate returns the descriptor for the layer with the given path.
 func (m *ZarfOCIManifest) Locate(path string) ocispec.Descriptor {
-	return utils.Find(m.Layers, func(layer ocispec.Descriptor) bool {
+	return helpers.Find(m.Layers, func(layer ocispec.Descriptor) bool {
 		return layer.Annotations[ocispec.AnnotationTitle] == path
 	})
 }
