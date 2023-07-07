@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -161,7 +162,7 @@ func (b *Bundler) ValidateBundle() error {
 				continue
 			}
 			for _, component := range pkg.OptionalComponents {
-				c := utils.Find(zarfYAML.Components, func(c types.ZarfComponent) bool {
+				c := helpers.Find(zarfYAML.Components, func(c types.ZarfComponent) bool {
 					return c.Name == component
 				})
 				// make sure the component exists
@@ -236,11 +237,11 @@ func (b *Bundler) SetOCIRemote(url string) error {
 // MergeVariables merges the variables from the config file and the CLI
 func MergeVariables(left map[string]string, right map[string]string) map[string]string {
 	// Ensure uppercase keys from viper and CLI --set
-	leftUpper := utils.TransformMapKeys(left, strings.ToUpper)
-	rightUpper := utils.TransformMapKeys(right, strings.ToUpper)
+	leftUpper := helpers.TransformMapKeys(left, strings.ToUpper)
+	rightUpper := helpers.TransformMapKeys(right, strings.ToUpper)
 
 	// Merge the viper config file variables and provided CLI flag variables (CLI takes precedence))
-	return utils.MergeMap(leftUpper, rightUpper)
+	return helpers.MergeMap(leftUpper, rightUpper)
 }
 
 // IsValidTarballPath returns true if the path is a valid tarball path to a bundle tarball
