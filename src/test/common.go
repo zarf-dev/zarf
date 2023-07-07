@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	dconfig "github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/stretchr/testify/require"
@@ -22,11 +22,12 @@ import (
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize.
 type ZarfE2ETest struct {
-	ZarfBinPath     string
-	Arch            string
-	ApplianceMode   bool
-	RunClusterTests bool
-	CommandLog      []string
+	ZarfBinPath       string
+	Arch              string
+	ApplianceMode     bool
+	ApplianceModeKeep bool
+	RunClusterTests   bool
+	CommandLog        []string
 }
 
 var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
@@ -91,7 +92,7 @@ func (e2e *ZarfE2ETest) GetMismatchedArch() string {
 
 // GetLogFileContents gets the log file contents from a given run's std error.
 func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
-	get, err := utils.MatchRegex(logRegex, stdErr)
+	get, err := helpers.MatchRegex(logRegex, stdErr)
 	require.NoError(t, err)
 	logFile := get("logFile")
 	logContents, err := os.ReadFile(logFile)
@@ -116,4 +117,12 @@ func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) *configfile.
 	}
 
 	return cfg
+}
+
+// GetZarfVersion returns the current build/zarf version
+func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
+	// Get the version of the CLI
+	stdOut, stdErr, err := e2e.Zarf("version")
+	require.NoError(t, err, stdOut, stdErr)
+	return strings.Trim(stdOut, "\n")
 }
