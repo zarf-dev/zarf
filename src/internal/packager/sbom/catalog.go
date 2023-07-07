@@ -81,7 +81,8 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 	defer eventBus.Unsubscribe(subscription)
 
 	cfg := logrus.Config{
-		Level: logger.DebugLevel,
+		Level:         logger.DebugLevel,
+		EnableConsole: true,
 	}
 	log, _ := logrus.New(cfg)
 	syft.SetLogger(log)
