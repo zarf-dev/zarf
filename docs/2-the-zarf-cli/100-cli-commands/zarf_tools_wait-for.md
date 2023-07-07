@@ -46,6 +46,12 @@ zarf tools wait-for { KIND | PROTOCOL } { NAME | SELECTOR | URI } { CONDITION | 
       --timeout string     Specify the timeout duration for the wait command. (default "5m")
 ```
 
+## Options inherited from parent commands
+
+```
+      --no-color   Disable colors in output
+```
+
 ## SEE ALSO
 
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier

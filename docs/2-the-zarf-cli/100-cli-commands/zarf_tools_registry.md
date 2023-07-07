@@ -13,6 +13,12 @@ Tools for working with container registries using go-containertools
   -v, --verbose                            Enable debug logs
 ```
 
+## Options inherited from parent commands
+
+```
+      --no-color   Disable colors in output
+```
+
 ## SEE ALSO
 
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
