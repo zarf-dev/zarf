@@ -22,6 +22,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "k8s.io/api/apps/v1"
@@ -324,7 +325,7 @@ func (p *Packager) updateComponentImagesInplace(index int, images []string) erro
 			ignore := false
 			for _, comment := range imageComments {
 				if comment.Position == goyaml.CommentLinePosition {
-					if utils.SliceContains(comment.Texts, "zarf-find-images:ignore") {
+					if helpers.SliceContains(comment.Texts, "zarf-find-images:ignore") {
 						// do nothing
 						ignore = true
 					}
@@ -350,7 +351,7 @@ func (p *Packager) updateComponentImagesInplace(index int, images []string) erro
 			ignore := false
 			for _, comment := range imageComments {
 				if comment.Position == goyaml.CommentLinePosition {
-					if utils.SliceContains(comment.Texts, "zarf-find-images:ignore") {
+					if helpers.SliceContains(comment.Texts, "zarf-find-images:ignore") {
 						// do nothing
 						ignore = true
 					}
