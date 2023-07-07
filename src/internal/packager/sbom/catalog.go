@@ -252,8 +252,10 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 		return nil, err
 	}
 
-	syftImage := image.New(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(tag.String()))
-	defer syftImage.Cleanup()
+	tmp := file.NewTempDirGenerator("zarf")
+	defer tmp.Cleanup()
+	syftImage := image.New(img, tmp, imageCachePath, image.WithTags(tag.String()))
+	// defer syftImage.Cleanup()
 	if err := syftImage.Read(); err != nil {
 		return nil, err
 	}
@@ -303,7 +305,7 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 
 // createPathSBOM uses syft to generate SBOM for a filepath.
 func (b *Builder) createFileSBOM(componentSBOM types.ComponentSBOM, component string) ([]byte, error) {
-	catalog := pkg.NewCatalog()
+	catalog := pkg.NewCollection()
 	relationships := []artifact.Relationship{}
 	parentSource, err := source.NewFromDirectory(componentSBOM.ComponentPath.Base)
 	if err != nil {
