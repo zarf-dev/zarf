@@ -253,6 +253,7 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 	}
 
 	syftImage := image.New(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(tag.String()))
+	defer syftImage.Cleanup()
 	if err := syftImage.Read(); err != nil {
 		return nil, err
 	}
