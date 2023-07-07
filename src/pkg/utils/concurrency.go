@@ -13,10 +13,12 @@ import (
 type ConcurrencyTools[P any, E any] struct {
 	ProgressChan chan P
 	ErrorChan    chan E
-	Context      context.Context
+	OnError      func(E) error
+	OnProgress   func(P, int)
+	context      context.Context
 	Cancel       context.CancelFunc
-	WaitGroup    *sync.WaitGroup
-	RoutineCount int
+	waitGroup    *sync.WaitGroup
+	routineCount int
 }
 
 func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
@@ -33,16 +35,21 @@ func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
 	concurrencyTools := ConcurrencyTools[P, E]{
 		ProgressChan: progressChan,
 		ErrorChan:    errorChan,
-		Context:      ctx,
+		context:      ctx,
 		Cancel:       cancel,
-		WaitGroup:    &waitGroup,
-		RoutineCount: length,
+		waitGroup:    &waitGroup,
+		routineCount: length,
+		OnError: func(e E) error {
+			return any(e).(error)
+		},
+		OnProgress: func(p P, i int) {},
 	}
 
 	return &concurrencyTools
 }
 
-func ContextDone(ctx context.Context) bool {
+func (ct *ConcurrencyTools[P, E]) IsDone() bool {
+	ctx := ct.context
 	select {
 	case <-ctx.Done():
 		return true
@@ -51,22 +58,22 @@ func ContextDone(ctx context.Context) bool {
 	}
 }
 
-func ReturnError(err error) error {
-	return err
+func (ct *ConcurrencyTools[P, E]) WaitGroupDone() {
+	ct.waitGroup.Done()
 }
 
-func WaitForConcurrencyTools[P any, E any, PF func(P, int), EF func(E) error](concurrencyTools *ConcurrencyTools[P, E], progressFunc PF, errorFunc EF) error {
-	for i := 0; i < concurrencyTools.RoutineCount; i++ {
+func (ct *ConcurrencyTools[P, E]) Wait() error {
+	for i := 0; i < ct.routineCount; i++ {
 		select {
-		case err := <-concurrencyTools.ErrorChan:
-			concurrencyTools.Cancel()
-			errResult := errorFunc(err)
-			concurrencyTools.WaitGroup.Done()
+		case err := <-ct.ErrorChan:
+			ct.Cancel()
+			errResult := ct.OnError(err)
+			ct.waitGroup.Done()
 			return errResult
-		case progress := <-concurrencyTools.ProgressChan:
-			progressFunc(progress, i)
+		case progress := <-ct.ProgressChan:
+			ct.OnProgress(progress, i)
 		}
 	}
-	concurrencyTools.WaitGroup.Wait()
+	ct.waitGroup.Wait()
 	return nil
 }

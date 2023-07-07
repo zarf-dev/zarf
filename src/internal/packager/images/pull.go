@@ -7,7 +7,6 @@ package images
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -56,8 +55,8 @@ func (i *ImgConfig) PullAll() error {
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
 	type srcAndImg struct {
-		src  string
-		img  v1.Image
+		src string
+		img v1.Image
 	}
 
 	metadataImageConcurrency := utils.NewConcurrencyTools[srcAndImg, error](len(i.ImgList))
@@ -72,11 +71,11 @@ func (i *ImgConfig) PullAll() error {
 		src := src
 		go func() {
 			// Make sure to call Done() on the WaitGroup when the goroutine finishes
-			defer metadataImageConcurrency.WaitGroup.Done()
+			defer metadataImageConcurrency.WaitGroupDone()
 
 			srcParsed, err := transform.ParseImageRef(src)
 			if err != nil {
-				metadataImageConcurrency.ErrorChan <-  fmt.Errorf("failed to parse image ref %s: %w", src, err)
+				metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to parse image ref %s: %w", src, err)
 				return
 			}
 
@@ -98,19 +97,21 @@ func (i *ImgConfig) PullAll() error {
 		}()
 	}
 
-	progressFunc := func(finishedImage srcAndImg, iteration int) {
+	metadataImageConcurrency.OnProgress = func(finishedImage srcAndImg, iteration int) {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImgList), finishedImage.src)
 		imageMap[finishedImage.src] = finishedImage.img
 	}
 
-	err := utils.WaitForConcurrencyTools(metadataImageConcurrency, progressFunc, utils.ReturnError)
-	if err != nil {
+	metadataImageConcurrency.OnError = func(err error) error {
+		return err
+	}
+
+	if err := metadataImageConcurrency.Wait(); err != nil {
 		return err
 	}
 
 	// Create the ImagePath directory
-	err = os.Mkdir(i.ImagesPath, 0755)
-	if err != nil && !errors.Is(err, os.ErrExist) {
+	if err := utils.CreateDirectory(i.ImagesPath, 0755); err != nil {
 		return fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
 
@@ -182,7 +183,7 @@ func (i *ImgConfig) PullAll() error {
 		tag, img := tag, img
 		go func() {
 			// Make sure to call Done() on the WaitGroup when the goroutine finishes
-			defer imageSavingConcurrency.WaitGroup.Done()
+			defer imageSavingConcurrency.WaitGroupDone()
 			// Save the image via crane
 			err := cranePath.WriteImage(img)
 			if err != nil {
@@ -204,12 +205,15 @@ func (i *ImgConfig) PullAll() error {
 		}()
 	}
 
-	imageProgressFunc := func(finishedImage digestAndTag, iteration int) {
+	imageSavingConcurrency.OnError = func(err error) error {
+		return err
+	}
+
+	imageSavingConcurrency.OnProgress = func(finishedImage digestAndTag, iteration int) {
 		tagToDigest[finishedImage.tag] = finishedImage.digest
 	}
 
-	err = utils.WaitForConcurrencyTools(imageSavingConcurrency, imageProgressFunc, utils.ReturnError)
-	if err != nil {
+	if err := imageSavingConcurrency.Wait(); err != nil {
 		return err
 	}
 

@@ -83,7 +83,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 			currentTag := tag
 			go func() {
 				// Make sure to call Done() on the WaitGroup when the goroutine finishes
-				defer imageSBOMConcurrency.WaitGroup.Done()
+				defer imageSBOMConcurrency.WaitGroupDone()
 				// Get the image that we are creating an SBOM for
 				img, err := utils.LoadOCIImage(tmpPaths.Images, currentTag)
 				if err != nil {
@@ -92,7 +92,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 				}
 
 				// If the context has been cancelled end the goroutine
-				if utils.ContextDone(imageSBOMConcurrency.Context) {
+				if imageSBOMConcurrency.IsDone() {
 					return
 				}
 
@@ -104,7 +104,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 				}
 
 				// If the context has been cancelled end the goroutine
-				if utils.ContextDone(imageSBOMConcurrency.Context) {
+				if imageSBOMConcurrency.IsDone() {
 					return
 				}
 
@@ -115,7 +115,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 				}
 
 				// If the context has been cancelled end the goroutine
-				if utils.ContextDone(imageSBOMConcurrency.Context) {
+				if imageSBOMConcurrency.IsDone() {
 					return
 				}
 
@@ -124,16 +124,16 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 			}()
 		}
 
-		imageSBOMErrorFunc := func(erroredImage message.ErrorWithMessage) error {
+		imageSBOMConcurrency.OnProgress = func(tag string, i int) {
+			builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", i, len(imgList), tag)
+		}
+
+		imageSBOMConcurrency.OnError = func(erroredImage message.ErrorWithMessage) error {
 			builder.spinner.Errorf(erroredImage.Error, erroredImage.Message)
 			return erroredImage.Error
 		}
 
-		imageSBOMProgressFunc := func(tag string, i int) {
-			builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", i, len(imgList), tag)
-		}
-
-		err = utils.WaitForConcurrencyTools(imageSBOMConcurrency, imageSBOMProgressFunc, imageSBOMErrorFunc)
+		err = imageSBOMConcurrency.Wait()
 		if err != nil {
 			return err
 		}
@@ -151,7 +151,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 			currentComponent := component
 			go func() {
 				// Make sure to call Done() on the WaitGroup when the goroutine finishes
-				defer fileSBOMConcurrency.WaitGroup.Done()
+				defer fileSBOMConcurrency.WaitGroupDone()
 
 				// Check if component requires SBOM generation
 				if componentSBOMs[currentComponent] == nil {
@@ -160,7 +160,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 				}
 
 				// If the context has been cancelled end the goroutine
-				if utils.ContextDone(fileSBOMConcurrency.Context) {
+				if fileSBOMConcurrency.IsDone() {
 					return
 				}
 
@@ -172,7 +172,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 				}
 
 				// If the context has been cancelled end the goroutine
-				if utils.ContextDone(fileSBOMConcurrency.Context) {
+				if fileSBOMConcurrency.IsDone() {
 					return
 				}
 
@@ -183,7 +183,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 				}
 
 				// If the context has been cancelled end the goroutine
-				if utils.ContextDone(fileSBOMConcurrency.Context) {
+				if fileSBOMConcurrency.IsDone() {
 					return
 				}
 
@@ -192,17 +192,16 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 			}()
 		}
 
-		fileSBOMErrorFunc := func(erroredComponent message.ErrorWithMessage) error {
-			builder.spinner.Errorf(erroredComponent.Error, erroredComponent.Message)
-			return erroredComponent.Error
-		}
+		// fileSBOMConcurrency.OnError = func(erroredComponent message.ErrorWithMessage) error {
+		// 	builder.spinner.Errorf(erroredComponent.Error, erroredComponent.Message)
+		// 	return erroredComponent.Error
+		// }
 
-		fileSBOMProgressFunc := func(component string, i int) {
+		fileSBOMConcurrency.OnProgress = func(component string, i int) {
 			builder.spinner.Updatef("Creating component file SBOMs (%d of %d): %s", i, len(componentSBOMs), component)
 		}
 
-		err = utils.WaitForConcurrencyTools(fileSBOMConcurrency, fileSBOMProgressFunc, fileSBOMErrorFunc)
-		if err != nil {
+		if err := fileSBOMConcurrency.Wait(); err != nil {
 			return err
 		}
 	}
