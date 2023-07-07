@@ -34,7 +34,7 @@ func (h *Helm) PackageChart(destination string) error {
 		}
 
 		if isGitURL {
-			// if it is append chart version as if its a tag
+			// if it is git url append chart version as if its a tag
 			if refPlain == "" {
 				h.Chart.URL = fmt.Sprintf("%s@%s", h.Chart.URL, h.Chart.Version)
 			}
@@ -68,7 +68,7 @@ func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
 		spinner.Errorf(err, "Validation failed for chart from %s (%s)", h.Chart.LocalPath, err.Error())
 		return "", err
 	}
-
+	h.buildChartDependencies(spinner)
 	client := action.NewPackage()
 
 	client.Destination = destination
@@ -180,4 +180,34 @@ func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, err
 	}
 
 	return gitCfg.GitPath, nil
+}
+
+// buildChartDependencies builds the helm chart dependencies
+func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
+	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
+	if err != nil {
+		spinner.Fatalf(err, "Unable to create a new registry client")
+	}
+
+	settings := cli.New()
+
+	man := &downloader.Manager{
+		Out:            os.Stdout,
+		ChartPath:      h.Chart.LocalPath,
+		Getters:        getter.All(settings),
+		RegistryClient: regClient,
+
+		RepositoryConfig: settings.RepositoryConfig,
+		RepositoryCache:  settings.RepositoryCache,
+		Debug:            false,
+	}
+	// Verify the chart
+	man.Verify = downloader.VerifyIfPossible
+
+	// Build the deps from the helm chart
+	err = man.Build()
+	if e, ok := err.(downloader.ErrRepoNotFound); ok {
+		return fmt.Errorf("%s. Please add the missing repos via 'helm repo add'", e.Error())
+	}
+	return nil
 }
