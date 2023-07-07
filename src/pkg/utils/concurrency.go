@@ -22,7 +22,7 @@ type ConcurrencyTools[P any, E any] struct {
 
 // NewConcurrencyTools creates a new ConcurrencyTools struct.
 func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.TODO())
 
 	progressChan := make(chan P, length)
 

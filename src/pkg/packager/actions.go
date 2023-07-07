@@ -145,7 +145,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 		// Otherwise, try running the command.
 		default:
-			ctx, cancel = context.WithTimeout(context.Background(), duration)
+			ctx, cancel = context.WithTimeout(context.TODO(), duration)
 			defer cancel()
 			if err := tryCmd(ctx); err == nil {
 				return nil
