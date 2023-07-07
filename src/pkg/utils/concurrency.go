@@ -13,8 +13,6 @@ import (
 type ConcurrencyTools[P any, E any] struct {
 	ProgressChan chan P
 	ErrorChan    chan E
-	OnError      func(E) error
-	OnProgress   func(P, int)
 	context      context.Context
 	Cancel       context.CancelFunc
 	waitGroup    *sync.WaitGroup
@@ -39,10 +37,6 @@ func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
 		Cancel:       cancel,
 		waitGroup:    &waitGroup,
 		routineCount: length,
-		OnError: func(e E) error {
-			return any(e).(error)
-		},
-		OnProgress: func(p P, i int) {},
 	}
 
 	return &concurrencyTools
@@ -62,16 +56,16 @@ func (ct *ConcurrencyTools[P, E]) WaitGroupDone() {
 	ct.waitGroup.Done()
 }
 
-func (ct *ConcurrencyTools[P, E]) Wait() error {
+func (ct *ConcurrencyTools[P, E]) WaitWithProgress(onProgress func(P, int), onError func(E) error) error {
 	for i := 0; i < ct.routineCount; i++ {
 		select {
 		case err := <-ct.ErrorChan:
 			ct.Cancel()
-			errResult := ct.OnError(err)
+			errResult := onError(err)
 			ct.waitGroup.Done()
 			return errResult
 		case progress := <-ct.ProgressChan:
-			ct.OnProgress(progress, i)
+			onProgress(progress, i)
 		}
 	}
 	ct.waitGroup.Wait()

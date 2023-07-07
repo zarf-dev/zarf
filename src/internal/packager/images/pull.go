@@ -97,16 +97,16 @@ func (i *ImgConfig) PullAll() error {
 		}()
 	}
 
-	metadataImageConcurrency.OnProgress = func(finishedImage srcAndImg, iteration int) {
+	metadataImageConcurrencyOnProgress := func(finishedImage srcAndImg, iteration int) {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImgList), finishedImage.src)
 		imageMap[finishedImage.src] = finishedImage.img
 	}
 
-	metadataImageConcurrency.OnError = func(err error) error {
+	metadataImageConcurrencyOnError := func(err error) error {
 		return err
 	}
 
-	if err := metadataImageConcurrency.Wait(); err != nil {
+	if err := metadataImageConcurrency.WaitWithProgress(metadataImageConcurrencyOnProgress, metadataImageConcurrencyOnError); err != nil {
 		return err
 	}
 
@@ -205,15 +205,15 @@ func (i *ImgConfig) PullAll() error {
 		}()
 	}
 
-	imageSavingConcurrency.OnError = func(err error) error {
-		return err
-	}
-
-	imageSavingConcurrency.OnProgress = func(finishedImage digestAndTag, iteration int) {
+	imageSavingConcurrencyOnProgress := func(finishedImage digestAndTag, iteration int) {
 		tagToDigest[finishedImage.tag] = finishedImage.digest
 	}
 
-	if err := imageSavingConcurrency.Wait(); err != nil {
+	imageSavingConcurrencyOnError := func(err error) error {
+		return err
+	}
+
+	if err := imageSavingConcurrency.WaitWithProgress(imageSavingConcurrencyOnProgress, imageSavingConcurrencyOnError); err != nil {
 		return err
 	}
 
