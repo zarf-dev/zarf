@@ -252,14 +252,14 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 		return nil, err
 	}
 
-	syftImage := image.NewImage(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(tag.String()))
+	syftImage := image.New(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(tag.String()))
 	if err := syftImage.Read(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to load tag %s: %w", tag, err)
 	}
 
 	syftSource, err := source.NewFromImage(syftImage, "")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to create source from tag %s: %w", tag, err)
 	}
 
 	catalog, relationships, distro, err := syft.CatalogPackages(&syftSource, cataloger.DefaultConfig())
