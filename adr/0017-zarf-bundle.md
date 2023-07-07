@@ -85,9 +85,13 @@ metadata:
   name: omnibus
   description: an example Zarf bundle
   version: 0.0.1
-  arch: amd64
+  architecture: amd64
 
 packages:
+  - repository: localhost:888/init
+    ref: "###ZARF_BNDL_TMPL_INIT_VERSION###"
+    optional-components:
+      - git-server
   - repository: ghcr.io/defenseunicorns/packages/dubbd
     ref: 0.0.1 # OCI spec compliant reference
     # arch is not needed as it will use w/e arch is set in the bundle's metadata
@@ -116,4 +120,4 @@ This does add complexity to the Zarf codebase, as it is the addition of an entir
 
 Additionally, this does add a new layer of complexity to the Zarf ecosystem, as meta-package maintainers must now also be aware of this bundling process, syntax and schema.  This is a necessary evil however, as the current pattern of using `zarf package deploy` to deploy multiple packages is not sustainable at the scale we are seeing.
 
-There is also the hard requirement that packages bundled must be first published to a registry available to the person performing the bundle operation. This removes some ability to develop bundles on an air gapped environment, but the team believes that in such scenarios, the air gapped environment should be _receiving_ a bundle, rather than developing one internally.  If this assumption is incorrect however there are options for us to allow the creation of bundles from OCI directories on local systems if we need to or we could provide more provisions within Zarf to make it easier to connect to airgap registries to mirror bundles.
+There is also the hard requirement that packages bundled must be first published to a registry available to the person performing the bundle operation. This removes some ability to develop bundles on an air gapped environment, but the team believes that in such scenarios, the air gapped environment should be _receiving_ a bundle, rather than developing one internally.  If this assumption is incorrect however there are options for us to allow the creation of bundles from OCI directories on local systems if we need to or we could provide more provisions within Zarf to make it easier to connect to air gap registries to mirror bundles.
