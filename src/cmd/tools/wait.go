@@ -29,6 +29,7 @@ var waitForCmd = &cobra.Command{
 	Example: lang.CmdToolsWaitForExample,
 	Args:    cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
+		exec.ExitOnInterrupt(1, lang.ErrInterrupt)
 		// Parse the timeout string
 		timeout, err := time.ParseDuration(waitTimeout)
 		if err != nil {
