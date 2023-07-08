@@ -144,6 +144,12 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 
 // CheckAuth checks if the user is authenticated to the remote registry.
 func (o *OrasRemote) CheckAuth(scopes ...string) error {
+	if scopes == nil && o.hasCredentials {
+		return fmt.Errorf("%s requires authentication but no request scopes were provided", o.Reference)
+	}
+	if scopes != nil {
+		scopes = []string{auth.ScopeRepository(o.Reference.Repository, scopes...)}
+	}
 	// check if we've already checked the scopes
 	currentScopes := auth.GetScopes(o.Context)
 	equal := reflect.DeepEqual(currentScopes, scopes)
@@ -156,7 +162,7 @@ func (o *OrasRemote) CheckAuth(scopes ...string) error {
 	if o.hasCredentials {
 		o.Context = auth.WithScopes(o.Context, scopes...)
 	}
-	reg, err := remote.NewRegistry(o.Repository.Reference.Registry)
+	reg, err := remote.NewRegistry(o.Reference.Registry)
 	if err != nil {
 		return err
 	}

@@ -35,9 +35,6 @@ func (o *OrasRemote) checkPull() error {
 
 // LayersFromPaths returns the descriptors for the given paths from the root manifest.
 func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.Descriptor, err error) {
-	if err := o.checkPull(); err != nil {
-		return nil, err
-	}
 	manifest, err := o.FetchRoot()
 	if err != nil {
 		return nil, err
@@ -58,9 +55,6 @@ func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.
 //
 // It also respects the `required` flag on components, and will retrieve all necessary layers for required components.
 func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string) (layers []ocispec.Descriptor, err error) {
-	if err := o.checkPull(); err != nil {
-		return nil, err
-	}
 	root, err := o.FetchRoot()
 	if err != nil {
 		return nil, err
