@@ -153,5 +153,5 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []co
 
 	k.Log("Pod lookup timeout exceeded")
 
-	return []string{}
+	return []corev1.Pod{}
 }

@@ -370,11 +370,7 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 		tunnel.remotePort = svc.Spec.Ports[0].TargetPort.IntValue()
 		// if targetPort == 0, look for Port (which is required)
 		if tunnel.remotePort == 0 {
-			containerPort, err := tunnel.findPodContainerPort(svc)
-			if err != nil {
-				return fmt.Errorf("unable to lookup the service: %w", err)
-			}
-			tunnel.remotePort = containerPort
+			tunnel.findPodContainerPort(svc)
 		}
 
 		// Add the url suffix too.
@@ -537,8 +533,8 @@ func makeLabels(labels map[string]string) string {
 	return strings.Join(out, ",")
 }
 
-// findPodTargetPort will find the container port in the pod and return the port number.
-func (tunnel *Tunnel) findPodContainerPort(svc v1.Service) (int, error) {
+// findPodTargetPort will find the container port in the pod and assign it to tunnel's remotePort.
+func (tunnel *Tunnel) findPodContainerPort(svc v1.Service) {
 	selectorLabelsOfPods := makeLabels(svc.Spec.Selector)
 	pods := tunnel.kube.WaitForPodsAndContainers(k8s.PodLookup{
 		Namespace: svc.Namespace,
@@ -550,10 +546,9 @@ func (tunnel *Tunnel) findPodContainerPort(svc v1.Service) (int, error) {
 		for _, container := range pod.Spec.Containers {
 			for _, port := range container.Ports {
 				if port.Name == svc.Spec.Ports[0].TargetPort.String() {
-					return int(port.ContainerPort), nil
+					tunnel.remotePort = int(port.ContainerPort)
 				}
 			}
 		}
 	}
-	return 0, fmt.Errorf("unable to find matching port in pod")
 }
