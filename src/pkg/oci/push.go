@@ -38,7 +38,7 @@ type ConfigPartial struct {
 }
 
 func (o *OrasRemote) checkPush() error {
-	scopes := auth.ScopeRepository(o.Reference.Registry, auth.ActionPull, auth.ActionPush)
+	scopes := auth.ScopeRepository(o.Reference.Repository, auth.ActionPull, auth.ActionPush)
 	return o.CheckAuth(scopes)
 }
 

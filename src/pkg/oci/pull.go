@@ -29,7 +29,7 @@ var (
 )
 
 func (o *OrasRemote) checkPull() error {
-	scopes := auth.ScopeRepository(o.Reference.Registry, auth.ActionPull)
+	scopes := auth.ScopeRepository(o.Reference.Repository, auth.ActionPull)
 	return o.CheckAuth(scopes)
 }
 
