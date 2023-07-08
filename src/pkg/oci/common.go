@@ -6,7 +6,6 @@ package oci
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -113,7 +112,8 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 		return nil, err
 	}
 	if !cfg.ContainsAuth() {
-		return nil, errors.New("no docker config file found, run 'zarf tools registry login --help'")
+		message.Debug("no docker config file found, run 'zarf tools registry login --help'")
+		return nil, nil
 	}
 
 	configs := []*configfile.ConfigFile{cfg}
