@@ -167,7 +167,7 @@ func (o *OrasRemote) CheckAuth(scopes ...string) error {
 	reg.Client = o.client
 	err = reg.Ping(o.Context)
 	if err == nil {
-		return fmt.Errorf("unable to authenticate to %s: %s", reg.Reference, err.Error())
+		return fmt.Errorf("unable to authenticate to %s: %s", o.Reference.Registry, err.Error())
 	}
 	return nil
 }
