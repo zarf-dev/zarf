@@ -147,9 +147,6 @@ func (o *OrasRemote) CheckAuth(scopes ...string) error {
 	if scopes == nil && o.hasCredentials {
 		return fmt.Errorf("%s requires authentication but no request scopes were provided", o.Reference)
 	}
-	if scopes != nil {
-		scopes = []string{auth.ScopeRepository(o.Reference.Repository, scopes...)}
-	}
 	// check if we've already checked the scopes
 	currentScopes := auth.GetScopes(o.Context)
 	equal := reflect.DeepEqual(currentScopes, scopes)
