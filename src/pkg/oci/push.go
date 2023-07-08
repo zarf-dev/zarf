@@ -20,6 +20,7 @@ import (
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
+	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 // ConfigPartial is a partial OCI config that is used to create the manifest config.
@@ -36,17 +37,16 @@ type ConfigPartial struct {
 	Annotations  map[string]string `json:"annotations,omitempty"`
 }
 
-// PushFile pushes the file at the given path to the remote repository.
-func (o *OrasRemote) PushFile(path string) (*ocispec.Descriptor, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return o.PushBytes(b, ZarfLayerMediaTypeBlob)
+func (o *OrasRemote) checkPush() error {
+	scopes := auth.ScopeRepository(o.Reference.Registry, auth.ActionPull, auth.ActionPush)
+	return o.CheckAuth(scopes)
 }
 
-// PushBytes pushes the given bytes to the remote repository.
-func (o *OrasRemote) PushBytes(b []byte, mediaType string) (*ocispec.Descriptor, error) {
+// PushLayer pushes the given layer (bytes) to the remote repository.
+func (o *OrasRemote) PushLayer(b []byte, mediaType string) (*ocispec.Descriptor, error) {
+	if err := o.checkPush(); err != nil {
+		return nil, err
+	}
 	desc := content.NewDescriptorFromBytes(mediaType, b)
 	return &desc, o.Push(o.Context, desc, bytes.NewReader(b))
 }
@@ -65,7 +65,7 @@ func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata
 	if err != nil {
 		return nil, err
 	}
-	return o.PushBytes(manifestConfigBytes, ocispec.MediaTypeImageConfig)
+	return o.PushLayer(manifestConfigBytes, ocispec.MediaTypeImageConfig)
 }
 
 func (o *OrasRemote) manifestAnnotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {
@@ -111,6 +111,9 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 
 // PublishPackage publishes the package to the remote repository.
 func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, concurrency int) error {
+	if err := o.checkPush(); err != nil {
+		return err
+	}
 	ctx := o.Context
 	// source file store
 	src, err := file.New(sourceDir)

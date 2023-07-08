@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
@@ -32,9 +33,10 @@ const (
 type OrasRemote struct {
 	*remote.Repository
 	context.Context
-	Transport *utils.Transport
-	CopyOpts  oras.CopyOptions
-	client    *auth.Client
+	Transport      *utils.Transport
+	CopyOpts       oras.CopyOptions
+	client         *auth.Client
+	hasCredentials bool
 }
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
@@ -53,13 +55,6 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 		return nil, err
 	}
 
-	if auth.GetScopes(o.Context) != nil {
-		err = o.CheckAuth()
-		if err != nil {
-			return nil, fmt.Errorf("unable to authenticate to %s: %s", ref.Registry, err.Error())
-		}
-	}
-
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.OnCopySkipped = o.printLayerSuccess
 	copyOpts.PostCopy = o.printLayerSuccess
@@ -70,6 +65,7 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 
 // WithRepository sets the repository for the remote as well as the auth client.
 func (o *OrasRemote) WithRepository(ref registry.Reference) error {
+	o.hasCredentials = false
 	// patch docker.io to registry-1.docker.io
 	// this allows end users to use docker.io as an alias for registry-1.docker.io
 	if ref.Registry == "docker.io" {
@@ -89,17 +85,6 @@ func (o *OrasRemote) WithRepository(ref registry.Reference) error {
 	repo.Client = o.client
 	o.Repository = repo
 	return nil
-}
-
-// withScopes returns a context with the given scopes.
-//
-// This is needed for pushing to Docker Hub.
-func withScopes(ref registry.Reference) context.Context {
-	// For pushing to Docker Hub, we need to set the scope to the repository with pull+push actions, otherwise a 401 is returned
-	scopes := []string{
-		fmt.Sprintf("repository:%s:pull,push", ref.Repository),
-	}
-	return auth.WithScopes(context.TODO(), scopes...)
 }
 
 // withAuthClient returns an auth client for the given reference.
@@ -130,7 +115,7 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 	}
 
 	if authConf.ServerAddress != "" {
-		o.Context = withScopes(ref)
+		o.hasCredentials = true
 	}
 
 	cred := auth.Credential{
@@ -158,12 +143,28 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 }
 
 // CheckAuth checks if the user is authenticated to the remote registry.
-func (o *OrasRemote) CheckAuth() error {
+func (o *OrasRemote) CheckAuth(scopes ...string) error {
+	// check if we've already checked the scopes
+	currentScopes := auth.GetScopes(o.Context)
+	equal := reflect.DeepEqual(currentScopes, scopes)
+	// if we've already checked the scopes and we dont have credentials, return
+	if equal && !o.hasCredentials {
+		return nil
+	}
+
+	// if we have credentials, add the scopes to the context
+	if o.hasCredentials {
+		o.Context = auth.WithScopes(o.Context, scopes...)
+	}
 	reg, err := remote.NewRegistry(o.Repository.Reference.Registry)
 	if err != nil {
 		return err
 	}
 	reg.PlainHTTP = zarfconfig.CommonOptions.Insecure
 	reg.Client = o.client
-	return reg.Ping(o.Context)
+	err = reg.Ping(o.Context)
+	if err == nil {
+		return fmt.Errorf("unable to authenticate to %s: %s", reg.Reference, err.Error())
+	}
+	return nil
 }
