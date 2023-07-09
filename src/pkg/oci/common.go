@@ -150,8 +150,8 @@ func (o *OrasRemote) CheckAuth(scopes ...string) error {
 	// check if we've already checked the scopes
 	currentScopes := auth.GetScopes(o.Context)
 	equal := reflect.DeepEqual(currentScopes, scopes)
-	// if we've already checked the scopes and we dont have credentials, return
-	if equal && !o.hasCredentials {
+	// if we've already checked the scopes return
+	if equal {
 		return nil
 	}
 
@@ -166,7 +166,7 @@ func (o *OrasRemote) CheckAuth(scopes ...string) error {
 	reg.PlainHTTP = zarfconfig.CommonOptions.Insecure
 	reg.Client = o.client
 	err = reg.Ping(o.Context)
-	if err == nil {
+	if err != nil {
 		return fmt.Errorf("unable to authenticate to %s: %s", o.Reference.Registry, err.Error())
 	}
 	return nil
