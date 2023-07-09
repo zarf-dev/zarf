@@ -140,23 +140,3 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 
 	return client, nil
 }
-
-// CheckAuth checks if the user is authenticated to the remote registry.
-func (o *OrasRemote) CheckRepoAuth() error {
-	// if we have credentials, add the scopes to the context
-	if o.hasCredentials {
-		scope := auth.ScopeRepository(o.repo.Reference.Repository, auth.ActionPull)
-		o.ctx = auth.AppendScopes(o.ctx, scope)
-	}
-	reg, err := remote.NewRegistry(o.repo.Reference.Registry)
-	if err != nil {
-		return err
-	}
-	reg.PlainHTTP = zarfconfig.CommonOptions.Insecure
-	reg.Client = o.client
-	err = reg.Ping(o.ctx)
-	if err != nil {
-		return fmt.Errorf("unable to authenticate to %s: %s", o.repo.Reference.Registry, err.Error())
-	}
-	return nil
-}
