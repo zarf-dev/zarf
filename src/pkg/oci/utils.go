@@ -58,7 +58,7 @@ func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
 		return nil, err
 	}
 	// get the manifest descriptor
-	descriptor, err := o.Resolve(o.Context, o.Reference.Reference)
+	descriptor, err := o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err erro
 	if err := o.checkPull(); err != nil {
 		return nil, err
 	}
-	return content.FetchAll(o.Context, o, desc)
+	return content.FetchAll(o.ctx, o.repo, desc)
 }
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.

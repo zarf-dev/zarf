@@ -38,7 +38,7 @@ type ConfigPartial struct {
 }
 
 func (o *OrasRemote) checkPush() error {
-	scopes := auth.ScopeRepository(o.Reference.Repository, auth.ActionPull, auth.ActionPush)
+	scopes := auth.ScopeRepository(o.repo.Reference.Repository, auth.ActionPull, auth.ActionPush)
 	return o.CheckAuth(scopes)
 }
 
@@ -48,7 +48,7 @@ func (o *OrasRemote) PushLayer(b []byte, mediaType string) (*ocispec.Descriptor,
 		return nil, err
 	}
 	desc := content.NewDescriptorFromBytes(mediaType, b)
-	return &desc, o.Push(o.Context, desc, bytes.NewReader(b))
+	return &desc, o.repo.Push(o.ctx, desc, bytes.NewReader(b))
 }
 
 func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata, build *types.ZarfBuildData) (*ocispec.Descriptor, error) {
@@ -98,11 +98,11 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 	packOpts.PackImageManifest = true
 	packOpts.ManifestAnnotations = o.manifestAnnotationsFromMetadata(metadata)
 
-	root, err := oras.Pack(o.Context, src, ocispec.MediaTypeImageManifest, descs, packOpts)
+	root, err := oras.Pack(o.ctx, src, ocispec.MediaTypeImageManifest, descs, packOpts)
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
-	if err = src.Tag(o.Context, root, root.Digest.String()); err != nil {
+	if err = src.Tag(o.ctx, root, root.Digest.String()); err != nil {
 		return ocispec.Descriptor{}, err
 	}
 
@@ -114,7 +114,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	if err := o.checkPush(); err != nil {
 		return err
 	}
-	ctx := o.Context
+	ctx := o.ctx
 	// source file store
 	src, err := file.New(sourceDir)
 	if err != nil {
@@ -122,7 +122,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	}
 	defer src.Close()
 
-	message.Infof("Publishing package to %s", o.Reference.String())
+	message.Infof("Publishing package to %s", o.repo.Reference)
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 
@@ -170,7 +170,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	}
 	// assumes referrers API is not supported since OCI artifact
 	// media type is not supported
-	o.SetReferrersCapability(false)
+	o.repo.SetReferrersCapability(false)
 
 	// push the manifest config
 	// since this config is so tiny, and the content is not used again
@@ -185,17 +185,17 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	}
 	total += root.Size + manifestConfigDesc.Size
 
-	o.Transport.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", o.Reference.Repository, o.Reference.Reference))
+	o.Transport.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", o.repo.Reference.Repository, o.repo.Reference.Reference))
 	defer o.Transport.ProgressBar.Stop()
 	// attempt to push the image manifest
-	_, err = oras.Copy(ctx, src, root.Digest.String(), o, o.Reference.Reference, copyOpts)
+	_, err = oras.Copy(ctx, src, root.Digest.String(), o.repo, o.repo.Reference.Reference, copyOpts)
 	if err != nil {
 		return err
 	}
 
-	o.Transport.ProgressBar.Successf("Published %s [%s]", o.Reference, root.MediaType)
+	o.Transport.ProgressBar.Successf("Published %s [%s]", o.repo.Reference, root.MediaType)
 	message.HorizontalRule()
-	if strings.HasSuffix(o.Reference.String(), SkeletonSuffix) {
+	if strings.HasSuffix(o.repo.Reference.String(), SkeletonSuffix) {
 		message.Title("How to import components from this skeleton:", "")
 		ex := []types.ZarfComponent{}
 		for _, c := range pkg.Components {
@@ -203,7 +203,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 				Name: fmt.Sprintf("import-%s", c.Name),
 				Import: types.ZarfComponentImport{
 					ComponentName: c.Name,
-					URL:           fmt.Sprintf("oci://%s", o.Reference),
+					URL:           fmt.Sprintf("oci://%s", o.repo.Reference),
 				},
 			})
 		}
@@ -214,9 +214,9 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 			flags = "--insecure"
 		}
 		message.Title("To inspect/deploy/pull:", "")
-		message.ZarfCommand("package inspect oci://%s %s", o.Reference, flags)
-		message.ZarfCommand("package deploy oci://%s %s", o.Reference, flags)
-		message.ZarfCommand("package pull oci://%s %s", o.Reference, flags)
+		message.ZarfCommand("package inspect oci://%s %s", o.repo.Reference, flags)
+		message.ZarfCommand("package deploy oci://%s %s", o.repo.Reference, flags)
+		message.ZarfCommand("package pull oci://%s %s", o.repo.Reference, flags)
 	}
 
 	return nil

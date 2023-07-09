@@ -31,8 +31,8 @@ const (
 
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
 type OrasRemote struct {
-	*remote.Repository
-	context.Context
+	repo           *remote.Repository
+	ctx            context.Context
 	Transport      *utils.Transport
 	CopyOpts       oras.CopyOptions
 	client         *auth.Client
@@ -48,7 +48,7 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 		return nil, fmt.Errorf("failed to parse OCI reference: %w", err)
 	}
 	o := &OrasRemote{}
-	o.Context = context.TODO()
+	o.ctx = context.TODO()
 
 	err = o.WithRepository(ref)
 	if err != nil {
@@ -83,7 +83,7 @@ func (o *OrasRemote) WithRepository(ref registry.Reference) error {
 	}
 	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
 	repo.Client = o.client
-	o.Repository = repo
+	o.repo = repo
 	return nil
 }
 
@@ -145,10 +145,10 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 // CheckAuth checks if the user is authenticated to the remote registry.
 func (o *OrasRemote) CheckAuth(scopes ...string) error {
 	if scopes == nil && o.hasCredentials {
-		return fmt.Errorf("%s requires authentication but no request scopes were provided", o.Reference)
+		return fmt.Errorf("%s requires authentication but no request scopes were provided", o.repo.Reference)
 	}
 	// check if we've already checked the scopes
-	currentScopes := auth.GetScopes(o.Context)
+	currentScopes := auth.GetScopes(o.ctx)
 	equal := reflect.DeepEqual(currentScopes, scopes)
 	// if we've already checked the scopes return
 	if equal {
@@ -157,17 +157,17 @@ func (o *OrasRemote) CheckAuth(scopes ...string) error {
 
 	// if we have credentials, add the scopes to the context
 	if o.hasCredentials {
-		o.Context = auth.WithScopes(o.Context, scopes...)
+		o.ctx = auth.WithScopes(o.ctx, scopes...)
 	}
-	reg, err := remote.NewRegistry(o.Reference.Registry)
+	reg, err := remote.NewRegistry(o.repo.Reference.Registry)
 	if err != nil {
 		return err
 	}
 	reg.PlainHTTP = zarfconfig.CommonOptions.Insecure
 	reg.Client = o.client
-	err = reg.Ping(o.Context)
+	err = reg.Ping(o.ctx)
 	if err != nil {
-		return fmt.Errorf("unable to authenticate to %s: %s", o.Reference.Registry, err.Error())
+		return fmt.Errorf("unable to authenticate to %s: %s", o.repo.Reference.Registry, err.Error())
 	}
 	return nil
 }

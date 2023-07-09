@@ -29,7 +29,7 @@ var (
 )
 
 func (o *OrasRemote) checkPull() error {
-	scopes := auth.ScopeRepository(o.Reference.Repository, auth.ActionPull)
+	scopes := auth.ScopeRepository(o.repo.Reference.Repository, auth.ActionPull)
 	return o.CheckAuth(scopes)
 }
 
@@ -132,7 +132,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 		return nil, err
 	}
 	isPartialPull := len(layersToPull) > 0
-	ref := o.Reference
+	ref := o.repo.Reference
 
 	pterm.Println()
 	message.Debugf("Pulling %s", ref.String())
@@ -190,7 +190,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
-	_, err = oras.Copy(o.Context, o.Repository, ref.String(), dst, ref.String(), copyOpts)
+	_, err = oras.Copy(o.ctx, o.repo, ref.String(), dst, ref.String(), copyOpts)
 	if err != nil {
 		return partialPaths, err
 	}
