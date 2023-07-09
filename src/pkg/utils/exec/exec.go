@@ -216,10 +216,7 @@ func ExitOnInterrupt() chan os.Signal {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		if ErrorMessage != "" {
-			message.Warnf(ErrorMessage)
-		}
-		os.Exit(ErrorCode)
+		message.Fatal(lang.ErrInterrupt, lang.ErrInterrupt.Error())
 	}()
 	return c
 }
