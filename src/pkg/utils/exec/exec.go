@@ -211,7 +211,7 @@ func IsPowershell(shellName string) bool {
 }
 
 // ExitOnInterrupt catches an interrupt and exits with ErrorCode
-func ExitOnInterrupt(ErrorCode int, ErrorMessage string) chan os.Signal {
+func ExitOnInterrupt() chan os.Signal {
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
