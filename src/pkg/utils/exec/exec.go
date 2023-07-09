@@ -18,6 +18,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
