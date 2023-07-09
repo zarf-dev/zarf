@@ -125,7 +125,7 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 
 	client := &auth.Client{
 		Credential: auth.StaticCredential(ref.Registry, cred),
-		Cache:      auth.NewCache(),
+		Cache:      auth.DefaultCache,
 		Client: &http.Client{
 			Transport: o.Transport,
 		},
