@@ -20,7 +20,6 @@ import (
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
-	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 // ConfigPartial is a partial OCI config that is used to create the manifest config.
@@ -37,16 +36,8 @@ type ConfigPartial struct {
 	Annotations  map[string]string `json:"annotations,omitempty"`
 }
 
-func (o *OrasRemote) checkPush() error {
-	scopes := auth.ScopeRepository(o.repo.Reference.Repository, auth.ActionPull, auth.ActionPush)
-	return o.CheckAuth(scopes)
-}
-
 // PushLayer pushes the given layer (bytes) to the remote repository.
 func (o *OrasRemote) PushLayer(b []byte, mediaType string) (*ocispec.Descriptor, error) {
-	if err := o.checkPush(); err != nil {
-		return nil, err
-	}
 	desc := content.NewDescriptorFromBytes(mediaType, b)
 	return &desc, o.repo.Push(o.ctx, desc, bytes.NewReader(b))
 }
@@ -111,9 +102,6 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 
 // PublishPackage publishes the package to the remote repository.
 func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, concurrency int) error {
-	if err := o.checkPush(); err != nil {
-		return err
-	}
 	ctx := o.ctx
 	// source file store
 	src, err := file.New(sourceDir)

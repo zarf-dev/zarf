@@ -54,9 +54,6 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 
 // FetchRoot fetches the root manifest from the remote repository.
 func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
-	if err := o.checkPull(); err != nil {
-		return nil, err
-	}
 	// get the manifest descriptor
 	descriptor, err := o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
 	if err != nil {
@@ -91,9 +88,6 @@ func (o *OrasRemote) FetchManifest(desc ocispec.Descriptor) (manifest *ZarfOCIMa
 
 // FetchLayer fetches the layer with the given descriptor from the remote repository.
 func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err error) {
-	if err := o.checkPull(); err != nil {
-		return nil, err
-	}
 	return content.FetchAll(o.ctx, o.repo, desc)
 }
 

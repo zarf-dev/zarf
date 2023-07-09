@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strings"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
@@ -143,29 +142,11 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 }
 
 // CheckAuth checks if the user is authenticated to the remote registry.
-func (o *OrasRemote) CheckAuth(scopes ...string) error {
-	if scopes == nil && o.hasCredentials {
-		return fmt.Errorf("%s requires authentication but no request scopes were provided", o.repo.Reference)
-	}
-	if scopes == nil {
-		// no scopes provided, skipping auth check
-		return nil
-	}
-	if !o.hasCredentials {
-		// no credentials provided, skipping auth check
-		return nil
-	}
-	// check if we've already checked the scopes
-	currentScopes := auth.GetScopes(o.ctx)
-	equal := reflect.DeepEqual(currentScopes, scopes)
-	// if we've already checked the scopes return
-	if equal {
-		return nil
-	}
-
+func (o *OrasRemote) CheckRepoAuth() error {
 	// if we have credentials, add the scopes to the context
 	if o.hasCredentials {
-		o.ctx = auth.WithScopes(o.ctx, scopes...)
+		scope := auth.ScopeRepository(o.repo.Reference.Repository, auth.ActionPull)
+		o.ctx = auth.AppendScopes(o.ctx, scope)
 	}
 	reg, err := remote.NewRegistry(o.repo.Reference.Registry)
 	if err != nil {

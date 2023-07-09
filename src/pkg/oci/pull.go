@@ -20,18 +20,12 @@ import (
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
-	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 var (
 	// AlwaysPull is a list of paths that will always be pulled from the remote repository.
 	AlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
 )
-
-func (o *OrasRemote) checkPull() error {
-	scopes := auth.ScopeRepository(o.repo.Reference.Repository, auth.ActionPull)
-	return o.CheckAuth(scopes)
-}
 
 // LayersFromPaths returns the descriptors for the given paths from the root manifest.
 func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.Descriptor, err error) {
@@ -128,9 +122,6 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 //   - checksums.txt
 //   - zarf.yaml.sig
 func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (partialPaths []string, err error) {
-	if err := o.checkPull(); err != nil {
-		return nil, err
-	}
 	isPartialPull := len(layersToPull) > 0
 	ref := o.repo.Reference
 
@@ -215,9 +206,6 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 
 // PullLayer pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
 func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) error {
-	if err := o.checkPull(); err != nil {
-		return err
-	}
 	if desc.MediaType != ZarfLayerMediaTypeBlob {
 		return fmt.Errorf("invalid media type for file layer: %s", desc.MediaType)
 	}
@@ -230,9 +218,6 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
 func (o *OrasRemote) PullPackageMetadata(destinationDir string) (err error) {
-	if err := o.checkPull(); err != nil {
-		return err
-	}
 	root, err := o.FetchRoot()
 	if err != nil {
 		return err
