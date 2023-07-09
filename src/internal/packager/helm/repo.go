@@ -188,17 +188,15 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 	if err != nil {
 		spinner.Fatalf(err, "Unable to create a new registry client")
 	}
-
-	settings := cli.New()
-
+	h.Settings = cli.New()
 	man := &downloader.Manager{
 		Out:            os.Stdout,
 		ChartPath:      h.Chart.LocalPath,
-		Getters:        getter.All(settings),
+		Getters:        getter.All(h.Settings),
 		RegistryClient: regClient,
 
-		RepositoryConfig: settings.RepositoryConfig,
-		RepositoryCache:  settings.RepositoryCache,
+		RepositoryConfig: h.Settings.RepositoryConfig,
+		RepositoryCache:  h.Settings.RepositoryCache,
 		Debug:            false,
 	}
 	// Verify the chart
