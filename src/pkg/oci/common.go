@@ -88,6 +88,19 @@ func (o *OrasRemote) WithRepository(ref registry.Reference) error {
 //
 // The credentials are pulled using Docker's default credential store.
 func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error) {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig.InsecureSkipVerify = zarfconfig.CommonOptions.Insecure
+
+	o.Transport = utils.NewTransport(transport, nil)
+
+	client := &auth.Client{
+		Cache: auth.DefaultCache,
+		Client: &http.Client{
+			Transport: o.Transport,
+		},
+	}
+	client.SetUserAgent("zarf/" + zarfconfig.CLIVersion)
+
 	message.Debugf("Loading docker config file from default config location: %s", config.Dir())
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
@@ -95,7 +108,7 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 	}
 	if !cfg.ContainsAuth() {
 		message.Debug("no docker config file found, run 'zarf tools registry login --help'")
-		return nil, nil
+		return client, nil
 	}
 
 	configs := []*configfile.ConfigFile{cfg}
@@ -118,19 +131,7 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 		RefreshToken: authConf.IdentityToken,
 	}
 
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig.InsecureSkipVerify = zarfconfig.CommonOptions.Insecure
-
-	o.Transport = utils.NewTransport(transport, nil)
-
-	client := &auth.Client{
-		Credential: auth.StaticCredential(ref.Registry, cred),
-		Cache:      auth.DefaultCache,
-		Client: &http.Client{
-			Transport: o.Transport,
-		},
-	}
-	client.SetUserAgent("zarf/" + zarfconfig.CLIVersion)
+	client.Credential = auth.StaticCredential(ref.Registry, cred)
 
 	return client, nil
 }
