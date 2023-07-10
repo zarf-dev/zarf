@@ -159,6 +159,7 @@ func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []st
 		if err != nil {
 			return seedImages, err
 		}
+		// This is done _without_ the domain (different from pull.go) since the injector only handles local images
 		tagToDigest[imgRef.Path+imgRef.TagOrDigest] = imgDigest.String()
 	}
 
