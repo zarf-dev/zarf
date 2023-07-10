@@ -15,17 +15,6 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// IndexJSON represents the index.json file in an OCI layout.
-type IndexJSON struct {
-	SchemaVersion int `json:"schemaVersion"`
-	Manifests     []struct {
-		MediaType   string            `json:"mediaType"`
-		Size        int               `json:"size"`
-		Digest      string            `json:"digest"`
-		Annotations map[string]string `json:"annotations"`
-	} `json:"manifests"`
-}
-
 // LoadOCIImage returns a v1.Image with the image tag specified from a location provided, or an error if the image cannot be found.
 func LoadOCIImage(imgPath, imgTag string) (v1.Image, error) {
 	// Use the manifest within the index.json to load the specific image we want
@@ -55,7 +44,7 @@ func AddImageNameAnnotation(ociPath string, tagToDigest map[string]string) error
 	indexPath := filepath.Join(ociPath, "index.json")
 
 	// Read the file contents and turn it into a usable struct that we can manipulate
-	var index IndexJSON
+	var index ocispec.Index
 	byteValue, err := os.ReadFile(indexPath)
 	if err != nil {
 		return fmt.Errorf("unable to read the contents of the file (%s) so we can add an annotation: %w", indexPath, err)
@@ -73,7 +62,7 @@ func AddImageNameAnnotation(ociPath string, tagToDigest map[string]string) error
 		var baseImageName string
 
 		for tag, digest := range tagToDigest {
-			if digest == manifest.Digest {
+			if digest == manifest.Digest.String() {
 				baseImageName = tag
 			}
 		}

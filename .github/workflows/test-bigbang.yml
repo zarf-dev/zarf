@@ -39,9 +39,6 @@ jobs:
         with:
           build-packages: 'false'
 
-      - name: Build a registry1.dso.mil Zarf 'init' package
-        run: ZARF_CONFIG=./src/extensions/bigbang/test/zarf-init-bb-config.toml make init-package
-
       - name: Setup K3d
         uses: ./.github/actions/k3d
 
@@ -54,6 +51,9 @@ jobs:
           registry: registry1.dso.mil
           username: ${{ secrets.IRONBANK_USERNAME }}
           password: ${{ secrets.IRONBANK_PASSWORD }}
+
+      - name: Build a registry1.dso.mil Zarf 'init' package
+        run: ZARF_CONFIG=./src/extensions/bigbang/test/zarf-init-bb-config.toml make init-package
 
       - name: Run tests
         if: ${{ env.IRONBANK_USERNAME != '' }}
