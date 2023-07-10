@@ -131,8 +131,10 @@ fn handle_request(root: &Path, request: &Request) -> Response {
 
             let namespaced_name = url_segments[2..object_index].join("/");
 
+            // this route handles (GET) (/v2/**/manifests/<tag>)
             if request.method() == "GET" {
                 return handle_get_manifest(&root, &namespaced_name, &tag_or_digest);
+            // this route handles (HEAD) (/v2/**/manifests/<tag>)
             } else if request.method() == "HEAD" {
                 // a normal HEAD response has an empty body, but due to rouille not allowing for an override
                 // on Content-Length, we respond the same as a GET
@@ -144,6 +146,7 @@ fn handle_request(root: &Path, request: &Request) -> Response {
                     "*/*" => Response::empty_406()
                 );
             }
+        // this route handles (GET) (/v2/**/blobs/<digest>)
         } else if object_type == "blobs" && request.method() == "GET" {
             let digest = url_segments[tag_index].to_owned();
             return handle_get_digest(&root, &digest);
