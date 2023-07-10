@@ -42,7 +42,7 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, []error) {
 
 	}
 
-    // TODO: If we move this function out of `internal` we should return a more standard singular error.
+	// TODO: If we move this function out of `internal` we should return a more standard singular error.
 	return deployedPackages, errorList
 }
 
@@ -100,7 +100,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings) error {
+func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, packageStatus types.PackageStatus) error {
 	// Generate a secret that describes the package that is being deployed
 	packageName := pkg.Metadata.Name
 	deployedPackageSecret := c.Kube.GenerateSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName, corev1.SecretTypeOpaque)
@@ -110,6 +110,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 		Name:               packageName,
 		CLIVersion:         config.CLIVersion,
 		Data:               pkg,
+		Status:             packageStatus,
 		DeployedComponents: components,
 		ConnectStrings:     connectStrings,
 	})

@@ -6,6 +6,24 @@ package types
 
 import "github.com/defenseunicorns/zarf/src/pkg/k8s"
 
+type PackageStatus string
+
+const (
+	PackageStatusDeployed  PackageStatus = "deployed"
+	PackageStatusFailed    PackageStatus = "failed"
+	PackageStatusDeploying PackageStatus = "deploying"
+	PackageStatusRemoving  PackageStatus = "removing"
+)
+
+type ComponentStatus string
+
+const (
+	ComponentStatusDeployed  ComponentStatus = "deployed"
+	ComponentStatusFailed    ComponentStatus = "failed"
+	ComponentStatusDeploying ComponentStatus = "deploying"
+	ComponentStatusRemoving  ComponentStatus = "removing"
+)
+
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data.
 type ZarfState struct {
 	ZarfAppliance bool             `json:"zarfAppliance" jsonschema:"description=Indicates if Zarf was initialized while deploying its own k8s cluster"`
@@ -23,9 +41,10 @@ type ZarfState struct {
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
-	Name       string      `json:"name"`
-	Data       ZarfPackage `json:"data"`
-	CLIVersion string      `json:"cliVersion"`
+	Name       string        `json:"name"`
+	Data       ZarfPackage   `json:"data"`
+	CLIVersion string        `json:"cliVersion"`
+	Status     PackageStatus `json:"status"`
 
 	DeployedComponents []DeployedComponent `json:"deployedComponents"`
 	ConnectStrings     ConnectStrings      `json:"connectStrings,omitempty"`
@@ -35,6 +54,7 @@ type DeployedPackage struct {
 type DeployedComponent struct {
 	Name            string           `json:"name"`
 	InstalledCharts []InstalledChart `json:"installedCharts"`
+	Status          ComponentStatus  `json:"status"`
 }
 
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.

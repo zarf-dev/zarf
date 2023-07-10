@@ -114,16 +114,25 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
 	}
 
-	for _, component := range componentsToDeploy {
-		var charts []types.InstalledChart
+	// TODO: @JPERRY I should save off a secret stating that a package is in the process of being deployed
+	if p.cluster != nil {
+		if err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings, types.PackageStatusDeploying); err != nil {
+			return deployedComponents, fmt.Errorf("unable to record package deployment (before deployment has completed): %w", err)
+		}
+	}
 
+	for idx, component := range componentsToDeploy {
+		// TODO: @JPERRY save the state saying that we are about to
+		deployedComponent := types.DeployedComponent{Name: component.Name, Status: types.ComponentStatusDeploying}
+		deployedComponents = append(deployedComponents, deployedComponent)
+
+		var charts []types.InstalledChart
 		if p.cfg.IsInitConfig {
 			charts, err = p.deployInitComponent(component)
 		} else {
 			charts, err = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
 		}
 
-		deployedComponent := types.DeployedComponent{Name: component.Name}
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
@@ -136,14 +145,18 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 		}
 
-		// Deploy the component
-		deployedComponent.InstalledCharts = charts
-		deployedComponents = append(deployedComponents, deployedComponent)
+		// Update the deployed component secret
+		deployedComponents[idx].InstalledCharts = charts
+		deployedComponents[idx].Status = types.ComponentStatusDeployed
 
 		// Save deployed package information to k8s
 		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 		if p.cluster != nil {
-			err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings)
+			packageStatus := types.PackageStatusDeploying
+			if idx == len(componentsToDeploy)-1 {
+				packageStatus = types.PackageStatusDeployed
+			}
+			err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings, packageStatus)
 			if err != nil {
 				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}

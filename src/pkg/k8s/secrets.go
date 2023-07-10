@@ -90,6 +90,7 @@ func (k *K8s) CreateSecret(secret *corev1.Secret) error {
 }
 
 // CreateOrUpdateSecret creates or updates a Kubernetes secret.
+// TODO: @JPERRY have this return the secret that got created/updated
 func (k *K8s) CreateOrUpdateSecret(secret *corev1.Secret) error {
 	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
 
@@ -105,5 +106,6 @@ func (k *K8s) CreateOrUpdateSecret(secret *corev1.Secret) error {
 		}
 	}
 
+	// TODO: @JPERRY Check the secret value that create/update returns and see if it contains mutations that Pepr would have done..
 	return nil
 }
