@@ -34,7 +34,7 @@ func (h *Helm) PackageChart(destination string) error {
 		}
 
 		if isGitURL {
-			// if it is git url append chart version as if its a tag
+			// if it is a git url append chart version as if its a tag
 			if refPlain == "" {
 				h.Chart.URL = fmt.Sprintf("%s@%s", h.Chart.URL, h.Chart.Version)
 			}
