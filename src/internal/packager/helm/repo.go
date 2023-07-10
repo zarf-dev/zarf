@@ -24,6 +24,7 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 )
 
+// PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
 func (h *Helm) PackageChart(destination string) error {
 	if len(h.Chart.URL) > 0 {
 		url, refPlain, err := transform.GitTransformURLSplitRef(h.Chart.URL)
