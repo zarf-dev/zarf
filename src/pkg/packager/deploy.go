@@ -114,9 +114,10 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
 	}
 
-	// TODO: @JPERRY I should save off a secret stating that a package is in the process of being deployed
+	// Save off a secret stating that a package is in the process of being deployed
 	if p.cluster != nil {
-		if err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings, types.PackageStatusDeploying); err != nil {
+		// TODO: @JPERRY check to see if the secret has been mutated (ie pepr is trying to do something)
+		if _, err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings, types.PackageStatusDeploying); err != nil {
 			return deployedComponents, fmt.Errorf("unable to record package deployment (before deployment has completed): %w", err)
 		}
 	}
@@ -156,7 +157,8 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			if idx == len(componentsToDeploy)-1 {
 				packageStatus = types.PackageStatusDeployed
 			}
-			err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings, packageStatus)
+			// TODO: @JPERRY check if the package status has changed? (ie. pepr is modifying something...)
+			_, err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings, packageStatus)
 			if err != nil {
 				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}

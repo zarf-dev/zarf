@@ -145,7 +145,7 @@ func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, pa
 		newPackageSecretData, _ := json.Marshal(deployedPackage)
 		newPackageSecret.Data["data"] = newPackageSecretData
 
-		err := p.cluster.Kube.CreateOrUpdateSecret(newPackageSecret)
+		_, err := p.cluster.Kube.CreateOrUpdateSecret(newPackageSecret)
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {

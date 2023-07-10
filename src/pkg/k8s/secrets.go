@@ -56,10 +56,10 @@ func (k *K8s) GenerateTLSSecret(namespace, name string, conf GeneratedPKI) (*cor
 }
 
 // CreateOrUpdateTLSSecret creates or updates a Kubernetes secret with a new TLS secret.
-func (k *K8s) CreateOrUpdateTLSSecret(namespace, name string, conf GeneratedPKI) error {
+func (k *K8s) CreateOrUpdateTLSSecret(namespace, name string, conf GeneratedPKI) (*corev1.Secret, error) {
 	secret, err := k.GenerateTLSSecret(namespace, name, conf)
 	if err != nil {
-		return err
+		return secret, err
 	}
 
 	return k.CreateOrUpdateSecret(secret)
@@ -78,34 +78,36 @@ func (k *K8s) DeleteSecret(secret *corev1.Secret) error {
 }
 
 // CreateSecret creates a Kubernetes secret.
-func (k *K8s) CreateSecret(secret *corev1.Secret) error {
+func (k *K8s) CreateSecret(secret *corev1.Secret) (*corev1.Secret, error) {
 	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
 
 	// create the given secret
-	if _, err := namespaceSecrets.Create(context.TODO(), secret, metav1.CreateOptions{}); err != nil {
-		return fmt.Errorf("unable to create the secret: %w", err)
+	var createdSecret *corev1.Secret
+	if createdSecret, err := namespaceSecrets.Create(context.TODO(), secret, metav1.CreateOptions{}); err != nil {
+		return createdSecret, fmt.Errorf("unable to create the secret: %w", err)
 	}
 
-	return nil
+	return createdSecret, nil
 }
 
 // CreateOrUpdateSecret creates or updates a Kubernetes secret.
-// TODO: @JPERRY have this return the secret that got created/updated
-func (k *K8s) CreateOrUpdateSecret(secret *corev1.Secret) error {
+func (k *K8s) CreateOrUpdateSecret(secret *corev1.Secret) (*corev1.Secret, error) {
+	var createdSecret *corev1.Secret
+
 	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
 
 	if _, err := k.GetSecret(secret.Namespace, secret.Name); err != nil {
 		// create the given secret
-		if err := k.CreateSecret(secret); err != nil {
-			return fmt.Errorf("unable to create the secret: %w", err)
+		if createdSecret, err := k.CreateSecret(secret); err != nil {
+			return createdSecret, fmt.Errorf("unable to create the secret: %w", err)
 		}
 	} else {
 		// update the given secret
-		if _, err := namespaceSecrets.Update(context.TODO(), secret, metav1.UpdateOptions{}); err != nil {
-			return fmt.Errorf("unable to update the secret: %w", err)
+		if createdSecret, err := namespaceSecrets.Update(context.TODO(), secret, metav1.UpdateOptions{}); err != nil {
+			return createdSecret, fmt.Errorf("unable to update the secret: %w", err)
 		}
 	}
 
 	// TODO: @JPERRY Check the secret value that create/update returns and see if it contains mutations that Pepr would have done..
-	return nil
+	return createdSecret, nil
 }

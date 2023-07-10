@@ -213,7 +213,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		currentSecret, _ := c.Kube.GetSecret(name, config.ZarfImagePullSecretName)
 		if currentSecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentSecret.Data, validSecret.Data) {
 			// Create or update the missing zarf registry secret
-			if err := c.Kube.CreateOrUpdateSecret(validSecret); err != nil {
+			if _, err := c.Kube.CreateOrUpdateSecret(validSecret); err != nil {
 				message.WarnErrorf(err, "Problem creating registry secret for the %s namespace", name)
 			}
 
@@ -225,7 +225,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			}
 
 			// Create or update the git server secret
-			if err := c.Kube.CreateOrUpdateSecret(gitServerSecret); err != nil {
+			if _, err := c.Kube.CreateOrUpdateSecret(gitServerSecret); err != nil {
 				message.WarnErrorf(err, "Problem creating git server secret for the %s namespace", name)
 			}
 		}
