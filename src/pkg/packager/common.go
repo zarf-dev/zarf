@@ -417,7 +417,7 @@ func (p *Packager) handleIfPartialPkg() error {
 	}
 
 	var shasum string
-	if shasum, err = utils.GetCryptoHash(destination, crypto.SHA256); err != nil {
+	if shasum, err = utils.GetCryptoHashFromFile(destination, crypto.SHA256); err != nil {
 		return fmt.Errorf("unable to get sha256sum of package: %w", err)
 	}
 

@@ -28,6 +28,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -168,7 +169,7 @@ func ServiceInfoFromServiceURL(serviceURL string) (*ServiceInfo, error) {
 
 	// Match hostname against local cluster service format.
 	pattern := regexp.MustCompile(serviceURLPattern)
-	get, err := utils.MatchRegex(pattern, parsedURL.Hostname())
+	get, err := helpers.MatchRegex(pattern, parsedURL.Hostname())
 
 	// If incomplete match, return an error.
 	if err != nil {

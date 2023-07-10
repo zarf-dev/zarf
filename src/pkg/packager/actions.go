@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -212,7 +213,7 @@ func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (st
 		// Convert any ${ZARF_VAR_*} or $ZARF_VAR_* to ${env:ZARF_VAR_*} or $env:ZARF_VAR_* respectively (also TF_VAR_*).
 		// https://regex101.com/r/xk1rkw/1
 		envVarRegex := regexp.MustCompile(`(?P<envIndicator>\${?(?P<varName>(ZARF|TF)_VAR_([a-zA-Z0-9_-])+)}?)`)
-		get, err := utils.MatchRegex(envVarRegex, cmd)
+		get, err := helpers.MatchRegex(envVarRegex, cmd)
 		if err == nil {
 			newCmd := strings.ReplaceAll(cmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
 			message.Debugf("Converted command \"%s\" to \"%s\" t", cmd, newCmd)

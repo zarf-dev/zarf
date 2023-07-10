@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pterm/pterm"
@@ -60,7 +61,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	images := map[string]bool{}
 	tarballFormat := "%s.tar"
 	for _, name := range requestedComponents {
-		component := utils.Find(pkg.Components, func(component types.ZarfComponent) bool {
+		component := helpers.Find(pkg.Components, func(component types.ZarfComponent) bool {
 			return component.Name == name
 		})
 		if component.Name == "" {
@@ -69,7 +70,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	}
 	for _, component := range pkg.Components {
 		// If we requested this component, or it is required, we need to pull its images and tarball
-		if utils.SliceContains(requestedComponents, component.Name) || component.Required {
+		if helpers.SliceContains(requestedComponents, component.Name) || component.Required {
 			for _, image := range component.Images {
 				images[image] = true
 			}
@@ -91,7 +92,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			return nil, err
 		}
 		for image := range images {
-			manifestDescriptor := utils.Find(index.Manifests, func(layer ocispec.Descriptor) bool {
+			manifestDescriptor := helpers.Find(index.Manifests, func(layer ocispec.Descriptor) bool {
 				return layer.Annotations[ocispec.AnnotationBaseImageName] == image
 			})
 			manifest, err := o.FetchManifest(manifestDescriptor)
@@ -122,7 +123,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 //   - zarf.yaml.sig
 func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (partialPaths []string, err error) {
 	isPartialPull := len(layersToPull) > 0
-	ref := o.Reference
+	ref := o.repo.Reference
 
 	pterm.Println()
 	message.Debugf("Pulling %s", ref.String())
@@ -167,7 +168,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 			}
 			var ret []ocispec.Descriptor
 			for _, node := range nodes {
-				if utils.SliceContains(paths, node.Annotations[ocispec.AnnotationTitle]) {
+				if helpers.SliceContains(paths, node.Annotations[ocispec.AnnotationTitle]) {
 					ret = append(ret, node)
 				}
 			}
@@ -180,7 +181,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
-	_, err = oras.Copy(o.Context, o.Repository, ref.String(), dst, ref.String(), copyOpts)
+	_, err = oras.Copy(o.ctx, o.repo, ref.String(), dst, ref.String(), copyOpts)
 	if err != nil {
 		return partialPaths, err
 	}

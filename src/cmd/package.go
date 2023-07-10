@@ -12,6 +12,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2/registry"
 
@@ -55,8 +56,8 @@ var packageCreateCmd = &cobra.Command{
 		}
 
 		// Ensure uppercase keys from viper
-		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_CREATE_SET), strings.ToUpper)
-		pkgConfig.CreateOpts.SetVariables = utils.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
+		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(V_PKG_CREATE_SET), strings.ToUpper)
+		pkgConfig.CreateOpts.SetVariables = helpers.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -79,11 +80,11 @@ var packageDeployCmd = &cobra.Command{
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
 
 		// Ensure uppercase keys from viper and CLI --set
-		viperConfigSetVariables := utils.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
-		pkgConfig.DeployOpts.SetVariables = utils.TransformMapKeys(pkgConfig.DeployOpts.SetVariables, strings.ToUpper)
+		viperConfigSetVariables := helpers.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
+		pkgConfig.DeployOpts.SetVariables = helpers.TransformMapKeys(pkgConfig.DeployOpts.SetVariables, strings.ToUpper)
 
 		// Merge the viper config file variables and provided CLI flag variables (CLI takes precedence))
-		pkgConfig.DeployOpts.SetVariables = utils.MergeMap(viperConfigSetVariables, pkgConfig.DeployOpts.SetVariables)
+		pkgConfig.DeployOpts.SetVariables = helpers.MergeMap(viperConfigSetVariables, pkgConfig.DeployOpts.SetVariables)
 
 		pkgConfig.PkgSourcePath = pkgConfig.DeployOpts.PackagePath
 
