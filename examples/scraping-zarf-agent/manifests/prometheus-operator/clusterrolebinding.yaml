@@ -9,5 +9,5 @@ roleRef:
   name: scrape-cr
 subjects:
 - kind: ServiceAccount
-  name: prometheus-operator
+  name: kube-prometheus-stack-operator 
   namespace: monitoring
