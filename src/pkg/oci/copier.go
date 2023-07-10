@@ -29,9 +29,9 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 		size += layer.Size
 	}
 
-	title := fmt.Sprintf("Copying from %s to %s", src.Repo().Reference, dst.Repo().Reference)
+	title := fmt.Sprintf("Copying from %s to %s", src.repo.Reference, dst.repo.Reference)
 	progressBar := message.NewProgressBar(size, title)
-	defer progressBar.Successf("%s into %s", src.Repo().Reference, dst.Repo().Reference)
+	defer progressBar.Successf("%s into %s", src.repo.Reference, dst.repo.Reference)
 
 	// TODO: goroutine this w/ semaphores
 	for _, layer := range layers {
@@ -41,7 +41,7 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 		wg.Add(2)
 
 		// fetch the layer from the source
-		rc, err := src.Repo().Fetch(ctx, layer)
+		rc, err := src.repo.Fetch(ctx, layer)
 		if err != nil {
 			return err
 		}
@@ -55,7 +55,7 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 
 			// get data from the TeeReader and push it to the destination
 			// push the layer to the destination
-			err = dst.Repo().Push(ctx, layer, tr)
+			err = dst.repo.Push(ctx, layer, tr)
 			if err != nil {
 				message.Fatal(err, "failed to push layer")
 			}
