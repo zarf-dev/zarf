@@ -134,7 +134,8 @@ func (c *Cluster) StopInjectionMadness() error {
 }
 
 func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []string, spinner *message.Spinner) ([]transform.Image, error) {
-	var seedImages []transform.Image
+	seedImages := []transform.Image{}
+	tagToDigest := make(map[string]string)
 
 	// Load the injector-specific images and save them as seed-images
 	for _, src := range injectorSeedTags {
@@ -152,6 +153,17 @@ func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []st
 			return seedImages, err
 		}
 		seedImages = append(seedImages, imgRef)
+
+		// Get the image digest so we can set an annotation in the image.json later
+		imgDigest, err := img.Digest()
+		if err != nil {
+			return seedImages, err
+		}
+		tagToDigest[imgRef.Path+imgRef.TagOrDigest] = imgDigest.String()
+	}
+
+	if err := utils.AddImageNameAnnotation(tempPath.SeedImages, tagToDigest); err != nil {
+		return seedImages, fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
 	return seedImages, nil

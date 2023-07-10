@@ -105,43 +105,111 @@ fn start_seed_registry() {
                     .with_additional_header("X-Content-Type-Options", "nosniff")
                 },
 
-                (GET) (/v2/registry/manifests/{_tag :String}) => {
-                    handle_get_manifest(&root)
+                (GET) (/v2/{name :String}/manifests/{tag :String}) => {
+                    handle_get_manifest(&root, &name, &tag)
                 },
 
-                (GET) (/v2/{_namespace :String}/registry/manifests/{_ref :String}) => {
-                    handle_get_manifest(&root)
+                (GET) (/v2/{namespace :String}/{name :String}/manifests/{tag :String}) => {
+                    let namespaced_name :String = namespace + "/" + &name;
+                    handle_get_manifest(&root, &namespaced_name, &tag)
                 },
 
-                (HEAD) (/v2/registry/manifests/{_ref :String}) => {
+                (GET) (/v2/{n1 :String}/{n2 :String}/{name :String}/manifests/{tag :String}) => {
+                    let namespaced_name :String = n1 + "/" + &n2 + "/" + &name;
+                    handle_get_manifest(&root, &namespaced_name, &tag)
+                },
+
+                (GET) (/v2/{n1 :String}/{n2 :String}/{n3 :String}/{name :String}/manifests/{tag :String}) => {
+                    let namespaced_name :String = n1 + "/" + &n2 + "/" + &n3 + "/" + &name;
+                    handle_get_manifest(&root, &namespaced_name, &tag)
+                },
+
+                (GET) (/v2/{n1 :String}/{n2 :String}/{n3 :String}/{n4 :String}/{name :String}/manifests/{tag :String}) => {
+                    let namespaced_name :String = n1 + "/" + &n2 + "/" + &n3 + "/" + &n4 + "/" + &name;
+                    handle_get_manifest(&root, &namespaced_name, &tag)
+                },
+
+                (HEAD) (/v2/{name :String}/manifests/{tag :String}) => {
                     // a normal HEAD response has an empty body, but due to rouille not allowing for an override
                     // on Content-Length, we respond the same as a GET
                     accept!(
                         request,
                         "application/vnd.docker.distribution.manifest.v2+json" => {
-                            handle_get_manifest(&root)
+                            handle_get_manifest(&root, &name, &tag)
                         },
                         "*/*" => Response::empty_406()
                     )
                 },
 
-                (HEAD) (/v2/{_namespace :String}/registry/manifests/{_ref :String}) => {
+                (HEAD) (/v2/{namespace :String}/{name :String}/manifests/{tag :String}) => {
+                    let namespaced_name :String = namespace + "/" + &name;
                     // a normal HEAD response has an empty body, but due to rouille not allowing for an override
                     // on Content-Length, we respond the same as a GET
                     accept!(
                         request,
                         "application/vnd.docker.distribution.manifest.v2+json" => {
-                            handle_get_manifest(&root)
+                            handle_get_manifest(&root, &namespaced_name, &tag)
                         },
                         "*/*" => Response::empty_406()
                     )
                 },
 
-                (GET) (/v2/registry/blobs/{digest :String}) => {
+                (HEAD) (/v2/{n1 :String}/{n2 :String}/{name :String}/manifests/{tag :String}) => {
+                    let namespaced_name :String = n1 + "/" + &n2 + "/" + &name;
+                    // a normal HEAD response has an empty body, but due to rouille not allowing for an override
+                    // on Content-Length, we respond the same as a GET
+                    accept!(
+                        request,
+                        "application/vnd.docker.distribution.manifest.v2+json" => {
+                            handle_get_manifest(&root, &namespaced_name, &tag)
+                        },
+                        "*/*" => Response::empty_406()
+                    )
+                },
+
+                (HEAD) (/v2/{n1 :String}/{n2 :String}/{n3 :String}/{name :String}/manifests/{tag :String}) => {
+                    let namespaced_name :String = n1 + "/" + &n2 + "/" + &n3 + "/" + &name;
+                    // a normal HEAD response has an empty body, but due to rouille not allowing for an override
+                    // on Content-Length, we respond the same as a GET
+                    accept!(
+                        request,
+                        "application/vnd.docker.distribution.manifest.v2+json" => {
+                            handle_get_manifest(&root, &namespaced_name, &tag)
+                        },
+                        "*/*" => Response::empty_406()
+                    )
+                },
+
+                (HEAD) (/v2/{n1 :String}/{n2 :String}/{n3 :String}/{n4 :String}/{name :String}/manifests/{tag :String}) => {
+                    let namespaced_name :String = n1 + "/" + &n2 + "/" + &n3 + "/" + &n4 +  "/"  + &name;
+                    // a normal HEAD response has an empty body, but due to rouille not allowing for an override
+                    // on Content-Length, we respond the same as a GET
+                    accept!(
+                        request,
+                        "application/vnd.docker.distribution.manifest.v2+json" => {
+                            handle_get_manifest(&root, &namespaced_name, &tag)
+                        },
+                        "*/*" => Response::empty_406()
+                    )
+                },
+
+                (GET) (/v2/{_name :String}/blobs/{digest :String}) => {
                     handle_get_digest(&root, &digest)
                 },
 
-                (GET) (/v2/{_namespace :String}/registry/blobs/{digest :String}) => {
+                (GET) (/v2/{_namespace :String}/{_name :String}/blobs/{digest :String}) => {
+                    handle_get_digest(&root, &digest)
+                },
+
+                (GET) (/v2/{_n1 :String}/{_n2 :String}/{_name :String}/blobs/{digest :String}) => {
+                    handle_get_digest(&root, &digest)
+                },
+
+                (GET) (/v2/{_n1 :String}/{_n2 :String}/{_n3 :String}/{_name :String}/blobs/{digest :String}) => {
+                    handle_get_digest(&root, &digest)
+                },
+
+                (GET) (/v2/{_n1 :String}/{_n2 :String}/{_n3 :String}/{_n4 :String}/{_name :String}/blobs/{digest :String}) => {
                     handle_get_digest(&root, &digest)
                 },
 
@@ -154,23 +222,39 @@ fn start_seed_registry() {
 }
 
 /// Handles the GET request for the manifest (only returns a OCI manifest regardless of Accept header)
-fn handle_get_manifest(root: &Path) -> Response {
+fn handle_get_manifest(root: &Path, name: &String, tag: &String) -> Response {
     let index = fs::read_to_string(root.join("index.json")).expect("read index.json");
     let json: Value = serde_json::from_str(&index).expect("unable to parse index.json");
-    let sha_manifest = json["manifests"][0]["digest"]
-        .as_str()
-        .unwrap()
-        .strip_prefix("sha256:")
-        .unwrap()
-        .to_owned();
-    let file = File::open(&root.join("blobs").join("sha256").join(&sha_manifest)).unwrap();
-    Response::from_file("application/vnd.docker.distribution.manifest.v2+json", file)
-        .with_additional_header(
-            "Docker-Content-Digest",
-            format!("sha256:{}", sha_manifest.to_owned()),
-        )
-        .with_additional_header("Etag", format!("sha256:{}", sha_manifest))
-        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
+    let mut sha_manifest = "".to_owned();
+
+    if tag.starts_with("sha256:") {
+        sha_manifest = tag.strip_prefix("sha256:").unwrap().to_owned();
+    } else {
+        for manifest in json["manifests"].as_array().unwrap() { 
+            let image_base_name = manifest["annotations"]["org.opencontainers.image.base.name"].as_str().unwrap();
+            let requested_reference = name.to_owned() + ":" + tag;
+            if requested_reference == image_base_name {
+                sha_manifest = manifest["digest"].as_str()
+                    .unwrap()
+                    .strip_prefix("sha256:")
+                    .unwrap()
+                    .to_owned();
+            }
+        }
+    }
+
+    if sha_manifest != "" {
+        let file = File::open(&root.join("blobs").join("sha256").join(&sha_manifest)).unwrap();
+        Response::from_file("application/vnd.docker.distribution.manifest.v2+json", file)
+            .with_additional_header(
+                "Docker-Content-Digest",
+                format!("sha256:{}", sha_manifest.to_owned()),
+            )
+            .with_additional_header("Etag", format!("sha256:{}", sha_manifest))
+            .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
+    } else {
+        Response::empty_404()
+    }
 }
 
 /// Handles the GET request for a blob
