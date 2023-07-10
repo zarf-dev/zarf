@@ -513,4 +513,5 @@ const (
 var (
 	ErrInitNotFound      = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
 	ErrUnableToCheckArch = errors.New("unable to get the configured cluster's architecture")
+	ErrInterrupt         = errors.New("Failed due to interrupt")
 )
