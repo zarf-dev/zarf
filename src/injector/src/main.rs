@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use flate2::read::GzDecoder;
 use glob::glob;
 use hex::ToHex;
-use rouille::{accept, router, Response};
+use rouille::{accept, router, Response, Request};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tar::Archive;
@@ -102,125 +102,55 @@ fn start_seed_registry() {
                 (GET) (/v2/) => {
                     // returns empty json w/ Docker-Distribution-Api-Version header set
                     Response::text("{}")
-                    .with_unique_header("Content-Type", "application/json; charset=utf-8")
-                    .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
-                    .with_additional_header("X-Content-Type-Options", "nosniff")
-                },
-
-                (GET) (/v2/{name :String}/manifests/{tag :String}) => {
-                    handle_get_manifest(&root, &name, &tag)
-                },
-
-                (GET) (/v2/{namespace :String}/{name :String}/manifests/{tag :String}) => {
-                    let namespaced_name :String = namespace + "/" + &name;
-                    handle_get_manifest(&root, &namespaced_name, &tag)
-                },
-
-                (GET) (/v2/{n1 :String}/{n2 :String}/{name :String}/manifests/{tag :String}) => {
-                    let namespaced_name :String = n1 + "/" + &n2 + "/" + &name;
-                    handle_get_manifest(&root, &namespaced_name, &tag)
-                },
-
-                (GET) (/v2/{n1 :String}/{n2 :String}/{n3 :String}/{name :String}/manifests/{tag :String}) => {
-                    let namespaced_name :String = n1 + "/" + &n2 + "/" + &n3 + "/" + &name;
-                    handle_get_manifest(&root, &namespaced_name, &tag)
-                },
-
-                (GET) (/v2/{n1 :String}/{n2 :String}/{n3 :String}/{n4 :String}/{name :String}/manifests/{tag :String}) => {
-                    let namespaced_name :String = n1 + "/" + &n2 + "/" + &n3 + "/" + &n4 + "/" + &name;
-                    handle_get_manifest(&root, &namespaced_name, &tag)
-                },
-
-                (HEAD) (/v2/{name :String}/manifests/{tag :String}) => {
-                    // a normal HEAD response has an empty body, but due to rouille not allowing for an override
-                    // on Content-Length, we respond the same as a GET
-                    accept!(
-                        request,
-                        DOCKER_MIME_TYPE => {
-                            handle_get_manifest(&root, &name, &tag)
-                        },
-                        "*/*" => Response::empty_406()
-                    )
-                },
-
-                (HEAD) (/v2/{namespace :String}/{name :String}/manifests/{tag :String}) => {
-                    let namespaced_name :String = namespace + "/" + &name;
-                    // a normal HEAD response has an empty body, but due to rouille not allowing for an override
-                    // on Content-Length, we respond the same as a GET
-                    accept!(
-                        request,
-                        DOCKER_MIME_TYPE => {
-                            handle_get_manifest(&root, &namespaced_name, &tag)
-                        },
-                        "*/*" => Response::empty_406()
-                    )
-                },
-
-                (HEAD) (/v2/{n1 :String}/{n2 :String}/{name :String}/manifests/{tag :String}) => {
-                    let namespaced_name :String = n1 + "/" + &n2 + "/" + &name;
-                    // a normal HEAD response has an empty body, but due to rouille not allowing for an override
-                    // on Content-Length, we respond the same as a GET
-                    accept!(
-                        request,
-                        DOCKER_MIME_TYPE => {
-                            handle_get_manifest(&root, &namespaced_name, &tag)
-                        },
-                        "*/*" => Response::empty_406()
-                    )
-                },
-
-                (HEAD) (/v2/{n1 :String}/{n2 :String}/{n3 :String}/{name :String}/manifests/{tag :String}) => {
-                    let namespaced_name :String = n1 + "/" + &n2 + "/" + &n3 + "/" + &name;
-                    // a normal HEAD response has an empty body, but due to rouille not allowing for an override
-                    // on Content-Length, we respond the same as a GET
-                    accept!(
-                        request,
-                        DOCKER_MIME_TYPE => {
-                            handle_get_manifest(&root, &namespaced_name, &tag)
-                        },
-                        "*/*" => Response::empty_406()
-                    )
-                },
-
-                (HEAD) (/v2/{n1 :String}/{n2 :String}/{n3 :String}/{n4 :String}/{name :String}/manifests/{tag :String}) => {
-                    let namespaced_name :String = n1 + "/" + &n2 + "/" + &n3 + "/" + &n4 +  "/"  + &name;
-                    // a normal HEAD response has an empty body, but due to rouille not allowing for an override
-                    // on Content-Length, we respond the same as a GET
-                    accept!(
-                        request,
-                        DOCKER_MIME_TYPE => {
-                            handle_get_manifest(&root, &namespaced_name, &tag)
-                        },
-                        "*/*" => Response::empty_406()
-                    )
-                },
-
-                (GET) (/v2/{_name :String}/blobs/{digest :String}) => {
-                    handle_get_digest(&root, &digest)
-                },
-
-                (GET) (/v2/{_namespace :String}/{_name :String}/blobs/{digest :String}) => {
-                    handle_get_digest(&root, &digest)
-                },
-
-                (GET) (/v2/{_n1 :String}/{_n2 :String}/{_name :String}/blobs/{digest :String}) => {
-                    handle_get_digest(&root, &digest)
-                },
-
-                (GET) (/v2/{_n1 :String}/{_n2 :String}/{_n3 :String}/{_name :String}/blobs/{digest :String}) => {
-                    handle_get_digest(&root, &digest)
-                },
-
-                (GET) (/v2/{_n1 :String}/{_n2 :String}/{_n3 :String}/{_n4 :String}/{_name :String}/blobs/{digest :String}) => {
-                    handle_get_digest(&root, &digest)
+                        .with_unique_header("Content-Type", "application/json; charset=utf-8")
+                        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
+                        .with_additional_header("X-Content-Type-Options", "nosniff")
                 },
 
                 _ => {
-                    Response::empty_404()
+                    handle_request(&root, &request)
                 }
             )
         })
     });
+}
+
+fn handle_request(root: &Path, request: &Request) -> Response {
+    let url = request.url();
+    let url_segments: Vec<_> = url.split("/").collect();
+    let url_seg_len = url_segments.len();
+
+    if url_seg_len >= 4 && url_segments[1] == "v2" {
+        let tag_index = url_seg_len - 1;
+        let object_index = url_seg_len - 2;
+
+        let object_type = url_segments[object_index];
+
+        if object_type == "manifests" {
+            let tag_or_digest = url_segments[tag_index].to_owned();
+
+            let namespaced_name = url_segments[2..object_index].join("/");
+
+            if request.method() == "GET" {
+                return handle_get_manifest(&root, &namespaced_name, &tag_or_digest);
+            } else if request.method() == "HEAD" {
+                // a normal HEAD response has an empty body, but due to rouille not allowing for an override
+                // on Content-Length, we respond the same as a GET
+                return accept!(
+                    request,
+                    DOCKER_MIME_TYPE => {
+                        handle_get_manifest(&root, &namespaced_name, &tag_or_digest)
+                    },
+                    "*/*" => Response::empty_406()
+                );
+            }
+        } else if object_type == "blobs" && request.method() == "GET" {
+            let digest = url_segments[tag_index].to_owned();
+            return handle_get_digest(&root, &digest);
+        }
+    }
+
+    Response::empty_404()
 }
 
 /// Handles the GET request for the manifest (only returns a OCI manifest regardless of Accept header)
