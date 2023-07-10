@@ -128,7 +128,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 //   - zarf.yaml.sig
 func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (partialPaths []string, err error) {
 	isPartialPull := len(layersToPull) > 0
-	ref := o.Reference
+	ref := o.repo.Reference
 
 	pterm.Println()
 	message.Debug("Pulling", ref)
@@ -201,7 +201,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling")
-	_, err = oras.Copy(o.Context, o.Repository, ref.String(), dst, ref.String(), copyOpts)
+	_, err = oras.Copy(o.ctx, o.repo, ref.String(), dst, ref.String(), copyOpts)
 	if err != nil {
 		return partialPaths, err
 	}
