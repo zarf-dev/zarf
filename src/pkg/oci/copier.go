@@ -5,6 +5,7 @@
 package oci
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sync"
@@ -14,6 +15,8 @@ import (
 
 // CopyPackage copies a package from one OCI registry to another
 func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
+	ctx := context.TODO()
+
 	srcRoot, err := src.FetchRoot()
 	if err != nil {
 		return err
@@ -26,9 +29,9 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 		size += layer.Size
 	}
 
-	title := fmt.Sprintf("Copying from %s to %s", src.Reference, dst.Reference)
+	title := fmt.Sprintf("Copying from %s to %s", src.Repo().Reference, dst.Repo().Reference)
 	progressBar := message.NewProgressBar(size, title)
-	defer progressBar.Successf("%s into %s", src.Reference, dst.Reference)
+	defer progressBar.Successf("%s into %s", src.Repo().Reference, dst.Repo().Reference)
 
 	// TODO: goroutine this w/ semaphores
 	for _, layer := range layers {
@@ -38,7 +41,7 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 		wg.Add(2)
 
 		// fetch the layer from the source
-		rc, err := src.Fetch(src.Context, layer)
+		rc, err := src.Repo().Fetch(ctx, layer)
 		if err != nil {
 			return err
 		}
@@ -52,7 +55,7 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 
 			// get data from the TeeReader and push it to the destination
 			// push the layer to the destination
-			err = dst.Push(dst.Context, layer, tr)
+			err = dst.Repo().Push(ctx, layer, tr)
 			if err != nil {
 				message.Fatal(err, "failed to push layer")
 			}

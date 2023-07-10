@@ -135,3 +135,8 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 
 	return client, nil
 }
+
+// Repo gives you access to the underlying remote repository
+func (o *OrasRemote) Repo() *remote.Repository {
+	return o.repo
+}

@@ -20,7 +20,8 @@ import (
 
 // Bundle pushes the given bundle to the remote repository.
 func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd string) error {
-	message.Debug("Bundling", bundle.Metadata.Name, "to", o.Reference)
+	ref := o.repo.Reference
+	message.Debug("Bundling", bundle.Metadata.Name, "to", ref)
 	layers := []ocispec.Descriptor{}
 	index := ocispec.Index{}
 	index.SchemaVersion = 2
@@ -40,7 +41,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 			return err
 		}
 		// push the manifest into the bundle
-		manifestDesc, err := o.PushBytes(manifestBytes, ZarfLayerMediaTypeBlob)
+		manifestDesc, err := o.PushLayer(manifestBytes, ZarfLayerMediaTypeBlob)
 		if err != nil {
 			return err
 		}
@@ -48,23 +49,23 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 		manifestDesc.Annotations = map[string]string{
 			ocispec.AnnotationBaseImageName: url,
 		}
-		message.Debugf("Pushed %s sub-manifest into %s: %s", url, o.Reference, message.JSONValue(manifestDesc))
+		message.Debugf("Pushed %s sub-manifest into %s: %s", url, ref, message.JSONValue(manifestDesc))
 		index.Manifests = append(index.Manifests, manifestDesc)
 		// stream copy the blobs from remote to o, otherwise do a blob mount
-		if remote.Reference.Registry != o.Reference.Registry {
-			message.Debugf("Streaming layers from %s --> %s", remote.Reference, o.Reference)
+		if remote.repo.Reference.Registry != o.repo.Reference.Registry {
+			message.Debugf("Streaming layers from %s --> %s", remote.repo.Reference, o.repo.Reference)
 			if err := CopyPackage(remote, o, config.CommonOptions.OCIConcurrency); err != nil {
 				return err
 			}
 		} else {
-			message.Debugf("Performing a cross repository blob mount on %s from %s --> %s", remote.Reference.Registry, remote.Reference.Repository, o.Reference.Repository)
-			spinner := message.NewProgressSpinner("Mounting layers from %s", remote.Reference.Repository)
+			message.Debugf("Performing a cross repository blob mount on %s from %s --> %s", remote.repo.Reference.Registry, remote.repo.Reference.Repository, ref.Repository)
+			spinner := message.NewProgressSpinner("Mounting layers from %s", remote.repo.Reference.Repository)
 			includingConfig := append(root.Layers, root.Config)
 			for _, layer := range includingConfig {
 				spinner.Updatef("Mounting %s", layer.Digest.Encoded())
-				if err := o.Mount(o.Context, layer, remote.Reference.Repository, func() (io.ReadCloser, error) {
+				if err := o.repo.Mount(o.ctx, layer, remote.repo.Reference.Repository, func() (io.ReadCloser, error) {
 					// TODO: how does this handle auth?
-					return remote.Fetch(o.Context, layer)
+					return remote.repo.Fetch(o.ctx, layer)
 				}); err != nil {
 					return err
 				}
@@ -80,7 +81,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 	if err != nil {
 		return err
 	}
-	indexDesc, err := o.PushBytes(indexBytes, ZarfLayerMediaTypeBlob)
+	indexDesc, err := o.PushLayer(indexBytes, ZarfLayerMediaTypeBlob)
 	if err != nil {
 		return err
 	}
@@ -99,7 +100,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 	if err != nil {
 		return err
 	}
-	zarfBundleYamlDesc, err := o.PushBytes(zarfBundleYamlBytes, ZarfLayerMediaTypeBlob)
+	zarfBundleYamlDesc, err := o.PushLayer(zarfBundleYamlBytes, ZarfLayerMediaTypeBlob)
 	if err != nil {
 		return err
 	}
@@ -137,11 +138,11 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 	o.Transport.ProgressBar = message.NewProgressBar(expected.Size, "Pushing manifest")
 	defer o.Transport.ProgressBar.Stop()
 
-	if err := o.Manifests().PushReference(o.Context, expected, bytes.NewReader(b), o.Reference.Reference); err != nil {
+	if err := o.repo.Manifests().PushReference(o.ctx, expected, bytes.NewReader(b), ref.Reference); err != nil {
 		return fmt.Errorf("failed to push manifest: %w", err)
 	}
 
-	o.Transport.ProgressBar.Successf("Published %s [%s]", o.Reference, expected.MediaType)
+	o.Transport.ProgressBar.Successf("Published %s [%s]", ref, expected.MediaType)
 	o.Transport.ProgressBar = nil
 
 	message.HorizontalRule()
@@ -150,9 +151,9 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 		flags = "--insecure"
 	}
 	message.Title("To inspect/deploy/pull:", "")
-	message.ZarfCommand("bundle inspect oci://%s %s", o.Reference, flags)
-	message.ZarfCommand("bundle deploy oci://%s %s", o.Reference, flags)
-	message.ZarfCommand("bundle pull oci://%s %s", o.Reference, flags)
+	message.ZarfCommand("bundle inspect oci://%s %s", ref, flags)
+	message.ZarfCommand("bundle deploy oci://%s %s", ref, flags)
+	message.ZarfCommand("bundle pull oci://%s %s", ref, flags)
 
 	return nil
 }
