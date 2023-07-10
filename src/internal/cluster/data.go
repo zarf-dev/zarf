@@ -88,8 +88,7 @@ iterator:
 			} else {
 				kubectlBinPath = fmt.Sprintf("%s tools kubectl", zarfBinPath)
 			}
-
-			kubectlCmd := fmt.Sprintf("%s exec -i -n %s %s -c %s ", kubectlBinPath, data.Target.Namespace, pod, data.Target.Container)
+			kubectlCmd := fmt.Sprintf("%s exec -i -n %s %s -c %s ", kubectlBinPath, data.Target.Namespace, pod.Name, data.Target.Container)
 
 			// Note that each command flag is separated to provide the widest cross-platform tar support
 			tarCmd := fmt.Sprintf("tar -c %s -f -", tarCompressFlag)
@@ -98,7 +97,7 @@ iterator:
 			// Must create the target directory before trying to change to it for untar
 			mkdirCmd := fmt.Sprintf("%s -- mkdir -p %s", kubectlCmd, data.Target.Path)
 			if err := exec.CmdWithPrint(shell, shellArgs, mkdirCmd); err != nil {
-				message.Warnf("Unable to create the data injection target directory %s in pod %s", data.Target.Path, pod)
+				message.Warnf("Unable to create the data injection target directory %s in pod %s", data.Target.Path, pod.Name)
 				continue iterator
 			}
 
@@ -111,7 +110,7 @@ iterator:
 
 			// Do the actual data injection
 			if err := exec.CmdWithPrint(shell, shellArgs, cpPodCmd); err != nil {
-				message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
+				message.Warnf("Error copying data into the pod %#v: %#v\n", pod.Name, err)
 				continue iterator
 			}
 
@@ -125,7 +124,7 @@ iterator:
 			)
 
 			if err := exec.CmdWithPrint(shell, shellArgs, cpPodCmd); err != nil {
-				message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
+				message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod.Name)
 				continue iterator
 			}
 		}
