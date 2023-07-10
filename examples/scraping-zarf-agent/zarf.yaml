@@ -2,92 +2,61 @@ kind: ZarfPackageConfig
 metadata:
   name: scrape-zarf-agent
   description: Scrape Zarf Agent with Prometheus Operator.
-
 components:
-  - name: namespace
+  - name: prometheus-deps
     required: true
-    manifests:
-      - name: namespace
+    charts:
+      - name: kube-prometheus-stack
+        version: 47.3.0
         namespace: monitoring
-        files:
-          - manifests/prometheus-deps/namespace.yaml
+        url: https://github.com/prometheus-community/helm-charts.git@kube-prometheus-stack-47.3.0
+        gitPath: charts/kube-prometheus-stack
+        releaseName: kube-prometheus-stack
+        valuesFiles: 
+        - config/values.yaml
+    images:
+      - quay.io/prometheus-operator/prometheus-operator:v0.66.0
+      - quay.io/prometheus/node-exporter:v1.6.0
+      - quay.io/kiwigrid/k8s-sidecar:1.24.3
+      - registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.9.2
+      - quay.io/prometheus-operator/prometheus-config-reloader:v0.66.0
+      - quay.io/prometheus/prometheus:v2.45.0
+      - registry.k8s.io/ingress-nginx/kube-webhook-certgen:v20221220-controller-v1.5.1-58-g787ea74b6
     actions:
       onDeploy:
         after:
           - wait:
               cluster:
-                kind: namespace
-                name: monitoring
-                namespace: namespace
-                condition: exists
-
-
-  - name: prep-manifests
+                kind: deployment
+                name: kube-prometheus-stack-operator
+                namespace: monitoring
+                condition: available
+          - wait:
+              cluster:
+                kind: deployment
+                name: kube-prometheus-stack-kube-state-metrics
+                namespace: monitoring
+                condition: available
+  - name: prometheus-operator
     required: true
-    # files:
-    #   # this file will be copied to the target location and the cat, dog, and snake sounds will be replaced with their values
-    #   # requires the on-deploy-with-dynamic-variable and on-deploy-with-multiple-variables components
-    #   - source: https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
-    #     target: ./manifests/prom-bundle/bundle.yaml
-    # actions:
-    #   onDeploy:   
-    #     after:
-    #     - cmd: sh ./manifests/prom-bundle/replace.sh
-         #   sed -i 's/namespace: default/namespace: monitoring/' ./prom-bundle/bundle.yaml
-    charts:
-      - name: kube-prometheus-stack
-        version: 47.3.0
+    manifests:
+      - name: prometheus-operator
         namespace: monitoring
-        url: https://github.com/prometheus-community/helm-charts.git
-        gitPath: charts/kube-prometheus-stack
-        releaseName: kube-prometheus-stack
-        valuesFiles: 
-        - config/values.yaml
-      # Helm Charts Repo
-      # - name: kube-prometheus-stack
-      #   version: 47.3.0
-      #   namespace: monitoring
-      #   url: https://prometheus-community.github.io/helm-charts # chart-repo
-      #   releaseName: kube-prometheus-stack
-      #   valuesFiles: 
-      #   - config/values.yaml
-    # images:
-    #   # - quay.io/prometheus/alertmanager:v0.25.0
-    #   - quay.io/prometheus-operator/prometheus-config-reloader:v0.66.0
-    #   - quay.io/prometheus-operator/prometheus-operator:v0.66.0
-    #   - quay.io/prometheus/prometheus:v2.45.0
-    # actions:
-    #   onDeploy:
-    #     after:
-    #       # - wait:
-    #       #     cluster:
-    #       #       kind: deployment
-    #       #       namespace: kube-prometheus-grafana
-    #       #       name: podinfo
-    #       #       condition: available
-    #       - wait:
-    #           cluster:
-    #             kind: deployment
-    #             namespace: metrics
-    #             name: kube-prometheus-kube-prome-operator 
-    #             condition: available
-    #       - wait:
-    #           cluster:
-    #             kind: deployment
-    #             namespace: metrics
-    #             name: kube-prometheus-kube-state-metrics
-    #             condition: available
-
-    # required: true
-    # manifests:
-    #   - name: prometheus-operator
-    #     namespace: monitoring
-    #     files:
-    #     - manifests/prometheus-operator/prometheus.yaml
-    #     - manifests/prometheus-operator/servicemonitor-agent.yaml
-    #     - manifests/prometheus-operator/clusterrole.yaml
-    #     - manifests/prometheus-operator/clusterrolebinding.yaml
-    #     - manifests/prometheus-operator/service.yaml
-    # images:
-    #   - quay.io/prometheus/prometheus:v2.45.0
-    #   - quay.io/prometheus-operator/prometheus-config-reloader:v0.66.0
+        files:
+        - manifests/prometheus-operator/prometheus.yaml
+        - manifests/prometheus-operator/servicemonitor-agent.yaml
+        - manifests/prometheus-operator/clusterrole.yaml
+        - manifests/prometheus-operator/clusterrolebinding.yaml
+        - manifests/prometheus-operator/service.yaml
+    images:
+      - quay.io/prometheus/prometheus:v2.45.0
+      - quay.io/prometheus-operator/prometheus-config-reloader:v0.66.0
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: statefulset
+                name: prometheus-k8s
+                namespace: monitoring
+                condition: '{status.readyReplicas}'=1
