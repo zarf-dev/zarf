@@ -41,6 +41,7 @@ var badGitURLs = []string{
 }
 
 func TestMutateGitURLsInText(t *testing.T) {
+	dummyLogger := func(content string, args ...any) {}
 	originalText := `
 	# Here we handle invalid URLs (see below comment)
 	# We transform https://*/*.git URLs
@@ -65,7 +66,7 @@ func TestMutateGitURLsInText(t *testing.T) {
 	https://www.defenseunicorns.com/
 	`
 
-	resultingText := MutateGitURLsInText("https://gitlab.com", originalText, "repo-owner")
+	resultingText := MutateGitURLsInText(dummyLogger, "https://gitlab.com", originalText, "repo-owner")
 	require.Equal(t, expectedText, resultingText)
 }
 

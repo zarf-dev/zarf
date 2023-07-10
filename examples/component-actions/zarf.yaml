@@ -138,6 +138,7 @@ components:
       # requires the on-deploy-with-dynamic-variable and on-deploy-with-multiple-variables components
       - source: test.txt
         target: test-templated.txt
+        shasum: 3c0404e0c767ace905c361fadded6c4b91fdb88aa07d5c42d2a220a87564836d
 
   - name: on-deploy-with-timeout
     description: This component will fail after 1 second

@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
 const (
@@ -77,7 +77,7 @@ func GenTransformURL(targetBaseURL string, sourceURL string) (*url.URL, error) {
 		packageName = fileName
 	}
 	// Add crc32 hash of the url to the end of the package name
-	packageNameGlobal := fmt.Sprintf("%s-%d", packageName, utils.GetCRCHash(sanitizedURL))
+	packageNameGlobal := fmt.Sprintf("%s-%d", packageName, helpers.GetCRCHash(sanitizedURL))
 
 	version := strings.ReplaceAll(matches[idx("version")], "/", "")
 	if version == "" {
