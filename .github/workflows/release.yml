@@ -61,6 +61,18 @@ jobs:
           make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=$GITHUB_REF_NAME
           make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=$GITHUB_REF_NAME
 
+      # Before we run the tests we need to aggressively cleanup files to reduce disk pressure
+      - name: Cleanup files
+        run: |
+          lsblk -f
+
+          sudo rm -rf zarf-sbom /tmp/zarf-* src/ui/node_modules
+          sudo build/zarf tools clear-cache
+          sudo docker system prune --all --force
+          go clean -cache
+
+          lsblk -f
+
       - name: Run Tests
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
@@ -74,17 +86,17 @@ jobs:
       - name: Create release time CVE report
         run: "make cve-report"
 
-      # Before we run GoReleaser we need to aggressively cleanup files to reduce disk pressure
+      # Before we run GoReleaser we need to (again) aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
         run: |
           lsblk -f
 
-          sudo rm -rf zarf-sbom /tmp/zarf-* src/ui/node_modules
+          sudo rm -rf zarf-sbom /tmp/zarf-*
           sudo env "PATH=$PATH" CI=true make delete-packages
           sudo build/zarf tools clear-cache
           sudo docker system prune --all --force
           go clean -cache
-          
+
           lsblk -f
 
       # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
