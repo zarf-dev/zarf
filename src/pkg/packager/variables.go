@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -21,7 +22,7 @@ func (p *Packager) fillActiveTemplate() error {
 
 	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
 		// Ensure uppercase keys
-		setFromCLIConfig := utils.TransformMapKeys(p.cfg.CreateOpts.SetVariables, strings.ToUpper)
+		setFromCLIConfig := helpers.TransformMapKeys(p.cfg.CreateOpts.SetVariables, strings.ToUpper)
 
 		yamlTemplates, err := utils.FindYamlTemplates(&p.cfg.Pkg, templatePrefix, "###")
 		if err != nil {
@@ -73,7 +74,7 @@ func (p *Packager) fillActiveTemplate() error {
 // setVariableMapInConfig handles setting the active variables used to template component files.
 func (p *Packager) setVariableMapInConfig() error {
 	// Ensure uppercase keys
-	setVariableValues := utils.TransformMapKeys(p.cfg.DeployOpts.SetVariables, strings.ToUpper)
+	setVariableValues := helpers.TransformMapKeys(p.cfg.DeployOpts.SetVariables, strings.ToUpper)
 	for name, value := range setVariableValues {
 		p.setVariableInConfig(name, value, false, false)
 	}

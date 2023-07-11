@@ -340,6 +340,22 @@ const (
 	$ zarf tools registry ls reg.example.com/stefanprodan/podinfo
 `
 
+	CmdToolsRegistryPushExample = `
+	# push an image into an internal repo in Zarf
+	$ zarf tools registry push image.tar 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
+
+	# push an image into an repo hosted at reg.example.com
+	$ zarf tools registry push image.tar reg.example.com/stefanprodan/podinfo:6.4.0
+`
+
+	CmdToolsRegistryPullExample = `
+	# pull an image from an internal repo in Zarf to a local tarball
+	$ zarf tools registry pull 127.0.0.1:31999/stefanprodan/podinfo:6.4.0 image.tar
+
+	# pull an image from a repo hosted at reg.example.com to a local tarball
+	$ zarf tools registry pull reg.example.com/stefanprodan/podinfo:6.4.0 image.tar
+`
+
 	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s': %s"
 	CmdToolsRegistryFlagVerbose        = "Enable debug logs"
 	CmdToolsRegistryFlagInsecure       = "Allow image references to be fetched without TLS"
@@ -359,7 +375,7 @@ const (
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
-	CmdToolsCraneListNoRepoSpecified = "You must specify a repository name to return a list of tags for."
+	CmdToolsCraneNotEnoughArgumentsSpecified = "You do not have enough arguments specified."
 
 	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
 	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."
@@ -395,6 +411,7 @@ const (
 		zarf tools wait-for svc zarf-docker-registry exists -n zarf           #  wait for service zarf-docker-registry in namespace zarf to exist
 		zarf tools wait-for svc zarf-docker-registry -n zarf                  #  same as above, except exists is the default condition
 		zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
+		zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
 
 	Wait for network endpoints:
 		zarf tools wait-for http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
@@ -496,4 +513,5 @@ const (
 var (
 	ErrInitNotFound      = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
 	ErrUnableToCheckArch = errors.New("unable to get the configured cluster's architecture")
+	ErrInterrupt         = errors.New("Failed due to interrupt")
 )

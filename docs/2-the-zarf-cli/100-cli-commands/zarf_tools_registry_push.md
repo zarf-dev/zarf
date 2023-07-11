@@ -11,6 +11,18 @@ If the PATH is a directory, it will be read as an OCI image layout. Otherwise, P
 zarf tools registry push PATH IMAGE [flags]
 ```
 
+## Examples
+
+```
+
+	# push an image into an internal repo in Zarf
+	$ zarf tools registry push image.tar 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
+
+	# push an image into an repo hosted at reg.example.com
+	$ zarf tools registry push image.tar reg.example.com/stefanprodan/podinfo:6.4.0
+
+```
+
 ## Options
 
 ```

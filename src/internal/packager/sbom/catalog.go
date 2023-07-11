@@ -236,6 +236,21 @@ func (b *Builder) createFileSBOM(componentSBOM types.ComponentSBOM, component st
 		}
 
 		for pkg := range cat.Enumerate() {
+			containsSource := false
+
+			// See if the source locations for this package contain the file Zarf indexed
+			for _, location := range pkg.Locations.ToSlice() {
+				if location.RealPath == fileSource.Metadata.Path {
+					containsSource = true
+				}
+			}
+
+			// If the locations do not contain the source file (i.e. the package was inside a tarball), add the file source
+			if !containsSource {
+				sourceLocation := source.NewLocation(fileSource.Metadata.Path)
+				pkg.Locations.Add(sourceLocation)
+			}
+
 			catalog.Add(pkg)
 		}
 

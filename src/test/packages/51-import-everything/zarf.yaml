@@ -69,9 +69,9 @@ components:
       - name: podinfo
         localPath: charts/local
         namespace: local-chart
-        version: 6.3.5
+        version: 6.4.0
     images:
-      - ghcr.io/stefanprodan/podinfo:6.3.5
+      - ghcr.io/stefanprodan/podinfo:6.4.0
     actions:
       onDeploy:
         after:
@@ -88,9 +88,9 @@ components:
       - name: podinfo
         localPath: ../everything-external/charts/local
         namespace: local-chart-relative
-        version: 6.3.5
+        version: 6.4.0
     images:
-      - ghcr.io/stefanprodan/podinfo:6.3.5
+      - ghcr.io/stefanprodan/podinfo:6.4.0
     actions:
       onDeploy:
         after:
@@ -105,11 +105,11 @@ components:
     required: false
     charts:
       - name: oci-demo
-        version: 6.3.5
+        version: 6.4.0
         namespace: podinfo
         url: oci://ghcr.io/stefanprodan/charts/podinfo
     images:
-      - ghcr.io/stefanprodan/podinfo:6.3.5
+      - ghcr.io/stefanprodan/podinfo:6.4.0
     dataInjections:
       - source: files/coffee-ipsum.txt
         target:
@@ -138,4 +138,4 @@ components:
   - name: import-images
     required: false
     images:
-      - ghcr.io/stefanprodan/podinfo:6.3.5
+      - ghcr.io/stefanprodan/podinfo:6.4.0

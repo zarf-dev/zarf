@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
@@ -83,12 +84,14 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 		}
 	}
 
+	bbRepo := fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version)
+
 	// Configure helm to pull down the Big Bang chart.
 	helmCfg := helm.Helm{
 		Chart: types.ZarfChart{
 			Name:        bb,
 			Namespace:   bb,
-			URL:         cfg.Repo,
+			URL:         bbRepo,
 			Version:     cfg.Version,
 			ValuesFiles: cfg.ValuesFiles,
 			GitPath:     "./chart",
@@ -231,7 +234,7 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 		}
 
 		// Make sure the list of images is unique.
-		c.Images = utils.Unique(c.Images)
+		c.Images = helpers.Unique(c.Images)
 	}
 
 	// Create the flux wrapper around Big Bang for deployment.
@@ -493,7 +496,7 @@ func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []st
 
 	chart := types.ZarfChart{
 		Name:    repo,
-		URL:     matches[0],
+		URL:     repo,
 		Version: matches[1],
 		GitPath: "chart",
 	}

@@ -61,7 +61,7 @@ func TestUseCLI(t *testing.T) {
 		// Test `zarf prepare find-images` for a remote asset
 		stdOut, stdErr, err := e2e.Zarf("prepare", "find-images", "examples/helm-charts", "--kube-version=v1.23.0")
 		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdOut, "ghcr.io/stefanprodan/podinfo:6.3.5", "The chart image should be found by Zarf")
+		require.Contains(t, stdOut, "ghcr.io/stefanprodan/podinfo:6.4.0", "The chart image should be found by Zarf")
 		// Test `zarf prepare find-images` with a chart that uses helm annotations
 		stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "src/test/packages/00-helm-annotations")
 		require.NoError(t, err, stdOut, stdErr)

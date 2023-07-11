@@ -24,16 +24,17 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/otiai10/copy"
 	"github.com/pterm/pterm"
 	corev1 "k8s.io/api/core/v1"
 )
 
 var (
-	hpaModified    bool
-	valueTemplate  *template.Values
-	connectStrings = make(types.ConnectStrings)
+	stateInitialized bool
+	hpaModified      bool
+	valueTemplate    *template.Values
+	connectStrings   = make(types.ConnectStrings)
 )
 
 // Deploy attempts to deploy the given PackageConfig.
@@ -164,24 +165,29 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	isInjector := component.Name == "zarf-injector"
 	isAgent := component.Name == "zarf-agent"
 
-	// Always init the state on the seed registry component
-	if isSeedRegistry {
+	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
+	if p.requiresCluster(component) && !stateInitialized {
 		p.cluster, err = cluster.NewClusterWithWait(5*time.Minute, true)
 		if err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
 
-		p.cluster.InitZarfState(p.cfg.InitOpts)
-	}
+		err = p.cluster.InitZarfState(p.cfg.InitOpts)
+		if err != nil {
+			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
+		}
 
-	if isRegistry {
-		// If we are deploying the registry then mark the HPA as "modifed" to set it to Min later
-		hpaModified = true
+		stateInitialized = true
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
 		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
 		return charts, nil
+	}
+
+	if isRegistry {
+		// If we are deploying the registry then mark the HPA as "modifed" to set it to Min later
+		hpaModified = true
 	}
 
 	// Before deploying the seed registry, start the injector
@@ -233,8 +239,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to process the component files: %w", err)
 	}
 
-	if !valueTemplate.Ready() && (hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections) {
-
+	if !valueTemplate.Ready() && p.requiresCluster(component) {
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
 			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, true)
@@ -311,7 +316,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if shasum, _ := utils.GetCryptoHash(fileLocation, crypto.SHA256); shasum != file.Shasum {
+			if shasum, _ := utils.GetCryptoHashFromFile(fileLocation, crypto.SHA256); shasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
 			}
 		}
@@ -346,7 +351,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err := copy.Copy(fileLocation, file.Target)
+		err := utils.CreatePathAndCopy(fileLocation, file.Target)
 		if err != nil {
 			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
 		}
@@ -444,7 +449,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 	}
 
-	return utils.Retry(func() error {
+	return helpers.Retry(func() error {
 		return imgConfig.PushToZarfRegistry()
 	}, 3, 5*time.Second)
 }
@@ -452,7 +457,6 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 // Push all of the components git repos to the configured git server.
 func (p *Packager) pushReposToRepository(reposPath string, repos []string) error {
 	for _, repoURL := range repos {
-
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
 			gitClient := git.New(p.cfg.State.GitServer)
@@ -477,7 +481,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 		}
 
 		// Try repo push up to 3 times
-		if err := utils.Retry(tryPush, 3, 5*time.Second); err != nil {
+		if err := helpers.Retry(tryPush, 3, 5*time.Second); err != nil {
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}
