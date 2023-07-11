@@ -57,8 +57,9 @@ const (
 	ZarfSBOMTar       = "sboms.tar"
 	ZarfPackagePrefix = "zarf-package-"
 
-	ZarfBundleYAML   = "zarf-bundle.yaml"
-	ZarfBundlePrefix = "zarf-bundle-"
+	ZarfBundleYAML          = "zarf-bundle.yaml"
+	ZarfBundleYAMLSignature = "zarf-bundle.yaml.sig"
+	ZarfBundlePrefix        = "zarf-bundle-"
 
 	ZarfComponentsDir = "components"
 

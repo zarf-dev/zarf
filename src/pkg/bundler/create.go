@@ -7,9 +7,11 @@ package bundler
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -57,8 +59,32 @@ func (b *Bundler) Create() error {
 		return err
 	}
 
+	var signatureBytes []byte
+
+	// sign the bundle if a signing key was provided
+	if b.cfg.CreateOpts.SigningKeyPath != "" {
+		// write the bundle to disk so we can sign it
+		bundlePath := filepath.Join(b.tmp, config.ZarfBundleYAML)
+		if err := b.WriteBundleYaml(bundlePath, &b.bundle); err != nil {
+			return err
+		}
+
+		getSigCreatePassword := func(_ bool) ([]byte, error) {
+			if b.cfg.CreateOpts.SigningKeyPassword != "" {
+				return []byte(b.cfg.CreateOpts.SigningKeyPassword), nil
+			}
+			return interactive.PromptSigPassword()
+		}
+		// sign the bundle
+		signaturePath := filepath.Join(b.tmp, config.ZarfBundleYAMLSignature)
+		signatureBytes, err = utils.CosignSignBlob(bundlePath, signaturePath, b.cfg.CreateOpts.SigningKeyPath, getSigCreatePassword)
+		if err != nil {
+			return err
+		}
+	}
+
 	// create + publish the bundle
-	return b.remote.Bundle(&b.bundle, b.cfg.CreateOpts.SigningKeyPath, b.cfg.CreateOpts.SigningKeyPassword)
+	return b.remote.Bundle(&b.bundle, signatureBytes)
 }
 
 // adapted from p.confirmAction

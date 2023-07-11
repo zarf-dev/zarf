@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
@@ -82,6 +82,11 @@ func (b *Bundler) ReadBundleYaml(path string, bndl *types.ZarfBundle) error {
 	return utils.ReadYaml(path, bndl)
 }
 
+// WriteBundleYaml is a wrapper around utils.WriteYaml
+func (b *Bundler) WriteBundleYaml(path string, bndl *types.ZarfBundle) error {
+	return utils.WriteYaml(path, bndl, 0600)
+}
+
 // ExtractPackage should extract a package from a bundle
 func (b *Bundler) ExtractPackage(name string, out string) error {
 	message.Infof("Extracting %s to %s", name, out)
@@ -130,7 +135,6 @@ func (b *Bundler) ValidateBundle() error {
 		// validate access to packages as well as components referenced in the package
 		remote, err := oci.NewOrasRemote(url)
 		if err != nil {
-			// remote performs access verification upon instantiation
 			return err
 		}
 		if err := remote.PullPackageMetadata(tmp); err != nil {
@@ -266,7 +270,7 @@ func (b *Bundler) templateBundleYaml() error {
 	for key := range yamlTemplates {
 		_, present := setFromCLIConfig[key]
 		if !present && !config.CommonOptions.Confirm {
-			setVal, err := b.promptVariable(types.ZarfPackageVariable{
+			setVal, err := interactive.PromptVariable(types.ZarfPackageVariable{
 				Name:    key,
 				Default: "",
 			})
@@ -287,23 +291,4 @@ func (b *Bundler) templateBundleYaml() error {
 	templateMap["###ZARF_BNDL_ARCH###"] = b.bundle.Metadata.Architecture
 
 	return utils.ReloadYamlTemplate(&b.bundle, templateMap)
-}
-
-// mirrored from p.promptVariable()
-func (b *Bundler) promptVariable(variable types.ZarfPackageVariable) (value string, err error) {
-
-	if variable.Description != "" {
-		message.Question(variable.Description)
-	}
-
-	prompt := &survey.Input{
-		Message: fmt.Sprintf("Please provide a value for \"%s\"", variable.Name),
-		Default: variable.Default,
-	}
-
-	if err = survey.AskOne(prompt, &value); err != nil {
-		return "", err
-	}
-
-	return value, nil
 }

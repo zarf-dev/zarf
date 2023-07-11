@@ -18,8 +18,11 @@ import (
 	"oras.land/oras-go/v2/content"
 )
 
-// Bundle pushes the given bundle to the remote repository.
-func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd string) error {
+// Bundle publishes the given bundle w/ optional signature to the remote repository.
+func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
+	if bundle.Metadata.Architecture == "" {
+		return fmt.Errorf("architecture is required for bundling")
+	}
 	ref := o.repo.Reference
 	message.Debug("Bundling", bundle.Metadata.Name, "to", ref)
 	index := ocispec.Index{}
@@ -99,14 +102,23 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 		return err
 	}
 	zarfBundleYamlDesc.Annotations = map[string]string{
-		ocispec.AnnotationTitle: "zarf-bundle.yaml",
+		ocispec.AnnotationTitle: config.ZarfBundleYAML,
 	}
 
-	message.Debug("Pushed zarf-bundle.yaml:", message.JSONValue(zarfBundleYamlDesc))
+	message.Debug("Pushed", config.ZarfBundleYAML+":", message.JSONValue(zarfBundleYamlDesc))
 	manifest.Layers = append(manifest.Layers, zarfBundleYamlDesc)
 
-	// TODO: push + append the zarf-bundle.yaml.sig to the layers, w/ proper path
-	message.Debug("TODO: signing bundle w/ %s - %s", sigPath, sigPsswd)
+	if len(signature) > 0 {
+		zarfBundleYamlSigDesc, err := o.PushLayer(signature, ZarfLayerMediaTypeBlob)
+		if err != nil {
+			return err
+		}
+		zarfBundleYamlSigDesc.Annotations = map[string]string{
+			ocispec.AnnotationTitle: config.ZarfBundleYAMLSignature,
+		}
+		manifest.Layers = append(manifest.Layers, zarfBundleYamlSigDesc)
+		message.Debug("Pushed", config.ZarfBundleYAMLSignature+":", message.JSONValue(zarfBundleYamlSigDesc))
+	}
 
 	// push the manifest config
 	configDesc, err := o.pushManifestConfigFromMetadata(&bundle.Metadata, &bundle.Build)

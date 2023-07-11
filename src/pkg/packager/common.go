@@ -16,7 +16,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
@@ -24,6 +23,7 @@ import (
 	"github.com/mholt/archiver/v3"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
@@ -497,7 +497,7 @@ func (p *Packager) getSigCreatePassword(_ bool) ([]byte, error) {
 		return []byte(p.cfg.CreateOpts.SigningKeyPassword), nil
 	}
 
-	return promptForSigPassword()
+	return interactive.PromptSigPassword()
 }
 
 func (p *Packager) getSigPublishPassword(_ bool) ([]byte, error) {
@@ -506,25 +506,7 @@ func (p *Packager) getSigPublishPassword(_ bool) ([]byte, error) {
 		return []byte(p.cfg.CreateOpts.SigningKeyPassword), nil
 	}
 
-	return promptForSigPassword()
-}
-
-func promptForSigPassword() ([]byte, error) {
-	var password string
-
-	// If we're in interactive mode, prompt the user for the password to their private key
-	if !config.CommonOptions.Confirm {
-		prompt := &survey.Password{
-			Message: "Private key password (empty for no password): ",
-		}
-		if err := survey.AskOne(prompt, &password); err != nil {
-			return nil, fmt.Errorf("unable to get password for private key: %w", err)
-		}
-		return []byte(password), nil
-	}
-
-	// We are returning a nil error here because purposefully avoiding a password input is a valid use condition
-	return nil, nil
+	return interactive.PromptSigPassword()
 }
 
 func (p *Packager) archiveComponent(component types.ZarfComponent) error {
