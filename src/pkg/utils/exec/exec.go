@@ -12,10 +12,13 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -206,4 +209,14 @@ func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 // IsPowershell returns whether a shell name is powershell
 func IsPowershell(shellName string) bool {
 	return shellName == "powershell" || shellName == "pwsh"
+}
+
+// ExitOnInterrupt catches an interrupt and exits with fatal error
+func ExitOnInterrupt() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		message.Fatal(lang.ErrInterrupt, lang.ErrInterrupt.Error())
+	}()
 }
