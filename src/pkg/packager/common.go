@@ -463,6 +463,7 @@ var (
 	ErrPkgSigButNoKey = errors.New("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
 )
 
+// ValidatePackageSignature validates the signature of a package
 func ValidatePackageSignature(directory string, publicKeyPath string) error {
 
 	// If the insecure flag was provided, ignore the signature validation

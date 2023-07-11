@@ -123,7 +123,7 @@ var bundlePullCmd = &cobra.Command{
 	},
 }
 
-func firstArgIsEitherOCIorTarball(cmd *cobra.Command, args []string) error {
+func firstArgIsEitherOCIorTarball(_ *cobra.Command, args []string) error {
 	if !utils.IsOCIURL(args[0]) && !bundler.IsValidTarballPath(args[0]) {
 		return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
 	}

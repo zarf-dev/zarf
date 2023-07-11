@@ -183,8 +183,8 @@ func (b *Bundler) ValidateBundle() error {
 	return nil
 }
 
-// TODO:
 // ValidateBundleSignature validates the bundle signature
+// TODO: implement
 func (b *Bundler) ValidateBundleSignature(base string) error {
 	message.Debugf("Validating bundle signature from %s/%s", base, config.ZarfYAMLSignature)
 	return nil

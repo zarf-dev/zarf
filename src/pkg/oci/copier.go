@@ -15,6 +15,7 @@ import (
 
 // CopyPackage copies a package from one OCI registry to another
 func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
+	message.Debug("CopyPackage concurrency:", concurrency)
 	ctx := context.TODO()
 
 	srcRoot, err := src.FetchRoot()

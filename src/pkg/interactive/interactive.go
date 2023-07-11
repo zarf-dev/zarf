@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// PromptSigPassword prompts the user for the password to their private key
 func PromptSigPassword() ([]byte, error) {
 	var password string
 
@@ -31,7 +32,7 @@ func PromptSigPassword() ([]byte, error) {
 	return nil, nil
 }
 
-// mirrored from p.promptVariable()
+// PromptVariable prompts the user for a value for a variable
 func PromptVariable(variable types.ZarfPackageVariable) (value string, err error) {
 
 	if variable.Description != "" {
