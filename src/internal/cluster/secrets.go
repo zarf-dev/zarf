@@ -65,7 +65,7 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo
 func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo types.GitServerInfo) *corev1.Secret {
 	message.Debugf("k8s.GenerateGitPullCreds(%s, %s, gitServerInfo)", namespace, name)
 
-	gitServerSecret := c.Kube.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
+	gitServerSecret := c.Kube.GenerateSecret(namespace, name, corev1.SecretTypeOpaque)
 	gitServerSecret.StringData = map[string]string{
 		"username": gitServerInfo.PullUsername,
 		"password": gitServerInfo.PullPassword,
