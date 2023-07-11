@@ -94,6 +94,5 @@ func (k *K8s) CreateOrUpdateSecret(secret *corev1.Secret) (createdSecret *corev1
 		}
 	}
 
-	// TODO: @JPERRY Check the secret value that create/update returns and see if it contains mutations that Pepr would have done..
 	return createdSecret, nil
 }

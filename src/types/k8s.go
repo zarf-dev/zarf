@@ -6,6 +6,7 @@ package types
 
 import "github.com/defenseunicorns/zarf/src/pkg/k8s"
 
+// PackageStatus defines the deployment status of a Zarf package.
 type PackageStatus string
 
 const (
@@ -17,6 +18,7 @@ const (
 	PackageStatusRemoving      PackageStatus = "removing"
 )
 
+// ComponentStatus defines the deployment status of a Zarf component within a package.
 type ComponentStatus string
 
 const (

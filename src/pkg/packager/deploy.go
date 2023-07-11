@@ -125,9 +125,11 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		}
 	}
 
+	// Process all the components we are deploying
 	for idx, component := range componentsToDeploy {
 		deployedComponent := types.DeployedComponent{Name: component.Name, Status: types.ComponentStatusDeploying}
 		deployedComponents = append(deployedComponents, deployedComponent)
+
 		// Update the package secret to indicate that we are about to deploy this component
 		if p.cluster != nil {
 			if _, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, types.PackageStatusDeploying); err != nil {
@@ -135,6 +137,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			}
 		}
 
+		// Deploy the component
 		var charts []types.InstalledChart
 		if p.cfg.IsInitConfig {
 			charts, err = p.deployInitComponent(component)

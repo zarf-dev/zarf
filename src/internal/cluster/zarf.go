@@ -117,17 +117,19 @@ func (c *Cluster) PackageSecretNeedsWait(secretName string) (bool, error) {
 
 	// Check if there are any package level statuses that we need to wait for
 	if deployedPackage.Status == types.PackageStatusPendingDeploy || deployedPackage.Status == types.PackageStatusFinalizing {
-		// Wait for the package to be continued
+		// The package status indicates we need to wait
 		return true, nil
 	}
 
 	// Check if there are any component level statuses that we need to wait for
 	for _, component := range deployedPackage.DeployedComponents {
 		if component.Status == types.ComponentStatusPendingDeploy || component.Status == types.ComponentStatusFinalizing {
+			// The component status indicates we need to wait
 			return true, nil
 		}
 	}
 
+	// If we get here, neither the package nor any of the components need to be waited on
 	return false, nil
 }
 
@@ -140,11 +142,11 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 	}
 
 	// Timebox the amount of time we wait for a mutation to finish before erroring
-	timeout := time.After(5 * time.Minute)
+	timeout := time.After(5 * time.Minute) // TODO: Make this configurable
 	packageNeedsWait, err := c.PackageSecretNeedsWait(packageSecret.Name)
 	for packageNeedsWait && err == nil {
 		select {
-		// On timeout, abort.
+		// On timeout, abort and return an error.
 		case <-timeout:
 			return nil, fmt.Errorf("timed out waiting for package deployment to complete")
 		default:
@@ -164,7 +166,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 	deployedPackageSecret := c.Kube.GenerateSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName, corev1.SecretTypeOpaque)
 	deployedPackageSecret.Labels[ZarfPackageInfoLabel] = packageName
 
-	stateData, _ := json.Marshal(types.DeployedPackage{
+	stateData, err := json.Marshal(types.DeployedPackage{
 		Name:               packageName,
 		CLIVersion:         config.CLIVersion,
 		Data:               pkg,
@@ -172,6 +174,9 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 		DeployedComponents: components,
 		ConnectStrings:     connectStrings,
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	deployedPackageSecret.Data = map[string][]byte{"data": stateData}
 
