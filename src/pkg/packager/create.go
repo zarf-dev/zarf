@@ -684,7 +684,7 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 		// Generate a list of all unique repos for this component
 		for _, repoURL := range component.Repos {
 			// Split the remote url and the zarf reference
-			_, refPlain, err := transform.GitTransformURLSplitRef(repoURL)
+			_, refPlain, err := transform.GitURLSplitRef(repoURL)
 			if err != nil {
 				return err
 			}

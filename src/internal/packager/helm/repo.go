@@ -27,7 +27,7 @@ import (
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
 func (h *Helm) PackageChart(destination string) error {
 	if len(h.Chart.URL) > 0 {
-		url, refPlain, err := transform.GitTransformURLSplitRef(h.Chart.URL)
+		url, refPlain, err := transform.GitURLSplitRef(h.Chart.URL)
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
 		isGitURL := strings.HasSuffix(url, ".git")
 		if err != nil {

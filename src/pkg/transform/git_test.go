@@ -26,6 +26,7 @@ var gitURLs = []string{
 	"https://github.com/defenseunicorns/zarf.helm.git",
 	"https://github.com/defenseunicorns/zarf.git@refs/tags/v0.16.0",
 	"https://github.com/DoD-Platform-One/big-bang.git@refs/heads/release-1.54.x",
+	"https://github.com/prometheus-community/helm-charts.git@kube-prometheus-stack-47.3.0",
 
 	// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
 	"https://github.com/defenseunicorns/zarf.helm.git/info/refs",
@@ -70,7 +71,7 @@ func TestMutateGitURLsInText(t *testing.T) {
 	require.Equal(t, expectedText, resultingText)
 }
 
-func TestGitTransformURLSplitRef(t *testing.T) {
+func TestGitURLSplitRef(t *testing.T) {
 	var expectedResult = [][]string{
 		// Normal git repos and references for pushing/pulling
 		{"https://repo1.dso.mil/platform-one/big-bang/apps/security-tools/twistlock.git", ""},
@@ -87,6 +88,7 @@ func TestGitTransformURLSplitRef(t *testing.T) {
 		{"https://github.com/defenseunicorns/zarf.helm.git", ""},
 		{"https://github.com/defenseunicorns/zarf.git", "refs/tags/v0.16.0"},
 		{"https://github.com/DoD-Platform-One/big-bang.git", "refs/heads/release-1.54.x"},
+		{"https://github.com/prometheus-community/helm-charts.git", "kube-prometheus-stack-47.3.0"},
 
 		// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
 		{"https://github.com/defenseunicorns/zarf.helm.git", ""},
@@ -97,14 +99,14 @@ func TestGitTransformURLSplitRef(t *testing.T) {
 	}
 
 	for idx, url := range gitURLs {
-		gitURLNoRef, refPlain, err := GitTransformURLSplitRef(url)
+		gitURLNoRef, refPlain, err := GitURLSplitRef(url)
 		require.NoError(t, err)
 		require.Equal(t, expectedResult[idx][0], gitURLNoRef)
 		require.Equal(t, expectedResult[idx][1], refPlain)
 	}
 
 	for _, url := range badGitURLs {
-		_, _, err := GitTransformURLSplitRef(url)
+		_, _, err := GitURLSplitRef(url)
 		require.Error(t, err)
 	}
 }
@@ -126,6 +128,7 @@ func TestGitTransformURLtoFolderName(t *testing.T) {
 		"zarf.helm-2570741950",
 		"zarf-2175050463",
 		"big-bang-2705706079",
+		"helm-charts-1319967699",
 
 		// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
 		"zarf.helm-2570741950",
@@ -164,6 +167,7 @@ func TestGitTransformURLtoRepoName(t *testing.T) {
 		"zarf.helm-842267124",
 		"zarf-1211668992",
 		"big-bang-2366614037",
+		"helm-charts-3648076006",
 
 		// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
 		"zarf.helm-842267124",
@@ -202,6 +206,7 @@ func TestGitTransformURL(t *testing.T) {
 		"https://gitlab.com/repo-owner/zarf.helm-842267124.git",
 		"https://gitlab.com/repo-owner/zarf-1211668992.git",
 		"https://gitlab.com/repo-owner/big-bang-2366614037.git",
+		"https://gitlab.com/repo-owner/helm-charts-3648076006.git",
 
 		// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
 		"https://gitlab.com/repo-owner/zarf.helm-842267124.git/info/refs",

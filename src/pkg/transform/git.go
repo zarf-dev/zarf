@@ -29,8 +29,8 @@ func MutateGitURLsInText(logger Log, targetBaseURL string, text string, pushUser
 	return output
 }
 
-// GitTransformURLSplitRef takes a git url and returns a separated source url and zarf reference.
-func GitTransformURLSplitRef(sourceURL string) (string, string, error) {
+// GitURLSplitRef takes a git url and returns a separated source url and zarf reference.
+func GitURLSplitRef(sourceURL string) (string, string, error) {
 	get, err := helpers.MatchRegex(gitURLRegex, sourceURL)
 
 	if err != nil {
