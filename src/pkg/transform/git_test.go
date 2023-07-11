@@ -27,6 +27,8 @@ var gitURLs = []string{
 	"https://github.com/defenseunicorns/zarf.git@refs/tags/v0.16.0",
 	"https://github.com/DoD-Platform-One/big-bang.git@refs/heads/release-1.54.x",
 	"https://github.com/prometheus-community/helm-charts.git@kube-prometheus-stack-47.3.0",
+	"https://github.com/prometheus-community/",
+	"https://github.com/",
 
 	// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
 	"https://github.com/defenseunicorns/zarf.helm.git/info/refs",
@@ -89,6 +91,8 @@ func TestGitURLSplitRef(t *testing.T) {
 		{"https://github.com/defenseunicorns/zarf.git", "refs/tags/v0.16.0"},
 		{"https://github.com/DoD-Platform-One/big-bang.git", "refs/heads/release-1.54.x"},
 		{"https://github.com/prometheus-community/helm-charts.git", "kube-prometheus-stack-47.3.0"},
+		{"https://github.com/prometheus-community", ""},
+		{"https://github.com/", ""},
 
 		// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
 		{"https://github.com/defenseunicorns/zarf.helm.git", ""},
@@ -129,6 +133,8 @@ func TestGitURLtoFolderName(t *testing.T) {
 		"zarf-2175050463",
 		"big-bang-2705706079",
 		"helm-charts-1319967699",
+		"prometheus-community-3453166319",
+		"-1276058275",
 
 		// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
 		"zarf.helm-2570741950",
@@ -168,6 +174,8 @@ func TestGitURLtoRepoName(t *testing.T) {
 		"zarf-1211668992",
 		"big-bang-2366614037",
 		"helm-charts-3648076006",
+		"prometheus-community-2749132599",
+		"-98306241",
 
 		// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
 		"zarf.helm-842267124",
@@ -207,6 +215,8 @@ func TestGitURL(t *testing.T) {
 		"https://gitlab.com/repo-owner/zarf-1211668992.git",
 		"https://gitlab.com/repo-owner/big-bang-2366614037.git",
 		"https://gitlab.com/repo-owner/helm-charts-3648076006.git",
+		"https://gitlab.com/repo-owner/prometheus-community-2749132599",
+		"https://gitlab.com/repo-owner/-98306241",
 
 		// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
 		"https://gitlab.com/repo-owner/zarf.helm-842267124.git/info/refs",
