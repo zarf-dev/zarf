@@ -131,7 +131,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		deployedComponents = append(deployedComponents, deployedComponent)
 
 		// Update the package secret to indicate that we are about to deploy this component
-		if p.cluster != nil {
+		if p.cluster != nil && !p.cfg.IsInitConfig {
 			if _, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, types.PackageStatusDeploying); err != nil {
 				return nil, err
 			}
