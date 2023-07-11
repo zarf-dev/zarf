@@ -19,7 +19,7 @@ var gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/
 func MutateGitURLsInText(logger Log, targetBaseURL string, text string, pushUser string) string {
 	extractPathRegex := regexp.MustCompile(`[a-z]+:\/\/[^\/]+\/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
-		output, err := GitTransformURL(targetBaseURL, match, pushUser)
+		output, err := GitURL(targetBaseURL, match, pushUser)
 		if err != nil {
 			logger("Unable to transform the git url, using the original url we have: %s", match)
 			return match
@@ -43,8 +43,8 @@ func GitURLSplitRef(sourceURL string) (string, string, error) {
 	return gitURLNoRef, refPlain, nil
 }
 
-// GitTransformURLtoFolderName takes a git url and returns the folder name for the repo in the Zarf package.
-func GitTransformURLtoFolderName(sourceURL string) (string, error) {
+// GitURLtoFolderName takes a git url and returns the folder name for the repo in the Zarf package.
+func GitURLtoFolderName(sourceURL string) (string, error) {
 	get, err := helpers.MatchRegex(gitURLRegex, sourceURL)
 
 	if err != nil {
@@ -64,8 +64,8 @@ func GitTransformURLtoFolderName(sourceURL string) (string, error) {
 	return newRepoName, nil
 }
 
-// GitTransformURLtoRepoName takes a git url and returns the name of the repo in the remote airgap repository.
-func GitTransformURLtoRepoName(sourceURL string) (string, error) {
+// GitURLtoRepoName takes a git url and returns the name of the repo in the remote airgap repository.
+func GitURLtoRepoName(sourceURL string) (string, error) {
 	get, err := helpers.MatchRegex(gitURLRegex, sourceURL)
 
 	if err != nil {
@@ -86,9 +86,9 @@ func GitTransformURLtoRepoName(sourceURL string) (string, error) {
 	return newRepoName, nil
 }
 
-// GitTransformURL takes a base URL, a source url and a username and returns a Zarf-compatible url.
-func GitTransformURL(targetBaseURL string, sourceURL string, pushUser string) (*url.URL, error) {
-	repoName, err := GitTransformURLtoRepoName(sourceURL)
+// GitURL takes a base URL, a source url and a username and returns a Zarf-compatible url.
+func GitURL(targetBaseURL string, sourceURL string, pushUser string) (*url.URL, error) {
+	repoName, err := GitURLtoRepoName(sourceURL)
 	if err != nil {
 		return nil, err
 	}

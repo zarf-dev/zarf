@@ -111,7 +111,7 @@ func TestGitURLSplitRef(t *testing.T) {
 	}
 }
 
-func TestGitTransformURLtoFolderName(t *testing.T) {
+func TestGitURLtoFolderName(t *testing.T) {
 	var expectedResult = []string{
 		// Normal git repos and references for pushing/pulling
 		"twistlock-1590638614",
@@ -139,18 +139,18 @@ func TestGitTransformURLtoFolderName(t *testing.T) {
 	}
 
 	for idx, url := range gitURLs {
-		repoFolder, err := GitTransformURLtoFolderName(url)
+		repoFolder, err := GitURLtoFolderName(url)
 		require.NoError(t, err)
 		require.Equal(t, expectedResult[idx], repoFolder)
 	}
 
 	for _, url := range badGitURLs {
-		_, err := GitTransformURLtoFolderName(url)
+		_, err := GitURLtoFolderName(url)
 		require.Error(t, err)
 	}
 }
 
-func TestGitTransformURLtoRepoName(t *testing.T) {
+func TestGitURLtoRepoName(t *testing.T) {
 	var expectedResult = []string{
 		// Normal git repos and references for pushing/pulling
 		"twistlock-97328248",
@@ -178,18 +178,18 @@ func TestGitTransformURLtoRepoName(t *testing.T) {
 	}
 
 	for idx, url := range gitURLs {
-		repoName, err := GitTransformURLtoRepoName(url)
+		repoName, err := GitURLtoRepoName(url)
 		require.NoError(t, err)
 		require.Equal(t, expectedResult[idx], repoName)
 	}
 
 	for _, url := range badGitURLs {
-		_, err := GitTransformURLtoRepoName(url)
+		_, err := GitURLtoRepoName(url)
 		require.Error(t, err)
 	}
 }
 
-func TestGitTransformURL(t *testing.T) {
+func TestGitURL(t *testing.T) {
 	var expectedResult = []string{
 		// Normal git repos and references for pushing/pulling
 		"https://gitlab.com/repo-owner/twistlock-97328248.git",
@@ -217,13 +217,13 @@ func TestGitTransformURL(t *testing.T) {
 	}
 
 	for idx, url := range gitURLs {
-		repoURL, err := GitTransformURL("https://gitlab.com", url, "repo-owner")
+		repoURL, err := GitURL("https://gitlab.com", url, "repo-owner")
 		require.NoError(t, err)
 		require.Equal(t, expectedResult[idx], repoURL.String())
 	}
 
 	for _, url := range badGitURLs {
-		_, err := GitTransformURL("https://gitlab.com", url, "repo-owner")
+		_, err := GitURL("https://gitlab.com", url, "repo-owner")
 		require.Error(t, err)
 	}
 }
