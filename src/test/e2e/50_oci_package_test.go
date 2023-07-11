@@ -122,6 +122,11 @@ func (suite *RegistryClientTestSuite) Test_3_Inspect() {
 	// Test inspect w/ bad ref.
 	_, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+badRef.String(), "--insecure")
 	suite.Error(err, stdErr)
+
+	// Test inspect on a public package.
+	// NOTE: This also makes sure that Zarf does not attempt auth when inspecting a public package.
+	_, stdErr, err = e2e.Zarf("package", "inspect", "oci://ghcr.io/defenseunicorns/packages/dubbd-k3d:0.3.0-amd64")
+	suite.NoError(err, stdErr)
 }
 
 func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {

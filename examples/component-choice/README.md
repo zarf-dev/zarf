@@ -22,4 +22,4 @@ To view the example in its entirety, select the `Edit this page` link below the 
 
 :::
 
-<ExampleYAML example="component-choice" showLink={false} />
+<ExampleYAML src={require('./zarf.yaml')} showLink={false} />

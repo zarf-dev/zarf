@@ -506,7 +506,7 @@ export interface ZarfComponentActionWait {
  */
 export interface ZarfComponentActionWaitCluster {
     /**
-     * The condition to wait for; defaults to exist
+     * The condition or jsonpath state to wait for; defaults to exist
      */
     condition?: string;
     /**

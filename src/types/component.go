@@ -185,7 +185,7 @@ type ZarfComponentActionWaitCluster struct {
 	Kind       string `json:"kind" jsonschema:"description=The kind of resource to wait for,example=Pod,example=Deployment)"`
 	Identifier string `json:"name" jsonschema:"description=The name of the resource or selector to wait for,example=podinfo,example=app&#61;podinfo"`
 	Namespace  string `json:"namespace,omitempty" jsonschema:"description=The namespace of the resource to wait for"`
-	Condition  string `json:"condition,omitempty" jsonschema:"description=The condition to wait for; defaults to exist, a special condition that will wait for the resource to exist,example=Ready,example=Available"`
+	Condition  string `json:"condition,omitempty" jsonschema:"description=The condition or jsonpath state to wait for; defaults to exist, a special condition that will wait for the resource to exist,example=Ready,example=Available,'{.status.availableReplicas}'=23"`
 }
 
 // ZarfComponentActionWaitNetwork specifies a condition to wait for before continuing

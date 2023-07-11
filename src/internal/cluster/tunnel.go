@@ -28,6 +28,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -167,7 +168,7 @@ func ServiceInfoFromServiceURL(serviceURL string) (*ServiceInfo, error) {
 
 	// Match hostname against local cluster service format.
 	pattern := regexp.MustCompile(serviceURLPattern)
-	get, err := utils.MatchRegex(pattern, parsedURL.Hostname())
+	get, err := helpers.MatchRegex(pattern, parsedURL.Hostname())
 
 	// If incomplete match, return an error.
 	if err != nil {
@@ -367,6 +368,10 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 		tunnel.namespace = svc.Namespace
 		// Only support a service with a single port.
 		tunnel.remotePort = svc.Spec.Ports[0].TargetPort.IntValue()
+		// if targetPort == 0, look for Port (which is required)
+		if tunnel.remotePort == 0 {
+			tunnel.findPodContainerPort(svc)
+		}
 
 		// Add the url suffix too.
 		tunnel.urlSuffix = svc.Annotations[config.ZarfConnectAnnotationURL]
@@ -516,8 +521,7 @@ func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
 	if len(servicePods) < 1 {
 		return "", fmt.Errorf("no pods found for service %s", tunnel.resourceName)
 	}
-
-	return servicePods[0], nil
+	return servicePods[0].Name, nil
 }
 
 // makeLabels is a helper to format a map of label key and value pairs into a single string for use as a selector.
@@ -527,4 +531,24 @@ func makeLabels(labels map[string]string) string {
 		out = append(out, fmt.Sprintf("%s=%s", key, value))
 	}
 	return strings.Join(out, ",")
+}
+
+// findPodTargetPort will find the container port in the pod and assign it to tunnel's remotePort.
+func (tunnel *Tunnel) findPodContainerPort(svc v1.Service) {
+	selectorLabelsOfPods := makeLabels(svc.Spec.Selector)
+	pods := tunnel.kube.WaitForPodsAndContainers(k8s.PodLookup{
+		Namespace: svc.Namespace,
+		Selector:  selectorLabelsOfPods,
+	}, nil)
+
+	for _, pod := range pods {
+		// Find the matching name on the port in the pod
+		for _, container := range pod.Spec.Containers {
+			for _, port := range container.Ports {
+				if port.Name == svc.Spec.Ports[0].TargetPort.String() {
+					tunnel.remotePort = int(port.ContainerPort)
+				}
+			}
+		}
+	}
 }

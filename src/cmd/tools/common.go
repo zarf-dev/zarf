@@ -10,7 +10,8 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
 )
 
@@ -35,6 +36,7 @@ var toolsCmd = &cobra.Command{
 	Aliases: []string{"t"},
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		config.SkipLogFile = true
+		exec.ExitOnInterrupt()
 	},
 	Short: lang.CmdToolsShort,
 }
@@ -61,7 +63,7 @@ func CheckVendorOnlyFromPath(cmd *cobra.Command) bool {
 func isVendorCmd(args []string, vendoredCmds []string) bool {
 	if len(args) > 2 {
 		if args[1] == "tools" || args[1] == "t" {
-			if utils.SliceContains(vendoredCmds, args[2]) {
+			if helpers.SliceContains(vendoredCmds, args[2]) {
 				return true
 			}
 		}

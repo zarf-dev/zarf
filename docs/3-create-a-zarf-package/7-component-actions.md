@@ -84,20 +84,20 @@ Below are some examples of putting together simple actions at various points in 
 
 Below is a simple example of an `onCreate` action set that declares `defaults` as well as `before` and `after` action lists:
 
-<ExampleYAML example="component-actions" component="on-create" />
+<ExampleYAML src={require('../../examples/component-actions/zarf.yaml')} component="on-create" />
 </TabItem>
 <TabItem value="Failure Handling onDeploy">
 
 Below is an example of an `onDeploy` action set that demonstrates how you can use `onFailure` actions to perform cleanup tasks or user messaging when an action of component lifecycle step fails:
 
-<ExampleYAML example="component-actions" component="on-deploy-with-timeout" />
+<ExampleYAML src={require('../../examples/component-actions/zarf.yaml')} component="on-deploy-with-timeout" />
 </TabItem>
 <TabItem value="Wait for a Resource">
 
 Below are examples of waiting for resources to exist or be available within an action using `wait` actions:
 
-<ExampleYAML example="component-actions" component="on-create-with-network-wait-action" />
-<ExampleYAML example="component-actions" component="on-deploy-with-wait-action" showLink={false} />
+<ExampleYAML src={require('../../examples/component-actions/zarf.yaml')} component="on-create-with-network-wait-action" />
+<ExampleYAML src={require('../../examples/component-actions/zarf.yaml')} component="on-deploy-with-wait-action" showLink={false} />
 </TabItem>
 </Tabs>
 
@@ -126,14 +126,14 @@ Unlike normal variables, `setVariables` do not need to be defined with the `vari
 
 :::
 
-<ExampleYAML example="component-actions" component="on-deploy-with-multiple-variables" />
+<ExampleYAML src={require('../../examples/component-actions/zarf.yaml')} component="on-deploy-with-multiple-variables" />
 
 </TabItem>
 <TabItem value="Zarf in Zarf onRemove">
 
 Below is an example of an `onRemove` action set that demonstrates how you can use `./zarf `&nbsp;to use Zarf commands like `zarf tools kubectl` to perform actions on systems that might not have the pre-requisite software (like `kubectl`) installed onto them:
 
-<ExampleYAML example="component-actions" component="on-remove" />
+<ExampleYAML src={require('../../examples/component-actions/zarf.yaml')} component="on-remove" />
 
 </TabItem>
 </Tabs>
@@ -150,7 +150,7 @@ Below are a few more use cases from other `examples` and `packages` for how acti
 
 The below example shows the `kiwix-serve` component from the data injections example which downloads a `.zim` file with an `onCreate.before` action for inclusion into the Zarf package.
 
-<ExampleYAML example="kiwix" component="kiwix-serve" />
+<ExampleYAML src={require('../../examples/kiwix/zarf.yaml')} component="kiwix-serve" />
 
 </TabItem>
 
@@ -159,8 +159,8 @@ The below example shows the `kiwix-serve` component from the data injections exa
 
 The below example includes the `eksctl` binary and `eks.yaml` file in one component, setting it up in an `onDeploy.after` action and then uses the `eksctl` binary in a second component to create an EKS cluster in an `onDeploy.before` action.
 
-<ExampleYAML example="distros/eks" component="load-eksctl" rootFolder="packages" />
-<ExampleYAML example="distros/eks" component="deploy-eks-cluster" rootFolder="packages" showLink={false} />
+<ExampleYAML src={require('../../packages/distros/eks/zarf.yaml')} component="load-eksctl" />
+<ExampleYAML src={require('../../packages/distros/eks/zarf.yaml')} component="deploy-eks-cluster" showLink={false} />
 
 </TabItem>
 
@@ -168,7 +168,7 @@ The below example includes the `eksctl` binary and `eks.yaml` file in one compon
 
 The below example shows using a `wait` command to wait for a GitOps deployment to happen after Zarf configures the initial `GitRepository` manifest.  By default Zarf will only track the resources it directly deploys, but adding a `wait` action allows you to control the lifecycle more directly.
 
-<ExampleYAML example="podinfo-flux" component="podinfo-via-flux" />
+<ExampleYAML src={require('../../examples/podinfo-flux/zarf.yaml')} component="podinfo-via-flux" />
 
 </TabItem>
 

@@ -41,7 +41,7 @@ func (suite *OCIDifferentialSuite) SetupSuite() {
 	differentialPackageName = fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0-differential-v0.25.0.tar.zst", e2e.Arch)
 	normalPackageName = fmt.Sprintf("zarf-package-podinfo-with-oci-flux-%s-v0.24.0.tar.zst", e2e.Arch)
 
-	_ = e2e.SetupDockerRegistry(suite.T(), 555)
+	e2e.SetupDockerRegistry(suite.T(), 555)
 	suite.Reference.Registry = "localhost:555"
 }
 
