@@ -85,24 +85,26 @@ func testPull(t *testing.T) {
 	err = json.Unmarshal(b, &index)
 	require.NoError(t, err)
 
-	require.Equal(t, 2, len(index.Manifests))
+	require.Equal(t, 3, len(index.Manifests))
 
-	// for _, desc := range index.Manifests {
-	// 	sha := desc.Digest.Encoded()
-	// 	shasMatch(t, filepath.Join(blobsDir, sha), desc.Digest.Encoded())
+	blobsDir := filepath.Join(decompressed, "blobs", "sha256")
 
-	// 	manifest := ocispec.Manifest{}
-	// 	b, err := os.ReadFile(filepath.Join(blobsDir, sha))
-	// 	require.NoError(t, err)
-	// 	err = json.Unmarshal(b, &manifest)
-	// 	require.NoError(t, err)
+	for _, desc := range index.Manifests {
+		sha := desc.Digest.Encoded()
+		shasMatch(t, filepath.Join(blobsDir, sha), desc.Digest.Encoded())
 
-	// 	require.FileExists(t, filepath.Join(blobsDir, manifest.Config.Digest.Encoded()))
+		manifest := ocispec.Manifest{}
+		b, err := os.ReadFile(filepath.Join(blobsDir, sha))
+		require.NoError(t, err)
+		err = json.Unmarshal(b, &manifest)
+		require.NoError(t, err)
 
-	// 	for _, layer := range manifest.Layers {
-	// 		sha := layer.Digest.Encoded()
-	// 		require.FileExists(t, filepath.Join(blobsDir, sha))
-	// 		shasMatch(t, filepath.Join(blobsDir, sha), layer.Digest.Encoded())
-	// 	}
-	// }
+		// require.FileExists(t, filepath.Join(blobsDir, manifest.Config.Digest.Encoded()))
+
+		for _, layer := range manifest.Layers {
+			sha := layer.Digest.Encoded()
+			require.FileExists(t, filepath.Join(blobsDir, sha))
+			shasMatch(t, filepath.Join(blobsDir, sha), layer.Digest.Encoded())
+		}
+	}
 }

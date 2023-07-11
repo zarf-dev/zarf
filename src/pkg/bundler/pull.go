@@ -16,7 +16,7 @@ import (
 
 // Pull pulls a bundle and saves it locally + caches it
 //
-// : retrieve the `zarf-bundle.yaml`, `index.json`, and `zarf.yaml.sig`
+// : retrieve the `zarf-bundle.yaml`, and `zarf-bundle.yaml.sig`
 // : verify sigs / checksums
 // : pull the bundle and tarball it up
 func (b *Bundler) Pull() error {

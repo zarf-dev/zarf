@@ -25,11 +25,11 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 	}
 	ref := o.repo.Reference
 	message.Debug("Bundling", bundle.Metadata.Name, "to", ref)
-	index := ocispec.Index{}
-	index.SchemaVersion = 2
+
+	manifest := ocispec.Manifest{}
 
 	for _, pkg := range bundle.Packages {
-		url := fmt.Sprintf("%s:%s-%s", pkg.Repository, pkg.Ref, bundle.Metadata.Architecture)
+		url := fmt.Sprintf("%s:%s", pkg.Repository, pkg.Ref)
 		remote, err := NewOrasRemote(url)
 		if err != nil {
 			return err
@@ -47,12 +47,10 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 		if err != nil {
 			return err
 		}
-		// add the package name to the manifest's annotations to make it easier to find
-		manifestDesc.Annotations = map[string]string{
-			ocispec.AnnotationBaseImageName: url,
-		}
+		// hack the media type to be a manifest
+		manifestDesc.MediaType = ocispec.MediaTypeImageManifest
 		message.Debugf("Pushed %s sub-manifest into %s: %s", url, ref, message.JSONValue(manifestDesc))
-		index.Manifests = append(index.Manifests, manifestDesc)
+		manifest.Layers = append(manifest.Layers, manifestDesc)
 		// stream copy the blobs from remote to o, otherwise do a blob mount
 		if remote.repo.Reference.Registry != o.repo.Reference.Registry {
 			message.Debugf("Streaming layers from %s --> %s", remote.repo.Reference, o.repo.Reference)
@@ -74,23 +72,6 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 			spinner.Successf("Mounted %d layers", len(includingConfig))
 		}
 	}
-	// push the index.json
-	indexBytes, err := json.Marshal(index)
-	if err != nil {
-		return err
-	}
-	indexDesc, err := o.PushLayer(indexBytes, ZarfLayerMediaTypeBlob)
-	if err != nil {
-		return err
-	}
-	message.Debug("Pushed index.json:", message.JSONValue(indexDesc))
-	// for easier debugging, add an annotation to the index.json layer
-	indexDesc.Annotations = map[string]string{
-		ocispec.AnnotationTitle: "index.json",
-	}
-
-	manifest := ocispec.Manifest{}
-	manifest.Layers = append(manifest.Layers, indexDesc)
 
 	// push the zarf-bundle.yaml
 	zarfBundleYamlBytes, err := goyaml.Marshal(bundle)

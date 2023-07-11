@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
@@ -139,4 +140,9 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 // Repo gives you access to the underlying remote repository
 func (o *OrasRemote) Repo() *remote.Repository {
 	return o.repo
+}
+
+// ResolveRoot returns the root descriptor for the remote repository
+func (o *OrasRemote) ResolveRoot() (ocispec.Descriptor, error) {
+	return o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
 }

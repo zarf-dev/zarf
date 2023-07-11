@@ -6,11 +6,8 @@ package oci
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -19,10 +16,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
+	"oras.land/oras-go/v2/content/oci"
 )
 
 var (
@@ -130,7 +127,6 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	isPartialPull := len(layersToPull) > 0
 	ref := o.repo.Reference
 
-	pterm.Println()
 	message.Debug("Pulling", ref)
 
 	manifest, err := o.FetchRoot()
@@ -138,7 +134,6 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 		return partialPaths, err
 	}
 
-	estimatedBytes := int64(0)
 	if isPartialPull {
 		for _, path := range PackageAlwaysPull {
 			exists := false
@@ -152,13 +147,10 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 				layersToPull = append(layersToPull, desc)
 			}
 		}
-		for _, desc := range layersToPull {
-			estimatedBytes += desc.Size
-		}
 	} else {
-		estimatedBytes = manifest.SumLayersSize()
+		layersToPull = append(layersToPull, manifest.Layers...)
 	}
-	estimatedBytes += manifest.Config.Size
+	layersToPull = append(layersToPull, manifest.Config)
 
 	dst, err := file.New(destinationDir)
 	if err != nil {
@@ -169,31 +161,43 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 	if isPartialPull {
-		shas := []string{}
 		for _, layer := range layersToPull {
 			path := layer.Annotations[ocispec.AnnotationTitle]
 			if len(path) > 0 {
 				partialPaths = append(partialPaths, path)
 			}
-			if len(layer.Digest.String()) > 0 {
-				shas = append(shas, layer.Digest.Encoded())
-			}
 		}
 		partialPaths = helpers.Unique(partialPaths)
+	}
 
-		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-			nodes, err := content.Successors(ctx, fetcher, desc)
-			if err != nil {
-				return nil, err
-			}
-			var ret []ocispec.Descriptor
-			for _, node := range nodes {
-				if helpers.SliceContains(shas, node.Digest.Encoded()) {
-					ret = append(ret, node)
-				}
-			}
-			return ret, nil
+	return partialPaths, o.copyWithProgress(layersToPull, dst, &copyOpts, destinationDir)
+}
+
+func (o *OrasRemote) copyWithProgress(layers []ocispec.Descriptor, store oras.Target, copyOpts *oras.CopyOptions, destinationDir string) error {
+	estimatedBytes := int64(0)
+	shas := []string{}
+	for _, layer := range layers {
+		estimatedBytes += layer.Size
+		if len(layer.Digest.String()) > 0 {
+			shas = append(shas, layer.Digest.Encoded())
 		}
+	}
+
+	copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+		if desc.MediaType != ocispec.MediaTypeImageManifest {
+			return nil, nil
+		}
+		nodes, err := content.Successors(ctx, fetcher, desc)
+		if err != nil {
+			return nil, err
+		}
+		var ret []ocispec.Descriptor
+		for _, node := range nodes {
+			if helpers.SliceContains(shas, node.Digest.Encoded()) {
+				ret = append(ret, node)
+			}
+		}
+		return ret, nil
 	}
 
 	// Create a thread to update a progress bar as we save the package to disk
@@ -201,19 +205,16 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling")
-	_, err = oras.Copy(o.ctx, o.repo, ref.String(), dst, ref.String(), copyOpts)
+	_, err := oras.Copy(o.ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), *copyOpts)
 	if err != nil {
-		return partialPaths, err
+		return err
 	}
 
 	// Send a signal to the progress bar that we're done and wait for it to finish
 	doneSaving <- 1
 	wg.Wait()
 
-	message.Debugf("Pulled %s", ref)
-	message.Successf("Pulled %s", ref)
-
-	return partialPaths, nil
+	return nil
 }
 
 // PullLayer pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
@@ -264,50 +265,44 @@ func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requeste
 		return err
 	}
 
-	// fetch the index.json
-	indexBytes, err := os.ReadFile(filepath.Join(destinationDir, "index.json"))
-	if err != nil {
-		return err
-	}
-	index := ocispec.Index{}
-	err = json.Unmarshal(indexBytes, &index)
-	if err != nil {
+	// TODO: validate the bundle signature
+
+	var bundle types.ZarfBundle
+
+	if err := utils.ReadYaml(filepath.Join(destinationDir, config.ZarfBundleYAML), &bundle); err != nil {
 		return err
 	}
 
-	packageManifests := make(map[string]ZarfOCIManifest)
+	layersToPull := []ocispec.Descriptor{}
 
-	// TODO: is this really the best way to do this?
-	sanitizeRefForDirname := func(ref string) string {
-		return strings.ReplaceAll(strings.ReplaceAll(ref, "/", "-"), ":", "-")
-	}
-
-	// map the package names to their manifests
-	for _, manifestDesc := range index.Manifests {
-		manifest, err := o.FetchManifest(manifestDesc)
-		if err != nil {
-			return err
-		}
-		// the "repo:ref" is stored in the manifest's basename annotation
-		pkgRef := manifestDesc.Annotations[ocispec.AnnotationBaseImageName]
-		cleaned := sanitizeRefForDirname(pkgRef)
-		packageManifests[cleaned] = *manifest
-	}
-
-	for pkg, manifest := range packageManifests {
-		if !isPartial || helpers.SliceContains(requestedPackages, pkg) {
-			pkgDestinationDir := filepath.Join(destinationDir, pkg)
-			// TODO: are these the right perms?
-			if err := utils.CreateDirectory(pkgDestinationDir, 0755); err != nil {
-				return err
-			}
-			_, err := o.PullPackage(pkgDestinationDir, concurrency, manifest.Layers...)
+	for _, pkg := range bundle.Packages {
+		// TODO: figure out how to handle partial pulls for bundles
+		if !isPartial || helpers.SliceContains(requestedPackages, pkg.Repository) {
+			url := fmt.Sprintf("%s:%s", o.repo.Reference, pkg.Ref)
+			manifestDesc, err := o.repo.Blobs().Resolve(o.ctx, url)
+			manifestDesc.MediaType = ocispec.MediaTypeImageManifest
 			if err != nil {
 				return err
 			}
-			// TODO: run checksum validation here
-			// TODO: run signature validation here
+			manifest, err := o.FetchManifest(manifestDesc)
+			if err != nil {
+				return err
+			}
+			layersToPull = append(layersToPull, manifestDesc)
+			layersToPull = append(layersToPull, manifest.Layers...)
 		}
+	}
+
+	copyOpts := o.CopyOpts
+	copyOpts.Concurrency = concurrency
+
+	store, err := oci.NewWithContext(o.ctx, destinationDir)
+	if err != nil {
+		return err
+	}
+
+	if err := o.copyWithProgress(layersToPull, store, &copyOpts, destinationDir); err != nil {
+		return err
 	}
 
 	return nil

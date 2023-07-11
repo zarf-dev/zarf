@@ -117,6 +117,21 @@ func (b *Bundler) ValidateBundle() error {
 		return fmt.Errorf("zarf-bundle.yaml is missing required list: packages")
 	}
 	for idx, pkg := range b.bundle.Packages {
+		url := fmt.Sprintf("%s:%s-%s", pkg.Repository, pkg.Ref, b.bundle.Metadata.Architecture)
+		// validate access to packages as well as components referenced in the package
+		remote, err := oci.NewOrasRemote(url)
+		if err != nil {
+			return err
+		}
+
+		manifestDesc, err := remote.ResolveRoot()
+		if err != nil {
+			return err
+		}
+
+		// mutate the ref to <tag>-<arch>@sha256:<digest> so we can reference it later
+		b.bundle.Packages[idx].Ref = pkg.Ref + "-" + b.bundle.Metadata.Architecture + "@sha256:" + manifestDesc.Digest.Encoded()
+
 		message.Debug("Validating package:", message.JSONValue(pkg))
 
 		tmp, err := utils.MakeTempDir("")
@@ -131,15 +146,11 @@ func (b *Bundler) ValidateBundle() error {
 		if pkg.Ref == "" {
 			return fmt.Errorf("zarf-bundle.yaml .packages[%s] is missing required field: ref", pkg.Repository)
 		}
-		url := fmt.Sprintf("%s:%s-%s", pkg.Repository, pkg.Ref, b.bundle.Metadata.Architecture)
-		// validate access to packages as well as components referenced in the package
-		remote, err := oci.NewOrasRemote(url)
-		if err != nil {
-			return err
-		}
+
 		if err := remote.PullPackageMetadata(tmp); err != nil {
 			return err
 		}
+
 		if err := packager.ValidatePackageSignature(tmp, pkg.PublicKey); err != nil {
 			return err
 		}
