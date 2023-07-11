@@ -13,7 +13,7 @@ zarf tools registry catalog REGISTRY [flags]
 
 	# list the repos internal to Zarf
 	$ zarf tools registry catalog
-  
+
 	# list the repos for reg.example.com
 	$ zarf tools registry catalog reg.example.com
 
@@ -38,3 +38,4 @@ zarf tools registry catalog REGISTRY [flags]
 ## SEE ALSO
 
 * [zarf tools registry](zarf_tools_registry.md)	 - Tools for working with container registries using go-containertools
+
