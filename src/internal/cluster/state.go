@@ -143,6 +143,8 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 		return fmt.Errorf("unable to save the Zarf state: %w", err)
 	}
 
+	c.UpdateZarfManagedSecrets(state)
+
 	return nil
 }
 

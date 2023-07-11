@@ -42,7 +42,7 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, []error) {
 
 	}
 
-    // TODO: If we move this function out of `internal` we should return a more standard singular error.
+	// TODO: If we move this function out of `internal` we should return a more standard singular error.
 	return deployedPackages, errorList
 }
 
@@ -84,14 +84,12 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 				}
 			}
 
-			for _, namespace := range namespaces.Items {
-				spinner.Updatef("Removing Zarf secrets for namespace %s", namespace.Name)
-				err := c.Kube.Clientset.CoreV1().
-					Secrets(namespace.Name).
-					DeleteCollection(context.TODO(), deleteOptions, listOptions)
-				if err != nil {
-					spinner.Errorf(err, "Unable to delete secrets from namespace %s", namespace.Name)
-				}
+			spinner.Updatef("Removing Zarf secrets for namespace %s", namespace.Name)
+			err := c.Kube.Clientset.CoreV1().
+				Secrets(namespace.Name).
+				DeleteCollection(context.TODO(), deleteOptions, listOptions)
+			if err != nil {
+				spinner.Errorf(err, "Unable to delete secrets from namespace %s", namespace.Name)
 			}
 		}
 	}
