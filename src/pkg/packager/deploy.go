@@ -119,7 +119,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 	// Save off a secret stating that a package is in the process of being deployed
 	var packageSecret *corev1.Secret
-	if p.cluster != nil {
+	if p.cluster != nil && !p.cfg.IsInitConfig {
 		if packageSecret, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, types.PackageStatusDeploying); err != nil || packageSecret == nil {
 			return deployedComponents, fmt.Errorf("unable to record package deployment (before deployment has completed): %w", err)
 		}
