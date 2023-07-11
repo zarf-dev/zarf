@@ -48,15 +48,21 @@ zarf package deploy
 ? Deploy this Zarf package? (y/N) [y]
 ```
 
-Port-forward the Prometheus Operator's Prometheus instance:
+Wait for the `prometheus-k8s` StatefulSet's replica to become ready:
 
 ```bash
-zarf connect --name=prometheus-operated --namespace monitoring --local-port 9090 --remote-port=9090
+zarf tools wait-for sts prometheus-k8s '{.status.availableReplicas}'=1 -n monitoring
 ```
 
-Navigate to the [Prometheus UI targets](http://localhost:9090/targets) at http://localhost:9090/targets.
+Port-forward the Prometheus Operator's Prometheus instance in the Prometheus UI , then click `Status` => `Targets`.:
 
-Checkout metrics emitted by the Zarf Agent by querying against the `agent-hook` job. Click this [link](http://localhost:9090/graph?g0.expr=%7Bjob%3D%22agent-hook%22%7D&g0.tab=1&g0.stacked=0&g0.show_exemplars=0&g0.range_input=1h) to see the Zarf Agent metrics while port-forwarding.
+```bash
+zarf connect prometheus-operated-agent
+```
+
+<!-- Navigate to the [Prometheus UI targets](http://localhost:9090/targets) at http://localhost:9090/targets.
+
+Checkout metrics emitted by the Zarf Agent by querying against the `agent-hook` job. Click this [link](http://localhost:9090/graph?g0.expr=%7Bjob%3D%22agent-hook%22%7D&g0.tab=1&g0.stacked=0&g0.show_exemplars=0&g0.range_input=1h) to see the Zarf Agent metrics while port-forwarding. -->
 
 
 ## `zarf.yaml` {#zarf.yaml}

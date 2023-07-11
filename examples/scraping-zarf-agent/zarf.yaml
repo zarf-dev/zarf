@@ -48,15 +48,7 @@ components:
         - manifests/prometheus-operator/clusterrole.yaml
         - manifests/prometheus-operator/clusterrolebinding.yaml
         - manifests/prometheus-operator/service.yaml
+        - manifests/prometheus-operator/service-account.yaml
     images:
       - quay.io/prometheus/prometheus:v2.45.0
       - quay.io/prometheus-operator/prometheus-config-reloader:v0.66.0
-    actions:
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: statefulset
-                name: prometheus-k8s
-                namespace: monitoring
-                condition: '{status.readyReplicas}'=1
