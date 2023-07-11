@@ -22,7 +22,6 @@ import (
 func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd string) error {
 	ref := o.repo.Reference
 	message.Debug("Bundling", bundle.Metadata.Name, "to", ref)
-	layers := []ocispec.Descriptor{}
 	index := ocispec.Index{}
 	index.SchemaVersion = 2
 
@@ -64,7 +63,6 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 			for _, layer := range includingConfig {
 				spinner.Updatef("Mounting %s", layer.Digest.Encoded())
 				if err := o.repo.Mount(o.ctx, layer, remote.repo.Reference.Repository, func() (io.ReadCloser, error) {
-					// TODO: how does this handle auth?
 					return remote.repo.Fetch(o.ctx, layer)
 				}); err != nil {
 					return err
@@ -72,9 +70,6 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 			}
 			spinner.Successf("Mounted %d layers", len(includingConfig))
 		}
-		layers = append(layers, root.Layers...)
-		layers = append(layers, manifestDesc)
-		layers = append(layers, root.Config)
 	}
 	// push the index.json
 	indexBytes, err := json.Marshal(index)
@@ -86,13 +81,12 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, sigPath string, sigPsswd s
 		return err
 	}
 	message.Debug("Pushed index.json:", message.JSONValue(indexDesc))
-	// when doing an oras.Copy, the annotation title is used as the filepath to download to
+	// for easier debugging, add an annotation to the index.json layer
 	indexDesc.Annotations = map[string]string{
 		ocispec.AnnotationTitle: "index.json",
 	}
 
 	manifest := ocispec.Manifest{}
-	manifest.Layers = layers
 	manifest.Layers = append(manifest.Layers, indexDesc)
 
 	// push the zarf-bundle.yaml

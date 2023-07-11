@@ -2,7 +2,6 @@ metadata:
   name: bundle
   description: a bundle
   version: 0.0.1
-  # architecture: amd64
 
 packages:
   - repository: localhost:888/init

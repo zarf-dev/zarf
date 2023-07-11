@@ -29,12 +29,25 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 		size += layer.Size
 	}
 
-	title := fmt.Sprintf("Copying from %s to %s", src.repo.Reference, dst.repo.Reference)
+	title := fmt.Sprintf("[0/%d] layers copied", len(layers))
 	progressBar := message.NewProgressBar(size, title)
-	defer progressBar.Successf("%s into %s", src.repo.Reference, dst.repo.Reference)
+	defer progressBar.Successf("%s --> %s", src.repo.Reference, dst.repo.Reference)
 
 	// TODO: goroutine this w/ semaphores
-	for _, layer := range layers {
+	for idx, layer := range layers {
+		message.Debug("Copying layer:", message.JSONValue(layer))
+
+		exists, err := dst.repo.Exists(ctx, layer)
+		if err != nil {
+			return err
+		}
+		if exists {
+			message.Debug("Layer already exists in destination, skipping")
+			progressBar.UpdateTitle(fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
+			progressBar.Add(int(layer.Size))
+			continue
+		}
+
 		pr, pw := io.Pipe()
 
 		wg := sync.WaitGroup{}
@@ -73,6 +86,7 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 
 		// wait for the goroutines to finish
 		wg.Wait()
+		progressBar.UpdateTitle(fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
 	}
 
 	return nil
