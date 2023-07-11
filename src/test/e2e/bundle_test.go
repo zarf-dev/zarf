@@ -90,6 +90,10 @@ func testPull(t *testing.T) {
 	blobsDir := filepath.Join(decompressed, "blobs", "sha256")
 
 	for _, desc := range index.Manifests {
+		if desc.Annotations[ocispec.AnnotationRefName] == ref {
+			// skip the bundle manifest
+			continue
+		}
 		sha := desc.Digest.Encoded()
 		shasMatch(t, filepath.Join(blobsDir, sha), desc.Digest.Encoded())
 
@@ -103,7 +107,7 @@ func testPull(t *testing.T) {
 
 		for _, layer := range manifest.Layers {
 			sha := layer.Digest.Encoded()
-			require.FileExists(t, filepath.Join(blobsDir, sha))
+			require.FileExists(t, filepath.Join(blobsDir, sha), fmt.Sprintf("%#+v", layer))
 			shasMatch(t, filepath.Join(blobsDir, sha), layer.Digest.Encoded())
 		}
 	}
