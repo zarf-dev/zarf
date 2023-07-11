@@ -9,19 +9,23 @@ import "github.com/defenseunicorns/zarf/src/pkg/k8s"
 type PackageStatus string
 
 const (
-	PackageStatusDeployed  PackageStatus = "deployed"
-	PackageStatusFailed    PackageStatus = "failed"
-	PackageStatusDeploying PackageStatus = "deploying"
-	PackageStatusRemoving  PackageStatus = "removing"
+	PackageStatusDeployed      PackageStatus = "deployed"
+	PackageStatusFailed        PackageStatus = "failed"
+	PackageStatusDeploying     PackageStatus = "deploying"
+	PackageStatusPendingDeploy PackageStatus = "pending-deploy"
+	PackageStatusFinalizing    PackageStatus = "finalizing"
+	PackageStatusRemoving      PackageStatus = "removing"
 )
 
 type ComponentStatus string
 
 const (
-	ComponentStatusDeployed  ComponentStatus = "deployed"
-	ComponentStatusFailed    ComponentStatus = "failed"
-	ComponentStatusDeploying ComponentStatus = "deploying"
-	ComponentStatusRemoving  ComponentStatus = "removing"
+	ComponentStatusDeployed      ComponentStatus = "deployed"
+	ComponentStatusFailed        ComponentStatus = "failed"
+	ComponentStatusDeploying     ComponentStatus = "deploying"
+	ComponentStatusPendingDeploy ComponentStatus = "pending-deploy"
+	ComponentStatusFinalizing    ComponentStatus = "finalizing"
+	ComponentStatusRemoving      ComponentStatus = "removing"
 )
 
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data.

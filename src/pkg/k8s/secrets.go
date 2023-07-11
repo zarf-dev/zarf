@@ -77,33 +77,19 @@ func (k *K8s) DeleteSecret(secret *corev1.Secret) error {
 	return nil
 }
 
-// CreateSecret creates a Kubernetes secret.
-func (k *K8s) CreateSecret(secret *corev1.Secret) (*corev1.Secret, error) {
-	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
-
-	// create the given secret
-	var createdSecret *corev1.Secret
-	if createdSecret, err := namespaceSecrets.Create(context.TODO(), secret, metav1.CreateOptions{}); err != nil {
-		return createdSecret, fmt.Errorf("unable to create the secret: %w", err)
-	}
-
-	return createdSecret, nil
-}
-
 // CreateOrUpdateSecret creates or updates a Kubernetes secret.
-func (k *K8s) CreateOrUpdateSecret(secret *corev1.Secret) (*corev1.Secret, error) {
-	var createdSecret *corev1.Secret
+func (k *K8s) CreateOrUpdateSecret(secret *corev1.Secret) (createdSecret *corev1.Secret, err error) {
 
 	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
 
-	if _, err := k.GetSecret(secret.Namespace, secret.Name); err != nil {
+	if _, err = k.GetSecret(secret.Namespace, secret.Name); err != nil {
 		// create the given secret
-		if createdSecret, err := k.CreateSecret(secret); err != nil {
+		if createdSecret, err = namespaceSecrets.Create(context.TODO(), secret, metav1.CreateOptions{}); err != nil {
 			return createdSecret, fmt.Errorf("unable to create the secret: %w", err)
 		}
 	} else {
 		// update the given secret
-		if createdSecret, err := namespaceSecrets.Update(context.TODO(), secret, metav1.UpdateOptions{}); err != nil {
+		if createdSecret, err = namespaceSecrets.Update(context.TODO(), secret, metav1.UpdateOptions{}); err != nil {
 			return createdSecret, fmt.Errorf("unable to update the secret: %w", err)
 		}
 	}

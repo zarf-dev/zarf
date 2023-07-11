@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -97,6 +98,63 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 	}
 
 	spinner.Success()
+}
+
+// PackageSecretNeedsWait checks if the the package status or any of the component statuses are being mutated by a webhook and need to be waited on.
+func (c *Cluster) PackageSecretNeedsWait(secretName string) (bool, error) {
+	// Get the secret that describes the deployed package
+	packageSecret, err := c.Kube.GetSecret(ZarfNamespaceName, secretName)
+	if err != nil {
+		return false, err
+	}
+
+	// Parse the secret
+	var deployedPackage types.DeployedPackage
+	err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage)
+	if err != nil {
+		return false, err
+	}
+
+	// Check if there are any package level statuses that we need to wait for
+	if deployedPackage.Status == types.PackageStatusPendingDeploy || deployedPackage.Status == types.PackageStatusFinalizing {
+		// Wait for the package to be continued
+		return true, nil
+	}
+
+	// Check if there are any component level statuses that we need to wait for
+	for _, component := range deployedPackage.DeployedComponents {
+		if component.Status == types.ComponentStatusPendingDeploy || component.Status == types.ComponentStatusFinalizing {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
+func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, packageStatus types.PackageStatus) (*corev1.Secret, error) {
+
+	packageSecret, err := c.RecordPackageDeployment(pkg, components, connectStrings, packageStatus)
+	if err != nil {
+		return packageSecret, err
+	}
+
+	// Timebox the amount of time we wait for a mutation to finish before erroring
+	timeout := time.After(5 * time.Minute)
+	packageNeedsWait, err := c.PackageSecretNeedsWait(packageSecret.Name)
+	for packageNeedsWait && err == nil {
+		select {
+		// On timeout, abort.
+		case <-timeout:
+			return nil, fmt.Errorf("timed out waiting for package deployment to complete")
+		default:
+			// Wait for 3 seconds before checking the secret again
+			time.Sleep(3 * time.Second)
+			packageNeedsWait, err = c.PackageSecretNeedsWait(packageSecret.Name)
+		}
+	}
+
+	return packageSecret, err
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.

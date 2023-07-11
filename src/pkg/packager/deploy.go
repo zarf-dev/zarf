@@ -91,6 +91,9 @@ func (p *Packager) Deploy() error {
 	// Filter out components that are not compatible with this system
 	p.filterComponents(true)
 
+	// Quickly attempt to load the cluster but ignore any errors because a cluster may not be available
+	p.cluster, _ = cluster.NewCluster()
+
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
 	if err != nil {
@@ -115,17 +118,22 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	}
 
 	// Save off a secret stating that a package is in the process of being deployed
+	var packageSecret *corev1.Secret
 	if p.cluster != nil {
-		// TODO: @JPERRY check to see if the secret has been mutated (ie pepr is trying to do something)
-		if _, err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings, types.PackageStatusDeploying); err != nil {
+		if packageSecret, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, types.PackageStatusDeploying); err != nil || packageSecret == nil {
 			return deployedComponents, fmt.Errorf("unable to record package deployment (before deployment has completed): %w", err)
 		}
 	}
 
 	for idx, component := range componentsToDeploy {
-		// TODO: @JPERRY save the state saying that we are about to
 		deployedComponent := types.DeployedComponent{Name: component.Name, Status: types.ComponentStatusDeploying}
 		deployedComponents = append(deployedComponents, deployedComponent)
+		// Update the package secret to indicate that we are about to deploy this component
+		if p.cluster != nil {
+			if _, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, types.PackageStatusDeploying); err != nil {
+				return nil, err
+			}
+		}
 
 		var charts []types.InstalledChart
 		if p.cfg.IsInitConfig {
@@ -157,11 +165,12 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			if idx == len(componentsToDeploy)-1 {
 				packageStatus = types.PackageStatusDeployed
 			}
-			// TODO: @JPERRY check if the package status has changed? (ie. pepr is modifying something...)
-			_, err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings, packageStatus)
+
+			_, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, packageStatus)
 			if err != nil {
 				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
+
 		}
 
 		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, valueTemplate); err != nil {
