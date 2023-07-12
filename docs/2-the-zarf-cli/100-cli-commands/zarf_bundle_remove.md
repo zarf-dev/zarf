@@ -4,13 +4,15 @@
 Remove a Zarf bundle or sub-packages that have been deployed already
 
 ```
-zarf bundle remove {PACKAGE_NAME|PACKAGE_FILE} [flags]
+zarf bundle remove [BUNDLE_NAME|BUNDLE_TARBALL|OCI_REF] [flags]
 ```
 
 ## Options
 
 ```
-  -h, --help   help for remove
+  -c, --confirm            REQUIRED. Confirm the removal action to prevent accidental deletions
+  -h, --help               help for remove
+  -p, --packages strings   Specify the package(s) to remove from the bundle.  E.g. packages=cluster-init,bigbang
 ```
 
 ## Options inherited from parent commands
@@ -21,6 +23,7 @@ zarf bundle remove {PACKAGE_NAME|PACKAGE_FILE} [flags]
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote bundle. (default 3)
       --tmpdir string         Specify the temporary directory to use for intermediate files
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```

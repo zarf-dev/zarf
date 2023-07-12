@@ -10,7 +10,12 @@ zarf bundle create [DIRECTORY] [flags]
 ## Options
 
 ```
-  -h, --help   help for create
+  -c, --confirm                       REQUIRED. Confirm the removal action to prevent accidental deletions
+  -h, --help                          help for create
+  -o, --output string                 Specify the output (an oci:// URL) for the created Zarf bundle
+  -s, --set stringToString            Specify bundle template variables to set on the command line (KEY=value) (default [])
+  -k, --signing-key string            Path to private key file for signing bundles
+  -p, --signing-key-password string   Password to the private key file used for signing bundles
 ```
 
 ## Options inherited from parent commands
@@ -21,6 +26,7 @@ zarf bundle create [DIRECTORY] [flags]
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote bundle. (default 3)
       --tmpdir string         Specify the temporary directory to use for intermediate files
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```

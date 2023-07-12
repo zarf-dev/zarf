@@ -6,7 +6,8 @@ Zarf commands for creating, deploying, removing, pulling, and inspecting bundles
 ## Options
 
 ```
-  -h, --help   help for bundle
+  -h, --help                  help for bundle
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote bundle. (default 3)
 ```
 
 ## Options inherited from parent commands
@@ -27,5 +28,5 @@ Zarf commands for creating, deploying, removing, pulling, and inspecting bundles
 * [zarf bundle create](zarf_bundle_create.md)	 - Create a Zarf bundle from a given directory or the current directory
 * [zarf bundle deploy](zarf_bundle_deploy.md)	 - Deploy a Zarf bundle from a local file or URL (runs offline)
 * [zarf bundle inspect](zarf_bundle_inspect.md)	 - Display the zarf.yaml of a compiled Zarf bundle (runs offline)
-* [zarf bundle pull](zarf_bundle_pull.md)	 - Pull a Zarf bundle from a remote registry and save to the local file system
+* [zarf bundle pull](zarf_bundle_pull.md)	 - Pull a Zarf bundle from a remote reigstry and save to the local file system
 * [zarf bundle remove](zarf_bundle_remove.md)	 - Remove a Zarf bundle or sub-packages that have been deployed already

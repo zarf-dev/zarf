@@ -4,13 +4,14 @@
 Display the zarf.yaml of a compiled Zarf bundle (runs offline)
 
 ```
-zarf bundle inspect [PACKAGE] [flags]
+zarf bundle inspect [BUNDLE] [flags]
 ```
 
 ## Options
 
 ```
-  -h, --help   help for inspect
+  -h, --help         help for inspect
+  -k, --key string   Path to a public key file that will be used to validate a signed bundle
 ```
 
 ## Options inherited from parent commands
@@ -21,6 +22,7 @@ zarf bundle inspect [PACKAGE] [flags]
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote bundle. (default 3)
       --tmpdir string         Specify the temporary directory to use for intermediate files
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```

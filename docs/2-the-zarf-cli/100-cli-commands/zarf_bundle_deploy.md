@@ -4,13 +4,15 @@
 Deploy a Zarf bundle from a local file or URL (runs offline)
 
 ```
-zarf bundle deploy [PACKAGE] [flags]
+zarf bundle deploy [BUNDLE] [flags]
 ```
 
 ## Options
 
 ```
-  -h, --help   help for deploy
+  -h, --help                 help for deploy
+  -p, --packages strings     Specify the package(s) to deploy from the bundle.  E.g. packages=cluster-init,bigbang
+  -s, --set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
 ```
 
 ## Options inherited from parent commands
@@ -21,6 +23,7 @@ zarf bundle deploy [PACKAGE] [flags]
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-log-file           Disable log file creation
       --no-progress           Disable fancy UI progress bars, spinners, logos, etc
+      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote bundle. (default 3)
       --tmpdir string         Specify the temporary directory to use for intermediate files
       --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
