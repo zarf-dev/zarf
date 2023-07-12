@@ -59,6 +59,11 @@ jobs:
         with:
           name: build-artifacts
           path: build/
+      
+      - name: Temp print dir contents
+        run: |
+          ls -la
+          ls -la build/
 
       - name: Install release version of Zarf
         uses: defenseunicorns/setup-zarf@main
