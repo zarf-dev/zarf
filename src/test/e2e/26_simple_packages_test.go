@@ -23,8 +23,7 @@ func TestPrometheus(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// tunnel, err := cluster.NewTunnel("monitoring", "svc", "prometheus-operator", 8080, 8080)
-	tunnel, err := cluster.NewTunnel("monitoring", "svc", "prometheus-operator", 8080, 8080)
+	tunnel, err := cluster.NewTunnel("monitoring", "svc", "kube-prometheus-stack-prometheus", 8080, 8080)
 
 	require.NoError(t, err)
 	err = tunnel.Connect("", false)
