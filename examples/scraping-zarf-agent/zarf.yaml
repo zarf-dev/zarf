@@ -31,12 +31,6 @@ components:
                 name: kube-prometheus-stack-operator
                 namespace: monitoring
                 condition: available
-          - wait:
-              cluster:
-                kind: deployment
-                name: kube-prometheus-stack-kube-state-metrics
-                namespace: monitoring
-                condition: available
   - name: prometheus-operator
     required: true
     manifests:
@@ -52,3 +46,18 @@ components:
     images:
       - quay.io/prometheus/prometheus:v2.45.0
       - quay.io/prometheus-operator/prometheus-config-reloader:v0.66.0
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: statefulset
+                name: prometheus-kube-prometheus-stack-prometheus
+                namespace: monitoring
+                condition: '{.status.availableReplicas}=1'
+          - wait:
+              cluster:
+                kind: statefulset
+                name: prometheus-k8s
+                namespace: monitoring
+                condition: '{.status.availableReplicas}=1'
