@@ -107,7 +107,7 @@ jobs:
 
   push:
     runs-on: ubuntu-latest
-    needs: test
+    needs: validate
     permissions:
       contents: write
     steps:
