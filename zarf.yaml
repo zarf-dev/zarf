@@ -32,7 +32,7 @@ components:
     import:
       path: packages/zarf-agent
 
-  # # (Optional) Adds logging to the cluster
+  # (Optional) Adds logging to the cluster
   - name: logging
     import:
       path: packages/logging-pgl
