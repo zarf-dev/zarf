@@ -48,7 +48,7 @@ zarf package deploy
 ? Deploy this Zarf package? (y/N) [y]
 ```
 
-Port-forward the Prometheus Operator's Prometheus instance in the Prometheus UI ,then click `Status` => `Targets`. Scroll down to find `serviceMonitor/monitoring/monitoring-agent-hook`:
+Port-forward the Prometheus Operator's Prometheus instance in the Prometheus UI, then click `Status` => `Targets`. Scroll down to find `serviceMonitor/monitoring/monitoring-agent-hook`:
 
 ```bash
 zarf connect prometheus-operated-agent
