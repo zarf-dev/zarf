@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
+	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
@@ -26,7 +27,7 @@ var (
 	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
 	PackageAlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
 	// BundleAlwaysPull is a list of paths that will always be pulled from the remote repository.
-	BundleAlwaysPull = []string{config.ZarfBundleYAML, config.ZarfYAMLSignature, "index.json"}
+	BundleAlwaysPull = []string{config.ZarfBundleYAML, config.ZarfBundleYAMLSignature}
 )
 
 // LayersFromPaths returns the descriptors for the given paths from the root manifest.
@@ -260,20 +261,31 @@ func (o *OrasRemote) PullBundleMetadata(destinationDir string) error {
 // PullBundle pulls the bundle from the remote repository and saves it to the given path.
 func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requestedPackages []string) error {
 	isPartial := len(requestedPackages) > 0
+	layersToPull := []ocispec.Descriptor{}
 
-	if err := o.PullBundleMetadata(destinationDir); err != nil {
+	root, err := o.FetchRoot()
+	if err != nil {
 		return err
 	}
 
-	// TODO: validate the bundle signature
+	bundleYamlDesc := root.Locate(config.ZarfBundleYAML)
+	layersToPull = append(layersToPull, bundleYamlDesc)
+
+	signatureDesc := root.Locate(config.ZarfBundleYAMLSignature)
+	if !o.isEmptyDescriptor(signatureDesc) {
+		layersToPull = append(layersToPull, signatureDesc)
+	}
+
+	b, err := o.FetchLayer(bundleYamlDesc)
+	if err != nil {
+		return err
+	}
 
 	var bundle types.ZarfBundle
 
-	if err := utils.ReadYaml(filepath.Join(destinationDir, config.ZarfBundleYAML), &bundle); err != nil {
+	if err := goyaml.Unmarshal(b, &bundle); err != nil {
 		return err
 	}
-
-	layersToPull := []ocispec.Descriptor{}
 
 	for _, pkg := range bundle.Packages {
 		// TODO: figure out how to handle partial pulls for bundles

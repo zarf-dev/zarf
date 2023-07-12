@@ -122,15 +122,11 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 
 	message.Debug("Pushing manifest:", message.JSONValue(expected))
 
-	o.Transport.ProgressBar = message.NewProgressBar(expected.Size, "Pushing manifest")
-	defer o.Transport.ProgressBar.Stop()
-
 	if err := o.repo.Manifests().PushReference(o.ctx, expected, bytes.NewReader(b), ref.Reference); err != nil {
 		return fmt.Errorf("failed to push manifest: %w", err)
 	}
 
-	o.Transport.ProgressBar.Successf("Published %s [%s]", ref, expected.MediaType)
-	o.Transport.ProgressBar = nil
+	message.Successf("Published %s [%s]", ref, expected.MediaType)
 
 	message.HorizontalRule()
 	flags := ""

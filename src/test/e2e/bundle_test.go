@@ -90,10 +90,6 @@ func testPull(t *testing.T) {
 	blobsDir := filepath.Join(decompressed, "blobs", "sha256")
 
 	for _, desc := range index.Manifests {
-		if desc.Annotations[ocispec.AnnotationRefName] == ref {
-			// skip the bundle manifest
-			continue
-		}
 		sha := desc.Digest.Encoded()
 		shasMatch(t, filepath.Join(blobsDir, sha), desc.Digest.Encoded())
 
