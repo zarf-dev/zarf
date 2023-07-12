@@ -115,28 +115,23 @@ func (c *Cluster) PackageSecretNeedsWait(secretName string) (bool, error) {
 		return false, err
 	}
 
-	// Check if there are any package level statuses that we need to wait for
-	if deployedPackage.Status == types.PackageStatusPendingDeploy || deployedPackage.Status == types.PackageStatusFinalizing {
-		// The package status indicates we need to wait
-		return true, nil
-	}
-
 	// Check if there are any component level statuses that we need to wait for
 	for _, component := range deployedPackage.DeployedComponents {
-		if component.Status == types.ComponentStatusPendingDeploy || component.Status == types.ComponentStatusFinalizing {
-			// The component status indicates we need to wait
-			return true, nil
+		for _, hook := range component.Webhooks {
+			if hook.Status == string(types.WebhookStatusRunning) {
+				return true, nil
+			}
 		}
 	}
 
-	// If we get here, neither the package nor any of the components need to be waited on
+	// If we get here, none of the components need to wait for a webhook to run
 	return false, nil
 }
 
 // RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
-func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, packageStatus types.PackageStatus) (*corev1.Secret, error) {
+func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings) (*corev1.Secret, error) {
 
-	packageSecret, err := c.RecordPackageDeployment(pkg, components, connectStrings, packageStatus)
+	packageSecret, err := c.RecordPackageDeployment(pkg, components, connectStrings)
 	if err != nil {
 		return packageSecret, err
 	}
@@ -160,7 +155,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, packageStatus types.PackageStatus) (*corev1.Secret, error) {
+func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings) (*corev1.Secret, error) {
 	// Generate a secret that describes the package that is being deployed
 	packageName := pkg.Metadata.Name
 	deployedPackageSecret := c.Kube.GenerateSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName, corev1.SecretTypeOpaque)
@@ -170,7 +165,6 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 		Name:               packageName,
 		CLIVersion:         config.CLIVersion,
 		Data:               pkg,
-		Status:             packageStatus,
 		DeployedComponents: components,
 		ConnectStrings:     connectStrings,
 	})

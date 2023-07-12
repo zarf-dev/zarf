@@ -7,27 +7,21 @@ package types
 import "github.com/defenseunicorns/zarf/src/pkg/k8s"
 
 // PackageStatus defines the deployment status of a Zarf package.
-type PackageStatus string
-
-const (
-	PackageStatusDeployed      PackageStatus = "deployed"
-	PackageStatusFailed        PackageStatus = "failed"
-	PackageStatusDeploying     PackageStatus = "deploying"
-	PackageStatusPendingDeploy PackageStatus = "pending-deploy"
-	PackageStatusFinalizing    PackageStatus = "finalizing"
-	PackageStatusRemoving      PackageStatus = "removing"
-)
+type WebhookStatus string
 
 // ComponentStatus defines the deployment status of a Zarf component within a package.
 type ComponentStatus string
 
 const (
-	ComponentStatusDeployed      ComponentStatus = "deployed"
-	ComponentStatusFailed        ComponentStatus = "failed"
-	ComponentStatusDeploying     ComponentStatus = "deploying"
-	ComponentStatusPendingDeploy ComponentStatus = "pending-deploy"
-	ComponentStatusFinalizing    ComponentStatus = "finalizing"
-	ComponentStatusRemoving      ComponentStatus = "removing"
+	WebhookStatusSucceeded WebhookStatus = "Succeeded"
+	WebhookStatusFailed    WebhookStatus = "Failed"
+	WebhookStatusRunning   WebhookStatus = "Running"
+	WebhookStatusRemoving  WebhookStatus = "Removing"
+
+	ComponentStatusSucceeded ComponentStatus = "Succeeded"
+	ComponentStatusFailed    ComponentStatus = "Failed"
+	ComponentStatusDeploying ComponentStatus = "Deploying"
+	ComponentStatusRemoving  ComponentStatus = "Removing"
 )
 
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data.
@@ -47,10 +41,10 @@ type ZarfState struct {
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
-	Name       string        `json:"name"`
-	Data       ZarfPackage   `json:"data"`
-	CLIVersion string        `json:"cliVersion"`
-	Status     PackageStatus `json:"status"`
+	Name       string            `json:"name"`
+	Data       ZarfPackage       `json:"data"`
+	CLIVersion string            `json:"cliVersion"`
+	Webhooks   map[string]string `json:"webhooks,omitempty"`
 
 	DeployedComponents []DeployedComponent `json:"deployedComponents"`
 	ConnectStrings     ConnectStrings      `json:"connectStrings,omitempty"`
@@ -58,9 +52,15 @@ type DeployedPackage struct {
 
 // DeployedComponent contains information about a Zarf Package Component that has been deployed to a cluster.
 type DeployedComponent struct {
-	Name            string           `json:"name"`
-	InstalledCharts []InstalledChart `json:"installedCharts"`
-	Status          ComponentStatus  `json:"status"`
+	Name            string             `json:"name"`
+	InstalledCharts []InstalledChart   `json:"installedCharts"`
+	Status          ComponentStatus    `json:"status"`
+	Webhooks        map[string]Webhook `json:"webhooks,omitempty"`
+}
+
+type Webhook struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
 }
 
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.

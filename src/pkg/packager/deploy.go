@@ -117,14 +117,6 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
 	}
 
-	// Save off a secret stating that a package is in the process of being deployed
-	var packageSecret *corev1.Secret
-	if p.cluster != nil && !p.cfg.IsInitConfig {
-		if packageSecret, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, types.PackageStatusDeploying); err != nil || packageSecret == nil {
-			return deployedComponents, fmt.Errorf("unable to record package deployment (before deployment has completed): %w", err)
-		}
-	}
-
 	// Process all the components we are deploying
 	for idx, component := range componentsToDeploy {
 		deployedComponent := types.DeployedComponent{Name: component.Name, Status: types.ComponentStatusDeploying}
@@ -132,7 +124,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 		// Update the package secret to indicate that we are about to deploy this component
 		if p.cluster != nil && !p.cfg.IsInitConfig {
-			if _, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, types.PackageStatusDeploying); err != nil {
+			if _, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings); err != nil {
 				return nil, err
 			}
 		}
@@ -159,17 +151,12 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 		// Update the deployed component secret
 		deployedComponents[idx].InstalledCharts = charts
-		deployedComponents[idx].Status = types.ComponentStatusDeployed
+		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 
 		// Save deployed package information to k8s
 		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 		if p.cluster != nil {
-			packageStatus := types.PackageStatusDeploying
-			if idx == len(componentsToDeploy)-1 {
-				packageStatus = types.PackageStatusDeployed
-			}
-
-			_, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, packageStatus)
+			_, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings)
 			if err != nil {
 				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
