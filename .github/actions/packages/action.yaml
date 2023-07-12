@@ -1,9 +1,28 @@
 name: packages
-description: "Create agent image, init package and example packages"
+description: "Build CLI, agent image, init package and example packages"
+
+inputs:
+  init-package:
+    description: 'Build the init package'
+    required: false
+    default: 'true'
+  build-examples:
+    description: 'Build the example packages'
+    required: false
+    default: 'true'
+
 
 runs:
   using: composite
   steps:
     - run: |
-        make build-cli-linux-amd init-package build-examples ARCH=amd64
+        make build-cli-linux-amd ARCH=amd64
       shell: bash
+    - run: |
+        make init-package ARCH=amd64
+      shell: bash
+      if: ${{ inputs.init-package == 'true' }}
+    - run: |
+        make build-examples ARCH=amd64
+      shell: bash
+      if: ${{ inputs.build-examples == 'true' }}
