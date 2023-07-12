@@ -24,9 +24,10 @@ func TestPrometheus(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// tunnel, err := cluster.NewTunnel("monitoring", "svc", "prometheus-operator", 8080, 8080)
-	tunnel, err := cluster.NewTunnel("monitoring", "svc", "", 8080, 0)
+	tunnel, err := cluster.NewTunnel("monitoring", "svc", "prometheus-operator", 8080, 8080)
+
 	require.NoError(t, err)
-	err = tunnel.Connect("PROMETHEUS", false)
+	err = tunnel.Connect("", false)
 	require.NoError(t, err)
 	defer tunnel.Close()
 
