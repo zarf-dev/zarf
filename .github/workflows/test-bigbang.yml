@@ -34,13 +34,15 @@ jobs:
       - name: Setup NodeJS
         uses: ./.github/actions/node
 
-      - name: Build binary and zarf packages
+      - name: Build Zarf binary
         uses: ./.github/actions/packages
+        with:
+          build-examples: 'false'
 
       - name: Setup K3d
         uses: ./.github/actions/k3d
 
-      - name: "Login to Iron Bank"
+      - name: Login to Iron Bank
         uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
         if: ${{ env.IRONBANK_USERNAME != '' }}
         env:
