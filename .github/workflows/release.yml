@@ -91,6 +91,10 @@ jobs:
           name: build-artifacts
           path: build/
 
+      - name: Make Zarf executable
+        run: |
+          chmod +x build/zarf
+
       # Build the example packages and run the tests
       - name: Build examples and run tests
         run: |
