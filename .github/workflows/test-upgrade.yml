@@ -34,11 +34,6 @@ jobs:
       - name: Setup NodeJS
         uses: ./.github/actions/node
 
-      - name: Install release version of Zarf
-        uses: defenseunicorns/setup-zarf@main
-        with:
-          download-init-package: true
-
       - name: Build PR binary and zarf init package
         uses: ./.github/actions/packages
         with:
@@ -65,6 +60,11 @@ jobs:
           name: build-artifacts
           path: build/
 
+      - name: Install release version of Zarf
+        uses: defenseunicorns/setup-zarf@main
+        with:
+          download-init-package: true
+
       - name: Initialize the cluster with the release version
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
@@ -72,6 +72,10 @@ jobs:
         run: |
           sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server,logging --confirm
           sudo chown $USER /tmp/zarf-*.log
+
+      # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
+      - name: Cleanup files
+        uses: ./.github/actions/cleanup-files
 
       - name: Create and deploy the upgrade test packages
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
