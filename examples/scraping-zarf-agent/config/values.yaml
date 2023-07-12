@@ -1,3 +1,5 @@
+# The original values.yaml find can be found here: https://github.com/prometheus-community/helm-charts/blob/kube-prometheus-stack-47.3.0/charts/kube-prometheus-stack/values.yaml
+
 # Default values for kube-prometheus-stack.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
