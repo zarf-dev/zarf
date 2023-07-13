@@ -38,7 +38,7 @@ func (g *Git) Pull(gitURL, targetFolder string, shallow bool) error {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
 	// Split the remote url and the zarf reference
-	gitURLNoRef, refPlain, err := transform.GitTransformURLSplitRef(gitURL)
+	gitURLNoRef, refPlain, err := transform.GitURLSplitRef(gitURL)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func (g *Git) Pull(gitURL, targetFolder string, shallow bool) error {
 	}
 
 	// Construct a path unique to this git repo
-	repoFolder, err := transform.GitTransformURLtoFolderName(gitURL)
+	repoFolder, err := transform.GitURLtoFolderName(gitURL)
 	if err != nil {
 		return err
 	}

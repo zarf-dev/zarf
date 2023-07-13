@@ -1,0 +1,16 @@
+name: cleanup-files
+description: "Cleans up files on the local system to reduce disk pressure"
+
+runs:
+  using: composite
+  steps:
+    - run: |
+        lsblk -f
+
+        sudo rm -rf zarf-sbom /tmp/zarf-* src/ui/node_modules
+        sudo env "PATH=$PATH" CI=true make delete-packages
+        sudo build/zarf tools clear-cache
+        sudo docker system prune --all --force
+
+        lsblk -f
+      shell: bash

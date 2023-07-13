@@ -66,13 +66,14 @@ func (h *Helm) parseChartValues() (map[string]any, error) {
 func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) error {
 	// Initialize helm SDK
 	actionConfig := new(action.Configuration)
-	settings := cli.New()
+	// Set the setings for the helm SDK
+	h.Settings = cli.New()
 
 	// Set the namespace for helm
-	settings.SetNamespace(namespace)
+	h.Settings.SetNamespace(namespace)
 
 	// Setup K8s connection
-	err := actionConfig.Init(settings.RESTClientGetter(), namespace, "", spinner.Updatef)
+	err := actionConfig.Init(h.Settings.RESTClientGetter(), namespace, "", spinner.Updatef)
 
 	// Set the actionConfig is the received Helm pointer
 	h.actionConfig = actionConfig

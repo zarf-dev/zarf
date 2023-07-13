@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -326,8 +325,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
-		re := regexp.MustCompile(`\.git$`)
-		isGitURL := re.MatchString(chart.URL)
+
 		helmCfg := helm.Helm{
 			Chart: chart,
 			Cfg:   p.cfg,
@@ -343,18 +341,10 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			}
 
 			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
-		} else if isGitURL {
-			_, err = helmCfg.PackageChartFromGit(componentPath.Charts)
-			if err != nil {
-				return fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
-			}
-		} else if len(chart.URL) > 0 {
-			helmCfg.DownloadPublishedChart(componentPath.Charts)
 		} else {
-			path := helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
-			zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
-			if !strings.HasSuffix(path, zarfFilename) {
-				return fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
+			err := helmCfg.PackageChart(componentPath.Charts)
+			if err != nil {
+				return err
 			}
 		}
 
@@ -694,7 +684,7 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 		// Generate a list of all unique repos for this component
 		for _, repoURL := range component.Repos {
 			// Split the remote url and the zarf reference
-			_, refPlain, err := transform.GitTransformURLSplitRef(repoURL)
+			_, refPlain, err := transform.GitURLSplitRef(repoURL)
 			if err != nil {
 				return err
 			}
