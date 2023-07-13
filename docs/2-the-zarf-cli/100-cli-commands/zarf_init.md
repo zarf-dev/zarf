@@ -40,6 +40,11 @@ zarf init [flags]
 	# Initializing w/ an external git server:
 	zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 
+	# Initializing w/ an external artifact server:
+	zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
+
+	# NOTE: Not specifying --*-pull-password/username when using --*-push-password/username will use the push user for pulling as well.
+
 ```
 
 ## Options
