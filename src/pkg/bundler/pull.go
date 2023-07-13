@@ -5,14 +5,17 @@
 package bundler
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/mholt/archiver/v3"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/mholt/archiver/v4"
 )
 
 // Pull pulls a bundle and saves it locally + caches it
@@ -27,7 +30,11 @@ func (b *Bundler) Pull() error {
 
 	// fetch the bundle's root descriptor
 	// to later get the bundle's descriptor
-	root, err := b.remote.FetchRoot()
+	rootDesc, err := b.remote.ResolveRoot()
+	if err != nil {
+		return err
+	}
+	root, err := b.remote.FetchManifest(rootDesc)
 	if err != nil {
 		return err
 	}
@@ -43,7 +50,8 @@ func (b *Bundler) Pull() error {
 	// TODO: figure out the best path to check the signature before we pull the bundle
 
 	// pull the bundle
-	if err := b.remote.PullBundle(cacheDir, config.CommonOptions.OCIConcurrency, nil); err != nil {
+	layersPulled, err := b.remote.PullBundle(cacheDir, config.CommonOptions.OCIConcurrency, nil)
+	if err != nil {
 		return err
 	}
 
@@ -71,7 +79,39 @@ func (b *Bundler) Pull() error {
 
 	_ = os.RemoveAll(dst)
 
-	if err := archiver.Archive([]string{b.tmp + string(os.PathSeparator)}, dst); err != nil {
+	paths := []string{}
+	for _, layer := range layersPulled {
+		paths = append(paths, filepath.Join(cacheDir, "blobs", "sha256", layer.Digest.Encoded()))
+	}
+	paths = append(paths, filepath.Join(cacheDir, "blobs", "sha256", rootDesc.Digest.Encoded()))
+	paths = helpers.Unique(paths)
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	format := archiver.CompressedArchive{
+		Compression: archiver.Zstd{},
+		Archival:    archiver.Tar{},
+	}
+
+	pathMap := make(map[string]string)
+
+	pathMap[filepath.Join(cacheDir, "index.json")] = "index.json"
+	pathMap[filepath.Join(cacheDir, "oci-layout")] = "oci-layout"
+
+	for _, path := range paths {
+		pathMap[path] = strings.TrimPrefix(path, cacheDir+string(os.PathSeparator))
+	}
+
+	files, err := archiver.FilesFromDisk(nil, pathMap)
+	if err != nil {
+		return err
+	}
+
+	if err := format.Archive(context.TODO(), out, files); err != nil {
 		return err
 	}
 

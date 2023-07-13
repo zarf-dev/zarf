@@ -29,6 +29,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 	manifest := ocispec.Manifest{}
 
 	for _, pkg := range bundle.Packages {
+		// TODO: handle components + wildcards
 		url := fmt.Sprintf("%s:%s", pkg.Repository, pkg.Ref)
 		remote, err := NewOrasRemote(url)
 		if err != nil {

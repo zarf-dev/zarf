@@ -259,13 +259,12 @@ func (o *OrasRemote) PullBundleMetadata(destinationDir string) error {
 }
 
 // PullBundle pulls the bundle from the remote repository and saves it to the given path.
-func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requestedPackages []string) error {
+func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requestedPackages []string) (layersToPull []ocispec.Descriptor, err error) {
 	isPartial := len(requestedPackages) > 0
-	layersToPull := []ocispec.Descriptor{}
 
 	root, err := o.FetchRoot()
 	if err != nil {
-		return err
+		return layersToPull, err
 	}
 
 	bundleYamlDesc := root.Locate(config.ZarfBundleYAML)
@@ -278,13 +277,13 @@ func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requeste
 
 	b, err := o.FetchLayer(bundleYamlDesc)
 	if err != nil {
-		return err
+		return layersToPull, err
 	}
 
 	var bundle types.ZarfBundle
 
 	if err := goyaml.Unmarshal(b, &bundle); err != nil {
-		return err
+		return layersToPull, err
 	}
 
 	for _, pkg := range bundle.Packages {
@@ -294,11 +293,11 @@ func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requeste
 			manifestDesc, err := o.repo.Blobs().Resolve(o.ctx, url)
 			manifestDesc.MediaType = ocispec.MediaTypeImageManifest
 			if err != nil {
-				return err
+				return layersToPull, err
 			}
 			manifest, err := o.FetchManifest(manifestDesc)
 			if err != nil {
-				return err
+				return layersToPull, err
 			}
 			layersToPull = append(layersToPull, manifestDesc)
 			layersToPull = append(layersToPull, manifest.Layers...)
@@ -310,12 +309,12 @@ func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requeste
 
 	store, err := oci.NewWithContext(o.ctx, destinationDir)
 	if err != nil {
-		return err
+		return layersToPull, err
 	}
 
 	if err := o.copyWithProgress(layersToPull, store, &copyOpts, destinationDir); err != nil {
-		return err
+		return layersToPull, err
 	}
 
-	return nil
+	return layersToPull, nil
 }
