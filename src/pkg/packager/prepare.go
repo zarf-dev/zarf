@@ -277,7 +277,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 			return err
 		}
 		perms := info.Mode().Perm()
-		err = utils.WriteYaml(config.ZarfYAML, &p.cfg.Pkg, p.cfg.CommentMap, perms)
+		err = utils.WriteYaml(config.ZarfYAML, p.cfg.Pkg, p.cfg.CommentMap, perms)
 		if err != nil {
 			return err
 		}
