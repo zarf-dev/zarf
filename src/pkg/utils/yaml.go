@@ -124,6 +124,7 @@ func ReadYaml(path string, value any, commentMap goyaml.CommentMap) error {
 	}
 
 	if commentMap != nil {
+		message.Warn("unmarshal commentMap is not nil")
 		return goyaml.UnmarshalWithOptions(b, value, goyaml.CommentToMap(commentMap))
 	}
 	return goyaml.Unmarshal(b, value)
@@ -135,6 +136,7 @@ func WriteYaml(path string, value any, commentMap goyaml.CommentMap, perm fs.Fil
 	var marshaled []byte
 	var err error
 	if commentMap != nil {
+		message.Warn("marshall commentMap is not nil")
 		marshaled, err = goyaml.MarshalWithOptions(value, goyaml.Indent(2), goyaml.WithComment(commentMap))
 		if err != nil {
 			return err
