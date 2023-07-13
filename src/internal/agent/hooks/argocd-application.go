@@ -18,7 +18,7 @@ import (
 )
 
 type Source struct {
-	RepoURL        string `json:"repoURL"`
+	RepoURL string `json:"repoURL"`
 }
 
 type ArgoApplication struct {
@@ -76,7 +76,7 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 	// Mutate the repoURL if necessary
 	if isCreate || (isUpdate && !isPatched) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-		transformedURL, err := transform.GitTransformURL(zarfState.GitServer.Address, patchedURL, zarfState.GitServer.PushUsername)
+		transformedURL, err := transform.GitURL(zarfState.GitServer.Address, patchedURL, zarfState.GitServer.PushUsername)
 		if err != nil {
 			message.Warnf("Unable to transform the repoURL, using the original url we have: %s", patchedURL)
 		}
