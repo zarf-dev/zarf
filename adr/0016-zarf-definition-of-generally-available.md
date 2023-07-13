@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-Eventually, Zarf needs to become a "Generally Available" v1.x.x product that people can rely on for mission-critical operations.  Today, Zarf can be used in these environments. Still, it requires someone more involved in the Zarf lifecycle than a normal consumer/user to make that successful due to the regular introduction of breaking changes and the lack of testing in certain areas.
+Eventually, Zarf needs to become a "Generally Available" v1.x.x product that people can rely on for mission-critical operations.  Today, Zarf can be used in these environments; though, it requires someone more involved in the Zarf lifecycle than a normal consumer/user to make that successful due to the regular introduction of breaking changes and the lack of testing in certain areas.
 
 ## Decision
 
