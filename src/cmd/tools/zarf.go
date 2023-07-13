@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/src/cmd/viper"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -20,30 +21,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/spf13/cobra"
-)
-
-// TODO: Ewww
-const (
-	// Init Git config keys
-	V_INIT_GIT_URL       = "init.git.url"
-	V_INIT_GIT_PUSH_USER = "init.git.push_username"
-	V_INIT_GIT_PUSH_PASS = "init.git.push_password"
-	V_INIT_GIT_PULL_USER = "init.git.pull_username"
-	V_INIT_GIT_PULL_PASS = "init.git.pull_password"
-
-	// Init Registry config keys
-	V_INIT_REGISTRY_URL       = "init.registry.url"
-	V_INIT_REGISTRY_NODEPORT  = "init.registry.nodeport"
-	V_INIT_REGISTRY_SECRET    = "init.registry.secret"
-	V_INIT_REGISTRY_PUSH_USER = "init.registry.push_username"
-	V_INIT_REGISTRY_PUSH_PASS = "init.registry.push_password"
-	V_INIT_REGISTRY_PULL_USER = "init.registry.pull_username"
-	V_INIT_REGISTRY_PULL_PASS = "init.registry.pull_password"
-
-	// Init Package config keys
-	V_INIT_ARTIFACT_URL        = "init.artifact.url"
-	V_INIT_ARTIFACT_PUSH_USER  = "init.artifact.push_username"
-	V_INIT_ARTIFACT_PUSH_TOKEN = "init.artifact.push_token"
 )
 
 var subAltNames []string
@@ -246,29 +223,31 @@ var generateKeyCmd = &cobra.Command{
 }
 
 func init() {
+	v := viper.Init()
+
 	toolsCmd.AddCommand(deprecatedGetGitCredsCmd)
 	toolsCmd.AddCommand(getCredsCmd)
 
 	toolsCmd.AddCommand(updateCredsCmd)
 
 	// Flags for using an external Git server
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.Address, "git-url", v.GetString(V_INIT_GIT_URL), lang.CmdInitFlagGitURL)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushUsername, "git-push-username", v.GetString(V_INIT_GIT_PUSH_USER), lang.CmdInitFlagGitPushUser)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushPassword, "git-push-password", v.GetString(V_INIT_GIT_PUSH_PASS), lang.CmdInitFlagGitPushPass)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullUsername, "git-pull-username", v.GetString(V_INIT_GIT_PULL_USER), lang.CmdInitFlagGitPullUser)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullPassword, "git-pull-password", v.GetString(V_INIT_GIT_PULL_PASS), lang.CmdInitFlagGitPullPass)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.Address, "git-url", v.GetString(viper.V_INIT_GIT_URL), lang.CmdInitFlagGitURL)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushUsername, "git-push-username", v.GetString(viper.V_INIT_GIT_PUSH_USER), lang.CmdInitFlagGitPushUser)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushPassword, "git-push-password", v.GetString(viper.V_INIT_GIT_PUSH_PASS), lang.CmdInitFlagGitPushPass)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullUsername, "git-pull-username", v.GetString(viper.V_INIT_GIT_PULL_USER), lang.CmdInitFlagGitPullUser)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullPassword, "git-pull-password", v.GetString(viper.V_INIT_GIT_PULL_PASS), lang.CmdInitFlagGitPullPass)
 
 	// Flags for using an external registry
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.Address, "registry-url", v.GetString(V_INIT_REGISTRY_URL), lang.CmdInitFlagRegURL)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(V_INIT_REGISTRY_PUSH_USER), lang.CmdInitFlagRegPushUser)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(V_INIT_REGISTRY_PUSH_PASS), lang.CmdInitFlagRegPushPass)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(V_INIT_REGISTRY_PULL_USER), lang.CmdInitFlagRegPullUser)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(V_INIT_REGISTRY_PULL_PASS), lang.CmdInitFlagRegPullPass)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.Address, "registry-url", v.GetString(viper.V_INIT_REGISTRY_URL), lang.CmdInitFlagRegURL)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(viper.V_INIT_REGISTRY_PUSH_USER), lang.CmdInitFlagRegPushUser)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(viper.V_INIT_REGISTRY_PUSH_PASS), lang.CmdInitFlagRegPushPass)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(viper.V_INIT_REGISTRY_PULL_USER), lang.CmdInitFlagRegPullUser)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(viper.V_INIT_REGISTRY_PULL_PASS), lang.CmdInitFlagRegPullPass)
 
 	// Flags for using an external artifact server
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.Address, "artifact-url", v.GetString(V_INIT_ARTIFACT_URL), lang.CmdInitFlagArtifactURL)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(V_INIT_ARTIFACT_PUSH_USER), lang.CmdInitFlagArtifactPushUser)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(V_INIT_ARTIFACT_PUSH_TOKEN), lang.CmdInitFlagArtifactPushToken)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.Address, "artifact-url", v.GetString(viper.V_INIT_ARTIFACT_URL), lang.CmdInitFlagArtifactURL)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(viper.V_INIT_ARTIFACT_PUSH_USER), lang.CmdInitFlagArtifactPushUser)
+	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(viper.V_INIT_ARTIFACT_PUSH_TOKEN), lang.CmdInitFlagArtifactPushToken)
 
 	updateCredsCmd.Flags().SortFlags = true
 

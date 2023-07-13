@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/cmd/viper"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -22,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/spf13/cobra"
+	spf13viper "github.com/spf13/viper"
 )
 
 var includeInspectSBOM bool
@@ -56,7 +58,8 @@ var packageCreateCmd = &cobra.Command{
 		}
 
 		// Ensure uppercase keys from viper
-		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(V_PKG_CREATE_SET), strings.ToUpper)
+		v := viper.Get()
+		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(viper.V_PKG_CREATE_SET), strings.ToUpper)
 		pkgConfig.CreateOpts.SetVariables = helpers.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
 
 		// Configure the packager
@@ -80,7 +83,8 @@ var packageDeployCmd = &cobra.Command{
 		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
 
 		// Ensure uppercase keys from viper and CLI --set
-		viperConfigSetVariables := helpers.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
+		v := viper.Get()
+		viperConfigSetVariables := helpers.TransformMapKeys(v.GetStringMapString(viper.V_PKG_DEPLOY_SET), strings.ToUpper)
 		pkgConfig.DeployOpts.SetVariables = helpers.TransformMapKeys(pkgConfig.DeployOpts.SetVariables, strings.ToUpper)
 
 		// Merge the viper config file variables and provided CLI flag variables (CLI takes precedence))
@@ -260,7 +264,7 @@ func choosePackage(args []string) string {
 }
 
 func init() {
-	initViper()
+	v := viper.Init()
 
 	rootCmd.AddCommand(packageCmd)
 	packageCmd.AddCommand(packageCreateCmd)
@@ -271,57 +275,57 @@ func init() {
 	packageCmd.AddCommand(packagePublishCmd)
 	packageCmd.AddCommand(packagePullCmd)
 
-	bindPackageFlags()
-	bindCreateFlags()
-	bindDeployFlags()
-	bindInspectFlags()
-	bindRemoveFlags()
-	bindPublishFlags()
-	bindPullFlags()
+	bindPackageFlags(v)
+	bindCreateFlags(v)
+	bindDeployFlags(v)
+	bindInspectFlags(v)
+	bindRemoveFlags(v)
+	bindPublishFlags(v)
+	bindPullFlags(v)
 }
 
-func bindPackageFlags() {
+func bindPackageFlags(v *spf13viper.Viper) {
 	packageFlags := packageCmd.PersistentFlags()
-	v.SetDefault(V_PKG_OCI_CONCURRENCY, 3)
-	packageFlags.IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(V_PKG_OCI_CONCURRENCY), lang.CmdPackageFlagConcurrency)
+	v.SetDefault(viper.V_PKG_OCI_CONCURRENCY, 3)
+	packageFlags.IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(viper.V_PKG_OCI_CONCURRENCY), lang.CmdPackageFlagConcurrency)
 }
 
-func bindCreateFlags() {
+func bindCreateFlags(v *spf13viper.Viper) {
 	createFlags := packageCreateCmd.Flags()
 
 	// Always require confirm flag (no viper)
 	createFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageCreateFlagConfirm)
 
-	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
-	v.SetDefault(V_PKG_CREATE_OUTPUT, "")
-	v.SetDefault(V_PKG_CREATE_SBOM, false)
-	v.SetDefault(V_PKG_CREATE_SBOM_OUTPUT, "")
-	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
-	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 0)
-	v.SetDefault(V_PKG_CREATE_SIGNING_KEY, "")
+	v.SetDefault(viper.V_PKG_CREATE_SET, map[string]string{})
+	v.SetDefault(viper.V_PKG_CREATE_OUTPUT, "")
+	v.SetDefault(viper.V_PKG_CREATE_SBOM, false)
+	v.SetDefault(viper.V_PKG_CREATE_SBOM_OUTPUT, "")
+	v.SetDefault(viper.V_PKG_CREATE_SKIP_SBOM, false)
+	v.SetDefault(viper.V_PKG_CREATE_MAX_PACKAGE_SIZE, 0)
+	v.SetDefault(viper.V_PKG_CREATE_SIGNING_KEY, "")
 
 	outputDirectory := v.GetString("package.create.output_directory")
-	output := v.GetString(V_PKG_CREATE_OUTPUT)
+	output := v.GetString(viper.V_PKG_CREATE_OUTPUT)
 	if outputDirectory != "" && output == "" {
-		v.Set(V_PKG_CREATE_OUTPUT, outputDirectory)
+		v.Set(viper.V_PKG_CREATE_OUTPUT, outputDirectory)
 	}
 	createFlags.StringVar(&pkgConfig.CreateOpts.Output, "output-directory", v.GetString("package.create.output_directory"), lang.CmdPackageCreateFlagOutput)
-	createFlags.StringVarP(&pkgConfig.CreateOpts.Output, "output", "o", v.GetString(V_PKG_CREATE_OUTPUT), lang.CmdPackageCreateFlagOutput)
+	createFlags.StringVarP(&pkgConfig.CreateOpts.Output, "output", "o", v.GetString(viper.V_PKG_CREATE_OUTPUT), lang.CmdPackageCreateFlagOutput)
 
-	createFlags.StringVar(&pkgConfig.CreateOpts.DifferentialData.DifferentialPackagePath, "differential", v.GetString(V_PKG_CREATE_DIFFERENTIAL), lang.CmdPackageCreateFlagDifferential)
-	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPackageCreateFlagSet)
-	createFlags.BoolVarP(&pkgConfig.CreateOpts.ViewSBOM, "sbom", "s", v.GetBool(V_PKG_CREATE_SBOM), lang.CmdPackageCreateFlagSbom)
-	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(V_PKG_CREATE_SBOM_OUTPUT), lang.CmdPackageCreateFlagSbomOut)
-	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(V_PKG_CREATE_SKIP_SBOM), lang.CmdPackageCreateFlagSkipSbom)
-	createFlags.IntVarP(&pkgConfig.CreateOpts.MaxPackageSizeMB, "max-package-size", "m", v.GetInt(V_PKG_CREATE_MAX_PACKAGE_SIZE), lang.CmdPackageCreateFlagMaxPackageSize)
-	createFlags.StringVarP(&pkgConfig.CreateOpts.SigningKeyPath, "key", "k", v.GetString(V_PKG_CREATE_SIGNING_KEY), lang.CmdPackageCreateFlagSigningKey)
-	createFlags.StringVar(&pkgConfig.CreateOpts.SigningKeyPassword, "key-pass", v.GetString(V_PKG_CREATE_SIGNING_KEY_PASSWORD), lang.CmdPackageCreateFlagSigningKeyPassword)
-	createFlags.StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(V_PKG_CREATE_REGISTRY_OVERRIDE), lang.CmdPackageCreateFlagRegistryOverride)
+	createFlags.StringVar(&pkgConfig.CreateOpts.DifferentialData.DifferentialPackagePath, "differential", v.GetString(viper.V_PKG_CREATE_DIFFERENTIAL), lang.CmdPackageCreateFlagDifferential)
+	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(viper.V_PKG_CREATE_SET), lang.CmdPackageCreateFlagSet)
+	createFlags.BoolVarP(&pkgConfig.CreateOpts.ViewSBOM, "sbom", "s", v.GetBool(viper.V_PKG_CREATE_SBOM), lang.CmdPackageCreateFlagSbom)
+	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(viper.V_PKG_CREATE_SBOM_OUTPUT), lang.CmdPackageCreateFlagSbomOut)
+	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(viper.V_PKG_CREATE_SKIP_SBOM), lang.CmdPackageCreateFlagSkipSbom)
+	createFlags.IntVarP(&pkgConfig.CreateOpts.MaxPackageSizeMB, "max-package-size", "m", v.GetInt(viper.V_PKG_CREATE_MAX_PACKAGE_SIZE), lang.CmdPackageCreateFlagMaxPackageSize)
+	createFlags.StringVarP(&pkgConfig.CreateOpts.SigningKeyPath, "key", "k", v.GetString(viper.V_PKG_CREATE_SIGNING_KEY), lang.CmdPackageCreateFlagSigningKey)
+	createFlags.StringVar(&pkgConfig.CreateOpts.SigningKeyPassword, "key-pass", v.GetString(viper.V_PKG_CREATE_SIGNING_KEY_PASSWORD), lang.CmdPackageCreateFlagSigningKeyPassword)
+	createFlags.StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(viper.V_PKG_CREATE_REGISTRY_OVERRIDE), lang.CmdPackageCreateFlagRegistryOverride)
 
 	createFlags.MarkHidden("output-directory")
 }
 
-func bindDeployFlags() {
+func bindDeployFlags(v *spf13viper.Viper) {
 	deployFlags := packageDeployCmd.Flags()
 
 	// Always require confirm flag (no viper)
@@ -330,42 +334,42 @@ func bindDeployFlags() {
 	// Always require adopt-existing-resources flag (no viper)
 	deployFlags.BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
 
-	v.SetDefault(V_PKG_DEPLOY_SET, map[string]string{})
-	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")
-	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
-	v.SetDefault(V_PKG_DEPLOY_SGET, "")
-	v.SetDefault(V_PKG_DEPLOY_PUBLIC_KEY, "")
+	v.SetDefault(viper.V_PKG_DEPLOY_SET, map[string]string{})
+	v.SetDefault(viper.V_PKG_DEPLOY_COMPONENTS, "")
+	v.SetDefault(viper.V_PKG_DEPLOY_SHASUM, "")
+	v.SetDefault(viper.V_PKG_DEPLOY_SGET, "")
+	v.SetDefault(viper.V_PKG_DEPLOY_PUBLIC_KEY, "")
 
-	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
-	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
-	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
-	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
-	deployFlags.StringVarP(&pkgConfig.DeployOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageDeployFlagPublicKey)
+	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(viper.V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
+	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(viper.V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
+	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(viper.V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
+	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(viper.V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
+	deployFlags.StringVarP(&pkgConfig.DeployOpts.PublicKeyPath, "key", "k", v.GetString(viper.V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageDeployFlagPublicKey)
 }
 
-func bindInspectFlags() {
+func bindInspectFlags(v *spf13viper.Viper) {
 	inspectFlags := packageInspectCmd.Flags()
 	inspectFlags.BoolVarP(&includeInspectSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
 	inspectFlags.StringVar(&outputInspectSBOM, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
-	inspectFlags.StringVarP(&inspectPublicKey, "key", "k", v.GetString(V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageInspectFlagPublicKey)
+	inspectFlags.StringVarP(&inspectPublicKey, "key", "k", v.GetString(viper.V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageInspectFlagPublicKey)
 }
 
-func bindRemoveFlags() {
+func bindRemoveFlags(v *spf13viper.Viper) {
 	removeFlags := packageRemoveCmd.Flags()
 	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageRemoveFlagConfirm)
-	removeFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageRemoveFlagComponents)
+	removeFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(viper.V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageRemoveFlagComponents)
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
 }
 
-func bindPublishFlags() {
+func bindPublishFlags(v *spf13viper.Viper) {
 	publishFlags := packagePublishCmd.Flags()
-	publishFlags.StringVarP(&pkgConfig.PublishOpts.SigningKeyPath, "key", "k", v.GetString(V_PKG_PUBLISH_SIGNING_KEY), lang.CmdPackagePublishFlagSigningKey)
-	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "key-pass", v.GetString(V_PKG_PUBLISH_SIGNING_KEY_PASSWORD), lang.CmdPackagePublishFlagSigningKeyPassword)
+	publishFlags.StringVarP(&pkgConfig.PublishOpts.SigningKeyPath, "key", "k", v.GetString(viper.V_PKG_PUBLISH_SIGNING_KEY), lang.CmdPackagePublishFlagSigningKey)
+	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "key-pass", v.GetString(viper.V_PKG_PUBLISH_SIGNING_KEY_PASSWORD), lang.CmdPackagePublishFlagSigningKeyPassword)
 }
 
-func bindPullFlags() {
+func bindPullFlags(v *spf13viper.Viper) {
 	pullFlags := packagePullCmd.Flags()
-	v.SetDefault(V_PKG_PULL_OUTPUT_DIR, "")
-	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_PULL_OUTPUT_DIR), lang.CmdPackagePullFlagOutputDirectory)
-	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_PULL_PUBLIC_KEY), lang.CmdPackagePullFlagPublicKey)
+	v.SetDefault(viper.V_PKG_PULL_OUTPUT_DIR, "")
+	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(viper.V_PKG_PULL_OUTPUT_DIR), lang.CmdPackagePullFlagOutputDirectory)
+	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(viper.V_PKG_PULL_PUBLIC_KEY), lang.CmdPackagePullFlagPublicKey)
 }

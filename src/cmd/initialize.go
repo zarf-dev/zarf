@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/src/cmd/viper"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -51,7 +52,8 @@ var initCmd = &cobra.Command{
 		pkgConfig.PkgSourcePath = pkgConfig.DeployOpts.PackagePath
 
 		// Ensure uppercase keys from viper
-		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
+		v := viper.Get()
+		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(viper.V_PKG_DEPLOY_SET), strings.ToUpper)
 		pkgConfig.DeployOpts.SetVariables = helpers.MergeMap(viperConfig, pkgConfig.DeployOpts.SetVariables)
 
 		// Configure the packager
@@ -162,43 +164,43 @@ func validateInitFlags() error {
 }
 
 func init() {
-	initViper()
+	v := viper.Init()
 
 	rootCmd.AddCommand(initCmd)
 
 	// Init package variable defaults that are non-zero values
-	v.SetDefault(V_PKG_DEPLOY_SET, map[string]string{})
-	v.SetDefault(V_INIT_GIT_PUSH_USER, config.ZarfGitPushUser)
-	v.SetDefault(V_INIT_REGISTRY_PUSH_USER, config.ZarfRegistryPushUser)
+	v.SetDefault(viper.V_PKG_DEPLOY_SET, map[string]string{})
+	v.SetDefault(viper.V_INIT_GIT_PUSH_USER, config.ZarfGitPushUser)
+	v.SetDefault(viper.V_INIT_REGISTRY_PUSH_USER, config.ZarfRegistryPushUser)
 
 	// Init package set variable flags
-	initCmd.Flags().StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdInitFlagSet)
+	initCmd.Flags().StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(viper.V_PKG_DEPLOY_SET), lang.CmdInitFlagSet)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
-	initCmd.Flags().StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_INIT_COMPONENTS), lang.CmdInitFlagComponents)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(V_INIT_STORAGE_CLASS), lang.CmdInitFlagStorageClass)
+	initCmd.Flags().StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(viper.V_INIT_COMPONENTS), lang.CmdInitFlagComponents)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(viper.V_INIT_STORAGE_CLASS), lang.CmdInitFlagStorageClass)
 
 	// Flags for using an external Git server
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(V_INIT_GIT_URL), lang.CmdInitFlagGitURL)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-push-username", v.GetString(V_INIT_GIT_PUSH_USER), lang.CmdInitFlagGitPushUser)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushPassword, "git-push-password", v.GetString(V_INIT_GIT_PUSH_PASS), lang.CmdInitFlagGitPushPass)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PullUsername, "git-pull-username", v.GetString(V_INIT_GIT_PULL_USER), lang.CmdInitFlagGitPullUser)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PullPassword, "git-pull-password", v.GetString(V_INIT_GIT_PULL_PASS), lang.CmdInitFlagGitPullPass)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(viper.V_INIT_GIT_URL), lang.CmdInitFlagGitURL)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-push-username", v.GetString(viper.V_INIT_GIT_PUSH_USER), lang.CmdInitFlagGitPushUser)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushPassword, "git-push-password", v.GetString(viper.V_INIT_GIT_PUSH_PASS), lang.CmdInitFlagGitPushPass)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PullUsername, "git-pull-username", v.GetString(viper.V_INIT_GIT_PULL_USER), lang.CmdInitFlagGitPullUser)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PullPassword, "git-pull-password", v.GetString(viper.V_INIT_GIT_PULL_PASS), lang.CmdInitFlagGitPullPass)
 
 	// Flags for using an external registry
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(V_INIT_REGISTRY_URL), lang.CmdInitFlagRegURL)
-	initCmd.Flags().IntVar(&pkgConfig.InitOpts.RegistryInfo.NodePort, "nodeport", v.GetInt(V_INIT_REGISTRY_NODEPORT), lang.CmdInitFlagRegNodePort)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(V_INIT_REGISTRY_PUSH_USER), lang.CmdInitFlagRegPushUser)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(V_INIT_REGISTRY_PUSH_PASS), lang.CmdInitFlagRegPushPass)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(V_INIT_REGISTRY_PULL_USER), lang.CmdInitFlagRegPullUser)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(V_INIT_REGISTRY_PULL_PASS), lang.CmdInitFlagRegPullPass)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Secret, "registry-secret", v.GetString(V_INIT_REGISTRY_SECRET), lang.CmdInitFlagRegSecret)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(viper.V_INIT_REGISTRY_URL), lang.CmdInitFlagRegURL)
+	initCmd.Flags().IntVar(&pkgConfig.InitOpts.RegistryInfo.NodePort, "nodeport", v.GetInt(viper.V_INIT_REGISTRY_NODEPORT), lang.CmdInitFlagRegNodePort)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(viper.V_INIT_REGISTRY_PUSH_USER), lang.CmdInitFlagRegPushUser)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(viper.V_INIT_REGISTRY_PUSH_PASS), lang.CmdInitFlagRegPushPass)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(viper.V_INIT_REGISTRY_PULL_USER), lang.CmdInitFlagRegPullUser)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(viper.V_INIT_REGISTRY_PULL_PASS), lang.CmdInitFlagRegPullPass)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Secret, "registry-secret", v.GetString(viper.V_INIT_REGISTRY_SECRET), lang.CmdInitFlagRegSecret)
 
 	// Flags for using an external artifact server
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.Address, "artifact-url", v.GetString(V_INIT_ARTIFACT_URL), lang.CmdInitFlagArtifactURL)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(V_INIT_ARTIFACT_PUSH_USER), lang.CmdInitFlagArtifactPushUser)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(V_INIT_ARTIFACT_PUSH_TOKEN), lang.CmdInitFlagArtifactPushToken)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.Address, "artifact-url", v.GetString(viper.V_INIT_ARTIFACT_URL), lang.CmdInitFlagArtifactURL)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(viper.V_INIT_ARTIFACT_PUSH_USER), lang.CmdInitFlagArtifactPushUser)
+	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(viper.V_INIT_ARTIFACT_PUSH_TOKEN), lang.CmdInitFlagArtifactPushToken)
 
 	initCmd.Flags().SortFlags = true
 }

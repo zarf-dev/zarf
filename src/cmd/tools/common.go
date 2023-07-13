@@ -13,7 +13,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var vendorCmds = []string{
@@ -32,11 +31,6 @@ var vendorCmds = []string{
 	"r",
 }
 
-var (
-	// Viper instance used by the tools package (shared with cmd)
-	v *viper.Viper
-)
-
 var toolsCmd = &cobra.Command{
 	Use:     "tools",
 	Aliases: []string{"t"},
@@ -48,9 +42,8 @@ var toolsCmd = &cobra.Command{
 }
 
 // Include adds the tools command to the root command.
-func Include(rootCmd *cobra.Command, cmdViper *viper.Viper) {
+func Include(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(toolsCmd)
-	v = cmdViper
 }
 
 // CheckVendorOnlyFromArgs checks if the command being run is a vendor-only command

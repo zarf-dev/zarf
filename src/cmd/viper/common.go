@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cmd contains the CLI commands for Zarf.
-package cmd
+// Package viper handles command config file interaction
+package viper
 
 import (
 	"os"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/cmd/tools"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/spf13/viper"
@@ -80,18 +79,16 @@ const (
 	V_PKG_PULL_PUBLIC_KEY = "package.pull.public_key"
 )
 
-func initViper() {
+// Viper instance used by commands
+var v *viper.Viper
+
+func Init() *viper.Viper {
 	// Already initialized by some other command
 	if v != nil {
-		return
+		return v
 	}
 
 	v = viper.New()
-
-	// Skip for vendor-only commands
-	if tools.CheckVendorOnlyFromArgs() {
-		return
-	}
 
 	// Specify an alternate config file
 	cfgFile := os.Getenv("ZARF_CONFIG")
@@ -123,4 +120,10 @@ func initViper() {
 	} else {
 		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
 	}
+
+	return v
+}
+
+func Get() *viper.Viper {
+	return v
 }

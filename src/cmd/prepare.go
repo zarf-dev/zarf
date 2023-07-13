@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/src/cmd/viper"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -102,7 +103,8 @@ var prepareFindImages = &cobra.Command{
 		}
 
 		// Ensure uppercase keys from viper
-		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(V_PKG_CREATE_SET), strings.ToUpper)
+		v := viper.Get()
+		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(viper.V_PKG_CREATE_SET), strings.ToUpper)
 		pkgConfig.CreateOpts.SetVariables = helpers.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
 
 		// Configure the packager
@@ -130,6 +132,7 @@ var prepareGenerateConfigFile = &cobra.Command{
 			fileName = args[0]
 		}
 
+		v := viper.Get()
 		if err := v.SafeWriteConfigAs(fileName); err != nil {
 			message.Fatalf(err, lang.CmdPrepareGenerateConfigErr, fileName)
 		}
@@ -137,7 +140,7 @@ var prepareGenerateConfigFile = &cobra.Command{
 }
 
 func init() {
-	initViper()
+	v := viper.Init()
 
 	rootCmd.AddCommand(prepareCmd)
 	prepareCmd.AddCommand(prepareTransformGitLinks)
@@ -145,11 +148,11 @@ func init() {
 	prepareCmd.AddCommand(prepareFindImages)
 	prepareCmd.AddCommand(prepareGenerateConfigFile)
 
-	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
+	v.SetDefault(viper.V_PKG_CREATE_SET, map[string]string{})
 
 	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPrepareFlagSet)
+	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(viper.V_PKG_CREATE_SET), lang.CmdPrepareFlagSet)
 	// allow for the override of the default helm KubeVersion
 	prepareFindImages.Flags().StringVar(&kubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
 
