@@ -21,7 +21,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/types"
-	goyaml "github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -29,6 +28,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	goyaml "github.com/goccy/go-yaml"
 )
 
 // Packager is the main struct for managing packages.
@@ -61,7 +61,7 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	}
 
 	if cfg.CommentMap == nil {
-		cfg.CommentMap = goyaml.CommentMap{}
+		cfg.CommentMap = make(goyaml.CommentMap)
 	}
 
 	if cfg.SetVariableMap == nil {
