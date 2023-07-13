@@ -1,0 +1,12 @@
+public/
+node_modules/
+.cache
+.history
+dist
+coverage
+docs/app
+__mocks__
+userguide/
+.release-please-manifest.json
+CHANGELOG.md
+.vscode/

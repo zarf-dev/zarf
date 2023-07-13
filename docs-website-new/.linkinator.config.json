@@ -1,0 +1,8 @@
+{
+  "recurse": true,
+  "skip": "^(https://example.com)",
+  "verbosity": "error",
+  "timeout": 0,
+  "markdown": true,
+  "directoryListing": true
+}

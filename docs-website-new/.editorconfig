@@ -1,0 +1,27 @@
+# Editor configuration, see https://editorconfig.org
+
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Allow trailing spaces in md as that is the syntax for a newline
+[*.md]
+trim_trailing_whitespace = false
+
+# 4 space indentation
+[*.js]
+indent_style = space
+indent_size = 2
+
+[*.json]
+indent_style = space
+indent_size = 2
+
+[*.yml, *.yaml]
+indent_style = space
+indent_size = 2

@@ -1,0 +1,31 @@
+{
+  "name": "zarf-website",
+  "version": "0.0.3",
+  "description": "Zarf Documentation",
+  "license": "Apache 2.0",
+  "author": "Defense Unicorns",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "build": "hugo",
+    "build:production": "npm run _hugo -- --minify",
+    "clean": "rm -Rf public",
+    "link-check": "npm run build && linkinator ./public --config .linkinator.config.json ",
+    "lint": "markdownlint ./content/**/*.md --ignore node_modules",
+    "lint:fix": "markdownlint -f ./content/**/*.md ./docs/**/*.md --ignore node_modules",
+    "prepare": "npm run update",
+    "start": "npm run clean && hugo serve",
+    "test": "npm run clean && npm run lint && npm run link-check",
+    "update": "hugo mod get -u ./... && hugo mod tidy"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.14",
+    "hugo-extended": "0.115.2",
+    "linkinator": "^5.0.1",
+    "markdownlint-cli": "0.35.0",
+    "postcss-cli": "^10.1.0",
+    "prettier": "^2.8.8",
+    "prettier-plugin-go-template": "^0.0.13"
+  }
+}
