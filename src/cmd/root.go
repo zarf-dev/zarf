@@ -72,7 +72,7 @@ func Execute() {
 
 func init() {
 	// Add the tools commands
-	tools.Include(rootCmd)
+	tools.Include(rootCmd, v)
 
 	// Skip for vendor-only commands
 	if tools.CheckVendorOnlyFromArgs() {

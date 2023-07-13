@@ -17,6 +17,7 @@ import "errors"
 const (
 	ErrLoadingConfig       = "failed to load config: %w"
 	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
+	ErrSaveState           = "Failed to save the Zarf State to the Kubernetes cluster."
 	ErrLoadPackageSecret   = "Failed to load %s's secret from the Kubernetes cluster"
 	ErrMarshal             = "failed to marshal file: %w"
 	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
@@ -121,6 +122,11 @@ const (
 
 	# Initializing w/ an external git server:
 	zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
+
+	# Initializing w/ an external artifact server:
+	zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
+
+	# NOTE: Not specifying --*-pull-password/username when using --*-push-password/username will use the push user for pulling as well
 `
 
 	CmdInitErrFlags             = "Invalid command flags were provided."
@@ -403,22 +409,22 @@ const (
 		"This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator.\n" +
 		"You can also wait for arbitrary network endpoints using REST or TCP checks.\n\n"
 	CmdToolsWaitForExample = `
-	Wait for Kubernetes resources:
-		zarf tools wait-for pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to be ready
-		zarf tools wait-for p cool-pod-name ready -n cool                     #  wait for pod (using p alias) cool-pod-name in namespace cool to be ready
-		zarf tools wait-for deployment podinfo available -n podinfo           #  wait for deployment podinfo in namespace podinfo to be available
-		zarf tools wait-for pod app=podinfo ready -n podinfo                  #  wait for pod with label app=podinfo in namespace podinfo to be ready
-		zarf tools wait-for svc zarf-docker-registry exists -n zarf           #  wait for service zarf-docker-registry in namespace zarf to exist
-		zarf tools wait-for svc zarf-docker-registry -n zarf                  #  same as above, except exists is the default condition
-		zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
-		zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
+	# Wait for Kubernetes resources:
+	zarf tools wait-for pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to be ready
+	zarf tools wait-for p cool-pod-name ready -n cool                     #  wait for pod (using p alias) cool-pod-name in namespace cool to be ready
+	zarf tools wait-for deployment podinfo available -n podinfo           #  wait for deployment podinfo in namespace podinfo to be available
+	zarf tools wait-for pod app=podinfo ready -n podinfo                  #  wait for pod with label app=podinfo in namespace podinfo to be ready
+	zarf tools wait-for svc zarf-docker-registry exists -n zarf           #  wait for service zarf-docker-registry in namespace zarf to exist
+	zarf tools wait-for svc zarf-docker-registry -n zarf                  #  same as above, except exists is the default condition
+	zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
+	zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
 
-	Wait for network endpoints:
-		zarf tools wait-for http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
-		zarf tools wait-for tcp localhost:8080                                #  wait for a connection to be established on localhost:8080
-		zarf tools wait-for https 1.1.1.1 200                                 #  wait for a 200 response from https://1.1.1.1
-		zarf tools wait-for http google.com                                   #  wait for any 2xx response from http://google.com
-		zarf tools wait-for http google.com success                           #  wait for any 2xx response from http://google.com
+	# Wait for network endpoints:
+	zarf tools wait-for http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
+	zarf tools wait-for tcp localhost:8080                                #  wait for a connection to be established on localhost:8080
+	zarf tools wait-for https 1.1.1.1 200                                 #  wait for a 200 response from https://1.1.1.1
+	zarf tools wait-for http google.com                                   #  wait for any 2xx response from http://google.com
+	zarf tools wait-for http google.com success                           #  wait for any 2xx response from http://google.com
 `
 	CmdToolsWaitForFlagTimeout        = "Specify the timeout duration for the wait command."
 	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration. Please use a valid duration string (e.g. 1s, 2m, 3h)."
@@ -429,8 +435,49 @@ const (
 
 	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
 
-	CmdToolsGetCredsShort = "Displays a Table of credentials for deployed components. Pass a component name to get a single credential"
-	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry'"
+	CmdToolsGetCredsShort   = "Displays a table of credentials for deployed Zarf services. Pass a service key to get a single credential"
+	CmdToolsGetCredsLong    = "Display a table of credentials for deployed Zarf services. Pass a service key to get a single credential. i.e. 'zarf tools get-creds registry'"
+	CmdToolsGetCredsExample = `
+	# Print all Zarf credentials:
+	zarf tools get-creds
+
+	# Get specific Zarf credentials:
+	zarf tools get-creds registry
+	zarf tools get-creds registry-readonly
+	zarf tools get-creds git
+	zarf tools get-creds git-readonly
+	zarf tools get-creds artifact
+	zarf tools get-creds logging
+`
+
+	CmdToolsUpdateCredsShort   = "Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service"
+	CmdToolsUpdateCredsLong    = "Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service. i.e. 'zarf tools update-creds registry'"
+	CmdToolsUpdateCredsExample = `
+	# Autogenerate all Zarf credentials at once:
+	zarf tools update-creds
+
+	# Autogenerate specific Zarf service credentials:
+	zarf tools update-creds registry
+	zarf tools update-creds git
+	zarf tools update-creds artifact
+	zarf tools update-creds logging
+
+	# Update all Zarf credentials w/external services at once:
+	zarf tools update-creds \
+		--registry-url={URL} --registry-push-username={USERNAME} --registry-push-password={PASSWORD} \
+		--git-url={URL} --git-push-username={USERNAME} --git-push-password={PASSWORD} \
+		--artifact-url={URL} --artifact-push-username={USERNAME} --artifact-push-token={PASSWORD}
+
+	# NOTE: Any credentials omitted from flags without a service key specified will be autogenerated - URLs will only change if specified
+	# config options can also be set with the 'init' section of a Zarf config file
+
+	# Update specific Zarf credentials w/external services:
+	zarf tools update-creds registry --registry-url={URL} --registry-push-username={USERNAME} --registry-push-password={PASSWORD}
+	zarf tools update-creds git --git-url={URL} --git-push-username={USERNAME} --git-push-password={PASSWORD}
+	zarf tools update-creds artifact --artifact-url={URL} --artifact-push-username={USERNAME} --artifact-push-token={PASSWORD}
+
+	# NOTE: Not specifying --*-pull-password/username when using --*-push-password/username will use the push user for pulling as well
+`
 
 	// zarf version
 	CmdVersionShort = "Shows the version of the running Zarf binary"

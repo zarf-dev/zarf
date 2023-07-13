@@ -132,9 +132,9 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 		state.StorageClass = initOptions.StorageClass
 	}
 
-	state.GitServer = c.fillInEmptyGitServerValues(initOptions.GitServer)
-	state.RegistryInfo = c.fillInEmptyContainerRegistryValues(initOptions.RegistryInfo)
-	state.ArtifactServer = c.fillInEmptyArtifactServerValues(initOptions.ArtifactServer)
+	state.GitServer = c.FillInEmptyGitServerValues(initOptions.GitServer)
+	state.RegistryInfo = c.FillInEmptyContainerRegistryValues(initOptions.RegistryInfo)
+	state.ArtifactServer = c.FillInEmptyArtifactServerValues(initOptions.ArtifactServer)
 
 	spinner.Success()
 
@@ -142,8 +142,6 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 	if err := c.SaveZarfState(state); err != nil {
 		return fmt.Errorf("unable to save the Zarf state: %w", err)
 	}
-
-	c.UpdateZarfManagedSecrets(state)
 
 	return nil
 }
@@ -234,7 +232,7 @@ func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 	return nil
 }
 
-func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
+func (c *Cluster) FillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
 	// Set default NodePort if none was provided
 	if containerRegistry.NodePort == 0 {
 		containerRegistry.NodePort = config.ZarfInClusterContainerRegistryNodePort
@@ -277,7 +275,7 @@ func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.Reg
 }
 
 // Fill in empty GitServerInfo values with the defaults.
-func (c *Cluster) fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerInfo {
+func (c *Cluster) FillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerInfo {
 	// Set default svc url if an external repository was not provided
 	if gitServer.Address == "" {
 		gitServer.Address = config.ZarfInClusterGitServiceURL
@@ -309,7 +307,7 @@ func (c *Cluster) fillInEmptyGitServerValues(gitServer types.GitServerInfo) type
 }
 
 // Fill in empty ArtifactServerInfo values with the defaults.
-func (c *Cluster) fillInEmptyArtifactServerValues(artifactServer types.ArtifactServerInfo) types.ArtifactServerInfo {
+func (c *Cluster) FillInEmptyArtifactServerValues(artifactServer types.ArtifactServerInfo) types.ArtifactServerInfo {
 	// Set default svc url if an external registry was not provided
 	if artifactServer.Address == "" {
 		artifactServer.Address = config.ZarfInClusterArtifactServiceURL
