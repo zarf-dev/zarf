@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/cli"
 )
 
 // Helm is a config object for working with helm charts.
@@ -25,6 +26,7 @@ type Helm struct {
 	Cluster           *cluster.Cluster
 	Cfg               *types.PackagerConfig
 	KubeVersion       string
+	Settings          *cli.EnvSettings
 
 	actionConfig *action.Configuration
 }

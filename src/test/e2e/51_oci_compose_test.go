@@ -240,7 +240,7 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 
 		if !isSkeleton {
 			for _, repo := range component.Repos {
-				dir, err := transform.GitTransformURLtoFolderName(repo)
+				dir, err := transform.GitURLtoFolderName(repo)
 				suite.NoError(err)
 				suite.DirExists(filepath.Join(componentPaths.Repos, dir))
 			}

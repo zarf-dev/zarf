@@ -518,10 +518,10 @@ github.com/fluxcd/pkg/apis/acl v0.1.0 h1:EoAl377hDQYL3WqanWCdifauXqXbMyFuK82NnX6
 github.com/fluxcd/pkg/apis/acl v0.1.0/go.mod h1:zfEZzz169Oap034EsDhmCAGgnWlcWmIObZjYMusoXS8=
 github.com/fluxcd/pkg/apis/kustomize v1.1.0 h1:Fbv4dCB57r2+fiusozN7at8r7upTz58Z4wWw1njHPyU=
 github.com/fluxcd/pkg/apis/kustomize v1.1.0/go.mod h1:CAe9Mjf9KVoTm1V4wpvq/FGXFDSnpBwfww/IG7mw3gM=
-github.com/fluxcd/pkg/apis/meta v1.1.0 h1:vYU1mvUzztnQyTzZOLHQ3wm/tXd7E1QZ2V91zuVJPsQ=
-github.com/fluxcd/pkg/apis/meta v1.1.0/go.mod h1:/QwCotRKL/BT6RSa4O75FlYW14fU8eRfKnoagzbkmL4=
-github.com/fluxcd/source-controller/api v0.36.1 h1:/ul69kJNEwrFG1Cwk2P/GwgraIxOETCL+tP+zMtxTu8=
-github.com/fluxcd/source-controller/api v0.36.1/go.mod h1:GktZmd5Dfxo84vPFBdLDl0bBtiJRODfd47uugK0romU=
+github.com/fluxcd/pkg/apis/meta v1.1.1 h1:sLAKLbEu7rRzJ+Mytffu3NcpfdbOBTa6hcpOQzFWm+M=
+github.com/fluxcd/pkg/apis/meta v1.1.1/go.mod h1:soCfzjFWbm1mqybDcOywWKTCEYlH3skpoNGTboVk234=
+github.com/fluxcd/source-controller/api v1.0.1 h1:nycylbNBnQd+EO4UHpqXqAQJ1cGAPxgBbrfERCQ1pp8=
+github.com/fluxcd/source-controller/api v1.0.1/go.mod h1:rAY5FRFGZUKpIFNyYANHIgPgJPvbALBHWsq/zHw/cXQ=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
 github.com/foxcpp/go-mockdns v1.0.0 h1:7jBqxd3WDWwi/6WhDvacvH1XsN3rOLXyHM1uhvIx6FI=
 github.com/frankban/quicktest v1.14.3/go.mod h1:mgiwOwqx65TmIk1wJ6Q7wvnVMocbUorkibMOrVTHZps=
