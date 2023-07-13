@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/cmd/tools"
-	"github.com/defenseunicorns/zarf/src/cmd/viper"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -31,7 +31,7 @@ var rootCmd = &cobra.Command{
 	Use: "zarf COMMAND",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Skip for vendor-only commands
-		if tools.CheckVendorOnlyFromPath(cmd) {
+		if common.CheckVendorOnlyFromPath(cmd) {
 			return
 		}
 
@@ -72,27 +72,27 @@ func init() {
 	tools.Include(rootCmd)
 
 	// Skip for vendor-only commands
-	if tools.CheckVendorOnlyFromArgs() {
+	if common.CheckVendorOnlyFromArgs() {
 		return
 	}
 
-	v := viper.Init()
+	v := common.InitViper()
 
-	v.SetDefault(viper.V_LOG_LEVEL, "info")
-	v.SetDefault(viper.V_ARCHITECTURE, "")
-	v.SetDefault(viper.V_NO_LOG_FILE, false)
-	v.SetDefault(viper.V_NO_PROGRESS, false)
-	v.SetDefault(viper.V_INSECURE, false)
-	v.SetDefault(viper.V_ZARF_CACHE, config.ZarfDefaultCachePath)
-	v.SetDefault(viper.V_TMP_DIR, "")
+	v.SetDefault(common.V_LOG_LEVEL, "info")
+	v.SetDefault(common.V_ARCHITECTURE, "")
+	v.SetDefault(common.V_NO_LOG_FILE, false)
+	v.SetDefault(common.V_NO_PROGRESS, false)
+	v.SetDefault(common.V_INSECURE, false)
+	v.SetDefault(common.V_ZARF_CACHE, config.ZarfDefaultCachePath)
+	v.SetDefault(common.V_TMP_DIR, "")
 
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(viper.V_LOG_LEVEL), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(viper.V_ARCHITECTURE), lang.RootCmdFlagArch)
-	rootCmd.PersistentFlags().BoolVar(&config.SkipLogFile, "no-log-file", v.GetBool(viper.V_NO_LOG_FILE), lang.RootCmdFlagSkipLogFile)
-	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(viper.V_NO_PROGRESS), lang.RootCmdFlagNoProgress)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(viper.V_ZARF_CACHE), lang.RootCmdFlagCachePath)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(viper.V_TMP_DIR), lang.RootCmdFlagTempDir)
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(viper.V_INSECURE), lang.RootCmdFlagInsecure)
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(common.V_LOG_LEVEL), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(common.V_ARCHITECTURE), lang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().BoolVar(&config.SkipLogFile, "no-log-file", v.GetBool(common.V_NO_LOG_FILE), lang.RootCmdFlagSkipLogFile)
+	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(common.V_NO_PROGRESS), lang.RootCmdFlagNoProgress)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(common.V_ZARF_CACHE), lang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(common.V_TMP_DIR), lang.RootCmdFlagTempDir)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(common.V_INSECURE), lang.RootCmdFlagInsecure)
 }
 
 func cliSetup() {

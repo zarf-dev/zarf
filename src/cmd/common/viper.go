@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package viper handles command config file interaction
-package viper
+// Package common handles command configuration across all commands
+package common
 
 import (
 	"os"
@@ -82,13 +82,18 @@ const (
 // Viper instance used by commands
 var v *viper.Viper
 
-func Init() *viper.Viper {
+func InitViper() *viper.Viper {
 	// Already initialized by some other command
 	if v != nil {
 		return v
 	}
 
 	v = viper.New()
+
+	// Skip for vendor-only commands
+	if CheckVendorOnlyFromArgs() {
+		return v
+	}
 
 	// Specify an alternate config file
 	cfgFile := os.Getenv("ZARF_CONFIG")
@@ -124,6 +129,6 @@ func Init() *viper.Viper {
 	return v
 }
 
-func Get() *viper.Viper {
+func GetViper() *viper.Viper {
 	return v
 }

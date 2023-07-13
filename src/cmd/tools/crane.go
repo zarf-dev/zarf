@@ -56,7 +56,7 @@ func init() {
 			if platform != "all" {
 				v1Platform, err = v1.ParsePlatform(platform)
 				if err != nil {
-					message.Fatalf(err, lang.CmdToolsRegistryInvalidPlatformErr, err.Error())
+					message.Fatalf(err, lang.CmdToolsRegistryInvalidPlatformErr, platform, err.Error())
 				}
 			}
 
