@@ -70,13 +70,13 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 	message.Debugf("Data %v", string(r.Object.Raw))
 
 	if src.Spec.Source != (Source{}) {
-		patchedURL, _ := handleRepoURL(src.Spec.Source.RepoURL)
+		patchedURL, _ := getPatchedRepoURL(src.Spec.Source.RepoURL)
 		patches = populateSingleSourceArgoApplicationPatchOperations(patchedURL, patches)
 	}
 
 	if len(src.Spec.Sources) > 0 {
 		for idx, source := range src.Spec.Sources {
-			patchedURL, _ := handleRepoURL(source.RepoURL)
+			patchedURL, _ := getPatchedRepoURL(source.RepoURL)
 			patches = populateMultipleSourceArgoApplicationPatchOperations(idx, patchedURL, patches)
 		}
 	}
@@ -87,7 +87,7 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 	}, nil
 }
 
-func handleRepoURL(repoURL string) (string, error) {
+func getPatchedRepoURL(repoURL string) (string, error) {
 	var err error
 	patchedURL := repoURL
 
