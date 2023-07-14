@@ -53,6 +53,7 @@ type ZarfPackageVariable struct {
 	Prompt      bool   `json:"prompt,omitempty" jsonschema:"description=Whether to prompt the user for input for this variable"`
 	Sensitive   bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
 	AutoIndent  bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
+	Type        string `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable),enum=variable,enum=file"`
 }
 
 // ZarfPackageConstant are constants that can be used to dynamically template K8s resources.

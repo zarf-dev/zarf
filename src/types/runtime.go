@@ -90,6 +90,7 @@ type ZarfSetVariable struct {
 	Sensitive  bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
 	AutoIndent bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
 	Value      string `json:"value" jsonschema:"description=The value the variable is currently set with"`
+	Type       string `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable),enum=variable,enum=file"`
 }
 
 // ConnectString contains information about a connection made with Zarf connect.

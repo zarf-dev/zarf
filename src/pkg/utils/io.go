@@ -54,6 +54,7 @@ func GetCryptoHashFromFile(path string, hashName crypto.Hash) (string, error) {
 type TextTemplate struct {
 	Sensitive  bool
 	AutoIndent bool
+	Type       string
 	Value      string
 }
 
@@ -182,6 +183,24 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 			value := templateKey
 			if template != nil {
 				value = template.Value
+
+				// Check if the value is a file type and load the value contents from the file
+				if template.Type == "file" {
+					if isText, err := IsTextFile(value); err != nil || !isText {
+						message.Warn("Refusing to load a non-text file for templating")
+						line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
+						continue
+					}
+
+					contents, err := os.ReadFile(value)
+					if err != nil {
+						message.Warnf("Unable to read file for templating - skipping: %s", err.Error())
+						line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
+						continue
+					}
+
+					value = string(contents)
+				}
 
 				// Check if the value is autoIndented and add the correct spacing
 				if template.AutoIndent {
