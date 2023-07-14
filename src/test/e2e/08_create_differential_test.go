@@ -47,7 +47,7 @@ func TestCreateDifferential(t *testing.T) {
 
 	// Load the extracted zarf.yaml specification
 	var differentialZarfConfig types.ZarfPackage
-	err = utils.ReadYaml(filepath.Join(tmpdir, config.ZarfYAML), &differentialZarfConfig, nil)
+	err = utils.ReadYaml(filepath.Join(tmpdir, config.ZarfYAML), &differentialZarfConfig)
 	require.NoError(t, err, "unable to read zarf.yaml from the differential git package")
 
 	// Get a list of all images and repos that are inside of the differential package

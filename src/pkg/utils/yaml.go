@@ -116,36 +116,41 @@ func AddRootHint(hints map[string]string, rootKey string, hintText string) map[s
 }
 
 // ReadYaml reads a yaml file and unmarshals it into a given config.
-func ReadYaml(path string, value any, commentMap goyaml.CommentMap) error {
+func ReadYaml(path string, value any) error {
 	message.Debugf("Loading Zarf config %s", path)
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-
-	if commentMap != nil {
-		message.Warn("unmarshal commentMap is not nil")
-		return goyaml.UnmarshalWithOptions(b, value, goyaml.CommentToMap(commentMap))
-	}
 	return goyaml.Unmarshal(b, value)
 }
 
+// ReadYamlWithComments reads a yaml file and unmarshals it and comments into a given config and comment map.
+func ReadYamlWithComments(path string, value any, commentMap goyaml.CommentMap) error {
+	message.Debugf("Loading Zarf config %s", path)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	return goyaml.UnmarshalWithOptions(b, value, goyaml.CommentToMap(commentMap))
+}
+
 // WriteYaml writes a given config to a yaml file on disk.
-func WriteYaml(path string, value any, commentMap goyaml.CommentMap, perm fs.FileMode) error {
+func WriteYaml(path string, value any, perm fs.FileMode) error {
 	// Save the parsed output to the config path given
-	var marshaled []byte
-	var err error
-	if commentMap != nil {
-		message.Warn("marshall commentMap is not nil")
-		marshaled, err = goyaml.MarshalWithOptions(value, goyaml.Indent(2), goyaml.WithComment(commentMap))
-		if err != nil {
-			return err
-		}
-	} else {
-		marshaled, err = goyaml.Marshal(value)
-		if err != nil {
-			return err
-		}
+	marshaled, err := goyaml.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, marshaled, perm)
+}
+
+// WriteYamlWithComments writes a given config and comment map to a yaml file on disk.
+func WriteYamlWithComments(path string, value any, commentMap goyaml.CommentMap, perm fs.FileMode) error {
+	marshaled, err := goyaml.MarshalWithOptions(value, goyaml.Indent(2), goyaml.WithComment(commentMap))
+	if err != nil {
+		return err
 	}
 
 	return os.WriteFile(path, marshaled, perm)

@@ -74,7 +74,7 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	err = archiver.Extract(filepath.Join(suite.tmpdir, normalPackageName), "zarf.yaml", suite.tmpdir)
 	suite.NoError(err, "unable to extract zarf.yaml from the differential git package")
 	var normalZarfConfig types.ZarfPackage
-	err = utils.ReadYaml(filepath.Join(suite.tmpdir, "zarf.yaml"), &normalZarfConfig, nil)
+	err = utils.ReadYaml(filepath.Join(suite.tmpdir, "zarf.yaml"), &normalZarfConfig)
 	suite.NoError(err, "unable to read zarf.yaml from the differential git package")
 	os.Remove(filepath.Join(suite.tmpdir, "zarf.yaml"))
 
@@ -85,7 +85,7 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	err = archiver.Extract(filepath.Join(suite.tmpdir, differentialPackageName), "zarf.yaml", suite.tmpdir)
 	suite.NoError(err, "unable to extract zarf.yaml from the differential git package")
 	var differentialZarfConfig types.ZarfPackage
-	err = utils.ReadYaml(filepath.Join(suite.tmpdir, "zarf.yaml"), &differentialZarfConfig, nil)
+	err = utils.ReadYaml(filepath.Join(suite.tmpdir, "zarf.yaml"), &differentialZarfConfig)
 	suite.NoError(err, "unable to read zarf.yaml from the differential git package")
 
 	/* Perform a bunch of asserts around the non-differential package */

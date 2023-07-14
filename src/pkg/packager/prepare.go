@@ -46,6 +46,10 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 	if err := p.readYaml(config.ZarfYAML); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
+	cm := make(goyaml.CommentMap)
+	if err := utils.ReadYamlWithComments(config.ZarfYAML, &p.cfg.Pkg, cm); err != nil {
+		return err
+	}
 
 	if err := p.composeComponents(); err != nil {
 		return err
@@ -239,7 +243,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 			}
 
 			if inplace {
-				err := p.updateComponentImagesInplace(componentIdx, sortedImages)
+				err := p.updateComponentImagesInplace(componentIdx, sortedImages, cm)
 				if err != nil {
 					return err
 				}
@@ -277,7 +281,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 			return err
 		}
 		perms := info.Mode().Perm()
-		err = utils.WriteYaml(config.ZarfYAML, p.cfg.Pkg, p.cfg.CommentMap, perms)
+		err = utils.WriteYamlWithComments(config.ZarfYAML, p.cfg.Pkg, p.cfg.CommentMap, perms)
 		if err != nil {
 			return err
 		}
@@ -291,12 +295,12 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 	return nil
 }
 
-func (p *Packager) updateComponentImagesInplace(index int, images []string) error {
+func (p *Packager) updateComponentImagesInplace(index int, images []string, cm goyaml.CommentMap) error {
 	component := p.cfg.Pkg.Components[index]
 
 	for imageIdx, image := range component.Images {
 		commentsPath := fmt.Sprintf("$.components[%d].images[%d]", index, imageIdx)
-		imageComments := p.cfg.CommentMap[commentsPath]
+		imageComments := cm[commentsPath]
 
 		left, err := transform.ParseImageRef(image)
 		if err != nil {

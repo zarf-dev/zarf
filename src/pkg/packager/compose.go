@@ -375,7 +375,7 @@ func (p *Packager) getSubPackage(packagePath string, checkSumPaths []string) (im
 	message.Debugf("packager.getSubPackage(%s)", packagePath)
 
 	path := filepath.Join(packagePath, config.ZarfYAML)
-	if err := utils.ReadYaml(path, &importedPackage, nil); err != nil {
+	if err := utils.ReadYaml(path, &importedPackage); err != nil {
 		return importedPackage, err
 	}
 

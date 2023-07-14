@@ -18,7 +18,7 @@ import (
 
 // readYaml loads the config from the given path
 func (p *Packager) readYaml(path string) error {
-	if err := utils.ReadYaml(path, &p.cfg.Pkg, p.cfg.CommentMap); err != nil {
+	if err := utils.ReadYaml(path, &p.cfg.Pkg); err != nil {
 		return err
 	}
 
@@ -79,5 +79,5 @@ func (p *Packager) writeYaml() error {
 
 	p.cfg.Pkg.Build.RegistryOverrides = p.cfg.CreateOpts.RegistryOverrides
 
-	return utils.WriteYaml(p.tmp.ZarfYaml, p.cfg.Pkg, p.cfg.CommentMap, 0400)
+	return utils.WriteYaml(p.tmp.ZarfYaml, p.cfg.Pkg, 0400)
 }

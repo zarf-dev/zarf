@@ -586,7 +586,7 @@ func (p *Packager) loadDifferentialData() error {
 	}
 
 	var differentialZarfConfig types.ZarfPackage
-	if err := utils.ReadYaml(filepath.Join(tmpDir, config.ZarfYAML), &differentialZarfConfig, nil); err != nil {
+	if err := utils.ReadYaml(filepath.Join(tmpDir, config.ZarfYAML), &differentialZarfConfig); err != nil {
 		return fmt.Errorf("unable to load the differential zarf package spec: %s", err.Error())
 	}
 
