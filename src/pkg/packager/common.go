@@ -28,7 +28,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	goyaml "github.com/goccy/go-yaml"
 )
 
 // Packager is the main struct for managing packages.
@@ -58,10 +57,6 @@ Note: This function creates a tmp directory that should be cleaned up with p.Cle
 func New(cfg *types.PackagerConfig) (*Packager, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
-	}
-
-	if cfg.CommentMap == nil {
-		cfg.CommentMap = make(goyaml.CommentMap)
 	}
 
 	if cfg.SetVariableMap == nil {
