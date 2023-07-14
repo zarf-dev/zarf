@@ -23,9 +23,18 @@ type Source struct {
 
 type ArgoApplication struct {
 	Spec struct {
-		Source Source `json:"source"`
+		Source  Source   `json:"source"`
+		Sources []Source `json:"sources"`
 	}
 }
+
+var (
+	zarfState types.ZarfState
+	patches   []operations.PatchOperation
+	isPatched bool
+	isCreate  bool
+	isUpdate  bool
+)
 
 // NewApplicationMutationHook creates a new instance of the ArgoCD Application mutation hook.
 func NewApplicationMutationHook() operations.Hook {
@@ -39,14 +48,10 @@ func NewApplicationMutationHook() operations.Hook {
 // mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
 func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
-	var (
-		zarfState types.ZarfState
-		patches   []operations.PatchOperation
-		isPatched bool
+	isCreate = r.Operation == v1.Create
+	isUpdate = r.Operation == v1.Update
 
-		isCreate = r.Operation == v1.Create
-		isUpdate = r.Operation == v1.Update
-	)
+	patches = []operations.PatchOperation{}
 
 	// Form the zarfState.GitServer.Address from the zarfState
 	if zarfState, err = state.GetZarfStateFromAgentPod(); err != nil {
@@ -61,15 +66,38 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
-	patchedURL := src.Spec.Source.RepoURL
+
+	message.Debugf("Data %v", string(r.Object.Raw))
+
+	if src.Spec.Source != (Source{}) {
+		patchedURL, _ := handleRepoURL(src.Spec.Source.RepoURL)
+		patches = populateSingleSourceArgoApplicationPatchOperations(patchedURL, patches)
+	}
+
+	if len(src.Spec.Sources) > 0 {
+		for idx, source := range src.Spec.Sources {
+			patchedURL, _ := handleRepoURL(source.RepoURL)
+			patches = populateMultipleSourceArgoApplicationPatchOperations(idx, patchedURL, patches)
+		}
+	}
+
+	return &operations.Result{
+		Allowed:  true,
+		PatchOps: patches,
+	}, nil
+}
+
+func handleRepoURL(repoURL string) (string, error) {
+	var err error
+	patchedURL := repoURL
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
-	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
+	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different from the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
 	if isUpdate {
-		isPatched, err = utils.DoHostnamesMatch(zarfState.GitServer.Address, src.Spec.Source.RepoURL)
+		isPatched, err = utils.DoHostnamesMatch(zarfState.GitServer.Address, repoURL)
 		if err != nil {
-			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
+			return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}
 	}
 
@@ -81,22 +109,18 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 			message.Warnf("Unable to transform the repoURL, using the original url we have: %s", patchedURL)
 		}
 		patchedURL = transformedURL.String()
-		message.Debugf("original repoURL of (%s) got mutated to (%s)", src.Spec.Source.RepoURL, patchedURL)
+		message.Debugf("original repoURL of (%s) got mutated to (%s)", repoURL, patchedURL)
 	}
 
-	// Patch updates of the repo spec
-	patches = populateArgoApplicationPatchOperations(patchedURL)
-
-	return &operations.Result{
-		Allowed:  true,
-		PatchOps: patches,
-	}, nil
+	return patchedURL, err
 }
 
 // Patch updates of the Argo source spec.
-func populateArgoApplicationPatchOperations(repoURL string) []operations.PatchOperation {
-	var patches []operations.PatchOperation
-	patches = append(patches, operations.ReplacePatchOperation("/spec/source/repoURL", repoURL))
+func populateSingleSourceArgoApplicationPatchOperations(repoURL string, patches []operations.PatchOperation) []operations.PatchOperation {
+	return append(patches, operations.ReplacePatchOperation("/spec/source/repoURL", repoURL))
+}
 
-	return patches
+// Patch updates of the Argo sources spec.
+func populateMultipleSourceArgoApplicationPatchOperations(idx int, repoURL string, patches []operations.PatchOperation) []operations.PatchOperation {
+	return append(patches, operations.ReplacePatchOperation(fmt.Sprintf("/spec/sources/%d/repoURL", idx), repoURL))
 }
