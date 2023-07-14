@@ -28,6 +28,7 @@ const (
 	ErrCreatingDir         = "failed to create directory %s: %s"
 	ErrRemoveFile          = "failed to remove file %s: %s"
 	ErrUnarchive           = "failed to unarchive %s: %s"
+	ErrConfirmCancel       = "confirm selection canceled: %s"
 )
 
 // Zarf CLI commands.
@@ -139,7 +140,6 @@ const (
 	CmdInitDownloadAsk       = "It seems the init package could not be found locally, but can be downloaded from %s"
 	CmdInitDownloadNote      = "Note: This will require an internet connection."
 	CmdInitDownloadConfirm   = "Do you want to download this init package?"
-	CmdInitDownloadErrCancel = "confirm selection canceled: %s"
 	CmdInitDownloadErrManual = "download the init package manually and place it in the current working directory"
 
 	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"

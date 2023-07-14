@@ -76,30 +76,44 @@ var updateCredsCmd = &cobra.Command{
 	Aliases: []string{"uc"},
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: Do some input validation on this command (like we do for init)
 		c := cluster.NewClusterOrDie()
-		state, err := c.LoadZarfState()
-		if err != nil || state.Distro == "" {
+		oldState, err := c.LoadZarfState()
+		if err != nil || oldState.Distro == "" {
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, lang.ErrLoadState)
 		}
 
 		// TODO: Handle different components individually
-		// Print a confirmation for what we are about to do (and support --confirm)
-		updateCredsInitOpts.RegistryInfo.NodePort = state.RegistryInfo.NodePort
-		updateCredsInitOpts.RegistryInfo.Secret = state.RegistryInfo.Secret
+		newState := oldState
+		newState.RegistryInfo = updateCredsInitOpts.RegistryInfo
+		newState.GitServer = updateCredsInitOpts.GitServer
+		newState.ArtifactServer = updateCredsInitOpts.ArtifactServer
+		newState.LoggingSecret = ""
 
-		state.GitServer = c.FillInEmptyGitServerValues(updateCredsInitOpts.GitServer)
-		state.RegistryInfo = c.FillInEmptyContainerRegistryValues(updateCredsInitOpts.RegistryInfo)
-		state.ArtifactServer = c.FillInEmptyArtifactServerValues(updateCredsInitOpts.ArtifactServer)
-		state.LoggingSecret = utils.RandomString(config.ZarfGeneratedPasswordLen)
+		utils.PrintCredentialUpdates(oldState, newState, []string{})
 
-		err = c.SaveZarfState(state)
-		if err != nil {
-			message.Fatalf(nil, lang.ErrSaveState)
+		confirm := false
+		prompt := &survey.Confirm{
+			Message: "Continue with these changes?",
 		}
-		c.UpdateZarfManagedSecrets(state)
-		// TODO: Apply the updates to the registry and git-server helm charts (if internal)
+		if err := survey.AskOne(prompt, &confirm); err != nil {
+			message.Fatalf(nil, lang.ErrConfirmCancel, err)
+		}
+
+		if confirm {
+			newState.RegistryInfo.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+			newState.RegistryInfo.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+			newState.GitServer.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+			newState.GitServer.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+			newState.ArtifactServer.PushToken = utils.RandomString(config.ZarfGeneratedPasswordLen)
+			newState.LoggingSecret = utils.RandomString(config.ZarfGeneratedPasswordLen)
+			err = c.SaveZarfState(newState)
+			if err != nil {
+				message.Fatalf(nil, lang.ErrSaveState)
+			}
+			c.UpdateZarfManagedSecrets(newState)
+			// TODO: Apply the updates to the registry and git-server helm charts (if internal)
+		}
 	},
 }
 
