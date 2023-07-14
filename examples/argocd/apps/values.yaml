@@ -1,0 +1,26 @@
+applications:
+  - name: apps
+    namespace: argocd
+    finalizers:
+      - resources-finalizer.argocd.argoproj.io
+    project: default
+    sources:
+      - repoURL: https://github.com/stefanprodan/podinfo.git
+        path: ./charts/podinfo
+        targetRevision: 6.4.0
+        helm:
+          valueFiles:
+            - values.yaml
+      - repoURL: https://github.com/radiusmethod/tracerbullet.git
+        path: ./chart
+        targetRevision: 0.0.4
+        helm:
+          valueFiles:
+            - values.yaml
+          values: |
+            message: "Zarf!"
+    syncPolicy:
+      automated: { }
+    destination:
+      namespace: default
+      server: https://kubernetes.default.svc

@@ -1,0 +1,15 @@
+redis-ha:
+  enabled: false
+
+configs:
+  repositories:
+    github-podinfo:
+      name: podinfo
+      url: https://github.com/stefanprodan/podinfo.git
+      username: ""
+      password: ""
+    github-tracerbullet:
+      name: tracerbullet
+      url: https://github.com/radiusmethod/tracerbullet.git
+      username: ""
+      password: ""
