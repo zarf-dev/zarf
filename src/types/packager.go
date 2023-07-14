@@ -4,10 +4,6 @@
 // Package types contains all the types used by Zarf.
 package types
 
-import (
-	goyaml "github.com/goccy/go-yaml"
-)
-
 // PackagerConfig is the main struct that the packager uses to hold high-level options.
 type PackagerConfig struct {
 	// CreateOpts tracks the user-defined options used to create the package
@@ -45,7 +41,4 @@ type PackagerConfig struct {
 
 	// SBOM file paths in the package
 	SBOMViewFiles []string
-
-	// CommentMap tracks the comments in the zarf.yaml file
-	CommentMap goyaml.CommentMap
 }
