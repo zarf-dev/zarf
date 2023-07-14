@@ -8,15 +8,19 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sync"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 )
 
 // CopyPackage copies a package from one OCI registry to another
 func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
-	message.Debug("CopyPackage concurrency:", concurrency)
+	sem := semaphore.NewWeighted(int64(concurrency))
 	ctx := context.TODO()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	srcRoot, err := src.FetchRoot()
 	if err != nil {
@@ -32,11 +36,14 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 
 	title := fmt.Sprintf("[0/%d] layers copied", len(layers))
 	progressBar := message.NewProgressBar(size, title)
-	defer progressBar.Successf("%s --> %s", src.repo.Reference, dst.repo.Reference)
+	defer progressBar.Successf("Copied %s", src.repo.Reference)
+	start := time.Now()
 
-	// TODO: goroutine this w/ semaphores
 	for idx, layer := range layers {
 		message.Debug("Copying layer:", message.JSONValue(layer))
+		if err := sem.Acquire(ctx, 1); err != nil {
+			return err
+		}
 
 		exists, err := dst.repo.Exists(ctx, layer)
 		if err != nil {
@@ -46,13 +53,14 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 			message.Debug("Layer already exists in destination, skipping")
 			progressBar.UpdateTitle(fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
 			progressBar.Add(int(layer.Size))
+			sem.Release(1)
 			continue
 		}
 
 		pr, pw := io.Pipe()
 
-		wg := sync.WaitGroup{}
-		wg.Add(2)
+		eg, ectx := errgroup.WithContext(ctx)
+		eg.SetLimit(2)
 
 		// fetch the layer from the source
 		rc, err := src.repo.Fetch(ctx, layer)
@@ -63,32 +71,37 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 		tr := io.TeeReader(rc, pw)
 
 		// this goroutine is responsible for pushing the layer to the destination
-		go func() {
-			defer wg.Done()
+		eg.Go(func() error {
 			defer pw.Close()
 
 			// get data from the TeeReader and push it to the destination
 			// push the layer to the destination
-			err = dst.repo.Push(ctx, layer, tr)
+			err = dst.repo.Push(ectx, layer, tr)
 			if err != nil {
-				message.Fatal(err, "failed to push layer")
+				return fmt.Errorf("failed to push layer %s to %s: %w", layer.Digest, dst.repo.Reference, err)
 			}
-		}()
+			return nil
+		})
 
 		// this goroutine is responsible for updating the progressbar
-		go func() {
-			defer wg.Done()
-
+		eg.Go(func() error {
 			// read from the PipeReader to the progressbar
 			if _, err := io.Copy(progressBar, pr); err != nil {
-				message.Fatal(err, "failed to copy layer")
+				return fmt.Errorf("failed to update progress on layer %s: %w", layer.Digest, err)
 			}
-		}()
+			return nil
+		})
 
 		// wait for the goroutines to finish
-		wg.Wait()
+		if err := eg.Wait(); err != nil {
+			return err
+		}
+		sem.Release(1)
 		progressBar.UpdateTitle(fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
 	}
+
+	duration := time.Since(start)
+	message.Debug("Copied", src.repo.Reference, "to", dst.repo.Reference, "with a concurrency of", concurrency, "and took", duration)
 
 	return nil
 }
