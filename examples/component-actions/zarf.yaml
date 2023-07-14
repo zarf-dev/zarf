@@ -117,7 +117,7 @@ components:
               - name: SNAKE_SOUND
                 # marks this variable as sensitive to prevent it from being output in the Zarf log
                 sensitive: true
-                # autoIndent tells Zarf to maintain spacing for any newlines when templating into a yaml file 
+                # autoIndent tells Zarf to maintain spacing for any newlines when templating into a yaml file
                 autoIndent: true
         # onSuccess will only run if steps in this component are successful
         onSuccess:
