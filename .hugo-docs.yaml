@@ -1,0 +1,8 @@
+paths:
+  - 'CONTRIBUTING.md'
+  - './adr'
+  - 'docs'
+  - 'examples'
+  - 'packages'
+
+outdir: './docs-website-new/content'
