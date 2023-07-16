@@ -108,10 +108,9 @@ func NewProcessor(source string) (Processor, error) {
 		}
 		processor.OrasRemote = remote
 		return &processor, nil
-	} else {
-		if !IsValidTarballPath(source) {
-			return nil, fmt.Errorf("invalid tarball path: %s", source)
-		}
-		return &tarballProcessor{src: source}, nil
 	}
+	if !IsValidTarballPath(source) {
+		return nil, fmt.Errorf("invalid tarball path: %s", source)
+	}
+	return &tarballProcessor{src: source}, nil
 }
