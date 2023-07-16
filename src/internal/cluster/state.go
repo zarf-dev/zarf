@@ -335,22 +335,3 @@ func (c *Cluster) fillInEmptyArtifactServerValues(artifactServer types.ArtifactS
 
 	return artifactServer
 }
-
-// func (c *Cluster) isUpdatedContainerRegistryValues(initRegistryInfo types.RegistryInfo, stateRegistryInfo types.RegistryInfo) bool {
-// 	if initRegistryInfo.NodePort != 0 && initRegistryInfo.NodePort != stateRegistryInfo.NodePort {
-// 		return true
-// 	} else if initRegistryInfo.Address != "" && initRegistryInfo.Address != stateRegistryInfo.Address {
-// 		return true
-// 	} else if initRegistryInfo.PushUsername != "" && initRegistryInfo.PushUsername != stateRegistryInfo.PushUsername {
-// 		return true
-// 	} else if initRegistryInfo.PushPassword != "" && initRegistryInfo.PushPassword != stateRegistryInfo.PushPassword {
-// 		return true
-// 	} else if initRegistryInfo.PullUsername != "" && initRegistryInfo.PullUsername != stateRegistryInfo.PullUsername {
-// 		return true
-// 	} else if initRegistryInfo.PullPassword != "" && initRegistryInfo.PullPassword != stateRegistryInfo.PullPassword {
-// 		return true
-// 	} else if initRegistryInfo.Secret != "" && initRegistryInfo.Secret != stateRegistryInfo.Secret {
-// 		return true
-// 	}
-// 	return false
-// }

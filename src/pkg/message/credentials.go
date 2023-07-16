@@ -14,6 +14,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
+// Common constants for printing credentials
 const (
 	loggingUsername = "zarf-admin"
 

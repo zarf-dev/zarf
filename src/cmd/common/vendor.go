@@ -41,7 +41,7 @@ func CheckVendorOnlyFromPath(cmd *cobra.Command) bool {
 	return IsVendorCmd(args, vendorCmds)
 }
 
-// isVendorCmd checks if the command is a vendor command.
+// IsVendorCmd checks if the command is a vendor command.
 func IsVendorCmd(args []string, vendoredCmds []string) bool {
 	if len(args) > 2 {
 		if args[1] == "tools" || args[1] == "t" {
