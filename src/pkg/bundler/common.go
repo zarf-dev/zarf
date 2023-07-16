@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -118,6 +120,11 @@ func (b *Bundler) ValidateBundle() error {
 	}
 	for idx, pkg := range b.bundle.Packages {
 		url := fmt.Sprintf("%s:%s-%s", pkg.Repository, pkg.Ref, b.bundle.Metadata.Architecture)
+
+		if strings.Contains(pkg.Ref, "@sha256:") {
+			url = fmt.Sprintf("%s:%s", pkg.Repository, pkg.Ref)
+		}
+
 		// validate access to packages as well as components referenced in the package
 		remote, err := oci.NewOrasRemote(url)
 		if err != nil {
@@ -130,7 +137,9 @@ func (b *Bundler) ValidateBundle() error {
 		}
 
 		// mutate the ref to <tag>-<arch>@sha256:<digest> so we can reference it later
-		b.bundle.Packages[idx].Ref = pkg.Ref + "-" + b.bundle.Metadata.Architecture + "@sha256:" + manifestDesc.Digest.Encoded()
+		if err := remote.Repo().Reference.ValidateReferenceAsDigest(); err != nil {
+			b.bundle.Packages[idx].Ref = pkg.Ref + "-" + b.bundle.Metadata.Architecture + "@sha256:" + manifestDesc.Digest.Encoded()
+		}
 
 		message.Debug("Validating package:", message.JSONValue(pkg))
 
@@ -174,8 +183,52 @@ func (b *Bundler) ValidateBundle() error {
 						pkg.OptionalComponents = append(pkg.OptionalComponents, c.Name)
 					}
 				}
+				// mutate the package to include all optional components
+				b.bundle.Packages[idx].OptionalComponents = pkg.OptionalComponents
 				continue
 			}
+			// expand partial wildcards
+			// TODO: move this to a `expandWildcards` helper so packager can use it too
+			for idx, component := range pkg.OptionalComponents {
+				// TODO: move this to helpers
+				wildCardToRegexp := func(pattern string) string {
+					components := strings.Split(pattern, "*")
+					if len(components) == 1 {
+						// if len is 1, there are no *'s, return exact match pattern
+						return "^" + pattern + "$"
+					}
+					var result strings.Builder
+					for i, literal := range components {
+
+						// Replace * with .*
+						if i > 0 {
+							result.WriteString(".*")
+						}
+
+						// Quote any regular expression meta characters in the
+						// literal text.
+						result.WriteString(regexp.QuoteMeta(literal))
+					}
+					return "^" + result.String() + "$"
+				}
+
+				// if the component is a partial wildcard, expand it
+				if strings.Contains(component, "*") {
+					// expand the wildcard
+					components := helpers.Filter(zarfYAML.Components, func(c types.ZarfComponent) bool {
+						return regexp.MustCompile(wildCardToRegexp(component)).MatchString(c.Name)
+					})
+					// add the expanded components to the optional components list
+					for _, c := range components {
+						if c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == b.bundle.Metadata.Architecture {
+							pkg.OptionalComponents = append(pkg.OptionalComponents[:idx], append([]string{c.Name}, pkg.OptionalComponents[idx:]...)...)
+						}
+					}
+					b.bundle.Packages[idx].OptionalComponents = pkg.OptionalComponents
+					continue
+				}
+			}
+			// validate the optional components exist in the package and support the bundle's target architecture
 			for _, component := range pkg.OptionalComponents {
 				c := helpers.Find(zarfYAML.Components, func(c types.ZarfComponent) bool {
 					return c.Name == component
@@ -189,6 +242,7 @@ func (b *Bundler) ValidateBundle() error {
 					return fmt.Errorf("zarf-bundle.yaml .packages[%s].components[%s] does not support architecture: %s", pkg.Repository, component, b.bundle.Metadata.Architecture)
 				}
 			}
+			sort.Strings(pkg.OptionalComponents)
 		}
 	}
 	return nil
