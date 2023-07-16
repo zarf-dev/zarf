@@ -74,7 +74,7 @@ jobs:
         #       in a previous step. This test run will the current release to create a K3s cluster.
         # chown the logs since they were originally created as root
         run: |
-          sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server,logging --confirm
+          sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server,logging --nodeport 31337 --confirm
           sudo chown $USER /tmp/zarf-*.log
 
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure

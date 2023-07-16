@@ -94,8 +94,27 @@ var updateCredsCmd = &cobra.Command{
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, lang.ErrLoadState)
 		}
+		initPackage, err := c.GetDeployedPackage("init")
+		if err != nil || oldState.Distro == "" {
+			// If no distro the zarf secret did not load properly
+			message.Fatalf(nil, "Unable to load init package information from the cluster")
+		}
 
-		// TODO: Handle different components individually
+		hasRegistry := false
+		hasGitServer := false
+		hasLogging := false
+		for _, dc := range initPackage.DeployedComponents {
+			if dc.Name == "zarf-registry" {
+				hasRegistry = true
+			}
+			if dc.Name == "git-server" {
+				hasGitServer = true
+			}
+			if dc.Name == "logging" {
+				hasGitServer = true
+			}
+		}
+
 		newState := oldState
 
 		if helpers.SliceContains(args, message.RegistryKey) {
@@ -139,8 +158,7 @@ var updateCredsCmd = &cobra.Command{
 				}
 			}
 			if helpers.SliceContains(args, message.ArtifactKey) {
-				if newState.ArtifactServer.PushToken == "" {
-
+				if newState.ArtifactServer.PushToken == "" && hasGitServer {
 					g := git.New(newState.GitServer)
 					tokenResponse, err := g.CreatePackageRegistryToken()
 					if err != nil {
@@ -152,12 +170,22 @@ var updateCredsCmd = &cobra.Command{
 			if helpers.SliceContains(args, message.LoggingKey) {
 				newState.LoggingSecret = utils.RandomString(config.ZarfGeneratedPasswordLen)
 			}
+
 			err = c.SaveZarfState(newState)
 			if err != nil {
 				message.Fatalf(nil, lang.ErrSaveState)
 			}
+
 			c.UpdateZarfManagedSecrets(newState)
-			// TODO: Apply the updates to the registry and git-server helm charts (if internal)
+			if helpers.SliceContains(args, message.RegistryKey) && hasRegistry {
+				// TODO: Apply the updates to the registry helm chart
+			}
+			if helpers.SliceContains(args, message.GitKey) && hasGitServer {
+				// TODO: Apply the updates to the gitea helm chart
+			}
+			if helpers.SliceContains(args, message.LoggingKey) && hasLogging {
+				// TODO: Apply the updates to the logging helm chart
+			}
 		}
 	},
 }
