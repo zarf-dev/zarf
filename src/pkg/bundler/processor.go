@@ -18,7 +18,7 @@ import (
 //
 // operations that are common no matter the source should be implemented on bundler
 type Processor interface {
-	// LoadBundle loads a bundle
+	// LoadBundle loads a bundle into the `dst` directory
 	//
 	// : if tarball
 	// : : extracts the package(s) from the tarball

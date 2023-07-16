@@ -35,6 +35,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 		if err != nil {
 			return err
 		}
+		// fetch the root manifest so we can push it into the bundle
 		root, err := remote.FetchRoot()
 		if err != nil {
 			return err
@@ -90,6 +91,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 	message.Debug("Pushed", config.ZarfBundleYAML+":", message.JSONValue(zarfBundleYamlDesc))
 	manifest.Layers = append(manifest.Layers, zarfBundleYamlDesc)
 
+	// push the zarf-bundle.yaml signature
 	if len(signature) > 0 {
 		zarfBundleYamlSigDesc, err := o.PushLayer(signature, ZarfLayerMediaTypeBlob)
 		if err != nil {

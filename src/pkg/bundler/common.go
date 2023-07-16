@@ -27,7 +27,6 @@ import (
 
 // Bundler handles bundler operations
 type Bundler struct {
-	// pkgr   packager.Packager
 	cfg    *types.BundlerConfig
 	bundle types.ZarfBundle
 	remote *oci.OrasRemote
@@ -87,15 +86,6 @@ func (b *Bundler) ReadBundleYaml(path string, bndl *types.ZarfBundle) error {
 // WriteBundleYaml is a wrapper around utils.WriteYaml
 func (b *Bundler) WriteBundleYaml(path string, bndl *types.ZarfBundle) error {
 	return utils.WriteYaml(path, bndl, 0600)
-}
-
-// ExtractPackage should extract a package from a bundle
-func (b *Bundler) ExtractPackage(name string, out string) error {
-	message.Infof("Extracting %s to %s", name, out)
-	return nil
-	// read the index.json from the bfs.SourceTarball
-	// get all the layers for the package
-	// extract the layers to the output directory
 }
 
 // ValidateBundle validates the bundle
@@ -304,6 +294,8 @@ func (b *Bundler) SetOCIRemote(url string) error {
 }
 
 // MergeVariables merges the variables from the config file and the CLI
+//
+// TODO: move this to helpers.MergeAndTransformMap
 func MergeVariables(left map[string]string, right map[string]string) map[string]string {
 	// Ensure uppercase keys from viper and CLI --set
 	leftUpper := helpers.TransformMapKeys(left, strings.ToUpper)

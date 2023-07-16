@@ -18,6 +18,7 @@ import (
 // : show the `zarf-bundle.yaml`
 // : have an option to download + persist the SBOMs?
 func (b *Bundler) Inspect() error {
+	// create a new processor
 	processor, err := NewProcessor(b.cfg.InspectOpts.Source)
 	if err != nil {
 		return err
