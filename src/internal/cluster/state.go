@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -111,6 +112,23 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 		if _, err := c.Kube.WaitForServiceAccount(ZarfNamespaceName, "default", 2*time.Minute); err != nil {
 			return fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
+
+		state.GitServer = c.fillInEmptyGitServerValues(initOptions.GitServer)
+		state.RegistryInfo = c.fillInEmptyContainerRegistryValues(initOptions.RegistryInfo)
+		state.ArtifactServer = c.fillInEmptyArtifactServerValues(initOptions.ArtifactServer)
+	} else {
+		if helpers.IsNotZeroAndNotEqual(initOptions.GitServer, state.GitServer) {
+			message.Warn("Detected a change in Git Server init options on a re-init. Ignoring... To update run:")
+			message.ZarfCommand("tools update-creds git")
+		}
+		if helpers.IsNotZeroAndNotEqual(initOptions.RegistryInfo, state.RegistryInfo) {
+			message.Warn("Detected a change in Image Registry init options on a re-init. Ignoring... To update run:")
+			message.ZarfCommand("tools update-creds registry")
+		}
+		if helpers.IsNotZeroAndNotEqual(initOptions.ArtifactServer, state.ArtifactServer) {
+			message.Warn("Detected a change in Artifact Server init options on a re-init. Ignoring... To update run:")
+			message.ZarfCommand("tools update-creds artifact")
+		}
 	}
 
 	if clusterArch != state.Architecture {
@@ -131,10 +149,6 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 	if initOptions.StorageClass != "" {
 		state.StorageClass = initOptions.StorageClass
 	}
-
-	state.GitServer = c.FillInEmptyGitServerValues(initOptions.GitServer)
-	state.RegistryInfo = c.FillInEmptyContainerRegistryValues(initOptions.RegistryInfo)
-	state.ArtifactServer = c.FillInEmptyArtifactServerValues(initOptions.ArtifactServer)
 
 	spinner.Success()
 
@@ -232,7 +246,7 @@ func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 	return nil
 }
 
-func (c *Cluster) FillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
+func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
 	// Set default NodePort if none was provided
 	if containerRegistry.NodePort == 0 {
 		containerRegistry.NodePort = config.ZarfInClusterContainerRegistryNodePort
@@ -275,7 +289,7 @@ func (c *Cluster) FillInEmptyContainerRegistryValues(containerRegistry types.Reg
 }
 
 // Fill in empty GitServerInfo values with the defaults.
-func (c *Cluster) FillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerInfo {
+func (c *Cluster) fillInEmptyGitServerValues(gitServer types.GitServerInfo) types.GitServerInfo {
 	// Set default svc url if an external repository was not provided
 	if gitServer.Address == "" {
 		gitServer.Address = config.ZarfInClusterGitServiceURL
@@ -307,7 +321,7 @@ func (c *Cluster) FillInEmptyGitServerValues(gitServer types.GitServerInfo) type
 }
 
 // Fill in empty ArtifactServerInfo values with the defaults.
-func (c *Cluster) FillInEmptyArtifactServerValues(artifactServer types.ArtifactServerInfo) types.ArtifactServerInfo {
+func (c *Cluster) fillInEmptyArtifactServerValues(artifactServer types.ArtifactServerInfo) types.ArtifactServerInfo {
 	// Set default svc url if an external registry was not provided
 	if artifactServer.Address == "" {
 		artifactServer.Address = config.ZarfInClusterArtifactServiceURL
@@ -321,3 +335,22 @@ func (c *Cluster) FillInEmptyArtifactServerValues(artifactServer types.ArtifactS
 
 	return artifactServer
 }
+
+// func (c *Cluster) isUpdatedContainerRegistryValues(initRegistryInfo types.RegistryInfo, stateRegistryInfo types.RegistryInfo) bool {
+// 	if initRegistryInfo.NodePort != 0 && initRegistryInfo.NodePort != stateRegistryInfo.NodePort {
+// 		return true
+// 	} else if initRegistryInfo.Address != "" && initRegistryInfo.Address != stateRegistryInfo.Address {
+// 		return true
+// 	} else if initRegistryInfo.PushUsername != "" && initRegistryInfo.PushUsername != stateRegistryInfo.PushUsername {
+// 		return true
+// 	} else if initRegistryInfo.PushPassword != "" && initRegistryInfo.PushPassword != stateRegistryInfo.PushPassword {
+// 		return true
+// 	} else if initRegistryInfo.PullUsername != "" && initRegistryInfo.PullUsername != stateRegistryInfo.PullUsername {
+// 		return true
+// 	} else if initRegistryInfo.PullPassword != "" && initRegistryInfo.PullPassword != stateRegistryInfo.PullPassword {
+// 		return true
+// 	} else if initRegistryInfo.Secret != "" && initRegistryInfo.Secret != stateRegistryInfo.Secret {
+// 		return true
+// 	}
+// 	return false
+// }

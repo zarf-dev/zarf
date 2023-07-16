@@ -6,6 +6,7 @@ package helpers
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"time"
 )
@@ -158,4 +159,21 @@ func MatchRegex(regex *regexp.Regexp, str string) (func(string) string, error) {
 	}
 
 	return get, nil
+}
+
+// IsNotZeroAndNotEqual is used to test if a struct has zero values or is equal values with another struct
+func IsNotZeroAndNotEqual(given any, equal any) bool {
+	givenValue := reflect.ValueOf(given)
+	equalValue := reflect.ValueOf(equal)
+
+	if givenValue.NumField() != equalValue.NumField() {
+		return true
+	}
+
+	for i := 0; i < givenValue.NumField(); i++ {
+		if !givenValue.Field(i).IsZero() && givenValue.Field(i).Interface() != equalValue.Field(i).Interface() {
+			return true
+		}
+	}
+	return false
 }

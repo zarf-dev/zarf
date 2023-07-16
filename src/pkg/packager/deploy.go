@@ -595,6 +595,6 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 		message.PrintConnectStringTable(connectStrings)
 	} else {
 		// otherwise, print the init config connection and passwords
-		utils.PrintCredentialTable(p.cfg.State, componentsToDeploy)
+		message.PrintCredentialTable(p.cfg.State, componentsToDeploy)
 	}
 }

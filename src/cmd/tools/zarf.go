@@ -14,10 +14,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/spf13/cobra"
@@ -41,7 +43,7 @@ var deprecatedGetGitCredsCmd = &cobra.Command{
 
 		message.Note(lang.CmdToolsGetGitPasswdInfo)
 		message.Warn(lang.CmdToolsGetGitPasswdDeprecation)
-		utils.PrintComponentCredential(state, "git")
+		message.PrintComponentCredential(state, "git")
 	},
 }
 
@@ -61,9 +63,9 @@ var getCredsCmd = &cobra.Command{
 
 		if len(args) > 0 {
 			// If a component name is provided, only show that component's credentials
-			utils.PrintComponentCredential(state, args[0])
+			message.PrintComponentCredential(state, args[0])
 		} else {
-			utils.PrintCredentialTable(state, nil)
+			message.PrintCredentialTable(state, nil)
 		}
 	},
 }
@@ -76,6 +78,16 @@ var updateCredsCmd = &cobra.Command{
 	Aliases: []string{"uc"},
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey, message.LoggingKey}
+		if len(args) == 0 {
+			args = validKeys
+		} else {
+			if !helpers.SliceContains(validKeys, args[0]) {
+				cmd.Help()
+				message.Fatalf(nil, "Invalid service key specified - valid keys are: %s, %s, %s, and %s", message.RegistryKey, message.GitKey, message.ArtifactKey, message.LoggingKey)
+			}
+		}
+
 		c := cluster.NewClusterOrDie()
 		oldState, err := c.LoadZarfState()
 		if err != nil || oldState.Distro == "" {
@@ -85,12 +97,21 @@ var updateCredsCmd = &cobra.Command{
 
 		// TODO: Handle different components individually
 		newState := oldState
-		newState.RegistryInfo = updateCredsInitOpts.RegistryInfo
-		newState.GitServer = updateCredsInitOpts.GitServer
-		newState.ArtifactServer = updateCredsInitOpts.ArtifactServer
-		newState.LoggingSecret = ""
 
-		utils.PrintCredentialUpdates(oldState, newState, []string{})
+		if helpers.SliceContains(args, message.RegistryKey) {
+			newState.RegistryInfo = updateCredsInitOpts.RegistryInfo
+		}
+		if helpers.SliceContains(args, message.GitKey) {
+			newState.GitServer = updateCredsInitOpts.GitServer
+		}
+		if helpers.SliceContains(args, message.ArtifactKey) {
+			newState.ArtifactServer = updateCredsInitOpts.ArtifactServer
+		}
+		if helpers.SliceContains(args, message.LoggingKey) {
+			newState.LoggingSecret = ""
+		}
+
+		message.PrintCredentialUpdates(oldState, newState, args)
 
 		confirm := false
 		prompt := &survey.Confirm{
@@ -101,12 +122,36 @@ var updateCredsCmd = &cobra.Command{
 		}
 
 		if confirm {
-			newState.RegistryInfo.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
-			newState.RegistryInfo.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
-			newState.GitServer.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
-			newState.GitServer.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
-			newState.ArtifactServer.PushToken = utils.RandomString(config.ZarfGeneratedPasswordLen)
-			newState.LoggingSecret = utils.RandomString(config.ZarfGeneratedPasswordLen)
+			if helpers.SliceContains(args, message.RegistryKey) {
+				if newState.RegistryInfo.PushPassword == "" {
+					newState.RegistryInfo.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+				}
+				if newState.RegistryInfo.PullPassword == "" {
+					newState.RegistryInfo.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+				}
+			}
+			if helpers.SliceContains(args, message.GitKey) {
+				if newState.GitServer.PushPassword == "" {
+					newState.GitServer.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+				}
+				if newState.GitServer.PullPassword == "" {
+					newState.GitServer.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+				}
+			}
+			if helpers.SliceContains(args, message.ArtifactKey) {
+				if newState.ArtifactServer.PushToken == "" {
+
+					g := git.New(newState.GitServer)
+					tokenResponse, err := g.CreatePackageRegistryToken()
+					if err != nil {
+						message.Fatalf(nil, "Unable to create the new Gitea artifact token")
+					}
+					newState.ArtifactServer.PushToken = tokenResponse.Sha1
+				}
+			}
+			if helpers.SliceContains(args, message.LoggingKey) {
+				newState.LoggingSecret = utils.RandomString(config.ZarfGeneratedPasswordLen)
+			}
 			err = c.SaveZarfState(newState)
 			if err != nil {
 				message.Fatalf(nil, lang.ErrSaveState)
