@@ -318,7 +318,15 @@ func IsValidTarballPath(path string) bool {
 	if utils.InvalidPath(path) || utils.IsDir(path) {
 		return false
 	}
-	return true // TODO: insert tarball regex here
+	name := filepath.Base(path)
+	if name == "" {
+		return false
+	}
+	if !strings.HasPrefix(name, config.ZarfBundlePrefix) {
+		return false
+	}
+	re := regexp.MustCompile(`^zarf-bundle-.*-.*.tar(.zst)?$`)
+	return re.MatchString(name)
 }
 
 // adapted from p.fillActiveTemplate
