@@ -40,11 +40,9 @@ func (b *Bundler) Pull() error {
 	}
 
 	cacheDir := filepath.Join(config.GetAbsCachePath(), "packages")
-
-	if utils.InvalidPath(cacheDir) {
-		if err := utils.CreateDirectory(cacheDir, 0755); err != nil {
-			return err
-		}
+	// create the cache directory if it doesn't exist
+	if err := utils.CreateDirectory(cacheDir, 0755); err != nil {
+		return err
 	}
 
 	// TODO: figure out the best path to check the signature before we pull the bundle
@@ -63,8 +61,6 @@ func (b *Bundler) Pull() error {
 
 	// read the zarf-bundle.yaml into memory
 	bundleYamlPath := filepath.Join(cacheDir, "blobs", "sha256", bundleDesc.Digest.Encoded())
-
-	// load the bundle into memory
 	if err := b.ReadBundleYaml(bundleYamlPath, &b.bundle); err != nil {
 		return err
 	}
@@ -79,6 +75,7 @@ func (b *Bundler) Pull() error {
 
 	_ = os.RemoveAll(dst)
 
+	// get the paths of the layers and the root descriptor
 	paths := []string{}
 	for _, layer := range layersPulled {
 		paths = append(paths, filepath.Join(cacheDir, "blobs", "sha256", layer.Digest.Encoded()))
@@ -92,6 +89,8 @@ func (b *Bundler) Pull() error {
 	}
 	defer out.Close()
 
+	// TODO: support an --uncompressed flag?
+
 	format := archiver.CompressedArchive{
 		Compression: archiver.Zstd{},
 		Archival:    archiver.Tar{},
@@ -99,9 +98,11 @@ func (b *Bundler) Pull() error {
 
 	pathMap := make(map[string]string)
 
+	// put the index.json and oci-layout at the root of the tarball
 	pathMap[filepath.Join(cacheDir, "index.json")] = "index.json"
 	pathMap[filepath.Join(cacheDir, "oci-layout")] = "oci-layout"
 
+	// re-map the paths to be relative to the cache directory
 	for _, path := range paths {
 		pathMap[path] = strings.TrimPrefix(path, cacheDir+string(os.PathSeparator))
 	}
@@ -111,6 +112,7 @@ func (b *Bundler) Pull() error {
 		return err
 	}
 
+	// tarball the bundle
 	if err := format.Archive(context.TODO(), out, files); err != nil {
 		return err
 	}

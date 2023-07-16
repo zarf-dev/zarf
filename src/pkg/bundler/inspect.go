@@ -11,19 +11,20 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-// Inspect should do the sme as previous code
+// Inspect pulls/unpacks a bundle's metadata and shows it
 //
-// : retrieve the `zarf-bundle.yaml`, and `zarf.yaml.sig`
+// : retrieve the `zarf-bundle.yaml`, and `zarf-bundle.yaml.sig`
 // : verify sigs
 // : show the `zarf-bundle.yaml`
 // : have an option to download + persist the SBOMs?
 func (b *Bundler) Inspect() error {
-	if err := b.SetOCIRemote(b.cfg.InspectOpts.Source); err != nil {
+	processor, err := NewProcessor(b.cfg.InspectOpts.Source)
+	if err != nil {
 		return err
 	}
 
 	// pull the zarf-bundle.yaml + sig
-	if err := b.remote.PullBundleMetadata(b.tmp); err != nil {
+	if err := processor.LoadBundleMetadata(b.tmp); err != nil {
 		return err
 	}
 
