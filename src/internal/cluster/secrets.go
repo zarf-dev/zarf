@@ -89,7 +89,9 @@ func (c *Cluster) UpdateZarfManagedSecrets(state types.ZarfState) {
 				continue
 			}
 
-			if currentRegistrySecret.Labels[config.ZarfManagedByLabel] == "zarf" {
+			// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
+			if currentRegistrySecret.Labels[config.ZarfManagedByLabel] == "zarf" ||
+				(namespace.Labels[agentLabel] != "skip" && namespace.Labels[agentLabel] != "ignore") {
 				// Create the secret
 				newRegistrySecret := c.GenerateRegistryPullCreds(namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
 				if !reflect.DeepEqual(currentRegistrySecret.Data, newRegistrySecret.Data) {
@@ -108,7 +110,9 @@ func (c *Cluster) UpdateZarfManagedSecrets(state types.ZarfState) {
 				continue
 			}
 
-			if currentGitSecret.Labels[config.ZarfManagedByLabel] == "zarf" {
+			// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
+			if currentGitSecret.Labels[config.ZarfManagedByLabel] == "zarf" ||
+				(namespace.Labels[agentLabel] != "skip" && namespace.Labels[agentLabel] != "ignore") {
 				// Create the secret
 				newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
 				if !reflect.DeepEqual(currentGitSecret.StringData, newGitSecret.StringData) {
