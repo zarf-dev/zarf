@@ -162,7 +162,7 @@ func MatchRegex(regex *regexp.Regexp, str string) (func(string) string, error) {
 }
 
 // IsNotZeroAndNotEqual is used to test if a struct has zero values or is equal values with another struct
-func IsNotZeroAndNotEqual(given any, equal any) bool {
+func IsNotZeroAndNotEqual[T any](given T, equal T) bool {
 	givenValue := reflect.ValueOf(given)
 	equalValue := reflect.ValueOf(equal)
 
@@ -176,4 +176,17 @@ func IsNotZeroAndNotEqual(given any, equal any) bool {
 		}
 	}
 	return false
+}
+
+// MergeNonZero is used to merge non-zero overrides from one struct into another of the same type
+func MergeNonZero[T any](original T, overrides T) T {
+	originalValue := reflect.ValueOf(original)
+	overridesValue := reflect.ValueOf(overrides)
+
+	for i := 0; i < originalValue.NumField(); i++ {
+		if !overridesValue.Field(i).IsZero() {
+			originalValue.Field(i).Set(overridesValue.Field(i))
+		}
+	}
+	return originalValue.Interface().(T)
 }

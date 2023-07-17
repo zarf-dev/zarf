@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
+	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
@@ -118,13 +119,13 @@ var updateCredsCmd = &cobra.Command{
 		newState := oldState
 
 		if helpers.SliceContains(args, message.RegistryKey) {
-			newState.RegistryInfo = updateCredsInitOpts.RegistryInfo
+			newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, updateCredsInitOpts.RegistryInfo)
 		}
 		if helpers.SliceContains(args, message.GitKey) {
-			newState.GitServer = updateCredsInitOpts.GitServer
+			newState.GitServer = helpers.MergeNonZero(newState.GitServer, updateCredsInitOpts.GitServer)
 		}
 		if helpers.SliceContains(args, message.ArtifactKey) {
-			newState.ArtifactServer = updateCredsInitOpts.ArtifactServer
+			newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, updateCredsInitOpts.ArtifactServer)
 		}
 		if helpers.SliceContains(args, message.LoggingKey) {
 			newState.LoggingSecret = ""
@@ -142,23 +143,25 @@ var updateCredsCmd = &cobra.Command{
 
 		if confirm {
 			if helpers.SliceContains(args, message.RegistryKey) {
-				if newState.RegistryInfo.PushPassword == "" {
+				if newState.RegistryInfo.PushPassword == oldState.RegistryInfo.PushPassword && hasRegistry {
 					newState.RegistryInfo.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 				}
-				if newState.RegistryInfo.PullPassword == "" {
+				if newState.RegistryInfo.PullPassword == oldState.RegistryInfo.PullPassword && hasRegistry {
 					newState.RegistryInfo.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 				}
+				c.UpdateZarfManagedImageSecrets(newState)
 			}
 			if helpers.SliceContains(args, message.GitKey) {
-				if newState.GitServer.PushPassword == "" {
+				if newState.GitServer.PushPassword == oldState.GitServer.PushPassword && hasGitServer {
 					newState.GitServer.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 				}
-				if newState.GitServer.PullPassword == "" {
+				if newState.GitServer.PullPassword == oldState.GitServer.PullPassword && hasGitServer {
 					newState.GitServer.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 				}
+				c.UpdateZarfManagedGitSecrets(newState)
 			}
 			if helpers.SliceContains(args, message.ArtifactKey) {
-				if newState.ArtifactServer.PushToken == "" && hasGitServer {
+				if newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && hasGitServer {
 					g := git.New(newState.GitServer)
 					tokenResponse, err := g.CreatePackageRegistryToken()
 					if err != nil {
@@ -176,9 +179,36 @@ var updateCredsCmd = &cobra.Command{
 				message.Fatalf(nil, lang.ErrSaveState)
 			}
 
-			c.UpdateZarfManagedSecrets(newState)
 			if helpers.SliceContains(args, message.RegistryKey) && hasRegistry {
-				// TODO: Apply the updates to the registry helm chart
+				pushUser, err := utils.GetHtpasswdString(newState.RegistryInfo.PushUsername, newState.RegistryInfo.PushPassword)
+				if err != nil {
+					message.Fatalf(nil, "error generating htpasswd string: %s", err.Error())
+				}
+
+				pullUser, err := utils.GetHtpasswdString(newState.RegistryInfo.PullUsername, newState.RegistryInfo.PullPassword)
+				if err != nil {
+					message.Fatalf(nil, "error generating htpasswd string: %s", err.Error())
+				}
+
+				registryValues := map[string]interface{}{}
+				registrySecrets := map[string]interface{}{}
+				registrySecrets["htpasswd"] = fmt.Sprintf("%s\n%s", pushUser, pullUser)
+				registryValues["secrets"] = registrySecrets
+
+				h := helm.Helm{
+					Chart: types.ZarfChart{
+						Namespace: "zarf",
+					},
+					Cluster:     c,
+					ReleaseName: "zarf-docker-registry",
+					Cfg: &types.PackagerConfig{
+						State: newState,
+					},
+				}
+				_, err = h.UpdateReleaseValues(registryValues)
+				if err != nil {
+					message.Fatalf(nil, "error updating the release values: %s", err.Error())
+				}
 			}
 			if helpers.SliceContains(args, message.GitKey) && hasGitServer {
 				// TODO: Apply the updates to the gitea helm chart

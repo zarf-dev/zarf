@@ -74,9 +74,9 @@ func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo typ
 	return gitServerSecret
 }
 
-// UpdateZarfManagedSecrets updates all Zarf-managed secrets in all namespaces based on state
-func (c *Cluster) UpdateZarfManagedSecrets(state types.ZarfState) {
-	spinner := message.NewProgressSpinner("Updating existing Zarf-manged secrets")
+// UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
+func (c *Cluster) UpdateZarfManagedImageSecrets(state types.ZarfState) {
+	spinner := message.NewProgressSpinner("Updating existing Zarf-manged image secrets")
 	defer spinner.Stop()
 
 	if namespaces, err := c.Kube.GetNamespaces(); err != nil {
@@ -102,7 +102,17 @@ func (c *Cluster) UpdateZarfManagedSecrets(state types.ZarfState) {
 				}
 			}
 		}
+	}
+}
 
+// UpdateZarfManagedGitSecrets updates all Zarf-managed git secrets in all namespaces based on state
+func (c *Cluster) UpdateZarfManagedGitSecrets(state types.ZarfState) {
+	spinner := message.NewProgressSpinner("Updating existing Zarf-manged git secrets")
+	defer spinner.Stop()
+
+	if namespaces, err := c.Kube.GetNamespaces(); err != nil {
+		spinner.Errorf(err, "Unable to get k8s namespaces")
+	} else {
 		// Update all git pull secrets
 		for _, namespace := range namespaces.Items {
 			currentGitSecret, err := c.Kube.GetSecret(namespace.Name, config.ZarfGitServerSecretName)

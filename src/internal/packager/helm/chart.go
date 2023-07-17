@@ -271,6 +271,51 @@ func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinn
 	return err
 }
 
+// UpdateChartValues updates values for a given chart release
+func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) (*release.Release, error) {
+	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.ReleaseName)
+	defer spinner.Stop()
+
+	err := h.createActionConfig(h.Chart.Namespace, spinner)
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize the K8s client: %w", err)
+	}
+
+	postRender, err := h.newRenderer()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create helm renderer: %w", err)
+	}
+
+	histClient := action.NewHistory(h.actionConfig)
+	histClient.Max = 1
+	releases, histErr := histClient.Run(h.ReleaseName)
+	if histErr == nil && len(releases) > 0 {
+		lastRelease := releases[len(releases)-1]
+
+		// Setup a new upgrade action
+		client := action.NewUpgrade(h.actionConfig)
+
+		// Let each chart run for the default timeout.
+		client.Timeout = defaultClientTimeout
+
+		client.SkipCRDs = true
+
+		// Namespace must be specified.
+		client.Namespace = h.Chart.Namespace
+
+		// Post-processing our manifests for reasons....
+		client.PostRenderer = postRender
+
+		// Set reuse values to only override the values we are explicitly given
+		client.ReuseValues = true
+
+		// Perform the loadedChart upgrade.
+		return client.Run(h.ReleaseName, lastRelease.Chart, updatedValues)
+	}
+
+	return nil, fmt.Errorf("unable to find the %s helm release", h.ReleaseName)
+}
+
 func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 	message.Debugf("helm.installChart(%#v)", postRender)
 	// Bind the helm action.

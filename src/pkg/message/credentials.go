@@ -156,7 +156,7 @@ func PrintCredentialUpdates(oldState types.ZarfState, newState types.ZarfState, 
 }
 
 func compareStrings(old string, new string, secret bool) string {
-	if new == "" {
+	if new == old {
 		if secret {
 			return fmt.Sprintf("%s -> %s", pterm.FgRed.Sprint("**existing (sanitized)**"), pterm.FgGreen.Sprint("**auto-generated**"))
 		}
