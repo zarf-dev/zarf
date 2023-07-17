@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 )
 
@@ -85,6 +86,43 @@ func (b *Bundler) Create() error {
 
 	// create + publish the bundle
 	return b.remote.Bundle(&b.bundle, signatureBytes)
+}
+
+// adapted from p.fillActiveTemplate
+func (b *Bundler) templateBundleYaml() error {
+	message.Debug("Templating zarf-bundle.yaml w/:", message.JSONValue(b.cfg.CreateOpts.SetVariables))
+
+	templateMap := map[string]string{}
+	setFromCLIConfig := b.cfg.CreateOpts.SetVariables
+	yamlTemplates, err := utils.FindYamlTemplates(&b.bundle, "###ZARF_BNDL_TMPL_", "###")
+	if err != nil {
+		return err
+	}
+
+	for key := range yamlTemplates {
+		_, present := setFromCLIConfig[key]
+		if !present && !config.CommonOptions.Confirm {
+			setVal, err := interactive.PromptVariable(types.ZarfPackageVariable{
+				Name:    key,
+				Default: "",
+			})
+
+			if err == nil {
+				setFromCLIConfig[key] = setVal
+			} else {
+				return err
+			}
+		} else if !present {
+			return fmt.Errorf("template '%s' must be '--set' when using the '--confirm' flag", key)
+		}
+	}
+	for key, value := range setFromCLIConfig {
+		templateMap[fmt.Sprintf("###ZARF_BNDL_TMPL_%s###", key)] = value
+	}
+
+	templateMap["###ZARF_BNDL_ARCH###"] = b.bundle.Metadata.Architecture
+
+	return utils.ReloadYamlTemplate(&b.bundle, templateMap)
 }
 
 // adapted from p.confirmAction

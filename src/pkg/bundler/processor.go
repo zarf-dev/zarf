@@ -36,6 +36,12 @@ type Processor interface {
 	// : if OCI ref
 	// : : pulls the metadata from the OCI ref
 	LoadBundleMetadata(dst string) error
+
+	// ValidateBundleSignature
+	// DeployPackge/DeployBundle
+	// ViewSBOMs/ExportSBOMs
+	// RemovePackage/RemoveBundle
+	// ListPackages/ListBundles?
 }
 
 // tarballProcessor is a Processor that works with tarballs

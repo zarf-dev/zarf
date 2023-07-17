@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
@@ -27,10 +26,14 @@ import (
 
 // Bundler handles bundler operations
 type Bundler struct {
-	cfg    *types.BundlerConfig
+	// cfg is the Bundler's configuration options
+	cfg *types.BundlerConfig
+	// bundle is the zarf-bundle.yaml read into memory
 	bundle types.ZarfBundle
+	// remote is the OCI remote to use for pushing and pulling
 	remote *oci.OrasRemote
-	tmp    string
+	// tmp is the temporary directory used by the Bundler cleaned up with ClearPaths()
+	tmp string
 }
 
 // New creates a new Bundler
@@ -85,6 +88,7 @@ func (b *Bundler) ReadBundleYaml(path string, bndl *types.ZarfBundle) error {
 
 // WriteBundleYaml is a wrapper around utils.WriteYaml
 func (b *Bundler) WriteBundleYaml(path string, bndl *types.ZarfBundle) error {
+	// TODO: is this the proper permissions?
 	return utils.WriteYaml(path, bndl, 0600)
 }
 
@@ -108,6 +112,7 @@ func (b *Bundler) ValidateBundle() error {
 	if len(b.bundle.Packages) == 0 {
 		return fmt.Errorf("zarf-bundle.yaml is missing required list: packages")
 	}
+	// validate access to packages as well as components referenced in the package
 	for idx, pkg := range b.bundle.Packages {
 		url := fmt.Sprintf("%s:%s-%s", pkg.Repository, pkg.Ref, b.bundle.Metadata.Architecture)
 
@@ -115,7 +120,6 @@ func (b *Bundler) ValidateBundle() error {
 			url = fmt.Sprintf("%s:%s", pkg.Repository, pkg.Ref)
 		}
 
-		// validate access to packages as well as components referenced in the package
 		remote, err := oci.NewOrasRemote(url)
 		if err != nil {
 			return err
@@ -270,7 +274,6 @@ func (b *Bundler) CalculateBuildInfo() error {
 	}
 	b.bundle.Build.Terminal = hostname
 
-	// Set the arch from the package config before filtering.
 	// --architecture flag > metadata.arch > build.arch / runtime.GOARCH (default)
 	b.bundle.Build.Architecture = config.GetArch(b.bundle.Metadata.Architecture, b.bundle.Build.Architecture)
 	b.bundle.Metadata.Architecture = b.bundle.Build.Architecture
@@ -319,41 +322,4 @@ func IsValidTarballPath(path string) bool {
 	}
 	re := regexp.MustCompile(`^zarf-bundle-.*-.*.tar(.zst)?$`)
 	return re.MatchString(name)
-}
-
-// adapted from p.fillActiveTemplate
-func (b *Bundler) templateBundleYaml() error {
-	message.Debug("Templating zarf-bundle.yaml w/:", message.JSONValue(b.cfg.CreateOpts.SetVariables))
-
-	templateMap := map[string]string{}
-	setFromCLIConfig := b.cfg.CreateOpts.SetVariables
-	yamlTemplates, err := utils.FindYamlTemplates(&b.bundle, "###ZARF_BNDL_TMPL_", "###")
-	if err != nil {
-		return err
-	}
-
-	for key := range yamlTemplates {
-		_, present := setFromCLIConfig[key]
-		if !present && !config.CommonOptions.Confirm {
-			setVal, err := interactive.PromptVariable(types.ZarfPackageVariable{
-				Name:    key,
-				Default: "",
-			})
-
-			if err == nil {
-				setFromCLIConfig[key] = setVal
-			} else {
-				return err
-			}
-		} else if !present {
-			return fmt.Errorf("template '%s' must be '--set' when using the '--confirm' flag", key)
-		}
-	}
-	for key, value := range setFromCLIConfig {
-		templateMap[fmt.Sprintf("###ZARF_BNDL_TMPL_%s###", key)] = value
-	}
-
-	templateMap["###ZARF_BNDL_ARCH###"] = b.bundle.Metadata.Architecture
-
-	return utils.ReloadYamlTemplate(&b.bundle, templateMap)
 }

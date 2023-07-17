@@ -88,6 +88,8 @@ func (o *OrasRemote) WithRepository(ref registry.Reference) error {
 // withAuthClient returns an auth client for the given reference.
 //
 // The credentials are pulled using Docker's default credential store.
+//
+// TODO: instead of using Docker's cred store, should use the new one from ORAS to remove that dep
 func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig.InsecureSkipVerify = zarfconfig.CommonOptions.Insecure

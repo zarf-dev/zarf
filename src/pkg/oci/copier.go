@@ -17,15 +17,18 @@ import (
 
 // CopyPackage copies a package from one OCI registry to another
 func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
+	// create a new semaphore to limit concurrency
 	sem := semaphore.NewWeighted(int64(concurrency))
 	ctx := context.TODO()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	// fetch the source root manifest
 	srcRoot, err := src.FetchRoot()
 	if err != nil {
 		return err
 	}
+	// TODO: handle components + wildcards
 	layers := srcRoot.Layers
 	layers = append(layers, srcRoot.Config)
 
@@ -45,6 +48,7 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 			return err
 		}
 
+		// check if the layer already exists in the destination
 		exists, err := dst.repo.Exists(ctx, layer)
 		if err != nil {
 			return err
@@ -57,6 +61,7 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 			continue
 		}
 
+		// create a new pipe so we can write to both the progressbar and the destination at the same time
 		pr, pw := io.Pipe()
 
 		eg, ectx := errgroup.WithContext(ctx)
