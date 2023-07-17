@@ -15,10 +15,10 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// Processor is an interface for processing bundles
+// Provider is an interface for processing bundles
 //
 // operations that are common no matter the source should be implemented on bundler
-type Processor interface {
+type Provider interface {
 	// LoadBundle loads a bundle into the `dst` directory
 	//
 	// : if tarball
@@ -56,13 +56,13 @@ func validateBundleSignature(base string) error {
 	// }
 }
 
-// tarballProcessor is a Processor that works with tarballs
-type tarballProcessor struct {
+// tarballProvider is a Processor that works with tarballs
+type tarballProvider struct {
 	src string
 }
 
 // LoadBundle loads a bundle from a tarball
-func (tp *tarballProcessor) LoadBundle(dst string, requestedPackages []string) ([]ocispec.Descriptor, error) {
+func (tp *tarballProvider) LoadBundle(dst string, requestedPackages []string) ([]ocispec.Descriptor, error) {
 	if len(requestedPackages) == 0 {
 		if err := archiver.Unarchive(tp.src, dst); err != nil {
 			return nil, fmt.Errorf("failed to extract %s to %s: %w", tp.src, dst, err)
@@ -89,7 +89,7 @@ func (tp *tarballProcessor) LoadBundle(dst string, requestedPackages []string) (
 }
 
 // LoadBundleMetadata loads a bundle's metadata from a tarball
-func (tp *tarballProcessor) LoadBundleMetadata(dst string) error {
+func (tp *tarballProvider) LoadBundleMetadata(dst string) error {
 	pathsToExtract := oci.BundleAlwaysPull
 
 	for _, path := range pathsToExtract {
@@ -101,44 +101,44 @@ func (tp *tarballProcessor) LoadBundleMetadata(dst string) error {
 }
 
 // ValidateBundleSignature validates the bundle signature
-func (tp *tarballProcessor) ValidateBundleSignature(base string) error {
+func (tp *tarballProvider) ValidateBundleSignature(base string) error {
 	return validateBundleSignature(base)
 }
 
-// ociProcessor is a Processor that works with OCI images
-type ociProcessor struct {
+// ociProvider is a Processor that works with OCI images
+type ociProvider struct {
 	src string
 	*oci.OrasRemote
 }
 
 // LoadBundle loads a bundle from an OCI image
-func (op *ociProcessor) LoadBundle(dst string, requestedPackages []string) ([]ocispec.Descriptor, error) {
+func (op *ociProvider) LoadBundle(dst string, requestedPackages []string) ([]ocispec.Descriptor, error) {
 	return op.PullBundle(dst, config.CommonOptions.OCIConcurrency, requestedPackages)
 }
 
 // LoadBundleMetadata loads a bundle's metadata from an OCI image
-func (op *ociProcessor) LoadBundleMetadata(dst string) error {
+func (op *ociProvider) LoadBundleMetadata(dst string) error {
 	return op.PullBundleMetadata(dst)
 }
 
 // ValidateBundleSignature validates the bundle signature
-func (op *ociProcessor) ValidateBundleSignature(base string) error {
+func (op *ociProvider) ValidateBundleSignature(base string) error {
 	return validateBundleSignature(base)
 }
 
-// NewProcessor returns a new bundler Processor based on the source type
-func NewProcessor(source string) (Processor, error) {
+// NewProvider returns a new bundler Provider based on the source type
+func NewProvider(source string) (Provider, error) {
 	if utils.IsOCIURL(source) {
-		processor := ociProcessor{src: source}
+		provider := ociProvider{src: source}
 		remote, err := oci.NewOrasRemote(source)
 		if err != nil {
 			return nil, err
 		}
-		processor.OrasRemote = remote
-		return &processor, nil
+		provider.OrasRemote = remote
+		return &provider, nil
 	}
 	if !IsValidTarballPath(source) {
 		return nil, fmt.Errorf("invalid tarball path: %s", source)
 	}
-	return &tarballProcessor{src: source}, nil
+	return &tarballProvider{src: source}, nil
 }

@@ -18,14 +18,14 @@ import (
 // : show the `zarf-bundle.yaml`
 // : have an option to download + persist the SBOMs?
 func (b *Bundler) Inspect() error {
-	// create a new processor
-	processor, err := NewProcessor(b.cfg.InspectOpts.Source)
+	// create a new provider
+	provider, err := NewProvider(b.cfg.InspectOpts.Source)
 	if err != nil {
 		return err
 	}
 
 	// pull the zarf-bundle.yaml + sig
-	if err := processor.LoadBundleMetadata(b.tmp); err != nil {
+	if err := provider.LoadBundleMetadata(b.tmp); err != nil {
 		return err
 	}
 
@@ -35,7 +35,7 @@ func (b *Bundler) Inspect() error {
 	}
 
 	// validate the sig (if present)
-	if err := processor.ValidateBundleSignature(b.tmp); err != nil {
+	if err := provider.ValidateBundleSignature(b.tmp); err != nil {
 		return err
 	}
 
