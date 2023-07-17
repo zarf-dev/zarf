@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
@@ -37,11 +38,22 @@ type Processor interface {
 	// : : pulls the metadata from the OCI ref
 	LoadBundleMetadata(dst string) error
 
-	// ValidateBundleSignature
+	ValidateBundleSignature(base string) error
 	// DeployPackge/DeployBundle
 	// ViewSBOMs/ExportSBOMs
 	// RemovePackage/RemoveBundle
 	// ListPackages/ListBundles?
+}
+
+// ValidateBundleSignature validates the bundle signature
+// TODO: implement
+func validateBundleSignature(base string) error {
+	message.Debugf("Validating bundle signature from %s/%s", base, config.ZarfYAMLSignature)
+	return nil
+	// err := utils.CosignVerifyBlob(bfs.tmp.ZarfBundleYaml, bfs.tmp.ZarfSig, <keypath>)
+	// if err != nil {
+	// 	return err
+	// }
 }
 
 // tarballProcessor is a Processor that works with tarballs
@@ -88,6 +100,11 @@ func (tp *tarballProcessor) LoadBundleMetadata(dst string) error {
 	return nil
 }
 
+// ValidateBundleSignature validates the bundle signature
+func (tp *tarballProcessor) ValidateBundleSignature(base string) error {
+	return validateBundleSignature(base)
+}
+
 // ociProcessor is a Processor that works with OCI images
 type ociProcessor struct {
 	src string
@@ -102,6 +119,11 @@ func (op *ociProcessor) LoadBundle(dst string, requestedPackages []string) ([]oc
 // LoadBundleMetadata loads a bundle's metadata from an OCI image
 func (op *ociProcessor) LoadBundleMetadata(dst string) error {
 	return op.PullBundleMetadata(dst)
+}
+
+// ValidateBundleSignature validates the bundle signature
+func (op *ociProcessor) ValidateBundleSignature(base string) error {
+	return validateBundleSignature(base)
 }
 
 // NewProcessor returns a new bundler Processor based on the source type

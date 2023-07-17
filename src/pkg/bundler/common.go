@@ -173,6 +173,7 @@ func (b *Bundler) ValidateBundle() error {
 			if pkg.OptionalComponents[0] == "*" {
 				// a wildcard has been given, so all optional components will be included
 				for _, c := range zarfYAML.Components {
+					// TODO: do we even need an arch check here? doesnt zarf only include components for the current arch during publish?
 					if c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == b.bundle.Metadata.Architecture {
 						pkg.OptionalComponents = append(pkg.OptionalComponents, c.Name)
 					}
@@ -219,7 +220,6 @@ func (b *Bundler) ValidateBundle() error {
 						}
 					}
 					b.bundle.Packages[idx].OptionalComponents = pkg.OptionalComponents
-					continue
 				}
 			}
 			// validate the optional components exist in the package and support the bundle's target architecture
@@ -240,17 +240,6 @@ func (b *Bundler) ValidateBundle() error {
 		}
 	}
 	return nil
-}
-
-// ValidateBundleSignature validates the bundle signature
-// TODO: implement
-func (b *Bundler) ValidateBundleSignature(base string) error {
-	message.Debugf("Validating bundle signature from %s/%s", base, config.ZarfYAMLSignature)
-	return nil
-	// err := utils.CosignVerifyBlob(bfs.tmp.ZarfBundleYaml, bfs.tmp.ZarfSig, <keypath>)
-	// if err != nil {
-	// 	return err
-	// }
 }
 
 // CalculateBuildInfo calculates the build info for the bundle

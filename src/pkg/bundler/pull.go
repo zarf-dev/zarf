@@ -66,7 +66,7 @@ func (b *Bundler) Pull() error {
 	}
 
 	// tarball the bundle
-	filename := fmt.Sprintf("zarf-bundle-%s-%s-%s.tar.zst", b.bundle.Metadata.Name, b.bundle.Metadata.Architecture, b.bundle.Metadata.Version)
+	filename := fmt.Sprintf("%s%s-%s-%s.tar.zst", config.ZarfBundlePrefix, b.bundle.Metadata.Name, b.bundle.Metadata.Architecture, b.bundle.Metadata.Version)
 	dst := filepath.Join(b.cfg.PullOpts.OutputDirectory, filename)
 
 	// TODO: instead of removing then writing

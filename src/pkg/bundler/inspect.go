@@ -35,7 +35,7 @@ func (b *Bundler) Inspect() error {
 	}
 
 	// validate the sig (if present)
-	if err := b.ValidateBundleSignature(b.tmp); err != nil {
+	if err := processor.ValidateBundleSignature(b.tmp); err != nil {
 		return err
 	}
 
