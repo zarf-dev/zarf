@@ -1,3 +1,4 @@
+import Properties from '@site/src/components/SchemaItemProperties';
 import ExampleYAML from "@site/src/components/ExampleYAML";
 
 # Variables
