@@ -23,7 +23,7 @@ To use variables and constants at deploy time you need to have two things:
 1. a manifest that you want to template a value in
 2. a defined variable in the `zarf.yaml` file from `variables` or `setVariable`
 
-The manifest should have your desired variable name in ALL CAPS prefixed with `###ZARF_VAR`  for `variables` or prefixed with `###ZARF_CONST` for `constants` and suffixed with `###`.  For example in a configmap that took a variable named `DATABASE_USERNAME` you would provide the following:
+The manifest should have your desired variable name in ALL CAPS prefixed with `###ZARF_VAR` for `variables` or prefixed with `###ZARF_CONST` for `constants` and suffixed with `###`.  For example in a configmap that took a variable named `DATABASE_USERNAME` you would provide the following:
 
 ```yaml
 apiVersion: v1
@@ -34,7 +34,7 @@ data:
   username: ###ZARF_VAR_DATABASE_USERNAME###
 ```
 
-In the `zarf.yaml`, you would need to define the variable in the `variables` section or as output from an action with `setVariable` with the same `name` as above. Or for a constant you would use the `constants` section.  For the same example as above, I would have the following for a variable defined by the deploy user:
+In the `zarf.yaml`, you would need to define the variable in the `variables` section or as output from an action with `setVariable` with the same `name` as above. Or for a constant you would use the `constants` section.  For the same example as above, you would have the following for a variable defined by the deploy user:
 
 ```yaml
 variables:
@@ -54,6 +54,20 @@ components:
             setVariables:
               - name: DATABASE_USERNAME
 ```
+
+Zarf `variables` can also have additional fields that describe how Zarf will handle them which are described below:
+
+<Properties item="ZarfPackageVariable" />
+
+:::note
+
+The fields `default`, `description` and `prompt` are not available on `setVariables` since they always take the standard output of an action command and will not be interacted with directly by a deploy user.
+
+:::
+
+Zarf `constants` are similar but have fewer options as they are static by the time `zarf package deploy` is run:
+
+<Properties item="ZarfPackageConstant" />
 
 :::note
 
