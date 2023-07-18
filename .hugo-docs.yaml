@@ -1,8 +1,11 @@
 paths:
   - 'CONTRIBUTING.md'
-  - './adr'
+  - 'adr'
   - 'docs'
   - 'examples'
   - 'packages'
 
-outdir: './docs-website-new/content'
+ignores:
+  - 'docs/.templates'
+
+outdir: 'content/en'
