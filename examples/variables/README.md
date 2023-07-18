@@ -63,7 +63,7 @@ All names must match the regex pattern `^[A-Z0-9_]+$` [Test](https://regex101.co
 
 :::tip
 
-When not specifying `default`, `prompt`, `sensitive`, or `indent` Zarf will default to `default: ""`, `prompt: false`, `sensitive: false` and `indent: 0`
+When not specifying `default`, `prompt`, `sensitive`, `autoIndent`, or `type` Zarf will default to `default: ""`, `prompt: false`, `sensitive: false`, `autoIndent: false`, and `type: "raw"`
 
 :::
 

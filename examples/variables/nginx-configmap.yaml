@@ -24,6 +24,7 @@ data:
         <pre>
           ###ZARF_VAR_MODIFIED_TERRAFORM###
         </pre>
+        <pre>File SHASUM: ###ZARF_VAR_MODIFIED_TERRAFORM_SHASUM###</pre>
         ###ZARF_VAR_OPTIONAL_FOOTER###
       </body>
     </html>

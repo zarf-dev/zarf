@@ -461,6 +461,20 @@ export interface ZarfComponentActionSetVariable {
      * Whether to mark this variable as sensitive to not print it in the Zarf log
      */
     sensitive?: boolean;
+    /**
+     * Changes the handling of a variable to load contents differently (i.e. from a file rather
+     * than as a raw variable)
+     */
+    type?: Type;
+}
+
+/**
+ * Changes the handling of a variable to load contents differently (i.e. from a file rather
+ * than as a raw variable)
+ */
+export enum Type {
+    File = "file",
+    Raw = "raw",
 }
 
 /**
@@ -958,6 +972,11 @@ export interface ZarfPackageVariable {
      * Whether to mark this variable as sensitive to not print it in the Zarf log
      */
     sensitive?: boolean;
+    /**
+     * Changes the handling of a variable to load contents differently (i.e. from a file rather
+     * than as a raw variable)
+     */
+    type?: Type;
 }
 
 export interface ClusterSummary {
@@ -1502,6 +1521,7 @@ const typeMap: any = {
         { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "name", js: "name", typ: "" },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
+        { json: "type", js: "type", typ: u(undefined, r("Type")) },
     ], false),
     "ZarfComponentActionShell": o([
         { json: "darwin", js: "darwin", typ: u(undefined, "") },
@@ -1626,6 +1646,7 @@ const typeMap: any = {
         { json: "name", js: "name", typ: "" },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
+        { json: "type", js: "type", typ: u(undefined, r("Type")) },
     ], false),
     "ClusterSummary": o([
         { json: "distro", js: "distro", typ: "" },
@@ -1766,6 +1787,10 @@ const typeMap: any = {
         { json: "DifferentialPackageVersion", js: "DifferentialPackageVersion", typ: "" },
         { json: "DifferentialRepos", js: "DifferentialRepos", typ: m(true) },
     ], false),
+    "Type": [
+        "file",
+        "raw",
+    ],
     "Protocol": [
         "http",
         "https",

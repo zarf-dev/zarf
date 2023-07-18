@@ -2175,6 +2175,28 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="components_items_actions_onCreate_before_items_setVariables_items_type"></a>type</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable)
+
+|          |                    |
+| -------- | ------------------ |
+| **Type** | `enum (of string)` |
+
+:::note
+Must be one of:
+* "raw"
+* "file"
+:::
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -2780,6 +2802,28 @@ Must be one of:
 |          |           |
 | -------- | --------- |
 | **Type** | `boolean` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="variables_items_type"></a>type</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable)
+
+|          |                    |
+| -------- | ------------------ |
+| **Type** | `enum (of string)` |
+
+:::note
+Must be one of:
+* "raw"
+* "file"
+:::
 
 </blockquote>
 </details>

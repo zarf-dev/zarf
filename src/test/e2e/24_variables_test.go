@@ -57,6 +57,8 @@ func TestVariables(t *testing.T) {
 	require.Contains(t, string(kubectlOut), "Defense Unicorns")
 	// AWS_REGION should have been templated and also templated into this config map
 	require.Contains(t, string(kubectlOut), "unicorn-land")
+	// MODIFIED_TERRAFORM_SHASUM should have been templated
+	require.Contains(t, string(kubectlOut), "9bea338a5170f9cb6b2071f09da136e6f8fd6990b9c61eb0a8934a5610022d8e")
 
 	// Remove the variables example
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", path, "--confirm")
