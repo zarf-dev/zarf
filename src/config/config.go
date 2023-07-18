@@ -66,6 +66,8 @@ const (
 
 	ZarfDeployStage = "Deploy"
 	ZarfCreateStage = "Create"
+
+	ZarfMinimumCompatibleVersion = "v0.27.0"
 )
 
 // Zarf Global Configuration Variables.

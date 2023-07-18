@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/Masterminds/semver"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
@@ -451,6 +452,25 @@ func (p *Packager) validatePackageArchitecture() error {
 				return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 			}
 		}
+	}
+
+	return nil
+}
+
+// validateMinimumCompatibleVersion validates that the version of Zarf in use is greater than or equal to the minimum compatible version of a Zarf package.
+func (p *Packager) validateMinimumCompatibleVersion() error {
+	minimumCompatibleVersion, err := semver.NewVersion(p.cfg.Pkg.Build.MinimumCompatibleVersion)
+	if err != nil {
+		return fmt.Errorf("unable to parse minimum compatible version from Zarf package build data: %w", err)
+	}
+
+	cliVersion, err := semver.NewVersion(config.CLIVersion)
+	if err != nil {
+		return fmt.Errorf("unable to parse Zarf CLI version: %w", err)
+	}
+
+	if cliVersion.LessThan(minimumCompatibleVersion) {
+		return fmt.Errorf("the version of this Zarf binary '%s' is less than the minimum compatible version of '%s'. Please upgrade your Zarf version to at least '%s' to deploy this package", config.CLIVersion, p.cfg.Pkg.Build.MinimumCompatibleVersion, p.cfg.Pkg.Build.MinimumCompatibleVersion)
 	}
 
 	return nil
