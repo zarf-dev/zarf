@@ -153,6 +153,14 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 	regexTemplateLine := regexp.MustCompile(fmt.Sprintf("(?P<preTemplate>.*?)(?P<template>%s)(?P<postTemplate>.*)", templateRegex))
 
 	fileScanner := bufio.NewScanner(textFile)
+
+	// Set the buffer to 1 MiB to handle long lines (i.e. base64 text in a secret)
+	// 1 MiB is around the documented maximum size for secrets and configmaps
+	const maxCapacity = 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	fileScanner.Buffer(buf, maxCapacity)
+
+	// Set the scanner to split on new lines
 	fileScanner.Split(bufio.ScanLines)
 
 	text := ""
