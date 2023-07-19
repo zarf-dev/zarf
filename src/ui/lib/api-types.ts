@@ -678,9 +678,9 @@ export interface ZarfComponentExtensions {
  */
 export interface BigBang {
     /**
-     * An optional path to a Flux kustomize strategic merge patch file
+     * Optional paths to a Flux kustomize strategic merge patch files
      */
-    fluxPatchPath?: string;
+    fluxPatchPaths?: string[];
     /**
      * Override repo to pull Big Bang from instead of Repo One
      */
@@ -1561,7 +1561,7 @@ const typeMap: any = {
         { json: "bigbang", js: "bigbang", typ: u(undefined, r("BigBang")) },
     ], false),
     "BigBang": o([
-        { json: "fluxPatchPath", js: "fluxPatchPath", typ: u(undefined, "") },
+        { json: "fluxPatchPaths", js: "fluxPatchPaths", typ: u(undefined, a("")) },
         { json: "repo", js: "repo", typ: u(undefined, "") },
         { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
