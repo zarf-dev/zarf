@@ -123,9 +123,9 @@ release-init-package:
 ib-init-package:
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm . \
-	  --set REGISTRY_IMAGE_DOMAIN="registry1.dso.mil/" \
-      --set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
-	  --set REGISTRY_IMAGE_TAG="2.8.2"
+		--set REGISTRY_IMAGE_DOMAIN="registry1.dso.mil/" \
+		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
+		--set REGISTRY_IMAGE_TAG="2.8.2"
 
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
