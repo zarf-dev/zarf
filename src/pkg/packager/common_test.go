@@ -24,7 +24,7 @@ func TestValidateMinimumCompatibleVersion(t *testing.T) {
 			name:                     "Assert that a CLI version less than the minimum compatible version returns an error",
 			cliVersion:               "v0.26.4",
 			minimumCompatibleVersion: "v0.27.0",
-			returnError:              true, // We expect these inputs to return an error
+			returnError:              true,
 		},
 		{
 			name:                     "Assert that a CLI version greater than the minimum compatible version does not return an error",
@@ -42,6 +42,12 @@ func TestValidateMinimumCompatibleVersion(t *testing.T) {
 			name:                     "Assert that an empty minimum compatible version string does not return an error",
 			cliVersion:               "this shouldn't get evaluated when the minimum compatible version string is empty",
 			minimumCompatibleVersion: "",
+			returnError:              false,
+		},
+		{
+			name:                     "Assert that a CLI version string in this format does not return an error",
+			cliVersion:               "v1.0.0-UnknownVersion", // This is used as a default version in the E2E tests
+			minimumCompatibleVersion: "v0.27.0",
 			returnError:              false,
 		},
 	}
