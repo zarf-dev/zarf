@@ -10,5 +10,5 @@ type BigBang struct {
 	Repo           string   `json:"repo,omitempty" jsonschema:"description=Override repo to pull Big Bang from instead of Repo One"`
 	ValuesFiles    []string `json:"valuesFiles,omitempty" jsonschema:"description=The list of values files to pass to Big Bang; these will be merged together"`
 	SkipFlux       bool     `json:"skipFlux,omitempty" jsonschema:"description=Whether to skip deploying flux; Defaults to false"`
-	FluxPatchPaths []string `json:"fluxPatchPaths,omitempty" jsonschema:"description=Optional paths to a Flux kustomize strategic merge patch files"`
+	FluxPatchFiles []string `json:"fluxPatchFiles,omitempty" jsonschema:"description=Optional paths to Flux kustomize strategic merge patch files"`
 }

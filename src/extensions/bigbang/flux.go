@@ -57,7 +57,7 @@ func getFlux(baseDir string, cfg *extensions.BigBang) (manifest types.ZarfManife
 		Resources: []string{remotePath},
 	}
 
-	for _, path := range cfg.FluxPatchPaths {
+	for _, path := range cfg.FluxPatchFiles {
 		absFluxPatchPath, _ := filepath.Abs(path)
 		fluxKustomization.Patches = append(fluxKustomization.Patches, krustytypes.Patch{Path: absFluxPatchPath})
 	}

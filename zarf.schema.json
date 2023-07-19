@@ -26,12 +26,12 @@
           "type": "boolean",
           "description": "Whether to skip deploying flux; Defaults to false"
         },
-        "fluxPatchPaths": {
+        "fluxPatchFiles": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Optional paths to a Flux kustomize strategic merge patch files"
+          "description": "Optional paths to Flux kustomize strategic merge patch files"
         }
       },
       "additionalProperties": false,
