@@ -5,7 +5,7 @@ agent_image = 'defenseunicorns/zarf/agent'
 agent_image_tag = 'local'
 
 # Tag for the zarf injector binary to use
-injector_version = '2023-02-09'
+injector_version = '2023-07-19'
 
 # The image reference to use for the registry that Zarf deploys into the cluster
 registry_image_domain = ''
