@@ -21,6 +21,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/otiai10/copy"
 )
 
@@ -54,7 +55,7 @@ func GetCryptoHashFromFile(path string, hashName crypto.Hash) (string, error) {
 type TextTemplate struct {
 	Sensitive  bool
 	AutoIndent bool
-	Type       string
+	Type       types.VariableType
 	Value      string
 }
 
@@ -193,9 +194,9 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 				value = template.Value
 
 				// Check if the value is a file type and load the value contents from the file
-				if template.Type == "file" {
+				if template.Type == types.FileVariableType {
 					if isText, err := IsTextFile(value); err != nil || !isText {
-						message.Warn("Refusing to load a non-text file for templating")
+						message.Warnf("Refusing to load a non-text file for templating %s", templateKey)
 						line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
 						continue
 					}

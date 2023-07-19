@@ -482,7 +482,7 @@
             "file"
           ],
           "type": "string",
-          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable)"
+          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
         }
       },
       "additionalProperties": false,
@@ -1019,7 +1019,7 @@
             "file"
           ],
           "type": "string",
-          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable)"
+          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
         }
       },
       "additionalProperties": false,

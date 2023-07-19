@@ -463,14 +463,14 @@ export interface ZarfComponentActionSetVariable {
     sensitive?: boolean;
     /**
      * Changes the handling of a variable to load contents differently (i.e. from a file rather
-     * than as a raw variable)
+     * than as a raw variable - templated files should be kept below 1 MiB)
      */
     type?: Type;
 }
 
 /**
  * Changes the handling of a variable to load contents differently (i.e. from a file rather
- * than as a raw variable)
+ * than as a raw variable - templated files should be kept below 1 MiB)
  */
 export enum Type {
     File = "file",
@@ -978,7 +978,7 @@ export interface ZarfPackageVariable {
     sensitive?: boolean;
     /**
      * Changes the handling of a variable to load contents differently (i.e. from a file rather
-     * than as a raw variable)
+     * than as a raw variable - templated files should be kept below 1 MiB)
      */
     type?: Type;
 }

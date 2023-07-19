@@ -2209,7 +2209,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable)
+**Description:** Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)
 
 |          |                    |
 | -------- | ------------------ |
@@ -2840,7 +2840,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable)
+**Description:** Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)
 
 |          |                    |
 | -------- | ------------------ |

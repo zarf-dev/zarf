@@ -109,7 +109,7 @@ func (p *Packager) setVariableMapInConfig() error {
 	return nil
 }
 
-func (p *Packager) setVariableInConfig(name, value string, sensitive bool, autoIndent bool, varType string) {
+func (p *Packager) setVariableInConfig(name, value string, sensitive bool, autoIndent bool, varType types.VariableType) {
 	p.cfg.SetVariableMap[name] = &types.ZarfSetVariable{
 		Name:       name,
 		Value:      value,
