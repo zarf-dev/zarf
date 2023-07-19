@@ -1,3 +1,4 @@
+import Properties from '@site/src/components/SchemaItemProperties';
 import ExampleYAML from '@site/src/components/ExampleYAML';
 
 # Big Bang
@@ -6,10 +7,7 @@ This package deploys [Big Bang](https://repo1.dso.mil/platform-one/big-bang/bigb
 
 The `bigbang` noun sits within the `extensions` specification of Zarf and provides the following configuration:
 
-- `version`     - The version of Big Bang to use
-- `repo`        - Override repo to pull Big Bang from instead of Repo One
-- `skipFlux`    - Whether to skip deploying flux; Defaults to false
-- `valuesFiles` - The list of values files to pass to Big Bang; these will be merged together
+<Properties item="BigBang" />
 
 To see a tutorial for the creation and deployment of this package see the [Big Bang Tutorial](../../docs/5-zarf-tutorials/6-big-bang.md).
 
