@@ -150,7 +150,7 @@ func (b *Bundler) ValidateBundle() error {
 			return fmt.Errorf("zarf-bundle.yaml .packages[%s] is missing required field: ref", pkg.Repository)
 		}
 
-		if err := remote.PullPackageMetadata(tmp); err != nil {
+		if _, err := remote.PullPackageMetadata(tmp); err != nil {
 			return err
 		}
 

@@ -5,10 +5,10 @@
 package bundler
 
 import (
-	"path/filepath"
+	"context"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	// ocistore "oras.land/oras-go/v2/content/oci"
 )
 
 // Inspect pulls/unpacks a bundle's metadata and shows it
@@ -18,19 +18,25 @@ import (
 // : show the `zarf-bundle.yaml`
 // : have an option to download + persist the SBOMs?
 func (b *Bundler) Inspect() error {
+	ctx := context.TODO()
 	// create a new provider
-	provider, err := NewProvider(b.cfg.InspectOpts.Source)
+	provider, err := NewProvider(ctx, b.cfg.InspectOpts.Source, b.tmp)
 	if err != nil {
 		return err
 	}
 
 	// pull the zarf-bundle.yaml + sig
-	if err := provider.LoadBundleMetadata(b.tmp); err != nil {
+	if _, err := provider.LoadBundleMetadata(); err != nil {
+		return err
+	}
+
+	bundleYAMLPath, err := b.LocateBundleYAML(b.tmp)
+	if err != nil {
 		return err
 	}
 
 	// read the zarf-bundle.yaml into memory
-	if err := b.ReadBundleYaml(filepath.Join(b.tmp, config.ZarfBundleYAML), &b.bundle); err != nil {
+	if err := b.ReadBundleYaml(bundleYAMLPath, &b.bundle); err != nil {
 		return err
 	}
 

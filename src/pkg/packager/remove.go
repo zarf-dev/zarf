@@ -46,7 +46,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 		}
 
 		// pull the package from the remote
-		if err = p.remote.PullPackageMetadata(p.tmp.Base); err != nil {
+		if _, err = p.remote.PullPackageMetadata(p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to pull the package from the remote: %w", err)
 		}
 	}

@@ -231,30 +231,32 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 }
 
 // PullMultipleFiles pulls multiple files from the remote repository and saves them to `destinationDir`.
-func (o *OrasRemote) PullMultipleFiles(paths []string, destinationDir string) error {
+func (o *OrasRemote) PullMultipleFiles(paths []string, destinationDir string) ([]ocispec.Descriptor, error) {
 	root, err := o.FetchRoot()
 	if err != nil {
-		return err
+		return nil, err
 	}
+	layersPulled := []ocispec.Descriptor{}
 	for _, path := range paths {
 		desc := root.Locate(path)
+		layersPulled = append(layersPulled, desc)
 		if !o.isEmptyDescriptor(desc) {
 			err = o.PullLayer(desc, destinationDir)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
-	return nil
+	return layersPulled, nil
 }
 
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
-func (o *OrasRemote) PullPackageMetadata(destinationDir string) (err error) {
+func (o *OrasRemote) PullPackageMetadata(destinationDir string) ([]ocispec.Descriptor, error) {
 	return o.PullMultipleFiles(PackageAlwaysPull, destinationDir)
 }
 
 // PullBundleMetadata pulls the bundle metadata from the remote repository and saves it to `destinationDir`.
-func (o *OrasRemote) PullBundleMetadata(destinationDir string) error {
+func (o *OrasRemote) PullBundleMetadata(destinationDir string) ([]ocispec.Descriptor, error) {
 	return o.PullMultipleFiles(BundleAlwaysPull, destinationDir)
 }
 

@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"crypto"
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"io/fs"
@@ -378,16 +377,11 @@ func IsDir(path string) bool {
 
 // GetSHA256OfFile returns the SHA256 hash of the provided file.
 func GetSHA256OfFile(filePath string) (string, error) {
-	file, err := os.Open(filePath)
+	f, err := os.Open(filePath)
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer f.Close()
 
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
-	}
-
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return helpers.GetCryptoHash(f, crypto.SHA256)
 }

@@ -6,6 +6,7 @@ package bundler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/mholt/archiver/v4"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // Pull pulls a bundle and saves it locally + caches it
@@ -59,6 +61,21 @@ func (b *Bundler) Pull() error {
 		return err
 	}
 
+	// make an index.json specifically for this bundle
+	index := ocispec.Index{}
+	index.SchemaVersion = 2
+	index.Manifests = append(index.Manifests, rootDesc)
+
+	// write the index.json to tmp
+	bytes, err := json.Marshal(index)
+	if err != nil {
+		return err
+	}
+	indexJSONPath := filepath.Join(b.tmp, "index.json")
+	if err := utils.WriteFile(indexJSONPath, bytes); err != nil {
+		return err
+	}
+
 	// read the zarf-bundle.yaml into memory
 	bundleYamlPath := filepath.Join(cacheDir, "blobs", "sha256", bundleDesc.Digest.Encoded())
 	if err := b.ReadBundleYaml(bundleYamlPath, &b.bundle); err != nil {
@@ -99,7 +116,7 @@ func (b *Bundler) Pull() error {
 	pathMap := make(map[string]string)
 
 	// put the index.json and oci-layout at the root of the tarball
-	pathMap[filepath.Join(cacheDir, "index.json")] = "index.json"
+	pathMap[indexJSONPath] = "index.json"
 	pathMap[filepath.Join(cacheDir, "oci-layout")] = "oci-layout"
 
 	// re-map the paths to be relative to the cache directory
