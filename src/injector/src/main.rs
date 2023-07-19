@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use flate2::read::GzDecoder;
 use glob::glob;
 use hex::ToHex;
-use rouille::{accept, router, Response, Request};
+use rouille::{accept, router, Request, Response};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tar::Archive;
@@ -165,11 +165,14 @@ fn handle_get_manifest(root: &Path, name: &String, tag: &String) -> Response {
     if tag.starts_with("sha256:") {
         sha_manifest = tag.strip_prefix("sha256:").unwrap().to_owned();
     } else {
-        for manifest in json["manifests"].as_array().unwrap() { 
-            let image_base_name = manifest["annotations"]["org.opencontainers.image.base.name"].as_str().unwrap();
+        for manifest in json["manifests"].as_array().unwrap() {
+            let image_base_name = manifest["annotations"]["org.opencontainers.image.base.name"]
+                .as_str()
+                .unwrap();
             let requested_reference = name.to_owned() + ":" + tag;
             if requested_reference == image_base_name {
-                sha_manifest = manifest["digest"].as_str()
+                sha_manifest = manifest["digest"]
+                    .as_str()
                     .unwrap()
                     .strip_prefix("sha256:")
                     .unwrap()
