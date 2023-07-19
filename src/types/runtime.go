@@ -18,6 +18,7 @@ const (
 	FileVariableType VariableType = "file"
 )
 
+// VariableType represents a type of a Zarf package variable
 type VariableType string
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
