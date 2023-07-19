@@ -25,6 +25,10 @@
         "skipFlux": {
           "type": "boolean",
           "description": "Whether to skip deploying flux; Defaults to false"
+        },
+        "fluxPatchPath": {
+          "type": "string",
+          "description": "An optional path to a Flux kustomize strategic merge patch file"
         }
       },
       "additionalProperties": false,

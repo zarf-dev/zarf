@@ -1704,6 +1704,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="components_items_extensions_bigbang_fluxPatchPath"></a>fluxPatchPath</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** An optional path to a Flux kustomize strategic merge patch file
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
