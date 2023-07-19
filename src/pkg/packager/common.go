@@ -457,20 +457,23 @@ func (p *Packager) validatePackageArchitecture() error {
 	return nil
 }
 
-// validateMinimumCompatibleVersion validates that the version of Zarf in use is greater than or equal to the minimum compatible version of a Zarf package.
-func (p *Packager) validateMinimumCompatibleVersion() error {
-	minimumCompatibleVersion, err := semver.NewVersion(p.cfg.Pkg.Build.MinimumCompatibleVersion)
-	if err != nil {
-		return fmt.Errorf("unable to parse minimum compatible version from Zarf package build data: %w", err)
-	}
+// validateMinimumCompatibleVersion validates that the version of Zarf in use is compatible with the version of the package.
+func (p *Packager) validateMinimumCompatibleVersion(minimumCompatibleVersion string, cliVersion string) (err error) {
+	// Only run the validation if the MinimumCompatibleVersion field is not empty
+	if minimumCompatibleVersion != "" {
+		minimumCompatibleSemVer, err := semver.NewVersion(minimumCompatibleVersion)
+		if err != nil {
+			return fmt.Errorf("unable to parse minimum compatible version from Zarf package build data: %w", err)
+		}
 
-	cliVersion, err := semver.NewVersion(config.CLIVersion)
-	if err != nil {
-		return fmt.Errorf("unable to parse Zarf CLI version: %w", err)
-	}
+		cliSemVer, err := semver.NewVersion(cliVersion)
+		if err != nil {
+			return fmt.Errorf("unable to parse Zarf CLI version: %w", err)
+		}
 
-	if cliVersion.LessThan(minimumCompatibleVersion) {
-		return fmt.Errorf("the version of this Zarf binary '%s' is less than the minimum compatible version of '%s'. Please upgrade your Zarf version to at least '%s' to deploy this package", config.CLIVersion, p.cfg.Pkg.Build.MinimumCompatibleVersion, p.cfg.Pkg.Build.MinimumCompatibleVersion)
+		if cliSemVer.LessThan(minimumCompatibleSemVer) {
+			return fmt.Errorf(lang.CmdPackageDeployValidateMinimumCompatibleVersionErr, cliVersion, minimumCompatibleVersion, minimumCompatibleVersion)
+		}
 	}
 
 	return nil

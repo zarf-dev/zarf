@@ -1,31 +1,63 @@
 package packager
 
-import "testing"
+import (
+	"fmt"
+	"testing"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/stretchr/testify/assert"
+)
+
+// TestValidateMinimumCompatibleVersion verifies that Zarf validates the minimum compatible version of packages against the CLI version correctly.
 func TestValidateMinimumCompatibleVersion(t *testing.T) {
 	t.Parallel()
 
-	/* Test Case 1:
+	type testCase struct {
+		name                     string
+		cliVersion               string
+		minimumCompatibleVersion string
+		returnError              bool
+	}
 
-	- Create a package tarball with the minimum compatible version (MCV) tagged in the build metadata
+	testCases := []testCase{
+		{
+			name:                     "Assert that a CLI version less than the minimum compatible version returns an error",
+			cliVersion:               "v0.26.4",
+			minimumCompatibleVersion: "v0.27.0",
+			returnError:              true, // We expect these inputs to return an error
+		},
+		{
+			name:                     "Assert that a CLI version greater than the minimum compatible version does not return an error",
+			cliVersion:               "v0.28.2",
+			minimumCompatibleVersion: "v0.27.0",
+			returnError:              false,
+		},
+		{
+			name:                     "Assert that a CLI version equal to the minimum compatible version does not return an error",
+			cliVersion:               "v0.27.0",
+			minimumCompatibleVersion: "v0.27.0",
+			returnError:              false,
+		},
+		{
+			name:                     "Assert that an empty minimum compatible version string does not return an error",
+			cliVersion:               "this shouldn't get evaluated when the minimum compatible version string is empty",
+			minimumCompatibleVersion: "",
+			returnError:              false,
+		},
+	}
 
-	- Load zarf package into memory
+	p := &Packager{}
 
-	- Set the CLI version variable to a version less than the MCV
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := p.validateMinimumCompatibleVersion(testCase.minimumCompatibleVersion, testCase.cliVersion)
 
-	- Call the validateMinimumCompatibleVersion() function and assert that it returns an error
-
-	*/
-
-	/* Test Case 2:
-
-	- Create a package tarball with the minimum compatible version (MCV) tagged in the build metadata
-
-	- Load zarf package into memory
-
-	- Set the CLI version variable to a version equal to or greater than the MCV
-
-	- Call the validateMinimumCompatibleVersion() function and assert that it does not return an error
-
-	*/
+			if testCase.returnError {
+				expectedErrorMessage := fmt.Sprintf(lang.CmdPackageDeployValidateMinimumCompatibleVersionErr, testCase.cliVersion, testCase.minimumCompatibleVersion, testCase.minimumCompatibleVersion)
+				assert.ErrorContains(t, err, expectedErrorMessage)
+			} else {
+				assert.NoError(t, err, "Expected no error for test case: %s", testCase.name)
+			}
+		})
+	}
 }
