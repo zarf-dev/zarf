@@ -249,6 +249,10 @@ export interface ZarfBuildData {
      */
     migrations: string[];
     /**
+     * The minimum version of Zarf that can be used to successfully deploy a package
+     */
+    minimumCompatibleVersion?: string;
+    /**
      * Map of components that were imported via OCI. The keys are OCI Package URLs and values
      * are the component names
      */
@@ -1447,6 +1451,7 @@ const typeMap: any = {
         { json: "differential", js: "differential", typ: true },
         { json: "differentialMissing", js: "differentialMissing", typ: u(undefined, a("")) },
         { json: "migrations", js: "migrations", typ: a("") },
+        { json: "minimumCompatibleVersion", js: "minimumCompatibleVersion", typ: u(undefined, "") },
         { json: "OCIImportedComponents", js: "OCIImportedComponents", typ: u(undefined, m("")) },
         { json: "registryOverrides", js: "registryOverrides", typ: m("") },
         { json: "terminal", js: "terminal", typ: "" },

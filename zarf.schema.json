@@ -136,6 +136,10 @@
           },
           "type": "object",
           "description": "Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names"
+        },
+        "minimumCompatibleVersion": {
+          "type": "string",
+          "description": "The minimum version of Zarf that can be used to successfully deploy a package"
         }
       },
       "additionalProperties": false,

@@ -535,6 +535,22 @@ must respect the following conditions
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="build_minimumCompatibleVersion"></a>minimumCompatibleVersion</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The minimum version of Zarf that can be used to successfully deploy a package
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
