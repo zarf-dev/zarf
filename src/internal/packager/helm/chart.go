@@ -272,18 +272,18 @@ func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinn
 }
 
 // UpdateChartValues updates values for a given chart release
-func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) (*release.Release, error) {
+func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
 	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.ReleaseName)
 	defer spinner.Stop()
 
 	err := h.createActionConfig(h.Chart.Namespace, spinner)
 	if err != nil {
-		return nil, fmt.Errorf("unable to initialize the K8s client: %w", err)
+		return fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
 	postRender, err := h.newRenderer()
 	if err != nil {
-		return nil, fmt.Errorf("unable to create helm renderer: %w", err)
+		return fmt.Errorf("unable to create helm renderer: %w", err)
 	}
 
 	histClient := action.NewHistory(h.actionConfig)
@@ -310,10 +310,17 @@ func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) (*relea
 		client.ReuseValues = true
 
 		// Perform the loadedChart upgrade.
-		return client.Run(h.ReleaseName, lastRelease.Chart, updatedValues)
+		_, err = client.Run(h.ReleaseName, lastRelease.Chart, updatedValues)
+		if err != nil {
+			return err
+		}
+
+		spinner.Success()
+
+		return nil
 	}
 
-	return nil, fmt.Errorf("unable to find the %s helm release", h.ReleaseName)
+	return fmt.Errorf("unable to find the %s helm release", h.ReleaseName)
 }
 
 func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {

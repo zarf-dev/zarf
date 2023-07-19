@@ -112,7 +112,7 @@ var updateCredsCmd = &cobra.Command{
 				hasGitServer = true
 			}
 			if dc.Name == "logging" {
-				hasGitServer = true
+				hasLogging = true
 			}
 		}
 
@@ -162,10 +162,10 @@ var updateCredsCmd = &cobra.Command{
 			}
 			if helpers.SliceContains(args, message.ArtifactKey) {
 				if newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && hasGitServer {
-					g := git.New(newState.GitServer)
+					g := git.New(oldState.GitServer)
 					tokenResponse, err := g.CreatePackageRegistryToken()
 					if err != nil {
-						message.Fatalf(nil, "Unable to create the new Gitea artifact token")
+						message.Fatalf(nil, "Unable to create the new Gitea artifact token: %s", err.Error())
 					}
 					newState.ArtifactServer.PushToken = tokenResponse.Sha1
 				}
@@ -205,16 +205,61 @@ var updateCredsCmd = &cobra.Command{
 						State: newState,
 					},
 				}
-				_, err = h.UpdateReleaseValues(registryValues)
+				err = h.UpdateReleaseValues(registryValues)
 				if err != nil {
 					message.Fatalf(nil, "error updating the release values: %s", err.Error())
 				}
 			}
 			if helpers.SliceContains(args, message.GitKey) && hasGitServer {
-				// TODO: Apply the updates to the gitea helm chart
+				giteaValues := map[string]interface{}{}
+				giteaGiteaValues := map[string]interface{}{}
+				giteaAdminValues := map[string]interface{}{}
+				giteaAdminValues["username"] = newState.GitServer.PushUsername
+				giteaAdminValues["password"] = newState.GitServer.PushPassword
+				giteaGiteaValues["admin"] = giteaAdminValues
+				giteaValues["gitea"] = giteaGiteaValues
+
+				h := helm.Helm{
+					Chart: types.ZarfChart{
+						Namespace: "zarf",
+					},
+					Cluster:     c,
+					ReleaseName: "zarf-gitea",
+					Cfg: &types.PackagerConfig{
+						State: newState,
+					},
+				}
+				err = h.UpdateReleaseValues(giteaValues)
+				if err != nil {
+					message.Fatalf(nil, "error updating the release values: %s", err.Error())
+				}
+
+				g := git.New(newState.GitServer)
+				err := g.CreateReadOnlyUser()
+				if err != nil {
+					message.Fatalf(nil, "Unable to create the new Gitea read only user")
+				}
 			}
 			if helpers.SliceContains(args, message.LoggingKey) && hasLogging {
-				// TODO: Apply the updates to the logging helm chart
+				loggingValues := map[string]interface{}{}
+				loggingGrafanaValues := map[string]interface{}{}
+				loggingGrafanaValues["adminPassword"] = newState.LoggingSecret
+				loggingValues["grafana"] = loggingGrafanaValues
+
+				h := helm.Helm{
+					Chart: types.ZarfChart{
+						Namespace: "zarf",
+					},
+					Cluster:     c,
+					ReleaseName: "zarf-loki-stack",
+					Cfg: &types.PackagerConfig{
+						State: newState,
+					},
+				}
+				err = h.UpdateReleaseValues(loggingValues)
+				if err != nil {
+					message.Fatalf(nil, "error updating the release values: %s", err.Error())
+				}
 			}
 		}
 	},

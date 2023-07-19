@@ -102,6 +102,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(state types.ZarfState) {
 				}
 			}
 		}
+		spinner.Success()
 	}
 }
 
@@ -133,5 +134,6 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(state types.ZarfState) {
 				}
 			}
 		}
+		spinner.Success()
 	}
 }

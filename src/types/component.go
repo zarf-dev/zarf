@@ -31,7 +31,7 @@ type ZarfComponent struct {
 	// Note: ignores default and required flags
 	Group string `json:"group,omitempty" jsonschema:"description=Create a user selector field based on all components in the same group"`
 
-	//Path to cosign publickey for signed online resources
+	// Path to cosign public key for signed online resources
 	CosignKeyPath string `json:"cosignKeyPath,omitempty" jsonschema:"description=Specify a path to a public key to validate signed online resources"`
 
 	// Import refers to another zarf.yaml package component.
@@ -119,7 +119,7 @@ type DeprecatedZarfComponentScripts struct {
 	After          []string `json:"after,omitempty" jsonschema:"description=Scripts to run after the component successfully deploys"`
 }
 
-// ZarfComponentActions are actionsets that map to different zarf package operations
+// ZarfComponentActions are ActionSets that map to different zarf package operations
 type ZarfComponentActions struct {
 	OnCreate ZarfComponentActionSet `json:"onCreate,omitempty" jsonschema:"description=Actions to run during package creation"`
 	OnDeploy ZarfComponentActionSet `json:"onDeploy,omitempty" jsonschema:"description=Actions to run during package deployment"`
