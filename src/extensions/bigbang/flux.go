@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -20,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	krustytypes "sigs.k8s.io/kustomize/api/types"
 )
 
 // HelmReleaseDependency is a struct that represents a Flux Helm Release from an HR DependsOn list.
@@ -43,6 +45,7 @@ func (h HelmReleaseDependency) Dependencies() []string {
 // getFlux Creates a component to deploy Flux.
 func getFlux(baseDir string, cfg *extensions.BigBang) (manifest types.ZarfManifest, images []string, err error) {
 	localPath := path.Join(baseDir, "bb-ext-flux.yaml")
+	kustomizePath := path.Join(baseDir, "kustomization.yaml")
 
 	if cfg.Repo == "" {
 		cfg.Repo = bbRepo
@@ -50,8 +53,21 @@ func getFlux(baseDir string, cfg *extensions.BigBang) (manifest types.ZarfManife
 
 	remotePath := fmt.Sprintf("%s//base/flux?ref=%s", cfg.Repo, cfg.Version)
 
-	// Perform Kustomzation now to get the flux.yaml file.
-	if err := kustomize.Build(remotePath, localPath, true); err != nil {
+	fluxKustomization := krustytypes.Kustomization{
+		Resources: []string{remotePath},
+	}
+
+	for _, path := range cfg.FluxPatchFiles {
+		absFluxPatchPath, _ := filepath.Abs(path)
+		fluxKustomization.Patches = append(fluxKustomization.Patches, krustytypes.Patch{Path: absFluxPatchPath})
+	}
+
+	if err := utils.WriteYaml(kustomizePath, fluxKustomization, 0600); err != nil {
+		return manifest, images, fmt.Errorf("unable to write kustomization: %w", err)
+	}
+
+	// Perform Kustomization now to get the flux.yaml file.
+	if err := kustomize.Build(baseDir, localPath, true); err != nil {
 		return manifest, images, fmt.Errorf("unable to build kustomization: %w", err)
 	}
 
