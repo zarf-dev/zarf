@@ -55,12 +55,12 @@ ensure-ui-build-dir:
 # INTERNAL: used to build the UI only if necessary
 check-ui:
 	@ if [ ! -z "$(shell command -v shasum)" ]; then\
-	    if test "$(shell ./hack/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
-		    $(MAKE) build-ui;\
-		    ./hack/print-ui-diff.sh > build/ui/git-info.txt;\
-	    fi;\
+		if test "$(shell ./hack/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
+			$(MAKE) build-ui;\
+			./hack/print-ui-diff.sh > build/ui/git-info.txt;\
+		fi;\
 	else\
-        $(MAKE) build-ui;\
+		$(MAKE) build-ui;\
 	fi
 
 build-ui: ## Build the Zarf UI
