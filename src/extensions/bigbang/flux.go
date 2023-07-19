@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -56,8 +57,9 @@ func getFlux(baseDir string, cfg *extensions.BigBang) (manifest types.ZarfManife
 		Resources: []string{remotePath},
 	}
 
-	if cfg.FluxPatchPath != "" {
-		fluxKustomization.Patches = []krustytypes.Patch{{Path: cfg.FluxPatchPath}}
+	for _, path := range cfg.FluxPatchPaths {
+		absFluxPatchPath, _ := filepath.Abs(path)
+		fluxKustomization.Patches = append(fluxKustomization.Patches, krustytypes.Patch{Path: absFluxPatchPath})
 	}
 
 	if err := utils.WriteYaml(kustomizePath, fluxKustomization, 0600); err != nil {
