@@ -54,7 +54,7 @@ jobs:
           password: ${{ secrets.IRONBANK_PASSWORD }}
 
       - name: Build a registry1.dso.mil Zarf 'init' package
-        run: ZARF_CONFIG=./src/extensions/bigbang/test/zarf-init-bb-config.toml make init-package
+        run: make ib-init-package
 
       - name: Run tests
         if: ${{ env.IRONBANK_USERNAME != '' }}
