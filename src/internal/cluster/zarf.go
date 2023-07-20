@@ -101,18 +101,18 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 }
 
 // PackageSecretNeedsWait checks if the the package status or any of the component statuses are being mutated by a webhook and need to be waited on.
-func (c *Cluster) PackageSecretNeedsWait(secretName string) (bool, error) {
+func (c *Cluster) PackageSecretNeedsWait(secretName string) (bool, int, error) {
 	// Get the secret that describes the deployed package
 	packageSecret, err := c.Kube.GetSecret(ZarfNamespaceName, secretName)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 
 	// Parse the secret
 	var deployedPackage types.DeployedPackage
 	err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 
 	// Check if there are any component level statuses that we need to wait for
@@ -120,13 +120,13 @@ func (c *Cluster) PackageSecretNeedsWait(secretName string) (bool, error) {
 		for hookName, webhook := range hookMap {
 			if webhook.Status == string(types.WebhookStatusRunning) {
 				message.Debugf("The component %s is still running the webhook %s", componentName, hookName)
-				return true, nil
+				return true, webhook.WaitDurationSeconds, nil
 			}
 		}
 	}
 
 	// If we get here, none of the components need to wait for a webhook to run
-	return false, nil
+	return false, 0, nil
 }
 
 // RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
@@ -137,12 +137,17 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 		return packageSecret, err
 	}
 
-	// Timebox the amount of time we wait for a mutation to finish before erroring
-	timeout := time.After(5 * time.Minute) // TODO @JPERRY: Make this configurable (via the webhook itself?)
-	packageNeedsWait, err := c.PackageSecretNeedsWait(packageSecret.Name)
+	packageNeedsWait, waitSeconds, err := c.PackageSecretNeedsWait(packageSecret.Name)
 	if !packageNeedsWait {
 		return packageSecret, err
 	}
+
+	// Timebox the amount of time we wait for a mutation to finish before erroring
+	waitDuration := types.DefaultWebhookWaitDuration
+	if waitSeconds > 0 {
+		waitDuration = time.Duration(waitSeconds) * time.Second
+	}
+	timeout := time.After(waitDuration)
 
 	// We need to wait for this package to finish having webhooks run, create a spinner and keep checking until it's ready
 	spinner := message.NewProgressSpinner("Waiting for component webhooks to complete")
@@ -155,7 +160,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 		default:
 			// Wait for 3 seconds before checking the secret again
 			time.Sleep(3 * time.Second)
-			packageNeedsWait, err = c.PackageSecretNeedsWait(packageSecret.Name)
+			packageNeedsWait, _, err = c.PackageSecretNeedsWait(packageSecret.Name)
 		}
 	}
 

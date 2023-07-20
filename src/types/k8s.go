@@ -4,13 +4,19 @@
 // Package types contains all the types used by Zarf.
 package types
 
-import "github.com/defenseunicorns/zarf/src/pkg/k8s"
+import (
+	"time"
+
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+)
 
 // PackageStatus defines the deployment status of a Zarf package.
 type WebhookStatus string
 
 // ComponentStatus defines the deployment status of a Zarf component within a package.
 type ComponentStatus string
+
+const DefaultWebhookWaitDuration = time.Minute * 5
 
 const (
 	WebhookStatusSucceeded WebhookStatus = "Succeeded"
@@ -58,8 +64,9 @@ type DeployedComponent struct {
 }
 
 type Webhook struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
+	Name                string `json:"name"`
+	WaitDurationSeconds int    `json:"waitDurationSeconds,omitempty"`
+	Status              string `json:"status"`
 }
 
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
