@@ -45,8 +45,8 @@ func TestValidateMinimumCompatibleVersion(t *testing.T) {
 			returnError:              false,
 		},
 		{
-			name:                     "Assert that a CLI version string in this format does not return an error",
-			cliVersion:               "v1.0.0-UnknownVersion", // This is used as a default version in the E2E tests
+			name:                     "Assert that the default CLI version string used in the E2E tests does not return an error",
+			cliVersion:               "UnknownVersion", // This is used as a default version in the E2E tests
 			minimumCompatibleVersion: "v0.27.0",
 			returnError:              false,
 		},
