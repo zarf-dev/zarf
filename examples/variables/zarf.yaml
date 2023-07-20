@@ -35,10 +35,16 @@ variables:
   - name: AWS_REGION
     default: us-east-1
     sensitive: true
+  # MODIFIED_TERRAFORM sets a filepath for a terraform file to be used as the contents of a template
+  - name: MODIFIED_TERRAFORM
+    default: modified-terraform.tf
+    autoIndent: true
+    sensitive: true
+    type: file
 
 components:
   # The following component templates the provided .tf file with the defined AWS_REGION
-  # NOTE: this component does not actually execute this file in this example (see examples/terraform)
+  # NOTE: this component does not actually execute this file in this example
   - name: variables-with-terraform
     description: Change a value in a regular file with a Zarf variable. Set AWS_REGION variable to modify the file.
     required: true
@@ -48,14 +54,13 @@ components:
     actions:
       onDeploy:
         after:
-          # This command `cat`s the modified terraform file on deploy for use later on (see examples/component-actions for more)
-          - cmd: cat modified-terraform.tf
-            # `mute` is set to exclude the command output from being shown (note this will include AWS_REGION which we marked sensitive above)
+          # This command uses Zarf to return the SHASUM of the terraform file (`type: file` variables will return the filepath instead of the contents when used in actions)
+          - cmd: ./zarf prepare sha256sum ${ZARF_VAR_MODIFIED_TERRAFORM}
+            # `mute` is set to exclude the command output from being shown (since we are treating it as sensitive below)
             mute: true
             setVariables:
-              - name: MODIFIED_TERRAFORM
-                autoIndent: true
-                # `sensitive` is set to exclude the command output from the logs (note this will include AWS_REGION which we marked sensitive above)
+              - name: MODIFIED_TERRAFORM_SHASUM
+                # `sensitive` is set to exclude the command output from the logs
                 sensitive: true
 
   # The following component deploys nginx to the cluster using the defined variables
