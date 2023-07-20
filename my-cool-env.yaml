@@ -1,0 +1,49 @@
+architecture: ""
+init:
+    components: ""
+    git:
+        pull_password: ""
+        pull_username: ""
+        push_password: ""
+        push_username: zarf-git-user
+        url: ""
+    registry:
+        nodeport: 0
+        pull_password: ""
+        pull_username: ""
+        push_password: ""
+        push_username: zarf-push
+        secret: ""
+        url: ""
+    storage_class: ""
+insecure: false
+log_level: info
+no_log_file: false
+no_progress: false
+package:
+    create:
+        max_package_size: 0
+        output: ""
+        sbom: false
+        sbom_output: ""
+        set:
+            agent_image: defenseunicorns/zarf/agent
+            agent_image_domain: ghcr.io/
+            agent_image_tag: local
+            injector_version: "2023-07-19"
+            registry_image: library/registry
+            registry_image_domain: ""
+            registry_image_tag: 2.8.2
+        signing_key: ""
+        skip_sbom: false
+    deploy:
+        components: ""
+        public_key: ""
+        set: {}
+        sget: ""
+        shasum: ""
+    oci_concurrency: 3
+    pull:
+        output_directory: ""
+tmp_dir: ""
+zarf_cache: ~/.zarf-cache
