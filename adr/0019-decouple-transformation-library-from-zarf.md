@@ -59,7 +59,7 @@ We considered:
 
 ## Decision
 
-We conformed around using WASM because we can leverage the battle tested transform library from Zarf without the incurring network overhead cost from pod to pod or container to container communications.
+We conformed around using WASM because we can leverage the battle tested transform library from Zarf without incurring network overhead cost from pod to pod or container to container communications.
 
 ## Consequences
 
