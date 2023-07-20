@@ -11,7 +11,6 @@ inputs:
     required: false
     default: 'true'
 
-
 runs:
   using: composite
   steps:
