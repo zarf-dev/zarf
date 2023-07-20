@@ -41,21 +41,20 @@ type ZarfState struct {
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
-	Name       string            `json:"name"`
-	Data       ZarfPackage       `json:"data"`
-	CLIVersion string            `json:"cliVersion"`
-	Webhooks   map[string]string `json:"webhooks,omitempty"`
+	Name       string      `json:"name"`
+	Data       ZarfPackage `json:"data"`
+	CLIVersion string      `json:"cliVersion"`
 
-	DeployedComponents []DeployedComponent `json:"deployedComponents"`
-	ConnectStrings     ConnectStrings      `json:"connectStrings,omitempty"`
+	DeployedComponents []DeployedComponent           `json:"deployedComponents"`
+	ComponentWebhooks  map[string]map[string]Webhook `json:"componentWebhooks,omitempty"`
+	ConnectStrings     ConnectStrings                `json:"connectStrings,omitempty"`
 }
 
 // DeployedComponent contains information about a Zarf Package Component that has been deployed to a cluster.
 type DeployedComponent struct {
-	Name            string             `json:"name"`
-	InstalledCharts []InstalledChart   `json:"installedCharts"`
-	Status          ComponentStatus    `json:"status"`
-	Webhooks        map[string]Webhook `json:"webhooks,omitempty"`
+	Name            string           `json:"name"`
+	InstalledCharts []InstalledChart `json:"installedCharts"`
+	Status          ComponentStatus  `json:"status"`
 }
 
 type Webhook struct {
