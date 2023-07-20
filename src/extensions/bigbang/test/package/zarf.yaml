@@ -18,6 +18,9 @@ components:
     extensions:
       bigbang:
         version: "###ZARF_PKG_TMPL_BB_VERSION###"
+        fluxPatchFiles:
+          - flux-overrides-helm-controller.yaml
+          - flux-overrides-source-controller.yaml
         valuesFiles:
           - disable-all-bb###ZARF_PKG_TMPL_BB_MAJOR###.yaml
           - enable-twistlock.yaml
