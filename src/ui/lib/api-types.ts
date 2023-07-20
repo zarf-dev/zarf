@@ -461,6 +461,20 @@ export interface ZarfComponentActionSetVariable {
      * Whether to mark this variable as sensitive to not print it in the Zarf log
      */
     sensitive?: boolean;
+    /**
+     * Changes the handling of a variable to load contents differently (i.e. from a file rather
+     * than as a raw variable - templated files should be kept below 1 MiB)
+     */
+    type?: Type;
+}
+
+/**
+ * Changes the handling of a variable to load contents differently (i.e. from a file rather
+ * than as a raw variable - templated files should be kept below 1 MiB)
+ */
+export enum Type {
+    File = "file",
+    Raw = "raw",
 }
 
 /**
@@ -677,6 +691,10 @@ export interface ZarfComponentExtensions {
  * Configurations for installing Big Bang and Flux in the cluster
  */
 export interface BigBang {
+    /**
+     * Optional paths to Flux kustomize strategic merge patch files
+     */
+    fluxPatchFiles?: string[];
     /**
      * Override repo to pull Big Bang from instead of Repo One
      */
@@ -958,6 +976,11 @@ export interface ZarfPackageVariable {
      * Whether to mark this variable as sensitive to not print it in the Zarf log
      */
     sensitive?: boolean;
+    /**
+     * Changes the handling of a variable to load contents differently (i.e. from a file rather
+     * than as a raw variable - templated files should be kept below 1 MiB)
+     */
+    type?: Type;
 }
 
 export interface ClusterSummary {
@@ -1502,6 +1525,7 @@ const typeMap: any = {
         { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "name", js: "name", typ: "" },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
+        { json: "type", js: "type", typ: u(undefined, r("Type")) },
     ], false),
     "ZarfComponentActionShell": o([
         { json: "darwin", js: "darwin", typ: u(undefined, "") },
@@ -1557,6 +1581,7 @@ const typeMap: any = {
         { json: "bigbang", js: "bigbang", typ: u(undefined, r("BigBang")) },
     ], false),
     "BigBang": o([
+        { json: "fluxPatchFiles", js: "fluxPatchFiles", typ: u(undefined, a("")) },
         { json: "repo", js: "repo", typ: u(undefined, "") },
         { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
@@ -1626,6 +1651,7 @@ const typeMap: any = {
         { json: "name", js: "name", typ: "" },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
+        { json: "type", js: "type", typ: u(undefined, r("Type")) },
     ], false),
     "ClusterSummary": o([
         { json: "distro", js: "distro", typ: "" },
@@ -1766,6 +1792,10 @@ const typeMap: any = {
         { json: "DifferentialPackageVersion", js: "DifferentialPackageVersion", typ: "" },
         { json: "DifferentialRepos", js: "DifferentialRepos", typ: m(true) },
     ], false),
+    "Type": [
+        "file",
+        "raw",
+    ],
     "Protocol": [
         "http",
         "https",

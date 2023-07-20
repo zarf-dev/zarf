@@ -13,6 +13,16 @@ const SchemaItemProperties = ({ item, include, invert }) => {
     return null;
   }
 
+  let includesElement = (key) => {
+    if (!include) {
+      return true;
+    } else if (invert) {
+      return !include.includes(key);
+    } else {
+      return include.includes(key);
+    }
+  }
+
   return (
     <>
       <table>
@@ -26,15 +36,7 @@ const SchemaItemProperties = ({ item, include, invert }) => {
         <tbody>
           {itemSchema &&
             Object.keys(itemSchema.properties)
-              .filter((key) => {
-                if (!include) {
-                  return true;
-                } else if (invert) {
-                  return !include.includes(key);
-                } else {
-                  return include.includes(key);
-                }
-              })
+              .filter(includesElement)
               .sort()
               .sort((key) => (itemSchema.required.includes(key) ? -1 : 1))
               .map((key) => {
@@ -53,9 +55,10 @@ const SchemaItemProperties = ({ item, include, invert }) => {
               })}
         </tbody>
       </table>
-      {itemSchema && itemSchema.required && itemSchema.required.some((ele) => include.includes(ele)) && (
+      {itemSchema && itemSchema.required && itemSchema.required.some(includesElement) && (
         <small>
           <em>* Required field</em>
+          <br/>&nbsp;
         </small>
       )}
     </>

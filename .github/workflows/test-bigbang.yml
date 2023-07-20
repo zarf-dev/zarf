@@ -37,6 +37,7 @@ jobs:
       - name: Build Zarf binary
         uses: ./.github/actions/packages
         with:
+          init-package: 'false'
           build-examples: 'false'
 
       - name: Setup K3d
@@ -51,6 +52,9 @@ jobs:
           registry: registry1.dso.mil
           username: ${{ secrets.IRONBANK_USERNAME }}
           password: ${{ secrets.IRONBANK_PASSWORD }}
+
+      - name: Build a registry1.dso.mil Zarf 'init' package
+        run: make ib-init-package
 
       - name: Run tests
         if: ${{ env.IRONBANK_USERNAME != '' }}
