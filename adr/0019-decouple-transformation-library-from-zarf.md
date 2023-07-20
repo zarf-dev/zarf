@@ -38,6 +38,7 @@ We considered:
 - Pepr is considering adding a sidecar and we did not want potentially 3 containers in the Pepr Pod.
 
 #### REST
+
 **PROS**
 - Shared codebase between TypeScript and Go
 - Proven
