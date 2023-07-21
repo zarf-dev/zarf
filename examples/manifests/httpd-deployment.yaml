@@ -17,4 +17,3 @@ spec:
         image: httpd:alpine3.18
         ports:
         - containerPort: 80
-          name: httpd
