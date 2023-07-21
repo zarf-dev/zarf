@@ -131,6 +131,7 @@ func (tp *tarballProvider) LoadBundle(requestedPackages []string) ([]ocispec.Des
 	return layersExtracted, nil
 }
 
+// LoadPackage loads a package from a tarball
 func (tp *tarballProvider) LoadPackage(sha, destinationDir string) (PathMap, error) {
 	if err := tp.getBundleManifest(); err != nil {
 		return nil, err

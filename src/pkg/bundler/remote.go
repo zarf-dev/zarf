@@ -13,7 +13,6 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// ociProvider is a Processor that works with OCI images
 type ociProvider struct {
 	ctx context.Context
 	src string
@@ -39,6 +38,7 @@ func (op *ociProvider) getBundleManifest() error {
 	return nil
 }
 
+// LoadPackage loads a package from a remote bundle
 func (op *ociProvider) LoadPackage(sha, destinationDir string) (PathMap, error) {
 	layers, err := op.PullBundle(destinationDir, config.CommonOptions.OCIConcurrency, []string{sha})
 	if err != nil {
@@ -52,7 +52,7 @@ func (op *ociProvider) LoadPackage(sha, destinationDir string) (PathMap, error) 
 	return paths, nil
 }
 
-// LoadBundleMetadata loads a bundle's metadata from an OCI image
+// LoadBundleMetadata loads a remote bundle's metadata
 func (op *ociProvider) LoadBundleMetadata() (PathMap, error) {
 	layers, err := op.PullBundleMetadata(op.dst)
 	if err != nil {
