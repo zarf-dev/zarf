@@ -15,9 +15,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// Unload pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
-func (p *Packager) Unload(packageName string) (err error) {
-	spinner := message.NewProgressSpinner("Unloading zarf package %s", packageName)
+// Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
+func (p *Packager) Mirror(packageName string) (err error) {
+	spinner := message.NewProgressSpinner("Mirroring zarf package %s", packageName)
 	defer spinner.Stop()
 
 	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
@@ -35,9 +35,9 @@ func (p *Packager) Unload(packageName string) (err error) {
 		return err
 	}
 
-	// Confirm the overall package unload
-	if !p.confirmAction(config.ZarfUnloadStage, p.cfg.SBOMViewFiles) {
-		return fmt.Errorf("unload cancelled")
+	// Confirm the overall package mirror
+	if !p.confirmAction(config.ZarfMirrorStage, p.cfg.SBOMViewFiles) {
+		return fmt.Errorf("mirror cancelled")
 	}
 
 	state := types.ZarfState{
@@ -53,7 +53,7 @@ func (p *Packager) Unload(packageName string) (err error) {
 
 	for _, component := range p.cfg.Pkg.Components {
 		if len(requestedComponentNames) == 0 || helpers.SliceContains(requestedComponentNames, component.Name) {
-			if err := p.unloadComponent(component, false); err != nil {
+			if err := p.mirrorComponent(component, false); err != nil {
 				return err
 			}
 		}
@@ -62,11 +62,10 @@ func (p *Packager) Unload(packageName string) (err error) {
 	return nil
 }
 
-// unloadComponent unloads a Zarf Component.
-func (p *Packager) unloadComponent(component types.ZarfComponent, noImgChecksum bool) error {
-	message.Debugf("packager.deployComponent(%#v, %#v", p.tmp, component)
+// mirrorComponent mirrors a Zarf Component.
+func (p *Packager) mirrorComponent(component types.ZarfComponent, noImgChecksum bool) error {
+	message.Debugf("packager.mirrorComponent(%#v, %#v", p.tmp, component)
 
-	// Toggles for general deploy operations
 	componentPath, err := p.createOrGetComponentPaths(component)
 	if err != nil {
 		return fmt.Errorf("unable to create the component paths: %w", err)

@@ -66,7 +66,7 @@ const (
 
 	ZarfDeployStage = "Deploy"
 	ZarfCreateStage = "Create"
-	ZarfUnloadStage = "Unload"
+	ZarfMirrorStage = "Mirror"
 )
 
 // Zarf Global Configuration Variables.

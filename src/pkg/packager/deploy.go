@@ -214,7 +214,6 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
 	message.Debugf("packager.deployComponent(%#v, %#v", p.tmp, component)
 
-	// Toggles for general deploy operations
 	componentPath, err := p.createOrGetComponentPaths(component)
 	if err != nil {
 		return charts, fmt.Errorf("unable to create the component paths: %w", err)
