@@ -215,6 +215,10 @@ const (
 	CmdPackageDeployLong  = "Unpacks resources and dependencies from a Zarf package archive and deploys them onto the target system.\n" +
 		"Kubernetes clusters are accessed via credentials in your current kubecontext defined in '~/.kube/config'"
 
+	CmdPackageMirrorShort = "Mirrors a Zarf package's resources from a local file or URL to specified registries and repos"
+	CmdPackageMirrorLong  = "Unpacks resources and dependencies from a Zarf package archive and mirrors them to the specified \n" +
+		"registries and repos within the target environment"
+
 	CmdPackageInspectShort = "Displays the definition of a Zarf package (runs offline)"
 	CmdPackageInspectLong  = "Displays the 'zarf.yaml' definition for the specified package and optionally allows SBOMs to be viewed"
 

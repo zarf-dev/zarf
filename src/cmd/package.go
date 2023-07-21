@@ -99,6 +99,28 @@ var packageDeployCmd = &cobra.Command{
 	},
 }
 
+var packageMirrorCmd = &cobra.Command{
+	Use:     "mirror [ PACKAGE ]",
+	Aliases: []string{"m"},
+	Short:   lang.CmdPackageMirrorShort,
+	Long:    lang.CmdPackageMirrorLong,
+	Args:    cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+
+		pkgConfig.PkgSourcePath = pkgConfig.DeployOpts.PackagePath
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Deploy the package
+		if err := pkgClient.Mirror(); err != nil {
+			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
+		}
+	},
+}
+
 var packageInspectCmd = &cobra.Command{
 	Use:     "inspect [ PACKAGE ]",
 	Aliases: []string{"i"},
