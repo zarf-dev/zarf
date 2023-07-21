@@ -17,7 +17,6 @@ import (
 // : retrieve the `zarf-bundle.yaml`, and `zarf-bundle.yaml.sig`
 // : verify sigs
 // : show the `zarf-bundle.yaml`
-// : have an option to download + persist the SBOMs?
 func (b *Bundler) Inspect() error {
 	ctx := context.TODO()
 	// create a new provider
@@ -44,5 +43,9 @@ func (b *Bundler) Inspect() error {
 
 	// show the zarf-bundle.yaml
 	utils.ColorPrintYAML(b.bundle, nil, false)
+
+	// TODO: showing SBOMs?
+	// TODO: showing package metadata?
+	// TODO: could be cool to have an interactive mode that lets you select a package and show its metadata
 	return nil
 }

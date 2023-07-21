@@ -15,17 +15,16 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
-// Deploy is different based on source
-// depending on if source is a tarball or a OCI ref
-// : if tarball
-// : : create a new tarballProcessor from the tarball
-// : : untar it into temp, but only the first package, making it look like packager's temp dir
-// : : use b.p.Deploy() to deploy it
-// : : variable scopes?
-// : if OCI ref
-// : : create a new OCIRemote from the OCI ref
-// : : pull the package's layers into temp, making it look like packager's temp dir
-// : : use b.p.Deploy() to deploy it
+// Deploy deploys a bundle
+//
+// : create a new provider
+// : pull the zarf-bundle.yaml + sig
+// : read the zarf-bundle.yaml into memory
+// : validate the sig (if present)
+// : loop through each package
+// : : load the package into a fresh temp dir
+// : : validate the sig (if present)
+// : : deploy the package
 func (b *Bundler) Deploy() error {
 	ctx := context.TODO()
 
