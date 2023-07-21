@@ -27,7 +27,7 @@ func (b *Bundler) Inspect() error {
 	}
 
 	// read the bundle's metadata into memory
-	if err := b.ReadBundleYaml(loaded[ZarfBundleYAML], &b.bundle); err != nil {
+	if err := b.ReadBundleYaml(loaded[BundleYAML], &b.bundle); err != nil {
 		return err
 	}
 

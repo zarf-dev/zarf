@@ -88,10 +88,10 @@ func Bundle(r *oci.OrasRemote, bundle *types.ZarfBundle, signature []byte) error
 		return err
 	}
 	zarfBundleYamlDesc.Annotations = map[string]string{
-		ocispec.AnnotationTitle: ZarfBundleYAML,
+		ocispec.AnnotationTitle: BundleYAML,
 	}
 
-	message.Debug("Pushed", ZarfBundleYAML+":", message.JSONValue(zarfBundleYamlDesc))
+	message.Debug("Pushed", BundleYAML+":", message.JSONValue(zarfBundleYamlDesc))
 	manifest.Layers = append(manifest.Layers, zarfBundleYamlDesc)
 
 	// push the bundle's signature
@@ -101,10 +101,10 @@ func Bundle(r *oci.OrasRemote, bundle *types.ZarfBundle, signature []byte) error
 			return err
 		}
 		zarfBundleYamlSigDesc.Annotations = map[string]string{
-			ocispec.AnnotationTitle: ZarfBundleYAMLSignature,
+			ocispec.AnnotationTitle: BundleYAMLSignature,
 		}
 		manifest.Layers = append(manifest.Layers, zarfBundleYamlSigDesc)
-		message.Debug("Pushed", ZarfBundleYAMLSignature+":", message.JSONValue(zarfBundleYamlSigDesc))
+		message.Debug("Pushed", BundleYAMLSignature+":", message.JSONValue(zarfBundleYamlSigDesc))
 	}
 
 	// push the manifest config

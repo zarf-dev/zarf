@@ -42,6 +42,7 @@ func (o *OrasRemote) PushLayer(b []byte, mediaType string) (ocispec.Descriptor, 
 	return desc, o.repo.Push(o.ctx, desc, bytes.NewReader(b))
 }
 
+// PushManifestConfigFromMetadata pushes the manifest config with metadata to the remote repository.
 func (o *OrasRemote) PushManifestConfigFromMetadata(metadata *types.ZarfMetadata, build *types.ZarfBuildData) (ocispec.Descriptor, error) {
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
@@ -59,6 +60,7 @@ func (o *OrasRemote) PushManifestConfigFromMetadata(metadata *types.ZarfMetadata
 	return o.PushLayer(manifestConfigBytes, ocispec.MediaTypeImageConfig)
 }
 
+// ManifestAnnotationsFromMetadata returns the annotations for the manifest from the given metadata.
 func (o *OrasRemote) ManifestAnnotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {
 	annotations := map[string]string{
 		ocispec.AnnotationDescription: metadata.Description,

@@ -5,12 +5,15 @@
 package bundler
 
 const (
-	ZarfBundleYAML          = "zarf-bundle.yaml"
-	ZarfBundleYAMLSignature = "zarf-bundle.yaml.sig"
-	ZarfBundlePrefix        = "zarf-bundle-"
+	// BundleYAML is the name of the bundle's metadata file
+	BundleYAML = "zarf-bundle.yaml"
+	// BundleYAMLSignature is the name of the bundle's metadata signature file
+	BundleYAMLSignature = "zarf-bundle.yaml.sig"
+	// BundlePrefix is the prefix for all bundle files
+	BundlePrefix = "zarf-bundle-"
 )
 
 var (
 	// BundleAlwaysPull is a list of paths that will always be pulled from the remote repository.
-	BundleAlwaysPull = []string{ZarfBundleYAML, ZarfBundleYAMLSignature}
+	BundleAlwaysPull = []string{BundleYAML, BundleYAMLSignature}
 )

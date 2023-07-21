@@ -107,7 +107,7 @@ func (tp *tarballProvider) getBundleManifest() error {
 }
 
 // LoadBundle loads a bundle from a tarball
-func (tp *tarballProvider) LoadBundle(concurrency int) (PathMap, error) {
+func (tp *tarballProvider) LoadBundle(_ int) (PathMap, error) {
 	if err := tp.getBundleManifest(); err != nil {
 		return nil, err
 	}
@@ -151,10 +151,7 @@ func (tp *tarballProvider) LoadBundle(concurrency int) (PathMap, error) {
 			return err
 		}
 		defer r.Close()
-		if err := store.Push(ctx, desc, r); err != nil {
-			return err
-		}
-		return nil
+		return store.Push(ctx, desc, r)
 	}
 
 	loaded := make(PathMap)
@@ -175,7 +172,7 @@ func (tp *tarballProvider) LoadBundle(concurrency int) (PathMap, error) {
 }
 
 // LoadPackage loads a package from a tarball
-func (tp *tarballProvider) LoadPackage(sha, destinationDir string, concurrency int) (PathMap, error) {
+func (tp *tarballProvider) LoadPackage(sha, destinationDir string, _ int) (PathMap, error) {
 	if err := tp.getBundleManifest(); err != nil {
 		return nil, err
 	}

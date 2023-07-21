@@ -55,7 +55,7 @@ func (b *Bundler) Pull() error {
 	}
 
 	// locate the bundle's metadata descriptor
-	bundleDesc := root.Locate(ZarfBundleYAML)
+	bundleDesc := root.Locate(BundleYAML)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (b *Bundler) Pull() error {
 	}
 
 	// tarball the bundle
-	filename := fmt.Sprintf("%s%s-%s-%s.tar.zst", ZarfBundlePrefix, b.bundle.Metadata.Name, b.bundle.Metadata.Architecture, b.bundle.Metadata.Version)
+	filename := fmt.Sprintf("%s%s-%s-%s.tar.zst", BundlePrefix, b.bundle.Metadata.Name, b.bundle.Metadata.Architecture, b.bundle.Metadata.Version)
 	dst := filepath.Join(b.cfg.PullOpts.OutputDirectory, filename)
 
 	// TODO: instead of removing then writing

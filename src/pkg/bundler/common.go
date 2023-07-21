@@ -104,13 +104,13 @@ func (b *Bundler) ValidateBundle() error {
 		}
 	}
 	if b.bundle.Metadata.Version == "" {
-		return fmt.Errorf("%s is missing required field: metadata.version", ZarfBundleYAML)
+		return fmt.Errorf("%s is missing required field: metadata.version", BundleYAML)
 	}
 	if b.bundle.Metadata.Name == "" {
-		return fmt.Errorf("%s is missing required field: metadata.name", ZarfBundleYAML)
+		return fmt.Errorf("%s is missing required field: metadata.name", BundleYAML)
 	}
 	if len(b.bundle.Packages) == 0 {
-		return fmt.Errorf("%s is missing required list: packages", ZarfBundleYAML)
+		return fmt.Errorf("%s is missing required list: packages", BundleYAML)
 	}
 	// validate access to packages as well as components referenced in the package
 	for idx, pkg := range b.bundle.Packages {
@@ -144,10 +144,10 @@ func (b *Bundler) ValidateBundle() error {
 		defer os.RemoveAll(tmp)
 
 		if pkg.Repository == "" {
-			return fmt.Errorf("%s .packages[%d] is missing required field: repository", ZarfBundleYAML, idx)
+			return fmt.Errorf("%s .packages[%d] is missing required field: repository", BundleYAML, idx)
 		}
 		if pkg.Ref == "" {
-			return fmt.Errorf("%s .packages[%s] is missing required field: ref", ZarfBundleYAML, pkg.Repository)
+			return fmt.Errorf("%s .packages[%s] is missing required field: ref", BundleYAML, pkg.Repository)
 		}
 
 		if _, err := remote.PullPackageMetadata(tmp); err != nil {
@@ -161,7 +161,7 @@ func (b *Bundler) ValidateBundle() error {
 			// make sure if a wildcard is given, it is the first and only element
 			for idx, component := range pkg.OptionalComponents {
 				if (component == "*" && idx != 0) || (component == "*" && len(pkg.OptionalComponents) > 1) {
-					return fmt.Errorf("%s .packages[%s].optional-components[%d] wildcard '*' must be first and only item", ZarfBundleYAML, pkg.Repository, idx)
+					return fmt.Errorf("%s .packages[%s].optional-components[%d] wildcard '*' must be first and only item", BundleYAML, pkg.Repository, idx)
 				}
 			}
 			zarfYAML := types.ZarfPackage{}
@@ -229,11 +229,11 @@ func (b *Bundler) ValidateBundle() error {
 				})
 				// make sure the component exists
 				if c.Name == "" {
-					return fmt.Errorf("%s .packages[%s].components[%s] does not exist in upstream: %s", ZarfBundleYAML, pkg.Repository, component, url)
+					return fmt.Errorf("%s .packages[%s].components[%s] does not exist in upstream: %s", BundleYAML, pkg.Repository, component, url)
 				}
 				// make sure the component supports the bundle's target architecture
 				if c.Only.Cluster.Architecture != "" && c.Only.Cluster.Architecture != b.bundle.Metadata.Architecture {
-					return fmt.Errorf("%s .packages[%s].components[%s] does not support architecture: %s", ZarfBundleYAML, pkg.Repository, component, b.bundle.Metadata.Architecture)
+					return fmt.Errorf("%s .packages[%s].components[%s] does not support architecture: %s", BundleYAML, pkg.Repository, component, b.bundle.Metadata.Architecture)
 				}
 			}
 			sort.Strings(pkg.OptionalComponents)
@@ -317,7 +317,7 @@ func IsValidTarballPath(path string) bool {
 	if name == "" {
 		return false
 	}
-	if !strings.HasPrefix(name, ZarfBundlePrefix) {
+	if !strings.HasPrefix(name, BundlePrefix) {
 		return false
 	}
 	re := regexp.MustCompile(`^zarf-bundle-.*-.*.tar(.zst)?$`)

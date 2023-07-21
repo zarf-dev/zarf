@@ -35,7 +35,7 @@ func (op *ociProvider) getBundleManifest() error {
 	if err != nil {
 		return err
 	}
-	bundleYamlDesc := root.Locate(ZarfBundleYAML)
+	bundleYamlDesc := root.Locate(BundleYAML)
 	manifest, err := op.FetchManifest(bundleYamlDesc)
 	if err != nil {
 		return err
@@ -110,7 +110,7 @@ func (op *ociProvider) LoadBundle(concurrency int) (PathMap, error) {
 		return nil, err
 	}
 
-	b, err := os.ReadFile(loaded[ZarfBundleYAML])
+	b, err := os.ReadFile(loaded[BundleYAML])
 	if err != nil {
 		return nil, err
 	}

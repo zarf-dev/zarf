@@ -170,6 +170,7 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	return partialPaths, o.CopyWithProgress(layersToPull, dst, &copyOpts, destinationDir)
 }
 
+// CopyWithProgress copies the given layers from the remote repository to the given store.
 func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Target, copyOpts *oras.CopyOptions, destinationDir string) error {
 	estimatedBytes := int64(0)
 	shas := []string{}
