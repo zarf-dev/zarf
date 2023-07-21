@@ -5,6 +5,8 @@
 package test
 
 import (
+	"crypto/tls"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -57,4 +59,41 @@ func TestConnect(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+}
+
+func TestMetrics(t *testing.T) {
+	t.Log("E2E: Emits metrics")
+	e2e.SetupWithCluster(t)
+
+	tunnel, err := cluster.NewTunnel("zarf", "svc", "agent-hook", 8888, 8443)
+
+	require.NoError(t, err)
+	err = tunnel.Connect("", false)
+	require.NoError(t, err)
+	defer tunnel.Close()
+
+	// Get untrusted https endpoint
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	client := &http.Client{Transport: tr}
+	https_endpoint := strings.ReplaceAll(tunnel.HTTPEndpoint(), "http", "https")
+	resp, err := client.Get(https_endpoint + "/metrics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	desiredString := "go_gc_duration_seconds_count"
+	require.Equal(t, true, strings.Contains(string(body), desiredString))
+	require.NoError(t, err, resp)
+	require.Equal(t, 200, resp.StatusCode)
+
 }
