@@ -48,19 +48,6 @@ func TestManifests(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Test Named Port
-	tunnel, err := cluster.NewTunnel("httpd", "svc", "httpd", 8080, 80)
-
-	require.NoError(t, err)
-	err = tunnel.Connect("", false)
-	require.NoError(t, err)
-	defer tunnel.Close()
-
-	// Ensure connection
-	resp, err := http.Get(tunnel.HTTPEndpoint())
-	require.NoError(t, err, resp)
-	require.Equal(t, 200, resp.StatusCode)
-
 	// Remove the package
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "manifests", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)

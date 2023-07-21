@@ -7,10 +7,12 @@ package test
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/require"
 )
@@ -34,6 +36,19 @@ func TestDataInjection(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "devops.stackexchange.com_en_all_2023-05.zim")
 	require.Contains(t, stdOut, ".zarf-injection-")
+
+	// Test Named Port
+	tunnel, err := cluster.NewTunnel("kiwix", "svc", "kiwix", 8080, 80)
+
+	require.NoError(t, err)
+	err = tunnel.Connect("", false)
+	require.NoError(t, err)
+	defer tunnel.Close()
+
+	// Ensure connection
+	resp, err := http.Get(tunnel.HTTPEndpoint())
+	require.NoError(t, err, resp)
+	require.Equal(t, 200, resp.StatusCode)
 
 	// Remove the data injection example
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", path, "--confirm")
