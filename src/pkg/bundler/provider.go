@@ -39,6 +39,9 @@ type Provider interface {
 	getBundleManifest() error
 }
 
+// PathMap is a map of either absolute paths to relative paths or relative paths to absolute paths
+type PathMap map[string]string
+
 // NewProvider returns a new bundler Provider based on the source type
 func NewProvider(ctx context.Context, source, destination string) (Provider, error) {
 	if utils.IsOCIURL(source) {

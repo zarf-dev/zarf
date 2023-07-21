@@ -23,9 +23,6 @@ import (
 
 var blobsDir = filepath.Join("blobs", "sha256")
 
-// PathMap is a map of absolute paths on disk to relative paths within packages/bundles
-type PathMap map[string]string
-
 type tarballProvider struct {
 	ctx      context.Context
 	src      string

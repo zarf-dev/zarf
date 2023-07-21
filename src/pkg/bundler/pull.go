@@ -114,7 +114,7 @@ func (b *Bundler) Pull() error {
 		Archival:    archiver.Tar{},
 	}
 
-	pathMap := make(map[string]string)
+	pathMap := make(PathMap)
 
 	// put the index.json and oci-layout at the root of the tarball
 	pathMap[indexJSONPath] = "index.json"
