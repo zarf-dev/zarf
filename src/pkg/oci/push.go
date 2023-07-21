@@ -42,7 +42,7 @@ func (o *OrasRemote) PushLayer(b []byte, mediaType string) (ocispec.Descriptor, 
 	return desc, o.repo.Push(o.ctx, desc, bytes.NewReader(b))
 }
 
-func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata, build *types.ZarfBuildData) (ocispec.Descriptor, error) {
+func (o *OrasRemote) PushManifestConfigFromMetadata(metadata *types.ZarfMetadata, build *types.ZarfBuildData) (ocispec.Descriptor, error) {
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,
@@ -59,7 +59,7 @@ func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata
 	return o.PushLayer(manifestConfigBytes, ocispec.MediaTypeImageConfig)
 }
 
-func (o *OrasRemote) manifestAnnotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {
+func (o *OrasRemote) ManifestAnnotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {
 	annotations := map[string]string{
 		ocispec.AnnotationDescription: metadata.Description,
 	}
@@ -87,7 +87,7 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 	packOpts := oras.PackOptions{}
 	packOpts.ConfigDescriptor = configDesc
 	packOpts.PackImageManifest = true
-	packOpts.ManifestAnnotations = o.manifestAnnotationsFromMetadata(metadata)
+	packOpts.ManifestAnnotations = o.ManifestAnnotationsFromMetadata(metadata)
 
 	root, err := oras.Pack(o.ctx, src, ocispec.MediaTypeImageManifest, descs, packOpts)
 	if err != nil {
@@ -164,7 +164,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	// push the manifest config
 	// since this config is so tiny, and the content is not used again
 	// it is not logged to the progress, but will error if it fails
-	manifestConfigDesc, err := o.pushManifestConfigFromMetadata(&pkg.Metadata, &pkg.Build)
+	manifestConfigDesc, err := o.PushManifestConfigFromMetadata(&pkg.Metadata, &pkg.Build)
 	if err != nil {
 		return err
 	}

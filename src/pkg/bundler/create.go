@@ -26,8 +26,8 @@ func (b *Bundler) Create() error {
 	if err := os.Chdir(b.cfg.CreateOpts.SourceDirectory); err != nil {
 		return err
 	}
-	// read zarf-bundle.yaml into memory
-	if err := b.ReadBundleYaml(config.ZarfBundleYAML, &b.bundle); err != nil {
+	// read the bundle's metadata into memory
+	if err := b.ReadBundleYaml(ZarfBundleYAML, &b.bundle); err != nil {
 		return err
 	}
 
@@ -65,7 +65,7 @@ func (b *Bundler) Create() error {
 	// sign the bundle if a signing key was provided
 	if b.cfg.CreateOpts.SigningKeyPath != "" {
 		// write the bundle to disk so we can sign it
-		bundlePath := filepath.Join(b.tmp, config.ZarfBundleYAML)
+		bundlePath := filepath.Join(b.tmp, ZarfBundleYAML)
 		if err := b.WriteBundleYaml(bundlePath, &b.bundle); err != nil {
 			return err
 		}
@@ -77,7 +77,7 @@ func (b *Bundler) Create() error {
 			return interactive.PromptSigPassword()
 		}
 		// sign the bundle
-		signaturePath := filepath.Join(b.tmp, config.ZarfBundleYAMLSignature)
+		signaturePath := filepath.Join(b.tmp, ZarfBundleYAMLSignature)
 		signatureBytes, err = utils.CosignSignBlob(bundlePath, signaturePath, b.cfg.CreateOpts.SigningKeyPath, getSigCreatePassword)
 		if err != nil {
 			return err
@@ -85,12 +85,12 @@ func (b *Bundler) Create() error {
 	}
 
 	// create + publish the bundle
-	return b.remote.Bundle(&b.bundle, signatureBytes)
+	return Bundle(b.remote, &b.bundle, signatureBytes)
 }
 
 // adapted from p.fillActiveTemplate
 func (b *Bundler) templateBundleYaml() error {
-	message.Debug("Templating zarf-bundle.yaml w/:", message.JSONValue(b.cfg.CreateOpts.SetVariables))
+	message.Debug("Templating", ZarfBundleYAML, "w/:", message.JSONValue(b.cfg.CreateOpts.SetVariables))
 
 	templateMap := map[string]string{}
 	setFromCLIConfig := b.cfg.CreateOpts.SetVariables

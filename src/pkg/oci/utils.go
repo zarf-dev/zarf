@@ -134,7 +134,7 @@ func (o *OrasRemote) printLayerSuccess(_ context.Context, desc ocispec.Descripto
 	return nil
 }
 
-func (o *OrasRemote) isEmptyDescriptor(desc ocispec.Descriptor) bool {
+func (o *OrasRemote) IsEmptyDescriptor(desc ocispec.Descriptor) bool {
 	return desc.Digest == "" && desc.Size == 0
 }
 

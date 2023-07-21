@@ -7,16 +7,11 @@ package bundler
 import (
 	"context"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	// ocistore "oras.land/oras-go/v2/content/oci"
 )
 
 // Inspect pulls/unpacks a bundle's metadata and shows it
-//
-// : retrieve the `zarf-bundle.yaml`, and `zarf-bundle.yaml.sig`
-// : verify sigs
-// : show the `zarf-bundle.yaml`
 func (b *Bundler) Inspect() error {
 	ctx := context.TODO()
 	// create a new provider
@@ -25,14 +20,14 @@ func (b *Bundler) Inspect() error {
 		return err
 	}
 
-	// pull the zarf-bundle.yaml + sig
+	// pull the bundle's metadata + sig
 	loaded, err := provider.LoadBundleMetadata()
 	if err != nil {
 		return err
 	}
 
-	// read the zarf-bundle.yaml into memory
-	if err := b.ReadBundleYaml(loaded[config.ZarfBundleYAML], &b.bundle); err != nil {
+	// read the bundle's metadata into memory
+	if err := b.ReadBundleYaml(loaded[ZarfBundleYAML], &b.bundle); err != nil {
 		return err
 	}
 
@@ -41,7 +36,7 @@ func (b *Bundler) Inspect() error {
 		return err
 	}
 
-	// show the zarf-bundle.yaml
+	// show the bundle's metadata
 	utils.ColorPrintYAML(b.bundle, nil, false)
 
 	// TODO: showing SBOMs?

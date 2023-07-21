@@ -10,21 +10,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/mholt/archiver/v4"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // Pull pulls a bundle and saves it locally + caches it
-//
-// : retrieve the `zarf-bundle.yaml`, and `zarf-bundle.yaml.sig`
-// : verify sigs / checksums
-// : pull the bundle into cache and tarball it up
 func (b *Bundler) Pull() error {
 	if err := b.SetOCIRemote(b.cfg.PullOpts.Source); err != nil {
 		return err
@@ -47,16 +41,21 @@ func (b *Bundler) Pull() error {
 		return err
 	}
 
-	// TODO: figure out the best path to check the signature before we pull the bundle
-
-	// pull the bundle
-	layersPulled, err := b.remote.PullBundle(cacheDir, config.CommonOptions.OCIConcurrency, nil)
+	provider, err := NewProvider(context.TODO(), b.cfg.PullOpts.Source, cacheDir)
 	if err != nil {
 		return err
 	}
 
-	// locate the zarf-bundle.yaml's descriptor
-	bundleDesc := root.Locate(config.ZarfBundleYAML)
+	// TODO: figure out the best path to check the signature before we pull the bundle
+
+	// pull the bundle
+	loaded, err := provider.LoadBundle(config.CommonOptions.OCIConcurrency)
+	if err != nil {
+		return err
+	}
+
+	// locate the bundle's metadata descriptor
+	bundleDesc := root.Locate(ZarfBundleYAML)
 	if err != nil {
 		return err
 	}
@@ -77,14 +76,14 @@ func (b *Bundler) Pull() error {
 		return err
 	}
 
-	// read the zarf-bundle.yaml into memory
+	// read the metadata into memory
 	bundleYamlPath := filepath.Join(cacheDir, "blobs", "sha256", bundleDesc.Digest.Encoded())
 	if err := b.ReadBundleYaml(bundleYamlPath, &b.bundle); err != nil {
 		return err
 	}
 
 	// tarball the bundle
-	filename := fmt.Sprintf("%s%s-%s-%s.tar.zst", config.ZarfBundlePrefix, b.bundle.Metadata.Name, b.bundle.Metadata.Architecture, b.bundle.Metadata.Version)
+	filename := fmt.Sprintf("%s%s-%s-%s.tar.zst", ZarfBundlePrefix, b.bundle.Metadata.Name, b.bundle.Metadata.Architecture, b.bundle.Metadata.Version)
 	dst := filepath.Join(b.cfg.PullOpts.OutputDirectory, filename)
 
 	// TODO: instead of removing then writing
@@ -92,14 +91,6 @@ func (b *Bundler) Pull() error {
 	//   differential into the tarball
 
 	_ = os.RemoveAll(dst)
-
-	// get the paths of the layers and the root descriptor
-	paths := []string{}
-	for _, layer := range layersPulled {
-		paths = append(paths, filepath.Join(cacheDir, "blobs", "sha256", layer.Digest.Encoded()))
-	}
-	paths = append(paths, filepath.Join(cacheDir, "blobs", "sha256", rootDesc.Digest.Encoded()))
-	paths = helpers.Unique(paths)
 
 	out, err := os.Create(dst)
 	if err != nil {
@@ -121,8 +112,8 @@ func (b *Bundler) Pull() error {
 	pathMap[filepath.Join(cacheDir, "oci-layout")] = "oci-layout"
 
 	// re-map the paths to be relative to the cache directory
-	for _, path := range paths {
-		pathMap[path] = strings.TrimPrefix(path, cacheDir+string(os.PathSeparator))
+	for sha, abs := range loaded {
+		pathMap[abs] = filepath.Join(blobsDir, sha)
 	}
 
 	files, err := archiver.FilesFromDisk(nil, pathMap)

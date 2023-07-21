@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -16,19 +15,15 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
-	"oras.land/oras-go/v2/content/oci"
 )
 
 var (
 	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
 	PackageAlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
-	// BundleAlwaysPull is a list of paths that will always be pulled from the remote repository.
-	BundleAlwaysPull = []string{config.ZarfBundleYAML, config.ZarfBundleYAMLSignature}
 )
 
 // LayersFromPaths returns the descriptors for the given paths from the root manifest.
@@ -39,7 +34,7 @@ func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.
 	}
 	for _, path := range requestedPaths {
 		layer := manifest.Locate(path)
-		if o.isEmptyDescriptor(layer) {
+		if o.IsEmptyDescriptor(layer) {
 			return nil, fmt.Errorf("path %s does not exist in this package", path)
 		}
 		layers = append(layers, layer)
@@ -85,7 +80,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	//
 	// Since sboms.tar is not a heavy addition 99% of the time, we'll just always pull it
 	sbomsDescriptor := root.Locate(config.ZarfSBOMTar)
-	if !o.isEmptyDescriptor(sbomsDescriptor) {
+	if !o.IsEmptyDescriptor(sbomsDescriptor) {
 		layers = append(layers, sbomsDescriptor)
 	}
 	if len(images) > 0 {
@@ -172,10 +167,10 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 		partialPaths = helpers.Unique(partialPaths)
 	}
 
-	return partialPaths, o.copyWithProgress(layersToPull, dst, &copyOpts, destinationDir)
+	return partialPaths, o.CopyWithProgress(layersToPull, dst, &copyOpts, destinationDir)
 }
 
-func (o *OrasRemote) copyWithProgress(layers []ocispec.Descriptor, store oras.Target, copyOpts *oras.CopyOptions, destinationDir string) error {
+func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Target, copyOpts *oras.CopyOptions, destinationDir string) error {
 	estimatedBytes := int64(0)
 	shas := []string{}
 	for _, layer := range layers {
@@ -240,8 +235,8 @@ func (o *OrasRemote) PullMultipleFiles(paths []string, destinationDir string) ([
 	layersPulled := []ocispec.Descriptor{}
 	for _, path := range paths {
 		desc := root.Locate(path)
-		layersPulled = append(layersPulled, desc)
-		if !o.isEmptyDescriptor(desc) {
+		if !o.IsEmptyDescriptor(desc) {
+			layersPulled = append(layersPulled, desc)
 			err = o.PullLayer(desc, destinationDir)
 			if err != nil {
 				return nil, err
@@ -254,70 +249,4 @@ func (o *OrasRemote) PullMultipleFiles(paths []string, destinationDir string) ([
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
 func (o *OrasRemote) PullPackageMetadata(destinationDir string) ([]ocispec.Descriptor, error) {
 	return o.PullMultipleFiles(PackageAlwaysPull, destinationDir)
-}
-
-// PullBundleMetadata pulls the bundle metadata from the remote repository and saves it to `destinationDir`.
-func (o *OrasRemote) PullBundleMetadata(destinationDir string) ([]ocispec.Descriptor, error) {
-	return o.PullMultipleFiles(BundleAlwaysPull, destinationDir)
-}
-
-// PullBundle pulls the bundle from the remote repository and saves it to the given path.
-func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requestedPackagesSHAs []string) (layersToPull []ocispec.Descriptor, err error) {
-	isPartial := len(requestedPackagesSHAs) > 0
-
-	root, err := o.FetchRoot()
-	if err != nil {
-		return layersToPull, err
-	}
-
-	bundleYamlDesc := root.Locate(config.ZarfBundleYAML)
-	layersToPull = append(layersToPull, bundleYamlDesc)
-
-	signatureDesc := root.Locate(config.ZarfBundleYAMLSignature)
-	if !o.isEmptyDescriptor(signatureDesc) {
-		layersToPull = append(layersToPull, signatureDesc)
-	}
-
-	b, err := o.FetchLayer(bundleYamlDesc)
-	if err != nil {
-		return layersToPull, err
-	}
-
-	var bundle types.ZarfBundle
-
-	if err := goyaml.Unmarshal(b, &bundle); err != nil {
-		return layersToPull, err
-	}
-
-	for _, pkg := range bundle.Packages {
-		// TODO: figure out how to handle partial pulls for bundles
-		if !isPartial || helpers.SliceContains(requestedPackagesSHAs, strings.Split(pkg.Ref, "@sha256:")[1]) {
-			url := fmt.Sprintf("%s:%s", o.repo.Reference, pkg.Ref)
-			manifestDesc, err := o.repo.Blobs().Resolve(o.ctx, url)
-			manifestDesc.MediaType = ocispec.MediaTypeImageManifest
-			if err != nil {
-				return layersToPull, err
-			}
-			manifest, err := o.FetchManifest(manifestDesc)
-			if err != nil {
-				return layersToPull, err
-			}
-			layersToPull = append(layersToPull, manifestDesc)
-			layersToPull = append(layersToPull, manifest.Layers...)
-		}
-	}
-
-	copyOpts := o.CopyOpts
-	copyOpts.Concurrency = concurrency
-
-	store, err := oci.NewWithContext(o.ctx, destinationDir)
-	if err != nil {
-		return layersToPull, err
-	}
-
-	if err := o.copyWithProgress(layersToPull, store, &copyOpts, destinationDir); err != nil {
-		return layersToPull, err
-	}
-
-	return layersToPull, nil
 }

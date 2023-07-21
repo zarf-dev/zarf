@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package oci contains functions for interacting with Zarf packages stored in OCI registries.
-package oci
+// Package bundler contains functions for interacting with, managing and deploying Zarf bundles.
+package bundler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -19,11 +21,11 @@ import (
 )
 
 // Bundle publishes the given bundle w/ optional signature to the remote repository.
-func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
+func Bundle(r *oci.OrasRemote, bundle *types.ZarfBundle, signature []byte) error {
 	if bundle.Metadata.Architecture == "" {
 		return fmt.Errorf("architecture is required for bundling")
 	}
-	ref := o.repo.Reference
+	ref := r.Repo().Reference
 	message.Debug("Bundling", bundle.Metadata.Name, "to", ref)
 
 	manifest := ocispec.Manifest{}
@@ -31,10 +33,11 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 	for _, pkg := range bundle.Packages {
 		// TODO: handle components + wildcards
 		url := fmt.Sprintf("%s:%s", pkg.Repository, pkg.Ref)
-		remote, err := NewOrasRemote(url)
+		remote, err := oci.NewOrasRemote(url)
 		if err != nil {
 			return err
 		}
+		pkgRef := remote.Repo().Reference
 		// fetch the root manifest so we can push it into the bundle
 		root, err := remote.FetchRoot()
 		if err != nil {
@@ -45,7 +48,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 			return err
 		}
 		// push the manifest into the bundle
-		manifestDesc, err := o.PushLayer(manifestBytes, ZarfLayerMediaTypeBlob)
+		manifestDesc, err := r.PushLayer(manifestBytes, oci.ZarfLayerMediaTypeBlob)
 		if err != nil {
 			return err
 		}
@@ -54,19 +57,19 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 		message.Debugf("Pushed %s sub-manifest into %s: %s", url, ref, message.JSONValue(manifestDesc))
 		manifest.Layers = append(manifest.Layers, manifestDesc)
 		// stream copy the blobs from remote to o, otherwise do a blob mount
-		if remote.repo.Reference.Registry != o.repo.Reference.Registry {
-			message.Debugf("Streaming layers from %s --> %s", remote.repo.Reference, o.repo.Reference)
-			if err := CopyPackage(remote, o, config.CommonOptions.OCIConcurrency); err != nil {
+		if remote.Repo().Reference.Registry != ref.Registry {
+			message.Debugf("Streaming layers from %s --> %s", pkgRef, ref)
+			if err := oci.CopyPackage(remote, r, config.CommonOptions.OCIConcurrency); err != nil {
 				return err
 			}
 		} else {
-			message.Debugf("Performing a cross repository blob mount on %s from %s --> %s", remote.repo.Reference.Registry, remote.repo.Reference.Repository, ref.Repository)
-			spinner := message.NewProgressSpinner("Mounting layers from %s", remote.repo.Reference.Repository)
+			message.Debugf("Performing a cross repository blob mount on %s from %s --> %s", ref, ref.Repository, ref.Repository)
+			spinner := message.NewProgressSpinner("Mounting layers from %s", pkgRef.Repository)
 			includingConfig := append(root.Layers, root.Config)
 			for _, layer := range includingConfig {
 				spinner.Updatef("Mounting %s", layer.Digest.Encoded())
-				if err := o.repo.Mount(o.ctx, layer, remote.repo.Reference.Repository, func() (io.ReadCloser, error) {
-					return remote.repo.Fetch(o.ctx, layer)
+				if err := r.Repo().Mount(context.TODO(), layer, pkgRef.Repository, func() (io.ReadCloser, error) {
+					return remote.Repo().Fetch(context.TODO(), layer)
 				}); err != nil {
 					return err
 				}
@@ -75,37 +78,37 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 		}
 	}
 
-	// push the zarf-bundle.yaml
+	// push the bundle's metadata
 	zarfBundleYamlBytes, err := goyaml.Marshal(bundle)
 	if err != nil {
 		return err
 	}
-	zarfBundleYamlDesc, err := o.PushLayer(zarfBundleYamlBytes, ZarfLayerMediaTypeBlob)
+	zarfBundleYamlDesc, err := r.PushLayer(zarfBundleYamlBytes, oci.ZarfLayerMediaTypeBlob)
 	if err != nil {
 		return err
 	}
 	zarfBundleYamlDesc.Annotations = map[string]string{
-		ocispec.AnnotationTitle: config.ZarfBundleYAML,
+		ocispec.AnnotationTitle: ZarfBundleYAML,
 	}
 
-	message.Debug("Pushed", config.ZarfBundleYAML+":", message.JSONValue(zarfBundleYamlDesc))
+	message.Debug("Pushed", ZarfBundleYAML+":", message.JSONValue(zarfBundleYamlDesc))
 	manifest.Layers = append(manifest.Layers, zarfBundleYamlDesc)
 
-	// push the zarf-bundle.yaml signature
+	// push the bundle's signature
 	if len(signature) > 0 {
-		zarfBundleYamlSigDesc, err := o.PushLayer(signature, ZarfLayerMediaTypeBlob)
+		zarfBundleYamlSigDesc, err := r.PushLayer(signature, oci.ZarfLayerMediaTypeBlob)
 		if err != nil {
 			return err
 		}
 		zarfBundleYamlSigDesc.Annotations = map[string]string{
-			ocispec.AnnotationTitle: config.ZarfBundleYAMLSignature,
+			ocispec.AnnotationTitle: ZarfBundleYAMLSignature,
 		}
 		manifest.Layers = append(manifest.Layers, zarfBundleYamlSigDesc)
-		message.Debug("Pushed", config.ZarfBundleYAMLSignature+":", message.JSONValue(zarfBundleYamlSigDesc))
+		message.Debug("Pushed", ZarfBundleYAMLSignature+":", message.JSONValue(zarfBundleYamlSigDesc))
 	}
 
 	// push the manifest config
-	configDesc, err := o.pushManifestConfigFromMetadata(&bundle.Metadata, &bundle.Build)
+	configDesc, err := r.PushManifestConfigFromMetadata(&bundle.Metadata, &bundle.Build)
 	if err != nil {
 		return err
 	}
@@ -116,7 +119,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 
 	manifest.SchemaVersion = 2
 
-	manifest.Annotations = o.manifestAnnotationsFromMetadata(&bundle.Metadata)
+	manifest.Annotations = r.ManifestAnnotationsFromMetadata(&bundle.Metadata)
 	b, err := json.Marshal(manifest)
 	if err != nil {
 		return err
@@ -125,7 +128,7 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 
 	message.Debug("Pushing manifest:", message.JSONValue(expected))
 
-	if err := o.repo.Manifests().PushReference(o.ctx, expected, bytes.NewReader(b), ref.Reference); err != nil {
+	if err := r.Repo().Manifests().PushReference(context.TODO(), expected, bytes.NewReader(b), ref.Reference); err != nil {
 		return fmt.Errorf("failed to push manifest: %w", err)
 	}
 

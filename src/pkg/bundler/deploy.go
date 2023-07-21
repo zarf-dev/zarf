@@ -18,8 +18,8 @@ import (
 // Deploy deploys a bundle
 //
 // : create a new provider
-// : pull the zarf-bundle.yaml + sig
-// : read the zarf-bundle.yaml into memory
+// : pull the bundle's metadata + sig
+// : read the metadata into memory
 // : validate the sig (if present)
 // : loop through each package
 // : : load the package into a fresh temp dir
@@ -34,14 +34,14 @@ func (b *Bundler) Deploy() error {
 		return err
 	}
 
-	// pull the zarf-bundle.yaml + sig
+	// pull the bundle's metadata + sig
 	loaded, err := provider.LoadBundleMetadata()
 	if err != nil {
 		return err
 	}
 
-	// read the zarf-bundle.yaml into memory
-	if err := b.ReadBundleYaml(loaded[config.ZarfBundleYAML], &b.bundle); err != nil {
+	// read the bundle's metadata into memory
+	if err := b.ReadBundleYaml(loaded[ZarfBundleYAML], &b.bundle); err != nil {
 		return err
 	}
 
@@ -63,7 +63,7 @@ func (b *Bundler) Deploy() error {
 				return err
 			}
 			defer os.RemoveAll(pkgTmp)
-			_, err = provider.LoadPackage(sha, pkgTmp)
+			_, err = provider.LoadPackage(sha, pkgTmp, config.CommonOptions.OCIConcurrency)
 			if err != nil {
 				return err
 			}

@@ -16,7 +16,7 @@ import (
 //
 // operations that are common no matter the source should be implemented on bundler
 type Provider interface {
-	// LoadBundleMetadata loads a bundle's metadata (zarf-bundle.yaml) and signature (zarf-bundle.yaml.sig)
+	// LoadBundleMetadata loads a bundle's metadata and signature
 	//
 	// these two files are placed in the `dst` directory
 	//
@@ -34,7 +34,9 @@ type Provider interface {
 	//
 	// : if OCI ref
 	// : : pulls the package from the OCI ref
-	LoadPackage(sha, destinationDir string) (PathMap, error)
+	LoadPackage(sha, destinationDir string, concurrency int) (PathMap, error)
+
+	LoadBundle(concurrency int) (PathMap, error)
 
 	getBundleManifest() error
 }

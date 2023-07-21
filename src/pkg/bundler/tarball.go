@@ -12,13 +12,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/mholt/archiver/v3"
 	av4 "github.com/mholt/archiver/v4"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	ocistore "oras.land/oras-go/v2/content/oci"
 )
 
 var blobsDir = filepath.Join("blobs", "sha256")
@@ -28,6 +28,22 @@ type tarballProvider struct {
 	src      string
 	dst      string
 	manifest *oci.ZarfOCIManifest
+}
+
+func extractJSON(j any) func(context.Context, av4.File) error {
+	return func(_ context.Context, file av4.File) error {
+		stream, err := file.Open()
+		if err != nil {
+			return err
+		}
+		defer stream.Close()
+
+		bytes, err := io.ReadAll(stream)
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal(bytes, j)
+	}
 }
 
 func (tp *tarballProvider) getBundleManifest() error {
@@ -91,45 +107,75 @@ func (tp *tarballProvider) getBundleManifest() error {
 }
 
 // LoadBundle loads a bundle from a tarball
-func (tp *tarballProvider) LoadBundle(requestedPackages []string) ([]ocispec.Descriptor, error) {
+func (tp *tarballProvider) LoadBundle(concurrency int) (PathMap, error) {
 	if err := tp.getBundleManifest(); err != nil {
 		return nil, err
 	}
 
-	layersExtracted := []ocispec.Descriptor{}
+	store, err := ocistore.NewWithContext(tp.ctx, tp.dst)
+	if err != nil {
+		return nil, err
+	}
 
-	if len(requestedPackages) == 0 {
-		if err := archiver.Unarchive(tp.src, tp.dst); err != nil {
-			return nil, fmt.Errorf("failed to extract %s to %s: %w", tp.src, tp.dst, err)
-		}
-		layersExtracted = tp.manifest.Layers
-		for _, layer := range tp.manifest.Layers {
-			if layer.MediaType == ocispec.MediaTypeImageConfig {
-				var manifest ocispec.Manifest
-				path := filepath.Join(tp.dst, blobsDir, layer.Digest.Encoded())
-				bytes, err := os.ReadFile(path)
-				if err != nil {
-					return nil, err
-				}
-				if err := json.Unmarshal(bytes, &manifest); err != nil {
-					return nil, err
-				}
-				layersExtracted = append(layersExtracted, manifest.Layers...)
+	layersToExtract := []ocispec.Descriptor{}
+
+	format := av4.CompressedArchive{
+		Compression: av4.Zstd{},
+		Archival:    av4.Tar{},
+	}
+
+	sourceArchive, err := os.Open(tp.src)
+	if err != nil {
+		return nil, err
+	}
+
+	defer sourceArchive.Close()
+
+	for _, layer := range tp.manifest.Layers {
+		if layer.MediaType == ocispec.MediaTypeImageManifest {
+			var manifest *oci.ZarfOCIManifest
+			if err := format.Extract(tp.ctx, sourceArchive, []string{filepath.Join(blobsDir, layer.Digest.Encoded())}, extractJSON(manifest)); err != nil {
+				return nil, err
 			}
+			layersToExtract = append(layersToExtract, layer)
+			layersToExtract = append(layersToExtract, manifest.Layers...)
 		}
 	}
 
-	bundleYAMLSHA := tp.manifest.Locate(config.ZarfBundleYAML).Digest.Encoded()
-
-	if err := archiver.Extract(tp.src, filepath.Join(blobsDir, bundleYAMLSHA), tp.dst); err != nil {
-		return nil, fmt.Errorf("failed to extract %s from %s: %w", bundleYAMLSHA, tp.src, err)
+	cacheFunc := func(ctx context.Context, file av4.File) error {
+		desc := helpers.Find(layersToExtract, func(layer ocispec.Descriptor) bool {
+			return layer.Digest.Encoded() == filepath.Base(file.NameInArchive)
+		})
+		r, err := file.Open()
+		if err != nil {
+			return err
+		}
+		defer r.Close()
+		if err := store.Push(ctx, desc, r); err != nil {
+			return err
+		}
+		return nil
 	}
 
-	return layersExtracted, nil
+	loaded := make(PathMap)
+	pathsInArchive := []string{}
+	for _, layer := range layersToExtract {
+		if layer.MediaType == oci.ZarfLayerMediaTypeBlob {
+			pathsInArchive = append(pathsInArchive, filepath.Join(blobsDir, layer.Digest.Encoded()))
+		}
+		sha := layer.Digest.Encoded()
+		loaded[sha] = filepath.Join(tp.dst, blobsDir, sha)
+	}
+
+	if err := format.Extract(tp.ctx, sourceArchive, pathsInArchive, cacheFunc); err != nil {
+		return nil, err
+	}
+
+	return loaded, nil
 }
 
 // LoadPackage loads a package from a tarball
-func (tp *tarballProvider) LoadPackage(sha, destinationDir string) (PathMap, error) {
+func (tp *tarballProvider) LoadPackage(sha, destinationDir string, concurrency int) (PathMap, error) {
 	if err := tp.getBundleManifest(); err != nil {
 		return nil, err
 	}
@@ -138,8 +184,6 @@ func (tp *tarballProvider) LoadPackage(sha, destinationDir string) (PathMap, err
 		Compression: av4.Zstd{},
 		Archival:    av4.Tar{},
 	}
-
-	ctx := context.TODO()
 
 	sourceArchive, err := os.Open(tp.src)
 	if err != nil {
@@ -150,23 +194,7 @@ func (tp *tarballProvider) LoadPackage(sha, destinationDir string) (PathMap, err
 
 	var manifest *oci.ZarfOCIManifest
 
-	extractJSON := func(j any) func(context.Context, av4.File) error {
-		return func(_ context.Context, file av4.File) error {
-			stream, err := file.Open()
-			if err != nil {
-				return err
-			}
-			defer stream.Close()
-
-			bytes, err := io.ReadAll(stream)
-			if err != nil {
-				return err
-			}
-			return json.Unmarshal(bytes, j)
-		}
-	}
-
-	if err := format.Extract(ctx, sourceArchive, []string{filepath.Join(blobsDir, sha)}, extractJSON(manifest)); err != nil {
+	if err := format.Extract(tp.ctx, sourceArchive, []string{filepath.Join(blobsDir, sha)}, extractJSON(manifest)); err != nil {
 		return nil, err
 	}
 
@@ -213,18 +241,18 @@ func (tp *tarballProvider) LoadPackage(sha, destinationDir string) (PathMap, err
 	}
 
 	layersToExtract := []string{}
-	paths := make(PathMap)
+	loaded := make(PathMap)
 
 	for _, layers := range manifest.Layers {
 		layersToExtract = append(layersToExtract, filepath.Join(blobsDir, layers.Digest.Encoded()))
-		paths[layers.Annotations[ocispec.AnnotationTitle]] = filepath.Join(destinationDir, blobsDir, layers.Digest.Encoded())
+		loaded[layers.Annotations[ocispec.AnnotationTitle]] = filepath.Join(destinationDir, blobsDir, layers.Digest.Encoded())
 	}
 
-	if err := format.Extract(ctx, sourceArchive, layersToExtract, extractLayer); err != nil {
+	if err := format.Extract(tp.ctx, sourceArchive, layersToExtract, extractLayer); err != nil {
 		return nil, err
 	}
 
-	return paths, nil
+	return loaded, nil
 }
 
 // LoadBundleMetadata loads a bundle's metadata from a tarball
@@ -232,19 +260,19 @@ func (tp *tarballProvider) LoadBundleMetadata() (PathMap, error) {
 	if err := tp.getBundleManifest(); err != nil {
 		return nil, err
 	}
-	pathsToExtract := oci.BundleAlwaysPull
+	pathsToExtract := BundleAlwaysPull
 
-	paths := make(PathMap)
+	loaded := make(PathMap)
 
 	for _, path := range pathsToExtract {
 		layer := tp.manifest.Locate(path)
 		pathInTarball := filepath.Join(blobsDir, layer.Digest.Encoded())
-		paths[path] = filepath.Join(tp.dst, pathInTarball)
+		loaded[path] = filepath.Join(tp.dst, pathInTarball)
 		if err := archiver.Extract(tp.src, pathInTarball, tp.dst); err != nil {
 			return nil, fmt.Errorf("failed to extract %s from %s: %w", path, tp.src, err)
 		}
 	}
-	return paths, nil
+	return loaded, nil
 }
 
 // TODO: move this to helpers/utils
