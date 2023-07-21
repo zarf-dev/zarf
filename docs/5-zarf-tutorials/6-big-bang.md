@@ -6,9 +6,9 @@ This tutorial describes how to use Big Bang with Zarf for Air Gap deployments th
 
 Zarf integrates with Big Bang through the use of an extension that simplifies the selection of Big Bang packages and the pulling of the required artifacts to deploy those packages in an Air Gap.
 
-### Known Issues
+### Limitations
 
-The current version of this extension works best with Big Bang version `1.54.0` or later, and is not fully integrated into the `zarf package remove` lifecycle.  We will be looking to remove these limitations in a future release.  Zarf also relies on [helm.sh/images annotations](https://github.com/helm/community/blob/main/hips/hip-0015.md) to discover images within charts (e.g. [GitLab](https://repo1.dso.mil/big-bang/product/packages/gitlab/-/blob/main/chart/Chart.yaml#L61)) - this is a new feature for Big Bang so if you see an `ImagePullBackOff` error, check that these annotations are set correctly for the sub charts you are using. To work around this issue, simply add the missing image to the images list on the same component that contains the Big Bang extension like the following:
+The current version of this extension requires Big Bang version `1.54.0` or later, and is not fully integrated into the `zarf package remove` lifecycle (see the [Big Bang example](../../examples/big-bang/README.md) for how to introduce those lifecycle hooks manually).  Zarf also relies on [helm.sh/images annotations](https://github.com/helm/community/blob/main/hips/hip-0015.md) to discover images within charts (e.g. [GitLab](https://repo1.dso.mil/big-bang/product/packages/gitlab/-/blob/main/chart/Chart.yaml#L61)) - this is a relatively new feature for Big Bang so if you see an `ImagePullBackOff` error, check that these annotations are set correctly for the sub charts you are using. To work around this issue if you come across it, simply add the missing image to the images list on the same component that contains the Big Bang extension like the following:
 
 ```
 components:

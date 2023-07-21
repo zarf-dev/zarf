@@ -77,7 +77,7 @@ func (p *Packager) setVariableMapInConfig() error {
 	// Ensure uppercase keys
 	setVariableValues := helpers.TransformMapKeys(p.cfg.DeployOpts.SetVariables, strings.ToUpper)
 	for name, value := range setVariableValues {
-		p.setVariableInConfig(name, value, false, false)
+		p.setVariableInConfig(name, value, false, false, "")
 	}
 
 	for _, variable := range p.cfg.Pkg.Variables {
@@ -87,11 +87,12 @@ func (p *Packager) setVariableMapInConfig() error {
 		if present {
 			p.cfg.SetVariableMap[variable.Name].Sensitive = variable.Sensitive
 			p.cfg.SetVariableMap[variable.Name].AutoIndent = variable.AutoIndent
+			p.cfg.SetVariableMap[variable.Name].Type = variable.Type
 			continue
 		}
 
 		// First set default (may be overridden by prompt)
-		p.setVariableInConfig(variable.Name, variable.Default, variable.Sensitive, variable.AutoIndent)
+		p.setVariableInConfig(variable.Name, variable.Default, variable.Sensitive, variable.AutoIndent, variable.Type)
 
 		// Variable is set to prompt the user
 		if variable.Prompt && !config.CommonOptions.Confirm {
@@ -102,19 +103,20 @@ func (p *Packager) setVariableMapInConfig() error {
 				return err
 			}
 
-			p.setVariableInConfig(variable.Name, val, variable.Sensitive, variable.AutoIndent)
+			p.setVariableInConfig(variable.Name, val, variable.Sensitive, variable.AutoIndent, variable.Type)
 		}
 	}
 
 	return nil
 }
 
-func (p *Packager) setVariableInConfig(name, value string, sensitive bool, autoIndent bool) {
+func (p *Packager) setVariableInConfig(name, value string, sensitive bool, autoIndent bool, varType types.VariableType) {
 	p.cfg.SetVariableMap[name] = &types.ZarfSetVariable{
 		Name:       name,
 		Value:      value,
 		Sensitive:  sensitive,
 		AutoIndent: autoIndent,
+		Type:       varType,
 	}
 }
 

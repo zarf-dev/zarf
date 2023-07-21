@@ -139,6 +139,7 @@ func (values *Values) GetVariables(component types.ZarfComponent) (map[string]*u
 			Value:      variable.Value,
 			Sensitive:  variable.Sensitive,
 			AutoIndent: variable.AutoIndent,
+			Type:       variable.Type,
 		}
 	}
 
