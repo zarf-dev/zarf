@@ -64,10 +64,11 @@ func (b *Bundler) Pull() error {
 	// make an index.json specifically for this bundle
 	index := ocispec.Index{}
 	index.SchemaVersion = 2
+	index.MediaType = ocispec.MediaTypeImageIndex
 	index.Manifests = append(index.Manifests, rootDesc)
 
 	// write the index.json to tmp
-	bytes, err := json.Marshal(index)
+	bytes, err := json.MarshalIndent(index, "", "  ")
 	if err != nil {
 		return err
 	}

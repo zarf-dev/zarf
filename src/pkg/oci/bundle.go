@@ -137,9 +137,9 @@ func (o *OrasRemote) Bundle(bundle *types.ZarfBundle, signature []byte) error {
 		flags = "--insecure"
 	}
 	message.Title("To inspect/deploy/pull:", "")
-	message.ZarfCommand("bundle inspect oci://%s %s", ref, flags)
-	message.ZarfCommand("bundle deploy oci://%s %s", ref, flags)
-	message.ZarfCommand("bundle pull oci://%s %s", ref, flags)
+	message.Command("bundle inspect oci://%s %s", ref, flags)
+	message.Command("bundle deploy oci://%s %s", ref, flags)
+	message.Command("bundle pull oci://%s %s", ref, flags)
 
 	return nil
 }
