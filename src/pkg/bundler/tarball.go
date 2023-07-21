@@ -8,15 +8,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/mholt/archiver/v3"
 	av4 "github.com/mholt/archiver/v4"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
+
+var blobsDir = filepath.Join("blobs", "sha256")
+
+// PathMap is a map of absolute paths on disk to relative paths within packages/bundles
+type PathMap map[string]string
 
 type tarballProvider struct {
 	ctx      context.Context
@@ -56,7 +64,7 @@ func (tp *tarballProvider) getBundleManifest() error {
 		return fmt.Errorf("expected only one manifest in index.json, found %d", len(index.Manifests))
 	}
 
-	manifestRelativePath := filepath.Join("blobs", "sha256", bundleManifestDesc.Digest.Encoded())
+	manifestRelativePath := filepath.Join(blobsDir, bundleManifestDesc.Digest.Encoded())
 
 	if err := archiver.Extract(tp.src, manifestRelativePath, tp.dst); err != nil {
 		return fmt.Errorf("failed to extract %s from %s: %w", bundleManifestDesc.Digest.Encoded(), tp.src, err)
@@ -101,7 +109,7 @@ func (tp *tarballProvider) LoadBundle(requestedPackages []string) ([]ocispec.Des
 		for _, layer := range tp.manifest.Layers {
 			if layer.MediaType == ocispec.MediaTypeImageConfig {
 				var manifest ocispec.Manifest
-				path := filepath.Join(tp.dst, "blobs", "sha256", layer.Digest.Encoded())
+				path := filepath.Join(tp.dst, blobsDir, layer.Digest.Encoded())
 				bytes, err := os.ReadFile(path)
 				if err != nil {
 					return nil, err
@@ -116,23 +124,18 @@ func (tp *tarballProvider) LoadBundle(requestedPackages []string) ([]ocispec.Des
 
 	bundleYAMLSHA := tp.manifest.Locate(config.ZarfBundleYAML).Digest.Encoded()
 
-	if err := archiver.Extract(tp.src, filepath.Join("blobs", "sha256", bundleYAMLSHA), tp.dst); err != nil {
+	if err := archiver.Extract(tp.src, filepath.Join(blobsDir, bundleYAMLSHA), tp.dst); err != nil {
 		return nil, fmt.Errorf("failed to extract %s from %s: %w", bundleYAMLSHA, tp.src, err)
 	}
-
-	// TODO: finish me
-	// for _, pkg := range bundle.Packages {
-	// 	manifestSha256 := strings.Split(pkg.Ref, "@sha256:")[1]
-	// }
-
-	// if err := utils.ReadYaml(filepath.Join(dst, config.ZarfBundleYAML), &bundle); err != nil {
-	// 	return nil, err
-	// }
 
 	return layersExtracted, nil
 }
 
-func (tp *tarballProvider) LoadPackage(sha string) ([]ocispec.Descriptor, error) {
+func (tp *tarballProvider) LoadPackage(sha, destinationDir string) (PathMap, error) {
+	if err := tp.getBundleManifest(); err != nil {
+		return nil, err
+	}
+
 	format := av4.CompressedArchive{
 		Compression: av4.Zstd{},
 		Archival:    av4.Tar{},
@@ -147,29 +150,113 @@ func (tp *tarballProvider) LoadPackage(sha string) ([]ocispec.Descriptor, error)
 
 	defer sourceArchive.Close()
 
-	if err := format.Extract(ctx, sourceArchive, packagePaths, handler); err != nil {
+	var manifest *oci.ZarfOCIManifest
+
+	extractJSON := func(j any) func(context.Context, av4.File) error {
+		return func(_ context.Context, file av4.File) error {
+			stream, err := file.Open()
+			if err != nil {
+				return err
+			}
+			defer stream.Close()
+
+			bytes, err := io.ReadAll(stream)
+			if err != nil {
+				return err
+			}
+			return json.Unmarshal(bytes, j)
+		}
+	}
+
+	if err := format.Extract(ctx, sourceArchive, []string{filepath.Join(blobsDir, sha)}, extractJSON(manifest)); err != nil {
 		return nil, err
 	}
 
-	return nil, nil
+	extractLayer := func(_ context.Context, file av4.File) error {
+		if file.IsDir() {
+			return nil
+		}
+		stream, err := file.Open()
+		if err != nil {
+			return err
+		}
+		defer stream.Close()
+
+		desc := helpers.Find(manifest.Layers, func(layer ocispec.Descriptor) bool {
+			return layer.Digest.Encoded() == filepath.Base(file.NameInArchive)
+		})
+
+		path := desc.Annotations[ocispec.AnnotationTitle]
+
+		size := desc.Size
+
+		dst := filepath.Join(destinationDir, path)
+
+		if err := utils.CreateDirectory(filepath.Dir(dst), 0700); err != nil {
+			return err
+		}
+
+		target, err := os.Create(dst)
+		if err != nil {
+			return err
+		}
+		defer target.Close()
+
+		written, err := io.Copy(target, stream)
+		if err != nil {
+			return err
+		}
+		if written != size {
+			return fmt.Errorf("expected to write %d bytes to %s, wrote %d", size, path, written)
+		}
+
+		// TODO: also check sha256?
+		return nil
+	}
+
+	layersToExtract := []string{}
+	paths := make(PathMap)
+
+	for _, layers := range manifest.Layers {
+		layersToExtract = append(layersToExtract, filepath.Join(blobsDir, layers.Digest.Encoded()))
+		paths[layers.Annotations[ocispec.AnnotationTitle]] = filepath.Join(destinationDir, blobsDir, layers.Digest.Encoded())
+	}
+
+	if err := format.Extract(ctx, sourceArchive, layersToExtract, extractLayer); err != nil {
+		return nil, err
+	}
+
+	return paths, nil
 }
 
 // LoadBundleMetadata loads a bundle's metadata from a tarball
-func (tp *tarballProvider) LoadBundleMetadata() ([]ocispec.Descriptor, error) {
+func (tp *tarballProvider) LoadBundleMetadata() (PathMap, error) {
 	if err := tp.getBundleManifest(); err != nil {
 		return nil, err
 	}
 	pathsToExtract := oci.BundleAlwaysPull
 
-	layersExtracted := []ocispec.Descriptor{}
+	paths := make(PathMap)
 
 	for _, path := range pathsToExtract {
 		layer := tp.manifest.Locate(path)
-		layersExtracted = append(layersExtracted, layer)
-		pathInTarball := filepath.Join("blobs", "sha256", layer.Digest.Encoded())
+		pathInTarball := filepath.Join(blobsDir, layer.Digest.Encoded())
+		paths[path] = filepath.Join(tp.dst, pathInTarball)
 		if err := archiver.Extract(tp.src, pathInTarball, tp.dst); err != nil {
 			return nil, fmt.Errorf("failed to extract %s from %s: %w", path, tp.src, err)
 		}
 	}
-	return layersExtracted, nil
+	return paths, nil
+}
+
+// TODO: move this to helpers/utils
+func shasMatch(path, expected string) error {
+	sha, err := utils.GetSHA256OfFile(path)
+	if err != nil {
+		return err
+	}
+	if sha != expected {
+		return fmt.Errorf("expected sha256 of %s to be %s, found %s", path, expected, sha)
+	}
+	return nil
 }

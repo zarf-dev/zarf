@@ -285,6 +285,17 @@ func (b *Bundler) SetOCIRemote(url string) error {
 	return nil
 }
 
+// ValidateBundleSignature validates the bundle signature
+// TODO: implement
+func ValidateBundleSignature(base string) error {
+	message.Debugf("Validating bundle signature from %s/%s", base, config.ZarfYAMLSignature)
+	return nil
+	// err := utils.CosignVerifyBlob(bfs.tmp.ZarfBundleYaml, bfs.tmp.ZarfSig, <keypath>)
+	// if err != nil {
+	// 	return err
+	// }
+}
+
 // MergeVariables merges the variables from the config file and the CLI
 //
 // TODO: move this to helpers.MergeAndTransformMap

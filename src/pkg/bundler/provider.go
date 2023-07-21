@@ -8,25 +8,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // Provider is an interface for processing bundles
 //
 // operations that are common no matter the source should be implemented on bundler
 type Provider interface {
-	// LoadBundle loads a bundle into the `dst` directory
-	//
-	// : if tarball
-	// : : extracts the package(s) from the tarball
-	//
-	// : if OCI ref
-	// : : pulls the package(s) from the OCI ref
-	LoadBundle(requestedPackages []string) ([]ocispec.Descriptor, error)
 	// LoadBundleMetadata loads a bundle's metadata (zarf-bundle.yaml) and signature (zarf-bundle.yaml.sig)
 	//
 	// these two files are placed in the `dst` directory
@@ -36,9 +25,9 @@ type Provider interface {
 	//
 	// : if OCI ref
 	// : : pulls the metadata from the OCI ref
-	LoadBundleMetadata() ([]ocispec.Descriptor, error)
+	LoadBundleMetadata() (PathMap, error)
 
-	// ContentStore() *ocistore.Store
+	LoadPackage(sha, destinationDir string) (PathMap, error)
 
 	getBundleManifest() error
 
@@ -63,15 +52,4 @@ func NewProvider(ctx context.Context, source, destination string) (Provider, err
 		return nil, fmt.Errorf("invalid tarball path: %s", source)
 	}
 	return &tarballProvider{ctx: ctx, src: source, dst: destination}, nil
-}
-
-// ValidateBundleSignature validates the bundle signature
-// TODO: implement
-func validateBundleSignature(base string) error {
-	message.Debugf("Validating bundle signature from %s/%s", base, config.ZarfYAMLSignature)
-	return nil
-	// err := utils.CosignVerifyBlob(bfs.tmp.ZarfBundleYaml, bfs.tmp.ZarfSig, <keypath>)
-	// if err != nil {
-	// 	return err
-	// }
 }

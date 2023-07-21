@@ -7,6 +7,7 @@ package bundler
 import (
 	"context"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	// ocistore "oras.land/oras-go/v2/content/oci"
 )
@@ -26,22 +27,18 @@ func (b *Bundler) Inspect() error {
 	}
 
 	// pull the zarf-bundle.yaml + sig
-	if _, err := provider.LoadBundleMetadata(); err != nil {
-		return err
-	}
-
-	bundleYAMLPath, err := b.LocateBundleYAML(b.tmp)
+	loaded, err := provider.LoadBundleMetadata()
 	if err != nil {
 		return err
 	}
 
 	// read the zarf-bundle.yaml into memory
-	if err := b.ReadBundleYaml(bundleYAMLPath, &b.bundle); err != nil {
+	if err := b.ReadBundleYaml(loaded[config.ZarfBundleYAML], &b.bundle); err != nil {
 		return err
 	}
 
 	// validate the sig (if present)
-	if err := provider.ValidateBundleSignature(b.tmp); err != nil {
+	if err := ValidateBundleSignature(b.tmp); err != nil {
 		return err
 	}
 

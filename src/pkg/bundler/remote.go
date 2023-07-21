@@ -6,6 +6,7 @@ package bundler
 
 import (
 	"context"
+	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
@@ -38,12 +39,29 @@ func (op *ociProvider) getBundleManifest() error {
 	return nil
 }
 
-// LoadBundle loads a bundle from an OCI image
-func (op *ociProvider) LoadBundle(requestedPackages []string) ([]ocispec.Descriptor, error) {
-	return op.PullBundle(op.dst, config.CommonOptions.OCIConcurrency, requestedPackages)
+func (op *ociProvider) LoadPackage(sha, destinationDir string) (PathMap, error) {
+	layers, err := op.PullBundle(destinationDir, config.CommonOptions.OCIConcurrency, []string{sha})
+	if err != nil {
+		return nil, err
+	}
+	paths := make(PathMap)
+	for _, layer := range layers {
+		rel := layer.Annotations[ocispec.AnnotationTitle]
+		paths[rel] = filepath.Join(destinationDir, rel)
+	}
+	return paths, nil
 }
 
 // LoadBundleMetadata loads a bundle's metadata from an OCI image
-func (op *ociProvider) LoadBundleMetadata() ([]ocispec.Descriptor, error) {
-	return op.PullBundleMetadata(op.dst)
+func (op *ociProvider) LoadBundleMetadata() (PathMap, error) {
+	layers, err := op.PullBundleMetadata(op.dst)
+	if err != nil {
+		return nil, err
+	}
+	paths := make(PathMap)
+	for _, layer := range layers {
+		rel := layer.Annotations[ocispec.AnnotationTitle]
+		paths[rel] = filepath.Join(op.dst, rel)
+	}
+	return paths, nil
 }

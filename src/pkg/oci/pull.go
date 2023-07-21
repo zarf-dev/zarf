@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -261,8 +262,8 @@ func (o *OrasRemote) PullBundleMetadata(destinationDir string) ([]ocispec.Descri
 }
 
 // PullBundle pulls the bundle from the remote repository and saves it to the given path.
-func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requestedPackages []string) (layersToPull []ocispec.Descriptor, err error) {
-	isPartial := len(requestedPackages) > 0
+func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requestedPackagesSHAs []string) (layersToPull []ocispec.Descriptor, err error) {
+	isPartial := len(requestedPackagesSHAs) > 0
 
 	root, err := o.FetchRoot()
 	if err != nil {
@@ -290,7 +291,7 @@ func (o *OrasRemote) PullBundle(destinationDir string, concurrency int, requeste
 
 	for _, pkg := range bundle.Packages {
 		// TODO: figure out how to handle partial pulls for bundles
-		if !isPartial || helpers.SliceContains(requestedPackages, pkg.Repository) {
+		if !isPartial || helpers.SliceContains(requestedPackagesSHAs, strings.Split(pkg.Ref, "@sha256:")[1]) {
 			url := fmt.Sprintf("%s:%s", o.repo.Reference, pkg.Ref)
 			manifestDesc, err := o.repo.Blobs().Resolve(o.ctx, url)
 			manifestDesc.MediaType = ocispec.MediaTypeImageManifest
