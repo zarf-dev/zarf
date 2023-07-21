@@ -85,7 +85,7 @@ func testPull(t *testing.T) {
 	err = json.Unmarshal(b, &index)
 	require.NoError(t, err)
 
-	require.Equal(t, 3, len(index.Manifests))
+	require.Equal(t, 1, len(index.Manifests))
 
 	blobsDir := filepath.Join(decompressed, "blobs", "sha256")
 
