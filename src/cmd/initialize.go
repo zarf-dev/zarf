@@ -166,25 +166,9 @@ func init() {
 
 	rootCmd.AddCommand(initCmd)
 
-	// Init package variables
-	v.SetDefault(V_PKG_DEPLOY_SET, map[string]string{})
-
-	v.SetDefault(V_INIT_COMPONENTS, "")
-	v.SetDefault(V_INIT_STORAGE_CLASS, "")
-
-	v.SetDefault(V_INIT_GIT_URL, "")
+	// Init package non-zero defaults
 	v.SetDefault(V_INIT_GIT_PUSH_USER, config.ZarfGitPushUser)
-	v.SetDefault(V_INIT_GIT_PUSH_PASS, "")
-	v.SetDefault(V_INIT_GIT_PULL_USER, "")
-	v.SetDefault(V_INIT_GIT_PULL_PASS, "")
-
-	v.SetDefault(V_INIT_REGISTRY_URL, "")
-	v.SetDefault(V_INIT_REGISTRY_NODEPORT, 0)
-	v.SetDefault(V_INIT_REGISTRY_SECRET, "")
 	v.SetDefault(V_INIT_REGISTRY_PUSH_USER, config.ZarfRegistryPushUser)
-	v.SetDefault(V_INIT_REGISTRY_PUSH_PASS, "")
-	v.SetDefault(V_INIT_REGISTRY_PULL_USER, "")
-	v.SetDefault(V_INIT_REGISTRY_PULL_PASS, "")
 
 	// Init package set variable flags
 	initCmd.Flags().StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdInitFlagSet)

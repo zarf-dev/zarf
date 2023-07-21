@@ -82,12 +82,7 @@ func init() {
 	initViper()
 
 	v.SetDefault(V_LOG_LEVEL, "info")
-	v.SetDefault(V_ARCHITECTURE, "")
-	v.SetDefault(V_NO_LOG_FILE, false)
-	v.SetDefault(V_NO_PROGRESS, false)
-	v.SetDefault(V_INSECURE, false)
 	v.SetDefault(V_ZARF_CACHE, config.ZarfDefaultCachePath)
-	v.SetDefault(V_TMP_DIR, "")
 
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(V_LOG_LEVEL), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(V_ARCHITECTURE), lang.RootCmdFlagArch)

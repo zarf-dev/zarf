@@ -27,6 +27,7 @@ import (
 var includeInspectSBOM bool
 var outputInspectSBOM string
 var inspectPublicKey string
+var noImgChecksum bool
 
 var packageCmd = &cobra.Command{
 	Use:     "package",
@@ -115,7 +116,7 @@ var packageMirrorCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Deploy the package
-		if err := pkgClient.Mirror(); err != nil {
+		if err := pkgClient.Mirror(noImgChecksum); err != nil {
 			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
 		}
 	},
@@ -287,6 +288,7 @@ func init() {
 	rootCmd.AddCommand(packageCmd)
 	packageCmd.AddCommand(packageCreateCmd)
 	packageCmd.AddCommand(packageDeployCmd)
+	packageCmd.AddCommand(packageMirrorCmd)
 	packageCmd.AddCommand(packageInspectCmd)
 	packageCmd.AddCommand(packageRemoveCmd)
 	packageCmd.AddCommand(packageListCmd)
@@ -296,6 +298,7 @@ func init() {
 	bindPackageFlags()
 	bindCreateFlags()
 	bindDeployFlags()
+	bindMirrorFlags()
 	bindInspectFlags()
 	bindRemoveFlags()
 	bindPublishFlags()
@@ -313,14 +316,6 @@ func bindCreateFlags() {
 
 	// Always require confirm flag (no viper)
 	createFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageCreateFlagConfirm)
-
-	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
-	v.SetDefault(V_PKG_CREATE_OUTPUT, "")
-	v.SetDefault(V_PKG_CREATE_SBOM, false)
-	v.SetDefault(V_PKG_CREATE_SBOM_OUTPUT, "")
-	v.SetDefault(V_PKG_CREATE_SKIP_SBOM, false)
-	v.SetDefault(V_PKG_CREATE_MAX_PACKAGE_SIZE, 0)
-	v.SetDefault(V_PKG_CREATE_SIGNING_KEY, "")
 
 	outputDirectory := v.GetString("package.create.output_directory")
 	output := v.GetString(V_PKG_CREATE_OUTPUT)
@@ -352,17 +347,37 @@ func bindDeployFlags() {
 	// Always require adopt-existing-resources flag (no viper)
 	deployFlags.BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
 
-	v.SetDefault(V_PKG_DEPLOY_SET, map[string]string{})
-	v.SetDefault(V_PKG_DEPLOY_COMPONENTS, "")
-	v.SetDefault(V_PKG_DEPLOY_SHASUM, "")
-	v.SetDefault(V_PKG_DEPLOY_SGET, "")
-	v.SetDefault(V_PKG_DEPLOY_PUBLIC_KEY, "")
-
 	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
 	deployFlags.StringVarP(&pkgConfig.DeployOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageDeployFlagPublicKey)
+}
+
+func bindMirrorFlags() {
+	mirrorFlags := packageMirrorCmd.Flags()
+
+	// Always require confirm flag (no viper)
+	mirrorFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
+
+	mirrorFlags.BoolVar(&noImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
+
+	mirrorFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_INIT_COMPONENTS), lang.CmdPackageMirrorFlagComponents)
+
+	// Flags for using an external Git server
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(V_INIT_GIT_URL), lang.CmdInitFlagGitURL)
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-push-username", v.GetString(V_INIT_GIT_PUSH_USER), lang.CmdInitFlagGitPushUser)
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.GitServer.PushPassword, "git-push-password", v.GetString(V_INIT_GIT_PUSH_PASS), lang.CmdInitFlagGitPushPass)
+
+	// Flags for using an external registry
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(V_INIT_REGISTRY_URL), lang.CmdInitFlagRegURL)
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(V_INIT_REGISTRY_PUSH_USER), lang.CmdInitFlagRegPushUser)
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(V_INIT_REGISTRY_PUSH_PASS), lang.CmdInitFlagRegPushPass)
+
+	// Flags for using an external artifact server
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.ArtifactServer.Address, "artifact-url", v.GetString(V_INIT_ARTIFACT_URL), lang.CmdInitFlagArtifactURL)
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(V_INIT_ARTIFACT_PUSH_USER), lang.CmdInitFlagArtifactPushUser)
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(V_INIT_ARTIFACT_PUSH_TOKEN), lang.CmdInitFlagArtifactPushToken)
 }
 
 func bindInspectFlags() {
@@ -387,7 +402,6 @@ func bindPublishFlags() {
 
 func bindPullFlags() {
 	pullFlags := packagePullCmd.Flags()
-	v.SetDefault(V_PKG_PULL_OUTPUT_DIR, "")
 	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(V_PKG_PULL_OUTPUT_DIR), lang.CmdPackagePullFlagOutputDirectory)
 	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_PULL_PUBLIC_KEY), lang.CmdPackagePullFlagPublicKey)
 }

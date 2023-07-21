@@ -2,11 +2,7 @@ package packager
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -65,37 +61,18 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 		return partialPaths, fmt.Errorf("remote package provided with an invalid extension, must be one of: %s", config.GetValidPackageExtensions())
 	}
 
-	// Download the package
-	resp, err := http.Get(opts.PackagePath)
-	if err != nil {
-		return partialPaths, fmt.Errorf("unable to download remote package: %w", err)
-	}
-	defer resp.Body.Close()
-
 	localPath := p.tmp.Base + providedURL.Path
-	message.Debugf("Creating local package with the path: %s", localPath)
-	packageFile, _ := os.Create(localPath)
-	_, err = io.Copy(packageFile, resp.Body)
-	if err != nil {
-		return partialPaths, fmt.Errorf("unable to copy the contents of the provided URL into a local file: %w", err)
-	}
+	message.Debugf("Downloading the local package with the path: %s", localPath)
 
-	// Check the shasum if necessary
+	packageURL := opts.PackagePath
+
 	if !config.CommonOptions.Insecure {
-		hasher := sha256.New()
-		_, err = io.Copy(hasher, packageFile)
-		if err != nil {
-			return partialPaths, fmt.Errorf("unable to calculate the sha256 of the provided remote package: %w", err)
-		}
-
-		value := hex.EncodeToString(hasher.Sum(nil))
-		if value != opts.Shasum {
-			_ = os.Remove(localPath)
-			return partialPaths, fmt.Errorf("shasum of remote package does not match provided shasum, expected %s, got %s", opts.Shasum, value)
-		}
+		packageURL = fmt.Sprintf("%s@%s", opts.PackagePath, opts.Shasum)
 	}
 
-	opts.PackagePath = localPath
+	utils.DownloadToFile(packageURL, localPath, "")
+
+	p.cfg.DeployOpts.PackagePath = localPath
 
 	spinner.Success()
 	return partialPaths, nil
