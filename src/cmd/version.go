@@ -43,9 +43,9 @@ var versionCmd = &cobra.Command{
 				depMap := map[string]string{}
 				for _, dep := range buildInfo.Deps {
 					if dep.Replace != nil {
-						depMap[dep.Path] = fmt.Sprintf("%s -> %s %s", dep.Path, dep.Replace.Path, dep.Version)
+						depMap[dep.Path] = fmt.Sprintf("-> %s %s", dep.Replace.Path, dep.Replace.Version)
 					} else {
-						depMap[dep.Path] = fmt.Sprintf("%s %s", dep.Path, dep.Version)
+						depMap[dep.Path] = dep.Version
 					}
 				}
 				yamlOutput["dependencies"] = depMap
