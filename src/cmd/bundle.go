@@ -28,11 +28,10 @@ var bundleCreateCmd = &cobra.Command{
 	Aliases: []string{"c"},
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdBundleCreateShort,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
+	PreRun: func(cmd *cobra.Command, args []string) {
 		if !utils.IsDir(args[0]) {
-			return fmt.Errorf("first argument must be a valid path to a directory")
+			message.Fatalf(nil, "first argument (%q) must be a valid path to a directory", args[0])
 		}
-		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		bundleCfg.CreateOpts.SourceDirectory = args[0]
@@ -43,6 +42,7 @@ var bundleCreateCmd = &cobra.Command{
 		defer bndlClient.ClearPaths()
 
 		if err := bndlClient.Create(); err != nil {
+			bndlClient.ClearPaths()
 			message.Fatalf(err, "Failed to create bundle: %s", err.Error())
 		}
 	},
@@ -53,7 +53,7 @@ var bundleDeployCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   lang.CmdBundleDeployShort,
 	Args:    cobra.ExactArgs(1),
-	PreRunE: firstArgIsEitherOCIorTarball,
+	PreRun:  firstArgIsEitherOCIorTarball,
 	Run: func(cmd *cobra.Command, args []string) {
 		bundleCfg.DeployOpts.Source = args[0]
 
@@ -63,6 +63,7 @@ var bundleDeployCmd = &cobra.Command{
 		defer bndlClient.ClearPaths()
 
 		if err := bndlClient.Deploy(); err != nil {
+			bndlClient.ClearPaths()
 			message.Fatalf(err, "Failed to deploy bundle: %s", err.Error())
 		}
 	},
@@ -73,7 +74,7 @@ var bundleInspectCmd = &cobra.Command{
 	Aliases: []string{"i"},
 	Short:   lang.CmdBundleInspectShort,
 	Args:    cobra.ExactArgs(1),
-	PreRunE: firstArgIsEitherOCIorTarball,
+	PreRun:  firstArgIsEitherOCIorTarball,
 	Run: func(cmd *cobra.Command, args []string) {
 		bundleCfg.InspectOpts.Source = args[0]
 
@@ -81,6 +82,7 @@ var bundleInspectCmd = &cobra.Command{
 		defer bndlClient.ClearPaths()
 
 		if err := bndlClient.Inspect(); err != nil {
+			bndlClient.ClearPaths()
 			message.Fatalf(err, "Failed to inspect bundle: %s", err.Error())
 		}
 	},
@@ -88,10 +90,10 @@ var bundleInspectCmd = &cobra.Command{
 
 var bundleRemoveCmd = &cobra.Command{
 	Use:     "remove [BUNDLE_NAME|BUNDLE_TARBALL|OCI_REF]",
-	Aliases: []string{"u"},
+	Aliases: []string{"r"},
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdBundleRemoveShort,
-	RunE:    firstArgIsEitherOCIorTarball,
+	PreRun:  firstArgIsEitherOCIorTarball,
 	Run: func(cmd *cobra.Command, args []string) {
 		bundleCfg.RemoveOpts.Source = args[0]
 
@@ -99,17 +101,21 @@ var bundleRemoveCmd = &cobra.Command{
 		defer bndlClient.ClearPaths()
 
 		if err := bndlClient.Remove(); err != nil {
-			message.Fatalf(err, "Unable to remove the bundle with an error of: %#v", err)
+			bndlClient.ClearPaths()
+			message.Fatalf(err, "Failed to remove bundle: %s", err.Error())
 		}
 	},
 }
 
 var bundlePullCmd = &cobra.Command{
-	Use:   "pull [OCI_REF]",
-	Short: lang.CmdBundlePullShort,
-	Args:  cobra.ExactArgs(1),
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		return oci.ValidateReference(args[0])
+	Use:     "pull [OCI_REF]",
+	Aliases: []string{"p"},
+	Short:   lang.CmdBundlePullShort,
+	Args:    cobra.ExactArgs(1),
+	PreRun: func(cmd *cobra.Command, args []string) {
+		if err := oci.ValidateReference(args[0]); err != nil {
+			message.Fatalf(err, "First agument (%q) must be a valid OCI URL: %s", args[0], err.Error())
+		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		bundleCfg.PullOpts.Source = args[0]
@@ -118,16 +124,24 @@ var bundlePullCmd = &cobra.Command{
 		defer bndlClient.ClearPaths()
 
 		if err := bndlClient.Pull(); err != nil {
+			bndlClient.ClearPaths()
 			message.Fatalf(err, "Failed to pull bundle: %s", err.Error())
 		}
 	},
 }
 
-func firstArgIsEitherOCIorTarball(_ *cobra.Command, args []string) error {
+func firstArgIsEitherOCIorTarball(_ *cobra.Command, args []string) {
+	var errString string
+	var err error
 	if !utils.IsOCIURL(args[0]) && !bundler.IsValidTarballPath(args[0]) {
-		return fmt.Errorf("first argument must either be a valid OCI URL or a valid path to a bundle tarball")
+		errString = fmt.Sprintf("First argument (%q) must either be a valid OCI URL or a valid path to a bundle tarball", args[0])
+	} else {
+		err = oci.ValidateReference(args[0])
+		errString = err.Error()
 	}
-	return oci.ValidateReference(args[0])
+	if errString != "" {
+		message.Fatalf(err, errString)
+	}
 }
 
 func init() {
