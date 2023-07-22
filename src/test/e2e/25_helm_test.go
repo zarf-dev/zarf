@@ -70,12 +70,13 @@ func testHelmEscaping(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Verify the configmap was deployed and escaped.
+	// Verify the configmap was deployed, escaped, and contains all of its data
 	kubectlOut, _ := exec.Command("kubectl", "describe", "cm", "dont-template-me").Output()
 	require.Contains(t, string(kubectlOut), `alert: OOMKilled {{ "{{ \"random.Values\" }}" }}`)
 	require.Contains(t, string(kubectlOut), "backtick1: \"content with backticks `some random things`\"")
 	require.Contains(t, string(kubectlOut), "backtick2: \"nested templating with backticks {{` random.Values `}}\"")
 	require.Contains(t, string(kubectlOut), `description: Pod {{$labels.pod}} in {{$labels.namespace}} got OOMKilled`)
+	require.Contains(t, string(kubectlOut), `TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIG`)
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "evil-templates", "--confirm")

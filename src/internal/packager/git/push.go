@@ -25,7 +25,7 @@ func (g *Git) PushRepo(srcURL, targetFolder string) error {
 	defer spinner.Stop()
 
 	// Setup git paths, including a unique name for the repo based on the hash of the git URL to avoid conflicts.
-	repoFolder, err := transform.GitTransformURLtoFolderName(srcURL)
+	repoFolder, err := transform.GitURLtoFolderName(srcURL)
 	if err != nil {
 		return fmt.Errorf("unable to parse git url (%s): %w", srcURL, err)
 	}
@@ -34,7 +34,7 @@ func (g *Git) PushRepo(srcURL, targetFolder string) error {
 	// Check that this package is using the new repo format (if not fallback to the format from <= 0.24.x)
 	_, err = os.Stat(repoPath)
 	if os.IsNotExist(err) {
-		repoFolder, err = transform.GitTransformURLtoRepoName(srcURL)
+		repoFolder, err = transform.GitURLtoRepoName(srcURL)
 		if err != nil {
 			return fmt.Errorf("unable to parse git url (%s): %w", srcURL, err)
 		}
@@ -63,7 +63,7 @@ func (g *Git) PushRepo(srcURL, targetFolder string) error {
 			return err
 		}
 		remoteURL := remote.Config().URLs[0]
-		repoName, err := transform.GitTransformURLtoRepoName(remoteURL)
+		repoName, err := transform.GitURLtoRepoName(remoteURL)
 		if err != nil {
 			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 			return err
@@ -94,7 +94,7 @@ func (g *Git) prepRepoForPush() (*git.Repository, error) {
 	}
 
 	remoteURL := remote.Config().URLs[0]
-	targetURL, err := transform.GitTransformURL(g.Server.Address, remoteURL, g.Server.PushUsername)
+	targetURL, err := transform.GitURL(g.Server.Address, remoteURL, g.Server.PushUsername)
 	if err != nil {
 		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}
