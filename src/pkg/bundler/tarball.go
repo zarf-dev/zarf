@@ -108,6 +108,8 @@ func (tp *tarballProvider) getBundleManifest() error {
 
 // LoadBundle loads a bundle from a tarball
 func (tp *tarballProvider) LoadBundle(_ int) (PathMap, error) {
+	loaded := make(PathMap)
+
 	if err := tp.getBundleManifest(); err != nil {
 		return nil, err
 	}
@@ -139,6 +141,10 @@ func (tp *tarballProvider) LoadBundle(_ int) (PathMap, error) {
 			}
 			layersToExtract = append(layersToExtract, layer)
 			layersToExtract = append(layersToExtract, manifest.Layers...)
+		} else if layer.MediaType == oci.ZarfLayerMediaTypeBlob {
+			rel := layer.Annotations[ocispec.AnnotationTitle]
+			layersToExtract = append(layersToExtract, layer)
+			loaded[rel] = filepath.Join(tp.dst, blobsDir, layer.Digest.Encoded())
 		}
 	}
 
@@ -154,14 +160,13 @@ func (tp *tarballProvider) LoadBundle(_ int) (PathMap, error) {
 		return store.Push(ctx, desc, r)
 	}
 
-	loaded := make(PathMap)
 	pathsInArchive := []string{}
 	for _, layer := range layersToExtract {
-		if layer.MediaType == oci.ZarfLayerMediaTypeBlob {
-			pathsInArchive = append(pathsInArchive, filepath.Join(blobsDir, layer.Digest.Encoded()))
-		}
 		sha := layer.Digest.Encoded()
-		loaded[sha] = filepath.Join(tp.dst, blobsDir, sha)
+		if layer.MediaType == oci.ZarfLayerMediaTypeBlob {
+			pathsInArchive = append(pathsInArchive, filepath.Join(blobsDir, sha))
+			loaded[sha] = filepath.Join(tp.dst, blobsDir, sha)
+		}
 	}
 
 	if err := format.Extract(tp.ctx, sourceArchive, pathsInArchive, cacheFunc); err != nil {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v4"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -20,21 +21,6 @@ import (
 
 // Pull pulls a bundle and saves it locally + caches it
 func (b *Bundler) Pull() error {
-	if err := b.SetOCIRemote(b.cfg.PullOpts.Source); err != nil {
-		return err
-	}
-
-	// fetch the bundle's root descriptor
-	// to later get the bundle's descriptor
-	rootDesc, err := b.remote.ResolveRoot()
-	if err != nil {
-		return err
-	}
-	root, err := b.remote.FetchManifest(rootDesc)
-	if err != nil {
-		return err
-	}
-
 	cacheDir := filepath.Join(config.GetAbsCachePath(), "packages")
 	// create the cache directory if it doesn't exist
 	if err := utils.CreateDirectory(cacheDir, 0755); err != nil {
@@ -54,8 +40,14 @@ func (b *Bundler) Pull() error {
 		return err
 	}
 
-	// locate the bundle's metadata descriptor
-	bundleDesc := root.Locate(BundleYAML)
+	// create a remote client just to resolve the root descriptor
+	remote, err := oci.NewOrasRemote(b.cfg.PullOpts.Source)
+	if err != nil {
+		return err
+	}
+
+	// fetch the bundle's root descriptor
+	rootDesc, err := remote.ResolveRoot()
 	if err != nil {
 		return err
 	}
@@ -77,18 +69,13 @@ func (b *Bundler) Pull() error {
 	}
 
 	// read the metadata into memory
-	bundleYamlPath := filepath.Join(cacheDir, "blobs", "sha256", bundleDesc.Digest.Encoded())
-	if err := b.ReadBundleYaml(bundleYamlPath, &b.bundle); err != nil {
+	if err := b.ReadBundleYaml(loaded[BundleYAML], &b.bundle); err != nil {
 		return err
 	}
 
 	// tarball the bundle
 	filename := fmt.Sprintf("%s%s-%s-%s.tar.zst", BundlePrefix, b.bundle.Metadata.Name, b.bundle.Metadata.Architecture, b.bundle.Metadata.Version)
 	dst := filepath.Join(b.cfg.PullOpts.OutputDirectory, filename)
-
-	// TODO: instead of removing then writing
-	// 	 we should figure out a way to stream the
-	//   differential into the tarball
 
 	_ = os.RemoveAll(dst)
 

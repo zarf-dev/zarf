@@ -51,15 +51,6 @@ func (b *Bundler) Create() error {
 		return err
 	}
 
-	// set the remote's reference from the bundle's metadata
-	ref, err := oci.ReferenceFromMetadata(b.cfg.CreateOpts.Output, &b.bundle.Metadata, b.bundle.Metadata.Architecture)
-	if err != nil {
-		return err
-	}
-	if err := b.SetOCIRemote(ref); err != nil {
-		return err
-	}
-
 	var signatureBytes []byte
 
 	// sign the bundle if a signing key was provided
@@ -78,14 +69,25 @@ func (b *Bundler) Create() error {
 		}
 		// sign the bundle
 		signaturePath := filepath.Join(b.tmp, BundleYAMLSignature)
-		signatureBytes, err = utils.CosignSignBlob(bundlePath, signaturePath, b.cfg.CreateOpts.SigningKeyPath, getSigCreatePassword)
+		bytes, err := utils.CosignSignBlob(bundlePath, signaturePath, b.cfg.CreateOpts.SigningKeyPath, getSigCreatePassword)
 		if err != nil {
 			return err
 		}
+		signatureBytes = bytes
+	}
+
+	// set the remote's reference from the bundle's metadata
+	ref, err := oci.ReferenceFromMetadata(b.cfg.CreateOpts.Output, &b.bundle.Metadata, b.bundle.Metadata.Architecture)
+	if err != nil {
+		return err
+	}
+	remote, err := oci.NewOrasRemote(ref)
+	if err != nil {
+		return err
 	}
 
 	// create + publish the bundle
-	return Bundle(b.remote, &b.bundle, signatureBytes)
+	return Bundle(remote, &b.bundle, signatureBytes)
 }
 
 // adapted from p.fillActiveTemplate

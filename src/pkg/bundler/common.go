@@ -30,8 +30,6 @@ type Bundler struct {
 	cfg *types.BundlerConfig
 	// bundle is the bundle's metadata read into memory
 	bundle types.ZarfBundle
-	// remote is the OCI remote to use for pushing and pulling
-	remote *oci.OrasRemote
 	// tmp is the temporary directory used by the Bundler cleaned up with ClearPaths()
 	tmp string
 }
@@ -271,17 +269,6 @@ func (b *Bundler) CalculateBuildInfo() error {
 
 	b.bundle.Build.Version = config.CLIVersion
 
-	return nil
-}
-
-// SetOCIRemote sets the remote for the Bundler
-func (b *Bundler) SetOCIRemote(url string) error {
-	message.Debug("Setting OCI remote URL to:", url)
-	remote, err := oci.NewOrasRemote(url)
-	if err != nil {
-		return err
-	}
-	b.remote = remote
 	return nil
 }
 
