@@ -102,6 +102,7 @@ func (op *ociProvider) LoadBundleMetadata() (PathMap, error) {
 	return loaded, nil
 }
 
+// LoadBundle loads a bundle from a remote source
 func (op *ociProvider) LoadBundle(concurrency int) (PathMap, error) {
 	layersToPull := []ocispec.Descriptor{}
 

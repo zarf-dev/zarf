@@ -413,3 +413,15 @@ func GetSHA256OfFile(filePath string) (string, error) {
 
 	return helpers.GetCryptoHash(f, crypto.SHA256)
 }
+
+// SHAsMatch returns an error if the SHA256 hash of the provided file does not match the expected hash.
+func SHAsMatch(path, expected string) error {
+	sha, err := GetSHA256OfFile(path)
+	if err != nil {
+		return err
+	}
+	if sha != expected {
+		return fmt.Errorf("expected sha256 of %s to be %s, found %s", path, expected, sha)
+	}
+	return nil
+}

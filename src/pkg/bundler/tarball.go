@@ -87,7 +87,7 @@ func (tp *tarballProvider) getBundleManifest() error {
 
 	defer os.Remove(manifestPath)
 
-	if err := shasMatch(manifestPath, bundleManifestDesc.Digest.Encoded()); err != nil {
+	if err := utils.SHAsMatch(manifestPath, bundleManifestDesc.Digest.Encoded()); err != nil {
 		return err
 	}
 
@@ -277,16 +277,4 @@ func (tp *tarballProvider) LoadBundleMetadata() (PathMap, error) {
 		}
 	}
 	return loaded, nil
-}
-
-// TODO: move this to helpers/utils
-func shasMatch(path, expected string) error {
-	sha, err := utils.GetSHA256OfFile(path)
-	if err != nil {
-		return err
-	}
-	if sha != expected {
-		return fmt.Errorf("expected sha256 of %s to be %s, found %s", path, expected, sha)
-	}
-	return nil
 }

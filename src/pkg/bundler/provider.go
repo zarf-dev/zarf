@@ -36,6 +36,9 @@ type Provider interface {
 	// : : pulls the package from the OCI ref
 	LoadPackage(sha, destinationDir string, concurrency int) (PathMap, error)
 
+	// LoadBundle loads a bundle
+	//
+	// (currently only the remote provider utilizes the concurrency parameter)
 	LoadBundle(concurrency int) (PathMap, error)
 
 	getBundleManifest() error
