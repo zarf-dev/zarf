@@ -13,7 +13,13 @@ const (
 	ManifestsFolder      = "manifests"
 	DataInjectionsFolder = "data"
 	ValuesFolder         = "values"
+
+	RawVariableType  VariableType = "raw"
+	FileVariableType VariableType = "file"
 )
+
+// VariableType represents a type of a Zarf package variable
+type VariableType string
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
@@ -86,10 +92,11 @@ type ZarfPartialPackageData struct {
 
 // ZarfSetVariable tracks internal variables that have been set during this run of Zarf
 type ZarfSetVariable struct {
-	Name       string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
-	Sensitive  bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
-	AutoIndent bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
-	Value      string `json:"value" jsonschema:"description=The value the variable is currently set with"`
+	Name       string       `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
+	Sensitive  bool         `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
+	AutoIndent bool         `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
+	Value      string       `json:"value" jsonschema:"description=The value the variable is currently set with"`
+	Type       VariableType `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB),enum=raw,enum=file"`
 }
 
 // ConnectString contains information about a connection made with Zarf connect.
