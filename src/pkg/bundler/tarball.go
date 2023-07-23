@@ -42,7 +42,7 @@ func extractJSON(j any) func(context.Context, av4.File) error {
 		if err != nil {
 			return err
 		}
-		return json.Unmarshal(bytes, j)
+		return json.Unmarshal(bytes, &j)
 	}
 }
 
@@ -98,7 +98,7 @@ func (tp *tarballProvider) getBundleManifest() error {
 
 	var manifest *oci.ZarfOCIManifest
 
-	if err := json.Unmarshal(bytes, manifest); err != nil {
+	if err := json.Unmarshal(bytes, &manifest); err != nil {
 		return err
 	}
 
@@ -268,10 +268,12 @@ func (tp *tarballProvider) LoadBundleMetadata() (PathMap, error) {
 
 	for _, path := range pathsToExtract {
 		layer := tp.manifest.Locate(path)
-		pathInTarball := filepath.Join(blobsDir, layer.Digest.Encoded())
-		loaded[path] = filepath.Join(tp.dst, pathInTarball)
-		if err := archiver.Extract(tp.src, pathInTarball, tp.dst); err != nil {
-			return nil, fmt.Errorf("failed to extract %s from %s: %w", path, tp.src, err)
+		if !oci.IsEmptyDescriptor(layer) {
+			pathInTarball := filepath.Join(blobsDir, layer.Digest.Encoded())
+			loaded[path] = filepath.Join(tp.dst, pathInTarball)
+			if err := archiver.Extract(tp.src, pathInTarball, tp.dst); err != nil {
+				return nil, fmt.Errorf("failed to extract %s from %s: %w", path, tp.src, err)
+			}
 		}
 	}
 	return loaded, nil

@@ -34,7 +34,7 @@ func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.
 	}
 	for _, path := range requestedPaths {
 		layer := manifest.Locate(path)
-		if o.IsEmptyDescriptor(layer) {
+		if IsEmptyDescriptor(layer) {
 			return nil, fmt.Errorf("path %s does not exist in this package", path)
 		}
 		layers = append(layers, layer)
@@ -80,7 +80,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	//
 	// Since sboms.tar is not a heavy addition 99% of the time, we'll just always pull it
 	sbomsDescriptor := root.Locate(config.ZarfSBOMTar)
-	if !o.IsEmptyDescriptor(sbomsDescriptor) {
+	if !IsEmptyDescriptor(sbomsDescriptor) {
 		layers = append(layers, sbomsDescriptor)
 	}
 	if len(images) > 0 {
@@ -236,7 +236,7 @@ func (o *OrasRemote) PullMultipleFiles(paths []string, destinationDir string) ([
 	layersPulled := []ocispec.Descriptor{}
 	for _, path := range paths {
 		desc := root.Locate(path)
-		if !o.IsEmptyDescriptor(desc) {
+		if !IsEmptyDescriptor(desc) {
 			layersPulled = append(layersPulled, desc)
 			if o.FileExists(desc, destinationDir) {
 				continue

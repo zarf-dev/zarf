@@ -158,7 +158,7 @@ func (o *OrasRemote) FileExists(desc ocispec.Descriptor, destinationDir string) 
 }
 
 // IsEmptyDescriptor returns true if the given descriptor is empty.
-func (o *OrasRemote) IsEmptyDescriptor(desc ocispec.Descriptor) bool {
+func IsEmptyDescriptor(desc ocispec.Descriptor) bool {
 	return desc.Digest == "" && desc.Size == 0
 }
 

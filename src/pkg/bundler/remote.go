@@ -50,7 +50,7 @@ func (op *ociProvider) LoadPackage(sha, destinationDir string, concurrency int) 
 		return nil, err
 	}
 	pkgManifestDesc := op.manifest.Locate(sha)
-	if op.IsEmptyDescriptor(pkgManifestDesc) {
+	if oci.IsEmptyDescriptor(pkgManifestDesc) {
 		return nil, fmt.Errorf("package %s does not exist in this bundle", sha)
 	}
 	pkgManifest, err := op.FetchManifest(pkgManifestDesc)
