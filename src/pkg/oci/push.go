@@ -10,11 +10,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
@@ -185,30 +182,6 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	}
 
 	o.Transport.ProgressBar.Successf("Published %s [%s]", o.repo.Reference, root.MediaType)
-	message.HorizontalRule()
-	if strings.HasSuffix(o.repo.Reference.String(), SkeletonSuffix) {
-		message.Title("How to import components from this skeleton:", "")
-		ex := []types.ZarfComponent{}
-		for _, c := range pkg.Components {
-			ex = append(ex, types.ZarfComponent{
-				Name: fmt.Sprintf("import-%s", c.Name),
-				Import: types.ZarfComponentImport{
-					ComponentName: c.Name,
-					URL:           fmt.Sprintf("oci://%s", o.repo.Reference),
-				},
-			})
-		}
-		utils.ColorPrintYAML(ex, nil, true)
-	} else {
-		flags := ""
-		if config.CommonOptions.Insecure {
-			flags = "--insecure"
-		}
-		message.Title("To inspect/deploy/pull:", "")
-		message.ZarfCommand("package inspect oci://%s %s", o.repo.Reference, flags)
-		message.ZarfCommand("package deploy oci://%s %s", o.repo.Reference, flags)
-		message.ZarfCommand("package pull oci://%s %s", o.repo.Reference, flags)
-	}
 
 	return nil
 }

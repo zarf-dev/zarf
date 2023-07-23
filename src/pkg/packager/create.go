@@ -229,6 +229,15 @@ func (p *Packager) Create(baseDir string) error {
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
+		message.HorizontalRule()
+		flags := ""
+		if config.CommonOptions.Insecure {
+			flags = "--insecure"
+		}
+		message.Title("To inspect/deploy/pull:", "")
+		message.ZarfCommand("package inspect oci://%s %s", p.remote.Repo().Reference, flags)
+		message.ZarfCommand("package deploy oci://%s %s", p.remote.Repo().Reference, flags)
+		message.ZarfCommand("package pull oci://%s %s", p.remote.Repo().Reference, flags)
 	} else {
 		// Use the output path if the user specified it.
 		packageName := filepath.Join(p.cfg.CreateOpts.Output, p.GetPackageName())
