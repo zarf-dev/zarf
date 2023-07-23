@@ -14,7 +14,7 @@ build-injector-linux-amd:
 	@test -s x86_64-linux-musl-cross || curl https://musl.cc/x86_64-linux-musl-cross.tgz | tar -xz
 
 	export PATH="$$PWD/x86_64-linux-musl-cross/bin:$$PATH"; \
-	export CARGO_TARGET_X86_64_UNKOWN_LINUX_MUSL_LINKER=x86_64-linux-musl-cc; \
+	export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-musl-cc; \
 	cargo build --target x86_64-unknown-linux-musl --release; \
 	x86_64-linux-musl-strip target/x86_64-unknown-linux-musl/release/zarf-injector
 
@@ -23,6 +23,6 @@ build-injector-linux-arm:
 	@test -s aarch64-linux-musl-cross || curl https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/aarch64-linux-musl-cross.tgz | tar -xz
 
 	export PATH="$$PWD/aarch64-linux-musl-cross/bin:$$PATH"; \
-	export CARGO_TARGET_AARCH64_UNKOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-cc; \
+	export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-cc; \
 	cargo build --target aarch64-unknown-linux-musl --release; \
 	aarch64-linux-musl-strip target/aarch64-unknown-linux-musl/release/zarf-injector
