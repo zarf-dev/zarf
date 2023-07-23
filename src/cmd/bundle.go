@@ -133,14 +133,16 @@ var bundlePullCmd = &cobra.Command{
 func firstArgIsEitherOCIorTarball(_ *cobra.Command, args []string) {
 	var errString string
 	var err error
+	if bundler.IsValidTarballPath(args[0]) {
+		return
+	}
 	if !utils.IsOCIURL(args[0]) && !bundler.IsValidTarballPath(args[0]) {
 		errString = fmt.Sprintf("First argument (%q) must either be a valid OCI URL or a valid path to a bundle tarball", args[0])
 	} else {
 		err = oci.ValidateReference(args[0])
-		errString = err.Error()
 	}
 	if errString != "" {
-		message.Fatalf(err, errString)
+		message.Fatalf(err, "Failed to validate first argument: %s", errString)
 	}
 }
 

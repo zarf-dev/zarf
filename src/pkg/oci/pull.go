@@ -238,6 +238,9 @@ func (o *OrasRemote) PullMultipleFiles(paths []string, destinationDir string) ([
 		desc := root.Locate(path)
 		if !o.IsEmptyDescriptor(desc) {
 			layersPulled = append(layersPulled, desc)
+			if o.FileExists(desc, destinationDir) {
+				continue
+			}
 			err = o.PullLayer(desc, destinationDir)
 			if err != nil {
 				return nil, err

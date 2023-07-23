@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -35,12 +36,7 @@ func (op *ociProvider) getBundleManifest() error {
 	if err != nil {
 		return err
 	}
-	bundleYamlDesc := root.Locate(BundleYAML)
-	manifest, err := op.FetchManifest(bundleYamlDesc)
-	if err != nil {
-		return err
-	}
-	op.manifest = manifest
+	op.manifest = root
 	return nil
 }
 
@@ -86,14 +82,22 @@ func (op *ociProvider) LoadPackage(sha, destinationDir string, concurrency int) 
 
 // LoadBundleMetadata loads a remote bundle's metadata
 func (op *ociProvider) LoadBundleMetadata() (PathMap, error) {
-	layers, err := op.PullMultipleFiles(BundleAlwaysPull, op.dst)
+	if err := utils.CreateDirectory(filepath.Join(op.dst, blobsDir), 0700); err != nil {
+		return nil, err
+	}
+	layers, err := op.PullMultipleFiles(BundleAlwaysPull, filepath.Join(op.dst, blobsDir))
 	if err != nil {
 		return nil, err
 	}
 	loaded := make(PathMap)
 	for _, layer := range layers {
 		rel := layer.Annotations[ocispec.AnnotationTitle]
-		loaded[rel] = filepath.Join(op.dst, rel)
+		abs := filepath.Join(op.dst, blobsDir, rel)
+		absSha := filepath.Join(op.dst, blobsDir, layer.Digest.Encoded())
+		if err := os.Rename(abs, absSha); err != nil {
+			return nil, err
+		}
+		loaded[rel] = absSha
 	}
 	return loaded, nil
 }

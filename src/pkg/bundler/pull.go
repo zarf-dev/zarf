@@ -100,6 +100,9 @@ func (b *Bundler) Pull() error {
 
 	// re-map the paths to be relative to the cache directory
 	for sha, abs := range loaded {
+		if sha == BundleYAML || sha == BundleYAMLSignature {
+			sha = filepath.Base(abs)
+		}
 		pathMap[abs] = filepath.Join(blobsDir, sha)
 	}
 

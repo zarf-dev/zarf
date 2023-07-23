@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	config "github.com/defenseunicorns/zarf/src/config"
@@ -132,6 +134,27 @@ func (o *OrasRemote) printLayerSuccess(_ context.Context, desc ocispec.Descripto
 	}
 	message.Successf(format)
 	return nil
+}
+
+// FileExists returns true if the given file exists in the given directory with the expected SHA.
+func (o *OrasRemote) FileExists(desc ocispec.Descriptor, destinationDir string) bool {
+	destinationPath := filepath.Join(destinationDir, desc.Annotations[ocispec.AnnotationTitle])
+	info, err := os.Stat(destinationPath)
+	if err != nil {
+		return false
+	}
+	if info.IsDir() {
+		return false
+	}
+	if info.Size() != desc.Size {
+		return false
+	}
+
+	actual, err := utils.GetSHA256OfFile(destinationPath)
+	if err != nil {
+		return false
+	}
+	return actual == desc.Digest.Encoded()
 }
 
 // IsEmptyDescriptor returns true if the given descriptor is empty.
