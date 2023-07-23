@@ -12,11 +12,17 @@ build-injector-linux: build-injector-linux-amd build-injector-linux-arm
 build-injector-linux-amd:
 	rustup target add x86_64-unknown-linux-musl
 	@test -s x86_64-linux-musl-cross || curl https://musl.cc/x86_64-linux-musl-cross.tgz | tar -xz
-	PATH="$$PWD/x86_64-linux-musl-cross/bin:$$PATH" cargo build --target x86_64-unknown-linux-musl --release
-	PATH="$$PWD/x86_64-linux-musl-cross/bin:$$PATH" strip target/x86_64-unknown-linux-musl/release/zarf-injector
+
+	export PATH="$$PWD/x86_64-linux-musl-cross/bin:$$PATH"; \
+	export CC=x86_64-linux-musl-cc; \
+	cargo build --target x86_64-unknown-linux-musl --release; \
+	x86_64-linux-musl-strip target/x86_64-unknown-linux-musl/release/zarf-injector
 
 build-injector-linux-arm:
 	rustup target add aarch64-unknown-linux-musl
 	@test -s aarch64-linux-musl-cross || curl https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/aarch64-linux-musl-cross.tgz | tar -xz
-	PATH="$$PWD/aarch64-linux-musl-cross/bin:$$PATH" cargo build --target aarch64-unknown-linux-musl --release
-	PATH="$$PWD/aarch64-linux-musl-cross/bin:$$PATH" aarch64-linux-musl-strip target/aarch64-unknown-linux-musl/release/zarf-injector
+
+	export PATH="$$PWD/aarch64-linux-musl-cross/bin:$$PATH"; \
+	export CC=aarch64-linux-musl-cc; \
+	cargo build --target aarch64-unknown-linux-musl --release; \
+	aarch64-linux-musl-strip target/aarch64-unknown-linux-musl/release/zarf-injector
