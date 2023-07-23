@@ -23,7 +23,7 @@ func TestGitAndFlux(t *testing.T) {
 	tmpdir := t.TempDir()
 	cachePath := filepath.Join(tmpdir, ".cache-location")
 
-	buildPath := filepath.Join("src", "test", "packages", "22-git-and-flux")
+	buildPath := filepath.Join("src", "test", "packages", "22-git-and-gitops")
 	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "--zarf-cache", cachePath, "-o=build", "--confirm", "-a=arm64")
 	require.NoError(t, err, stdOut, stdErr)
 
@@ -52,7 +52,7 @@ func TestGitAndArgoCD(t *testing.T) {
 	e2e.SetupWithCluster(t)
 
 	buildPath := filepath.Join("src", "test", "packages", "22-git-and-gitops")
-	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "-o=build", "--confirm", "--skip-sbom", "-a=arm64")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "-o=build", "--confirm", "--skip-sbom")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-git-data-check-secrets-%s-1.0.0.tar.zst", e2e.Arch)
