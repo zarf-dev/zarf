@@ -2,7 +2,6 @@ kind: ZarfPackageConfig
 metadata:
   name: argocd
   description: Example showcasing installing ArgoCD
-  version: 1.0.0
 
 components:
   - name: argocd-helm-chart
@@ -19,15 +18,8 @@ components:
       - quay.io/argoproj/argocd:v2.7.7
       - ghcr.io/dexidp/dex:v2.37.0
       - public.ecr.aws/docker/library/redis:7.0.11-alpine
-  - name: argocd-podinfo
+  - name: argocd-apps
     required: false
-    actions:
-      # This prepares the default namespace for the Zarf agent for the sample applications.
-      onDeploy:
-        before:
-          - cmd: "zarf tools kubectl label namespaces default zarf.dev/agent-"
-          - cmd: "zarf tools kubectl delete secret private-registry --ignore-not-found=true -n default"
-          - cmd: "zarf tools kubectl create secret docker-registry private-registry --docker-server=${ZARF_REGISTRY} --docker-username=zarf-pull --docker-password=${ZARF_REGISTRY_AUTH_PULL}"
     charts:
       - name: argocd-apps
         version: 1.3.0
@@ -42,3 +34,26 @@ components:
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       - docker.io/nginx:1.25.1
+    actions:
+      # This prepares the default namespace for the Zarf agent for the sample applications.
+      onDeploy:
+        before:
+          - cmd: "zarf tools kubectl label namespaces default zarf.dev/agent-"
+          - cmd: "zarf tools kubectl delete secret private-registry --ignore-not-found=true -n default"
+          - cmd: "zarf tools kubectl create secret docker-registry private-registry --docker-server=${ZARF_REGISTRY} --docker-username=zarf-pull --docker-password=${ZARF_REGISTRY_AUTH_PULL}"
+        after:
+          # This will use a wait action to wait for the pods to be ready
+          - description: Podinfo pod to be ready via wait action
+            wait:
+              cluster:
+                kind: pod
+                name: app.kubernetes.io/name=apps-podinfo
+                namespace: default
+                condition: ready
+          - description: Tracerbullet pod to be ready via wait action
+            wait:
+              cluster:
+                kind: pod
+                name: app.kubernetes.io/name=tracerbullet
+                namespace: default
+                condition: ready

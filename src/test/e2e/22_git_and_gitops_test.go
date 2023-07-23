@@ -18,13 +18,13 @@ import (
 )
 
 func TestGitAndFlux(t *testing.T) {
-	t.Log("E2E: Git and flux")
+	t.Log("E2E: Git and Flux")
 	e2e.SetupWithCluster(t)
 	tmpdir := t.TempDir()
 	cachePath := filepath.Join(tmpdir, ".cache-location")
 
 	buildPath := filepath.Join("src", "test", "packages", "22-git-and-flux")
-	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "--zarf-cache", cachePath, "-o=build", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "--zarf-cache", cachePath, "-o=build", "--confirm", "-a=arm64")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-git-data-test-%s-1.0.0.tar.zst", e2e.Arch)
@@ -44,6 +44,38 @@ func TestGitAndFlux(t *testing.T) {
 	testGitServerReadOnly(t, tunnel.HTTPEndpoint())
 	testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
 	waitFluxPodInfoDeployment(t)
+
+}
+
+func TestGitAndArgoCD(t *testing.T) {
+	t.Log("E2E: Git and ArgoCD")
+	e2e.SetupWithCluster(t)
+
+	buildPath := filepath.Join("src", "test", "packages", "22-git-and-gitops")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "-o=build", "--confirm", "--skip-sbom", "-a=arm64")
+	require.NoError(t, err, stdOut, stdErr)
+
+	path := fmt.Sprintf("build/zarf-package-git-data-check-secrets-%s-1.0.0.tar.zst", e2e.Arch)
+	defer e2e.CleanFiles(path)
+
+	// Deploy the gitops example
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// This package contains SBOMable things but was created with --skip-sbom
+	require.Contains(t, string(stdErr), "This package does NOT contain an SBOM.")
+
+	tunnel, err := cluster.NewZarfTunnel()
+	require.NoError(t, err)
+	err = tunnel.Connect(cluster.ZarfGit, false)
+	require.NoError(t, err)
+	defer tunnel.Close()
+
+	testGitServerConnect(t, tunnel.HTTPEndpoint())
+	testGitServerReadOnly(t, tunnel.HTTPEndpoint())
+	testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
+	waitArgoDeployment(t)
+
 }
 
 func testGitServerConnect(t *testing.T, gitURL string) {
@@ -114,5 +146,16 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 
 	// Prune the flux images to reduce disk pressure
 	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "prune", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
+
+func waitArgoDeployment(t *testing.T) {
+	// Deploy the argocd example and verify that it works
+	path := fmt.Sprintf("build/zarf-package-argocd-%s.tar.zst", e2e.Arch)
+	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--components=argocd-apps", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	
+	// Remove the argocd example when deployment completes
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "argocd", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
