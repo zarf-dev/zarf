@@ -22,9 +22,6 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branchName }}
 
-      - name: Setup golang
-        uses: ./.github/actions/golang
-
       - name: Install The Latest Release Version of Zarf
         uses: defenseunicorns/setup-zarf@main
 
