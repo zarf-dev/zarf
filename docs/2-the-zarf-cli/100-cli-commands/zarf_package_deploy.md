@@ -21,7 +21,7 @@ zarf package deploy [ PACKAGE ] [flags]
   -h, --help                       help for deploy
   -k, --key string                 Path to public key file for validating signed packages
       --set stringToString         Specify deployment variables to set on the command line (KEY=value) (default [])
-      --sget string                (DEPRECATED) Path to public sget key file for remote packages signed via cosign. This flag will be removed in v0.29.0, please use the --key flag instead.
+      --sget string                [Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v0.29.0, please use the --key flag instead.
       --shasum string              Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
 ```
 
