@@ -17,6 +17,7 @@ func TestValidateMinimumCompatibleVersion(t *testing.T) {
 		cliVersion               string
 		minimumCompatibleVersion string
 		returnError              bool
+		expectedErrorMessage     string
 	}
 
 	testCases := []testCase{
@@ -25,6 +26,26 @@ func TestValidateMinimumCompatibleVersion(t *testing.T) {
 			cliVersion:               "v0.26.4",
 			minimumCompatibleVersion: "v0.27.0",
 			returnError:              true,
+			expectedErrorMessage: fmt.Sprintf(
+				lang.CmdPackageDeployValidateMinimumCompatibleVersionErr,
+				"v0.26.4",
+				"v0.27.0",
+				"v0.27.0",
+			),
+		},
+		{
+			name:                     "invalid semantic version (CLI version)",
+			cliVersion:               "invalidSemanticVersion",
+			minimumCompatibleVersion: "v0.0.1",
+			returnError:              true,
+			expectedErrorMessage:     "unable to parse Zarf CLI version",
+		},
+		{
+			name:                     "invalid semantic version (minimum compatible version)",
+			cliVersion:               "v0.0.1",
+			minimumCompatibleVersion: "invalidSemanticVersion",
+			returnError:              true,
+			expectedErrorMessage:     "unable to parse minimum compatible version",
 		},
 		{
 			name:                     "CLI version greater than minimum compatible version",
@@ -58,15 +79,8 @@ func TestValidateMinimumCompatibleVersion(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			err := p.validateMinimumCompatibleVersion(testCase.minimumCompatibleVersion, testCase.cliVersion)
 
-			expectedErrorMessage := fmt.Sprintf(
-				lang.CmdPackageDeployValidateMinimumCompatibleVersionErr,
-				testCase.cliVersion,
-				testCase.minimumCompatibleVersion,
-				testCase.minimumCompatibleVersion,
-			)
-
 			if testCase.returnError {
-				assert.ErrorContains(t, err, expectedErrorMessage)
+				assert.ErrorContains(t, err, testCase.expectedErrorMessage)
 			} else {
 				assert.NoError(t, err, "Expected no error for test case: %s", testCase.name)
 			}

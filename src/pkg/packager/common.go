@@ -463,12 +463,16 @@ func (p *Packager) validateMinimumCompatibleVersion(minimumCompatibleVersion str
 		if cliVersion != "UnknownVersion" {
 			minimumCompatibleSemVer, err := semver.NewVersion(minimumCompatibleVersion)
 			if err != nil {
-				return fmt.Errorf("unable to parse minimum compatible version from Zarf package build data: %w", err)
+				return fmt.Errorf(
+					"unable to parse minimum compatible version '%s' from Zarf package build data : %w",
+					minimumCompatibleVersion,
+					err,
+				)
 			}
 
 			cliSemVer, err := semver.NewVersion(cliVersion)
 			if err != nil {
-				return fmt.Errorf("unable to parse Zarf CLI version: %w", err)
+				return fmt.Errorf("unable to parse Zarf CLI version '%s' : %w", cliVersion, err)
 			}
 
 			if cliSemVer.LessThan(minimumCompatibleSemVer) {
