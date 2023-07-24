@@ -20,7 +20,7 @@ module.exports = function (context, options) {
                         },
                         {
                             // Look for all require("*.toml") files
-                            test: /\.toml/,
+                            test: /\.(yaml|toml|ini)/,
                             // Set this as an asset so it is pulled in as-is without compression
                             type: 'asset/resource',
                             // Generate a filename to place the example next to the generated index.html file
