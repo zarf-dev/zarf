@@ -472,7 +472,12 @@ func (p *Packager) validateMinimumCompatibleVersion(minimumCompatibleVersion str
 			}
 
 			if cliSemVer.LessThan(minimumCompatibleSemVer) {
-				return fmt.Errorf(lang.CmdPackageDeployValidateMinimumCompatibleVersionErr, cliVersion, minimumCompatibleVersion, minimumCompatibleVersion)
+				return fmt.Errorf(
+					lang.CmdPackageDeployValidateMinimumCompatibleVersionErr,
+					cliVersion,
+					minimumCompatibleVersion,
+					minimumCompatibleVersion,
+				)
 			}
 		}
 	}

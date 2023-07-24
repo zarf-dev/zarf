@@ -21,31 +21,31 @@ func TestValidateMinimumCompatibleVersion(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:                     "Assert that a CLI version less than the minimum compatible version returns an error",
+			name:                     "CLI version less than minimum compatible version",
 			cliVersion:               "v0.26.4",
 			minimumCompatibleVersion: "v0.27.0",
 			returnError:              true,
 		},
 		{
-			name:                     "Assert that a CLI version greater than the minimum compatible version does not return an error",
+			name:                     "CLI version greater than minimum compatible version",
 			cliVersion:               "v0.28.2",
 			minimumCompatibleVersion: "v0.27.0",
 			returnError:              false,
 		},
 		{
-			name:                     "Assert that a CLI version equal to the minimum compatible version does not return an error",
+			name:                     "CLI version equal to minimum compatible version",
 			cliVersion:               "v0.27.0",
 			minimumCompatibleVersion: "v0.27.0",
 			returnError:              false,
 		},
 		{
-			name:                     "Assert that an empty minimum compatible version string does not return an error",
+			name:                     "empty minimum compatible version",
 			cliVersion:               "this shouldn't get evaluated when the minimum compatible version string is empty",
 			minimumCompatibleVersion: "",
 			returnError:              false,
 		},
 		{
-			name:                     "Assert that the default CLI version string used in the E2E tests does not return an error",
+			name:                     "default CLI version in E2E tests",
 			cliVersion:               "UnknownVersion", // This is used as a default version in the E2E tests
 			minimumCompatibleVersion: "v0.27.0",
 			returnError:              false,
@@ -58,8 +58,14 @@ func TestValidateMinimumCompatibleVersion(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			err := p.validateMinimumCompatibleVersion(testCase.minimumCompatibleVersion, testCase.cliVersion)
 
+			expectedErrorMessage := fmt.Sprintf(
+				lang.CmdPackageDeployValidateMinimumCompatibleVersionErr,
+				testCase.cliVersion,
+				testCase.minimumCompatibleVersion,
+				testCase.minimumCompatibleVersion,
+			)
+
 			if testCase.returnError {
-				expectedErrorMessage := fmt.Sprintf(lang.CmdPackageDeployValidateMinimumCompatibleVersionErr, testCase.cliVersion, testCase.minimumCompatibleVersion, testCase.minimumCompatibleVersion)
 				assert.ErrorContains(t, err, expectedErrorMessage)
 			} else {
 				assert.NoError(t, err, "Expected no error for test case: %s", testCase.name)
