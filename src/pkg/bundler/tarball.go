@@ -238,7 +238,6 @@ func (tp *tarballProvider) LoadPackage(sha, destinationDir string, _ int) (PathM
 			return fmt.Errorf("expected to write %d bytes to %s, wrote %d", size, path, written)
 		}
 
-		// TODO: also check sha256?
 		return nil
 	}
 
@@ -270,7 +269,11 @@ func (tp *tarballProvider) LoadBundleMetadata() (PathMap, error) {
 		layer := tp.manifest.Locate(path)
 		if !oci.IsEmptyDescriptor(layer) {
 			pathInTarball := filepath.Join(blobsDir, layer.Digest.Encoded())
-			loaded[path] = filepath.Join(tp.dst, pathInTarball)
+			abs := filepath.Join(tp.dst, pathInTarball)
+			loaded[path] = abs
+			if !utils.InvalidPath(abs) && utils.SHAsMatch(abs, layer.Digest.Encoded()) == nil {
+				continue
+			}
 			if err := archiver.Extract(tp.src, pathInTarball, tp.dst); err != nil {
 				return nil, fmt.Errorf("failed to extract %s from %s: %w", path, tp.src, err)
 			}

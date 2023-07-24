@@ -30,6 +30,7 @@ type BundlerCreateOptions struct {
 type BundlerDeployOptions struct {
 	Packages     []string
 	Source       string
+	PublicKey    string
 	SetVariables map[string]string
 }
 

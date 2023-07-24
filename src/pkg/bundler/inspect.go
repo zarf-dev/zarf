@@ -26,13 +26,13 @@ func (b *Bundler) Inspect() error {
 		return err
 	}
 
-	// read the bundle's metadata into memory
-	if err := b.ReadBundleYaml(loaded[BundleYAML], &b.bundle); err != nil {
+	// validate the sig (if present)
+	if err := ValidateBundleSignature(loaded[BundleYAML], loaded[BundleYAMLSignature], b.cfg.InspectOpts.PublicKey); err != nil {
 		return err
 	}
 
-	// validate the sig (if present)
-	if err := ValidateBundleSignature(b.tmp); err != nil {
+	// read the bundle's metadata into memory
+	if err := b.ReadBundleYaml(loaded[BundleYAML], &b.bundle); err != nil {
 		return err
 	}
 

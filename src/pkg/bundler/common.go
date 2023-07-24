@@ -273,14 +273,21 @@ func (b *Bundler) CalculateBuildInfo() error {
 }
 
 // ValidateBundleSignature validates the bundle signature
-// TODO: implement
-func ValidateBundleSignature(base string) error {
-	message.Debugf("Validating bundle signature from %s/%s", base, config.ZarfYAMLSignature)
-	return nil
-	// err := utils.CosignVerifyBlob(bfs.tmp.ZarfBundleYaml, bfs.tmp.ZarfSig, <keypath>)
-	// if err != nil {
-	// 	return err
-	// }
+func ValidateBundleSignature(bundleYAMLPath, signaturePath, publicKey string) error {
+	if utils.InvalidPath(bundleYAMLPath) {
+		return fmt.Errorf("path for %s at %s does not exist", BundleYAML, bundleYAMLPath)
+	}
+	// The package is not signed, but a public key was provided
+	if utils.InvalidPath(signaturePath) && !utils.InvalidPath(publicKey) {
+		return fmt.Errorf("package is not signed, but a public key was provided")
+	}
+	// The package is signed, but no public key was provided
+	if !utils.InvalidPath(signaturePath) && utils.InvalidPath(publicKey) {
+		return fmt.Errorf("package is signed, but no public key was provided")
+	}
+
+	// The package is signed, and a public key was provided
+	return utils.CosignVerifyBlob(bundleYAMLPath, signaturePath, publicKey)
 }
 
 // MergeVariables merges the variables from the config file and the CLI

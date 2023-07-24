@@ -32,7 +32,16 @@ func (b *Bundler) Pull() error {
 		return err
 	}
 
-	// TODO: figure out the best path to check the signature before we pull the bundle
+	// pull the bundle's metadata + sig
+	loadedMetadata, err := provider.LoadBundleMetadata()
+	if err != nil {
+		return err
+	}
+
+	// validate the sig (if present)
+	if err := ValidateBundleSignature(loadedMetadata[BundleYAML], loadedMetadata[BundleYAMLSignature], b.cfg.PullOpts.PublicKey); err != nil {
+		return err
+	}
 
 	// pull the bundle
 	loaded, err := provider.LoadBundle(config.CommonOptions.OCIConcurrency)
