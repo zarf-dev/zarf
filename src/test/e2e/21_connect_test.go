@@ -72,14 +72,15 @@ func TestMetrics(t *testing.T) {
 	require.NoError(t, err)
 	defer tunnel.Close()
 
-	// Get untrusted https endpoint
+	// Skip certificate verification
+	// this is an https endpoint being accessed through port-forwarding
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	client := &http.Client{Transport: tr}
-	https_endpoint := strings.ReplaceAll(tunnel.HTTPEndpoint(), "http", "https")
-	resp, err := client.Get(https_endpoint + "/metrics")
+	httpsEndpoint := strings.ReplaceAll(tunnel.HTTPEndpoint(), "http", "https")
+	resp, err := client.Get(httpsEndpoint + "/metrics")
 	if err != nil {
 		t.Fatal(err)
 	}
