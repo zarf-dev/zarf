@@ -78,7 +78,7 @@ func (b *Bundler) Pull() error {
 	}
 
 	// read the metadata into memory
-	if err := b.ReadBundleYaml(loaded[BundleYAML], &b.bundle); err != nil {
+	if err := utils.ReadYaml(loaded[BundleYAML], &b.bundle); err != nil {
 		return err
 	}
 

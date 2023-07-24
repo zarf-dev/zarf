@@ -27,7 +27,7 @@ func (b *Bundler) Create() error {
 		return err
 	}
 	// read the bundle's metadata into memory
-	if err := b.ReadBundleYaml(BundleYAML, &b.bundle); err != nil {
+	if err := utils.ReadYaml(BundleYAML, &b.bundle); err != nil {
 		return err
 	}
 
@@ -57,7 +57,7 @@ func (b *Bundler) Create() error {
 	if b.cfg.CreateOpts.SigningKeyPath != "" {
 		// write the bundle to disk so we can sign it
 		bundlePath := filepath.Join(b.tmp, BundleYAML)
-		if err := b.WriteBundleYaml(bundlePath, &b.bundle); err != nil {
+		if err := utils.WriteYaml(bundlePath, &b.bundle, 0600); err != nil {
 			return err
 		}
 

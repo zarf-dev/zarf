@@ -79,17 +79,6 @@ func (b *Bundler) ClearPaths() {
 	_ = os.RemoveAll(config.ZarfSBOMDir)
 }
 
-// ReadBundleYaml is a wrapper around utils.ReadYaml
-func (b *Bundler) ReadBundleYaml(path string, bndl *types.ZarfBundle) error {
-	return utils.ReadYaml(path, bndl)
-}
-
-// WriteBundleYaml is a wrapper around utils.WriteYaml
-func (b *Bundler) WriteBundleYaml(path string, bndl *types.ZarfBundle) error {
-	// TODO: is this the proper permissions?
-	return utils.WriteYaml(path, bndl, 0600)
-}
-
 // ValidateBundle validates the bundle
 func (b *Bundler) ValidateBundle() error {
 	if b.bundle.Metadata.Architecture == "" {

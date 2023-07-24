@@ -46,7 +46,7 @@ func (b *Bundler) Deploy() error {
 	}
 
 	// read the bundle's metadata into memory
-	if err := b.ReadBundleYaml(loaded[BundleYAML], &b.bundle); err != nil {
+	if err := utils.ReadYaml(loaded[BundleYAML], &b.bundle); err != nil {
 		return err
 	}
 
@@ -55,10 +55,11 @@ func (b *Bundler) Deploy() error {
 	// deploy each package
 	for _, pkg := range b.bundle.Packages {
 		sha := strings.Split(pkg.Ref, "@sha256:")[1]
-		// TODO: figure out how we want to handle passing --packages to deploy
-		// TODO: add a `name` field to the package struct
+		split := strings.Split(pkg.Repository, "/")
+		name := split[len(split)-1]
+		// TODO: figure out how we want to handle passing --packages to deploy, prob use name
 		if len(b.cfg.DeployOpts.Packages) == 0 || helpers.SliceContains(b.cfg.DeployOpts.Packages, sha) {
-			pkgTmp, err := utils.MakeTempDir("") // change this to pkg.Name
+			pkgTmp, err := utils.MakeTempDir(name)
 			if err != nil {
 				return err
 			}
