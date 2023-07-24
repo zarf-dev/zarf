@@ -76,7 +76,11 @@ func TestValidateMinimumCompatibleVersion(t *testing.T) {
 	p := &Packager{}
 
 	for _, testCase := range testCases {
+		testCase := testCase // create a local copy of this loop variable
+
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := p.validateMinimumCompatibleVersion(testCase.minimumCompatibleVersion, testCase.cliVersion)
 
 			if testCase.returnError {
