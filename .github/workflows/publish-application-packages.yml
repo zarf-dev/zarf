@@ -25,9 +25,6 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
-      - name: Setup NodeJS
-        uses: ./.github/actions/node
-
       - name: Install The Latest Release Version of Zarf
         uses: defenseunicorns/setup-zarf@main
 
