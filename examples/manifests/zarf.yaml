@@ -12,7 +12,6 @@ components:
         files:
           # local manifests are specified relative to the `zarf.yaml` that uses them:
           - httpd-deployment.yaml
-          - httpd-service.yaml
     actions:
       onDeploy:
       # the following checks were computed by viewing the success state of the package deployment
