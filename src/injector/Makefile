@@ -16,7 +16,7 @@ build-injector-linux-amd: ## Build the Zarf injector for AMD64
 	rustup target add x86_64-unknown-linux-musl
 
 	if [ "$(shell uname -m)" = "arm64" ] || [ "$(shell uname -m)" = "aarch64" ]; then \
-		test -s x86_64-linux-musl-cross || curl https://musl.cc/x86_64-linux-musl-cross.tgz | tar -xz; \
+		test -s x86_64-linux-musl-cross || curl https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/x86_64-linux-musl-cross.tgz | tar -xz; \
 		export PATH="$$PWD/x86_64-linux-musl-cross/bin:$$PATH"; \
 		cargo build --target x86_64-unknown-linux-musl --release; \
 		x86_64-linux-musl-strip target/x86_64-unknown-linux-musl/release/zarf-injector; \
