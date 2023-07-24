@@ -17,7 +17,7 @@ module.exports = function (context, options) {
                             generator: {
                                 filename: 'build/[file].[hash]'
                             }
-                        }
+                        },
                     ],
                 },
             };
