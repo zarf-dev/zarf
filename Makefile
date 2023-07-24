@@ -3,6 +3,7 @@
 
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
+KEY ?= ""
 ######################################################################################
 
 # Figure out which Zarf binary we should use based on the operating system we are on
@@ -129,8 +130,8 @@ ib-init-package:
 
 # INTERNAL used to build the dos games packages for release
 build-release-packages:
-	$(ZARF_BIN) package create -o build -a amd64 examples/dos-games --confirm
-	$(ZARF_BIN) package create -o build -a arm64 examples/dos-games --confirm
+	$(ZARF_BIN) package create -o build -a amd64 examples/dos-games --key=$(KEY) --confirm
+	$(ZARF_BIN) package create -o build -a arm64 examples/dos-games --key=$(KEY) --confirm
 
 # INTERNAL used to publish the dos games packages to GHCR
 publish-release-packages:

@@ -41,5 +41,5 @@ jobs:
       - name: Build And Publish Application Packages
         # TODO: Add package signing to this step
         run: |
-          make build-application-packages
-          make publish-application-packages
+          make build-release-packages KEY=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }}
+          make publish-release-packages
