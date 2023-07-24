@@ -16,7 +16,7 @@ import (
 //
 // operations that are common no matter the source should be implemented on bundler
 type Provider interface {
-	// LoadBundleMetadata loads a bundle's metadata and signature
+	// LoadBundleMetadata loads a bundle's metadata and signature into the temporary directory and returns a map of the bundle's metadata files
 	//
 	// these two files are placed in the `dst` directory
 	//
@@ -36,7 +36,7 @@ type Provider interface {
 	// : : pulls the package from the OCI ref
 	LoadPackage(sha, destinationDir string, concurrency int) (PathMap, error)
 
-	// LoadBundle loads a bundle
+	// LoadBundle loads a bundle into the temporary directory and returns a map of the bundle's files
 	//
 	// (currently only the remote provider utilizes the concurrency parameter)
 	LoadBundle(concurrency int) (PathMap, error)

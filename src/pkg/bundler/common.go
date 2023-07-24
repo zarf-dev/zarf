@@ -303,6 +303,6 @@ func IsValidTarballPath(path string) bool {
 	if !strings.HasPrefix(name, BundlePrefix) {
 		return false
 	}
-	re := regexp.MustCompile(`^zarf-bundle-.*-.*.tar(.zst)?$`)
+	re := regexp.MustCompile(`^zarf-bundle-.*-.*.tar(.zst)?$`) // TODO: change this during the port
 	return re.MatchString(name)
 }
