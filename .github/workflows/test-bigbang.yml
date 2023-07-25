@@ -74,6 +74,13 @@ jobs:
           name: build-artifacts
           path: build/
 
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Make Zarf executable
+        run: |
+          chmod +x build/zarf
+
       - name: Setup K3d
         uses: ./.github/actions/k3d
 
