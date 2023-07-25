@@ -15,68 +15,68 @@ import (
 
 const (
 	// Root config keys
-	V_LOG_LEVEL    = "log_level"
-	V_ARCHITECTURE = "architecture"
-	V_NO_LOG_FILE  = "no_log_file"
-	V_NO_PROGRESS  = "no_progress"
-	V_ZARF_CACHE   = "zarf_cache"
-	V_TMP_DIR      = "tmp_dir"
-	V_INSECURE     = "insecure"
+	VLogLevel     = "log_level"
+	VArchitecture = "architecture"
+	VNoLogFile    = "no_log_file"
+	VNoProgress   = "no_progress"
+	VZarfCache    = "zarf_cache"
+	VTmpDir       = "tmp_dir"
+	VInsecure     = "insecure"
 
 	// Init config keys
-	V_INIT_COMPONENTS    = "init.components"
-	V_INIT_STORAGE_CLASS = "init.storage_class"
+	VInitComponents   = "init.components"
+	VInitStorageClass = "init.storage_class"
 
 	// Init Git config keys
-	V_INIT_GIT_URL       = "init.git.url"
-	V_INIT_GIT_PUSH_USER = "init.git.push_username"
-	V_INIT_GIT_PUSH_PASS = "init.git.push_password"
-	V_INIT_GIT_PULL_USER = "init.git.pull_username"
-	V_INIT_GIT_PULL_PASS = "init.git.pull_password"
+	VInitGitURL      = "init.git.url"
+	VInitGitPushUser = "init.git.push_username"
+	VInitGitPushPass = "init.git.push_password"
+	VInitGitPullUser = "init.git.pull_username"
+	VInitGitPullPass = "init.git.pull_password"
 
 	// Init Registry config keys
-	V_INIT_REGISTRY_URL       = "init.registry.url"
-	V_INIT_REGISTRY_NODEPORT  = "init.registry.nodeport"
-	V_INIT_REGISTRY_SECRET    = "init.registry.secret"
-	V_INIT_REGISTRY_PUSH_USER = "init.registry.push_username"
-	V_INIT_REGISTRY_PUSH_PASS = "init.registry.push_password"
-	V_INIT_REGISTRY_PULL_USER = "init.registry.pull_username"
-	V_INIT_REGISTRY_PULL_PASS = "init.registry.pull_password"
+	VInitRegistryURL      = "init.registry.url"
+	VInitRegistryNodeport = "init.registry.nodeport"
+	VInitRegistrySecret   = "init.registry.secret"
+	VInitRegistryPushUser = "init.registry.push_username"
+	VInitRegistryPushPass = "init.registry.push_password"
+	VInitRegistryPullUser = "init.registry.pull_username"
+	VInitRegistryPullPass = "init.registry.pull_password"
 
 	// Init Package config keys
-	V_INIT_ARTIFACT_URL        = "init.artifact.url"
-	V_INIT_ARTIFACT_PUSH_USER  = "init.artifact.push_username"
-	V_INIT_ARTIFACT_PUSH_TOKEN = "init.artifact.push_token"
+	VInitArtifactURL       = "init.artifact.url"
+	VInitArtifactPushUser  = "init.artifact.push_username"
+	VInitArtifactPushToken = "init.artifact.push_token"
 
 	// Package config keys
-	V_PKG_OCI_CONCURRENCY = "package.oci_concurrency"
+	VPkgOCIConcurrency = "package.oci_concurrency"
 
 	// Package create config keys
-	V_PKG_CREATE_SET                  = "package.create.set"
-	V_PKG_CREATE_OUTPUT               = "package.create.output"
-	V_PKG_CREATE_SBOM                 = "package.create.sbom"
-	V_PKG_CREATE_SBOM_OUTPUT          = "package.create.sbom_output"
-	V_PKG_CREATE_SKIP_SBOM            = "package.create.skip_sbom"
-	V_PKG_CREATE_MAX_PACKAGE_SIZE     = "package.create.max_package_size"
-	V_PKG_CREATE_SIGNING_KEY          = "package.create.signing_key"
-	V_PKG_CREATE_SIGNING_KEY_PASSWORD = "package.create.signing_key_password"
-	V_PKG_CREATE_DIFFERENTIAL         = "package.create.differential"
-	V_PKG_CREATE_REGISTRY_OVERRIDE    = "package.create.registry_override"
+	VPkgCreateSet                = "package.create.set"
+	VPkgCreateOutput             = "package.create.output"
+	VPkgCreateSbom               = "package.create.sbom"
+	VPkgCreateSbomOutput         = "package.create.sbom_output"
+	VPkgCreateSkipSbom           = "package.create.skip_sbom"
+	VPkgCreateMaxPackageSize     = "package.create.max_package_size"
+	VPkgCreateSigningKey         = "package.create.signing_key"
+	VPkgCreateSigningKeyPassword = "package.create.signing_key_password"
+	VPkgCreateDifferential       = "package.create.differential"
+	VPkgCreateRegistryOverride   = "package.create.registry_override"
 
 	// Package deploy config keys
-	V_PKG_DEPLOY_SET        = "package.deploy.set"
-	V_PKG_DEPLOY_COMPONENTS = "package.deploy.components"
-	V_PKG_DEPLOY_SHASUM     = "package.deploy.shasum"
-	V_PKG_DEPLOY_SGET       = "package.deploy.sget"
-	V_PKG_DEPLOY_PUBLIC_KEY = "package.deploy.public_key"
+	VPkgDeploySet        = "package.deploy.set"
+	VPkgDeployComponents = "package.deploy.components"
+	VPkgDeployShasum     = "package.deploy.shasum"
+	VPkgDeploySget       = "package.deploy.sget"
+	VPkgDeployPublicKey  = "package.deploy.public_key"
 
 	// Package publish config keys
-	V_PKG_PUBLISH_SIGNING_KEY          = "package.publish.signing_key"
-	V_PKG_PUBLISH_SIGNING_KEY_PASSWORD = "package.publish.signing_key_password"
+	VPkgPublishSigningKey         = "package.publish.signing_key"
+	VPkgPublishSigningKeyPassword = "package.publish.signing_key_password"
 
 	// Package pull config keys
-	V_PKG_PULL_OUTPUT_DIR = "package.pull.output_directory"
-	V_PKG_PULL_PUBLIC_KEY = "package.pull.public_key"
+	VPkgPullOutputDir = "package.pull.output_directory"
+	VPkgPullPublicKey = "package.pull.public_key"
 )
 
 // Viper instance used by commands

@@ -104,7 +104,7 @@ var prepareFindImages = &cobra.Command{
 
 		// Ensure uppercase keys from viper
 		v := common.GetViper()
-		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(common.V_PKG_CREATE_SET), strings.ToUpper)
+		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(common.VPkgCreateSet), strings.ToUpper)
 		pkgConfig.CreateOpts.SetVariables = helpers.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
 
 		// Configure the packager
@@ -148,11 +148,11 @@ func init() {
 	prepareCmd.AddCommand(prepareFindImages)
 	prepareCmd.AddCommand(prepareGenerateConfigFile)
 
-	v.SetDefault(common.V_PKG_CREATE_SET, map[string]string{})
+	v.SetDefault(common.VPkgCreateSet, map[string]string{})
 
 	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.V_PKG_CREATE_SET), lang.CmdPrepareFlagSet)
+	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPrepareFlagSet)
 	// allow for the override of the default helm KubeVersion
 	prepareFindImages.Flags().StringVar(&kubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
 

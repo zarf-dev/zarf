@@ -78,21 +78,21 @@ func init() {
 
 	v := common.InitViper()
 
-	v.SetDefault(common.V_LOG_LEVEL, "info")
-	v.SetDefault(common.V_ARCHITECTURE, "")
-	v.SetDefault(common.V_NO_LOG_FILE, false)
-	v.SetDefault(common.V_NO_PROGRESS, false)
-	v.SetDefault(common.V_INSECURE, false)
-	v.SetDefault(common.V_ZARF_CACHE, config.ZarfDefaultCachePath)
-	v.SetDefault(common.V_TMP_DIR, "")
+	v.SetDefault(common.VLogLevel, "info")
+	v.SetDefault(common.VArchitecture, "")
+	v.SetDefault(common.VNoLogFile, false)
+	v.SetDefault(common.VNoProgress, false)
+	v.SetDefault(common.VInsecure, false)
+	v.SetDefault(common.VZarfCache, config.ZarfDefaultCachePath)
+	v.SetDefault(common.VTmpDir, "")
 
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(common.V_LOG_LEVEL), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(common.V_ARCHITECTURE), lang.RootCmdFlagArch)
-	rootCmd.PersistentFlags().BoolVar(&config.SkipLogFile, "no-log-file", v.GetBool(common.V_NO_LOG_FILE), lang.RootCmdFlagSkipLogFile)
-	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(common.V_NO_PROGRESS), lang.RootCmdFlagNoProgress)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(common.V_ZARF_CACHE), lang.RootCmdFlagCachePath)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(common.V_TMP_DIR), lang.RootCmdFlagTempDir)
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(common.V_INSECURE), lang.RootCmdFlagInsecure)
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(common.VArchitecture), lang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().BoolVar(&config.SkipLogFile, "no-log-file", v.GetBool(common.VNoLogFile), lang.RootCmdFlagSkipLogFile)
+	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(common.VNoProgress), lang.RootCmdFlagNoProgress)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(common.VZarfCache), lang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(common.VTmpDir), lang.RootCmdFlagTempDir)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(common.VInsecure), lang.RootCmdFlagInsecure)
 }
 
 func cliSetup() {
