@@ -55,12 +55,12 @@ ensure-ui-build-dir:
 # INTERNAL: used to build the UI only if necessary
 check-ui:
 	@ if [ ! -z "$(shell command -v shasum)" ]; then\
-	    if test "$(shell ./hack/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
-		    $(MAKE) build-ui;\
-		    ./hack/print-ui-diff.sh > build/ui/git-info.txt;\
-	    fi;\
+		if test "$(shell ./hack/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
+			$(MAKE) build-ui;\
+			./hack/print-ui-diff.sh > build/ui/git-info.txt;\
+		fi;\
 	else\
-        $(MAKE) build-ui;\
+		$(MAKE) build-ui;\
 	fi
 
 build-ui: ## Build the Zarf UI
@@ -118,6 +118,14 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 # INTERNAL: used to build a release version of the init package with a specific agent image
 release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
+
+# INTERNAL: used to build an iron bank version of the init package with an ib version of the registry image
+ib-init-package:
+	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm . \
+		--set REGISTRY_IMAGE_DOMAIN="registry1.dso.mil/" \
+		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
+		--set REGISTRY_IMAGE_TAG="2.8.2"
 
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
