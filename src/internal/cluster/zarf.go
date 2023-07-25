@@ -130,9 +130,9 @@ func (c *Cluster) PackageSecretNeedsWait(secretName string) (bool, int, error) {
 }
 
 // RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
-func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings) (*corev1.Secret, error) {
+func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int) (*corev1.Secret, error) {
 
-	packageSecret, err := c.RecordPackageDeployment(pkg, components, connectStrings)
+	packageSecret, err := c.RecordPackageDeployment(pkg, components, connectStrings, generation)
 	if err != nil {
 		return packageSecret, err
 	}
@@ -169,7 +169,15 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings) (*corev1.Secret, error) {
+func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int) (*corev1.Secret, error) {
+
+	// Attempt to load information about webhooks for the package
+	componentWebhooks := map[string]map[string]types.Webhook{}
+	existingPackageSecret, err := c.GetDeployedPackage(pkg.Metadata.Name)
+	if err == nil {
+		componentWebhooks = existingPackageSecret.ComponentWebhooks
+	}
+
 	// Generate a secret that describes the package that is being deployed
 	packageName := pkg.Metadata.Name
 	deployedPackageSecret := c.Kube.GenerateSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName, corev1.SecretTypeOpaque)
@@ -181,6 +189,8 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 		Data:               pkg,
 		DeployedComponents: components,
 		ConnectStrings:     connectStrings,
+		Generation:         generation,
+		ComponentWebhooks:  componentWebhooks,
 	})
 	if err != nil {
 		return nil, err

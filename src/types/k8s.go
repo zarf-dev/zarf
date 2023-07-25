@@ -50,6 +50,7 @@ type DeployedPackage struct {
 	Name       string      `json:"name"`
 	Data       ZarfPackage `json:"data"`
 	CLIVersion string      `json:"cliVersion"`
+	Generation int         `json:"generation"`
 
 	DeployedComponents []DeployedComponent           `json:"deployedComponents"`
 	ComponentWebhooks  map[string]map[string]Webhook `json:"componentWebhooks,omitempty"`
@@ -58,15 +59,17 @@ type DeployedPackage struct {
 
 // DeployedComponent contains information about a Zarf Package Component that has been deployed to a cluster.
 type DeployedComponent struct {
-	Name            string           `json:"name"`
-	InstalledCharts []InstalledChart `json:"installedCharts"`
-	Status          ComponentStatus  `json:"status"`
+	Name               string           `json:"name"`
+	InstalledCharts    []InstalledChart `json:"installedCharts"`
+	Status             ComponentStatus  `json:"status"`
+	ObservedGeneration int              `json:"observedGeneration"`
 }
 
 type Webhook struct {
 	Name                string `json:"name"`
 	WaitDurationSeconds int    `json:"waitDurationSeconds,omitempty"`
 	Status              string `json:"status"`
+	ObservedGeneration  int    `json:"observedGeneration"`
 }
 
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
