@@ -75,14 +75,14 @@ func (b *Bundler) Deploy() error {
 			return err
 		}
 
-		deployOpts := types.ZarfPackageOptions{
+		opts := types.ZarfPackageOptions{
 			PackagePath:   pkgTmp,
 			Components:    strings.Join(pkg.OptionalComponents, ","),
 			PublicKeyPath: publicKeyPath,
 			// TODO: SetVariables...
 		}
 
-		pkgCfg.PkgOpts = deployOpts
+		pkgCfg.PkgOpts = opts
 
 		pkgClient, err := packager.New(&pkgCfg)
 		if err != nil {

@@ -137,7 +137,12 @@ func (b *Bundler) ValidateBundle() error {
 			return err
 		}
 
-		if err := packager.ValidatePackageSignature(tmp, pkg.PublicKey); err != nil {
+		publicKeyPath := filepath.Join(tmp, "public-key.txt")
+		if err := utils.WriteFile(publicKeyPath, []byte(pkg.PublicKey)); err != nil {
+			return err
+		}
+
+		if err := packager.ValidatePackageSignature(tmp, publicKeyPath); err != nil {
 			return err
 		}
 		if len(pkg.OptionalComponents) > 0 {
