@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 
 func TestReleases(t *testing.T) {
 	// Initialize the cluster with the Git server and AMD64 architecture
-	zarfExec(t, "init", "--confirm", "--components", "git-server", "--architecture", "amd64", "--set=registry_cpu_limit=500m")
+	zarfExec(t, "init", "--confirm", "--components", "git-server", "--architecture", "amd64")
 
 	// Build the previous version
 	bbVersion := fmt.Sprintf("--set=BB_VERSION=%s", previous)
