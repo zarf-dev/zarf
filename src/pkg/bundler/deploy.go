@@ -7,12 +7,14 @@ package bundler
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Deploy deploys a bundle
@@ -52,6 +54,8 @@ func (b *Bundler) Deploy() error {
 
 	// TODO: state sharing? variable scoping?
 
+	pkgCfg := types.PackagerConfig{}
+
 	// deploy each package
 	for _, pkg := range b.bundle.Packages {
 		sha := strings.Split(pkg.Ref, "@sha256:")[1]
@@ -68,14 +72,31 @@ func (b *Bundler) Deploy() error {
 			if err != nil {
 				return err
 			}
-			if err := packager.ValidatePackageSignature(pkgTmp, pkg.PublicKey); err != nil {
+
+			publicKeyPath := filepath.Join(pkgTmp, "public-key.txt")
+			if err := utils.WriteFile(publicKeyPath, []byte(pkg.PublicKey)); err != nil {
 				return err
 			}
-			// TODO: this is where we break packager
-			// check if is init-package
-			// confirm deployment interactively
-			// set variables
-			// deploy all the components
+
+			deployOpts := types.ZarfDeployOptions{
+				PackagePath:   pkgTmp,
+				Components:    strings.Join(pkg.OptionalComponents, ","),
+				PublicKeyPath: publicKeyPath,
+				// TODO: SetVariables...
+			}
+
+			pkgCfg.DeployOpts = deployOpts
+
+			pkgClient, err := packager.New(&pkgCfg)
+			if err != nil {
+				return err
+			}
+			if err := pkgClient.SetTempDirectory(pkgTmp); err != nil {
+				return err
+			}
+			if err := pkgClient.Deploy(); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

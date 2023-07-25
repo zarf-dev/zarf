@@ -100,6 +100,17 @@ func NewOrDie(config *types.PackagerConfig) *Packager {
 	return pkgConfig
 }
 
+// SetTempDirectory sets the temp directory for the packager.
+func (p *Packager) SetTempDirectory(path string) error {
+	p.ClearTempPaths()
+	tmp, err := createPaths(path)
+	if err != nil {
+		return fmt.Errorf("unable to create package temp paths: %w", err)
+	}
+	p.tmp = tmp
+	return nil
+}
+
 // GetInitPackageName returns the formatted name of the init package.
 func GetInitPackageName(arch string) string {
 	message.Debug("packager.GetInitPackageName()")
