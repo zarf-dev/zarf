@@ -72,6 +72,8 @@ func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) er
 	// Set the namespace for helm
 	h.Settings.SetNamespace(namespace)
 
+	h.Settings.Debug = true
+
 	// Setup K8s connection
 	err := actionConfig.Init(h.Settings.RESTClientGetter(), namespace, "", spinner.Updatef)
 
