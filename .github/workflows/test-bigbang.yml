@@ -81,6 +81,10 @@ jobs:
         run: |
           chmod +x build/zarf
 
+      # Before we run the tests we need to aggressively cleanup files to reduce disk pressure
+      - name: Cleanup files
+        uses: ./.github/actions/cleanup-files
+
       - name: Setup K3d
         uses: ./.github/actions/k3d
 
