@@ -6,8 +6,11 @@ package bundler
 
 import (
 	"context"
+	"strings"
 
+	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Remove should do the same as previous code
@@ -18,7 +21,7 @@ import (
 func (b *Bundler) Remove() error {
 	ctx := context.TODO()
 	// create a new provider
-	provider, err := NewProvider(ctx, b.cfg.InspectOpts.Source, b.tmp)
+	provider, err := NewProvider(ctx, b.cfg.RemoveOpts.Source, b.tmp)
 	if err != nil {
 		return err
 	}
@@ -34,7 +37,31 @@ func (b *Bundler) Remove() error {
 		return err
 	}
 
-	// TODO: support removing bundle by: name / tarball / OCI ref
+	for _, pkg := range b.bundle.Packages {
+		split := strings.Split(pkg.Repository, "/")
+		name := split[len(split)-1]
+		pkgTmp, err := utils.MakeTempDir(name)
+		if err != nil {
+			return err
+		}
+		pkgCfg := types.PackagerConfig{
+			PkgOpts: types.ZarfPackageOptions{
+				PackagePath: name,
+			},
+		}
+		pkgClient, err := packager.New(&pkgCfg)
+		if err != nil {
+			return err
+		}
+		if err := pkgClient.SetTempDirectory(pkgTmp); err != nil {
+			return err
+		}
+		defer pkgClient.ClearTempPaths()
+
+		if err := pkgClient.Remove(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

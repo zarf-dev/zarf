@@ -274,14 +274,14 @@ func (p *Packager) loadZarfPkg() error {
 		return fmt.Errorf("unable to handle the provided package path: %w", err)
 	}
 
-	alreadyExtracted := p.cfg.DeployOpts.PackagePath == p.tmp.Base
+	alreadyExtracted := p.cfg.PkgOpts.PackagePath == p.tmp.Base
 
-	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
+	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.PkgOpts.PackagePath)
 	defer spinner.Stop()
 
 	// Make sure the user gave us a package we can work with
-	if utils.InvalidPath(p.cfg.DeployOpts.PackagePath) {
-		return fmt.Errorf("unable to find the package at %s", p.cfg.DeployOpts.PackagePath)
+	if utils.InvalidPath(p.cfg.PkgOpts.PackagePath) {
+		return fmt.Errorf("unable to find the package at %s", p.cfg.PkgOpts.PackagePath)
 	}
 
 	// If packagePath has partial in the name, we need to combine the partials into a single package
@@ -293,7 +293,7 @@ func (p *Packager) loadZarfPkg() error {
 	if !alreadyExtracted {
 		// Extract the archive
 		spinner.Updatef("Extracting the package, this may take a few moments")
-		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
+		if err := archiver.Unarchive(p.cfg.PkgOpts.PackagePath, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract the package: %w", err)
 		}
 	}
@@ -354,10 +354,10 @@ func (p *Packager) loadZarfPkg() error {
 }
 
 func (p *Packager) handleIfPartialPkg() error {
-	message.Debugf("Checking for partial package: %s", p.cfg.DeployOpts.PackagePath)
+	message.Debugf("Checking for partial package: %s", p.cfg.PkgOpts.PackagePath)
 
 	// If packagePath has partial in the name, we need to combine the partials into a single package
-	if !strings.Contains(p.cfg.DeployOpts.PackagePath, ".part000") {
+	if !strings.Contains(p.cfg.PkgOpts.PackagePath, ".part000") {
 		message.Debug("No partial package detected")
 		return nil
 	}
@@ -365,7 +365,7 @@ func (p *Packager) handleIfPartialPkg() error {
 	message.Debug("Partial package detected")
 
 	// Replace part 000 with *
-	pattern := strings.Replace(p.cfg.DeployOpts.PackagePath, ".part000", ".part*", 1)
+	pattern := strings.Replace(p.cfg.PkgOpts.PackagePath, ".part000", ".part*", 1)
 	fileList, err := filepath.Glob(pattern)
 	if err != nil {
 		return fmt.Errorf("unable to find partial package files: %s", err)
@@ -375,7 +375,7 @@ func (p *Packager) handleIfPartialPkg() error {
 	sort.Strings(fileList)
 
 	// Create the new package
-	destination := strings.Replace(p.cfg.DeployOpts.PackagePath, ".part000", "", 1)
+	destination := strings.Replace(p.cfg.PkgOpts.PackagePath, ".part000", "", 1)
 	pkgFile, err := os.Create(destination)
 	if err != nil {
 		return fmt.Errorf("unable to create new package file: %s", err)
@@ -385,7 +385,7 @@ func (p *Packager) handleIfPartialPkg() error {
 	// Remove the new package if there is an error
 	defer func() {
 		// If there is an error, remove the new package
-		if p.cfg.DeployOpts.PackagePath != destination {
+		if p.cfg.PkgOpts.PackagePath != destination {
 			os.Remove(destination)
 		}
 	}()
@@ -442,7 +442,7 @@ func (p *Packager) handleIfPartialPkg() error {
 	}
 
 	// Success, update the package path
-	p.cfg.DeployOpts.PackagePath = destination
+	p.cfg.PkgOpts.PackagePath = destination
 	return nil
 }
 

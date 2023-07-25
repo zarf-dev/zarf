@@ -41,8 +41,8 @@ var (
 func (p *Packager) Deploy() error {
 	message.Debug("packager.Deploy()")
 
-	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
-		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)
+	if utils.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
+		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
 		if err != nil {
 			return err
 		}
@@ -60,7 +60,7 @@ func (p *Packager) Deploy() error {
 		}
 	}
 
-	if err := ValidatePackageSignature(p.tmp.Base, p.cfg.DeployOpts.PublicKeyPath); err != nil {
+	if err := ValidatePackageSignature(p.tmp.Base, p.cfg.PkgOpts.PublicKeyPath); err != nil {
 		return err
 	}
 

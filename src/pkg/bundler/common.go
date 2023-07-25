@@ -42,10 +42,6 @@ func New(cfg *types.BundlerConfig) (*Bundler, error) {
 		return nil, errors.New("bundler.New() called with nil config")
 	}
 
-	if cfg.SetVariableMap == nil {
-		cfg.SetVariableMap = make(map[string]*types.ZarfSetVariable)
-	}
-
 	var (
 		bundler = &Bundler{
 			cfg: cfg,

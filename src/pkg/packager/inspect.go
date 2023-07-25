@@ -24,11 +24,11 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	}
 
 	// Handle OCI packages that have been published to a registry
-	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
+	if utils.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
 
-		message.Debugf("Pulling layers %v from %s", partialPaths, p.cfg.DeployOpts.PackagePath)
+		message.Debugf("Pulling layers %v from %s", partialPaths, p.cfg.PkgOpts.PackagePath)
 
-		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)
+		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
 		if err != nil {
 			return err
 		}
@@ -44,21 +44,21 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		}
 	} else {
 		// This package exists on the local file system - extract the first layer of the tarball
-		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfChecksumsTxt, p.tmp.Base); err != nil {
+		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfChecksumsTxt, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract %s: %w", config.ZarfChecksumsTxt, err)
 		}
 
-		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
+		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAML, err)
 		}
-		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfYAMLSignature, p.tmp.Base); err != nil {
+		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfYAMLSignature, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAMLSignature, err)
 		}
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 		}
 		if wantSBOM {
-			if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfSBOMTar, p.tmp.Base); err != nil {
+			if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfSBOMTar, p.tmp.Base); err != nil {
 				return fmt.Errorf("unable to extract %s: %w", config.ZarfSBOMTar, err)
 			}
 		}

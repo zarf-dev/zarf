@@ -77,16 +77,16 @@ var packageDeployCmd = &cobra.Command{
 	Long:    lang.CmdPackageDeployLong,
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+		pkgConfig.PkgOpts.PackagePath = choosePackage(args)
 
 		// Ensure uppercase keys from viper and CLI --set
 		viperConfigSetVariables := helpers.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
-		pkgConfig.DeployOpts.SetVariables = helpers.TransformMapKeys(pkgConfig.DeployOpts.SetVariables, strings.ToUpper)
+		pkgConfig.PkgOpts.SetVariables = helpers.TransformMapKeys(pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
 		// Merge the viper config file variables and provided CLI flag variables (CLI takes precedence))
-		pkgConfig.DeployOpts.SetVariables = helpers.MergeMap(viperConfigSetVariables, pkgConfig.DeployOpts.SetVariables)
+		pkgConfig.PkgOpts.SetVariables = helpers.MergeMap(viperConfigSetVariables, pkgConfig.PkgOpts.SetVariables)
 
-		pkgConfig.PkgSourcePath = pkgConfig.DeployOpts.PackagePath
+		pkgConfig.PkgSource = pkgConfig.PkgOpts.PackagePath
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -106,7 +106,7 @@ var packageInspectCmd = &cobra.Command{
 	Long:    lang.CmdPackageInspectLong,
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+		pkgConfig.PkgOpts.PackagePath = choosePackage(args)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -144,7 +144,7 @@ var packageListCmd = &cobra.Command{
 
 			packageTable = append(packageTable, pterm.TableData{{
 				fmt.Sprintf("     %s", pkg.Name),
-				fmt.Sprintf("%s", pkg.Data.Metadata.Version),
+				pkg.Data.Metadata.Version,
 				fmt.Sprintf("%v", components),
 			}}...)
 		}
@@ -165,13 +165,13 @@ var packageRemoveCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgName := args[0]
+		pkgConfig.PkgOpts.PackagePath = args[0]
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.Remove(pkgName); err != nil {
+		if err := pkgClient.Remove(); err != nil {
 			message.Fatalf(err, lang.CmdPackageRemoveErr, err.Error())
 		}
 	},
@@ -336,11 +336,11 @@ func bindDeployFlags() {
 	v.SetDefault(V_PKG_DEPLOY_SGET, "")
 	v.SetDefault(V_PKG_DEPLOY_PUBLIC_KEY, "")
 
-	deployFlags.StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
-	deployFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
-	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
-	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
-	deployFlags.StringVarP(&pkgConfig.DeployOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageDeployFlagPublicKey)
+	deployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdPackageDeployFlagSet)
+	deployFlags.StringVar(&pkgConfig.PkgOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageDeployFlagComponents)
+	deployFlags.StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(V_PKG_DEPLOY_SHASUM), lang.CmdPackageDeployFlagShasum)
+	deployFlags.StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(V_PKG_DEPLOY_SGET), lang.CmdPackageDeployFlagSget)
+	deployFlags.StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(V_PKG_DEPLOY_PUBLIC_KEY), lang.CmdPackageDeployFlagPublicKey)
 }
 
 func bindInspectFlags() {
@@ -353,7 +353,7 @@ func bindInspectFlags() {
 func bindRemoveFlags() {
 	removeFlags := packageRemoveCmd.Flags()
 	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageRemoveFlagConfirm)
-	removeFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageRemoveFlagComponents)
+	removeFlags.StringVar(&pkgConfig.PkgOpts.Components, "components", v.GetString(V_PKG_DEPLOY_COMPONENTS), lang.CmdPackageRemoveFlagComponents)
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
 }
 

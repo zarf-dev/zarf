@@ -22,7 +22,7 @@ import (
 func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 	message.Debug("packager.handlePackagePath()")
 
-	opts := p.cfg.DeployOpts
+	opts := p.cfg.PkgOpts
 
 	// Check if the user gave us a remote package
 	providedURL, err := url.Parse(opts.PackagePath)
@@ -33,8 +33,8 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 
 	// Handle case where deploying remote package stored in an OCI registry
 	if utils.IsOCIURL(opts.PackagePath) {
-		p.cfg.DeployOpts.PackagePath = p.tmp.Base
-		requestedComponents := getRequestedComponentList(p.cfg.DeployOpts.Components)
+		p.cfg.PkgOpts.PackagePath = p.tmp.Base
+		requestedComponents := getRequestedComponentList(p.cfg.PkgOpts.Components)
 		layersToPull := []ocispec.Descriptor{}
 		// only pull specified components and their images if --components AND --confirm are set
 		if len(requestedComponents) > 0 && config.CommonOptions.Confirm {
@@ -104,7 +104,7 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 func (p *Packager) handleSgetPackage() error {
 	message.Debug("packager.handleSgetPackage()")
 
-	opts := p.cfg.DeployOpts
+	opts := p.cfg.PkgOpts
 
 	spinner := message.NewProgressSpinner("Loading Zarf Package %s", opts.PackagePath)
 	defer spinner.Stop()
@@ -120,16 +120,16 @@ func (p *Packager) handleSgetPackage() error {
 	// If this is a DefenseUnicorns package, use an internal sget public key
 	if strings.HasPrefix(opts.PackagePath, fmt.Sprintf("%s://defenseunicorns", utils.SGETURLScheme)) {
 		os.Setenv("DU_SGET_KEY", config.SGetPublicKey)
-		p.cfg.DeployOpts.SGetKeyPath = "env://DU_SGET_KEY"
+		p.cfg.PkgOpts.SGetKeyPath = "env://DU_SGET_KEY"
 	}
 
 	// Sget the package
-	err = utils.Sget(context.TODO(), opts.PackagePath, p.cfg.DeployOpts.SGetKeyPath, destinationFile)
+	err = utils.Sget(context.TODO(), opts.PackagePath, p.cfg.PkgOpts.SGetKeyPath, destinationFile)
 	if err != nil {
 		return fmt.Errorf("unable to get the remote package via sget: %w", err)
 	}
 
-	p.cfg.DeployOpts.PackagePath = localPath
+	p.cfg.PkgOpts.PackagePath = localPath
 
 	spinner.Success()
 	return nil

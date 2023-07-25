@@ -75,7 +75,7 @@ func (p *Packager) fillActiveTemplate() error {
 // setVariableMapInConfig handles setting the active variables used to template component files.
 func (p *Packager) setVariableMapInConfig() error {
 	// Ensure uppercase keys
-	setVariableValues := helpers.TransformMapKeys(p.cfg.DeployOpts.SetVariables, strings.ToUpper)
+	setVariableValues := helpers.TransformMapKeys(p.cfg.PkgOpts.SetVariables, strings.ToUpper)
 	for name, value := range setVariableValues {
 		p.setVariableInConfig(name, value, false, false, "")
 	}

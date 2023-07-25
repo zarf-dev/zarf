@@ -161,7 +161,6 @@ func init() {
 	bundleCreateCmd.Flags().StringToStringVarP(&bundleCfg.CreateOpts.SetVariables, "set", "s", v.GetStringMapString(V_BNDL_CREATE_SET), lang.CmdBundleCreateFlagSet)
 
 	bundleCmd.AddCommand(bundleDeployCmd)
-	bundleDeployCmd.Flags().StringSliceVarP(&bundleCfg.DeployOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_DEPLOY_PACKAGES), lang.CmdBundleDeployFlagPackages)
 	bundleDeployCmd.Flags().StringToStringVarP(&bundleCfg.DeployOpts.SetVariables, "set", "s", v.GetStringMapString(V_BNDL_DEPLOY_SET), lang.CmdBundleDeployFlagSet)
 
 	bundleCmd.AddCommand(bundleInspectCmd)
@@ -170,7 +169,6 @@ func init() {
 	bundleCmd.AddCommand(bundleRemoveCmd)
 	// confirm does not use the Viper config
 	bundleRemoveCmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdBundleRemoveFlagConfirm)
-	bundleRemoveCmd.Flags().StringSliceVarP(&bundleCfg.RemoveOpts.Packages, "packages", "p", v.GetStringSlice(V_BNDL_REMOVE_PACKAGES), lang.CmdBundleRemoveFlagPackages)
 	_ = bundleRemoveCmd.MarkFlagRequired("confirm")
 
 	bundleCmd.AddCommand(bundlePullCmd)

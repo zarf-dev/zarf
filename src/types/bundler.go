@@ -11,10 +11,6 @@ type BundlerConfig struct {
 	PullOpts    BundlerPullOptions
 	InspectOpts BundlerInspectOptions
 	RemoveOpts  BundlerRemoveOptions
-	State       ZarfState
-
-	// Variables set by the user
-	SetVariableMap map[string]*ZarfSetVariable
 }
 
 // BundlerCreateOptions is the options for the bundler.Create() function
@@ -28,7 +24,6 @@ type BundlerCreateOptions struct {
 
 // BundlerDeployOptions is the options for the bundler.Deploy() function
 type BundlerDeployOptions struct {
-	Packages     []string
 	Source       string
 	PublicKey    string
 	SetVariables map[string]string
@@ -49,6 +44,5 @@ type BundlerPullOptions struct {
 
 // BundlerRemoveOptions is the options for the bundler.Remove() function
 type BundlerRemoveOptions struct {
-	Packages []string
-	Source   string
+	Source string
 }
