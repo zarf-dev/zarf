@@ -27,7 +27,7 @@ func (b *Bundler) Inspect() error {
 	}
 
 	// validate the sig (if present)
-	if err := ValidateBundleSignature(loaded[BundleYAML], loaded[BundleYAMLSignature], b.cfg.InspectOpts.PublicKey); err != nil {
+	if err := ValidateBundleSignature(loaded[BundleYAML], loaded[BundleYAMLSignature], b.cfg.InspectOpts.PublicKeyPath); err != nil {
 		return err
 	}
 

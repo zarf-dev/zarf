@@ -89,7 +89,7 @@ var bundleInspectCmd = &cobra.Command{
 }
 
 var bundleRemoveCmd = &cobra.Command{
-	Use:     "remove [BUNDLE_NAME|BUNDLE_TARBALL|OCI_REF]",
+	Use:     "remove [BUNDLE_TARBALL|OCI_REF]",
 	Aliases: []string{"r"},
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdBundleRemoveShort,
@@ -164,7 +164,7 @@ func init() {
 	bundleDeployCmd.Flags().StringToStringVarP(&bundleCfg.DeployOpts.SetVariables, "set", "s", v.GetStringMapString(V_BNDL_DEPLOY_SET), lang.CmdBundleDeployFlagSet)
 
 	bundleCmd.AddCommand(bundleInspectCmd)
-	bundleInspectCmd.Flags().StringVarP(&bundleCfg.InspectOpts.PublicKey, "key", "k", v.GetString(V_BNDL_INSPECT_KEY), lang.CmdBundleInspectFlagKey)
+	bundleInspectCmd.Flags().StringVarP(&bundleCfg.InspectOpts.PublicKeyPath, "key", "k", v.GetString(V_BNDL_INSPECT_KEY), lang.CmdBundleInspectFlagKey)
 
 	bundleCmd.AddCommand(bundleRemoveCmd)
 	// confirm does not use the Viper config
@@ -173,5 +173,5 @@ func init() {
 
 	bundleCmd.AddCommand(bundlePullCmd)
 	bundlePullCmd.Flags().StringVarP(&bundleCfg.PullOpts.OutputDirectory, "output", "o", v.GetString(V_BNDL_PULL_OUTPUT), lang.CmdBundlePullFlagOutput)
-	bundlePullCmd.Flags().StringVarP(&bundleCfg.PullOpts.PublicKey, "key", "k", v.GetString(V_BNDL_PULL_KEY), lang.CmdBundlePullFlagKey)
+	bundlePullCmd.Flags().StringVarP(&bundleCfg.PullOpts.PublicKeyPath, "key", "k", v.GetString(V_BNDL_PULL_KEY), lang.CmdBundlePullFlagKey)
 }

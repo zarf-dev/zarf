@@ -11,6 +11,8 @@ const (
 	BundleYAMLSignature = "zarf-bundle.yaml.sig"
 	// BundlePrefix is the prefix for all bundle files
 	BundlePrefix = "zarf-bundle-"
+	// PublicKeyFile is the name of the public key file
+	PublicKeyFile = "public.key"
 )
 
 var (

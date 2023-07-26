@@ -39,7 +39,7 @@ func (b *Bundler) Pull() error {
 	}
 
 	// validate the sig (if present)
-	if err := ValidateBundleSignature(loadedMetadata[BundleYAML], loadedMetadata[BundleYAMLSignature], b.cfg.PullOpts.PublicKey); err != nil {
+	if err := ValidateBundleSignature(loadedMetadata[BundleYAML], loadedMetadata[BundleYAMLSignature], b.cfg.PullOpts.PublicKeyPath); err != nil {
 		return err
 	}
 

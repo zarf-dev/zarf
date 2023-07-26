@@ -283,30 +283,28 @@ const (
 	CmdPackageChoose    = "Choose or type the package file"
 	CmdPackageChooseErr = "Package path selection canceled: %s"
 
-	// zarf bundle
-	CmdBundleShort           = "Zarf commands for creating, deploying, removing, pulling, and inspecting bundles"
+	// bundle
+	CmdBundleShort           = "Commands for creating, deploying, removing, pulling, and inspecting bundles"
 	CmdBundleFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote bundle."
 
-	CmdBundleCreateShort                  = "Create a Zarf bundle from a given directory or the current directory"
+	CmdBundleCreateShort                  = "Create a bundle from a given directory or the current directory"
 	CmdBundleCreateFlagConfirm            = "Confirm bundle creation without prompting"
-	CmdBundleCreateFlagOutput             = "Specify the output (an oci:// URL) for the created Zarf bundle"
+	CmdBundleCreateFlagOutput             = "Specify the output (an oci:// URL) for the created bundle"
 	CmdBundleCreateFlagSigningKey         = "Path to private key file for signing bundles"
 	CmdBundleCreateFlagSigningKeyPassword = "Password to the private key file used for signing bundles"
 	CmdBundleCreateFlagSet                = "Specify bundle template variables to set on the command line (KEY=value)"
 
-	CmdBundleDeployShort        = "Deploy a Zarf bundle from a local file or URL (runs offline)"
-	CmdBundleDeployFlagPackages = "Specify the package(s) to deploy from the bundle.  E.g. packages=cluster-init,bigbang"
-	CmdBundleDeployFlagSet      = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdBundleDeployShort   = "Deploy a bundle from a local tarball or oci:// URL"
+	CmdBundleDeployFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
 
-	CmdBundleInspectShort   = "Display the zarf.yaml of a compiled Zarf bundle (runs offline)"
+	CmdBundleInspectShort   = "Display the metadata of a bundle"
 	CmdBundleInspectFlagKey = "Path to a public key file that will be used to validate a signed bundle"
 
-	CmdBundleRemoveShort        = "Remove a Zarf bundle or sub-packages that have been deployed already"
-	CmdBundleRemoveFlagConfirm  = "REQUIRED. Confirm the removal action to prevent accidental deletions"
-	CmdBundleRemoveFlagPackages = "Specify the package(s) to remove from the bundle.  E.g. packages=cluster-init,bigbang"
+	CmdBundleRemoveShort       = "Remove a bundle that has been deployed already"
+	CmdBundleRemoveFlagConfirm = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 
-	CmdBundlePullShort      = "Pull a Zarf bundle from a remote reigstry and save to the local file system"
-	CmdBundlePullFlagOutput = "Specify the output directory for the pulled Zarf bundle"
+	CmdBundlePullShort      = "Pull a bundle from a remote reigstry and save to the local file system"
+	CmdBundlePullFlagOutput = "Specify the output directory for the pulled bundle"
 	CmdBundlePullFlagKey    = "Path to a public key file that will be used to validate a signed bundle"
 
 	// zarf prepare

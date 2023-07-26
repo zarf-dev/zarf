@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"sort"
 	"strings"
 	"time"
 
@@ -137,7 +136,7 @@ func (b *Bundler) ValidateBundle() error {
 			return err
 		}
 
-		publicKeyPath := filepath.Join(tmp, "public-key.txt")
+		publicKeyPath := filepath.Join(tmp, PublicKeyFile)
 		if err := utils.WriteFile(publicKeyPath, []byte(pkg.PublicKey)); err != nil {
 			return err
 		}
@@ -224,7 +223,6 @@ func (b *Bundler) ValidateBundle() error {
 					return fmt.Errorf("%s .packages[%s].components[%s] does not support architecture: %s", BundleYAML, pkg.Repository, component, b.bundle.Metadata.Architecture)
 				}
 			}
-			sort.Strings(pkg.OptionalComponents)
 		}
 	}
 	return nil
@@ -263,21 +261,25 @@ func (b *Bundler) CalculateBuildInfo() error {
 }
 
 // ValidateBundleSignature validates the bundle signature
-func ValidateBundleSignature(bundleYAMLPath, signaturePath, publicKey string) error {
+func ValidateBundleSignature(bundleYAMLPath, signaturePath, publicKeyPath string) error {
 	if utils.InvalidPath(bundleYAMLPath) {
 		return fmt.Errorf("path for %s at %s does not exist", BundleYAML, bundleYAMLPath)
 	}
+	// The package is not signed, and no public key was provided
+	if signaturePath == "" && publicKeyPath == "" {
+		return nil
+	}
 	// The package is not signed, but a public key was provided
-	if utils.InvalidPath(signaturePath) && !utils.InvalidPath(publicKey) {
+	if utils.InvalidPath(signaturePath) && !utils.InvalidPath(publicKeyPath) {
 		return fmt.Errorf("package is not signed, but a public key was provided")
 	}
 	// The package is signed, but no public key was provided
-	if !utils.InvalidPath(signaturePath) && utils.InvalidPath(publicKey) {
+	if !utils.InvalidPath(signaturePath) && utils.InvalidPath(publicKeyPath) {
 		return fmt.Errorf("package is signed, but no public key was provided")
 	}
 
 	// The package is signed, and a public key was provided
-	return utils.CosignVerifyBlob(bundleYAMLPath, signaturePath, publicKey)
+	return utils.CosignVerifyBlob(bundleYAMLPath, signaturePath, publicKeyPath)
 }
 
 // MergeVariables merges the variables from the config file and the CLI

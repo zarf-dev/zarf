@@ -42,7 +42,7 @@ func (b *Bundler) Deploy() error {
 	}
 
 	// validate the sig (if present)
-	if err := ValidateBundleSignature(loaded[BundleYAML], loaded[BundleYAMLSignature], b.cfg.DeployOpts.PublicKey); err != nil {
+	if err := ValidateBundleSignature(loaded[BundleYAML], loaded[BundleYAMLSignature], b.cfg.DeployOpts.PublicKeyPath); err != nil {
 		return err
 	}
 
@@ -70,7 +70,7 @@ func (b *Bundler) Deploy() error {
 			return err
 		}
 
-		publicKeyPath := filepath.Join(pkgTmp, "public-key.txt")
+		publicKeyPath := filepath.Join(pkgTmp, PublicKeyFile)
 		if err := utils.WriteFile(publicKeyPath, []byte(pkg.PublicKey)); err != nil {
 			return err
 		}

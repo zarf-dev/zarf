@@ -24,21 +24,21 @@ type BundlerCreateOptions struct {
 
 // BundlerDeployOptions is the options for the bundler.Deploy() function
 type BundlerDeployOptions struct {
-	Source       string
-	PublicKey    string
-	SetVariables map[string]string
+	Source        string
+	PublicKeyPath string
+	SetVariables  map[string]string
 }
 
 // BundlerInspectOptions is the options for the bundler.Inspect() function
 type BundlerInspectOptions struct {
-	PublicKey string
-	Source    string
+	PublicKeyPath string
+	Source        string
 }
 
 // BundlerPullOptions is the options for the bundler.Pull() function
 type BundlerPullOptions struct {
 	OutputDirectory string
-	PublicKey       string
+	PublicKeyPath   string
 	Source          string
 }
 

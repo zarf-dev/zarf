@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"oras.land/oras-go/v2/registry"
 )
 
 func publish(t *testing.T, path string, reg string) {
@@ -26,6 +27,8 @@ func publish(t *testing.T, path string, reg string) {
 var cliver string
 
 func TestBundle(t *testing.T) {
+	e2e.SetupWithCluster(t)
+
 	e2e.SetupDockerRegistry(t, 888)
 	defer e2e.TeardownRegistry(t, 888)
 	e2e.SetupDockerRegistry(t, 889)
@@ -39,24 +42,67 @@ func TestBundle(t *testing.T) {
 	pkg = fmt.Sprintf("build/zarf-package-manifests-%s-0.0.1.tar.zst", e2e.Arch)
 	publish(t, pkg, "localhost:889")
 
-	testCreate(t)
+	bundleRef := registry.Reference{
+		Registry: "localhost:888",
+		// this info is derived from the bundle's metadata
+		Repository: "bundle",
+		Reference:  fmt.Sprintf("0.0.1-%s", e2e.Arch),
+	}
 
-	testInspect(t)
+	tarballPath := filepath.Join("build", fmt.Sprintf("zarf-bundle-bundle-%s-0.0.1.tar.zst", e2e.Arch))
 
-	testPull(t)
+	create(t, bundleRef.Registry)
+
+	pull(t, bundleRef.String(), tarballPath)
+
+	inspect(t, bundleRef.String(), tarballPath)
+
+	deployAndRemove(t, "oci://"+bundleRef.String())
+
+	deployAndRemove(t, tarballPath)
 }
 
-func testCreate(t *testing.T) {
+func create(t *testing.T, reg string) {
 	dir := "src/test/packages/60-bundle"
-	cmd := strings.Split(fmt.Sprintf("bundle create %s -o oci://%s --set INIT_VERSION=%s --confirm --insecure -l=debug", dir, "localhost:888", cliver), " ")
+	cmd := strings.Split(fmt.Sprintf("bundle create %s -o oci://%s --set INIT_VERSION=%s --confirm --insecure -l=debug", dir, reg, cliver), " ")
 	_, _, err := e2e.Zarf(cmd...)
 	require.NoError(t, err)
 }
 
-func testInspect(t *testing.T) {
-	ref := fmt.Sprintf("localhost:888/bundle:0.0.1-%s", e2e.Arch)
-	cmd := strings.Split(fmt.Sprintf("bundle inspect oci://%s --insecure -l=debug", ref), " ")
+func inspect(t *testing.T, ref string, tarballPath string) {
+	t.Run(
+		"inspect bundle via OCI",
+		func(t *testing.T) {
+			t.Parallel()
+			cmd := strings.Split(fmt.Sprintf("bundle inspect oci://%s --insecure -l=debug", ref), " ")
+			_, _, err := e2e.Zarf(cmd...)
+			require.NoError(t, err)
+		},
+	)
+	t.Run(
+		"inspect bundle via local tarball",
+		func(t *testing.T) {
+			t.Parallel()
+			cmd := strings.Split(fmt.Sprintf("bundle inspect %s -l=debug", tarballPath), " ")
+			_, _, err := e2e.Zarf(cmd...)
+			require.NoError(t, err)
+		},
+	)
+}
+
+func deployAndRemove(t *testing.T, source string) {
+	var cmd []string
+
+	if strings.HasPrefix(source, "oci://") {
+		cmd = strings.Split(fmt.Sprintf("bundle deploy %s --insecure --oci-concurrency=10 --confirm -l=debug", source), " ")
+	} else {
+		cmd = strings.Split(fmt.Sprintf("bundle deploy %s --confirm -l=debug", source), " ")
+	}
 	_, _, err := e2e.Zarf(cmd...)
+	require.NoError(t, err)
+
+	cmd = strings.Split(fmt.Sprintf("bundle remove %s --confirm -l=debug", source), " ")
+	_, _, err = e2e.Zarf(cmd...)
 	require.NoError(t, err)
 }
 
@@ -66,16 +112,15 @@ func shasMatch(t *testing.T, path string, expected string) {
 	require.Equal(t, expected, actual)
 }
 
-func testPull(t *testing.T) {
-	ref := fmt.Sprintf("localhost:888/bundle:0.0.1-%s", e2e.Arch)
+func pull(t *testing.T, ref string, tarballPath string) {
 	cmd := strings.Split(fmt.Sprintf("bundle pull oci://%s -o build --insecure --oci-concurrency=10 -l=debug", ref), " ")
 	_, _, err := e2e.Zarf(cmd...)
 	require.NoError(t, err)
 
-	decompressed := "build/decompress-bundle"
+	decompressed := "build/decompressed-bundle"
 	defer e2e.CleanFiles(decompressed)
 
-	cmd = []string{"tools", "archiver", "decompress", fmt.Sprintf("build/zarf-bundle-bundle-%s-0.0.1.tar.zst", e2e.Arch), decompressed}
+	cmd = []string{"tools", "archiver", "decompress", tarballPath, decompressed}
 	_, _, err = e2e.Zarf(cmd...)
 	require.NoError(t, err)
 
@@ -98,8 +143,6 @@ func testPull(t *testing.T) {
 		require.NoError(t, err)
 		err = json.Unmarshal(b, &manifest)
 		require.NoError(t, err)
-
-		// require.FileExists(t, filepath.Join(blobsDir, manifest.Config.Digest.Encoded()))
 
 		for _, layer := range manifest.Layers {
 			sha := layer.Digest.Encoded()
