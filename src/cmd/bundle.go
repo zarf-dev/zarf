@@ -49,7 +49,7 @@ var bundleCreateCmd = &cobra.Command{
 }
 
 var bundleDeployCmd = &cobra.Command{
-	Use:     "deploy [BUNDLE]",
+	Use:     "deploy [BUNDLE_TARBALL|OCI_REF]",
 	Aliases: []string{"d"},
 	Short:   lang.CmdBundleDeployShort,
 	Args:    cobra.ExactArgs(1),
@@ -70,7 +70,7 @@ var bundleDeployCmd = &cobra.Command{
 }
 
 var bundleInspectCmd = &cobra.Command{
-	Use:     "inspect [BUNDLE]",
+	Use:     "inspect [BUNDLE_TARBALL|OCI_REF]",
 	Aliases: []string{"i"},
 	Short:   lang.CmdBundleInspectShort,
 	Args:    cobra.ExactArgs(1),
