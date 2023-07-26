@@ -57,6 +57,11 @@ func (p *Packager) fillActiveTemplate() error {
 		return nil
 	}
 
+	err := utils.FindComponentTemplatesAndReload(&p.cfg.Pkg, "###ZARF_COMPONENT_", "###")
+	if err != nil {
+		return err
+	}
+
 	if err := promptAndSetTemplate("###ZARF_PKG_TMPL_", false); err != nil {
 		return err
 	}

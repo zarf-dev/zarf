@@ -1,0 +1,26 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-component-name-template
+  description: Component name template example
+
+variables:
+  - name: DOMAIN
+    default: bigbang.dev
+    prompt: false
+    
+components:
+  - name: hello-zarf-chart
+    required: true
+    charts:
+      # Must match name in Chart.yaml
+      - name: hello-zarf-chart
+      # Must match version in Chart.yaml
+        version: 0.1.0
+        namespace: webserver
+        localPath: .
+    # Must include images in helm chart
+    images:
+      - docker.io/cmwylie19/hello-zarf
+      - busybox    
+      valuesFiles:
+       - enable-###ZARF_COMPONENT_NAME###.yaml

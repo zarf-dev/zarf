@@ -1,0 +1,5 @@
+# Default values for hello-zarf-chart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+name: hello-world
+

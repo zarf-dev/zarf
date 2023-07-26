@@ -8,6 +8,7 @@ package utils
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -16,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/fatih/color"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/lexer"
@@ -158,6 +160,70 @@ func ReloadYamlTemplate(config any, mappings map[string]string) error {
 	}
 
 	return goyaml.Unmarshal(text, config)
+}
+
+// FindComponentTemplates appends ###ZARF_COMPONENT_ with Chart name and assigns value
+func FindComponentTemplatesAndReload(config any, prefix string, suffix string) error {
+
+	// Create empty byte array for the Package Components
+	var components []byte
+
+	// Find all strings that are between the given prefix and suffix
+	r := regexp.MustCompile(fmt.Sprintf("%s([A-Z_]+)%s", prefix, suffix))
+
+	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
+	for _, component := range config.(*types.ZarfPackage).Components {
+		// Create Bytes from component
+		componentText, err := json.Marshal(component)
+		if err != nil {
+			return err
+		}
+
+		// Find all strings that are between the given prefix and suffix and switch
+		// Range of strings between ###ZARF_COMPONENT_ and ### and switch
+		for _, match := range r.FindAllStringSubmatch(string(componentText), -1) {
+			completeTemplate := []byte(prefix + match[1] + suffix)
+
+			// replace with actual component part
+			switch match[1] {
+			// can do more component cases here
+			case "NAME":
+				// replace component name with template value
+				componentText = bytes.ReplaceAll(componentText, completeTemplate, []byte(component.Name))
+			}
+		}
+		// append to text
+		components = append(components, componentText...)
+
+	}
+
+	fmt.Printf("%s", string(components))
+
+	// withoutQuotes := bytes.ReplaceAll(components, []byte(`\"`), []byte(`"`))
+	// remove := bytes.ReplaceAll(withoutQuotes, []byte(`"`), []byte(``))
+	var data map[string]interface{}
+	// Unmarshal the JSON string into the data variable
+	err := json.Unmarshal(components, &data)
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert the interface to a JSON byte array
+	podBytes, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println(err)
+	}
+	// unmarshal podBytes into pod
+	err = json.Unmarshal(podBytes, &config.(*types.ZarfPackage).Components)
+	if err != nil {
+		fmt.Println("Error unmarshalling pod", err)
+	}
+	// // yamlString := bytes.ReplaceAll(components, []byte("\\n"), []byte("\n"))
+	// // fmt.Printf("%s", withoutQuotes)
+	// // // Replace \" with ""
+	// // yamlString = bytes.ReplaceAll(yamlString, []byte("\\\""), []byte(""))
+	// fmt.Printf("%s", string(withoutQuotes))
+
+	return goyaml.Unmarshal(components, config.(*types.ZarfPackage).Components)
 }
 
 // FindYamlTemplates finds strings with a given prefix in a config.
