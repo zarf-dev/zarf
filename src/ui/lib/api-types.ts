@@ -249,7 +249,7 @@ export interface ZarfBuildData {
      */
     migrations: string[];
     /**
-     * The minimum version of Zarf that can be used to successfully deploy a package
+     * The minimum version of Zarf that should be used to reliably deploy a package
      */
     minimumCompatibleVersion?: string;
     /**

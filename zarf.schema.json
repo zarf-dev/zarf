@@ -146,7 +146,7 @@
         },
         "minimumCompatibleVersion": {
           "type": "string",
-          "description": "The minimum version of Zarf that can be used to successfully deploy a package"
+          "description": "The minimum version of Zarf that should be used to reliably deploy a package"
         }
       },
       "additionalProperties": false,

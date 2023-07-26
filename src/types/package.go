@@ -43,7 +43,7 @@ type ZarfBuildData struct {
 	RegistryOverrides        map[string]string `json:"registryOverrides" jsonschema:"description=Any registry domains that were overridden on package create when pulling images"`
 	DifferentialMissing      []string          `json:"differentialMissing,omitempty" jsonschema:"description=List of components that were not included in this package due to differential packaging"`
 	OCIImportedComponents    map[string]string `json:"OCIImportedComponents,omitempty" jsonschema:"description=Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names"`
-	MinimumCompatibleVersion string            `json:"minimumCompatibleVersion,omitempty" jsonschema:"description=The minimum version of Zarf that can be used to successfully deploy a package"`
+	MinimumCompatibleVersion string            `json:"minimumCompatibleVersion,omitempty" jsonschema:"description=The minimum version of Zarf that should be used to reliably deploy a package"`
 }
 
 // ZarfPackageVariable are variables that can be used to dynamically template K8s resources.
