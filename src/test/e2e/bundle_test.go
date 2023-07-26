@@ -30,10 +30,10 @@ var cliver string
 func TestBundle(t *testing.T) {
 	e2e.SetupWithCluster(t)
 
-	// e2e.SetupDockerRegistry(t, 888)
-	// defer e2e.TeardownRegistry(t, 888)
-	// e2e.SetupDockerRegistry(t, 889)
-	// defer e2e.TeardownRegistry(t, 889)
+	e2e.SetupDockerRegistry(t, 888)
+	defer e2e.TeardownRegistry(t, 888)
+	e2e.SetupDockerRegistry(t, 889)
+	defer e2e.TeardownRegistry(t, 889)
 
 	cliver = e2e.GetZarfVersion(t)
 
@@ -58,7 +58,7 @@ func TestBundle(t *testing.T) {
 
 	pull(t, bundleRef.String(), tarballPath)
 
-	// inspect(t, bundleRef.String(), tarballPath)
+	inspect(t, bundleRef.String(), tarballPath)
 
 	deployAndRemove(t, "oci://"+bundleRef.String())
 

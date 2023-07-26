@@ -58,8 +58,14 @@ func (op *ociProvider) LoadPackage(sha, destinationDir string, concurrency int) 
 	if err != nil {
 		return nil, err
 	}
+	// including the package manifest uses some ORAs FindSuccessors hackery to expand the manifest into all layers
+	// as oras.Copy was designed for resolving layers via a manifest reference, not a manifest embedded inside of another
+	// image
 	layersToPull := []ocispec.Descriptor{pkgManifestDesc}
 	for _, layer := range pkgManifest.Layers {
+		// only fetch layers that exist
+		// since optional-components exists, there will be layers that don't exist
+		// as the package's preserved manifest will contain all layers for all components
 		ok, _ := op.Repo().Blobs().Exists(op.ctx, layer)
 		if ok {
 			layersToPull = append(layersToPull, layer)
