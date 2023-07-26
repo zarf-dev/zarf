@@ -5,7 +5,7 @@ import CodeBlock from "@theme/CodeBlock";
 const FetchFileCodeBlock = ({ src, component, raw, showLink = true, fileFormat, fileName }) => {
   const [content, setContent] = useState(null);
 
-  const linkBaseUrl = `${src}`.replace(/^\/build\/\.\.\//gm, '').replace(/\/zarf\.yaml.+?$/gm, '');
+  const linkBaseUrl = `${src}`.replace(/^\/build\/\.\.\//gm, '');
 
   const handleDownloadClick = () => {
     const jsonDataString = JSON.stringify(src, null, 2);
