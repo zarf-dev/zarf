@@ -57,6 +57,7 @@ func (p *Packager) fillActiveTemplate() error {
 		return nil
 	}
 
+	// update the component templates on the package
 	err := utils.FindComponentTemplatesAndReload(&p.cfg.Pkg, "###ZARF_COMPONENT_", "###")
 	if err != nil {
 		return err

@@ -162,12 +162,8 @@ func ReloadYamlTemplate(config any, mappings map[string]string) error {
 	return goyaml.Unmarshal(text, config)
 }
 
-// FindComponentTemplates appends ###ZARF_COMPONENT_ with Chart name, assigns value, and reloads
+// FindComponentTemplatesAndReload appends ###ZARF_COMPONENT_  for each component, assigns value, and reloads
 func FindComponentTemplatesAndReload(config any, prefix string, suffix string) error {
-
-	// Create empty byte array for the Package Components
-	var components []byte
-
 	// Find all strings that are between the given prefix and suffix
 	r := regexp.MustCompile(fmt.Sprintf("%s([A-Z_]+)%s", prefix, suffix))
 
@@ -194,35 +190,11 @@ func FindComponentTemplatesAndReload(config any, prefix string, suffix string) e
 		}
 		err = json.Unmarshal(componentText, &config.(*types.ZarfPackage).Components[i])
 		if err != nil {
-			fmt.Println("Error unmarshalling component", err)
+			return err
 		}
-		// append to text
-		components = append(components, componentText...)
-
 	}
 
-	fmt.Printf("%s", string(components))
-
-	// withoutQuotes := bytes.ReplaceAll(components, []byte(`\"`), []byte(`"`))
-	// remove := bytes.ReplaceAll(withoutQuotes, []byte(`"`), []byte(``))
-	// var data map[string]interface{}
-	// // Unmarshal the JSON string into the data variable
-	// err := json.Unmarshal(components, &data)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// // Convert the interface to a JSON byte array
-	// podBytes, err := json.Marshal(data)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// // unmarshal podBytes into pod
-	// err = json.Unmarshal(podBytes, &config.(*types.ZarfPackage).Components)
-	// if err != nil {
-	// 	fmt.Println("Error unmarshalling pod", err)
-	// }
 	return nil
-	//return goyaml.Unmarshal(components, config.(*types.ZarfPackage).Components)
 }
 
 // FindYamlTemplates finds strings with a given prefix in a config.
