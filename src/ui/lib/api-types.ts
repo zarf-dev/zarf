@@ -19,7 +19,7 @@ export interface APITypes {
     deployedPackage:           DeployedPackage;
     zarfCommonOptions:         ZarfCommonOptions;
     zarfCreateOptions:         ZarfCreateOptions;
-    zarfDeployOptions:         ZarfDeployOptions;
+    zarfDeployOptions:         ZarfPackageOptions;
     zarfInitOptions:           ZarfInitOptions;
     zarfPackage:               ZarfPackage;
     zarfState:                 ZarfState;
@@ -36,15 +36,11 @@ export interface APIPackageSBOM {
 }
 
 export interface APIZarfDeployPayload {
-    deployOpts: ZarfDeployOptions;
+    deployOpts: ZarfPackageOptions;
     initOpts?:  ZarfInitOptions;
 }
 
-export interface ZarfDeployOptions {
-    /**
-     * Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
-     */
-    adoptExistingResources: boolean;
+export interface ZarfPackageOptions {
     /**
      * Comma separated list of optional components to deploy
      */
@@ -1396,7 +1392,7 @@ const typeMap: any = {
         { json: "deployedPackage", js: "deployedPackage", typ: r("DeployedPackage") },
         { json: "zarfCommonOptions", js: "zarfCommonOptions", typ: r("ZarfCommonOptions") },
         { json: "zarfCreateOptions", js: "zarfCreateOptions", typ: r("ZarfCreateOptions") },
-        { json: "zarfDeployOptions", js: "zarfDeployOptions", typ: r("ZarfDeployOptions") },
+        { json: "zarfDeployOptions", js: "zarfDeployOptions", typ: r("ZarfPackageOptions") },
         { json: "zarfInitOptions", js: "zarfInitOptions", typ: r("ZarfInitOptions") },
         { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
@@ -1410,11 +1406,10 @@ const typeMap: any = {
         { json: "sboms", js: "sboms", typ: a("") },
     ], false),
     "APIZarfDeployPayload": o([
-        { json: "deployOpts", js: "deployOpts", typ: r("ZarfDeployOptions") },
+        { json: "deployOpts", js: "deployOpts", typ: r("ZarfPackageOptions") },
         { json: "initOpts", js: "initOpts", typ: u(undefined, r("ZarfInitOptions")) },
     ], false),
-    "ZarfDeployOptions": o([
-        { json: "adoptExistingResources", js: "adoptExistingResources", typ: true },
+    "ZarfPackageOptions": o([
         { json: "components", js: "components", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
