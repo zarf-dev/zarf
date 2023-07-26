@@ -64,8 +64,12 @@ func (p *Packager) Deploy() error {
 		return err
 	}
 
-	if err := p.validateMinimumCompatibleVersion(p.cfg.Pkg.Build.MinimumCompatibleVersion, config.CLIVersion); err != nil {
+	warning, err := p.validateMinimumCompatibleVersion(p.cfg.Pkg.Build.MinimumCompatibleVersion, config.CLIVersion)
+	if err != nil {
 		return err
+	}
+	if warning != "" {
+		p.warnings = append(p.warnings, warning)
 	}
 
 	// Now that we have read the zarf.yaml, check the package kind
