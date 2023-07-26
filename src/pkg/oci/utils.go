@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	config "github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -55,6 +55,9 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 
 // FetchRoot fetches the root manifest from the remote repository.
 func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
+	if o.root != nil {
+		return o.root, nil
+	}
 	// get the manifest descriptor
 	descriptor, err := o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
 	if err != nil {
@@ -71,7 +74,9 @@ func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
 	if err = json.Unmarshal(bytes, &manifest); err != nil {
 		return nil, err
 	}
-	return NewZarfOCIManifest(&manifest), nil
+	root := NewZarfOCIManifest(&manifest)
+	o.root = root
+	return o.root, nil
 }
 
 // FetchManifest fetches the manifest with the given descriptor from the remote repository.
@@ -94,33 +99,62 @@ func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err erro
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.
 func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg types.ZarfPackage, err error) {
-	zarfYamlDescriptor := manifest.Locate(config.ZarfYAML)
-	if zarfYamlDescriptor.Digest == "" {
-		return pkg, fmt.Errorf("unable to find %s in the manifest", config.ZarfYAML)
-	}
-	zarfYamlBytes, err := o.FetchLayer(zarfYamlDescriptor)
+	v, err := o.FetchYAML(manifest, config.ZarfYAML)
 	if err != nil {
 		return pkg, err
 	}
-	err = goyaml.Unmarshal(zarfYamlBytes, &pkg)
-	if err != nil {
-		return pkg, err
+	p, ok := v.(types.ZarfPackage)
+	if !ok {
+		return pkg, fmt.Errorf("unable to parse %s as a Zarf package", config.ZarfYAML)
 	}
-	return pkg, nil
+	return p, nil
 }
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.
 func (o *OrasRemote) FetchImagesIndex(manifest *ZarfOCIManifest) (index *ocispec.Index, err error) {
-	indexDescriptor := manifest.Locate(manifest.indexPath)
-	indexBytes, err := o.FetchLayer(indexDescriptor)
+	v, err := o.FetchJSON(manifest, manifest.indexPath)
+	if err != nil {
+		return index, err
+	}
+	i, ok := v.(*ocispec.Index)
+	if !ok {
+		return index, fmt.Errorf("unable to parse %s as an OCI index", manifest.indexPath)
+	}
+	return i, nil
+}
+
+func (o *OrasRemote) FetchJSON(manifest *ZarfOCIManifest, path string) (any, error) {
+	descriptor := manifest.Locate(path)
+	if IsEmptyDescriptor(descriptor) {
+		return nil, fmt.Errorf("unable to find %s in the manifest", path)
+	}
+	bytes, err := o.FetchLayer(descriptor)
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(indexBytes, &index)
+	var result any
+	err = json.Unmarshal(bytes, &result)
 	if err != nil {
 		return nil, err
 	}
-	return index, nil
+	return result, nil
+}
+
+func (o *OrasRemote) FetchYAML(manifest *ZarfOCIManifest, path string) (any, error) {
+	descriptor := manifest.Locate(path)
+	if IsEmptyDescriptor(descriptor) {
+		return nil, fmt.Errorf("unable to find %s in the manifest", path)
+	}
+	bytes, err := o.FetchLayer(descriptor)
+	if err != nil {
+		return nil, err
+	}
+	var result any
+	err = goyaml.Unmarshal(bytes, &result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // printLayerSuccess prints a success message to the console when a layer has been successfully published/pulled to/from a registry.

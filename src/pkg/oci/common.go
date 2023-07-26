@@ -32,6 +32,7 @@ const (
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
 type OrasRemote struct {
 	repo      *remote.Repository
+	root      *ZarfOCIManifest
 	ctx       context.Context
 	Transport *utils.Transport
 	CopyOpts  oras.CopyOptions
@@ -64,6 +65,10 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 
 // WithRepository sets the repository for the remote as well as the auth client.
 func (o *OrasRemote) WithRepository(ref registry.Reference) error {
+	if o.root != nil {
+		o.root = nil
+	}
+
 	// patch docker.io to registry-1.docker.io
 	// this allows end users to use docker.io as an alias for registry-1.docker.io
 	if ref.Registry == "docker.io" {
