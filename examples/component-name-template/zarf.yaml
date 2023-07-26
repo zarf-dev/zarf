@@ -18,7 +18,7 @@ components:
       # Must match version in Chart.yaml
         version: 0.1.0
         namespace: webserver
-        localPath: chart
+        localPath: chart1
         valuesFiles:
           - enable-###ZARF_COMPONENT_NAME###.yaml
     # Must include images in helm chart
@@ -29,11 +29,11 @@ components:
     required: true
     charts:
       # Must match name in Chart.yaml
-      - name: hello-zarf-chart
+      - name: goodbye-zarf-chart
       # Must match version in Chart.yaml
         version: 0.1.0
         namespace: webserver
-        localPath: chart
+        localPath: chart2
         valuesFiles:
           - enable-###ZARF_COMPONENT_NAME###.yaml
     # Must include images in helm chart
