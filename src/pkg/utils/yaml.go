@@ -162,7 +162,7 @@ func ReloadYamlTemplate(config any, mappings map[string]string) error {
 	return goyaml.Unmarshal(text, config)
 }
 
-// FindComponentTemplates appends ###ZARF_COMPONENT_ with Chart name and assigns value
+// FindComponentTemplates appends ###ZARF_COMPONENT_ with Chart name, assigns value, and reloads
 func FindComponentTemplatesAndReload(config any, prefix string, suffix string) error {
 
 	// Create empty byte array for the Package Components
