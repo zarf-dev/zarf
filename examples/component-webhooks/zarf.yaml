@@ -1,0 +1,16 @@
+kind: ZarfPackageConfig
+metadata:
+  name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+  description: 'Pepr Module: '
+  url: https://github.com/defenseunicorns/pepr
+  version: 0.0.1
+components:
+  - name: module
+    required: true
+    manifests:
+      - name: module
+        namespace: pepr-system
+        files:
+          - pepr-module-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b.yaml
+    images:
+      - ghcr.io/defenseunicorns/pepr/controller:v0.12.0

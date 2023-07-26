@@ -1,0 +1,191 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pepr-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+rules:
+  - apiGroups:
+      - '*'
+    resources:
+      - '*'
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+subjects:
+  - kind: ServiceAccount
+    name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+    namespace: pepr-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+  namespace: pepr-system
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b-api-token
+  namespace: pepr-system
+type: Opaque
+data:
+  value: >-
+    ZDViMDU4MzFkY2U5ZTkxY2U2YTlhMmI3YzU3YjQ2ZjRjZDg2NWQwMTZlMTczYTY5YTdkM2Q0ZTgxMTdlNGU5NQ==
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b-tls
+  namespace: pepr-system
+type: kubernetes.io/tls
+data:
+  tls.crt: >-
+    LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tDQpNSUlDd3pDQ0FhdWdBd0lCQWdJQkFUQU5CZ2txaGtpRzl3MEJBUXNGQURBQU1CNFhEVEl6TURjeU5qSXhOVGt5DQpNRm9YRFRJME1EY3lOakl4TlRreU1Gb3dBRENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DDQpnZ0VCQU1oZ1dPVDBBTDhiNzdKTmRwcHNpRFo1c3V2aHJOYVNxQzE3RVpoNG5JeEZuVm5qYnl5VU42S1lLMHFaDQpuY2gxK25oaURjSnRyczdGMm9SZTFWclNJckU1U0NQY0dHSWpNZzkrZFIvVENlZ1h6MmUzQ3YxZU5qNktPK2p4DQp4ZGg5OVcyWjZsbE9wRi85cTQ0UFpUbFFHNEdhSUNnZnlsczRaMitpY1BrbkVldzE3NnlvZXNILys0Sk5DUWdaDQp1eU16SHBhSmhCLzNFdytqcGRVRFAwazFySnN3Q002dlM2Skc2SkRqdEdDa05zeTBYSDNlM2hDN0hCckIzWFlRDQpoR2xZTVpENkgySEVQM1ZKZGpScVQrR2NWUENDMGVvaDdtNThQV2l2SzRudUlKSGMwREZaZUFPVGp0dDZ4N0NCDQpHN1RXTnZGNTFpdllhNGUrOFJOczI4OFNjNDBDQXdFQUFhTklNRVl3UkFZRFZSMFJCRDB3TzRJNWNHVndjaTFqDQpZalUyT1RObFppMWtNVE5qTFRWbVpURXRZalZoWkMxak9EY3dabVE1TVRGaU0ySXVjR1Z3Y2kxemVYTjBaVzB1DQpjM1pqTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBb2pjYzdDQzJKT1A4ZkJLOU4yOGFXcTU4RDNVQWE0MDFjDQpVdmpMZkY5c0c2TDlFWjdoK3kzTVI0c2ovTHZrUFlic1lKdU9kVDhnNG5Bck5NRkhrMkNXeDlldGRLK2pybVg2DQpuWE11M2xxbWU5TStsWTlPWlF4ZkRFNmtNNkRkZlU2QVArKy9jK3pldk55YnlnR0kzMkNYcWs0a29SM0JzaUUyDQplQzZFbDZ0SEhmd3hCcnF1L3pyWVd3UUUvdjhabXBzZ1VwcUo5akdVNWFNdWN2d2tya0pBeXRObUpjaEdsdC95DQpQclQ2djJmd2hGRkJ1Z0Z5YlpnMEFNcVZkU29Qc0dITFhMSzFCODM4dk9BZldmV09HK1hESGoxZTdKeTRFck94DQpFbDdqS3Uvbk1lVWZ5N1lzcGRrbGhlUUFZL1JwdU5rRE9tVWNENDY1RFBEZlFNQ2ljSWhTDQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tDQo=
+  tls.key: >-
+    LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQ0KTUlJRW93SUJBQUtDQVFFQXlHQlk1UFFBdnh2dnNrMTJtbXlJTm5teTYrR3MxcEtvTFhzUm1IaWNqRVdkV2VOdg0KTEpRM29wZ3JTcG1keUhYNmVHSU53bTJ1enNYYWhGN1ZXdElpc1RsSUk5d1lZaU15RDM1MUg5TUo2QmZQWjdjSw0KL1Y0MlBvbzc2UEhGMkgzMWJabnFXVTZrWC8ycmpnOWxPVkFiZ1pvZ0tCL0tXemhuYjZKdytTY1I3RFh2cktoNg0Kd2YvN2drMEpDQm03SXpNZWxvbUVIL2NURDZPbDFRTS9TVFdzbXpBSXpxOUxva2Jva09PMFlLUTJ6TFJjZmQ3ZQ0KRUxzY0dzSGRkaENFYVZneGtQb2ZZY1EvZFVsMk5HcFA0WnhVOElMUjZpSHVibnc5YUs4cmllNGdrZHpRTVZsNA0KQTVPTzIzckhzSUVidE5ZMjhYbldLOWhyaDc3eEUyemJ6eEp6alFJREFRQUJBb0lCQUNNZG1XNlVZVzRjaWZzRQ0KTHRFY3pKbEpaaVVIQVhpQUxxZDd6aWRibWNuT2FHZEluNkxmSGNucG80cVpGY2o3L2dkclhiQnhjdVZyVUtLSw0Ka1JidnhTTXNYL3RpMXNZYUYydVdOSlg5Y05yREUzYkFZaFZwbFpXTHViaVc2RjZLb29DUTdQdzJOMEhZVGFDaA0KaTVLSitxd1JrK21jT3FVV1l6QXg5bHovcnhrblFrVjAxajJ3dEVpUzFJUGloeGlPMXI3SnU5K3ArL2h5N210dw0KQ3NQSWE1L1ZJVnVHZWNSUk1BS1BNckVydXFvcjd0cTFGNUdYNzhKc3Q4SWI4TGJuV1UvWEVkMDh4M1VOc2JRKw0KYk9aWnhIbWltelNZN3lDUHRXbHdqK0dybzJKQ1kzMXp5MlJyUUZWVi9tMm5UR2hWS3dDSng5eUhEeWZvVHVxeQ0KeTAwZTd0RUNnWUVBNHJuWG50bytVZk1MbUtLSUo3VFlneVlSOHJxR2Y4dDhWenJZd3pUZkJveFpwRmFCektiQg0KNXUvdXJ3bGg1MDJhd1BQdmd0TTVoUUJaaEZyNEZMYSttSzc2Smx1OFJSWHVMbEJlOStucndoS3JjZTdLdkUrRA0KZ0pMY0FXNzFSZ3lOK05VZFc2K2VmUEh4b2RxZU03T1VvRFVDUXJrRVNRWTBYUXZoTmpyV0FGMENnWUVBNGorTQ0KN0FKQ2g0aTd3WXhCc2t6UXVURmphNVdmSDdENURjUGRaRjk0M0FhMzZ5VDYvNUhHR0c1US80OUdNVXZtSXBPTQ0KYXlKUytEUm5OK2RySWxjSi80V0VtM0NqY1ZGK3BnRDcramV0MWdLWnNxNnExbWsrWjJoWVhzbHhQN2VYclhueg0Ka3JWRkZzMkcvYkJiWS95eVFwZ3ZTRWdZa0ozZlBNNGJQeU42elBFQ2dZQVBSaFBIaU01UCtQNmIvcjhMWmJ4OA0KUVZGT045Q2R4VmlRQzgvVWZyaFRtWnJrWGt1S1BPV3RLQmE5UmZXSmZvbmhXODJUMDZUNVY4ZXdDZXpTZ0drZw0Kb2hFS0NuNEpiV3ZKUlBMUTRycFdMYW5OR0JnaVRYei9hV1ZXMTJIQW9WSGpKSUJBei9qdVUrSkNWQmI2UnF2Sg0KaXlpbTFBMzgyV1VucTRnMWZnc3lwUUtCZ1FESlM2dVJEQTJ2VXR0aVArenZ1MkoxY3RpM0RyOHR6aUk0dWd4UA0KVXBaUWhQVzhGQUh4d3Z3U0hveVlaQndhbmlIYW41WnVkM0tFZlBOZEROd0lDSkxQc2phaXFkdnhaWVdlSXdBTg0KeHQ0MnE4ZWQ3OFAxMGx1QVc1bE1kRVA3WWRoa3N6MGdTWUYzNFZMNmdaOCtYY1VvZFFpVWNmalJLblZGUDBlRQ0KckllRXNRS0JnRE5qZ3krR1QzODRkTHBzeitUcW5aZkNJWTczSm1ZOUU3R094ZU8wSTNSR3ltYlRWeFFYR3pWSA0KbHhvb0R4NkI3MFZCOUl2MFhQOGxoWGh3NlBzL29yYTFnSEJDUGNjZ05pK29wRitpK0pCd2ZFOXRQVHNVcDhMNA0KNG1Cc3NON09OQkM2YzBnS2lvenozbnR4RTg3QSs2d0Vsb1ZiTWlXWG9GdGtYZ2wvTnBHaA0KLS0tLS1FTkQgUlNBIFBSSVZBVEUgS0VZLS0tLS0NCg==
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+webhooks:
+  - name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b.pepr.dev
+    admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      caBundle: >-
+        LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tDQpNSUlDdERDQ0FaeWdBd0lCQWdJQkFUQU5CZ2txaGtpRzl3MEJBUXNGQURBY01Sb3dHQVlEVlFRREV4RlFaWEJ5DQpJRVZ3YUdWdFpYSmhiQ0JEUVRBZUZ3MHlNekEzTWpZeU1UVTVNakJhRncweU5EQTNNall5TVRVNU1qQmFNQUF3DQpnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCQVFERis2VTM0R3d6aWxPZjJEODU0K3pNDQpIOGwrYVF4UE1oZTBtZmdwYVNJSkpyWE1FeFM4SUNxT2pocm1TekhOOHVlcmpGSkxwU1hVODZSK0N3UlN0SEsyDQpQc2swMkxmS3lXbVRKdzhJOFZlOGF3b0lrMTRIYUJCRVhSL3hobjR3SEV2aCtkUzV2R2h4V0ZFc2FGNDNRcWtGDQo5cDJWdWhkUHVhdTdMUjVmc0hhbEdYbk9TMnNXUExKUWMyVnpTT0FHSUtuN0hZQUlWeHlvMVo5N2loM0psdnlsDQphQjZWZHJTdHF4eTM0M3BSUDhQMjhGOFl2T3FvR0IwOVZqdEx6ODhSaERXYnlCMmsreVk5RFZFZ1ZZMXJnZ2xjDQpZR0pOZC9mKzZaUVpidWNaZWx3WXhpcGVIdnpGd2JwamRWaGhWK2U5NGtkZFdvdVBkeGhLUUV6Y1FpYmluencvDQpBZ01CQUFHakhUQWJNQXdHQTFVZEV3UUZNQU1CQWY4d0N3WURWUjBQQkFRREFnTDBNQTBHQ1NxR1NJYjNEUUVCDQpDd1VBQTRJQkFRQ04vZnVZaEM4dVE4eEk4TFEzUTUvc1VmSUhQNS94VmtuVFdPM01tYlhmU2NmeThmS1VKMFFNDQpYK3BzM2hsc2FlRDdVZkM1MzlSUi8xU1pNM2FCbitrcmFmd3htSk9uVGc2ajcvR3hnNVJWWm5ONFdJSGY5WHUwDQpBT3J4RXBzK3RkUjhGSVlML3piTk1ZY2c5L3VDZTNvYUxVVkkvT2xJdlNvZmdqMXpnOWF6Y1JwaXQ1SW12bGdoDQo1TjFOVm5sNlQxYU5ET1NpZ0JmWXVkOTR3SU5rTWEydllKTjJEL09TV0U3cmp2a0t3RXRtUjUveGthbjdtaVdMDQo1T01FdUJqWVRzVHFFTkR3SlVSZWJhRHVaRjB6cGNaRW42a3h0eGlQYTk3eCt2QUFqQ0xnVXdoMnBNcFp3YlZQDQo1eEFwdjR0bHZaSUVIYzBidWRaeURDWWNnVGg5dDBHeA0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ0K
+      service:
+        name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+        namespace: pepr-system
+        path: >-
+          /mutate/d5b05831dce9e91ce6a9a2b7c57b46f4cd865d016e173a69a7d3d4e8117e4e95
+    failurePolicy: Ignore
+    matchPolicy: Equivalent
+    timeoutSeconds: 10
+    namespaceSelector:
+      matchExpressions:
+        - key: pepr.dev
+          operator: NotIn
+          values:
+            - ignore
+    objectSelector:
+      matchExpressions:
+        - key: pepr.dev
+          operator: NotIn
+          values:
+            - ignore
+    rules:
+      - apiGroups:
+          - ''
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - secrets
+    sideEffects: None
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+  namespace: pepr-system
+  labels:
+    app: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+  template:
+    metadata:
+      labels:
+        app: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+    spec:
+      priorityClassName: system-node-critical
+      serviceAccountName: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+      containers:
+        - name: server
+          image: ghcr.io/defenseunicorns/pepr/controller:v0.12.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - node
+            - /app/node_modules/pepr/dist/controller.js
+            - 1b0831087568a7371fe36d9b1f8cbb53fbbb6731901ac957d79bd1f302dff214
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+              scheme: HTTPS
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi
+              cpu: 500m
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/certs
+              readOnly: true
+            - name: api-token
+              mountPath: /app/api-token
+              readOnly: true
+            - name: module
+              mountPath: /app/load
+              readOnly: true
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b-tls
+        - name: api-token
+          secret:
+            secretName: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b-api-token
+        - name: module
+          secret:
+            secretName: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b-module
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+  namespace: pepr-system
+spec:
+  selector:
+    app: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
+  ports:
+    - port: 443
+      targetPort: 3000
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b-module
+  namespace: pepr-system
+type: Opaque
+data:
+  module-1b0831087568a7371fe36d9b1f8cbb53fbbb6731901ac957d79bd1f302dff214.js.gz: >-
+    H4sIAAAAAAAAE5VWbZPbNBD+3l8hBHO1qawmhIPWGV/p5ApT6NvctXSGm2MqW2tHjSMZSb4QUv93VnZyzXGhlA9x7NVqX559tKsrYUmbvczfQ+G5hFJpeGVNA9avp1e4JrNIMxFnJy3+Uy2WQNnmStQtpIIVRpeqaq3Ia0i/GHVxvyXPLPzRKgsRbaCxdJDOs03YnVIobLKCfG7MgrIrsE4ZndIRH/ExZRJcYVXjexllC1ivjJUuvRhMMbp44PDZmFoV6wR0hfGGb1xMlka2dfhyULRW+TW9ZIOGSzfaSPR9ko0foKMR7VjYkh4KqW2VTGmRH3/3cAJlIseTIjkuYZzkx0ImxYPvR6V8OB7nk5wyo59Ya2xKVaWNRd+iXom1e9p/DdZdIwoM4OKS1SKHOrx1HRuyxLjoYiITB75taBreSVG3zgMCDzV4IH1mEq7I0RHZXy4siP3lJFlMXCJsRe4mKMjb6gcHFuFNR3cxWwkNaAm6UAGMPnf6OyL+TY8FGji9oeDXzbYQKT1GwL6lXddX0RysbZFpWBHDZ6IRuaoR+miH7J9i2dTwEd0bBX5MnArLZKtGimsDxBvi5mZFwm+72xEkw4KslJ+T34QtCUK7EBUgVk1t1kvQ3nHK9lGnf6Eevexitnk7B52WXVZMy8hwwc+x6uBj/tTNeizlS/umkeElQqF+sbMSDTZi/hb9Pgs1xNwHx8ngOFG6NKjwGj1EOjvZYOWIyDQ/EysGzDGbfTGeerveuEx4k0eCo5/hEYfFUVcIX8zD8seVLmyA7Ofzly94I6yDyMWDXuTjjeHPTMUhsC+ipVA1yABZr0j8HIjr0/toLiX0no+nKGut7uDoCPgQPciZWTZGB/QOS3lp7BMR/GJunjsvfOuyLKOnvarSFT06ioaIeupFFKEgxc5A8MxDVe5Roty2WmFXzIBfa73dFjnEcEt4MRi4/OTiBfXg/DXX/p8yN3l/YORPoMGKQFBMEXh1/fno8zKcC0dEjZSSa3yXROzoiyzHxoT8IognUZ6TF8ZvhYgGEdpg4SyncRodCPzDh0PSbNMdRHGXZra5meeu5d0QsqGkKT1rtQ6FYSuh/Gk75I0HxWjswZPRiN0GKd2HCDvbAtm9BC964gVfbIgkjuMukD1Duj/ao3mWeyOinuXOW3SuynWE2um+zq1lHDXCrXVBylYXwTNZ9HNqI0LkpIomo3gajiFsWxPODf5Lm8OsH1lT4LUR8kdrlqdQirb20aDusOJLsYDHjZrVCvGMhq0z7Oe/jlG6O0FkcOR4KPR1r5BDUwmjcts0fOgJQ6h22xl8Znlu5Joth27g97uB2j/wy5g1mTpQXHGLvruwmt3xpOdtUQBIkJR9nomsYf4/6qLimO0Sb0Ir+tfMmWdXRkky+uTfZo7o4RUA5yAWxmN8yWscPTgKRdPgiO9JdR/9Y1uuVJEswWLX7T3fe++MxrGEVOBDV0R8o/22+O5MaKLwcBo8WqSXkRWWg2BjDecN22XbN/y+X+5mydA3U/LV5h+527h7hwRGGstogZeMGqB5rOVsLnQF5z3oOA6v+VhFOt5sixIoiLeqpcKaiuwEx/1rtQTT+kgw/fUYJr3RamsUrYQNOX+FE/Z5f6mJ5uyiuIynd+7f/5I409oCniNCGNmbs2dZfwn4nAsLf++Q3c2dvwFhBG1v9QkAAA==
