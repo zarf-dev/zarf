@@ -8,7 +8,7 @@ components:
   - name: import-component-local
     required: false
     import:
-      path: foo
+      path: ###ZARF_COMPONENT_NAME###
       name: baz
 
   - name: import-component-local-relative
@@ -39,14 +39,14 @@ components:
     cosignKeyPath: ../../../../cosign.pub
     files:
       # Import of a file within the current directory
-      - source: files/coffee-ipsum.txt
-        target: files/coffee-ipsum.txt
+      - source: ###ZARF_COMPONENT_NAME###/coffee-ipsum.txt
+        target: ###ZARF_COMPONENT_NAME###/coffee-ipsum.txt
         # Import of a file from a relative path external to the current directory
       - source: ../everything-external/files/coffee-ipsum.txt
-        target: files/latte.txt
+        target: ###ZARF_COMPONENT_NAME###/latte.txt
         # Import of a file from a URL
       - source: https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md
-        target: files/zarf-readme.md
+        target: ###ZARF_COMPONENT_NAME###/zarf-readme.md
     actions:
       onDeploy:
         after:

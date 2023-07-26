@@ -152,3 +152,19 @@ func (p *Packager) injectImportedConstant(importedConstant types.ZarfPackageCons
 		p.cfg.Pkg.Constants = append(p.cfg.Pkg.Constants, importedConstant)
 	}
 }
+
+// findComponentTemplatesAndReload appends ###ZARF_COMPONENT_NAME  for each component, assigns value, and reloads
+func findComponentTemplatesAndReload(config any, prefix string, suffix string) error {
+
+	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
+	for i, component := range config.(*types.ZarfPackage).Components {
+		mappings := map[string]string{}
+		mappings["###ZARF_COMPONENT_NAME###"] = component.Name
+		err := utils.ReloadYamlTemplate(config.(*types.ZarfPackage).Components[i], mappings)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

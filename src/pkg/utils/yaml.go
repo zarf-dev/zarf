@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/fatih/color"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/lexer"
@@ -159,45 +158,6 @@ func ReloadYamlTemplate(config any, mappings map[string]string) error {
 	}
 
 	return goyaml.Unmarshal(text, config)
-}
-
-// FindComponentTemplatesAndReload appends ###ZARF_COMPONENT_  for each component, assigns value, and reloads
-func FindComponentTemplatesAndReload(config any, prefix string, suffix string) error {
-	// Find all strings that are between the given prefix and suffix
-	//r := regexp.MustCompile(fmt.Sprintf("%s([A-Z_]+)%s", prefix, suffix))
-
-	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
-	for i, component := range config.(*types.ZarfPackage).Components {
-		mappings := map[string]string{}
-		mappings["###ZARF_COMPONENT_NAME###"] = component.Name
-		_ = ReloadYamlTemplate(config.(*types.ZarfPackage).Components[i], mappings)
-
-		// Create Bytes from component
-		// componentText, err := json.Marshal(component)
-		// if err != nil {
-		// 	return err
-		// }
-
-		// // Find all strings that are between the given prefix and suffix and switch
-		// // Range of strings between ###ZARF_COMPONENT_ and ### and switch
-		// for _, match := range r.FindAllStringSubmatch(string(componentText), -1) {
-		// 	completeTemplate := []byte(prefix + match[1] + suffix)
-
-		// 	// replace with actual component part
-		// 	switch match[1] {
-		// 	// can do more component cases here
-		// 	case "NAME":
-		// 		// replace component name with template value
-		// 		componentText = bytes.ReplaceAll(componentText, completeTemplate, []byte(component.Name))
-		// 	}
-		// }
-		// err = json.Unmarshal(componentText, &config.(*types.ZarfPackage).Components[i])
-		// if err != nil {
-		// 	return err
-		// }
-	}
-
-	return nil
 }
 
 // FindYamlTemplates finds strings with a given prefix in a config.
