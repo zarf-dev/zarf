@@ -14,6 +14,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"oras.land/oras-go/v2/registry"
 )
@@ -146,8 +147,12 @@ func pull(t *testing.T, ref string, tarballPath string) {
 
 		for _, layer := range manifest.Layers {
 			sha := layer.Digest.Encoded()
-			require.FileExists(t, filepath.Join(blobsDir, sha), fmt.Sprintf("%#+v", layer))
-			shasMatch(t, filepath.Join(blobsDir, sha), layer.Digest.Encoded())
+			path := filepath.Join(blobsDir, sha)
+			if assert.FileExists(t, path) {
+				shasMatch(t, path, layer.Digest.Encoded())
+			} else {
+				t.Logf("layer dne, but it might be part of a component that is not included in this bundle: \n %#+v", layer)
+			}
 		}
 	}
 }
