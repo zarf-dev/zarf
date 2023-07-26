@@ -31,7 +31,6 @@ func Bundle(r *oci.OrasRemote, bundle *types.ZarfBundle, signature []byte) error
 	manifest := ocispec.Manifest{}
 
 	for _, pkg := range bundle.Packages {
-		// TODO: handle components + wildcards
 		url := fmt.Sprintf("%s:%s", pkg.Repository, pkg.Ref)
 		remote, err := oci.NewOrasRemote(url)
 		if err != nil {
@@ -56,17 +55,43 @@ func Bundle(r *oci.OrasRemote, bundle *types.ZarfBundle, signature []byte) error
 		manifestDesc.MediaType = ocispec.MediaTypeImageManifest
 		message.Debugf("Pushed %s sub-manifest into %s: %s", url, ref, message.JSONValue(manifestDesc))
 		manifest.Layers = append(manifest.Layers, manifestDesc)
-		// stream copy the blobs from remote to o, otherwise do a blob mount
+
+		// get only the layers that are required by the components
+		layersFromComponents, err := remote.LayersFromRequestedComponents(pkg.OptionalComponents)
+		if err != nil {
+			return err
+		}
+
+		// get the layers that are always required
+		metadataLayers, err := remote.LayersFromPaths(oci.PackageAlwaysPull)
+		if err != nil {
+			return err
+		}
+
+		layersToCopy := append(layersFromComponents, metadataLayers...)
+
+		// stream copy the blobs, otherwise do a blob mount
 		if remote.Repo().Reference.Registry != ref.Registry {
 			message.Debugf("Streaming layers from %s --> %s", pkgRef, ref)
-			if err := oci.CopyPackage(remote, r, config.CommonOptions.OCIConcurrency); err != nil {
+
+			filterLayers := func(d ocispec.Descriptor) bool {
+				for _, layer := range layersToCopy {
+					if layer.Digest == d.Digest {
+						return true
+					}
+				}
+				return false
+			}
+
+			if err := oci.CopyPackage(remote, r, filterLayers, config.CommonOptions.OCIConcurrency); err != nil {
 				return err
 			}
 		} else {
 			message.Debugf("Performing a cross repository blob mount on %s from %s --> %s", ref, ref.Repository, ref.Repository)
 			spinner := message.NewProgressSpinner("Mounting layers from %s", pkgRef.Repository)
-			includingConfig := append(root.Layers, root.Config)
-			for _, layer := range includingConfig {
+			layersToCopy = append(layersToCopy, root.Config)
+
+			for _, layer := range layersToCopy {
 				spinner.Updatef("Mounting %s", layer.Digest.Encoded())
 				if err := r.Repo().Mount(context.TODO(), layer, pkgRef.Repository, func() (io.ReadCloser, error) {
 					return remote.Repo().Fetch(context.TODO(), layer)
@@ -74,7 +99,8 @@ func Bundle(r *oci.OrasRemote, bundle *types.ZarfBundle, signature []byte) error
 					return err
 				}
 			}
-			spinner.Successf("Mounted %d layers", len(includingConfig))
+
+			spinner.Successf("Mounted %d layers", len(layersToCopy))
 		}
 	}
 

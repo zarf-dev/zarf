@@ -11,12 +11,13 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
 
 // CopyPackage copies a package from one OCI registry to another
-func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
+func CopyPackage(src *OrasRemote, dst *OrasRemote, include func(d ocispec.Descriptor) bool, concurrency int) error {
 	// create a new semaphore to limit concurrency
 	sem := semaphore.NewWeighted(int64(concurrency))
 	ctx := context.TODO()
@@ -28,8 +29,16 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, concurrency int) error {
 	if err != nil {
 		return err
 	}
-	// TODO: handle components + wildcards
-	layers := srcRoot.Layers
+
+	var layers []ocispec.Descriptor
+	for _, layer := range srcRoot.Layers {
+		if include != nil && include(layer) {
+			layers = append(layers, layer)
+		} else if include == nil {
+			layers = append(layers, layer)
+		}
+	}
+
 	layers = append(layers, srcRoot.Config)
 
 	size := int64(0)
