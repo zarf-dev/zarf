@@ -294,8 +294,9 @@ const (
 	CmdBundleCreateFlagSigningKeyPassword = "Password to the private key file used for signing bundles"
 	CmdBundleCreateFlagSet                = "Specify bundle template variables to set on the command line (KEY=value)"
 
-	CmdBundleDeployShort   = "Deploy a bundle from a local tarball or oci:// URL"
-	CmdBundleDeployFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdBundleDeployShort       = "Deploy a bundle from a local tarball or oci:// URL"
+	CmdBundleDeployFlagSet     = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdBundleDeployFlagConfirm = "Confirms bundle deployment without prompting. ONLY use with bundles you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 
 	CmdBundleInspectShort   = "Display the metadata of a bundle"
 	CmdBundleInspectFlagKey = "Path to a public key file that will be used to validate a signed bundle"

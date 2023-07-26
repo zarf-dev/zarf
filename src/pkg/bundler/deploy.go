@@ -58,9 +58,7 @@ func (b *Bundler) Deploy() error {
 	// deploy each package
 	for _, pkg := range b.bundle.Packages {
 		sha := strings.Split(pkg.Ref, "@sha256:")[1]
-		split := strings.Split(pkg.Repository, "/")
-		name := split[len(split)-1]
-		pkgTmp, err := utils.MakeTempDir(name)
+		pkgTmp, err := utils.MakeTempDir()
 		if err != nil {
 			return err
 		}
@@ -70,9 +68,13 @@ func (b *Bundler) Deploy() error {
 			return err
 		}
 
-		publicKeyPath := filepath.Join(pkgTmp, PublicKeyFile)
-		if err := utils.WriteFile(publicKeyPath, []byte(pkg.PublicKey)); err != nil {
-			return err
+		publicKeyPath := filepath.Join(b.tmp, PublicKeyFile)
+		if pkg.PublicKey != "" {
+			if err := utils.WriteFile(publicKeyPath, []byte(pkg.PublicKey)); err != nil {
+				return err
+			}
+		} else {
+			publicKeyPath = ""
 		}
 
 		opts := types.ZarfPackageOptions{

@@ -62,10 +62,13 @@ func Bundle(r *oci.OrasRemote, bundle *types.ZarfBundle, signature []byte) error
 			return err
 		}
 
-		// get the layers that are always required
-		metadataLayers, err := remote.LayersFromPaths(oci.PackageAlwaysPull)
-		if err != nil {
-			return err
+		// get the layers that are always pulled
+		metadataLayers := []ocispec.Descriptor{}
+		for _, path := range oci.PackageAlwaysPull {
+			layer := root.Locate(path)
+			if !oci.IsEmptyDescriptor(layer) {
+				metadataLayers = append(metadataLayers, layer)
+			}
 		}
 
 		layersToCopy := append(layersFromComponents, metadataLayers...)

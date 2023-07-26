@@ -6,6 +6,7 @@ package bundler
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
@@ -40,7 +41,7 @@ func (b *Bundler) Remove() error {
 	for _, pkg := range b.bundle.Packages {
 		split := strings.Split(pkg.Repository, "/")
 		name := split[len(split)-1]
-		pkgTmp, err := utils.MakeTempDir(name)
+		pkgTmp, err := os.MkdirTemp(b.tmp, name)
 		if err != nil {
 			return err
 		}

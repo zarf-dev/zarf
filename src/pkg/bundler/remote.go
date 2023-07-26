@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -57,7 +58,13 @@ func (op *ociProvider) LoadPackage(sha, destinationDir string, concurrency int) 
 	if err != nil {
 		return nil, err
 	}
-	layersToPull := pkgManifest.Layers
+	layersToPull := []ocispec.Descriptor{pkgManifestDesc}
+	for _, layer := range pkgManifest.Layers {
+		ok, _ := op.Repo().Blobs().Exists(op.ctx, layer)
+		if ok {
+			layersToPull = append(layersToPull, layer)
+		}
+	}
 
 	store, err := file.New(destinationDir)
 	if err != nil {
@@ -68,6 +75,13 @@ func (op *ociProvider) LoadPackage(sha, destinationDir string, concurrency int) 
 	copyOpts := op.CopyOpts
 	copyOpts.Concurrency = concurrency
 
+	preCopy := func(_ context.Context, desc ocispec.Descriptor) error {
+		message.Debug("Copying", message.JSONValue(desc), "to", destinationDir)
+		return nil
+	}
+
+	copyOpts.PreCopy = preCopy
+
 	if err := op.CopyWithProgress(layersToPull, store, &copyOpts, destinationDir); err != nil {
 		return nil, err
 	}
@@ -77,6 +91,7 @@ func (op *ociProvider) LoadPackage(sha, destinationDir string, concurrency int) 
 		rel := layer.Annotations[ocispec.AnnotationTitle]
 		loaded[rel] = filepath.Join(destinationDir, rel)
 	}
+	message.Debug(message.JSONValue(loaded))
 	return loaded, nil
 }
 
@@ -138,7 +153,15 @@ func (op *ociProvider) LoadBundle(concurrency int) (PathMap, error) {
 			return nil, err
 		}
 		layersToPull = append(layersToPull, manifestDesc)
-		layersToPull = append(layersToPull, manifest.Layers...)
+		for _, layer := range manifest.Layers {
+			ok, err := op.Repo().Blobs().Exists(op.ctx, layer)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				layersToPull = append(layersToPull, layer)
+			}
+		}
 	}
 
 	copyOpts := op.CopyOpts

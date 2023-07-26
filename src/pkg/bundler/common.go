@@ -47,7 +47,7 @@ func New(cfg *types.BundlerConfig) (*Bundler, error) {
 		}
 	)
 
-	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	tmp, err := utils.MakeTempDir()
 	if err != nil {
 		return nil, fmt.Errorf("bundler unable to create temp directory: %w", err)
 	}
@@ -119,7 +119,7 @@ func (b *Bundler) ValidateBundle() error {
 
 		message.Debug("Validating package:", message.JSONValue(pkg))
 
-		tmp, err := utils.MakeTempDir("")
+		tmp, err := utils.MakeTempDir()
 		if err != nil {
 			return err
 		}
@@ -136,9 +136,13 @@ func (b *Bundler) ValidateBundle() error {
 			return err
 		}
 
-		publicKeyPath := filepath.Join(tmp, PublicKeyFile)
-		if err := utils.WriteFile(publicKeyPath, []byte(pkg.PublicKey)); err != nil {
-			return err
+		publicKeyPath := filepath.Join(b.tmp, PublicKeyFile)
+		if pkg.PublicKey != "" {
+			if err := utils.WriteFile(publicKeyPath, []byte(pkg.PublicKey)); err != nil {
+				return err
+			}
+		} else {
+			publicKeyPath = ""
 		}
 
 		if err := packager.ValidatePackageSignature(tmp, publicKeyPath); err != nil {
@@ -158,6 +162,7 @@ func (b *Bundler) ValidateBundle() error {
 				return err
 			}
 			if pkg.OptionalComponents[0] == "*" {
+				pkg.OptionalComponents = []string{}
 				// a wildcard has been given, so all optional components will be included
 				for _, c := range zarfYAML.Components {
 					// TODO: do we even need an arch check here? doesnt zarf only include components for the current arch during publish?

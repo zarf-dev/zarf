@@ -74,6 +74,12 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 		}
 	)
 
+	if config.CommonOptions.TempDirectory != "" {
+		if err := utils.CreateDirectory(config.CommonOptions.TempDirectory, 0700); err != nil {
+			return nil, fmt.Errorf("unable to create temp directory: %w", err)
+		}
+	}
+
 	// Create a temp directory for the package
 	if pkgConfig.tmp, err = createPaths(config.CommonOptions.TempDirectory); err != nil {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
@@ -235,10 +241,15 @@ func isValidFileExtension(filename string) bool {
 	return false
 }
 
-func createPaths(base string) (paths types.TempPaths, err error) {
+func createPaths(basePath string) (paths types.TempPaths, err error) {
 	message.Debug("packager.createPaths()")
 
-	basePath, err := utils.MakeTempDir(base)
+	if basePath == "" {
+		basePath, err = utils.MakeTempDir()
+		if err != nil {
+			return paths, err
+		}
+	}
 	paths = types.TempPaths{
 		Base: basePath,
 
@@ -275,6 +286,16 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	alreadyExtracted := p.cfg.PkgOpts.PackagePath == p.tmp.Base
+
+	if alreadyExtracted && pathsToCheck == nil {
+		paths, err := utils.RecursiveFileList(p.tmp.Base, nil, false)
+		if err != nil {
+			return fmt.Errorf("unable to get a list of files in the package: %w", err)
+		}
+		for _, path := range paths {
+			pathsToCheck = append(pathsToCheck, strings.TrimPrefix(path, p.tmp.Base+string(os.PathSeparator)))
+		}
+	}
 
 	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.PkgOpts.PackagePath)
 	defer spinner.Stop()

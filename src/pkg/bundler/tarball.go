@@ -135,8 +135,8 @@ func (tp *tarballProvider) LoadBundle(_ int) (PathMap, error) {
 
 	for _, layer := range tp.manifest.Layers {
 		if layer.MediaType == ocispec.MediaTypeImageManifest {
-			var manifest *oci.ZarfOCIManifest
-			if err := format.Extract(tp.ctx, sourceArchive, []string{filepath.Join(blobsDir, layer.Digest.Encoded())}, extractJSON(manifest)); err != nil {
+			var manifest oci.ZarfOCIManifest
+			if err := format.Extract(tp.ctx, sourceArchive, []string{filepath.Join(blobsDir, layer.Digest.Encoded())}, extractJSON(&manifest)); err != nil {
 				return nil, err
 			}
 			layersToExtract = append(layersToExtract, layer)
@@ -192,11 +192,14 @@ func (tp *tarballProvider) LoadPackage(sha, destinationDir string, _ int) (PathM
 		return nil, err
 	}
 
-	defer sourceArchive.Close()
+	var manifest oci.ZarfOCIManifest
 
-	var manifest *oci.ZarfOCIManifest
+	if err := format.Extract(tp.ctx, sourceArchive, []string{filepath.Join(blobsDir, sha)}, extractJSON(&manifest)); err != nil {
+		sourceArchive.Close()
+		return nil, err
+	}
 
-	if err := format.Extract(tp.ctx, sourceArchive, []string{filepath.Join(blobsDir, sha)}, extractJSON(manifest)); err != nil {
+	if err := sourceArchive.Close(); err != nil {
 		return nil, err
 	}
 
@@ -244,10 +247,16 @@ func (tp *tarballProvider) LoadPackage(sha, destinationDir string, _ int) (PathM
 	layersToExtract := []string{}
 	loaded := make(PathMap)
 
-	for _, layers := range manifest.Layers {
-		layersToExtract = append(layersToExtract, filepath.Join(blobsDir, layers.Digest.Encoded()))
-		loaded[layers.Annotations[ocispec.AnnotationTitle]] = filepath.Join(destinationDir, blobsDir, layers.Digest.Encoded())
+	for _, layer := range manifest.Layers {
+		layersToExtract = append(layersToExtract, filepath.Join(blobsDir, layer.Digest.Encoded()))
+		loaded[layer.Annotations[ocispec.AnnotationTitle]] = filepath.Join(destinationDir, blobsDir, layer.Digest.Encoded())
 	}
+
+	sourceArchive, err = os.Open(tp.src)
+	if err != nil {
+		return nil, err
+	}
+	defer sourceArchive.Close()
 
 	if err := format.Extract(tp.ctx, sourceArchive, layersToExtract, extractLayer); err != nil {
 		return nil, err
