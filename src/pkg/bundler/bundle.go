@@ -77,6 +77,8 @@ func Bundle(r *oci.OrasRemote, bundle *types.ZarfBundle, signature []byte) error
 		if remote.Repo().Reference.Registry != ref.Registry {
 			message.Debugf("Streaming layers from %s --> %s", pkgRef, ref)
 
+			// filterLayers returns true if the layer is in the list of layers to copy, this allows for
+			// copying only the layers that are required by the required + specified optional components
 			filterLayers := func(d ocispec.Descriptor) bool {
 				for _, layer := range layersToCopy {
 					if layer.Digest == d.Digest {

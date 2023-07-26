@@ -52,6 +52,8 @@ func TestBundle(t *testing.T) {
 
 	tarballPath := filepath.Join("build", fmt.Sprintf("zarf-bundle-bundle-%s-0.0.1.tar.zst", e2e.Arch))
 
+	// defer e2e.CleanFiles(tarballPath)
+
 	create(t, bundleRef.Registry)
 
 	pull(t, bundleRef.String(), tarballPath)

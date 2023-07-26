@@ -21,11 +21,18 @@ import (
 
 // Create creates a bundle
 func (b *Bundler) Create() error {
+	// get the current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
 
 	// cd into base
 	if err := os.Chdir(b.cfg.CreateOpts.SourceDirectory); err != nil {
 		return err
 	}
+	defer os.Chdir(cwd)
+
 	// read the bundle's metadata into memory
 	if err := utils.ReadYaml(BundleYAML, &b.bundle); err != nil {
 		return err
@@ -47,7 +54,7 @@ func (b *Bundler) Create() error {
 	}
 
 	// validate bundle / verify access to all repositories
-	if err := b.ValidateBundle(); err != nil {
+	if err := b.ValidateBundleResources(&b.bundle); err != nil {
 		return err
 	}
 

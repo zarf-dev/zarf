@@ -73,6 +73,7 @@ func (b *Bundler) Deploy() error {
 			if err := utils.WriteFile(publicKeyPath, []byte(pkg.PublicKey)); err != nil {
 				return err
 			}
+			defer os.Remove(publicKeyPath)
 		} else {
 			publicKeyPath = ""
 		}

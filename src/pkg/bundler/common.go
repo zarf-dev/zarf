@@ -74,29 +74,29 @@ func (b *Bundler) ClearPaths() {
 	_ = os.RemoveAll(config.ZarfSBOMDir)
 }
 
-// ValidateBundle validates the bundle
-func (b *Bundler) ValidateBundle() error {
-	if b.bundle.Metadata.Architecture == "" {
+// ValidateBundleResources validates the bundle's metadata and package references
+func (b *Bundler) ValidateBundleResources(bundle *types.ZarfBundle) error {
+	if bundle.Metadata.Architecture == "" {
 		// ValidateBundle was erroneously called before CalculateBuildInfo
 		if err := b.CalculateBuildInfo(); err != nil {
 			return err
 		}
-		if b.bundle.Metadata.Architecture == "" {
+		if bundle.Metadata.Architecture == "" {
 			return errors.New("unable to determine architecture")
 		}
 	}
-	if b.bundle.Metadata.Version == "" {
+	if bundle.Metadata.Version == "" {
 		return fmt.Errorf("%s is missing required field: metadata.version", BundleYAML)
 	}
-	if b.bundle.Metadata.Name == "" {
+	if bundle.Metadata.Name == "" {
 		return fmt.Errorf("%s is missing required field: metadata.name", BundleYAML)
 	}
-	if len(b.bundle.Packages) == 0 {
+	if len(bundle.Packages) == 0 {
 		return fmt.Errorf("%s is missing required list: packages", BundleYAML)
 	}
 	// validate access to packages as well as components referenced in the package
-	for idx, pkg := range b.bundle.Packages {
-		url := fmt.Sprintf("%s:%s-%s", pkg.Repository, pkg.Ref, b.bundle.Metadata.Architecture)
+	for idx, pkg := range bundle.Packages {
+		url := fmt.Sprintf("%s:%s-%s", pkg.Repository, pkg.Ref, bundle.Metadata.Architecture)
 
 		if strings.Contains(pkg.Ref, "@sha256:") {
 			url = fmt.Sprintf("%s:%s", pkg.Repository, pkg.Ref)
@@ -114,7 +114,7 @@ func (b *Bundler) ValidateBundle() error {
 
 		// mutate the ref to <tag>-<arch>@sha256:<digest> so we can reference it later
 		if err := remote.Repo().Reference.ValidateReferenceAsDigest(); err != nil {
-			b.bundle.Packages[idx].Ref = pkg.Ref + "-" + b.bundle.Metadata.Architecture + "@sha256:" + manifestDesc.Digest.Encoded()
+			bundle.Packages[idx].Ref = pkg.Ref + "-" + bundle.Metadata.Architecture + "@sha256:" + manifestDesc.Digest.Encoded()
 		}
 
 		message.Debug("Validating package:", message.JSONValue(pkg))
@@ -141,6 +141,7 @@ func (b *Bundler) ValidateBundle() error {
 			if err := utils.WriteFile(publicKeyPath, []byte(pkg.PublicKey)); err != nil {
 				return err
 			}
+			defer os.Remove(publicKeyPath)
 		} else {
 			publicKeyPath = ""
 		}
@@ -166,12 +167,12 @@ func (b *Bundler) ValidateBundle() error {
 				// a wildcard has been given, so all optional components will be included
 				for _, c := range zarfYAML.Components {
 					// TODO: do we even need an arch check here? doesnt zarf only include components for the current arch during publish?
-					if c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == b.bundle.Metadata.Architecture {
+					if c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == bundle.Metadata.Architecture {
 						pkg.OptionalComponents = append(pkg.OptionalComponents, c.Name)
 					}
 				}
 				// mutate the package to include all optional components
-				b.bundle.Packages[idx].OptionalComponents = pkg.OptionalComponents
+				bundle.Packages[idx].OptionalComponents = pkg.OptionalComponents
 				continue
 			}
 			// expand partial wildcards
@@ -207,11 +208,11 @@ func (b *Bundler) ValidateBundle() error {
 					})
 					// add the expanded components to the optional components list
 					for _, c := range components {
-						if c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == b.bundle.Metadata.Architecture {
+						if c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == bundle.Metadata.Architecture {
 							pkg.OptionalComponents = append(pkg.OptionalComponents[:idx], append([]string{c.Name}, pkg.OptionalComponents[idx:]...)...)
 						}
 					}
-					b.bundle.Packages[idx].OptionalComponents = pkg.OptionalComponents
+					bundle.Packages[idx].OptionalComponents = pkg.OptionalComponents
 				}
 			}
 			// validate the optional components exist in the package and support the bundle's target architecture
@@ -224,8 +225,8 @@ func (b *Bundler) ValidateBundle() error {
 					return fmt.Errorf("%s .packages[%s].components[%s] does not exist in upstream: %s", BundleYAML, pkg.Repository, component, url)
 				}
 				// make sure the component supports the bundle's target architecture
-				if c.Only.Cluster.Architecture != "" && c.Only.Cluster.Architecture != b.bundle.Metadata.Architecture {
-					return fmt.Errorf("%s .packages[%s].components[%s] does not support architecture: %s", BundleYAML, pkg.Repository, component, b.bundle.Metadata.Architecture)
+				if c.Only.Cluster.Architecture != "" && c.Only.Cluster.Architecture != bundle.Metadata.Architecture {
+					return fmt.Errorf("%s .packages[%s].components[%s] does not support architecture: %s", BundleYAML, pkg.Repository, component, bundle.Metadata.Architecture)
 				}
 			}
 		}
