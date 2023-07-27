@@ -7,16 +7,6 @@ const FetchFileCodeBlock = ({ src, component, raw, showLink = true, fileFormat, 
 
   const linkBaseUrl = `${src}`.replace(/^\/build\/\.\.\//gm, '');
 
-  const handleDownloadClick = () => {
-    const jsonDataString = JSON.stringify(src, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonDataString);
-    
-    const downloadLink = document.createElement('a');
-    downloadLink.href = dataUri;
-    downloadLink.download = fileName;
-    downloadLink.click();
-  };
-
   useEffect(() => {
     //  when fileFormat is json then you don't need to fetch, it is [object Object]
     fileFormat !== "json" ?
@@ -52,7 +42,7 @@ const FetchFileCodeBlock = ({ src, component, raw, showLink = true, fileFormat, 
       {showLink && (
         <p>
           This example's full <code>{fileName}</code> can be viewed at{" "}
-          {fileFormat === "json" ? <a style={{cursor: "pointer"}} onClick={handleDownloadClick}>{fileName}</a> : <a href={`/${linkBaseUrl}/#zarf.yaml`}>{linkBaseUrl}</a>}
+          {fileFormat === "json" ? <a download={fileName} href={"data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(src, null, 2))} style={{cursor: "pointer"}}>{fileName}</a> : <a href={`/${linkBaseUrl}/#zarf.yaml`}>{linkBaseUrl}</a>}
         </p>
       )}
       <CodeBlock copy={false} fileFormat={fileFormat}>
