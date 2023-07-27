@@ -87,6 +87,8 @@ func (b *Bundler) Deploy() error {
 
 		pkgCfg.PkgOpts = opts
 
+		pkgCfg.InitOpts = defaultZarfInitOptions
+
 		pkgClient, err := packager.New(&pkgCfg)
 		if err != nil {
 			return err

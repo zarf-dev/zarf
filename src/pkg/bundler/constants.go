@@ -4,6 +4,11 @@
 // Package bundler contains functions for interacting with, managing and deploying Zarf bundles.
 package bundler
 
+import (
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/types"
+)
+
 const (
 	// BundleYAML is the name of the bundle's metadata file
 	BundleYAML = "zarf-bundle.yaml"
@@ -19,3 +24,32 @@ var (
 	// BundleAlwaysPull is a list of paths that will always be pulled from the remote repository.
 	BundleAlwaysPull = []string{BundleYAML, BundleYAMLSignature}
 )
+
+var defaultZarfInitOptions types.ZarfInitOptions = types.ZarfInitOptions{
+	ApplianceMode: false,
+	GitServer: types.GitServerInfo{
+		PushUsername:   config.ZarfGitPushUser,
+		PushPassword:   "",
+		PullUsername:   "",
+		PullPassword:   "",
+		Address:        "",
+		InternalServer: false,
+	},
+	RegistryInfo: types.RegistryInfo{
+		PushUsername:     config.ZarfRegistryPushUser,
+		PushPassword:     "",
+		PullUsername:     "",
+		PullPassword:     "",
+		Address:          "",
+		NodePort:         0,
+		InternalRegistry: false,
+		Secret:           "",
+	},
+	ArtifactServer: types.ArtifactServerInfo{
+		PushUsername:   "",
+		PushToken:      "",
+		Address:        "",
+		InternalServer: false,
+	},
+	StorageClass: "",
+}

@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/types"
-
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -25,17 +24,9 @@ import (
 // Zarf Global Configuration Constants.
 const (
 	GithubProject = "defenseunicorns/zarf"
-	IPV4Localhost = "127.0.0.1"
 
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
 	ZarfMaxChartNameLength   = 40
-	ZarfGitPushUser          = "zarf-git-user"
-	ZarfGitReadUser          = "zarf-git-read-user"
-	ZarfArtifactTokenName    = "zarf-artifact-registry-token"
-	ZarfRegistryPushUser     = "zarf-push"
-	ZarfRegistryPullUser     = "zarf-pull"
-	ZarfImagePullSecretName  = "private-registry"
-	ZarfGitServerSecretName  = "private-git-server"
 	ZarfGeneratedPasswordLen = 24
 	ZarfGeneratedSecretLen   = 48
 
@@ -59,13 +50,27 @@ const (
 
 	ZarfComponentsDir = "components"
 
-	ZarfInClusterContainerRegistryNodePort = 31999
-
-	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
-	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
-
 	ZarfDeployStage = "Deploy"
 	ZarfCreateStage = "Create"
+)
+
+const (
+	IPV4Localhost string = "127.0.0.1"
+
+	ZarfArtifactTokenName string = "zarf-artifact-registry-token"
+
+	ZarfImagePullSecretName string = "private-registry"
+	ZarfGitServerSecretName string = "private-git-server"
+
+	ZarfRegistryPushUser                   string = "zarf-push"
+	ZarfRegistryPullUser                   string = "zarf-pull"
+	ZarfInClusterContainerRegistryNodePort int    = 31999
+
+	ZarfGitPushUser string = "zarf-git-user"
+	ZarfGitReadUser string = "zarf-git-read-user"
+
+	ZarfInClusterGitServiceURL      string = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+	ZarfInClusterArtifactServiceURL string = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 )
 
 // Zarf Global Configuration Variables.
