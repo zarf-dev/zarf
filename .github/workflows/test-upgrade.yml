@@ -78,7 +78,6 @@ jobs:
         # chown the logs since they were originally created as root
         run: |
           sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server,logging --confirm
-          sudo chown $USER /tmp/zarf-*.log
 
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
@@ -93,7 +92,6 @@ jobs:
           sudo env "PATH=$PATH" CI=true zarf package deploy zarf-package-test-upgrade-package-amd64-6.3.3.tar.zst --confirm
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe deployments -n=podinfo-upgrade
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
-          sudo chown $USER /tmp/zarf-*.log
 
       - name: "Run the PR's tests"
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
@@ -101,7 +99,6 @@ jobs:
         # chown the logs since they were originally created as root
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true APPLIANCE_MODE_KEEP=true make test-e2e ARCH=amd64
-          sudo chown $USER /tmp/zarf-*.log
 
       - name: "Describe nodes, pods and deployments"
         # NOTE: We describe nodes, pods and deployments here to help understand failures
@@ -124,7 +121,6 @@ jobs:
           zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.4 --confirm
 
           sudo env "PATH=$PATH" CI=true make test-upgrade ARCH=amd64
-          sudo chown $USER /tmp/zarf-*.log
 
       - name: Save logs
         if: always()
