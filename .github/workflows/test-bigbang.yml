@@ -109,4 +109,6 @@ jobs:
 
       - name: Save logs
         if: always() && ${{ env.IRONBANK_USERNAME != '' }}
+        env:
+          IRONBANK_USERNAME: ${{ secrets.IRONBANK_USERNAME }}
         uses: ./.github/actions/save-logs
