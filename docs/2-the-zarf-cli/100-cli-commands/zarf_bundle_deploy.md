@@ -10,6 +10,7 @@ zarf bundle deploy [BUNDLE_TARBALL|OCI_REF] [flags]
 ## Options
 
 ```
+  -c, --confirm              Confirms bundle deployment without prompting. ONLY use with bundles you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
   -h, --help                 help for deploy
   -s, --set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
 ```
