@@ -15,12 +15,7 @@ const FetchFileCodeBlock = ({ src, component, raw, showLink = true, fileFormat, 
           return res.text()
         })
         .then(async (text) => {
-          if (component) {
-            const lines = text.split("\n");
-            setContent(lines.join("\n"));
-          } else {
-            setContent(text);
-          }
+          setContent(text);
         }) : setContent(JSON.stringify(src, null, 2))
   }, []);
 
