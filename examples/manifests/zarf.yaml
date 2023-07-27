@@ -22,7 +22,7 @@ components:
                 kind: deployment
                 name: httpd-deployment
                 namespace: httpd
-                condition: available
+                condition: '{.status.readyReplicas}=2'
     # image discovery is supported in all manifests and charts using:
     # zarf prepare find-images
     images:

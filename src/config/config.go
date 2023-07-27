@@ -85,8 +85,8 @@ var (
 	// SkipLogFile is a flag to skip logging to a file
 	SkipLogFile bool
 
-	SGetPublicKey string
-	UIAssets      embed.FS
+	CosignPublicKey string
+	UIAssets        embed.FS
 
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
