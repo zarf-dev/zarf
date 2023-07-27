@@ -37,7 +37,7 @@ spec:
               name: data
       containers:
         - name: kiwix-serve
-          image: "ghcr.io/kiwix/kiwix-serve:3.5.0"
+          image: "ghcr.io/kiwix/kiwix-serve:3.5.0-2"
           command:
             [
               "sh",
