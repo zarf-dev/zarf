@@ -52,9 +52,6 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	// Set the minimum compatible version in the package build metadata
-	p.cfg.Pkg.Build.MinimumCompatibleVersion = config.ZarfMinimumCompatibleVersion
-
 	// Load the images and repos from the 'reference' package
 	if err := p.loadDifferentialData(); err != nil {
 		return err

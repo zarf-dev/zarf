@@ -537,12 +537,12 @@ must respect the following conditions
 
 <details>
 <summary>
-<strong> <a name="build_minimumCompatibleVersion"></a>minimumCompatibleVersion</strong>
+<strong> <a name="build_lastNonBreakingVersion"></a>lastNonBreakingVersion</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** The minimum version of Zarf that should be used to reliably deploy a package
+**Description:** The minimum version of Zarf that does not have breaking package structure changes
 
 |          |          |
 | -------- | -------- |

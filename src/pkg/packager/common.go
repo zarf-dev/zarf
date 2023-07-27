@@ -457,19 +457,17 @@ func (p *Packager) validatePackageArchitecture() error {
 	return nil
 }
 
-// validateMinimumCompatibleVersion compares the Zarf CLI version against a package's minimumCompatibleVersion.
-// It will return an error if there is an error parsing either of the two version inputs,
-// and will throw a warning if the CLI version is less than the minimumCompatibleVersion.
-func (p *Packager) validateMinimumCompatibleVersion(minimumCompatibleVersion string, cliVersion string) (err error) {
-	if minimumCompatibleVersion != "" && cliVersion != "UnknownVersion" {
-		minimumCompatibleSemVer, err := semver.NewVersion(minimumCompatibleVersion)
+// validateLastNonBreakingVersion compares the Zarf CLI version against a package's LastNonBreakingVersion.
+// It will return an error if there is an error parsing either of the two versions,
+// and will throw a warning if the CLI version is less than the LastNonBreakingVersion.
+func (p *Packager) validateLastNonBreakingVersion() (err error) {
+	cliVersion := config.CLIVersion
+	lastNonBreakingVersion := p.cfg.Pkg.Build.LastNonBreakingVersion
+
+	if lastNonBreakingVersion != "" && cliVersion != "UnknownVersion" {
+		lastNonBreakingSemVer, err := semver.NewVersion(lastNonBreakingVersion)
 		if err != nil {
-			err = fmt.Errorf(
-				"unable to parse minimum compatible version '%s' from Zarf package build data : %w",
-				minimumCompatibleVersion,
-				err,
-			)
-			return err
+			return fmt.Errorf("unable to parse lastNonBreakingVersion '%s' from Zarf package build data : %w", lastNonBreakingVersion, err)
 		}
 
 		cliSemVer, err := semver.NewVersion(cliVersion)
@@ -477,17 +475,16 @@ func (p *Packager) validateMinimumCompatibleVersion(minimumCompatibleVersion str
 			return fmt.Errorf("unable to parse Zarf CLI version '%s' : %w", cliVersion, err)
 		}
 
-		if cliSemVer.LessThan(minimumCompatibleSemVer) {
+		if cliSemVer.LessThan(lastNonBreakingSemVer) {
 			warning := fmt.Sprintf(
-				lang.CmdPackageDeployValidateMinCompatVersionWarn,
+				lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
 				cliVersion,
-				minimumCompatibleVersion,
-				minimumCompatibleVersion,
+				lastNonBreakingVersion,
+				lastNonBreakingVersion,
 			)
 			p.warnings = append(p.warnings, warning)
 		}
 	}
-
 	return nil
 }
 

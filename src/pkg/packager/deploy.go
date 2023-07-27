@@ -64,7 +64,7 @@ func (p *Packager) Deploy() error {
 		return err
 	}
 
-	if err := p.validateMinimumCompatibleVersion(p.cfg.Pkg.Build.MinimumCompatibleVersion, config.CLIVersion); err != nil {
+	if err := p.validateLastNonBreakingVersion(); err != nil {
 		return err
 	}
 

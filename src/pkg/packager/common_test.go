@@ -4,93 +4,105 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/assert"
 )
 
-// TestValidateMinimumCompatibleVersion verifies that Zarf validates the minimum compatible version of packages against the CLI version correctly.
-func TestValidateMinimumCompatibleVersion(t *testing.T) {
+// TestValidateLastNonBreakingVersion verifies that Zarf validates the lastNonBreakingVersion of packages against the CLI version correctly.
+func TestValidateLastNonBreakingVersion(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		name                     string
-		cliVersion               string
-		minimumCompatibleVersion string
-		expectedErrorMessage     string
-		expectedWarningMessage   string
-		returnError              bool
-		throwWarning             bool
+		name                   string
+		cliVersion             string
+		lastNonBreakingVersion string
+		expectedErrorMessage   string
+		expectedWarningMessage string
+		returnError            bool
+		throwWarning           bool
 	}
 
 	testCases := []testCase{
 		{
-			name:                     "CLI version less than minimum compatible version",
-			cliVersion:               "v0.26.4",
-			minimumCompatibleVersion: "v0.27.0",
-			returnError:              false,
-			throwWarning:             true,
+			name:                   "CLI version less than lastNonBreakingVersion",
+			cliVersion:             "v0.26.4",
+			lastNonBreakingVersion: "v0.27.0",
+			returnError:            false,
+			throwWarning:           true,
 			expectedWarningMessage: fmt.Sprintf(
-				lang.CmdPackageDeployValidateMinCompatVersionWarn,
+				lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
 				"v0.26.4",
 				"v0.27.0",
 				"v0.27.0",
 			),
 		},
 		{
-			name:                     "invalid semantic version (CLI version)",
-			cliVersion:               "invalidSemanticVersion",
-			minimumCompatibleVersion: "v0.0.1",
-			throwWarning:             false,
-			returnError:              true,
-			expectedErrorMessage:     "unable to parse Zarf CLI version",
+			name:                   "invalid semantic version (CLI version)",
+			cliVersion:             "invalidSemanticVersion",
+			lastNonBreakingVersion: "v0.0.1",
+			throwWarning:           false,
+			returnError:            true,
+			expectedErrorMessage:   "unable to parse Zarf CLI version",
 		},
 		{
-			name:                     "invalid semantic version (minimum compatible version)",
-			cliVersion:               "v0.0.1",
-			minimumCompatibleVersion: "invalidSemanticVersion",
-			throwWarning:             false,
-			returnError:              true,
-			expectedErrorMessage:     "unable to parse minimum compatible version",
+			name:                   "invalid semantic version (lastNonBreakingVersion)",
+			cliVersion:             "v0.0.1",
+			lastNonBreakingVersion: "invalidSemanticVersion",
+			throwWarning:           false,
+			returnError:            true,
+			expectedErrorMessage:   "unable to parse lastNonBreakingVersion",
 		},
 		{
-			name:                     "CLI version greater than minimum compatible version",
-			cliVersion:               "v0.28.2",
-			minimumCompatibleVersion: "v0.27.0",
-			returnError:              false,
-			throwWarning:             false,
+			name:                   "CLI version greater than lastNonBreakingVersion",
+			cliVersion:             "v0.28.2",
+			lastNonBreakingVersion: "v0.27.0",
+			returnError:            false,
+			throwWarning:           false,
 		},
 		{
-			name:                     "CLI version equal to minimum compatible version",
-			cliVersion:               "v0.27.0",
-			minimumCompatibleVersion: "v0.27.0",
-			returnError:              false,
-			throwWarning:             false,
+			name:                   "CLI version equal to lastNonBreakingVersion",
+			cliVersion:             "v0.27.0",
+			lastNonBreakingVersion: "v0.27.0",
+			returnError:            false,
+			throwWarning:           false,
 		},
 		{
-			name:                     "empty minimum compatible version",
-			cliVersion:               "this shouldn't get evaluated when the minimum compatible version string is empty",
-			minimumCompatibleVersion: "",
-			returnError:              false,
-			throwWarning:             false,
+			name:                   "empty lastNonBreakingVersion",
+			cliVersion:             "this shouldn't get evaluated when the lastNonBreakingVersion is empty",
+			lastNonBreakingVersion: "",
+			returnError:            false,
+			throwWarning:           false,
 		},
 		{
-			name:                     "default CLI version in E2E tests",
-			cliVersion:               "UnknownVersion", // This is used as a default version in the E2E tests
-			minimumCompatibleVersion: "v0.27.0",
-			returnError:              false,
-			throwWarning:             false,
+			name:                   "default CLI version in E2E tests",
+			cliVersion:             "UnknownVersion", // This is used as a default version in the E2E tests
+			lastNonBreakingVersion: "v0.27.0",
+			returnError:            false,
+			throwWarning:           false,
 		},
 	}
 
 	for _, testCase := range testCases {
 		testCase := testCase
 
-		p := &Packager{}
-
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := p.validateMinimumCompatibleVersion(testCase.minimumCompatibleVersion, testCase.cliVersion)
+			config.CLIVersion = testCase.cliVersion
+
+			p := &Packager{
+				cfg: &types.PackagerConfig{
+					Pkg: types.ZarfPackage{
+						Build: types.ZarfBuildData{
+							LastNonBreakingVersion: testCase.lastNonBreakingVersion,
+						},
+					},
+				},
+			}
+
+			err := p.validateLastNonBreakingVersion()
 
 			switch {
 			case testCase.returnError:
@@ -103,7 +115,6 @@ func TestValidateMinimumCompatibleVersion(t *testing.T) {
 				assert.NoError(t, err, "Expected no error for test case: %s", testCase.name)
 				assert.Empty(t, p.warnings, "Expected no warnings for test case: %s", testCase.name)
 			}
-
 		})
 	}
 }
