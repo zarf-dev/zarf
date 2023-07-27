@@ -167,4 +167,3 @@ jobs:
         with:
           name: cve-report
           path: build/zarf-known-cves.csv
-          

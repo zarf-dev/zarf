@@ -141,7 +141,7 @@ publish-release-packages:
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
-	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-dos-games-$(ARCH)-1.0.0.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
 
