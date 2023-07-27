@@ -81,7 +81,7 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	}
 
 	// If the cache directory is within the temp directory, warn the user
-	if strings.HasPrefix(config.CommonOptions.CachePath, config.CommonOptions.TempDirectory) {
+	if config.CommonOptions.CachePath != "" && strings.HasPrefix(config.CommonOptions.CachePath, config.CommonOptions.TempDirectory) {
 		message.Warnf("The cache directory (%q) is within the temp directory (%q) and will be removed when the temp directory is cleared with ClearTempPaths", config.CommonOptions.CachePath, config.CommonOptions.TempDirectory)
 	}
 
