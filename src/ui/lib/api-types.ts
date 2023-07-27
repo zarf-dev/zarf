@@ -289,7 +289,7 @@ export interface ZarfComponent {
      */
     charts?: ZarfChart[];
     /**
-     * Specify a path to a public key to validate signed online resources
+     * [Deprecated] Specify a path to a public key to validate signed online resources
      */
     cosignKeyPath?: string;
     /**

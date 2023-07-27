@@ -257,7 +257,7 @@
         },
         "cosignKeyPath": {
           "type": "string",
-          "description": "Specify a path to a public key to validate signed online resources"
+          "description": "[Deprecated] Specify a path to a public key to validate signed online resources"
         },
         "import": {
           "$schema": "http://json-schema.org/draft-04/schema#",

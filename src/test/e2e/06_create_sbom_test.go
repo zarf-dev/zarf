@@ -19,7 +19,7 @@ func TestCreateSBOM(t *testing.T) {
 	cachePath := filepath.Join(tmpdir, ".cache-location")
 	sbomPath := filepath.Join(tmpdir, ".sbom-location")
 
-	pkgName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
+	pkgName := fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 
 	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/dos-games", "--zarf-cache", cachePath, "--sbom-out", sbomPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
