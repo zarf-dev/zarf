@@ -160,7 +160,7 @@ func (p *Packager) findComponentTemplatesAndReload(config any, prefix string) er
 	for i, component := range config.(*types.ZarfPackage).Components {
 		mappings := map[string]string{}
 		mappings["###ZARF_COMPONENT_NAME###"] = component.Name
-		err := utils.ReloadYamlTemplate(config.(*types.ZarfPackage).Components[i], mappings)
+		err := utils.ReloadYamlTemplate(&config.(*types.ZarfPackage).Components[i], mappings)
 		if err != nil {
 			return err
 		}

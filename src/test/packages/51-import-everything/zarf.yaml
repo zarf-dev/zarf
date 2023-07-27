@@ -34,6 +34,11 @@ components:
       name: demo-helm-local-chart
       url: oci://localhost:555/helm-charts:0.0.1-skeleton
 
+# Look for ones that are self referential to this package. Not having anything that is na override of 
+# another package.
+# asset zarf component name is set correctly
+# put a description field in a componnent and assert the component name are correct
+# through standard error message assert stdout is the name
   - name: component-template
     required: false
     import:
@@ -149,4 +154,3 @@ components:
     required: false
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
-      
