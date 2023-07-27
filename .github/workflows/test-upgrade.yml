@@ -60,6 +60,9 @@ jobs:
           name: build-artifacts
           path: build/
 
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
       - name: Make Zarf executable
         run: |
           chmod +x build/zarf
@@ -126,3 +129,4 @@ jobs:
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
+        
