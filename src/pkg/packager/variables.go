@@ -58,7 +58,7 @@ func (p *Packager) fillActiveTemplate() error {
 	}
 
 	// update the component templates on the package
-	err := p.findComponentTemplatesAndReload(&p.cfg.Pkg, "###ZARF_COMPONENT_", "###")
+	err := p.findComponentTemplatesAndReload(&p.cfg.Pkg, "###ZARF_COMPONENT_")
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func (p *Packager) injectImportedConstant(importedConstant types.ZarfPackageCons
 }
 
 // findComponentTemplatesAndReload appends ###ZARF_COMPONENT_NAME  for each component, assigns value, and reloads
-func (p *Packager) findComponentTemplatesAndReload(config any, prefix string, suffix string) error {
+func (p *Packager) findComponentTemplatesAndReload(config any, prefix string) error {
 
 	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
 	for i, component := range config.(*types.ZarfPackage).Components {
