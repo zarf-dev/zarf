@@ -51,7 +51,11 @@ var versionCmd = &cobra.Command{
 		buildMap := make(map[string]interface{})
 		buildMap["platform"] = runtime.GOOS + "/" + runtime.GOARCH
 		buildMap["goVersion"] = runtime.Version()
-		ver := semver.MustParse(config.CLIVersion)
+		ver, err := semver.NewVersion(config.CLIVersion)
+		if err != nil {
+			fmt.Println(config.CLIVersion)
+			return
+		}
 		buildMap["major"] = ver.Major()
 		buildMap["minor"] = ver.Minor()
 		buildMap["patch"] = ver.Patch()
