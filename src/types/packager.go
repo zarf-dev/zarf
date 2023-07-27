@@ -34,7 +34,7 @@ type PackagerConfig struct {
 	PkgSource string
 
 	// The active zarf state
-	State ZarfState
+	State *ZarfState
 
 	// Variables set by the user
 	SetVariableMap map[string]*ZarfSetVariable

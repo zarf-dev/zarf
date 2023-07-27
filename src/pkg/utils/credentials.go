@@ -16,7 +16,7 @@ import (
 )
 
 // PrintCredentialTable displays credentials in a table
-func PrintCredentialTable(state types.ZarfState, componentsToDeploy []types.DeployedComponent) {
+func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.DeployedComponent) {
 	if len(componentsToDeploy) == 0 {
 		componentsToDeploy = []types.DeployedComponent{{Name: "logging"}, {Name: "git-server"}}
 	}

@@ -97,7 +97,7 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 			GitPath:     "./chart",
 		},
 		Cfg: &types.PackagerConfig{
-			State: types.ZarfState{},
+			State: &types.ZarfState{},
 		},
 		BasePath: tmpPaths.Temp,
 	}
@@ -504,7 +504,7 @@ func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []st
 	helmCfg := helm.Helm{
 		Chart: chart,
 		Cfg: &types.PackagerConfig{
-			State: types.ZarfState{},
+			State: &types.ZarfState{},
 		},
 	}
 

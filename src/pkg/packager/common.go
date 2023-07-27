@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
+	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 
@@ -32,12 +33,13 @@ import (
 
 // Packager is the main struct for managing packages.
 type Packager struct {
-	cfg      *types.PackagerConfig
-	cluster  *cluster.Cluster
-	remote   *oci.OrasRemote
-	tmp      types.TempPaths
-	arch     string
-	warnings []string
+	cfg           *types.PackagerConfig
+	cluster       *cluster.Cluster
+	remote        *oci.OrasRemote
+	tmp           types.TempPaths
+	arch          string
+	warnings      []string
+	valueTemplate *template.Values
 }
 
 // Zarf Packager Variables.

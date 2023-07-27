@@ -31,10 +31,8 @@ import (
 )
 
 var (
-	stateInitialized bool
-	hpaModified      bool
-	valueTemplate    *template.Values
-	connectStrings   = make(types.ConnectStrings)
+	hpaModified    bool
+	connectStrings = make(types.ConnectStrings)
 )
 
 // Deploy attempts to deploy the given PackageConfig.
@@ -110,7 +108,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	componentsToDeploy := p.getValidComponents()
 
 	// Generate a value template
-	if valueTemplate, err = template.Generate(p.cfg); err != nil {
+	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
 		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
 	}
 
@@ -127,7 +125,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, valueTemplate); err != nil {
+			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, p.valueTemplate); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -149,7 +147,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			}
 		}
 
-		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, valueTemplate); err != nil {
+		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
 			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -166,7 +164,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	isAgent := component.Name == "zarf-agent"
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if p.requiresCluster(component) && !stateInitialized {
+	if p.requiresCluster(component) && p.cfg.State == nil {
 		p.cluster, err = cluster.NewClusterWithWait(5*time.Minute, true)
 		if err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
@@ -176,8 +174,6 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 		if err != nil {
 			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
 		}
-
-		stateInitialized = true
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
@@ -231,7 +227,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	onDeploy := component.Actions.OnDeploy
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, valueTemplate); err != nil {
+	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -239,7 +235,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to process the component files: %w", err)
 	}
 
-	if p.requiresCluster(component) {
+	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
 			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, true)
@@ -247,11 +243,8 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
 		}
-	}
-
-	if !valueTemplate.Ready() && p.requiresCluster(component) {
 		// Setup the state in the config and get the valuesTemplate
-		valueTemplate, err = p.setupStateValuesTemplate(component)
+		p.valueTemplate, err = p.setupStateValuesTemplate(component)
 		if err != nil {
 			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
 		}
@@ -290,7 +283,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.After, valueTemplate); err != nil {
+	if err = p.runActions(onDeploy.Defaults, onDeploy.After, p.valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -345,7 +338,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 			// If the file is a text file, template it
 			if isText {
 				spinner.Updatef("Templating %s", file.Target)
-				if err := valueTemplate.Apply(component, subFile, true); err != nil {
+				if err := p.valueTemplate.Apply(component, subFile, true); err != nil {
 					return fmt.Errorf("unable to template file %s: %w", subFile, err)
 				}
 			}
@@ -381,7 +374,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 	return nil
 }
 
-// Fetch the current ZarfState from the k8s cluster and generate a valueTemplate from the state values.
+// Fetch the current ZarfState from the k8s cluster and generate a p.valueTemplate from the state values.
 func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values *template.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
@@ -417,7 +410,7 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 			"the pod or namespace label `zarf.dev/agent: ignore'.")
 	}
 
-	p.cfg.State = state
+	p.cfg.State = &state
 
 	// Continue loading state data if it is valid
 	values, err = template.Generate(p.cfg)
@@ -512,7 +505,7 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
 			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPath.Values, chart), idx)
-			if err := valueTemplate.Apply(component, chartValueName, false); err != nil {
+			if err := p.valueTemplate.Apply(component, chartValueName, false); err != nil {
 				return installedCharts, err
 			}
 		}

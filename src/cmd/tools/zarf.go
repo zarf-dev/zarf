@@ -60,7 +60,7 @@ func init() {
 				// If a component name is provided, only show that component's credentials
 				utils.PrintComponentCredential(state, args[0])
 			} else {
-				utils.PrintCredentialTable(state, nil)
+				utils.PrintCredentialTable(&state, nil)
 			}
 		},
 	}
