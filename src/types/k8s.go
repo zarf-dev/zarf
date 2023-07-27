@@ -16,8 +16,10 @@ type WebhookStatus string
 // ComponentStatus defines the deployment status of a Zarf component within a package.
 type ComponentStatus string
 
+// DefaultWebhookWaitDuration is the default amount of time Zarf will wait for a webhook to complete.
 const DefaultWebhookWaitDuration = time.Minute * 5
 
+// All the different status options for a Zarf Component or a webhook that is running for a Zarf Component deployment.
 const (
 	WebhookStatusSucceeded WebhookStatus = "Succeeded"
 	WebhookStatusFailed    WebhookStatus = "Failed"

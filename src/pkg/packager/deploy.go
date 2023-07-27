@@ -119,50 +119,21 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 	// Check if this package has been deployed before and grab relevant information about already deployed components
 	packageGeneration := 1
-	existingDeployedComponents := make(map[string]types.DeployedComponent)
 	if p.cluster != nil {
-
-		// If there is no error, then this package has been deployed before. Figure out what generation we are on.
 		existingDeployedPackage, err := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name)
 		if err == nil {
-
+			// If there is no error, then this package has been deployed before. Figure out what generation we are on.
 			// Increment the package generation within the secret
 			packageGeneration = existingDeployedPackage.Generation + 1
-
-			// Seed the deployedComponents with the existing components
-			deployedComponents = existingDeployedPackage.DeployedComponents
-
-			// Create map of components deployed in previous generations for quick lookup
-			for _, deployedComponent := range deployedComponents {
-				existingDeployedComponents[deployedComponent.Name] = deployedComponent
-			}
 		}
 	}
 
 	// Process all the components we are deploying
 	for _, component := range componentsToDeploy {
 		deployedComponent := types.DeployedComponent{Name: component.Name, Status: types.ComponentStatusDeploying, ObservedGeneration: packageGeneration}
-		idx := -1
 
 		// Add the component to the list of deployedComponents
-		// Check if this component was deployed previously
-		if _, ok := existingDeployedComponents[deployedComponent.Name]; ok {
-			// Get the index of the already deployed component in the list
-			for deployedIdx, tempComponent := range deployedComponents {
-				if tempComponent.Name == deployedComponent.Name {
-					idx = deployedIdx
-					break
-				}
-			}
-
-			// Update the existing component with the new information
-			deployedComponents[idx] = deployedComponent
-
-		} else {
-			// This is a new component, add it to the end of the list
-			deployedComponents = append(deployedComponents, deployedComponent)
-			idx = len(deployedComponents) - 1
-		}
+		deployedComponents = append(deployedComponents, deployedComponent)
 
 		// Update the package secret to indicate that we are about to deploy this component
 		if p.cluster != nil && !p.cfg.IsInitConfig {
@@ -192,6 +163,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		}
 
 		// Update the deployed component secret
+		idx := len(deployedComponents) - 1
 		deployedComponents[idx].InstalledCharts = charts
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 
