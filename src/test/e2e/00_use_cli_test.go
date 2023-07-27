@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -50,10 +51,23 @@ func TestUseCLI(t *testing.T) {
 	t.Run("zarf version", func(t *testing.T) {
 		t.Parallel()
 		// Test `zarf version`
-		stdOut, _, err := e2e.Zarf("version")
+		version, _, err := e2e.Zarf("version")
 		require.NoError(t, err)
-		require.NotEqual(t, len(stdOut), 0, "Zarf version should not be an empty string")
-		require.NotEqual(t, stdOut, "UnknownVersion", "Zarf version should not be the default value")
+		require.NotEqual(t, len(version), 0, "Zarf version should not be an empty string")
+		require.NotEqual(t, version, "UnknownVersion", "Zarf version should not be the default value")
+		version = strings.Trim(version, "\n")
+
+		// test `zarf version --output=json`
+		stdOut, _, err := e2e.Zarf("version", "--output=json")
+		require.NoError(t, err)
+		jsonVersion := fmt.Sprintf(",\"version\":\"%s\"}", version)
+		require.Contains(t, stdOut, jsonVersion, "Zarf version should be the same in both formats")
+
+		// test `zarf version --output=yaml`
+		stdOut, _, err = e2e.Zarf("version", "--output=yaml")
+		require.NoError(t, err)
+		yamlVersion := fmt.Sprintf("version: %s", version)
+		require.Contains(t, stdOut, yamlVersion, "Zarf version should be the same in both formats")
 	})
 
 	t.Run("zarf prepare find-images", func(t *testing.T) {
