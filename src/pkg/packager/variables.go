@@ -10,7 +10,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -31,7 +30,7 @@ func (p *Packager) fillActiveTemplate() error {
 
 		for key := range yamlTemplates {
 			if deprecated {
-				message.Warnf(lang.PkgValidateTemplateDeprecation, key, key, key)
+				p.warnings = append(p.warnings, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
 			}
 
 			_, present := setFromCLIConfig[key]
