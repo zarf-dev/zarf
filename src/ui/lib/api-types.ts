@@ -1122,17 +1122,26 @@ export interface ConnectString {
 
 export interface DeployedPackage {
     cliVersion:         string;
+    componentWebhooks?: { [key: string]: { [key: string]: Webhook } };
     connectStrings?:    { [key: string]: ConnectString };
     data:               ZarfPackage;
     deployedComponents: DeployedComponent[];
+    generation:         number;
     name:               string;
-    status:             string;
+}
+
+export interface Webhook {
+    name:                 string;
+    observedGeneration:   number;
+    status:               string;
+    waitDurationSeconds?: number;
 }
 
 export interface DeployedComponent {
-    installedCharts: InstalledChart[];
-    name:            string;
-    status:          string;
+    installedCharts:    InstalledChart[];
+    name:               string;
+    observedGeneration: number;
+    status:             string;
 }
 
 export interface InstalledChart {
@@ -1735,15 +1744,23 @@ const typeMap: any = {
     ], false),
     "DeployedPackage": o([
         { json: "cliVersion", js: "cliVersion", typ: "" },
+        { json: "componentWebhooks", js: "componentWebhooks", typ: u(undefined, m(m(r("Webhook")))) },
         { json: "connectStrings", js: "connectStrings", typ: u(undefined, m(r("ConnectString"))) },
         { json: "data", js: "data", typ: r("ZarfPackage") },
         { json: "deployedComponents", js: "deployedComponents", typ: a(r("DeployedComponent")) },
+        { json: "generation", js: "generation", typ: 0 },
         { json: "name", js: "name", typ: "" },
+    ], false),
+    "Webhook": o([
+        { json: "name", js: "name", typ: "" },
+        { json: "observedGeneration", js: "observedGeneration", typ: 0 },
         { json: "status", js: "status", typ: "" },
+        { json: "waitDurationSeconds", js: "waitDurationSeconds", typ: u(undefined, 0) },
     ], false),
     "DeployedComponent": o([
         { json: "installedCharts", js: "installedCharts", typ: a(r("InstalledChart")) },
         { json: "name", js: "name", typ: "" },
+        { json: "observedGeneration", js: "observedGeneration", typ: 0 },
         { json: "status", js: "status", typ: "" },
     ], false),
     "InstalledChart": o([
