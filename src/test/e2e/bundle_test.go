@@ -104,7 +104,7 @@ func deployAndRemove(t *testing.T, source string) {
 	_, _, err := e2e.Zarf(cmd...)
 	require.NoError(t, err)
 
-	cmd = strings.Split(fmt.Sprintf("bundle remove %s --confirm -l=debug", source), " ")
+	cmd = strings.Split(fmt.Sprintf("bundle remove %s --confirm -l=debug --insecure", source), " ")
 	_, _, err = e2e.Zarf(cmd...)
 	require.NoError(t, err)
 }

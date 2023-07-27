@@ -97,7 +97,6 @@ func (op *ociProvider) LoadPackage(sha, destinationDir string, concurrency int) 
 		rel := layer.Annotations[ocispec.AnnotationTitle]
 		loaded[rel] = filepath.Join(destinationDir, rel)
 	}
-	message.Debug(message.JSONValue(loaded))
 	return loaded, nil
 }
 

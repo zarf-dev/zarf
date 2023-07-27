@@ -239,7 +239,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to process the component files: %w", err)
 	}
 
-	if !valueTemplate.Ready() && p.requiresCluster(component) {
+	if p.requiresCluster(component) {
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
 			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, true)
@@ -247,7 +247,9 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
 		}
+	}
 
+	if !valueTemplate.Ready() && p.requiresCluster(component) {
 		// Setup the state in the config and get the valuesTemplate
 		valueTemplate, err = p.setupStateValuesTemplate(component)
 		if err != nil {

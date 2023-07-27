@@ -26,30 +26,10 @@ var (
 )
 
 var defaultZarfInitOptions types.ZarfInitOptions = types.ZarfInitOptions{
-	ApplianceMode: false,
 	GitServer: types.GitServerInfo{
-		PushUsername:   config.ZarfGitPushUser,
-		PushPassword:   "",
-		PullUsername:   "",
-		PullPassword:   "",
-		Address:        "",
-		InternalServer: false,
+		PushUsername: config.ZarfGitPushUser,
 	},
 	RegistryInfo: types.RegistryInfo{
-		PushUsername:     config.ZarfRegistryPushUser,
-		PushPassword:     "",
-		PullUsername:     "",
-		PullPassword:     "",
-		Address:          "",
-		NodePort:         0,
-		InternalRegistry: false,
-		Secret:           "",
+		PushUsername: config.ZarfRegistryPushUser,
 	},
-	ArtifactServer: types.ArtifactServerInfo{
-		PushUsername:   "",
-		PushToken:      "",
-		Address:        "",
-		InternalServer: false,
-	},
-	StorageClass: "",
 }
