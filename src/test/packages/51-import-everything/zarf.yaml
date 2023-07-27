@@ -149,3 +149,4 @@ components:
     required: false
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
+      
