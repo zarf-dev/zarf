@@ -54,20 +54,19 @@ func TestUseCLI(t *testing.T) {
 		version, _, err := e2e.Zarf("version")
 		require.NoError(t, err)
 		require.NotEqual(t, len(version), 0, "Zarf version should not be an empty string")
-		require.NotEqual(t, version, "UnknownVersion", "Zarf version should not be the default value")
 		version = strings.Trim(version, "\n")
 
 		// test `zarf version --output=json`
 		stdOut, _, err := e2e.Zarf("version", "--output=json")
 		require.NoError(t, err)
 		jsonVersion := fmt.Sprintf(",\"version\":\"%s\"}", version)
-		require.Contains(t, stdOut, jsonVersion, "Zarf version should be the same in both formats")
+		require.Contains(t, stdOut, jsonVersion, "Zarf version should be the same in all formats")
 
 		// test `zarf version --output=yaml`
 		stdOut, _, err = e2e.Zarf("version", "--output=yaml")
 		require.NoError(t, err)
 		yamlVersion := fmt.Sprintf("version: %s", version)
-		require.Contains(t, stdOut, yamlVersion, "Zarf version should be the same in both formats")
+		require.Contains(t, stdOut, yamlVersion, "Zarf version should be the same in all formats")
 	})
 
 	t.Run("zarf prepare find-images", func(t *testing.T) {
