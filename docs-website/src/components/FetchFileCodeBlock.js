@@ -20,7 +20,7 @@ const FetchFileCodeBlock = ({ src, component, raw, showLink = true, fileFormat, 
   }, []);
 
   if (!content) {
-    // This is necessary so the bowser does not show [object Object] when fileFormat is json
+    // This is necessary so the browser does not show [object Object] when fileFormat is json
     if (fileFormat === "json") {
       console.log(`Unable to fetch example ${fileFormat} ${fileName}`)
     } else {
