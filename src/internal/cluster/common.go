@@ -70,5 +70,10 @@ func NewCluster() (*Cluster, error) {
 	var err error
 	c := &Cluster{}
 	c.Kube, err = k8s.New(message.Debugf, labels)
+	if err != nil {
+		// Return nil for the cluster because we use that object 'existing' to check if the cluster is ready
+		return nil, err
+	}
+
 	return c, err
 }
