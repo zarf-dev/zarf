@@ -25,46 +25,23 @@ jobs:
       - name: Install tools
         uses: ./.github/actions/install-tools
 
-      - name: "Dependency: Setup rust toolchain"
+      - name: "Build Rust Binary for x86_64 and arm64"
         run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          sudo apt install build-essential -y
+          make build-injector-linux
+          cd src/injector/target
+          cp x86_64-unknown-linux-musl/release/zarf-injector dist/zarf-injector-amd64
+          cp aarch64-unknown-linux-musl/release/zarf-injector dist/zarf-injector-arm64
+          cd dist
+          sha265sum zarf-injector-amd64 >> checksums.txt
+          sha265sum zarf-injector-arm64 >> checksums.txt
 
-      - name: "Build Rust Binary for x86_64"
-        working-directory: src/injector
-        run: |
-          rustup target add x86_64-unknown-linux-musl
-          cargo build --target x86_64-unknown-linux-musl --release
-          strip target/x86_64-unknown-linux-musl/release/zarf-injector
-
-      - name: "Build Rust Binary for aarch64"
-        working-directory: src/injector
-        run: |
-          rustup target add aarch64-unknown-linux-musl
-          curl https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/aarch64-linux-musl-cross.tgz | tar -xz
-          export PATH="$PWD/aarch64-linux-musl-cross/bin:$PATH"
-          cargo build --target aarch64-unknown-linux-musl --release
-          aarch64-linux-musl-strip target/aarch64-unknown-linux-musl/release/zarf-injector
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
+      - name: Set AWS Credentials
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          aws-access-key-id: ${{ secrets.AWS_GOV_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
+          aws-region: us-gov-west-1
 
-      - name: "Upload Binaries To DockerHub"
-        working-directory: src/injector/target
+      - name: Sync Artifacts to S3
         run: |
-          cosign upload blob -f x86_64-unknown-linux-musl/release/zarf-injector defenseunicorns/zarf-injector:amd64-${{ github.event.inputs.versionTag }}
-          cosign upload blob -f aarch64-unknown-linux-musl/release/zarf-injector defenseunicorns/zarf-injector:arm64-${{ github.event.inputs.versionTag }}
-
-      - name: "Sign the binaries"
-        run: |
-          cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=https://github.com/${{ github.actor }} -a version=${{ github.event.inputs.versionTag }} defenseunicorns/zarf-injector:amd64-${{ github.event.inputs.versionTag }}
-          cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=https://github.com/${{ github.actor }} -a version=${{ github.event.inputs.versionTag }} defenseunicorns/zarf-injector:arm64-${{ github.event.inputs.versionTag }}
-        env:
-          COSIGN_EXPERIMENTAL: 1
-          AWS_REGION: ${{ secrets.COSIGN_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.COSIGN_AWS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.COSIGN_AWS_ACCESS_KEY }}
+          aws s3 sync src/injector/target/dist/ s3://zarf-public/injector/${{ github.event.inputs.versionTag }}/
