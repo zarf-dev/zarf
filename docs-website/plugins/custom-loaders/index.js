@@ -7,8 +7,8 @@ module.exports = function (context, options) {
                 module: {
                     rules: [
                         {
-                            // Look for all require("*.yaml") files
-                            test: /\.yaml/,
+                            // Look for all require("*.yaml,*.toml,*.ini") files
+                            test: /\.(yaml|toml|ini)/,
                             // Set this as an asset so it is pulled in as-is without compression
                             type: 'asset/resource',
                             // Generate a filename to place the example next to the generated index.html file
