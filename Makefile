@@ -130,7 +130,7 @@ ib-init-package:
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
-# @test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
 
@@ -154,7 +154,8 @@ build-examples: ## Build all of the example packages
 .PHONY: test-e2e
 test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
-	go test ./src/test/e2e/... -run TestBundle -count=1 -failfast -v -timeout 30m
+	cd src/test/e2e && go test -failfast -v -timeout 30m
+# go test ./src/test/e2e/... -run TestBundle -count=1 -failfast -v -timeout 30m
 
 ## NOTE: Requires an existing cluster
 .PHONY: test-external
