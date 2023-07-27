@@ -29,4 +29,3 @@ components:
         onFailure:
           - cmd: ./zarf tools kubectl describe nodes
           - cmd: ./zarf tools kubectl describe pods -A
-          
