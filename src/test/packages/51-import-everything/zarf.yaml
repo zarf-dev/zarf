@@ -8,7 +8,7 @@ components:
   - name: import-component-local
     required: false
     import:
-      path: ###ZARF_COMPONENT_NAME###
+      path: foo
       name: baz
 
   - name: import-component-local-relative
@@ -34,19 +34,29 @@ components:
       name: demo-helm-local-chart
       url: oci://localhost:555/helm-charts:0.0.1-skeleton
 
+  - name: component-template
+    required: false
+    import:
+      path: ../../../../examples/dos-games
+      name: baseline
+    manifests:
+      - name: override
+        kustomizations:
+          - ###ZARF_COMPONENT_NAME###
+
   - name: file-imports
     required: false
     cosignKeyPath: ../../../../cosign.pub
     files:
       # Import of a file within the current directory
-      - source: ###ZARF_COMPONENT_NAME###/coffee-ipsum.txt
-        target: ###ZARF_COMPONENT_NAME###/coffee-ipsum.txt
+      - source: files/coffee-ipsum.txt
+        target: files/coffee-ipsum.txt
         # Import of a file from a relative path external to the current directory
       - source: ../everything-external/files/coffee-ipsum.txt
-        target: ###ZARF_COMPONENT_NAME###/latte.txt
+        target: files/latte.txt
         # Import of a file from a URL
       - source: https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md
-        target: ###ZARF_COMPONENT_NAME###/zarf-readme.md
+        target: files/zarf-readme.md
     actions:
       onDeploy:
         after:
