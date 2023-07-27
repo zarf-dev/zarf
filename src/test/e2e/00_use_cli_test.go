@@ -106,12 +106,12 @@ func TestUseCLI(t *testing.T) {
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
-		cachePath := filepath.Join(tmpdir, ".cache-location")
-		stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/dos-games", "--zarf-cache", cachePath, "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
+		cachedir := filepath.Join(t.TempDir(), ".cache-location")
+		stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/dos-games", "--zarf-cache", cachedir, "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
 		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
 		require.NoError(t, err, stdOut, stdErr)
 
-		files, err := os.ReadDir(filepath.Join(cachePath, "images"))
+		files, err := os.ReadDir(filepath.Join(cachedir, "images"))
 		require.NoError(t, err, "Encountered an unexpected error when reading image cache path")
 		require.Greater(t, len(files), 1)
 	})

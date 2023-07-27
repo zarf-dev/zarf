@@ -80,6 +80,11 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 		}
 	}
 
+	// If the cache directory is within the temp directory, warn the user
+	if strings.HasPrefix(config.CommonOptions.CachePath, config.CommonOptions.TempDirectory) {
+		message.Warnf("The cache directory (%q) is within the temp directory (%q) and will be removed when the temp directory is cleared with ClearTempPaths", config.CommonOptions.CachePath, config.CommonOptions.TempDirectory)
+	}
+
 	// Create a temp directory for the package
 	if pkgConfig.tmp, err = createPaths(config.CommonOptions.TempDirectory); err != nil {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
@@ -242,14 +247,13 @@ func isValidFileExtension(filename string) bool {
 }
 
 func createPaths(basePath string) (paths types.TempPaths, err error) {
-	message.Debug("packager.createPaths()")
-
 	if basePath == "" {
 		basePath, err = utils.MakeTempDir()
 		if err != nil {
 			return paths, err
 		}
 	}
+	message.Debug("Using temp", basePath)
 	paths = types.TempPaths{
 		Base: basePath,
 
