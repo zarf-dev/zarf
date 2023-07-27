@@ -9,6 +9,7 @@ package:
       leopard : 'spots'
   deploy:
     components: 'lion'
+    # Set a variable for package deploy
     set:
       scorpion : 'iridescent'
       camel_spider : 'matte'
