@@ -51,9 +51,6 @@ jobs:
           password: ${{ secrets.IRONBANK_PASSWORD }}
 
       - name: Build a registry1.dso.mil Zarf 'init' package
-        if: ${{ env.IRONBANK_USERNAME != '' }}
-        env:
-          IRONBANK_USERNAME: ${{ secrets.IRONBANK_USERNAME }}
         run: make ib-init-package
 
       # Upload the contents of the build directory for later stages to use
