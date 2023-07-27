@@ -138,7 +138,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Update the package secret to indicate that we are about to deploy this component
 		if p.cluster != nil && !p.cfg.IsInitConfig {
 			if _, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, packageGeneration); err != nil {
-				return nil, err
+				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
 
