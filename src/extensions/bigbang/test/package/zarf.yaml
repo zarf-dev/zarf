@@ -29,4 +29,7 @@ components:
         onFailure:
           - cmd: ./zarf tools kubectl describe nodes
           - cmd: ./zarf tools kubectl describe pods -A
-   
+<<<<<<< HEAD
+          
+=======
+>>>>>>> 925079b5 (1853 - Zarf Metrics & Tests (#1915))
