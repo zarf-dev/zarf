@@ -6,12 +6,14 @@ metadata:
 
 components:
   - name: import-component-local
+    description: "###ZARF_COMPONENT_NAME### case was here"
     required: false
     import:
       path: foo
       name: baz
 
   - name: import-component-local-relative
+    description: "###ZARF_COMPONENT_NAME### case was here"
     required: false
     import:
       path: ../../../../examples/dos-games
@@ -22,13 +24,14 @@ components:
           - files
 
   - name: import-component-wordpress
+    description: "###ZARF_COMPONENT_NAME### case was here"
     required: false
     import:
       path: ../../../../examples/wordpress
       name: wordpress
 
   - name: import-component-oci
-    description: ###ZARF_COMPONENT_NAME###
+    description: "###ZARF_COMPONENT_NAME### case was here"
     required: false
     import:
       # name is optional, if not provided the name of the component will be used to import
@@ -36,6 +39,7 @@ components:
       url: oci://localhost:555/helm-charts:0.0.1-skeleton
 
   - name: file-imports
+    description: "###ZARF_COMPONENT_NAME### case was here" 
     required: false
     cosignKeyPath: ../../../../cosign.pub
     files:
@@ -65,7 +69,7 @@ components:
           - cmd: test ! -f files/zarf-readme.md
 
   - name: import-helm-local
-    description: ###ZARF_COMPONENT_NAME###
+    description: "###ZARF_COMPONENT_NAME### case was here"
     required: false
     charts:
       - name: podinfo
@@ -85,6 +89,7 @@ components:
                 condition: available
 
   - name: import-helm-local-relative
+    description: "###ZARF_COMPONENT_NAME### case was here"
     required: false
     charts:
       - name: podinfo
@@ -104,6 +109,7 @@ components:
                 condition: available
 
   - name: import-helm-oci
+    description: "###ZARF_COMPONENT_NAME### case was here"
     required: false
     charts:
       - name: oci-demo
@@ -130,6 +136,7 @@ components:
                 condition: ready
 
   - name: import-repos
+    description: "###ZARF_COMPONENT_NAME### case was here"
     required: false
     repos:
       # Import a full repo via HTTPS
@@ -138,6 +145,7 @@ components:
       - file:///tmp/nocode
 
   - name: import-images
+    description: "###ZARF_COMPONENT_NAME### case was here"
     required: false
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0

@@ -105,8 +105,34 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 	_, _, err := e2e.Zarf("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
 
-	_, cfg, err = e2e.Zarf("package", "create", importception, "--confirm", "-o", "build", "--insecure")
+	_, _, err = e2e.Zarf("package", "create", importception, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
+}
+
+func (suite *SkeletonSuite) Test_2_Component_Templates() {
+	suite.T().Log("E2E: Component Templates")
+	e2e.SetupWithCluster(suite.T())
+	importEverythingPath := fmt.Sprintf("build/zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch)
+
+	_, stdErr, err := e2e.Zarf("package", "inspect", importEverythingPath)
+	suite.NoError(err)
+
+	targets := []string{
+		"import-component-local case was here",
+		"import-component-local-relative case was here",
+		"import-component-wordpress case was here",
+		"import-component-oci case was here",
+		"file-imports case was here",
+		"import-helm-local case was here",
+		"import-helm-local-relative",
+		"import-helm-oci case was here",
+		"import-repos case was here",
+		"import-images case was here",
+	}
+
+	for _, target := range targets {
+		suite.Contains(stdErr, target)
+	}
 
 }
 
