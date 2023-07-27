@@ -78,7 +78,7 @@ func (suite *RegistryClientTestSuite) Test_1_Pull() {
 	// Pull the package via OCI.
 	stdOut, stdErr, err := e2e.Zarf("package", "pull", "oci://"+ref, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
-	suite.Contains(stdErr, "Pulled "+ref)
+	suite.Contains(stdErr, "Pulled oci://"+ref)
 
 	// Verify the package was pulled.
 	suite.FileExists(out)
@@ -99,7 +99,7 @@ func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 	// Deploy the package via OCI.
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", "oci://"+ref, "--components=demo-helm-oci-chart", "--insecure", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
-	suite.Contains(stdErr, "Pulled "+ref)
+	suite.Contains(stdErr, "Pulled oci://"+ref)
 
 	// Remove the package via OCI.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "oci://"+ref, "--insecure", "--confirm")

@@ -27,6 +27,9 @@ func (p *Packager) Pull() error {
 	if err != nil {
 		return err
 	}
+
+	message.Successf("Pulled %s", p.cfg.PullOpts.PackageSource)
+
 	err = utils.ReadYaml(p.tmp.ZarfYaml, &p.cfg.Pkg)
 	if err != nil {
 		return err
