@@ -28,26 +28,12 @@ components:
       name: wordpress
 
   - name: import-component-oci
+    description: ###ZARF_COMPONENT_NAME###
     required: false
     import:
       # name is optional, if not provided the name of the component will be used to import
       name: demo-helm-local-chart
       url: oci://localhost:555/helm-charts:0.0.1-skeleton
-
-# Look for ones that are self referential to this package. Not having anything that is na override of 
-# another package.
-# asset zarf component name is set correctly
-# put a description field in a componnent and assert the component name are correct
-# through standard error message assert stdout is the name
-  - name: component-template
-    required: false
-    import:
-      path: ../../../../examples/dos-games
-      name: baseline
-    manifests:
-      - name: override
-        kustomizations:
-          - ###ZARF_COMPONENT_NAME###
 
   - name: file-imports
     required: false
@@ -79,6 +65,7 @@ components:
           - cmd: test ! -f files/zarf-readme.md
 
   - name: import-helm-local
+    description: ###ZARF_COMPONENT_NAME###
     required: false
     charts:
       - name: podinfo

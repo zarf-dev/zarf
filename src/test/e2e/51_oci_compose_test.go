@@ -105,8 +105,9 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 	_, _, err := e2e.Zarf("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "create", importception, "--confirm", "-o", "build", "--insecure")
+	_, cfg, err = e2e.Zarf("package", "create", importception, "--confirm", "-o", "build", "--insecure")
 	suite.NoError(err)
+
 }
 
 func (suite *SkeletonSuite) Test_3_FilePaths() {
