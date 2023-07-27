@@ -35,7 +35,7 @@ jobs:
       - name: Build And Publish Application Packages
         # TODO: Add package signing to this step
         run: |
-          zarf package create -o build -a amd64 examples/dos-games --key=$(KEY) --confirm
-          zarf package create -o build -a arm64 examples/dos-games --key=$(KEY) --confirm
+          zarf package create -o build -a amd64 examples/dos-games --key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} --confirm
+          zarf package create -o build -a arm64 examples/dos-games --key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} --confirm
           zarf package publish ./build/zarf-package-dos-games-amd64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages
           zarf package publish ./build/zarf-package-dos-games-arm64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages
