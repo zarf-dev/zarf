@@ -107,9 +107,11 @@ func (p *Packager) Deploy() error {
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
 	componentsToDeploy := p.getValidComponents()
 
-	// Generate a value template
-	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
-		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
+	if p.cluster != nil {
+		// Generate a value template
+		if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
+			return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
+		}
 	}
 
 	for _, component := range componentsToDeploy {

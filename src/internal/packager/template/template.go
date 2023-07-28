@@ -32,11 +32,6 @@ func Generate(cfg *types.PackagerConfig) (*Values, error) {
 		return nil, fmt.Errorf("config is nil")
 	}
 
-	if cfg.State == nil {
-		message.Debug("packager's state is nil, skipping template generation for image registry")
-		return &generated, nil
-	}
-
 	generated.config = cfg
 
 	regInfo := cfg.State.RegistryInfo
