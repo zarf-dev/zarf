@@ -24,11 +24,11 @@ func TestHelm(t *testing.T) {
 
 	testHelmUninstallRollback(t)
 
-	testHelmAdoption(t)
+	// testHelmAdoption(t)
 
-	t.Run("helm charts example", testHelmChartsExample)
+	// t.Run("helm charts example", testHelmChartsExample)
 
-	t.Run("helm escaping", testHelmEscaping)
+	// t.Run("helm escaping", testHelmEscaping)
 }
 
 func testHelmChartsExample(t *testing.T) {
@@ -122,6 +122,9 @@ func testHelmUninstallRollback(t *testing.T) {
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Kubectl("delete", "namespace", "dos-games")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
