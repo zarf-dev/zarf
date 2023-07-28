@@ -106,10 +106,11 @@ func (p *Packager) Deploy() error {
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
 func (p *Packager) attemptClusterChecks() error {
 	// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
-	if cluster, err := cluster.NewCluster(); err == nil {
+	var err error
+	if p.cluster, err = cluster.NewCluster(); err == nil {
 
 		// Get the init package from the cluster
-		if p.currentInitPackage, err = cluster.GetDeployedPackage("init"); err == nil {
+		if p.currentInitPackage, err = p.cluster.GetDeployedPackage("init"); err == nil {
 			// We use the build.version for now because it is the most reliable way to get this version info pre v0.26.0
 			deprecated.PrintBreakingChanges(p.currentInitPackage.Data.Build.Version)
 		}
