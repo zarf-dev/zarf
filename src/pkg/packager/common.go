@@ -440,7 +440,7 @@ func (p *Packager) handleIfPartialPkg() error {
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() error {
 	// Ignore this check if the architecture is explicitly "multi"
-	if p.arch != "multi" || p.cluster == nil {
+	if p.arch == "multi" || p.cluster == nil {
 		return nil
 	}
 
