@@ -389,7 +389,7 @@ func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
 
 func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 	// Get the Kubernetes version from the current cluster
-	kubeVersion, err := h.Cluster.Kube.Clientset.ServerVersion()
+	kubeVersion, err := h.Cluster.Clientset.ServerVersion()
 	if err != nil {
 		return err
 	}
@@ -417,7 +417,7 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
 		}
 
-		rawData, manifestModified, err := h.Cluster.Kube.HandleDeprecations(rawData, *kubeGitVersion)
+		rawData, manifestModified, err := h.Cluster.HandleDeprecations(rawData, *kubeGitVersion)
 		manifestContent, err := yaml.Marshal(rawData)
 		if err != nil {
 			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %#v", err)

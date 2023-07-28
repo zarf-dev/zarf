@@ -31,7 +31,7 @@ type DockerConfigEntryWithAuth struct {
 func (c *Cluster) GenerateRegistryPullCreds(namespace, name string) (*corev1.Secret, error) {
 	message.Debugf("k8s.GenerateRegistryPullCreds(%s, %s)", namespace, name)
 
-	secretDockerConfig := c.Kube.GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
+	secretDockerConfig := c.GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
 
 	// Get the registry credentials from the ZarfState secret
 	zarfState, err := c.LoadZarfState()

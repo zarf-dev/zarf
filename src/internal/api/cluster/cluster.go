@@ -10,7 +10,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"k8s.io/client-go/tools/clientcmd"
@@ -31,10 +30,10 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 
 	reachable = err == nil
 	if reachable {
-		distro, _ = c.Kube.DetectDistro()
+		distro, _ = c.DetectDistro()
 		state, _ = c.LoadZarfState()
 		hasZarf = state.Distro != ""
-		k8sRevision = getServerVersion(c.Kube)
+		k8sRevision = getServerVersion(c)
 	}
 
 	data := types.ClusterSummary{
@@ -50,8 +49,8 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 }
 
 // Retrieve and return the k8s revision.
-func getServerVersion(k *k8s.K8s) string {
-	info, _ := k.Clientset.DiscoveryClient.ServerVersion()
+func getServerVersion(c *cluster.Cluster) string {
+	info, _ := c.Clientset.DiscoveryClient.ServerVersion()
 
 	return info.String()
 }

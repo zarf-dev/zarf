@@ -41,7 +41,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 	defer spinner.Stop()
 
 	spinner.Updatef("Getting cluster architecture")
-	if clusterArch, err = c.Kube.GetArchitecture(); err != nil {
+	if clusterArch, err = c.GetArchitecture(); err != nil {
 		spinner.Errorf(err, "Unable to validate the cluster system architecture")
 	}
 
@@ -60,7 +60,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 			state.ZarfAppliance = true
 		} else {
 			// Otherwise, trying to detect the K8s distro type.
-			distro, err = c.Kube.DetectDistro()
+			distro, err = c.DetectDistro()
 			if err != nil {
 				// This is a basic failure right now but likely could be polished to provide user guidance to resolve.
 				return fmt.Errorf("unable to connect to the cluster to verify the distro: %w", err)
@@ -79,7 +79,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
 
-		namespaces, err := c.Kube.GetNamespaces()
+		namespaces, err := c.GetNamespaces()
 		if err != nil {
 			return fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
 		}
@@ -92,7 +92,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 			}
 			// This label will tell the Zarf Agent to ignore this namespace.
 			namespace.Labels[agentLabel] = "ignore"
-			if _, err = c.Kube.UpdateNamespace(&namespace); err != nil {
+			if _, err = c.UpdateNamespace(&namespace); err != nil {
 				// This is not a hard failure, but we should log it.
 				message.WarnErrorf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
 			}
@@ -100,15 +100,15 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
-		zarfNamespace := c.Kube.NewZarfManagedNamespace(ZarfNamespaceName)
-		if _, err := c.Kube.CreateNamespace(zarfNamespace); err != nil {
+		zarfNamespace := c.NewZarfManagedNamespace(ZarfNamespaceName)
+		if _, err := c.CreateNamespace(zarfNamespace); err != nil {
 			return fmt.Errorf("unable to create the zarf namespace: %w", err)
 		}
 
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
-		if _, err := c.Kube.WaitForServiceAccount(ZarfNamespaceName, "default", 2*time.Minute); err != nil {
+		if _, err := c.WaitForServiceAccount(ZarfNamespaceName, "default", 2*time.Minute); err != nil {
 			return fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 	}
@@ -154,7 +154,7 @@ func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 	state := types.ZarfState{}
 
 	// Set up the API connection
-	secret, err := c.Kube.GetSecret(ZarfNamespaceName, ZarfStateSecretName)
+	secret, err := c.GetSecret(ZarfNamespaceName, ZarfStateSecretName)
 	if err != nil {
 		return state, err
 	}
@@ -225,7 +225,7 @@ func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 	}
 
 	// Attempt to create or update the secret and return.
-	if err := c.Kube.CreateOrUpdateSecret(secret); err != nil {
+	if err := c.CreateOrUpdateSecret(secret); err != nil {
 		return fmt.Errorf("unable to create the zarf state secret")
 	}
 

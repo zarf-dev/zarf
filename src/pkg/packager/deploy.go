@@ -398,8 +398,8 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 
 		// Try to create the zarf namespace
 		spinner.Updatef("Creating the Zarf namespace")
-		zarfNamespace := p.cluster.Kube.NewZarfManagedNamespace(cluster.ZarfNamespaceName)
-		if _, err := p.cluster.Kube.CreateNamespace(zarfNamespace); err != nil {
+		zarfNamespace := p.cluster.NewZarfManagedNamespace(cluster.ZarfNamespaceName)
+		if _, err := p.cluster.CreateNamespace(zarfNamespace); err != nil {
 			spinner.Fatalf(err, "Unable to create the zarf namespace")
 		}
 	}

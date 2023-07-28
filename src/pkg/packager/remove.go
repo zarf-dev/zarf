@@ -140,13 +140,13 @@ func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, pa
 		secretName := config.ZarfPackagePrefix + packageName
 
 		// Save the new secret with the removed components removed from the secret
-		newPackageSecret := p.cluster.Kube.GenerateSecret(cluster.ZarfNamespaceName, secretName, corev1.SecretTypeOpaque)
+		newPackageSecret := p.cluster.GenerateSecret(cluster.ZarfNamespaceName, secretName, corev1.SecretTypeOpaque)
 		newPackageSecret.Labels[cluster.ZarfPackageInfoLabel] = p.cfg.Pkg.Metadata.Name
 
 		newPackageSecretData, _ := json.Marshal(deployedPackage)
 		newPackageSecret.Data["data"] = newPackageSecretData
 
-		err := p.cluster.Kube.CreateOrUpdateSecret(newPackageSecret)
+		err := p.cluster.CreateOrUpdateSecret(newPackageSecret)
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
@@ -217,13 +217,13 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 		secretName := config.ZarfPackagePrefix + deployedPackage.Name
 
 		// All the installed components were deleted, therefore this package is no longer actually deployed
-		packageSecret, err := p.cluster.Kube.GetSecret(cluster.ZarfNamespaceName, secretName)
+		packageSecret, err := p.cluster.GetSecret(cluster.ZarfNamespaceName, secretName)
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
 			message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 		} else {
-			err = p.cluster.Kube.DeleteSecret(packageSecret)
+			err = p.cluster.DeleteSecret(packageSecret)
 			if err != nil {
 				message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 			}

@@ -478,7 +478,7 @@ func (p *Packager) validatePackageArchitecture() error {
 	if p.arch != "multi" {
 		// Attempt to connect to a cluster to get the architecture.
 		if cluster, err := cluster.NewCluster(); err == nil {
-			clusterArch, err := cluster.Kube.GetArchitecture()
+			clusterArch, err := cluster.GetArchitecture()
 			if err != nil {
 				return lang.ErrUnableToCheckArch
 			}

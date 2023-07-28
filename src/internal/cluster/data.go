@@ -73,7 +73,7 @@ iterator:
 		}
 
 		// Wait until the pod we are injecting data into becomes available
-		pods := c.Kube.WaitForPodsAndContainers(target, podFilterByInitContainer)
+		pods := c.WaitForPodsAndContainers(target, podFilterByInitContainer)
 		if len(pods) < 1 {
 			continue
 		}
@@ -138,7 +138,7 @@ iterator:
 		// Block one final time to make sure at least one pod has come up and injected the data
 		// Using only the pod as the final selector because we don't know what the container name will be
 		// Still using the init container filter to make sure we have the right running pod
-		_ = c.Kube.WaitForPodsAndContainers(podOnlyTarget, podFilterByInitContainer)
+		_ = c.WaitForPodsAndContainers(podOnlyTarget, podFilterByInitContainer)
 
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(source)
