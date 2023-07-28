@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -36,9 +37,11 @@ import (
 
 // Sget performs a cosign signature verification on a given image using the specified public key.
 func Sget(ctx context.Context, image, key string, out io.Writer) error {
+	message.Warnf(lang.WarnSGetDeprecation)
+
 	// If this is a DefenseUnicorns package, use an internal sget public key
 	if strings.HasPrefix(image, fmt.Sprintf("%s://defenseunicorns", SGETURLScheme)) {
-		os.Setenv("DU_SGET_KEY", config.SGetPublicKey)
+		os.Setenv("DU_SGET_KEY", config.CosignPublicKey)
 		key = "env://DU_SGET_KEY"
 	}
 
