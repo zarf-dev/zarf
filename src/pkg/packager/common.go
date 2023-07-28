@@ -464,27 +464,30 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 	cliVersion := config.CLIVersion
 	lastNonBreakingVersion := p.cfg.Pkg.Build.LastNonBreakingVersion
 
-	if lastNonBreakingVersion != "" && cliVersion != "UnknownVersion" {
-		lastNonBreakingSemVer, err := semver.NewVersion(lastNonBreakingVersion)
-		if err != nil {
-			return fmt.Errorf("unable to parse lastNonBreakingVersion '%s' from Zarf package build data : %w", lastNonBreakingVersion, err)
-		}
-
-		cliSemVer, err := semver.NewVersion(cliVersion)
-		if err != nil {
-			return fmt.Errorf("unable to parse Zarf CLI version '%s' : %w", cliVersion, err)
-		}
-
-		if cliSemVer.LessThan(lastNonBreakingSemVer) {
-			warning := fmt.Sprintf(
-				lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
-				cliVersion,
-				lastNonBreakingVersion,
-				lastNonBreakingVersion,
-			)
-			p.warnings = append(p.warnings, warning)
-		}
+	if lastNonBreakingVersion == "" || cliVersion == "UnknownVersion" {
+		return nil
 	}
+
+	lastNonBreakingSemVer, err := semver.NewVersion(lastNonBreakingVersion)
+	if err != nil {
+		return fmt.Errorf("unable to parse lastNonBreakingVersion '%s' from Zarf package build data : %w", lastNonBreakingVersion, err)
+	}
+
+	cliSemVer, err := semver.NewVersion(cliVersion)
+	if err != nil {
+		return fmt.Errorf("unable to parse Zarf CLI version '%s' : %w", cliVersion, err)
+	}
+
+	if cliSemVer.LessThan(lastNonBreakingSemVer) {
+		warning := fmt.Sprintf(
+			lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
+			cliVersion,
+			lastNonBreakingVersion,
+			lastNonBreakingVersion,
+		)
+		p.warnings = append(p.warnings, warning)
+	}
+
 	return nil
 }
 
