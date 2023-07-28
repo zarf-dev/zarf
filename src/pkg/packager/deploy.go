@@ -23,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -52,14 +53,6 @@ func (p *Packager) Deploy() error {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
 
-	if err := p.validatePackageArchitecture(); err != nil {
-		if errors.Is(err, lang.ErrUnableToCheckArch) {
-			message.Warnf("Unable to validate package architecture: %s", err.Error())
-		} else {
-			return err
-		}
-	}
-
 	if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
 		return err
 	}
@@ -67,6 +60,10 @@ func (p *Packager) Deploy() error {
 	// Now that we have read the zarf.yaml, check the package kind
 	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
 		p.cfg.IsInitConfig = true
+	}
+
+	if err := p.attemptClusterChecks(); err != nil {
+		return err
 	}
 
 	// Confirm the overall package deployment
@@ -91,9 +88,6 @@ func (p *Packager) Deploy() error {
 	// Filter out components that are not compatible with this system
 	p.filterComponents(true)
 
-	// Quickly attempt to load the cluster but ignore any errors because a cluster may not be available
-	p.cluster, _ = cluster.NewCluster()
-
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
 	if err != nil {
@@ -108,6 +102,38 @@ func (p *Packager) Deploy() error {
 	return nil
 }
 
+// attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
+// NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
+func (p *Packager) attemptClusterChecks() error {
+	// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
+	if cluster, err := cluster.NewCluster(); err == nil {
+
+		// Get the init package from the cluster
+		if p.currentInitPackage, err = cluster.GetDeployedPackage("init"); err == nil {
+			// We use the build.version for now because it is the most reliable way to get this version info pre v0.26.0
+			deprecated.PrintBreakingChanges(p.currentInitPackage.Data.Build.Version)
+		}
+
+		// Check if t he package has already been deployed and get its generation
+		if existingDeployedPackage, err := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); err == nil {
+			// If there is no error, then this package has been deployed before. Figure out what generation we are on.
+			// Increment the package generation within the secret
+			p.generation = existingDeployedPackage.Generation + 1
+		}
+
+		// Check the clusters architecture vs the package spec
+		if err := p.validatePackageArchitecture(); err != nil {
+			if errors.Is(err, lang.ErrUnableToCheckArch) {
+				message.Warnf("Unable to validate package architecture: %s", err.Error())
+			} else {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
 	componentsToDeploy := p.getValidComponents()
@@ -118,26 +144,20 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	}
 
 	// Check if this package has been deployed before and grab relevant information about already deployed components
-	packageGeneration := 1
-	if p.cluster != nil {
-		existingDeployedPackage, err := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name)
-		if err == nil {
-			// If there is no error, then this package has been deployed before. Figure out what generation we are on.
-			// Increment the package generation within the secret
-			packageGeneration = existingDeployedPackage.Generation + 1
-		}
+	if p.generation == 0 {
+		p.generation = 1 // If this is the first deployment, set the generation to 1
 	}
 
 	// Process all the components we are deploying
 	for _, component := range componentsToDeploy {
-		deployedComponent := types.DeployedComponent{Name: component.Name, Status: types.ComponentStatusDeploying, ObservedGeneration: packageGeneration}
+		deployedComponent := types.DeployedComponent{Name: component.Name, Status: types.ComponentStatusDeploying, ObservedGeneration: p.generation}
 
 		// Add the component to the list of deployedComponents
 		deployedComponents = append(deployedComponents, deployedComponent)
 
 		// Update the package secret to indicate that we are about to deploy this component
 		if p.cluster != nil && !p.cfg.IsInitConfig {
-			if _, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, packageGeneration); err != nil {
+			if _, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, p.generation); err != nil {
 				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
@@ -170,7 +190,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Save deployed package information to k8s
 		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 		if p.cluster != nil {
-			_, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, packageGeneration)
+			_, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, connectStrings, p.generation)
 			if err != nil && deployedComponent.Name != "zarf-injector" {
 				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}

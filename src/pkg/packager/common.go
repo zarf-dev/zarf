@@ -32,12 +32,14 @@ import (
 
 // Packager is the main struct for managing packages.
 type Packager struct {
-	cfg      *types.PackagerConfig
-	cluster  *cluster.Cluster
-	remote   *oci.OrasRemote
-	tmp      types.TempPaths
-	arch     string
-	warnings []string
+	cfg                *types.PackagerConfig
+	cluster            *cluster.Cluster
+	remote             *oci.OrasRemote
+	tmp                types.TempPaths
+	arch               string
+	warnings           []string
+	currentInitPackage types.DeployedPackage
+	generation         int
 }
 
 // Zarf Packager Variables.
@@ -438,19 +440,18 @@ func (p *Packager) handleIfPartialPkg() error {
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() error {
 	// Ignore this check if the architecture is explicitly "multi"
-	if p.arch != "multi" {
-		// Attempt to connect to a cluster to get the architecture.
-		if cluster, err := cluster.NewCluster(); err == nil {
-			clusterArch, err := cluster.Kube.GetArchitecture()
-			if err != nil {
-				return lang.ErrUnableToCheckArch
-			}
+	if p.arch != "multi" || p.cluster == nil {
+		return nil
+	}
 
-			// Check if the package architecture and the cluster architecture are the same.
-			if p.arch != clusterArch {
-				return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
-			}
-		}
+	clusterArch, err := p.cluster.Kube.GetArchitecture()
+	if err != nil {
+		return lang.ErrUnableToCheckArch
+	}
+
+	// Check if the package architecture and the cluster architecture are the same.
+	if p.arch != clusterArch {
+		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 	}
 
 	return nil
