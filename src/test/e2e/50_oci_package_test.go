@@ -53,7 +53,7 @@ func (suite *RegistryClientTestSuite) Test_0_Publish() {
 	suite.Contains(stdErr, "Published "+ref)
 
 	// Publish w/ package missing `metadata.version` field.
-	example = filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch))
+	example = filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-component-actions-%s.tar.zst", e2e.Arch))
 	_, stdErr, err = e2e.Zarf("package", "publish", example, "oci://"+ref, "--insecure")
 	suite.Error(err, stdErr)
 

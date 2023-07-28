@@ -760,22 +760,6 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary>
-<strong> <a name="components_items_cosignKeyPath"></a>cosignKeyPath</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Specify a path to a public key to validate signed online resources
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
 <details open>
 <summary>
 <strong> <a name="components_items_import"></a>import</strong>

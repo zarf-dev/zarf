@@ -70,7 +70,13 @@ func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
 		spinner.Errorf(err, "Validation failed for chart from %s (%s)", h.Chart.LocalPath, err.Error())
 		return "", err
 	}
-	h.buildChartDependencies(spinner)
+
+	err = h.buildChartDependencies(spinner)
+	if err != nil {
+		spinner.Errorf(err, "Unable to build dependencies for the chart: %s", err.Error())
+		return "", err
+	}
+
 	client := action.NewPackage()
 
 	client.Destination = destination
@@ -207,7 +213,10 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 	// Build the deps from the helm chart
 	err = man.Build()
 	if e, ok := err.(downloader.ErrRepoNotFound); ok {
-		return fmt.Errorf("%s. Please add the missing repos via 'helm repo add'", e.Error())
+		return fmt.Errorf("%s. Please add the missing repo via 'helm repo add <name> <url>'", e.Error())
+	} else if err != nil {
+		return err
 	}
+
 	return nil
 }
