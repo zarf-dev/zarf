@@ -80,11 +80,10 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 		if err := utils.CreateDirectory(config.CommonOptions.TempDirectory, 0700); err != nil {
 			return nil, fmt.Errorf("unable to create temp directory: %w", err)
 		}
-	}
-
-	// If the cache directory is within the temp directory, warn the user
-	if config.CommonOptions.CachePath != "" && strings.HasPrefix(config.CommonOptions.CachePath, config.CommonOptions.TempDirectory) {
-		message.Warnf("The cache directory (%q) is within the temp directory (%q) and will be removed when the temp directory is cleared with ClearTempPaths", config.CommonOptions.CachePath, config.CommonOptions.TempDirectory)
+		// If the cache directory is within the temp directory, warn the user
+		if strings.HasPrefix(config.CommonOptions.CachePath, config.CommonOptions.TempDirectory) {
+			message.Warnf("The cache directory (%q) is within the temp directory (%q) and will be removed when the temp directory is cleaned up", config.CommonOptions.CachePath, config.CommonOptions.TempDirectory)
+		}
 	}
 
 	// Create a temp directory for the package
