@@ -128,16 +128,6 @@ ib-init-package:
 		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
 		--set REGISTRY_IMAGE_TAG="2.8.2"
 
-# INTERNAL used to build the dos games packages for release
-build-release-packages:
-	$(ZARF_BIN) package create -o build -a amd64 examples/dos-games --key=$(KEY) --confirm
-	$(ZARF_BIN) package create -o build -a arm64 examples/dos-games --key=$(KEY) --confirm
-
-# INTERNAL used to publish the dos games packages to GHCR
-publish-release-packages:
-	$(ZARF_BIN) package publish ./build/zarf-package-dos-games-amd64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages
-	$(ZARF_BIN) package publish ./build/zarf-package-dos-games-arm64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages
-
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
