@@ -28,10 +28,10 @@ import (
 )
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
-func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOverride string) ([]string, error) {
+func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOverride string) (map[string][]string, error) {
 
 	var originalDir string
-	var images []string
+	imagesMap := make(map[string][]string)
 
 	// Change the working directory if this run has an alternate base dir
 	if baseDir != "" {
@@ -231,7 +231,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 			componentDefinition += fmt.Sprintf("\n  - name: %s\n    images:\n", component.Name)
 			for _, image := range sortedImages {
 				// Use print because we want this dumped to stdout
-				images = append(images, image)
+				imagesMap[component.Name] = append(imagesMap[component.Name], image)
 				componentDefinition += fmt.Sprintf("      - %s\n", image)
 			}
 		}
@@ -266,7 +266,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 		_ = os.Chdir(originalDir)
 	}
 
-	return images, nil
+	return imagesMap, nil
 }
 
 func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured, matchedImages, maybeImages k8s.ImageMap) (k8s.ImageMap, k8s.ImageMap, error) {
