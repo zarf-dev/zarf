@@ -118,16 +118,16 @@ func (suite *SkeletonSuite) Test_2_Component_Templates() {
 	suite.NoError(err)
 
 	targets := []string{
-		"import-component-local case was here",
-		"import-component-local-relative case was here",
-		"import-component-wordpress case was here",
-		"import-component-oci case was here",
-		"file-imports case was here",
-		"import-helm-local case was here",
-		"import-helm-local-relative",
-		"import-helm-oci case was here",
-		"import-repos case was here",
-		"import-images case was here",
+		"import-component-local == import-component-local",
+		"import-component-local-relative == import-component-local-relative",
+		"import-component-wordpress == import-component-wordpress",
+		"import-component-oci == import-component-oci",
+		"file-imports == file-imports",
+		"import-helm-local == import-helm-local",
+		"import-helm-local-relative == import-helm-local-relative",
+		"import-helm-oci == import-helm-oci",
+		"import-repos == import-repos",
+		"import-images == import-images",
 	}
 
 	for _, target := range targets {
