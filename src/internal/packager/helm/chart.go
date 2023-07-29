@@ -30,7 +30,7 @@ import (
 )
 
 // Set the default helm client timeout to 15 minutes
-const defaultClientTimeout = 15 * time.Minute
+const defaultClientTimeout = 5 * time.Minute
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
 func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
