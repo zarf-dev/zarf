@@ -91,7 +91,7 @@ func manifestGitRepo(cfg *extensions.BigBang) fluxSrcCtrl.GitRepository {
 	return fluxSrcCtrl.GitRepository{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       fluxSrcCtrl.GitRepositoryKind,
-			APIVersion: "source.toolkit.fluxcd.io/v1beta2",
+			APIVersion: "source.toolkit.fluxcd.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bb,
