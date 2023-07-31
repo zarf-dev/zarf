@@ -62,7 +62,7 @@ func Generate(cfg *types.PackagerConfig) (*Values, error) {
 
 // Ready returns true if the Values struct is ready to be used in the template.
 func (values *Values) Ready() bool {
-	return values.config.State != nil && values.config.State.Distro != ""
+	return values.config.State != nil
 }
 
 // GetRegistry returns the registry address.

@@ -208,7 +208,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 // Deploy a Zarf Component.
 func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
-	message.Debugf("packager.deployComponent(%#v, %#v", p.tmp, component)
+	message.Debugf("packager.deployComponent - %s", message.JSONValue(component))
 
 	// Toggles for general deploy operations
 	componentPath, err := p.createOrGetComponentPaths(component)
@@ -387,7 +387,7 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 	}
 
 	// Check if the state is empty (uninitialized cluster)
-	if state.Distro == "" {
+	if state == nil {
 		// If this is not a YOLO mode package, return an error
 		if !p.cfg.Pkg.Metadata.YOLO {
 			return nil, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
@@ -404,13 +404,13 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 		}
 	}
 
-	if p.cfg.Pkg.Metadata.YOLO && state.Distro != "YOLO" {
+	if p.cfg.Pkg.Metadata.YOLO && state != nil && state.Distro != "YOLO" {
 		message.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
 			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
 			"the pod or namespace label `zarf.dev/agent: ignore'.")
 	}
 
-	p.cfg.State = &state
+	p.cfg.State = state
 
 	// Continue loading state data if it is valid
 	values, err = template.Generate(p.cfg)
@@ -497,9 +497,7 @@ func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPat
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, component types.ZarfComponent) ([]types.InstalledChart, error) {
-	installedCharts := []types.InstalledChart{}
-
+func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 
 		// zarf magic for the value file

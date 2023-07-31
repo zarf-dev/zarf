@@ -32,7 +32,7 @@ type ClusterSummary struct {
 	Reachable   bool        `json:"reachable"`
 	HasZarf     bool        `json:"hasZarf"`
 	Distro      string      `json:"distro"`
-	ZarfState   ZarfState   `json:"zarfState"`
+	ZarfState   *ZarfState  `json:"zarfState"`
 	K8sRevision string      `json:"k8sRevision"`
 	RawConfig   *api.Config `json:"rawConfig"`
 }

@@ -171,7 +171,7 @@ func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []st
 }
 
 func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *message.Spinner) ([]string, string, error) {
-	message.Debugf("packager.tryInjectorPayloadDeploy(%#v)", tempPath)
+	message.Debugf("packager.tryInjectorPayloadDeploy(%q)", tempPath.Base)
 	var configMaps []string
 
 	// Chunk size has to accommodate base64 encoding & etcd 1MB limit

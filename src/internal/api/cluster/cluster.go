@@ -19,7 +19,7 @@ import (
 func Summary(w http.ResponseWriter, _ *http.Request) {
 	message.Debug("cluster.Summary()")
 
-	var state types.ZarfState
+	var state *types.ZarfState
 	var reachable bool
 	var distro string
 	var hasZarf bool

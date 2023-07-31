@@ -95,8 +95,6 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 }
 
 func (p *Packager) isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {
-	message.Debugf("config.isCompatibleComponent(%s, %v)", component.Name, filterByOS)
-
 	// Ignore only filters that are empty
 	var validArch, validOS bool
 
@@ -119,8 +117,6 @@ func (p *Packager) isCompatibleComponent(component types.ZarfComponent, filterBy
 
 // Match on the first requested component that is not in the list of valid components and return the component name.
 func (p *Packager) validateRequests(validComponentsList []types.ZarfComponent, requestedComponentNames, choiceComponents []string) error {
-	message.Debugf("packager.validateRequests(%#v, %#v, %#v)", validComponentsList, requestedComponentNames, choiceComponents)
-
 	// Loop through each requested component names
 	for _, componentName := range requestedComponentNames {
 		found := false
@@ -149,8 +145,6 @@ func (p *Packager) validateRequests(validComponentsList []types.ZarfComponent, r
 }
 
 func (p *Packager) isRequiredOrRequested(component types.ZarfComponent, requestedComponentNames []string) bool {
-	message.Debugf("packager.isRequiredOrRequested(%#v, %#v)", component, requestedComponentNames)
-
 	// If the component is required, then just return true
 	if component.Required {
 		return true
@@ -172,8 +166,6 @@ func (p *Packager) isRequiredOrRequested(component types.ZarfComponent, requeste
 
 // Confirm optional component.
 func (p *Packager) confirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
-	message.Debugf("packager.confirmOptionalComponent(%#v)", component)
-
 	// Confirm flag passed, just use defaults
 	if config.CommonOptions.Confirm {
 		return component.Default

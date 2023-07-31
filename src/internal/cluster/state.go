@@ -46,9 +46,12 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 	}
 
 	// Attempt to load an existing state prior to init.
-	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
-	state, _ := c.LoadZarfState()
+	state, err := c.LoadZarfState()
+	if err != nil {
+		// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
+		return nil
+	}
 
 	// If the distro isn't populated in the state, assume this is a new cluster.
 	if state.Distro == "" {
@@ -147,60 +150,68 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 }
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
-func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
+func (c *Cluster) LoadZarfState() (state *types.ZarfState, err error) {
 	message.Debug("k8s.LoadZarfState()")
-
-	// The empty state that we will try to fill.
-	state := types.ZarfState{}
 
 	// Set up the API connection
 	secret, err := c.GetSecret(ZarfNamespaceName, ZarfStateSecretName)
 	if err != nil {
-		return state, err
+		return nil, err
 	}
 
-	_ = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
+	err = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
+	if err != nil {
+		return nil, err
+	}
 
-	message.Debugf("ZarfState = %s", message.JSONValue(c.sanitizeZarfState(state)))
+	c.debugPrintZarfState(state)
 
 	return state, nil
 }
 
-func (c *Cluster) sanitizeZarfState(state types.ZarfState) types.ZarfState {
-	sanitizedState := state
-
+func (c *Cluster) sanitizeZarfState(state *types.ZarfState) *types.ZarfState {
 	// Overwrite the AgentTLS information
-	sanitizedState.AgentTLS.CA = []byte("**sanitized**")
-	sanitizedState.AgentTLS.Cert = []byte("**sanitized**")
-	sanitizedState.AgentTLS.Key = []byte("**sanitized**")
+	state.AgentTLS.CA = []byte("**sanitized**")
+	state.AgentTLS.Cert = []byte("**sanitized**")
+	state.AgentTLS.Key = []byte("**sanitized**")
 
 	// Overwrite the GitServer passwords
-	sanitizedState.GitServer.PushPassword = "**sanitized**"
-	sanitizedState.GitServer.PullPassword = "**sanitized**"
+	state.GitServer.PushPassword = "**sanitized**"
+	state.GitServer.PullPassword = "**sanitized**"
 
 	// Overwrite the RegistryInfo passwords
-	sanitizedState.RegistryInfo.PushPassword = "**sanitized**"
-	sanitizedState.RegistryInfo.PullPassword = "**sanitized**"
-	sanitizedState.RegistryInfo.Secret = "**sanitized**"
+	state.RegistryInfo.PushPassword = "**sanitized**"
+	state.RegistryInfo.PullPassword = "**sanitized**"
+	state.RegistryInfo.Secret = "**sanitized**"
 
 	// Overwrite the ArtifactServer secret
-	sanitizedState.ArtifactServer.PushToken = "**sanitized**"
+	state.ArtifactServer.PushToken = "**sanitized**"
 
 	// Overwrite the Logging secret
-	sanitizedState.LoggingSecret = "**sanitized**"
+	state.LoggingSecret = "**sanitized**"
 
-	return sanitizedState
+	return state
+}
+
+func (c *Cluster) debugPrintZarfState(state *types.ZarfState) {
+	if state == nil {
+		return
+	}
+	// this is a shallow copy, nested pointers WILL NOT be copied
+	oldState := *state
+	sanitized := c.sanitizeZarfState(&oldState)
+	message.Debugf("ZarfState = %s", message.JSONValue(sanitized))
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
-func (c *Cluster) SaveZarfState(state types.ZarfState) error {
+func (c *Cluster) SaveZarfState(state *types.ZarfState) error {
 	message.Debugf("k8s.SaveZarfState()")
-	message.Debug(message.JSONValue(c.sanitizeZarfState(state)))
+	c.debugPrintZarfState(state)
 
 	// Convert the data back to JSON.
-	data, err := json.Marshal(state)
+	data, err := json.Marshal(&state)
 	if err != nil {
-		return fmt.Errorf("unable to json-encode the zarf state")
+		return err
 	}
 
 	// Set up the data wrapper.

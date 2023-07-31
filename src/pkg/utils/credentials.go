@@ -60,7 +60,7 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 }
 
 // PrintComponentCredential displays credentials for a single component
-func PrintComponentCredential(state types.ZarfState, componentName string) {
+func PrintComponentCredential(state *types.ZarfState, componentName string) {
 	switch strings.ToLower(componentName) {
 	case "logging":
 		message.Note("Logging credentials (username: zarf-admin):")
