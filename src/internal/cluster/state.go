@@ -46,15 +46,13 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 	}
 
 	// Attempt to load an existing state prior to init.
+	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
-	state, err := c.LoadZarfState()
-	if err != nil {
-		// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
-		return nil
-	}
+	state, _ := c.LoadZarfState()
 
-	// If the distro isn't populated in the state, assume this is a new cluster.
-	if state.Distro == "" {
+	// If state is nil, this is a new cluster.
+	if state == nil {
+		state = &types.ZarfState{}
 		spinner.Updatef("New cluster, no prior Zarf deployments found")
 
 		// If the K3s component is being deployed, skip distro detection.

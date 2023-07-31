@@ -30,8 +30,6 @@ var payloadChunkSize = 1024 * 768
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
 func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths, injectorSeedTags []string) {
-	message.Debugf("packager.runInjectionMadness(%#v)", tempPath)
-
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer spinner.Stop()
 
@@ -47,8 +45,6 @@ func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths, injectorSeedTa
 	if images, err = c.GetAllImages(timeout); err != nil {
 		spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
 	}
-	message.Debugf("Found %d images in the cluster", len(images))
-	message.Debugf("Images: %#v", images)
 
 	spinner.Updatef("Creating the injector configmap")
 	if err = c.createInjectorConfigmap(tempPath); err != nil {

@@ -166,10 +166,8 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 
 // Apply renders the template and writes the result to the given path.
 func (values *Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
-	message.Debugf("template.Apply(%#v, %s)", component, path)
-
 	// If Apply() is called before all values are loaded, fail unless ignoreReady is true
-	if !ignoreReady && !values.Ready() {
+	if !values.Ready() && !ignoreReady {
 		return fmt.Errorf("template.Apply() called before template.Generate()")
 	}
 

@@ -272,7 +272,6 @@ func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinn
 }
 
 func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
-	message.Debugf("helm.installChart(%#v)", postRender)
 	// Bind the helm action.
 	client := action.NewInstall(h.actionConfig)
 

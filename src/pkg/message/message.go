@@ -128,7 +128,7 @@ func Command(format string, a ...any) {
 
 // Debug prints a debug message.
 func Debug(payload ...any) {
-	debugPrinter(2, payload...)
+	debugPrinter(4, payload...)
 }
 
 // Debugf prints a debug message with a given format.
