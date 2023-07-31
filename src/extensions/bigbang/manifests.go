@@ -14,7 +14,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
-	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
+	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
