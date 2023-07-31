@@ -108,5 +108,4 @@ jobs:
         run: "go test ./src/extensions/bigbang/test -failfast -v -timeout 30m"
 
       - name: Save logs
-        if: always()
         uses: ./.github/actions/save-logs
