@@ -97,7 +97,6 @@ func (k *K8s) DetectDistro() (string, error) {
 	}
 
 	namespaces, err := k.GetNamespaces()
-	k.Log("%#v", namespaces)
 	if err != nil {
 		return DistroIsUnknown, errors.New("error getting namespace list")
 	}

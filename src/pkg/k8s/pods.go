@@ -95,7 +95,6 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []co
 		if len(pods.Items) > 0 {
 			for _, pod := range pods.Items {
 				k.Log("Testing pod %s", pod.Name)
-				k.Log("%#v", pod)
 
 				// If an include function is provided, only keep pods that return true
 				if include != nil && !include(pod) {
