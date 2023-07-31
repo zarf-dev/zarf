@@ -81,7 +81,7 @@ The following assumes you are using the internal Gitea server. If you are using 
 zarf connect git&
 
 # Apply the kustomization
-zarf tools kubectl apply -k http://zarf-git-user:$(zarf tools get-creds Git)@localhost:<WhicheverPortGotUsed>/zarf-git-user/mirror__github.com__stefanprodan__podinfo//kustomize
+zarf tools kubectl apply -k http://zarf-git-user:$(zarf tools get-creds Git)@localhost:<WhicheverPortGotUsed>/zarf-git-user/mirror__github.com__stefanprodan__podinfo/kustomize
 
 # Inspect
 zarf tools k9s

@@ -9,6 +9,8 @@ components:
     required: true
     repos:
       # The following performs a full Git Repo Mirror with `go-git` (internal to Zarf)
+      - https://github.com/stefanprodan/podinfo.git
+      # The following performs a full Git Repo Mirror with `go-git` (internal to Zarf)
       - https://github.com/defenseunicorns/zarf-public-test.git
       # The following performs a full Git Repo Mirror forcing a fallback to host `git`
       - https://racer159.visualstudio.com/zarf-public-test/_git/zarf-public-test
