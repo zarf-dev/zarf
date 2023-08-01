@@ -52,22 +52,20 @@ func TestBundle(t *testing.T) {
 
 	tarballPath := filepath.Join("build", fmt.Sprintf("zarf-bundle-bundle-%s-0.0.1.tar.zst", e2e.Arch))
 
-	defer e2e.CleanFiles(tarballPath)
-
 	create(t, bundleRef.Registry)
 
 	pull(t, bundleRef.String(), tarballPath)
 
 	inspect(t, bundleRef.String(), tarballPath)
 
-	deployAndRemove(t, "oci://"+bundleRef.String())
+	deployAndRemove(t, bundleRef.String(), tarballPath)
 
-	deployAndRemove(t, tarballPath)
+	e2e.CleanFiles(tarballPath)
 }
 
 func create(t *testing.T, reg string) {
 	dir := "src/test/packages/60-bundle"
-	cmd := strings.Split(fmt.Sprintf("bundle create %s -o oci://%s --set INIT_VERSION=%s --confirm --insecure -l=debug", dir, reg, cliver), " ")
+	cmd := strings.Split(fmt.Sprintf("bundle create %s -o oci://%s --set INIT_VERSION=%s --confirm --insecure", dir, reg, cliver), " ")
 	_, _, err := e2e.Zarf(cmd...)
 	require.NoError(t, err)
 }
@@ -76,8 +74,7 @@ func inspect(t *testing.T, ref string, tarballPath string) {
 	t.Run(
 		"inspect bundle via OCI",
 		func(t *testing.T) {
-			t.Parallel()
-			cmd := strings.Split(fmt.Sprintf("bundle inspect oci://%s --insecure -l=debug", ref), " ")
+			cmd := strings.Split(fmt.Sprintf("bundle inspect oci://%s --insecure", ref), " ")
 			_, _, err := e2e.Zarf(cmd...)
 			require.NoError(t, err)
 		},
@@ -85,28 +82,41 @@ func inspect(t *testing.T, ref string, tarballPath string) {
 	t.Run(
 		"inspect bundle via local tarball",
 		func(t *testing.T) {
-			t.Parallel()
-			cmd := strings.Split(fmt.Sprintf("bundle inspect %s -l=debug", tarballPath), " ")
+			cmd := strings.Split(fmt.Sprintf("bundle inspect %s", tarballPath), " ")
 			_, _, err := e2e.Zarf(cmd...)
 			require.NoError(t, err)
 		},
 	)
 }
 
-func deployAndRemove(t *testing.T, source string) {
+func deployAndRemove(t *testing.T, ref string, tarballPath string) {
 	var cmd []string
 
-	if strings.HasPrefix(source, "oci://") {
-		cmd = strings.Split(fmt.Sprintf("bundle deploy %s --insecure --oci-concurrency=10 --confirm -l=debug", source), " ")
-	} else {
-		cmd = strings.Split(fmt.Sprintf("bundle deploy %s --confirm -l=debug", source), " ")
-	}
-	_, _, err := e2e.Zarf(cmd...)
-	require.NoError(t, err)
+	t.Run(
+		"deploy+remove bundle via OCI",
+		func(t *testing.T) {
+			cmd = strings.Split(fmt.Sprintf("bundle deploy oci://%s --insecure --oci-concurrency=10 --confirm", ref), " ")
+			_, _, err := e2e.Zarf(cmd...)
+			require.NoError(t, err)
 
-	cmd = strings.Split(fmt.Sprintf("bundle remove %s --confirm -l=debug --insecure", source), " ")
-	_, _, err = e2e.Zarf(cmd...)
-	require.NoError(t, err)
+			cmd = strings.Split(fmt.Sprintf("bundle remove oci://%s --confirm --insecure", ref), " ")
+			_, _, err = e2e.Zarf(cmd...)
+			require.NoError(t, err)
+		},
+	)
+
+	t.Run(
+		"deploy+remove bundle via local tarball",
+		func(t *testing.T) {
+			cmd = strings.Split(fmt.Sprintf("bundle deploy %s --confirm", tarballPath), " ")
+			_, _, err := e2e.Zarf(cmd...)
+			require.NoError(t, err)
+
+			cmd = strings.Split(fmt.Sprintf("bundle remove %s --confirm --insecure", tarballPath), " ")
+			_, _, err = e2e.Zarf(cmd...)
+			require.NoError(t, err)
+		},
+	)
 }
 
 func shasMatch(t *testing.T, path string, expected string) {
@@ -116,7 +126,7 @@ func shasMatch(t *testing.T, path string, expected string) {
 }
 
 func pull(t *testing.T, ref string, tarballPath string) {
-	cmd := strings.Split(fmt.Sprintf("bundle pull oci://%s -o build --insecure --oci-concurrency=10 -l=debug", ref), " ")
+	cmd := strings.Split(fmt.Sprintf("bundle pull oci://%s -o build --insecure --oci-concurrency=10", ref), " ")
 	_, _, err := e2e.Zarf(cmd...)
 	require.NoError(t, err)
 
