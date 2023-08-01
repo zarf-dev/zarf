@@ -25,7 +25,6 @@ type ZarfE2ETest struct {
 	ApplianceMode     bool
 	ApplianceModeKeep bool
 	RunClusterTests   bool
-	CommandLog        []string
 }
 
 var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
@@ -59,7 +58,6 @@ func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
 
 // Zarf executes a Zarf command.
 func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
-	e2e.CommandLog = append(e2e.CommandLog, strings.Join(args, " "))
 	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)
 }
 
