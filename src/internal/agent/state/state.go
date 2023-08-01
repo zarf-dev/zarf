@@ -22,5 +22,9 @@ func GetZarfStateFromAgentPod() (state *types.ZarfState, err error) {
 	}
 
 	// Unmarshal the json file into a Go struct
-	return nil, json.Unmarshal(stateFile, state)
+	if err := json.Unmarshal(stateFile, &state); err != nil {
+		return nil, err
+	}
+
+	return state, nil
 }
