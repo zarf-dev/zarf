@@ -151,7 +151,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				deployedNamespace = r.options.Chart.Namespace
 			}
 
-			helmLabels := map[string]string{"app.Clusterrnetes.io/managed-by": "Helm"}
+			helmLabels := map[string]string{"app.kubernetes.io/managed-by": "Helm"}
 			helmAnnotations := map[string]string{
 				"meta.helm.sh/release-name":      r.options.ReleaseName,
 				"meta.helm.sh/release-namespace": r.options.Chart.Namespace,
