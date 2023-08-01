@@ -135,12 +135,12 @@ export interface GitServerInfo {
     internalServer: boolean;
     /**
      * Password of a user with pull-only access to the git repository. If not provided for an
-     * external repository than the push-user is used
+     * external repository then the push-user is used
      */
     pullPassword: string;
     /**
      * Username of a user with pull-only access to the git repository. If not provided for an
-     * external repository than the push-user is used
+     * external repository then the push-user is used
      */
     pullUsername: string;
     /**
