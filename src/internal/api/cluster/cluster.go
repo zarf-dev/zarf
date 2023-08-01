@@ -32,7 +32,7 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 	if reachable {
 		distro, _ = c.DetectDistro()
 		state, _ = c.LoadZarfState()
-		hasZarf = state.Distro != ""
+		hasZarf = state != nil
 		k8sRevision = getServerVersion(c)
 	}
 
