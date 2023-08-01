@@ -375,7 +375,8 @@ const (
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
-	CmdToolsCraneNotEnoughArgumentsSpecified = "You do not have enough arguments specified."
+	CmdToolsCraneNotEnoughArgumentsErr   = "You do not have enough arguments specified for this command"
+	CmdToolsCraneConnectedButBadStateErr = "Detected a K8s cluster but was unable to get Zarf state - continuing without state information: %s"
 
 	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
 	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."
@@ -421,7 +422,7 @@ const (
 		zarf tools wait-for http google.com success                           #  wait for any 2xx response from http://google.com
 `
 	CmdToolsWaitForFlagTimeout        = "Specify the timeout duration for the wait command."
-	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration. Please use a valid duration string (e.g. 1s, 2m, 3h)."
+	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration '%s'. Please use a valid duration string (e.g. 1s, 2m, 3h)."
 	CmdToolsWaitForErrTimeout         = "Wait timed out."
 	CmdToolsWaitForErrConditionString = "Invalid HTTP status code. Please use a valid HTTP status code (e.g. 200, 404, 500)."
 	CmdToolsWaitForErrZarfPath        = "Could not locate the current Zarf binary path."
@@ -513,7 +514,7 @@ const (
 var (
 	ErrInitNotFound      = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
 	ErrUnableToCheckArch = errors.New("unable to get the configured cluster's architecture")
-	ErrInterrupt         = errors.New("Failed due to interrupt")
+	ErrInterrupt         = errors.New("execution cancelled due to an interrupt")
 )
 
 // Collection of reusable warn messages.
