@@ -384,7 +384,7 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 	// Return on error if we are not in YOLO mode
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
 		return nil, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
-	} else if state == nil {
+	} else if state == nil && p.cfg.Pkg.Metadata.YOLO {
 		state = &types.ZarfState{}
 		// YOLO mode, so minimal state needed
 		state.Distro = "YOLO"

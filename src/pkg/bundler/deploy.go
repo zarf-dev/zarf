@@ -53,8 +53,6 @@ func (b *Bundler) Deploy() error {
 
 	// TODO: state sharing? variable scoping?
 
-	pkgCfg := types.PackagerConfig{}
-
 	// deploy each package
 	for _, pkg := range b.bundle.Packages {
 		sha := strings.Split(pkg.Ref, "@sha256:")[1]
@@ -84,10 +82,10 @@ func (b *Bundler) Deploy() error {
 			PublicKeyPath: publicKeyPath,
 			// TODO: SetVariables...
 		}
-
-		pkgCfg.PkgOpts = opts
-
-		pkgCfg.InitOpts = defaultZarfInitOptions
+		pkgCfg := types.PackagerConfig{
+			PkgOpts:  opts,
+			InitOpts: defaultZarfInitOptions,
+		}
 
 		pkgClient, err := packager.New(&pkgCfg)
 		if err != nil {

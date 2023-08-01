@@ -153,7 +153,7 @@ func ServiceInfoFromNodePortURL(nodePortURL string) (*ServiceInfo, error) {
 }
 
 // ServiceInfoFromServiceURL takes a serviceURL and parses it to find the service info for connecting to the cluster. The string is expected to follow the following format:
-// Example serviceURL: http://{SERVICE_NAME}.{NAMESPACE}.svc.local:{PORT}.
+// Example serviceURL: http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}.
 func ServiceInfoFromServiceURL(serviceURL string) (*ServiceInfo, error) {
 	parsedURL, err := url.Parse(serviceURL)
 	if err != nil {
