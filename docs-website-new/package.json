@@ -20,6 +20,7 @@
     "update": "hugo mod get -u ./... && hugo mod tidy"
   },
   "devDependencies": {
+    "@defenseunicorns/hugodocs": "github:defenseunicorns/build-hugo-docs",
     "autoprefixer": "^10.4.14",
     "hugo-extended": "0.115.2",
     "linkinator": "^5.0.1",

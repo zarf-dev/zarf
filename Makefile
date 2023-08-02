@@ -214,3 +214,9 @@ cve-report: ensure-ui-build-dir ## Create a CVE report for the current project (
 
 lint-go: ## Run revive to lint the go code (must `brew install revive` first)
 	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
+
+build-website:
+	find . -type d -empty -delete
+	# make docs-and-schema
+	cd docs-website-new && hugodocs && npm start
+
