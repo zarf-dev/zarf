@@ -7,3 +7,4 @@ node_modules/
 .hugo_build.lock
 !data/
 !assets/
+!zarf/
