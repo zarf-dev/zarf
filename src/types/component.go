@@ -32,7 +32,7 @@ type ZarfComponent struct {
 	Group string `json:"group,omitempty" jsonschema:"description=Create a user selector field based on all components in the same group"`
 
 	//Path to cosign publickey for signed online resources
-	CosignKeyPath string `json:"cosignKeyPath,omitempty" jsonschema:"description=Specify a path to a public key to validate signed online resources"`
+	CosignKeyPath string `json:"cosignKeyPath,omitempty" jsonschema:"description=[Deprecated] Specify a path to a public key to validate signed online resources"`
 
 	// Import refers to another zarf.yaml package component.
 	Import ZarfComponentImport `json:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`

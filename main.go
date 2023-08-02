@@ -19,6 +19,6 @@ var cosignPublicKey string
 
 func main() {
 	config.UIAssets = assets
-	config.SGetPublicKey = cosignPublicKey
+	config.CosignPublicKey = cosignPublicKey
 	cmd.Execute()
 }

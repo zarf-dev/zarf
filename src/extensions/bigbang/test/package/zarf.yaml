@@ -21,6 +21,8 @@ components:
         fluxPatchFiles:
           - flux-overrides-helm-controller.yaml
           - flux-overrides-source-controller.yaml
+          - flux-overrides-kustomize-controller.yaml
+          - flux-overrides-notification-controller.yaml
         valuesFiles:
           - disable-all-bb###ZARF_PKG_TMPL_BB_MAJOR###.yaml
           - enable-twistlock.yaml
