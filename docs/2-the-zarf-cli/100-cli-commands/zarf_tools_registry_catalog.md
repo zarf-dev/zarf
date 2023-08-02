@@ -13,7 +13,7 @@ zarf tools registry catalog REGISTRY [flags]
 
 	# list the repos internal to Zarf
 	$ zarf tools registry catalog
-  
+
 	# list the repos for reg.example.com
 	$ zarf tools registry catalog reg.example.com
 
