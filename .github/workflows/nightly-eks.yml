@@ -76,11 +76,6 @@ jobs:
 
       - name: Send trigger to Slack on workflow failure
         if: failure()
-        uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
+        uses: ./.github/actions/slack
         with:
-          payload: |
-            {
-              "text": "The GitHub Action '${{ github.action }}' had a result of: ${{ job.status }}."
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
