@@ -61,6 +61,14 @@ enableRobotsTXT = true
     source = "content/en"
     target = "content"
 
+[[module.mounts]]
+    source = "../docs"
+    target = "content/docs"
+
+[[module.mounts]]
+    source = "../examples"
+    target = "content/examples"
+
 ## The following merge in theme defaults from: https://github.com/defenseunicorns/defense-unicorns-hugo-theme/tree/main/config/_default
 [markup]
     _merge = 'shallow'
