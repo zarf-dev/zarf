@@ -143,6 +143,10 @@
           },
           "type": "object",
           "description": "Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names"
+        },
+        "lastNonBreakingVersion": {
+          "type": "string",
+          "description": "The minimum version of Zarf that does not have breaking package structure changes"
         }
       },
       "additionalProperties": false,
