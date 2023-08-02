@@ -38,7 +38,7 @@ Full clones are used in this example with the `stefanprodan/podinfo` repository 
 
 :::note
 
-If you want to learn more about how Zarf work with GitOps, see the [podinfo-flux](../podinfo-flux/) example.
+If you want to learn more about how Zarf works with GitOps, see the [podinfo-flux](../podinfo-flux/) example.
 
 :::
 
