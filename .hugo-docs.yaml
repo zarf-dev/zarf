@@ -8,4 +8,4 @@ paths:
 ignores:
   - 'docs/.templates'
 
-outdir: 'content/en'
+outdir: 'docs-website-new/content/en'
