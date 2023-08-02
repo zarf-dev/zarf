@@ -245,6 +245,10 @@ export interface ZarfBuildData {
      */
     differentialMissing?: string[];
     /**
+     * The minimum version of Zarf that does not have breaking package structure changes
+     */
+    lastNonBreakingVersion?: string;
+    /**
      * Any migrations that have been run on this package
      */
     migrations: string[];
@@ -1469,6 +1473,7 @@ const typeMap: any = {
         { json: "architecture", js: "architecture", typ: "" },
         { json: "differential", js: "differential", typ: true },
         { json: "differentialMissing", js: "differentialMissing", typ: u(undefined, a("")) },
+        { json: "lastNonBreakingVersion", js: "lastNonBreakingVersion", typ: u(undefined, "") },
         { json: "migrations", js: "migrations", typ: a("") },
         { json: "OCIImportedComponents", js: "OCIImportedComponents", typ: u(undefined, m("")) },
         { json: "registryOverrides", js: "registryOverrides", typ: m("") },
