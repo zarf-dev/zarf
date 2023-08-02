@@ -3,6 +3,7 @@
 
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
+KEY ?= ""
 ######################################################################################
 
 # Figure out which Zarf binary we should use based on the operating system we are on
@@ -55,12 +56,12 @@ ensure-ui-build-dir:
 # INTERNAL: used to build the UI only if necessary
 check-ui:
 	@ if [ ! -z "$(shell command -v shasum)" ]; then\
-	    if test "$(shell ./hack/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
-		    $(MAKE) build-ui;\
-		    ./hack/print-ui-diff.sh > build/ui/git-info.txt;\
-	    fi;\
+		if test "$(shell ./hack/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
+			$(MAKE) build-ui;\
+			./hack/print-ui-diff.sh > build/ui/git-info.txt;\
+		fi;\
 	else\
-        $(MAKE) build-ui;\
+		$(MAKE) build-ui;\
 	fi
 
 build-ui: ## Build the Zarf UI
@@ -119,10 +120,18 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
+# INTERNAL: used to build an iron bank version of the init package with an ib version of the registry image
+ib-init-package:
+	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm . \
+		--set REGISTRY_IMAGE_DOMAIN="registry1.dso.mil/" \
+		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
+		--set REGISTRY_IMAGE_TAG="2.8.2"
+
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
-	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-dos-games-$(ARCH)-1.0.0.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
 
@@ -188,7 +197,7 @@ test-ui-dev-server:
 
 .PHONY: test-ui-build-server
 # INTERNAL: used to start the built version of the API server for the Zarf Web UI (in CI)
-test-ui-build-server: 
+test-ui-build-server:
 	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR

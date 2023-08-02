@@ -135,12 +135,12 @@ export interface GitServerInfo {
     internalServer: boolean;
     /**
      * Password of a user with pull-only access to the git repository. If not provided for an
-     * external repository than the push-user is used
+     * external repository then the push-user is used
      */
     pullPassword: string;
     /**
      * Username of a user with pull-only access to the git repository. If not provided for an
-     * external repository than the push-user is used
+     * external repository then the push-user is used
      */
     pullUsername: string;
     /**
@@ -245,6 +245,10 @@ export interface ZarfBuildData {
      */
     differentialMissing?: string[];
     /**
+     * The minimum version of Zarf that does not have breaking package structure changes
+     */
+    lastNonBreakingVersion?: string;
+    /**
      * Any migrations that have been run on this package
      */
     migrations: string[];
@@ -285,7 +289,7 @@ export interface ZarfComponent {
      */
     charts?: ZarfChart[];
     /**
-     * Specify a path to a public key to validate signed online resources
+     * [Deprecated] Specify a path to a public key to validate signed online resources
      */
     cosignKeyPath?: string;
     /**
@@ -461,6 +465,20 @@ export interface ZarfComponentActionSetVariable {
      * Whether to mark this variable as sensitive to not print it in the Zarf log
      */
     sensitive?: boolean;
+    /**
+     * Changes the handling of a variable to load contents differently (i.e. from a file rather
+     * than as a raw variable - templated files should be kept below 1 MiB)
+     */
+    type?: Type;
+}
+
+/**
+ * Changes the handling of a variable to load contents differently (i.e. from a file rather
+ * than as a raw variable - templated files should be kept below 1 MiB)
+ */
+export enum Type {
+    File = "file",
+    Raw = "raw",
 }
 
 /**
@@ -677,6 +695,10 @@ export interface ZarfComponentExtensions {
  * Configurations for installing Big Bang and Flux in the cluster
  */
 export interface BigBang {
+    /**
+     * Optional paths to Flux kustomize strategic merge patch files
+     */
+    fluxPatchFiles?: string[];
     /**
      * Override repo to pull Big Bang from instead of Repo One
      */
@@ -958,6 +980,11 @@ export interface ZarfPackageVariable {
      * Whether to mark this variable as sensitive to not print it in the Zarf log
      */
     sensitive?: boolean;
+    /**
+     * Changes the handling of a variable to load contents differently (i.e. from a file rather
+     * than as a raw variable - templated files should be kept below 1 MiB)
+     */
+    type?: Type;
 }
 
 export interface ClusterSummary {
@@ -1446,6 +1473,7 @@ const typeMap: any = {
         { json: "architecture", js: "architecture", typ: "" },
         { json: "differential", js: "differential", typ: true },
         { json: "differentialMissing", js: "differentialMissing", typ: u(undefined, a("")) },
+        { json: "lastNonBreakingVersion", js: "lastNonBreakingVersion", typ: u(undefined, "") },
         { json: "migrations", js: "migrations", typ: a("") },
         { json: "OCIImportedComponents", js: "OCIImportedComponents", typ: u(undefined, m("")) },
         { json: "registryOverrides", js: "registryOverrides", typ: m("") },
@@ -1502,6 +1530,7 @@ const typeMap: any = {
         { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "name", js: "name", typ: "" },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
+        { json: "type", js: "type", typ: u(undefined, r("Type")) },
     ], false),
     "ZarfComponentActionShell": o([
         { json: "darwin", js: "darwin", typ: u(undefined, "") },
@@ -1557,6 +1586,7 @@ const typeMap: any = {
         { json: "bigbang", js: "bigbang", typ: u(undefined, r("BigBang")) },
     ], false),
     "BigBang": o([
+        { json: "fluxPatchFiles", js: "fluxPatchFiles", typ: u(undefined, a("")) },
         { json: "repo", js: "repo", typ: u(undefined, "") },
         { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
@@ -1626,6 +1656,7 @@ const typeMap: any = {
         { json: "name", js: "name", typ: "" },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
+        { json: "type", js: "type", typ: u(undefined, r("Type")) },
     ], false),
     "ClusterSummary": o([
         { json: "distro", js: "distro", typ: "" },
@@ -1766,6 +1797,10 @@ const typeMap: any = {
         { json: "DifferentialPackageVersion", js: "DifferentialPackageVersion", typ: "" },
         { json: "DifferentialRepos", js: "DifferentialRepos", typ: m(true) },
     ], false),
+    "Type": [
+        "file",
+        "raw",
+    ],
     "Protocol": [
         "http",
         "https",

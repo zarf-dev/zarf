@@ -25,6 +25,13 @@
         "skipFlux": {
           "type": "boolean",
           "description": "Whether to skip deploying flux; Defaults to false"
+        },
+        "fluxPatchFiles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Optional paths to Flux kustomize strategic merge patch files"
         }
       },
       "additionalProperties": false,
@@ -136,6 +143,10 @@
           },
           "type": "object",
           "description": "Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names"
+        },
+        "lastNonBreakingVersion": {
+          "type": "string",
+          "description": "The minimum version of Zarf that does not have breaking package structure changes"
         }
       },
       "additionalProperties": false,
@@ -246,7 +257,7 @@
         },
         "cosignKeyPath": {
           "type": "string",
-          "description": "Specify a path to a public key to validate signed online resources"
+          "description": "[Deprecated] Specify a path to a public key to validate signed online resources"
         },
         "import": {
           "$schema": "http://json-schema.org/draft-04/schema#",
@@ -468,6 +479,14 @@
         "autoIndent": {
           "type": "boolean",
           "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
+        },
+        "type": {
+          "enum": [
+            "raw",
+            "file"
+          ],
+          "type": "string",
+          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
         }
       },
       "additionalProperties": false,
@@ -997,6 +1016,14 @@
         "autoIndent": {
           "type": "boolean",
           "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
+        },
+        "type": {
+          "enum": [
+            "raw",
+            "file"
+          ],
+          "type": "string",
+          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
         }
       },
       "additionalProperties": false,

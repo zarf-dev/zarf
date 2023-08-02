@@ -1,40 +1,40 @@
 * @defenseunicorns/zarf
 
 # Docs & examples
-/adr/ @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-/docs/ @Madeline-UX @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-/examples/ @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-*.md @Madeline-UX @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/adr/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/docs/ @Madeline-UX @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/examples/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+*.md @Madeline-UX @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 
 # Core code
-/src/ @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-/go.* @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-main.go @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/src/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/go.* @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+main.go @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 
 # Init package
-/packages/ @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-/zarf.yaml @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/packages/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/zarf.yaml @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 
 # Web UI-specific
-/package*.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
-/src/internal/api @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
-/src/ui/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
-/playwright.config.ts @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
-/svelte.config.js @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
-/tsconfig.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
-/vite.config.ts @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
-/docs-website/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy @YrrepNoj
+/package*.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy @cmwylie19
+/src/internal/api @mike-winberry @Racer159 @Noxsios @jeff-mccoy @cmwylie19
+/src/ui/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy @cmwylie19
+/playwright.config.ts @mike-winberry @Racer159 @Noxsios @jeff-mccoy @cmwylie19
+/svelte.config.js @mike-winberry @Racer159 @Noxsios @jeff-mccoy @cmwylie19
+/tsconfig.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy @cmwylie19
+/vite.config.ts @mike-winberry @Racer159 @Noxsios @jeff-mccoy @cmwylie19
+/docs-website/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy @cmwylie19
 
 # Privileged pipeline files
-/.github/ @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-/hack/ @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-/.gitignore @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-/.golangci.yml @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-/.goreleaser.yml @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-/.grype.yaml @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-/Dockerfile @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-/renovate.json @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
-/Makefile @jeff-mccoy @YrrepNoj @Racer159 @Noxsios
+/.github/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/hack/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/.gitignore @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/.golangci.yml @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/.goreleaser.yml @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/.grype.yaml @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/Dockerfile @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/renovate.json @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/Makefile @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 
 # Additional privileged files
 /CODEOWNERS @jeff-mccoy @runyontr

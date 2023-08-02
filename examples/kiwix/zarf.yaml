@@ -17,7 +17,7 @@ components:
           - manifests/deployment.yaml
           - manifests/service.yaml
     images:
-      - ghcr.io/kiwix/kiwix-serve:3.5.0
+      - ghcr.io/kiwix/kiwix-serve:3.5.0-2
       - alpine:3.18
     # Add new data into the cluster, these will keep trying up until their timeout
     dataInjections:

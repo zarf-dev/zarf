@@ -10,7 +10,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -31,7 +30,7 @@ func (p *Packager) fillActiveTemplate() error {
 
 		for key := range yamlTemplates {
 			if deprecated {
-				message.Warnf(lang.PkgValidateTemplateDeprecation, key, key, key)
+				p.warnings = append(p.warnings, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
 			}
 
 			_, present := setFromCLIConfig[key]
@@ -57,6 +56,12 @@ func (p *Packager) fillActiveTemplate() error {
 		return nil
 	}
 
+	// update the component templates on the package
+	err := p.findComponentTemplatesAndReload(&p.cfg.Pkg)
+	if err != nil {
+		return err
+	}
+
 	if err := promptAndSetTemplate("###ZARF_PKG_TMPL_", false); err != nil {
 		return err
 	}
@@ -76,7 +81,7 @@ func (p *Packager) setVariableMapInConfig() error {
 	// Ensure uppercase keys
 	setVariableValues := helpers.TransformMapKeys(p.cfg.DeployOpts.SetVariables, strings.ToUpper)
 	for name, value := range setVariableValues {
-		p.setVariableInConfig(name, value, false, false)
+		p.setVariableInConfig(name, value, false, false, "")
 	}
 
 	for _, variable := range p.cfg.Pkg.Variables {
@@ -86,11 +91,12 @@ func (p *Packager) setVariableMapInConfig() error {
 		if present {
 			p.cfg.SetVariableMap[variable.Name].Sensitive = variable.Sensitive
 			p.cfg.SetVariableMap[variable.Name].AutoIndent = variable.AutoIndent
+			p.cfg.SetVariableMap[variable.Name].Type = variable.Type
 			continue
 		}
 
 		// First set default (may be overridden by prompt)
-		p.setVariableInConfig(variable.Name, variable.Default, variable.Sensitive, variable.AutoIndent)
+		p.setVariableInConfig(variable.Name, variable.Default, variable.Sensitive, variable.AutoIndent, variable.Type)
 
 		// Variable is set to prompt the user
 		if variable.Prompt && !config.CommonOptions.Confirm {
@@ -101,19 +107,20 @@ func (p *Packager) setVariableMapInConfig() error {
 				return err
 			}
 
-			p.setVariableInConfig(variable.Name, val, variable.Sensitive, variable.AutoIndent)
+			p.setVariableInConfig(variable.Name, val, variable.Sensitive, variable.AutoIndent, variable.Type)
 		}
 	}
 
 	return nil
 }
 
-func (p *Packager) setVariableInConfig(name, value string, sensitive bool, autoIndent bool) {
+func (p *Packager) setVariableInConfig(name, value string, sensitive bool, autoIndent bool, varType types.VariableType) {
 	p.cfg.SetVariableMap[name] = &types.ZarfSetVariable{
 		Name:       name,
 		Value:      value,
 		Sensitive:  sensitive,
 		AutoIndent: autoIndent,
+		Type:       varType,
 	}
 }
 
@@ -143,4 +150,20 @@ func (p *Packager) injectImportedConstant(importedConstant types.ZarfPackageCons
 	if !presentInActive {
 		p.cfg.Pkg.Constants = append(p.cfg.Pkg.Constants, importedConstant)
 	}
+}
+
+// findComponentTemplatesAndReload appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
+func (p *Packager) findComponentTemplatesAndReload(config any) error {
+
+	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
+	for i, component := range config.(*types.ZarfPackage).Components {
+		mappings := map[string]string{}
+		mappings["###ZARF_COMPONENT_NAME###"] = component.Name
+		err := utils.ReloadYamlTemplate(&config.(*types.ZarfPackage).Components[i], mappings)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

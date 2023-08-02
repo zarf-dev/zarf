@@ -33,26 +33,28 @@ type ZarfMetadata struct {
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
-	Terminal              string            `json:"terminal" jsonschema:"description=The machine name that created this package"`
-	User                  string            `json:"user" jsonschema:"description=The username who created this package"`
-	Architecture          string            `json:"architecture" jsonschema:"description=The architecture this package was created on"`
-	Timestamp             string            `json:"timestamp" jsonschema:"description=The timestamp when this package was created"`
-	Version               string            `json:"version" jsonschema:"description=The version of Zarf used to build this package"`
-	Migrations            []string          `json:"migrations" jsonschema:"description=Any migrations that have been run on this package"`
-	Differential          bool              `json:"differential" jsonschema:"description=Whether this package was created with differential components"`
-	RegistryOverrides     map[string]string `json:"registryOverrides" jsonschema:"description=Any registry domains that were overridden on package create when pulling images"`
-	DifferentialMissing   []string          `json:"differentialMissing,omitempty" jsonschema:"description=List of components that were not included in this package due to differential packaging"`
-	OCIImportedComponents map[string]string `json:"OCIImportedComponents,omitempty" jsonschema:"description=Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names"`
+	Terminal               string            `json:"terminal" jsonschema:"description=The machine name that created this package"`
+	User                   string            `json:"user" jsonschema:"description=The username who created this package"`
+	Architecture           string            `json:"architecture" jsonschema:"description=The architecture this package was created on"`
+	Timestamp              string            `json:"timestamp" jsonschema:"description=The timestamp when this package was created"`
+	Version                string            `json:"version" jsonschema:"description=The version of Zarf used to build this package"`
+	Migrations             []string          `json:"migrations" jsonschema:"description=Any migrations that have been run on this package"`
+	Differential           bool              `json:"differential" jsonschema:"description=Whether this package was created with differential components"`
+	RegistryOverrides      map[string]string `json:"registryOverrides" jsonschema:"description=Any registry domains that were overridden on package create when pulling images"`
+	DifferentialMissing    []string          `json:"differentialMissing,omitempty" jsonschema:"description=List of components that were not included in this package due to differential packaging"`
+	OCIImportedComponents  map[string]string `json:"OCIImportedComponents,omitempty" jsonschema:"description=Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names"`
+	LastNonBreakingVersion string            `json:"lastNonBreakingVersion,omitempty" jsonschema:"description=The minimum version of Zarf that does not have breaking package structure changes"`
 }
 
 // ZarfPackageVariable are variables that can be used to dynamically template K8s resources.
 type ZarfPackageVariable struct {
-	Name        string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
-	Description string `json:"description,omitempty" jsonschema:"description=A description of the variable to be used when prompting the user a value"`
-	Default     string `json:"default,omitempty" jsonschema:"description=The default value to use for the variable"`
-	Prompt      bool   `json:"prompt,omitempty" jsonschema:"description=Whether to prompt the user for input for this variable"`
-	Sensitive   bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
-	AutoIndent  bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
+	Name        string       `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
+	Description string       `json:"description,omitempty" jsonschema:"description=A description of the variable to be used when prompting the user a value"`
+	Default     string       `json:"default,omitempty" jsonschema:"description=The default value to use for the variable"`
+	Prompt      bool         `json:"prompt,omitempty" jsonschema:"description=Whether to prompt the user for input for this variable"`
+	Sensitive   bool         `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
+	AutoIndent  bool         `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
+	Type        VariableType `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB),enum=raw,enum=file"`
 }
 
 // ZarfPackageConstant are constants that can be used to dynamically template K8s resources.
