@@ -1,11 +1,16 @@
-paths:
-  - '../CONTRIBUTING.md'
-  - '../adr'
-  - '../docs'
-  - '../examples'
-  - '../packages'
+mounts:
+  - source: '../docs'
+    target: 'content/en/docs'
+    ignores: ['.templates']
 
-ignores:
-  - '../docs/.templates'
+  - source: '../adr'
+    target: 'content/en/docs/adr'
 
-outdir: 'content/en'
+  - source: '../examples'
+    target: 'content/en/docs/examples'
+
+  - source: '../packages'
+    target: 'content/en/docs/packages'
+
+  - source: '../CONTRIBUTING.md'
+    target: 'content/en/docs/contributing'

@@ -38,4 +38,3 @@ zarf-sbom/
 test-*.txt
 __debug_bin
 docs-website/static/zarf.schema.json
-docs-website-new/content/
