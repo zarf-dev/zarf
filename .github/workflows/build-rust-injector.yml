@@ -33,8 +33,8 @@ jobs:
           cp x86_64-unknown-linux-musl/release/zarf-injector ../dist/zarf-injector-amd64
           cp aarch64-unknown-linux-musl/release/zarf-injector ../dist/zarf-injector-arm64
           cd ../dist
-          sha265sum zarf-injector-amd64 >> checksums.txt
-          sha265sum zarf-injector-arm64 >> checksums.txt
+          shasum zarf-injector-amd64 >> checksums.txt
+          shasum zarf-injector-arm64 >> checksums.txt
 
       - name: Set AWS Credentials
         uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
