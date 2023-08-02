@@ -13,7 +13,33 @@ runs:
       with:
         payload: |
           {
-            "text": "The GitHub Action Workflow '${{ github.workflow }}' had a result of: ${{ job.status }}."
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "The GitHub Action Workflow **'${{ github.workflow }}'** had a result of: `${{ job.status }}`."
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "View Workflow Run"
+                },
+                "accessory": {
+                  "type": "button",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "Click Me",
+                    "emoji": true
+                  },
+                  "value": "click_me_workflow_run",
+                  "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "action_id": "button-action"
+                }
+              }
+            ]
           }
       env:
         SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
