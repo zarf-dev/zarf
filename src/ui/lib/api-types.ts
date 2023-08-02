@@ -235,7 +235,7 @@ export interface ZarfBuildData {
     /**
      * Whether this package was created with differential components
      */
-    differential: boolean;
+    differential?: boolean;
     /**
      * List of components that were not included in this package due to differential packaging
      */
@@ -247,7 +247,7 @@ export interface ZarfBuildData {
     /**
      * Any migrations that have been run on this package
      */
-    migrations: string[];
+    migrations?: string[];
     /**
      * Map of components that were imported via OCI. The keys are OCI Package URLs and values
      * are the component names
@@ -256,7 +256,7 @@ export interface ZarfBuildData {
     /**
      * Any registry domains that were overridden on package create when pulling images
      */
-    registryOverrides: { [key: string]: string };
+    registryOverrides?: { [key: string]: string };
     /**
      * The machine name that created this package
      */
@@ -1466,12 +1466,12 @@ const typeMap: any = {
     ], false),
     "ZarfBuildData": o([
         { json: "architecture", js: "architecture", typ: "" },
-        { json: "differential", js: "differential", typ: true },
+        { json: "differential", js: "differential", typ: u(undefined, true) },
         { json: "differentialMissing", js: "differentialMissing", typ: u(undefined, a("")) },
         { json: "lastNonBreakingVersion", js: "lastNonBreakingVersion", typ: u(undefined, "") },
-        { json: "migrations", js: "migrations", typ: a("") },
+        { json: "migrations", js: "migrations", typ: u(undefined, a("")) },
         { json: "OCIImportedComponents", js: "OCIImportedComponents", typ: u(undefined, m("")) },
-        { json: "registryOverrides", js: "registryOverrides", typ: m("") },
+        { json: "registryOverrides", js: "registryOverrides", typ: u(undefined, m("")) },
         { json: "terminal", js: "terminal", typ: "" },
         { json: "timestamp", js: "timestamp", typ: "" },
         { json: "user", js: "user", typ: "" },
