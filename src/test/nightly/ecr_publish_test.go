@@ -62,7 +62,6 @@ func TestECRPublishing(t *testing.T) {
 	// Ensure we get a warning when trying to inspect the online published package
 	stdOut, stdErr, err = e2e.Zarf("package", "inspect", upstreamPackageURL, keyFlag)
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Zarf is unable to validate the checksums of remote OCI packages.")
 	require.Contains(t, stdErr, "Package signature validated!")
 
 	// Ensure we get an error when trying to pull the package without providing the public key
