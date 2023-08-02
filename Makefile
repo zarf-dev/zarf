@@ -56,9 +56,9 @@ ensure-ui-build-dir:
 # INTERNAL: used to build the UI only if necessary
 check-ui:
 	@ if [ ! -z "$(shell command -v shasum)" ]; then\
-		if test "$(shell ./hack/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
+		if test "$(shell ./scripts/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
 			$(MAKE) build-ui;\
-			./hack/print-ui-diff.sh > build/ui/git-info.txt;\
+			./scripts/print-ui-diff.sh > build/ui/git-info.txt;\
 		fi;\
 	else\
 		$(MAKE) build-ui;\
@@ -92,7 +92,7 @@ build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli
 
 docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Schema
 	docs/gen-cli-docs.sh
-	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
+	ZARF_CONFIG=scripts/empty-config.toml scripts/create-zarf-schema.sh
 
 dev: ensure-ui-build-dir ## Start a Dev Server for the Zarf UI
 	go mod download
@@ -203,14 +203,14 @@ test-ui-build-server:
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR
 test-docs-and-schema:
 	$(MAKE) docs-and-schema
-	hack/check-zarf-docs-and-schema.sh
+	scripts/check-zarf-docs-and-schema.sh
 
 # INTERNAL: used to test for new CVEs that may have been introduced
 test-cves: ensure-ui-build-dir
 	go run main.go tools sbom packages . -o json --exclude './docs-website' | grype --fail-on low
 
 cve-report: ensure-ui-build-dir ## Create a CVE report for the current project (must `brew install grype` first)
-	go run main.go tools sbom packages . -o json --exclude './docs-website' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
+	go run main.go tools sbom packages . -o json --exclude './docs-website' | grype -o template -t scripts/grype.tmpl > build/zarf-known-cves.csv
 
 lint-go: ## Run revive to lint the go code (must `brew install revive` first)
 	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
