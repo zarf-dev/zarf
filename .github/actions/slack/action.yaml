@@ -13,7 +13,7 @@ runs:
       with:
         payload: |
           {
-            "text": "The GitHub Action '${{ github.action }}' had a result of: ${{ job.status }}."
+            "text": "The GitHub Action Workflow '${{ github.workflow }}' had a result of: ${{ job.status }}."
           }
       env:
         SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
