@@ -6,12 +6,14 @@ metadata:
 
 components:
   - name: import-component-local
+    description: "import-component-local == ###ZARF_COMPONENT_NAME###"
     required: false
     import:
       path: foo
       name: baz
 
   - name: import-component-local-relative
+    description: "import-component-local-relative == ###ZARF_COMPONENT_NAME###"
     required: false
     import:
       path: ../../../../examples/dos-games
@@ -22,12 +24,14 @@ components:
           - files
 
   - name: import-component-wordpress
+    description: "import-component-wordpress == ###ZARF_COMPONENT_NAME###"
     required: false
     import:
       path: ../../../../examples/wordpress
       name: wordpress
 
   - name: import-component-oci
+    description: "import-component-oci == ###ZARF_COMPONENT_NAME###"
     required: false
     import:
       # name is optional, if not provided the name of the component will be used to import
@@ -35,6 +39,7 @@ components:
       url: oci://localhost:555/helm-charts:0.0.1-skeleton
 
   - name: file-imports
+    description: "file-imports == ###ZARF_COMPONENT_NAME###" 
     required: false
     cosignKeyPath: ../../../../cosign.pub
     files:
@@ -64,6 +69,7 @@ components:
           - cmd: test ! -f files/zarf-readme.md
 
   - name: import-helm-local
+    description: "import-helm-local == ###ZARF_COMPONENT_NAME###"
     required: false
     charts:
       - name: podinfo
@@ -83,6 +89,7 @@ components:
                 condition: available
 
   - name: import-helm-local-relative
+    description: "import-helm-local-relative == ###ZARF_COMPONENT_NAME###"
     required: false
     charts:
       - name: podinfo
@@ -102,6 +109,7 @@ components:
                 condition: available
 
   - name: import-helm-oci
+    description: "import-helm-oci == ###ZARF_COMPONENT_NAME###"
     required: false
     charts:
       - name: oci-demo
@@ -128,6 +136,7 @@ components:
                 condition: ready
 
   - name: import-repos
+    description: "import-repos == ###ZARF_COMPONENT_NAME###"
     required: false
     repos:
       # Import a full repo via HTTPS
@@ -136,6 +145,7 @@ components:
       - file:///tmp/nocode
 
   - name: import-images
+    description: "import-images == ###ZARF_COMPONENT_NAME###"
     required: false
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
