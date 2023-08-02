@@ -11,14 +11,6 @@ applications:
         helm:
           valueFiles:
             - values.yaml
-      - repoURL: https://github.com/radiusmethod/tracerbullet.git
-        path: ./chart
-        targetRevision: 0.0.4
-        helm:
-          valueFiles:
-            - values.yaml
-          values: |
-            message: "Zarf!"
     syncPolicy:
       automated: { }
     destination:
