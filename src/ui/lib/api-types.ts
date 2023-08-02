@@ -131,12 +131,12 @@ export interface GitServerInfo {
     internalServer: boolean;
     /**
      * Password of a user with pull-only access to the git repository. If not provided for an
-     * external repository than the push-user is used
+     * external repository then the push-user is used
      */
     pullPassword: string;
     /**
      * Username of a user with pull-only access to the git repository. If not provided for an
-     * external repository than the push-user is used
+     * external repository then the push-user is used
      */
     pullUsername: string;
     /**
@@ -235,15 +235,19 @@ export interface ZarfBuildData {
     /**
      * Whether this package was created with differential components
      */
-    differential?: boolean;
+    differential: boolean;
     /**
      * List of components that were not included in this package due to differential packaging
      */
     differentialMissing?: string[];
     /**
+     * The minimum version of Zarf that does not have breaking package structure changes
+     */
+    lastNonBreakingVersion?: string;
+    /**
      * Any migrations that have been run on this package
      */
-    migrations?: string[];
+    migrations: string[];
     /**
      * Map of components that were imported via OCI. The keys are OCI Package URLs and values
      * are the component names
@@ -252,7 +256,7 @@ export interface ZarfBuildData {
     /**
      * Any registry domains that were overridden on package create when pulling images
      */
-    registryOverrides?: { [key: string]: string };
+    registryOverrides: { [key: string]: string };
     /**
      * The machine name that created this package
      */
@@ -1462,11 +1466,12 @@ const typeMap: any = {
     ], false),
     "ZarfBuildData": o([
         { json: "architecture", js: "architecture", typ: "" },
-        { json: "differential", js: "differential", typ: u(undefined, true) },
+        { json: "differential", js: "differential", typ: true },
         { json: "differentialMissing", js: "differentialMissing", typ: u(undefined, a("")) },
-        { json: "migrations", js: "migrations", typ: u(undefined, a("")) },
+        { json: "lastNonBreakingVersion", js: "lastNonBreakingVersion", typ: u(undefined, "") },
+        { json: "migrations", js: "migrations", typ: a("") },
         { json: "OCIImportedComponents", js: "OCIImportedComponents", typ: u(undefined, m("")) },
-        { json: "registryOverrides", js: "registryOverrides", typ: u(undefined, m("")) },
+        { json: "registryOverrides", js: "registryOverrides", typ: m("") },
         { json: "terminal", js: "terminal", typ: "" },
         { json: "timestamp", js: "timestamp", typ: "" },
         { json: "user", js: "user", typ: "" },

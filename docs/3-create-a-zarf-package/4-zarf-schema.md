@@ -530,6 +530,22 @@ must respect the following conditions
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="build_lastNonBreakingVersion"></a>lastNonBreakingVersion</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The minimum version of Zarf that does not have breaking package structure changes
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 

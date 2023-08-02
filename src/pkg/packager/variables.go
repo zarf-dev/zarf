@@ -11,7 +11,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -32,7 +31,7 @@ func (p *Packager) fillActiveTemplate() error {
 
 		for key := range yamlTemplates {
 			if deprecated {
-				message.Warnf(lang.PkgValidateTemplateDeprecation, key, key, key)
+				p.warnings = append(p.warnings, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
 			}
 
 			_, present := setFromCLIConfig[key]
@@ -56,6 +55,12 @@ func (p *Packager) fillActiveTemplate() error {
 		}
 
 		return nil
+	}
+
+	// update the component templates on the package
+	err := p.findComponentTemplatesAndReload(&p.cfg.Pkg)
+	if err != nil {
+		return err
 	}
 
 	if err := promptAndSetTemplate("###ZARF_PKG_TMPL_", false); err != nil {
@@ -146,4 +151,20 @@ func (p *Packager) injectImportedConstant(importedConstant types.ZarfPackageCons
 	if !presentInActive {
 		p.cfg.Pkg.Constants = append(p.cfg.Pkg.Constants, importedConstant)
 	}
+}
+
+// findComponentTemplatesAndReload appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
+func (p *Packager) findComponentTemplatesAndReload(config any) error {
+
+	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
+	for i, component := range config.(*types.ZarfPackage).Components {
+		mappings := map[string]string{}
+		mappings["###ZARF_COMPONENT_NAME###"] = component.Name
+		err := utils.ReloadYamlTemplate(&config.(*types.ZarfPackage).Components[i], mappings)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

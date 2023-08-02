@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
@@ -488,6 +489,40 @@ func (p *Packager) validatePackageArchitecture() error {
 				return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 			}
 		}
+	}
+
+	return nil
+}
+
+// validateLastNonBreakingVersion compares the Zarf CLI version against a package's LastNonBreakingVersion.
+// It will return an error if there is an error parsing either of the two versions,
+// and will throw a warning if the CLI version is less than the LastNonBreakingVersion.
+func (p *Packager) validateLastNonBreakingVersion() (err error) {
+	cliVersion := config.CLIVersion
+	lastNonBreakingVersion := p.cfg.Pkg.Build.LastNonBreakingVersion
+
+	if lastNonBreakingVersion == "" || cliVersion == "UnknownVersion" {
+		return nil
+	}
+
+	lastNonBreakingSemVer, err := semver.NewVersion(lastNonBreakingVersion)
+	if err != nil {
+		return fmt.Errorf("unable to parse lastNonBreakingVersion '%s' from Zarf package build data : %w", lastNonBreakingVersion, err)
+	}
+
+	cliSemVer, err := semver.NewVersion(cliVersion)
+	if err != nil {
+		return fmt.Errorf("unable to parse Zarf CLI version '%s' : %w", cliVersion, err)
+	}
+
+	if cliSemVer.LessThan(lastNonBreakingSemVer) {
+		warning := fmt.Sprintf(
+			lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
+			cliVersion,
+			lastNonBreakingVersion,
+			lastNonBreakingVersion,
+		)
+		p.warnings = append(p.warnings, warning)
 	}
 
 	return nil

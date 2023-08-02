@@ -24,6 +24,8 @@ type BreakingChange struct {
 
 // List of migrations tracked in the zarf.yaml build data.
 const (
+	// This should be updated when a breaking change is introduced to the Zarf package structure.  See: https://github.com/defenseunicorns/zarf/releases/tag/v0.27.0
+	LastNonBreakingVersion   = "v0.27.0"
 	ScriptsToActionsMigrated = "scripts-to-actions"
 	PluralizeSetVariable     = "pluralize-set-variable"
 )
