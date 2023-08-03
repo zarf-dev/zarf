@@ -39,8 +39,8 @@ func (o *OrasRemote) PushLayer(b []byte, mediaType string) (ocispec.Descriptor, 
 	return desc, o.repo.Push(o.ctx, desc, bytes.NewReader(b))
 }
 
-// PushManifestConfigFromMetadata pushes the manifest config with metadata to the remote repository.
-func (o *OrasRemote) PushManifestConfigFromMetadata(metadata *types.ZarfMetadata, build *types.ZarfBuildData) (ocispec.Descriptor, error) {
+// pushManifestConfigFromMetadata pushes the manifest config with metadata to the remote repository.
+func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata, build *types.ZarfBuildData) (ocispec.Descriptor, error) {
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,
@@ -57,8 +57,8 @@ func (o *OrasRemote) PushManifestConfigFromMetadata(metadata *types.ZarfMetadata
 	return o.PushLayer(manifestConfigBytes, ocispec.MediaTypeImageConfig)
 }
 
-// ManifestAnnotationsFromMetadata returns the annotations for the manifest from the given metadata.
-func (o *OrasRemote) ManifestAnnotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {
+// manifestAnnotationsFromMetadata returns the annotations for the manifest from the given metadata.
+func (o *OrasRemote) manifestAnnotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {
 	annotations := map[string]string{
 		ocispec.AnnotationDescription: metadata.Description,
 	}
@@ -86,7 +86,7 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 	packOpts := oras.PackOptions{}
 	packOpts.ConfigDescriptor = configDesc
 	packOpts.PackImageManifest = true
-	packOpts.ManifestAnnotations = o.ManifestAnnotationsFromMetadata(metadata)
+	packOpts.ManifestAnnotations = o.manifestAnnotationsFromMetadata(metadata)
 
 	root, err := oras.Pack(o.ctx, src, ocispec.MediaTypeImageManifest, descs, packOpts)
 	if err != nil {
@@ -163,7 +163,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	// push the manifest config
 	// since this config is so tiny, and the content is not used again
 	// it is not logged to the progress, but will error if it fails
-	manifestConfigDesc, err := o.PushManifestConfigFromMetadata(&pkg.Metadata, &pkg.Build)
+	manifestConfigDesc, err := o.pushManifestConfigFromMetadata(&pkg.Metadata, &pkg.Build)
 	if err != nil {
 		return err
 	}
