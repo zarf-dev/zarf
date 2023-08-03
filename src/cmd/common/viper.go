@@ -13,8 +13,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Constants for use when loading configurations from viper config files
 const (
+
 	// Root config keys
+
 	VLogLevel     = "log_level"
 	VArchitecture = "architecture"
 	VNoLogFile    = "no_log_file"
@@ -24,10 +27,12 @@ const (
 	VInsecure     = "insecure"
 
 	// Init config keys
+
 	VInitComponents   = "init.components"
 	VInitStorageClass = "init.storage_class"
 
 	// Init Git config keys
+
 	VInitGitURL      = "init.git.url"
 	VInitGitPushUser = "init.git.push_username"
 	VInitGitPushPass = "init.git.push_password"
@@ -35,6 +40,7 @@ const (
 	VInitGitPullPass = "init.git.pull_password"
 
 	// Init Registry config keys
+
 	VInitRegistryURL      = "init.registry.url"
 	VInitRegistryNodeport = "init.registry.nodeport"
 	VInitRegistrySecret   = "init.registry.secret"
@@ -44,14 +50,17 @@ const (
 	VInitRegistryPullPass = "init.registry.pull_password"
 
 	// Init Package config keys
+
 	VInitArtifactURL       = "init.artifact.url"
 	VInitArtifactPushUser  = "init.artifact.push_username"
 	VInitArtifactPushToken = "init.artifact.push_token"
 
 	// Package config keys
+
 	VPkgOCIConcurrency = "package.oci_concurrency"
 
 	// Package create config keys
+
 	VPkgCreateSet                = "package.create.set"
 	VPkgCreateOutput             = "package.create.output"
 	VPkgCreateSbom               = "package.create.sbom"
@@ -64,6 +73,7 @@ const (
 	VPkgCreateRegistryOverride   = "package.create.registry_override"
 
 	// Package deploy config keys
+
 	VPkgDeploySet        = "package.deploy.set"
 	VPkgDeployComponents = "package.deploy.components"
 	VPkgDeployShasum     = "package.deploy.shasum"
@@ -71,10 +81,12 @@ const (
 	VPkgDeployPublicKey  = "package.deploy.public_key"
 
 	// Package publish config keys
+
 	VPkgPublishSigningKey         = "package.publish.signing_key"
 	VPkgPublishSigningKeyPassword = "package.publish.signing_key_password"
 
 	// Package pull config keys
+
 	VPkgPullOutputDir = "package.pull.output_directory"
 	VPkgPullPublicKey = "package.pull.public_key"
 )
