@@ -1,5 +1,5 @@
 mounts:
-  - source: "../docs/1-getting-started"
+  - source: "../docs"
     target: "../docsNew"
     ignores: [".templates"]
 
