@@ -1,16 +1,13 @@
 mounts:
-  - source: '../docs'
-    target: 'content/en/docs'
-    ignores: ['.templates']
+  - source: "../docs/1-getting-started"
+    target: "../docsNew"
+    ignores: [".templates"]
 
-  - source: '../adr'
-    target: 'content/en/docs/adr'
+  # - source: "../examples"
+  #   target: "../examples"
 
-  - source: '../examples'
-    target: 'content/en/docs/examples'
+  # - source: "../packages"
+  #   target: "../packages"
 
-  - source: '../packages'
-    target: 'content/en/docs/packages'
-
-  - source: '../CONTRIBUTING.md'
-    target: 'content/en/docs/contributing'
+  # - source: "../CONTRIBUTING.md"
+  #   target: "../docs/contributing"

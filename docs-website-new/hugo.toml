@@ -58,8 +58,8 @@ enableRobotsTXT = true
         url  = "https://github.com/defenseunicorns/doc-site-template"
 
 [[module.mounts]]
-    source = "content/en"
-    target = "content"
+    source = "../docsNew"
+    target = "content/docs"
 
     # [[module.mounts]]
     #     source = "../docs"
