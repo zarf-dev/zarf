@@ -200,6 +200,16 @@ func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (st
 		return cmd, err
 	}
 
+	// if another binary is calling Zarf, use the system Zarf
+	// See https://regex101.com/r/O4Ngia/1
+	regex, err := regexp.Compile(`^.*zarf(\.exe)?$`)
+	if err != nil {
+		message.Debug("Could not compile regex")
+	}
+	if !regex.MatchString(binaryPath) {
+		binaryPath = "zarf"
+	}
+
 	// Try to patch the zarf binary path in case the name isn't exactly "./zarf".
 	cmd = strings.ReplaceAll(cmd, "./zarf ", binaryPath+" ")
 
