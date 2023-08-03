@@ -195,6 +195,9 @@ func RemoveDuplicateDescriptors(descriptors []ocispec.Descriptor) []ocispec.Desc
 	keys := make(map[string]bool)
 	list := []ocispec.Descriptor{}
 	for _, entry := range descriptors {
+		if IsEmptyDescriptor(entry) {
+			continue
+		}
 		if _, value := keys[entry.Digest.Encoded()]; !value {
 			keys[entry.Digest.Encoded()] = true
 			list = append(list, entry)
