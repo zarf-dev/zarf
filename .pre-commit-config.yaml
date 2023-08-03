@@ -3,11 +3,11 @@ repos:
     rev: v4.0.1
     hooks:
       - id: check-added-large-files
-        args: ['--maxkb=1024']
+        args: ["--maxkb=1024"]
       - id: check-merge-conflict
       - id: detect-aws-credentials
         args:
-          - '--allow-missing-credentials'
+          - "--allow-missing-credentials"
       - id: detect-private-key
         exclude: |
           (?x)^(
@@ -15,10 +15,10 @@ repos:
             examples/istio-with-separate-cert/files/bigbangdev.key
           )$
       - id: end-of-file-fixer
-        exclude: '^examples/big-bang/template/bigbang/vendor/.*$'
+        exclude: "^examples/big-bang/template/bigbang/vendor/.*$"
       - id: fix-byte-order-marker
       - id: trailing-whitespace
-        exclude: '^examples/big-bang/template/bigbang/vendor/.*$'
+        exclude: "^examples/big-bang/template/bigbang/vendor/.*$"
         args: [--markdown-linebreak-ext=md]
   - repo: https://github.com/sirosen/fix-smartquotes
     rev: 0.2.0
@@ -33,17 +33,17 @@ repos:
       - id: generate-zarf-schema
         name: Check for outdated Zarf schema
         entry: ./hack/verify-zarf-schema.sh
-        files: 'src/types/types.go'
+        files: "src/types/types.go"
         types: [go]
         language: script
         description:
-          'Runs `zarf internal config-schema > zarf.schema.json` to ensure
-          schema is up to date'
+          "Runs `zarf internal config-schema > zarf.schema.json` to ensure
+          schema is up to date"
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.14.0
     hooks:
       - id: check-jsonschema
-        name: 'Validate Zarf Configs Against Schema'
-        files: 'zarf.yaml'
+        name: "Validate Zarf Configs Against Schema"
+        files: "zarf.yaml"
         types: [yaml]
-        args: ['--schemafile', 'zarf.schema.json']
+        args: ["--schemafile", "zarf.schema.json"]
