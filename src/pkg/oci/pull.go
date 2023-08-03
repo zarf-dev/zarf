@@ -133,21 +133,16 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 
 	if isPartialPull {
 		for _, path := range PackageAlwaysPull {
-			exists := false
-			for _, layer := range layersToPull {
-				if layer.Annotations[ocispec.AnnotationTitle] == path {
-					exists = true
-				}
-			}
-			if !exists {
-				desc := manifest.Locate(path)
-				layersToPull = append(layersToPull, desc)
-			}
+			desc := manifest.Locate(path)
+			layersToPull = append(layersToPull, desc)
 		}
 	} else {
 		layersToPull = append(layersToPull, manifest.Layers...)
 	}
 	layersToPull = append(layersToPull, manifest.Config)
+
+	// de-duplicate layers
+	layersToPull = RemoveDuplicateDescriptors(layersToPull)
 
 	dst, err := file.New(destinationDir)
 	if err != nil {
@@ -160,6 +155,8 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	if isPartialPull {
 		for _, layer := range layersToPull {
 			path := layer.Annotations[ocispec.AnnotationTitle]
+			// partial paths are relative to the destination directory
+			// only layers w/ a title annotation are considered
 			if len(path) > 0 {
 				partialPaths = append(partialPaths, path)
 			}
@@ -229,6 +226,7 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 
 // PullMultipleFiles pulls multiple files from the remote repository and saves them to `destinationDir`.
 func (o *OrasRemote) PullMultipleFiles(paths []string, destinationDir string) ([]ocispec.Descriptor, error) {
+	paths = helpers.Unique(paths)
 	root, err := o.FetchRoot()
 	if err != nil {
 		return nil, err

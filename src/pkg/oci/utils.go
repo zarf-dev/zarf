@@ -189,3 +189,16 @@ func ValidateReference(url string) error {
 	_, err := registry.ParseReference(sansPrefix)
 	return err
 }
+
+// RemoveDuplicateDescriptors removes duplicate descriptors from the given list.
+func RemoveDuplicateDescriptors(descriptors []ocispec.Descriptor) []ocispec.Descriptor {
+	keys := make(map[string]bool)
+	list := []ocispec.Descriptor{}
+	for _, entry := range descriptors {
+		if _, value := keys[entry.Digest.Encoded()]; !value {
+			keys[entry.Digest.Encoded()] = true
+			list = append(list, entry)
+		}
+	}
+	return list
+}
