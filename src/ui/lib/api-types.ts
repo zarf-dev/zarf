@@ -19,9 +19,9 @@ export interface APITypes {
     deployedPackage:           DeployedPackage;
     zarfCommonOptions:         ZarfCommonOptions;
     zarfCreateOptions:         ZarfCreateOptions;
-    zarfDeployOptions:         ZarfPackageOptions;
     zarfInitOptions:           ZarfInitOptions;
     zarfPackage:               ZarfPackage;
+    zarfPackageOptions:        ZarfPackageOptions;
     zarfState:                 ZarfState;
 }
 
@@ -36,36 +36,8 @@ export interface APIPackageSBOM {
 }
 
 export interface APIZarfDeployPayload {
-    deployOpts: ZarfPackageOptions;
-    initOpts?:  ZarfInitOptions;
-}
-
-export interface ZarfPackageOptions {
-    /**
-     * Comma separated list of optional components to deploy
-     */
-    components: string;
-    /**
-     * Location where a Zarf package to deploy can be found
-     */
-    packagePath: string;
-    /**
-     * Location where the public key component of a cosign key-pair can be found
-     */
-    publicKeyPath: string;
-    /**
-     * Key-Value map of variable names and their corresponding values that will be used to
-     * template manifests and files in the Zarf package
-     */
-    setVariables: { [key: string]: string };
-    /**
-     * Location where the public key component of a cosign key-pair can be found
-     */
-    sGetKeyPath: string;
-    /**
-     * The SHA256 checksum of the package to deploy
-     */
-    shasum: string;
+    initOpts?:   ZarfInitOptions;
+    packageOpts: ZarfPackageOptions;
 }
 
 export interface ZarfInitOptions {
@@ -190,6 +162,34 @@ export interface RegistryInfo {
      * Secret value that the registry was seeded with
      */
     secret: string;
+}
+
+export interface ZarfPackageOptions {
+    /**
+     * Comma separated list of optional components to deploy
+     */
+    components: string;
+    /**
+     * Location where a Zarf package to deploy can be found
+     */
+    packagePath: string;
+    /**
+     * Location where the public key component of a cosign key-pair can be found
+     */
+    publicKeyPath: string;
+    /**
+     * Key-Value map of variable names and their corresponding values that will be used to
+     * template manifests and files in the Zarf package
+     */
+    setVariables: { [key: string]: string };
+    /**
+     * Location where the public key component of a cosign key-pair can be found
+     */
+    sGetKeyPath: string;
+    /**
+     * The SHA256 checksum of the package to deploy
+     */
+    shasum: string;
 }
 
 export interface APIZarfPackage {
@@ -1396,9 +1396,9 @@ const typeMap: any = {
         { json: "deployedPackage", js: "deployedPackage", typ: r("DeployedPackage") },
         { json: "zarfCommonOptions", js: "zarfCommonOptions", typ: r("ZarfCommonOptions") },
         { json: "zarfCreateOptions", js: "zarfCreateOptions", typ: r("ZarfCreateOptions") },
-        { json: "zarfDeployOptions", js: "zarfDeployOptions", typ: r("ZarfPackageOptions") },
         { json: "zarfInitOptions", js: "zarfInitOptions", typ: r("ZarfInitOptions") },
         { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
+        { json: "zarfPackageOptions", js: "zarfPackageOptions", typ: r("ZarfPackageOptions") },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
     ], false),
     "APIDeployedPackageConnection": o([
@@ -1410,16 +1410,8 @@ const typeMap: any = {
         { json: "sboms", js: "sboms", typ: a("") },
     ], false),
     "APIZarfDeployPayload": o([
-        { json: "deployOpts", js: "deployOpts", typ: r("ZarfPackageOptions") },
         { json: "initOpts", js: "initOpts", typ: u(undefined, r("ZarfInitOptions")) },
-    ], false),
-    "ZarfPackageOptions": o([
-        { json: "components", js: "components", typ: "" },
-        { json: "packagePath", js: "packagePath", typ: "" },
-        { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
-        { json: "setVariables", js: "setVariables", typ: m("") },
-        { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
-        { json: "shasum", js: "shasum", typ: "" },
+        { json: "packageOpts", js: "packageOpts", typ: r("ZarfPackageOptions") },
     ], false),
     "ZarfInitOptions": o([
         { json: "applianceMode", js: "applianceMode", typ: true },
@@ -1451,6 +1443,14 @@ const typeMap: any = {
         { json: "pushPassword", js: "pushPassword", typ: "" },
         { json: "pushUsername", js: "pushUsername", typ: "" },
         { json: "secret", js: "secret", typ: "" },
+    ], false),
+    "ZarfPackageOptions": o([
+        { json: "components", js: "components", typ: "" },
+        { json: "packagePath", js: "packagePath", typ: "" },
+        { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
+        { json: "setVariables", js: "setVariables", typ: m("") },
+        { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
+        { json: "shasum", js: "shasum", typ: "" },
     ], false),
     "APIZarfPackage": o([
         { json: "path", js: "path", typ: "" },

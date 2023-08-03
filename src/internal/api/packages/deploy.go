@@ -37,7 +37,7 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 	if body.InitOpts != nil {
 		cfg.InitOpts = *body.InitOpts
 	}
-	cfg.PkgOpts = body.DeployOpts
+	cfg.PkgOpts = body.PackageOpts
 
 	globalConfig.CommonOptions.Confirm = true
 
