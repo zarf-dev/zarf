@@ -62,6 +62,10 @@ func (p *Packager) Deploy() error {
 		return err
 	}
 
+	if err := p.validateLastNonBreakingVersion(); err != nil {
+		return err
+	}
+
 	// Now that we have read the zarf.yaml, check the package kind
 	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
 		p.cfg.IsInitConfig = true

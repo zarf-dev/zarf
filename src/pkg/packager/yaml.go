@@ -79,5 +79,8 @@ func (p *Packager) writeYaml() error {
 
 	p.cfg.Pkg.Build.RegistryOverrides = p.cfg.CreateOpts.RegistryOverrides
 
+	// Record the latest version of Zarf without breaking changes to the package structure.
+	p.cfg.Pkg.Build.LastNonBreakingVersion = deprecated.LastNonBreakingVersion
+
 	return utils.WriteYaml(p.tmp.ZarfYaml, p.cfg.Pkg, 0400)
 }

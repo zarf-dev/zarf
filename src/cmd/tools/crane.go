@@ -56,7 +56,7 @@ func init() {
 			if platform != "all" {
 				v1Platform, err = v1.ParsePlatform(platform)
 				if err != nil {
-					message.Fatalf(err, lang.CmdToolsRegistryInvalidPlatformErr, err.Error())
+					message.Fatalf(err, lang.CmdToolsRegistryInvalidPlatformErr, platform, err.Error())
 				}
 			}
 
@@ -137,7 +137,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 	wrappedCommand.RunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) < imageNameArgumentIndex+1 {
-			message.Fatal(nil, lang.CmdToolsCraneNotEnoughArgumentsSpecified)
+			message.Fatal(nil, lang.CmdToolsCraneNotEnoughArgumentsErr)
 		}
 
 		// Try to connect to a Zarf initialized cluster otherwise then pass it down to crane.
@@ -146,10 +146,11 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 			return originalListFn(cmd, args)
 		}
 
-		// Load the state
+		// Load the state (if able)
 		zarfState, err := zarfCluster.LoadZarfState()
 		if err != nil {
-			return err
+			message.Warnf(lang.CmdToolsCraneConnectedButBadStateErr, err.Error())
+			return originalListFn(cmd, args)
 		}
 
 		// Check to see if it matches the existing internal address.

@@ -108,6 +108,33 @@ func (suite *SkeletonSuite) Test_1_Compose() {
 	suite.NoError(err)
 }
 
+func (suite *SkeletonSuite) Test_2_Component_Templates() {
+	suite.T().Log("E2E: Component Templates")
+	e2e.SetupWithCluster(suite.T())
+	importEverythingPath := fmt.Sprintf("build/zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch)
+
+	_, stdErr, err := e2e.Zarf("package", "inspect", importEverythingPath)
+	suite.NoError(err)
+
+	targets := []string{
+		"import-component-local == import-component-local",
+		"import-component-local-relative == import-component-local-relative",
+		"import-component-wordpress == import-component-wordpress",
+		"import-component-oci == import-component-oci",
+		"file-imports == file-imports",
+		"import-helm-local == import-helm-local",
+		"import-helm-local-relative == import-helm-local-relative",
+		"import-helm-oci == import-helm-oci",
+		"import-repos == import-repos",
+		"import-images == import-images",
+	}
+
+	for _, target := range targets {
+		suite.Contains(stdErr, target)
+	}
+
+}
+
 func (suite *SkeletonSuite) Test_3_FilePaths() {
 	suite.T().Log("E2E: Skeleton Package File Paths")
 
