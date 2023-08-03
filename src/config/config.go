@@ -54,6 +54,7 @@ const (
 	ZarfCreateStage = "Create"
 )
 
+// Zarf Constants for In-Cluster Services.
 const (
 	IPV4Localhost string = "127.0.0.1"
 

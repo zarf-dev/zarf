@@ -18,8 +18,6 @@ import (
 )
 
 func (p *Packager) getValidComponents() []types.ZarfComponent {
-	message.Debugf("packager.getValidComponents()")
-
 	var validComponentsList []types.ZarfComponent
 	var orderedKeys []string
 	var choiceComponents []string
@@ -192,8 +190,6 @@ func (p *Packager) confirmOptionalComponent(component types.ZarfComponent) (conf
 }
 
 func (p *Packager) confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
-	message.Debugf("packager.confirmChoiceGroup(%#v)", componentGroup)
-
 	// Confirm flag passed, just use defaults
 	if config.CommonOptions.Confirm {
 		var componentNames []string
@@ -234,8 +230,6 @@ func (p *Packager) confirmChoiceGroup(componentGroup []types.ZarfComponent) type
 }
 
 func (p *Packager) appendIfNotExists(slice []string, item string) []string {
-	message.Debugf("packager.appendIfNotExists(%#v, %s)", slice, item)
-
 	for _, s := range slice {
 		if s == item {
 			return slice

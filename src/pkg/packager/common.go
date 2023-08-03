@@ -126,7 +126,6 @@ func (p *Packager) SetTempDirectory(path string) error {
 
 // GetInitPackageName returns the formatted name of the init package.
 func GetInitPackageName(arch string) string {
-	message.Debug("packager.GetInitPackageName()")
 	if arch == "" {
 		// No package has been loaded yet so lookup GetArch() with no package info
 		arch = config.GetArch()
@@ -136,8 +135,6 @@ func GetInitPackageName(arch string) string {
 
 // GetPackageName returns the formatted name of the package.
 func (p *Packager) GetPackageName() string {
-	message.Debugf("packager.GetPackageName(%s)", message.JSONValue(p))
-
 	if p.cfg.IsInitConfig {
 		return GetInitPackageName(p.arch)
 	}
@@ -171,8 +168,6 @@ func (p *Packager) ClearTempPaths() {
 }
 
 func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
-	message.Debugf("packager.createOrGetComponentPaths(%s)", message.JSONValue(component))
-
 	base := filepath.Join(p.tmp.Components, component.Name)
 
 	err = utils.CreateDirectory(base, 0700)

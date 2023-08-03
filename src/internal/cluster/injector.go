@@ -167,7 +167,6 @@ func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []st
 }
 
 func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *message.Spinner) ([]string, string, error) {
-	message.Debugf("packager.tryInjectorPayloadDeploy(%q)", tempPath.Base)
 	var configMaps []string
 
 	// Chunk size has to accommodate base64 encoding & etcd 1MB limit
@@ -221,8 +220,6 @@ func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *mes
 
 // Test for pod readiness and seed image presence.
 func (c *Cluster) injectorIsReady(seedImages []transform.Image, spinner *message.Spinner) bool {
-	message.Debugf("packager.injectorIsReady()")
-
 	// Establish the zarf connect tunnel
 	tunnel, err := NewZarfTunnel()
 	if err != nil {

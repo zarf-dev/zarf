@@ -37,8 +37,6 @@ var (
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() error {
-	message.Debug("packager.Deploy()")
-
 	if utils.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
 		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
 		if err != nil {
@@ -212,8 +210,6 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 // Deploy a Zarf Component.
 func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
-	message.Debugf("packager.deployComponent - %s", message.JSONValue(component))
-
 	// Toggles for general deploy operations
 	componentPath, err := p.createOrGetComponentPaths(component)
 	if err != nil {

@@ -21,8 +21,6 @@ import (
 
 // handlePackagePath If provided package is a URL download it to a temp directory.
 func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
-	message.Debug("packager.handlePackagePath()")
-
 	opts := p.cfg.PkgOpts
 
 	// Check if the user gave us a remote package
@@ -103,7 +101,6 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 }
 
 func (p *Packager) handleSgetPackage() error {
-	message.Debug("packager.handleSgetPackage()")
 	message.Warn(lang.WarnSGetDeprecation)
 
 	opts := p.cfg.PkgOpts
