@@ -10,7 +10,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
-	github.com/anchore/stereoscope v0.0.0-20230627195312-cd49355d934e
+	github.com/anchore/stereoscope v0.0.0-20230727211946-d1f3d766295e
 	github.com/anchore/syft v0.84.0
 	github.com/derailed/k9s v0.27.4
 	github.com/distribution/distribution v2.8.2+incompatible
@@ -30,6 +30,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc3
 	github.com/otiai10/copy v1.12.0
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.15.1
 	github.com/pterm/pterm v0.12.62
 	github.com/sergi/go-diff v1.3.1
 	github.com/sigstore/cosign v1.13.1
@@ -321,7 +322,6 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.15.1 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
