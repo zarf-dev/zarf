@@ -56,11 +56,29 @@ components:
       Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
       Removed and destroyed after the Zarf Registry is self-hosting the registry image.
     required: true
-    cosignKeyPath: ../../cosign.pub
+    only:
+      cluster:
+        architecture: amd64
     files:
       # Rust Injector Binary
-      - source: sget://defenseunicorns/zarf-injector:###ZARF_PKG_ARCH###-###ZARF_PKG_TMPL_INJECTOR_VERSION###
+      - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/injector/###ZARF_PKG_TMPL_INJECTOR_VERSION###/zarf-injector-amd64
         target: "###ZARF_TEMP###/zarf-injector"
+        shasum: "###ZARF_PKG_TMPL_INJECTOR_AMD64_SHASUM###"
+        executable: true
+
+  - name: zarf-injector
+    description: |
+      Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
+      Removed and destroyed after the Zarf Registry is self-hosting the registry image.
+    required: true
+    only:
+      cluster:
+        architecture: arm64
+    files:
+      # Rust Injector Binary
+      - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/injector/###ZARF_PKG_TMPL_INJECTOR_VERSION###/zarf-injector-arm64
+        target: "###ZARF_TEMP###/zarf-injector"
+        shasum: "###ZARF_PKG_TMPL_INJECTOR_ARM64_SHASUM###"
         executable: true
 
   - name: zarf-seed-registry
