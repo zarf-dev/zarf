@@ -48,7 +48,7 @@ var rootCmd = &cobra.Command{
 	},
 	Short: lang.RootCmdShort,
 	Long:  lang.RootCmdLong,
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)

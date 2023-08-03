@@ -37,7 +37,7 @@ var packageCmd = &cobra.Command{
 var packageCreateCmd = &cobra.Command{
 	Use:     "create [ DIRECTORY ]",
 	Aliases: []string{"c"},
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageCreateShort,
 	Long:    lang.CmdPackageCreateLong,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -75,7 +75,7 @@ var packageDeployCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   lang.CmdPackageDeployShort,
 	Long:    lang.CmdPackageDeployLong,
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackagePath = choosePackage(args)
 
@@ -104,7 +104,7 @@ var packageInspectCmd = &cobra.Command{
 	Aliases: []string{"i"},
 	Short:   lang.CmdPackageInspectShort,
 	Long:    lang.CmdPackageInspectLong,
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackagePath = choosePackage(args)
 
