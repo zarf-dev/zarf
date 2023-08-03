@@ -48,7 +48,8 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 		return nil, fmt.Errorf("failed to parse OCI reference %s: %w", url, err)
 	}
 	o := &OrasRemote{}
-	o.ctx = context.TODO()
+	ctx := context.TODO()
+	o.WithContext(ctx)
 
 	err = o.WithRepository(ref)
 	if err != nil {
@@ -88,6 +89,11 @@ func (o *OrasRemote) WithRepository(ref registry.Reference) error {
 	repo.Client = o.client
 	o.repo = repo
 	return nil
+}
+
+// WithContext sets the context for the remote
+func (o *OrasRemote) WithContext(ctx context.Context) {
+	o.ctx = ctx
 }
 
 // withAuthClient returns an auth client for the given reference.
