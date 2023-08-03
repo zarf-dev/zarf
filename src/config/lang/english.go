@@ -242,15 +242,16 @@ const (
 	CmdPackageCreateCleanPathErr           = "Invalid characters in Zarf cache path, defaulting to %s"
 	CmdPackageCreateErr                    = "Failed to create package: %s"
 
-	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
-	CmdPackageDeployFlagAdoptExistingResources = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
-	CmdPackageDeployFlagSet                    = "Specify deployment variables to set on the command line (KEY=value)"
-	CmdPackageDeployFlagComponents             = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
-	CmdPackageDeployFlagShasum                 = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
-	CmdPackageDeployFlagSget                   = "Path to public sget key file for remote packages signed via cosign"
-	CmdPackageDeployFlagPublicKey              = "Path to public key file for validating signed packages"
-	CmdPackageDeployValidateArchitectureErr    = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
-	CmdPackageDeployErr                        = "Failed to deploy package: %s"
+	CmdPackageDeployFlagConfirm                        = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
+	CmdPackageDeployFlagAdoptExistingResources         = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
+	CmdPackageDeployFlagSet                            = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
+	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
+	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v0.31.0 please use the --key flag instead."
+	CmdPackageDeployFlagPublicKey                      = "Path to public key file for validating signed packages"
+	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
+	CmdPackageDeployValidateLastNonBreakingVersionWarn = "the version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
+	CmdPackageDeployErr                                = "Failed to deploy package: %s"
 
 	CmdPackageInspectFlagSbom      = "View SBOM contents while inspecting the package"
 	CmdPackageInspectFlagSbomOut   = "Specify an output directory for the SBOMs from the inspected Zarf package"
@@ -334,7 +335,7 @@ const (
 	CmdToolsRegistryCatalogExample = `
 	# list the repos internal to Zarf
 	$ zarf tools registry catalog
-  
+
 	# list the repos for reg.example.com
 	$ zarf tools registry catalog reg.example.com
 `
@@ -381,7 +382,8 @@ const (
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
-	CmdToolsCraneNotEnoughArgumentsSpecified = "You do not have enough arguments specified."
+	CmdToolsCraneNotEnoughArgumentsErr   = "You do not have enough arguments specified for this command"
+	CmdToolsCraneConnectedButBadStateErr = "Detected a K8s cluster but was unable to get Zarf state - continuing without state information: %s"
 
 	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
 	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."
@@ -427,7 +429,7 @@ const (
 	zarf tools wait-for http google.com success                           #  wait for any 2xx response from http://google.com
 `
 	CmdToolsWaitForFlagTimeout        = "Specify the timeout duration for the wait command."
-	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration (%s). Please use a valid duration string (e.g. 1s, 2m, 3h)."
+	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration '%s'. Please use a valid duration string (e.g. 1s, 2m, 3h)."
 	CmdToolsWaitForErrTimeout         = "Wait timed out."
 	CmdToolsWaitForErrConditionString = "Invalid HTTP status code. Please use a valid HTTP status code (e.g. 200, 404, 500)."
 	CmdToolsWaitForErrZarfPath        = "Could not locate the current Zarf binary path."
@@ -560,5 +562,10 @@ const (
 var (
 	ErrInitNotFound      = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
 	ErrUnableToCheckArch = errors.New("unable to get the configured cluster's architecture")
-	ErrInterrupt         = errors.New("Failed due to interrupt")
+	ErrInterrupt         = errors.New("execution cancelled due to an interrupt")
+)
+
+// Collection of reusable warn messages.
+var (
+	WarnSGetDeprecation = "Using sget to download resources is being deprecated and will removed in the v0.31.0 release of Zarf. Please publish the packages as OCI artifacts instead."
 )

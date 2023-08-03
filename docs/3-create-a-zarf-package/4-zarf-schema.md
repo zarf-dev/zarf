@@ -535,6 +535,22 @@ must respect the following conditions
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="build_lastNonBreakingVersion"></a>lastNonBreakingVersion</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The minimum version of Zarf that does not have breaking package structure changes
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -757,22 +773,6 @@ Must be one of:
 <blockquote>
 
 **Description:** Create a user selector field based on all components in the same group
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
-<details>
-<summary>
-<strong> <a name="components_items_cosignKeyPath"></a>cosignKeyPath</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Specify a path to a public key to validate signed online resources
 
 |          |          |
 | -------- | -------- |

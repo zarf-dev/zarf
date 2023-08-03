@@ -91,6 +91,9 @@ jobs:
           name: build-artifacts
           path: build/
 
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
       - name: Make Zarf executable
         run: |
           chmod +x build/zarf
@@ -99,7 +102,6 @@ jobs:
       - name: Build examples and run tests
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
-          sudo chown $USER /tmp/zarf-*.log
 
       - name: Save logs
         if: always()

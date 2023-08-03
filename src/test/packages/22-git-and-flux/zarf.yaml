@@ -18,6 +18,8 @@ components:
     repos:
       # Do a full Git Repo Mirror
       - https://github.com/kelseyhightower/nocode.git
+      # Perform a full repo mirror of a simple repository with a single branch - this causes an "already up to date" error in go-git
+      - https://github.com/defenseunicorns/golang-tekton-hello-world.git
     actions:
       onDeploy:
         before:

@@ -135,12 +135,12 @@ export interface GitServerInfo {
     internalServer: boolean;
     /**
      * Password of a user with pull-only access to the git repository. If not provided for an
-     * external repository than the push-user is used
+     * external repository then the push-user is used
      */
     pullPassword: string;
     /**
      * Username of a user with pull-only access to the git repository. If not provided for an
-     * external repository than the push-user is used
+     * external repository then the push-user is used
      */
     pullUsername: string;
     /**
@@ -245,6 +245,10 @@ export interface ZarfBuildData {
      */
     differentialMissing?: string[];
     /**
+     * The minimum version of Zarf that does not have breaking package structure changes
+     */
+    lastNonBreakingVersion?: string;
+    /**
      * Any migrations that have been run on this package
      */
     migrations: string[];
@@ -285,7 +289,7 @@ export interface ZarfComponent {
      */
     charts?: ZarfChart[];
     /**
-     * Specify a path to a public key to validate signed online resources
+     * [Deprecated] Specify a path to a public key to validate signed online resources
      */
     cosignKeyPath?: string;
     /**
@@ -1469,6 +1473,7 @@ const typeMap: any = {
         { json: "architecture", js: "architecture", typ: "" },
         { json: "differential", js: "differential", typ: true },
         { json: "differentialMissing", js: "differentialMissing", typ: u(undefined, a("")) },
+        { json: "lastNonBreakingVersion", js: "lastNonBreakingVersion", typ: u(undefined, "") },
         { json: "migrations", js: "migrations", typ: a("") },
         { json: "OCIImportedComponents", js: "OCIImportedComponents", typ: u(undefined, m("")) },
         { json: "registryOverrides", js: "registryOverrides", typ: m("") },

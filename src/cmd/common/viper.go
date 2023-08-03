@@ -95,6 +95,11 @@ func InitViper() *viper.Viper {
 		return v
 	}
 
+	// Skip for the version command
+	if isVersionCmd() {
+		return v
+	}
+
 	// Specify an alternate config file
 	cfgFile := os.Getenv("ZARF_CONFIG")
 
@@ -131,4 +136,9 @@ func InitViper() *viper.Viper {
 
 func GetViper() *viper.Viper {
 	return v
+}
+
+func isVersionCmd() bool {
+	args := os.Args
+	return len(args) > 1 && (args[1] == "version" || args[1] == "v")
 }
