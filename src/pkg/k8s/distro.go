@@ -71,8 +71,8 @@ func (k *K8s) DetectDistro() (string, error) {
 
 	labels := node.GetLabels()
 	for _, label := range labels {
-		// kubectl get nodes --selector node.Clusterrnetes.io/instance-type=k3s for K3s
-		if label == "node.Clusterrnetes.io/instance-type=k3s" {
+		// kubectl get nodes --selector node.kubernetes.io/instance-type=k3s for K3s
+		if label == "node.kubernetes.io/instance-type=k3s" {
 			return DistroIsK3s, nil
 		}
 		// kubectl get nodes --selector microk8s.io/cluster=true for MicroK8s
