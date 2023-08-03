@@ -149,8 +149,6 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
 func (c *Cluster) LoadZarfState() (state *types.ZarfState, err error) {
-	message.Debug("k8s.LoadZarfState()")
-
 	// Set up the API connection
 	secret, err := c.GetSecret(ZarfNamespaceName, ZarfStateSecretName)
 	if err != nil {
@@ -203,7 +201,6 @@ func (c *Cluster) debugPrintZarfState(state *types.ZarfState) {
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
 func (c *Cluster) SaveZarfState(state *types.ZarfState) error {
-	message.Debugf("k8s.SaveZarfState()")
 	c.debugPrintZarfState(state)
 
 	// Convert the data back to JSON.
