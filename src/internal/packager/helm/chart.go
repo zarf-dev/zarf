@@ -271,7 +271,7 @@ func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinn
 	return err
 }
 
-// UpdateChartValues updates values for a given chart release
+// UpdateReleaseValues updates values for a given chart release
 func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
 	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.ReleaseName)
 	defer spinner.Stop()

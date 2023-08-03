@@ -94,6 +94,7 @@ const (
 // Viper instance used by commands
 var v *viper.Viper
 
+// InitViper initializes the viper singleton for the CLI
 func InitViper() *viper.Viper {
 	// Already initialized by some other command
 	if v != nil {
@@ -146,6 +147,7 @@ func InitViper() *viper.Viper {
 	return v
 }
 
+// GetViper returns the viper singleton
 func GetViper() *viper.Viper {
 	return v
 }
