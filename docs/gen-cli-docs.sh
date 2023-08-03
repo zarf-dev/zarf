@@ -1,6 +1,6 @@
 # Generate the Zarf CLI docs
 printf "Generating CLI docs\n"
-ZARF_CONFIG=scripts/empty-config.toml go run main.go internal generate-cli-docs
+ZARF_CONFIG=hack/empty-config.toml go run main.go internal generate-cli-docs
 
 # Create the top menu label for the sidebar menu
 printf "Generating sidebar menu label\n"

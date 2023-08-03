@@ -32,7 +32,7 @@ main.go @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 # Privileged pipeline files
 
 /.github/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
-/scripts/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
+/hack/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 /.gitignore @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 /.golangci.yml @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 /.goreleaser.yml @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
