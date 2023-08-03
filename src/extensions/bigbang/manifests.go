@@ -88,10 +88,22 @@ func manifestZarfCredentials(version string) corev1.Secret {
 
 // manifestGitRepo generates a GitRepository object for the Big Bang umbrella repo.
 func manifestGitRepo(cfg *extensions.BigBang) fluxSrcCtrl.GitRepository {
+	apiVersion := "source.toolkit.fluxcd.io/v1beta2"
+	semverVersion, err := semver.NewVersion(cfg.Version)
+	if err == nil {
+		c, err := semver.NewConstraint(">= 2.7.0")
+		if err == nil {
+			updateFlux, err := c.Validate(semverVersion)
+			if err == nil && updateFlux && !cfg.SkipFlux {
+				apiVersion = "source.toolkit.fluxcd.io/v1"
+			}
+		}
+	}
+
 	return fluxSrcCtrl.GitRepository{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       fluxSrcCtrl.GitRepositoryKind,
-			APIVersion: "source.toolkit.fluxcd.io/v1",
+			APIVersion: apiVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bb,
