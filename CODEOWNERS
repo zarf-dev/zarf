@@ -1,25 +1,21 @@
 * @defenseunicorns/zarf
 
 # Docs & examples
-
 /adr/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 /docs/ @Madeline-UX @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 /examples/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 *.md @Madeline-UX @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 
 # Core code
-
 /src/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 /go.* @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 main.go @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 
 # Init package
-
 /packages/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 /zarf.yaml @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 
 # Web UI-specific
-
 /package*.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy @cmwylie19
 /src/internal/api @mike-winberry @Racer159 @Noxsios @jeff-mccoy @cmwylie19
 /src/ui/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy @cmwylie19
@@ -30,7 +26,6 @@ main.go @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 /docs-website/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy @cmwylie19
 
 # Privileged pipeline files
-
 /.github/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 /hack/ @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 /.gitignore @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
@@ -42,7 +37,6 @@ main.go @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 /Makefile @jeff-mccoy @cmwylie19 @Racer159 @Noxsios
 
 # Additional privileged files
-
 /CODEOWNERS @jeff-mccoy @runyontr
 /cosign.pub @jeff-mccoy @runyontr
 /LICENSE @jeff-mccoy @runyontr
