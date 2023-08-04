@@ -4,7 +4,6 @@ sidebar_position: 0
 
 import TabItem from "@theme/TabItem";
 import Tabs from "@theme/Tabs";
-import Admonition from "@theme/Admonition";
 
 # Overview
 
@@ -118,7 +117,7 @@ In the more complex use case, your package consists of updates for many apps/sys
 ## Why Use Zarf?
 
 - 💸 **Free and Open-Source.** Zarf will always be free to use and maintained by the open-source community.
-- ⭐️ **Zero Dependencies.** As a statically compiled binary, the Zarf CLI has zero dependencies to run on any machine. 
+- ⭐️ **Zero Dependencies.** As a statically compiled binary, the Zarf CLI has zero dependencies to run on any machine.
 - 🔓 **No Vendor Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you still can use your helm charts to deploy your software manually.
 - 💻 **OS Agnostic.** Zarf supports numerous operating systems. A full matrix of supported OSes, architectures and featuresets is coming soon.
 - 📦 **Highly Distributable.** Integrate and deploy software from multiple secure development environments including edge, embedded systems, secure cloud, data centers, and even local environments.
@@ -164,7 +163,7 @@ In the more complex use case, your package consists of updates for many apps/sys
 <Tabs>
 <TabItem value="Linux" label="Linux">
 
-<Admonition type="info">
+:::info
 
 This quick start requires you to already have:
 
@@ -173,7 +172,7 @@ This quick start requires you to already have:
 
 For more install options please visit our [Getting Started page](./1-getting-started/index.md).
 
-</Admonition>
+:::
 
 ## Linux Commands
 
@@ -193,16 +192,16 @@ zarf init
 zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
-<Admonition type="note">
+:::note
 
 Zarf has no prerequisites on Linux. However, for this example, we will use Docker and Kind.
 
-</Admonition>
+:::
 
 </TabItem>
 <TabItem value="macOS" label="macOS">
 
-<Admonition type="info">
+:::info
 
 This quick start requires you to already have:
 
@@ -211,7 +210,7 @@ This quick start requires you to already have:
 
 For more install options please visit our [Getting Started page](./1-getting-started/index.md).
 
-</Admonition>
+:::
 
 ## MacOS Commands
 
