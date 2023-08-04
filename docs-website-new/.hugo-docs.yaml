@@ -1,13 +1,13 @@
 mounts:
   - source: "../docs"
-    target: "../docsNew"
+    target: "./content"
     ignores: [".templates"]
 
-  # - source: "../examples"
-  #   target: "../examples"
+  - source: "../examples"
+    target: "./content/docs"
 
-  # - source: "../packages"
-  #   target: "../packages"
+  - source: "../packages"
+    target: "./content/docs"
 
   # - source: "../CONTRIBUTING.md"
   #   target: "../docs/contributing"
