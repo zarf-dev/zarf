@@ -6,6 +6,7 @@ package git
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -62,7 +63,7 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) err
 			fetchOpts.Auth = &gitCred.Auth
 		}
 
-		if err := repo.Fetch(fetchOpts); err != nil {
+		if err := repo.Fetch(fetchOpts); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 			return err
 		}
 	}
