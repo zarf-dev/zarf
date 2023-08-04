@@ -6,8 +6,5 @@ mounts:
   - source: "../examples"
     target: "./content/docs"
 
-  - source: "../packages"
-    target: "./content/docs"
-
   # - source: "../CONTRIBUTING.md"
   #   target: "../docs/contributing"
