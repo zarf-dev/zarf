@@ -56,22 +56,22 @@ const (
 
 // Zarf Constants for In-Cluster Services.
 const (
-	IPV4Localhost string = "127.0.0.1"
+	IPV4Localhost  = "127.0.0.1"
 
-	ZarfArtifactTokenName string = "zarf-artifact-registry-token"
+	ZarfArtifactTokenName  = "zarf-artifact-registry-token"
 
-	ZarfImagePullSecretName string = "private-registry"
-	ZarfGitServerSecretName string = "private-git-server"
+	ZarfImagePullSecretName  = "private-registry"
+	ZarfGitServerSecretName  = "private-git-server"
 
-	ZarfRegistryPushUser                   string = "zarf-push"
-	ZarfRegistryPullUser                   string = "zarf-pull"
-	ZarfInClusterContainerRegistryNodePort int    = 31999
+	ZarfRegistryPushUser                    = "zarf-push"
+	ZarfRegistryPullUser                    = "zarf-pull"
+	ZarfInClusterContainerRegistryNodePort     = 31999
 
-	ZarfGitPushUser string = "zarf-git-user"
-	ZarfGitReadUser string = "zarf-git-read-user"
+	ZarfGitPushUser  = "zarf-git-user"
+	ZarfGitReadUser  = "zarf-git-read-user"
 
-	ZarfInClusterGitServiceURL      string = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
-	ZarfInClusterArtifactServiceURL string = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+	ZarfInClusterGitServiceURL       = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+	ZarfInClusterArtifactServiceURL  = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 )
 
 // Zarf Global Configuration Variables.
