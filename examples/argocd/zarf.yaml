@@ -34,7 +34,6 @@ components:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       - docker.io/nginx:1.25.1
     actions:
-      # This prepares the default namespace for the Zarf agent for the sample applications.
       onDeploy:
         after:
           # This will use a wait action to wait for the pods to be ready
