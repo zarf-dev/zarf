@@ -14,5 +14,5 @@ applications:
     syncPolicy:
       automated: { }
     destination:
-      namespace: default
+      namespace: podinfo
       server: https://kubernetes.default.svc
