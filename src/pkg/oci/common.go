@@ -48,8 +48,7 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 		return nil, fmt.Errorf("failed to parse OCI reference %s: %w", url, err)
 	}
 	o := &OrasRemote{}
-	ctx := context.TODO()
-	o.WithContext(ctx)
+	o.WithContext(context.TODO())
 
 	err = o.WithRepository(ref)
 	if err != nil {
