@@ -10,7 +10,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 )
@@ -24,6 +24,8 @@ type BreakingChange struct {
 
 // List of migrations tracked in the zarf.yaml build data.
 const (
+	// This should be updated when a breaking change is introduced to the Zarf package structure.  See: https://github.com/defenseunicorns/zarf/releases/tag/v0.27.0
+	LastNonBreakingVersion   = "v0.27.0"
 	ScriptsToActionsMigrated = "scripts-to-actions"
 	PluralizeSetVariable     = "pluralize-set-variable"
 )
@@ -43,7 +45,7 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 	migratedComponent = component
 
 	// If the component has already been migrated, clear the deprecated scripts.
-	if utils.SliceContains(build.Migrations, ScriptsToActionsMigrated) {
+	if helpers.SliceContains(build.Migrations, ScriptsToActionsMigrated) {
 		migratedComponent.DeprecatedScripts = types.DeprecatedZarfComponentScripts{}
 	} else {
 		// Otherwise, run the migration.
@@ -54,7 +56,7 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 	}
 
 	// If the component has already been migrated, clear the setVariable definitions.
-	if utils.SliceContains(build.Migrations, PluralizeSetVariable) {
+	if helpers.SliceContains(build.Migrations, PluralizeSetVariable) {
 		migratedComponent = clearSetVariables(migratedComponent)
 	} else {
 		// Otherwise, run the migration.

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +26,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/mholt/archiver/v3"
@@ -157,7 +157,7 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	imgList := utils.Unique(combinedImageList)
+	imgList := helpers.Unique(combinedImageList)
 
 	// Images are handled separately from other component assets.
 	if len(imgList) > 0 {
@@ -175,7 +175,7 @@ func (p *Packager) Create(baseDir string) error {
 			return imgConfig.PullAll()
 		}
 
-		if err := utils.Retry(doPull, 3, 5*time.Second); err != nil {
+		if err := helpers.Retry(doPull, 3, 5*time.Second); err != nil {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 	}
@@ -325,8 +325,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
-		re := regexp.MustCompile(`\.git$`)
-		isGitURL := re.MatchString(chart.URL)
+
 		helmCfg := helm.Helm{
 			Chart: chart,
 			Cfg:   p.cfg,
@@ -342,18 +341,10 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			}
 
 			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
-		} else if isGitURL {
-			_, err = helmCfg.PackageChartFromGit(componentPath.Charts)
-			if err != nil {
-				return fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
-			}
-		} else if len(chart.URL) > 0 {
-			helmCfg.DownloadPublishedChart(componentPath.Charts)
 		} else {
-			path := helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
-			zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
-			if !strings.HasSuffix(path, zarfFilename) {
-				return fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
+			err := helmCfg.PackageChart(componentPath.Charts)
+			if err != nil {
+				return err
 			}
 		}
 
@@ -403,7 +394,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			if actualShasum, _ := utils.GetCryptoHash(dst, crypto.SHA256); actualShasum != file.Shasum {
+			if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 			}
 		}
@@ -693,7 +684,7 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 		// Generate a list of all unique repos for this component
 		for _, repoURL := range component.Repos {
 			// Split the remote url and the zarf reference
-			_, refPlain, err := transform.GitTransformURLSplitRef(repoURL)
+			_, refPlain, err := transform.GitURLSplitRef(repoURL)
 			if err != nil {
 				return err
 			}

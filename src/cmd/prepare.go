@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +46,7 @@ var prepareTransformGitLinks = &cobra.Command{
 
 		// Perform git url transformation via regex
 		text := string(content)
-		processedText := transform.MutateGitURLsInText(pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
+		processedText := transform.MutateGitURLsInText(message.Warnf, pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
 
 		// Print the differences
 		message.PrintDiff(text, processedText)
@@ -77,7 +78,7 @@ var prepareComputeFileSha256sum = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		fileName := args[0]
-		hash, err := utils.GetCryptoHash(fileName, crypto.SHA256)
+		hash, err := utils.GetCryptoHashFromFile(fileName, crypto.SHA256)
 		if err != nil {
 			message.Fatal(err, lang.CmdPrepareSha256sumHashErr)
 		} else {
@@ -101,15 +102,15 @@ var prepareFindImages = &cobra.Command{
 		}
 
 		// Ensure uppercase keys from viper
-		viperConfig := utils.TransformMapKeys(v.GetStringMapString(V_PKG_CREATE_SET), strings.ToUpper)
-		pkgConfig.CreateOpts.SetVariables = utils.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
+		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(V_PKG_CREATE_SET), strings.ToUpper)
+		pkgConfig.CreateOpts.SetVariables = helpers.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
 		// Find all the images the package might need
-		if err := pkgClient.FindImages(baseDir, repoHelmChartPath, kubeVersionOverride); err != nil {
+		if _, err := pkgClient.FindImages(baseDir, repoHelmChartPath, kubeVersionOverride); err != nil {
 			message.Fatalf(err, lang.CmdPrepareFindImagesErr, baseDir)
 		}
 	},

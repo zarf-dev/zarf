@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -103,6 +104,7 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 
 func (p *Packager) handleSgetPackage() error {
 	message.Debug("packager.handleSgetPackage()")
+	message.Warn(lang.WarnSGetDeprecation)
 
 	opts := p.cfg.DeployOpts
 
@@ -119,7 +121,7 @@ func (p *Packager) handleSgetPackage() error {
 
 	// If this is a DefenseUnicorns package, use an internal sget public key
 	if strings.HasPrefix(opts.PackagePath, fmt.Sprintf("%s://defenseunicorns", utils.SGETURLScheme)) {
-		os.Setenv("DU_SGET_KEY", config.SGetPublicKey)
+		os.Setenv("DU_SGET_KEY", config.CosignPublicKey)
 		p.cfg.DeployOpts.SGetKeyPath = "env://DU_SGET_KEY"
 	}
 

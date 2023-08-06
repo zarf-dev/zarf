@@ -19,7 +19,7 @@ func TestMismatchedArchitectures(t *testing.T) {
 
 	var (
 		mismatchedArch         = e2e.GetMismatchedArch()
-		mismatchedGamesPackage = fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", mismatchedArch)
+		mismatchedGamesPackage = fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", mismatchedArch)
 		expectedErrorMessage   = fmt.Sprintf("this package architecture is %s", mismatchedArch)
 	)
 

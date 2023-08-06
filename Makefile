@@ -3,6 +3,7 @@
 
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
+KEY ?= ""
 ######################################################################################
 
 # Figure out which Zarf binary we should use based on the operating system we are on
@@ -55,12 +56,12 @@ ensure-ui-build-dir:
 # INTERNAL: used to build the UI only if necessary
 check-ui:
 	@ if [ ! -z "$(shell command -v shasum)" ]; then\
-	    if test "$(shell ./hack/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
-		    $(MAKE) build-ui;\
-		    ./hack/print-ui-diff.sh > build/ui/git-info.txt;\
-	    fi;\
+		if test "$(shell ./hack/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
+			$(MAKE) build-ui;\
+			./hack/print-ui-diff.sh > build/ui/git-info.txt;\
+		fi;\
 	else\
-        $(MAKE) build-ui;\
+		$(MAKE) build-ui;\
 	fi
 
 build-ui: ## Build the Zarf UI
@@ -90,7 +91,7 @@ build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI f
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Schema
-	docs/gen-cli-docs.sh
+	hack/gen-cli-docs.sh
 	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
 dev: ensure-ui-build-dir ## Start a Dev Server for the Zarf UI
@@ -108,6 +109,8 @@ build-local-agent-image: ## Build the Zarf agent image to be used in a locally b
 	@ if [ "$(ARCH)" = "arm64" ] && [ ! -s ./build/zarf-arm ]; then $(MAKE) build-cli-linux-arm; fi
 	@ if [ "$(ARCH)" = "arm64" ]; then cp build/zarf-arm build/zarf-linux-arm64; fi
 	docker buildx build --load --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
+	@ if [ "$(ARCH)" = "amd64" ]; then rm build/zarf-linux-amd64; fi
+	@ if [ "$(ARCH)" = "arm64" ]; then rm build/zarf-linux-arm64; fi
 
 init-package: ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
@@ -117,10 +120,18 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
+# INTERNAL: used to build an iron bank version of the init package with an ib version of the registry image
+ib-init-package:
+	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm . \
+		--set REGISTRY_IMAGE_DOMAIN="registry1.dso.mil/" \
+		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
+		--set REGISTRY_IMAGE_TAG="2.8.2"
+
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
-	@test -s ./build/zarf-package-dos-games-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-dos-games-$(ARCH)-1.0.0.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
 
@@ -139,6 +150,9 @@ build-examples: ## Build all of the example packages
 	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
+
+build-injector-linux: ## Build the Zarf injector for AMD64 and ARM64
+	docker run --rm --user "$(id -u)":"$(id -g)" -v $$PWD/src/injector:/usr/src/zarf-injector -w /usr/src/zarf-injector rust:1.71.0-bookworm make build-injector-linux
 
 ## NOTE: Requires an existing cluster or the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
@@ -186,7 +200,7 @@ test-ui-dev-server:
 
 .PHONY: test-ui-build-server
 # INTERNAL: used to start the built version of the API server for the Zarf Web UI (in CI)
-test-ui-build-server: 
+test-ui-build-server:
 	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR
@@ -199,7 +213,7 @@ test-cves: ensure-ui-build-dir
 	go run main.go tools sbom packages . -o json --exclude './docs-website' | grype --fail-on low
 
 cve-report: ensure-ui-build-dir ## Create a CVE report for the current project (must `brew install grype` first)
-	go run main.go tools sbom packages . -o json --exclude './docs-website' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
+	go run main.go tools sbom packages . -o json --exclude './docs-website' | grype -o template -t hack/.templates/grype.tmpl > build/zarf-known-cves.csv
 
 lint-go: ## Run revive to lint the go code (must `brew install revive` first)
 	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...

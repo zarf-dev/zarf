@@ -1,0 +1,45 @@
+name: Zarf Application Package Publishing
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      branchName:
+        description: "Branch to build the packages from"
+        required: true
+        default: "main"
+
+jobs:
+  publish-packages:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: "Checkout Repo"
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        with:
+          ref: ${{ github.event.inputs.branchName }}
+
+      - name: Install The Latest Release Version of Zarf
+        uses: defenseunicorns/setup-zarf@main
+
+      - name: "Login to GHCR"
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.1.0
+        with:
+          registry: ghcr.io
+          username: dummy
+          password: ${{ github.token }}
+
+      - name: Build And Publish Application Packages
+        # TODO: Add package signing to this step
+        run: |
+          zarf package create -o build -a amd64 examples/dos-games --key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} --confirm
+          zarf package create -o build -a arm64 examples/dos-games --key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} --confirm
+          zarf package publish ./build/zarf-package-dos-games-amd64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages
+          zarf package publish ./build/zarf-package-dos-games-arm64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages
+        env:
+          AWS_REGION: ${{ secrets.COSIGN_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.COSIGN_AWS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.COSIGN_AWS_ACCESS_KEY }}

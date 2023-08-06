@@ -24,6 +24,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 	corev1 "k8s.io/api/core/v1"
@@ -60,6 +61,10 @@ func (p *Packager) Deploy() error {
 	}
 
 	if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
+		return err
+	}
+
+	if err := p.validateLastNonBreakingVersion(); err != nil {
 		return err
 	}
 
@@ -315,7 +320,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if shasum, _ := utils.GetCryptoHash(fileLocation, crypto.SHA256); shasum != file.Shasum {
+			if shasum, _ := utils.GetCryptoHashFromFile(fileLocation, crypto.SHA256); shasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
 			}
 		}
@@ -448,7 +453,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 	}
 
-	return utils.Retry(func() error {
+	return helpers.Retry(func() error {
 		return imgConfig.PushToZarfRegistry()
 	}, 3, 5*time.Second)
 }
@@ -480,7 +485,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 		}
 
 		// Try repo push up to 3 times
-		if err := utils.Retry(tryPush, 3, 5*time.Second); err != nil {
+		if err := helpers.Retry(tryPush, 3, 5*time.Second); err != nil {
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}

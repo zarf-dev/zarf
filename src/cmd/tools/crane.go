@@ -6,17 +6,19 @@ package tools
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
-	"os"
-	"strings"
 )
 
 func init() {
@@ -33,6 +35,9 @@ func init() {
 		Aliases: []string{"r", "crane"},
 		Short:   lang.CmdToolsRegistryShort,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+
+			exec.ExitOnInterrupt()
+
 			// The crane options loading here comes from the rootCmd of crane
 			craneOptions = append(craneOptions, crane.WithContext(cmd.Context()))
 			// TODO(jonjohnsonjr): crane.Verbose option?
@@ -51,7 +56,7 @@ func init() {
 			if platform != "all" {
 				v1Platform, err = v1.ParsePlatform(platform)
 				if err != nil {
-					message.Fatalf(err, lang.CmdToolsRegistryInvalidPlatformErr, err.Error())
+					message.Fatalf(err, lang.CmdToolsRegistryInvalidPlatformErr, platform, err.Error())
 				}
 			}
 
@@ -132,7 +137,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 	wrappedCommand.RunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) < imageNameArgumentIndex+1 {
-			message.Fatal(nil, lang.CmdToolsCraneNotEnoughArgumentsSpecified)
+			message.Fatal(nil, lang.CmdToolsCraneNotEnoughArgumentsErr)
 		}
 
 		// Try to connect to a Zarf initialized cluster otherwise then pass it down to crane.
@@ -141,10 +146,11 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 			return originalListFn(cmd, args)
 		}
 
-		// Load the state
+		// Load the state (if able)
 		zarfState, err := zarfCluster.LoadZarfState()
 		if err != nil {
-			return err
+			message.Warnf(lang.CmdToolsCraneConnectedButBadStateErr, err.Error())
+			return originalListFn(cmd, args)
 		}
 
 		// Check to see if it matches the existing internal address.

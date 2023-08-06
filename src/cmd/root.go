@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -37,7 +38,9 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		// Don't add the logo to the help command
+		exec.ExitOnInterrupt()
+
+		// Don't log the help command
 		if cmd.Parent() == nil {
 			config.SkipLogFile = true
 		}
