@@ -30,11 +30,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var (
-	hpaModified    bool
-	connectStrings = make(types.ConnectStrings)
-)
-
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() error {
 	if utils.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
@@ -79,9 +74,11 @@ func (p *Packager) Deploy() error {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
+	p.hpaModified = false
+	p.connectStrings = make(types.ConnectStrings)
 	// Reset registry HPA scale down whether an error occurs or not
 	defer func() {
-		if p.cluster != nil && hpaModified {
+		if p.cluster != nil && p.hpaModified {
 			if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
 				message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
 			}
@@ -143,7 +140,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Save deployed package information to k8s
 		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 		if p.cluster != nil {
-			err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings)
+			err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, p.connectStrings)
 			if err != nil {
 				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
@@ -185,7 +182,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	if isRegistry {
 		// If we are deploying the registry then mark the HPA as "modifed" to set it to Min later
-		hpaModified = true
+		p.hpaModified = true
 	}
 
 	// Before deploying the seed registry, start the injector
@@ -250,11 +247,11 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
-		if hasImages && !hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
+		if hasImages && !p.hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
 			if err := p.cluster.DisableRegHPAScaleDown(); err != nil {
 				message.Debugf("unable to disable the registry HPA scale down: %s", err.Error())
 			} else {
-				hpaModified = true
+				p.hpaModified = true
 			}
 		}
 	}
@@ -518,7 +515,7 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 
 		// Iterate over any connectStrings and add to the main map
 		for name, description := range addedConnectStrings {
-			connectStrings[name] = description
+			p.connectStrings[name] = description
 		}
 	}
 
@@ -566,7 +563,7 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 
 		// Iterate over any connectStrings and add to the main map
 		for name, description := range addedConnectStrings {
-			connectStrings[name] = description
+			p.connectStrings[name] = description
 		}
 	}
 
@@ -578,7 +575,7 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 
 	// If not init config, print the application connection table
 	if !p.cfg.IsInitConfig {
-		message.PrintConnectStringTable(connectStrings)
+		message.PrintConnectStringTable(p.connectStrings)
 	} else {
 		// otherwise, print the init config connection and passwords
 		utils.PrintCredentialTable(p.cfg.State, componentsToDeploy)
