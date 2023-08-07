@@ -71,35 +71,14 @@ func (suite *TestNetworkSuite) Test_1_IsOCIURL() {
 	}
 }
 
-func (suite *TestNetworkSuite) Test_2_DoHostnamesMatch() {
-	b, err := DoHostnamesMatch("https://zarf.dev", "https://zarf.dev")
-	suite.NoError(err)
-	suite.True(b)
-	b, err = DoHostnamesMatch("https://zarf.dev", "https://docs.zarf.dev")
-	suite.NoError(err)
-	suite.False(b)
-	b, err = DoHostnamesMatch("https://zarf.dev", "https://zarf.dev/docs")
-	suite.NoError(err)
-	suite.True(b)
-	b, err = DoHostnamesMatch("https://zarf.dev", "https://user:pass@zarf.dev")
-	suite.NoError(err)
-	suite.True(b)
-	b, err = DoHostnamesMatch("https://zarf.dev", "")
-	suite.NoError(err)
-	suite.False(b)
-	b, err = DoHostnamesMatch("", "https://zarf.dev")
-	suite.NoError(err)
-	suite.False(b)
-}
-
-func (suite *TestNetworkSuite) Test_3_Fetch() {
+func (suite *TestNetworkSuite) Test_2_Fetch() {
 	readme := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md"
 	body := Fetch(readme)
 	defer body.Close()
 	suite.NotNil(body)
 }
 
-func (suite *TestNetworkSuite) Test_4_parseChecksum() {
+func (suite *TestNetworkSuite) Test_3_parseChecksum() {
 	// zarf prepare sha256sum .adr-dir
 	adr := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/.adr-dir"
 	sum := "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3"
@@ -128,7 +107,7 @@ func (suite *TestNetworkSuite) Test_4_parseChecksum() {
 	suite.Equal(sum, checksum)
 }
 
-func (suite *TestNetworkSuite) Test_5_DownloadToFile() {
+func (suite *TestNetworkSuite) Test_4_DownloadToFile() {
 	readme := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md"
 	tmp := suite.T().TempDir()
 	path := filepath.Join(tmp, "README.md")
