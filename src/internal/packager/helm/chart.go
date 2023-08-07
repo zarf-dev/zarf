@@ -272,6 +272,7 @@ func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinn
 }
 
 // UpdateReleaseValues updates values for a given chart release
+// (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
 func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
 	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.ReleaseName)
 	defer spinner.Stop()
@@ -308,6 +309,9 @@ func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
 
 		// Set reuse values to only override the values we are explicitly given
 		client.ReuseValues = true
+
+		// Wait for the update operation to successfully complete
+		client.Wait = true
 
 		// Perform the loadedChart upgrade.
 		_, err = client.Run(h.ReleaseName, lastRelease.Chart, updatedValues)
@@ -469,7 +473,7 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
 		}
 
-		rawData, manifestModified, err := h.Cluster.Kube.HandleDeprecations(rawData, *kubeGitVersion)
+		rawData, manifestModified, _ := h.Cluster.Kube.HandleDeprecations(rawData, *kubeGitVersion)
 		manifestContent, err := yaml.Marshal(rawData)
 		if err != nil {
 			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %#v", err)

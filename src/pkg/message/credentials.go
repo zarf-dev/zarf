@@ -138,12 +138,6 @@ func PrintCredentialUpdates(oldState types.ZarfState, newState types.ZarfState, 
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("URL Address"), compareStrings(oA.Address, nA.Address, false))
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Username"), compareStrings(oA.PushUsername, nA.PushUsername, false))
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Token"), compareStrings(oA.PushToken, nA.PushToken, true))
-		case LoggingKey:
-			oL := oldState.LoggingSecret
-			nL := newState.LoggingSecret
-			Title("Logging", "the information used to interact with Zarf's Logging Stack")
-			pterm.Println()
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Logging Secret"), compareStrings(oL, nL, true))
 		}
 	}
 

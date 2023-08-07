@@ -79,13 +79,13 @@ var updateCredsCmd = &cobra.Command{
 	Aliases: []string{"uc"},
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey, message.LoggingKey}
+		validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey}
 		if len(args) == 0 {
 			args = validKeys
 		} else {
 			if !helpers.SliceContains(validKeys, args[0]) {
 				cmd.Help()
-				message.Fatalf(nil, "Invalid service key specified - valid keys are: %s, %s, %s, and %s", message.RegistryKey, message.GitKey, message.ArtifactKey, message.LoggingKey)
+				message.Fatalf(nil, "Invalid service key specified - valid keys are: %s, %s, and %s", message.RegistryKey, message.GitKey, message.ArtifactKey)
 			}
 		}
 
@@ -103,16 +103,12 @@ var updateCredsCmd = &cobra.Command{
 
 		hasRegistry := false
 		hasGitServer := false
-		hasLogging := false
 		for _, dc := range initPackage.DeployedComponents {
 			if dc.Name == "zarf-registry" {
 				hasRegistry = true
 			}
 			if dc.Name == "git-server" {
 				hasGitServer = true
-			}
-			if dc.Name == "logging" {
-				hasLogging = true
 			}
 		}
 
@@ -126,9 +122,6 @@ var updateCredsCmd = &cobra.Command{
 		}
 		if helpers.SliceContains(args, message.ArtifactKey) {
 			newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, updateCredsInitOpts.ArtifactServer)
-		}
-		if helpers.SliceContains(args, message.LoggingKey) {
-			newState.LoggingSecret = ""
 		}
 
 		message.PrintCredentialUpdates(oldState, newState, args)
@@ -174,9 +167,6 @@ var updateCredsCmd = &cobra.Command{
 					}
 					newState.ArtifactServer.PushToken = tokenResponse.Sha1
 				}
-			}
-			if helpers.SliceContains(args, message.LoggingKey) {
-				newState.LoggingSecret = utils.RandomString(config.ZarfGeneratedPasswordLen)
 			}
 
 			err = c.SaveZarfState(newState)
@@ -243,27 +233,6 @@ var updateCredsCmd = &cobra.Command{
 				err := g.CreateReadOnlyUser()
 				if err != nil {
 					message.Fatalf(nil, "Unable to create the new Gitea read only user")
-				}
-			}
-			if helpers.SliceContains(args, message.LoggingKey) && hasLogging {
-				loggingValues := map[string]interface{}{}
-				loggingGrafanaValues := map[string]interface{}{}
-				loggingGrafanaValues["adminPassword"] = newState.LoggingSecret
-				loggingValues["grafana"] = loggingGrafanaValues
-
-				h := helm.Helm{
-					Chart: types.ZarfChart{
-						Namespace: "zarf",
-					},
-					Cluster:     c,
-					ReleaseName: "zarf-loki-stack",
-					Cfg: &types.PackagerConfig{
-						State: newState,
-					},
-				}
-				err = h.UpdateReleaseValues(loggingValues)
-				if err != nil {
-					message.Fatalf(nil, "error updating the release values: %s", err.Error())
 				}
 			}
 		}
