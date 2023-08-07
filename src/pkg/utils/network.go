@@ -24,23 +24,9 @@ import (
 
 // Nonstandard URL schemes or prefixes
 const (
-	OCIURLScheme  = "oci"
-	OCIURLPrefix  = "oci://"
-	SGETURLScheme = "sget"
 	SGETURLPrefix = "sget://"
+	SGETURLScheme = "sget"
 )
-
-// IsURL is a helper function to check if a URL is valid.
-func IsURL(source string) bool {
-	parsedURL, err := url.Parse(source)
-	return err == nil && parsedURL.Scheme != "" && parsedURL.Host != ""
-}
-
-// IsOCIURL returns true if the given URL is an OCI URL.
-func IsOCIURL(source string) bool {
-	parsedURL, err := url.Parse(source)
-	return err == nil && parsedURL.Scheme == "oci"
-}
 
 // Fetch fetches the response body from a given URL.
 func Fetch(url string) io.ReadCloser {

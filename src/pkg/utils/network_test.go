@@ -17,68 +17,20 @@ import (
 type TestNetworkSuite struct {
 	suite.Suite
 	*require.Assertions
-	urls testURLs
-}
-
-type testURLs struct {
-	good  []string
-	oci   []string
-	paths []string
 }
 
 func (suite *TestNetworkSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
-	suite.urls.good = []string{
-		"https://zarf.dev",
-		"https://docs.zarf.dev",
-		"https://zarf.dev/docs",
-		"https://defenseunicorns.com",
-		"https://google.com",
-		"https://user:pass@hello.world?foo=bar",
-		"https://zarf.dev?foo=bar&bar=baz",
-	}
-	suite.urls.oci = []string{
-		"oci://zarf.dev",
-		"oci://defenseunicorns.com",
-		"oci://google.com",
-	}
-	suite.urls.paths = []string{
-		"./hello.txt",
-		"../hello.txt",
-		"/tmp/hello.txt",
-	}
 }
 
-func (suite *TestNetworkSuite) Test_0_IsURL() {
-	all := append(suite.urls.good, suite.urls.oci...)
-	for _, url := range all {
-		suite.True(IsURL(url), "Expected %s to be a valid URL", url)
-	}
-	for _, url := range suite.urls.paths {
-		suite.False(IsURL(url), "Expected %s to be an invalid URL", url)
-	}
-}
-
-func (suite *TestNetworkSuite) Test_1_IsOCIURL() {
-	for _, url := range suite.urls.good {
-		suite.False(IsOCIURL(url), "Expected %s to be an invalid OCI URL", url)
-	}
-	for _, url := range suite.urls.oci {
-		suite.True(IsOCIURL(url), "Expected %s to be a valid OCI URL", url)
-	}
-	for _, url := range suite.urls.paths {
-		suite.False(IsOCIURL(url), "Expected %s to be an invalid OCI URL", url)
-	}
-}
-
-func (suite *TestNetworkSuite) Test_2_Fetch() {
+func (suite *TestNetworkSuite) Test_0_Fetch() {
 	readme := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md"
 	body := Fetch(readme)
 	defer body.Close()
 	suite.NotNil(body)
 }
 
-func (suite *TestNetworkSuite) Test_3_parseChecksum() {
+func (suite *TestNetworkSuite) Test_1_parseChecksum() {
 	// zarf prepare sha256sum .adr-dir
 	adr := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/.adr-dir"
 	sum := "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3"
@@ -107,7 +59,7 @@ func (suite *TestNetworkSuite) Test_3_parseChecksum() {
 	suite.Equal(sum, checksum)
 }
 
-func (suite *TestNetworkSuite) Test_4_DownloadToFile() {
+func (suite *TestNetworkSuite) Test_2_DownloadToFile() {
 	readme := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md"
 	tmp := suite.T().TempDir()
 	path := filepath.Join(tmp, "README.md")
