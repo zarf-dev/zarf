@@ -1,9 +1,8 @@
 package network
 
 import (
+	"fmt"
 	"net/url"
-
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
 )
 
 // DoHostnamesMatch returns a boolean indicating if the hostname of two different URLs are the same.

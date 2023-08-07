@@ -20,24 +20,23 @@ func (suite *TestNetworkSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 }
 func (suite *TestNetworkSuite) Test_0_DoHostnamesMatch() {
-	dummyLogger := func(content string, args ...any) {}
 
-	b, err := DoHostnamesMatch(dummyLogger, "https://zarf.dev", "https://zarf.dev")
+	b, err := DoHostnamesMatch("https://zarf.dev", "https://zarf.dev")
 	suite.NoError(err)
 	suite.True(b)
-	b, err = DoHostnamesMatch(dummyLogger, "https://zarf.dev", "https://docs.zarf.dev")
+	b, err = DoHostnamesMatch("https://zarf.dev", "https://docs.zarf.dev")
 	suite.NoError(err)
 	suite.False(b)
-	b, err = DoHostnamesMatch(dummyLogger, "https://zarf.dev", "https://zarf.dev/docs")
+	b, err = DoHostnamesMatch("https://zarf.dev", "https://zarf.dev/docs")
 	suite.NoError(err)
 	suite.True(b)
-	b, err = DoHostnamesMatch(dummyLogger, "https://zarf.dev", "https://user:pass@zarf.dev")
+	b, err = DoHostnamesMatch("https://zarf.dev", "https://user:pass@zarf.dev")
 	suite.NoError(err)
 	suite.True(b)
-	b, err = DoHostnamesMatch(dummyLogger, "https://zarf.dev", "")
+	b, err = DoHostnamesMatch("https://zarf.dev", "")
 	suite.NoError(err)
 	suite.False(b)
-	b, err = DoHostnamesMatch(dummyLogger, "", "https://zarf.dev")
+	b, err = DoHostnamesMatch("", "https://zarf.dev")
 	suite.NoError(err)
 	suite.False(b)
 }
