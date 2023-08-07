@@ -50,8 +50,7 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 	o := &OrasRemote{}
 	o.WithContext(context.TODO())
 
-	err = o.WithRepository(ref)
-	if err != nil {
+	if err := o.withRepository(ref); err != nil {
 		return nil, err
 	}
 
@@ -63,11 +62,9 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 	return o, nil
 }
 
-// WithRepository sets the repository for the remote as well as the auth client.
-func (o *OrasRemote) WithRepository(ref registry.Reference) error {
-	if o.root != nil {
-		o.root = nil
-	}
+// withRepository sets the repository for the remote as well as the auth client.
+func (o *OrasRemote) withRepository(ref registry.Reference) error {
+	o.root = nil
 
 	// patch docker.io to registry-1.docker.io
 	// this allows end users to use docker.io as an alias for registry-1.docker.io
