@@ -10,7 +10,7 @@
   "scripts": {
     "build": "hugo",
     "build:production": "npm run _hugo -- --minify",
-    "clean": "rm -Rf public",
+    "clean": "rm -Rf public && rm -Rf resources && hugo mod clean ",
     "link-check": "npm run build && linkinator ./public --config .linkinator.config.json ",
     "lint": "markdownlint ./content/**/*.md --ignore node_modules",
     "lint:fix": "markdownlint -f ./content/**/*.md ./docs/**/*.md --ignore node_modules",
@@ -22,7 +22,7 @@
   "devDependencies": {
     "@defenseunicorns/hugodocs": "github:defenseunicorns/build-hugo-docs",
     "autoprefixer": "^10.4.14",
-    "hugo-extended": "0.115.2",
+    "hugo-extended": "0.115.4",
     "linkinator": "^5.0.1",
     "markdownlint-cli": "0.35.0",
     "postcss-cli": "^10.1.0",
