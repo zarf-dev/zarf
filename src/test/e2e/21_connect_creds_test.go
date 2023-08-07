@@ -108,16 +108,16 @@ func connectToZarfServices(t *testing.T) {
 	defer tunnelGit.Close()
 
 	// Make sure Gitea comes up cleanly
-	gitPushUrl := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitPushPassword, tunnelGit.Endpoint())
-	respGit, err := http.Get(gitPushUrl)
+	gitPushURL := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitPushPassword, tunnelGit.Endpoint())
+	respGit, err := http.Get(gitPushURL)
 	require.NoError(t, err)
 	require.Equal(t, 200, respGit.StatusCode)
-	gitPullUrl := fmt.Sprintf("http://zarf-git-read-user:%s@%s/api/v1/user", gitPullPassword, tunnelGit.Endpoint())
-	respGit, err = http.Get(gitPullUrl)
+	gitPullURL := fmt.Sprintf("http://zarf-git-read-user:%s@%s/api/v1/user", gitPullPassword, tunnelGit.Endpoint())
+	respGit, err = http.Get(gitPullURL)
 	require.NoError(t, err)
 	require.Equal(t, 200, respGit.StatusCode)
-	gitArtifactUrl := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitArtifactToken, tunnelGit.Endpoint())
-	respGit, err = http.Get(gitArtifactUrl)
+	gitArtifactURL := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitArtifactToken, tunnelGit.Endpoint())
+	respGit, err = http.Get(gitArtifactURL)
 	require.NoError(t, err)
 	require.Equal(t, 200, respGit.StatusCode)
 

@@ -220,6 +220,7 @@ func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 	return nil
 }
 
+// MergeZarfState merges init options for provided services into the provided state to create a new state struct
 func (c *Cluster) MergeZarfState(oldState types.ZarfState, initOptions types.ZarfInitOptions, services []string) types.ZarfState {
 	newState := oldState
 

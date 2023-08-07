@@ -124,7 +124,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 	if parsed.Scheme == SGETURLScheme {
 		err = Sget(context.TODO(), src, cosignKeyPath, file)
 		if err != nil {
-			return fmt.Errorf("unable to download file with sget: %s: %s", src, err.Error())
+			return fmt.Errorf("unable to download file with sget: %s: %w", src, err)
 		}
 		if err != nil {
 			return err

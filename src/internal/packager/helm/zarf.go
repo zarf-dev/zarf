@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
 func (h *Helm) UpdateZarfRegistryValues() error {
 	pushUser, err := utils.GetHtpasswdString(h.Cfg.State.RegistryInfo.PushUsername, h.Cfg.State.RegistryInfo.PushPassword)
 	if err != nil {
@@ -42,6 +43,7 @@ func (h *Helm) UpdateZarfRegistryValues() error {
 	return nil
 }
 
+// UpdateZarfGiteaValues updates the Zarf git server deployment with the new state values
 func (h *Helm) UpdateZarfGiteaValues() error {
 	giteaValues := map[string]interface{}{
 		"gitea": map[string]interface{}{
