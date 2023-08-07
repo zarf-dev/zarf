@@ -95,34 +95,8 @@ var updateCredsCmd = &cobra.Command{
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, lang.ErrLoadState)
 		}
-		initPackage, err := c.GetDeployedPackage("init")
-		if err != nil || oldState.Distro == "" {
-			// If no distro the zarf secret did not load properly
-			message.Fatalf(nil, "Unable to load init package information from the cluster")
-		}
 
-		hasRegistry := false
-		hasGitServer := false
-		for _, dc := range initPackage.DeployedComponents {
-			if dc.Name == "zarf-registry" {
-				hasRegistry = true
-			}
-			if dc.Name == "git-server" {
-				hasGitServer = true
-			}
-		}
-
-		newState := oldState
-
-		if helpers.SliceContains(args, message.RegistryKey) {
-			newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, updateCredsInitOpts.RegistryInfo)
-		}
-		if helpers.SliceContains(args, message.GitKey) {
-			newState.GitServer = helpers.MergeNonZero(newState.GitServer, updateCredsInitOpts.GitServer)
-		}
-		if helpers.SliceContains(args, message.ArtifactKey) {
-			newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, updateCredsInitOpts.ArtifactServer)
-		}
+		newState := c.MergeZarfState(oldState, updateCredsInitOpts, args)
 
 		message.PrintCredentialUpdates(oldState, newState, args)
 
@@ -140,99 +114,50 @@ var updateCredsCmd = &cobra.Command{
 		}
 
 		if confirm {
-			if helpers.SliceContains(args, message.RegistryKey) {
-				if newState.RegistryInfo.PushPassword == oldState.RegistryInfo.PushPassword && hasRegistry {
-					newState.RegistryInfo.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
-				}
-				if newState.RegistryInfo.PullPassword == oldState.RegistryInfo.PullPassword && hasRegistry {
-					newState.RegistryInfo.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
-				}
-				// c.UpdateZarfManagedImageSecrets(newState)
-			}
-			if helpers.SliceContains(args, message.GitKey) {
-				if newState.GitServer.PushPassword == oldState.GitServer.PushPassword && hasGitServer {
-					newState.GitServer.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
-				}
-				if newState.GitServer.PullPassword == oldState.GitServer.PullPassword && hasGitServer {
-					newState.GitServer.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
-				}
-				// c.UpdateZarfManagedGitSecrets(newState)
-			}
-			if helpers.SliceContains(args, message.ArtifactKey) {
-				if newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && hasGitServer {
-					g := git.New(oldState.GitServer)
-					tokenResponse, err := g.CreatePackageRegistryToken()
-					if err != nil {
-						message.Fatalf(nil, "Unable to create the new Gitea artifact token: %s", err.Error())
-					}
-					newState.ArtifactServer.PushToken = tokenResponse.Sha1
-				}
-			}
-
+			// Save Zarf State
 			err = c.SaveZarfState(newState)
 			if err != nil {
-				message.Fatalf(nil, lang.ErrSaveState)
+				message.Fatalf(err, lang.ErrSaveState)
 			}
 
-			if helpers.SliceContains(args, message.RegistryKey) && hasRegistry {
-				pushUser, err := utils.GetHtpasswdString(newState.RegistryInfo.PushUsername, newState.RegistryInfo.PushPassword)
-				if err != nil {
-					message.Fatalf(nil, "error generating htpasswd string: %s", err.Error())
-				}
+			// Update registry and git pull secrets
+			if helpers.SliceContains(args, message.RegistryKey) {
+				c.UpdateZarfManagedImageSecrets(newState)
+			}
+			if helpers.SliceContains(args, message.GitKey) {
+				c.UpdateZarfManagedGitSecrets(newState)
+			}
 
-				pullUser, err := utils.GetHtpasswdString(newState.RegistryInfo.PullUsername, newState.RegistryInfo.PullPassword)
-				if err != nil {
-					message.Fatalf(nil, "error generating htpasswd string: %s", err.Error())
-				}
+			// Update artifact token (if internal)
+			if helpers.SliceContains(args, message.ArtifactKey) &&
+				newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && newState.GitServer.InternalServer {
 
-				registryValues := map[string]interface{}{}
-				registrySecrets := map[string]interface{}{}
-				registrySecrets["htpasswd"] = fmt.Sprintf("%s\n%s", pushUser, pullUser)
-				registryValues["secrets"] = registrySecrets
-
-				h := helm.Helm{
-					Chart: types.ZarfChart{
-						Namespace: "zarf",
-					},
-					Cluster:     c,
-					ReleaseName: "zarf-docker-registry",
-					Cfg: &types.PackagerConfig{
-						State: newState,
-					},
-				}
-				err = h.UpdateReleaseValues(registryValues)
+				g := git.New(oldState.GitServer)
+				tokenResponse, err := g.CreatePackageRegistryToken()
 				if err != nil {
-					message.Fatalf(nil, "error updating the release values: %s", err.Error())
+					message.Fatalf(nil, "Unable to create the new Gitea artifact token: %s", err.Error())
+				}
+				newState.ArtifactServer.PushToken = tokenResponse.Sha1
+			}
+
+			// Update Zarf 'init' component Helm releases if present
+			h := helm.Helm{
+				Cluster: c,
+				Cfg: &types.PackagerConfig{
+					State: newState,
+				},
+			}
+
+			if helpers.SliceContains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
+				err = h.UpdateZarfRegistryValues()
+				if err != nil {
+					message.Fatalf(err, "Unable to update Zarf registry: %s", err.Error())
 				}
 			}
-			if helpers.SliceContains(args, message.GitKey) && hasGitServer {
-				giteaValues := map[string]interface{}{}
-				giteaGiteaValues := map[string]interface{}{}
-				giteaAdminValues := map[string]interface{}{}
-				giteaAdminValues["username"] = newState.GitServer.PushUsername
-				giteaAdminValues["password"] = newState.GitServer.PushPassword
-				giteaGiteaValues["admin"] = giteaAdminValues
-				giteaValues["gitea"] = giteaGiteaValues
-
-				h := helm.Helm{
-					Chart: types.ZarfChart{
-						Namespace: "zarf",
-					},
-					Cluster:     c,
-					ReleaseName: "zarf-gitea",
-					Cfg: &types.PackagerConfig{
-						State: newState,
-					},
-				}
-				err = h.UpdateReleaseValues(giteaValues)
+			if helpers.SliceContains(args, message.GitKey) && newState.GitServer.InternalServer {
+				err = h.UpdateZarfGiteaValues()
 				if err != nil {
-					message.Fatalf(nil, "error updating the release values: %s", err.Error())
-				}
-
-				g := git.New(newState.GitServer)
-				err := g.CreateReadOnlyUser()
-				if err != nil {
-					message.Fatalf(nil, "Unable to create the new Gitea read only user")
+					message.Fatalf(err, "Unable to update Zarf git server: %s", err.Error())
 				}
 			}
 		}

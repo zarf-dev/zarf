@@ -180,32 +180,6 @@ func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
 	return state, nil
 }
 
-func (c *Cluster) sanitizeZarfState(state types.ZarfState) types.ZarfState {
-	sanitizedState := state
-
-	// Overwrite the AgentTLS information
-	sanitizedState.AgentTLS.CA = []byte("**sanitized**")
-	sanitizedState.AgentTLS.Cert = []byte("**sanitized**")
-	sanitizedState.AgentTLS.Key = []byte("**sanitized**")
-
-	// Overwrite the GitServer passwords
-	sanitizedState.GitServer.PushPassword = "**sanitized**"
-	sanitizedState.GitServer.PullPassword = "**sanitized**"
-
-	// Overwrite the RegistryInfo passwords
-	sanitizedState.RegistryInfo.PushPassword = "**sanitized**"
-	sanitizedState.RegistryInfo.PullPassword = "**sanitized**"
-	sanitizedState.RegistryInfo.Secret = "**sanitized**"
-
-	// Overwrite the ArtifactServer secret
-	sanitizedState.ArtifactServer.PushToken = "**sanitized**"
-
-	// Overwrite the Logging secret
-	sanitizedState.LoggingSecret = "**sanitized**"
-
-	return sanitizedState
-}
-
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
 func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 	message.Debugf("k8s.SaveZarfState()")
@@ -244,6 +218,60 @@ func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 	}
 
 	return nil
+}
+
+func (c *Cluster) MergeZarfState(oldState types.ZarfState, initOptions types.ZarfInitOptions, services []string) types.ZarfState {
+	newState := oldState
+
+	if helpers.SliceContains(services, message.RegistryKey) {
+		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, initOptions.RegistryInfo)
+		if newState.RegistryInfo.PushPassword == oldState.RegistryInfo.PushPassword && oldState.RegistryInfo.InternalRegistry {
+			newState.RegistryInfo.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+		}
+		if newState.RegistryInfo.PullPassword == oldState.RegistryInfo.PullPassword && oldState.RegistryInfo.InternalRegistry {
+			newState.RegistryInfo.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+		}
+	}
+	if helpers.SliceContains(services, message.GitKey) {
+		newState.GitServer = helpers.MergeNonZero(newState.GitServer, initOptions.GitServer)
+		if newState.GitServer.PushPassword == oldState.GitServer.PushPassword && oldState.GitServer.InternalServer {
+			newState.GitServer.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+		}
+		if newState.GitServer.PullPassword == oldState.GitServer.PullPassword && oldState.GitServer.InternalServer {
+			newState.GitServer.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+		}
+	}
+	if helpers.SliceContains(services, message.ArtifactKey) {
+		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, initOptions.ArtifactServer)
+	}
+
+	return newState
+}
+
+func (c *Cluster) sanitizeZarfState(state types.ZarfState) types.ZarfState {
+	sanitizedState := state
+
+	// Overwrite the AgentTLS information
+	sanitizedState.AgentTLS.CA = []byte("**sanitized**")
+	sanitizedState.AgentTLS.Cert = []byte("**sanitized**")
+	sanitizedState.AgentTLS.Key = []byte("**sanitized**")
+
+	// Overwrite the GitServer passwords
+	sanitizedState.GitServer.PushPassword = "**sanitized**"
+	sanitizedState.GitServer.PullPassword = "**sanitized**"
+
+	// Overwrite the RegistryInfo passwords
+	sanitizedState.RegistryInfo.PushPassword = "**sanitized**"
+	sanitizedState.RegistryInfo.PullPassword = "**sanitized**"
+	sanitizedState.RegistryInfo.Secret = "**sanitized**"
+
+	// Overwrite the ArtifactServer secret
+	sanitizedState.ArtifactServer.PushToken = "**sanitized**"
+
+	// Overwrite the Logging secret
+	sanitizedState.LoggingSecret = "**sanitized**"
+
+	return sanitizedState
 }
 
 func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
