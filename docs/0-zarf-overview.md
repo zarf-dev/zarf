@@ -161,7 +161,7 @@ In the more complex use case, your package consists of updates for many apps/sys
 3. `$` Enter the commands into your terminal.
 
 <Tabs>
-<TabItem value="Linux" label="Linux">
+<TabItem value="Linux">
 
 :::info
 
@@ -199,7 +199,7 @@ Zarf has no prerequisites on Linux. However, for this example, we will use Docke
 :::
 
 </TabItem>
-<TabItem value="macOS" label="macOS">
+<TabItem value="macOS">
 
 :::info
 
@@ -231,7 +231,7 @@ zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
 ```
 
 </TabItem>
-<TabItem value="Windows" label="Windows">
+<TabItem value="Windows">
 
 ## Windows Commands
 
