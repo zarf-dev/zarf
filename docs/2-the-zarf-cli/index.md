@@ -18,7 +18,7 @@ You can get the Zarf CLI on your machine in a few different ways. You can use th
 
 <!-- NOTE: The empty line after the '<TabItem ...>' lines are important for the rendering... -->
 <Tabs>
-<TabItem value="macOS" label="macOS" default>
+<TabItem value="macOS">
 
 ```bash
 brew tap defenseunicorns/tap
@@ -27,7 +27,7 @@ brew install zarf
 
 </TabItem>
 
-<TabItem value="Linux" label="Linux">
+<TabItem value="Linux">
 
 ```bash
 brew tap defenseunicorns/tap
@@ -71,7 +71,7 @@ Available Commands:
 </details>
 
 <Tabs>
-<TabItem value="homebrew" label="Installed via Homebrew" default>
+<TabItem value="Installed with Homebrew">
 
 ```bash
 zarf --help
@@ -79,9 +79,9 @@ zarf --help
 
 </TabItem>
 
-<TabItem value="custom-install" label="Downloaded from Github">
+<TabItem value="Downloaded from Github">
 
-- If you're not sure where the file was downloaded to, a good default place to look is `~/Downloads`.
+- If you're not sure where the file was downloaded, a good default place to look is `~/Downloads`.
 - While we only say `zarf` for this example command, the name of the binary is the name of the file you downloaded, which will likely have a different name.
 
 ```bash
@@ -91,7 +91,7 @@ chmod +x ~/Downloads/zarf   # Make the binary executable
 
 </TabItem>
 
-<TabItem value="manually-built" label="Manually Built">
+<TabItem value="Manually Built">
 
 - While we only say `zarf` for this example command, depending on your system, you might have to use a different name for the binary like `zarf-mac-intel` or `zarf-mac-apple`.
 
