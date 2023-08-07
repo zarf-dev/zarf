@@ -63,7 +63,7 @@ func TestZarfInit(t *testing.T) {
 	if err == nil {
 		oldStateJSON, err := base64.StdEncoding.DecodeString(base64State)
 		require.NoError(t, err)
-		err = json.Unmarshal(oldStateJSON, &oldState)
+		_ = json.Unmarshal(oldStateJSON, &oldState)
 	}
 
 	// run `zarf init`
