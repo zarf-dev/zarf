@@ -6,6 +6,7 @@ package test
 
 import (
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -80,7 +81,24 @@ func connectToZarfServices(t *testing.T) {
 	// We assert greater than or equal to since the base init has 12 images
 	// HOWEVER during an upgrade we could have mismatched versions/names resulting in more images
 	require.GreaterOrEqual(t, len(registryList), 7)
+	require.Contains(t, stdOut, "defenseunicorns/zarf/agent")
 	require.Contains(t, stdOut, "gitea/gitea")
+	require.Contains(t, stdOut, "grafana/grafana")
+	require.Contains(t, stdOut, "grafana/loki")
+	require.Contains(t, stdOut, "grafana/promtail")
+	require.Contains(t, stdOut, "kiwigrid/k8s-sidecar")
+	require.Contains(t, stdOut, "library/registry")
+
+	// Get the git credentials
+	stdOut, stdErr, err = e2e.Zarf("tools", "get-creds", "git")
+	require.NoError(t, err, stdOut, stdErr)
+	gitPushPassword := strings.TrimSpace(stdOut)
+	stdOut, stdErr, err = e2e.Zarf("tools", "get-creds", "git-readonly")
+	require.NoError(t, err, stdOut, stdErr)
+	gitPullPassword := strings.TrimSpace(stdOut)
+	stdOut, stdErr, err = e2e.Zarf("tools", "get-creds", "artifact")
+	require.NoError(t, err, stdOut, stdErr)
+	gitArtifactToken := strings.TrimSpace(stdOut)
 
 	// Connect to Gitea
 	tunnelGit, err := cluster.NewZarfTunnel()
@@ -90,7 +108,16 @@ func connectToZarfServices(t *testing.T) {
 	defer tunnelGit.Close()
 
 	// Make sure Gitea comes up cleanly
-	respGit, err := http.Get(tunnelGit.HTTPEndpoint())
+	gitPushUrl := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitPushPassword, tunnelGit.Endpoint())
+	respGit, err := http.Get(gitPushUrl)
+	require.NoError(t, err)
+	require.Equal(t, 200, respGit.StatusCode)
+	gitPullUrl := fmt.Sprintf("http://zarf-git-read-user:%s@%s/api/v1/user", gitPullPassword, tunnelGit.Endpoint())
+	respGit, err = http.Get(gitPullUrl)
+	require.NoError(t, err)
+	require.Equal(t, 200, respGit.StatusCode)
+	gitArtifactUrl := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitArtifactToken, tunnelGit.Endpoint())
+	respGit, err = http.Get(gitArtifactUrl)
 	require.NoError(t, err)
 	require.Equal(t, 200, respGit.StatusCode)
 
