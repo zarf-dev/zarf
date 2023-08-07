@@ -130,7 +130,7 @@ var updateCredsCmd = &cobra.Command{
 
 			// Update artifact token (if internal)
 			if helpers.SliceContains(args, message.ArtifactKey) &&
-				newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && newState.GitServer.InternalServer {
+				newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && newState.ArtifactServer.InternalServer {
 
 				g := git.New(oldState.GitServer)
 				tokenResponse, err := g.CreatePackageRegistryToken()
