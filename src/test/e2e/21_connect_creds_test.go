@@ -6,7 +6,7 @@ package test
 
 import (
 	"crypto/tls"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -19,10 +19,59 @@ type RegistryResponse struct {
 	Repositories []string `json:"repositories"`
 }
 
-func TestConnect(t *testing.T) {
+func TestConnectAndCreds(t *testing.T) {
 	t.Log("E2E: Connect")
 	e2e.SetupWithCluster(t)
 
+	connectToZarfServices(t)
+
+	stdOut, stdErr, err := e2e.Zarf("tools", "update-creds", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	connectToZarfServices(t)
+
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
+
+func TestMetrics(t *testing.T) {
+	t.Log("E2E: Emits metrics")
+	e2e.SetupWithCluster(t)
+
+	tunnel, err := cluster.NewTunnel("zarf", "svc", "agent-hook", 8888, 8443)
+
+	require.NoError(t, err)
+	err = tunnel.Connect("", false)
+	require.NoError(t, err)
+	defer tunnel.Close()
+
+	// Skip certificate verification
+	// this is an https endpoint being accessed through port-forwarding
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	client := &http.Client{Transport: tr}
+	httpsEndpoint := strings.ReplaceAll(tunnel.HTTPEndpoint(), "http", "https")
+	resp, err := client.Get(httpsEndpoint + "/metrics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	desiredString := "go_gc_duration_seconds_count"
+	require.Equal(t, true, strings.Contains(string(body), desiredString))
+	require.NoError(t, err, resp)
+	require.Equal(t, 200, resp.StatusCode)
+}
+
+func connectToZarfServices(t *testing.T) {
 	// Make the Registry contains the images we expect
 	stdOut, stdErr, err := e2e.Zarf("tools", "registry", "catalog")
 	require.NoError(t, err, stdOut, stdErr)
@@ -56,45 +105,4 @@ func TestConnect(t *testing.T) {
 	respLog, err := http.Get(tunnelLog.HTTPEndpoint())
 	require.NoError(t, err)
 	require.Equal(t, 200, respLog.StatusCode)
-
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-}
-
-func TestMetrics(t *testing.T) {
-	t.Log("E2E: Emits metrics")
-	e2e.SetupWithCluster(t)
-
-	tunnel, err := cluster.NewTunnel("zarf", "svc", "agent-hook", 8888, 8443)
-
-	require.NoError(t, err)
-	err = tunnel.Connect("", false)
-	require.NoError(t, err)
-	defer tunnel.Close()
-
-	// Skip certificate verification
-	// this is an https endpoint being accessed through port-forwarding
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
-	client := &http.Client{Transport: tr}
-	httpsEndpoint := strings.ReplaceAll(tunnel.HTTPEndpoint(), "http", "https")
-	resp, err := client.Get(httpsEndpoint + "/metrics")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	// Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	desiredString := "go_gc_duration_seconds_count"
-	require.Equal(t, true, strings.Contains(string(body), desiredString))
-	require.NoError(t, err, resp)
-	require.Equal(t, 200, resp.StatusCode)
-
 }

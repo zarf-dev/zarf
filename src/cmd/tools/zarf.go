@@ -133,12 +133,17 @@ var updateCredsCmd = &cobra.Command{
 
 		message.PrintCredentialUpdates(oldState, newState, args)
 
-		confirm := false
-		prompt := &survey.Confirm{
-			Message: "Continue with these changes?",
-		}
-		if err := survey.AskOne(prompt, &confirm); err != nil {
-			message.Fatalf(nil, lang.ErrConfirmCancel, err)
+		confirm := config.CommonOptions.Confirm
+
+		if confirm {
+			message.Note("Confirm flag specified, continuing without prompting.")
+		} else {
+			prompt := &survey.Confirm{
+				Message: "Continue with these changes?",
+			}
+			if err := survey.AskOne(prompt, &confirm); err != nil {
+				message.Fatalf(nil, lang.ErrConfirmCancel, err)
+			}
 		}
 
 		if confirm {
@@ -391,6 +396,9 @@ func init() {
 	toolsCmd.AddCommand(getCredsCmd)
 
 	toolsCmd.AddCommand(updateCredsCmd)
+
+	// Always require confirm flag (no viper)
+	updateCredsCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdToolsUpdateCredsConfirm)
 
 	// Flags for using an external Git server
 	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.Address, "git-url", v.GetString(common.VInitGitURL), lang.CmdInitFlagGitURL)

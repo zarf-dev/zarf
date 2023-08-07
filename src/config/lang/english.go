@@ -480,6 +480,7 @@ const (
 
 	# NOTE: Not specifying --*-pull-password/username when using --*-push-password/username will use the push user for pulling as well.
 `
+	CmdToolsUpdateCredsConfirm = "Confirm updating credentials without prompting"
 
 	// zarf version
 	CmdVersionShort = "Shows the version of the running Zarf binary"

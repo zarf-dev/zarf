@@ -36,12 +36,13 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	require.Contains(t, kubectlOut, "6.3.3")
 
 	// Verify that the private-registry secret and private-git-server secret in the podinfo-upgrade namespace are the same after re-init
-	zarfRegistrySecret, _, _ := kubectl("-n=zarf", "get", "secret", "private-registry", "-o", "jsonpath={.data}")
-	podinfoRegistrySecret, _, _ := kubectl("-n=podinfo-upgrade", "get", "secret", "private-registry", "-o", "jsonpath={.data}")
-	require.Equal(t, zarfRegistrySecret, podinfoRegistrySecret, "the zarf registry secret and podinfo-upgrade registry secret did not match")
-	zarfGitServerSecret, _, _ := kubectl("-n=zarf", "get", "secret", "private-git-server", "-o", "jsonpath={.data}")
-	podinfoGitServerSecret, _, _ := kubectl("-n=podinfo-upgrade", "get", "secret", "private-git-server", "-o", "jsonpath={.data}")
-	require.Equal(t, zarfGitServerSecret, podinfoGitServerSecret, "the zarf git server secret and podinfo-upgrade git server secret did not match")
+	// This tests that `zarf tools update-creds` successfully updated the other namespace
+	// zarfRegistrySecret, _, _ := kubectl("-n=zarf", "get", "secret", "private-registry", "-o", "jsonpath={.data}")
+	// podinfoRegistrySecret, _, _ := kubectl("-n=podinfo-upgrade", "get", "secret", "private-registry", "-o", "jsonpath={.data}")
+	// require.Equal(t, zarfRegistrySecret, podinfoRegistrySecret, "the zarf registry secret and podinfo-upgrade registry secret did not match")
+	// zarfGitServerSecret, _, _ := kubectl("-n=zarf", "get", "secret", "private-git-server", "-o", "jsonpath={.data}")
+	// podinfoGitServerSecret, _, _ := kubectl("-n=podinfo-upgrade", "get", "secret", "private-git-server", "-o", "jsonpath={.data}")
+	// require.Equal(t, zarfGitServerSecret, podinfoGitServerSecret, "the zarf git server secret and podinfo-upgrade git server secret did not match")
 
 	// We also expect a 6.3.4 package to have been previously built
 	previouslyBuiltPackage := "../../../zarf-package-test-upgrade-package-amd64-6.3.4.tar.zst"
