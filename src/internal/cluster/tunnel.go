@@ -223,7 +223,7 @@ func (tunnel *Tunnel) AddSpinner(spinner *message.Spinner) {
 
 // Connect will establish a tunnel to the specified target.
 func (tunnel *Tunnel) Connect(target string, blocking bool) error {
-	message.Debugf("tunnel.Connect(%s, %#v)", target, blocking)
+	message.Debugf("tunnel.Connect(%s, %t)", target, blocking)
 
 	switch strings.ToUpper(target) {
 	case ZarfRegistry:
