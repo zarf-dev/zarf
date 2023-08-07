@@ -85,7 +85,7 @@ var updateCredsCmd = &cobra.Command{
 		} else {
 			if !helpers.SliceContains(validKeys, args[0]) {
 				cmd.Help()
-				message.Fatalf(nil, "Invalid service key specified - valid keys are: %s, %s, and %s", message.RegistryKey, message.GitKey, message.ArtifactKey)
+				message.Fatalf(nil, lang.CmdToolsUpdateCredsInvalidServiceErr, message.RegistryKey, message.GitKey, message.ArtifactKey)
 			}
 		}
 
@@ -103,10 +103,10 @@ var updateCredsCmd = &cobra.Command{
 		confirm := config.CommonOptions.Confirm
 
 		if confirm {
-			message.Note("Confirm flag specified, continuing without prompting.")
+			message.Note(lang.CmdToolsUpdateCredsConfirmProvided)
 		} else {
 			prompt := &survey.Confirm{
-				Message: "Continue with these changes?",
+				Message: lang.CmdToolsUpdateCredsConfirmContinue,
 			}
 			if err := survey.AskOne(prompt, &confirm); err != nil {
 				message.Fatalf(nil, lang.ErrConfirmCancel, err)
@@ -127,7 +127,7 @@ var updateCredsCmd = &cobra.Command{
 				g := git.New(oldState.GitServer)
 				tokenResponse, err := g.CreatePackageRegistryToken()
 				if err != nil {
-					message.Fatalf(nil, "Unable to create the new Gitea artifact token: %s", err.Error())
+					message.Fatalf(nil, lang.CmdToolsUpdateCredsUnableCreateToken, err.Error())
 				}
 				newState.ArtifactServer.PushToken = tokenResponse.Sha1
 			}
@@ -149,13 +149,13 @@ var updateCredsCmd = &cobra.Command{
 			if helpers.SliceContains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
 				err = h.UpdateZarfRegistryValues()
 				if err != nil {
-					message.Fatalf(err, "Unable to update Zarf registry: %s", err.Error())
+					message.Fatalf(err, lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
 				}
 			}
 			if helpers.SliceContains(args, message.GitKey) && newState.GitServer.InternalServer {
 				err = h.UpdateZarfGiteaValues()
 				if err != nil {
-					message.Fatalf(err, "Unable to update Zarf git server: %s", err.Error())
+					message.Fatalf(err, lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())
 				}
 			}
 		}
@@ -290,7 +290,7 @@ func init() {
 	toolsCmd.AddCommand(updateCredsCmd)
 
 	// Always require confirm flag (no viper)
-	updateCredsCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdToolsUpdateCredsConfirm)
+	updateCredsCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdToolsUpdateCredsConfirmFlag)
 
 	// Flags for using an external Git server
 	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.Address, "git-url", v.GetString(common.VInitGitURL), lang.CmdInitFlagGitURL)

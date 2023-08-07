@@ -480,7 +480,13 @@ const (
 
 	# NOTE: Not specifying --*-pull-password/username when using --*-push-password/username will use the push user for pulling as well.
 `
-	CmdToolsUpdateCredsConfirm = "Confirm updating credentials without prompting"
+	CmdToolsUpdateCredsConfirmFlag          = "Confirm updating credentials without prompting"
+	CmdToolsUpdateCredsConfirmProvided      = "Confirm flag specified, continuing without prompting."
+	CmdToolsUpdateCredsConfirmContinue      = "Continue with these changes?"
+	CmdToolsUpdateCredsInvalidServiceErr    = "Invalid service key specified - valid keys are: %s, %s, and %s"
+	CmdToolsUpdateCredsUnableCreateToken    = "Unable to create the new Gitea artifact token: %s"
+	CmdToolsUpdateCredsUnableUpdateRegistry = "Unable to update Zarf registry: %s"
+	CmdToolsUpdateCredsUnableUpdateGit      = "Unable to update Zarf git server: %s"
 
 	// zarf version
 	CmdVersionShort = "Shows the version of the running Zarf binary"
