@@ -114,12 +114,6 @@ var updateCredsCmd = &cobra.Command{
 		}
 
 		if confirm {
-			// Save Zarf State
-			err = c.SaveZarfState(newState)
-			if err != nil {
-				message.Fatalf(err, lang.ErrSaveState)
-			}
-
 			// Update registry and git pull secrets
 			if helpers.SliceContains(args, message.RegistryKey) {
 				c.UpdateZarfManagedImageSecrets(newState)
@@ -129,15 +123,19 @@ var updateCredsCmd = &cobra.Command{
 			}
 
 			// Update artifact token (if internal)
-			if helpers.SliceContains(args, message.ArtifactKey) &&
-				newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && newState.ArtifactServer.InternalServer {
-
+			if helpers.SliceContains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.InternalServer {
 				g := git.New(oldState.GitServer)
 				tokenResponse, err := g.CreatePackageRegistryToken()
 				if err != nil {
 					message.Fatalf(nil, "Unable to create the new Gitea artifact token: %s", err.Error())
 				}
 				newState.ArtifactServer.PushToken = tokenResponse.Sha1
+			}
+
+			// Save the final Zarf State
+			err = c.SaveZarfState(newState)
+			if err != nil {
+				message.Fatalf(err, lang.ErrSaveState)
 			}
 
 			// Update Zarf 'init' component Helm releases if present
