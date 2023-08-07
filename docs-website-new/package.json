@@ -10,7 +10,7 @@
   "scripts": {
     "build": "hugo",
     "build:production": "npm run _hugo -- --minify",
-    "clean": "rm -Rf public && rm -Rf resources && hugo mod clean ",
+    "clean": "rm -Rf public resources && hugo mod clean --all ",
     "link-check": "npm run build && linkinator ./public --config .linkinator.config.json ",
     "lint": "markdownlint ./content/**/*.md --ignore node_modules",
     "lint:fix": "markdownlint -f ./content/**/*.md ./docs/**/*.md --ignore node_modules",
