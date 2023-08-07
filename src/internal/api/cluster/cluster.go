@@ -51,7 +51,7 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 
 // Retrieve and return the k8s revision.
 func getServerVersion(k *k8s.K8s) string {
-	info, _ := k.Clientset.DiscoveryClient.ServerVersion()
+	info, _ := k.Clientset.Discovery().ServerVersion()
 
 	return info.String()
 }

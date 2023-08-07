@@ -1,14 +1,108 @@
 package packager
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	k8sTesting "k8s.io/client-go/testing"
 )
+
+// TestValidatePackageArchitecture verifies that Zarf validates package architecture against cluster architecture correctly.
+func TestValidatePackageArchitecture(t *testing.T) {
+	t.Parallel()
+
+	type testCase struct {
+		name          string
+		pkgArch       string
+		clusterArch   string
+		expectedError error
+		mockError     error
+	}
+
+	testCases := []testCase{
+		{
+			name:          "architecture match",
+			pkgArch:       "amd64",
+			clusterArch:   "amd64",
+			expectedError: nil,
+		},
+		{
+			name:          "architecture mismatch",
+			pkgArch:       "arm64",
+			clusterArch:   "amd64",
+			expectedError: fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, "arm64", "amd64"),
+		},
+		{
+			name:          "ignore validation when package arch equals 'multi'",
+			pkgArch:       "multi",
+			clusterArch:   "not evaluated",
+			expectedError: nil,
+		},
+		{
+			name:          "return error when GetArchitecture() returns an error",
+			pkgArch:       "amd64",
+			mockError:     errors.New("mock error returned from GetArchitecture()"),
+			expectedError: lang.ErrUnableToCheckArch,
+		},
+	}
+
+	for _, testCase := range testCases {
+		testCase := testCase
+
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			mockClient := fake.NewSimpleClientset()
+			logger := func(string, ...interface{}) {}
+
+			p := &Packager{
+				arch: testCase.pkgArch,
+				cluster: &cluster.Cluster{
+					Kube: &k8s.K8s{
+						Clientset: mockClient,
+						Log:       logger,
+					},
+				},
+			}
+
+			// Set up the desired mock error response from GetArchitecture().
+			// This mocks an error being returned when trying to list nodes when fetching cluster architecture.
+			mockClient.Fake.PrependReactor("list", "nodes", func(action k8sTesting.Action) (handled bool, ret runtime.Object, err error) {
+				if testCase.mockError != nil {
+					return true, nil, testCase.mockError
+				}
+				// Create a Node object with architecture as test data
+				nodeList := &v1.NodeList{
+					Items: []v1.Node{
+						{
+							Status: v1.NodeStatus{
+								NodeInfo: v1.NodeSystemInfo{
+									Architecture: testCase.clusterArch,
+								},
+							},
+						},
+					},
+				}
+				return true, nodeList, nil
+			})
+
+			err := p.validatePackageArchitecture()
+
+			require.Equal(t, testCase.expectedError, err)
+		})
+	}
+}
 
 // TestValidateLastNonBreakingVersion verifies that Zarf validates the lastNonBreakingVersion of packages against the CLI version correctly.
 func TestValidateLastNonBreakingVersion(t *testing.T) {

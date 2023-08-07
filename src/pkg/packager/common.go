@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Masterminds/semver/v3"
@@ -438,20 +439,27 @@ func (p *Packager) handleIfPartialPkg() error {
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() error {
-	// Ignore this check if the architecture is explicitly "multi"
-	if p.arch != "multi" {
-		// Attempt to connect to a cluster to get the architecture.
-		if cluster, err := cluster.NewCluster(); err == nil {
-			clusterArch, err := cluster.Kube.GetArchitecture()
-			if err != nil {
-				return lang.ErrUnableToCheckArch
-			}
+	// Ignore this check if the package architecture is explicitly "multi"
+	if p.arch == "multi" {
+		return nil
+	}
 
-			// Check if the package architecture and the cluster architecture are the same.
-			if p.arch != clusterArch {
-				return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
-			}
+	if p.cluster == nil {
+		cluster, err := cluster.NewClusterWithWait(time.Second, false)
+		if err != nil {
+			return err
 		}
+		p.cluster = cluster
+	}
+
+	clusterArch, err := p.cluster.Kube.GetArchitecture()
+	if err != nil {
+		return lang.ErrUnableToCheckArch
+	}
+
+	// Check if the package architecture and the cluster architecture are the same.
+	if p.arch != clusterArch {
+		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 	}
 
 	return nil
