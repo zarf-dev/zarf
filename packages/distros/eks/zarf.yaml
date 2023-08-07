@@ -36,13 +36,13 @@ components:
         target: eks.yaml
       - source: https://github.com/weaveworks/eksctl/releases/download/v0.147.0/eksctl_Darwin_amd64.tar.gz
         target: archives/eksctl_Darwin_x86_64.tar.gz
-        shasum: 2e3faa90e3adf639aed4dbefd7691f73f4b2a21d64d907e6bdbc086cd79bf275
+        shasum: d3b2a204f68eaf151b8b79bb3a28857d45d5d56353b5c430a4cd34161c8fe6fe
       - source: https://github.com/weaveworks/eksctl/releases/download/v0.147.0/eksctl_Darwin_arm64.tar.gz
         target: archives/eksctl_Darwin_arm64.tar.gz
-        shasum: d9c21038e87df0a1f6e8a6090c19b55f011b9ca0910c1321e2ef75e56957fa2c
+        shasum: bfc14880a3c5c8fec0e338726fdfa52e375dce0a8bfa766a34e4c4224ec5c929
       - source: https://github.com/weaveworks/eksctl/releases/download/v0.147.0/eksctl_Linux_amd64.tar.gz
         target: archives/eksctl_Linux_x86_64.tar.gz
-        shasum: 5626aac166bb786992a98a47ce9586890966d523f1a80517eec86a4899323dbb
+        shasum: 56e5746160381a288d5ad70846f0f0b4cd7f5d51e1dfe0880043cf120a2eb10a
 
   - name: deploy-eks-cluster
     description: Create an EKS cluster!
