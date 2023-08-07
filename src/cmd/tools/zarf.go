@@ -147,7 +147,7 @@ var updateCredsCmd = &cobra.Command{
 				if newState.RegistryInfo.PullPassword == oldState.RegistryInfo.PullPassword && hasRegistry {
 					newState.RegistryInfo.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 				}
-				c.UpdateZarfManagedImageSecrets(newState)
+				// c.UpdateZarfManagedImageSecrets(newState)
 			}
 			if helpers.SliceContains(args, message.GitKey) {
 				if newState.GitServer.PushPassword == oldState.GitServer.PushPassword && hasGitServer {
@@ -156,7 +156,7 @@ var updateCredsCmd = &cobra.Command{
 				if newState.GitServer.PullPassword == oldState.GitServer.PullPassword && hasGitServer {
 					newState.GitServer.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 				}
-				c.UpdateZarfManagedGitSecrets(newState)
+				// c.UpdateZarfManagedGitSecrets(newState)
 			}
 			if helpers.SliceContains(args, message.ArtifactKey) {
 				if newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && hasGitServer {
