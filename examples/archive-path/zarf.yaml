@@ -1,0 +1,33 @@
+kind: ZarfPackageConfig
+metadata:
+  name: archive-path
+  description: "Test archive path"
+
+
+components:
+  - name: download-flux
+    required: true
+    actions:
+      onDeploy:
+        after:
+          - cmd: echo "$(uname -a)"
+            description: What is the arch?
+    files:
+      - source: https://github.com/fluxcd/flux2/releases/download/v2.0.1/flux_2.0.1_darwin_arm64.tar.gz
+        target: /Users/cmwylie19/zarf/flux_2.0.1_darwin_arm64.tar.gz
+
+        # shasum: 2e3faa90e3adf639aed4dbefd7691f73f4b2a21d64d907e6bdbc086cd79bf275
+       # archivePath: eksctl
+  - name: flux-version
+    required: true
+    actions:
+      onDeploy:
+        before:
+          - cmd: ls -l flux_2.0.1_darwin_arm64.tar.gz 
+            dir: /Users/cmwylie19/zarf/
+            description: "Check it out"
+            mute: false
+          - cmd: rm flux_2.0.1_darwin_arm64.tar.gz
+            dir: /Users/cmwylie19/zarf/
+            description: Remove the zipped
+      

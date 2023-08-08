@@ -79,11 +79,12 @@ type ZarfComponentOnlyCluster struct {
 
 // ZarfFile defines a file to deploy.
 type ZarfFile struct {
-	Source     string   `json:"source" jsonschema:"description=Local folder or file path or remote URL to pull into the package"`
-	Shasum     string   `json:"shasum,omitempty" jsonschema:"description=(files only) Optional SHA256 checksum of the file"`
-	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file or folder should be copied to during package deploy"`
-	Executable bool     `json:"executable,omitempty" jsonschema:"description=(files only) Determines if the file should be made executable during package deploy"`
-	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
+	Source      string   `json:"source" jsonschema:"description=Local folder or file path or remote URL to pull into the package"`
+	Shasum      string   `json:"shasum,omitempty" jsonschema:"description=(files only) Optional SHA256 checksum of the file"`
+	Target      string   `json:"target" jsonschema:"description=The absolute or relative path where the file or folder should be copied to during package deploy"`
+	Executable  bool     `json:"executable,omitempty" jsonschema:"description=(files only) Determines if the file should be made executable during package deploy"`
+	Symlinks    []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
+	ArchivePath string   `json:"archivePath,omitempty" jsonschema:"description=Local folder or file to be extracted into the package"`
 }
 
 // ZarfChart defines a helm chart to be deployed.
