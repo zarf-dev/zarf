@@ -20,12 +20,14 @@ import (
 func TestGitAndFlux(t *testing.T) {
 	t.Log("E2E: Git and flux")
 	e2e.SetupWithCluster(t)
+	tmpdir := t.TempDir()
+	cachePath := filepath.Join(tmpdir, ".cache-location")
 
 	buildPath := filepath.Join("src", "test", "packages", "22-git-and-flux")
-	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "-o=build", "--confirm", "--skip-sbom")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "--zarf-cache", cachePath, "-o=build", "--confirm", "--skip-sbom")
 	require.NoError(t, err, stdOut, stdErr)
 
-	path := fmt.Sprintf("build/zarf-package-git-data-check-secrets-%s-1.0.0.tar.zst", e2e.Arch)
+	path := fmt.Sprintf("build/zarf-package-git-data-test-%s-1.0.0.tar.zst", e2e.Arch)
 	defer e2e.CleanFiles(path)
 
 	// Deploy the gitops example
@@ -45,9 +47,6 @@ func TestGitAndFlux(t *testing.T) {
 	testGitServerReadOnly(t, tunnel.HTTPEndpoint())
 	testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
 	waitFluxPodInfoDeployment(t)
-
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "podinfo-flux", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
 }
 
 func testGitServerConnect(t *testing.T, gitURL string) {
@@ -65,7 +64,7 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 	gitCfg := git.New(state.GitServer)
 
 	// Get the repo as the readonly user
-	repoName := "zarf-1211668992"
+	repoName := "zarf-public-test-2469062884"
 	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, state.GitServer.PushUsername, repoName), nil)
 	getRepoResponseBody, err := gitCfg.DoHTTPThings(getRepoRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
@@ -83,12 +82,12 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	// Init the state variable
 	state, err := cluster.NewClusterOrDie().LoadZarfState()
 	require.NoError(t, err, "Failed to load Zarf state")
-	repoName := "zarf-1211668992"
+	repoName := "zarf-public-test-2469062884"
 
 	gitCfg := git.New(state.GitServer)
 
 	// Get the Zarf repo tag
-	repoTag := "v0.15.0"
+	repoTag := "v0.0.1"
 	getRepoTagsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/tags/%s", gitURL, config.ZarfGitPushUser, repoName, repoTag), nil)
 	getRepoTagsResponseBody, err := gitCfg.DoHTTPThings(getRepoTagsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
@@ -99,7 +98,7 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	require.Equal(t, repoTag, tagMap["name"])
 
 	// Get the Zarf repo commit
-	repoHash := "c74e2e9626da0400e0a41e78319b3054c53a5d4e"
+	repoHash := "01a23218923f24194133b5eb11268cf8d73ff1bb"
 	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/git/commits/%s", gitURL, config.ZarfGitPushUser, repoName, repoHash), nil)
 	getRepoCommitsResponseBody, err := gitCfg.DoHTTPThings(getRepoCommitsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
@@ -110,5 +109,9 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	// Deploy the flux example and verify that it works
 	path := fmt.Sprintf("build/zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Remove the flux example when deployment completes
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "podinfo-flux", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
