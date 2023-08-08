@@ -14,6 +14,7 @@ import (
 	config "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -27,7 +28,7 @@ import (
 //
 // appending the provided suffix to the version
 func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata, suffix string) (*registry.Reference, error) {
-	registryLocation = strings.TrimPrefix(registryLocation, utils.OCIURLPrefix)
+	registryLocation = strings.TrimPrefix(registryLocation, helpers.OCIURLPrefix)
 
 	ver := metadata.Version
 	if len(ver) == 0 {

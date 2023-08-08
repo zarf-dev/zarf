@@ -12,7 +12,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+
 	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2/registry"
 
@@ -20,7 +20,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
 )
 
@@ -185,10 +185,10 @@ var packagePublishCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
 
-		if !utils.IsOCIURL(args[1]) {
+		if !helpers.IsOCIURL(args[1]) {
 			message.Fatal(nil, lang.CmdPackageRegistryPrefixErr)
 		}
-		parts := strings.Split(strings.TrimPrefix(args[1], utils.OCIURLPrefix), "/")
+		parts := strings.Split(strings.TrimPrefix(args[1], helpers.OCIURLPrefix), "/")
 		ref := registry.Reference{
 			Registry:   parts[0],
 			Repository: strings.Join(parts[1:], "/"),
@@ -217,7 +217,7 @@ var packagePullCmd = &cobra.Command{
 	Example: lang.CmdPackagePullExample,
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if !utils.IsOCIURL(args[0]) {
+		if !helpers.IsOCIURL(args[0]) {
 			message.Fatal(nil, lang.CmdPackageRegistryPrefixErr)
 		}
 
