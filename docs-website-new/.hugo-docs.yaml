@@ -1,20 +1,14 @@
 mounts:
+  # Convert the docs folder to Hugo format
   - source: "../docs"
     docsRoot: "0-zarf-overview.md"
     rootTitle: "Documentation"
     target: "../docs-hugo"
     ignores: [".templates"]
 
-  - source: "../examples-hugo"
-    # docsRoot: "0-zarf-overview.md"
-    # rootTitle: "Examples"
-    target: ".."
-    # ignores: [".templates"]
-  # - source: "../examples"
-  #   target: "../docsNew/examples"
-
-  # - source: "../examples"
-  #   target: "./content/docs"
+  # Convert README.md files to be usable by Hugo
+  - source: "../examples"
+    target: "../docs-hugo/docs"
 
   # - source: "../CONTRIBUTING.md"
   #   target: "../docs/contributing"

@@ -61,10 +61,10 @@ ignoreFiles = [
         url  = "https://github.com/defenseunicorns/doc-site-template"
 
 [[module.mounts]]
-    excludeFiles = [
-    ]
+    # Link the example assets under the contents path. The hugodocs script will format and copy the README.md files as
+    # _index.md under the docs folder.
     source = "../examples"
-    target = "content/docs/examples"
+    target = "content/examples"
 
 [[module.mounts]]
     source = "../docs-hugo"
