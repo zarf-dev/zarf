@@ -53,7 +53,7 @@
 		"eslint": "8.44.0",
 		"eslint-config-prettier": "8.8.0",
 		"eslint-plugin-svelte": "2.32.2",
-		"nodemon": "2.0.22",
+		"nodemon": "3.0.1",
 		"playwright": "1.35.1",
 		"prettier": "3.0.0",
 		"prettier-plugin-svelte": "3.0.3",
