@@ -90,6 +90,6 @@ func (suite *TestNetworkSuite) Test_2_DoHostnamesMatch() {
 	suite.False(b)
 }
 
-func TestNetwork(t *testing.T) {
+func TestURL(t *testing.T) {
 	suite.Run(t, new(TestNetworkSuite))
 }
