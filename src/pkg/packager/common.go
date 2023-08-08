@@ -437,14 +437,19 @@ func (p *Packager) handleIfPartialPkg() error {
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
-func (p *Packager) validatePackageArchitecture() error {
+func (p *Packager) validatePackageArchitecture() (err error) {
 	// Ignore this check if the package architecture is explicitly "multi"
 	if p.arch == "multi" {
 		return nil
 	}
 
-	// Only run this check if we are connected to a cluster
-	if p.cluster != nil {
+	// Attempt to connect to a cluster to get the architecture.
+	if p.cluster == nil {
+		p.cluster, err = cluster.NewCluster()
+	}
+
+	// Only get the architecture and validate if no error occurred when connecting to a cluster.
+	if err == nil {
 		clusterArch, err := p.cluster.Kube.GetArchitecture()
 		if err != nil {
 			return lang.ErrUnableToCheckArch
