@@ -15,7 +15,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Masterminds/semver/v3"
@@ -444,22 +443,17 @@ func (p *Packager) validatePackageArchitecture() error {
 		return nil
 	}
 
-	if p.cluster == nil {
-		cluster, err := cluster.NewClusterWithWait(time.Second, false)
+	// Only run this check if we are connected to a cluster
+	if p.cluster != nil {
+		clusterArch, err := p.cluster.Kube.GetArchitecture()
 		if err != nil {
-			return err
+			return lang.ErrUnableToCheckArch
 		}
-		p.cluster = cluster
-	}
 
-	clusterArch, err := p.cluster.Kube.GetArchitecture()
-	if err != nil {
-		return lang.ErrUnableToCheckArch
-	}
-
-	// Check if the package architecture and the cluster architecture are the same.
-	if p.arch != clusterArch {
-		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+		// Check if the package architecture and the cluster architecture are the same.
+		if p.arch != clusterArch {
+			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+		}
 	}
 
 	return nil
