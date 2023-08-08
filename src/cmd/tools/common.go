@@ -5,9 +5,9 @@
 package tools
 
 import (
+	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/spf13/cobra"
 )
 
@@ -16,7 +16,7 @@ var toolsCmd = &cobra.Command{
 	Aliases: []string{"t"},
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		config.SkipLogFile = true
-		exec.ExitOnInterrupt()
+		common.SetupCLI()
 	},
 	Short: lang.CmdToolsShort,
 }

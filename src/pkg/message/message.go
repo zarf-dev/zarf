@@ -45,11 +45,13 @@ var RuleLine = strings.Repeat("━", TermWidth)
 // LogWriter is the stream to write logs to.
 var LogWriter io.Writer = os.Stderr
 
+// logLevel holds the pterm compatible log level integer
 var logLevel = InfoLevel
 
-// Write logs to stderr and a buffer for logFile generation.
+// logFile acts as a buffer for logFile generation
 var logFile *os.File
 
+// useLogFile controls whether to use the log file or not
 var useLogFile bool
 
 // DebugWriter represents a writer interface that writes to message.Debug

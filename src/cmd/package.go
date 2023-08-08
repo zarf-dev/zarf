@@ -148,7 +148,7 @@ var packageListCmd = &cobra.Command{
 
 			packageTable = append(packageTable, pterm.TableData{{
 				fmt.Sprintf("     %s", pkg.Name),
-				fmt.Sprintf("%s", pkg.Data.Metadata.Version),
+				pkg.Data.Metadata.Version,
 				fmt.Sprintf("%v", components),
 			}}...)
 		}

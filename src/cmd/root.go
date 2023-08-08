@@ -14,15 +14,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
 var (
-	logLevel string
-
 	// Default global config for the CLI
 	pkgConfig = types.PackagerConfig{}
 )
@@ -35,13 +32,12 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		exec.ExitOnInterrupt()
-
 		// Don't log the help command
 		if cmd.Parent() == nil {
 			config.SkipLogFile = true
 		}
-		cliSetup()
+
+		common.SetupCLI()
 	},
 	Short: lang.RootCmdShort,
 	Long:  lang.RootCmdLong,
@@ -86,40 +82,11 @@ func init() {
 	v.SetDefault(common.VZarfCache, config.ZarfDefaultCachePath)
 	v.SetDefault(common.VTmpDir, "")
 
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVarP(&common.LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(common.VArchitecture), lang.RootCmdFlagArch)
 	rootCmd.PersistentFlags().BoolVar(&config.SkipLogFile, "no-log-file", v.GetBool(common.VNoLogFile), lang.RootCmdFlagSkipLogFile)
 	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(common.VNoProgress), lang.RootCmdFlagNoProgress)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(common.VZarfCache), lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(common.VTmpDir), lang.RootCmdFlagTempDir)
 	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(common.VInsecure), lang.RootCmdFlagInsecure)
-}
-
-func cliSetup() {
-	match := map[string]message.LogLevel{
-		"warn":  message.WarnLevel,
-		"info":  message.InfoLevel,
-		"debug": message.DebugLevel,
-		"trace": message.TraceLevel,
-	}
-
-	// No log level set, so use the default
-	if logLevel != "" {
-		if lvl, ok := match[logLevel]; ok {
-			message.SetLogLevel(lvl)
-			message.Debug("Log level set to " + logLevel)
-		} else {
-			message.Warn(lang.RootCmdErrInvalidLogLevel)
-		}
-	}
-
-	// Disable progress bars for CI envs
-	if os.Getenv("CI") == "true" {
-		message.Debug("CI environment detected, disabling progress bars")
-		message.NoProgress = true
-	}
-
-	if !config.SkipLogFile {
-		message.UseLogFile()
-	}
 }
