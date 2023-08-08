@@ -13,12 +13,6 @@ zarf tools kubectl [flags]
   -h, --help   help for kubectl
 ```
 
-## Options inherited from parent commands
-
-```
-      --no-color   Disable colors in output
-```
-
 ## SEE ALSO
 
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier

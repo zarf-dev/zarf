@@ -31,7 +31,6 @@ zarf tools sbom packages [SOURCE] [flags]
 
 ```
   -c, --config string   application config file
-      --no-color        Disable colors in output
   -q, --quiet           suppress all logging output
   -v, --verbose count   increase verbosity (-v = info, -vv = debug)
 ```
