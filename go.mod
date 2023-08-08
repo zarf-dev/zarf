@@ -3,7 +3,7 @@ module github.com/defenseunicorns/zarf
 go 1.20
 
 // TODO (@WSTARR) remove this temporary replacement of oras-go 1.2.2 with defenseunicorns version due to upgraded docker lib
-replace oras.land/oras-go v1.2.2 => github.com/defenseunicorns/oras-go v1.2.4-0.20230605015028-85c595ed4b64
+replace oras.land/oras-go v1.2.3 => github.com/defenseunicorns/oras-go v1.2.4-0.20230605015028-85c595ed4b64
 
 require (
 	cuelang.org/go v0.5.0
@@ -38,7 +38,7 @@ require (
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.12.0
-	helm.sh/helm/v3 v3.12.1
+	helm.sh/helm/v3 v3.12.2
 	k8s.io/api v0.27.4
 	k8s.io/apimachinery v0.27.4
 	k8s.io/client-go v0.27.4
@@ -412,7 +412,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20230525220651-2546d827e515 // indirect
 	k8s.io/metrics v0.27.4 // indirect
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
-	oras.land/oras-go v1.2.2 // indirect
+	oras.land/oras-go v1.2.3 // indirect
 	sigs.k8s.io/controller-runtime v0.15.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/kustomize/v5 v5.0.1 // indirect
