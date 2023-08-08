@@ -38,8 +38,14 @@ var (
 )
 
 // Deploy attempts to deploy the given PackageConfig.
-func (p *Packager) Deploy() error {
+func (p *Packager) Deploy() (err error) {
 	message.Debug("packager.Deploy()")
+
+	// Attempt to connect to the cluster
+	p.cluster, err = cluster.NewCluster()
+	if err != nil {
+		return err
+	}
 
 	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
 		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)

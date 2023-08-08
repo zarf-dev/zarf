@@ -443,22 +443,14 @@ func (p *Packager) validatePackageArchitecture() (err error) {
 		return nil
 	}
 
-	// Attempt to connect to a cluster to get the architecture.
-	if p.cluster == nil {
-		p.cluster, err = cluster.NewCluster()
+	clusterArch, err := p.cluster.Kube.GetArchitecture()
+	if err != nil {
+		return lang.ErrUnableToCheckArch
 	}
 
-	// Only get the architecture and validate if no error occurred when connecting to a cluster.
-	if err == nil {
-		clusterArch, err := p.cluster.Kube.GetArchitecture()
-		if err != nil {
-			return lang.ErrUnableToCheckArch
-		}
-
-		// Check if the package architecture and the cluster architecture are the same.
-		if p.arch != clusterArch {
-			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
-		}
+	// Check if the package architecture and the cluster architecture are the same.
+	if p.arch != clusterArch {
+		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 	}
 
 	return nil
