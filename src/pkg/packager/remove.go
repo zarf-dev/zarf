@@ -39,7 +39,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 	}
 
 	// If the user input is a path to a oci, pull the package
-	if utils.IsOCIURL(packageName) {
+	if helpers.IsOCIURL(packageName) {
 		err := p.SetOCIRemote(packageName)
 		if err != nil {
 			message.Fatalf(err, "Unable to set OCI remote: %s", err.Error())
@@ -52,7 +52,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 	}
 
 	// If this came from a real package, read the package config and reset the packageName
-	if ZarfPackagePattern.MatchString(packageName) || ZarfInitPattern.MatchString(packageName) || utils.IsOCIURL(packageName) {
+	if ZarfPackagePattern.MatchString(packageName) || ZarfInitPattern.MatchString(packageName) || helpers.IsOCIURL(packageName) {
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 			return err
 		}
