@@ -41,7 +41,7 @@ var (
 func (p *Packager) Deploy() error {
 	message.Debug("packager.Deploy()")
 
-	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
+	if helpers.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
 		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)
 		if err != nil {
 			return err
