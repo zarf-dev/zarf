@@ -16,6 +16,7 @@ import (
 // LogLevelCLI holds the log level as input from a command
 var LogLevelCLI string
 
+// SetupCLI sets up the CLI logging, interrupt functions, and more
 func SetupCLI() {
 	exec.ExitOnInterrupt()
 
