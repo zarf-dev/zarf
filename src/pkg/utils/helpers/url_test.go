@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type TestNetworkSuite struct {
+type TestURLSuite struct {
 	suite.Suite
 	*require.Assertions
 	urls testURLs
