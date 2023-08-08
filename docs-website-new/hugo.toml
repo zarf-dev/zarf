@@ -58,8 +58,18 @@ enableRobotsTXT = true
         url  = "https://github.com/defenseunicorns/doc-site-template"
 
 [[module.mounts]]
-    source = "../docsNew"
-    target = "content/docs"
+    source = "../examples"
+    target = "content/docs/examples"
+
+[[module.mounts]]
+    source = "../docs-hugo"
+    target = "content"
+
+    # [[module.mounts]]
+    #     excludeFiles = [
+    #     ]
+    #     source = "../examples/**/*.yaml"
+    #     target = "static/exampleCode"
 
     # [[module.mounts]]
     #     source = "../docs"

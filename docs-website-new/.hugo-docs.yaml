@@ -1,10 +1,15 @@
 mounts:
   - source: "../docs"
-    target: "./content"
+    docsRoot: "0-zarf-overview.md"
+    rootTitle: "Documentation"
+    target: "../docs-hugo"
     ignores: [".templates"]
 
-  - source: "../examples"
-    target: "./content/docs"
+  # - source: "../examples"
+  #   target: "../docsNew/examples"
+
+  # - source: "../examples"
+  #   target: "./content/docs"
 
   # - source: "../CONTRIBUTING.md"
   #   target: "../docs/contributing"
