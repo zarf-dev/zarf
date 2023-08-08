@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 )
@@ -97,7 +98,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		// Save all the OCI imported components into our build data
 		p.cfg.Pkg.Build.OCIImportedComponents[parent.Import.URL] = childComponentName
 
-		skelURL := strings.TrimPrefix(parent.Import.URL, utils.OCIURLPrefix)
+		skelURL := strings.TrimPrefix(parent.Import.URL, helpers.OCIURLPrefix)
 		cachePath = filepath.Join(config.GetAbsCachePath(), "oci", skelURL)
 		err = os.MkdirAll(cachePath, 0755)
 		if err != nil {
@@ -401,7 +402,7 @@ func (p *Packager) getComposedFilePath(prefix string, path string) string {
 	message.Debugf("packager.getComposedFilePath(%s, %s)", prefix, path)
 
 	// Return original if it is a remote file.
-	if utils.IsURL(path) {
+	if helpers.IsURL(path) {
 		return path
 	}
 

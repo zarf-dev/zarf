@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -225,7 +226,7 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 		}
 
 		for filesIdx, file := range component.Files {
-			if isSkeleton && utils.IsURL(file.Source) {
+			if isSkeleton && helpers.IsURL(file.Source) {
 				continue
 			} else if isSkeleton {
 				suite.FileExists(filepath.Join(base, file.Source))
@@ -236,7 +237,7 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 		}
 
 		for dataIdx, data := range component.DataInjections {
-			if isSkeleton && utils.IsURL(data.Source) {
+			if isSkeleton && helpers.IsURL(data.Source) {
 				continue
 			} else if isSkeleton {
 				suite.DirOrFileExists(filepath.Join(base, data.Source))
@@ -251,7 +252,7 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 				suite.Nil(manifest.Kustomizations)
 			}
 			for filesIdx, path := range manifest.Files {
-				if isSkeleton && utils.IsURL(path) {
+				if isSkeleton && helpers.IsURL(path) {
 					continue
 				} else if isSkeleton {
 					suite.FileExists(filepath.Join(base, path))
