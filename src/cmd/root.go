@@ -40,7 +40,7 @@ var rootCmd = &cobra.Command{
 
 		exec.ExitOnInterrupt()
 
-		// Don't add the logo to the help command
+		// Don't log the help command
 		if cmd.Parent() == nil {
 			config.SkipLogFile = true
 		}
