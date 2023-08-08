@@ -1,0 +1,7 @@
+{{/* Source:https://gitlab.com/Roneo/hugo-shortcode-roneo-collection */}}
+
+{{ $file := .Get 0 }}
+<!--{{ (printf "%s%s" .Page.File.Dir $file) | readFile | replaceRE "^---[\\s\\S]+?---" "" | safeHTML | markdownify }}
+ -->
+
+{{ (printf "%s%s" .Page.File.Dir $file ) | safeHTML | markdownify }}

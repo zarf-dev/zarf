@@ -1,6 +1,9 @@
-baseURL         = "https://docs.zarf.dev/"
-enableGitInfo   = true
+baseURL = "https://docs.zarf.dev/"
+enableGitInfo = true
 enableRobotsTXT = true
+ignoreFiles = [
+    "README.md"
+]
 
 [module]
     proxy = "direct"
@@ -58,26 +61,14 @@ enableRobotsTXT = true
         url  = "https://github.com/defenseunicorns/doc-site-template"
 
 [[module.mounts]]
+    excludeFiles = [
+    ]
     source = "../examples"
     target = "content/docs/examples"
 
 [[module.mounts]]
     source = "../docs-hugo"
     target = "content"
-
-    # [[module.mounts]]
-    #     excludeFiles = [
-    #     ]
-    #     source = "../examples/**/*.yaml"
-    #     target = "static/exampleCode"
-
-    # [[module.mounts]]
-    #     source = "../docs"
-    #     target = "content/en/docs"
-
-    # [[module.mounts]]
-    #     source = "../examples"
-    #     target = "content/examples"
 
 ## The following merge in theme defaults from: https://github.com/defenseunicorns/defense-unicorns-hugo-theme/tree/main/config/_default
 [markup]

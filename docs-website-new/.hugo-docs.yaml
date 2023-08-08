@@ -5,6 +5,11 @@ mounts:
     target: "../docs-hugo"
     ignores: [".templates"]
 
+  - source: "../examples-hugo"
+    # docsRoot: "0-zarf-overview.md"
+    # rootTitle: "Examples"
+    target: ".."
+    # ignores: [".templates"]
   # - source: "../examples"
   #   target: "../docsNew/examples"
 
