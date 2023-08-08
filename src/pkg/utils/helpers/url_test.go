@@ -23,7 +23,7 @@ type testURLs struct {
 	paths []string
 }
 
-func (suite *TestNetworkSuite) SetupSuite() {
+func (suite *TestURLSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 	suite.urls.good = []string{
 		"https://zarf.dev",
@@ -46,7 +46,7 @@ func (suite *TestNetworkSuite) SetupSuite() {
 	}
 }
 
-func (suite *TestNetworkSuite) Test_0_IsURL() {
+func (suite *TestURLSuite) Test_0_IsURL() {
 	all := append(suite.urls.good, suite.urls.oci...)
 	for _, url := range all {
 		suite.True(IsURL(url), "Expected %s to be a valid URL", url)
@@ -56,7 +56,7 @@ func (suite *TestNetworkSuite) Test_0_IsURL() {
 	}
 }
 
-func (suite *TestNetworkSuite) Test_1_IsOCIURL() {
+func (suite *TestURLSuite) Test_1_IsOCIURL() {
 	for _, url := range suite.urls.good {
 		suite.False(IsOCIURL(url), "Expected %s to be an invalid OCI URL", url)
 	}
@@ -68,7 +68,7 @@ func (suite *TestNetworkSuite) Test_1_IsOCIURL() {
 	}
 }
 
-func (suite *TestNetworkSuite) Test_2_DoHostnamesMatch() {
+func (suite *TestURLSuite) Test_2_DoHostnamesMatch() {
 
 	b, err := DoHostnamesMatch("https://zarf.dev", "https://zarf.dev")
 	suite.NoError(err)
@@ -91,5 +91,5 @@ func (suite *TestNetworkSuite) Test_2_DoHostnamesMatch() {
 }
 
 func TestURL(t *testing.T) {
-	suite.Run(t, new(TestNetworkSuite))
+	suite.Run(t, new(TestURLSuite))
 }
