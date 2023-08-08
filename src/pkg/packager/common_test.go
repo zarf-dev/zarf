@@ -27,7 +27,7 @@ func TestValidatePackageArchitecture(t *testing.T) {
 		pkgArch       string
 		clusterArch   string
 		expectedError error
-		mockError     error
+		getArchError  error
 	}
 
 	testCases := []testCase{
@@ -50,9 +50,9 @@ func TestValidatePackageArchitecture(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name:          "return error when GetArchitecture() returns an error",
+			name:          "test the error path when fetching cluster architecture fails",
 			pkgArch:       "amd64",
-			mockError:     errors.New("mock error returned from GetArchitecture()"),
+			getArchError:  errors.New("error fetching cluster architecture"),
 			expectedError: lang.ErrUnableToCheckArch,
 		},
 	}
@@ -66,6 +66,7 @@ func TestValidatePackageArchitecture(t *testing.T) {
 			mockClient := fake.NewSimpleClientset()
 			logger := func(string, ...interface{}) {}
 
+			// Create a Packager instance with package architecture set and a mock Kubernetes client.
 			p := &Packager{
 				arch: testCase.pkgArch,
 				cluster: &cluster.Cluster{
@@ -76,13 +77,14 @@ func TestValidatePackageArchitecture(t *testing.T) {
 				},
 			}
 
-			// Set up the desired mock error response from GetArchitecture().
-			// This mocks an error being returned when trying to list nodes when fetching cluster architecture.
+			// Set up test data for fetching cluster architecture.
 			mockClient.Fake.PrependReactor("list", "nodes", func(action k8sTesting.Action) (handled bool, ret runtime.Object, err error) {
-				if testCase.mockError != nil {
-					return true, nil, testCase.mockError
+				// Return an error for cases that test this error path.
+				if testCase.getArchError != nil {
+					return true, nil, testCase.getArchError
 				}
-				// Create a Node object with architecture as test data
+
+				// Create a NodeList object to fetch cluster architecture with the mock client.
 				nodeList := &v1.NodeList{
 					Items: []v1.Node{
 						{
