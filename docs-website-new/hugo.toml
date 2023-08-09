@@ -67,6 +67,10 @@ ignoreFiles = [
     target = "content/examples"
 
 [[module.mounts]]
+    source = "../packages"
+    target = "content/packages"
+
+[[module.mounts]]
     source = "../docs-hugo"
     target = "content"
 
