@@ -8,3 +8,5 @@ node_modules/
 !data/
 !assets/
 !zarf/
+data/zarf_schema.json
+static/includes

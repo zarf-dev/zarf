@@ -31,16 +31,8 @@ ignoreFiles = [
     github_repo         = "https://github.com/defenseunicorns/zarf"
     github_subdir       = "content/en"
 
-    # version = "v0.0.3"
-    # version_menu = "v0.3"
-    # url_latest_version = "https://latest-version"
-    # Add your release versions here that references the deployed release branch for that version.
-    # [[params.versions]]
-    # version = "v0.3 - Latest"
-    # url = "https://latest-version"
-    # [[params.versions]]
-    # version = "v0.2"
-    # url = "https://v02-version"
+    # To add a version menu, see the theme documentation.
+
     [params.ui]
         navbar_logo = "img/doug.svg" # The product logo on the navbar
 
@@ -59,12 +51,6 @@ ignoreFiles = [
         icon = "fa-brands fa-github"
         name = "GitHub"
         url  = "https://github.com/defenseunicorns/doc-site-template"
-
-[[module.mounts]]
-    # Link the example assets under the contents path. The hugodocs script will format and copy the README.md files as
-    # _index.md under the docs folder.
-    source = "../examples"
-    target = "content/examples"
 
 [[module.mounts]]
     source = "../packages"
