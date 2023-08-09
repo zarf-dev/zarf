@@ -9,7 +9,8 @@ components:
     required: true
     files:
       - source: https://github.com/fluxcd/flux2/releases/download/v2.0.1/flux_2.0.1_darwin_arm64.tar.gz
-        target: /Users/cmwylie19/zarf/flux
+        # target: /Users/cmwylie19/zarf/flux
+        target:  flux
         executable: true
         shasum: 520f25324d42e222ccdc75009659452808adcbecb2b744f2ebf037e14e18cd69
         archivePath: flux
@@ -19,10 +20,8 @@ components:
       onDeploy:
         before:
           - cmd: ./flux -v
-            dir: /Users/cmwylie19/zarf/
             description: What's the version
             mute: false
           - cmd: rm flux
-            dir: /Users/cmwylie19/zarf/
             description: Remove the zipped
       
