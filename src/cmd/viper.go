@@ -118,13 +118,16 @@ func initViper() {
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
-	// Optional, so ignore errors
-	err := v.ReadInConfig()
+	// Optional, but capture any error
+	vConfigError = v.ReadInConfig()
+}
 
-	if err != nil {
+func printViperConfigUsed() {
+	// Optional, so ignore file not found errors
+	if vConfigError != nil {
 		// Config file not found; ignore
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			message.WarnErrorf(err, lang.CmdViperErrLoadingConfigFile, err.Error())
+		if _, ok := vConfigError.(viper.ConfigFileNotFoundError); !ok {
+			message.WarnErrorf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
 		}
 	} else {
 		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())

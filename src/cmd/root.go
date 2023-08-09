@@ -28,6 +28,9 @@ var (
 
 	// Viper instance used by the cmd package
 	v *viper.Viper
+
+	// holds any error from reading in Viper config
+	vConfigError error
 )
 
 var rootCmd = &cobra.Command{
@@ -111,6 +114,8 @@ func cliSetup() {
 	if config.NoColor {
 		message.DisableColor()
 	}
+
+	printViperConfigUsed()
 
 	// No log level set, so use the default
 	if logLevel != "" {
