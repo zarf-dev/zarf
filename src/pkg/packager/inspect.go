@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -24,8 +25,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	}
 
 	// Handle OCI packages that have been published to a registry
-	if utils.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
-
+	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
 		message.Debugf("Pulling layers %v from %s", partialPaths, p.cfg.PkgOpts.PackagePath)
 
 		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)

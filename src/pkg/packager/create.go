@@ -41,7 +41,7 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
-	if utils.IsOCIURL(p.cfg.CreateOpts.Output) {
+	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
 		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.arch)
 		if err != nil {
 			return err
@@ -224,7 +224,7 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	if utils.IsOCIURL(p.cfg.CreateOpts.Output) {
+	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
 		err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
@@ -361,7 +361,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			rel := fmt.Sprintf("%s-%d", helm.StandardName(types.ValuesFolder, chart), valuesIdx)
 			dst := filepath.Join(componentPath.Base, rel)
 
-			if utils.IsURL(path) {
+			if helpers.IsURL(path) {
 				if isSkeleton {
 					continue
 				}
@@ -385,7 +385,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		rel := filepath.Join(types.FilesFolder, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(componentPath.Base, rel)
 
-		if utils.IsURL(file.Source) {
+		if helpers.IsURL(file.Source) {
 			if isSkeleton {
 				continue
 			}
@@ -425,7 +425,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			rel := filepath.Join(types.DataInjectionsFolder, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 			dst := filepath.Join(componentPath.Base, rel)
 
-			if utils.IsURL(data.Source) {
+			if helpers.IsURL(data.Source) {
 				if isSkeleton {
 					continue
 				}
@@ -464,7 +464,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", path)
-				if utils.IsURL(path) {
+				if helpers.IsURL(path) {
 					if isSkeleton {
 						continue
 					}
@@ -575,7 +575,7 @@ func (p *Packager) loadDifferentialData() error {
 	defer os.RemoveAll(tmpDir)
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
-	if utils.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
+	if helpers.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
 		err := p.SetOCIRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
 		if err != nil {
 			return err
@@ -631,7 +631,7 @@ func (p *Packager) removeDifferentialComponentsFromPackage() error {
 
 		for idx, component := range p.cfg.Pkg.Components {
 			// if the component is imported from an OCI package and everything is the same, don't include this package
-			if utils.IsOCIURL(component.Import.URL) {
+			if helpers.IsOCIURL(component.Import.URL) {
 				if _, alsoExists := p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents[component.Import.URL]; alsoExists {
 
 					// If the component spec is not empty, we will still include it in the differential package

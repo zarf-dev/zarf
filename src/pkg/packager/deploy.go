@@ -32,7 +32,7 @@ import (
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() error {
-	if utils.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
+	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
 		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
 		if err != nil {
 			return err

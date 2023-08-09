@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -31,7 +32,7 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 	}
 
 	// Handle case where deploying remote package stored in an OCI registry
-	if utils.IsOCIURL(opts.PackagePath) {
+	if helpers.IsOCIURL(opts.PackagePath) {
 		p.cfg.PkgOpts.PackagePath = p.tmp.Base
 		requestedComponents := getRequestedComponentList(p.cfg.PkgOpts.Components)
 		layersToPull := []ocispec.Descriptor{}

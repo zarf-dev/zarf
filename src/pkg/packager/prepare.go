@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "k8s.io/api/apps/v1"
@@ -131,7 +132,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 				for idx, path := range chart.ValuesFiles {
 					dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
-					if utils.IsURL(path) {
+					if helpers.IsURL(path) {
 						if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
 							return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
 						}
@@ -195,7 +196,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				}
 				// Get all manifest files
 				for idx, f := range manifest.Files {
-					if utils.IsURL(f) {
+					if helpers.IsURL(f) {
 						mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
 						destination := filepath.Join(componentPath.Manifests, mname)
 						if err := utils.DownloadToFile(f, destination, component.CosignKeyPath); err != nil {
