@@ -76,7 +76,7 @@ func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo typ
 
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
 func (c *Cluster) UpdateZarfManagedImageSecrets(state types.ZarfState) {
-	spinner := message.NewProgressSpinner("Updating existing Zarf-manged image secrets")
+	spinner := message.NewProgressSpinner("Updating existing Zarf-managed image secrets")
 	defer spinner.Stop()
 
 	if namespaces, err := c.Kube.GetNamespaces(); err != nil {
@@ -92,6 +92,8 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(state types.ZarfState) {
 			// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
 			if currentRegistrySecret.Labels[config.ZarfManagedByLabel] == "zarf" ||
 				(namespace.Labels[agentLabel] != "skip" && namespace.Labels[agentLabel] != "ignore") {
+				spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
+
 				// Create the secret
 				newRegistrySecret := c.GenerateRegistryPullCreds(namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
 				if !reflect.DeepEqual(currentRegistrySecret.Data, newRegistrySecret.Data) {
@@ -108,7 +110,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(state types.ZarfState) {
 
 // UpdateZarfManagedGitSecrets updates all Zarf-managed git secrets in all namespaces based on state
 func (c *Cluster) UpdateZarfManagedGitSecrets(state types.ZarfState) {
-	spinner := message.NewProgressSpinner("Updating existing Zarf-manged git secrets")
+	spinner := message.NewProgressSpinner("Updating existing Zarf-managed git secrets")
 	defer spinner.Stop()
 
 	if namespaces, err := c.Kube.GetNamespaces(); err != nil {
@@ -124,6 +126,8 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(state types.ZarfState) {
 			// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
 			if currentGitSecret.Labels[config.ZarfManagedByLabel] == "zarf" ||
 				(namespace.Labels[agentLabel] != "skip" && namespace.Labels[agentLabel] != "ignore") {
+				spinner.Updatef("Updating existing Zarf-managed git secret for namespace: '%s'", namespace.Name)
+
 				// Create the secret
 				newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
 				if !reflect.DeepEqual(currentGitSecret.StringData, newGitSecret.StringData) {
