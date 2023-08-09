@@ -8,14 +8,15 @@
     "doc": "docs"
   },
   "scripts": {
-    "build": "hugo",
+    "build": "npm run copy-files && hugo",
     "build:production": "npm run _hugo -- --minify",
     "clean": "rm -Rf public resources && hugo mod clean",
+    "copy-files": "sh copy_data.sh",
     "link-check": "npm run build && linkinator ./public --config .linkinator.config.json ",
     "lint": "markdownlint ./content/**/*.md --ignore node_modules",
     "lint:fix": "markdownlint -f ./content/**/*.md ./docs/**/*.md --ignore node_modules",
     "prepare": "npm run update",
-    "start": "npm run clean && hugo serve",
+    "start": "npm run clean && npm run copy-files && hugo serve",
     "test": "npm run clean && npm run lint && npm run link-check",
     "update": "hugo mod get -u ./... && hugo mod tidy"
   },
