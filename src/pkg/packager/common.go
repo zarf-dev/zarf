@@ -17,7 +17,6 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
@@ -468,25 +467,25 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 		return nil
 	}
 
-	lastNonBreakingSemVer, err := semver.NewVersion(lastNonBreakingVersion)
-	if err != nil {
-		return fmt.Errorf("unable to parse lastNonBreakingVersion '%s' from Zarf package build data : %w", lastNonBreakingVersion, err)
-	}
+	// lastNonBreakingSemVer, err := semver.NewVersion(lastNonBreakingVersion)
+	// if err != nil {
+	// 	return fmt.Errorf("unable to parse lastNonBreakingVersion '%s' from Zarf package build data : %w", lastNonBreakingVersion, err)
+	// }
 
-	cliSemVer, err := semver.NewVersion(cliVersion)
-	if err != nil {
-		return fmt.Errorf("unable to parse Zarf CLI version '%s' : %w", cliVersion, err)
-	}
+	// cliSemVer, err := semver.NewVersion(cliVersion)
+	// if err != nil {
+	// 	return fmt.Errorf("unable to parse Zarf CLI version '%s' : %w", cliVersion, err)
+	// }
 
-	if cliSemVer.LessThan(lastNonBreakingSemVer) {
-		warning := fmt.Sprintf(
-			lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
-			cliVersion,
-			lastNonBreakingVersion,
-			lastNonBreakingVersion,
-		)
-		p.warnings = append(p.warnings, warning)
-	}
+	// if cliSemVer.LessThan(lastNonBreakingSemVer) {
+	// 	warning := fmt.Sprintf(
+	// 		lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
+	// 		cliVersion,
+	// 		lastNonBreakingVersion,
+	// 		lastNonBreakingVersion,
+	// 	)
+	// 	p.warnings = append(p.warnings, warning)
+	// }
 
 	return nil
 }

@@ -407,11 +407,8 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 					message.Fatalf(err, lang.CmdToolsArchiverDecompressErr, err.Error())
 				}
 
-				// Remove all files in directory other file
-				err = helpers.KeepOnlyFile(helpers.GetDirFromFilename(dst), file.ArchivePath)
-				if err != nil {
-					fmt.Println("Error cleaning up directory", err.Error())
-				}
+				// for Sha256sum rename dst
+				dst = newDst
 
 			}
 		} else {
@@ -428,6 +425,15 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 			}
+
+			if file.ArchivePath != "" {
+				// Remove all files in directory other file
+				err = helpers.KeepOnlyFiles(filepath.Dir(dst), []string{file.ArchivePath, filepath.Base(dst)})
+				if err != nil {
+					fmt.Println("Error cleaning up directory", err.Error())
+				}
+			}
+
 		}
 
 		if file.Executable || utils.IsDir(dst) {
