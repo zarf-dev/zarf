@@ -11,7 +11,7 @@
     "build": "npm run copy-files && hugo",
     "build:production": "npm run _hugo -- --minify",
     "clean": "rm -Rf public resources && hugo mod clean",
-    "copy-files": "sh copy_data.sh",
+    "copy-files": "sh copy_data.sh && hugodocs",
     "link-check": "npm run build && linkinator ./public --config .linkinator.config.json ",
     "lint": "markdownlint ./content/**/*.md --ignore node_modules",
     "lint:fix": "markdownlint -f ./content/**/*.md ./docs/**/*.md --ignore node_modules",
