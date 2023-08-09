@@ -27,6 +27,7 @@ const (
 	ErrCreatingDir         = "failed to create directory %s: %s"
 	ErrRemoveFile          = "failed to remove file %s: %s"
 	ErrUnarchive           = "failed to unarchive %s: %s"
+	ErrFilename            = "failed to extract filename from url %s: %s"
 )
 
 // Zarf CLI commands.

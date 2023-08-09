@@ -1,66 +1,63 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package helpers provides generic helper functions with no external imports
 package helpers
 
 import (
-	"archive/tar"
-	"compress/gzip"
-	"io"
+	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 )
 
-func ExtractTarGz(filenameWithPath string) error {
-	// Open the .tar.gz file for reading
-	file, err := os.Open(filenameWithPath)
+func KeepOnlyFile(directory, filename string) error {
+	files, err := os.ReadDir(directory)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	// Create a gzip reader
-	gzReader, err := gzip.NewReader(file)
-	if err != nil {
-		return err
-	}
-	defer gzReader.Close()
-
-	// Create a tar reader
-	tarReader := tar.NewReader(gzReader)
-
-	// Extract files
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break // End of archive
-		}
-		if err != nil {
-			return err
-		}
-
-		// Construct the target file path
-		targetPath := filepath.Join(filepath.Dir(filenameWithPath), header.Name)
-
-		// Create directories if needed
-		if header.Typeflag == tar.TypeDir {
-			err := os.MkdirAll(targetPath, os.ModePerm)
+	for _, file := range files {
+		if file.Name() != filename {
+			filePath := filepath.Join(directory, file.Name())
+			err := os.RemoveAll(filePath)
 			if err != nil {
 				return err
 			}
-			continue
-		}
-
-		// Create the target file
-		fileWriter, err := os.Create(targetPath)
-		if err != nil {
-			return err
-		}
-		defer fileWriter.Close()
-
-		// Copy the file contents
-		_, err = io.Copy(fileWriter, tarReader)
-		if err != nil {
-			return err
+			fmt.Println("Deleted:", filePath)
 		}
 	}
 
 	return nil
+}
+
+func SupportedCompressionFormat(filename string) bool {
+	supportedFormats := []string{".tar.gz", ".br", ".bz2", ".zip", ".lz4", ".sz", ".xz", ".zz", ".zst"}
+
+	for _, format := range supportedFormats {
+		if strings.HasSuffix(filename, format) {
+			return true
+		}
+	}
+	return false
+}
+
+func GetDirFromFilename(target string) string {
+	return filepath.Dir(target)
+}
+func RenamePathWithFilename(target, fileName string) (string, error) {
+	dir := filepath.Dir(target)
+	newPath := filepath.Join(dir, fileName)
+	return newPath, nil
+}
+func ExtractFilenameFromURL(urlStr string) (string, error) {
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return "", err
+	}
+
+	filename := path.Base(parsedURL.Path)
+	return filename, nil
 }

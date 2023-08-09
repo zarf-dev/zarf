@@ -7,27 +7,22 @@ metadata:
 components:
   - name: download-flux
     required: true
-    actions:
-      onDeploy:
-        after:
-          - cmd: echo "$(uname -a)"
-            description: What is the arch?
     files:
       - source: https://github.com/fluxcd/flux2/releases/download/v2.0.1/flux_2.0.1_darwin_arm64.tar.gz
-        target: /Users/cmwylie19/zarf/flux_2.0.1_darwin_arm64.tar.gz
-
-        # shasum: 2e3faa90e3adf639aed4dbefd7691f73f4b2a21d64d907e6bdbc086cd79bf275
-       # archivePath: eksctl
+        target: /Users/cmwylie19/zarf/flux
+        executable: true
+        shasum: 520f25324d42e222ccdc75009659452808adcbecb2b744f2ebf037e14e18cd69
+        archivePath: flux
   - name: flux-version
     required: true
     actions:
       onDeploy:
         before:
-          - cmd: ls -l flux_2.0.1_darwin_arm64.tar.gz 
+          - cmd: ./flux -v
             dir: /Users/cmwylie19/zarf/
-            description: "Check it out"
+            description: What's the version
             mute: false
-          - cmd: rm flux_2.0.1_darwin_arm64.tar.gz
+          - cmd: rm flux
             dir: /Users/cmwylie19/zarf/
             description: Remove the zipped
       

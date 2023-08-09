@@ -383,6 +383,37 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 			}
+			// Verify we can decompress the file
+			if file.ArchivePath != "" || helpers.SupportedCompressionFormat(file.Source) {
+				// extract filename from target
+				dstFileName, err := helpers.ExtractFilenameFromURL(file.Source)
+				if err != nil {
+					message.Fatalf(err, lang.ErrFilename, file.Source, err.Error())
+				}
+				// For archiver support, we need to rename the file to the original
+				newDst, err := helpers.RenamePathWithFilename(dst, dstFileName)
+				if err != nil {
+					fmt.Printf("Could not renamePathWithFilename %s, %s, %s", file.Target, dst, err.Error())
+				}
+
+				err = os.Rename(dst, newDst)
+				if err != nil {
+					return fmt.Errorf(lang.ErrWritingFile, dst, err)
+				}
+
+				// Decompress the file into the target directory
+				err = archiver.Unarchive(newDst, helpers.GetDirFromFilename(dst))
+				if err != nil {
+					message.Fatalf(err, lang.CmdToolsArchiverDecompressErr, err.Error())
+				}
+
+				// Remove all files in directory other file
+				err = helpers.KeepOnlyFile(helpers.GetDirFromFilename(dst), file.ArchivePath)
+				if err != nil {
+					fmt.Println("Error cleaning up directory", err.Error())
+				}
+
+			}
 		} else {
 			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
 				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
