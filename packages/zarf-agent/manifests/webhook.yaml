@@ -85,6 +85,7 @@ webhooks:
         apiVersions:
           - "v1beta1"
           - "v1beta2"
+          - "v1"
         resources:
           - "gitrepositories"
     admissionReviewVersions:
