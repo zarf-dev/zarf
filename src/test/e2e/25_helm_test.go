@@ -90,12 +90,15 @@ func testHelmUninstallRollback(t *testing.T) {
 	evilPath := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
 	// Create the evil package (with the bad configmap).
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/25-evil-dos-games/", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/25-evil-dos-games/", "--skip-sbom", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the evil package.
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
+
+	// This package contains SBOMable things but was created with --skip-sbom
+	require.Contains(t, string(stdErr), "This package does NOT contain an SBOM.")
 
 	// Ensure that this does not leave behind a dos-games chart
 	helmOut, err := exec.Command("helm", "list", "-n", "dos-games").Output()
