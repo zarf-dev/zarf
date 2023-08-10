@@ -116,6 +116,26 @@ func TestUseCLI(t *testing.T) {
 		require.Error(t, err, stdOut, stdErr)
 	})
 
+	t.Run("zarf package create for archive path", func(t *testing.T) {
+		t.Parallel()
+		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--zarf-cache", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+	})
+
+	t.Run("zarf package inspect for archive path", func(t *testing.T) {
+		t.Parallel()
+		path := "build/zarf-package-distro-eks-multi-0.0.2.tar.zst"
+		stdOut, stdErr, err := e2e.Zarf("package", "inspect", path)
+		require.NoError(t, err, stdOut, stdErr)
+	})
+
+	t.Run("zarf package deploy for archive path", func(t *testing.T) {
+		t.Parallel()
+		path := "build/zarf-package-distro-eks-multi-0.0.2.tar.zst"
+		stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+	})
+
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
@@ -152,26 +172,6 @@ func TestUseCLI(t *testing.T) {
 		path := fmt.Sprintf("build/zarf-package-component-choice-%s.tar.zst", e2e.Arch)
 		stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
 		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
-		require.NoError(t, err, stdOut, stdErr)
-	})
-
-	t.Run("zarf package create for archive path", func(t *testing.T) {
-		t.Parallel()
-		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--zarf-cache", "--confirm")
-		require.NoError(t, err, stdOut, stdErr)
-	})
-
-	t.Run("zarf package inspect for archive path", func(t *testing.T) {
-		t.Parallel()
-		path := "build/zarf-package-distro-eks-multi-0.0.2.tar.zst"
-		stdOut, stdErr, err := e2e.Zarf("package", "inspect", path)
-		require.NoError(t, err, stdOut, stdErr)
-	})
-
-	t.Run("zarf package deploy for archive path", func(t *testing.T) {
-		t.Parallel()
-		path := "build/zarf-package-distro-eks-multi-0.0.2.tar.zst"
-		stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
