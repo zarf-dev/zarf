@@ -13,6 +13,7 @@ runs:
       with:
         payload: |
           {
+            "text": "The GitHub Action Workflow **'${{ github.workflow }}'** had a result of: `${{ job.status }}`.",
             "blocks": [
               {
                 "type": "section",
