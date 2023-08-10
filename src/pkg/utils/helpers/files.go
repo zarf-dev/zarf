@@ -5,13 +5,11 @@
 package helpers
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -43,7 +41,7 @@ func FindAndCopyFileFromArchive(archivePath, targetFile, destinationDir string) 
 		// Remove the compressed file
 		err := os.Remove(archivePath)
 		if err != nil {
-			return fmt.Errorf(lang.ErrRemoveFile, archivePath, err.Error())
+			return err
 		}
 		return nil
 	})
