@@ -85,6 +85,9 @@ var (
 	// SkipLogFile is a flag to skip logging to a file
 	SkipLogFile bool
 
+	// NoColor is a flag to disable colors in output
+	NoColor bool
+
 	CosignPublicKey string
 	UIAssets        embed.FS
 
