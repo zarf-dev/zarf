@@ -32,7 +32,7 @@ func TestCreateGit(t *testing.T) {
 		"v0.0.1\n", "  dragons\n* main\n")
 
 	// Verify the full-repo component fallback
-	gitDir = fmt.Sprintf("%s/components/full-repo/repos/zarf-public-test-1651489007/.git", extractDir)
+	gitDir = fmt.Sprintf("%s/components/full-repo/repos/zarf-public-test-410141584/.git", extractDir)
 	verifyGitRepo(t, gitDir,
 		"0a6b587", "(HEAD -> main, online-upstream/main, online-upstream/HEAD)", "Adjust dragon spacing",
 		"v0.0.1\n", "  dragons\n* main\n")
@@ -50,7 +50,7 @@ func TestCreateGit(t *testing.T) {
 		"v0.0.1\n", "* zarf-ref-v0.0.1\n")
 
 	// Verify specific tag component tag fallback
-	gitDir = fmt.Sprintf("%s/components/specific-tag/repos/zarf-public-test-308170788/.git", extractDir)
+	gitDir = fmt.Sprintf("%s/components/specific-tag/repos/zarf-public-test-3956869879/.git", extractDir)
 	verifyGitRepo(t, gitDir,
 		"5249809", "(HEAD -> zarf-ref-v0.0.1, tag: v0.0.1)", "Added README.md",
 		"v0.0.1\n", "* zarf-ref-v0.0.1\n")
@@ -62,7 +62,7 @@ func TestCreateGit(t *testing.T) {
 		"", "* dragons\n")
 
 	// Verify specific branch component fallback
-	gitDir = fmt.Sprintf("%s/components/specific-branch/repos/zarf-public-test-1204519508/.git", extractDir)
+	gitDir = fmt.Sprintf("%s/components/specific-branch/repos/zarf-public-test-3363080017/.git", extractDir)
 	verifyGitRepo(t, gitDir,
 		"01a2321", "(HEAD -> dragons, online-upstream/dragons)", "Explain what this repo does",
 		"", "* dragons\n")
@@ -74,7 +74,7 @@ func TestCreateGit(t *testing.T) {
 		"v0.0.1\n", "  main\n* zarf-ref-01a23218923f24194133b5eb11268cf8d73ff1bb\n")
 
 	// Verify specific hash component fallback
-	gitDir = fmt.Sprintf("%s/components/specific-hash/repos/zarf-public-test-2793472375/.git", extractDir)
+	gitDir = fmt.Sprintf("%s/components/specific-hash/repos/zarf-public-test-1425142831/.git", extractDir)
 	verifyGitRepo(t, gitDir,
 		"01a2321", "(HEAD -> zarf-ref-01a23218923f24194133b5eb11268cf8d73ff1bb, online-upstream/dragons)", "Explain what this repo does",
 		"v0.0.1\n", "  main\n* zarf-ref-01a23218923f24194133b5eb11268cf8d73ff1bb\n")
