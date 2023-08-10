@@ -90,6 +90,29 @@ func (suite *TestURLSuite) Test_2_DoHostnamesMatch() {
 	suite.False(b)
 }
 
+func (suite *TestURLSuite) Test_3_ExtractFilenameFromURL() {
+	urls := []string{
+		"https://zarf.dev/file.txt",
+		"https://docs.zarf.dev/file.txt",
+		"https://zarf.dev/docs/file.tar.gz",
+		"https://defenseunicorns.com/file.yaml",
+		"https://google.com/file.md",
+	}
+	expectations := []string{
+		"file.txt",
+		"file.txt",
+		"file.tar.gz",
+		"file.yaml",
+		"file.md",
+	}
+
+	for idx, url := range urls {
+		actualURL, err := ExtractFilenameFromURL(url)
+		suite.NoError(err)
+		suite.Equal(actualURL, expectations[idx])
+	}
+
+}
 func TestURL(t *testing.T) {
 	suite.Run(t, new(TestURLSuite))
 }

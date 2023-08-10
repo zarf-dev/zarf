@@ -7,6 +7,7 @@ package helpers
 import (
 	"fmt"
 	"net/url"
+	"path"
 )
 
 // Nonstandard URL schemes or prefixes
@@ -39,4 +40,15 @@ func DoHostnamesMatch(url1 string, url2 string) (bool, error) {
 	}
 
 	return parsedURL1.Hostname() == parsedURL2.Hostname(), nil
+}
+
+// ExtractFilenameFromURL returns filename from URL string
+func ExtractFilenameFromURL(urlStr string) (string, error) {
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return "", err
+	}
+
+	filename := path.Base(parsedURL.Path)
+	return filename, nil
 }

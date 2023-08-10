@@ -380,35 +380,23 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			if isSkeleton {
 				continue
 			}
+			// src without Hash
 			if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 			}
 			// Verify we can decompress the file
-			if file.ArchivePath != "" || helpers.SupportedCompressionFormat(file.Source) {
-				// extract filename from target
-				dstFileName, err := helpers.ExtractFilenameFromURL(file.Source)
-				if err != nil {
-					message.Fatalf(err, lang.ErrFilename, file.Source, err.Error())
-				}
-				// For archiver support, we need to rename the file to the original
-				newDst, err := helpers.RenamePathWithFilename(dst, dstFileName)
-				if err != nil {
-					fmt.Printf("Could not renamePathWithFilename %s, %s, %s", file.Target, dst, err.Error())
-				}
-
-				err = os.Rename(dst, newDst)
+			if file.ArchivePath != "" {
+				compressFileName, _ := helpers.ExtractFilenameFromURL(file.Source)
+				archiveFile := filepath.Dir(dst) + "/" + compressFileName
+				targetFile := filepath.Dir(dst) + "/" + file.Target
+				err = os.Rename(targetFile, archiveFile)
 				if err != nil {
 					return fmt.Errorf(lang.ErrWritingFile, dst, err)
 				}
-
-				// Decompress the file into the target directory
-				err = archiver.Unarchive(newDst, helpers.GetDirFromFilename(dst))
+				err = helpers.FindAndCopyFileFromArchive(archiveFile, file.ArchivePath, filepath.Dir(dst))
 				if err != nil {
-					message.Fatalf(err, lang.CmdToolsArchiverDecompressErr, err.Error())
-				}
 
-				// for Sha256sum rename dst
-				dst = newDst
+				}
 
 			}
 		} else {
@@ -424,14 +412,6 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		if file.Shasum != "" {
 			if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
-			}
-
-			if file.ArchivePath != "" {
-				// Remove all files in directory other file
-				err = helpers.KeepOnlyFiles(filepath.Dir(dst), []string{file.ArchivePath, filepath.Base(dst)})
-				if err != nil {
-					fmt.Println("Error cleaning up directory", err.Error())
-				}
 			}
 
 		}

@@ -9,10 +9,9 @@ components:
     required: true
     files:
       - source: https://github.com/fluxcd/flux2/releases/download/v2.0.1/flux_2.0.1_darwin_arm64.tar.gz
-        # target: /Users/cmwylie19/zarf/flux
         target:  flux
         executable: true
-        shasum: 520f25324d42e222ccdc75009659452808adcbecb2b744f2ebf037e14e18cd69
+        shasum: 9b17a9d0ee8e0f0cf071e74df05e3e264320c7ce415cb706791b5773de7747f0
         archivePath: flux
   - name: flux-version
     required: true
