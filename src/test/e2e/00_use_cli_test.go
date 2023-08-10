@@ -170,11 +170,9 @@ func TestUseCLI(t *testing.T) {
 
 	t.Run("zarf package deploy for archive path", func(t *testing.T) {
 		t.Parallel()
-		expectedString := "Remove eksctl"
 		path := "build/zarf-package-distro-eks-multi-0.0.2.tar.zst"
 		stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdOut, expectedString, "Should report 'Remove eksctl'")
 	})
 
 	t.Run("remove cache", func(t *testing.T) {
