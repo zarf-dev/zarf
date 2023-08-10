@@ -47,7 +47,7 @@ func NewApplicationMutationHook() operations.Hook {
 	}
 }
 
-// mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
+// mutateApplication mutates the git repository url to point to the repository URL defined in the ZarfState.
 func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	isCreate = r.Operation == v1.Create
