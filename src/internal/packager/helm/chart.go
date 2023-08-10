@@ -389,12 +389,12 @@ func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
 
 func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 	// Get the Kubernetes version from the current cluster
-	kubeVersion, err := h.Cluster.Kube.Clientset.Discovery().ServerVersion()
+	kubeVersion, err := h.Cluster.Kube.GetServerVersion()
 	if err != nil {
 		return err
 	}
 
-	kubeGitVersion, err := semver.NewVersion(kubeVersion.GitVersion)
+	kubeGitVersion, err := semver.NewVersion(kubeVersion)
 	if err != nil {
 		return err
 	}
