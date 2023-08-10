@@ -18,7 +18,7 @@ type Labels map[string]string
 
 // K8s is a client for interacting with a Kubernetes cluster.
 type K8s struct {
-	Clientset  *kubernetes.Clientset
+	Clientset  kubernetes.Interface
 	RestConfig *rest.Config
 	Log        Log
 	Labels     Labels
