@@ -794,6 +794,10 @@
           },
           "type": "array",
           "description": "List of symlinks to create during package deploy"
+        },
+        "archivePath": {
+          "type": "string",
+          "description": "Local folder or file to be extracted into the package"
         }
       },
       "additionalProperties": false,

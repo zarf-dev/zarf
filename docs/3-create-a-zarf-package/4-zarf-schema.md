@@ -980,6 +980,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="components_items_files_items_archivePath"></a>archivePath</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Local folder or file to be extracted into the package
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
