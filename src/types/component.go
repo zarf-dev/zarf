@@ -84,7 +84,7 @@ type ZarfFile struct {
 	Target      string   `json:"target" jsonschema:"description=The absolute or relative path where the file or folder should be copied to during package deploy"`
 	Executable  bool     `json:"executable,omitempty" jsonschema:"description=(files only) Determines if the file should be made executable during package deploy"`
 	Symlinks    []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
-	ArchivePath string   `json:"archivePath,omitempty" jsonschema:"description=Local folder or file to be extracted into the package"`
+	ArchivePath string   `json:"archivePath,omitempty" jsonschema:"description=Local folder or file to be extracted from a 'source' archive"`
 }
 
 // ZarfChart defines a helm chart to be deployed.
