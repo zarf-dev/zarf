@@ -155,6 +155,28 @@ func TestUseCLI(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
+	t.Run("zarf package create for archive path", func(t *testing.T) {
+		t.Parallel()
+		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--zarf-cache", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+	})
+
+	t.Run("zarf package inspect for archive path", func(t *testing.T) {
+		t.Parallel()
+		path := "build/zarf-package-distro-eks-multi-0.0.2.tar.zst"
+		stdOut, stdErr, err := e2e.Zarf("package", "inspect", path)
+		require.NoError(t, err, stdOut, stdErr)
+	})
+
+	t.Run("zarf package deploy for archive path", func(t *testing.T) {
+		t.Parallel()
+		expectedString := "Remove eksctl"
+		path := "build/zarf-package-distro-eks-multi-0.0.2.tar.zst"
+		stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+		require.Contains(t, stdOut, expectedString, "Should report 'Remove eksctl'")
+	})
+
 	t.Run("remove cache", func(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()

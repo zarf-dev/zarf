@@ -20,6 +20,22 @@ variables:
     default: "1.23"
 
 components:
+  - name: test-archive
+    description: Test archive
+    required: true
+    actions:
+      onDeploy:
+        after:
+          - cmd: rm -rf eksctl
+            description: Remove eksctl
+            mute: false
+    files:
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.147.0/eksctl_Darwin_arm64.tar.gz
+        target: eksctl
+        shasum: 1d7dd5b9907de1cb3fa7832659db29f50530444d10e77b4a8eb27aa648da6fab
+        archivePath: eksctl
+        executable: true
+
   - name: load-eksctl
     required: true
     actions:
