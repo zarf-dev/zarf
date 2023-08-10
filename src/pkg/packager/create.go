@@ -380,11 +380,11 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			if isSkeleton {
 				continue
 			}
-			// src without Hash
+
 			if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 			}
-			// Verify we can decompress the file
+
 			if file.ArchivePath != "" {
 				compressFileName, _ := helpers.ExtractFilenameFromURL(file.Source)
 				archiveFile := filepath.Dir(dst) + "/" + compressFileName
@@ -412,7 +412,6 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 			}
-
 		}
 
 		if file.Executable || utils.IsDir(dst) {
