@@ -27,6 +27,12 @@ func SetupCLI() {
 		"trace": message.TraceLevel,
 	}
 
+	if config.NoColor {
+		message.DisableColor()
+	}
+
+	printViperConfigUsed()
+
 	// No log level set, so use the default
 	if LogLevelCLI != "" {
 		if lvl, ok := match[LogLevelCLI]; ok {

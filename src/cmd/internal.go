@@ -68,6 +68,7 @@ var generateCLIDocs = &cobra.Command{
 						addHiddenDummyFlag(toolCmd, "zarf-cache")
 						addHiddenDummyFlag(toolCmd, "tmpdir")
 						addHiddenDummyFlag(toolCmd, "insecure")
+						addHiddenDummyFlag(toolCmd, "no-color")
 					}
 				}
 			}

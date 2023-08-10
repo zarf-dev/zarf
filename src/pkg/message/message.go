@@ -117,6 +117,11 @@ func GetLogLevel() LogLevel {
 	return logLevel
 }
 
+// DisableColor disables color in output
+func DisableColor() {
+	pterm.DisableColor()
+}
+
 // ZarfCommand prints a zarf terminal command.
 func ZarfCommand(format string, a ...any) {
 	Command("zarf "+format, a...)

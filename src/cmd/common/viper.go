@@ -22,6 +22,7 @@ const (
 	VArchitecture = "architecture"
 	VNoLogFile    = "no_log_file"
 	VNoProgress   = "no_progress"
+	VNoColor      = "no_color"
 	VZarfCache    = "zarf_cache"
 	VTmpDir       = "tmp_dir"
 	VInsecure     = "insecure"
@@ -91,8 +92,13 @@ const (
 	VPkgPullPublicKey = "package.pull.public_key"
 )
 
-// Viper instance used by commands
-var v *viper.Viper
+var (
+	// Viper instance used by commands
+	v *viper.Viper
+
+	// Viper configuration error
+	vConfigError error
+)
 
 // InitViper initializes the viper singleton for the CLI
 func InitViper() *viper.Viper {
@@ -133,16 +139,7 @@ func InitViper() *viper.Viper {
 	v.AutomaticEnv()
 
 	// Optional, so ignore errors
-	err := v.ReadInConfig()
-
-	if err != nil {
-		// Config file not found; ignore
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			message.WarnErrorf(err, lang.CmdViperErrLoadingConfigFile, err.Error())
-		}
-	} else {
-		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
-	}
+	vConfigError = v.ReadInConfig()
 
 	return v
 }
@@ -155,4 +152,16 @@ func GetViper() *viper.Viper {
 func isVersionCmd() bool {
 	args := os.Args
 	return len(args) > 1 && (args[1] == "version" || args[1] == "v")
+}
+
+func printViperConfigUsed() {
+	// Optional, so ignore file not found errors
+	if vConfigError != nil {
+		// Config file not found; ignore
+		if _, ok := vConfigError.(viper.ConfigFileNotFoundError); !ok {
+			message.WarnErrorf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
+		}
+	} else {
+		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
+	}
 }
