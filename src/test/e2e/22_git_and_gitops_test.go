@@ -155,7 +155,7 @@ func waitArgoDeployment(t *testing.T) {
 	// Tests the mutation of the repoURL for Application CRD source(s) for ArgoCD.
 	stdOut, stdErr, err = e2e.Kubectl("get", "application", "apps", "-n", "argocd", "-o", "jsonpath={.spec.sources[0].repoURL}")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Equal(t, expectedMutatedRepoUrl, stdOut)
+	require.Equal(t, expectedMutatedRepoURL, stdOut)
 
 	// Remove the argocd example when deployment completes
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "argocd", "--confirm")
