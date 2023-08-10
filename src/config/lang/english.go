@@ -47,8 +47,8 @@ const (
 	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
 	RootCmdFlagInsecure    = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
-	RootCmdDeprecatedDeploy = "Please use \"zarf package deploy %s\" to deploy this package."
-	RootCmdDeprecatedCreate = "Please use \"zarf package create\" to create this package."
+	RootCmdDeprecatedDeploy = "Deprecated: Please use \"zarf package deploy %s\" to deploy this package.  This warning will be removed in Zarf v1.0.0."
+	RootCmdDeprecatedCreate = "Deprecated: Please use \"zarf package create\" to create this package.  This warning will be removed in Zarf v1.0.0."
 
 	RootCmdErrInvalidLogLevel = "Invalid log level. Valid options are: warn, info, debug, trace."
 
@@ -248,7 +248,7 @@ const (
 	CmdPackageDeployFlagSet                            = "Specify deployment variables to set on the command line (KEY=value)"
 	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
-	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v0.31.0 please use the --key flag instead."
+	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
 	CmdPackageDeployFlagPublicKey                      = "Path to public key file for validating signed packages"
 	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "the version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
@@ -370,10 +370,9 @@ const (
 	CmdToolsRegistryFlagNonDist        = "Allow pushing non-distributable (foreign) layers"
 	CmdToolsRegistryFlagPlatform       = "Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64)."
 
-	CmdToolsGetGitPasswdShort       = "Returns the push user's password for the Git server"
-	CmdToolsGetGitPasswdLong        = "Reads the password for a user with push access to the configured Git server from the zarf-state secret in the zarf namespace"
-	CmdToolsGetGitPasswdInfo        = "Git Server Push Password: "
-	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in a future release."
+	CmdToolsGetGitPasswdShort       = "Deprecated: Returns the push user's password for the Git server"
+	CmdToolsGetGitPasswdLong        = "Deprecated: Reads the password for a user with push access to the configured Git server in Zarf State. Note that this command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
+	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
 
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
@@ -529,7 +528,7 @@ const (
 
 // src/internal/packager/validate.
 const (
-	PkgValidateTemplateDeprecation        = "Package template '%s' is using the deprecated syntax ###ZARF_PKG_VAR_%s###.  This will be removed in a future Zarf version.  Please update to ###ZARF_PKG_TMPL_%s###."
+	PkgValidateTemplateDeprecation        = "Package template '%s' is using the deprecated syntax ###ZARF_PKG_VAR_%s###.  This will be removed in Zarf v1.0.0.  Please update to ###ZARF_PKG_TMPL_%s###."
 	PkgValidateMustBeUppercase            = "variable name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
 	PkgValidateErrActionVariables         = "component %s cannot contain setVariables outside of onDeploy in actions"
@@ -575,5 +574,5 @@ var (
 
 // Collection of reusable warn messages.
 var (
-	WarnSGetDeprecation = "Using sget to download resources is being deprecated and will removed in the v0.31.0 release of Zarf. Please publish the packages as OCI artifacts instead."
+	WarnSGetDeprecation = "Using sget to download resources is being deprecated and will removed in the v1.0.0 release of Zarf. Please publish the packages as OCI artifacts instead."
 )

@@ -203,8 +203,8 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 			Values:         filepath.Join(base, types.ValuesFolder),
 		}
 
-		if isSkeleton && component.CosignKeyPath != "" {
-			suite.FileExists(filepath.Join(base, component.CosignKeyPath))
+		if isSkeleton && component.DeprecatedCosignKeyPath != "" {
+			suite.FileExists(filepath.Join(base, component.DeprecatedCosignKeyPath))
 		}
 
 		if isSkeleton && component.Extensions.BigBang != nil {

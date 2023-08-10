@@ -36,15 +36,8 @@ var deprecatedGetGitCredsCmd = &cobra.Command{
 	Short:  lang.CmdToolsGetGitPasswdShort,
 	Long:   lang.CmdToolsGetGitPasswdLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		state, err := cluster.NewClusterOrDie().LoadZarfState()
-		if err != nil || state.Distro == "" {
-			// If no distro the zarf secret did not load properly
-			message.Fatalf(nil, lang.ErrLoadState)
-		}
-
-		message.Note(lang.CmdToolsGetGitPasswdInfo)
 		message.Warn(lang.CmdToolsGetGitPasswdDeprecation)
-		message.PrintComponentCredential(state, "git")
+		getCredsCmd.Run(getCredsCmd, []string{"git"})
 	},
 }
 

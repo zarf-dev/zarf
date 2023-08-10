@@ -15,7 +15,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
@@ -49,10 +48,10 @@ var rootCmd = &cobra.Command{
 
 		if len(args) > 0 {
 			if strings.Contains(args[0], config.ZarfPackagePrefix) || strings.Contains(args[0], "zarf-init") {
-				pterm.FgYellow.Printfln("\n"+lang.RootCmdDeprecatedDeploy, args[0])
+				message.Warnf(lang.RootCmdDeprecatedDeploy, args[0])
 			}
 			if args[0] == config.ZarfYAML {
-				pterm.FgYellow.Printfln("\n" + lang.RootCmdDeprecatedCreate)
+				message.Warn(lang.RootCmdDeprecatedCreate)
 			}
 		}
 	},

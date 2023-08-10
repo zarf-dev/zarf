@@ -331,6 +331,8 @@ func bindDeployFlags(v *spf13viper.Viper) {
 	deployFlags.StringVar(&pkgConfig.DeployOpts.Shasum, "shasum", v.GetString(common.VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.DeployOpts.SGetKeyPath, "sget", v.GetString(common.VPkgDeploySget), lang.CmdPackageDeployFlagSget)
 	deployFlags.StringVarP(&pkgConfig.DeployOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgDeployPublicKey), lang.CmdPackageDeployFlagPublicKey)
+
+	deployFlags.MarkHidden("sget")
 }
 
 func bindInspectFlags(v *spf13viper.Viper) {

@@ -275,9 +275,9 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 		child.Actions.OnCreate.Defaults.Dir = composedDefaultDir
 	}
 
-	if child.CosignKeyPath != "" {
-		composed := p.getComposedFilePath(pathAncestry, child.CosignKeyPath)
-		child.CosignKeyPath = composed
+	if child.DeprecatedCosignKeyPath != "" {
+		composed := p.getComposedFilePath(pathAncestry, child.DeprecatedCosignKeyPath)
+		child.DeprecatedCosignKeyPath = composed
 	}
 
 	child = p.composeExtensions(pathAncestry, child)
@@ -311,8 +311,8 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	}
 
 	// Override cosign key path if it was provided.
-	if override.CosignKeyPath != "" {
-		target.CosignKeyPath = override.CosignKeyPath
+	if override.DeprecatedCosignKeyPath != "" {
+		target.DeprecatedCosignKeyPath = override.DeprecatedCosignKeyPath
 	}
 
 	// Append slices where they exist.
