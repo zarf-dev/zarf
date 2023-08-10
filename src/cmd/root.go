@@ -28,6 +28,9 @@ var (
 
 	// Viper instance used by the cmd package
 	v *viper.Viper
+
+	// holds any error from reading in Viper config
+	vConfigError error
 )
 
 var rootCmd = &cobra.Command{
@@ -85,6 +88,7 @@ func init() {
 	v.SetDefault(V_ARCHITECTURE, "")
 	v.SetDefault(V_NO_LOG_FILE, false)
 	v.SetDefault(V_NO_PROGRESS, false)
+	v.SetDefault(V_NO_COLOR, false)
 	v.SetDefault(V_INSECURE, false)
 	v.SetDefault(V_ZARF_CACHE, config.ZarfDefaultCachePath)
 	v.SetDefault(V_TMP_DIR, "")
@@ -93,6 +97,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(V_ARCHITECTURE), lang.RootCmdFlagArch)
 	rootCmd.PersistentFlags().BoolVar(&config.SkipLogFile, "no-log-file", v.GetBool(V_NO_LOG_FILE), lang.RootCmdFlagSkipLogFile)
 	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(V_NO_PROGRESS), lang.RootCmdFlagNoProgress)
+	rootCmd.PersistentFlags().BoolVar(&config.NoColor, "no-color", v.GetBool(V_NO_COLOR), lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(V_ZARF_CACHE), lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(V_TMP_DIR), lang.RootCmdFlagTempDir)
 	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(V_INSECURE), lang.RootCmdFlagInsecure)
@@ -105,6 +110,12 @@ func cliSetup() {
 		"debug": message.DebugLevel,
 		"trace": message.TraceLevel,
 	}
+
+	if config.NoColor {
+		message.DisableColor()
+	}
+
+	printViperConfigUsed()
 
 	// No log level set, so use the default
 	if logLevel != "" {
