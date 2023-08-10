@@ -131,7 +131,6 @@ func configFileDefaultTests(t *testing.T) {
 
 	packageDeployFlags := []string{
 		"deploy.components: 8d6fde37",
-		"deploy.sget: ee7905de",
 		"deploy.shasum: 7606fe19",
 		"[thing2=2b3c4d5e]",
 	}
