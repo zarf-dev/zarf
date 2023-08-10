@@ -397,7 +397,6 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				if err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ArchivePath, archiveFile, err)
 				}
-
 			}
 		} else {
 			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
