@@ -794,6 +794,49 @@
           },
           "type": "array",
           "description": "List of symlinks to create during package deploy"
+        },
+        "matrix": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfFileMatrix",
+          "description": "Matrix of operating systems and architectures to handle cross-system files"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfFileMatrix": {
+      "properties": {
+        "os": {
+          "items": {
+            "enum": [
+              "linux",
+              "Linux",
+              "windows",
+              "Windows",
+              "win",
+              "Win",
+              "darwin",
+              "Darwin",
+              "macos",
+              "macOS"
+            ],
+            "type": "string"
+          },
+          "type": "array",
+          "description": "List of operating systems to which this file corresponds"
+        },
+        "arch": {
+          "items": {
+            "enum": [
+              "arm64",
+              "amd64",
+              "aarch64",
+              "x86_64"
+            ],
+            "type": "string"
+          },
+          "type": "array",
+          "description": "List of system architectures to which this file corresponds"
         }
       },
       "additionalProperties": false,

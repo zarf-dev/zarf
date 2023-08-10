@@ -723,6 +723,10 @@ export interface ZarfFile {
      */
     executable?: boolean;
     /**
+     * Matrix of operating systems and architectures to handle cross-system files
+     */
+    matrix?: ZarfFileMatrix;
+    /**
      * (files only) Optional SHA256 checksum of the file
      */
     shasum?: string;
@@ -739,6 +743,40 @@ export interface ZarfFile {
      * deploy
      */
     target: string;
+}
+
+/**
+ * Matrix of operating systems and architectures to handle cross-system files
+ */
+export interface ZarfFileMatrix {
+    /**
+     * List of system architectures to which this file corresponds
+     */
+    arch?: Arch[];
+    /**
+     * List of operating systems to which this file corresponds
+     */
+    os?: O[];
+}
+
+export enum Arch {
+    Aarch64 = "aarch64",
+    Amd64 = "amd64",
+    Arm64 = "arm64",
+    X8664 = "x86_64",
+}
+
+export enum O {
+    Darwin = "darwin",
+    Linux = "linux",
+    MACOS = "macOS",
+    Macos = "macos",
+    ODarwin = "Darwin",
+    OLinux = "Linux",
+    OWin = "Win",
+    OWindows = "Windows",
+    Win = "win",
+    Windows = "windows",
 }
 
 /**
@@ -1594,10 +1632,15 @@ const typeMap: any = {
     ], false),
     "ZarfFile": o([
         { json: "executable", js: "executable", typ: u(undefined, true) },
+        { json: "matrix", js: "matrix", typ: u(undefined, r("ZarfFileMatrix")) },
         { json: "shasum", js: "shasum", typ: u(undefined, "") },
         { json: "source", js: "source", typ: "" },
         { json: "symlinks", js: "symlinks", typ: u(undefined, a("")) },
         { json: "target", js: "target", typ: "" },
+    ], false),
+    "ZarfFileMatrix": o([
+        { json: "arch", js: "arch", typ: u(undefined, a(r("Arch"))) },
+        { json: "os", js: "os", typ: u(undefined, a(r("O"))) },
     ], false),
     "ZarfComponentImport": o([
         { json: "name", js: "name", typ: u(undefined, "") },
@@ -1805,6 +1848,24 @@ const typeMap: any = {
         "http",
         "https",
         "tcp",
+    ],
+    "Arch": [
+        "aarch64",
+        "amd64",
+        "arm64",
+        "x86_64",
+    ],
+    "O": [
+        "darwin",
+        "linux",
+        "macOS",
+        "macos",
+        "Darwin",
+        "Linux",
+        "Win",
+        "Windows",
+        "win",
+        "windows",
     ],
     "Architecture": [
         "amd64",

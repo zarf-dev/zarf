@@ -79,11 +79,18 @@ type ZarfComponentOnlyCluster struct {
 
 // ZarfFile defines a file to deploy.
 type ZarfFile struct {
-	Source     string   `json:"source" jsonschema:"description=Local folder or file path or remote URL to pull into the package"`
-	Shasum     string   `json:"shasum,omitempty" jsonschema:"description=(files only) Optional SHA256 checksum of the file"`
-	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file or folder should be copied to during package deploy"`
-	Executable bool     `json:"executable,omitempty" jsonschema:"description=(files only) Determines if the file should be made executable during package deploy"`
-	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
+	Source     string         `json:"source" jsonschema:"description=Local folder or file path or remote URL to pull into the package"`
+	Shasum     string         `json:"shasum,omitempty" jsonschema:"description=(files only) Optional SHA256 checksum of the file"`
+	Target     string         `json:"target" jsonschema:"description=The absolute or relative path where the file or folder should be copied to during package deploy"`
+	Executable bool           `json:"executable,omitempty" jsonschema:"description=(files only) Determines if the file should be made executable during package deploy"`
+	Symlinks   []string       `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
+	Matrix     ZarfFileMatrix `json:"matrix,omitempty" jsonschema:"description=Matrix of operating systems and architectures to handle cross-system files"`
+}
+
+// ZarfFileMatrix defines a matrix of operating systems and architectures a file entry corresponds to
+type ZarfFileMatrix struct {
+	OS   []string `json:"os,omitempty" jsonschema:"description=List of operating systems to which this file corresponds,enum=linux,enum=Linux,enum=windows,enum=Windows,enum=win,enum=Win,enum=darwin,enum=Darwin,enum=macos,enum=macOS"`
+	Arch []string `json:"arch,omitempty" jsonschema:"description=List of system architectures to which this file corresponds,enum=arm64,enum=amd64,enum=aarch64,enum=x86_64"`
 }
 
 // ZarfChart defines a helm chart to be deployed.
