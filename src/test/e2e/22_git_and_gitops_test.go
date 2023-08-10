@@ -25,7 +25,7 @@ func TestGit(t *testing.T) {
 	cachePath := filepath.Join(tmpdir, ".cache-location")
 
 	buildPath := filepath.Join("src", "test", "packages", "22-git-data")
-	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "--zarf-cache", cachePath, "-o=build", "--confirm", "-a=arm64")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "--zarf-cache", cachePath, "-o=build", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-git-data-test-%s-1.0.0.tar.zst", e2e.Arch)
@@ -124,8 +124,8 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 
 	// Tests the URL mutation for GitRepository CRD for Flux.
 	stdOut, stdErr, err = e2e.Kubectl("get", "gitrepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
-	expectedMutatedRepoUrl := fmt.Sprintf("%s/%s/podinfo-1646971829.git", config.ZarfInClusterGitServiceURL, config.ZarfGitPushUser)
-	require.Equal(t, expectedMutatedRepoUrl, stdOut)
+	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", config.ZarfInClusterGitServiceURL, config.ZarfGitPushUser)
+	require.Equal(t, expectedMutatedRepoURL, stdOut)
 
 	// Remove the flux example when deployment completes
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "podinfo-flux", "--confirm")
@@ -142,15 +142,15 @@ func waitArgoDeployment(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--components=argocd-apps", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	expectedMutatedRepoUrl := fmt.Sprintf("%s/%s/podinfo-1646971829.git", config.ZarfInClusterGitServiceURL, config.ZarfGitPushUser)
+	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", config.ZarfInClusterGitServiceURL, config.ZarfGitPushUser)
 
 	// Tests the mutation of the private repository Secret for ArgoCD.
 	stdOut, stdErr, err = e2e.Kubectl("get", "secret", "argocd-repo-github-podinfo", "-n", "argocd", "-o", "jsonpath={.data.url}")
 	require.NoError(t, err, stdOut, stdErr)
 
-	expectedMutatedPrivateRepoUrlSecret, err := base64.StdEncoding.DecodeString(stdOut)
+	expectedMutatedPrivateRepoURLSecret, err := base64.StdEncoding.DecodeString(stdOut)
 	require.NoError(t, err, stdOut, stdErr)
-	require.Equal(t, expectedMutatedRepoUrl, string(expectedMutatedPrivateRepoUrlSecret))
+	require.Equal(t, expectedMutatedRepoURL, string(expectedMutatedPrivateRepoURLSecret))
 
 	// Tests the mutation of the repoURL for Application CRD source(s) for ArgoCD.
 	stdOut, stdErr, err = e2e.Kubectl("get", "application", "apps", "-n", "argocd", "-o", "jsonpath={.spec.sources[0].repoURL}")

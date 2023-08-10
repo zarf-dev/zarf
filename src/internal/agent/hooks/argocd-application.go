@@ -17,10 +17,12 @@ import (
 	v1 "k8s.io/api/admission/v1"
 )
 
+// Source represents a subset of the Argo Source object needed for Zarf Git URL mutations
 type Source struct {
 	RepoURL string `json:"repoURL"`
 }
 
+// ArgoApplication represents a subset of the Argo Application object needed for Zarf Git URL mutations
 type ArgoApplication struct {
 	Spec struct {
 		Source  Source   `json:"source"`

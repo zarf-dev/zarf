@@ -19,6 +19,7 @@ import (
 	v1 "k8s.io/api/admission/v1"
 )
 
+// ArgoRepository represents a subset of the Argo Repository object needed for Zarf Git URL mutations
 type ArgoRepository struct {
 	Data struct {
 		URL string `json:"url"`
@@ -34,7 +35,7 @@ func NewRepositoryMutationHook() operations.Hook {
 	}
 }
 
-// mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
+// mutateRepository mutates the git repository URL to point to the repository URL defined in the ZarfState.
 func mutateRepository(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	var (
