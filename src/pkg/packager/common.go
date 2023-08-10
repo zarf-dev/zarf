@@ -80,9 +80,6 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	)
 
 	if config.CommonOptions.TempDirectory != "" {
-		if err := utils.CreateDirectory(config.CommonOptions.TempDirectory, 0700); err != nil {
-			return nil, fmt.Errorf("unable to create temp directory: %w", err)
-		}
 		// If the cache directory is within the temp directory, warn the user
 		if strings.HasPrefix(config.CommonOptions.CachePath, config.CommonOptions.TempDirectory) {
 			message.Warnf("The cache directory (%q) is within the temp directory (%q) and will be removed when the temp directory is cleaned up", config.CommonOptions.CachePath, config.CommonOptions.TempDirectory)
@@ -250,6 +247,10 @@ func createPaths(basePath string) (paths types.TempPaths, err error) {
 		basePath, err = utils.MakeTempDir()
 		if err != nil {
 			return paths, err
+		}
+	} else {
+		if err := utils.CreateDirectory(basePath, 0700); err != nil {
+			return paths, fmt.Errorf("unable to create temp directory: %w", err)
 		}
 	}
 	message.Debug("Using temp", basePath)

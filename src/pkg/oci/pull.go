@@ -7,6 +7,7 @@ package oci
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -25,6 +26,27 @@ var (
 	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
 	PackageAlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
 )
+
+// FileExists returns true if the given file exists in the given directory with the expected SHA.
+func (o *OrasRemote) FileExists(desc ocispec.Descriptor, destinationDir string) bool {
+	destinationPath := filepath.Join(destinationDir, desc.Annotations[ocispec.AnnotationTitle])
+	info, err := os.Stat(destinationPath)
+	if err != nil {
+		return false
+	}
+	if info.IsDir() {
+		return false
+	}
+	if info.Size() != desc.Size {
+		return false
+	}
+
+	actual, err := utils.GetSHA256OfFile(destinationPath)
+	if err != nil {
+		return false
+	}
+	return actual == desc.Digest.Encoded()
+}
 
 // LayersFromPaths returns the descriptors for the given paths from the root manifest.
 func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.Descriptor, err error) {

@@ -16,7 +16,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
@@ -37,7 +36,6 @@ type OrasRemote struct {
 	ctx       context.Context
 	Transport *utils.Transport
 	CopyOpts  oras.CopyOptions
-	client    *auth.Client
 }
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
@@ -76,14 +74,13 @@ func (o *OrasRemote) withRepository(ref registry.Reference) error {
 	if err != nil {
 		return err
 	}
-	o.client = client
 
 	repo, err := remote.NewRepository(ref.String())
 	if err != nil {
 		return err
 	}
 	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
-	repo.Client = o.client
+	repo.Client = client
 	o.repo = repo
 	return nil
 }
@@ -145,14 +142,4 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 	client.Credential = auth.StaticCredential(ref.Registry, cred)
 
 	return client, nil
-}
-
-// Repo gives you access to the underlying remote repository
-func (o *OrasRemote) Repo() *remote.Repository {
-	return o.repo
-}
-
-// ResolveRoot returns the root descriptor for the remote repository
-func (o *OrasRemote) ResolveRoot() (ocispec.Descriptor, error) {
-	return o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
 }
