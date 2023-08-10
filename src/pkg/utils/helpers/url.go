@@ -42,7 +42,7 @@ func DoHostnamesMatch(url1 string, url2 string) (bool, error) {
 	return parsedURL1.Hostname() == parsedURL2.Hostname(), nil
 }
 
-// ExtractFilenameFromURL returns filename from URL string
+// ExtractBasePathFromURL returns filename from URL string
 func ExtractBasePathFromURL(urlStr string) (string, error) {
 	parsedURL, err := url.Parse(urlStr)
 	if err != nil {

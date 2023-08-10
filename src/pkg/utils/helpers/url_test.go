@@ -90,7 +90,7 @@ func (suite *TestURLSuite) Test_2_DoHostnamesMatch() {
 	suite.False(b)
 }
 
-func (suite *TestURLSuite) Test_3_ExtractFilenameFromURL() {
+func (suite *TestURLSuite) Test_3_ExtractBasePathFromURL() {
 	urls := []string{
 		"https://zarf.dev/file.txt",
 		"https://docs.zarf.dev/file.txt",
@@ -107,7 +107,7 @@ func (suite *TestURLSuite) Test_3_ExtractFilenameFromURL() {
 	}
 
 	for idx, url := range urls {
-		actualURL, err := ExtractFilenameFromURL(url)
+		actualURL, err := ExtractBasePathFromURL(url)
 		suite.NoError(err)
 		suite.Equal(actualURL, expectations[idx])
 	}

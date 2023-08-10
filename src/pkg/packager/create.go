@@ -386,7 +386,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			}
 
 			if file.ArchivePath != "" {
-				compressFileName, _ := helpers.ExtractFilenameFromURL(file.Source)
+				compressFileName, _ := helpers.ExtractBasePathFromURL(file.Source)
 				archiveFile := filepath.Dir(dst) + "/" + compressFileName
 				targetFile := filepath.Dir(dst) + "/" + file.Target
 				err = os.Rename(targetFile, archiveFile)
