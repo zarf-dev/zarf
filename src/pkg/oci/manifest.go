@@ -33,7 +33,7 @@ func NewZarfOCIManifest(manifest *ocispec.Manifest) *ZarfOCIManifest {
 	return &ZarfOCIManifest{*manifest}
 }
 
-// Locate returns the descriptor for the layer with the given path.
+// Locate returns the descriptor for the first layer with the given path or digest.
 func (m *ZarfOCIManifest) Locate(uri string) ocispec.Descriptor {
 	return helpers.Find(m.Layers, func(layer ocispec.Descriptor) bool {
 		return layer.Annotations[ocispec.AnnotationTitle] == uri || layer.Digest.Encoded() == uri
