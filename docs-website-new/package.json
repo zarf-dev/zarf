@@ -18,7 +18,7 @@
     "prepare": "npm run update",
     "start": "npm run clean && npm run copy-files && hugo serve",
     "test": "npm run clean && npm run lint && npm run link-check",
-    "update": "hugo mod get -u ./... && hugo mod tidy && npm update"
+    "update": "hugo mod get -u ./... && hugo mod tidy && npx npm-check-updates -u "
   },
   "devDependencies": {
     "@defenseunicorns/hugodocs": "github:defenseunicorns/build-hugo-docs",
