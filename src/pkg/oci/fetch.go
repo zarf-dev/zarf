@@ -72,7 +72,7 @@ func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg types.ZarfPac
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.
 func (o *OrasRemote) FetchImagesIndex(manifest *ZarfOCIManifest) (index *ocispec.Index, err error) {
-	return FetchJSON[*ocispec.Index](o.FetchLayer, manifest, manifest.indexPath)
+	return FetchJSON[*ocispec.Index](o.FetchLayer, manifest, ZarfPackageIndexPath)
 }
 
 // FetchJSON fetches the given JSON file from the remote repository.

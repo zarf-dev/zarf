@@ -12,8 +12,11 @@ import (
 )
 
 var (
-	ZarfPackageIndexPath      = filepath.Join("images", "index.json")
-	ZarfPackageLayoutPath     = filepath.Join("images", "oci-layout")
+	// ZarfPackageIndexPath is the path to the index.json file in the OCI package.
+	ZarfPackageIndexPath = filepath.Join("images", "index.json")
+	// ZarfPackageLayoutPath is the path to the oci-layout file in the OCI package.
+	ZarfPackageLayoutPath = filepath.Join("images", "oci-layout")
+	// ZarfPackageImagesBlobsDir is the path to the directory containing the image blobs in the OCI package.
 	ZarfPackageImagesBlobsDir = filepath.Join("images", "blobs", "sha256")
 )
 
