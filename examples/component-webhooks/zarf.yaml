@@ -13,4 +13,4 @@ components:
         files:
           - pepr-module-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b.yaml
     images:
-      - ghcr.io/defenseunicorns/pepr/controller:v0.12.0
+      - ghcr.io/defenseunicorns/pepr/controller:v0.12.2
