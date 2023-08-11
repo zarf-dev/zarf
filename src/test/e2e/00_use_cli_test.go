@@ -116,7 +116,7 @@ func TestUseCLI(t *testing.T) {
 		require.Error(t, err, stdOut, stdErr)
 	})
 
-	t.Run("zarf package to test  archive path", func(t *testing.T) {
+	t.Run("zarf package to test archive path", func(t *testing.T) {
 		t.Parallel()
 		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--zarf-cache", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
