@@ -358,6 +358,16 @@ const (
 	$ zarf tools registry pull reg.example.com/stefanprodan/podinfo:6.4.0 image.tar
 `
 
+	CmdToolsRegistryDeleteExample = `
+# delete an image from an internal repo in Zarf
+$ zarf tools registry delete 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
+
+# delete an image from a repo hosted at reg.example.com
+$ zarf tools registry delete reg.example.com/stefanprodan/podinfo:6.4.0
+`
+
+	CmdToolsRegistryPruneShort = "Prunes images from the registry that are not currently being used by any Zarf packages."
+
 	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s': %s"
 	CmdToolsRegistryFlagVerbose        = "Enable debug logs"
 	CmdToolsRegistryFlagInsecure       = "Allow image references to be fetched without TLS"

@@ -59,6 +59,16 @@ func TestConnect(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "prune", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "catalog")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdOut, "gitea/gitea")
+	require.NotContains(t, stdOut, "grafana/promtail")
+	require.NotContains(t, stdOut, "grafana/grafana")
+	require.NotContains(t, stdOut, "grafana/loki")
 }
 
 func TestMetrics(t *testing.T) {

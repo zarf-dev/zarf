@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -64,6 +65,13 @@ func init() {
 		},
 	}
 
+	pruneCmd := &cobra.Command{
+		Use:     "prune",
+		Aliases: []string{"p"},
+		Short:   lang.CmdToolsRegistryPruneShort,
+		RunE:    pruneImages,
+	}
+
 	craneLogin := craneCmd.NewCmdAuthLogin()
 	craneLogin.Example = ""
 
@@ -76,6 +84,8 @@ func init() {
 	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdList, &craneOptions, lang.CmdToolsRegistryListExample, 0))
 	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPush, &craneOptions, lang.CmdToolsRegistryPushExample, 1))
 	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
+	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
+	registryCmd.AddCommand(pruneCmd)
 
 	registryCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
 	registryCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
@@ -175,11 +185,122 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 		}
 
 		// Add the correct authentication to the crane command options
-		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PullUsername, zarfState.RegistryInfo.PullPassword)
+		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PushUsername, zarfState.RegistryInfo.PushPassword)
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
 
 		return originalListFn(cmd, args)
 	}
 
 	return wrappedCommand
+}
+
+func pruneImages(cmd *cobra.Command, args []string) error {
+	// Try to connect to a Zarf initialized cluster
+	zarfCluster, err := cluster.NewCluster()
+	if err != nil {
+		return err
+	}
+
+	// Load the state
+	zarfState, err := zarfCluster.LoadZarfState()
+	if err != nil {
+		return err
+	}
+
+	// Load the currently deployed packages
+	zarfPackages, errs := zarfCluster.GetDeployedZarfPackages()
+	if len(errs) > 0 {
+		return fmt.Errorf("unable to load the Zarf Package data from the cluster: %w", errs[0])
+	}
+
+	// Set up a tunnel to the registry if applicable
+	registryAddress := zarfState.RegistryInfo.Address
+	if zarfState.RegistryInfo.InternalRegistry {
+		// Open a tunnel to the Zarf registry
+		tunnelReg, err := cluster.NewZarfTunnel()
+		if err != nil {
+			return err
+		}
+		err = tunnelReg.Connect(cluster.ZarfRegistry, false)
+		if err != nil {
+			return err
+		}
+		registryAddress = tunnelReg.Endpoint()
+	}
+
+	// Determine which images are currently used by Zarf packages
+	pkgImages := map[string]bool{}
+	for _, pkg := range zarfPackages {
+		deployedComponents := map[string]bool{}
+		for _, depComponent := range pkg.DeployedComponents {
+			deployedComponents[depComponent.Name] = true
+		}
+
+		for _, component := range pkg.Data.Components {
+			if _, ok := deployedComponents[component.Name]; ok {
+				for _, image := range component.Images {
+					transformedImage, err := transform.ImageTransformHost(registryAddress, image)
+					if err != nil {
+						return err
+					}
+
+					transformedImageNoCheck, err := transform.ImageTransformHostWithoutChecksum(registryAddress, image)
+					if err != nil {
+						return err
+					}
+
+					pkgImages[transformedImage] = true
+					pkgImages[transformedImageNoCheck] = true
+				}
+			}
+		}
+	}
+
+	// Find which images and tags are in the registry currently
+	authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PushUsername, zarfState.RegistryInfo.PushPassword)
+	imageCatalog, err := crane.Catalog(registryAddress, authOption)
+	if err != nil {
+		return err
+	}
+	registryImages := []string{}
+	for _, image := range imageCatalog {
+		imageRef := fmt.Sprintf("%s/%s", registryAddress, image)
+		tags, err := crane.ListTags(imageRef, authOption)
+		if err != nil {
+			return err
+		}
+		for _, tag := range tags {
+			taggedImageRef := fmt.Sprintf("%s:%s", imageRef, tag)
+			registryImages = append(registryImages, taggedImageRef)
+		}
+	}
+
+	// Figure out which images are in the registry but not needed by packages
+	imagesToPrune := []string{}
+	for _, image := range registryImages {
+		if _, ok := pkgImages[image]; !ok {
+			imagesToPrune = append(imagesToPrune, image)
+		}
+	}
+
+	// TODO: CONFIRM
+	message.Warnf("Package images: %#v", pkgImages)
+	message.Warnf("Image catalog: %#v", registryImages)
+	message.Warnf("Images to delete: %#v", imagesToPrune)
+
+	// Delete the image references that are to be pruned
+	for _, image := range imagesToPrune {
+		digest, err := crane.Digest(image, authOption)
+		if err != nil {
+			return err
+		}
+		imageParts := strings.Split(image, ":")
+		image = fmt.Sprintf("%s:%s@%s", imageParts[0], imageParts[1], digest)
+		err = crane.Delete(image, authOption)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
