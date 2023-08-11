@@ -199,7 +199,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 	return wrappedCommand
 }
 
-func pruneImages(cmd *cobra.Command, args []string) error {
+func pruneImages(_ *cobra.Command, _ []string) error {
 	// Try to connect to a Zarf initialized cluster
 	zarfCluster, err := cluster.NewCluster()
 	if err != nil {
