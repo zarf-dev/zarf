@@ -27,10 +27,15 @@ const (
 	ErrCreatingDir         = "failed to create directory %s: %s"
 	ErrRemoveFile          = "failed to remove file %s: %s"
 	ErrUnarchive           = "failed to unarchive %s: %s"
+	ErrConfirmCancel       = "confirm selection canceled: %s"
 )
 
 // Zarf CLI commands.
 const (
+	// common command language
+	CmdConfirmProvided = "Confirm flag specified, continuing without prompting."
+	CmdConfirmContinue = "Continue with these changes?"
+
 	// root zarf command
 	RootCmdShort = "DevSecOps for Airgap"
 	RootCmdLong  = "Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads\n" +
@@ -359,11 +364,19 @@ const (
 `
 
 	CmdToolsRegistryDeleteExample = `
-# delete an image from an internal repo in Zarf
-$ zarf tools registry delete 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
+# delete an image digest from an internal repo in Zarf
+$ zarf tools registry delete 127.0.0.1:31999/stefanprodan/podinfo@sha256:57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8
 
-# delete an image from a repo hosted at reg.example.com
-$ zarf tools registry delete reg.example.com/stefanprodan/podinfo:6.4.0
+# delete an image digest from a repo hosted at reg.example.com
+$ zarf tools registry delete reg.example.com/stefanprodan/podinfo@sha256:57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8
+`
+
+	CmdToolsRegistryDigestExample = `
+# return an image digest for an internal repo in Zarf
+$ zarf tools registry digest 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
+
+# return an image digest from a repo hosted at reg.example.com
+$ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 `
 
 	CmdToolsRegistryPruneShort       = "Prunes images from the registry that are not currently being used by any Zarf packages."
@@ -525,9 +538,10 @@ const (
 
 // Collection of reusable error messages.
 var (
-	ErrInitNotFound      = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
-	ErrUnableToCheckArch = errors.New("unable to get the configured cluster's architecture")
-	ErrInterrupt         = errors.New("execution cancelled due to an interrupt")
+	ErrInitNotFound        = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
+	ErrUnableToCheckArch   = errors.New("unable to get the configured cluster's architecture")
+	ErrInterrupt           = errors.New("execution cancelled due to an interrupt")
+	ErrUnableToGetPackages = errors.New("unable to load the Zarf Package data from the cluster")
 )
 
 // Collection of reusable warn messages.

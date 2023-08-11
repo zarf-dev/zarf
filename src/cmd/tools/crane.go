@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -88,6 +89,7 @@ func init() {
 	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPush, &craneOptions, lang.CmdToolsRegistryPushExample, 1))
 	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
 	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
+	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
 	registryCmd.AddCommand(pruneCmd)
 
 	registryCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
@@ -213,7 +215,7 @@ func pruneImages(cmd *cobra.Command, args []string) error {
 	// Load the currently deployed packages
 	zarfPackages, errs := zarfCluster.GetDeployedZarfPackages()
 	if len(errs) > 0 {
-		return fmt.Errorf("unable to load the Zarf Package data from the cluster: %w", errs[0])
+		return lang.ErrUnableToGetPackages
 	}
 
 	// Set up a tunnel to the registry if applicable
@@ -231,7 +233,9 @@ func pruneImages(cmd *cobra.Command, args []string) error {
 		registryAddress = tunnelReg.Endpoint()
 	}
 
-	// Determine which images are currently used by Zarf packages
+	authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PushUsername, zarfState.RegistryInfo.PushPassword)
+
+	// Determine which image digests are currently used by Zarf packages
 	pkgImages := map[string]bool{}
 	for _, pkg := range zarfPackages {
 		deployedComponents := map[string]bool{}
@@ -242,30 +246,28 @@ func pruneImages(cmd *cobra.Command, args []string) error {
 		for _, component := range pkg.Data.Components {
 			if _, ok := deployedComponents[component.Name]; ok {
 				for _, image := range component.Images {
-					transformedImage, err := transform.ImageTransformHost(registryAddress, image)
-					if err != nil {
-						return err
-					}
-
+					// We use the no checksum image since it will always exist and will share the same digest with other tags
 					transformedImageNoCheck, err := transform.ImageTransformHostWithoutChecksum(registryAddress, image)
 					if err != nil {
 						return err
 					}
 
-					pkgImages[transformedImage] = true
-					pkgImages[transformedImageNoCheck] = true
+					digest, err := crane.Digest(transformedImageNoCheck, authOption)
+					if err != nil {
+						return err
+					}
+					pkgImages[digest] = true
 				}
 			}
 		}
 	}
 
 	// Find which images and tags are in the registry currently
-	authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PushUsername, zarfState.RegistryInfo.PushPassword)
 	imageCatalog, err := crane.Catalog(registryAddress, authOption)
 	if err != nil {
 		return err
 	}
-	registryImages := []string{}
+	imageRefToDigest := map[string]string{}
 	for _, image := range imageCatalog {
 		imageRef := fmt.Sprintf("%s/%s", registryAddress, image)
 		tags, err := crane.ListTags(imageRef, authOption)
@@ -274,35 +276,54 @@ func pruneImages(cmd *cobra.Command, args []string) error {
 		}
 		for _, tag := range tags {
 			taggedImageRef := fmt.Sprintf("%s:%s", imageRef, tag)
-			registryImages = append(registryImages, taggedImageRef)
+			digest, err := crane.Digest(taggedImageRef, authOption)
+			if err != nil {
+				return err
+			}
+			imageRefToDigest[taggedImageRef] = digest
 		}
 	}
 
 	// Figure out which images are in the registry but not needed by packages
-	imagesToPrune := []string{}
-	for _, image := range registryImages {
-		if _, ok := pkgImages[image]; !ok {
-			imagesToPrune = append(imagesToPrune, image)
+	imageDigestsToPrune := map[string]bool{}
+	for imageRef, digest := range imageRefToDigest {
+		if _, ok := pkgImages[digest]; !ok {
+			imageParts := strings.Split(imageRef, ":")
+			imageRef = fmt.Sprintf("%s:%s@%s", imageParts[0], imageParts[1], digest)
+			imageDigestsToPrune[imageRef] = true
 		}
 	}
 
-	// TODO: CONFIRM
-	message.Warnf("Package images: %#v", pkgImages)
-	message.Warnf("Image catalog: %#v", registryImages)
-	message.Warnf("Images to delete: %#v", imagesToPrune)
+	if len(imageDigestsToPrune) > 0 {
+		message.Note("The following image digests will be pruned from the registry:")
 
-	// Delete the image references that are to be pruned
-	for _, image := range imagesToPrune {
-		digest, err := crane.Digest(image, authOption)
-		if err != nil {
-			return err
+		for imageRef := range imageDigestsToPrune {
+			message.Info(imageRef)
 		}
-		imageParts := strings.Split(image, ":")
-		image = fmt.Sprintf("%s:%s@%s", imageParts[0], imageParts[1], digest)
-		err = crane.Delete(image, authOption)
-		if err != nil {
-			return err
+
+		confirm := config.CommonOptions.Confirm
+
+		if confirm {
+			message.Note(lang.CmdConfirmProvided)
+		} else {
+			prompt := &survey.Confirm{
+				Message: lang.CmdConfirmContinue,
+			}
+			if err := survey.AskOne(prompt, &confirm); err != nil {
+				message.Fatalf(nil, lang.ErrConfirmCancel, err)
+			}
 		}
+		if confirm {
+			// Delete the image references that are to be pruned
+			for imageRef := range imageDigestsToPrune {
+				err = crane.Delete(imageRef, authOption)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	} else {
+		message.Note("There are no images to prune")
 	}
 
 	return nil
