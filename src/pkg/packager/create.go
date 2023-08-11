@@ -393,7 +393,8 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				if err != nil {
 					return fmt.Errorf(lang.ErrWritingFile, dst, err)
 				}
-				err = helpers.FindAndCopyFileFromArchive(archiveFile, file.ArchivePath, filepath.Dir(dst))
+
+				err = archiver.Extract(archiveFile, file.ArchivePath, filepath.Dir(dst))
 				if err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ArchivePath, archiveFile, err)
 				}
