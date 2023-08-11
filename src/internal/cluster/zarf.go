@@ -50,17 +50,18 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, []error) {
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
-func (c *Cluster) GetDeployedPackage(packageName string) (types.DeployedPackage, error) {
-	var deployedPackage = types.DeployedPackage{}
-
+func (c *Cluster) GetDeployedPackage(packageName string) (deployedPackage types.DeployedPackage, err error) {
 	// Get the secret that describes the deployed init package
 	secret, err := c.Kube.GetSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName)
 	if err != nil {
 		return deployedPackage, err
 	}
 
-	err = json.Unmarshal(secret.Data["data"], &deployedPackage)
-	return deployedPackage, err
+	if err = json.Unmarshal(secret.Data["data"], &deployedPackage); err != nil {
+		return deployedPackage, err
+	}
+
+	return deployedPackage, nil
 }
 
 // StripZarfLabelsAndSecretsFromNamespaces removes metadata and secrets from existing namespaces no longer manged by Zarf.
@@ -142,11 +143,12 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 	if err != nil {
 		return packageSecret, err
 	}
+	// If no webhooks need to complete, we can return immediately.
 	if !packageNeedsWait {
 		return packageSecret, nil
 	}
 
-	// Timebox the amount of time we wait for a mutation to finish before erroring
+	// Timebox the amount of time we wait for a webhook to complete before erroring
 	waitDuration := types.DefaultWebhookWaitDuration
 	if waitSeconds > 0 {
 		waitDuration = time.Duration(waitSeconds) * time.Second
@@ -165,27 +167,31 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 			// Wait for 3 seconds before checking the secret again
 			time.Sleep(3 * time.Second)
 			packageNeedsWait, _, err = c.PackageSecretNeedsWait(packageSecret.Name)
+			if err != nil {
+				return packageSecret, err
+			}
 		}
 	}
 
 	spinner.Success()
-	return packageSecret, err
+	return packageSecret, nil
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
 func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int) (*corev1.Secret, error) {
-
-	// Attempt to load information about webhooks for the package
-	componentWebhooks := map[string]map[string]types.Webhook{}
-	existingPackageSecret, err := c.GetDeployedPackage(pkg.Metadata.Name)
-	if err == nil {
-		componentWebhooks = existingPackageSecret.ComponentWebhooks
-	}
+	packageName := pkg.Metadata.Name
 
 	// Generate a secret that describes the package that is being deployed
-	packageName := pkg.Metadata.Name
-	deployedPackageSecret := c.Kube.GenerateSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName, corev1.SecretTypeOpaque)
+	secretName := config.ZarfPackagePrefix + packageName
+	deployedPackageSecret := c.Kube.GenerateSecret(ZarfNamespaceName, secretName, corev1.SecretTypeOpaque)
 	deployedPackageSecret.Labels[ZarfPackageInfoLabel] = packageName
+
+	// Attempt to load information about webhooks for the package
+	existingPackageSecret, err := c.GetDeployedPackage(packageName)
+	if err != nil {
+		return &corev1.Secret{}, err
+	}
+	componentWebhooks := existingPackageSecret.ComponentWebhooks
 
 	stateData, err := json.Marshal(types.DeployedPackage{
 		Name:               packageName,
@@ -200,6 +206,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 		return nil, err
 	}
 
+	// Update the package secret with the deployed package data.
 	deployedPackageSecret.Data = map[string][]byte{"data": stateData}
 
 	return c.Kube.CreateOrUpdateSecret(deployedPackageSecret)
