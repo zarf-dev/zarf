@@ -7,6 +7,7 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -155,11 +156,11 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 	// We need to wait for this package to finish having webhooks run, create a spinner and keep checking until it's ready
 	spinner := message.NewProgressSpinner("Waiting for component webhooks to complete")
 	defer spinner.Stop()
-	for packageNeedsWait && err == nil {
+	for packageNeedsWait {
 		select {
 		// On timeout, abort and return an error.
 		case <-timeout:
-			return nil, fmt.Errorf("timed out waiting for package deployment to complete")
+			return nil, errors.New("timed out waiting for package deployment to complete")
 		default:
 			// Wait for 3 seconds before checking the secret again
 			time.Sleep(3 * time.Second)
