@@ -19,6 +19,7 @@ Tools for working with container registries using go-containertools
 * [zarf tools registry catalog](zarf_tools_registry_catalog.md)	 - List the repos in a registry
 * [zarf tools registry copy](zarf_tools_registry_copy.md)	 - Efficiently copy a remote image from src to dst while retaining the digest value
 * [zarf tools registry delete](zarf_tools_registry_delete.md)	 - Delete an image reference from its registry
+* [zarf tools registry digest](zarf_tools_registry_digest.md)	 - Get the digest of an image
 * [zarf tools registry login](zarf_tools_registry_login.md)	 - Log in to a registry
 * [zarf tools registry ls](zarf_tools_registry_ls.md)	 - List the tags in a repo
 * [zarf tools registry prune](zarf_tools_registry_prune.md)	 - Prunes images from the registry that are not currently being used by any Zarf packages.
