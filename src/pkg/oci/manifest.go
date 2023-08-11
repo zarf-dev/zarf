@@ -11,25 +11,23 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+var (
+	ZarfPackageIndexPath      = filepath.Join("images", "index.json")
+	ZarfPackageLayoutPath     = filepath.Join("images", "oci-layout")
+	ZarfPackageImagesBlobsDir = filepath.Join("images", "blobs", "sha256")
+)
+
 // ZarfOCIManifest is a wrapper around the OCI manifest
 //
 // it includes the path to the index.json, oci-layout, and image blobs.
 // as well as a few helper functions for locating layers and calculating the size of the layers.
 type ZarfOCIManifest struct {
 	ocispec.Manifest
-	indexPath      string
-	ociLayoutPath  string
-	imagesBlobsDir string
 }
 
 // NewZarfOCIManifest returns a new ZarfOCIManifest.
 func NewZarfOCIManifest(manifest *ocispec.Manifest) *ZarfOCIManifest {
-	return &ZarfOCIManifest{
-		Manifest:       *manifest,
-		indexPath:      filepath.Join("images", "index.json"),
-		ociLayoutPath:  filepath.Join("images", "oci-layout"),
-		imagesBlobsDir: filepath.Join("images", "blobs", "sha256"),
-	}
+	return &ZarfOCIManifest{*manifest}
 }
 
 // Locate returns the descriptor for the layer with the given path.

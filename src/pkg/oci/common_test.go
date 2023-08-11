@@ -18,8 +18,80 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 )
 
-func setup(t *testing.T, port int) (*OrasRemote, *registry.Registry) {
+// type testFileContents map[string]interface{}
+
+// var testFiles = testFileContents{
+// 	zconfig.ZarfYAML: types.ZarfPackage{
+// 		Kind: types.ZarfPackageConfig,
+// 		Metadata: types.ZarfMetadata{
+// 			Name:    "oci-lib-unit-test",
+// 			Version: "0.0.1",
+// 		},
+// 		Build: types.ZarfBuildData{
+// 			Architecture: runtime.GOARCH,
+// 		},
+// 		Components: []types.ZarfComponent{
+// 			{
+// 				Name:     "nginx-remote",
+// 				Required: true,
+// 				Manifests: []types.ZarfManifest{
+// 					{
+// 						Name:      "simple-nginx-deployment",
+// 						Namespace: "nginx",
+// 						Files:     []string{"https://k8s.io/examples/application/deployment.yaml@c57f73449b26eae02ca2a549c388807d49ef6d3f2dc040a9bbb1290128d97157"},
+// 					},
+// 				},
+// 				Images: []string{
+// 					"nginx:1.14.2",
+// 				},
+// 			},
+// 		},
+// 	},
+// 	zconfig.ZarfYAMLSignature: "signature contents",
+// 	zconfig.ZarfSBOMTar:       "sboms.tar contents",
+// 	filepath.Join(zconfig.ZarfComponentsDir, "nginx-remote.tar"): "nginx-remote.tar contents",
+// 	ZarfPackageLayoutPath: ocispec.ImageLayout{
+// 		Version: ocispec.ImageLayoutVersion,
+// 	},
+// 	ZarfPackageIndexPath: ocispec.Index{
+// 		Manifests: []ocispec.Descriptor{
+// 			{
+// 				MediaType: ocispec.MediaTypeImageConfig,
+// 				Digest: digest.FromString(),
+// 			},
+// 		},
+// 	},
+// }
+
+// func setupDummyPackage(t *testing.T) string {
+
+// 	tmp := t.TempDir()
+
+// 	for name, contents := range testFiles {
+// 		path := filepath.Join(tmp, name)
+// 		var b []byte
+// 		var err error
+// 		switch contents.(type) {
+// 		case string:
+// 			b = []byte(contents.(string))
+// 		case types.ZarfPackage:
+// 			b, err = goyaml.Marshal(contents)
+// 			require.NoError(t, err)
+// 		default:
+// 			b, err = json.Marshal(contents)
+// 			require.NoError(t, err)
+// 		}
+
+// 		err = utils.WriteFile(path, b)
+// 		require.NoError(t, err)
+// 	}
+
+// 	return tmp
+// }
+
+func setup(t *testing.T, port int) (*OrasRemote, *registry.Registry, context.CancelFunc) {
 	ctx := context.TODO()
+	ctx, cancel := context.WithCancel(ctx)
 
 	config := &configuration.Configuration{}
 	config.HTTP.Addr = fmt.Sprintf(":%d", port)
@@ -29,11 +101,19 @@ func setup(t *testing.T, port int) (*OrasRemote, *registry.Registry) {
 	reg, err := registry.NewRegistry(ctx, config)
 	require.NoError(t, err)
 
-	url := fmt.Sprintf("oci://localhost:%d", port)
+	repo := "test"
+	tag := "0.0.1"
+	url := fmt.Sprintf("oci://localhost:%d/%s:%s", port, repo, tag)
 	remote, err := NewOrasRemote(url)
 	require.NoError(t, err)
+	remote.ctx = ctx
 
-	return remote, reg
+	// populate the registry with a test package
+	// dir := setupDummyPackage(t)
+	// err = remote.PublishPackage(testFiles[zconfig.ZarfYAML].(*types.ZarfPackage), dir, 3)
+	// require.NoError(t, err)
+
+	return remote, reg, cancel
 }
 
 func Test_NewOrasRemote(t *testing.T) {

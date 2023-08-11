@@ -107,7 +107,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	}
 	if len(images) > 0 {
 		// Add the image index and the oci-layout layers
-		layers = append(layers, root.Locate(root.indexPath), root.Locate(root.ociLayoutPath))
+		layers = append(layers, root.Locate(ZarfPackageIndexPath), root.Locate(ZarfPackageLayoutPath))
 		index, err := o.FetchImagesIndex(root)
 		if err != nil {
 			return nil, err
@@ -121,12 +121,12 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 				return nil, err
 			}
 			// Add the manifest and the manifest config layers
-			layers = append(layers, root.Locate(filepath.Join(root.imagesBlobsDir, manifestDescriptor.Digest.Encoded())))
-			layers = append(layers, root.Locate(filepath.Join(root.imagesBlobsDir, manifest.Config.Digest.Encoded())))
+			layers = append(layers, root.Locate(filepath.Join(ZarfPackageImagesBlobsDir, manifestDescriptor.Digest.Encoded())))
+			layers = append(layers, root.Locate(filepath.Join(ZarfPackageImagesBlobsDir, manifest.Config.Digest.Encoded())))
 
 			// Add all the layers from the manifest
 			for _, layer := range manifest.Layers {
-				layerPath := filepath.Join(root.imagesBlobsDir, layer.Digest.Encoded())
+				layerPath := filepath.Join(ZarfPackageImagesBlobsDir, layer.Digest.Encoded())
 				layers = append(layers, root.Locate(layerPath))
 			}
 		}

@@ -12,15 +12,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
-	"oras.land/oras-go/v2/registry/remote"
 
 	goyaml "github.com/goccy/go-yaml"
 )
-
-// Repo gives you access to the underlying remote repository
-func (o *OrasRemote) Repo() *remote.Repository {
-	return o.repo
-}
 
 // ResolveRoot returns the root descriptor for the remote repository
 func (o *OrasRemote) ResolveRoot() (ocispec.Descriptor, error) {
