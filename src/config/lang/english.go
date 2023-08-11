@@ -366,7 +366,8 @@ $ zarf tools registry delete 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
 $ zarf tools registry delete reg.example.com/stefanprodan/podinfo:6.4.0
 `
 
-	CmdToolsRegistryPruneShort = "Prunes images from the registry that are not currently being used by any Zarf packages."
+	CmdToolsRegistryPruneShort       = "Prunes images from the registry that are not currently being used by any Zarf packages."
+	CmdToolsRegistryPruneFlagConfirm = "Confirm the image prune action to prevent accidental deletions"
 
 	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s': %s"
 	CmdToolsRegistryFlagVerbose        = "Enable debug logs"

@@ -72,6 +72,9 @@ func init() {
 		RunE:    pruneImages,
 	}
 
+	// Always require confirm flag (no viper)
+	pruneCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdToolsRegistryPruneFlagConfirm)
+
 	craneLogin := craneCmd.NewCmdAuthLogin()
 	craneLogin.Example = ""
 
