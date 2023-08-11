@@ -138,8 +138,11 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 	}
 
 	packageNeedsWait, waitSeconds, err := c.PackageSecretNeedsWait(packageSecret.Name)
-	if !packageNeedsWait {
+	if err != nil {
 		return packageSecret, err
+	}
+	if !packageNeedsWait {
+		return packageSecret, nil
 	}
 
 	// Timebox the amount of time we wait for a mutation to finish before erroring
