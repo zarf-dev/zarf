@@ -21,4 +21,3 @@ func (k *K8s) GetNodes() (*corev1.NodeList, error) {
 func (k *K8s) GetNode(nodeName string) (*corev1.Node, error) {
 	return k.Clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 }
-

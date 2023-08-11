@@ -12,7 +12,6 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -58,8 +57,8 @@ func (p *Packager) confirmAction(stage string, sbomViewFiles []string) (confirm 
 		}
 
 		// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
-		if cluster, err := cluster.NewCluster(); err == nil {
-			if initPackage, err := cluster.GetDeployedPackage("init"); err == nil {
+		if p.cluster != nil {
+			if initPackage, err := p.cluster.GetDeployedPackage("init"); err == nil {
 				// We use the build.version for now because it is the most reliable way to get this version info pre v0.26.0
 				deprecated.PrintBreakingChanges(initPackage.Data.Build.Version)
 			}

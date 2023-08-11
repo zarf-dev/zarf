@@ -33,7 +33,7 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 		distro, _ = c.DetectDistro()
 		state, _ = c.LoadZarfState()
 		hasZarf = state != nil
-		k8sRevision = getServerVersion(c)
+		k8sRevision, _ = c.GetServerVersion()
 	}
 
 	data := types.ClusterSummary{
@@ -46,11 +46,4 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	common.WriteJSONResponse(w, data, http.StatusOK)
-}
-
-// Retrieve and return the k8s revision.
-func getServerVersion(c *cluster.Cluster) string {
-	info, _ := c.Clientset.DiscoveryClient.ServerVersion()
-
-	return info.String()
 }

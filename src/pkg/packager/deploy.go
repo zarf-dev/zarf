@@ -31,7 +31,14 @@ import (
 )
 
 // Deploy attempts to deploy the given PackageConfig.
-func (p *Packager) Deploy() error {
+func (p *Packager) Deploy() (err error) {
+	// Attempt to connect to a Kubernetes cluster.
+	// Not all packages require Kubernetes, so we only want to log a debug message rather than return the error when we can't connect to a cluster.
+	p.cluster, err = cluster.NewCluster()
+	if err != nil {
+		message.Debug(err)
+	}
+
 	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
 		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
 		if err != nil {

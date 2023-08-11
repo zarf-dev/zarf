@@ -56,22 +56,22 @@ const (
 
 // Zarf Constants for In-Cluster Services.
 const (
-	IPV4Localhost  = "127.0.0.1"
+	IPV4Localhost = "127.0.0.1"
 
-	ZarfArtifactTokenName  = "zarf-artifact-registry-token"
+	ZarfArtifactTokenName = "zarf-artifact-registry-token"
 
-	ZarfImagePullSecretName  = "private-registry"
-	ZarfGitServerSecretName  = "private-git-server"
+	ZarfImagePullSecretName = "private-registry"
+	ZarfGitServerSecretName = "private-git-server"
 
-	ZarfRegistryPushUser                    = "zarf-push"
-	ZarfRegistryPullUser                    = "zarf-pull"
-	ZarfInClusterContainerRegistryNodePort     = 31999
+	ZarfRegistryPushUser                   = "zarf-push"
+	ZarfRegistryPullUser                   = "zarf-pull"
+	ZarfInClusterContainerRegistryNodePort = 31999
 
-	ZarfGitPushUser  = "zarf-git-user"
-	ZarfGitReadUser  = "zarf-git-read-user"
+	ZarfGitPushUser = "zarf-git-user"
+	ZarfGitReadUser = "zarf-git-read-user"
 
-	ZarfInClusterGitServiceURL       = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
-	ZarfInClusterArtifactServiceURL  = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 )
 
 // Zarf Global Configuration Variables.
@@ -90,6 +90,9 @@ var (
 
 	// SkipLogFile is a flag to skip logging to a file
 	SkipLogFile bool
+
+	// NoColor is a flag to disable colors in output
+	NoColor bool
 
 	CosignPublicKey string
 	UIAssets        embed.FS
