@@ -206,7 +206,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 		return nil, err
 	}
 
-	// Update the package secret with the deployed package data.
+	// Update the package secret
 	deployedPackageSecret.Data = map[string][]byte{"data": stateData}
 
 	return c.Kube.CreateOrUpdateSecret(deployedPackageSecret)
