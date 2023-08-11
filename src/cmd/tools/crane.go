@@ -288,14 +288,17 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 	imageDigestsToPrune := map[string]bool{}
 	for imageRef, digest := range imageRefToDigest {
 		if _, ok := pkgImages[digest]; !ok {
-			imageParts := strings.Split(imageRef, ":")
-			imageRef = fmt.Sprintf("%s:%s@%s", imageParts[0], imageParts[1], digest)
+			ref, err := transform.ParseImageRef(imageRef)
+			if err != nil {
+				return err
+			}
+			imageRef = fmt.Sprintf("%s@%s", ref.Name, digest)
 			imageDigestsToPrune[imageRef] = true
 		}
 	}
 
 	if len(imageDigestsToPrune) > 0 {
-		message.Note("The following image digests will be pruned from the registry:")
+		message.Note(lang.CmdToolsRegistryPruneImageList)
 
 		for imageRef := range imageDigestsToPrune {
 			message.Info(imageRef)
@@ -323,7 +326,7 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 			}
 		}
 	} else {
-		message.Note("There are no images to prune")
+		message.Note(lang.CmdToolsRegistryPruneNoImages)
 	}
 
 	return nil

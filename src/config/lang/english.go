@@ -381,6 +381,8 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 
 	CmdToolsRegistryPruneShort       = "Prunes images from the registry that are not currently being used by any Zarf packages."
 	CmdToolsRegistryPruneFlagConfirm = "Confirm the image prune action to prevent accidental deletions"
+	CmdToolsRegistryPruneImageList   = "The following image digests will be pruned from the registry:"
+	CmdToolsRegistryPruneNoImages    = "There are no images to prune"
 
 	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s': %s"
 	CmdToolsRegistryFlagVerbose        = "Enable debug logs"
