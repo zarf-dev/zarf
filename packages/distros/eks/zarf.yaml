@@ -26,7 +26,7 @@ components:
       - source: eks.yaml
         target: eks.yaml
       - source: https://github.com/weaveworks/eksctl/releases/download/v0.147.0/eksctl_Darwin_amd64.tar.gz
-        target: binaries/eksctl__Darwin_x86_64
+        target: binaries/eksctl_Darwin_x86_64
         executable: true
         shasum: 6d72fe0bafa5ac62e1da3889b6987af6192b330abd9c50491bcf1c5966358f89
         archivePath: eksctl
