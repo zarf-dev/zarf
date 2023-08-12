@@ -155,6 +155,10 @@ func isVersionCmd() bool {
 }
 
 func printViperConfigUsed() {
+	vInitialized := v != nil
+	if !vInitialized {
+		return
+	}
 	// Optional, so ignore file not found errors
 	if vConfigError != nil {
 		// Config file not found; ignore
