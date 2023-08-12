@@ -1,6 +1,12 @@
 redis-ha:
   enabled: false
 
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
 configs:
   repositories:
     github-podinfo:

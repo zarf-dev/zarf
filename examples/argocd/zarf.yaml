@@ -16,7 +16,6 @@ components:
           - baseline/values.yaml
     images:
       - quay.io/argoproj/argocd:v2.7.7
-      - ghcr.io/dexidp/dex:v2.37.0
       - public.ecr.aws/docker/library/redis:7.0.11-alpine
   - name: argocd-apps
     required: true
@@ -32,7 +31,6 @@ components:
       - https://github.com/stefanprodan/podinfo.git
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
-      - docker.io/nginx:1.25.1
     actions:
       onDeploy:
         after:
