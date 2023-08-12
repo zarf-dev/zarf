@@ -156,7 +156,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		if p.cluster != nil {
 			err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings)
 			if err != nil {
-				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
 

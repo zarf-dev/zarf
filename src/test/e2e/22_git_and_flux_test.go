@@ -111,4 +111,8 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	// Remove the flux example when deployment completes
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "podinfo-flux", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Prune the flux images to reduce disk pressure
+	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "prune", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }
