@@ -537,9 +537,12 @@ var (
 
 // ValidatePackageSignature validates the signature of a package
 func ValidatePackageSignature(directory string, publicKeyPath string) error {
-
-	// If the insecure flag was provided, ignore the signature validation
-	if config.CommonOptions.Insecure {
+	var pkg types.ZarfPackage
+	if err := utils.ReadYaml(filepath.Join(directory, config.ZarfYAML), &pkg); err != nil {
+		return fmt.Errorf("unable to read the package config: %w", err)
+	}
+	// If the insecure flag was provided, or there is no aggregate checksum, ignore the signature validation
+	if config.CommonOptions.Insecure || pkg.Metadata.AggregateChecksum == "" {
 		return nil
 	}
 
