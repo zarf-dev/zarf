@@ -285,7 +285,13 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 	}
 
 	for filesIdx, file := range component.Files {
-		path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), file.Target)
+		var path string
+		if file.ArchivePath != "" {
+			path = filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), file.Target)
+			appendSBOMFiles(path)
+		} else {
+			path = filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		}
 		appendSBOMFiles(path)
 	}
 
