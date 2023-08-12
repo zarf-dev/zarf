@@ -118,7 +118,7 @@ func TestUseCLI(t *testing.T) {
 
 	t.Run("zarf package to test archive path", func(t *testing.T) {
 		t.Parallel()
-		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--zarf-cache", "--confirm")
+		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
 		path := "build/zarf-package-distro-eks-multi-0.0.2.tar.zst"
