@@ -319,7 +319,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 	for fileIdx, file := range component.Files {
 		spinner.Updatef("Loading %s", file.Target)
 
-		fileLocation := filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
+		fileLocation := filepath.Join(pkgLocation, strconv.Itoa(fileIdx), file.Target)
 		if utils.InvalidPath(fileLocation) {
 			fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
 		}

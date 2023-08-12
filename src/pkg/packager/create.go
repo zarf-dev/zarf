@@ -285,8 +285,8 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 	}
 
 	for filesIdx, file := range component.Files {
-		path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
-
+		// path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), file.Target)
 		appendSBOMFiles(path)
 	}
 
@@ -387,17 +387,29 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 			if file.ArchivePath != "" {
 				compressFileName, _ := helpers.ExtractBasePathFromURL(file.Source)
-				archiveFile := filepath.Dir(dst) + "/" + compressFileName
-				targetFile := filepath.Dir(dst) + "/" + file.Target
+				targetFile := filepath.Join(filepath.Dir(dst), filepath.Base(file.Target))
+				targetDir := filepath.Join(filepath.Dir(dst), filepath.Dir(file.Target))
+				archiveFile := filepath.Join(filepath.Dir(targetFile), compressFileName)
 				err = os.Rename(targetFile, archiveFile)
 				if err != nil {
 					return fmt.Errorf(lang.ErrWritingFile, dst, err)
 				}
-
-				err = archiver.Extract(archiveFile, file.ArchivePath, filepath.Dir(dst))
+				// archiver.Extract()
+				err = archiver.Extract(archiveFile, file.ArchivePath, targetDir)
 				if err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ArchivePath, archiveFile, err)
 				}
+				file.Target = filepath.Join(targetDir, filepath.Base(file.Target))
+				extractedArchiveFile := filepath.Join(targetDir, file.ArchivePath)
+				if file.Target != extractedArchiveFile {
+					err = os.Rename(filepath.Join(targetDir, file.ArchivePath), file.Target)
+					if err != nil {
+						return fmt.Errorf(lang.ErrWritingFile, dst, err)
+					}
+				}
+
+				dst = filepath.Join(targetDir, filepath.Base(file.Target))
+
 			}
 		} else {
 			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
@@ -410,9 +422,11 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != file.Shasum {
+			actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256)
+			if actualShasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 			}
+
 		}
 
 		if file.Executable || utils.IsDir(dst) {
