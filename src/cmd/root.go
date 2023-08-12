@@ -73,11 +73,6 @@ func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
-// RootCmd returns the root command.
-func RootCmd() *cobra.Command {
-	return rootCmd
-}
-
 func init() {
 	// Add the tools commands
 	tools.Include(rootCmd)
