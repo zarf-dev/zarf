@@ -285,7 +285,6 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 	}
 
 	for filesIdx, file := range component.Files {
-		// path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), file.Target)
 		appendSBOMFiles(path)
 	}
@@ -386,21 +385,30 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			}
 
 			if file.ArchivePath != "" {
+
 				compressFileName, _ := helpers.ExtractBasePathFromURL(file.Source)
 				targetFile := filepath.Join(filepath.Dir(dst), filepath.Base(file.Target))
 				targetDir := filepath.Join(filepath.Dir(dst), filepath.Dir(file.Target))
 				archiveFile := filepath.Join(filepath.Dir(targetFile), compressFileName)
+
+				// Rename the targetFile to the archiveFile so that we can extract it
 				err = os.Rename(targetFile, archiveFile)
 				if err != nil {
 					return fmt.Errorf(lang.ErrWritingFile, dst, err)
 				}
-				// archiver.Extract()
+
+				// Extract the ArchivePath from the archive file into the targetDir
 				err = archiver.Extract(archiveFile, file.ArchivePath, targetDir)
 				if err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ArchivePath, archiveFile, err)
 				}
+
+				// Update the new file.Target to reflect extracted file
 				file.Target = filepath.Join(targetDir, filepath.Base(file.Target))
 				extractedArchiveFile := filepath.Join(targetDir, file.ArchivePath)
+
+				// If the extractedArchiveFile has a different name than file.Target
+				// rename for cases when file.Target = dir/binary
 				if file.Target != extractedArchiveFile {
 					err = os.Rename(filepath.Join(targetDir, file.ArchivePath), file.Target)
 					if err != nil {
