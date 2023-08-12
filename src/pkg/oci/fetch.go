@@ -43,15 +43,7 @@ func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
 
 // FetchManifest fetches the manifest with the given descriptor from the remote repository.
 func (o *OrasRemote) FetchManifest(desc ocispec.Descriptor) (manifest *ZarfOCIManifest, err error) {
-	bytes, err := o.FetchLayer(desc)
-	if err != nil {
-		return manifest, err
-	}
-	err = json.Unmarshal(bytes, &manifest)
-	if err != nil {
-		return manifest, err
-	}
-	return manifest, nil
+	return FetchUnmarshal[*ZarfOCIManifest](o.FetchLayer, json.Unmarshal, desc)
 }
 
 // FetchLayer fetches the layer with the given descriptor from the remote repository.
@@ -61,30 +53,34 @@ func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err erro
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.
 func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg types.ZarfPackage, err error) {
-	return FetchYAML[types.ZarfPackage](o.FetchLayer, manifest, config.ZarfYAML)
+	return FetchYAMLFile[types.ZarfPackage](o.FetchLayer, manifest, config.ZarfYAML)
 }
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.
 func (o *OrasRemote) FetchImagesIndex(manifest *ZarfOCIManifest) (index *ocispec.Index, err error) {
-	return FetchJSON[*ocispec.Index](o.FetchLayer, manifest, ZarfPackageIndexPath)
+	return FetchJSONFile[*ocispec.Index](o.FetchLayer, manifest, ZarfPackageIndexPath)
 }
 
-// FetchJSON fetches the given JSON file from the remote repository.
-func FetchJSON[T any](fetcher func(desc ocispec.Descriptor) (bytes []byte, err error), manifest *ZarfOCIManifest, path string) (result T, err error) {
-	return FetchUnmarshal[T](fetcher, json.Unmarshal, manifest, path)
-}
-
-// FetchYAML fetches the given JSON file from the remote repository.
-func FetchYAML[T any](fetcher func(desc ocispec.Descriptor) (bytes []byte, err error), manifest *ZarfOCIManifest, path string) (result T, err error) {
-	return FetchUnmarshal[T](fetcher, goyaml.Unmarshal, manifest, path)
-}
-
-// FetchUnmarshal fetches the given descriptor from the remote repository and unmarshals it.
-func FetchUnmarshal[T any](fetcher func(desc ocispec.Descriptor) (bytes []byte, err error), unmarshaler func(data []byte, v interface{}) error, manifest *ZarfOCIManifest, path string) (result T, err error) {
+// FetchJSONFile fetches the given JSON file from the remote repository.
+func FetchJSONFile[T any](fetcher func(desc ocispec.Descriptor) (bytes []byte, err error), manifest *ZarfOCIManifest, path string) (result T, err error) {
 	descriptor := manifest.Locate(path)
 	if IsEmptyDescriptor(descriptor) {
 		return result, fmt.Errorf("unable to find %s in the manifest", path)
 	}
+	return FetchUnmarshal[T](fetcher, json.Unmarshal, descriptor)
+}
+
+// FetchYAMLFile fetches the given YAML file from the remote repository.
+func FetchYAMLFile[T any](fetcher func(desc ocispec.Descriptor) (bytes []byte, err error), manifest *ZarfOCIManifest, path string) (result T, err error) {
+	descriptor := manifest.Locate(path)
+	if IsEmptyDescriptor(descriptor) {
+		return result, fmt.Errorf("unable to find %s in the manifest", path)
+	}
+	return FetchUnmarshal[T](fetcher, goyaml.Unmarshal, descriptor)
+}
+
+// FetchUnmarshal fetches the given descriptor from the remote repository and unmarshals it.
+func FetchUnmarshal[T any](fetcher func(desc ocispec.Descriptor) (bytes []byte, err error), unmarshaler func(data []byte, v interface{}) error, descriptor ocispec.Descriptor) (result T, err error) {
 	bytes, err := fetcher(descriptor)
 	if err != nil {
 		return result, err
