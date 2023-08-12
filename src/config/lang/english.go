@@ -128,7 +128,7 @@ const (
 	# Initializing w/ an external artifact server:
 	zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
 
-	# NOTE: Not specifying --*-pull-password/username when using --*-push-password/username will use the push user for pulling as well.
+	# NOTE: Not specifying a pull username/password will use the push user for pulling as well.
 `
 
 	CmdInitErrFlags             = "Invalid command flags were provided."
@@ -404,7 +404,7 @@ const (
 	CmdToolsGenKeySuccess               = "Generated key pair and written to %s and %s"
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
-	CmdToolsSbomErr   = "Unable to create sbom (syft) CLI"
+	CmdToolsSbomErr   = "Unable to create SBOM (Syft) CLI"
 
 	CmdToolsWaitForShort = "Waits for a given Kubernetes resource to be ready"
 	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment.\n" +
@@ -478,7 +478,7 @@ const (
 	zarf tools update-creds git --git-push-username={USERNAME} --git-push-password={PASSWORD}
 	zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifact-push-token={PASSWORD}
 
-	# NOTE: Not specifying --*-pull-password/username when using --*-push-password/username will use the push user for pulling as well.
+	# NOTE: Not specifying a pull username/password will keep the previous pull username/password.
 `
 	CmdToolsUpdateCredsConfirmFlag          = "Confirm updating credentials without prompting"
 	CmdToolsUpdateCredsConfirmProvided      = "Confirm flag specified, continuing without prompting."

@@ -38,7 +38,7 @@ zarf tools update-creds [flags]
 	zarf tools update-creds git --git-push-username={USERNAME} --git-push-password={PASSWORD}
 	zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifact-push-token={PASSWORD}
 
-	# NOTE: Not specifying --*-pull-password/username when using --*-push-password/username will use the push user for pulling as well.
+	# NOTE: Not specifying a pull username/password will keep the previous pull username/password.
 
 ```
 

@@ -53,8 +53,8 @@ var initCmd = &cobra.Command{
 
 		// Ensure uppercase keys from viper
 		v := common.GetViper()
-		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(common.VPkgDeploySet), strings.ToUpper)
-		pkgConfig.DeployOpts.SetVariables = helpers.MergeMap(viperConfig, pkgConfig.DeployOpts.SetVariables)
+		pkgConfig.DeployOpts.SetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.DeployOpts.SetVariables, strings.ToUpper)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)

@@ -43,7 +43,7 @@ zarf init [flags]
 	# Initializing w/ an external artifact server:
 	zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
 
-	# NOTE: Not specifying --*-pull-password/username when using --*-push-password/username will use the push user for pulling as well.
+	# NOTE: Not specifying a pull username/password will use the push user for pulling as well.
 
 ```
 

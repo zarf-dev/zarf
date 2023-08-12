@@ -109,13 +109,8 @@ func InitViper() *viper.Viper {
 
 	v = viper.New()
 
-	// Skip for vendor-only commands
-	if CheckVendorOnlyFromArgs() {
-		return v
-	}
-
-	// Skip for the version command
-	if isVersionCmd() {
+	// Skip for vendor-only commands or the version command
+	if CheckVendorOnlyFromArgs() || isVersionCmd() {
 		return v
 	}
 
@@ -155,10 +150,12 @@ func isVersionCmd() bool {
 }
 
 func printViperConfigUsed() {
+	// Only print config info if viper is initialized.
 	vInitialized := v != nil
 	if !vInitialized {
 		return
 	}
+
 	// Optional, so ignore file not found errors
 	if vConfigError != nil {
 		// Config file not found; ignore

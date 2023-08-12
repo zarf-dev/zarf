@@ -110,6 +110,15 @@ func MergeMap[T any](m1, m2 map[string]T) (r map[string]T) {
 	return r
 }
 
+// TransformAndMergeMap transforms keys in both maps then merges map m2 with m1 overwriting common values with m2's values.
+func TransformAndMergeMap[T any](m1, m2 map[string]T, transform func(string) string) (r map[string]T) {
+	mt1 := TransformMapKeys(m1, transform)
+	mt2 := TransformMapKeys(m2, transform)
+	r = MergeMap(mt1, mt2)
+
+	return r
+}
+
 // MergeMapRecursive recursively (nestedly) merges map m2 with m1 overwriting common values with m2's values.
 func MergeMapRecursive(m1, m2 map[string]interface{}) (r map[string]interface{}) {
 	r = map[string]interface{}{}

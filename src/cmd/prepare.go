@@ -104,8 +104,8 @@ var prepareFindImages = &cobra.Command{
 
 		// Ensure uppercase keys from viper
 		v := common.GetViper()
-		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(common.VPkgCreateSet), strings.ToUpper)
-		pkgConfig.CreateOpts.SetVariables = helpers.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
+		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)

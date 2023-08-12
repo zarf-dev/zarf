@@ -23,7 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
-	spf13viper "github.com/spf13/viper"
+	"github.com/spf13/viper"
 )
 
 var includeInspectSBOM bool
@@ -59,8 +59,8 @@ var packageCreateCmd = &cobra.Command{
 
 		// Ensure uppercase keys from viper
 		v := common.GetViper()
-		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(common.VPkgCreateSet), strings.ToUpper)
-		pkgConfig.CreateOpts.SetVariables = helpers.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
+		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -84,11 +84,10 @@ var packageDeployCmd = &cobra.Command{
 
 		// Ensure uppercase keys from viper and CLI --set
 		v := common.GetViper()
-		viperConfigSetVariables := helpers.TransformMapKeys(v.GetStringMapString(common.VPkgDeploySet), strings.ToUpper)
-		pkgConfig.DeployOpts.SetVariables = helpers.TransformMapKeys(pkgConfig.DeployOpts.SetVariables, strings.ToUpper)
 
 		// Merge the viper config file variables and provided CLI flag variables (CLI takes precedence))
-		pkgConfig.DeployOpts.SetVariables = helpers.MergeMap(viperConfigSetVariables, pkgConfig.DeployOpts.SetVariables)
+		pkgConfig.DeployOpts.SetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.DeployOpts.SetVariables, strings.ToUpper)
 
 		pkgConfig.PkgSourcePath = pkgConfig.DeployOpts.PackagePath
 
@@ -284,13 +283,13 @@ func init() {
 	bindPullFlags(v)
 }
 
-func bindPackageFlags(v *spf13viper.Viper) {
+func bindPackageFlags(v *viper.Viper) {
 	packageFlags := packageCmd.PersistentFlags()
 	v.SetDefault(common.VPkgOCIConcurrency, 3)
 	packageFlags.IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(common.VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 }
 
-func bindCreateFlags(v *spf13viper.Viper) {
+func bindCreateFlags(v *viper.Viper) {
 	createFlags := packageCreateCmd.Flags()
 
 	// Always require confirm flag (no viper)
@@ -317,7 +316,7 @@ func bindCreateFlags(v *spf13viper.Viper) {
 	createFlags.MarkHidden("output-directory")
 }
 
-func bindDeployFlags(v *spf13viper.Viper) {
+func bindDeployFlags(v *viper.Viper) {
 	deployFlags := packageDeployCmd.Flags()
 
 	// Always require confirm flag (no viper)
@@ -335,27 +334,27 @@ func bindDeployFlags(v *spf13viper.Viper) {
 	deployFlags.MarkHidden("sget")
 }
 
-func bindInspectFlags(v *spf13viper.Viper) {
+func bindInspectFlags(v *viper.Viper) {
 	inspectFlags := packageInspectCmd.Flags()
 	inspectFlags.BoolVarP(&includeInspectSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
 	inspectFlags.StringVar(&outputInspectSBOM, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
 	inspectFlags.StringVarP(&inspectPublicKey, "key", "k", v.GetString(common.VPkgDeployPublicKey), lang.CmdPackageInspectFlagPublicKey)
 }
 
-func bindRemoveFlags(v *spf13viper.Viper) {
+func bindRemoveFlags(v *viper.Viper) {
 	removeFlags := packageRemoveCmd.Flags()
 	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageRemoveFlagConfirm)
 	removeFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
 }
 
-func bindPublishFlags(v *spf13viper.Viper) {
+func bindPublishFlags(v *viper.Viper) {
 	publishFlags := packagePublishCmd.Flags()
 	publishFlags.StringVarP(&pkgConfig.PublishOpts.SigningKeyPath, "key", "k", v.GetString(common.VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
 	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "key-pass", v.GetString(common.VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
 }
 
-func bindPullFlags(v *spf13viper.Viper) {
+func bindPullFlags(v *viper.Viper) {
 	pullFlags := packagePullCmd.Flags()
 	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(common.VPkgPullOutputDir), lang.CmdPackagePullFlagOutputDirectory)
 	pullFlags.StringVarP(&pkgConfig.PullOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgPullPublicKey), lang.CmdPackagePullFlagPublicKey)
