@@ -719,7 +719,7 @@ export interface BigBang {
 
 export interface ZarfFile {
     /**
-     * Local folder or file to be extracted into the package
+     * Local folder or file to be extracted from a 'source' archive
      */
     archivePath?: string;
     /**

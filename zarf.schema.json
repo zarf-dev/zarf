@@ -797,7 +797,7 @@
         },
         "archivePath": {
           "type": "string",
-          "description": "Local folder or file to be extracted into the package"
+          "description": "Local folder or file to be extracted from a 'source' archive"
         }
       },
       "additionalProperties": false,

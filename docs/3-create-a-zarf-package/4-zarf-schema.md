@@ -987,7 +987,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Local folder or file to be extracted into the package
+**Description:** Local folder or file to be extracted from a 'source' archive
 
 |          |          |
 | -------- | -------- |
