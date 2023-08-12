@@ -22,12 +22,6 @@ variables:
 components:
   - name: load-eksctl
     required: true
-    actions:
-      onDeploy:
-        after:
-          # Remove existing eksctl
-          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) version
-
     files:
       - source: eks.yaml
         target: eks.yaml
@@ -52,10 +46,10 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: ./binaries_$(uname -s)_$(uname -m)/eksctl create cluster --dry-run -f eks.yaml
+          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster --dry-run -f eks.yaml
           - cmd: sleep 15
-          - cmd: ./binaries_$(uname -s)_$(uname -m)/eksctl create cluster -f eks.yaml
-          - cmd: ./binaries_$(uname -s)_$(uname -m)/eksctl utils write-kubeconfig -c ${ZARF_VAR_CLUSTER_NAME}
+          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster -f eks.yaml
+          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) utils write-kubeconfig -c ${ZARF_VAR_CLUSTER_NAME}
           - cmd: ./zarf tools kubectl create namespace zarf
           - cmd: ./zarf tools kubectl create secret generic zarf-eks-yaml -n zarf --from-file=eks.yaml
 
@@ -68,7 +62,7 @@ components:
           - cmd: ./zarf tools kubectl get secret -n zarf zarf-eks-yaml -o jsonpath='{.data.*}' | base64 -d > eks.yaml
           # TODO: Error handling in case the eks.yaml isn't what we expect ???
           # Use eksctl to delete the cluster
-          - cmd: ./binaries_$(uname -s)_$(uname -m)/eksctl delete cluster -f eks.yaml --disable-nodegroup-eviction --wait
+          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) delete cluster -f eks.yaml --disable-nodegroup-eviction --wait
         after:
           # clean up after ourselves
           - cmd: rm -f binaries
