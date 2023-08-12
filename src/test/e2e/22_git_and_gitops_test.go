@@ -160,4 +160,8 @@ func waitArgoDeployment(t *testing.T) {
 	// Remove the argocd example when deployment completes
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "argocd", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Prune the ArgoCD images to reduce disk pressure
+	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "prune", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }
