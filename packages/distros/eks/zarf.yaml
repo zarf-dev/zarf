@@ -66,4 +66,4 @@ components:
         after:
           # clean up after ourselves
           - cmd: rm -f binaries
-          - cmd: rm -f eksctl
+          - cmd: rm -f eks.yaml
