@@ -27,22 +27,16 @@ func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
 		return o.root, nil
 	}
 	// get the manifest descriptor
-	descriptor, err := o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
+	descriptor, err := o.ResolveRoot()
 	if err != nil {
 		return nil, err
 	}
 
-	// get the manifest itself
-	bytes, err := o.FetchLayer(descriptor)
+	// fetch the manifest
+	root, err := o.FetchManifest(descriptor)
 	if err != nil {
 		return nil, err
 	}
-	manifest := ocispec.Manifest{}
-
-	if err = json.Unmarshal(bytes, &manifest); err != nil {
-		return nil, err
-	}
-	root := NewZarfOCIManifest(&manifest)
 	o.root = root
 	return o.root, nil
 }
