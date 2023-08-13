@@ -750,33 +750,66 @@ export interface ZarfFile {
  */
 export interface ZarfFileMatrix {
     /**
-     * List of system architectures to which this file corresponds
+     * Options for macOS running on an AMD64 platform
      */
-    arch?: Arch[];
+    "darwin-amd64"?: ZarfFileOptions;
     /**
-     * List of operating systems to which this file corresponds
+     * Options for macOS running on an ARM64 platform
      */
-    os?: O[];
+    "darwin-arm64"?: ZarfFileOptions;
+    /**
+     * Options for Linux running on an AMD64 platform
+     */
+    "linux-amd64"?: ZarfFileOptions;
+    /**
+     * Options for Linux running on an ARM64 platform
+     */
+    "linux-arm64"?: ZarfFileOptions;
+    /**
+     * Options for Windows running on an AMD64 platform
+     */
+    "windows-amd64"?: ZarfFileOptions;
+    /**
+     * Options for Windows running on an ARM64 platform
+     */
+    "windows-arm64"?: ZarfFileOptions;
 }
 
-export enum Arch {
-    Aarch64 = "aarch64",
-    Amd64 = "amd64",
-    Arm64 = "arm64",
-    X8664 = "x86_64",
-}
-
-export enum O {
-    Darwin = "darwin",
-    Linux = "linux",
-    MACOS = "macOS",
-    Macos = "macos",
-    ODarwin = "Darwin",
-    OLinux = "Linux",
-    OWin = "Win",
-    OWindows = "Windows",
-    Win = "win",
-    Windows = "windows",
+/**
+ * Options for macOS running on an AMD64 platform
+ *
+ * Options for macOS running on an ARM64 platform
+ *
+ * Options for Linux running on an AMD64 platform
+ *
+ * Options for Linux running on an ARM64 platform
+ *
+ * Options for Windows running on an AMD64 platform
+ *
+ * Options for Windows running on an ARM64 platform
+ */
+export interface ZarfFileOptions {
+    /**
+     * (files only) Determines if the file should be made executable during package deploy
+     */
+    executable?: boolean;
+    /**
+     * (files only) Optional SHA256 checksum of the file
+     */
+    shasum?: string;
+    /**
+     * Local folder or file path or remote URL to pull into the package
+     */
+    source: string;
+    /**
+     * List of symlinks to create during package deploy
+     */
+    symlinks?: string[];
+    /**
+     * The absolute or relative path where the file or folder should be copied to during package
+     * deploy
+     */
+    target: string;
 }
 
 /**
@@ -1639,8 +1672,19 @@ const typeMap: any = {
         { json: "target", js: "target", typ: "" },
     ], false),
     "ZarfFileMatrix": o([
-        { json: "arch", js: "arch", typ: u(undefined, a(r("Arch"))) },
-        { json: "os", js: "os", typ: u(undefined, a(r("O"))) },
+        { json: "darwin-amd64", js: "darwin-amd64", typ: u(undefined, r("ZarfFileOptions")) },
+        { json: "darwin-arm64", js: "darwin-arm64", typ: u(undefined, r("ZarfFileOptions")) },
+        { json: "linux-amd64", js: "linux-amd64", typ: u(undefined, r("ZarfFileOptions")) },
+        { json: "linux-arm64", js: "linux-arm64", typ: u(undefined, r("ZarfFileOptions")) },
+        { json: "windows-amd64", js: "windows-amd64", typ: u(undefined, r("ZarfFileOptions")) },
+        { json: "windows-arm64", js: "windows-arm64", typ: u(undefined, r("ZarfFileOptions")) },
+    ], false),
+    "ZarfFileOptions": o([
+        { json: "executable", js: "executable", typ: u(undefined, true) },
+        { json: "shasum", js: "shasum", typ: u(undefined, "") },
+        { json: "source", js: "source", typ: "" },
+        { json: "symlinks", js: "symlinks", typ: u(undefined, a("")) },
+        { json: "target", js: "target", typ: "" },
     ], false),
     "ZarfComponentImport": o([
         { json: "name", js: "name", typ: u(undefined, "") },
@@ -1848,24 +1892,6 @@ const typeMap: any = {
         "http",
         "https",
         "tcp",
-    ],
-    "Arch": [
-        "aarch64",
-        "amd64",
-        "arm64",
-        "x86_64",
-    ],
-    "O": [
-        "darwin",
-        "linux",
-        "macOS",
-        "macos",
-        "Darwin",
-        "Linux",
-        "Win",
-        "Windows",
-        "win",
-        "windows",
     ],
     "Architecture": [
         "amd64",

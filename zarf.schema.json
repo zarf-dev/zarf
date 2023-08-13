@@ -806,37 +806,63 @@
     },
     "ZarfFileMatrix": {
       "properties": {
-        "os": {
-          "items": {
-            "enum": [
-              "linux",
-              "Linux",
-              "windows",
-              "Windows",
-              "win",
-              "Win",
-              "darwin",
-              "Darwin",
-              "macos",
-              "macOS"
-            ],
-            "type": "string"
-          },
-          "type": "array",
-          "description": "List of operating systems to which this file corresponds"
+        "linux-amd64": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfFileOptions",
+          "description": "Options for Linux running on an AMD64 platform"
         },
-        "arch": {
+        "linux-arm64": {
+          "$ref": "#/definitions/ZarfFileOptions",
+          "description": "Options for Linux running on an ARM64 platform"
+        },
+        "darwin-amd64": {
+          "$ref": "#/definitions/ZarfFileOptions",
+          "description": "Options for macOS running on an AMD64 platform"
+        },
+        "darwin-arm64": {
+          "$ref": "#/definitions/ZarfFileOptions",
+          "description": "Options for macOS running on an ARM64 platform"
+        },
+        "windows-amd64": {
+          "$ref": "#/definitions/ZarfFileOptions",
+          "description": "Options for Windows running on an AMD64 platform"
+        },
+        "windows-arm64": {
+          "$ref": "#/definitions/ZarfFileOptions",
+          "description": "Options for Windows running on an ARM64 platform"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ZarfFileOptions": {
+      "required": [
+        "source",
+        "target"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Local folder or file path or remote URL to pull into the package"
+        },
+        "shasum": {
+          "type": "string",
+          "description": "(files only) Optional SHA256 checksum of the file"
+        },
+        "target": {
+          "type": "string",
+          "description": "The absolute or relative path where the file or folder should be copied to during package deploy"
+        },
+        "executable": {
+          "type": "boolean",
+          "description": "(files only) Determines if the file should be made executable during package deploy"
+        },
+        "symlinks": {
           "items": {
-            "enum": [
-              "arm64",
-              "amd64",
-              "aarch64",
-              "x86_64"
-            ],
             "type": "string"
           },
           "type": "array",
-          "description": "List of system architectures to which this file corresponds"
+          "description": "List of symlinks to create during package deploy"
         }
       },
       "additionalProperties": false,
