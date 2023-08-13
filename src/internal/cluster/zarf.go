@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -31,18 +32,19 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, []error) {
 
 	// Process the k8s secret into our internal structs
 	for _, secret := range secrets.Items {
-		var deployedPackage types.DeployedPackage
-		err := json.Unmarshal(secret.Data["data"], &deployedPackage)
-		// add the error to the error list
-		if err != nil {
-			errorList = append(errorList, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
-		} else {
-			deployedPackages = append(deployedPackages, deployedPackage)
+		if strings.HasPrefix(secret.Name, config.ZarfPackagePrefix) {
+			var deployedPackage types.DeployedPackage
+			err := json.Unmarshal(secret.Data["data"], &deployedPackage)
+			// add the error to the error list
+			if err != nil {
+				errorList = append(errorList, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
+			} else {
+				deployedPackages = append(deployedPackages, deployedPackage)
+			}
 		}
-
 	}
 
-    // TODO: If we move this function out of `internal` we should return a more standard singular error.
+	// TODO: If we move this function out of `internal` we should return a more standard singular error.
 	return deployedPackages, errorList
 }
 
