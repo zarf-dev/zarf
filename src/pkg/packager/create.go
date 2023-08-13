@@ -285,9 +285,29 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 	}
 
 	for filesIdx, file := range component.Files {
-		path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 
-		appendSBOMFiles(path)
+		if file.Matrix != nil {
+			mergeOpts := func(options *types.ZarfFileOptions, prefix string) {
+				if options != nil {
+					r := file
+					r.Target = options.Target
+
+					prefix = fmt.Sprintf("%d-%s", filesIdx, prefix)
+					path := filepath.Join(componentPath.Files, prefix, filepath.Base(r.Target))
+					appendSBOMFiles(path)
+				}
+			}
+
+			mergeOpts(file.Matrix.LinuxAmd64, "linux-amd64")
+			mergeOpts(file.Matrix.LinuxArm64, "linux-arm64")
+			mergeOpts(file.Matrix.DarwinAmd64, "darwin-amd64")
+			mergeOpts(file.Matrix.DarwinArm64, "darwin-arm64")
+			mergeOpts(file.Matrix.WindowsAmd64, "windows-amd64")
+			mergeOpts(file.Matrix.WindowsArm64, "windows-arm64")
+		} else {
+			path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+			appendSBOMFiles(path)
+		}
 	}
 
 	for dataIdx, data := range component.DataInjections {
@@ -373,36 +393,63 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	for filesIdx, file := range component.Files {
 		message.Debugf("Loading %#v", file)
 
-		rel := filepath.Join(types.FilesFolder, strconv.Itoa(filesIdx), filepath.Base(file.Target))
-		dst := filepath.Join(componentPath.Base, rel)
+		mFiles := make(map[string]types.ZarfFile)
+		if file.Matrix != nil {
+			mergeOpts := func(options *types.ZarfFileOptions, prefix string) {
+				if options != nil {
+					r := file
+					r.Shasum = options.Shasum
+					r.Source = options.Source
+					r.Target = options.Target
+					r.Symlinks = options.Symlinks
 
-		if helpers.IsURL(file.Source) {
-			if isSkeleton {
-				continue
+					prefix = fmt.Sprintf("%d-%s", filesIdx, prefix)
+					mFiles[prefix] = r
+				}
 			}
-			if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
-			}
+
+			mergeOpts(file.Matrix.LinuxAmd64, "linux-amd64")
+			mergeOpts(file.Matrix.LinuxArm64, "linux-arm64")
+			mergeOpts(file.Matrix.DarwinAmd64, "darwin-amd64")
+			mergeOpts(file.Matrix.DarwinArm64, "darwin-arm64")
+			mergeOpts(file.Matrix.WindowsAmd64, "windows-amd64")
+			mergeOpts(file.Matrix.WindowsArm64, "windows-arm64")
 		} else {
-			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
-				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
-			}
-			if isSkeleton {
-				p.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
-			}
+			mFiles[strconv.Itoa(filesIdx)] = file
 		}
 
-		// Abort packaging on invalid shasum (if one is specified).
-		if file.Shasum != "" {
-			if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != file.Shasum {
-				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
-			}
-		}
+		for prefix, mFile := range mFiles {
+			rel := filepath.Join(types.FilesFolder, prefix, filepath.Base(mFile.Target))
+			dst := filepath.Join(componentPath.Base, rel)
 
-		if file.Executable || utils.IsDir(dst) {
-			_ = os.Chmod(dst, 0700)
-		} else {
-			_ = os.Chmod(dst, 0600)
+			if helpers.IsURL(mFile.Source) {
+				if isSkeleton {
+					continue
+				}
+				if err := utils.DownloadToFile(mFile.Source, dst, component.CosignKeyPath); err != nil {
+					return fmt.Errorf(lang.ErrDownloading, mFile.Source, err.Error())
+				}
+			} else {
+				if err := utils.CreatePathAndCopy(mFile.Source, dst); err != nil {
+					return fmt.Errorf("unable to copy file %s: %w", mFile.Source, err)
+				}
+				if isSkeleton {
+					p.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
+				}
+			}
+
+			// Abort packaging on invalid shasum (if one is specified).
+			if mFile.Shasum != "" {
+				if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != mFile.Shasum {
+					return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", mFile.Source, mFile.Shasum, actualShasum)
+				}
+			}
+
+			if mFile.Executable || utils.IsDir(dst) {
+				_ = os.Chmod(dst, 0700)
+			} else {
+				_ = os.Chmod(dst, 0600)
+			}
 		}
 	}
 
