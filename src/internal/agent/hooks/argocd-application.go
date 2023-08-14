@@ -7,6 +7,7 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/internal/agent/state"
@@ -27,7 +28,7 @@ type ArgoApplication struct {
 	Spec struct {
 		Source  Source   `json:"source"`
 		Sources []Source `json:"sources"`
-	}
+	} `json:"spec"`
 }
 
 var (

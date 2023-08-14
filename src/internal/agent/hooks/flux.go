@@ -29,7 +29,7 @@ type GenericGitRepo struct {
 	Spec struct {
 		URL       string    `json:"url"`
 		SecretRef SecretRef `json:"secretRef,omitempty"`
-	}
+	} `json:"spec"`
 }
 
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
