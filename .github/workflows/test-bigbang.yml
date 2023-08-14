@@ -9,8 +9,6 @@ on:
       - "**.svg"
       - "adr/**"
       - "docs/**"
-      - "package.json"
-      - "package-lock.json"
       - "CODEOWNERS"
 
 permissions:
