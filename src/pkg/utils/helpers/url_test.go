@@ -92,14 +92,14 @@ func (suite *TestURLSuite) Test_2_DoHostnamesMatch() {
 }
 
 func (suite *TestURLSuite) Test_3_ExtractBasePathFromURL() {
-	good_urls := []string{
+	goodURLs := []string{
 		"https://zarf.dev/file.txt",
 		"https://docs.zarf.dev/file.txt",
 		"https://zarf.dev/docs/file.tar.gz",
 		"https://defenseunicorns.com/file.yaml",
 		"https://google.com/file.md",
 	}
-	bad_urls := []string{
+	badURLs := []string{
 		"invalid-url",
 		"am",
 		"not",
@@ -116,12 +116,12 @@ func (suite *TestURLSuite) Test_3_ExtractBasePathFromURL() {
 		"file.md",
 	}
 
-	for idx, url := range good_urls {
+	for idx, url := range goodURLs {
 		actualURL, err := ExtractBasePathFromURL(url)
 		suite.NoError(err)
 		suite.Equal(actualURL, expectations[idx])
 	}
-	for _, url := range bad_urls {
+	for _, url := range badURLs {
 		url, err := ExtractBasePathFromURL(url)
 		fmt.Println(url)
 		suite.Error(err)

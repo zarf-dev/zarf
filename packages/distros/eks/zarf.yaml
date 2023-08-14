@@ -65,5 +65,5 @@ components:
           - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) delete cluster -f eks.yaml --disable-nodegroup-eviction --wait
         after:
           # clean up after ourselves
-          - cmd: rm -f binaries
+          - cmd: rm -rf binaries
           - cmd: rm -f eks.yaml
