@@ -7,6 +7,7 @@ package tools
 import (
 	"os"
 
+	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/spf13/cobra"
@@ -25,7 +26,7 @@ func init() {
 	}
 
 	// Only load this command if it is being called directly.
-	if isVendorCmd(os.Args, []string{"kubectl", "k"}) {
+	if common.IsVendorCmd(os.Args, []string{"kubectl", "k"}) {
 		// Add the kubectl command to the tools command.
 		kubectlCmd = kubeCmd.NewDefaultKubectlCommand()
 

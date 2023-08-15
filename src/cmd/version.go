@@ -7,7 +7,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"runtime"
 
 	"github.com/Masterminds/semver/v3"
@@ -74,11 +73,6 @@ var versionCmd = &cobra.Command{
 			fmt.Println(config.CLIVersion)
 		}
 	},
-}
-
-func isVersionCmd() bool {
-	args := os.Args
-	return len(args) > 1 && (args[1] == "version" || args[1] == "v")
 }
 
 func init() {

@@ -203,32 +203,24 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 		// Create the secret
-		validSecret, err := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName)
-		if err != nil {
-			return nil, fmt.Errorf("unable to generate the registry pull secret for namespace %s", name)
-		}
+		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.options.Cfg.State.RegistryInfo)
 
 		// Try to get a valid existing secret
-		currentSecret, _ := c.GetSecret(name, config.ZarfImagePullSecretName)
-		if currentSecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentSecret.Data, validSecret.Data) {
-			// Create or update the missing zarf registry secret
-			if err := c.CreateOrUpdateSecret(validSecret); err != nil {
+		currentRegistrySecret, _ := c.GetSecret(name, config.ZarfImagePullSecretName)
+		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentRegistrySecret.Data, validRegistrySecret.Data) {
+			// Create or update the zarf registry secret
+			if err := c.CreateOrUpdateSecret(validRegistrySecret); err != nil {
 				message.WarnErrorf(err, "Problem creating registry secret for the %s namespace", name)
 			}
 
 			// Generate the git server secret
-			gitServerSecret := c.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
-			gitServerSecret.StringData = map[string]string{
-				"username": r.options.Cfg.State.GitServer.PullUsername,
-				"password": r.options.Cfg.State.GitServer.PullPassword,
-			}
+			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.options.Cfg.State.GitServer)
 
-			// Create or update the git server secret
+			// Create or update the zarf git server secret
 			if err := c.CreateOrUpdateSecret(gitServerSecret); err != nil {
 				message.WarnErrorf(err, "Problem creating git server secret for the %s namespace", name)
 			}
 		}
-
 	}
 
 	// Send the bytes back to helm

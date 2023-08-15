@@ -316,13 +316,13 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		return fmt.Errorf("unable to create the component paths: %s", err.Error())
 	}
 
-	if isSkeleton && component.CosignKeyPath != "" {
+	if isSkeleton && component.DeprecatedCosignKeyPath != "" {
 		dst := filepath.Join(componentPath.Base, "cosign.pub")
-		err := utils.CreatePathAndCopy(component.CosignKeyPath, dst)
+		err := utils.CreatePathAndCopy(component.DeprecatedCosignKeyPath, dst)
 		if err != nil {
 			return err
 		}
-		p.cfg.Pkg.Components[index].CosignKeyPath = "cosign.pub"
+		p.cfg.Pkg.Components[index].DeprecatedCosignKeyPath = "cosign.pub"
 	}
 
 	onCreate := component.Actions.OnCreate
@@ -365,7 +365,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				if isSkeleton {
 					continue
 				}
-				if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 				}
 			} else {
@@ -389,7 +389,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			if isSkeleton {
 				continue
 			}
-			if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
+			if err := utils.DownloadToFile(file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 			}
 		} else {
@@ -429,7 +429,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				if isSkeleton {
 					continue
 				}
-				if err := utils.DownloadToFile(data.Source, dst, component.CosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
@@ -468,7 +468,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 					if isSkeleton {
 						continue
 					}
-					if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+					if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
 						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 					}
 				} else {
