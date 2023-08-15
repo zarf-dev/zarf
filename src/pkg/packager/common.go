@@ -253,7 +253,7 @@ func createPaths(basePath string) (paths types.TempPaths, err error) {
 			return paths, fmt.Errorf("unable to create temp directory: %w", err)
 		}
 	}
-	message.Debug("Using temp", basePath)
+	message.Debug("Using temporary directory:", basePath)
 	paths = types.TempPaths{
 		Base: basePath,
 
