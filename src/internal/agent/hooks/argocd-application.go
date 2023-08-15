@@ -32,7 +32,7 @@ type ArgoApplication struct {
 }
 
 var (
-	zarfState types.ZarfState
+	zarfState *types.ZarfState
 	patches   []operations.PatchOperation
 	isPatched bool
 	isCreate  bool

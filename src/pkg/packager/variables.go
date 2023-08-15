@@ -9,6 +9,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -30,7 +31,7 @@ func (p *Packager) fillActiveTemplate() error {
 
 			_, present := p.cfg.CreateOpts.SetVariables[key]
 			if !present && !config.CommonOptions.Confirm {
-				setVal, err := p.promptVariable(types.ZarfPackageVariable{
+				setVal, err := interactive.PromptVariable(types.ZarfPackageVariable{
 					Name: key,
 				})
 
@@ -73,7 +74,7 @@ func (p *Packager) fillActiveTemplate() error {
 
 // setVariableMapInConfig handles setting the active variables used to template component files.
 func (p *Packager) setVariableMapInConfig() error {
-	for name, value := range p.cfg.DeployOpts.SetVariables {
+	for name, value := range p.cfg.PkgOpts.SetVariables {
 		p.setVariableInConfig(name, value, false, false, "")
 	}
 
@@ -94,7 +95,7 @@ func (p *Packager) setVariableMapInConfig() error {
 		// Variable is set to prompt the user
 		if variable.Prompt && !config.CommonOptions.Confirm {
 			// Prompt the user for the variable
-			val, err := p.promptVariable(variable)
+			val, err := interactive.PromptVariable(variable)
 
 			if err != nil {
 				return err

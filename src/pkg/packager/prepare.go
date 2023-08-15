@@ -123,7 +123,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 					Cfg:   p.cfg,
 				}
 
-				helmCfg.Cfg.State = types.ZarfState{}
+				helmCfg.Cfg.State = &types.ZarfState{}
 
 				err := helmCfg.PackageChart(componentPath.Charts)
 				if err != nil {

@@ -27,7 +27,7 @@ const (
 )
 
 // PrintCredentialTable displays credentials in a table
-func PrintCredentialTable(state types.ZarfState, componentsToDeploy []types.DeployedComponent) {
+func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.DeployedComponent) {
 	if len(componentsToDeploy) == 0 {
 		componentsToDeploy = []types.DeployedComponent{{Name: "logging"}, {Name: "git-server"}}
 	}
@@ -75,7 +75,7 @@ func PrintCredentialTable(state types.ZarfState, componentsToDeploy []types.Depl
 }
 
 // PrintComponentCredential displays credentials for a single component
-func PrintComponentCredential(state types.ZarfState, componentName string) {
+func PrintComponentCredential(state *types.ZarfState, componentName string) {
 	switch strings.ToLower(componentName) {
 	case LoggingKey:
 		Notef("Logging credentials (username: %s):", loggingUsername)
@@ -101,7 +101,7 @@ func PrintComponentCredential(state types.ZarfState, componentName string) {
 }
 
 // PrintCredentialUpdates displays credentials that will be updated
-func PrintCredentialUpdates(oldState types.ZarfState, newState types.ZarfState, services []string) {
+func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState, services []string) {
 	// Set output to os.Stderr to avoid creds being printed in logs
 	pterm.SetDefaultOutput(os.Stderr)
 

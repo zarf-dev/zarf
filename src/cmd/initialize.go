@@ -41,20 +41,20 @@ var initCmd = &cobra.Command{
 
 		// Continue running package deploy for all components like any other package
 		initPackageName := packager.GetInitPackageName("")
-		pkgConfig.DeployOpts.PackagePath = initPackageName
+		pkgConfig.PkgOpts.PackagePath = initPackageName
 
 		// Try to use an init-package in the executable directory if none exist in current working directory
 		var err error
-		if pkgConfig.DeployOpts.PackagePath, err = findInitPackage(initPackageName); err != nil {
+		if pkgConfig.PkgOpts.PackagePath, err = findInitPackage(initPackageName); err != nil {
 			message.Fatal(err, err.Error())
 		}
 
-		pkgConfig.PkgSourcePath = pkgConfig.DeployOpts.PackagePath
+		pkgConfig.PkgSource = pkgConfig.PkgOpts.PackagePath
 
 		// Ensure uppercase keys from viper
 		v := common.GetViper()
-		pkgConfig.DeployOpts.SetVariables = helpers.TransformAndMergeMap(
-			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.DeployOpts.SetVariables, strings.ToUpper)
+		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -173,11 +173,11 @@ func init() {
 	v.SetDefault(common.VInitRegistryPushUser, config.ZarfRegistryPushUser)
 
 	// Init package set variable flags
-	initCmd.Flags().StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdInitFlagSet)
+	initCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdInitFlagSet)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
-	initCmd.Flags().StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(common.VInitComponents), lang.CmdInitFlagComponents)
+	initCmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VInitComponents), lang.CmdInitFlagComponents)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(common.VInitStorageClass), lang.CmdInitFlagStorageClass)
 
 	// Flags for using an external Git server

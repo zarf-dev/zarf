@@ -70,7 +70,7 @@ func TestValidatePackageArchitecture(t *testing.T) {
 			p := &Packager{
 				arch: testCase.pkgArch,
 				cluster: &cluster.Cluster{
-					Kube: &k8s.K8s{
+					K8s: &k8s.K8s{
 						Clientset: mockClient,
 						Log:       logger,
 					},

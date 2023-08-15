@@ -46,7 +46,7 @@ func (p *Packager) Create(baseDir string) error {
 		if err != nil {
 			return err
 		}
-		err = p.SetOCIRemote(ref.String())
+		err = p.SetOCIRemote(ref)
 		if err != nil {
 			return err
 		}
@@ -66,7 +66,7 @@ func (p *Packager) Create(baseDir string) error {
 		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
 	}
 
-	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
+	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 		p.cfg.IsInitConfig = true
 	}
@@ -229,6 +229,15 @@ func (p *Packager) Create(baseDir string) error {
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
+		message.HorizontalRule()
+		flags := ""
+		if config.CommonOptions.Insecure {
+			flags = "--insecure"
+		}
+		message.Title("To inspect/deploy/pull:", "")
+		message.ZarfCommand("package inspect oci://%s %s", p.remote.Repo().Reference, flags)
+		message.ZarfCommand("package deploy oci://%s %s", p.remote.Repo().Reference, flags)
+		message.ZarfCommand("package pull oci://%s %s", p.remote.Repo().Reference, flags)
 	} else {
 		// Use the output path if the user specified it.
 		packageName := filepath.Join(p.cfg.CreateOpts.Output, p.GetPackageName())
@@ -502,7 +511,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
-			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
+			gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
 			if err := gitCfg.Pull(url, componentPath.Repos, false); err != nil {
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
@@ -562,7 +571,7 @@ func (p *Packager) loadDifferentialData() error {
 	// Save the fact that this is a differential build into the build data of the package
 	p.cfg.Pkg.Build.Differential = true
 
-	tmpDir, _ := utils.MakeTempDir("")
+	tmpDir, _ := utils.MakeTempDir()
 	defer os.RemoveAll(tmpDir)
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build

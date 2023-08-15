@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	// Default global config for the CLI
+	// Default global config for the packager
 	pkgConfig = types.PackagerConfig{}
 )
 

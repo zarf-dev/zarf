@@ -332,7 +332,6 @@ func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
 }
 
 func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
-	message.Debugf("helm.installChart(%#v)", postRender)
 	// Bind the helm action.
 	client := action.NewInstall(h.actionConfig)
 
@@ -449,7 +448,7 @@ func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
 
 func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 	// Get the Kubernetes version from the current cluster
-	kubeVersion, err := h.Cluster.Kube.GetServerVersion()
+	kubeVersion, err := h.Cluster.GetServerVersion()
 	if err != nil {
 		return err
 	}
@@ -477,7 +476,7 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
 		}
 
-		rawData, manifestModified, _ := h.Cluster.Kube.HandleDeprecations(rawData, *kubeGitVersion)
+		rawData, manifestModified, _ := h.Cluster.HandleDeprecations(rawData, *kubeGitVersion)
 		manifestContent, err := yaml.Marshal(rawData)
 		if err != nil {
 			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %#v", err)

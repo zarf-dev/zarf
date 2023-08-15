@@ -82,10 +82,7 @@
         "user",
         "architecture",
         "timestamp",
-        "version",
-        "migrations",
-        "differential",
-        "registryOverrides"
+        "version"
       ],
       "properties": {
         "terminal": {

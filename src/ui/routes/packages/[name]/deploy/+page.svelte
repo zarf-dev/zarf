@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
  -->
 <script lang="ts">
-	import type { APIZarfDeployPayload, ZarfDeployOptions, ZarfInitOptions } from '$lib/api-types';
+	import type { APIZarfDeployPayload, ZarfPackageOptions, ZarfInitOptions } from '$lib/api-types';
 	import { Dialog, Stepper, Typography, type StepProps, Box } from '@ui';
 	import { pkgComponentDeployStore, pkgStore } from '$lib/store';
 	import bigZarf from '@images/zarf-bubbles-right.png';
@@ -37,12 +37,12 @@
 	const isInitPkg = $pkgStore.zarfPackage.kind === 'ZarfInitConfig';
 
 	let options: APIZarfDeployPayload = {
-		deployOpts: {
+		packageOpts: {
 			components: requestedComponents,
 			sGetKeyPath: '',
 			packagePath: $pkgStore.path,
 			setVariables: {},
-		} as ZarfDeployOptions,
+		} as ZarfPackageOptions,
 	};
 
 	if (isInitPkg) {
