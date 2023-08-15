@@ -57,9 +57,8 @@ func (suite *SkeletonSuite) SetupSuite() {
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
-	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
-	suite.NoError(err)
-	err = os.RemoveAll(everythingExternal)
+	e2e.TeardownRegistry(suite.T(), 555)
+	err := os.RemoveAll(everythingExternal)
 	suite.NoError(err)
 	err = os.RemoveAll(absNoCode)
 	suite.NoError(err)

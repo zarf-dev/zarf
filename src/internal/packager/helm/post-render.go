@@ -46,7 +46,7 @@ func (h *Helm) newRenderer() (*renderer, error) {
 		options:        h,
 		namespaces: map[string]*corev1.Namespace{
 			// Add the passed-in namespace to the list
-			h.Chart.Namespace: h.Cluster.Kube.NewZarfManagedNamespace(h.Chart.Namespace),
+			h.Chart.Namespace: h.Cluster.NewZarfManagedNamespace(h.Chart.Namespace),
 		},
 		values:       *valueTemplate,
 		actionConfig: h.actionConfig,
@@ -54,9 +54,8 @@ func (h *Helm) newRenderer() (*renderer, error) {
 }
 
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
-	message.Debugf("helm.Run(renderedManifests *bytes.Buffer)")
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
-	tempDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	tempDir, err := utils.MakeTempDir()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create tmpdir:  %w", err)
 	}
@@ -142,7 +141,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		namespace := rawData.GetNamespace()
 		if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
 			// if this is the first time seeing this ns, we need to track that to create it as well
-			r.namespaces[namespace] = r.options.Cluster.Kube.NewZarfManagedNamespace(namespace)
+			r.namespaces[namespace] = r.options.Cluster.NewZarfManagedNamespace(namespace)
 		}
 
 		// If we have been asked to adopt existing resources, process those now as well
@@ -158,7 +157,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				"meta.helm.sh/release-namespace": r.options.Chart.Namespace,
 			}
 
-			if err := r.options.Cluster.Kube.AddLabelsAndAnnotations(deployedNamespace, rawData.GetName(), rawData.GroupVersionKind().GroupKind(), helmLabels, helmAnnotations); err != nil {
+			if err := r.options.Cluster.AddLabelsAndAnnotations(deployedNamespace, rawData.GetName(), rawData.GroupVersionKind().GroupKind(), helmLabels, helmAnnotations); err != nil {
 				// Print a debug message since this could just be because the resource doesn't exist
 				message.Debugf("Unable to adopt resource %s: %s", rawData.GetName(), err.Error())
 			}
@@ -169,7 +168,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 
 	c := r.options.Cluster
-	existingNamespaces, _ := c.Kube.GetNamespaces()
+	existingNamespaces, _ := c.GetNamespaces()
 
 	for name, namespace := range r.namespaces {
 
@@ -183,16 +182,16 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 		if !existingNamespace {
 			// This is a new namespace, add it
-			if _, err := c.Kube.CreateNamespace(namespace); err != nil {
+			if _, err := c.CreateNamespace(namespace); err != nil {
 				return nil, fmt.Errorf("unable to create the missing namespace %s", name)
 			}
 		} else if r.options.Cfg.DeployOpts.AdoptExistingResources {
-			if r.options.Cluster.Kube.IsInitialNamespace(name) {
+			if r.options.Cluster.IsInitialNamespace(name) {
 				// If this is a K8s initial namespace, refuse to adopt it
 				message.Warnf("Refusing to adopt the initial namespace: %s", name)
 			} else {
 				// This is an existing namespace to adopt
-				if _, err := c.Kube.UpdateNamespace(namespace); err != nil {
+				if _, err := c.UpdateNamespace(namespace); err != nil {
 					return nil, fmt.Errorf("unable to adopt the existing namespace %s", name)
 				}
 			}
@@ -210,22 +209,22 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 		// Try to get a valid existing secret
-		currentSecret, _ := c.Kube.GetSecret(name, config.ZarfImagePullSecretName)
+		currentSecret, _ := c.GetSecret(name, config.ZarfImagePullSecretName)
 		if currentSecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentSecret.Data, validSecret.Data) {
 			// Create or update the missing zarf registry secret
-			if err := c.Kube.CreateOrUpdateSecret(validSecret); err != nil {
+			if err := c.CreateOrUpdateSecret(validSecret); err != nil {
 				message.WarnErrorf(err, "Problem creating registry secret for the %s namespace", name)
 			}
 
 			// Generate the git server secret
-			gitServerSecret := c.Kube.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
+			gitServerSecret := c.GenerateSecret(name, config.ZarfGitServerSecretName, corev1.SecretTypeOpaque)
 			gitServerSecret.StringData = map[string]string{
 				"username": r.options.Cfg.State.GitServer.PullUsername,
 				"password": r.options.Cfg.State.GitServer.PullPassword,
 			}
 
 			// Create or update the git server secret
-			if err := c.Kube.CreateOrUpdateSecret(gitServerSecret); err != nil {
+			if err := c.CreateOrUpdateSecret(gitServerSecret); err != nil {
 				message.WarnErrorf(err, "Problem creating git server secret for the %s namespace", name)
 			}
 		}

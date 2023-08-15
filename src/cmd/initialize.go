@@ -40,19 +40,19 @@ var initCmd = &cobra.Command{
 
 		// Continue running package deploy for all components like any other package
 		initPackageName := packager.GetInitPackageName("")
-		pkgConfig.DeployOpts.PackagePath = initPackageName
+		pkgConfig.PkgOpts.PackagePath = initPackageName
 
 		// Try to use an init-package in the executable directory if none exist in current working directory
 		var err error
-		if pkgConfig.DeployOpts.PackagePath, err = findInitPackage(initPackageName); err != nil {
+		if pkgConfig.PkgOpts.PackagePath, err = findInitPackage(initPackageName); err != nil {
 			message.Fatal(err, err.Error())
 		}
 
-		pkgConfig.PkgSourcePath = pkgConfig.DeployOpts.PackagePath
+		pkgConfig.PkgSource = pkgConfig.PkgOpts.PackagePath
 
 		// Ensure uppercase keys from viper
 		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(V_PKG_DEPLOY_SET), strings.ToUpper)
-		pkgConfig.DeployOpts.SetVariables = helpers.MergeMap(viperConfig, pkgConfig.DeployOpts.SetVariables)
+		pkgConfig.PkgOpts.SetVariables = helpers.MergeMap(viperConfig, pkgConfig.PkgOpts.SetVariables)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -187,11 +187,11 @@ func init() {
 	v.SetDefault(V_INIT_REGISTRY_PULL_PASS, "")
 
 	// Init package set variable flags
-	initCmd.Flags().StringToStringVar(&pkgConfig.DeployOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdInitFlagSet)
+	initCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(V_PKG_DEPLOY_SET), lang.CmdInitFlagSet)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
-	initCmd.Flags().StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(V_INIT_COMPONENTS), lang.CmdInitFlagComponents)
+	initCmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(V_INIT_COMPONENTS), lang.CmdInitFlagComponents)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(V_INIT_STORAGE_CLASS), lang.CmdInitFlagStorageClass)
 
 	// Flags for using an external Git server

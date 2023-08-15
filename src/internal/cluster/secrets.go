@@ -10,8 +10,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 // DockerConfig contains the authentication information from the machine's docker config.
@@ -29,9 +27,7 @@ type DockerConfigEntryWithAuth struct {
 
 // GenerateRegistryPullCreds generates a secret containing the registry credentials.
 func (c *Cluster) GenerateRegistryPullCreds(namespace, name string) (*corev1.Secret, error) {
-	message.Debugf("k8s.GenerateRegistryPullCreds(%s, %s)", namespace, name)
-
-	secretDockerConfig := c.Kube.GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
+	secretDockerConfig := c.GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
 
 	// Get the registry credentials from the ZarfState secret
 	zarfState, err := c.LoadZarfState()

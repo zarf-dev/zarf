@@ -37,7 +37,6 @@ func (k *K8s) DetectDistro() (string, error) {
 	tkgRegex := regexp.MustCompile(`^projects\.registry\.vmware\.com/tkg/tanzu_core/`)
 
 	nodes, err := k.GetNodes()
-	k.Log("%#v", nodes)
 	if err != nil {
 		return DistroIsUnknown, errors.New("error getting cluster nodes")
 	}
@@ -99,7 +98,6 @@ func (k *K8s) DetectDistro() (string, error) {
 	}
 
 	namespaces, err := k.GetNamespaces()
-	k.Log("%#v", namespaces)
 	if err != nil {
 		return DistroIsUnknown, errors.New("error getting namespace list")
 	}
@@ -117,9 +115,6 @@ func (k *K8s) DetectDistro() (string, error) {
 // GetArchitecture returns the cluster system architecture if found or an error if not.
 func (k *K8s) GetArchitecture() (string, error) {
 	nodes, err := k.GetNodes()
-
-	k.Log("%#v", nodes)
-
 	if err != nil {
 		return "", err
 	}

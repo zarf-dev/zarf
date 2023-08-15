@@ -23,7 +23,7 @@ import (
 var (
 	logLevel string
 
-	// Default global config for the CLI
+	// Default global config for the packager
 	pkgConfig = types.PackagerConfig{}
 
 	// Viper instance used by the cmd package

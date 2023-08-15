@@ -34,6 +34,10 @@ func Generate(cfg *types.PackagerConfig) (*Values, error) {
 
 	generated.config = cfg
 
+	if cfg.State == nil {
+		return &generated, nil
+	}
+
 	regInfo := cfg.State.RegistryInfo
 
 	// Only calculate this for internal registries to allow longer external passwords
@@ -58,7 +62,7 @@ func Generate(cfg *types.PackagerConfig) (*Values, error) {
 
 // Ready returns true if the Values struct is ready to be used in the template.
 func (values *Values) Ready() bool {
-	return values.config.State.Distro != ""
+	return values.config.State != nil
 }
 
 // GetRegistry returns the registry address.
@@ -67,69 +71,72 @@ func (values *Values) GetRegistry() string {
 }
 
 // GetVariables returns the variables to be used in the template.
-func (values *Values) GetVariables(component types.ZarfComponent) (map[string]*utils.TextTemplate, map[string]string) {
-	regInfo := values.config.State.RegistryInfo
-	gitInfo := values.config.State.GitServer
+func (values *Values) GetVariables(component types.ZarfComponent) (templateMap map[string]*utils.TextTemplate, deprecations map[string]string) {
+	templateMap = make(map[string]*utils.TextTemplate)
 
 	depMarkerOld := "DATA_INJECTON_MARKER"
 	depMarkerNew := "DATA_INJECTION_MARKER"
-	deprecations := map[string]string{
+	deprecations = map[string]string{
 		fmt.Sprintf("###ZARF_%s###", depMarkerOld): fmt.Sprintf("###ZARF_%s###", depMarkerNew),
 	}
 
-	builtinMap := map[string]string{
-		"STORAGE_CLASS": values.config.State.StorageClass,
+	if values.config.State != nil {
+		regInfo := values.config.State.RegistryInfo
+		gitInfo := values.config.State.GitServer
 
-		// Registry info
-		"REGISTRY":           values.registry,
-		"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
-		"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
-		"REGISTRY_AUTH_PULL": regInfo.PullPassword,
+		builtinMap := map[string]string{
+			"STORAGE_CLASS": values.config.State.StorageClass,
 
-		// Git server info
-		"GIT_PUSH":      gitInfo.PushUsername,
-		"GIT_AUTH_PUSH": gitInfo.PushPassword,
-		"GIT_PULL":      gitInfo.PullUsername,
-		"GIT_AUTH_PULL": gitInfo.PullPassword,
-	}
+			// Registry info
+			"REGISTRY":           values.registry,
+			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
+			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
+			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
 
-	// Include the data injection marker template if the component has data injections
-	if len(component.DataInjections) > 0 {
-		// Preserve existing misspelling for backwards compatibility
-		builtinMap[depMarkerOld] = config.GetDataInjectionMarker()
-		builtinMap[depMarkerNew] = config.GetDataInjectionMarker()
-	}
-
-	// Don't template component-specific variables for every component
-	switch component.Name {
-	case "zarf-agent":
-		agentTLS := values.config.State.AgentTLS
-		builtinMap["AGENT_CRT"] = base64.StdEncoding.EncodeToString(agentTLS.Cert)
-		builtinMap["AGENT_KEY"] = base64.StdEncoding.EncodeToString(agentTLS.Key)
-		builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
-
-	case "zarf-seed-registry", "zarf-registry":
-		builtinMap["SEED_REGISTRY"] = fmt.Sprintf("%s:%s", config.IPV4Localhost, config.ZarfSeedPort)
-		builtinMap["HTPASSWD"] = values.htpasswd
-		builtinMap["REGISTRY_SECRET"] = regInfo.Secret
-
-	case "logging":
-		builtinMap["LOGGING_AUTH"] = values.config.State.LoggingSecret
-	}
-
-	// Iterate over any custom variables and add them to the mappings for templating
-	templateMap := map[string]*utils.TextTemplate{}
-	for key, value := range builtinMap {
-		// Builtin keys are always uppercase in the format ###ZARF_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = &utils.TextTemplate{
-			Value: value,
+			// Git server info
+			"GIT_PUSH":      gitInfo.PushUsername,
+			"GIT_AUTH_PUSH": gitInfo.PushPassword,
+			"GIT_PULL":      gitInfo.PullUsername,
+			"GIT_AUTH_PULL": gitInfo.PullPassword,
 		}
 
-		if key == "LOGGING_AUTH" || key == "REGISTRY_SECRET" || key == "HTPASSWD" ||
-			key == "AGENT_CA" || key == "AGENT_KEY" || key == "AGENT_CRT" || key == "GIT_AUTH_PULL" ||
-			key == "GIT_AUTH_PUSH" || key == "REGISTRY_AUTH_PULL" || key == "REGISTRY_AUTH_PUSH" {
-			// Sanitize any builtin templates that are sensitive
-			templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))].Sensitive = true
+		// Include the data injection marker template if the component has data injections
+		if len(component.DataInjections) > 0 {
+			// Preserve existing misspelling for backwards compatibility
+			builtinMap[depMarkerOld] = config.GetDataInjectionMarker()
+			builtinMap[depMarkerNew] = config.GetDataInjectionMarker()
+		}
+
+		// Don't template component-specific variables for every component
+		switch component.Name {
+		case "zarf-agent":
+			agentTLS := values.config.State.AgentTLS
+			builtinMap["AGENT_CRT"] = base64.StdEncoding.EncodeToString(agentTLS.Cert)
+			builtinMap["AGENT_KEY"] = base64.StdEncoding.EncodeToString(agentTLS.Key)
+			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
+
+		case "zarf-seed-registry", "zarf-registry":
+			builtinMap["SEED_REGISTRY"] = fmt.Sprintf("%s:%s", config.IPV4Localhost, config.ZarfSeedPort)
+			builtinMap["HTPASSWD"] = values.htpasswd
+			builtinMap["REGISTRY_SECRET"] = regInfo.Secret
+
+		case "logging":
+			builtinMap["LOGGING_AUTH"] = values.config.State.LoggingSecret
+		}
+
+		// Iterate over any custom variables and add them to the mappings for templating
+		for key, value := range builtinMap {
+			// Builtin keys are always uppercase in the format ###ZARF_KEY###
+			templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = &utils.TextTemplate{
+				Value: value,
+			}
+
+			if key == "LOGGING_AUTH" || key == "REGISTRY_SECRET" || key == "HTPASSWD" ||
+				key == "AGENT_CA" || key == "AGENT_KEY" || key == "AGENT_CRT" || key == "GIT_AUTH_PULL" ||
+				key == "GIT_AUTH_PUSH" || key == "REGISTRY_AUTH_PULL" || key == "REGISTRY_AUTH_PUSH" {
+				// Sanitize any builtin templates that are sensitive
+				templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))].Sensitive = true
+			}
 		}
 	}
 
@@ -159,8 +166,6 @@ func (values *Values) GetVariables(component types.ZarfComponent) (map[string]*u
 
 // Apply renders the template and writes the result to the given path.
 func (values *Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
-	message.Debugf("template.Apply(%#v, %s)", component, path)
-
 	// If Apply() is called before all values are loaded, fail unless ignoreReady is true
 	if !values.Ready() && !ignoreReady {
 		return fmt.Errorf("template.Apply() called before template.Generate()")

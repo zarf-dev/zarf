@@ -26,3 +26,8 @@ func GetCRCHash(text string) uint32 {
 	table := crc32.MakeTable(crc32.IEEE)
 	return crc32.Checksum([]byte(text), table)
 }
+
+// GetSHA256Hash returns the computed SHA256 Sum of a given file
+func GetSHA256Hash(data io.ReadCloser) (string, error) {
+	return GetCryptoHash(data, crypto.SHA256)
+}

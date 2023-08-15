@@ -25,7 +25,6 @@ type ZarfE2ETest struct {
 	ApplianceMode     bool
 	ApplianceModeKeep bool
 	RunClusterTests   bool
-	CommandLog        []string
 }
 
 var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
@@ -59,7 +58,6 @@ func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
 
 // Zarf executes a Zarf command.
 func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
-	e2e.CommandLog = append(e2e.CommandLog, strings.Join(args, " "))
 	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)
 }
 
@@ -102,7 +100,14 @@ func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
 func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) {
 	// spin up a local registry
 	registryImage := "registry:2.8.2"
-	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", fmt.Sprintf("%d:5000", port), "--name", "registry", registryImage)
+	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", fmt.Sprintf("%d:5000", port), "--name", fmt.Sprintf("registry-%d", port), registryImage)
+	require.NoError(t, err)
+}
+
+// TeardownRegistry removes the local registry.
+func (e2e *ZarfE2ETest) TeardownRegistry(t *testing.T, port int) {
+	// remove the local registry
+	err := exec.CmdWithPrint("docker", "rm", "-f", fmt.Sprintf("registry-%d", port))
 	require.NoError(t, err)
 }
 

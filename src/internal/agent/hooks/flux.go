@@ -45,7 +45,7 @@ func NewGitRepositoryMutationHook() operations.Hook {
 func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	var (
-		zarfState types.ZarfState
+		zarfState *types.ZarfState
 		patches   []operations.PatchOperation
 		isPatched bool
 
