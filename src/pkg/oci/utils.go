@@ -68,10 +68,10 @@ func IsEmptyDescriptor(desc ocispec.Descriptor) bool {
 
 // ValidateReference validates the given url is a valid OCI reference.
 func ValidateReference(url string) error {
-	if !strings.HasPrefix(url, "oci://") {
-		return fmt.Errorf("oci url reference must begin with oci://")
+	if !strings.HasPrefix(url, helpers.OCIURLPrefix) {
+		return fmt.Errorf("oci url reference must begin with %s", helpers.OCIURLPrefix)
 	}
-	sansPrefix := strings.TrimPrefix(url, "oci://")
+	sansPrefix := strings.TrimPrefix(url, helpers.OCIURLPrefix)
 	_, err := registry.ParseReference(sansPrefix)
 	return err
 }

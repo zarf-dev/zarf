@@ -27,8 +27,8 @@ var (
 	PackageAlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
 )
 
-// FileExists returns true if the given file exists in the given directory with the expected SHA.
-func (o *OrasRemote) FileExists(desc ocispec.Descriptor, destinationDir string) bool {
+// FileDescriptorExists returns true if the given file exists in the given directory with the expected SHA.
+func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDir string) bool {
 	destinationPath := filepath.Join(destinationDir, desc.Annotations[ocispec.AnnotationTitle])
 	info, err := os.Stat(destinationPath)
 	if err != nil {
@@ -264,7 +264,7 @@ func (o *OrasRemote) PullPackagePaths(paths []string, destinationDir string) ([]
 		desc := root.Locate(path)
 		if !IsEmptyDescriptor(desc) {
 			layersPulled = append(layersPulled, desc)
-			if o.FileExists(desc, destinationDir) {
+			if o.FileDescriptorExists(desc, destinationDir) {
 				continue
 			}
 			err = o.PullLayer(desc, destinationDir)
