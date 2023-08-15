@@ -13,20 +13,24 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// NewAdmissionServer creates an http.Server for the mutating webhook admission handler.
+// NewAdmissionServer creates a http.Server for the mutating webhook admission handler.
 func NewAdmissionServer(port string) *http.Server {
 	message.Debugf("http.NewServer(%s)", port)
 
 	// Instances hooks
 	podsMutation := hooks.NewPodMutationHook()
-	gitRepositoryMutation := hooks.NewGitRepositoryMutationHook()
+	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook()
+	argocdApplicationMutation := hooks.NewApplicationMutationHook()
+	argocdRepositoryMutation := hooks.NewRepositoryMutationHook()
 
 	// Routers
 	ah := newAdmissionHandler()
 	mux := http.NewServeMux()
 	mux.Handle("/healthz", healthz())
 	mux.Handle("/mutate/pod", ah.Serve(podsMutation))
-	mux.Handle("/mutate/flux-gitrepository", ah.Serve(gitRepositoryMutation))
+	mux.Handle("/mutate/flux-gitrepository", ah.Serve(fluxGitRepositoryMutation))
+	mux.Handle("/mutate/argocd-application", ah.Serve(argocdApplicationMutation))
+	mux.Handle("/mutate/argocd-repository", ah.Serve(argocdRepositoryMutation))
 	mux.Handle("/metrics", promhttp.Handler())
 
 	return &http.Server{

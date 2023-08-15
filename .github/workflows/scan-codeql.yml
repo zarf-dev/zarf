@@ -15,8 +15,6 @@ on:
       - "**.svg"
       - "adr/**"
       - "docs/**"
-      - "package.json"
-      - "package-lock.json"
       - "CODEOWNERS"
   schedule:
     - cron: "32 2 * * 5"

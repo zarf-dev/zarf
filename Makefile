@@ -151,6 +151,8 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
 
+	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH) --confirm
+
 	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
 
 build-injector-linux: ## Build the Zarf injector for AMD64 and ARM64
@@ -168,6 +170,7 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH) --confirm
 	cd src/test/external && go test -failfast -v -timeout 30m
 
 ## NOTE: Requires an existing cluster and
