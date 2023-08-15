@@ -166,11 +166,11 @@ export interface RegistryInfo {
 
 export interface ZarfPackageOptions {
     /**
-     * Comma separated list of optional components to deploy
+     * Comma separated list of optional components
      */
-    components: string;
+    optionalComponents: string;
     /**
-     * Location where a Zarf package to deploy can be found
+     * Location where a Zarf package can be found
      */
     packagePath: string;
     /**
@@ -187,7 +187,7 @@ export interface ZarfPackageOptions {
      */
     sGetKeyPath: string;
     /**
-     * The SHA256 checksum of the package to deploy
+     * The SHA256 checksum of the package
      */
     shasum: string;
 }
@@ -1445,7 +1445,7 @@ const typeMap: any = {
         { json: "secret", js: "secret", typ: "" },
     ], false),
     "ZarfPackageOptions": o([
-        { json: "components", js: "components", typ: "" },
+        { json: "optionalComponents", js: "optionalComponents", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
