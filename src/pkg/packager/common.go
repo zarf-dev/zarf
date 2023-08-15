@@ -339,11 +339,11 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// Get a list of paths for the components of the package
-	components, err := os.ReadDir(p.tmp.Components)
-	if err != nil {
+	componentTarballs, err := os.ReadDir(p.tmp.Components)
+	if err != nil && !utils.InvalidPath(p.tmp.Components) {
 		return fmt.Errorf("unable to get a list of components... %w", err)
 	}
-	for _, path := range components {
+	for _, path := range componentTarballs {
 		// If the components are tarballs, extract them!
 		componentPath := filepath.Join(p.tmp.Components, path.Name())
 		if !path.IsDir() && strings.HasSuffix(path.Name(), ".tar") {
@@ -357,8 +357,7 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// If a SBOM tar file exist, temporarily place them in the deploy directory
-	_, tarErr := os.Stat(p.tmp.SbomTar)
-	if tarErr == nil {
+	if !utils.InvalidPath(p.tmp.SbomTar) {
 		if err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
 			return fmt.Errorf("unable to extract the sbom data from the component: %w", err)
 		}
