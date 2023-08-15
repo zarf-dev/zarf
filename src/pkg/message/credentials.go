@@ -16,8 +16,6 @@ import (
 
 // Common constants for printing credentials
 const (
-	loggingUsername = "zarf-admin"
-
 	RegistryKey     = "registry"
 	RegistryReadKey = "registry-readonly"
 	GitKey          = "git"
@@ -51,7 +49,7 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 	for _, component := range componentsToDeploy {
 		// Show message if including logging stack
 		if component.Name == "logging" {
-			loginTable = append(loginTable, pterm.TableData{{"     Logging", loggingUsername, state.LoggingSecret, "zarf connect logging", LoggingKey}}...)
+			loginTable = append(loginTable, pterm.TableData{{"     Logging", config.ZarfLoggingUser, state.LoggingSecret, "zarf connect logging", LoggingKey}}...)
 		}
 		// Show message if including git-server
 		if component.Name == "git-server" {
@@ -78,7 +76,7 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 func PrintComponentCredential(state *types.ZarfState, componentName string) {
 	switch strings.ToLower(componentName) {
 	case LoggingKey:
-		Notef("Logging credentials (username: %s):", loggingUsername)
+		Notef("Logging credentials (username: %s):", config.ZarfLoggingUser)
 		fmt.Println(state.LoggingSecret)
 	case GitKey:
 		Notef("Git Server push password (username: %s):", state.GitServer.PushUsername)
