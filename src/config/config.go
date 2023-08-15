@@ -70,10 +70,10 @@ const (
 	ZarfGitPushUser = "zarf-git-user"
 	ZarfGitReadUser = "zarf-git-read-user"
 
-	ZarfLoggingUser = "zarf-admin"
-
 	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+
+	ZarfLoggingUser = "zarf-admin"
 )
 
 // Zarf Global Configuration Variables.
