@@ -22,10 +22,9 @@ import (
 
 // handlePackagePath If provided package is a URL download it to a temp directory.
 func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
-	opts := p.cfg.PkgOpts
 
 	// Check if the user gave us a remote package
-	providedURL, err := url.Parse(opts.PackagePath)
+	providedURL, err := url.Parse(p.cfg.PkgOpts.PackagePath)
 	if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
 		message.Debug("Provided package path is not a URL, skipping download")
 		return partialPaths, nil
@@ -104,7 +103,6 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 func (p *Packager) handleSgetPackage() error {
 	message.Warn(lang.WarnSGetDeprecation)
 
-	opts := p.cfg.PkgOpts
 
 	spinner := message.NewProgressSpinner("Loading Zarf Package %s", opts.PackagePath)
 	defer spinner.Stop()
@@ -118,7 +116,7 @@ func (p *Packager) handleSgetPackage() error {
 	defer destinationFile.Close()
 
 	// If this is a DefenseUnicorns package, use an internal sget public key
-	if strings.HasPrefix(opts.PackagePath, fmt.Sprintf("%s://defenseunicorns", utils.SGETURLScheme)) {
+	if strings.HasPrefix(p.cfg.PkgOpts.PackagePath, fmt.Sprintf("%s://defenseunicorns", utils.SGETURLScheme)) {
 		os.Setenv("DU_SGET_KEY", config.CosignPublicKey)
 		p.cfg.PkgOpts.SGetKeyPath = "env://DU_SGET_KEY"
 	}
