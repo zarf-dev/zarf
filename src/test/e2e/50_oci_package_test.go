@@ -151,13 +151,15 @@ func (suite *RegistryClientTestSuite) Test_5_Copy() {
 	e2e.SetupDockerRegistry(t, dstRegistryPort)
 	defer e2e.TeardownRegistry(t, dstRegistryPort)
 
+	ctx := context.TODO()
+
 	src, err := oci.NewOrasRemote(ref)
 	suite.NoError(err)
+	src = src.WithInsecureConnection(true).WithContext(ctx)
 
 	dst, err := oci.NewOrasRemote(dstRef)
 	suite.NoError(err)
-
-	ctx := context.TODO()
+	dst = dst.WithInsecureConnection(true).WithContext(ctx)
 
 	err = oci.CopyPackage(ctx, src, dst, nil, 5)
 	suite.NoError(err)

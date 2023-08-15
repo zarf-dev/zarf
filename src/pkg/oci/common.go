@@ -47,9 +47,8 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 		return nil, fmt.Errorf("failed to parse OCI reference %s: %w", url, err)
 	}
 	o := &OrasRemote{}
-	o.WithContext(context.TODO())
 
-	if err := o.withRepository(ref); err != nil {
+	if err := o.setRepository(ref); err != nil {
 		return nil, err
 	}
 
@@ -58,11 +57,11 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 	copyOpts.PostCopy = o.printLayerSuccess
 	o.CopyOpts = copyOpts
 
-	return o, nil
+	return o.WithContext(context.TODO()).WithInsecureConnection(zarfconfig.CommonOptions.Insecure), nil
 }
 
-// withRepository sets the repository for the remote as well as the auth client.
-func (o *OrasRemote) withRepository(ref registry.Reference) error {
+// setRepository sets the repository for the remote as well as the auth client.
+func (o *OrasRemote) setRepository(ref registry.Reference) error {
 	o.root = nil
 
 	// patch docker.io to registry-1.docker.io
@@ -70,7 +69,7 @@ func (o *OrasRemote) withRepository(ref registry.Reference) error {
 	if ref.Registry == "docker.io" {
 		ref.Registry = "registry-1.docker.io"
 	}
-	client, err := o.withAuthClient(ref)
+	client, err := o.createAuthClient(ref)
 	if err != nil {
 		return err
 	}
@@ -79,26 +78,25 @@ func (o *OrasRemote) withRepository(ref registry.Reference) error {
 	if err != nil {
 		return err
 	}
-	repo.PlainHTTP = zarfconfig.CommonOptions.Insecure
 	repo.Client = client
 	o.repo = repo
+
 	return nil
 }
 
 // WithContext sets the context for the remote
-func (o *OrasRemote) WithContext(ctx context.Context) {
+func (o *OrasRemote) WithContext(ctx context.Context) *OrasRemote {
 	o.ctx = ctx
+	return o
 }
 
-// withAuthClient returns an auth client for the given reference.
+// createAuthClient returns an auth client for the given reference.
 //
 // The credentials are pulled using Docker's default credential store.
 //
 // TODO: instead of using Docker's cred store, should use the new one from ORAS to remove that dep
-func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error) {
+func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig.InsecureSkipVerify = zarfconfig.CommonOptions.Insecure
-
 	o.Transport = utils.NewTransport(transport, nil)
 
 	client := &auth.Client{
@@ -142,6 +140,15 @@ func (o *OrasRemote) withAuthClient(ref registry.Reference) (*auth.Client, error
 	client.Credential = auth.StaticCredential(ref.Registry, cred)
 
 	return client, nil
+}
+
+// WithInsecureConnection sets the insecure connection flag for the remote
+func (o *OrasRemote) WithInsecureConnection(insecure bool) *OrasRemote {
+	o.repo.PlainHTTP = insecure
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig.InsecureSkipVerify = insecure
+	o.Transport = utils.NewTransport(transport, nil)
+	return o
 }
 
 // Repo gives you access to the underlying remote repository
