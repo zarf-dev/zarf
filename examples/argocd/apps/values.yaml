@@ -1,0 +1,18 @@
+applications:
+  - name: apps
+    namespace: argocd
+    finalizers:
+      - resources-finalizer.argocd.argoproj.io
+    project: default
+    sources:
+      - repoURL: https://github.com/stefanprodan/podinfo.git
+        path: ./charts/podinfo
+        targetRevision: 6.4.0
+        helm:
+          valueFiles:
+            - values.yaml
+    syncPolicy:
+      automated: { }
+    destination:
+      namespace: podinfo
+      server: https://kubernetes.default.svc

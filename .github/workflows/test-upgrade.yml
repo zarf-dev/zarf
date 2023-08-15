@@ -1,4 +1,4 @@
-name: Test Zarf Upgrade
+name: Test Upgrade
 on:
   pull_request:
     paths-ignore:
@@ -9,8 +9,6 @@ on:
       - "**.svg"
       - "adr/**"
       - "docs/**"
-      - "package.json"
-      - "package-lock.json"
       - "CODEOWNERS"
 
 permissions:
@@ -37,7 +35,7 @@ jobs:
       - name: Build PR binary and zarf init package
         uses: ./.github/actions/packages
         with:
-          build-examples: 'false'
+          build-examples: "false"
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
@@ -93,7 +91,7 @@ jobs:
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe deployments -n=podinfo-upgrade
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
 
-      - name: "Run the PR's tests"
+      - name: Run tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
         #       in a previous step. This test run will use this PR's Zarf to create a K3s cluster.
         # chown the logs since they were originally created as root
