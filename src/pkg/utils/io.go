@@ -404,7 +404,7 @@ func GetSHA256OfFile(filePath string) (string, error) {
 	}
 	defer f.Close()
 
-	return helpers.GetCryptoHash(f, crypto.SHA256)
+	return helpers.GetSHA256Hash(f)
 }
 
 // SHAsMatch returns an error if the SHA256 hash of the provided file does not match the expected hash.
