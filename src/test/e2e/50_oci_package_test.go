@@ -5,10 +5,13 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
@@ -137,6 +140,36 @@ func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {
 	// Deploy the local package.
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", local, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
+}
+
+func (suite *RegistryClientTestSuite) Test_5_Copy() {
+	t := suite.T()
+	ref := suite.Reference.String()
+	dstRegistryPort := 556
+	dstRef := strings.Replace(ref, fmt.Sprint(555), fmt.Sprint(dstRegistryPort), 1)
+
+	e2e.SetupDockerRegistry(t, dstRegistryPort)
+	defer e2e.TeardownRegistry(t, dstRegistryPort)
+
+	src, err := oci.NewOrasRemote(ref)
+	suite.NoError(err)
+
+	dst, err := oci.NewOrasRemote(dstRef)
+	suite.NoError(err)
+
+	ctx := context.TODO()
+
+	err = oci.CopyPackage(ctx, src, dst, nil, 5)
+	suite.NoError(err)
+
+	srcRoot, err := src.FetchRoot()
+	suite.NoError(err)
+
+	for _, layer := range srcRoot.Layers {
+		ok, err := dst.Repo().Exists(ctx, layer)
+		suite.True(ok)
+		suite.NoError(err)
+	}
 }
 
 func TestRegistryClientTestSuite(t *testing.T) {

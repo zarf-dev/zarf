@@ -17,12 +17,9 @@ import (
 )
 
 // CopyPackage copies a package from one OCI registry to another
-func CopyPackage(src *OrasRemote, dst *OrasRemote, include func(d ocispec.Descriptor) bool, concurrency int) error {
+func CopyPackage(ctx context.Context, src *OrasRemote, dst *OrasRemote, include func(d ocispec.Descriptor) bool, concurrency int) error {
 	// create a new semaphore to limit concurrency
 	sem := semaphore.NewWeighted(int64(concurrency))
-	ctx := context.TODO()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 
 	// fetch the source root manifest
 	srcRoot, err := src.FetchRoot()
@@ -77,7 +74,7 @@ func CopyPackage(src *OrasRemote, dst *OrasRemote, include func(d ocispec.Descri
 		eg.SetLimit(2)
 
 		// fetch the layer from the source
-		rc, err := src.repo.Fetch(ctx, layer)
+		rc, err := src.repo.Fetch(ectx, layer)
 		if err != nil {
 			return err
 		}
