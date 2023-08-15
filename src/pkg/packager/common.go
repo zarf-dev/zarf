@@ -87,7 +87,7 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	}
 
 	// Create a temp directory for the package
-	if pkgConfig.tmp, err = createPaths(config.CommonOptions.TempDirectory); err != nil {
+	if err = pkgConfig.SetTempDirectory(config.CommonOptions.TempDirectory); err != nil {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
@@ -114,7 +114,10 @@ func NewOrDie(config *types.PackagerConfig) *Packager {
 
 // SetTempDirectory sets the temp directory for the packager.
 func (p *Packager) SetTempDirectory(path string) error {
-	p.ClearTempPaths()
+	if p.tmp.Base != "" {
+		p.ClearTempPaths()
+	}
+
 	tmp, err := createPaths(path)
 	if err != nil {
 		return fmt.Errorf("unable to create package temp paths: %w", err)
@@ -537,12 +540,8 @@ var (
 
 // ValidatePackageSignature validates the signature of a package
 func ValidatePackageSignature(directory string, publicKeyPath string) error {
-	var pkg types.ZarfPackage
-	if err := utils.ReadYaml(filepath.Join(directory, config.ZarfYAML), &pkg); err != nil {
-		return fmt.Errorf("unable to read the package config: %w", err)
-	}
-	// If the insecure flag was provided, or there is no aggregate checksum, ignore the signature validation
-	if config.CommonOptions.Insecure || pkg.Metadata.AggregateChecksum == "" {
+	// If the insecure flag was provided ignore the signature validation
+	if config.CommonOptions.Insecure {
 		return nil
 	}
 
