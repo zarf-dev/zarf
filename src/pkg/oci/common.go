@@ -146,9 +146,7 @@ func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, err
 // WithInsecureConnection sets the insecure connection flag for the remote
 func (o *OrasRemote) WithInsecureConnection(insecure bool) {
 	o.repo.PlainHTTP = insecure
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig.InsecureSkipVerify = insecure
-	o.Transport = utils.NewTransport(transport, nil)
+	o.Transport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
 }
 
 // Repo gives you access to the underlying remote repository
