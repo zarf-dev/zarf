@@ -275,6 +275,62 @@ func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinn
 	return err
 }
 
+// UpdateReleaseValues updates values for a given chart release
+// (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
+func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
+	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.ReleaseName)
+	defer spinner.Stop()
+
+	err := h.createActionConfig(h.Chart.Namespace, spinner)
+	if err != nil {
+		return fmt.Errorf("unable to initialize the K8s client: %w", err)
+	}
+
+	postRender, err := h.newRenderer()
+	if err != nil {
+		return fmt.Errorf("unable to create helm renderer: %w", err)
+	}
+
+	histClient := action.NewHistory(h.actionConfig)
+	histClient.Max = 1
+	releases, histErr := histClient.Run(h.ReleaseName)
+	if histErr == nil && len(releases) > 0 {
+		lastRelease := releases[len(releases)-1]
+
+		// Setup a new upgrade action
+		client := action.NewUpgrade(h.actionConfig)
+
+		// Let each chart run for the default timeout.
+		client.Timeout = defaultClientTimeout
+
+		client.SkipCRDs = true
+
+		// Namespace must be specified.
+		client.Namespace = h.Chart.Namespace
+
+		// Post-processing our manifests for reasons....
+		client.PostRenderer = postRender
+
+		// Set reuse values to only override the values we are explicitly given
+		client.ReuseValues = true
+
+		// Wait for the update operation to successfully complete
+		client.Wait = true
+
+		// Perform the loadedChart upgrade.
+		_, err = client.Run(h.ReleaseName, lastRelease.Chart, updatedValues)
+		if err != nil {
+			return err
+		}
+
+		spinner.Success()
+
+		return nil
+	}
+
+	return fmt.Errorf("unable to find the %s helm release", h.ReleaseName)
+}
+
 func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 	// Bind the helm action.
 	client := action.NewInstall(h.actionConfig)
@@ -420,7 +476,7 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
 		}
 
-		rawData, manifestModified, err := h.Cluster.HandleDeprecations(rawData, *kubeGitVersion)
+		rawData, manifestModified, _ := h.Cluster.HandleDeprecations(rawData, *kubeGitVersion)
 		manifestContent, err := yaml.Marshal(rawData)
 		if err != nil {
 			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %#v", err)

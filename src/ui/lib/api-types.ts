@@ -285,7 +285,8 @@ export interface ZarfComponent {
      */
     charts?: ZarfChart[];
     /**
-     * [Deprecated] Specify a path to a public key to validate signed online resources
+     * [Deprecated] Specify a path to a public key to validate signed online resources. This
+     * will be removed in Zarf v1.0.0.
      */
     cosignKeyPath?: string;
     /**
@@ -342,7 +343,7 @@ export interface ZarfComponent {
     required?: boolean;
     /**
      * [Deprecated] (replaced by actions) Custom commands to run before or after package
-     * deployment
+     * deployment.  This will be removed in Zarf v1.0.0.
      */
     scripts?: DeprecatedZarfComponentScripts;
 }
@@ -427,7 +428,7 @@ export interface ZarfComponentAction {
     /**
      * [Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to
      * update with the output of the command. This variable will be available to all remaining
-     * actions and components in the package.
+     * actions and components in the package. This will be removed in Zarf v1.0.0
      */
     setVariable?: string;
     /**
@@ -830,7 +831,7 @@ export enum LocalOS {
 
 /**
  * [Deprecated] (replaced by actions) Custom commands to run before or after package
- * deployment
+ * deployment.  This will be removed in Zarf v1.0.0.
  */
 export interface DeprecatedZarfComponentScripts {
     /**

@@ -584,7 +584,12 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 	if !p.cfg.IsInitConfig {
 		message.PrintConnectStringTable(p.connectStrings)
 	} else {
+		// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds
+		freshState, err := p.cluster.LoadZarfState()
+		if err != nil {
+			freshState = p.cfg.State
+		}
 		// otherwise, print the init config connection and passwords
-		utils.PrintCredentialTable(p.cfg.State, componentsToDeploy)
+		message.PrintCredentialTable(freshState, componentsToDeploy)
 	}
 }

@@ -28,7 +28,7 @@ type ArgoApplication struct {
 	Spec struct {
 		Source  Source   `json:"source"`
 		Sources []Source `json:"sources"`
-	}
+	} `json:"spec"`
 }
 
 var (

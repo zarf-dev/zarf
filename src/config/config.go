@@ -72,6 +72,8 @@ const (
 
 	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+
+	ZarfLoggingUser = "zarf-admin"
 )
 
 // Zarf Global Configuration Variables.
