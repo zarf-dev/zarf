@@ -38,10 +38,17 @@ var (
 )
 
 // Deploy attempts to deploy the given PackageConfig.
-func (p *Packager) Deploy() error {
+func (p *Packager) Deploy() (err error) {
 	message.Debug("packager.Deploy()")
 
-	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
+	// Attempt to connect to a Kubernetes cluster.
+	// Not all packages require Kubernetes, so we only want to log a debug message rather than return the error when we can't connect to a cluster.
+	p.cluster, err = cluster.NewCluster()
+	if err != nil {
+		message.Debug(err)
+	}
+
+	if helpers.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
 		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)
 		if err != nil {
 			return err
@@ -149,7 +156,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		if p.cluster != nil {
 			err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, connectStrings)
 			if err != nil {
-				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
 

@@ -27,7 +27,7 @@ var labels = k8s.Labels{
 	config.ZarfManagedByLabel: "zarf",
 }
 
-// NewClusterOrDie creates a new cluster instance and waits up to 30 seconds for the cluster to be ready or throws a fatal error.
+// NewClusterOrDie creates a new Cluster instance and waits up to 30 seconds for the cluster to be ready or throws a fatal error.
 func NewClusterOrDie() *Cluster {
 	c, err := NewClusterWithWait(DefaultTimeout, true)
 	if err != nil {
@@ -37,7 +37,7 @@ func NewClusterOrDie() *Cluster {
 	return c
 }
 
-// NewClusterWithWait creates a new cluster instance and waits for the given timeout for the cluster to be ready.
+// NewClusterWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.
 func NewClusterWithWait(timeout time.Duration, withSpinner bool) (*Cluster, error) {
 	var spinner *message.Spinner
 	if withSpinner {
@@ -65,10 +65,21 @@ func NewClusterWithWait(timeout time.Duration, withSpinner bool) (*Cluster, erro
 	return c, nil
 }
 
-// NewCluster creates a new cluster instance without waiting for the cluster to be ready.
+// NewCluster creates a new Cluster instance and validates connection to the cluster by fetching the Kubernetes version.
 func NewCluster() (*Cluster, error) {
-	var err error
 	c := &Cluster{}
+	var err error
+
 	c.Kube, err = k8s.New(message.Debugf, labels)
-	return c, err
+	if err != nil {
+		return nil, err
+	}
+
+	// Dogsled the version output. We just want to ensure no errors were returned to validate cluster connection.
+	_, err = c.Kube.GetServerVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }

@@ -5,6 +5,7 @@
 package test
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -17,23 +18,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGitAndFlux(t *testing.T) {
-	t.Log("E2E: Git and flux")
+func TestGit(t *testing.T) {
+	t.Log("E2E: Git")
 	e2e.SetupWithCluster(t)
+	tmpdir := t.TempDir()
+	cachePath := filepath.Join(tmpdir, ".cache-location")
 
-	buildPath := filepath.Join("src", "test", "packages", "22-git-and-flux")
-	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "-o=build", "--confirm", "--skip-sbom")
+	buildPath := filepath.Join("src", "test", "packages", "22-git-data")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "--zarf-cache", cachePath, "-o=build", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	path := fmt.Sprintf("build/zarf-package-git-data-check-secrets-%s-1.0.0.tar.zst", e2e.Arch)
+	path := fmt.Sprintf("build/zarf-package-git-data-test-%s-1.0.0.tar.zst", e2e.Arch)
 	defer e2e.CleanFiles(path)
 
-	// Deploy the gitops example
+	// Deploy the git data example
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-
-	// This package contains SBOMable things but was created with --skip-sbom
-	require.Contains(t, string(stdErr), "This package does NOT contain an SBOM.")
 
 	tunnel, err := cluster.NewZarfTunnel()
 	require.NoError(t, err)
@@ -44,10 +44,20 @@ func TestGitAndFlux(t *testing.T) {
 	testGitServerConnect(t, tunnel.HTTPEndpoint())
 	testGitServerReadOnly(t, tunnel.HTTPEndpoint())
 	testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
-	waitFluxPodInfoDeployment(t)
+}
 
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "podinfo-flux", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
+func TestGitOpsFlux(t *testing.T) {
+	t.Log("E2E: GitOps / Flux")
+	e2e.SetupWithCluster(t)
+
+	waitFluxPodInfoDeployment(t)
+}
+
+func TestGitOpsArgoCD(t *testing.T) {
+	t.Log("E2E: ArgoCD / Flux")
+	e2e.SetupWithCluster(t)
+
+	waitArgoDeployment(t)
 }
 
 func testGitServerConnect(t *testing.T, gitURL string) {
@@ -65,7 +75,7 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 	gitCfg := git.New(state.GitServer)
 
 	// Get the repo as the readonly user
-	repoName := "zarf-1211668992"
+	repoName := "zarf-public-test-2469062884"
 	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, state.GitServer.PushUsername, repoName), nil)
 	getRepoResponseBody, err := gitCfg.DoHTTPThings(getRepoRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
@@ -83,12 +93,12 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	// Init the state variable
 	state, err := cluster.NewClusterOrDie().LoadZarfState()
 	require.NoError(t, err, "Failed to load Zarf state")
-	repoName := "zarf-1211668992"
+	repoName := "zarf-public-test-2469062884"
 
 	gitCfg := git.New(state.GitServer)
 
 	// Get the Zarf repo tag
-	repoTag := "v0.15.0"
+	repoTag := "v0.0.1"
 	getRepoTagsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/tags/%s", gitURL, config.ZarfGitPushUser, repoName, repoTag), nil)
 	getRepoTagsResponseBody, err := gitCfg.DoHTTPThings(getRepoTagsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
@@ -99,7 +109,7 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	require.Equal(t, repoTag, tagMap["name"])
 
 	// Get the Zarf repo commit
-	repoHash := "c74e2e9626da0400e0a41e78319b3054c53a5d4e"
+	repoHash := "01a23218923f24194133b5eb11268cf8d73ff1bb"
 	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/git/commits/%s", gitURL, config.ZarfGitPushUser, repoName, repoHash), nil)
 	getRepoCommitsResponseBody, err := gitCfg.DoHTTPThings(getRepoCommitsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
@@ -110,5 +120,48 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	// Deploy the flux example and verify that it works
 	path := fmt.Sprintf("build/zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Tests the URL mutation for GitRepository CRD for Flux.
+	stdOut, stdErr, err = e2e.Kubectl("get", "gitrepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
+	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", config.ZarfInClusterGitServiceURL, config.ZarfGitPushUser)
+	require.Equal(t, expectedMutatedRepoURL, stdOut)
+
+	// Remove the flux example when deployment completes
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "podinfo-flux", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Prune the flux images to reduce disk pressure
+	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "prune", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
+
+func waitArgoDeployment(t *testing.T) {
+	// Deploy the argocd example and verify that it works
+	path := fmt.Sprintf("build/zarf-package-argocd-%s.tar.zst", e2e.Arch)
+	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--components=argocd-apps", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", config.ZarfInClusterGitServiceURL, config.ZarfGitPushUser)
+
+	// Tests the mutation of the private repository Secret for ArgoCD.
+	stdOut, stdErr, err = e2e.Kubectl("get", "secret", "argocd-repo-github-podinfo", "-n", "argocd", "-o", "jsonpath={.data.url}")
+	require.NoError(t, err, stdOut, stdErr)
+
+	expectedMutatedPrivateRepoURLSecret, err := base64.StdEncoding.DecodeString(stdOut)
+	require.NoError(t, err, stdOut, stdErr)
+	require.Equal(t, expectedMutatedRepoURL, string(expectedMutatedPrivateRepoURLSecret))
+
+	// Tests the mutation of the repoURL for Application CRD source(s) for ArgoCD.
+	stdOut, stdErr, err = e2e.Kubectl("get", "application", "apps", "-n", "argocd", "-o", "jsonpath={.spec.sources[0].repoURL}")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Equal(t, expectedMutatedRepoURL, stdOut)
+
+	// Remove the argocd example when deployment completes
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "argocd", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Prune the ArgoCD images to reduce disk pressure
+	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "prune", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

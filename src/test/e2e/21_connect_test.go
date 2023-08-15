@@ -59,6 +59,23 @@ func TestConnect(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Prune the images from Grafana and ensure that they are gone
+	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "prune", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/library/registry")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdOut, "2.8.2")
+	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/promtail")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Equal(t, stdOut, "")
+	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/grafana")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Equal(t, stdOut, "")
+	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/loki")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Equal(t, stdOut, "")
 }
 
 func TestMetrics(t *testing.T) {

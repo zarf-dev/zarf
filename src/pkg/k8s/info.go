@@ -6,6 +6,7 @@ package k8s
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 )
 
@@ -128,4 +129,14 @@ func (k *K8s) GetArchitecture() (string, error) {
 	}
 
 	return "", errors.New("could not identify node architecture")
+}
+
+// GetServerVersion retrieves and returns the k8s revision.
+func (k *K8s) GetServerVersion() (version string, err error) {
+	versionInfo, err := k.Clientset.Discovery().ServerVersion()
+	if err != nil {
+		return "", fmt.Errorf("unable to get Kubernetes version from the cluster : %w", err)
+	}
+
+	return versionInfo.String(), nil
 }
