@@ -285,18 +285,18 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 		}
 	}
 
-	for filesIdx, file := range component.Files {
+	for fileIdx, file := range component.Files {
 		if file.Matrix != nil {
 			m := reflect.ValueOf(*file.Matrix)
 			for i := 0; i < m.NumField(); i++ {
-				prefix := fmt.Sprintf("%d-%s", filesIdx, m.Type().Field(i).Tag.Get("json"))
+				prefix := fmt.Sprintf("%d-%s", fileIdx, strings.Split(m.Type().Field(i).Tag.Get("json"), ",")[0])
 				if options, ok := m.Field(i).Interface().(*types.ZarfFileOptions); ok && options != nil {
 					path := filepath.Join(componentPath.Files, prefix, filepath.Base(options.Target))
 					appendSBOMFiles(path)
 				}
 			}
 		} else {
-			path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+			path := filepath.Join(componentPath.Files, strconv.Itoa(fileIdx), filepath.Base(file.Target))
 			appendSBOMFiles(path)
 		}
 	}
@@ -381,14 +381,14 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		}
 	}
 
-	for filesIdx, file := range component.Files {
+	for fileIdx, file := range component.Files {
 		message.Debugf("Loading %#v", file)
 
 		mFiles := make(map[string]types.ZarfFile)
 		if file.Matrix != nil {
 			m := reflect.ValueOf(*file.Matrix)
 			for i := 0; i < m.NumField(); i++ {
-				prefix := fmt.Sprintf("%d-%s", filesIdx, m.Type().Field(i).Tag.Get("json"))
+				prefix := fmt.Sprintf("%d-%s", fileIdx, strings.Split(m.Type().Field(i).Tag.Get("json"), ",")[0])
 				if options, ok := m.Field(i).Interface().(*types.ZarfFileOptions); ok && options != nil {
 					r := file
 					r.Shasum = options.Shasum
@@ -400,7 +400,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				}
 			}
 		} else {
-			mFiles[strconv.Itoa(filesIdx)] = file
+			mFiles[strconv.Itoa(fileIdx)] = file
 		}
 
 		for prefix, mFile := range mFiles {
@@ -419,7 +419,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 					return fmt.Errorf("unable to copy file %s: %w", mFile.Source, err)
 				}
 				if isSkeleton {
-					p.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
+					p.cfg.Pkg.Components[index].Files[fileIdx].Source = rel
 				}
 			}
 

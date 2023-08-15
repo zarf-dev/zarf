@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -319,11 +321,34 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 	for fileIdx, file := range component.Files {
 		spinner.Updatef("Loading %s", file.Target)
 
-		fileLocation := filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
-		if utils.InvalidPath(fileLocation) {
-			fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
-		}
+		var fileLocation string
+		if file.Matrix != nil {
+			tag := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
+			m := reflect.ValueOf(*file.Matrix)
+			for i := 0; i < m.NumField(); i++ {
+				if tag == strings.Split(m.Type().Field(i).Tag.Get("json"), ",")[0] {
+					prefix := fmt.Sprintf("%d-%s", fileIdx, tag)
+					if options, ok := m.Field(i).Interface().(*types.ZarfFileOptions); ok && options != nil {
+						r := file
+						r.Shasum = options.Shasum
+						r.Source = options.Source
+						r.Target = options.Target
+						r.Symlinks = options.Symlinks
 
+						fileLocation = filepath.Join(pkgLocation, prefix, filepath.Base(r.Target))
+						break
+					}
+				}
+			}
+			if fileLocation == "" {
+				return fmt.Errorf("the %q operating system on the %q platform is not supported by this package", runtime.GOOS, runtime.GOARCH)
+			}
+		} else {
+			fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
+			if utils.InvalidPath(fileLocation) {
+				fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
+			}
+		}
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
