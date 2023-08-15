@@ -939,22 +939,6 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="components_items_files_items_executable"></a>executable</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** (files only) Determines if the file should be made executable during package deploy
-
-|          |           |
-| -------- | --------- |
-| **Type** | `boolean` |
-
-</blockquote>
-</details>
-
-<details>
-<summary>
 <strong> <a name="components_items_files_items_symlinks"></a>symlinks</strong>
 </summary>
 &nbsp;
@@ -976,6 +960,22 @@ Must be one of:
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_files_items_executable"></a>executable</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** (files only) Determines if the file should be made executable during package deploy
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
 
 </blockquote>
 </details>
@@ -1062,22 +1062,6 @@ Must be one of:
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
-
-</blockquote>
-</details>
-
-<details>
-<summary>
-<strong> <a name="components_items_files_items_matrix_linux-amd64_executable"></a>executable</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** (files only) Determines if the file should be made executable during package deploy
-
-|          |           |
-| -------- | --------- |
-| **Type** | `boolean` |
 
 </blockquote>
 </details>

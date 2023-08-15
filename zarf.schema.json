@@ -784,16 +784,16 @@
           "type": "string",
           "description": "The absolute or relative path where the file or folder should be copied to during package deploy"
         },
-        "executable": {
-          "type": "boolean",
-          "description": "(files only) Determines if the file should be made executable during package deploy"
-        },
         "symlinks": {
           "items": {
             "type": "string"
           },
           "type": "array",
           "description": "List of symlinks to create during package deploy"
+        },
+        "executable": {
+          "type": "boolean",
+          "description": "(files only) Determines if the file should be made executable during package deploy"
         },
         "matrix": {
           "$schema": "http://json-schema.org/draft-04/schema#",
@@ -852,10 +852,6 @@
         "target": {
           "type": "string",
           "description": "The absolute or relative path where the file or folder should be copied to during package deploy"
-        },
-        "executable": {
-          "type": "boolean",
-          "description": "(files only) Determines if the file should be made executable during package deploy"
         },
         "symlinks": {
           "items": {

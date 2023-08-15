@@ -790,10 +790,6 @@ export interface ZarfFileMatrix {
  */
 export interface ZarfFileOptions {
     /**
-     * (files only) Determines if the file should be made executable during package deploy
-     */
-    executable?: boolean;
-    /**
      * (files only) Optional SHA256 checksum of the file
      */
     shasum?: string;
@@ -1680,7 +1676,6 @@ const typeMap: any = {
         { json: "windows-arm64", js: "windows-arm64", typ: u(undefined, r("ZarfFileOptions")) },
     ], false),
     "ZarfFileOptions": o([
-        { json: "executable", js: "executable", typ: u(undefined, true) },
         { json: "shasum", js: "shasum", typ: u(undefined, "") },
         { json: "source", js: "source", typ: "" },
         { json: "symlinks", js: "symlinks", typ: u(undefined, a("")) },
