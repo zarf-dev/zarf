@@ -10,9 +10,11 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -200,13 +202,18 @@ func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (st
 		return cmd, err
 	}
 
-	// if another binary is calling Zarf, use the system Zarf
-	// See https://regex101.com/r/O4Ngia/1
-	regex, err := regexp.Compile(`^.*zarf(\.exe)?$`)
-	if err != nil {
-		message.Debug("Could not compile regex")
+	// If zarf is used as a library, os.Executable() will return the path to the binary that called it.
+	//
+	// To verify this, we can check the build info to see if the main module path of the current executable
+	// matches Zarf's main module path.
+	//
+	// The likelyhood of this being a false positive are extremely low.
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return cmd, fmt.Errorf("could not read build info")
 	}
-	if !regex.MatchString(binaryPath) {
+	isZarf := bi.Main.Path == "github.com/"+config.GithubProject
+	if !isZarf {
 		binaryPath = "zarf"
 	}
 

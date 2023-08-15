@@ -48,8 +48,6 @@ var versionCmd = &cobra.Command{
 		}
 		output["dependencies"] = depMap
 
-		output["main"] = buildInfo.Main
-
 		buildMap := make(map[string]interface{})
 		buildMap["platform"] = runtime.GOOS + "/" + runtime.GOARCH
 		buildMap["goVersion"] = runtime.Version()
