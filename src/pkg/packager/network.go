@@ -2,8 +2,6 @@ package packager
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -31,9 +29,9 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 	}
 
 	// Handle case where deploying remote package stored in an OCI registry
-	if helpers.IsOCIURL(opts.PackagePath) {
+	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
 		p.cfg.PkgOpts.PackagePath = p.tmp.Base
-		requestedComponents := getRequestedComponentList(p.cfg.PkgOpts.Components)
+		requestedComponents := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
 		layersToPull := []ocispec.Descriptor{}
 		// only pull specified components and their images if --components AND --confirm are set
 		if len(requestedComponents) > 0 && config.CommonOptions.Confirm {
@@ -48,14 +46,14 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 	}
 
 	// Handle case where deploying remote package validated via sget
-	if strings.HasPrefix(opts.PackagePath, utils.SGETURLPrefix) {
+	if strings.HasPrefix(p.cfg.PkgOpts.PackagePath, utils.SGETURLPrefix) {
 		return partialPaths, p.handleSgetPackage()
 	}
 
-	spinner := message.NewProgressSpinner("Loading Zarf Package %s", opts.PackagePath)
+	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.PkgOpts.PackagePath)
 	defer spinner.Stop()
 
-	if !config.CommonOptions.Insecure && opts.Shasum == "" {
+	if !config.CommonOptions.Insecure && p.cfg.PkgOpts.Shasum == "" {
 		return partialPaths, fmt.Errorf("remote package provided without a shasum, use --insecure to ignore")
 	}
 
@@ -65,7 +63,7 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 	}
 
 	// Download the package
-	resp, err := http.Get(opts.PackagePath)
+	resp, err := http.Get(p.cfg.PkgOpts.PackagePath)
 	if err != nil {
 		return partialPaths, fmt.Errorf("unable to download remote package: %w", err)
 	}
@@ -81,20 +79,14 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 
 	// Check the shasum if necessary
 	if !config.CommonOptions.Insecure {
-		hasher := sha256.New()
-		_, err = io.Copy(hasher, packageFile)
-		if err != nil {
-			return partialPaths, fmt.Errorf("unable to calculate the sha256 of the provided remote package: %w", err)
-		}
-
-		value := hex.EncodeToString(hasher.Sum(nil))
-		if value != opts.Shasum {
+		value, err := helpers.GetSHA256Hash(packageFile)
+		if value != p.cfg.PkgOpts.Shasum || err != nil {
 			_ = os.Remove(localPath)
-			return partialPaths, fmt.Errorf("shasum of remote package does not match provided shasum, expected %s, got %s", opts.Shasum, value)
+			return partialPaths, fmt.Errorf("shasum of remote package does not match provided shasum, expected %s, got %s", p.cfg.PkgOpts.Shasum, value)
 		}
 	}
 
-	opts.PackagePath = localPath
+	p.cfg.PkgOpts.PackagePath = localPath
 
 	spinner.Success()
 	return partialPaths, nil
@@ -103,8 +95,7 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 func (p *Packager) handleSgetPackage() error {
 	message.Warn(lang.WarnSGetDeprecation)
 
-
-	spinner := message.NewProgressSpinner("Loading Zarf Package %s", opts.PackagePath)
+	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.PkgOpts.PackagePath)
 	defer spinner.Stop()
 
 	// Create the local file for the package
@@ -122,7 +113,7 @@ func (p *Packager) handleSgetPackage() error {
 	}
 
 	// Sget the package
-	err = utils.Sget(context.TODO(), opts.PackagePath, p.cfg.PkgOpts.SGetKeyPath, destinationFile)
+	err = utils.Sget(context.TODO(), p.cfg.PkgOpts.PackagePath, p.cfg.PkgOpts.SGetKeyPath, destinationFile)
 	if err != nil {
 		return fmt.Errorf("unable to get the remote package via sget: %w", err)
 	}

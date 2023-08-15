@@ -61,7 +61,7 @@ func (p *Packager) Remove() (err error) {
 	}
 
 	// If components were provided; just remove the things we were asked to remove
-	requestedComponents := getRequestedComponentList(p.cfg.PkgOpts.Components)
+	requestedComponents := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
 	partialRemove := len(requestedComponents) > 0 && requestedComponents[0] != ""
 
 	// Determine if we need the cluster

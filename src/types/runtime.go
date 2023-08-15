@@ -32,12 +32,12 @@ type ZarfCommonOptions struct {
 
 // ZarfPackageOptions tracks the user-defined preferences during common package operations.
 type ZarfPackageOptions struct {
-	Shasum        string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package"`
-	PackagePath   string            `json:"packagePath" jsonschema:"description=Location where a Zarf package can be found"`
-	OptionalComponents    string            `json:"optionalComponents" jsonschema:"description=Comma separated list of optional components"`
-	SGetKeyPath   string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
-	SetVariables  map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package"`
-	PublicKeyPath string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
+	Shasum             string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package"`
+	PackagePath        string            `json:"packagePath" jsonschema:"description=Location where a Zarf package can be found"`
+	OptionalComponents string            `json:"optionalComponents" jsonschema:"description=Comma separated list of optional components"`
+	SGetKeyPath        string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
+	SetVariables       map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package"`
+	PublicKeyPath      string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.

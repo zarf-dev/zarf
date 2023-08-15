@@ -25,8 +25,8 @@ func RemovePackage(w http.ResponseWriter, r *http.Request) {
 	// Setup the packager
 	pkg, err := packager.New(&types.PackagerConfig{
 		PkgOpts: types.ZarfPackageOptions{
-			Components:  components,
-			PackagePath: name,
+			OptionalComponents: components,
+			PackagePath:        name,
 		},
 	})
 	defer pkg.ClearTempPaths()

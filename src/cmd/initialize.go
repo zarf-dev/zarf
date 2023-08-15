@@ -191,7 +191,7 @@ func init() {
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
-	initCmd.Flags().StringVar(&pkgConfig.PkgOpts.Components, "components", v.GetString(V_INIT_COMPONENTS), lang.CmdInitFlagComponents)
+	initCmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(V_INIT_COMPONENTS), lang.CmdInitFlagComponents)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(V_INIT_STORAGE_CLASS), lang.CmdInitFlagStorageClass)
 
 	// Flags for using an external Git server

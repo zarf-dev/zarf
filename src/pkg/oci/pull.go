@@ -47,7 +47,7 @@ func (o *OrasRemote) FileExists(desc ocispec.Descriptor, destinationDir string) 
 	}
 	defer f.Close()
 
-	actual, err := helpers.GetSHA256(f)
+	actual, err := helpers.GetSHA256Hash(f)
 	if err != nil {
 		return false
 	}
