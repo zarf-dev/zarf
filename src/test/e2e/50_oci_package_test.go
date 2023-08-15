@@ -10,11 +10,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
+	"oras.land/oras-go/v2/registry/remote"
 )
 
 type RegistryClientTestSuite struct {
@@ -162,6 +164,20 @@ func (suite *RegistryClientTestSuite) Test_5_Copy() {
 	suite.NoError(err)
 	dst.WithInsecureConnection(true)
 	dst.WithContext(ctx)
+
+	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])
+	suite.NoError(err)
+	reg.PlainHTTP = true
+	attempt := 0
+	for attempt <= 5 {
+		err = reg.Ping(ctx)
+		if err == nil {
+			break
+		}
+		attempt++
+		time.Sleep(2 * time.Second)
+	}
+	require.Less(t, attempt, 5, "failed to ping registry")
 
 	err = oci.CopyPackage(ctx, src, dst, nil, 5)
 	suite.NoError(err)
