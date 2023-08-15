@@ -155,11 +155,13 @@ func (suite *RegistryClientTestSuite) Test_5_Copy() {
 
 	src, err := oci.NewOrasRemote(ref)
 	suite.NoError(err)
-	src = src.WithInsecureConnection(true).WithContext(ctx)
+	src.WithInsecureConnection(true)
+	src.WithContext(ctx)
 
 	dst, err := oci.NewOrasRemote(dstRef)
 	suite.NoError(err)
-	dst = dst.WithInsecureConnection(true).WithContext(ctx)
+	dst.WithInsecureConnection(true)
+	dst.WithContext(ctx)
 
 	err = oci.CopyPackage(ctx, src, dst, nil, 5)
 	suite.NoError(err)

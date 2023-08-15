@@ -57,7 +57,9 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 	copyOpts.PostCopy = o.printLayerSuccess
 	o.CopyOpts = copyOpts
 
-	return o.WithContext(context.TODO()).WithInsecureConnection(zarfconfig.CommonOptions.Insecure), nil
+	o.WithContext(context.TODO())
+	o.WithInsecureConnection(zarfconfig.CommonOptions.Insecure)
+	return o, nil
 }
 
 // setRepository sets the repository for the remote as well as the auth client.
@@ -85,9 +87,8 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 }
 
 // WithContext sets the context for the remote
-func (o *OrasRemote) WithContext(ctx context.Context) *OrasRemote {
+func (o *OrasRemote) WithContext(ctx context.Context) {
 	o.ctx = ctx
-	return o
 }
 
 // createAuthClient returns an auth client for the given reference.
@@ -143,12 +144,11 @@ func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, err
 }
 
 // WithInsecureConnection sets the insecure connection flag for the remote
-func (o *OrasRemote) WithInsecureConnection(insecure bool) *OrasRemote {
+func (o *OrasRemote) WithInsecureConnection(insecure bool) {
 	o.repo.PlainHTTP = insecure
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig.InsecureSkipVerify = insecure
 	o.Transport = utils.NewTransport(transport, nil)
-	return o
 }
 
 // Repo gives you access to the underlying remote repository
