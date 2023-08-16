@@ -115,16 +115,16 @@ func (fp *FilePacker) ProcessFiles() error {
 
 		var fileLocation string
 		if file.Matrix != nil {
-			tag := fmt.Sprintf("%d-%s-%s", fileIdx, runtime.GOOS, runtime.GOARCH)
+			prefix := fmt.Sprintf("%d-%s-%s", fileIdx, runtime.GOOS, runtime.GOARCH)
 
 			matrixFiles := fp.getMatrixFileMap(file, fileIdx)
-			if mFile, ok := matrixFiles[tag]; ok {
-				fileLocation = filepath.Join(pkgLocation, tag, filepath.Base(mFile.Target))
+			if mFile, ok := matrixFiles[prefix]; ok {
+				_, fileLocation = fp.getFilePath(mFile, prefix)
 			} else {
 				return fmt.Errorf("the %q operating system on the %q platform is not supported by this package", runtime.GOOS, runtime.GOARCH)
 			}
 		} else {
-			fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
+			_, fileLocation = fp.getFilePath(file, strconv.Itoa(fileIdx))
 			if utils.InvalidPath(fileLocation) {
 				fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
 			}
