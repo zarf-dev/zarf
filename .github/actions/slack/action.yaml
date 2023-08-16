@@ -1,0 +1,46 @@
+name: slack
+description: "Post a message to slack with the workflow status"
+
+inputs:
+  slack-webhook-url:
+    description: 'The webhook URL to use to post to slack'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
+      with:
+        payload: |
+          {
+            "text": "The GitHub Action Workflow **'${{ github.workflow }}'** had a result of: `${{ job.status }}`.",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "The GitHub Action Workflow **'${{ github.workflow }}'** had a result of: `${{ job.status }}`."
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "View Workflow Run"
+                },
+                "accessory": {
+                  "type": "button",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "Click Me",
+                    "emoji": true
+                  },
+                  "value": "click_me_workflow_run",
+                  "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "action_id": "button-action"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}

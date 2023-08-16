@@ -16,14 +16,16 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
+	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
+	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
@@ -32,12 +34,15 @@ import (
 
 // Packager is the main struct for managing packages.
 type Packager struct {
-	cfg      *types.PackagerConfig
-	cluster  *cluster.Cluster
-	remote   *oci.OrasRemote
-	tmp      types.TempPaths
-	arch     string
-	warnings []string
+	cfg            *types.PackagerConfig
+	cluster        *cluster.Cluster
+	remote         *oci.OrasRemote
+	tmp            types.TempPaths
+	arch           string
+	warnings       []string
+	valueTemplate  *template.Values
+	hpaModified    bool
+	connectStrings types.ConnectStrings
 }
 
 // Zarf Packager Variables.
@@ -74,8 +79,15 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 		}
 	)
 
+	if config.CommonOptions.TempDirectory != "" {
+		// If the cache directory is within the temp directory, warn the user
+		if strings.HasPrefix(config.CommonOptions.CachePath, config.CommonOptions.TempDirectory) {
+			message.Warnf("The cache directory (%q) is within the temp directory (%q) and will be removed when the temp directory is cleaned up", config.CommonOptions.CachePath, config.CommonOptions.TempDirectory)
+		}
+	}
+
 	// Create a temp directory for the package
-	if pkgConfig.tmp, err = createPaths(); err != nil {
+	if err = pkgConfig.SetTempDirectory(config.CommonOptions.TempDirectory); err != nil {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
@@ -100,9 +112,22 @@ func NewOrDie(config *types.PackagerConfig) *Packager {
 	return pkgConfig
 }
 
+// SetTempDirectory sets the temp directory for the packager.
+func (p *Packager) SetTempDirectory(path string) error {
+	if p.tmp.Base != "" {
+		p.ClearTempPaths()
+	}
+
+	tmp, err := createPaths(path)
+	if err != nil {
+		return fmt.Errorf("unable to create package temp paths: %w", err)
+	}
+	p.tmp = tmp
+	return nil
+}
+
 // GetInitPackageName returns the formatted name of the init package.
 func GetInitPackageName(arch string) string {
-	message.Debug("packager.GetInitPackageName()")
 	if arch == "" {
 		// No package has been loaded yet so lookup GetArch() with no package info
 		arch = config.GetArch()
@@ -112,8 +137,6 @@ func GetInitPackageName(arch string) string {
 
 // GetPackageName returns the formatted name of the package.
 func (p *Packager) GetPackageName() string {
-	message.Debugf("packager.GetPackageName(%s)", message.JSONValue(p))
-
 	if p.cfg.IsInitConfig {
 		return GetInitPackageName(p.arch)
 	}
@@ -147,8 +170,6 @@ func (p *Packager) ClearTempPaths() {
 }
 
 func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
-	message.Debugf("packager.createOrGetComponentPaths(%s)", message.JSONValue(component))
-
 	base := filepath.Join(p.tmp.Components, component.Name)
 
 	err = utils.CreateDirectory(base, 0700)
@@ -224,10 +245,18 @@ func isValidFileExtension(filename string) bool {
 	return false
 }
 
-func createPaths() (paths types.TempPaths, err error) {
-	message.Debug("packager.createPaths()")
-
-	basePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+func createPaths(basePath string) (paths types.TempPaths, err error) {
+	if basePath == "" {
+		basePath, err = utils.MakeTempDir()
+		if err != nil {
+			return paths, err
+		}
+	} else {
+		if err := utils.CreateDirectory(basePath, 0700); err != nil {
+			return paths, fmt.Errorf("unable to create temp directory: %w", err)
+		}
+	}
+	message.Debug("Using temporary directory:", basePath)
 	paths = types.TempPaths{
 		Base: basePath,
 
@@ -263,14 +292,24 @@ func (p *Packager) loadZarfPkg() error {
 		return fmt.Errorf("unable to handle the provided package path: %w", err)
 	}
 
-	alreadyExtracted := p.cfg.DeployOpts.PackagePath == p.tmp.Base
+	alreadyExtracted := p.cfg.PkgOpts.PackagePath == p.tmp.Base
 
-	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.DeployOpts.PackagePath)
+	if alreadyExtracted && pathsToCheck == nil {
+		paths, err := utils.RecursiveFileList(p.tmp.Base, nil, false)
+		if err != nil {
+			return fmt.Errorf("unable to get a list of files in the package: %w", err)
+		}
+		for _, path := range paths {
+			pathsToCheck = append(pathsToCheck, strings.TrimPrefix(path, p.tmp.Base+string(os.PathSeparator)))
+		}
+	}
+
+	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.PkgOpts.PackagePath)
 	defer spinner.Stop()
 
 	// Make sure the user gave us a package we can work with
-	if utils.InvalidPath(p.cfg.DeployOpts.PackagePath) {
-		return fmt.Errorf("unable to find the package at %s", p.cfg.DeployOpts.PackagePath)
+	if utils.InvalidPath(p.cfg.PkgOpts.PackagePath) {
+		return fmt.Errorf("unable to find the package at %s", p.cfg.PkgOpts.PackagePath)
 	}
 
 	// If packagePath has partial in the name, we need to combine the partials into a single package
@@ -282,7 +321,7 @@ func (p *Packager) loadZarfPkg() error {
 	if !alreadyExtracted {
 		// Extract the archive
 		spinner.Updatef("Extracting the package, this may take a few moments")
-		if err := archiver.Unarchive(p.cfg.DeployOpts.PackagePath, p.tmp.Base); err != nil {
+		if err := archiver.Unarchive(p.cfg.PkgOpts.PackagePath, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract the package: %w", err)
 		}
 	}
@@ -300,11 +339,11 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// Get a list of paths for the components of the package
-	components, err := os.ReadDir(p.tmp.Components)
-	if err != nil {
+	componentTarballs, err := os.ReadDir(p.tmp.Components)
+	if err != nil && !utils.InvalidPath(p.tmp.Components) {
 		return fmt.Errorf("unable to get a list of components... %w", err)
 	}
-	for _, path := range components {
+	for _, path := range componentTarballs {
 		// If the components are tarballs, extract them!
 		componentPath := filepath.Join(p.tmp.Components, path.Name())
 		if !path.IsDir() && strings.HasSuffix(path.Name(), ".tar") {
@@ -318,8 +357,7 @@ func (p *Packager) loadZarfPkg() error {
 	}
 
 	// If a SBOM tar file exist, temporarily place them in the deploy directory
-	_, tarErr := os.Stat(p.tmp.SbomTar)
-	if tarErr == nil {
+	if !utils.InvalidPath(p.tmp.SbomTar) {
 		if err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
 			return fmt.Errorf("unable to extract the sbom data from the component: %w", err)
 		}
@@ -343,10 +381,10 @@ func (p *Packager) loadZarfPkg() error {
 }
 
 func (p *Packager) handleIfPartialPkg() error {
-	message.Debugf("Checking for partial package: %s", p.cfg.DeployOpts.PackagePath)
+	message.Debugf("Checking for partial package: %s", p.cfg.PkgOpts.PackagePath)
 
 	// If packagePath has partial in the name, we need to combine the partials into a single package
-	if !strings.Contains(p.cfg.DeployOpts.PackagePath, ".part000") {
+	if !strings.Contains(p.cfg.PkgOpts.PackagePath, ".part000") {
 		message.Debug("No partial package detected")
 		return nil
 	}
@@ -354,7 +392,7 @@ func (p *Packager) handleIfPartialPkg() error {
 	message.Debug("Partial package detected")
 
 	// Replace part 000 with *
-	pattern := strings.Replace(p.cfg.DeployOpts.PackagePath, ".part000", ".part*", 1)
+	pattern := strings.Replace(p.cfg.PkgOpts.PackagePath, ".part000", ".part*", 1)
 	fileList, err := filepath.Glob(pattern)
 	if err != nil {
 		return fmt.Errorf("unable to find partial package files: %s", err)
@@ -364,7 +402,7 @@ func (p *Packager) handleIfPartialPkg() error {
 	sort.Strings(fileList)
 
 	// Create the new package
-	destination := strings.Replace(p.cfg.DeployOpts.PackagePath, ".part000", "", 1)
+	destination := strings.Replace(p.cfg.PkgOpts.PackagePath, ".part000", "", 1)
 	pkgFile, err := os.Create(destination)
 	if err != nil {
 		return fmt.Errorf("unable to create new package file: %s", err)
@@ -374,7 +412,7 @@ func (p *Packager) handleIfPartialPkg() error {
 	// Remove the new package if there is an error
 	defer func() {
 		// If there is an error, remove the new package
-		if p.cfg.DeployOpts.PackagePath != destination {
+		if p.cfg.PkgOpts.PackagePath != destination {
 			os.Remove(destination)
 		}
 	}()
@@ -431,26 +469,62 @@ func (p *Packager) handleIfPartialPkg() error {
 	}
 
 	// Success, update the package path
-	p.cfg.DeployOpts.PackagePath = destination
+	p.cfg.PkgOpts.PackagePath = destination
 	return nil
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
-func (p *Packager) validatePackageArchitecture() error {
-	// Ignore this check if the architecture is explicitly "multi"
-	if p.arch != "multi" {
-		// Attempt to connect to a cluster to get the architecture.
-		if cluster, err := cluster.NewCluster(); err == nil {
-			clusterArch, err := cluster.Kube.GetArchitecture()
-			if err != nil {
-				return lang.ErrUnableToCheckArch
-			}
+func (p *Packager) validatePackageArchitecture() (err error) {
+	// Ignore this check if the package architecture is explicitly "multi"
+	if p.arch == "multi" {
+		return nil
+	}
 
-			// Check if the package architecture and the cluster architecture are the same.
-			if p.arch != clusterArch {
-				return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
-			}
+	// Fetch cluster architecture only if we're already connected to a cluster.
+	if p.cluster != nil {
+		clusterArch, err := p.cluster.GetArchitecture()
+		if err != nil {
+			return lang.ErrUnableToCheckArch
 		}
+
+		// Check if the package architecture and the cluster architecture are the same.
+		if p.arch != clusterArch {
+			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+		}
+	}
+
+	return nil
+}
+
+// validateLastNonBreakingVersion compares the Zarf CLI version against a package's LastNonBreakingVersion.
+// It will return an error if there is an error parsing either of the two versions,
+// and will throw a warning if the CLI version is less than the LastNonBreakingVersion.
+func (p *Packager) validateLastNonBreakingVersion() (err error) {
+	cliVersion := config.CLIVersion
+	lastNonBreakingVersion := p.cfg.Pkg.Build.LastNonBreakingVersion
+
+	if lastNonBreakingVersion == "" || cliVersion == "UnknownVersion" {
+		return nil
+	}
+
+	lastNonBreakingSemVer, err := semver.NewVersion(lastNonBreakingVersion)
+	if err != nil {
+		return fmt.Errorf("unable to parse lastNonBreakingVersion '%s' from Zarf package build data : %w", lastNonBreakingVersion, err)
+	}
+
+	cliSemVer, err := semver.NewVersion(cliVersion)
+	if err != nil {
+		return fmt.Errorf("unable to parse Zarf CLI version '%s' : %w", cliVersion, err)
+	}
+
+	if cliSemVer.LessThan(lastNonBreakingSemVer) {
+		warning := fmt.Sprintf(
+			lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
+			cliVersion,
+			lastNonBreakingVersion,
+			lastNonBreakingVersion,
+		)
+		p.warnings = append(p.warnings, warning)
 	}
 
 	return nil
@@ -463,15 +537,15 @@ var (
 	ErrPkgSigButNoKey = errors.New("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
 )
 
-func (p *Packager) validatePackageSignature(publicKeyPath string) error {
-
-	// If the insecure flag was provided, or there is no aggregate checksum, ignore the signature validation
-	if config.CommonOptions.Insecure || p.cfg.Pkg.Metadata.AggregateChecksum == "" {
+// ValidatePackageSignature validates the signature of a package
+func ValidatePackageSignature(directory string, publicKeyPath string) error {
+	// If the insecure flag was provided ignore the signature validation
+	if config.CommonOptions.Insecure {
 		return nil
 	}
 
 	// Handle situations where there is no signature within the package
-	sigExist := !utils.InvalidPath(p.tmp.ZarfSig)
+	sigExist := !utils.InvalidPath(filepath.Join(directory, config.ZarfYAMLSignature))
 	if !sigExist && publicKeyPath == "" {
 		// Nobody was expecting a signature, so we can just return
 		return nil
@@ -484,7 +558,7 @@ func (p *Packager) validatePackageSignature(publicKeyPath string) error {
 	}
 
 	// Validate the signature with the key we were provided
-	if err := utils.CosignVerifyBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, publicKeyPath); err != nil {
+	if err := utils.CosignVerifyBlob(filepath.Join(directory, config.ZarfYAML), filepath.Join(directory, config.ZarfYAMLSignature), publicKeyPath); err != nil {
 		return fmt.Errorf("package signature did not match the provided key: %w", err)
 	}
 
@@ -497,7 +571,7 @@ func (p *Packager) getSigCreatePassword(_ bool) ([]byte, error) {
 		return []byte(p.cfg.CreateOpts.SigningKeyPassword), nil
 	}
 
-	return promptForSigPassword()
+	return interactive.PromptSigPassword()
 }
 
 func (p *Packager) getSigPublishPassword(_ bool) ([]byte, error) {
@@ -506,25 +580,7 @@ func (p *Packager) getSigPublishPassword(_ bool) ([]byte, error) {
 		return []byte(p.cfg.CreateOpts.SigningKeyPassword), nil
 	}
 
-	return promptForSigPassword()
-}
-
-func promptForSigPassword() ([]byte, error) {
-	var password string
-
-	// If we're in interactive mode, prompt the user for the password to their private key
-	if !config.CommonOptions.Confirm {
-		prompt := &survey.Password{
-			Message: "Private key password (empty for no password): ",
-		}
-		if err := survey.AskOne(prompt, &password); err != nil {
-			return nil, fmt.Errorf("unable to get password for private key: %w", err)
-		}
-		return []byte(password), nil
-	}
-
-	// We are returning a nil error here because purposefully avoiding a password input is a valid use condition
-	return nil, nil
+	return interactive.PromptSigPassword()
 }
 
 func (p *Packager) archiveComponent(component types.ZarfComponent) error {

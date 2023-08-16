@@ -14,15 +14,13 @@ import (
 const zarfStatePath = "/etc/zarf-state/state"
 
 // GetZarfStateFromAgentPod reads the state json file that was mounted into the agent pods.
-func GetZarfStateFromAgentPod() (types.ZarfState, error) {
-	zarfState := types.ZarfState{}
-
+func GetZarfStateFromAgentPod() (state *types.ZarfState, err error) {
 	// Read the state file
 	stateFile, err := os.ReadFile(zarfStatePath)
 	if err != nil {
-		return zarfState, err
+		return nil, err
 	}
 
 	// Unmarshal the json file into a Go struct
-	return zarfState, json.Unmarshal(stateFile, &zarfState)
+	return state, json.Unmarshal(stateFile, &state)
 }

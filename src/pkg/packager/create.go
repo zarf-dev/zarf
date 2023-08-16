@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -42,12 +41,12 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
-	if utils.IsOCIURL(p.cfg.CreateOpts.Output) {
+	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
 		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.arch)
 		if err != nil {
 			return err
 		}
-		err = p.SetOCIRemote(ref.String())
+		err = p.SetOCIRemote(ref)
 		if err != nil {
 			return err
 		}
@@ -67,7 +66,7 @@ func (p *Packager) Create(baseDir string) error {
 		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
 	}
 
-	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
+	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 		p.cfg.IsInitConfig = true
 	}
@@ -225,11 +224,20 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	if utils.IsOCIURL(p.cfg.CreateOpts.Output) {
+	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
 		err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
+		message.HorizontalRule()
+		flags := ""
+		if config.CommonOptions.Insecure {
+			flags = "--insecure"
+		}
+		message.Title("To inspect/deploy/pull:", "")
+		message.ZarfCommand("package inspect oci://%s %s", p.remote.Repo().Reference, flags)
+		message.ZarfCommand("package deploy oci://%s %s", p.remote.Repo().Reference, flags)
+		message.ZarfCommand("package pull oci://%s %s", p.remote.Repo().Reference, flags)
 	} else {
 		// Use the output path if the user specified it.
 		packageName := filepath.Join(p.cfg.CreateOpts.Output, p.GetPackageName())
@@ -308,13 +316,13 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		return fmt.Errorf("unable to create the component paths: %s", err.Error())
 	}
 
-	if isSkeleton && component.CosignKeyPath != "" {
+	if isSkeleton && component.DeprecatedCosignKeyPath != "" {
 		dst := filepath.Join(componentPath.Base, "cosign.pub")
-		err := utils.CreatePathAndCopy(component.CosignKeyPath, dst)
+		err := utils.CreatePathAndCopy(component.DeprecatedCosignKeyPath, dst)
 		if err != nil {
 			return err
 		}
-		p.cfg.Pkg.Components[index].CosignKeyPath = "cosign.pub"
+		p.cfg.Pkg.Components[index].DeprecatedCosignKeyPath = "cosign.pub"
 	}
 
 	onCreate := component.Actions.OnCreate
@@ -326,8 +334,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
-		re := regexp.MustCompile(`\.git$`)
-		isGitURL := re.MatchString(chart.URL)
+
 		helmCfg := helm.Helm{
 			Chart: chart,
 			Cfg:   p.cfg,
@@ -343,18 +350,10 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			}
 
 			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
-		} else if isGitURL {
-			_, err = helmCfg.PackageChartFromGit(componentPath.Charts)
-			if err != nil {
-				return fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
-			}
-		} else if len(chart.URL) > 0 {
-			helmCfg.DownloadPublishedChart(componentPath.Charts)
 		} else {
-			path := helmCfg.PackageChartFromLocalFiles(componentPath.Charts)
-			zarfFilename := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
-			if !strings.HasSuffix(path, zarfFilename) {
-				return fmt.Errorf("error creating chart archive, user provided chart name and/or version does not match given chart")
+			err := helmCfg.PackageChart(componentPath.Charts)
+			if err != nil {
+				return err
 			}
 		}
 
@@ -362,11 +361,11 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			rel := fmt.Sprintf("%s-%d", helm.StandardName(types.ValuesFolder, chart), valuesIdx)
 			dst := filepath.Join(componentPath.Base, rel)
 
-			if utils.IsURL(path) {
+			if helpers.IsURL(path) {
 				if isSkeleton {
 					continue
 				}
-				if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 				}
 			} else {
@@ -386,11 +385,11 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		rel := filepath.Join(types.FilesFolder, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(componentPath.Base, rel)
 
-		if utils.IsURL(file.Source) {
+		if helpers.IsURL(file.Source) {
 			if isSkeleton {
 				continue
 			}
-			if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
+			if err := utils.DownloadToFile(file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 			}
 		} else {
@@ -426,11 +425,11 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			rel := filepath.Join(types.DataInjectionsFolder, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 			dst := filepath.Join(componentPath.Base, rel)
 
-			if utils.IsURL(data.Source) {
+			if helpers.IsURL(data.Source) {
 				if isSkeleton {
 					continue
 				}
-				if err := utils.DownloadToFile(data.Source, dst, component.CosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
@@ -465,11 +464,11 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", path)
-				if utils.IsURL(path) {
+				if helpers.IsURL(path) {
 					if isSkeleton {
 						continue
 					}
-					if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+					if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
 						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 					}
 				} else {
@@ -512,7 +511,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
-			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
+			gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
 			if err := gitCfg.Pull(url, componentPath.Repos, false); err != nil {
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
@@ -572,11 +571,11 @@ func (p *Packager) loadDifferentialData() error {
 	// Save the fact that this is a differential build into the build data of the package
 	p.cfg.Pkg.Build.Differential = true
 
-	tmpDir, _ := utils.MakeTempDir("")
+	tmpDir, _ := utils.MakeTempDir()
 	defer os.RemoveAll(tmpDir)
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
-	if utils.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
+	if helpers.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
 		err := p.SetOCIRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
 		if err != nil {
 			return err
@@ -632,7 +631,7 @@ func (p *Packager) removeDifferentialComponentsFromPackage() error {
 
 		for idx, component := range p.cfg.Pkg.Components {
 			// if the component is imported from an OCI package and everything is the same, don't include this package
-			if utils.IsOCIURL(component.Import.URL) {
+			if helpers.IsOCIURL(component.Import.URL) {
 				if _, alsoExists := p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents[component.Import.URL]; alsoExists {
 
 					// If the component spec is not empty, we will still include it in the differential package
@@ -694,7 +693,7 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 		// Generate a list of all unique repos for this component
 		for _, repoURL := range component.Repos {
 			// Split the remote url and the zarf reference
-			_, refPlain, err := transform.GitTransformURLSplitRef(repoURL)
+			_, refPlain, err := transform.GitURLSplitRef(repoURL)
 			if err != nil {
 				return err
 			}

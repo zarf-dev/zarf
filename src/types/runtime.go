@@ -13,7 +13,13 @@ const (
 	ManifestsFolder      = "manifests"
 	DataInjectionsFolder = "data"
 	ValuesFolder         = "values"
+
+	RawVariableType  VariableType = "raw"
+	FileVariableType VariableType = "file"
 )
+
+// VariableType represents a type of a Zarf package variable
+type VariableType string
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
@@ -24,15 +30,19 @@ type ZarfCommonOptions struct {
 	OCIConcurrency int    `jsonschema:"description=Number of concurrent layer operations to perform when interacting with a remote package"`
 }
 
-// ZarfDeployOptions tracks the user-defined preferences during a package deployment.
+// ZarfPackageOptions tracks the user-defined preferences during common package operations.
+type ZarfPackageOptions struct {
+	Shasum             string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package"`
+	PackagePath        string            `json:"packagePath" jsonschema:"description=Location where a Zarf package can be found"`
+	OptionalComponents string            `json:"optionalComponents" jsonschema:"description=Comma separated list of optional components"`
+	SGetKeyPath        string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
+	SetVariables       map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package"`
+	PublicKeyPath      string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
+}
+
+// ZarfDeployOptions tracks the user-defined preferences during a package deploy.
 type ZarfDeployOptions struct {
-	Shasum                 string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package to deploy"`
-	PackagePath            string            `json:"packagePath" jsonschema:"description=Location where a Zarf package to deploy can be found"`
-	Components             string            `json:"components" jsonschema:"description=Comma separated list of optional components to deploy"`
-	SGetKeyPath            string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
-	SetVariables           map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package"`
-	PublicKeyPath          string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
-	AdoptExistingResources bool              `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`
+	AdoptExistingResources bool `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`
 }
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
@@ -86,10 +96,11 @@ type ZarfPartialPackageData struct {
 
 // ZarfSetVariable tracks internal variables that have been set during this run of Zarf
 type ZarfSetVariable struct {
-	Name       string `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
-	Sensitive  bool   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
-	AutoIndent bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
-	Value      string `json:"value" jsonschema:"description=The value the variable is currently set with"`
+	Name       string       `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
+	Sensitive  bool         `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
+	AutoIndent bool         `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
+	Value      string       `json:"value" jsonschema:"description=The value the variable is currently set with"`
+	Type       VariableType `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB),enum=raw,enum=file"`
 }
 
 // ConnectString contains information about a connection made with Zarf connect.

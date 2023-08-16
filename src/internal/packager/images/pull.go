@@ -6,7 +6,6 @@ package images
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -28,7 +27,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/moby/moby/client"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pterm/pterm"
 )
 
@@ -234,7 +232,7 @@ func (i *ImgConfig) PullAll() error {
 		tagToDigest[tag.String()] = imgDigest.String()
 	}
 
-	if err := addImageNameAnnotation(i.ImagesPath, tagToDigest); err != nil {
+	if err := utils.AddImageNameAnnotation(i.ImagesPath, tagToDigest); err != nil {
 		return fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
@@ -306,58 +304,4 @@ func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Imag
 	img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 
 	return img, nil
-}
-
-// IndexJSON represents the index.json file in an OCI layout.
-type IndexJSON struct {
-	SchemaVersion int `json:"schemaVersion"`
-	Manifests     []struct {
-		MediaType   string            `json:"mediaType"`
-		Size        int               `json:"size"`
-		Digest      string            `json:"digest"`
-		Annotations map[string]string `json:"annotations"`
-	} `json:"manifests"`
-}
-
-// addImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image tag <-> digest shasum will be.
-func addImageNameAnnotation(ociPath string, tagToDigest map[string]string) error {
-	indexPath := filepath.Join(ociPath, "index.json")
-
-	// Read the file contents and turn it into a usable struct that we can manipulate
-	var index IndexJSON
-	byteValue, err := os.ReadFile(indexPath)
-	if err != nil {
-		return fmt.Errorf("unable to read the contents of the file (%s) so we can add an annotation: %w", indexPath, err)
-	}
-	if err = json.Unmarshal(byteValue, &index); err != nil {
-		return fmt.Errorf("unable to process the conents of the file (%s): %w", indexPath, err)
-	}
-
-	// Loop through the manifests and add the appropriate OCI Base Image Name Annotation
-	for idx, manifest := range index.Manifests {
-		if manifest.Annotations == nil {
-			manifest.Annotations = make(map[string]string)
-		}
-
-		var baseImageName string
-
-		for tag, digest := range tagToDigest {
-			if digest == manifest.Digest {
-				baseImageName = tag
-			}
-		}
-
-		if baseImageName != "" {
-			manifest.Annotations[ocispec.AnnotationBaseImageName] = baseImageName
-			index.Manifests[idx] = manifest
-			delete(tagToDigest, baseImageName)
-		}
-	}
-
-	// Write the file back to the package
-	indexJSONBytes, err := json.Marshal(index)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(indexPath, indexJSONBytes, 0600)
 }

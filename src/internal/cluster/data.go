@@ -24,7 +24,6 @@ import (
 // HandleDataInjection waits for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now.
 func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath types.ComponentPaths, dataIdx int) {
-	message.Debugf("packager.handleDataInjections(%#v, %#v, %#v)", wg, data, componentPath)
 	defer wg.Done()
 
 	injectionCompletionMarker := filepath.Join(componentPath.DataInjections, config.GetDataInjectionMarker())
@@ -73,7 +72,7 @@ iterator:
 		}
 
 		// Wait until the pod we are injecting data into becomes available
-		pods := c.Kube.WaitForPodsAndContainers(target, podFilterByInitContainer)
+		pods := c.WaitForPodsAndContainers(target, podFilterByInitContainer)
 		if len(pods) < 1 {
 			continue
 		}
@@ -88,8 +87,7 @@ iterator:
 			} else {
 				kubectlBinPath = fmt.Sprintf("%s tools kubectl", zarfBinPath)
 			}
-
-			kubectlCmd := fmt.Sprintf("%s exec -i -n %s %s -c %s ", kubectlBinPath, data.Target.Namespace, pod, data.Target.Container)
+			kubectlCmd := fmt.Sprintf("%s exec -i -n %s %s -c %s ", kubectlBinPath, data.Target.Namespace, pod.Name, data.Target.Container)
 
 			// Note that each command flag is separated to provide the widest cross-platform tar support
 			tarCmd := fmt.Sprintf("tar -c %s -f -", tarCompressFlag)
@@ -98,7 +96,7 @@ iterator:
 			// Must create the target directory before trying to change to it for untar
 			mkdirCmd := fmt.Sprintf("%s -- mkdir -p %s", kubectlCmd, data.Target.Path)
 			if err := exec.CmdWithPrint(shell, shellArgs, mkdirCmd); err != nil {
-				message.Warnf("Unable to create the data injection target directory %s in pod %s", data.Target.Path, pod)
+				message.Warnf("Unable to create the data injection target directory %s in pod %s", data.Target.Path, pod.Name)
 				continue iterator
 			}
 
@@ -111,7 +109,7 @@ iterator:
 
 			// Do the actual data injection
 			if err := exec.CmdWithPrint(shell, shellArgs, cpPodCmd); err != nil {
-				message.Warnf("Error copying data into the pod %#v: %#v\n", pod, err)
+				message.Warnf("Error copying data into the pod %#v: %#v\n", pod.Name, err)
 				continue iterator
 			}
 
@@ -125,7 +123,7 @@ iterator:
 			)
 
 			if err := exec.CmdWithPrint(shell, shellArgs, cpPodCmd); err != nil {
-				message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod)
+				message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod.Name)
 				continue iterator
 			}
 		}
@@ -139,7 +137,7 @@ iterator:
 		// Block one final time to make sure at least one pod has come up and injected the data
 		// Using only the pod as the final selector because we don't know what the container name will be
 		// Still using the init container filter to make sure we have the right running pod
-		_ = c.Kube.WaitForPodsAndContainers(podOnlyTarget, podFilterByInitContainer)
+		_ = c.WaitForPodsAndContainers(podOnlyTarget, podFilterByInitContainer)
 
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(source)

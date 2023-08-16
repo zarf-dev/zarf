@@ -25,6 +25,13 @@
         "skipFlux": {
           "type": "boolean",
           "description": "Whether to skip deploying flux; Defaults to false"
+        },
+        "fluxPatchFiles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Optional paths to Flux kustomize strategic merge patch files"
         }
       },
       "additionalProperties": false,
@@ -75,10 +82,7 @@
         "user",
         "architecture",
         "timestamp",
-        "version",
-        "migrations",
-        "differential",
-        "registryOverrides"
+        "version"
       ],
       "properties": {
         "terminal": {
@@ -136,6 +140,10 @@
           },
           "type": "object",
           "description": "Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names"
+        },
+        "lastNonBreakingVersion": {
+          "type": "string",
+          "description": "The minimum version of Zarf that does not have breaking package structure changes"
         }
       },
       "additionalProperties": false,
@@ -246,7 +254,7 @@
         },
         "cosignKeyPath": {
           "type": "string",
-          "description": "Specify a path to a public key to validate signed online resources"
+          "description": "[Deprecated] Specify a path to a public key to validate signed online resources. This will be removed in Zarf v1.0.0."
         },
         "import": {
           "$schema": "http://json-schema.org/draft-04/schema#",
@@ -256,7 +264,7 @@
         "scripts": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/DeprecatedZarfComponentScripts",
-          "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment"
+          "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0."
         },
         "files": {
           "items": {
@@ -354,7 +362,7 @@
         "setVariable": {
           "pattern": "^[A-Z0-9_]+$",
           "type": "string",
-          "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package."
+          "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0"
         },
         "setVariables": {
           "items": {
@@ -468,6 +476,14 @@
         "autoIndent": {
           "type": "boolean",
           "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
+        },
+        "type": {
+          "enum": [
+            "raw",
+            "file"
+          ],
+          "type": "string",
+          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
         }
       },
       "additionalProperties": false,
@@ -997,6 +1013,14 @@
         "autoIndent": {
           "type": "boolean",
           "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
+        },
+        "type": {
+          "enum": [
+            "raw",
+            "file"
+          ],
+          "type": "string",
+          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
         }
       },
       "additionalProperties": false,

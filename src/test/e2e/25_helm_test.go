@@ -70,12 +70,13 @@ func testHelmEscaping(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Verify the configmap was deployed and escaped.
+	// Verify the configmap was deployed, escaped, and contains all of its data
 	kubectlOut, _ := exec.Command("kubectl", "describe", "cm", "dont-template-me").Output()
 	require.Contains(t, string(kubectlOut), `alert: OOMKilled {{ "{{ \"random.Values\" }}" }}`)
 	require.Contains(t, string(kubectlOut), "backtick1: \"content with backticks `some random things`\"")
 	require.Contains(t, string(kubectlOut), "backtick2: \"nested templating with backticks {{` random.Values `}}\"")
 	require.Contains(t, string(kubectlOut), `description: Pod {{$labels.pod}} in {{$labels.namespace}} got OOMKilled`)
+	require.Contains(t, string(kubectlOut), `TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIG`)
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "evil-templates", "--confirm")
@@ -85,16 +86,19 @@ func testHelmEscaping(t *testing.T) {
 func testHelmUninstallRollback(t *testing.T) {
 	t.Log("E2E: Helm Uninstall and Rollback")
 
-	goodPath := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.Arch)
+	goodPath := fmt.Sprintf("build/zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 	evilPath := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
 	// Create the evil package (with the bad configmap).
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/25-evil-dos-games/", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/25-evil-dos-games/", "--skip-sbom", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the evil package.
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
+
+	// This package contains SBOMable things but was created with --skip-sbom
+	require.Contains(t, string(stdErr), "This package does NOT contain an SBOM.")
 
 	// Ensure that this does not leave behind a dos-games chart
 	helmOut, err := exec.Command("helm", "list", "-n", "dos-games").Output()
@@ -127,7 +131,7 @@ func testHelmUninstallRollback(t *testing.T) {
 func testHelmAdoption(t *testing.T) {
 	t.Log("E2E: Helm Adopt a Deployment")
 
-	packagePath := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.Arch)
+	packagePath := fmt.Sprintf("build/zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 	deploymentManifest := "src/test/packages/25-manifest-adoption/deployment.yaml"
 
 	// Deploy dos-games manually into the cluster without Zarf

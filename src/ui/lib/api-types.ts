@@ -19,9 +19,9 @@ export interface APITypes {
     deployedPackage:           DeployedPackage;
     zarfCommonOptions:         ZarfCommonOptions;
     zarfCreateOptions:         ZarfCreateOptions;
-    zarfDeployOptions:         ZarfDeployOptions;
     zarfInitOptions:           ZarfInitOptions;
     zarfPackage:               ZarfPackage;
+    zarfPackageOptions:        ZarfPackageOptions;
     zarfState:                 ZarfState;
 }
 
@@ -36,40 +36,8 @@ export interface APIPackageSBOM {
 }
 
 export interface APIZarfDeployPayload {
-    deployOpts: ZarfDeployOptions;
-    initOpts?:  ZarfInitOptions;
-}
-
-export interface ZarfDeployOptions {
-    /**
-     * Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
-     */
-    adoptExistingResources: boolean;
-    /**
-     * Comma separated list of optional components to deploy
-     */
-    components: string;
-    /**
-     * Location where a Zarf package to deploy can be found
-     */
-    packagePath: string;
-    /**
-     * Location where the public key component of a cosign key-pair can be found
-     */
-    publicKeyPath: string;
-    /**
-     * Key-Value map of variable names and their corresponding values that will be used to
-     * template manifests and files in the Zarf package
-     */
-    setVariables: { [key: string]: string };
-    /**
-     * Location where the public key component of a cosign key-pair can be found
-     */
-    sGetKeyPath: string;
-    /**
-     * The SHA256 checksum of the package to deploy
-     */
-    shasum: string;
+    initOpts?:   ZarfInitOptions;
+    packageOpts: ZarfPackageOptions;
 }
 
 export interface ZarfInitOptions {
@@ -135,12 +103,12 @@ export interface GitServerInfo {
     internalServer: boolean;
     /**
      * Password of a user with pull-only access to the git repository. If not provided for an
-     * external repository than the push-user is used
+     * external repository then the push-user is used
      */
     pullPassword: string;
     /**
      * Username of a user with pull-only access to the git repository. If not provided for an
-     * external repository than the push-user is used
+     * external repository then the push-user is used
      */
     pullUsername: string;
     /**
@@ -196,6 +164,34 @@ export interface RegistryInfo {
     secret: string;
 }
 
+export interface ZarfPackageOptions {
+    /**
+     * Comma separated list of optional components
+     */
+    optionalComponents: string;
+    /**
+     * Location where a Zarf package can be found
+     */
+    packagePath: string;
+    /**
+     * Location where the public key component of a cosign key-pair can be found
+     */
+    publicKeyPath: string;
+    /**
+     * Key-Value map of variable names and their corresponding values that will be used to
+     * template manifests and files in the Zarf package
+     */
+    setVariables: { [key: string]: string };
+    /**
+     * Location where the public key component of a cosign key-pair can be found
+     */
+    sGetKeyPath: string;
+    /**
+     * The SHA256 checksum of the package
+     */
+    shasum: string;
+}
+
 export interface APIZarfPackage {
     path:        string;
     zarfPackage: ZarfPackage;
@@ -239,15 +235,19 @@ export interface ZarfBuildData {
     /**
      * Whether this package was created with differential components
      */
-    differential: boolean;
+    differential?: boolean;
     /**
      * List of components that were not included in this package due to differential packaging
      */
     differentialMissing?: string[];
     /**
+     * The minimum version of Zarf that does not have breaking package structure changes
+     */
+    lastNonBreakingVersion?: string;
+    /**
      * Any migrations that have been run on this package
      */
-    migrations: string[];
+    migrations?: string[];
     /**
      * Map of components that were imported via OCI. The keys are OCI Package URLs and values
      * are the component names
@@ -256,7 +256,7 @@ export interface ZarfBuildData {
     /**
      * Any registry domains that were overridden on package create when pulling images
      */
-    registryOverrides: { [key: string]: string };
+    registryOverrides?: { [key: string]: string };
     /**
      * The machine name that created this package
      */
@@ -285,7 +285,8 @@ export interface ZarfComponent {
      */
     charts?: ZarfChart[];
     /**
-     * Specify a path to a public key to validate signed online resources
+     * [Deprecated] Specify a path to a public key to validate signed online resources. This
+     * will be removed in Zarf v1.0.0.
      */
     cosignKeyPath?: string;
     /**
@@ -342,7 +343,7 @@ export interface ZarfComponent {
     required?: boolean;
     /**
      * [Deprecated] (replaced by actions) Custom commands to run before or after package
-     * deployment
+     * deployment.  This will be removed in Zarf v1.0.0.
      */
     scripts?: DeprecatedZarfComponentScripts;
 }
@@ -427,7 +428,7 @@ export interface ZarfComponentAction {
     /**
      * [Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to
      * update with the output of the command. This variable will be available to all remaining
-     * actions and components in the package.
+     * actions and components in the package. This will be removed in Zarf v1.0.0
      */
     setVariable?: string;
     /**
@@ -461,6 +462,20 @@ export interface ZarfComponentActionSetVariable {
      * Whether to mark this variable as sensitive to not print it in the Zarf log
      */
     sensitive?: boolean;
+    /**
+     * Changes the handling of a variable to load contents differently (i.e. from a file rather
+     * than as a raw variable - templated files should be kept below 1 MiB)
+     */
+    type?: Type;
+}
+
+/**
+ * Changes the handling of a variable to load contents differently (i.e. from a file rather
+ * than as a raw variable - templated files should be kept below 1 MiB)
+ */
+export enum Type {
+    File = "file",
+    Raw = "raw",
 }
 
 /**
@@ -678,6 +693,10 @@ export interface ZarfComponentExtensions {
  */
 export interface BigBang {
     /**
+     * Optional paths to Flux kustomize strategic merge patch files
+     */
+    fluxPatchFiles?: string[];
+    /**
      * Override repo to pull Big Bang from instead of Repo One
      */
     repo?: string;
@@ -812,7 +831,7 @@ export enum LocalOS {
 
 /**
  * [Deprecated] (replaced by actions) Custom commands to run before or after package
- * deployment
+ * deployment.  This will be removed in Zarf v1.0.0.
  */
 export interface DeprecatedZarfComponentScripts {
     /**
@@ -958,6 +977,11 @@ export interface ZarfPackageVariable {
      * Whether to mark this variable as sensitive to not print it in the Zarf log
      */
     sensitive?: boolean;
+    /**
+     * Changes the handling of a variable to load contents differently (i.e. from a file rather
+     * than as a raw variable - templated files should be kept below 1 MiB)
+     */
+    type?: Type;
 }
 
 export interface ClusterSummary {
@@ -1373,9 +1397,9 @@ const typeMap: any = {
         { json: "deployedPackage", js: "deployedPackage", typ: r("DeployedPackage") },
         { json: "zarfCommonOptions", js: "zarfCommonOptions", typ: r("ZarfCommonOptions") },
         { json: "zarfCreateOptions", js: "zarfCreateOptions", typ: r("ZarfCreateOptions") },
-        { json: "zarfDeployOptions", js: "zarfDeployOptions", typ: r("ZarfDeployOptions") },
         { json: "zarfInitOptions", js: "zarfInitOptions", typ: r("ZarfInitOptions") },
         { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
+        { json: "zarfPackageOptions", js: "zarfPackageOptions", typ: r("ZarfPackageOptions") },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
     ], false),
     "APIDeployedPackageConnection": o([
@@ -1387,17 +1411,8 @@ const typeMap: any = {
         { json: "sboms", js: "sboms", typ: a("") },
     ], false),
     "APIZarfDeployPayload": o([
-        { json: "deployOpts", js: "deployOpts", typ: r("ZarfDeployOptions") },
         { json: "initOpts", js: "initOpts", typ: u(undefined, r("ZarfInitOptions")) },
-    ], false),
-    "ZarfDeployOptions": o([
-        { json: "adoptExistingResources", js: "adoptExistingResources", typ: true },
-        { json: "components", js: "components", typ: "" },
-        { json: "packagePath", js: "packagePath", typ: "" },
-        { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
-        { json: "setVariables", js: "setVariables", typ: m("") },
-        { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
-        { json: "shasum", js: "shasum", typ: "" },
+        { json: "packageOpts", js: "packageOpts", typ: r("ZarfPackageOptions") },
     ], false),
     "ZarfInitOptions": o([
         { json: "applianceMode", js: "applianceMode", typ: true },
@@ -1430,6 +1445,14 @@ const typeMap: any = {
         { json: "pushUsername", js: "pushUsername", typ: "" },
         { json: "secret", js: "secret", typ: "" },
     ], false),
+    "ZarfPackageOptions": o([
+        { json: "optionalComponents", js: "optionalComponents", typ: "" },
+        { json: "packagePath", js: "packagePath", typ: "" },
+        { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
+        { json: "setVariables", js: "setVariables", typ: m("") },
+        { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
+        { json: "shasum", js: "shasum", typ: "" },
+    ], false),
     "APIZarfPackage": o([
         { json: "path", js: "path", typ: "" },
         { json: "zarfPackage", js: "zarfPackage", typ: r("ZarfPackage") },
@@ -1444,11 +1467,12 @@ const typeMap: any = {
     ], false),
     "ZarfBuildData": o([
         { json: "architecture", js: "architecture", typ: "" },
-        { json: "differential", js: "differential", typ: true },
+        { json: "differential", js: "differential", typ: u(undefined, true) },
         { json: "differentialMissing", js: "differentialMissing", typ: u(undefined, a("")) },
-        { json: "migrations", js: "migrations", typ: a("") },
+        { json: "lastNonBreakingVersion", js: "lastNonBreakingVersion", typ: u(undefined, "") },
+        { json: "migrations", js: "migrations", typ: u(undefined, a("")) },
         { json: "OCIImportedComponents", js: "OCIImportedComponents", typ: u(undefined, m("")) },
-        { json: "registryOverrides", js: "registryOverrides", typ: m("") },
+        { json: "registryOverrides", js: "registryOverrides", typ: u(undefined, m("")) },
         { json: "terminal", js: "terminal", typ: "" },
         { json: "timestamp", js: "timestamp", typ: "" },
         { json: "user", js: "user", typ: "" },
@@ -1502,6 +1526,7 @@ const typeMap: any = {
         { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "name", js: "name", typ: "" },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
+        { json: "type", js: "type", typ: u(undefined, r("Type")) },
     ], false),
     "ZarfComponentActionShell": o([
         { json: "darwin", js: "darwin", typ: u(undefined, "") },
@@ -1557,6 +1582,7 @@ const typeMap: any = {
         { json: "bigbang", js: "bigbang", typ: u(undefined, r("BigBang")) },
     ], false),
     "BigBang": o([
+        { json: "fluxPatchFiles", js: "fluxPatchFiles", typ: u(undefined, a("")) },
         { json: "repo", js: "repo", typ: u(undefined, "") },
         { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
@@ -1626,6 +1652,7 @@ const typeMap: any = {
         { json: "name", js: "name", typ: "" },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
+        { json: "type", js: "type", typ: u(undefined, r("Type")) },
     ], false),
     "ClusterSummary": o([
         { json: "distro", js: "distro", typ: "" },
@@ -1766,6 +1793,10 @@ const typeMap: any = {
         { json: "DifferentialPackageVersion", js: "DifferentialPackageVersion", typ: "" },
         { json: "DifferentialRepos", js: "DifferentialRepos", typ: m(true) },
     ], false),
+    "Type": [
+        "file",
+        "raw",
+    ],
     "Protocol": [
         "http",
         "https",

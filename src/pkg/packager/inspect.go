@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -24,11 +25,10 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	}
 
 	// Handle OCI packages that have been published to a registry
-	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
+	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
+		message.Debugf("Pulling layers %v from %s", partialPaths, p.cfg.PkgOpts.PackagePath)
 
-		message.Debugf("Pulling layers %v from %s", partialPaths, p.cfg.DeployOpts.PackagePath)
-
-		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)
+		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
 		if err != nil {
 			return err
 		}
@@ -44,21 +44,21 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 		}
 	} else {
 		// This package exists on the local file system - extract the first layer of the tarball
-		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfChecksumsTxt, p.tmp.Base); err != nil {
+		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfChecksumsTxt, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract %s: %w", config.ZarfChecksumsTxt, err)
 		}
 
-		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
+		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAML, err)
 		}
-		if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfYAMLSignature, p.tmp.Base); err != nil {
+		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfYAMLSignature, p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAMLSignature, err)
 		}
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 		}
 		if wantSBOM {
-			if err := archiver.Extract(p.cfg.DeployOpts.PackagePath, config.ZarfSBOMTar, p.tmp.Base); err != nil {
+			if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfSBOMTar, p.tmp.Base); err != nil {
 				return fmt.Errorf("unable to extract %s: %w", config.ZarfSBOMTar, err)
 			}
 		}
@@ -71,7 +71,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 
 	// Validate the package checksums and signatures if specified, and warn if the package was signed but a key was not provided
-	if err := p.validatePackageSignature(inspectPublicKey); err != nil {
+	if err := ValidatePackageSignature(p.tmp.Base, inspectPublicKey); err != nil {
 		if err == ErrPkgSigButNoKey {
 			message.Warn("The package was signed but no public key was provided, skipping signature validation")
 		} else {

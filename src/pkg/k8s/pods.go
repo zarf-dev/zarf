@@ -74,7 +74,7 @@ func (k *K8s) GetPods(namespace string) (*corev1.PodList, error) {
 // WaitForPodsAndContainers attempts to find pods matching the given selector and optional inclusion filter
 // It will wait up to 90 seconds for the pods to be found and will return a list of matching pod names
 // If the timeout is reached, an empty list will be returned.
-func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []string {
+func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []corev1.Pod {
 	for count := 0; count < waitLimit; count++ {
 
 		pods, err := k.Clientset.CoreV1().Pods(target.Namespace).List(context.TODO(), metav1.ListOptions{
@@ -85,7 +85,9 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []st
 			break
 		}
 
-		var readyPods []string
+		k.Log("Found %d pods for target %#v", len(pods.Items), target)
+
+		var readyPods = []corev1.Pod{}
 
 		// Reverse sort by creation time
 		sort.Slice(pods.Items, func(i, j int) bool {
@@ -94,8 +96,7 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []st
 
 		if len(pods.Items) > 0 {
 			for _, pod := range pods.Items {
-				k.Log("Testing pod %s", pod.Name)
-				k.Log("%#v", pod)
+				k.Log("Testing pod %q", pod.Name)
 
 				// If an include function is provided, only keep pods that return true
 				if include != nil && !include(pod) {
@@ -104,7 +105,7 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []st
 
 				// Handle container targeting
 				if target.Container != "" {
-					k.Log("Testing for container")
+					k.Log("Testing pod %q for container %q", pod.Name, target.Container)
 					var matchesInitContainer bool
 
 					// Check the status of initContainers for a running match
@@ -113,7 +114,7 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []st
 						if isRunning && initContainer.Name == target.Container {
 							// On running match in initContainer break this loop
 							matchesInitContainer = true
-							readyPods = append(readyPods, pod.Name)
+							readyPods = append(readyPods, pod)
 							break
 						}
 					}
@@ -127,22 +128,21 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []st
 					for _, container := range pod.Status.ContainerStatuses {
 						isRunning := container.State.Running != nil
 						if isRunning && container.Name == target.Container {
-							readyPods = append(readyPods, pod.Name)
+							readyPods = append(readyPods, pod)
 						}
 					}
 
 				} else {
 					status := pod.Status.Phase
-					k.Log("Testing for pod only, phase: %s", status)
+					k.Log("Testing pod %q phase, want (%q) got (%q)", pod.Name, corev1.PodRunning, status)
 					// Regular status checking without a container
 					if status == corev1.PodRunning {
-						readyPods = append(readyPods, pod.Name)
+						readyPods = append(readyPods, pod)
 					}
 				}
 
 			}
 
-			k.Log("Ready pods %#v", readyPods)
 			if len(readyPods) > 0 {
 				return readyPods
 			}
@@ -153,5 +153,5 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []st
 
 	k.Log("Pod lookup timeout exceeded")
 
-	return []string{}
+	return []corev1.Pod{}
 }

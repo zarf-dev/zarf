@@ -23,7 +23,8 @@ import (
 )
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
-func (p *Packager) Remove(packageName string) (err error) {
+func (p *Packager) Remove() (err error) {
+	packageName := p.cfg.PkgOpts.PackagePath
 	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
 	defer spinner.Stop()
 
@@ -39,20 +40,20 @@ func (p *Packager) Remove(packageName string) (err error) {
 	}
 
 	// If the user input is a path to a oci, pull the package
-	if utils.IsOCIURL(packageName) {
+	if helpers.IsOCIURL(packageName) {
 		err := p.SetOCIRemote(packageName)
 		if err != nil {
 			message.Fatalf(err, "Unable to set OCI remote: %s", err.Error())
 		}
 
 		// pull the package from the remote
-		if err = p.remote.PullPackageMetadata(p.tmp.Base); err != nil {
+		if _, err = p.remote.PullPackageMetadata(p.tmp.Base); err != nil {
 			return fmt.Errorf("unable to pull the package from the remote: %w", err)
 		}
 	}
 
 	// If this came from a real package, read the package config and reset the packageName
-	if ZarfPackagePattern.MatchString(packageName) || ZarfInitPattern.MatchString(packageName) || utils.IsOCIURL(packageName) {
+	if ZarfPackagePattern.MatchString(packageName) || ZarfInitPattern.MatchString(packageName) || helpers.IsOCIURL(packageName) {
 		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 			return err
 		}
@@ -60,7 +61,7 @@ func (p *Packager) Remove(packageName string) (err error) {
 	}
 
 	// If components were provided; just remove the things we were asked to remove
-	requestedComponents := getRequestedComponentList(p.cfg.DeployOpts.Components)
+	requestedComponents := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
 	partialRemove := len(requestedComponents) > 0 && requestedComponents[0] != ""
 
 	// Determine if we need the cluster
@@ -139,13 +140,13 @@ func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, pa
 		secretName := config.ZarfPackagePrefix + packageName
 
 		// Save the new secret with the removed components removed from the secret
-		newPackageSecret := p.cluster.Kube.GenerateSecret(cluster.ZarfNamespaceName, secretName, corev1.SecretTypeOpaque)
+		newPackageSecret := p.cluster.GenerateSecret(cluster.ZarfNamespaceName, secretName, corev1.SecretTypeOpaque)
 		newPackageSecret.Labels[cluster.ZarfPackageInfoLabel] = p.cfg.Pkg.Metadata.Name
 
 		newPackageSecretData, _ := json.Marshal(deployedPackage)
 		newPackageSecret.Data["data"] = newPackageSecretData
 
-		err := p.cluster.Kube.CreateOrUpdateSecret(newPackageSecret)
+		err := p.cluster.CreateOrUpdateSecret(newPackageSecret)
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
@@ -216,13 +217,13 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 		secretName := config.ZarfPackagePrefix + deployedPackage.Name
 
 		// All the installed components were deleted, therefore this package is no longer actually deployed
-		packageSecret, err := p.cluster.Kube.GetSecret(cluster.ZarfNamespaceName, secretName)
+		packageSecret, err := p.cluster.GetSecret(cluster.ZarfNamespaceName, secretName)
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
 			message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 		} else {
-			err = p.cluster.Kube.DeleteSecret(packageSecret)
+			err = p.cluster.DeleteSecret(packageSecret)
 			if err != nil {
 				message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 			}

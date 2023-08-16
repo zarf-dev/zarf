@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -25,7 +26,7 @@ var (
 
 // Run performs config validations.
 func Run(pkg types.ZarfPackage) error {
-	if pkg.Kind == "ZarfInitConfig" && pkg.Metadata.YOLO {
+	if pkg.Kind == types.ZarfInitConfig && pkg.Metadata.YOLO {
 		return fmt.Errorf(lang.PkgValidateErrInitNoYOLO)
 	}
 
@@ -92,7 +93,7 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		if path != "" {
 			return fmt.Errorf(lang.PkgValidateErrImportOptions, composedComponent.Name)
 		}
-		ok := utils.IsOCIURL(url)
+		ok := helpers.IsOCIURL(url)
 		if !ok {
 			return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, composedComponent.Import.URL)
 		}

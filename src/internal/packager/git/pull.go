@@ -9,7 +9,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -19,7 +18,7 @@ import (
 func (g *Git) DownloadRepoToTemp(gitURL string) error {
 	g.Spinner.Updatef("g.DownloadRepoToTemp(%s)", gitURL)
 
-	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	path, err := utils.MakeTempDir()
 	if err != nil {
 		return fmt.Errorf("unable to create tmpdir: %w", err)
 	}
@@ -38,7 +37,7 @@ func (g *Git) Pull(gitURL, targetFolder string, shallow bool) error {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
 	// Split the remote url and the zarf reference
-	gitURLNoRef, refPlain, err := transform.GitTransformURLSplitRef(gitURL)
+	gitURLNoRef, refPlain, err := transform.GitURLSplitRef(gitURL)
 	if err != nil {
 		return err
 	}
@@ -51,7 +50,7 @@ func (g *Git) Pull(gitURL, targetFolder string, shallow bool) error {
 	}
 
 	// Construct a path unique to this git repo
-	repoFolder, err := transform.GitTransformURLtoFolderName(gitURL)
+	repoFolder, err := transform.GitURLtoFolderName(gitURL)
 	if err != nil {
 		return err
 	}

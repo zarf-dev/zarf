@@ -6,6 +6,7 @@ package k8s
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 )
 
@@ -36,7 +37,6 @@ func (k *K8s) DetectDistro() (string, error) {
 	tkgRegex := regexp.MustCompile(`^projects\.registry\.vmware\.com/tkg/tanzu_core/`)
 
 	nodes, err := k.GetNodes()
-	k.Log("%#v", nodes)
 	if err != nil {
 		return DistroIsUnknown, errors.New("error getting cluster nodes")
 	}
@@ -98,7 +98,6 @@ func (k *K8s) DetectDistro() (string, error) {
 	}
 
 	namespaces, err := k.GetNamespaces()
-	k.Log("%#v", namespaces)
 	if err != nil {
 		return DistroIsUnknown, errors.New("error getting namespace list")
 	}
@@ -116,9 +115,6 @@ func (k *K8s) DetectDistro() (string, error) {
 // GetArchitecture returns the cluster system architecture if found or an error if not.
 func (k *K8s) GetArchitecture() (string, error) {
 	nodes, err := k.GetNodes()
-
-	k.Log("%#v", nodes)
-
 	if err != nil {
 		return "", err
 	}
@@ -128,4 +124,14 @@ func (k *K8s) GetArchitecture() (string, error) {
 	}
 
 	return "", errors.New("could not identify node architecture")
+}
+
+// GetServerVersion retrieves and returns the k8s revision.
+func (k *K8s) GetServerVersion() (version string, err error) {
+	versionInfo, err := k.Clientset.Discovery().ServerVersion()
+	if err != nil {
+		return "", fmt.Errorf("unable to get Kubernetes version from the cluster : %w", err)
+	}
+
+	return versionInfo.String(), nil
 }

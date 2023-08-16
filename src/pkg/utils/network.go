@@ -24,41 +24,9 @@ import (
 
 // Nonstandard URL schemes or prefixes
 const (
-	OCIURLScheme  = "oci"
-	OCIURLPrefix  = "oci://"
-	SGETURLScheme = "sget"
 	SGETURLPrefix = "sget://"
+	SGETURLScheme = "sget"
 )
-
-// IsURL is a helper function to check if a URL is valid.
-func IsURL(source string) bool {
-	parsedURL, err := url.Parse(source)
-	return err == nil && parsedURL.Scheme != "" && parsedURL.Host != ""
-}
-
-// IsOCIURL returns true if the given URL is an OCI URL.
-func IsOCIURL(source string) bool {
-	parsedURL, err := url.Parse(source)
-	return err == nil && parsedURL.Scheme == "oci"
-}
-
-// DoHostnamesMatch returns a boolean indicating if the hostname of two different URLs are the same.
-func DoHostnamesMatch(url1 string, url2 string) (bool, error) {
-	parsedURL1, err := url.Parse(url1)
-	if err != nil {
-		message.Debugf("unable to parse the url (%s)", url1)
-
-		return false, err
-	}
-	parsedURL2, err := url.Parse(url2)
-	if err != nil {
-		message.Debugf("unable to parse the url (%s)", url2)
-
-		return false, err
-	}
-
-	return parsedURL1.Hostname() == parsedURL2.Hostname(), nil
-}
 
 // Fetch fetches the response body from a given URL.
 func Fetch(url string) io.ReadCloser {
@@ -124,7 +92,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 	if parsed.Scheme == SGETURLScheme {
 		err = Sget(context.TODO(), src, cosignKeyPath, file)
 		if err != nil {
-			return fmt.Errorf("unable to download file with sget: %s", src)
+			return fmt.Errorf("unable to download file with sget: %s: %w", src, err)
 		}
 		if err != nil {
 			return err

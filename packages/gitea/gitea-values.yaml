@@ -2,6 +2,10 @@ persistence:
   storageClass: "###ZARF_STORAGE_CLASS###"
   existingClaim: "###ZARF_VAR_GIT_SERVER_EXISTING_PVC###"
   size: "###ZARF_VAR_GIT_SERVER_PVC_SIZE###"
+  accessModes:
+    - "###ZARF_VAR_GIT_SERVER_PVC_ACCESS_MODE###"
+
+replicaCount: "###ZARF_VAR_GIT_SERVER_REPLICA_COUNT###"
 
 gitea:
   admin:

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -102,15 +103,16 @@ var prepareFindImages = &cobra.Command{
 		}
 
 		// Ensure uppercase keys from viper
-		viperConfig := helpers.TransformMapKeys(v.GetStringMapString(V_PKG_CREATE_SET), strings.ToUpper)
-		pkgConfig.CreateOpts.SetVariables = helpers.MergeMap(viperConfig, pkgConfig.CreateOpts.SetVariables)
+		v := common.GetViper()
+		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
 		// Find all the images the package might need
-		if err := pkgClient.FindImages(baseDir, repoHelmChartPath, kubeVersionOverride); err != nil {
+		if _, err := pkgClient.FindImages(baseDir, repoHelmChartPath, kubeVersionOverride); err != nil {
 			message.Fatalf(err, lang.CmdPrepareFindImagesErr, baseDir)
 		}
 	},
@@ -130,6 +132,7 @@ var prepareGenerateConfigFile = &cobra.Command{
 			fileName = args[0]
 		}
 
+		v := common.GetViper()
 		if err := v.SafeWriteConfigAs(fileName); err != nil {
 			message.Fatalf(err, lang.CmdPrepareGenerateConfigErr, fileName)
 		}
@@ -137,7 +140,7 @@ var prepareGenerateConfigFile = &cobra.Command{
 }
 
 func init() {
-	initViper()
+	v := common.InitViper()
 
 	rootCmd.AddCommand(prepareCmd)
 	prepareCmd.AddCommand(prepareTransformGitLinks)
@@ -145,11 +148,11 @@ func init() {
 	prepareCmd.AddCommand(prepareFindImages)
 	prepareCmd.AddCommand(prepareGenerateConfigFile)
 
-	v.SetDefault(V_PKG_CREATE_SET, map[string]string{})
+	v.SetDefault(common.VPkgCreateSet, map[string]string{})
 
 	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(V_PKG_CREATE_SET), lang.CmdPrepareFlagSet)
+	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPrepareFlagSet)
 	// allow for the override of the default helm KubeVersion
 	prepareFindImages.Flags().StringVar(&kubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
 

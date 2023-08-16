@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -49,7 +51,7 @@ func (p *Packager) Publish() error {
 		return err
 	}
 
-	err = p.SetOCIRemote(ref.String())
+	err = p.SetOCIRemote(ref)
 	if err != nil {
 		return err
 	}
@@ -66,10 +68,27 @@ func (p *Packager) Publish() error {
 		}
 	}
 
-	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, p.remote.Reference.Reference)
+	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
 
 	// Publish the package/skeleton to the registry
-	return p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, config.CommonOptions.OCIConcurrency)
+	if err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, config.CommonOptions.OCIConcurrency); err != nil {
+		return err
+	}
+	if strings.HasSuffix(p.remote.Repo().Reference.String(), oci.SkeletonSuffix) {
+		message.Title("How to import components from this skeleton:", "")
+		ex := []types.ZarfComponent{}
+		for _, c := range p.cfg.Pkg.Components {
+			ex = append(ex, types.ZarfComponent{
+				Name: fmt.Sprintf("import-%s", c.Name),
+				Import: types.ZarfComponentImport{
+					ComponentName: c.Name,
+					URL:           fmt.Sprintf("oci://%s", p.remote.Repo().Reference),
+				},
+			})
+		}
+		utils.ColorPrintYAML(ex, nil, true)
+	}
+	return nil
 }
 
 func (p *Packager) loadSkeleton() error {

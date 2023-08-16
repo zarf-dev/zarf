@@ -15,8 +15,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
-	dconfig "github.com/docker/cli/cli/config"
-	"github.com/docker/cli/cli/config/configfile"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +25,6 @@ type ZarfE2ETest struct {
 	ApplianceMode     bool
 	ApplianceModeKeep bool
 	RunClusterTests   bool
-	CommandLog        []string
 }
 
 var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
@@ -61,7 +58,6 @@ func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
 
 // Zarf executes a Zarf command.
 func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
-	e2e.CommandLog = append(e2e.CommandLog, strings.Join(args, " "))
 	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)
 }
 
@@ -101,22 +97,18 @@ func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
 }
 
 // SetupDockerRegistry uses the host machine's docker daemon to spin up a local registry for testing purposes.
-func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) *configfile.ConfigFile {
+func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) {
 	// spin up a local registry
 	registryImage := "registry:2.8.2"
-	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", fmt.Sprintf("%d:5000", port), "--name", "registry", registryImage)
+	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", fmt.Sprintf("%d:5000", port), "--name", fmt.Sprintf("registry-%d", port), registryImage)
 	require.NoError(t, err)
+}
 
-	// docker config folder
-	cfg, err := dconfig.Load(dconfig.Dir())
+// TeardownRegistry removes the local registry.
+func (e2e *ZarfE2ETest) TeardownRegistry(t *testing.T, port int) {
+	// remove the local registry
+	err := exec.CmdWithPrint("docker", "rm", "-f", fmt.Sprintf("registry-%d", port))
 	require.NoError(t, err)
-	if !cfg.ContainsAuth() {
-		// make a docker config file w/ some blank creds
-		_, _, err := e2e.Zarf("tools", "registry", "login", "--username", "zarf", "-p", "zarf", "localhost:6000")
-		require.NoError(t, err)
-	}
-
-	return cfg
 }
 
 // GetZarfVersion returns the current build/zarf version

@@ -76,7 +76,7 @@ type ServiceInfo struct {
 
 // PrintConnectTable will print a table of all Zarf connect matches found in the cluster.
 func (c *Cluster) PrintConnectTable() error {
-	list, err := c.Kube.GetServicesByLabelExists(v1.NamespaceAll, config.ZarfConnectLabelName)
+	list, err := c.GetServicesByLabelExists(v1.NamespaceAll, config.ZarfConnectLabelName)
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func (tunnel *Tunnel) AddSpinner(spinner *message.Spinner) {
 
 // Connect will establish a tunnel to the specified target.
 func (tunnel *Tunnel) Connect(target string, blocking bool) error {
-	message.Debugf("tunnel.Connect(%s, %#v)", target, blocking)
+	message.Debugf("tunnel.Connect(%s, %t)", target, blocking)
 
 	switch strings.ToUpper(target) {
 	case ZarfRegistry:
@@ -368,6 +368,10 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 		tunnel.namespace = svc.Namespace
 		// Only support a service with a single port.
 		tunnel.remotePort = svc.Spec.Ports[0].TargetPort.IntValue()
+		// if targetPort == 0, look for Port (which is required)
+		if tunnel.remotePort == 0 {
+			tunnel.findPodContainerPort(svc)
+		}
 
 		// Add the url suffix too.
 		tunnel.urlSuffix = svc.Annotations[config.ZarfConnectAnnotationURL]
@@ -517,8 +521,7 @@ func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
 	if len(servicePods) < 1 {
 		return "", fmt.Errorf("no pods found for service %s", tunnel.resourceName)
 	}
-
-	return servicePods[0], nil
+	return servicePods[0].Name, nil
 }
 
 // makeLabels is a helper to format a map of label key and value pairs into a single string for use as a selector.
@@ -528,4 +531,24 @@ func makeLabels(labels map[string]string) string {
 		out = append(out, fmt.Sprintf("%s=%s", key, value))
 	}
 	return strings.Join(out, ",")
+}
+
+// findPodTargetPort will find the container port in the pod and assign it to tunnel's remotePort.
+func (tunnel *Tunnel) findPodContainerPort(svc v1.Service) {
+	selectorLabelsOfPods := makeLabels(svc.Spec.Selector)
+	pods := tunnel.kube.WaitForPodsAndContainers(k8s.PodLookup{
+		Namespace: svc.Namespace,
+		Selector:  selectorLabelsOfPods,
+	}, nil)
+
+	for _, pod := range pods {
+		// Find the matching name on the port in the pod
+		for _, container := range pod.Spec.Containers {
+			for _, port := range container.Ports {
+				if port.Name == svc.Spec.Ports[0].TargetPort.String() {
+					tunnel.remotePort = int(port.ContainerPort)
+				}
+			}
+		}
+	}
 }

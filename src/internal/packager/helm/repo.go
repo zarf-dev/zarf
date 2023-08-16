@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/registry"
@@ -22,15 +25,56 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 )
 
+// PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
+func (h *Helm) PackageChart(destination string) error {
+	if len(h.Chart.URL) > 0 {
+		url, refPlain, err := transform.GitURLSplitRef(h.Chart.URL)
+		// check if the chart is a git url with a ref (if an error is returned url will be empty)
+		isGitURL := strings.HasSuffix(url, ".git")
+		if err != nil {
+			message.Debugf("unable to parse the url, continuing with %s", h.Chart.URL)
+		}
+
+		if isGitURL {
+			// if it is a git url append chart version as if its a tag
+			if refPlain == "" {
+				h.Chart.URL = fmt.Sprintf("%s@%s", h.Chart.URL, h.Chart.Version)
+			}
+
+			_, err = h.PackageChartFromGit(destination)
+
+			if err != nil {
+				return fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
+			}
+		} else {
+			h.DownloadPublishedChart(destination)
+		}
+
+	} else {
+		_, err := h.PackageChartFromLocalFiles(destination)
+		if err != nil {
+			return fmt.Errorf("error creating chart archive, unable to package the chart: %s", err.Error())
+		}
+	}
+	return nil
+}
+
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func (h *Helm) PackageChartFromLocalFiles(destination string) string {
+func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.Chart.Name, h.Chart.Version, h.Chart.LocalPath)
 	defer spinner.Stop()
 
 	// Validate the chart
 	_, err := loader.LoadDir(h.Chart.LocalPath)
 	if err != nil {
-		spinner.Fatalf(err, "Validation failed for chart from %s (%s)", h.Chart.LocalPath, err.Error())
+		spinner.Errorf(err, "Validation failed for chart from %s (%s)", h.Chart.LocalPath, err.Error())
+		return "", err
+	}
+
+	err = h.buildChartDependencies(spinner)
+	if err != nil {
+		spinner.Errorf(err, "Unable to build dependencies for the chart: %s", err.Error())
+		return "", err
 	}
 
 	client := action.NewPackage()
@@ -39,20 +83,19 @@ func (h *Helm) PackageChartFromLocalFiles(destination string) string {
 	path, err := client.Run(h.Chart.LocalPath, nil)
 
 	if err != nil {
-		spinner.Fatalf(err, "Helm is unable to save the archive and create the package %s", path)
+		spinner.Errorf(err, "Helm is unable to save the archive and create the package %s", path)
+		return "", err
 	}
 
 	spinner.Success()
 
-	return path
+	return path, nil
 }
 
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
 func (h *Helm) PackageChartFromGit(destination string) (string, error) {
 	spinner := message.NewProgressSpinner("Processing helm chart %s", h.Chart.Name)
 	defer spinner.Stop()
-
-	client := action.NewPackage()
 
 	// Retrieve the repo containing the chart
 	gitPath, err := h.DownloadChartFromGitToTemp(spinner)
@@ -61,26 +104,9 @@ func (h *Helm) PackageChartFromGit(destination string) (string, error) {
 	}
 	defer os.RemoveAll(gitPath)
 
-	// Set the directory for the chart
-	chartPath := filepath.Join(gitPath, h.Chart.GitPath)
-
-	// Validate the chart
-	if _, err := loader.LoadDir(chartPath); err != nil {
-		spinner.Errorf(err, "Validation failed for chart %s (%s)", h.Chart.Name, err.Error())
-		return "", err
-	}
-
-	// Tell helm where to save the archive and create the package
-	client.Destination = destination
-	name, err := client.Run(chartPath, nil)
-	if err != nil {
-		spinner.Errorf(err, "Helm is unable to save the archive and create the package %s", name)
-		return "", err
-	}
-
-	spinner.Success()
-
-	return name, nil
+	// Set the directory for the chart and package it
+	h.Chart.LocalPath = filepath.Join(gitPath, h.Chart.GitPath)
+	return h.PackageChartFromLocalFiles(destination)
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
@@ -152,16 +178,45 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 // DownloadChartFromGitToTemp downloads a chart from git into a temp directory
 func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, error) {
 	// Create the Git configuration and download the repo
-	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
-
-	gitRepoWithRef := fmt.Sprintf("%s@%s", h.Chart.URL, h.Chart.Version)
+	gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
 
 	// Download the git repo to a temporary directory
-	err := gitCfg.DownloadRepoToTemp(gitRepoWithRef)
+	err := gitCfg.DownloadRepoToTemp(h.Chart.URL)
 	if err != nil {
-		spinner.Errorf(err, "Unable to download the git repo %s", gitRepoWithRef)
+		spinner.Errorf(err, "Unable to download the git repo %s", h.Chart.URL)
 		return "", err
 	}
 
 	return gitCfg.GitPath, nil
+}
+
+// buildChartDependencies builds the helm chart dependencies
+func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
+	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
+	if err != nil {
+		spinner.Fatalf(err, "Unable to create a new registry client")
+	}
+	h.Settings = cli.New()
+	man := &downloader.Manager{
+		Out:            os.Stdout,
+		ChartPath:      h.Chart.LocalPath,
+		Getters:        getter.All(h.Settings),
+		RegistryClient: regClient,
+
+		RepositoryConfig: h.Settings.RepositoryConfig,
+		RepositoryCache:  h.Settings.RepositoryCache,
+		Debug:            false,
+	}
+	// Verify the chart
+	man.Verify = downloader.VerifyIfPossible
+
+	// Build the deps from the helm chart
+	err = man.Build()
+	if e, ok := err.(downloader.ErrRepoNotFound); ok {
+		return fmt.Errorf("%s. Please add the missing repo via 'helm repo add <name> <url>'", e.Error())
+	} else if err != nil {
+		return err
+	}
+
+	return nil
 }

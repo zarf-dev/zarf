@@ -9,12 +9,12 @@ on:
       - "v*"
 
 jobs:
-  push-resources:
+  build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
       packages: write
     steps:
+      # Checkout the repo and setup the tooling for this job
       - name: Checkout
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
@@ -46,6 +46,8 @@ jobs:
           cp build/zarf build/zarf-linux-amd64
           cp build/zarf-arm build/zarf-linux-arm64
           docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag ghcr.io/defenseunicorns/zarf/agent:$GITHUB_REF_NAME .
+          rm build/zarf-linux-amd64
+          rm build/zarf-linux-arm64
 
       - name: "Zarf Agent: Sign the Image"
         run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=https://github.com/${{ github.actor }} -a version=$GITHUB_REF_NAME ghcr.io/defenseunicorns/zarf/agent:$GITHUB_REF_NAME
@@ -61,31 +63,76 @@ jobs:
           make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=$GITHUB_REF_NAME
           make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=$GITHUB_REF_NAME
 
-      - name: Run Tests
+      # Create a CVE report based on this build
+      - name: Create release time CVE report
+        run: "make cve-report"
+
+      # Upload the contents of the build directory for later stages to use
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: build-artifacts
+          path: build/
+          retention-days: 1
+
+  validate:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      # Checkout the repo and setup the tooling for this job
+      - name: Checkout
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          fetch-depth: 0
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: build-artifacts
+          path: build/
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Make Zarf executable
+        run: |
+          chmod +x build/zarf
+
+      # Build the example packages and run the tests
+      - name: Build examples and run tests
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
-          sudo chown $USER /tmp/zarf-*.log
 
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
 
-      # Builds init packages since GoReleaser won't handle this for us
-      - name: Create release time CVE report
-        run: "make cve-report"
+  push:
+    runs-on: ubuntu-latest
+    needs: validate
+    permissions:
+      contents: write
+    steps:
+      # Checkout the repo and setup the tooling for this job
+      - name: Checkout
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          fetch-depth: 0
 
-      # Before we run GoReleaser we need to aggressively cleanup files to reduce disk pressure
-      - name: Cleanup files
-        run: |
-          lsblk -f
+      - name: Setup golang
+        uses: ./.github/actions/golang
 
-          sudo rm -rf zarf-sbom /tmp/zarf-* src/ui/node_modules
-          sudo env "PATH=$PATH" CI=true make delete-packages
-          sudo build/zarf tools clear-cache
-          sudo docker system prune --all --force
-          go clean -cache
-          
-          lsblk -f
+      - name: Setup NodeJS
+        uses: ./.github/actions/node
+
+      - name: Install tools
+        uses: ./.github/actions/install-tools
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: build-artifacts
+          path: build/
 
       # Set up AWS credentials for GoReleaser to upload backups of artifacts to S3
       - name: Set AWS Credentials
