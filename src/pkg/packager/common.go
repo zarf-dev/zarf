@@ -32,7 +32,7 @@ type Packager struct {
 	cfg            *types.PackagerConfig
 	cluster        *cluster.Cluster
 	remote         *oci.OrasRemote
-	tmp            types.TempPaths
+	tmp            types.LoadedPackagePaths
 	arch           string
 	warnings       []string
 	valueTemplate  *template.Values
@@ -171,7 +171,7 @@ func (p *Packager) ClearTempPaths() {
 }
 
 func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
-	base := filepath.Join(p.tmp.Components, component.Name)
+	base := filepath.Join(p.tmp.ComponentsDir, component.Name)
 
 	err = utils.CreateDirectory(base, 0700)
 	if err != nil {
@@ -246,7 +246,7 @@ func isValidFileExtension(filename string) bool {
 	return false
 }
 
-func createPaths(basePath string) (paths types.TempPaths, err error) {
+func createPaths(basePath string) (paths types.LoadedPackagePaths, err error) {
 	if basePath == "" {
 		basePath, err = utils.MakeTempDir()
 		if err != nil {
@@ -258,19 +258,28 @@ func createPaths(basePath string) (paths types.TempPaths, err error) {
 		}
 	}
 	message.Debug("Using temporary directory:", basePath)
-	paths = types.TempPaths{
-		Base: basePath,
+	paths = types.LoadedPackagePaths{
+		Base:          basePath,
+		ComponentsDir: filepath.Join(basePath, config.ZarfComponentsDir),
 
-		InjectBinary: filepath.Join(basePath, "zarf-injector"),
-		SeedImages:   filepath.Join(basePath, "seed-images"),
-		Images:       filepath.Join(basePath, "images"),
-		Components:   filepath.Join(basePath, config.ZarfComponentsDir),
-		Sboms:        filepath.Join(basePath, "sboms"),
-		MetadataPaths: types.MetadataPaths{
+		LoadedInitPackagePaths: types.LoadedInitPackagePaths{
+			InjectBinary: filepath.Join(basePath, "zarf-injector"),
+			SeedImages:   filepath.Join(basePath, "seed-images"),
+		},
+
+		LoadedImagePaths: types.LoadedImagePaths{
+			ImagesDir:      filepath.Join(basePath, "images"),
+			ImagesIndex:    filepath.Join(basePath, "images", "index.json"),
+			ImagesLayout:   filepath.Join(basePath, "images", "layout.json"),
+			ImagesBlobsDir: filepath.Join(basePath, "images", "blobs", "sha256"),
+		},
+
+		LoadedMetadataPaths: types.LoadedMetadataPaths{
 			Checksums: filepath.Join(basePath, config.ZarfChecksumsTxt),
 			ZarfYaml:  filepath.Join(basePath, config.ZarfYAML),
 			ZarfSig:   filepath.Join(basePath, config.ZarfYAMLSignature),
 			SbomTar:   filepath.Join(basePath, config.ZarfSBOMTar),
+			Sboms:     filepath.Join(basePath, "sboms"),
 		},
 	}
 
@@ -400,7 +409,7 @@ func (p *Packager) getSigPublishPassword(_ bool) ([]byte, error) {
 }
 
 func (p *Packager) archiveComponent(component types.ZarfComponent) error {
-	componentPath := filepath.Join(p.tmp.Components, component.Name)
+	componentPath := filepath.Join(p.tmp.ComponentsDir, component.Name)
 	size, err := utils.GetDirSize(componentPath)
 	if err != nil {
 		return err

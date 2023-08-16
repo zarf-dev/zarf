@@ -42,7 +42,7 @@ func ViewSBOMFiles(directory string) {
 }
 
 // OutputSBOMFiles outputs the sbom files into a specified directory.
-func OutputSBOMFiles(tmp types.TempPaths, outputDir string, packageName string) error {
+func OutputSBOMFiles(tmp types.LoadedPackagePaths, outputDir string, packageName string) error {
 	packagePath := filepath.Join(outputDir, packageName)
 
 	if err := os.RemoveAll(packagePath); err != nil {

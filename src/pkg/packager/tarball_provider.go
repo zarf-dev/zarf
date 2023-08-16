@@ -12,12 +12,12 @@ type tarballProvider struct {
 	DefaultValidator
 }
 
-func (tp *tarballProvider) LoadPackage(optionalComponents []string) ([]string, *types.ZarfPackage, error) {
+func (tp *tarballProvider) LoadPackage(optionalComponents []string) (*types.LoadedPackagePaths, *types.ZarfPackage, error) {
 	return nil, nil, nil
 }
 
-func (tp *tarballProvider) LoadPackageMetadata(wantSBOM bool) (types.MetadataPaths, *types.ZarfPackage, error) {
-	return types.MetadataPaths{}, nil, nil
+func (tp *tarballProvider) LoadPackageMetadata(wantSBOM bool) (*types.LoadedMetadataPaths, *types.ZarfPackage, error) {
+	return nil, nil, nil
 }
 
 // func (p *Packager) handleIfPartialPkg() error {

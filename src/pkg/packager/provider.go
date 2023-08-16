@@ -78,7 +78,7 @@ type DefaultValidator struct {
 	Source string
 }
 
-func (dv *DefaultValidator) Validate(loadedPaths []string, keyPath string) error {
+func (dv *DefaultValidator) Validate(loadedPaths *types.LoadedPackagePaths, keyPath string) error {
 	if err := ValidatePackageSignature(dv.Source, keyPath); err != nil {
 		return err
 	}

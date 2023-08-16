@@ -69,9 +69,9 @@ func (p *Packager) Deploy() (err error) {
 		p.warnings = append(p.warnings, warnings...)
 
 		// extract the component tarball if it exists
-		tb := filepath.Join(p.tmp.Components, component.Name+".tar")
+		tb := filepath.Join(p.tmp.ComponentsDir, component.Name+".tar")
 		if !utils.InvalidPath(tb) {
-			if err := archiver.Unarchive(tb, p.tmp.Components); err != nil {
+			if err := archiver.Unarchive(tb, p.tmp.ComponentsDir); err != nil {
 				return fmt.Errorf("unable to extract the component: %w", err)
 			}
 
@@ -466,7 +466,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	}
 
 	imgConfig := images.ImgConfig{
-		ImagesPath:    p.tmp.Images,
+		ImagesPath:    p.tmp.ImagesDir,
 		ImgList:       componentImages,
 		NoChecksum:    noImgChecksum,
 		RegInfo:       p.cfg.State.RegistryInfo,

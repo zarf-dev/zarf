@@ -150,7 +150,7 @@ func (p *Packager) Create(baseDir string) error {
 		combinedImageList = append(combinedImageList, component.Images...)
 
 		// Remove the temp directory for this component before archiving.
-		err = os.RemoveAll(filepath.Join(p.tmp.Components, component.Name, types.TempFolder))
+		err = os.RemoveAll(filepath.Join(p.tmp.ComponentsDir, component.Name, types.TempFolder))
 		if err != nil {
 			message.Warnf("unable to remove temp directory for component %s, component tarball may contain unused artifacts: %s", component.Name, err.Error())
 		}
@@ -164,7 +164,7 @@ func (p *Packager) Create(baseDir string) error {
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
-				ImagesPath:        p.tmp.Images,
+				ImagesPath:        p.tmp.ImagesDir,
 				ImgList:           imgList,
 				Insecure:          config.CommonOptions.Insecure,
 				Architectures:     []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},

@@ -41,16 +41,9 @@ type ZarfPackageOptions struct {
 }
 
 type PackageProvider interface {
-	LoadPackage(optionalComponents []string) ([]string, *ZarfPackage, error)
-	LoadPackageMetadata(wantSBOM bool) (MetadataPaths, *ZarfPackage, error)
-	Validate(loadedPaths []string, keyPath string) error
-}
-
-type MetadataPaths struct {
-	ZarfYaml  string
-	ZarfSig   string
-	Checksums string
-	SbomTar   string
+	LoadPackage(optionalComponents []string) (*LoadedPackagePaths, *ZarfPackage, error)
+	LoadPackageMetadata(wantSBOM bool) (*LoadedMetadataPaths, *ZarfPackage, error)
+	Validate(loaded *LoadedPackagePaths, keyPath string) error
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.
@@ -143,15 +136,33 @@ type ComponentPaths struct {
 	DataInjections string
 }
 
-// TempPaths is a struct that represents all of the subdirectories for a Zarf package.
-type TempPaths struct {
-	Base         string
+type LoadedInitPackagePaths struct {
 	InjectBinary string
 	SeedImages   string
-	Images       string
-	Components   string
-	Sboms        string
-	MetadataPaths
+}
+
+type LoadedMetadataPaths struct {
+	ZarfYaml  string
+	ZarfSig   string
+	Checksums string
+	SbomTar   string
+	Sboms     string
+}
+
+type LoadedImagePaths struct {
+	ImagesDir      string
+	ImagesIndex    string
+	ImagesLayout   string
+	ImagesBlobsDir string
+}
+
+// LoadedPackagePaths is a struct that represents all of the subdirectories for a Zarf package.
+type LoadedPackagePaths struct {
+	Base          string
+	ComponentsDir string
+	LoadedInitPackagePaths
+	LoadedImagePaths
+	LoadedMetadataPaths
 }
 
 // DifferentialData contains image and repository information about the package a Differential Package is based on.

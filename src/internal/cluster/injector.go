@@ -29,7 +29,7 @@ import (
 var payloadChunkSize = 1024 * 768
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths, injectorSeedTags []string) {
+func (c *Cluster) StartInjectionMadness(tempPath types.LoadedPackagePaths, injectorSeedTags []string) {
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer spinner.Stop()
 
@@ -129,7 +129,7 @@ func (c *Cluster) StopInjectionMadness() error {
 	return c.DeleteService(ZarfNamespaceName, "zarf-injector")
 }
 
-func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []string, spinner *message.Spinner) ([]transform.Image, error) {
+func (c *Cluster) loadSeedImages(tempPath types.LoadedPackagePaths, injectorSeedTags []string, spinner *message.Spinner) ([]transform.Image, error) {
 	seedImages := []transform.Image{}
 	tagToDigest := make(map[string]string)
 
@@ -137,7 +137,7 @@ func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []st
 	for _, src := range injectorSeedTags {
 		spinner.Updatef("Loading the seed image '%s' from the package", src)
 
-		img, err := utils.LoadOCIImage(tempPath.Images, src)
+		img, err := utils.LoadOCIImage(tempPath.ImagesDir, src)
 		if err != nil {
 			return seedImages, err
 		}
@@ -166,7 +166,7 @@ func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []st
 	return seedImages, nil
 }
 
-func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *message.Spinner) ([]string, string, error) {
+func (c *Cluster) createPayloadConfigmaps(tempPath types.LoadedPackagePaths, spinner *message.Spinner) ([]string, string, error) {
 	var configMaps []string
 
 	// Chunk size has to accommodate base64 encoding & etcd 1MB limit
@@ -248,7 +248,7 @@ func (c *Cluster) injectorIsReady(seedImages []transform.Image, spinner *message
 	return true
 }
 
-func (c *Cluster) createInjectorConfigmap(tempPath types.TempPaths) error {
+func (c *Cluster) createInjectorConfigmap(tempPath types.LoadedPackagePaths) error {
 	var err error
 	configData := make(map[string][]byte)
 

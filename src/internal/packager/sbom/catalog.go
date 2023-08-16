@@ -47,13 +47,13 @@ var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
 // func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, imagesPath, sbomPath string) error {
-func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, tmpPaths types.TempPaths) error {
+func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, tmpPaths types.LoadedPackagePaths) error {
 	imageCount := len(imgList)
 	componentCount := len(componentSBOMs)
 	builder := Builder{
 		spinner:     message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
 		cachePath:   config.GetAbsCachePath(),
-		imagesPath:  tmpPaths.Images,
+		imagesPath:  tmpPaths.ImagesDir,
 		sbomTarPath: tmpPaths.SbomTar,
 		tmpSBOMPath: tmpPaths.Sboms,
 	}
@@ -76,7 +76,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
 		// Get the image that we are creating an SBOM for
-		img, err := utils.LoadOCIImage(tmpPaths.Images, tag)
+		img, err := utils.LoadOCIImage(tmpPaths.ImagesDir, tag)
 		if err != nil {
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err
