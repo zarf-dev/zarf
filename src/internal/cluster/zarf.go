@@ -189,7 +189,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 	// Attempt to load information about webhooks for the package
 	existingPackageSecret, err := c.GetDeployedPackage(packageName)
 	if err != nil {
-		return &corev1.Secret{}, err
+		message.Debugf("Unable to fetch existing secret for package '%s': %s", packageName, err.Error())
 	}
 	componentWebhooks := existingPackageSecret.ComponentWebhooks
 
