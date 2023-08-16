@@ -68,7 +68,6 @@ func (p *Packager) Create(baseDir string) error {
 
 	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
-		p.cfg.IsInitConfig = true
 	}
 
 	// Before we compose the components (and render the imported OCI components), we need to remove any components that are not needed for a differential build
@@ -265,7 +264,7 @@ func (p *Packager) Create(baseDir string) error {
 
 		// Open a browser to view the SBOM if specified.
 		if p.cfg.CreateOpts.ViewSBOM {
-			sbom.ViewSBOMFiles(p.tmp)
+			sbom.ViewSBOMFiles(p.tmp.Sboms)
 		}
 	}
 

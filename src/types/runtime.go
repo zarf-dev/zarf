@@ -40,6 +40,19 @@ type ZarfPackageOptions struct {
 	PublicKeyPath      string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
+type PackageProvider interface {
+	LoadPackage(optionalComponents []string) ([]string, *ZarfPackage, error)
+	LoadPackageMetadata(wantSBOM bool) (MetadataPaths, *ZarfPackage, error)
+	Validate(loadedPaths []string, keyPath string) error
+}
+
+type MetadataPaths struct {
+	ZarfYaml  string
+	ZarfSig   string
+	Checksums string
+	SbomTar   string
+}
+
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.
 type ZarfDeployOptions struct {
 	AdoptExistingResources bool `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`
@@ -137,11 +150,8 @@ type TempPaths struct {
 	SeedImages   string
 	Images       string
 	Components   string
-	SbomTar      string
 	Sboms        string
-	ZarfYaml     string
-	ZarfSig      string
-	Checksums    string
+	MetadataPaths
 }
 
 // DifferentialData contains image and repository information about the package a Differential Package is based on.

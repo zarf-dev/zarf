@@ -21,11 +21,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
+	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/mholt/archiver/v3"
 	"github.com/pterm/pterm"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -39,15 +42,54 @@ func (p *Packager) Deploy() (err error) {
 		message.Debug(err)
 	}
 
-	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
-		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
+	if p.provider == nil {
+		provider, err := ProviderFromSource(p.cfg.PkgSource, p.cfg.PkgOpts.Shasum, p.tmp.Base)
 		if err != nil {
 			return err
 		}
+		p.provider = provider
+	}
+	optionalComponents := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
+
+	loaded, pkg, err := p.provider.LoadPackage(optionalComponents)
+	if err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	if err := p.loadZarfPkg(); err != nil {
-		return fmt.Errorf("unable to load the Zarf Package: %w", err)
+	p.cfg.Pkg = *pkg
+
+	if err := p.provider.Validate(loaded, p.cfg.PkgOpts.PublicKeyPath); err != nil {
+		return fmt.Errorf("unable to validate the package paths: %w", err)
+	}
+
+	for idx, component := range p.cfg.Pkg.Components {
+		// Handle component configuration deprecations
+		var warnings []string
+		p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+		p.warnings = append(p.warnings, warnings...)
+
+		// extract the component tarball if it exists
+		tb := filepath.Join(p.tmp.Components, component.Name+".tar")
+		if !utils.InvalidPath(tb) {
+			if err := archiver.Unarchive(tb, p.tmp.Components); err != nil {
+				return fmt.Errorf("unable to extract the component: %w", err)
+			}
+
+			// After extracting the component, remove the compressed tarball to release disk space
+			defer os.Remove(tb)
+		}
+	}
+
+	// If a SBOM tar file exist, temporarily place them in the deploy directory
+	if !utils.InvalidPath(p.tmp.SbomTar) {
+		if err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
+			return fmt.Errorf("unable to extract the sbom data from the component: %w", err)
+		}
+		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
+		if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
+			// Don't stop the deployment, let the user decide if they want to continue the deployment
+			message.Warnf("Unable to process the SBOM files for this package: %s", err.Error())
+		}
 	}
 
 	if err := p.validatePackageArchitecture(); err != nil {
@@ -58,17 +100,8 @@ func (p *Packager) Deploy() (err error) {
 		}
 	}
 
-	if err := ValidatePackageSignature(p.tmp.Base, p.cfg.PkgOpts.PublicKeyPath); err != nil {
-		return err
-	}
-
 	if err := p.validateLastNonBreakingVersion(); err != nil {
 		return err
-	}
-
-	// Now that we have read the zarf.yaml, check the package kind
-	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
-		p.cfg.IsInitConfig = true
 	}
 
 	// Confirm the overall package deployment
@@ -121,7 +154,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	for _, component := range componentsToDeploy {
 		var charts []types.InstalledChart
 
-		if p.cfg.IsInitConfig {
+		if p.cfg.Pkg.Kind == types.ZarfInitConfig {
 			charts, err = p.deployInitComponent(component)
 		} else {
 			charts, err = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
@@ -581,7 +614,7 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 	pterm.Println()
 
 	// If not init config, print the application connection table
-	if !p.cfg.IsInitConfig {
+	if !(p.cfg.Pkg.Kind == types.ZarfInitConfig) {
 		message.PrintConnectStringTable(p.connectStrings)
 	} else {
 		// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds

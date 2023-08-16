@@ -65,7 +65,7 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 
 			if requested {
 				// Mark deployment as appliance mode if this is an init config and the k3s component is enabled
-				if component.Name == k8s.DistroIsK3s && p.cfg.IsInitConfig {
+				if component.Name == k8s.DistroIsK3s && p.cfg.Pkg.Kind == types.ZarfInitConfig {
 					p.cfg.InitOpts.ApplianceMode = true
 				}
 				// Add the component to the list of valid components

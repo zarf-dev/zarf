@@ -7,11 +7,9 @@ package packager
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -19,52 +17,68 @@ import (
 func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string) error {
 	wantSBOM := includeSBOM || outputSBOM != ""
 
-	partialPaths := []string{config.ZarfYAML}
-	if wantSBOM {
-		partialPaths = append(partialPaths, config.ZarfSBOMTar)
-	}
-
-	// Handle OCI packages that have been published to a registry
-	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
-		message.Debugf("Pulling layers %v from %s", partialPaths, p.cfg.PkgOpts.PackagePath)
-
-		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
+	if p.provider == nil {
+		provider, err := ProviderFromSource(p.cfg.PkgOpts.PackagePath, p.cfg.PkgOpts.Shasum, p.tmp.Base)
 		if err != nil {
 			return err
 		}
-		layersToPull, err := p.remote.LayersFromPaths(partialPaths)
-		if err != nil {
-			return err
-		}
-		if partialPaths, err = p.remote.PullPackage(p.tmp.Base, config.CommonOptions.OCIConcurrency, layersToPull...); err != nil {
-			return fmt.Errorf("unable to pull the package: %w", err)
-		}
-		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
-			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
-		}
-	} else {
-		// This package exists on the local file system - extract the first layer of the tarball
-		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfChecksumsTxt, p.tmp.Base); err != nil {
-			return fmt.Errorf("unable to extract %s: %w", config.ZarfChecksumsTxt, err)
-		}
-
-		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
-			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAML, err)
-		}
-		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfYAMLSignature, p.tmp.Base); err != nil {
-			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAMLSignature, err)
-		}
-		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
-			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
-		}
-		if wantSBOM {
-			if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfSBOMTar, p.tmp.Base); err != nil {
-				return fmt.Errorf("unable to extract %s: %w", config.ZarfSBOMTar, err)
-			}
-		}
+		p.provider = provider
 	}
 
-	if err := p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, partialPaths); err != nil {
+	metatdataPaths, pkg, err := p.provider.LoadPackageMetadata(wantSBOM)
+	if err != nil {
+		return err
+	}
+	p.cfg.Pkg = *pkg
+
+	pathsToCheck := []string{
+		metatdataPaths.Checksums,
+		metatdataPaths.ZarfYaml,
+		metatdataPaths.ZarfSig,
+		metatdataPaths.SbomTar,
+	}
+
+	// // Handle OCI packages that have been published to a registry
+	// if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
+	// 	message.Debugf("Pulling layers %v from %s", partialPaths, p.cfg.PkgOpts.PackagePath)
+
+	// 	err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	layersToPull, err := p.remote.LayersFromPaths(partialPaths)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if partialPaths, err = p.remote.PullPackage(p.tmp.Base, config.CommonOptions.OCIConcurrency, layersToPull...); err != nil {
+	// 		return fmt.Errorf("unable to pull the package: %w", err)
+	// 	}
+	// 	if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
+	// 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
+	// 	}
+	// } else {
+	// 	// This package exists on the local file system - extract the first layer of the tarball
+	// 	if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfChecksumsTxt, p.tmp.Base); err != nil {
+	// 		return fmt.Errorf("unable to extract %s: %w", config.ZarfChecksumsTxt, err)
+	// 	}
+
+	// 	if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
+	// 		return fmt.Errorf("unable to extract %s: %w", config.ZarfYAML, err)
+	// 	}
+	// 	if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfYAMLSignature, p.tmp.Base); err != nil {
+	// 		return fmt.Errorf("unable to extract %s: %w", config.ZarfYAMLSignature, err)
+	// 	}
+	// 	if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
+	// 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
+	// 	}
+	// 	if wantSBOM {
+	// 		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfSBOMTar, p.tmp.Base); err != nil {
+	// 			return fmt.Errorf("unable to extract %s: %w", config.ZarfSBOMTar, err)
+	// 		}
+	// 	}
+	// }
+
+	if err := p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, pathsToCheck); err != nil {
 		return fmt.Errorf("unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
 	}
 
@@ -81,14 +95,14 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 	if wantSBOM {
 		// Extract the SBOM files from the sboms.tar file
-		if err := archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
+		if err := archiver.Unarchive(metatdataPaths.SbomTar, p.tmp.Sboms); err != nil {
 			return fmt.Errorf("unable to extract the SBOM files: %w", err)
 		}
 	}
 
 	// Open a browser to view the SBOM if specified
 	if includeSBOM {
-		sbom.ViewSBOMFiles(p.tmp)
+		sbom.ViewSBOMFiles(p.tmp.Sboms)
 	}
 
 	// Output the SBOM files into a directory if specified
