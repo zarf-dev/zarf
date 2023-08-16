@@ -28,9 +28,15 @@
         {{ if not (in $ignore $key) }}
           {{ if and (not (in $include $key)) (gt (len $include) 0) }}
           {{ else }}
+          {{ $deprecated := "[Deprecated]"}}
             <tr>
               <td>
+                {{if (strings.Contains $value.description $deprecated)}}
+                <code><s>{{ $key }}</s></code>
+                {{else}}
                 <code>{{ $key }}</code>
+                {{end}}
+
                 {{ if in $itemSchema.required $key }}
                   <em>*</em>
                   {{ $global.Set "hasRequired" true }}
@@ -48,7 +54,6 @@
       {{ end }}
     </tbody>
   </table>
-  {{ $hasRequired := $global.Get "hasRequired" }}
   {{ if $global.Get "hasRequired" }}
     <small>
       <em>* Required field</em>

@@ -1,0 +1,20 @@
+// start table overrides
+$uui-primary: #e0e0e0;
+$uui-secondary: #68c4ff;
+$uui-background: #0a0e2e;
+$uui-divider: rgba(255, 255, 255, 0.12);
+
+$table-color: $uui-primary !default;
+$table-bg: $uui-background !default;
+$table-accent-bg: transparent !default;
+$table-border-factor: 0.1 !default;
+$table-border-color: $uui-divider !default;
+$table-striped-order: odd !default;
+$table-striped-columns-order: even !default;
+$table-striped-color: $table-color !default;
+$table-striped-bg-factor: 0.08 !default;
+$table-striped-bg: rgba($uui-primary, $table-striped-bg-factor) !default;
+$table-group-separator-color: $uui-divider !default;
+$table-caption-color: $uui-secondary !default;
+
+// end table overrides
