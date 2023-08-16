@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -198,4 +199,9 @@ func MergeNonZero[T any](original T, overrides T) T {
 		}
 	}
 	return originalValue.Interface().(T)
+}
+
+// GetJSONTagName returns the JSON tag name of a field within a reflect value at a given index
+func GetJSONTagName(value reflect.Value, fieldIdx int) string {
+	return strings.Split(value.Type().Field(fieldIdx).Tag.Get("json"), ",")[0]
 }

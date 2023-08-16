@@ -312,18 +312,16 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		var fileLocation string
 		if file.Matrix != nil {
 			tag := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
-			m := reflect.ValueOf(*file.Matrix)
-			for i := 0; i < m.NumField(); i++ {
-				if tag == strings.Split(m.Type().Field(i).Tag.Get("json"), ",")[0] {
+			matrixValue := reflect.ValueOf(*file.Matrix)
+			for fieldIdx := 0; fieldIdx < matrixValue.NumField(); fieldIdx++ {
+				if tag == helpers.GetJSONTagName(matrixValue, fieldIdx) {
 					prefix := fmt.Sprintf("%d-%s", fileIdx, tag)
-					if options, ok := m.Field(i).Interface().(*types.ZarfFileOptions); ok && options != nil {
-						r := file
-						r.Shasum = options.Shasum
-						r.Source = options.Source
-						r.Target = options.Target
-						r.Symlinks = options.Symlinks
-
-						fileLocation = filepath.Join(pkgLocation, prefix, filepath.Base(r.Target))
+					if options, ok := matrixValue.Field(fieldIdx).Interface().(*types.ZarfFileOptions); ok && options != nil {
+						target := file.Target
+						if options.Target != "" {
+							target = options.Target
+						}
+						fileLocation = filepath.Join(pkgLocation, prefix, filepath.Base(target))
 						break
 					}
 				}

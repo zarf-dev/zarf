@@ -300,7 +300,11 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 			for i := 0; i < m.NumField(); i++ {
 				prefix := fmt.Sprintf("%d-%s", fileIdx, strings.Split(m.Type().Field(i).Tag.Get("json"), ",")[0])
 				if options, ok := m.Field(i).Interface().(*types.ZarfFileOptions); ok && options != nil {
-					path := filepath.Join(componentPath.Files, prefix, filepath.Base(options.Target))
+					target := file.Target
+					if options.Target != "" {
+						target = options.Target
+					}
+					path := filepath.Join(componentPath.Files, prefix, filepath.Base(target))
 					appendSBOMFiles(path)
 				}
 			}
@@ -393,26 +397,34 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	for fileIdx, file := range component.Files {
 		message.Debugf("Loading %#v", file)
 
-		mFiles := make(map[string]types.ZarfFile)
+		matrixFiles := make(map[string]types.ZarfFile)
 		if file.Matrix != nil {
-			m := reflect.ValueOf(*file.Matrix)
-			for i := 0; i < m.NumField(); i++ {
-				prefix := fmt.Sprintf("%d-%s", fileIdx, strings.Split(m.Type().Field(i).Tag.Get("json"), ",")[0])
-				if options, ok := m.Field(i).Interface().(*types.ZarfFileOptions); ok && options != nil {
+			matrixValue := reflect.ValueOf(*file.Matrix)
+			for fieldIdx := 0; fieldIdx < matrixValue.NumField(); fieldIdx++ {
+				prefix := fmt.Sprintf("%d-%s", fileIdx, helpers.GetJSONTagName(matrixValue, fieldIdx))
+				if options, ok := matrixValue.Field(fieldIdx).Interface().(*types.ZarfFileOptions); ok && options != nil {
 					r := file
-					r.Shasum = options.Shasum
-					r.Source = options.Source
-					r.Target = options.Target
-					r.Symlinks = options.Symlinks
+					if options.Shasum != "" {
+						r.Shasum = options.Shasum
+					}
+					if options.Source != "" {
+						r.Source = options.Source
+					}
+					if options.Target != "" {
+						r.Target = options.Target
+					}
+					if len(options.Symlinks) > 0 {
+						r.Symlinks = options.Symlinks
+					}
 
-					mFiles[prefix] = r
+					matrixFiles[prefix] = r
 				}
 			}
 		} else {
-			mFiles[strconv.Itoa(fileIdx)] = file
+			matrixFiles[strconv.Itoa(fileIdx)] = file
 		}
 
-		for prefix, mFile := range mFiles {
+		for prefix, mFile := range matrixFiles {
 			rel := filepath.Join(types.FilesFolder, prefix, filepath.Base(mFile.Target))
 			dst := filepath.Join(componentPath.Base, rel)
 
