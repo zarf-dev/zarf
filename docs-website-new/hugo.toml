@@ -34,13 +34,13 @@ ignoreFiles = [
     # To add a version menu, see the theme documentation.
 
     [params.ui]
-        navbar_logo = "img/doug.svg" # The product logo on the navbar
+        navbar_logo = "img/zarf-logo.svg" # The product logo on the navbar
 
-    # [[params.socialLinks]]
-    # name = "Community Slack"
-    # url = "https://communityinviter.com/apps/kubernetes/community"
-    # icon = "fa-brands fa-slack"
-    # desc = "Discussion and help from your fellow users"
+    [[params.socialLinks]]
+        desc = "Discussion and help from your fellow users"
+        icon = "fa-brands fa-slack"
+        name = "Community Slack"
+        url  = "https://zarf.dev/slack"
     # [[params.socialLinks]]
     # name = "Twitter"
     # url = "https://twitter.com/DefenseUnicorns"
