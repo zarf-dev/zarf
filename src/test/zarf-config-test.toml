@@ -37,7 +37,6 @@ thing1 = '1a2b3c4d'
 
 [package.deploy]
 components = 'deploy.components: 8d6fde37'
-sget = 'deploy.sget: ee7905de'
 shasum = 'deploy.shasum: 7606fe19'
 
 [package.deploy.set]

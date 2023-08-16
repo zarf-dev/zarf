@@ -11,9 +11,7 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/test"
-	"github.com/pterm/pterm"
 )
 
 var (
@@ -67,17 +65,6 @@ func doAllTheThings(m *testing.M) (int, error) {
 
 	// Run the tests, with the cluster cleanup being deferred to the end of the function call
 	returnCode := m.Run()
-
-	isCi := os.Getenv("CI") == "true"
-	if isCi {
-		pterm.Println("::notice::Zarf Command Log")
-		// Print out the command history
-		pterm.Println("::group::Zarf Command Log")
-		for _, cmd := range e2e.CommandLog {
-			message.ZarfCommand(cmd)
-		}
-		pterm.Println("::endgroup::")
-	}
 
 	return returnCode, nil
 }

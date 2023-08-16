@@ -45,18 +45,20 @@ var RuleLine = strings.Repeat("━", TermWidth)
 // LogWriter is the stream to write logs to.
 var LogWriter io.Writer = os.Stderr
 
+// logLevel holds the pterm compatible log level integer
 var logLevel = InfoLevel
 
-// Write logs to stderr and a buffer for logFile generation.
+// logFile acts as a buffer for logFile generation
 var logFile *os.File
 
+// useLogFile controls whether to use the log file or not
 var useLogFile bool
 
 // DebugWriter represents a writer interface that writes to message.Debug
 type DebugWriter struct{}
 
 func (d *DebugWriter) Write(raw []byte) (int, error) {
-	Debug(string(raw))
+	debugPrinter(2, string(raw))
 	return len(raw), nil
 }
 
@@ -139,12 +141,12 @@ func Debug(payload ...any) {
 // Debugf prints a debug message with a given format.
 func Debugf(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
-	Debug(message)
+	debugPrinter(2, message)
 }
 
 // ErrorWebf prints an error message and returns a web response.
 func ErrorWebf(err any, w http.ResponseWriter, format string, a ...any) {
-	Debug(err)
+	debugPrinter(2, err)
 	message := fmt.Sprintf(format, a...)
 	Warn(message)
 	http.Error(w, message, http.StatusInternalServerError)
@@ -164,21 +166,21 @@ func Warnf(format string, a ...any) {
 
 // WarnErr prints an error message as a warning.
 func WarnErr(err any, message string) {
-	Debug(err)
+	debugPrinter(2, err)
 	Warnf(message)
 }
 
 // WarnErrorf prints an error message as a warning with a given format.
 func WarnErrorf(err any, format string, a ...any) {
-	Debug(err)
+	debugPrinter(2, err)
 	Warnf(format, a...)
 }
 
 // Fatal prints a fatal error message and exits with a 1.
 func Fatal(err any, message string) {
-	Debug(err)
+	debugPrinter(2, err)
 	errorPrinter(2).Println(message)
-	Debug(string(debug.Stack()))
+	debugPrinter(2, string(debug.Stack()))
 	os.Exit(1)
 }
 
@@ -273,7 +275,7 @@ func HorizontalRule() {
 func JSONValue(value any) string {
 	bytes, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
-		Debug(err, "ERROR marshalling json")
+		debugPrinter(2, fmt.Sprintf("ERROR marshalling json: %s", err.Error()))
 	}
 	return string(bytes)
 }

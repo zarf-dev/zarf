@@ -47,7 +47,7 @@ func (p *Packager) Create(baseDir string) error {
 		if err != nil {
 			return err
 		}
-		err = p.SetOCIRemote(ref.String())
+		err = p.SetOCIRemote(ref)
 		if err != nil {
 			return err
 		}
@@ -67,7 +67,7 @@ func (p *Packager) Create(baseDir string) error {
 		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
 	}
 
-	if p.cfg.Pkg.Kind == "ZarfInitConfig" {
+	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 		p.cfg.IsInitConfig = true
 	}
@@ -230,6 +230,15 @@ func (p *Packager) Create(baseDir string) error {
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
+		message.HorizontalRule()
+		flags := ""
+		if config.CommonOptions.Insecure {
+			flags = "--insecure"
+		}
+		message.Title("To inspect/deploy/pull:", "")
+		message.ZarfCommand("package inspect oci://%s %s", p.remote.Repo().Reference, flags)
+		message.ZarfCommand("package deploy oci://%s %s", p.remote.Repo().Reference, flags)
+		message.ZarfCommand("package pull oci://%s %s", p.remote.Repo().Reference, flags)
 	} else {
 		// Use the output path if the user specified it.
 		packageName := filepath.Join(p.cfg.CreateOpts.Output, p.GetPackageName())
@@ -318,13 +327,13 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		return fmt.Errorf("unable to create the component paths: %s", err.Error())
 	}
 
-	if isSkeleton && component.CosignKeyPath != "" {
+	if isSkeleton && component.DeprecatedCosignKeyPath != "" {
 		dst := filepath.Join(componentPath.Base, "cosign.pub")
-		err := utils.CreatePathAndCopy(component.CosignKeyPath, dst)
+		err := utils.CreatePathAndCopy(component.DeprecatedCosignKeyPath, dst)
 		if err != nil {
 			return err
 		}
-		p.cfg.Pkg.Components[index].CosignKeyPath = "cosign.pub"
+		p.cfg.Pkg.Components[index].DeprecatedCosignKeyPath = "cosign.pub"
 	}
 
 	onCreate := component.Actions.OnCreate
@@ -367,7 +376,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				if isSkeleton {
 					continue
 				}
-				if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 				}
 			} else {
@@ -411,7 +420,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				if isSkeleton {
 					continue
 				}
-				if err := utils.DownloadToFile(mFile.Source, dst, component.CosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(mFile.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, mFile.Source, err.Error())
 				}
 			} else {
@@ -452,7 +461,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				if isSkeleton {
 					continue
 				}
-				if err := utils.DownloadToFile(data.Source, dst, component.CosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
@@ -491,7 +500,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 					if isSkeleton {
 						continue
 					}
-					if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+					if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
 						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 					}
 				} else {
@@ -534,7 +543,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
-			gitCfg := git.NewWithSpinner(p.cfg.State.GitServer, spinner)
+			gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
 			if err := gitCfg.Pull(url, componentPath.Repos, false); err != nil {
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
@@ -594,7 +603,7 @@ func (p *Packager) loadDifferentialData() error {
 	// Save the fact that this is a differential build into the build data of the package
 	p.cfg.Pkg.Build.Differential = true
 
-	tmpDir, _ := utils.MakeTempDir("")
+	tmpDir, _ := utils.MakeTempDir()
 	defer os.RemoveAll(tmpDir)
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build

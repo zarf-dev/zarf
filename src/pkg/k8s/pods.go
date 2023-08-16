@@ -85,6 +85,8 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []co
 			break
 		}
 
+		k.Log("Found %d pods for target %#v", len(pods.Items), target)
+
 		var readyPods = []corev1.Pod{}
 
 		// Reverse sort by creation time
@@ -94,8 +96,7 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []co
 
 		if len(pods.Items) > 0 {
 			for _, pod := range pods.Items {
-				k.Log("Testing pod %s", pod.Name)
-				k.Log("%#v", pod)
+				k.Log("Testing pod %q", pod.Name)
 
 				// If an include function is provided, only keep pods that return true
 				if include != nil && !include(pod) {
@@ -104,7 +105,7 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []co
 
 				// Handle container targeting
 				if target.Container != "" {
-					k.Log("Testing for container")
+					k.Log("Testing pod %q for container %q", pod.Name, target.Container)
 					var matchesInitContainer bool
 
 					// Check the status of initContainers for a running match
@@ -133,7 +134,7 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []co
 
 				} else {
 					status := pod.Status.Phase
-					k.Log("Testing for pod only, phase: %s", status)
+					k.Log("Testing pod %q phase, want (%q) got (%q)", pod.Name, corev1.PodRunning, status)
 					// Regular status checking without a container
 					if status == corev1.PodRunning {
 						readyPods = append(readyPods, pod)
@@ -142,7 +143,6 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []co
 
 			}
 
-			k.Log("Ready pods %#v", readyPods)
 			if len(readyPods) > 0 {
 				return readyPods
 			}

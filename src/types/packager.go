@@ -9,6 +9,9 @@ type PackagerConfig struct {
 	// CreateOpts tracks the user-defined options used to create the package
 	CreateOpts ZarfCreateOptions
 
+	// PkgOpts tracks user-defined options
+	PkgOpts ZarfPackageOptions
+
 	// DeployOpts tracks user-defined values for the active deployment
 	DeployOpts ZarfDeployOptions
 
@@ -21,9 +24,6 @@ type PackagerConfig struct {
 	// PullOpts tracks user-defined options used to pull packages
 	PullOpts ZarfPullOptions
 
-	// Track if CLI prompts should be generated
-	IsInteractive bool
-
 	// Track if the package is an init package
 	IsInitConfig bool
 
@@ -31,10 +31,10 @@ type PackagerConfig struct {
 	Pkg ZarfPackage
 
 	// The original source of the package
-	PkgSourcePath string
+	PkgSource string
 
 	// The active zarf state
-	State ZarfState
+	State *ZarfState
 
 	// Variables set by the user
 	SetVariableMap map[string]*ZarfSetVariable

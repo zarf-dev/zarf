@@ -57,9 +57,8 @@ func (suite *SkeletonSuite) SetupSuite() {
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
-	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
-	suite.NoError(err)
-	err = os.RemoveAll(everythingExternal)
+	e2e.TeardownRegistry(suite.T(), 555)
+	err := os.RemoveAll(everythingExternal)
 	suite.NoError(err)
 	err = os.RemoveAll(absNoCode)
 	suite.NoError(err)
@@ -203,8 +202,8 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 			Values:         filepath.Join(base, types.ValuesFolder),
 		}
 
-		if isSkeleton && component.CosignKeyPath != "" {
-			suite.FileExists(filepath.Join(base, component.CosignKeyPath))
+		if isSkeleton && component.DeprecatedCosignKeyPath != "" {
+			suite.FileExists(filepath.Join(base, component.DeprecatedCosignKeyPath))
 		}
 
 		if isSkeleton && component.Extensions.BigBang != nil {

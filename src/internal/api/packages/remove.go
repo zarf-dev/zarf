@@ -24,8 +24,9 @@ func RemovePackage(w http.ResponseWriter, r *http.Request) {
 
 	// Setup the packager
 	pkg, err := packager.New(&types.PackagerConfig{
-		DeployOpts: types.ZarfDeployOptions{
-			Components: components,
+		PkgOpts: types.ZarfPackageOptions{
+			OptionalComponents: components,
+			PackagePath:        name,
 		},
 	})
 	defer pkg.ClearTempPaths()
@@ -35,7 +36,7 @@ func RemovePackage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Remove the package
-	if err := pkg.Remove(name); err != nil {
+	if err := pkg.Remove(); err != nil {
 		message.ErrorWebf(err, w, "Unable to remove the zarf package from the cluster")
 		return
 	}

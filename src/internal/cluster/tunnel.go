@@ -76,7 +76,7 @@ type ServiceInfo struct {
 
 // PrintConnectTable will print a table of all Zarf connect matches found in the cluster.
 func (c *Cluster) PrintConnectTable() error {
-	list, err := c.Kube.GetServicesByLabelExists(v1.NamespaceAll, config.ZarfConnectLabelName)
+	list, err := c.GetServicesByLabelExists(v1.NamespaceAll, config.ZarfConnectLabelName)
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func (tunnel *Tunnel) AddSpinner(spinner *message.Spinner) {
 
 // Connect will establish a tunnel to the specified target.
 func (tunnel *Tunnel) Connect(target string, blocking bool) error {
-	message.Debugf("tunnel.Connect(%s, %#v)", target, blocking)
+	message.Debugf("tunnel.Connect(%s, %t)", target, blocking)
 
 	switch strings.ToUpper(target) {
 	case ZarfRegistry:

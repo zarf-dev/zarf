@@ -2,11 +2,7 @@ package packager
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -22,21 +18,18 @@ import (
 
 // handlePackagePath If provided package is a URL download it to a temp directory.
 func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
-	message.Debug("packager.handlePackagePath()")
-
-	opts := p.cfg.DeployOpts
 
 	// Check if the user gave us a remote package
-	providedURL, err := url.Parse(opts.PackagePath)
+	providedURL, err := url.Parse(p.cfg.PkgOpts.PackagePath)
 	if err != nil || providedURL.Scheme == "" || providedURL.Host == "" {
 		message.Debug("Provided package path is not a URL, skipping download")
 		return partialPaths, nil
 	}
 
 	// Handle case where deploying remote package stored in an OCI registry
-	if helpers.IsOCIURL(opts.PackagePath) {
-		p.cfg.DeployOpts.PackagePath = p.tmp.Base
-		requestedComponents := getRequestedComponentList(p.cfg.DeployOpts.Components)
+	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
+		p.cfg.PkgOpts.PackagePath = p.tmp.Base
+		requestedComponents := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
 		layersToPull := []ocispec.Descriptor{}
 		// only pull specified components and their images if --components AND --confirm are set
 		if len(requestedComponents) > 0 && config.CommonOptions.Confirm {
@@ -51,14 +44,14 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 	}
 
 	// Handle case where deploying remote package validated via sget
-	if strings.HasPrefix(opts.PackagePath, utils.SGETURLPrefix) {
+	if strings.HasPrefix(p.cfg.PkgOpts.PackagePath, utils.SGETURLPrefix) {
 		return partialPaths, p.handleSgetPackage()
 	}
 
-	spinner := message.NewProgressSpinner("Loading Zarf Package %s", opts.PackagePath)
+	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.PkgOpts.PackagePath)
 	defer spinner.Stop()
 
-	if !config.CommonOptions.Insecure && opts.Shasum == "" {
+	if !config.CommonOptions.Insecure && p.cfg.PkgOpts.Shasum == "" {
 		return partialPaths, fmt.Errorf("remote package provided without a shasum, use --insecure to ignore")
 	}
 
@@ -67,49 +60,27 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 		return partialPaths, fmt.Errorf("remote package provided with an invalid extension, must be one of: %s", config.GetValidPackageExtensions())
 	}
 
-	// Download the package
-	resp, err := http.Get(opts.PackagePath)
-	if err != nil {
-		return partialPaths, fmt.Errorf("unable to download remote package: %w", err)
-	}
-	defer resp.Body.Close()
-
 	localPath := p.tmp.Base + providedURL.Path
-	message.Debugf("Creating local package with the path: %s", localPath)
-	packageFile, _ := os.Create(localPath)
-	_, err = io.Copy(packageFile, resp.Body)
-	if err != nil {
-		return partialPaths, fmt.Errorf("unable to copy the contents of the provided URL into a local file: %w", err)
-	}
+	message.Debugf("Downloading the local package with the path: %s", localPath)
 
-	// Check the shasum if necessary
+	packageURL := p.cfg.PkgOpts.PackagePath
+
 	if !config.CommonOptions.Insecure {
-		hasher := sha256.New()
-		_, err = io.Copy(hasher, packageFile)
-		if err != nil {
-			return partialPaths, fmt.Errorf("unable to calculate the sha256 of the provided remote package: %w", err)
-		}
-
-		value := hex.EncodeToString(hasher.Sum(nil))
-		if value != opts.Shasum {
-			_ = os.Remove(localPath)
-			return partialPaths, fmt.Errorf("shasum of remote package does not match provided shasum, expected %s, got %s", opts.Shasum, value)
-		}
+		packageURL = fmt.Sprintf("%s@%s", p.cfg.PkgOpts.PackagePath, p.cfg.PkgOpts.Shasum)
 	}
 
-	opts.PackagePath = localPath
+	utils.DownloadToFile(packageURL, localPath, "")
+
+	p.cfg.PkgOpts.PackagePath = localPath
 
 	spinner.Success()
 	return partialPaths, nil
 }
 
 func (p *Packager) handleSgetPackage() error {
-	message.Debug("packager.handleSgetPackage()")
 	message.Warn(lang.WarnSGetDeprecation)
 
-	opts := p.cfg.DeployOpts
-
-	spinner := message.NewProgressSpinner("Loading Zarf Package %s", opts.PackagePath)
+	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.PkgOpts.PackagePath)
 	defer spinner.Stop()
 
 	// Create the local file for the package
@@ -121,18 +92,18 @@ func (p *Packager) handleSgetPackage() error {
 	defer destinationFile.Close()
 
 	// If this is a DefenseUnicorns package, use an internal sget public key
-	if strings.HasPrefix(opts.PackagePath, fmt.Sprintf("%s://defenseunicorns", utils.SGETURLScheme)) {
+	if strings.HasPrefix(p.cfg.PkgOpts.PackagePath, fmt.Sprintf("%s://defenseunicorns", utils.SGETURLScheme)) {
 		os.Setenv("DU_SGET_KEY", config.CosignPublicKey)
-		p.cfg.DeployOpts.SGetKeyPath = "env://DU_SGET_KEY"
+		p.cfg.PkgOpts.SGetKeyPath = "env://DU_SGET_KEY"
 	}
 
 	// Sget the package
-	err = utils.Sget(context.TODO(), opts.PackagePath, p.cfg.DeployOpts.SGetKeyPath, destinationFile)
+	err = utils.Sget(context.TODO(), p.cfg.PkgOpts.PackagePath, p.cfg.PkgOpts.SGetKeyPath, destinationFile)
 	if err != nil {
 		return fmt.Errorf("unable to get the remote package via sget: %w", err)
 	}
 
-	p.cfg.DeployOpts.PackagePath = localPath
+	p.cfg.PkgOpts.PackagePath = localPath
 
 	spinner.Success()
 	return nil
