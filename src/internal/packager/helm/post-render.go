@@ -55,12 +55,13 @@ func (h *Helm) newRenderer() (*renderer, error) {
 
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
-	tempDir, err := utils.MakeTempDir()
+	tmpDir := filepath.Join(r.options.ComponentPaths.Temp, fmt.Sprintf("post-render-%s", r.options.Chart.Name))
+	err := utils.CreateDirectory(tmpDir, 0700)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create tmpdir:  %w", err)
 	}
-	defer os.RemoveAll(tempDir)
-	path := filepath.Join(tempDir, "chart.yaml")
+	defer os.RemoveAll(tmpDir)
+	path := filepath.Join(tmpDir, "chart.yaml")
 
 	// Write the context to a file for processing
 	if err := utils.WriteFile(path, renderedManifests.Bytes()); err != nil {
@@ -68,7 +69,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 
 	// Run the template engine against the chart output
-	if _, err := template.ProcessYamlFilesInPath(tempDir, r.options.Component, r.values); err != nil {
+	if _, err := template.ProcessYamlFilesInPath(tmpDir, r.options.Component, r.values); err != nil {
 		return nil, fmt.Errorf("error templating the helm chart: %w", err)
 	}
 

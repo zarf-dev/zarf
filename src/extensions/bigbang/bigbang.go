@@ -96,7 +96,6 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 			ValuesFiles: cfg.ValuesFiles,
 			GitPath:     "./chart",
 		},
-		BasePath: tmpPaths.Temp,
 	}
 
 	// Download the chart from Git and save it to a temporary directory.

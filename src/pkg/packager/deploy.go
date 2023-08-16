@@ -412,12 +412,12 @@ func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPat
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(componentPaths types.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
-			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPath.Values, chart), idx)
+			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
 			if err := p.valueTemplate.Apply(component, chartValueName, false); err != nil {
 				return installedCharts, err
 			}
@@ -425,11 +425,11 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 
 		// Generate helm templates to pass to gitops engine
 		helmCfg := helm.Helm{
-			BasePath:  componentPath.Base,
-			Chart:     chart,
-			Component: component,
-			Cfg:       p.cfg,
-			Cluster:   p.cluster,
+			ComponentPaths: componentPaths,
+			Chart:          chart,
+			Component:      component,
+			Cfg:            p.cfg,
+			Cluster:        p.cluster,
 		}
 
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
@@ -446,10 +446,10 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
-			if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+			if utils.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
 				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
 				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
-				if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+				if utils.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
 					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
 				}
 			}
@@ -467,10 +467,10 @@ func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, 
 
 		// Iterate over any connectStrings and add to the main map
 		helmCfg := helm.Helm{
-			BasePath:  componentPath.Manifests,
-			Component: component,
-			Cfg:       p.cfg,
-			Cluster:   p.cluster,
+			ComponentPaths: componentPaths,
+			Component:      component,
+			Cfg:            p.cfg,
+			Cluster:        p.cluster,
 		}
 
 		// Generate the chart.

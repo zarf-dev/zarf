@@ -16,7 +16,7 @@ import (
 
 // Helm is a config object for working with helm charts.
 type Helm struct {
-	BasePath          string
+	ComponentPaths    types.ComponentPaths
 	Chart             types.ZarfChart
 	ReleaseName       string
 	ChartLoadOverride string

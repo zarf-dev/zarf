@@ -233,7 +233,7 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) error {
 	// Add the manifest files so helm does its thing.
 	for _, file := range manifest.Files {
 		spinner.Updatef("Processing %s", file)
-		manifest := path.Join(h.BasePath, file)
+		manifest := path.Join(h.ComponentPaths.Manifests, file)
 		data, err := os.ReadFile(manifest)
 		if err != nil {
 			return fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
