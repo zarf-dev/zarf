@@ -7,7 +7,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"runtime"
 
 	"github.com/Masterminds/semver/v3"
@@ -51,12 +50,8 @@ var versionCmd = &cobra.Command{
 		buildMap := make(map[string]interface{})
 		buildMap["platform"] = runtime.GOOS + "/" + runtime.GOARCH
 		buildMap["goVersion"] = runtime.Version()
-		ver, err := semver.NewVersion(config.CLIVersion)
-		if err != nil {
-			buildMap["minor"] = ""
-			buildMap["patch"] = ""
-			buildMap["prerelease"] = ""
-		} else {
+		ver, _ := semver.NewVersion(config.CLIVersion)
+		if ver != nil {
 			buildMap["major"] = ver.Major()
 			buildMap["minor"] = ver.Minor()
 			buildMap["patch"] = ver.Patch()
@@ -78,11 +73,6 @@ var versionCmd = &cobra.Command{
 			fmt.Println(config.CLIVersion)
 		}
 	},
-}
-
-func isVersionCmd() bool {
-	args := os.Args
-	return len(args) > 1 && (args[1] == "version" || args[1] == "v")
 }
 
 func init() {

@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/registry"
@@ -177,7 +178,7 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 // DownloadChartFromGitToTemp downloads a chart from git into a temp directory
 func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, error) {
 	// Create the Git configuration and download the repo
-	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
+	gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
 
 	// Download the git repo to a temporary directory
 	err := gitCfg.DownloadRepoToTemp(h.Chart.URL)

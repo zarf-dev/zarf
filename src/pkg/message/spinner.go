@@ -7,6 +7,7 @@ package message
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -27,7 +28,7 @@ type Spinner struct {
 // NewProgressSpinner creates a new progress spinner.
 func NewProgressSpinner(format string, a ...any) *Spinner {
 	if activeSpinner != nil {
-		Debug("Active spinner already exists")
+		debugPrinter(2, "Active spinner already exists")
 		return activeSpinner
 	}
 
@@ -94,7 +95,7 @@ func (p *Spinner) Write(raw []byte) (int, error) {
 // Updatef updates the spinner text.
 func (p *Spinner) Updatef(format string, a ...any) {
 	if NoProgress {
-		Debugf(format, a...)
+		debugPrinter(2, fmt.Sprintf(format, a...))
 		return
 	}
 
@@ -139,7 +140,7 @@ func (p *Spinner) Warnf(format string, a ...any) {
 // Errorf prints an error message with the spinner.
 func (p *Spinner) Errorf(err error, format string, a ...any) {
 	p.Warnf(format, a...)
-	Debug(err)
+	debugPrinter(2, err)
 }
 
 // Fatal calls message.Fatalf with the given error.

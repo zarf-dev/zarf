@@ -70,7 +70,7 @@ func TestValidatePackageArchitecture(t *testing.T) {
 			p := &Packager{
 				arch: testCase.pkgArch,
 				cluster: &cluster.Cluster{
-					Kube: &k8s.K8s{
+					K8s: &k8s.K8s{
 						Clientset: mockClient,
 						Log:       logger,
 					},
@@ -181,11 +181,7 @@ func TestValidateLastNonBreakingVersion(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		testCase := testCase
-
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
 			config.CLIVersion = testCase.cliVersion
 
 			p := &Packager{

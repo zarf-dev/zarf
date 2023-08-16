@@ -17,6 +17,7 @@ import "errors"
 const (
 	ErrLoadingConfig       = "failed to load config: %w"
 	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
+	ErrSaveState           = "Failed to save the Zarf State to the Kubernetes cluster."
 	ErrLoadPackageSecret   = "Failed to load %s's secret from the Kubernetes cluster"
 	ErrMarshal             = "failed to marshal file: %w"
 	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
@@ -50,8 +51,8 @@ const (
 	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
 	RootCmdFlagInsecure    = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
-	RootCmdDeprecatedDeploy = "Please use \"zarf package deploy %s\" to deploy this package."
-	RootCmdDeprecatedCreate = "Please use \"zarf package create\" to create this package."
+	RootCmdDeprecatedDeploy = "Deprecated: Please use \"zarf package deploy %s\" to deploy this package.  This warning will be removed in Zarf v1.0.0."
+	RootCmdDeprecatedCreate = "Deprecated: Please use \"zarf package create\" to create this package.  This warning will be removed in Zarf v1.0.0."
 
 	RootCmdErrInvalidLogLevel = "Invalid log level. Valid options are: warn, info, debug, trace."
 
@@ -127,6 +128,11 @@ const (
 
 	# Initializing w/ an external git server:
 	zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
+
+	# Initializing w/ an external artifact server:
+	zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
+
+	# NOTE: Not specifying a pull username/password will use the push user for pulling as well.
 `
 
 	CmdInitErrFlags             = "Invalid command flags were provided."
@@ -139,7 +145,6 @@ const (
 	CmdInitDownloadAsk       = "It seems the init package could not be found locally, but can be downloaded from %s"
 	CmdInitDownloadNote      = "Note: This will require an internet connection."
 	CmdInitDownloadConfirm   = "Do you want to download this init package?"
-	CmdInitDownloadErrCancel = "confirm selection canceled: %s"
 	CmdInitDownloadErrManual = "download the init package manually and place it in the current working directory"
 
 	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
@@ -247,7 +252,7 @@ const (
 	CmdPackageDeployFlagSet                            = "Specify deployment variables to set on the command line (KEY=value)"
 	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
-	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v0.31.0 please use the --key flag instead."
+	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
 	CmdPackageDeployFlagPublicKey                      = "Path to public key file for validating signed packages"
 	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "the version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
@@ -390,10 +395,9 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsRegistryFlagNonDist        = "Allow pushing non-distributable (foreign) layers"
 	CmdToolsRegistryFlagPlatform       = "Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64)."
 
-	CmdToolsGetGitPasswdShort       = "Returns the push user's password for the Git server"
-	CmdToolsGetGitPasswdLong        = "Reads the password for a user with push access to the configured Git server from the zarf-state secret in the zarf namespace"
-	CmdToolsGetGitPasswdInfo        = "Git Server Push Password: "
-	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in a future release."
+	CmdToolsGetGitPasswdShort       = "Deprecated: Returns the push user's password for the Git server"
+	CmdToolsGetGitPasswdLong        = "Deprecated: Reads the password for a user with push access to the configured Git server in Zarf State. Note that this command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
+	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
 
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
@@ -425,29 +429,29 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsGenKeySuccess               = "Generated key pair and written to %s and %s"
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
-	CmdToolsSbomErr   = "Unable to create sbom (syft) CLI"
+	CmdToolsSbomErr   = "Unable to create SBOM (Syft) CLI"
 
 	CmdToolsWaitForShort = "Waits for a given Kubernetes resource to be ready"
 	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment.\n" +
 		"This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator.\n" +
 		"You can also wait for arbitrary network endpoints using REST or TCP checks.\n\n"
 	CmdToolsWaitForExample = `
-	Wait for Kubernetes resources:
-		zarf tools wait-for pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to be ready
-		zarf tools wait-for p cool-pod-name ready -n cool                     #  wait for pod (using p alias) cool-pod-name in namespace cool to be ready
-		zarf tools wait-for deployment podinfo available -n podinfo           #  wait for deployment podinfo in namespace podinfo to be available
-		zarf tools wait-for pod app=podinfo ready -n podinfo                  #  wait for pod with label app=podinfo in namespace podinfo to be ready
-		zarf tools wait-for svc zarf-docker-registry exists -n zarf           #  wait for service zarf-docker-registry in namespace zarf to exist
-		zarf tools wait-for svc zarf-docker-registry -n zarf                  #  same as above, except exists is the default condition
-		zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
-		zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
+	# Wait for Kubernetes resources:
+	zarf tools wait-for pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to be ready
+	zarf tools wait-for p cool-pod-name ready -n cool                     #  wait for pod (using p alias) cool-pod-name in namespace cool to be ready
+	zarf tools wait-for deployment podinfo available -n podinfo           #  wait for deployment podinfo in namespace podinfo to be available
+	zarf tools wait-for pod app=podinfo ready -n podinfo                  #  wait for pod with label app=podinfo in namespace podinfo to be ready
+	zarf tools wait-for svc zarf-docker-registry exists -n zarf           #  wait for service zarf-docker-registry in namespace zarf to exist
+	zarf tools wait-for svc zarf-docker-registry -n zarf                  #  same as above, except exists is the default condition
+	zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
+	zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
 
-	Wait for network endpoints:
-		zarf tools wait-for http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
-		zarf tools wait-for tcp localhost:8080                                #  wait for a connection to be established on localhost:8080
-		zarf tools wait-for https 1.1.1.1 200                                 #  wait for a 200 response from https://1.1.1.1
-		zarf tools wait-for http google.com                                   #  wait for any 2xx response from http://google.com
-		zarf tools wait-for http google.com success                           #  wait for any 2xx response from http://google.com
+	# Wait for network endpoints:
+	zarf tools wait-for http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
+	zarf tools wait-for tcp localhost:8080                                #  wait for a connection to be established on localhost:8080
+	zarf tools wait-for https 1.1.1.1 200                                 #  wait for a 200 response from https://1.1.1.1
+	zarf tools wait-for http google.com                                   #  wait for any 2xx response from http://google.com
+	zarf tools wait-for http google.com success                           #  wait for any 2xx response from http://google.com
 `
 	CmdToolsWaitForFlagTimeout        = "Specify the timeout duration for the wait command."
 	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration '%s'. Please use a valid duration string (e.g. 1s, 2m, 3h)."
@@ -458,8 +462,56 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 
 	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
 
-	CmdToolsGetCredsShort = "Displays a Table of credentials for deployed components. Pass a component name to get a single credential"
-	CmdToolsGetCredsLong  = "Display a Table of credentials for deployed components. Pass a component name to get a single credential. i.e. 'zarf tools get-creds registry'"
+	CmdToolsGetCredsShort   = "Displays a table of credentials for deployed Zarf services. Pass a service key to get a single credential"
+	CmdToolsGetCredsLong    = "Display a table of credentials for deployed Zarf services. Pass a service key to get a single credential. i.e. 'zarf tools get-creds registry'"
+	CmdToolsGetCredsExample = `
+	# Print all Zarf credentials:
+	zarf tools get-creds
+
+	# Get specific Zarf credentials:
+	zarf tools get-creds registry
+	zarf tools get-creds registry-readonly
+	zarf tools get-creds git
+	zarf tools get-creds git-readonly
+	zarf tools get-creds artifact
+	zarf tools get-creds logging
+`
+
+	CmdToolsUpdateCredsShort   = "Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service"
+	CmdToolsUpdateCredsLong    = "Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service. i.e. 'zarf tools update-creds registry'"
+	CmdToolsUpdateCredsExample = `
+	# Autogenerate all Zarf credentials at once:
+	zarf tools update-creds
+
+	# Autogenerate specific Zarf service credentials:
+	zarf tools update-creds registry
+	zarf tools update-creds git
+	zarf tools update-creds artifact
+	zarf tools update-creds logging
+
+	# Update all Zarf credentials w/external services at once:
+	zarf tools update-creds \
+		--registry-push-username={USERNAME} --registry-push-password={PASSWORD} \
+		--git-push-username={USERNAME} --git-push-password={PASSWORD} \
+		--artifact-push-username={USERNAME} --artifact-push-token={PASSWORD}
+
+	# NOTE: Any credentials omitted from flags without a service key specified will be autogenerated - URLs will only change if specified.
+	# Config options can also be set with the 'init' section of a Zarf config file.
+
+	# Update specific Zarf credentials w/external services:
+	zarf tools update-creds registry --registry-push-username={USERNAME} --registry-push-password={PASSWORD}
+	zarf tools update-creds git --git-push-username={USERNAME} --git-push-password={PASSWORD}
+	zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifact-push-token={PASSWORD}
+
+	# NOTE: Not specifying a pull username/password will keep the previous pull username/password.
+`
+	CmdToolsUpdateCredsConfirmFlag          = "Confirm updating credentials without prompting"
+	CmdToolsUpdateCredsConfirmProvided      = "Confirm flag specified, continuing without prompting."
+	CmdToolsUpdateCredsConfirmContinue      = "Continue with these changes?"
+	CmdToolsUpdateCredsInvalidServiceErr    = "Invalid service key specified - valid keys are: %s, %s, and %s"
+	CmdToolsUpdateCredsUnableCreateToken    = "Unable to create the new Gitea artifact token: %s"
+	CmdToolsUpdateCredsUnableUpdateRegistry = "Unable to update Zarf registry: %s"
+	CmdToolsUpdateCredsUnableUpdateGit      = "Unable to update Zarf git server: %s"
 
 	// zarf version
 	CmdVersionShort = "Shows the version of the running Zarf binary"
@@ -501,7 +553,7 @@ const (
 
 // src/internal/packager/validate.
 const (
-	PkgValidateTemplateDeprecation        = "Package template '%s' is using the deprecated syntax ###ZARF_PKG_VAR_%s###.  This will be removed in a future Zarf version.  Please update to ###ZARF_PKG_TMPL_%s###."
+	PkgValidateTemplateDeprecation        = "Package template '%s' is using the deprecated syntax ###ZARF_PKG_VAR_%s###.  This will be removed in Zarf v1.0.0.  Please update to ###ZARF_PKG_TMPL_%s###."
 	PkgValidateMustBeUppercase            = "variable name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
 	PkgValidateErrActionVariables         = "component %s cannot contain setVariables outside of onDeploy in actions"
@@ -548,5 +600,5 @@ var (
 
 // Collection of reusable warn messages.
 var (
-	WarnSGetDeprecation = "Using sget to download resources is being deprecated and will removed in the v0.31.0 release of Zarf. Please publish the packages as OCI artifacts instead."
+	WarnSGetDeprecation = "Using sget to download resources is being deprecated and will removed in the v1.0.0 release of Zarf. Please publish the packages as OCI artifacts instead."
 )

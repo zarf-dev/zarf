@@ -8,8 +8,12 @@ variables:
     default: ""
 
   - name: GIT_SERVER_PVC_SIZE
-    description: The size of the persistent volume claim for git server
+    description: The size of the persistent volume claim for the git server
     default: 10Gi
+
+  - name: GIT_SERVER_PVC_ACCESS_MODE
+    description: The access mode of the persistent volume claim for the git server
+    default: ReadWriteOnce
 
   - name: GIT_SERVER_CPU_REQ
     description: The CPU request for git server
@@ -26,6 +30,10 @@ variables:
   - name: GIT_SERVER_MEM_LIMIT
     description: The memory limit for git server
     default: 2Gi
+
+  - name: GIT_SERVER_REPLICA_COUNT
+    description: The number of git server replicas to deploy
+    default: "1"
 
 components:
   - name: git-server
