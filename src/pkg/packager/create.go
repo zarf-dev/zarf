@@ -5,12 +5,10 @@
 package packager
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -274,7 +272,7 @@ func (p *Packager) Create(baseDir string) error {
 }
 
 func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.ComponentSBOM, error) {
-	componentPath, err := p.createOrGetComponentPaths(component)
+	componentPaths, err := p.createOrGetComponentPaths(component)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create the component paths: %s", err.Error())
 	}
@@ -282,7 +280,7 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 	// Create an struct to hold the SBOM information for this component.
 	componentSBOM := types.ComponentSBOM{
 		Files:         []string{},
-		ComponentPath: componentPath,
+		ComponentPath: componentPaths,
 	}
 
 	appendSBOMFiles := func(path string) {
@@ -294,28 +292,17 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 		}
 	}
 
-	for fileIdx, file := range component.Files {
-		if file.Matrix != nil {
-			m := reflect.ValueOf(*file.Matrix)
-			for i := 0; i < m.NumField(); i++ {
-				prefix := fmt.Sprintf("%d-%s", fileIdx, strings.Split(m.Type().Field(i).Tag.Get("json"), ",")[0])
-				if options, ok := m.Field(i).Interface().(*types.ZarfFileOptions); ok && options != nil {
-					target := file.Target
-					if options.Target != "" {
-						target = options.Target
-					}
-					path := filepath.Join(componentPath.Files, prefix, filepath.Base(target))
-					appendSBOMFiles(path)
-				}
-			}
-		} else {
-			path := filepath.Join(componentPath.Files, strconv.Itoa(fileIdx), filepath.Base(file.Target))
-			appendSBOMFiles(path)
-		}
+	fp := FilePacker{
+		component:      &component,
+		componentPaths: componentPaths,
+	}
+
+	for _, path := range fp.GetSBOMPaths() {
+		appendSBOMFiles(path)
 	}
 
 	for dataIdx, data := range component.DataInjections {
-		path := filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+		path := filepath.Join(componentPaths.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 
 		appendSBOMFiles(path)
 	}
@@ -326,13 +313,13 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkeleton bool) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
-	componentPath, err := p.createOrGetComponentPaths(component)
+	componentPaths, err := p.createOrGetComponentPaths(component)
 	if err != nil {
 		return fmt.Errorf("unable to create the component paths: %s", err.Error())
 	}
 
 	if isSkeleton && component.DeprecatedCosignKeyPath != "" {
-		dst := filepath.Join(componentPath.Base, "cosign.pub")
+		dst := filepath.Join(componentPaths.Base, "cosign.pub")
 		err := utils.CreatePathAndCopy(component.DeprecatedCosignKeyPath, dst)
 		if err != nil {
 			return err
@@ -357,7 +344,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		if isSkeleton && chart.URL == "" {
 			rel := filepath.Join(types.ChartsFolder, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
-			dst := filepath.Join(componentPath.Base, rel)
+			dst := filepath.Join(componentPaths.Base, rel)
 
 			err := utils.CreatePathAndCopy(chart.LocalPath, dst)
 			if err != nil {
@@ -366,7 +353,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
 		} else {
-			err := helmCfg.PackageChart(componentPath.Charts)
+			err := helmCfg.PackageChart(componentPaths.Charts)
 			if err != nil {
 				return err
 			}
@@ -374,7 +361,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		for valuesIdx, path := range chart.ValuesFiles {
 			rel := fmt.Sprintf("%s-%d", helm.StandardName(types.ValuesFolder, chart), valuesIdx)
-			dst := filepath.Join(componentPath.Base, rel)
+			dst := filepath.Join(componentPaths.Base, rel)
 
 			if helpers.IsURL(path) {
 				if isSkeleton {
@@ -394,69 +381,15 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		}
 	}
 
-	for fileIdx, file := range component.Files {
-		message.Debugf("Loading %#v", file)
+	fp := FilePacker{
+		component:      &component,
+		componentPaths: componentPaths,
+	}
 
-		matrixFiles := make(map[string]types.ZarfFile)
-		if file.Matrix != nil {
-			matrixValue := reflect.ValueOf(*file.Matrix)
-			for fieldIdx := 0; fieldIdx < matrixValue.NumField(); fieldIdx++ {
-				prefix := fmt.Sprintf("%d-%s", fileIdx, helpers.GetJSONTagName(matrixValue, fieldIdx))
-				if options, ok := matrixValue.Field(fieldIdx).Interface().(*types.ZarfFileOptions); ok && options != nil {
-					r := file
-					if options.Shasum != "" {
-						r.Shasum = options.Shasum
-					}
-					if options.Source != "" {
-						r.Source = options.Source
-					}
-					if options.Target != "" {
-						r.Target = options.Target
-					}
-					if len(options.Symlinks) > 0 {
-						r.Symlinks = options.Symlinks
-					}
-
-					matrixFiles[prefix] = r
-				}
-			}
-		} else {
-			matrixFiles[strconv.Itoa(fileIdx)] = file
-		}
-
-		for prefix, mFile := range matrixFiles {
-			rel := filepath.Join(types.FilesFolder, prefix, filepath.Base(mFile.Target))
-			dst := filepath.Join(componentPath.Base, rel)
-
-			if helpers.IsURL(mFile.Source) {
-				if isSkeleton {
-					continue
-				}
-				if err := utils.DownloadToFile(mFile.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
-					return fmt.Errorf(lang.ErrDownloading, mFile.Source, err.Error())
-				}
-			} else {
-				if err := utils.CreatePathAndCopy(mFile.Source, dst); err != nil {
-					return fmt.Errorf("unable to copy file %s: %w", mFile.Source, err)
-				}
-				if isSkeleton {
-					p.cfg.Pkg.Components[index].Files[fileIdx].Source = rel
-				}
-			}
-
-			// Abort packaging on invalid shasum (if one is specified).
-			if mFile.Shasum != "" {
-				if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != mFile.Shasum {
-					return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", mFile.Source, mFile.Shasum, actualShasum)
-				}
-			}
-
-			if mFile.Executable || utils.IsDir(dst) {
-				_ = os.Chmod(dst, 0700)
-			} else {
-				_ = os.Chmod(dst, 0600)
-			}
-		}
+	if isSkeleton {
+		fp.PackSkeletonFiles()
+	} else {
+		fp.PackFiles()
 	}
 
 	if len(component.DataInjections) > 0 {
@@ -467,7 +400,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 
 			rel := filepath.Join(types.DataInjectionsFolder, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
-			dst := filepath.Join(componentPath.Base, rel)
+			dst := filepath.Join(componentPaths.Base, rel)
 
 			if helpers.IsURL(data.Source) {
 				if isSkeleton {
@@ -504,7 +437,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		for manifestIdx, manifest := range component.Manifests {
 			for fileIdx, path := range manifest.Files {
 				rel := filepath.Join(types.ManifestsFolder, fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
-				dst := filepath.Join(componentPath.Base, rel)
+				dst := filepath.Join(componentPaths.Base, rel)
 
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", path)
@@ -531,7 +464,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
 				rel := filepath.Join(types.ManifestsFolder, kname)
-				dst := filepath.Join(componentPath.Base, rel)
+				dst := filepath.Join(componentPaths.Base, rel)
 
 				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return fmt.Errorf("unable to build kustomization %s: %w", path, err)
@@ -556,7 +489,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
 			gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
-			if err := gitCfg.Pull(url, componentPath.Repos, false); err != nil {
+			if err := gitCfg.Pull(url, componentPaths.Repos, false); err != nil {
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}

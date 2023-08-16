@@ -5,14 +5,9 @@
 package packager
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
-	"reflect"
-	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -217,7 +212,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 // Deploy a Zarf Component.
 func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
 	// Toggles for general deploy operations
-	componentPath, err := p.createOrGetComponentPaths(component)
+	componentPaths, err := p.createOrGetComponentPaths(component)
 	if err != nil {
 		return charts, fmt.Errorf("unable to create the component paths: %w", err)
 	}
@@ -237,7 +232,12 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
-	if err := p.processComponentFiles(component, componentPath.Files); err != nil {
+	fp := FilePacker{
+		component:      &component,
+		componentPaths: componentPaths,
+		valueTemplate:  p.valueTemplate,
+	}
+	if err := fp.ProcessFiles(); err != nil {
 		return charts, fmt.Errorf("unable to process the component files: %w", err)
 	}
 
@@ -272,7 +272,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	}
 
 	if hasRepos {
-		if err = p.pushReposToRepository(componentPath.Repos, component.Repos); err != nil {
+		if err = p.pushReposToRepository(componentPaths.Repos, component.Repos); err != nil {
 			return charts, fmt.Errorf("unable to push the repos to the repository: %w", err)
 		}
 	}
@@ -280,11 +280,11 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	if hasDataInjections {
 		waitGroup := sync.WaitGroup{}
 		defer waitGroup.Wait()
-		p.performDataInjections(&waitGroup, componentPath, component.DataInjections)
+		p.performDataInjections(&waitGroup, componentPaths, component.DataInjections)
 	}
 
 	if hasCharts || hasManifests {
-		if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
+		if charts, err = p.installChartAndManifests(componentPaths, component); err != nil {
 			return charts, fmt.Errorf("unable to install helm chart(s): %w", err)
 		}
 	}
@@ -294,111 +294,6 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	}
 
 	return charts, nil
-}
-
-// Move files onto the host of the machine performing the deployment.
-func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocation string) error {
-	// If there are no files to process, return early.
-	if len(component.Files) < 1 {
-		return nil
-	}
-
-	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
-	defer spinner.Stop()
-
-	for fileIdx, file := range component.Files {
-		spinner.Updatef("Loading %s", file.Target)
-
-		var fileLocation string
-		if file.Matrix != nil {
-			tag := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
-			matrixValue := reflect.ValueOf(*file.Matrix)
-			for fieldIdx := 0; fieldIdx < matrixValue.NumField(); fieldIdx++ {
-				if tag == helpers.GetJSONTagName(matrixValue, fieldIdx) {
-					prefix := fmt.Sprintf("%d-%s", fileIdx, tag)
-					if options, ok := matrixValue.Field(fieldIdx).Interface().(*types.ZarfFileOptions); ok && options != nil {
-						target := file.Target
-						if options.Target != "" {
-							target = options.Target
-						}
-						fileLocation = filepath.Join(pkgLocation, prefix, filepath.Base(target))
-						break
-					}
-				}
-			}
-			if fileLocation == "" {
-				return fmt.Errorf("the %q operating system on the %q platform is not supported by this package", runtime.GOOS, runtime.GOARCH)
-			}
-		} else {
-			fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
-			if utils.InvalidPath(fileLocation) {
-				fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
-			}
-		}
-		// If a shasum is specified check it again on deployment as well
-		if file.Shasum != "" {
-			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if shasum, _ := utils.GetCryptoHashFromFile(fileLocation, crypto.SHA256); shasum != file.Shasum {
-				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
-			}
-		}
-
-		// Replace temp target directory and home directory
-		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
-		file.Target = config.GetAbsHomePath(file.Target)
-
-		fileList := []string{}
-		if utils.IsDir(fileLocation) {
-			files, _ := utils.RecursiveFileList(fileLocation, nil, false)
-			fileList = append(fileList, files...)
-		} else {
-			fileList = append(fileList, fileLocation)
-		}
-
-		for _, subFile := range fileList {
-			// Check if the file looks like a text file
-			isText, err := utils.IsTextFile(subFile)
-			if err != nil {
-				message.Debugf("unable to determine if file %s is a text file: %s", subFile, err)
-			}
-
-			// If the file is a text file, template it
-			if isText {
-				spinner.Updatef("Templating %s", file.Target)
-				if err := p.valueTemplate.Apply(component, subFile, true); err != nil {
-					return fmt.Errorf("unable to template file %s: %w", subFile, err)
-				}
-			}
-		}
-
-		// Copy the file to the destination
-		spinner.Updatef("Saving %s", file.Target)
-		err := utils.CreatePathAndCopy(fileLocation, file.Target)
-		if err != nil {
-			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
-		}
-
-		// Loop over all symlinks and create them
-		for _, link := range file.Symlinks {
-			spinner.Updatef("Adding symlink %s->%s", link, file.Target)
-			// Try to remove the filepath if it exists
-			_ = os.RemoveAll(link)
-			// Make sure the parent directory exists
-			_ = utils.CreateFilePath(link)
-			// Create the symlink
-			err := os.Symlink(file.Target, link)
-			if err != nil {
-				return fmt.Errorf("unable to create symlink %s->%s: %w", link, file.Target, err)
-			}
-		}
-
-		// Cleanup now to reduce disk pressure
-		_ = os.RemoveAll(fileLocation)
-	}
-
-	spinner.Success()
-
-	return nil
 }
 
 // Fetch the current ZarfState from the k8s cluster and generate a p.valueTemplate from the state values.

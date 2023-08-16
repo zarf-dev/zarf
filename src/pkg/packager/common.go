@@ -178,6 +178,7 @@ func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (pat
 	}
 
 	paths = types.ComponentPaths{
+		Package:        p.tmp.Base,
 		Base:           base,
 		Temp:           filepath.Join(base, types.TempFolder),
 		Files:          filepath.Join(base, types.FilesFolder),

@@ -120,6 +120,7 @@ type ComponentSBOM struct {
 
 // ComponentPaths is a struct that represents all of the subdirectories for a Zarf component.
 type ComponentPaths struct {
+	Package        string
 	Base           string
 	Temp           string
 	Files          string
