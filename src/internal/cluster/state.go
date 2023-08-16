@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -41,7 +42,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 	defer spinner.Stop()
 
 	spinner.Updatef("Getting cluster architecture")
-	if clusterArch, err = c.Kube.GetArchitecture(); err != nil {
+	if clusterArch, err = c.GetArchitecture(); err != nil {
 		spinner.Errorf(err, "Unable to validate the cluster system architecture")
 	}
 
@@ -50,8 +51,9 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
 	state, _ := c.LoadZarfState()
 
-	// If the distro isn't populated in the state, assume this is a new cluster.
-	if state.Distro == "" {
+	// If state is nil, this is a new cluster.
+	if state == nil {
+		state = &types.ZarfState{}
 		spinner.Updatef("New cluster, no prior Zarf deployments found")
 
 		// If the K3s component is being deployed, skip distro detection.
@@ -60,7 +62,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 			state.ZarfAppliance = true
 		} else {
 			// Otherwise, trying to detect the K8s distro type.
-			distro, err = c.Kube.DetectDistro()
+			distro, err = c.DetectDistro()
 			if err != nil {
 				// This is a basic failure right now but likely could be polished to provide user guidance to resolve.
 				return fmt.Errorf("unable to connect to the cluster to verify the distro: %w", err)
@@ -79,7 +81,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
 
-		namespaces, err := c.Kube.GetNamespaces()
+		namespaces, err := c.GetNamespaces()
 		if err != nil {
 			return fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
 		}
@@ -92,7 +94,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 			}
 			// This label will tell the Zarf Agent to ignore this namespace.
 			namespace.Labels[agentLabel] = "ignore"
-			if _, err = c.Kube.UpdateNamespace(&namespace); err != nil {
+			if _, err = c.UpdateNamespace(&namespace); err != nil {
 				// This is not a hard failure, but we should log it.
 				message.WarnErrorf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
 			}
@@ -100,16 +102,33 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
-		zarfNamespace := c.Kube.NewZarfManagedNamespace(ZarfNamespaceName)
-		if _, err := c.Kube.CreateNamespace(zarfNamespace); err != nil {
+		zarfNamespace := c.NewZarfManagedNamespace(ZarfNamespaceName)
+		if _, err := c.CreateNamespace(zarfNamespace); err != nil {
 			return fmt.Errorf("unable to create the zarf namespace: %w", err)
 		}
 
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
-		if _, err := c.Kube.WaitForServiceAccount(ZarfNamespaceName, "default", 2*time.Minute); err != nil {
+		if _, err := c.WaitForServiceAccount(ZarfNamespaceName, "default", 2*time.Minute); err != nil {
 			return fmt.Errorf("unable get default Zarf service account: %w", err)
+		}
+
+		state.GitServer = c.fillInEmptyGitServerValues(initOptions.GitServer)
+		state.RegistryInfo = c.fillInEmptyContainerRegistryValues(initOptions.RegistryInfo)
+		state.ArtifactServer = c.fillInEmptyArtifactServerValues(initOptions.ArtifactServer)
+	} else {
+		if helpers.IsNotZeroAndNotEqual(initOptions.GitServer, state.GitServer) {
+			message.Warn("Detected a change in Git Server init options on a re-init. Ignoring... To update run:")
+			message.ZarfCommand("tools update-creds git")
+		}
+		if helpers.IsNotZeroAndNotEqual(initOptions.RegistryInfo, state.RegistryInfo) {
+			message.Warn("Detected a change in Image Registry init options on a re-init. Ignoring... To update run:")
+			message.ZarfCommand("tools update-creds registry")
+		}
+		if helpers.IsNotZeroAndNotEqual(initOptions.ArtifactServer, state.ArtifactServer) {
+			message.Warn("Detected a change in Artifact Server init options on a re-init. Ignoring... To update run:")
+			message.ZarfCommand("tools update-creds artifact")
 		}
 	}
 
@@ -132,10 +151,6 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 		state.StorageClass = initOptions.StorageClass
 	}
 
-	state.GitServer = c.fillInEmptyGitServerValues(initOptions.GitServer)
-	state.RegistryInfo = c.fillInEmptyContainerRegistryValues(initOptions.RegistryInfo)
-	state.ArtifactServer = c.fillInEmptyArtifactServerValues(initOptions.ArtifactServer)
-
 	spinner.Success()
 
 	// Save the state back to K8s
@@ -147,60 +162,65 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 }
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
-func (c *Cluster) LoadZarfState() (types.ZarfState, error) {
-	message.Debug("k8s.LoadZarfState()")
-
-	// The empty state that we will try to fill.
-	state := types.ZarfState{}
-
+func (c *Cluster) LoadZarfState() (state *types.ZarfState, err error) {
 	// Set up the API connection
-	secret, err := c.Kube.GetSecret(ZarfNamespaceName, ZarfStateSecretName)
+	secret, err := c.GetSecret(ZarfNamespaceName, ZarfStateSecretName)
 	if err != nil {
-		return state, err
+		return nil, err
 	}
 
-	_ = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
+	err = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
+	if err != nil {
+		return nil, err
+	}
 
-	message.Debugf("ZarfState = %s", message.JSONValue(c.sanitizeZarfState(state)))
+	c.debugPrintZarfState(state)
 
 	return state, nil
 }
 
-func (c *Cluster) sanitizeZarfState(state types.ZarfState) types.ZarfState {
-	sanitizedState := state
-
+func (c *Cluster) sanitizeZarfState(state *types.ZarfState) *types.ZarfState {
 	// Overwrite the AgentTLS information
-	sanitizedState.AgentTLS.CA = []byte("**sanitized**")
-	sanitizedState.AgentTLS.Cert = []byte("**sanitized**")
-	sanitizedState.AgentTLS.Key = []byte("**sanitized**")
+	state.AgentTLS.CA = []byte("**sanitized**")
+	state.AgentTLS.Cert = []byte("**sanitized**")
+	state.AgentTLS.Key = []byte("**sanitized**")
 
 	// Overwrite the GitServer passwords
-	sanitizedState.GitServer.PushPassword = "**sanitized**"
-	sanitizedState.GitServer.PullPassword = "**sanitized**"
+	state.GitServer.PushPassword = "**sanitized**"
+	state.GitServer.PullPassword = "**sanitized**"
 
 	// Overwrite the RegistryInfo passwords
-	sanitizedState.RegistryInfo.PushPassword = "**sanitized**"
-	sanitizedState.RegistryInfo.PullPassword = "**sanitized**"
-	sanitizedState.RegistryInfo.Secret = "**sanitized**"
+	state.RegistryInfo.PushPassword = "**sanitized**"
+	state.RegistryInfo.PullPassword = "**sanitized**"
+	state.RegistryInfo.Secret = "**sanitized**"
 
 	// Overwrite the ArtifactServer secret
-	sanitizedState.ArtifactServer.PushToken = "**sanitized**"
+	state.ArtifactServer.PushToken = "**sanitized**"
 
 	// Overwrite the Logging secret
-	sanitizedState.LoggingSecret = "**sanitized**"
+	state.LoggingSecret = "**sanitized**"
 
-	return sanitizedState
+	return state
+}
+
+func (c *Cluster) debugPrintZarfState(state *types.ZarfState) {
+	if state == nil {
+		return
+	}
+	// this is a shallow copy, nested pointers WILL NOT be copied
+	oldState := *state
+	sanitized := c.sanitizeZarfState(&oldState)
+	message.Debugf("ZarfState - %s", message.JSONValue(sanitized))
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
-func (c *Cluster) SaveZarfState(state types.ZarfState) error {
-	message.Debugf("k8s.SaveZarfState()")
-	message.Debug(message.JSONValue(c.sanitizeZarfState(state)))
+func (c *Cluster) SaveZarfState(state *types.ZarfState) error {
+	c.debugPrintZarfState(state)
 
 	// Convert the data back to JSON.
-	data, err := json.Marshal(state)
+	data, err := json.Marshal(&state)
 	if err != nil {
-		return fmt.Errorf("unable to json-encode the zarf state")
+		return err
 	}
 
 	// Set up the data wrapper.
@@ -225,11 +245,69 @@ func (c *Cluster) SaveZarfState(state types.ZarfState) error {
 	}
 
 	// Attempt to create or update the secret and return.
-	if _, err := c.Kube.CreateOrUpdateSecret(secret); err != nil {
+	if _, err := c.CreateOrUpdateSecret(secret); err != nil {
 		return fmt.Errorf("unable to create the zarf state secret")
 	}
 
 	return nil
+}
+
+// MergeZarfState merges init options for provided services into the provided state to create a new state struct
+func (c *Cluster) MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions, services []string) *types.ZarfState {
+	newState := *oldState
+
+	if helpers.SliceContains(services, message.RegistryKey) {
+		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, initOptions.RegistryInfo)
+		// Set the state of the internal registry if it has changed
+		if newState.RegistryInfo.Address == fmt.Sprintf("%s:%d", config.IPV4Localhost, newState.RegistryInfo.NodePort) {
+			newState.RegistryInfo.InternalRegistry = true
+		} else {
+			newState.RegistryInfo.InternalRegistry = false
+		}
+
+		// Set the new passwords if they should be autogenerated
+		if newState.RegistryInfo.PushPassword == oldState.RegistryInfo.PushPassword && oldState.RegistryInfo.InternalRegistry {
+			newState.RegistryInfo.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+		}
+		if newState.RegistryInfo.PullPassword == oldState.RegistryInfo.PullPassword && oldState.RegistryInfo.InternalRegistry {
+			newState.RegistryInfo.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+		}
+	}
+	if helpers.SliceContains(services, message.GitKey) {
+		newState.GitServer = helpers.MergeNonZero(newState.GitServer, initOptions.GitServer)
+
+		// Set the state of the internal git server if it has changed
+		if newState.GitServer.Address == config.ZarfInClusterGitServiceURL {
+			newState.GitServer.InternalServer = true
+		} else {
+			newState.GitServer.InternalServer = false
+		}
+
+		// Set the new passwords if they should be autogenerated
+		if newState.GitServer.PushPassword == oldState.GitServer.PushPassword && oldState.GitServer.InternalServer {
+			newState.GitServer.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+		}
+		if newState.GitServer.PullPassword == oldState.GitServer.PullPassword && oldState.GitServer.InternalServer {
+			newState.GitServer.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
+		}
+	}
+	if helpers.SliceContains(services, message.ArtifactKey) {
+		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, initOptions.ArtifactServer)
+
+		// Set the state of the internal artifact server if it has changed
+		if newState.ArtifactServer.Address == config.ZarfInClusterArtifactServiceURL {
+			newState.ArtifactServer.InternalServer = true
+		} else {
+			newState.ArtifactServer.InternalServer = false
+		}
+
+		// Set an empty token if it should be autogenerated
+		if newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && oldState.ArtifactServer.InternalServer {
+			newState.ArtifactServer.PushToken = ""
+		}
+	}
+
+	return &newState
 }
 
 func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {

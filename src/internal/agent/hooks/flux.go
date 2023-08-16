@@ -29,7 +29,7 @@ type GenericGitRepo struct {
 	Spec struct {
 		URL       string    `json:"url"`
 		SecretRef SecretRef `json:"secretRef,omitempty"`
-	}
+	} `json:"spec"`
 }
 
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
@@ -45,7 +45,7 @@ func NewGitRepositoryMutationHook() operations.Hook {
 func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	var (
-		zarfState types.ZarfState
+		zarfState *types.ZarfState
 		patches   []operations.PatchOperation
 		isPatched bool
 

@@ -19,7 +19,7 @@ import (
 func Summary(w http.ResponseWriter, _ *http.Request) {
 	message.Debug("cluster.Summary()")
 
-	var state types.ZarfState
+	var state *types.ZarfState
 	var reachable bool
 	var distro string
 	var hasZarf bool
@@ -30,10 +30,10 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 
 	reachable = err == nil
 	if reachable {
-		distro, _ = c.Kube.DetectDistro()
+		distro, _ = c.DetectDistro()
 		state, _ = c.LoadZarfState()
-		hasZarf = state.Distro != ""
-		k8sRevision, _ = c.Kube.GetServerVersion()
+		hasZarf = state != nil
+		k8sRevision, _ = c.GetServerVersion()
 	}
 
 	data := types.ClusterSummary{

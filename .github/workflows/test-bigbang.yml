@@ -9,8 +9,6 @@ on:
       - "**.svg"
       - "adr/**"
       - "docs/**"
-      - "package.json"
-      - "package-lock.json"
       - "CODEOWNERS"
 
 permissions:
@@ -37,8 +35,8 @@ jobs:
       - name: Build Zarf binary
         uses: ./.github/actions/packages
         with:
-          init-package: 'false'
-          build-examples: 'false'
+          init-package: "false"
+          build-examples: "false"
 
       - name: Login to Iron Bank
         uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0

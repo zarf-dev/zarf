@@ -22,8 +22,6 @@ import (
 
 // New creates a new K8s client.
 func New(logger Log, defaultLabels Labels) (*K8s, error) {
-	logger("k8s.NewK8sClient()")
-
 	klog.SetLogger(funcr.New(func(prefix, args string) {
 		logger(args)
 	}, funcr.Options{}))

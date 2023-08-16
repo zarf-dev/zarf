@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -26,22 +27,23 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, []error) {
 	var deployedPackages = []types.DeployedPackage{}
 	var errorList []error
 	// Get the secrets that describe the deployed packages
-	secrets, err := c.Kube.GetSecretsWithLabel(ZarfNamespaceName, ZarfPackageInfoLabel)
+	secrets, err := c.GetSecretsWithLabel(ZarfNamespaceName, ZarfPackageInfoLabel)
 	if err != nil {
 		return deployedPackages, append(errorList, err)
 	}
 
 	// Process the k8s secret into our internal structs
 	for _, secret := range secrets.Items {
-		var deployedPackage types.DeployedPackage
-		err := json.Unmarshal(secret.Data["data"], &deployedPackage)
-		// add the error to the error list
-		if err != nil {
-			errorList = append(errorList, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
-		} else {
-			deployedPackages = append(deployedPackages, deployedPackage)
+		if strings.HasPrefix(secret.Name, config.ZarfPackagePrefix) {
+			var deployedPackage types.DeployedPackage
+			err := json.Unmarshal(secret.Data["data"], &deployedPackage)
+			// add the error to the error list
+			if err != nil {
+				errorList = append(errorList, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
+			} else {
+				deployedPackages = append(deployedPackages, deployedPackage)
+			}
 		}
-
 	}
 
 	// TODO: If we move this function out of `internal` we should return a more standard singular error.
@@ -52,7 +54,7 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, []error) {
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
 func (c *Cluster) GetDeployedPackage(packageName string) (deployedPackage types.DeployedPackage, err error) {
 	// Get the secret that describes the deployed init package
-	secret, err := c.Kube.GetSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName)
+	secret, err := c.GetSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName)
 	if err != nil {
 		return deployedPackage, err
 	}
@@ -74,27 +76,25 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 		LabelSelector: config.ZarfManagedByLabel + "=zarf",
 	}
 
-	if namespaces, err := c.Kube.GetNamespaces(); err != nil {
+	if namespaces, err := c.GetNamespaces(); err != nil {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
 	} else {
 		for _, namespace := range namespaces.Items {
 			if _, ok := namespace.Labels[agentLabel]; ok {
 				spinner.Updatef("Removing Zarf Agent label for namespace %s", namespace.Name)
 				delete(namespace.Labels, agentLabel)
-				if _, err = c.Kube.UpdateNamespace(&namespace); err != nil {
+				if _, err = c.UpdateNamespace(&namespace); err != nil {
 					// This is not a hard failure, but we should log it
 					spinner.Errorf(err, "Unable to update the namespace labels for %s", namespace.Name)
 				}
 			}
 
-			for _, namespace := range namespaces.Items {
-				spinner.Updatef("Removing Zarf secrets for namespace %s", namespace.Name)
-				err := c.Kube.Clientset.CoreV1().
-					Secrets(namespace.Name).
-					DeleteCollection(context.TODO(), deleteOptions, listOptions)
-				if err != nil {
-					spinner.Errorf(err, "Unable to delete secrets from namespace %s", namespace.Name)
-				}
+			spinner.Updatef("Removing Zarf secrets for namespace %s", namespace.Name)
+			err := c.Clientset.CoreV1().
+				Secrets(namespace.Name).
+				DeleteCollection(context.TODO(), deleteOptions, listOptions)
+			if err != nil {
+				spinner.Errorf(err, "Unable to delete secrets from namespace %s", namespace.Name)
 			}
 		}
 	}
@@ -105,7 +105,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 // PackageSecretNeedsWait checks if the the package status or any of the component statuses are being mutated by a webhook and need to be waited on.
 func (c *Cluster) PackageSecretNeedsWait(secretName string) (bool, int, error) {
 	// Get the secret that describes the deployed package
-	packageSecret, err := c.Kube.GetSecret(ZarfNamespaceName, secretName)
+	packageSecret, err := c.GetSecret(ZarfNamespaceName, secretName)
 	if err != nil {
 		return false, 0, err
 	}
@@ -183,7 +183,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 
 	// Generate a secret that describes the package that is being deployed
 	secretName := config.ZarfPackagePrefix + packageName
-	deployedPackageSecret := c.Kube.GenerateSecret(ZarfNamespaceName, secretName, corev1.SecretTypeOpaque)
+	deployedPackageSecret := c.GenerateSecret(ZarfNamespaceName, secretName, corev1.SecretTypeOpaque)
 	deployedPackageSecret.Labels[ZarfPackageInfoLabel] = packageName
 
 	// Attempt to load information about webhooks for the package
@@ -209,12 +209,12 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 	// Update the package secret
 	deployedPackageSecret.Data = map[string][]byte{"data": stateData}
 
-	return c.Kube.CreateOrUpdateSecret(deployedPackageSecret)
+	return c.CreateOrUpdateSecret(deployedPackageSecret)
 }
 
 // EnableRegHPAScaleDown enables the HPA scale down for the Zarf Registry.
 func (c *Cluster) EnableRegHPAScaleDown() error {
-	hpa, err := c.Kube.GetHPA(ZarfNamespaceName, "zarf-docker-registry")
+	hpa, err := c.GetHPA(ZarfNamespaceName, "zarf-docker-registry")
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func (c *Cluster) EnableRegHPAScaleDown() error {
 	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
 
 	// Save the HPA changes.
-	if _, err = c.Kube.UpdateHPA(hpa); err != nil {
+	if _, err = c.UpdateHPA(hpa); err != nil {
 		return err
 	}
 
@@ -233,7 +233,7 @@ func (c *Cluster) EnableRegHPAScaleDown() error {
 
 // DisableRegHPAScaleDown disables the HPA scale down for the Zarf Registry.
 func (c *Cluster) DisableRegHPAScaleDown() error {
-	hpa, err := c.Kube.GetHPA(ZarfNamespaceName, "zarf-docker-registry")
+	hpa, err := c.GetHPA(ZarfNamespaceName, "zarf-docker-registry")
 	if err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func (c *Cluster) DisableRegHPAScaleDown() error {
 	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
 
 	// Save the HPA changes.
-	if _, err = c.Kube.UpdateHPA(hpa); err != nil {
+	if _, err = c.UpdateHPA(hpa); err != nil {
 		return err
 	}
 

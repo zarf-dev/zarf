@@ -4,9 +4,19 @@
 // Package types contains all the types used by Zarf.
 package types
 
+// ZarfPackageKind is an enum of the different kinds of Zarf packages.
+type ZarfPackageKind string
+
+const (
+	// ZarfInitConfig is the kind of Zarf package used during `zarf init`.
+	ZarfInitConfig ZarfPackageKind = "ZarfInitConfig"
+	// ZarfPackageConfig is the default kind of Zarf package, primarily used during `zarf package`.
+	ZarfPackageConfig ZarfPackageKind = "ZarfPackageConfig"
+)
+
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
-	Kind       string                `json:"kind" jsonschema:"description=The kind of Zarf package,enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
+	Kind       ZarfPackageKind       `json:"kind" jsonschema:"description=The kind of Zarf package,enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	Metadata   ZarfMetadata          `json:"metadata,omitempty" jsonschema:"description=Package metadata"`
 	Build      ZarfBuildData         `json:"build,omitempty" jsonschema:"description=Zarf-generated package build data"`
 	Components []ZarfComponent       `json:"components" jsonschema:"description=List of components to deploy in this package"`
@@ -38,9 +48,9 @@ type ZarfBuildData struct {
 	Architecture           string            `json:"architecture" jsonschema:"description=The architecture this package was created on"`
 	Timestamp              string            `json:"timestamp" jsonschema:"description=The timestamp when this package was created"`
 	Version                string            `json:"version" jsonschema:"description=The version of Zarf used to build this package"`
-	Migrations             []string          `json:"migrations" jsonschema:"description=Any migrations that have been run on this package"`
-	Differential           bool              `json:"differential" jsonschema:"description=Whether this package was created with differential components"`
-	RegistryOverrides      map[string]string `json:"registryOverrides" jsonschema:"description=Any registry domains that were overridden on package create when pulling images"`
+	Migrations             []string          `json:"migrations,omitempty" jsonschema:"description=Any migrations that have been run on this package"`
+	Differential           bool              `json:"differential,omitempty" jsonschema:"description=Whether this package was created with differential components"`
+	RegistryOverrides      map[string]string `json:"registryOverrides,omitempty" jsonschema:"description=Any registry domains that were overridden on package create when pulling images"`
 	DifferentialMissing    []string          `json:"differentialMissing,omitempty" jsonschema:"description=List of components that were not included in this package due to differential packaging"`
 	OCIImportedComponents  map[string]string `json:"OCIImportedComponents,omitempty" jsonschema:"description=Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names"`
 	LastNonBreakingVersion string            `json:"lastNonBreakingVersion,omitempty" jsonschema:"description=The minimum version of Zarf that does not have breaking package structure changes"`

@@ -10,9 +10,11 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -198,6 +200,21 @@ func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (st
 	binaryPath, err := os.Executable()
 	if err != nil {
 		return cmd, err
+	}
+
+	// If zarf is used as a library, os.Executable() will return the path to the binary that called it.
+	//
+	// To verify this, we can check the build info to see if the main module path of the current executable
+	// matches Zarf's main module path.
+	//
+	// The likelyhood of this being a false positive are extremely low.
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return cmd, fmt.Errorf("could not read build info")
+	}
+	isZarf := bi.Main.Path == "github.com/"+config.GithubProject
+	if !isZarf {
+		binaryPath = "zarf"
 	}
 
 	// Try to patch the zarf binary path in case the name isn't exactly "./zarf".

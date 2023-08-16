@@ -1,4 +1,4 @@
-name: Test Zarf Upgrade
+name: Test Upgrade
 on:
   pull_request:
     paths-ignore:
@@ -9,8 +9,6 @@ on:
       - "**.svg"
       - "adr/**"
       - "docs/**"
-      - "package.json"
-      - "package-lock.json"
       - "CODEOWNERS"
 
 permissions:
@@ -37,7 +35,7 @@ jobs:
       - name: Build PR binary and zarf init package
         uses: ./.github/actions/packages
         with:
-          build-examples: 'false'
+          build-examples: "false"
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
@@ -75,9 +73,8 @@ jobs:
       - name: Initialize the cluster with the release version
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
-        # chown the logs since they were originally created as root
         run: |
-          sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server,logging --confirm
+          sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server,logging --nodeport 31337 --confirm
 
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
@@ -86,17 +83,15 @@ jobs:
       - name: Create and deploy the upgrade test packages
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
-        # chown the logs since they were originally created as root
         run: |
           zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.3 --confirm
           sudo env "PATH=$PATH" CI=true zarf package deploy zarf-package-test-upgrade-package-amd64-6.3.3.tar.zst --confirm
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe deployments -n=podinfo-upgrade
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
 
-      - name: "Run the PR's tests"
+      - name: Run tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
         #       in a previous step. This test run will use this PR's Zarf to create a K3s cluster.
-        # chown the logs since they were originally created as root
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true APPLIANCE_MODE_KEEP=true make test-e2e ARCH=amd64
 
@@ -114,7 +109,6 @@ jobs:
       - name: Run the upgrade tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
-        # chown the logs since they were originally created as root
         run: |
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe nodes
 

@@ -14,7 +14,7 @@ type RestAPI struct {
 	ZarfState                     ZarfState                     `json:"zarfState"`
 	ZarfCommonOptions             ZarfCommonOptions             `json:"zarfCommonOptions"`
 	ZarfCreateOptions             ZarfCreateOptions             `json:"zarfCreateOptions"`
-	ZarfDeployOptions             ZarfDeployOptions             `json:"zarfDeployOptions"`
+	ZarfPackageOptions            ZarfPackageOptions            `json:"zarfPackageOptions"`
 	ZarfInitOptions               ZarfInitOptions               `json:"zarfInitOptions"`
 	ConnectStrings                ConnectStrings                `json:"connectStrings"`
 	ClusterSummary                ClusterSummary                `json:"clusterSummary"`
@@ -32,7 +32,7 @@ type ClusterSummary struct {
 	Reachable   bool        `json:"reachable"`
 	HasZarf     bool        `json:"hasZarf"`
 	Distro      string      `json:"distro"`
-	ZarfState   ZarfState   `json:"zarfState"`
+	ZarfState   *ZarfState  `json:"zarfState"`
 	K8sRevision string      `json:"k8sRevision"`
 	RawConfig   *api.Config `json:"rawConfig"`
 }
@@ -45,8 +45,8 @@ type APIZarfPackage struct {
 
 // APIZarfDeployPayload represents the needed data to deploy a ZarfPackage/ZarfInit
 type APIZarfDeployPayload struct {
-	DeployOpts ZarfDeployOptions `json:"deployOpts"`
-	InitOpts   *ZarfInitOptions  `json:"initOpts,omitempty"`
+	PackageOpts ZarfPackageOptions `json:"packageOpts"`
+	InitOpts    *ZarfInitOptions   `json:"initOpts,omitempty"`
 }
 
 // APIPackageSBOM represents the SBOM viewer files for a package

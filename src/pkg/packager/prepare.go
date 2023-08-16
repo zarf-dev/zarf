@@ -123,7 +123,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 					Cfg:   p.cfg,
 				}
 
-				helmCfg.Cfg.State = types.ZarfState{}
+				helmCfg.Cfg.State = &types.ZarfState{}
 
 				err := helmCfg.PackageChart(componentPath.Charts)
 				if err != nil {
@@ -133,7 +133,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				for idx, path := range chart.ValuesFiles {
 					dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
 					if helpers.IsURL(path) {
-						if err := utils.DownloadToFile(path, dst, component.CosignKeyPath); err != nil {
+						if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
 							return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
 						}
 					} else {
@@ -199,7 +199,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 					if helpers.IsURL(f) {
 						mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
 						destination := filepath.Join(componentPath.Manifests, mname)
-						if err := utils.DownloadToFile(f, destination, component.CosignKeyPath); err != nil {
+						if err := utils.DownloadToFile(f, destination, component.DeprecatedCosignKeyPath); err != nil {
 							return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 						}
 						f = destination

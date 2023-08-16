@@ -12,7 +12,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -23,8 +22,6 @@ import (
 
 // composeComponents builds the composed components list for the current config.
 func (p *Packager) composeComponents() error {
-	message.Debugf("packager.ComposeComponents()")
-
 	components := []types.ZarfComponent{}
 
 	for _, component := range p.cfg.Pkg.Components {
@@ -55,8 +52,6 @@ func (p *Packager) composeComponents() error {
 // this follows the composite design pattern outlined here: https://en.wikipedia.org/wiki/Composite_pattern
 // where 1 component parent is made up of 0...n composite or leaf children.
 func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (child types.ZarfComponent, err error) {
-	message.Debugf("packager.GetComposedComponent(%+v)", parentComponent)
-
 	// Make sure the component we're trying to import can't be accessed.
 	if err := validate.ImportPackage(&parentComponent); err != nil {
 		return child, fmt.Errorf("invalid import definition in the %s component: %w", parentComponent.Name, err)
@@ -79,8 +74,6 @@ func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (ch
 }
 
 func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry string) (child types.ZarfComponent, err error) {
-	message.Debugf("packager.getChildComponent(%+v, %s)", parent, pathAncestry)
-
 	// Figure out which component we are actually importing.
 	// NOTE: Default to the component name if a custom one was not provided.
 	childComponentName := parent.Import.ComponentName
@@ -214,8 +207,6 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 }
 
 func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfComponent) (types.ZarfComponent, error) {
-	message.Debugf("packager.fixComposedFilepaths(%+v, %+v)", pathAncestry, child)
-
 	for fileIdx, file := range child.Files {
 		composed := p.getComposedFilePath(pathAncestry, file.Source)
 		child.Files[fileIdx].Source = composed
@@ -275,9 +266,9 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 		child.Actions.OnCreate.Defaults.Dir = composedDefaultDir
 	}
 
-	if child.CosignKeyPath != "" {
-		composed := p.getComposedFilePath(pathAncestry, child.CosignKeyPath)
-		child.CosignKeyPath = composed
+	if child.DeprecatedCosignKeyPath != "" {
+		composed := p.getComposedFilePath(pathAncestry, child.DeprecatedCosignKeyPath)
+		child.DeprecatedCosignKeyPath = composed
 	}
 
 	child = p.composeExtensions(pathAncestry, child)
@@ -298,8 +289,6 @@ func (p *Packager) fixComposedActionFilepaths(pathAncestry string, actions []typ
 
 // Sets Name, Default, Required and Description to the original components values.
 func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
-	message.Debugf("packager.mergeComponentOverrides(%+v, %+v)", target, override)
-
 	target.Name = override.Name
 	target.Default = override.Default
 	target.Required = override.Required
@@ -311,8 +300,8 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	}
 
 	// Override cosign key path if it was provided.
-	if override.CosignKeyPath != "" {
-		target.CosignKeyPath = override.CosignKeyPath
+	if override.DeprecatedCosignKeyPath != "" {
+		target.DeprecatedCosignKeyPath = override.DeprecatedCosignKeyPath
 	}
 
 	// Append slices where they exist.
@@ -373,8 +362,6 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 
 // Reads the locally imported zarf.yaml.
 func (p *Packager) getSubPackage(packagePath string, checkSumPaths []string) (importedPackage types.ZarfPackage, err error) {
-	message.Debugf("packager.getSubPackage(%s)", packagePath)
-
 	path := filepath.Join(packagePath, config.ZarfYAML)
 	if err := utils.ReadYaml(path, &importedPackage); err != nil {
 		return importedPackage, err
@@ -399,8 +386,6 @@ func (p *Packager) getSubPackage(packagePath string, checkSumPaths []string) (im
 
 // Prefix file path with importPath if original file path is not a url.
 func (p *Packager) getComposedFilePath(prefix string, path string) string {
-	message.Debugf("packager.getComposedFilePath(%s, %s)", prefix, path)
-
 	// Return original if it is a remote file.
 	if helpers.IsURL(path) {
 		return path

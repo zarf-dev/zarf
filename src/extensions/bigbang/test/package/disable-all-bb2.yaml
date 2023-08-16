@@ -53,6 +53,9 @@ monitoring:
 twistlock:
   enabled: false
 
+grafana:
+  enabled: false
+
 addons:
   metricsServer:
     enabled: false
