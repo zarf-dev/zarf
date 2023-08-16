@@ -9,6 +9,3 @@ mounts:
   # Convert README.md files to be usable by Hugo
   - source: "../examples"
     target: "../docs-hugo/docs"
-
-  # - source: "../CONTRIBUTING.md"
-  #   target: "../docs/contributing"
