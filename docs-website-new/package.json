@@ -22,12 +22,12 @@
   },
   "devDependencies": {
     "@defenseunicorns/hugodocs": "github:defenseunicorns/build-hugo-docs",
-    "autoprefixer": "^10.4.14",
+    "autoprefixer": "^10.4.15",
     "hugo-extended": "0.117.0",
     "linkinator": "^5.0.1",
     "markdownlint-cli": "0.35.0",
     "postcss-cli": "^10.1.0",
-    "prettier": "^3.0.1",
+    "prettier": "^3.0.2",
     "prettier-plugin-go-template": "^0.0.15"
   }
 }
