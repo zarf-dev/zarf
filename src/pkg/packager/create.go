@@ -123,7 +123,7 @@ func (p *Packager) Create(baseDir string) error {
 	for idx, component := range p.cfg.Pkg.Components {
 		onCreate := component.Actions.OnCreate
 		onFailure := func() {
-			if err := actions.RunActions(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
+			if err := actions.Run(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -139,7 +139,7 @@ func (p *Packager) Create(baseDir string) error {
 			return fmt.Errorf("unable to create component SBOM: %w", err)
 		}
 
-		if err := actions.RunActions(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
+		if err := actions.Run(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -295,12 +295,7 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 	}
 
 	for fileIdx, file := range component.Files {
-		f := files.FileCfg{
-			File:           &file,
-			FilePrefix:     strconv.Itoa(fileIdx),
-			Component:      &component,
-			ComponentPaths: componentPaths,
-		}
+		f := files.New(&file, strconv.Itoa(fileIdx), &component, componentPaths)
 
 		for _, path := range f.GetSBOMPaths() {
 			appendSBOMFiles(path)
@@ -335,7 +330,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 	onCreate := component.Actions.OnCreate
 	if !isSkeleton {
-		if err := actions.RunActions(onCreate.Defaults, onCreate.Before, nil); err != nil {
+		if err := actions.Run(onCreate.Defaults, onCreate.Before, nil); err != nil {
 			return fmt.Errorf("unable to run component before action: %w", err)
 		}
 	}
@@ -343,11 +338,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
 
-		helmCfg := helm.HelmCfg{
-			Chart:           chart,
-			PackageMetadata: p.cfg.Pkg.Metadata,
-			State:           p.cfg.State,
-		}
+		helmCfg := helm.New(&chart, "")
 
 		if isSkeleton && chart.URL == "" {
 			rel := filepath.Join(types.ChartsFolder, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
@@ -367,7 +358,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		}
 
 		for valuesIdx, path := range chart.ValuesFiles {
-			rel := fmt.Sprintf("%s-%d", helm.StandardName(types.ValuesFolder, chart), valuesIdx)
+			rel := fmt.Sprintf("%s-%d", helm.StandardName(types.ValuesFolder, &chart), valuesIdx)
 			dst := filepath.Join(componentPaths.Base, rel)
 
 			if helpers.IsURL(path) {
@@ -389,12 +380,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	}
 
 	for fileIdx, file := range component.Files {
-		f := files.FileCfg{
-			File:           &file,
-			FilePrefix:     strconv.Itoa(fileIdx),
-			Component:      &component,
-			ComponentPaths: componentPaths,
-		}
+		f := files.New(&file, strconv.Itoa(fileIdx), &component, componentPaths)
 
 		if isSkeleton {
 			f.PackSkeletonFile()
@@ -508,7 +494,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	}
 
 	if !isSkeleton {
-		if err := actions.RunActions(onCreate.Defaults, onCreate.After, nil); err != nil {
+		if err := actions.Run(onCreate.Defaults, onCreate.After, nil); err != nil {
 			return fmt.Errorf("unable to run component after action: %w", err)
 		}
 	}

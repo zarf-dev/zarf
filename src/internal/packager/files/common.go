@@ -24,29 +24,43 @@ import (
 
 // FileCfg is a config object for packing and processing Zarf files.
 type FileCfg struct {
-	File           *types.ZarfFile
-	FilePrefix     string
-	Component      *types.ZarfComponent
-	ComponentPaths types.ComponentPaths
-	ValueTemplate  *variables.Values
+	file           *types.ZarfFile
+	filePrefix     string
+	component      *types.ZarfComponent
+	componentPaths types.ComponentPaths
+	valueTemplate  *variables.Values
+}
+
+func New(file *types.ZarfFile, filePrefix string, component *types.ZarfComponent, componentPaths types.ComponentPaths) *FileCfg {
+	return &FileCfg{
+		file:           file,
+		filePrefix:     filePrefix,
+		component:      component,
+		componentPaths: componentPaths,
+	}
+}
+
+func (f *FileCfg) WithValues(valueTemplate *variables.Values) *FileCfg {
+	f.valueTemplate = valueTemplate
+	return f
 }
 
 // PackFile packs all component files into a package
 func (f *FileCfg) PackFile() error {
-	message.Debugf("Loading file from %q", f.File.Source)
+	message.Debugf("Loading file from %q", f.file.Source)
 
 	matrixFiles := f.getMatrixFileMap()
 
 	for _, mf := range matrixFiles {
 		dst, _ := mf.getFilePath()
 
-		if helpers.IsURL(mf.File.Source) {
-			if err := utils.DownloadToFile(mf.File.Source, dst, f.Component.DeprecatedCosignKeyPath); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, mf.File.Source, err.Error())
+		if helpers.IsURL(mf.file.Source) {
+			if err := utils.DownloadToFile(mf.file.Source, dst, f.component.DeprecatedCosignKeyPath); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, mf.file.Source, err.Error())
 			}
 		} else {
-			if err := utils.CreatePathAndCopy(mf.File.Source, dst); err != nil {
-				return fmt.Errorf("unable to copy file %s: %w", mf.File.Source, err)
+			if err := utils.CreatePathAndCopy(mf.file.Source, dst); err != nil {
+				return fmt.Errorf("unable to copy file %s: %w", mf.file.Source, err)
 			}
 		}
 
@@ -60,18 +74,18 @@ func (f *FileCfg) PackFile() error {
 
 // PackSkeletonFile packs all applicable component files into a skeleton package
 func (f *FileCfg) PackSkeletonFile() error {
-	message.Debugf("Loading file from %q", f.File.Source)
+	message.Debugf("Loading file from %q", f.file.Source)
 
 	matrixFiles := f.getMatrixFileMap()
 
 	for _, mf := range matrixFiles {
 		dst, rel := mf.getFilePath()
 
-		if !helpers.IsURL(mf.File.Source) {
-			if err := utils.CreatePathAndCopy(mf.File.Source, dst); err != nil {
-				return fmt.Errorf("unable to copy file %s: %w", mf.File.Source, err)
+		if !helpers.IsURL(mf.file.Source) {
+			if err := utils.CreatePathAndCopy(mf.file.Source, dst); err != nil {
+				return fmt.Errorf("unable to copy file %s: %w", mf.file.Source, err)
 			}
-			f.File.Source = rel
+			f.file.Source = rel
 			if err := mf.finalizeFile(); err != nil {
 				return err
 			}
@@ -99,12 +113,12 @@ func (f *FileCfg) GetSBOMPaths() []string {
 func (f *FileCfg) ProcessFile() error {
 	// spinner.Updatef("Loading %s", file.Target)
 
-	if f.File.Matrix != nil {
-		prefix := fmt.Sprintf("%s-%s-%s", f.FilePrefix, runtime.GOOS, runtime.GOARCH)
+	if f.file.Matrix != nil {
+		prefix := fmt.Sprintf("%s-%s-%s", f.filePrefix, runtime.GOOS, runtime.GOARCH)
 
 		matrixFiles := f.getMatrixFileMap()
 		if mFile, ok := matrixFiles[prefix]; ok {
-			f.File = mFile.File
+			f.file = mFile.file
 		} else {
 			return fmt.Errorf("the %q operating system on the %q platform is not supported by this package", runtime.GOOS, runtime.GOARCH)
 		}
@@ -112,20 +126,20 @@ func (f *FileCfg) ProcessFile() error {
 
 	filePkgPath, _ := f.getFilePath()
 	if utils.InvalidPath(filePkgPath) {
-		filePkgPath = filepath.Join(f.ComponentPaths.Files, f.FilePrefix)
+		filePkgPath = filepath.Join(f.componentPaths.Files, f.filePrefix)
 	}
 
 	// If a shasum is specified check it again on deployment as well
-	if f.File.Shasum != "" {
+	if f.file.Shasum != "" {
 		// spinner.Updatef("Validating SHASUM for %s", file.Target)
-		if shasum, _ := utils.GetCryptoHashFromFile(filePkgPath, crypto.SHA256); shasum != f.File.Shasum {
-			return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", f.File.Source, f.File.Shasum, shasum)
+		if shasum, _ := utils.GetCryptoHashFromFile(filePkgPath, crypto.SHA256); shasum != f.file.Shasum {
+			return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", f.file.Source, f.file.Shasum, shasum)
 		}
 	}
 
 	// Replace temp target directory and home directory
-	f.File.Target = strings.Replace(f.File.Target, "###ZARF_TEMP###", f.ComponentPaths.Package, 1)
-	f.File.Target = config.GetAbsHomePath(f.File.Target)
+	f.file.Target = strings.Replace(f.file.Target, "###ZARF_TEMP###", f.componentPaths.Package, 1)
+	f.file.Target = config.GetAbsHomePath(f.file.Target)
 
 	fileList := []string{}
 	if utils.IsDir(filePkgPath) {
@@ -145,7 +159,7 @@ func (f *FileCfg) ProcessFile() error {
 		// If the file is a text file, template it
 		if isText {
 			// spinner.Updatef("Templating %s", file.Target)
-			if err := f.ValueTemplate.Apply(*f.Component, subFile); err != nil {
+			if err := f.valueTemplate.Apply(*f.component, subFile); err != nil {
 				return fmt.Errorf("unable to template file %s: %w", subFile, err)
 			}
 		}
@@ -153,22 +167,22 @@ func (f *FileCfg) ProcessFile() error {
 
 	// Copy the file to the destination
 	// spinner.Updatef("Saving %s", file.Target)
-	err := utils.CreatePathAndCopy(filePkgPath, f.File.Target)
+	err := utils.CreatePathAndCopy(filePkgPath, f.file.Target)
 	if err != nil {
-		return fmt.Errorf("unable to copy file %s to %s: %w", filePkgPath, f.File.Target, err)
+		return fmt.Errorf("unable to copy file %s to %s: %w", filePkgPath, f.file.Target, err)
 	}
 
 	// Loop over all symlinks and create them
-	for _, link := range f.File.Symlinks {
+	for _, link := range f.file.Symlinks {
 		// spinner.Updatef("Adding symlink %s->%s", link, file.Target)
 		// Try to remove the filepath if it exists
 		_ = os.RemoveAll(link)
 		// Make sure the parent directory exists
 		_ = utils.CreateFilePath(link)
 		// Create the symlink
-		err := os.Symlink(f.File.Target, link)
+		err := os.Symlink(f.file.Target, link)
 		if err != nil {
-			return fmt.Errorf("unable to create symlink %s->%s: %w", link, f.File.Target, err)
+			return fmt.Errorf("unable to create symlink %s->%s: %w", link, f.file.Target, err)
 		}
 	}
 
@@ -182,12 +196,12 @@ func (f *FileCfg) ProcessFile() error {
 
 func (f *FileCfg) getMatrixFileMap() map[string]*FileCfg {
 	matrixFiles := make(map[string]*FileCfg)
-	if f.File.Matrix != nil {
-		matrixValue := reflect.ValueOf(*f.File.Matrix)
+	if f.file.Matrix != nil {
+		matrixValue := reflect.ValueOf(*f.file.Matrix)
 		for fieldIdx := 0; fieldIdx < matrixValue.NumField(); fieldIdx++ {
-			prefix := fmt.Sprintf("%s-%s", f.FilePrefix, helpers.GetJSONTagName(matrixValue, fieldIdx))
+			prefix := fmt.Sprintf("%s-%s", f.filePrefix, helpers.GetJSONTagName(matrixValue, fieldIdx))
 			if options, ok := matrixValue.Field(fieldIdx).Interface().(*types.ZarfFileOptions); ok && options != nil {
-				r := *f.File
+				r := *f.file
 				if options.Shasum != "" {
 					r.Shasum = options.Shasum
 				}
@@ -201,26 +215,20 @@ func (f *FileCfg) getMatrixFileMap() map[string]*FileCfg {
 					r.Symlinks = options.Symlinks
 				}
 
-				mFileCfg := FileCfg{
-					File:           &r,
-					FilePrefix:     prefix,
-					ComponentPaths: f.ComponentPaths,
-					ValueTemplate:  f.ValueTemplate,
-				}
-
-				matrixFiles[prefix] = &mFileCfg
+				mFileCfg := New(&r, prefix, f.component, f.componentPaths).WithValues(f.valueTemplate)
+				matrixFiles[prefix] = mFileCfg
 			}
 		}
 	} else {
-		matrixFiles[f.FilePrefix] = f
+		matrixFiles[f.filePrefix] = f
 	}
 
 	return matrixFiles
 }
 
 func (f *FileCfg) getFilePath() (string, string) {
-	rel := filepath.Join(types.FilesFolder, f.FilePrefix, filepath.Base(f.File.Target))
-	dst := filepath.Join(f.ComponentPaths.Base, rel)
+	rel := filepath.Join(types.FilesFolder, f.filePrefix, filepath.Base(f.file.Target))
+	dst := filepath.Join(f.componentPaths.Base, rel)
 	return dst, rel
 }
 
@@ -228,13 +236,13 @@ func (f *FileCfg) finalizeFile() error {
 	dst, _ := f.getFilePath()
 
 	// Abort packaging on invalid shasum (if one is specified).
-	if f.File.Shasum != "" {
-		if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != f.File.Shasum {
-			return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", f.File.Source, f.File.Shasum, actualShasum)
+	if f.file.Shasum != "" {
+		if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != f.file.Shasum {
+			return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", f.file.Source, f.file.Shasum, actualShasum)
 		}
 	}
 
-	if f.File.Executable || utils.IsDir(dst) {
+	if f.file.Executable || utils.IsDir(dst) {
 		_ = os.Chmod(dst, 0700)
 	} else {
 		_ = os.Chmod(dst, 0600)

@@ -23,7 +23,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func RunActions(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *variables.Values) error {
+// Run runs all of the actions within the provided action set
+func Run(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *variables.Values) error {
 	for _, a := range actions {
 		if err := runAction(defaultCfg, a, valueTemplate); err != nil {
 			return err
@@ -32,7 +33,7 @@ func RunActions(defaultCfg types.ZarfComponentActionDefaults, actions []types.Za
 	return nil
 }
 
-// Run commands that a component has provided.
+// runAction runs a single action that a component has provided.
 func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *variables.Values) error {
 	var (
 		ctx        context.Context

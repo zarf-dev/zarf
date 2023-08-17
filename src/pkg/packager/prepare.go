@@ -110,19 +110,15 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 			return nil, fmt.Errorf("unable to create component paths: %s", err.Error())
 		}
 
-		chartOverrides := make(map[string]string)
-
 		if len(component.Charts) > 0 {
 			_ = utils.CreateDirectory(componentPaths.Charts, 0700)
 			_ = utils.CreateDirectory(componentPaths.Values, 0700)
 
 			for _, chart := range component.Charts {
 
-				helmCfg := helm.HelmCfg{
-					Chart:           chart,
-					PackageMetadata: p.cfg.Pkg.Metadata,
-					State:           &types.ZarfState{},
-				}
+				helmCfg := helm.New(
+					&chart, kubeVersionOverride,
+				)
 
 				err := helmCfg.PackageChart(componentPaths.Charts)
 				if err != nil {
@@ -130,7 +126,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				}
 
 				for idx, path := range chart.ValuesFiles {
-					dst := helm.StandardName(componentPaths.Values, chart) + "-" + strconv.Itoa(idx)
+					dst := helm.StandardName(componentPaths.Values, &chart) + "-" + strconv.Itoa(idx)
 					if helpers.IsURL(path) {
 						if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
 							return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
@@ -143,12 +139,6 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				}
 
 				// Generate helm templates to pass to gitops engine
-				helmCfg = helm.HelmCfg{
-					ComponentPaths:    componentPaths,
-					Chart:             chart,
-					ChartLoadOverride: chartOverrides[chart.Name],
-					KubeVersion:       kubeVersionOverride,
-				}
 				template, values, err := helmCfg.TemplateChart()
 
 				if err != nil {
@@ -160,12 +150,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				yamls, _ := utils.SplitYAML([]byte(template))
 				resources = append(resources, yamls...)
 
-				var chartTarball string
-				if overridePath, ok := chartOverrides[chart.Name]; ok {
-					chartTarball = overridePath
-				} else {
-					chartTarball = helm.StandardName(componentPaths.Charts, helmCfg.Chart) + ".tgz"
-				}
+				chartTarball := helm.StandardName(componentPaths.Charts, &chart) + ".tgz"
 
 				annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 				if err != nil {

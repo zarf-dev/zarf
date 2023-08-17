@@ -37,33 +37,33 @@ const defaultHelmAttempts = 3
 
 // InstallOrUpgradeChart performs a helm install or upgrade of the given chart.
 func (h *HelmCfg) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
-	fromMessage := h.Chart.URL
+	fromMessage := h.chart.URL
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
 	}
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s",
-		h.Chart.Name,
-		h.Chart.Version,
+		h.chart.Name,
+		h.chart.Version,
 		fromMessage)
 	defer spinner.Stop()
 
 	var output *release.Release
 
-	h.ReleaseName = h.Chart.ReleaseName
+	h.releaseName = h.chart.ReleaseName
 
 	// If no release name is specified, use the chart name.
-	if h.ReleaseName == "" {
-		h.ReleaseName = h.Chart.Name
+	if h.releaseName == "" {
+		h.releaseName = h.chart.Name
 	}
 
 	// Do not wait for the chart to be ready if data injections are present.
-	if len(h.Component.DataInjections) > 0 {
+	if len(h.component.DataInjections) > 0 {
 		spinner.Updatef("Data injections detected, not waiting for chart to be ready")
-		h.Chart.NoWait = true
+		h.chart.NoWait = true
 	}
 
 	// Setup K8s connection.
-	err := h.createActionConfig(h.Chart.Namespace, spinner)
+	err := h.createActionConfig(h.chart.Namespace, spinner)
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
@@ -79,7 +79,7 @@ func (h *HelmCfg) InstallOrUpgradeChart() (types.ConnectStrings, string, error) 
 
 		histClient := action.NewHistory(h.actionConfig)
 		histClient.Max = 1
-		releases, histErr := histClient.Run(h.ReleaseName)
+		releases, histErr := histClient.Run(h.releaseName)
 
 		if attempt > 3 {
 			previouslyDeployed := false
@@ -94,7 +94,7 @@ func (h *HelmCfg) InstallOrUpgradeChart() (types.ConnectStrings, string, error) 
 			// On total failure try to rollback or uninstall.
 			if previouslyDeployed {
 				spinner.Updatef("Performing chart rollback")
-				err = h.rollbackChart(h.ReleaseName)
+				err = h.rollbackChart(h.releaseName)
 				if err != nil {
 					return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts and unable to rollback: %w", defaultHelmAttempts, err)
 				}
@@ -103,7 +103,7 @@ func (h *HelmCfg) InstallOrUpgradeChart() (types.ConnectStrings, string, error) 
 			}
 
 			spinner.Updatef("Performing chart uninstall")
-			_, err = h.uninstallChart(h.ReleaseName)
+			_, err = h.uninstallChart(h.releaseName)
 			if err != nil {
 				return nil, "", fmt.Errorf("unable to install chart after %d attempts and unable to uninstall: %w", defaultHelmAttempts, err)
 			}
@@ -144,16 +144,16 @@ func (h *HelmCfg) InstallOrUpgradeChart() (types.ConnectStrings, string, error) 
 	}
 
 	// return any collected connect strings for zarf connect.
-	return postRender.connectStrings, h.ReleaseName, nil
+	return postRender.connectStrings, h.releaseName, nil
 }
 
 // TemplateChart generates a helm template from a given chart.
 func (h *HelmCfg) TemplateChart() (string, chartutil.Values, error) {
 	message.Debugf("helm.TemplateChart()")
-	spinner := message.NewProgressSpinner("Templating helm chart %s", h.Chart.Name)
+	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
 	defer spinner.Stop()
 
-	err := h.createActionConfig(h.Chart.Namespace, spinner)
+	err := h.createActionConfig(h.chart.Namespace, spinner)
 
 	// Setup K8s connection.
 	if err != nil {
@@ -170,22 +170,22 @@ func (h *HelmCfg) TemplateChart() (string, chartutil.Values, error) {
 	// TODO: Further research this with regular/OCI charts
 	client.Verify = false
 	client.InsecureSkipTLSverify = config.CommonOptions.Insecure
-	if h.KubeVersion != "" {
-		parsedKubeVersion, err := chartutil.ParseKubeVersion(h.KubeVersion)
+	if h.kubeVersionOverride != "" {
+		parsedKubeVersion, err := chartutil.ParseKubeVersion(h.kubeVersionOverride)
 		if err != nil {
-			return "", nil, fmt.Errorf("invalid kube version '%s': %s", h.KubeVersion, err)
+			return "", nil, fmt.Errorf("invalid kube version '%s': %s", h.kubeVersionOverride, err)
 		}
 		client.KubeVersion = parsedKubeVersion
 	}
-	client.ReleaseName = h.Chart.ReleaseName
+	client.ReleaseName = h.chart.ReleaseName
 
 	// If no release name is specified, use the chart name.
 	if client.ReleaseName == "" {
-		client.ReleaseName = h.Chart.Name
+		client.ReleaseName = h.chart.Name
 	}
 
 	// Namespace must be specified.
-	client.Namespace = h.Chart.Namespace
+	client.Namespace = h.chart.Namespace
 
 	loadedChart, chartValues, err := h.loadChartData()
 	if err != nil {
@@ -220,7 +220,7 @@ func (h *HelmCfg) GenerateChart(manifest types.ZarfManifest) error {
 	tmpChart.Metadata = new(chart.Metadata)
 
 	// Generate a hashed chart name.
-	rawChartName := fmt.Sprintf("raw-%s-%s-%s", h.PackageMetadata.Name, h.Component.Name, manifest.Name)
+	rawChartName := fmt.Sprintf("raw-%s-%s-%s", h.pkgMetadata.Name, h.component.Name, manifest.Name)
 	hasher := sha1.New()
 	hasher.Write([]byte(rawChartName))
 	tmpChart.Metadata.Name = rawChartName
@@ -233,7 +233,7 @@ func (h *HelmCfg) GenerateChart(manifest types.ZarfManifest) error {
 	// Add the manifest files so helm does its thing.
 	for _, file := range manifest.Files {
 		spinner.Updatef("Processing %s", file)
-		manifest := path.Join(h.ComponentPaths.Manifests, file)
+		manifest := path.Join(h.componentPaths.Manifests, file)
 		data, err := os.ReadFile(manifest)
 		if err != nil {
 			return fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
@@ -247,7 +247,7 @@ func (h *HelmCfg) GenerateChart(manifest types.ZarfManifest) error {
 	}
 
 	// Generate the struct to pass to InstallOrUpgradeChart().
-	h.Chart = types.ZarfChart{
+	h.chart = &types.ZarfChart{
 		Name: tmpChart.Metadata.Name,
 		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
 		ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
@@ -255,10 +255,10 @@ func (h *HelmCfg) GenerateChart(manifest types.ZarfManifest) error {
 		Namespace:   manifest.Namespace,
 		NoWait:      manifest.NoWait,
 	}
-	h.ChartOverride = tmpChart
+	h.chartOverride = tmpChart
 
 	// We don't have any values because we do not expose them in the zarf.yaml currently.
-	h.ValueOverride = map[string]any{}
+	h.valueOverride = map[string]any{}
 
 	spinner.Success()
 
@@ -278,10 +278,10 @@ func (h *HelmCfg) RemoveChart(namespace string, name string, spinner *message.Sp
 // UpdateReleaseValues updates values for a given chart release
 // (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
 func (h *HelmCfg) UpdateReleaseValues(updatedValues map[string]interface{}) error {
-	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.ReleaseName)
+	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.releaseName)
 	defer spinner.Stop()
 
-	err := h.createActionConfig(h.Chart.Namespace, spinner)
+	err := h.createActionConfig(h.chart.Namespace, spinner)
 	if err != nil {
 		return fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
@@ -293,7 +293,7 @@ func (h *HelmCfg) UpdateReleaseValues(updatedValues map[string]interface{}) erro
 
 	histClient := action.NewHistory(h.actionConfig)
 	histClient.Max = 1
-	releases, histErr := histClient.Run(h.ReleaseName)
+	releases, histErr := histClient.Run(h.releaseName)
 	if histErr == nil && len(releases) > 0 {
 		lastRelease := releases[len(releases)-1]
 
@@ -306,7 +306,7 @@ func (h *HelmCfg) UpdateReleaseValues(updatedValues map[string]interface{}) erro
 		client.SkipCRDs = true
 
 		// Namespace must be specified.
-		client.Namespace = h.Chart.Namespace
+		client.Namespace = h.chart.Namespace
 
 		// Post-processing our manifests for reasons....
 		client.PostRenderer = postRender
@@ -318,7 +318,7 @@ func (h *HelmCfg) UpdateReleaseValues(updatedValues map[string]interface{}) erro
 		client.Wait = true
 
 		// Perform the loadedChart upgrade.
-		_, err = client.Run(h.ReleaseName, lastRelease.Chart, updatedValues)
+		_, err = client.Run(h.releaseName, lastRelease.Chart, updatedValues)
 		if err != nil {
 			return err
 		}
@@ -328,7 +328,7 @@ func (h *HelmCfg) UpdateReleaseValues(updatedValues map[string]interface{}) erro
 		return nil
 	}
 
-	return fmt.Errorf("unable to find the %s helm release", h.ReleaseName)
+	return fmt.Errorf("unable to find the %s helm release", h.releaseName)
 }
 
 func (h *HelmCfg) installChart(postRender *renderer) (*release.Release, error) {
@@ -339,16 +339,16 @@ func (h *HelmCfg) installChart(postRender *renderer) (*release.Release, error) {
 	client.Timeout = defaultClientTimeout
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection).
-	client.Wait = !h.Chart.NoWait
+	client.Wait = !h.chart.NoWait
 
 	// We need to include CRDs or operator installations will fail spectacularly.
 	client.SkipCRDs = false
 
 	// Must be unique per-namespace and < 53 characters. @todo: restrict helm loadedChart name to this.
-	client.ReleaseName = h.ReleaseName
+	client.ReleaseName = h.releaseName
 
 	// Namespace must be specified.
-	client.Namespace = h.Chart.Namespace
+	client.Namespace = h.chart.Namespace
 
 	// Post-processing our manifests for reasons....
 	client.PostRenderer = postRender
@@ -379,12 +379,12 @@ func (h *HelmCfg) upgradeChart(lastRelease *release.Release, postRender *rendere
 	client.Timeout = defaultClientTimeout
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection).
-	client.Wait = !h.Chart.NoWait
+	client.Wait = !h.chart.NoWait
 
 	client.SkipCRDs = true
 
 	// Namespace must be specified.
-	client.Namespace = h.Chart.Namespace
+	client.Namespace = h.chart.Namespace
 
 	// Post-processing our manifests for reasons....
 	client.PostRenderer = postRender
@@ -395,7 +395,7 @@ func (h *HelmCfg) upgradeChart(lastRelease *release.Release, postRender *rendere
 	}
 
 	// Perform the loadedChart upgrade.
-	return client.Run(h.ReleaseName, loadedChart, chartValues)
+	return client.Run(h.releaseName, loadedChart, chartValues)
 }
 
 func (h *HelmCfg) rollbackChart(name string) error {
@@ -425,7 +425,7 @@ func (h *HelmCfg) loadChartData() (*chart.Chart, chartutil.Values, error) {
 		err         error
 	)
 
-	if h.ChartOverride == nil || h.ValueOverride == nil {
+	if h.chartOverride == nil || h.valueOverride == nil {
 		// If there is no override, get the chart and values info.
 		loadedChart, err = h.loadChartFromTarball()
 		if err != nil {
@@ -438,8 +438,8 @@ func (h *HelmCfg) loadChartData() (*chart.Chart, chartutil.Values, error) {
 		}
 	} else {
 		// Otherwise, use the overrides instead.
-		loadedChart = h.ChartOverride
-		chartValues = h.ValueOverride
+		loadedChart = h.chartOverride
+		chartValues = h.valueOverride
 	}
 
 	return loadedChart, chartValues, nil
@@ -447,7 +447,7 @@ func (h *HelmCfg) loadChartData() (*chart.Chart, chartutil.Values, error) {
 
 func (h *HelmCfg) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 	// Get the Kubernetes version from the current cluster
-	kubeVersion, err := h.Cluster.GetServerVersion()
+	kubeVersion, err := h.cluster.GetServerVersion()
 	if err != nil {
 		return err
 	}
@@ -475,7 +475,7 @@ func (h *HelmCfg) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
 		}
 
-		rawData, manifestModified, _ := h.Cluster.HandleDeprecations(rawData, *kubeGitVersion)
+		rawData, manifestModified, _ := h.cluster.HandleDeprecations(rawData, *kubeGitVersion)
 		manifestContent, err := yaml.Marshal(rawData)
 		if err != nil {
 			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %#v", err)

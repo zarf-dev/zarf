@@ -40,9 +40,9 @@ var tenMins = metav1.Duration{
 
 // Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
-func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Run(YOLO bool, componentPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	var err error
-	if err := utils.CreateDirectory(tmpPaths.Temp, 0700); err != nil {
+	if err := utils.CreateDirectory(componentPaths.Temp, 0700); err != nil {
 		return c, fmt.Errorf("unable to component temp directory: %w", err)
 	}
 
@@ -70,7 +70,7 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 
 	// By default, we want to deploy flux.
 	if !cfg.SkipFlux {
-		fluxManifest, images, err := getFlux(tmpPaths.Temp, cfg)
+		fluxManifest, images, err := getFlux(componentPaths.Temp, cfg)
 		if err != nil {
 			return c, err
 		}
@@ -87,20 +87,19 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 	bbRepo := fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version)
 
 	// Configure helm to pull down the Big Bang chart.
-	helmCfg := helm.HelmCfg{
-		Chart: types.ZarfChart{
-			Name:        bb,
-			Namespace:   bb,
-			URL:         bbRepo,
-			Version:     cfg.Version,
-			ValuesFiles: cfg.ValuesFiles,
-			GitPath:     "./chart",
-		},
+	bbChart := types.ZarfChart{
+		Name:        bb,
+		Namespace:   bb,
+		URL:         bbRepo,
+		Version:     cfg.Version,
+		ValuesFiles: cfg.ValuesFiles,
+		GitPath:     "./chart",
 	}
 
+	helmCfg := helm.New(&bbChart, "")
+
 	// Download the chart from Git and save it to a temporary directory.
-	chartPath := path.Join(tmpPaths.Temp, bb)
-	helmCfg.ChartLoadOverride, err = helmCfg.PackageChartFromGit(chartPath)
+	chartTarball, err := helmCfg.PackageChartFromGit(componentPaths.Charts)
 	if err != nil {
 		return c, fmt.Errorf("unable to download Big Bang Chart: %w", err)
 	}
@@ -108,6 +107,12 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 	// Template the chart so we can see what GitRepositories are being referenced in the
 	// manifests created with the provided Helm.
 	template, _, err := helmCfg.TemplateChart()
+	if err != nil {
+		return c, fmt.Errorf("unable to template Big Bang Chart: %w", err)
+	}
+
+	// Cleanup the chart tarball once we receive the templates
+	err = os.Remove(chartTarball)
 	if err != nil {
 		return c, fmt.Errorf("unable to template Big Bang Chart: %w", err)
 	}
@@ -234,7 +239,7 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 	}
 
 	// Create the flux wrapper around Big Bang for deployment.
-	manifest, err := addBigBangManifests(YOLO, tmpPaths.Temp, cfg)
+	manifest, err := addBigBangManifests(YOLO, componentPaths.Temp, cfg)
 	if err != nil {
 		return c, err
 	}
@@ -497,9 +502,7 @@ func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []st
 		GitPath: "chart",
 	}
 
-	helmCfg := helm.HelmCfg{
-		Chart: chart,
-	}
+	helmCfg := helm.New(&chart, "")
 
 	gitPath, err := helmCfg.DownloadChartFromGitToTemp(spinner)
 	if err != nil {
@@ -508,7 +511,7 @@ func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []st
 	defer os.RemoveAll(gitPath)
 
 	// Set the directory for the chart
-	chartPath := filepath.Join(gitPath, helmCfg.Chart.GitPath)
+	chartPath := filepath.Join(gitPath, chart.GitPath)
 
 	images, err = helm.FindAnnotatedImagesForChart(chartPath, values)
 	if err != nil {

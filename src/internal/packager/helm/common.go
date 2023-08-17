@@ -17,25 +17,53 @@ import (
 
 // HelmCfg is a config object for working with helm charts.
 type HelmCfg struct {
-	ComponentPaths         types.ComponentPaths
-	Chart                  types.ZarfChart
-	ReleaseName            string
-	ChartLoadOverride      string
-	ChartOverride          *chart.Chart
-	ValueOverride          map[string]any
-	Component              types.ZarfComponent
-	PackageMetadata        types.ZarfMetadata
-	Cluster                *cluster.Cluster
-	State                  *types.ZarfState
-	KubeVersion            string
-	Settings               *cli.EnvSettings
-	AdoptExistingResources bool
-	ValueTemplate          *variables.Values
+	chart               *types.ZarfChart
+	kubeVersionOverride string
 
+	cluster *cluster.Cluster
+	state   *types.ZarfState
+
+	pkgMetadata            types.ZarfMetadata
+	component              types.ZarfComponent
+	componentPaths         types.ComponentPaths
+	valueTemplate          *variables.Values
+	adoptExistingResources bool
+
+	releaseName   string
+	chartOverride *chart.Chart
+	valueOverride map[string]any
+
+	settings     *cli.EnvSettings
 	actionConfig *action.Configuration
 }
 
+func New(chart *types.ZarfChart, kubeVersionOverride string) *HelmCfg {
+	return &HelmCfg{
+		chart:               chart,
+		kubeVersionOverride: kubeVersionOverride,
+	}
+}
+
+func (h *HelmCfg) WithCluster(cluster *cluster.Cluster, state *types.ZarfState) *HelmCfg {
+	h.cluster = cluster
+	h.state = state
+	return h
+}
+
+func (h *HelmCfg) WithComponent(pkgMetadata types.ZarfMetadata, component types.ZarfComponent, componentPaths types.ComponentPaths) *HelmCfg {
+	h.pkgMetadata = pkgMetadata
+	h.component = component
+	h.componentPaths = componentPaths
+	return h
+}
+
+func (h *HelmCfg) WithValues(valueTemplate *variables.Values, adoptExistingResources bool) *HelmCfg {
+	h.valueTemplate = valueTemplate
+	h.adoptExistingResources = adoptExistingResources
+	return h
+}
+
 // StandardName generates a predictable full path for a helm chart for Zarf.
-func StandardName(destination string, chart types.ZarfChart) string {
+func StandardName(destination string, chart *types.ZarfChart) string {
 	return filepath.Join(destination, chart.Name+"-"+chart.Version)
 }

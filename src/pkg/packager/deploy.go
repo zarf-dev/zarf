@@ -131,7 +131,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := actions.RunActions(onDeploy.Defaults, onDeploy.OnFailure, p.valueTemplate); err != nil {
+			if err := actions.Run(onDeploy.Defaults, onDeploy.OnFailure, p.valueTemplate); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -153,7 +153,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			}
 		}
 
-		if err := actions.RunActions(onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
+		if err := actions.Run(onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
 			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -231,7 +231,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	onDeploy := component.Actions.OnDeploy
 
-	if err = actions.RunActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
+	if err = actions.Run(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -243,15 +243,10 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	// spinner := message.NewProgressSpinner("Copying %d files", len(f.component.Files))
 	// defer spinner.Stop()
 
-	for idx, file := range component.Files {
-		fileCfg := files.FileCfg{
-			File:           &file,
-			FilePrefix:     strconv.Itoa(idx),
-			Component:      &component,
-			ComponentPaths: componentPaths,
-			ValueTemplate:  p.valueTemplate,
-		}
-		if err := fileCfg.ProcessFile(); err != nil {
+	for fileIdx, file := range component.Files {
+		f := files.New(&file, strconv.Itoa(fileIdx), &component, componentPaths).WithValues(p.valueTemplate)
+
+		if err := f.ProcessFile(); err != nil {
 			return charts, fmt.Errorf("unable to process the component files: %w", err)
 		}
 	}
@@ -304,7 +299,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = actions.RunActions(onDeploy.Defaults, onDeploy.After, p.valueTemplate); err != nil {
+	if err = actions.Run(onDeploy.Defaults, onDeploy.After, p.valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -432,22 +427,21 @@ func (p *Packager) installChartAndManifests(componentPaths types.ComponentPaths,
 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
-			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
+			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, &chart), idx)
 			if err := p.valueTemplate.Apply(component, chartValueName); err != nil {
 				return installedCharts, err
 			}
 		}
 
-		// Generate helm templates to pass to gitops engine
-		helmCfg := helm.HelmCfg{
-			ComponentPaths:         componentPaths,
-			Chart:                  chart,
-			Component:              component,
-			PackageMetadata:        p.cfg.Pkg.Metadata,
-			State:                  p.cfg.State,
-			Cluster:                p.cluster,
-			AdoptExistingResources: p.cfg.DeployOpts.AdoptExistingResources,
-		}
+		helmCfg := helm.New(
+			&chart, "",
+		).WithCluster(
+			p.cluster, p.cfg.State,
+		).WithComponent(
+			p.cfg.Pkg.Metadata, component, componentPaths,
+		).WithValues(
+			p.valueTemplate, p.cfg.DeployOpts.AdoptExistingResources,
+		)
 
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
 		if err != nil {
@@ -483,14 +477,15 @@ func (p *Packager) installChartAndManifests(componentPaths types.ComponentPaths,
 		}
 
 		// Iterate over any connectStrings and add to the main map
-		helmCfg := helm.HelmCfg{
-			ComponentPaths:         componentPaths,
-			Component:              component,
-			PackageMetadata:        p.cfg.Pkg.Metadata,
-			State:                  p.cfg.State,
-			Cluster:                p.cluster,
-			AdoptExistingResources: p.cfg.DeployOpts.AdoptExistingResources,
-		}
+		helmCfg := helm.New(
+			nil, "",
+		).WithCluster(
+			p.cluster, p.cfg.State,
+		).WithComponent(
+			p.cfg.Pkg.Metadata, component, componentPaths,
+		).WithValues(
+			p.valueTemplate, p.cfg.DeployOpts.AdoptExistingResources,
+		)
 
 		// Generate the chart.
 		if err := helmCfg.GenerateChart(manifest); err != nil {

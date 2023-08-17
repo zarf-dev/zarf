@@ -21,10 +21,7 @@ import (
 // loadChartFromTarball returns a helm chart from a tarball.
 func (h *HelmCfg) loadChartFromTarball() (*chart.Chart, error) {
 	// Get the path the temporary helm chart tarball
-	sourceFile := StandardName(h.ComponentPaths.Charts, h.Chart) + ".tgz"
-	if h.ChartLoadOverride != "" {
-		sourceFile = h.ChartLoadOverride
-	}
+	sourceFile := StandardName(h.componentPaths.Charts, h.chart) + ".tgz"
 
 	// Load the loadedChart tarball
 	loadedChart, err := loader.Load(sourceFile)
@@ -43,12 +40,8 @@ func (h *HelmCfg) loadChartFromTarball() (*chart.Chart, error) {
 func (h *HelmCfg) parseChartValues() (map[string]any, error) {
 	valueOpts := &values.Options{}
 
-	for idx, file := range h.Chart.ValuesFiles {
-		path := StandardName(h.ComponentPaths.Values, h.Chart) + "-" + strconv.Itoa(idx)
-		// If we are overriding the chart path, assuming this is for zarf prepare
-		if h.ChartLoadOverride != "" {
-			path = file
-		}
+	for idx := range h.chart.ValuesFiles {
+		path := StandardName(h.componentPaths.Values, h.chart) + "-" + strconv.Itoa(idx)
 		valueOpts.ValueFiles = append(valueOpts.ValueFiles, path)
 	}
 
@@ -65,13 +58,13 @@ func (h *HelmCfg) createActionConfig(namespace string, spinner *message.Spinner)
 	// Initialize helm SDK
 	actionConfig := new(action.Configuration)
 	// Set the setings for the helm SDK
-	h.Settings = cli.New()
+	h.settings = cli.New()
 
 	// Set the namespace for helm
-	h.Settings.SetNamespace(namespace)
+	h.settings.SetNamespace(namespace)
 
 	// Setup K8s connection
-	err := actionConfig.Init(h.Settings.RESTClientGetter(), namespace, "", spinner.Updatef)
+	err := actionConfig.Init(h.settings.RESTClientGetter(), namespace, "", spinner.Updatef)
 
 	// Set the actionConfig is the received Helm pointer
 	h.actionConfig = actionConfig
