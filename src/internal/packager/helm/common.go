@@ -37,6 +37,7 @@ type HelmCfg struct {
 	actionConfig *action.Configuration
 }
 
+// New creates a new Helm config to process a provided chart
 func New(chart *types.ZarfChart, kubeVersionOverride string) *HelmCfg {
 	return &HelmCfg{
 		chart:               chart,
@@ -44,12 +45,14 @@ func New(chart *types.ZarfChart, kubeVersionOverride string) *HelmCfg {
 	}
 }
 
+// WithCluster adds cluster and state information to the given helm config
 func (h *HelmCfg) WithCluster(cluster *cluster.Cluster, state *types.ZarfState) *HelmCfg {
 	h.cluster = cluster
 	h.state = state
 	return h
 }
 
+// WithComponent adds component information to the given helm config
 func (h *HelmCfg) WithComponent(pkgMetadata types.ZarfMetadata, component types.ZarfComponent, componentPaths types.ComponentPaths) *HelmCfg {
 	h.pkgMetadata = pkgMetadata
 	h.component = component
@@ -57,6 +60,7 @@ func (h *HelmCfg) WithComponent(pkgMetadata types.ZarfMetadata, component types.
 	return h
 }
 
+// WithValues adds runtime values to the given helm config
 func (h *HelmCfg) WithValues(valueTemplate *variables.Values, adoptExistingResources bool) *HelmCfg {
 	h.valueTemplate = valueTemplate
 	h.adoptExistingResources = adoptExistingResources

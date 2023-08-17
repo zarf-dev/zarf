@@ -29,7 +29,7 @@ func (g *GitCfg) DownloadRepoToTemp(gitURL string) (string, error) {
 		return "", fmt.Errorf("unable to pull the git repo at %s: %w", gitURL, err)
 	}
 
-	return tmpPath, nil
+	return g.gitPath, nil
 }
 
 // Pull clones or updates a git repository into the target folder.
