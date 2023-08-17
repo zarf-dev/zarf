@@ -64,8 +64,10 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 
 	// Run the template engine against the chart output
-	if _, err := r.valueTemplate.ProcessYamlFilesInPath(tmpDir, r.options.component); err != nil {
-		return nil, fmt.Errorf("error templating the helm chart: %w", err)
+	if r.valueTemplate != nil {
+		if _, err := r.valueTemplate.ProcessYamlFilesInPath(tmpDir, r.options.component); err != nil {
+			return nil, fmt.Errorf("error templating the helm chart: %w", err)
+		}
 	}
 
 	// Read back the templated file contents
