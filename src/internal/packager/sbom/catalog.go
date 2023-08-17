@@ -70,141 +70,55 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 	}
 	builder.jsonList = json
 
-	if len(imgList) > 0 {
-		// Generate SBOM for all images at once using goroutines
-		// Use the ConcurrencyTools part of the utils package to help with concurrency
-		imageSBOMConcurrency := utils.NewConcurrencyTools[string, message.ErrorWithMessage](len(imgList))
+	// Generate SBOM for each image
+	currImage := 1
+	for _, tag := range imgList {
+		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
-		// Make sure cancel is always called
-		defer imageSBOMConcurrency.Cancel()
-
-		// Call a goroutine for each image
-		for _, tag := range imgList {
-			currentTag := tag
-			go func() {
-				// Make sure to call Done() on the WaitGroup when the goroutine finishes
-				defer imageSBOMConcurrency.WaitGroup.Done()
-				// Get the image that we are creating an SBOM for
-				img, err := utils.LoadOCIImage(tmpPaths.Images, currentTag)
-				if err != nil {
-					imageSBOMConcurrency.ErrorChan <- message.ErrorWithMessage{Error: err, Message: "Unable to load the image to generate an SBOM"}
-					return
-				}
-
-				// If the context has been cancelled end the goroutine
-				if utils.ContextDone(imageSBOMConcurrency.Context) {
-					return
-				}
-
-				// Generate the SBOM JSON for the given image
-				jsonData, err := builder.createImageSBOM(img, currentTag)
-				if err != nil {
-					imageSBOMConcurrency.ErrorChan <- message.ErrorWithMessage{Error: err, Message: fmt.Sprintf("Unable to create SBOM for image %s", currentTag)}
-					return
-				}
-
-				// If the context has been cancelled end the goroutine
-				if utils.ContextDone(imageSBOMConcurrency.Context) {
-					return
-				}
-
-				// Create the SBOM viewer HTML for the given image
-				if err = builder.createSBOMViewerAsset(currentTag, jsonData); err != nil {
-					imageSBOMConcurrency.ErrorChan <- message.ErrorWithMessage{Error: err, Message: fmt.Sprintf("Unable to create SBOM viewer for image %s", currentTag)}
-					return
-				}
-
-				// If the context has been cancelled end the goroutine
-				if utils.ContextDone(imageSBOMConcurrency.Context) {
-					return
-				}
-
-				// Call the progress channel to let us know that the SBOM generation is done for this image
-				imageSBOMConcurrency.ProgressChan <- currentTag
-			}()
-		}
-
-		imageSBOMErrorFunc := func(erroredImage message.ErrorWithMessage) error {
-			builder.spinner.Errorf(erroredImage.Error, erroredImage.Message)
-			return erroredImage.Error
-		}
-
-		imageSBOMProgressFunc := func(tag string, i int) {
-			builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", i, len(imgList), tag)
-		}
-
-		err = utils.WaitForConcurrencyTools(imageSBOMConcurrency, imageSBOMProgressFunc, imageSBOMErrorFunc)
+		// Get the image that we are creating an SBOM for
+		img, err := utils.LoadOCIImage(tmpPaths.Images, tag)
 		if err != nil {
+			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err
 		}
+
+		jsonData, err := builder.createImageSBOM(img, tag)
+		if err != nil {
+			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", tag)
+			return err
+		}
+
+		if err = builder.createSBOMViewerAsset(tag, jsonData); err != nil {
+			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", tag)
+			return err
+		}
+
+		currImage++
 	}
 
-	// Generate SBOM for all components' files/dataInjections at once using goroutines
+	currComponent := 1
 
-	if len(componentSBOMs) > 0 {
-		builder.spinner.Updatef("Creating component file SBOMs (0 of %d)", len(componentSBOMs))
+	// Generate SBOM for each component
+	for component := range componentSBOMs {
+		builder.spinner.Updatef("Creating component file SBOMs (%d of %d): %s", currComponent, componentCount, component)
 
-		// Use the ConcurrencyTools part of the utils package to help with concurrency
-		fileSBOMConcurrency := utils.NewConcurrencyTools[string, message.ErrorWithMessage](len(componentSBOMs))
-
-		for component := range componentSBOMs {
-			currentComponent := component
-			go func() {
-				// Make sure to call Done() on the WaitGroup when the goroutine finishes
-				defer fileSBOMConcurrency.WaitGroup.Done()
-
-				// Check if component requires SBOM generation
-				if componentSBOMs[currentComponent] == nil {
-					message.Debugf("Component %s has invalid SBOM, skipping", currentComponent)
-					return
-				}
-
-				// If the context has been cancelled end the goroutine
-				if utils.ContextDone(fileSBOMConcurrency.Context) {
-					return
-				}
-
-				// Generate the SBOM JSON for the given component
-				jsonData, err := builder.createFileSBOM(*componentSBOMs[currentComponent], currentComponent)
-				if err != nil {
-					fileSBOMConcurrency.ErrorChan <- message.ErrorWithMessage{Error: err, Message: fmt.Sprintf("Unable to create SBOM for component %s", currentComponent)}
-					return
-				}
-
-				// If the context has been cancelled end the goroutine
-				if utils.ContextDone(fileSBOMConcurrency.Context) {
-					return
-				}
-
-				// Create the SBOM viewer HTML for the given component
-				if err = builder.createSBOMViewerAsset(fmt.Sprintf("%s%s", componentPrefix, currentComponent), jsonData); err != nil {
-					fileSBOMConcurrency.ErrorChan <- message.ErrorWithMessage{Error: err, Message: fmt.Sprintf("Unable to create SBOM viewer for component %s", currentComponent)}
-					return
-				}
-
-				// If the context has been cancelled end the goroutine
-				if utils.ContextDone(fileSBOMConcurrency.Context) {
-					return
-				}
-
-				// Call the progress channel to let us know that the SBOM generation is done for this component
-				fileSBOMConcurrency.ProgressChan <- currentComponent
-			}()
+		if componentSBOMs[component] == nil {
+			message.Debugf("Component %s has invalid SBOM, skipping", component)
+			continue
 		}
 
-		fileSBOMErrorFunc := func(erroredComponent message.ErrorWithMessage) error {
-			builder.spinner.Errorf(erroredComponent.Error, erroredComponent.Message)
-			return erroredComponent.Error
-		}
-
-		fileSBOMProgressFunc := func(component string, i int) {
-			builder.spinner.Updatef("Creating component file SBOMs (%d of %d): %s", i, len(componentSBOMs), component)
-		}
-
-		err = utils.WaitForConcurrencyTools(fileSBOMConcurrency, fileSBOMProgressFunc, fileSBOMErrorFunc)
+		jsonData, err := builder.createFileSBOM(*componentSBOMs[component], component)
 		if err != nil {
+			builder.spinner.Errorf(err, "Unable to create SBOM for component %s", component)
 			return err
 		}
+
+		if err = builder.createSBOMViewerAsset(fmt.Sprintf("%s%s", componentPrefix, component), jsonData); err != nil {
+			builder.spinner.Errorf(err, "Unable to create SBOM viewer for component %s", component)
+			return err
+		}
+
+		currComponent++
 	}
 
 	// Include the compare tool if there are any image SBOMs OR component SBOMs
