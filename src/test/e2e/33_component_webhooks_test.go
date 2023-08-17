@@ -15,7 +15,7 @@ func TestComponentWebhooks(t *testing.T) {
 	t.Log("E2E: Component Webhooks")
 	e2e.SetupWithCluster(t)
 
-	// Deploy example pepr capability
+	// Deploy example Pepr capability
 	webhookPath := fmt.Sprintf("build/zarf-package-component-webhooks-%s-0.0.1.tar.zst", e2e.Arch)
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", webhookPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -25,4 +25,8 @@ func TestComponentWebhooks(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", gamesPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Waiting for component webhooks to complete")
+
+	// Remove the Pepr webhook package.
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "component-webhooks", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }
