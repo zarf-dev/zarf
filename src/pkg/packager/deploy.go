@@ -114,7 +114,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	componentsToDeploy := p.getValidComponents()
 
 	// Generate a variables value template
-	if err = p.valueTemplate.SetState(p.cfg.State); err != nil {
+	if err = p.valueTemplate.WithState(p.cfg.State); err != nil {
 		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
 	}
 
@@ -260,7 +260,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 			}
 		}
 		// Setup the state in the config and get the valuesTemplate
-		p.valueTemplate, err = p.setupStateValuesTemplate(component)
+		err = p.setupStateValuesTemplate(component)
 		if err != nil {
 			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
 		}
@@ -307,7 +307,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 }
 
 // Fetch the current ZarfState from the k8s cluster and generate a p.valueTemplate from the state values.
-func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values *variables.Values, err error) {
+func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
@@ -315,7 +315,7 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 	state, err := p.cluster.LoadZarfState()
 	// Return on error if we are not in YOLO mode
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
-		return nil, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
+		return fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
 	} else if state == nil && p.cfg.Pkg.Metadata.YOLO {
 		state = &types.ZarfState{}
 		// YOLO mode, so minimal state needed
@@ -338,20 +338,20 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 	p.cfg.State = state
 
 	// Continue loading state data if it is valid
-	err = p.valueTemplate.SetState(p.cfg.State)
+	err = p.valueTemplate.WithState(p.cfg.State)
 	if err != nil {
-		return values, err
+		return err
 	}
 
 	// Only check the architecture if the package has images
 	if len(component.Images) > 0 && state.Architecture != p.arch {
 		// If the package has images but the architectures don't match, fail the deployment and warn the user to avoid ugly hidden errors with image push/pull
-		return values, fmt.Errorf("this package architecture is %s, but this cluster seems to be initialized with the %s architecture",
+		return fmt.Errorf("this package architecture is %s, but this cluster seems to be initialized with the %s architecture",
 			p.arch, state.Architecture)
 	}
 
 	spinner.Success()
-	return values, nil
+	return nil
 }
 
 // Push all of the components images to the configured container registry.

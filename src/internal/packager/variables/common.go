@@ -38,8 +38,8 @@ func New(pkg types.ZarfPackage, setVariables map[string]string) (*Values, error)
 	return values, nil
 }
 
-// SetState returns a Values struct with the values to be used in the template.
-func (values *Values) SetState(state *types.ZarfState) error {
+// WithState returns a Values struct with the values to be used in the template.
+func (values *Values) WithState(state *types.ZarfState) error {
 	if state == nil {
 		return nil
 	}
