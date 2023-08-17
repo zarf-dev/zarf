@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
-  name: pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b
-  description: 'Pepr Module: '
+  name: component-webhooks
+  description: Example Pepr Module for Component Webhooks
   url: https://github.com/defenseunicorns/pepr
   version: 0.0.1
 components:
