@@ -178,16 +178,16 @@ func (h *HelmCfg) DownloadPublishedChart(destination string) {
 // DownloadChartFromGitToTemp downloads a chart from git into a temp directory
 func (h *HelmCfg) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, error) {
 	// Create the Git configuration and download the repo
-	gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
+	gitCfg := git.New(types.GitServerInfo{}).WithSpinner(spinner)
 
 	// Download the git repo to a temporary directory
-	err := gitCfg.DownloadRepoToTemp(h.chart.URL)
+	tmpPath, err := gitCfg.DownloadRepoToTemp(h.chart.URL)
 	if err != nil {
 		spinner.Errorf(err, "Unable to download the git repo %s", h.chart.URL)
 		return "", err
 	}
 
-	return gitCfg.GitPath, nil
+	return tmpPath, nil
 }
 
 // buildChartDependencies builds the helm chart dependencies

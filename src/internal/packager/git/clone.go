@@ -21,7 +21,7 @@ import (
 func (g *GitCfg) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) error {
 	cloneOptions := &git.CloneOptions{
 		URL:        gitURL,
-		Progress:   g.Spinner,
+		Progress:   g.spinner,
 		RemoteName: onlineRemoteName,
 	}
 
@@ -44,7 +44,7 @@ func (g *GitCfg) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) 
 	}
 
 	// Clone the given repo.
-	repo, err := git.PlainClone(g.GitPath, false, cloneOptions)
+	repo, err := git.PlainClone(g.gitPath, false, cloneOptions)
 	if err != nil {
 		message.Warnf("Falling back to host 'git', failed to clone the repo with Zarf - %s: %s", gitURL, err.Error())
 		return g.gitCloneFallback(gitURL, ref, shallow)
@@ -54,7 +54,7 @@ func (g *GitCfg) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) 
 	if ref == emptyRef {
 		fetchOpts := &git.FetchOptions{
 			RemoteName: onlineRemoteName,
-			Progress:   g.Spinner,
+			Progress:   g.spinner,
 			RefSpecs:   []goConfig.RefSpec{"refs/*:refs/*"},
 			Tags:       git.AllTags,
 		}
@@ -75,7 +75,7 @@ func (g *GitCfg) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) 
 func (g *GitCfg) gitCloneFallback(gitURL string, ref plumbing.ReferenceName, shallow bool) error {
 	// If we can't clone with go-git, fallback to the host clone
 	// Only support "all tags" due to the azure clone url format including a username
-	cloneArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, g.GitPath}
+	cloneArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, g.gitPath}
 
 	// Don't clone all tags / refs if we're cloning a specific tag or branch.
 	if ref.IsTag() || ref.IsBranch() {
@@ -90,8 +90,8 @@ func (g *GitCfg) gitCloneFallback(gitURL string, ref plumbing.ReferenceName, sha
 	}
 
 	cloneExecConfig := exec.Config{
-		Stdout: g.Spinner,
-		Stderr: g.Spinner,
+		Stdout: g.spinner,
+		Stderr: g.spinner,
 	}
 
 	message.Command("git %s", strings.Join(cloneArgs, " "))
@@ -106,9 +106,9 @@ func (g *GitCfg) gitCloneFallback(gitURL string, ref plumbing.ReferenceName, sha
 		fetchArgs := []string{"fetch", "--tags", "--update-head-ok", onlineRemoteName, "refs/*:refs/*"}
 
 		fetchExecConfig := exec.Config{
-			Stdout: g.Spinner,
-			Stderr: g.Spinner,
-			Dir:    g.GitPath,
+			Stdout: g.spinner,
+			Stderr: g.spinner,
+			Dir:    g.gitPath,
 		}
 
 		message.Command("git %s", strings.Join(fetchArgs, " "))

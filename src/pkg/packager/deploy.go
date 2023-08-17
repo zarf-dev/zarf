@@ -260,7 +260,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 			}
 		}
 		// Setup the state in the config and get the valuesTemplate
-		err = p.setupStateValuesTemplate(component)
+		err = p.setupState(component)
 		if err != nil {
 			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
 		}
@@ -307,7 +307,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 }
 
 // Fetch the current ZarfState from the k8s cluster and generate a p.valueTemplate from the state values.
-func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (err error) {
+func (p *Packager) setupState(component types.ZarfComponent) (err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
@@ -379,8 +379,8 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 	for _, repoURL := range repos {
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
-			gitClient := git.New(p.cfg.State.GitServer)
-			svcInfo, err := cluster.ServiceInfoFromServiceURL(gitClient.Server.Address)
+			gitConnectionInfo := p.cfg.State.GitServer
+			svcInfo, err := cluster.ServiceInfoFromServiceURL(gitConnectionInfo.Address)
 
 			// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
 			if err == nil {
@@ -394,8 +394,10 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 					return err
 				}
 				defer tunnel.Close()
-				gitClient.Server.Address = tunnel.HTTPEndpoint()
+				gitConnectionInfo.Address = tunnel.HTTPEndpoint()
 			}
+
+			gitClient := git.New(gitConnectionInfo)
 
 			return gitClient.PushRepo(repoURL, reposPath)
 		}

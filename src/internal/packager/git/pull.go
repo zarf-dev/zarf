@@ -15,26 +15,26 @@ import (
 )
 
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
-func (g *GitCfg) DownloadRepoToTemp(gitURL string) error {
-	g.Spinner.Updatef("g.DownloadRepoToTemp(%s)", gitURL)
+func (g *GitCfg) DownloadRepoToTemp(gitURL string) (string, error) {
+	g.spinner.Updatef("g.DownloadRepoToTemp(%s)", gitURL)
 
-	path, err := utils.MakeTempDir()
+	tmpPath, err := utils.MakeTempDir()
 	if err != nil {
-		return fmt.Errorf("unable to create tmpdir: %w", err)
+		return "", fmt.Errorf("unable to create tmpdir: %w", err)
 	}
 
 	// If downloading to temp, set this as a shallow clone to only pull the exact
 	// gitURL w/ ref that was specified since we will throw away git history anyway
-	if err = g.Pull(gitURL, path, true); err != nil {
-		return fmt.Errorf("unable to pull the git repo at %s: %w", gitURL, err)
+	if err = g.Pull(gitURL, tmpPath, true); err != nil {
+		return "", fmt.Errorf("unable to pull the git repo at %s: %w", gitURL, err)
 	}
 
-	return nil
+	return tmpPath, nil
 }
 
 // Pull clones or updates a git repository into the target folder.
 func (g *GitCfg) Pull(gitURL, targetFolder string, shallow bool) error {
-	g.Spinner.Updatef("Processing git repo %s", gitURL)
+	g.spinner.Updatef("Processing git repo %s", gitURL)
 
 	// Split the remote url and the zarf reference
 	gitURLNoRef, refPlain, err := transform.GitURLSplitRef(gitURL)
@@ -55,7 +55,7 @@ func (g *GitCfg) Pull(gitURL, targetFolder string, shallow bool) error {
 		return err
 	}
 
-	g.GitPath = path.Join(targetFolder, repoFolder)
+	g.gitPath = path.Join(targetFolder, repoFolder)
 
 	// Clone the git repository.
 	err = g.clone(gitURLNoRef, ref, shallow)

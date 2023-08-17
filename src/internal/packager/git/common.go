@@ -16,11 +16,11 @@ import (
 // GitCfg is the main struct for managing git repositories.
 type GitCfg struct {
 	// Server is the git server configuration.
-	Server types.GitServerInfo
+	server types.GitServerInfo
 	// Spinner is an optional spinner to use for long running operations.
-	Spinner *message.Spinner
+	spinner *message.Spinner
 	// Target working directory for the git repository.
-	GitPath string
+	gitPath string
 }
 
 const onlineRemoteName = "online-upstream"
@@ -30,16 +30,14 @@ const emptyRef = ""
 // New creates a new git instance with the provided server config.
 func New(server types.GitServerInfo) *GitCfg {
 	return &GitCfg{
-		Server: server,
+		server: server,
 	}
 }
 
-// NewWithSpinner creates a new git instance with the provided server config and spinner.
-func NewWithSpinner(server types.GitServerInfo, spinner *message.Spinner) *GitCfg {
-	return &GitCfg{
-		Server:  server,
-		Spinner: spinner,
-	}
+// WithSpinner adds a spinner to the git config.
+func (g *GitCfg) WithSpinner(spinner *message.Spinner) *GitCfg {
+	g.spinner = spinner
+	return g
 }
 
 // ParseRef parses the provided ref into a ReferenceName if it's not a hash.

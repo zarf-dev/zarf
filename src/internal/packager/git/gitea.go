@@ -46,7 +46,7 @@ func (g *GitCfg) CreateReadOnlyUser() error {
 	// Determine if the read only user already exists
 	getUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users", tunnelURL)
 	getUserRequest, _ := netHttp.NewRequest("GET", getUserEndpoint, nil)
-	out, err := g.DoHTTPThings(getUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+	out, err := g.DoHTTPThings(getUserRequest, g.server.PushUsername, g.server.PushPassword)
 	message.Debugf("GET %s:\n%s", getUserEndpoint, string(out))
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (g *GitCfg) CreateReadOnlyUser() error {
 	}
 
 	for _, user := range users {
-		if user["login"] == g.Server.PullUsername {
+		if user["login"] == g.server.PullUsername {
 			hasReadOnlyUser = true
 		}
 	}
@@ -68,21 +68,21 @@ func (g *GitCfg) CreateReadOnlyUser() error {
 	if hasReadOnlyUser {
 		// Update the existing user's password
 		updateUserBody := map[string]interface{}{
-			"login_name": g.Server.PullUsername,
-			"password":   g.Server.PullPassword,
+			"login_name": g.server.PullUsername,
+			"password":   g.server.PullPassword,
 		}
 		updateUserData, _ := json.Marshal(updateUserBody)
-		updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, g.Server.PullUsername)
+		updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, g.server.PullUsername)
 		updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
-		out, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+		out, err = g.DoHTTPThings(updateUserRequest, g.server.PushUsername, g.server.PushPassword)
 		message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
 		return err
 	}
 
 	// Create json representation of the create-user request body
 	createUserBody := map[string]interface{}{
-		"username":             g.Server.PullUsername,
-		"password":             g.Server.PullPassword,
+		"username":             g.server.PullUsername,
+		"password":             g.server.PullPassword,
 		"email":                "zarf-reader@localhost.local",
 		"must_change_password": false,
 	}
@@ -94,7 +94,7 @@ func (g *GitCfg) CreateReadOnlyUser() error {
 	// Send API request to create the user
 	createUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users", tunnelURL)
 	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
-	out, err = g.DoHTTPThings(createUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+	out, err = g.DoHTTPThings(createUserRequest, g.server.PushUsername, g.server.PushPassword)
 	message.Debugf("POST %s:\n%s", createUserEndpoint, string(out))
 	if err != nil {
 		return err
@@ -102,14 +102,14 @@ func (g *GitCfg) CreateReadOnlyUser() error {
 
 	// Make sure the user can't create their own repos or orgs
 	updateUserBody := map[string]interface{}{
-		"login_name":                g.Server.PullUsername,
+		"login_name":                g.server.PullUsername,
 		"max_repo_creation":         0,
 		"allow_create_organization": false,
 	}
 	updateUserData, _ := json.Marshal(updateUserBody)
-	updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, g.Server.PullUsername)
+	updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, g.server.PullUsername)
 	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
-	out, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+	out, err = g.DoHTTPThings(updateUserRequest, g.server.PushUsername, g.server.PushPassword)
 	message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
 	return err
 }
@@ -132,9 +132,9 @@ func (g *GitCfg) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	tunnelURL := tunnel.Endpoint()
 
 	// Determine if the package token already exists
-	getTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens", tunnelURL, g.Server.PushUsername)
+	getTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens", tunnelURL, g.server.PushUsername)
 	getTokensRequest, _ := netHttp.NewRequest("GET", getTokensEndpoint, nil)
-	out, err := g.DoHTTPThings(getTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+	out, err := g.DoHTTPThings(getTokensRequest, g.server.PushUsername, g.server.PushPassword)
 	message.Debugf("GET %s:\n%s", getTokensEndpoint, string(out))
 	if err != nil {
 		return CreateTokenResponse{}, err
@@ -155,22 +155,22 @@ func (g *GitCfg) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 
 	if hasPackageToken {
 		// Delete the existing token to be replaced
-		deleteTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens/%s", tunnelURL, g.Server.PushUsername, config.ZarfArtifactTokenName)
+		deleteTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens/%s", tunnelURL, g.server.PushUsername, config.ZarfArtifactTokenName)
 		deleteTokensRequest, _ := netHttp.NewRequest("DELETE", deleteTokensEndpoint, nil)
-		out, err := g.DoHTTPThings(deleteTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+		out, err := g.DoHTTPThings(deleteTokensRequest, g.server.PushUsername, g.server.PushPassword)
 		message.Debugf("DELETE %s:\n%s", deleteTokensEndpoint, string(out))
 		if err != nil {
 			return CreateTokenResponse{}, err
 		}
 	}
 
-	createTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens", tunnelURL, g.Server.PushUsername)
+	createTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens", tunnelURL, g.server.PushUsername)
 	createTokensBody := map[string]interface{}{
 		"name": config.ZarfArtifactTokenName,
 	}
 	createTokensData, _ := json.Marshal(createTokensBody)
 	createTokensRequest, _ := netHttp.NewRequest("POST", createTokensEndpoint, bytes.NewBuffer(createTokensData))
-	out, err = g.DoHTTPThings(createTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+	out, err = g.DoHTTPThings(createTokensRequest, g.server.PushUsername, g.server.PushPassword)
 	message.Debugf("POST %s:\n%s", createTokensEndpoint, string(out))
 	if err != nil {
 		return CreateTokenResponse{}, err
@@ -224,9 +224,9 @@ func (g *GitCfg) addReadOnlyUserToRepo(tunnelURL, repo string) error {
 	}
 
 	// Send API request to add a user as a read-only collaborator to a repo
-	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelURL, g.Server.PushUsername, repo, g.Server.PullUsername)
+	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelURL, g.server.PushUsername, repo, g.server.PullUsername)
 	addColabRequest, _ := netHttp.NewRequest("PUT", addColabEndpoint, bytes.NewBuffer(addColabData))
-	out, err := g.DoHTTPThings(addColabRequest, g.Server.PushUsername, g.Server.PushPassword)
+	out, err := g.DoHTTPThings(addColabRequest, g.server.PushUsername, g.server.PushPassword)
 	message.Debugf("PUT %s:\n%s", addColabEndpoint, string(out))
 	return err
 }

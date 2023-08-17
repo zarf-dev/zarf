@@ -118,6 +118,8 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 				helmCfg := helm.New(
 					&chart, kubeVersionOverride,
+				).WithComponent(
+					p.cfg.Pkg.Metadata, component, componentPaths,
 				)
 
 				err := helmCfg.PackageChart(componentPaths.Charts)

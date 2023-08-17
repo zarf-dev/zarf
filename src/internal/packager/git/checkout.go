@@ -37,7 +37,7 @@ func (g *GitCfg) checkoutRefAsBranch(ref string, branch plumbing.ReferenceName) 
 func (g *GitCfg) checkoutTagAsBranch(tag string, branch plumbing.ReferenceName) error {
 	message.Debugf("git.checkoutTagAsBranch(%s,%s)", tag, branch.String())
 
-	repo, err := git.PlainOpen(g.GitPath)
+	repo, err := git.PlainOpen(g.gitPath)
 	if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
@@ -56,7 +56,7 @@ func (g *GitCfg) checkoutTagAsBranch(tag string, branch plumbing.ReferenceName) 
 func (g *GitCfg) checkoutHashAsBranch(hash plumbing.Hash, branch plumbing.ReferenceName) error {
 	message.Debugf("git.checkoutHasAsBranch(%s,%s)", hash.String(), branch.String())
 
-	repo, err := git.PlainOpen(g.GitPath)
+	repo, err := git.PlainOpen(g.gitPath)
 	if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
@@ -94,7 +94,7 @@ func (g *GitCfg) checkout(checkoutOptions *git.CheckoutOptions) error {
 	message.Debugf("git.checkout(%#v)", checkoutOptions)
 
 	// Open the given repo
-	repo, err := git.PlainOpen(g.GitPath)
+	repo, err := git.PlainOpen(g.gitPath)
 	if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}

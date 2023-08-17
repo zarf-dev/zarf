@@ -41,7 +41,7 @@ func (g *GitCfg) PushRepo(srcURL, targetFolder string) error {
 		repoPath = path.Join(targetFolder, repoFolder)
 	}
 
-	g.GitPath = repoPath
+	g.gitPath = repoPath
 
 	repo, err := g.prepRepoForPush()
 	if err != nil {
@@ -55,7 +55,7 @@ func (g *GitCfg) PushRepo(srcURL, targetFolder string) error {
 	}
 
 	// Add the read-only user to this repo
-	if g.Server.InternalServer {
+	if g.server.InternalServer {
 		// Get the upstream URL
 		remote, err := repo.Remote(onlineRemoteName)
 		if err != nil {
@@ -69,7 +69,7 @@ func (g *GitCfg) PushRepo(srcURL, targetFolder string) error {
 			return err
 		}
 
-		err = g.addReadOnlyUserToRepo(g.Server.Address, repoName)
+		err = g.addReadOnlyUserToRepo(g.server.Address, repoName)
 		if err != nil {
 			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 			return err
@@ -82,7 +82,7 @@ func (g *GitCfg) PushRepo(srcURL, targetFolder string) error {
 
 func (g *GitCfg) prepRepoForPush() (*git.Repository, error) {
 	// Open the given repo
-	repo, err := git.PlainOpen(g.GitPath)
+	repo, err := git.PlainOpen(g.gitPath)
 	if err != nil {
 		return nil, fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
@@ -94,7 +94,7 @@ func (g *GitCfg) prepRepoForPush() (*git.Repository, error) {
 	}
 
 	remoteURL := remote.Config().URLs[0]
-	targetURL, err := transform.GitURL(g.Server.Address, remoteURL, g.Server.PushUsername)
+	targetURL, err := transform.GitURL(g.server.Address, remoteURL, g.server.PushUsername)
 	if err != nil {
 		return nil, fmt.Errorf("unable to transform the git url: %w", err)
 	}
@@ -115,8 +115,8 @@ func (g *GitCfg) prepRepoForPush() (*git.Repository, error) {
 
 func (g *GitCfg) push(repo *git.Repository, spinner *message.Spinner) error {
 	gitCred := http.BasicAuth{
-		Username: g.Server.PushUsername,
-		Password: g.Server.PushPassword,
+		Username: g.server.PushUsername,
+		Password: g.server.PushPassword,
 	}
 
 	// Fetch remote offline refs in case of old update or if multiple refs are specified in one package
