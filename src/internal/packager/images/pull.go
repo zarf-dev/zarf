@@ -115,7 +115,7 @@ func (i *ImgConfig) PullAll() error {
 	}
 
 	totalBytes := int64(0)
-	processedLayers := make(map[string]bool)
+	processedLayers := make(map[string]v1.Layer)
 	for src, img := range imageMap {
 		tag, err := name.NewTag(src, name.WeakValidation)
 		if err != nil {
@@ -134,24 +134,18 @@ func (i *ImgConfig) PullAll() error {
 			}
 
 			// Only calculate this layer size if we haven't already looked at it
-			if !processedLayers[layerDigest.Hex] {
+			if processedLayers[layerDigest.Hex] == nil {
 				size, err := layer.Size()
 				if err != nil {
 					return fmt.Errorf("unable to get size of layer: %w", err)
 				}
 				totalBytes += size
-				processedLayers[layerDigest.Hex] = true
+				processedLayers[layerDigest.Hex] = layer
 			}
 
 		}
 	}
 	spinner.Updatef("Preparing image sources and cache for image pulling")
-
-	// Create a thread to update a progress bar as we save the image files to disk
-	doneSaving := make(chan int)
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &wg, doneSaving, fmt.Sprintf("Pulling %d images", imgCount))
 
 	type digestAndTag struct {
 		digest string
@@ -171,37 +165,29 @@ func (i *ImgConfig) PullAll() error {
 		}
 	}
 
-	dedupedLayers := make(map[string]v1.Layer)
-
 	for tag, img := range tagToImage {
 		imgDigest, err := img.Digest()
 		if err != nil {
 			return fmt.Errorf("unable to get digest for image %s: %w", tag, err)
 		}
 		tagToDigest[tag.String()] = imgDigest.String()
-
-		layers, err := img.Layers()
-		if err != nil {
-			return fmt.Errorf("unable to get layers for image %s: %w", tag, err)
-		}
-		for _, layer := range layers {
-			hash, err := layer.Digest()
-			if err != nil {
-				return fmt.Errorf("unable to get digest for image layer: %w", err)
-			}
-			dedupedLayers[hash.Hex] = layer
-		}
 	}
 
 	spinner.Success()
 
+	// Create a thread to update a progress bar as we save the image files to disk
+	doneSaving := make(chan int)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &wg, doneSaving, fmt.Sprintf("Pulling %d images", imgCount))
+
 	// Spawn a goroutine for each layer to write it to disk using crane
 
-	layerWritingConcurrency := utils.NewConcurrencyTools[bool, error](len(dedupedLayers))
+	layerWritingConcurrency := utils.NewConcurrencyTools[bool, error](len(processedLayers))
 
 	defer layerWritingConcurrency.Cancel()
 
-	for _, layer := range dedupedLayers {
+	for _, layer := range processedLayers {
 		layer := layer
 		// Function is a combination of https://github.com/google/go-containerregistry/blob/v0.15.2/pkg/v1/layout/write.go#L270-L305
 		// and https://github.com/google/go-containerregistry/blob/v0.15.2/pkg/v1/layout/write.go#L198-L262
