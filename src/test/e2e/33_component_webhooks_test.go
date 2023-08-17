@@ -15,9 +15,11 @@ func TestComponentWebhooks(t *testing.T) {
 	t.Log("E2E: Component Webhooks")
 	e2e.SetupWithCluster(t)
 
-	// Deploy example Pepr capability
+	// Deploy example Pepr capability.
 	webhookPath := fmt.Sprintf("build/zarf-package-component-webhooks-%s-0.0.1.tar.zst", e2e.Arch)
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", webhookPath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Zarf("tools", "wait-for", "deployment", "pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b", "available", "-n=pepr-system")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy dos-games package and ensure it waits for the Pepr webhook to complete.
