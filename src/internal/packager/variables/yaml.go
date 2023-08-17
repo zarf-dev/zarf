@@ -18,7 +18,7 @@ func (values *Values) ProcessYamlFilesInPath(path string, component types.ZarfCo
 	manifests, _ := utils.RecursiveFileList(path, pattern, false)
 
 	for _, manifest := range manifests {
-		if err := values.Apply(component, manifest, false); err != nil {
+		if err := values.Apply(component, manifest); err != nil {
 			return nil, err
 		}
 	}

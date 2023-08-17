@@ -22,7 +22,6 @@ type Values struct {
 	state       *types.ZarfState
 	variableMap map[string]*types.ZarfSetVariable
 	constants   []types.ZarfPackageConstant
-	registry    string
 	htpasswd    string
 }
 
@@ -64,19 +63,12 @@ func (values *Values) SetState(state *types.ZarfState) error {
 		values.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
 	}
 
-	values.registry = regInfo.Address
-
 	return nil
 }
 
 // HasState returns true if the Values struct has its state and is ready to be used in the template.
 func (values *Values) HasState() bool {
 	return values.state != nil
-}
-
-// GetRegistry returns the registry address.
-func (values *Values) GetRegistry() string {
-	return values.registry
 }
 
 // GetVariables returns the variables to be used in the template.
@@ -97,7 +89,7 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 			"STORAGE_CLASS": values.state.StorageClass,
 
 			// Registry info
-			"REGISTRY":           values.registry,
+			"REGISTRY":           values.state.RegistryInfo.Address,
 			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
 			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
 			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
@@ -173,20 +165,26 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 	return templateMap, deprecations
 }
 
-// Apply renders the template and writes the result to the given path.
-func (values *Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
-	// If Apply() is called before all values are loaded, fail unless ignoreReady is true
-	if !values.HasState() && !ignoreReady {
-		return fmt.Errorf("template.Apply() called before template.Generate()")
-	}
-
+// Apply renders the template to the given file and writes the result to the given path.
+func (values *Values) Apply(component types.ZarfComponent, path string) error {
 	templateMap, deprecations := values.GetVariables(component)
 	err := utils.ReplaceTextTemplate(path, templateMap, deprecations, "###ZARF_[A-Z0-9_]+###")
 
 	return err
 }
 
-// SetVariableMap handles setting the active variables used to template component files.
+// SetVariable sets an individual variable
+func (values *Values) SetVariable(name, value string, sensitive bool, autoIndent bool, varType types.VariableType) {
+	values.variableMap[name] = &types.ZarfSetVariable{
+		Name:       name,
+		Value:      value,
+		Sensitive:  sensitive,
+		AutoIndent: autoIndent,
+		Type:       varType,
+	}
+}
+
+// setVariableMap handles setting the active variables used to template component files.
 func (values *Values) setVariableMap(variables []types.ZarfPackageVariable, setVariables map[string]string) error {
 	for name, value := range setVariables {
 		values.SetVariable(name, value, false, false, "")
@@ -220,17 +218,6 @@ func (values *Values) setVariableMap(variables []types.ZarfPackageVariable, setV
 	}
 
 	return nil
-}
-
-// SetVariable sets an individual variable
-func (values *Values) SetVariable(name, value string, sensitive bool, autoIndent bool, varType types.VariableType) {
-	values.variableMap[name] = &types.ZarfSetVariable{
-		Name:       name,
-		Value:      value,
-		Sensitive:  sensitive,
-		AutoIndent: autoIndent,
-		Type:       varType,
-	}
 }
 
 func debugPrintTemplateMap(templateMap map[string]*utils.TextTemplate) {

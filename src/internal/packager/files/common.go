@@ -31,7 +31,7 @@ type FileCfg struct {
 	ValueTemplate  *variables.Values
 }
 
-// PackFiles packs all component files into a package
+// PackFile packs all component files into a package
 func (f *FileCfg) PackFile() error {
 	message.Debugf("Loading file from %q", f.File.Source)
 
@@ -58,7 +58,7 @@ func (f *FileCfg) PackFile() error {
 	return nil
 }
 
-// PackSkeletonFiles packs all applicable component files into a skeleton package
+// PackSkeletonFile packs all applicable component files into a skeleton package
 func (f *FileCfg) PackSkeletonFile() error {
 	message.Debugf("Loading file from %q", f.File.Source)
 
@@ -95,7 +95,7 @@ func (f *FileCfg) GetSBOMPaths() []string {
 	return paths
 }
 
-// ProcessFiles moves files onto the host of the machine performing the deployment.
+// ProcessFile moves files onto the host of the machine performing the deployment.
 func (f *FileCfg) ProcessFile() error {
 	pkgLocation := f.ComponentPaths.Files
 
@@ -147,7 +147,7 @@ func (f *FileCfg) ProcessFile() error {
 		// If the file is a text file, template it
 		if isText {
 			// spinner.Updatef("Templating %s", file.Target)
-			if err := f.ValueTemplate.Apply(*f.Component, subFile, true); err != nil {
+			if err := f.ValueTemplate.Apply(*f.Component, subFile); err != nil {
 				return fmt.Errorf("unable to template file %s: %w", subFile, err)
 			}
 		}

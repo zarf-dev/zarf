@@ -247,6 +247,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		fileCfg := files.FileCfg{
 			File:           &file,
 			FilePrefix:     strconv.Itoa(idx),
+			Component:      &component,
 			ComponentPaths: componentPaths,
 			ValueTemplate:  p.valueTemplate,
 		}
@@ -432,7 +433,7 @@ func (p *Packager) installChartAndManifests(componentPaths types.ComponentPaths,
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
 			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
-			if err := p.valueTemplate.Apply(component, chartValueName, false); err != nil {
+			if err := p.valueTemplate.Apply(component, chartValueName); err != nil {
 				return installedCharts, err
 			}
 		}
