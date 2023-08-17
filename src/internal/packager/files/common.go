@@ -97,8 +97,6 @@ func (f *FileCfg) GetSBOMPaths() []string {
 
 // ProcessFile moves files onto the host of the machine performing the deployment.
 func (f *FileCfg) ProcessFile() error {
-	pkgLocation := f.ComponentPaths.Files
-
 	// spinner.Updatef("Loading %s", file.Target)
 
 	if f.File.Matrix != nil {
@@ -112,15 +110,15 @@ func (f *FileCfg) ProcessFile() error {
 		}
 	}
 
-	_, fileLocation := f.getFilePath()
-	if utils.InvalidPath(fileLocation) {
-		fileLocation = filepath.Join(pkgLocation, f.FilePrefix)
+	filePkgPath, _ := f.getFilePath()
+	if utils.InvalidPath(filePkgPath) {
+		filePkgPath = filepath.Join(f.ComponentPaths.Files, f.FilePrefix)
 	}
 
 	// If a shasum is specified check it again on deployment as well
 	if f.File.Shasum != "" {
 		// spinner.Updatef("Validating SHASUM for %s", file.Target)
-		if shasum, _ := utils.GetCryptoHashFromFile(fileLocation, crypto.SHA256); shasum != f.File.Shasum {
+		if shasum, _ := utils.GetCryptoHashFromFile(filePkgPath, crypto.SHA256); shasum != f.File.Shasum {
 			return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", f.File.Source, f.File.Shasum, shasum)
 		}
 	}
@@ -130,11 +128,11 @@ func (f *FileCfg) ProcessFile() error {
 	f.File.Target = config.GetAbsHomePath(f.File.Target)
 
 	fileList := []string{}
-	if utils.IsDir(fileLocation) {
-		files, _ := utils.RecursiveFileList(fileLocation, nil, false)
+	if utils.IsDir(filePkgPath) {
+		files, _ := utils.RecursiveFileList(filePkgPath, nil, false)
 		fileList = append(fileList, files...)
 	} else {
-		fileList = append(fileList, fileLocation)
+		fileList = append(fileList, filePkgPath)
 	}
 
 	for _, subFile := range fileList {
@@ -155,9 +153,9 @@ func (f *FileCfg) ProcessFile() error {
 
 	// Copy the file to the destination
 	// spinner.Updatef("Saving %s", file.Target)
-	err := utils.CreatePathAndCopy(fileLocation, f.File.Target)
+	err := utils.CreatePathAndCopy(filePkgPath, f.File.Target)
 	if err != nil {
-		return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, f.File.Target, err)
+		return fmt.Errorf("unable to copy file %s to %s: %w", filePkgPath, f.File.Target, err)
 	}
 
 	// Loop over all symlinks and create them
@@ -175,7 +173,7 @@ func (f *FileCfg) ProcessFile() error {
 	}
 
 	// Cleanup now to reduce disk pressure
-	_ = os.RemoveAll(fileLocation)
+	_ = os.RemoveAll(filePkgPath)
 
 	// spinner.Success()
 
