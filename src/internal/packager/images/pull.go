@@ -80,6 +80,10 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
+			if utils.ContextDone(metadataImageConcurrency.Context) {
+				return
+			}
+
 			actualSrc := src
 			if overrideHost, present := i.RegistryOverrides[srcParsed.Host]; present {
 				actualSrc, err = transform.ImageTransformHostWithoutChecksum(overrideHost, src)
@@ -89,11 +93,20 @@ func (i *ImgConfig) PullAll() error {
 				}
 			}
 
+			if utils.ContextDone(metadataImageConcurrency.Context) {
+				return
+			}
+
 			img, err := i.PullImage(actualSrc, spinner)
 			if err != nil {
 				metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to pull image %s: %w", actualSrc, err)
 				return
 			}
+
+			if utils.ContextDone(metadataImageConcurrency.Context) {
+				return
+			}
+
 			metadataImageConcurrency.ProgressChan <- srcAndImg{src: src, img: img}
 		}()
 	}
@@ -105,6 +118,7 @@ func (i *ImgConfig) PullAll() error {
 
 	err := utils.WaitForConcurrencyTools(metadataImageConcurrency, progressFunc, utils.ReturnError)
 	if err != nil {
+		spinner.Warnf("Failed to load metadata for all images. This may be due to a network error or an invalid image reference.")
 		return err
 	}
 
@@ -179,7 +193,7 @@ func (i *ImgConfig) PullAll() error {
 	doneSaving := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &wg, doneSaving, fmt.Sprintf("Pulling %d images", imgCount))
+	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &wg, doneSaving, fmt.Sprintf("Pulling %d images", imgCount)) // Send a signal to the progress bar that we're done and ait for the thread to finish
 
 	// Spawn a goroutine for each layer to write it to disk using crane
 
@@ -204,6 +218,7 @@ func (i *ImgConfig) PullAll() error {
 				digest = v1.Hash{Algorithm: "sha256", Hex: ""}
 			} else if err != nil {
 				layerWritingConcurrency.ErrorChan <- err
+				return
 			}
 
 			size, err := layer.Size()
@@ -217,11 +232,17 @@ func (i *ImgConfig) PullAll() error {
 				size = -1
 			} else if err != nil {
 				layerWritingConcurrency.ErrorChan <- err
+				return
+			}
+
+			if utils.ContextDone(layerWritingConcurrency.Context) {
+				return
 			}
 
 			readCloser, err := layer.Compressed()
 			if err != nil {
 				layerWritingConcurrency.ErrorChan <- err
+				return
 			}
 
 			// Get the file path for the cranePath
@@ -231,11 +252,21 @@ func (i *ImgConfig) PullAll() error {
 			dir := filepath.Join(append(completePath, "blobs", digest.Algorithm)...)
 			if err := os.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
 				layerWritingConcurrency.ErrorChan <- err
+				return
+			}
+
+			if utils.ContextDone(layerWritingConcurrency.Context) {
+				return
 			}
 
 			// Check if blob already exists and is the correct size
 			file := filepath.Join(dir, digest.Hex)
 			if s, err := os.Stat(file); err == nil && !s.IsDir() && (s.Size() == size || size == -1) {
+				layerWritingConcurrency.ProgressChan <- true
+				return
+			}
+
+			if utils.ContextDone(layerWritingConcurrency.Context) {
 				return
 			}
 
@@ -243,6 +274,7 @@ func (i *ImgConfig) PullAll() error {
 			w, err := os.CreateTemp(dir, digest.Hex)
 			if err != nil {
 				layerWritingConcurrency.ErrorChan <- err
+				return
 			}
 			// Delete temp file if an error is encountered before renaming
 			defer func() {
@@ -253,11 +285,21 @@ func (i *ImgConfig) PullAll() error {
 
 			defer w.Close()
 
+			if utils.ContextDone(layerWritingConcurrency.Context) {
+				return
+			}
+
 			// Write to file rename
 			if n, err := io.Copy(w, readCloser); err != nil {
 				layerWritingConcurrency.ErrorChan <- err
+				return
 			} else if size != -1 && n != size {
 				layerWritingConcurrency.ErrorChan <- fmt.Errorf("expected blob size %d, but only wrote %d", size, n)
+				return
+			}
+
+			if utils.ContextDone(layerWritingConcurrency.Context) {
+				return
 			}
 
 			// Always close reader before renaming, since Close computes the digest in
@@ -267,16 +309,22 @@ func (i *ImgConfig) PullAll() error {
 			// ErrNotComputed.
 			if err := readCloser.Close(); err != nil {
 				layerWritingConcurrency.ErrorChan <- err
+				return
 			}
 
 			// Always close file before renaming
 			if err := w.Close(); err != nil {
 				layerWritingConcurrency.ErrorChan <- err
+				return
 			}
 
 			// Rename file based on the final hash
 			renamePath := filepath.Join(append(completePath, "blobs", digest.Algorithm, digest.Hex)...)
 			os.Rename(w.Name(), renamePath)
+
+			if utils.ContextDone(layerWritingConcurrency.Context) {
+				return
+			}
 
 			layerWritingConcurrency.ProgressChan <- true
 		}()
@@ -284,6 +332,10 @@ func (i *ImgConfig) PullAll() error {
 
 	err = utils.WaitForConcurrencyTools(layerWritingConcurrency, func(b bool, i int) {}, utils.ReturnError)
 	if err != nil {
+		// Send a signal to the progress bar that we're done and wait for the thread to finish
+		doneSaving <- 1
+		wg.Wait()
+		message.WarnErr(err, "Failed to download and write layers, trying again up to 3 times...")
 		if strings.HasPrefix(err.Error(), "error writing layer: expected blob size") {
 			message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
 		}
@@ -302,8 +354,18 @@ func (i *ImgConfig) PullAll() error {
 		go func() {
 			// Make sure to call Done() on the WaitGroup when the goroutine finishes
 			defer imageSavingConcurrency.WaitGroup.Done()
+
+			if utils.ContextDone(imageSavingConcurrency.Context) {
+				return
+			}
+
 			// Save the image via crane
 			err := cranePath.WriteImage(img)
+
+			if utils.ContextDone(imageSavingConcurrency.Context) {
+				return
+			}
+
 			if err != nil {
 				// Check if the cache has been invalidated, and warn the user if so
 				if strings.HasPrefix(err.Error(), "error writing layer: expected blob size") {
@@ -313,12 +375,21 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
+			if utils.ContextDone(imageSavingConcurrency.Context) {
+				return
+			}
+
 			// Get the image digest so we can set an annotation in the image.json later
 			imgDigest, err := img.Digest()
 			if err != nil {
 				imageSavingConcurrency.ErrorChan <- err
 				return
 			}
+
+			if utils.ContextDone(imageSavingConcurrency.Context) {
+				return
+			}
+
 			imageSavingConcurrency.ProgressChan <- digestAndTag{digest: imgDigest.String(), tag: tag.String()}
 		}()
 	}
@@ -329,6 +400,10 @@ func (i *ImgConfig) PullAll() error {
 
 	err = utils.WaitForConcurrencyTools(imageSavingConcurrency, imageProgressFunc, utils.ReturnError)
 	if err != nil {
+		// Send a signal to the progress bar that we're done and wait for the thread to finish
+		doneSaving <- 1
+		wg.Wait()
+		message.WarnErr(err, "Failed to write image config or manifest, trying again up to 3 times...")
 		return err
 	}
 
@@ -357,7 +432,7 @@ func (i *ImgConfig) PullAll() error {
 		return fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
-	// Send a signal to the progress bar that we're done and ait for the thread to finish
+	// Send a signal to the progress bar that we're done and wait for the thread to finish
 	doneSaving <- 1
 	wg.Wait()
 

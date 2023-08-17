@@ -61,7 +61,6 @@ func WaitForConcurrencyTools[P any, E any, PF func(P, int), EF func(E) error](co
 		case err := <-concurrencyTools.ErrorChan:
 			concurrencyTools.Cancel()
 			errResult := errorFunc(err)
-			concurrencyTools.WaitGroup.Done()
 			return errResult
 		case progress := <-concurrencyTools.ProgressChan:
 			progressFunc(progress, i)
