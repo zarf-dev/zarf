@@ -15,7 +15,7 @@ import (
 )
 
 // DownloadRepoToTemp clones or updates a repo into a temp folder to perform ephemeral actions (i.e. process chart repos).
-func (g *Git) DownloadRepoToTemp(gitURL string) error {
+func (g *GitCfg) DownloadRepoToTemp(gitURL string) error {
 	g.Spinner.Updatef("g.DownloadRepoToTemp(%s)", gitURL)
 
 	path, err := utils.MakeTempDir()
@@ -33,7 +33,7 @@ func (g *Git) DownloadRepoToTemp(gitURL string) error {
 }
 
 // Pull clones or updates a git repository into the target folder.
-func (g *Git) Pull(gitURL, targetFolder string, shallow bool) error {
+func (g *GitCfg) Pull(gitURL, targetFolder string, shallow bool) error {
 	g.Spinner.Updatef("Processing git repo %s", gitURL)
 
 	// Split the remote url and the zarf reference

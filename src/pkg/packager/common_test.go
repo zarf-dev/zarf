@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
@@ -185,7 +189,7 @@ func TestValidateLastNonBreakingVersion(t *testing.T) {
 			config.CLIVersion = testCase.cliVersion
 
 			p := &Packager{
-				cfg: &types.PackagerConfig{
+				cfg: &PackagerCfg{
 					Pkg: types.ZarfPackage{
 						Build: types.ZarfBuildData{
 							LastNonBreakingVersion: testCase.lastNonBreakingVersion,

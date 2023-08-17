@@ -394,3 +394,31 @@ func (p *Packager) getComposedFilePath(prefix string, path string) string {
 	// Add prefix for local files.
 	return filepath.Join(prefix, path)
 }
+
+// injectImportedVariable determines if an imported package variable exists in the active config and adds it if not.
+func (p *Packager) injectImportedVariable(importedVariable types.ZarfPackageVariable) {
+	presentInActive := false
+	for _, configVariable := range p.cfg.Pkg.Variables {
+		if configVariable.Name == importedVariable.Name {
+			presentInActive = true
+		}
+	}
+
+	if !presentInActive {
+		p.cfg.Pkg.Variables = append(p.cfg.Pkg.Variables, importedVariable)
+	}
+}
+
+// injectImportedConstant determines if an imported package constant exists in the active config and adds it if not.
+func (p *Packager) injectImportedConstant(importedConstant types.ZarfPackageConstant) {
+	presentInActive := false
+	for _, configVariable := range p.cfg.Pkg.Constants {
+		if configVariable.Name == importedConstant.Name {
+			presentInActive = true
+		}
+	}
+
+	if !presentInActive {
+		p.cfg.Pkg.Constants = append(p.cfg.Pkg.Constants, importedConstant)
+	}
+}

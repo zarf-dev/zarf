@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/internal/packager/actions"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -164,12 +165,12 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 
 	onRemove := c.Actions.OnRemove
 	onFailure := func() {
-		if err := p.runActions(onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
+		if err := actions.RunActions(onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
 			message.Debugf("Unable to run the failure action: %s", err)
 		}
 	}
 
-	if err := p.runActions(onRemove.Defaults, onRemove.Before, nil); err != nil {
+	if err := actions.RunActions(onRemove.Defaults, onRemove.Before, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
@@ -177,7 +178,7 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 	for _, chart := range helpers.Reverse(deployedComponent.InstalledCharts) {
 		spinner.Updatef("Uninstalling chart '%s' from the '%s' component", chart.ChartName, deployedComponent.Name)
 
-		helmCfg := helm.Helm{}
+		helmCfg := helm.HelmCfg{}
 		if err := helmCfg.RemoveChart(chart.Namespace, chart.ChartName, spinner); err != nil {
 			if !errors.Is(err, driver.ErrReleaseNotFound) {
 				onFailure()
@@ -198,12 +199,12 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 		p.updatePackageSecret(deployedPackage, deployedPackage.Name)
 	}
 
-	if err := p.runActions(onRemove.Defaults, onRemove.After, nil); err != nil {
+	if err := actions.RunActions(onRemove.Defaults, onRemove.After, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the after action: %w", err)
 	}
 
-	if err := p.runActions(onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
+	if err := actions.RunActions(onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the success action: %w", err)
 	}

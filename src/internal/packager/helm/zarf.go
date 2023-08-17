@@ -13,13 +13,13 @@ import (
 )
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
-func (h *Helm) UpdateZarfRegistryValues() error {
-	pushUser, err := utils.GetHtpasswdString(h.Cfg.State.RegistryInfo.PushUsername, h.Cfg.State.RegistryInfo.PushPassword)
+func (h *HelmCfg) UpdateZarfRegistryValues() error {
+	pushUser, err := utils.GetHtpasswdString(h.State.RegistryInfo.PushUsername, h.State.RegistryInfo.PushPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
 	}
 
-	pullUser, err := utils.GetHtpasswdString(h.Cfg.State.RegistryInfo.PullUsername, h.Cfg.State.RegistryInfo.PullPassword)
+	pullUser, err := utils.GetHtpasswdString(h.State.RegistryInfo.PullUsername, h.State.RegistryInfo.PullPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
 	}
@@ -44,12 +44,12 @@ func (h *Helm) UpdateZarfRegistryValues() error {
 }
 
 // UpdateZarfGiteaValues updates the Zarf git server deployment with the new state values
-func (h *Helm) UpdateZarfGiteaValues() error {
+func (h *HelmCfg) UpdateZarfGiteaValues() error {
 	giteaValues := map[string]interface{}{
 		"gitea": map[string]interface{}{
 			"admin": map[string]interface{}{
-				"username": h.Cfg.State.GitServer.PushUsername,
-				"password": h.Cfg.State.GitServer.PushPassword,
+				"username": h.State.GitServer.PushUsername,
+				"password": h.State.GitServer.PushPassword,
 			},
 		},
 	}
@@ -64,7 +64,7 @@ func (h *Helm) UpdateZarfGiteaValues() error {
 		return fmt.Errorf("error updating the release values: %w", err)
 	}
 
-	g := git.New(h.Cfg.State.GitServer)
+	g := git.New(h.State.GitServer)
 	err = g.CreateReadOnlyUser()
 	if err != nil {
 		return fmt.Errorf("unable to create the new Gitea read only user: %w", err)

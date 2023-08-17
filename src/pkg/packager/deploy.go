@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,10 +16,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/internal/packager/actions"
+	"github.com/defenseunicorns/zarf/src/internal/packager/files"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/internal/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -74,7 +77,7 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	// Set variables and prompt if --confirm is not set
-	if err := p.setVariableMapInConfig(); err != nil {
+	if p.valueTemplate, err = variables.New(p.cfg.Pkg, p.cfg.PkgOpts.SetVariables); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
@@ -110,8 +113,8 @@ func (p *Packager) Deploy() (err error) {
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
 	componentsToDeploy := p.getValidComponents()
 
-	// Generate a value template
-	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
+	// Generate a variables value template
+	if err = p.valueTemplate.SetState(p.cfg.State); err != nil {
 		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
 	}
 
@@ -128,7 +131,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, p.valueTemplate); err != nil {
+			if err := actions.RunActions(onDeploy.Defaults, onDeploy.OnFailure, p.valueTemplate); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -150,7 +153,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			}
 		}
 
-		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
+		if err := actions.RunActions(onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
 			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -228,20 +231,31 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	onDeploy := component.Actions.OnDeploy
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
+	if err = actions.RunActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
-	fp := FilePacker{
-		component:      &component,
-		componentPaths: componentPaths,
-		valueTemplate:  p.valueTemplate,
-	}
-	if err := fp.ProcessFiles(); err != nil {
-		return charts, fmt.Errorf("unable to process the component files: %w", err)
+	// If there are no files to process, return early.
+	// if len(f.component.Files) < 1 {
+	// 	return nil
+	// }
+
+	// spinner := message.NewProgressSpinner("Copying %d files", len(f.component.Files))
+	// defer spinner.Stop()
+
+	for idx, file := range component.Files {
+		fileCfg := files.FileCfg{
+			File:           &file,
+			FilePrefix:     strconv.Itoa(idx),
+			ComponentPaths: componentPaths,
+			ValueTemplate:  p.valueTemplate,
+		}
+		if err := fileCfg.ProcessFile(); err != nil {
+			return charts, fmt.Errorf("unable to process the component files: %w", err)
+		}
 	}
 
-	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
+	if !p.valueTemplate.HasState() && p.requiresCluster(component) {
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
 			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, true)
@@ -289,7 +303,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.After, p.valueTemplate); err != nil {
+	if err = actions.RunActions(onDeploy.Defaults, onDeploy.After, p.valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -297,7 +311,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 }
 
 // Fetch the current ZarfState from the k8s cluster and generate a p.valueTemplate from the state values.
-func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values *template.Values, err error) {
+func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values *variables.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
@@ -328,7 +342,7 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 	p.cfg.State = state
 
 	// Continue loading state data if it is valid
-	values, err = template.Generate(p.cfg)
+	err = p.valueTemplate.SetState(p.cfg.State)
 	if err != nil {
 		return values, err
 	}
@@ -424,12 +438,14 @@ func (p *Packager) installChartAndManifests(componentPaths types.ComponentPaths,
 		}
 
 		// Generate helm templates to pass to gitops engine
-		helmCfg := helm.Helm{
-			ComponentPaths: componentPaths,
-			Chart:          chart,
-			Component:      component,
-			Cfg:            p.cfg,
-			Cluster:        p.cluster,
+		helmCfg := helm.HelmCfg{
+			ComponentPaths:         componentPaths,
+			Chart:                  chart,
+			Component:              component,
+			PackageMetadata:        p.cfg.Pkg.Metadata,
+			State:                  p.cfg.State,
+			Cluster:                p.cluster,
+			AdoptExistingResources: p.cfg.DeployOpts.AdoptExistingResources,
 		}
 
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
@@ -466,11 +482,13 @@ func (p *Packager) installChartAndManifests(componentPaths types.ComponentPaths,
 		}
 
 		// Iterate over any connectStrings and add to the main map
-		helmCfg := helm.Helm{
-			ComponentPaths: componentPaths,
-			Component:      component,
-			Cfg:            p.cfg,
-			Cluster:        p.cluster,
+		helmCfg := helm.HelmCfg{
+			ComponentPaths:         componentPaths,
+			Component:              component,
+			PackageMetadata:        p.cfg.Pkg.Metadata,
+			State:                  p.cfg.State,
+			Cluster:                p.cluster,
+			AdoptExistingResources: p.cfg.DeployOpts.AdoptExistingResources,
 		}
 
 		// Generate the chart.

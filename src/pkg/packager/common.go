@@ -20,7 +20,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/internal/packager/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 
@@ -34,15 +34,54 @@ import (
 
 // Packager is the main struct for managing packages.
 type Packager struct {
-	cfg            *types.PackagerConfig
+	cfg            *PackagerCfg
 	cluster        *cluster.Cluster
 	remote         *oci.OrasRemote
 	tmp            types.TempPaths
 	arch           string
 	warnings       []string
-	valueTemplate  *template.Values
+	valueTemplate  *variables.Values
 	hpaModified    bool
 	connectStrings types.ConnectStrings
+}
+
+// PackagerCfg is the main struct that the packager uses to hold high-level options.
+type PackagerCfg struct {
+	// CreateOpts tracks the user-defined options used to create the package
+	CreateOpts types.ZarfCreateOptions
+
+	// PkgOpts tracks user-defined options
+	PkgOpts types.ZarfPackageOptions
+
+	// DeployOpts tracks user-defined values for the active deployment
+	DeployOpts types.ZarfDeployOptions
+
+	// InitOpts tracks user-defined values for the active Zarf initialization.
+	InitOpts types.ZarfInitOptions
+
+	// PublishOpts tracks user-defined options used to publish the package
+	PublishOpts types.ZarfPublishOptions
+
+	// PullOpts tracks user-defined options used to pull packages
+	PullOpts types.ZarfPullOptions
+
+	// Track if the package is an init package
+	IsInitConfig bool
+
+	// The package data
+	Pkg types.ZarfPackage
+
+	// The original source of the package
+	PkgSource string
+
+	// The active zarf state
+	State *types.ZarfState
+
+	// Variables set by the user
+	SetVariableMap map[string]*types.ZarfSetVariable
+
+	// SBOM file paths in the package
+	SBOMViewFiles []string
 }
 
 // Zarf Packager Variables.
@@ -59,7 +98,7 @@ New creates a new package instance with the provided config.
 
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
-func New(cfg *types.PackagerConfig) (*Packager, error) {
+func New(cfg *PackagerCfg) (*Packager, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
 	}
@@ -99,7 +138,7 @@ NewOrDie creates a new package instance with the provided config or throws a fat
 
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
-func NewOrDie(config *types.PackagerConfig) *Packager {
+func NewOrDie(config *PackagerCfg) *Packager {
 	var (
 		err       error
 		pkgConfig *Packager

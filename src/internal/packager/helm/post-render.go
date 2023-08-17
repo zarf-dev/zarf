@@ -12,7 +12,7 @@ import (
 	"reflect"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/internal/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -27,19 +27,14 @@ import (
 
 type renderer struct {
 	actionConfig   *action.Configuration
-	options        *Helm
+	options        *HelmCfg
 	connectStrings types.ConnectStrings
 	namespaces     map[string]*corev1.Namespace
-	values         template.Values
+	valueTemplate  *variables.Values
 }
 
-func (h *Helm) newRenderer() (*renderer, error) {
+func (h *HelmCfg) newRenderer() (*renderer, error) {
 	message.Debugf("helm.NewRenderer()")
-
-	valueTemplate, err := template.Generate(h.Cfg)
-	if err != nil {
-		return nil, err
-	}
 
 	return &renderer{
 		connectStrings: make(types.ConnectStrings),
@@ -48,8 +43,8 @@ func (h *Helm) newRenderer() (*renderer, error) {
 			// Add the passed-in namespace to the list
 			h.Chart.Namespace: h.Cluster.NewZarfManagedNamespace(h.Chart.Namespace),
 		},
-		values:       *valueTemplate,
-		actionConfig: h.actionConfig,
+		valueTemplate: h.ValueTemplate,
+		actionConfig:  h.actionConfig,
 	}, nil
 }
 
@@ -69,7 +64,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 
 	// Run the template engine against the chart output
-	if _, err := template.ProcessYamlFilesInPath(tmpDir, r.options.Component, r.values); err != nil {
+	if _, err := r.valueTemplate.ProcessYamlFilesInPath(tmpDir, r.options.Component); err != nil {
 		return nil, fmt.Errorf("error templating the helm chart: %w", err)
 	}
 
@@ -146,7 +141,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 		// If we have been asked to adopt existing resources, process those now as well
-		if r.options.Cfg.DeployOpts.AdoptExistingResources {
+		if r.options.AdoptExistingResources {
 			deployedNamespace := namespace
 			if deployedNamespace == "" {
 				deployedNamespace = r.options.Chart.Namespace
@@ -186,7 +181,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			if _, err := c.CreateNamespace(namespace); err != nil {
 				return nil, fmt.Errorf("unable to create the missing namespace %s", name)
 			}
-		} else if r.options.Cfg.DeployOpts.AdoptExistingResources {
+		} else if r.options.AdoptExistingResources {
 			if r.options.Cluster.IsInitialNamespace(name) {
 				// If this is a K8s initial namespace, refuse to adopt it
 				message.Warnf("Refusing to adopt the initial namespace: %s", name)
@@ -199,12 +194,12 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 		// If the package is marked as YOLO and the state is empty, skip the secret creation for this namespace
-		if r.options.Cfg.Pkg.Metadata.YOLO && r.options.Cfg.State.Distro == "YOLO" {
+		if r.options.PackageMetadata.YOLO && r.options.State.Distro == "YOLO" {
 			continue
 		}
 
 		// Create the secret
-		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.options.Cfg.State.RegistryInfo)
+		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.options.State.RegistryInfo)
 
 		// Try to get a valid existing secret
 		currentRegistrySecret, _ := c.GetSecret(name, config.ZarfImagePullSecretName)
@@ -215,7 +210,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			}
 
 			// Generate the git server secret
-			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.options.Cfg.State.GitServer)
+			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.options.State.GitServer)
 
 			// Create or update the zarf git server secret
 			if err := c.CreateOrUpdateSecret(gitServerSecret); err != nil {

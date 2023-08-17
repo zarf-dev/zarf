@@ -18,7 +18,7 @@ import (
 )
 
 // clone performs a `git clone` of a given repo.
-func (g *Git) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) error {
+func (g *GitCfg) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) error {
 	cloneOptions := &git.CloneOptions{
 		URL:        gitURL,
 		Progress:   g.Spinner,
@@ -72,7 +72,7 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) err
 }
 
 // gitCloneFallback is a fallback if go-git fails to clone a repo.
-func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName, shallow bool) error {
+func (g *GitCfg) gitCloneFallback(gitURL string, ref plumbing.ReferenceName, shallow bool) error {
 	// If we can't clone with go-git, fallback to the host clone
 	// Only support "all tags" due to the azure clone url format including a username
 	cloneArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, g.GitPath}

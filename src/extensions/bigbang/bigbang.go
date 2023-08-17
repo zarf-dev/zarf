@@ -87,7 +87,7 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 	bbRepo := fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version)
 
 	// Configure helm to pull down the Big Bang chart.
-	helmCfg := helm.Helm{
+	helmCfg := helm.HelmCfg{
 		Chart: types.ZarfChart{
 			Name:        bb,
 			Namespace:   bb,
@@ -497,7 +497,7 @@ func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []st
 		GitPath: "chart",
 	}
 
-	helmCfg := helm.Helm{
+	helmCfg := helm.HelmCfg{
 		Chart: chart,
 	}
 

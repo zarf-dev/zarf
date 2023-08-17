@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages.
-package packager
+// Package actions contains functions for processing Zarf actions.
+package actions
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/internal/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
@@ -23,9 +23,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
+func RunActions(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *variables.Values) error {
 	for _, a := range actions {
-		if err := p.runAction(defaultCfg, a, valueTemplate); err != nil {
+		if err := runAction(defaultCfg, a, valueTemplate); err != nil {
 			return err
 		}
 	}
@@ -33,7 +33,7 @@ func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, acti
 }
 
 // Run commands that a component has provided.
-func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *template.Values) error {
+func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *variables.Values) error {
 	var (
 		ctx        context.Context
 		cancel     context.CancelFunc
@@ -113,7 +113,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 
 			// If an output variable is defined, set it.
 			for _, v := range action.SetVariables {
-				p.setVariableInConfig(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
+				valueTemplate.SetVariable(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
 			}
 
 			// If the action has a wait, change the spinner message to reflect that on success.

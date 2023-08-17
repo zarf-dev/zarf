@@ -132,11 +132,9 @@ var updateCredsCmd = &cobra.Command{
 			}
 
 			// Update Zarf 'init' component Helm releases if present
-			h := helm.Helm{
+			h := helm.HelmCfg{
 				Cluster: c,
-				Cfg: &types.PackagerConfig{
-					State: newState,
-				},
+				State:   newState,
 			}
 
 			if helpers.SliceContains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {

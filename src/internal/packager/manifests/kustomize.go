@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package kustomize provides functions for building kustomizations.
-package kustomize
+// Package manifests provides functions for handling raw manifests and kustomizations.
+package manifests
 
 import (
 	"fmt"

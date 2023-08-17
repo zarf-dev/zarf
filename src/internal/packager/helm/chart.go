@@ -35,8 +35,8 @@ const defaultClientTimeout = 15 * time.Minute
 // Set the default number of Helm install/upgrade attempts to 3
 const defaultHelmAttempts = 3
 
-// InstallOrUpgradeChart performs a helm install of the given chart.
-func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
+// InstallOrUpgradeChart performs a helm install or upgrade of the given chart.
+func (h *HelmCfg) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	fromMessage := h.Chart.URL
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
@@ -148,7 +148,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 }
 
 // TemplateChart generates a helm template from a given chart.
-func (h *Helm) TemplateChart() (string, chartutil.Values, error) {
+func (h *HelmCfg) TemplateChart() (string, chartutil.Values, error) {
 	message.Debugf("helm.TemplateChart()")
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.Chart.Name)
 	defer spinner.Stop()
@@ -210,7 +210,7 @@ func (h *Helm) TemplateChart() (string, chartutil.Values, error) {
 }
 
 // GenerateChart generates a helm chart for a given Zarf manifest.
-func (h *Helm) GenerateChart(manifest types.ZarfManifest) error {
+func (h *HelmCfg) GenerateChart(manifest types.ZarfManifest) error {
 	message.Debugf("helm.GenerateChart(%#v)", manifest)
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
@@ -220,7 +220,7 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) error {
 	tmpChart.Metadata = new(chart.Metadata)
 
 	// Generate a hashed chart name.
-	rawChartName := fmt.Sprintf("raw-%s-%s-%s", h.Cfg.Pkg.Metadata.Name, h.Component.Name, manifest.Name)
+	rawChartName := fmt.Sprintf("raw-%s-%s-%s", h.PackageMetadata.Name, h.Component.Name, manifest.Name)
 	hasher := sha1.New()
 	hasher.Write([]byte(rawChartName))
 	tmpChart.Metadata.Name = rawChartName
@@ -266,7 +266,7 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) error {
 }
 
 // RemoveChart removes a chart from the cluster.
-func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinner) error {
+func (h *HelmCfg) RemoveChart(namespace string, name string, spinner *message.Spinner) error {
 	// Establish a new actionConfig for the namespace.
 	_ = h.createActionConfig(namespace, spinner)
 	// Perform the uninstall.
@@ -277,7 +277,7 @@ func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinn
 
 // UpdateReleaseValues updates values for a given chart release
 // (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
-func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
+func (h *HelmCfg) UpdateReleaseValues(updatedValues map[string]interface{}) error {
 	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.ReleaseName)
 	defer spinner.Stop()
 
@@ -331,7 +331,7 @@ func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
 	return fmt.Errorf("unable to find the %s helm release", h.ReleaseName)
 }
 
-func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
+func (h *HelmCfg) installChart(postRender *renderer) (*release.Release, error) {
 	// Bind the helm action.
 	client := action.NewInstall(h.actionConfig)
 
@@ -362,10 +362,10 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 	return client.Run(loadedChart, chartValues)
 }
 
-func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) (*release.Release, error) {
+func (h *HelmCfg) upgradeChart(lastRelease *release.Release, postRender *renderer) (*release.Release, error) {
 	// Print the postRender object piece by piece to not print the htpasswd
 	message.Debugf("helm.upgradeChart(%#v, %#v, %#v, %#v, %s)", postRender.actionConfig, postRender.connectStrings,
-		postRender.namespaces, postRender.options, fmt.Sprintf("values:template.Values{ registry: \"%s\" }", postRender.values.GetRegistry()))
+		postRender.namespaces, postRender.options, fmt.Sprintf("values:template.Values{ registry: \"%s\" }", postRender.valueTemplate.GetRegistry()))
 
 	// Migrate any deprecated APIs (if applicable)
 	err := h.migrateDeprecatedAPIs(lastRelease)
@@ -399,7 +399,7 @@ func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) 
 	return client.Run(h.ReleaseName, loadedChart, chartValues)
 }
 
-func (h *Helm) rollbackChart(name string) error {
+func (h *HelmCfg) rollbackChart(name string) error {
 	message.Debugf("helm.rollbackChart(%s)", name)
 	client := action.NewRollback(h.actionConfig)
 	client.CleanupOnFail = true
@@ -409,7 +409,7 @@ func (h *Helm) rollbackChart(name string) error {
 	return client.Run(name)
 }
 
-func (h *Helm) uninstallChart(name string) (*release.UninstallReleaseResponse, error) {
+func (h *HelmCfg) uninstallChart(name string) (*release.UninstallReleaseResponse, error) {
 	message.Debugf("helm.uninstallChart(%s)", name)
 	client := action.NewUninstall(h.actionConfig)
 	client.KeepHistory = false
@@ -418,7 +418,7 @@ func (h *Helm) uninstallChart(name string) (*release.UninstallReleaseResponse, e
 	return client.Run(name)
 }
 
-func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
+func (h *HelmCfg) loadChartData() (*chart.Chart, chartutil.Values, error) {
 	message.Debugf("helm.loadChartData()")
 	var (
 		loadedChart *chart.Chart
@@ -446,7 +446,7 @@ func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
 	return loadedChart, chartValues, nil
 }
 
-func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
+func (h *HelmCfg) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 	// Get the Kubernetes version from the current cluster
 	kubeVersion, err := h.Cluster.GetServerVersion()
 	if err != nil {

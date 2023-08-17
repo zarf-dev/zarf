@@ -19,7 +19,7 @@ import (
 )
 
 // loadChartFromTarball returns a helm chart from a tarball.
-func (h *Helm) loadChartFromTarball() (*chart.Chart, error) {
+func (h *HelmCfg) loadChartFromTarball() (*chart.Chart, error) {
 	// Get the path the temporary helm chart tarball
 	sourceFile := StandardName(h.ComponentPaths.Charts, h.Chart) + ".tgz"
 	if h.ChartLoadOverride != "" {
@@ -40,7 +40,7 @@ func (h *Helm) loadChartFromTarball() (*chart.Chart, error) {
 }
 
 // parseChartValues reads the context of the chart values into an interface if it exists.
-func (h *Helm) parseChartValues() (map[string]any, error) {
+func (h *HelmCfg) parseChartValues() (map[string]any, error) {
 	valueOpts := &values.Options{}
 
 	for idx, file := range h.Chart.ValuesFiles {
@@ -61,7 +61,7 @@ func (h *Helm) parseChartValues() (map[string]any, error) {
 	return valueOpts.MergeValues(providers)
 }
 
-func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) error {
+func (h *HelmCfg) createActionConfig(namespace string, spinner *message.Spinner) error {
 	// Initialize helm SDK
 	actionConfig := new(action.Configuration)
 	// Set the setings for the helm SDK

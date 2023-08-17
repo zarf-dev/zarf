@@ -15,7 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
+	"github.com/defenseunicorns/zarf/src/internal/packager/manifests"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -118,12 +118,11 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 			for _, chart := range component.Charts {
 
-				helmCfg := helm.Helm{
-					Chart: chart,
-					Cfg:   p.cfg,
+				helmCfg := helm.HelmCfg{
+					Chart:           chart,
+					PackageMetadata: p.cfg.Pkg.Metadata,
+					State:           &types.ZarfState{},
 				}
-
-				helmCfg.Cfg.State = &types.ZarfState{}
 
 				err := helmCfg.PackageChart(componentPaths.Charts)
 				if err != nil {
@@ -144,7 +143,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				}
 
 				// Generate helm templates to pass to gitops engine
-				helmCfg = helm.Helm{
+				helmCfg = helm.HelmCfg{
 					ComponentPaths:    componentPaths,
 					Chart:             chart,
 					ChartLoadOverride: chartOverrides[chart.Name],
@@ -189,7 +188,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 					// Generate manifests from kustomizations and place in the package
 					kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
 					destination := filepath.Join(componentPaths.Manifests, kname)
-					if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
+					if err := manifests.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 						return nil, fmt.Errorf("unable to build the kustomization for %s: %s", k, err.Error())
 					}
 					manifest.Files = append(manifest.Files, destination)

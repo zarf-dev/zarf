@@ -27,7 +27,7 @@ type CreateTokenResponse struct {
 }
 
 // CreateReadOnlyUser uses the Gitea API to create a non-admin Zarf user.
-func (g *Git) CreateReadOnlyUser() error {
+func (g *GitCfg) CreateReadOnlyUser() error {
 	message.Debugf("git.CreateReadOnlyUser()")
 
 	// Establish a git tunnel to send the repo
@@ -115,7 +115,7 @@ func (g *Git) CreateReadOnlyUser() error {
 }
 
 // CreatePackageRegistryToken uses the Gitea API to create a package registry token.
-func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
+func (g *GitCfg) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	message.Debugf("git.CreatePackageRegistryToken()")
 
 	// Establish a git tunnel to send the repo
@@ -186,7 +186,7 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 }
 
 // DoHTTPThings adds http request boilerplate and perform the request, checking for a successful response.
-func (g *Git) DoHTTPThings(request *netHttp.Request, username, secret string) ([]byte, error) {
+func (g *GitCfg) DoHTTPThings(request *netHttp.Request, username, secret string) ([]byte, error) {
 	message.Debugf("git.DoHttpThings()")
 
 	// Prep the request with boilerplate
@@ -211,7 +211,7 @@ func (g *Git) DoHTTPThings(request *netHttp.Request, username, secret string) ([
 	return responseBody, nil
 }
 
-func (g *Git) addReadOnlyUserToRepo(tunnelURL, repo string) error {
+func (g *GitCfg) addReadOnlyUserToRepo(tunnelURL, repo string) error {
 	message.Debugf("git.addReadOnlyUserToRepo()")
 
 	// Add the readonly user to the repo

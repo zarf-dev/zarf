@@ -20,7 +20,7 @@ import (
 )
 
 // PushRepo pushes a git repository from the local path to the configured git server.
-func (g *Git) PushRepo(srcURL, targetFolder string) error {
+func (g *GitCfg) PushRepo(srcURL, targetFolder string) error {
 	spinner := message.NewProgressSpinner("Processing git repo %s", srcURL)
 	defer spinner.Stop()
 
@@ -80,7 +80,7 @@ func (g *Git) PushRepo(srcURL, targetFolder string) error {
 	return nil
 }
 
-func (g *Git) prepRepoForPush() (*git.Repository, error) {
+func (g *GitCfg) prepRepoForPush() (*git.Repository, error) {
 	// Open the given repo
 	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
@@ -113,7 +113,7 @@ func (g *Git) prepRepoForPush() (*git.Repository, error) {
 	return repo, nil
 }
 
-func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
+func (g *GitCfg) push(repo *git.Repository, spinner *message.Spinner) error {
 	gitCred := http.BasicAuth{
 		Username: g.Server.PushUsername,
 		Password: g.Server.PushPassword,

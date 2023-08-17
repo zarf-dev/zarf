@@ -10,7 +10,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
+	"github.com/defenseunicorns/zarf/src/internal/packager/manifests"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -67,7 +67,7 @@ func getFlux(baseDir string, cfg *extensions.BigBang) (manifest types.ZarfManife
 	}
 
 	// Perform Kustomization now to get the flux.yaml file.
-	if err := kustomize.Build(baseDir, localPath, true); err != nil {
+	if err := manifests.Build(baseDir, localPath, true); err != nil {
 		return manifest, images, fmt.Errorf("unable to build kustomization: %w", err)
 	}
 

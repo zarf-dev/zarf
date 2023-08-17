@@ -14,13 +14,13 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/spf13/cobra"
 )
 
 var (
 	// Default global config for the packager
-	pkgConfig = types.PackagerConfig{}
+	pkgConfig = packager.PackagerCfg{}
 )
 
 var rootCmd = &cobra.Command{

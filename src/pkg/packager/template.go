@@ -14,7 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// fillActiveTemplate handles setting the active variables and reloading the base template.
+// fillActiveTemplate handles setting the package templates and reloading the package configuration based on that.
 func (p *Packager) fillActiveTemplate() error {
 	templateMap := map[string]string{}
 
@@ -70,80 +70,6 @@ func (p *Packager) fillActiveTemplate() error {
 	templateMap["###ZARF_PKG_ARCH###"] = p.arch
 
 	return utils.ReloadYamlTemplate(&p.cfg.Pkg, templateMap)
-}
-
-// setVariableMapInConfig handles setting the active variables used to template component files.
-func (p *Packager) setVariableMapInConfig() error {
-	for name, value := range p.cfg.PkgOpts.SetVariables {
-		p.setVariableInConfig(name, value, false, false, "")
-	}
-
-	for _, variable := range p.cfg.Pkg.Variables {
-		_, present := p.cfg.SetVariableMap[variable.Name]
-
-		// Variable is present, no need to continue checking
-		if present {
-			p.cfg.SetVariableMap[variable.Name].Sensitive = variable.Sensitive
-			p.cfg.SetVariableMap[variable.Name].AutoIndent = variable.AutoIndent
-			p.cfg.SetVariableMap[variable.Name].Type = variable.Type
-			continue
-		}
-
-		// First set default (may be overridden by prompt)
-		p.setVariableInConfig(variable.Name, variable.Default, variable.Sensitive, variable.AutoIndent, variable.Type)
-
-		// Variable is set to prompt the user
-		if variable.Prompt && !config.CommonOptions.Confirm {
-			// Prompt the user for the variable
-			val, err := interactive.PromptVariable(variable)
-
-			if err != nil {
-				return err
-			}
-
-			p.setVariableInConfig(variable.Name, val, variable.Sensitive, variable.AutoIndent, variable.Type)
-		}
-	}
-
-	return nil
-}
-
-func (p *Packager) setVariableInConfig(name, value string, sensitive bool, autoIndent bool, varType types.VariableType) {
-	p.cfg.SetVariableMap[name] = &types.ZarfSetVariable{
-		Name:       name,
-		Value:      value,
-		Sensitive:  sensitive,
-		AutoIndent: autoIndent,
-		Type:       varType,
-	}
-}
-
-// injectImportedVariable determines if an imported package variable exists in the active config and adds it if not.
-func (p *Packager) injectImportedVariable(importedVariable types.ZarfPackageVariable) {
-	presentInActive := false
-	for _, configVariable := range p.cfg.Pkg.Variables {
-		if configVariable.Name == importedVariable.Name {
-			presentInActive = true
-		}
-	}
-
-	if !presentInActive {
-		p.cfg.Pkg.Variables = append(p.cfg.Pkg.Variables, importedVariable)
-	}
-}
-
-// injectImportedConstant determines if an imported package constant exists in the active config and adds it if not.
-func (p *Packager) injectImportedConstant(importedConstant types.ZarfPackageConstant) {
-	presentInActive := false
-	for _, configVariable := range p.cfg.Pkg.Constants {
-		if configVariable.Name == importedConstant.Name {
-			presentInActive = true
-		}
-	}
-
-	if !presentInActive {
-		p.cfg.Pkg.Constants = append(p.cfg.Pkg.Constants, importedConstant)
-	}
 }
 
 // findComponentTemplatesAndReload appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads

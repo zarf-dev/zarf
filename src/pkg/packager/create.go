@@ -15,10 +15,12 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/internal/packager/actions"
+	"github.com/defenseunicorns/zarf/src/internal/packager/files"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
-	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
+	"github.com/defenseunicorns/zarf/src/internal/packager/manifests"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -121,7 +123,7 @@ func (p *Packager) Create(baseDir string) error {
 	for idx, component := range p.cfg.Pkg.Components {
 		onCreate := component.Actions.OnCreate
 		onFailure := func() {
-			if err := p.runActions(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
+			if err := actions.RunActions(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -137,7 +139,7 @@ func (p *Packager) Create(baseDir string) error {
 			return fmt.Errorf("unable to create component SBOM: %w", err)
 		}
 
-		if err := p.runActions(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
+		if err := actions.RunActions(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -292,13 +294,17 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 		}
 	}
 
-	fp := FilePacker{
-		component:      &component,
-		componentPaths: componentPaths,
-	}
+	for fileIdx, file := range component.Files {
+		f := files.FileCfg{
+			File:           &file,
+			FilePrefix:     strconv.Itoa(fileIdx),
+			Component:      &component,
+			ComponentPaths: componentPaths,
+		}
 
-	for _, path := range fp.GetSBOMPaths() {
-		appendSBOMFiles(path)
+		for _, path := range f.GetSBOMPaths() {
+			appendSBOMFiles(path)
+		}
 	}
 
 	for dataIdx, data := range component.DataInjections {
@@ -329,7 +335,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 	onCreate := component.Actions.OnCreate
 	if !isSkeleton {
-		if err := p.runActions(onCreate.Defaults, onCreate.Before, nil); err != nil {
+		if err := actions.RunActions(onCreate.Defaults, onCreate.Before, nil); err != nil {
 			return fmt.Errorf("unable to run component before action: %w", err)
 		}
 	}
@@ -337,9 +343,10 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
 
-		helmCfg := helm.Helm{
-			Chart: chart,
-			Cfg:   p.cfg,
+		helmCfg := helm.HelmCfg{
+			Chart:           chart,
+			PackageMetadata: p.cfg.Pkg.Metadata,
+			State:           p.cfg.State,
 		}
 
 		if isSkeleton && chart.URL == "" {
@@ -381,15 +388,19 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		}
 	}
 
-	fp := FilePacker{
-		component:      &component,
-		componentPaths: componentPaths,
-	}
+	for fileIdx, file := range component.Files {
+		f := files.FileCfg{
+			File:           &file,
+			FilePrefix:     strconv.Itoa(fileIdx),
+			Component:      &component,
+			ComponentPaths: componentPaths,
+		}
 
-	if isSkeleton {
-		fp.PackSkeletonFiles()
-	} else {
-		fp.PackFiles()
+		if isSkeleton {
+			f.PackSkeletonFile()
+		} else {
+			f.PackFile()
+		}
 	}
 
 	if len(component.DataInjections) > 0 {
@@ -466,7 +477,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				rel := filepath.Join(types.ManifestsFolder, kname)
 				dst := filepath.Join(componentPaths.Base, rel)
 
-				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+				if err := manifests.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 				}
 				if isSkeleton {
@@ -497,7 +508,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	}
 
 	if !isSkeleton {
-		if err := p.runActions(onCreate.Defaults, onCreate.After, nil); err != nil {
+		if err := actions.RunActions(onCreate.Defaults, onCreate.After, nil); err != nil {
 			return fmt.Errorf("unable to run component after action: %w", err)
 		}
 	}

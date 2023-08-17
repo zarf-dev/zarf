@@ -71,7 +71,7 @@ var destroyCmd = &cobra.Command{
 			}
 		} else {
 			// Perform chart uninstallation
-			helmCfg := helm.Helm{}
+			helmCfg := helm.HelmCfg{}
 			helmCfg.Destroy(removeComponents)
 
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace

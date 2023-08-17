@@ -13,8 +13,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
-// Git is the main struct for managing git repositories.
-type Git struct {
+// GitCfg is the main struct for managing git repositories.
+type GitCfg struct {
 	// Server is the git server configuration.
 	Server types.GitServerInfo
 	// Spinner is an optional spinner to use for long running operations.
@@ -28,15 +28,15 @@ const offlineRemoteName = "offline-downstream"
 const emptyRef = ""
 
 // New creates a new git instance with the provided server config.
-func New(server types.GitServerInfo) *Git {
-	return &Git{
+func New(server types.GitServerInfo) *GitCfg {
+	return &GitCfg{
 		Server: server,
 	}
 }
 
 // NewWithSpinner creates a new git instance with the provided server config and spinner.
-func NewWithSpinner(server types.GitServerInfo, spinner *message.Spinner) *Git {
-	return &Git{
+func NewWithSpinner(server types.GitServerInfo, spinner *message.Spinner) *GitCfg {
+	return &GitCfg{
 		Server:  server,
 		Spinner: spinner,
 	}

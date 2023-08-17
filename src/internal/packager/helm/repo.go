@@ -26,7 +26,7 @@ import (
 )
 
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
-func (h *Helm) PackageChart(destination string) error {
+func (h *HelmCfg) PackageChart(destination string) error {
 	if len(h.Chart.URL) > 0 {
 		url, refPlain, err := transform.GitURLSplitRef(h.Chart.URL)
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
@@ -60,7 +60,7 @@ func (h *Helm) PackageChart(destination string) error {
 }
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
+func (h *HelmCfg) PackageChartFromLocalFiles(destination string) (string, error) {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.Chart.Name, h.Chart.Version, h.Chart.LocalPath)
 	defer spinner.Stop()
 
@@ -93,7 +93,7 @@ func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
 }
 
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
-func (h *Helm) PackageChartFromGit(destination string) (string, error) {
+func (h *HelmCfg) PackageChartFromGit(destination string) (string, error) {
 	spinner := message.NewProgressSpinner("Processing helm chart %s", h.Chart.Name)
 	defer spinner.Stop()
 
@@ -110,7 +110,7 @@ func (h *Helm) PackageChartFromGit(destination string) (string, error) {
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func (h *Helm) DownloadPublishedChart(destination string) {
+func (h *HelmCfg) DownloadPublishedChart(destination string) {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.Chart.Name, h.Chart.Version, h.Chart.URL)
 	defer spinner.Stop()
 
@@ -176,7 +176,7 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 }
 
 // DownloadChartFromGitToTemp downloads a chart from git into a temp directory
-func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, error) {
+func (h *HelmCfg) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, error) {
 	// Create the Git configuration and download the repo
 	gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
 
@@ -191,7 +191,7 @@ func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, err
 }
 
 // buildChartDependencies builds the helm chart dependencies
-func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
+func (h *HelmCfg) buildChartDependencies(spinner *message.Spinner) error {
 	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
 	if err != nil {
 		spinner.Fatalf(err, "Unable to create a new registry client")

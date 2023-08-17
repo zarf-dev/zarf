@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package template provides functions for templating yaml files.
-package template
+// Package variables provides functions for templating yaml files based on Zarf variables and constants.
+package variables
 
 import (
 	"regexp"
@@ -12,7 +12,7 @@ import (
 )
 
 // ProcessYamlFilesInPath iterates over all yaml files in a given path and performs Zarf templating + image swapping.
-func ProcessYamlFilesInPath(path string, component types.ZarfComponent, values Values) ([]string, error) {
+func (values *Values) ProcessYamlFilesInPath(path string, component types.ZarfComponent) ([]string, error) {
 	// Only pull in yml and yaml files
 	pattern := regexp.MustCompile(`(?mi)\.ya?ml$`)
 	manifests, _ := utils.RecursiveFileList(path, pattern, false)
