@@ -96,7 +96,7 @@ func Run(YOLO bool, componentPaths types.ComponentPaths, c types.ZarfComponent) 
 		GitPath:     "./chart",
 	}
 
-	helmCfg := helm.New(&bbChart, "")
+	helmCfg := helm.New(&bbChart, "").WithComponent(types.ZarfMetadata{}, c, componentPaths)
 
 	// Download the chart from Git and save it to a temporary directory.
 	chartTarball, err := helmCfg.PackageChartFromGit(componentPaths.Charts)
