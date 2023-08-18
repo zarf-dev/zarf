@@ -43,7 +43,7 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	if p.provider == nil {
-		provider, err := ProviderFromSource(p.cfg.PkgSource, p.cfg.PkgOpts.Shasum, p.tmp.Base(), p.cfg.PkgOpts.PublicKeyPath)
+		provider, err := ProviderFromSource(p.cfg.PkgSource, p.cfg.PkgOpts.Shasum, p.tmp, p.cfg.PkgOpts.PublicKeyPath)
 		if err != nil {
 			return err
 		}

@@ -9,17 +9,19 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type ociProvider struct {
 	src string
-	dst string
+	dst types.PackagePathsMap
 	*oci.OrasRemote
-	DefaultValidator
+	signatureValidator
 }
 
-func (op *ociProvider) LoadPackage(optionalComponents []string) ([]string, error) {
+func (op *ociProvider) LoadPackage(optionalComponents []string) (pkg *types.ZarfPackage, err error) {
 	layersToPull := []ocispec.Descriptor{}
 
 	// only pull specified components and their images if optionalComponents AND --confirm are set
@@ -31,5 +33,27 @@ func (op *ociProvider) LoadPackage(optionalComponents []string) ([]string, error
 		layersToPull = append(layersToPull, layers...)
 	}
 
-	return op.PullPackage(op.dst, config.CommonOptions.OCIConcurrency, layersToPull...)
+	_, err = op.PullPackage(op.dst.Base(), config.CommonOptions.OCIConcurrency, layersToPull...)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: checksum validation
+
+	return pkg, utils.ReadYaml(op.dst[types.ZarfYAML], &pkg)
+}
+
+func (op *ociProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackage, err error) {
+	_, err = op.PullPackageMetadata(op.dst.Base())
+	if err != nil {
+		return nil, err
+	}
+	if wantSBOM {
+		_, err = op.PullPackageSBOM(op.dst.Base())
+		if err != nil {
+			return nil, err
+		}
+	}
+	// TODO: checksum validation
+
+	return pkg, utils.ReadYaml(op.dst[types.ZarfYAML], &pkg)
 }

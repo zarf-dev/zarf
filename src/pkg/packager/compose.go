@@ -377,9 +377,9 @@ func (p *Packager) getSubPackage(packagePath string, checkSumPaths []string) (im
 		p.injectImportedConstant(importedConstant)
 	}
 
-	if len(checkSumPaths) > 0 {
-		p.validatePackageChecksums(packagePath, importedPackage.Metadata.AggregateChecksum, checkSumPaths)
-	}
+	// if len(checkSumPaths) > 0 {
+	// 	p.validatePackageChecksums(packagePath, importedPackage.Metadata.AggregateChecksum, checkSumPaths)
+	// }
 
 	return
 }

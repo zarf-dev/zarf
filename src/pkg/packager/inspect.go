@@ -14,7 +14,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	wantSBOM := includeSBOM || outputSBOM != ""
 
 	if p.provider == nil {
-		provider, err := ProviderFromSource(p.cfg.PkgOpts.PackagePath, p.cfg.PkgOpts.Shasum, p.tmp.Base(), p.cfg.PkgOpts.PublicKeyPath)
+		provider, err := ProviderFromSource(p.cfg.PkgOpts.PackagePath, p.cfg.PkgOpts.Shasum, p.tmp, p.cfg.PkgOpts.PublicKeyPath)
 		if err != nil {
 			return err
 		}
@@ -45,26 +45,6 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	// 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	// 	}
 	// } else {
-	// 	// This package exists on the local file system - extract the first layer of the tarball
-	// 	if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfChecksumsTxt, p.tmp.Base); err != nil {
-	// 		return fmt.Errorf("unable to extract %s: %w", config.ZarfChecksumsTxt, err)
-	// 	}
-
-	// 	if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, types.ZarfYAML, p.tmp.Base); err != nil {
-	// 		return fmt.Errorf("unable to extract %s: %w", types.ZarfYAML, err)
-	// 	}
-	// 	if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, types.ZarfYAMLSignature, p.tmp.Base); err != nil {
-	// 		return fmt.Errorf("unable to extract %s: %w", types.ZarfYAMLSignature, err)
-	// 	}
-	// 	if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
-	// 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
-	// 	}
-	// 	if wantSBOM {
-	// 		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, types.ZarfSBOMTar, p.tmp.Base); err != nil {
-	// 			return fmt.Errorf("unable to extract %s: %w", types.ZarfSBOMTar, err)
-	// 		}
-	// 	}
-	// }
 
 	utils.ColorPrintYAML(pkg, nil, false)
 

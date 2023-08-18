@@ -56,7 +56,11 @@ func (p *Packager) Publish() error {
 		return err
 	}
 
-	if err := p.validatePackageChecksums(p.tmp.Base(), p.cfg.Pkg.Metadata.AggregateChecksum, nil); err != nil {
+	cv := checksumValidator{
+		src: p.tmp,
+	}
+
+	if err := cv.Validate(nil, p.cfg.Pkg.Metadata.AggregateChecksum); err != nil {
 		return fmt.Errorf("unable to publish package because checksums do not match: %w", err)
 	}
 

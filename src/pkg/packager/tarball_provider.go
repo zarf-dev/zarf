@@ -5,22 +5,42 @@
 package packager
 
 import (
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/mholt/archiver/v3"
 )
 
 type tarballProvider struct {
 	src string
-	dst string
-	DefaultValidator
+	dst types.PackagePathsMap
+	signatureValidator
 }
 
-func (tp *tarballProvider) LoadPackage(optionalComponents []string) (*types.ZarfPackage, error) {
-	return nil, nil
+func (tp *tarballProvider) LoadPackage(optionalComponents []string) (pkg *types.ZarfPackage, err error) {
+	if len(optionalComponents) > 0 {
+		// TODO: implement
+		return nil, nil
+	}
+
+	if err := archiver.Unarchive(tp.src, tp.dst.Base()); err != nil {
+		return nil, err
+	}
+
+	return pkg, utils.ReadYaml(tp.dst[types.ZarfYAML], &pkg)
 }
 
-func (tp *tarballProvider) LoadPackageMetadata(wantSBOM bool) (*types.ZarfPackage, error) {
+func (tp *tarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackage, err error) {
+	pathsToExtract := tp.dst.MetadataPaths()
+	if wantSBOM {
+		pathsToExtract[types.ZarfSBOMTar] = tp.dst[types.ZarfSBOMTar]
+	}
+	for pathInArchive := range pathsToExtract {
+		if err := archiver.Extract(tp.src, pathInArchive, tp.dst.Base()); err != nil {
+			return nil, err
+		}
+	}
 
-	return &types.ZarfPackage{}, tp.Validate([]string{})
+	return pkg, utils.ReadYaml(tp.dst[types.ZarfYAML], &pkg)
 }
 
 // func (p *Packager) handleIfPartialPkg() error {
