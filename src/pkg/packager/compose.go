@@ -315,7 +315,12 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 		existing := false
 		for _, targetChart := range target.Charts {
 			if targetChart.Name == overrideChart.Name {
-				targetChart.Namespace = overrideChart.Namespace
+				if overrideChart.Namespace != "" {
+					targetChart.Namespace = overrideChart.Namespace
+				}
+				if overrideChart.ReleaseName != "" {
+					targetChart.ReleaseName = overrideChart.ReleaseName
+				}
 				targetChart.ValuesFiles = append(targetChart.ValuesFiles, overrideChart.ValuesFiles...)
 				existing = true
 			}
@@ -331,7 +336,12 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 		existing := false
 		for _, targetManifest := range target.Manifests {
 			if targetManifest.Name == overrideManifest.Name {
+				if overrideManifest.Namespace != "" {
+					targetManifest.Namespace = overrideManifest.Namespace
+				}
 				targetManifest.Files = append(targetManifest.Files, overrideManifest.Files...)
+				targetManifest.Kustomizations = append(targetManifest.Files, overrideManifest.Kustomizations...)
+
 				existing = true
 			}
 		}

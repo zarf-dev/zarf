@@ -15,10 +15,13 @@ components:
       path: ../dos-games
       # Example optional custom name to point to in the imported package (default is to use this component's name)
       name: baseline
-    # Array keys are appended to the end of anything the imported component defined (in this case an extra service)
+    # 'name'd Zarf primitives will merge the arrays together on import:
+    # - 'manifests' of the same name will merge namespace, files and kustomizations
+    # - 'charts' of the same name will merge namespace, releaseName and valuesFiles
+    # Zarf primitives without matching 'name's will be appended to the end of the primitive's list for that component.
     manifests:
-      - name: additional-games
-        namespace: dos-games
+      - name: multi-games
+        namespace: dos-games-override
         files:
           - quake-service.yaml
 
@@ -32,10 +35,10 @@ components:
       url: oci://localhost:5000/wordpress:16.0.4-skeleton
       # Example optional custom name to point to in the imported package (default is to use this component's name)
       name: wordpress
-    # Array keys are appended to the end of anything the imported component defined (in this case an override of the blog name)
+    # Un'name'd Zarf primitives will be appended to the end of the primitive's list for that component.
     actions:
       onDeploy:
         before:
-          - cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}
+          - cmd: ./zarf tools kubectl get -n dos-games-override deployment -o jsonpath={.items[0].metadata.creationTimestamp}
             setVariables:
               - name: WORDPRESS_BLOG_NAME
