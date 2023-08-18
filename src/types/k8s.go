@@ -10,7 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 )
 
-// PackageStatus defines the deployment status of a Zarf package.
+// WebhookStatus defines the status of a component webhook for a Zarf package.
 type WebhookStatus string
 
 // ComponentStatus defines the deployment status of a Zarf component within a package.
