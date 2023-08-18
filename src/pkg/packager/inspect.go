@@ -6,6 +6,7 @@ package packager
 
 import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Inspect list the contents of a package.
@@ -77,7 +78,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	// }
 
 	if wantSBOM {
-		return UnarchiveAndViewSBOMs(p.tmp.SBOMTar(), outputSBOM, pkg.Metadata.Name, includeSBOM)
+		return UnarchiveAndViewSBOMs(p.tmp[types.ZarfSBOMTar], outputSBOM, pkg.Metadata.Name, includeSBOM)
 	}
 
 	return nil

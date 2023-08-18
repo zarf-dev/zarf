@@ -164,7 +164,7 @@ func (p *Packager) Create(baseDir string) error {
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
-				ImagesPath:        p.tmp.ImagesDirectory(),
+				ImagesPath:        p.tmp[types.ZarfImageCacheDir],
 				ImgList:           imgList,
 				Insecure:          config.CommonOptions.Insecure,
 				Architectures:     []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
@@ -183,7 +183,7 @@ func (p *Packager) Create(baseDir string) error {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp.SBOMDirectory(), p.tmp.ImagesDirectory()); err != nil {
+		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp[types.ZarfSBOMDir], p.tmp[types.ZarfImageCacheDir]); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
@@ -253,7 +253,7 @@ func (p *Packager) Create(baseDir string) error {
 
 	// Output the SBOM files into a directory if specified.
 	if p.cfg.CreateOpts.SBOMOutputDir != "" || p.cfg.CreateOpts.ViewSBOM {
-		tarballPath := p.tmp.SBOMTar()
+		tarballPath := p.tmp[types.ZarfSBOMDir]
 		return UnarchiveAndViewSBOMs(tarballPath, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name, p.cfg.CreateOpts.ViewSBOM)
 	}
 

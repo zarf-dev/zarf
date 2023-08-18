@@ -191,22 +191,6 @@ func (pm PackagePathsMap) MetadataPaths() map[string]string {
 	}
 }
 
-func (pm PackagePathsMap) ImagesDirectory() string {
-	return pm[ZarfImageCacheDir]
-}
-
-func (pm PackagePathsMap) ComponentsDirectory() string {
-	return pm[ZarfComponentsDir]
-}
-
-func (pm PackagePathsMap) SBOMDirectory() string {
-	return pm[ZarfSBOMDir]
-}
-
-func (pm PackagePathsMap) SBOMTar() string {
-	return pm[ZarfSBOMTar]
-}
-
 // ComponentPaths is a struct that represents all of the subdirectories for a Zarf component.
 type ComponentPaths struct {
 	Base           string

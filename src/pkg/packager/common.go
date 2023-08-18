@@ -180,7 +180,7 @@ func (p *Packager) ClearTempPaths() {
 }
 
 func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
-	if err := utils.CreateDirectory(p.tmp.ComponentsDirectory(), 0700); err != nil {
+	if err := utils.CreateDirectory(p.tmp[types.ZarfComponentsDir], 0700); err != nil {
 		return paths, err
 	}
 
