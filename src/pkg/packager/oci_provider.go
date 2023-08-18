@@ -33,11 +33,16 @@ func (op *ociProvider) LoadPackage(optionalComponents []string) (pkg *types.Zarf
 		layersToPull = append(layersToPull, layers...)
 	}
 
+	pathsToCheck, err := op.PullPackage(op.dst.Base(), config.CommonOptions.OCIConcurrency, layersToPull...)
+	if err != nil {
+		return nil, fmt.Errorf("unable to pull the package: %w", err)
+	}
+
 	if err := utils.ReadYaml(op.dst[types.ZarfYAML], &pkg); err != nil {
 		return nil, err
 	}
 
-	if err := validate.PackageIntegrity(op.dst, nil, pkg.Metadata.AggregateChecksum); err != nil {
+	if err := validate.PackageIntegrity(op.dst, pathsToCheck, pkg.Metadata.AggregateChecksum); err != nil {
 		return nil, err
 	}
 
