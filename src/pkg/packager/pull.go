@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -42,7 +43,7 @@ func (p *Packager) Pull() error {
 		message.Successf("Package signature is valid")
 	}
 
-	if err = p.validatePackageChecksums(p.tmp.Base(), p.cfg.Pkg.Metadata.AggregateChecksum, pathsToCheck); err != nil {
+	if err := validate.PackageIntegrity(p.tmp, pathsToCheck, p.cfg.Pkg.Metadata.AggregateChecksum); err != nil {
 		return fmt.Errorf("unable to validate the package checksums: %w", err)
 	}
 

@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
@@ -13,7 +14,6 @@ import (
 type tarballProvider struct {
 	src string
 	dst types.PackagePathsMap
-	signatureValidator
 }
 
 func (tp *tarballProvider) LoadPackage(optionalComponents []string) (pkg *types.ZarfPackage, err error) {
@@ -26,7 +26,15 @@ func (tp *tarballProvider) LoadPackage(optionalComponents []string) (pkg *types.
 		return nil, err
 	}
 
-	return pkg, utils.ReadYaml(tp.dst[types.ZarfYAML], &pkg)
+	if err := utils.ReadYaml(tp.dst[types.ZarfYAML], &pkg); err != nil {
+		return nil, err
+	}
+
+	if err := validate.PackageIntegrity(tp.dst, nil, pkg.Metadata.AggregateChecksum); err != nil {
+		return nil, err
+	}
+
+	return pkg, nil
 }
 
 func (tp *tarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackage, err error) {
@@ -40,7 +48,15 @@ func (tp *tarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPa
 		}
 	}
 
-	return pkg, utils.ReadYaml(tp.dst[types.ZarfYAML], &pkg)
+	if err := utils.ReadYaml(tp.dst[types.ZarfYAML], &pkg); err != nil {
+		return nil, err
+	}
+
+	if err := validate.PackageIntegrity(tp.dst, nil, pkg.Metadata.AggregateChecksum); err != nil {
+		return nil, err
+	}
+
+	return pkg, nil
 }
 
 // func (p *Packager) handleIfPartialPkg() error {

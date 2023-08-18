@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -18,7 +19,6 @@ type ociProvider struct {
 	src string
 	dst types.PackagePathsMap
 	*oci.OrasRemote
-	signatureValidator
 }
 
 func (op *ociProvider) LoadPackage(optionalComponents []string) (pkg *types.ZarfPackage, err error) {
@@ -33,27 +33,46 @@ func (op *ociProvider) LoadPackage(optionalComponents []string) (pkg *types.Zarf
 		layersToPull = append(layersToPull, layers...)
 	}
 
-	_, err = op.PullPackage(op.dst.Base(), config.CommonOptions.OCIConcurrency, layersToPull...)
-	if err != nil {
+	if err := utils.ReadYaml(op.dst[types.ZarfYAML], &pkg); err != nil {
 		return nil, err
 	}
-	// TODO: checksum validation
 
-	return pkg, utils.ReadYaml(op.dst[types.ZarfYAML], &pkg)
+	if err := validate.PackageIntegrity(op.dst, nil, pkg.Metadata.AggregateChecksum); err != nil {
+		return nil, err
+	}
+
+	return pkg, nil
 }
 
 func (op *ociProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackage, err error) {
-	_, err = op.PullPackageMetadata(op.dst.Base())
+	var pathsToCheck []string
+
+	metatdataDescriptors, err := op.PullPackageMetadata(op.dst.Base())
 	if err != nil {
 		return nil, err
 	}
+
+	for _, desc := range metatdataDescriptors {
+		pathsToCheck = append(pathsToCheck, desc.Annotations[ocispec.AnnotationTitle])
+	}
+
 	if wantSBOM {
-		_, err = op.PullPackageSBOM(op.dst.Base())
+		sbomDescriptors, err := op.PullPackageSBOM(op.dst.Base())
 		if err != nil {
 			return nil, err
 		}
+		for _, desc := range sbomDescriptors {
+			pathsToCheck = append(pathsToCheck, desc.Annotations[ocispec.AnnotationTitle])
+		}
 	}
-	// TODO: checksum validation
 
-	return pkg, utils.ReadYaml(op.dst[types.ZarfYAML], &pkg)
+	if err := utils.ReadYaml(op.dst[types.ZarfYAML], &pkg); err != nil {
+		return nil, err
+	}
+
+	if err := validate.PackageIntegrity(op.dst, pathsToCheck, pkg.Metadata.AggregateChecksum); err != nil {
+		return nil, err
+	}
+
+	return pkg, nil
 }

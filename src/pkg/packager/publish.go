@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -56,11 +57,7 @@ func (p *Packager) Publish() error {
 		return err
 	}
 
-	cv := checksumValidator{
-		src: p.tmp,
-	}
-
-	if err := cv.Validate(nil, p.cfg.Pkg.Metadata.AggregateChecksum); err != nil {
+	if err := validate.PackageIntegrity(p.tmp, nil, p.cfg.Pkg.Metadata.AggregateChecksum); err != nil {
 		return fmt.Errorf("unable to publish package because checksums do not match: %w", err)
 	}
 

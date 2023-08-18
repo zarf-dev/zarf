@@ -51,7 +51,6 @@ type httpProvider struct {
 	dst      string
 	shasum   string
 	insecure bool
-	signatureValidator
 }
 
 func (hp *httpProvider) LoadPackage(optionalComponents []string) ([]string, error) {
