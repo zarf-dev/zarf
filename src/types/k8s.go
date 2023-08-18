@@ -10,7 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 )
 
-// WebhookStatus defines the status of a component webhook for a Zarf package.
+// WebhookStatus defines the status of a Component Webhook operating on a Zarf package secret.
 type WebhookStatus string
 
 // ComponentStatus defines the deployment status of a Zarf component within a package.
@@ -67,6 +67,7 @@ type DeployedComponent struct {
 	ObservedGeneration int              `json:"observedGeneration"`
 }
 
+// Webhook contains information about a Component Webhook operating on a Zarf package secret.
 type Webhook struct {
 	Name                string `json:"name"`
 	WaitDurationSeconds int    `json:"waitDurationSeconds,omitempty"`
