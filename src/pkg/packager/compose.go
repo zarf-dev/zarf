@@ -98,7 +98,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			return child, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
 		}
 
-		componentLayer := filepath.Join(config.ZarfComponentsDir, fmt.Sprintf("%s.tar", childComponentName))
+		componentLayer := filepath.Join(types.ZarfComponentsDir, fmt.Sprintf("%s.tar", childComponentName))
 		err = p.SetOCIRemote(parent.Import.URL)
 		if err != nil {
 			return child, err
@@ -153,9 +153,9 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	// If it's OCI, we need to unpack the component tarball
 	if parent.Import.URL != "" {
-		dir := filepath.Join(cachePath, config.ZarfComponentsDir, child.Name)
+		dir := filepath.Join(cachePath, types.ZarfComponentsDir, child.Name)
 		componentTarball := fmt.Sprintf("%s.tar", dir)
-		parent.Import.Path = filepath.Join(parent.Import.Path, config.ZarfComponentsDir, child.Name)
+		parent.Import.Path = filepath.Join(parent.Import.Path, types.ZarfComponentsDir, child.Name)
 		if !utils.InvalidPath(componentTarball) {
 			if !utils.InvalidPath(dir) {
 				err = os.RemoveAll(dir)
@@ -163,7 +163,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 					return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
 				}
 			}
-			err = archiver.Unarchive(componentTarball, filepath.Join(cachePath, config.ZarfComponentsDir))
+			err = archiver.Unarchive(componentTarball, filepath.Join(cachePath, types.ZarfComponentsDir))
 			if err != nil {
 				return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
 			}
@@ -362,7 +362,7 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 
 // Reads the locally imported zarf.yaml.
 func (p *Packager) getSubPackage(packagePath string, checkSumPaths []string) (importedPackage types.ZarfPackage, err error) {
-	path := filepath.Join(packagePath, config.ZarfYAML)
+	path := filepath.Join(packagePath, types.ZarfYAML)
 	if err := utils.ReadYaml(path, &importedPackage); err != nil {
 		return importedPackage, err
 	}

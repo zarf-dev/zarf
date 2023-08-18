@@ -31,12 +31,11 @@ import (
 
 // Builder is the main struct used to build SBOM artifacts.
 type Builder struct {
-	spinner     *message.Spinner
-	cachePath   string
-	imagesPath  string
-	tmpSBOMPath string
-	sbomTarPath string
-	jsonList    []byte
+	spinner    *message.Spinner
+	cachePath  string
+	imagesPath string
+	outputDir  string
+	jsonList   []byte
 }
 
 //go:embed viewer/*
@@ -47,20 +46,19 @@ var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
 // func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, imagesPath, sbomPath string) error {
-func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, tmpPaths types.LoadedPackagePaths) error {
+func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, sbomDir string, imagesDir string) error {
 	imageCount := len(imgList)
 	componentCount := len(componentSBOMs)
 	builder := Builder{
-		spinner:     message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
-		cachePath:   config.GetAbsCachePath(),
-		imagesPath:  tmpPaths.ImagesDir,
-		sbomTarPath: tmpPaths.SbomTar,
-		tmpSBOMPath: tmpPaths.Sboms,
+		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
+		cachePath:  config.GetAbsCachePath(),
+		imagesPath: imagesDir,
+		outputDir:  sbomDir,
 	}
 	defer builder.spinner.Stop()
 
 	// Ensure the sbom directory exists
-	_ = utils.CreateDirectory(builder.tmpSBOMPath, 0700)
+	_ = utils.CreateDirectory(sbomDir, 0700)
 
 	// Generate a list of images and files for the sbom viewer
 	json, err := builder.generateJSONList(componentSBOMs, imgList)
@@ -76,7 +74,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
 		// Get the image that we are creating an SBOM for
-		img, err := utils.LoadOCIImage(tmpPaths.ImagesDir, tag)
+		img, err := utils.LoadOCIImage(imagesDir, tag)
 		if err != nil {
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err
@@ -129,18 +127,19 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 		}
 	}
 
-	allSBOMFiles, err := filepath.Glob(filepath.Join(builder.tmpSBOMPath, "*"))
+	allSBOMFiles, err := filepath.Glob(filepath.Join(sbomDir, "*"))
 	if err != nil {
 		builder.spinner.Errorf(err, "Unable to get a list of all SBOM files")
 		return err
 	}
 
-	if err = archiver.Archive(allSBOMFiles, builder.sbomTarPath); err != nil {
+	sbomTarballPath := fmt.Sprintf("%s.tar", sbomDir)
+	if err = archiver.Archive(allSBOMFiles, sbomTarballPath); err != nil {
 		builder.spinner.Errorf(err, "Unable to create the sbom archive")
 		return err
 	}
 
-	if err = os.RemoveAll(builder.tmpSBOMPath); err != nil {
+	if err = os.RemoveAll(sbomDir); err != nil {
 		builder.spinner.Errorf(err, "Unable to remove the temporary SBOM directory")
 		return err
 	}
@@ -160,7 +159,7 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 	}
 
 	// Create the sbom.
-	imageCachePath := filepath.Join(b.cachePath, config.ZarfImageCacheDir)
+	imageCachePath := filepath.Join(b.cachePath, types.ZarfImageCacheDir)
 
 	// Ensure the image cache directory exists.
 	if err := utils.CreateDirectory(imageCachePath, 0700); err != nil {
@@ -302,6 +301,6 @@ func (b *Builder) getNormalizedFileName(identifier string) string {
 }
 
 func (b *Builder) createSBOMFile(filename string) (*os.File, error) {
-	path := filepath.Join(b.tmpSBOMPath, b.getNormalizedFileName(filename))
+	path := filepath.Join(b.outputDir, b.getNormalizedFileName(filename))
 	return os.Create(path)
 }

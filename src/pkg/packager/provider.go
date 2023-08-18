@@ -34,6 +34,7 @@ func identifySourceType(source string) string {
 			return ""
 		}
 	}
+	// if ZarfPackagePattern.MatchString(packageName) || ZarfInitPattern.MatchString(packageName) {
 
 	if utils.InvalidPath(source) {
 		return ""
@@ -48,9 +49,10 @@ func identifySourceType(source string) string {
 	return ""
 }
 
-func ProviderFromSource(source, shasum, destination string) (types.PackageProvider, error) {
+func ProviderFromSource(source string, shasum string, destination string, keyPath string) (types.PackageProvider, error) {
 	defaultValidator := DefaultValidator{
-		Source: destination,
+		Source:  destination,
+		KeyPath: keyPath,
 	}
 
 	switch identifySourceType(source) {
@@ -75,11 +77,12 @@ func ProviderFromSource(source, shasum, destination string) (types.PackageProvid
 }
 
 type DefaultValidator struct {
-	Source string
+	Source  string
+	KeyPath string
 }
 
-func (dv *DefaultValidator) Validate(loadedPaths *types.LoadedPackagePaths, keyPath string) error {
-	if err := ValidatePackageSignature(dv.Source, keyPath); err != nil {
+func (dv *DefaultValidator) Validate(loaded []string) error {
+	if err := ValidatePackageSignature(dv.Source, dv.KeyPath); err != nil {
 		return err
 	}
 

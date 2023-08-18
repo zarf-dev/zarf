@@ -37,7 +37,7 @@ func (p *Packager) Create(baseDir string) error {
 
 	var originalDir string
 
-	if err := p.readYaml(filepath.Join(baseDir, config.ZarfYAML)); err != nil {
+	if err := p.readYaml(filepath.Join(baseDir, types.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
@@ -150,7 +150,7 @@ func (p *Packager) Create(baseDir string) error {
 		combinedImageList = append(combinedImageList, component.Images...)
 
 		// Remove the temp directory for this component before archiving.
-		err = os.RemoveAll(filepath.Join(p.tmp.ComponentsDir, component.Name, types.TempFolder))
+		err = os.RemoveAll(filepath.Join(p.tmp.GetComponentPaths(component.Name).Temp))
 		if err != nil {
 			message.Warnf("unable to remove temp directory for component %s, component tarball may contain unused artifacts: %s", component.Name, err.Error())
 		}
@@ -164,7 +164,7 @@ func (p *Packager) Create(baseDir string) error {
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
-				ImagesPath:        p.tmp.ImagesDir,
+				ImagesPath:        p.tmp.ImagesDirectory(),
 				ImgList:           imgList,
 				Insecure:          config.CommonOptions.Insecure,
 				Architectures:     []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
@@ -183,7 +183,7 @@ func (p *Packager) Create(baseDir string) error {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp); err != nil {
+		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp.SBOMDirectory(), p.tmp.ImagesDirectory()); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
@@ -204,7 +204,7 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Calculate all the checksums
-	checksumChecksum, err := generatePackageChecksums(p.tmp.Base)
+	checksumChecksum, err := p.generatePackageChecksums(p.tmp.Base())
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for the package: %w", err)
 	}
@@ -217,14 +217,15 @@ func (p *Packager) Create(baseDir string) error {
 
 	// Sign the config file if a key was provided
 	if p.cfg.CreateOpts.SigningKeyPath != "" {
-		_, err := utils.CosignSignBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, p.cfg.CreateOpts.SigningKeyPath, p.getSigCreatePassword)
+		mp := p.tmp.MetadataPaths()
+		_, err := utils.CosignSignBlob(mp[types.ZarfYAML], mp[types.ZarfYAMLSignature], p.cfg.CreateOpts.SigningKeyPath, p.getSigCreatePassword)
 		if err != nil {
 			return fmt.Errorf("unable to sign the package: %w", err)
 		}
 	}
 
 	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
-		err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, config.CommonOptions.OCIConcurrency)
+		err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base(), config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
@@ -245,27 +246,33 @@ func (p *Packager) Create(baseDir string) error {
 		_ = os.Remove(packageName)
 
 		// Create the package tarball.
-		if err := p.archivePackage(p.tmp.Base, packageName); err != nil {
+		if err := p.archivePackage(packageName); err != nil {
 			return fmt.Errorf("unable to archive package: %w", err)
 		}
 	}
 
 	// Output the SBOM files into a directory if specified.
 	if p.cfg.CreateOpts.SBOMOutputDir != "" || p.cfg.CreateOpts.ViewSBOM {
-		if err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
+		tarballPath := p.tmp.SBOMTar()
+		return UnarchiveAndViewSBOMs(tarballPath, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name, p.cfg.CreateOpts.ViewSBOM)
+	}
+
+	return nil
+}
+
+func UnarchiveAndViewSBOMs(tarballPath, outputDir, packageName string, viewAfter bool) error {
+	if err := archiver.Unarchive(tarballPath, strings.TrimSuffix(tarballPath, ".tar")); err != nil {
+		return err
+	}
+
+	if outputDir != "" {
+		if err := sbom.OutputSBOMFiles(strings.TrimSuffix(tarballPath, ".tar"), outputDir, packageName); err != nil {
 			return err
 		}
+	}
 
-		if p.cfg.CreateOpts.SBOMOutputDir != "" {
-			if err := sbom.OutputSBOMFiles(p.tmp, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name); err != nil {
-				return err
-			}
-		}
-
-		// Open a browser to view the SBOM if specified.
-		if p.cfg.CreateOpts.ViewSBOM {
-			sbom.ViewSBOMFiles(p.tmp.Sboms)
-		}
+	if viewAfter {
+		sbom.ViewSBOMFiles(strings.TrimSuffix(tarballPath, ".tar"))
 	}
 
 	return nil
@@ -530,7 +537,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 // generateChecksum walks through all of the files starting at the base path and generates a checksum file.
 // Each file within the basePath represents a layer within the Zarf package.
 // generateChecksum returns a SHA256 checksum of the checksums.txt file.
-func generatePackageChecksums(basePath string) (string, error) {
+func (p *Packager) generatePackageChecksums(basePath string) (string, error) {
 	var checksumsData string
 
 	// Add a '/' or '\' to the basePath so that the checksums file lists paths from the perspective of the basePath
@@ -552,7 +559,7 @@ func generatePackageChecksums(basePath string) (string, error) {
 	}
 
 	// Create the checksums file
-	checksumsFilePath := filepath.Join(basePath, config.ZarfChecksumsTxt)
+	checksumsFilePath := p.tmp.MetadataPaths()[types.ZarfChecksumsTxt]
 	if err := utils.WriteFile(checksumsFilePath, []byte(checksumsData)); err != nil {
 		return "", err
 	}
@@ -587,18 +594,18 @@ func (p *Packager) loadDifferentialData() error {
 		if err != nil {
 			return err
 		}
-		err = utils.WriteYaml(filepath.Join(tmpDir, config.ZarfYAML), pkg, 0600)
+		err = utils.WriteYaml(filepath.Join(tmpDir, types.ZarfYAML), pkg, 0600)
 		if err != nil {
 			return err
 		}
 	} else {
-		if err := archiver.Extract(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, config.ZarfYAML, tmpDir); err != nil {
+		if err := archiver.Extract(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, types.ZarfYAML, tmpDir); err != nil {
 			return fmt.Errorf("unable to extract the differential zarf package spec: %s", err.Error())
 		}
 	}
 
 	var differentialZarfConfig types.ZarfPackage
-	if err := utils.ReadYaml(filepath.Join(tmpDir, config.ZarfYAML), &differentialZarfConfig); err != nil {
+	if err := utils.ReadYaml(filepath.Join(tmpDir, types.ZarfYAML), &differentialZarfConfig); err != nil {
 		return fmt.Errorf("unable to load the differential zarf package spec: %s", err.Error())
 	}
 

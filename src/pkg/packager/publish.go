@@ -34,11 +34,11 @@ func (p *Packager) Publish() error {
 		}
 	} else {
 		// Extract the first layer of the tarball
-		if err := archiver.Unarchive(p.cfg.PublishOpts.PackagePath, p.tmp.Base); err != nil {
+		if err := archiver.Unarchive(p.cfg.PublishOpts.PackagePath, p.tmp.Base()); err != nil {
 			return fmt.Errorf("unable to extract the package: %w", err)
 		}
 
-		err := p.readYaml(p.tmp.ZarfYaml)
+		err := p.readYaml(p.tmp[types.ZarfYAML])
 		if err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 		}
@@ -56,13 +56,13 @@ func (p *Packager) Publish() error {
 		return err
 	}
 
-	if err := p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, nil); err != nil {
+	if err := p.validatePackageChecksums(p.tmp.Base(), p.cfg.Pkg.Metadata.AggregateChecksum, nil); err != nil {
 		return fmt.Errorf("unable to publish package because checksums do not match: %w", err)
 	}
 
 	// Sign the package if a key has been provided
 	if p.cfg.PublishOpts.SigningKeyPath != "" {
-		_, err := utils.CosignSignBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, p.cfg.PublishOpts.SigningKeyPath, p.getSigPublishPassword)
+		_, err := utils.CosignSignBlob(p.tmp[types.ZarfYAML], p.tmp[types.ZarfYAMLSignature], p.cfg.PublishOpts.SigningKeyPath, p.getSigPublishPassword)
 		if err != nil {
 			return fmt.Errorf("unable to sign the package: %w", err)
 		}
@@ -71,7 +71,7 @@ func (p *Packager) Publish() error {
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
 
 	// Publish the package/skeleton to the registry
-	if err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, config.CommonOptions.OCIConcurrency); err != nil {
+	if err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base(), config.CommonOptions.OCIConcurrency); err != nil {
 		return err
 	}
 	if strings.HasSuffix(p.remote.Repo().Reference.String(), oci.SkeletonSuffix) {
@@ -99,7 +99,7 @@ func (p *Packager) loadSkeleton() error {
 	if err := os.Chdir(base); err != nil {
 		return err
 	}
-	if err := p.readYaml(config.ZarfYAML); err != nil {
+	if err := p.readYaml(types.ZarfYAML); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml in %s: %s", base, err.Error())
 	}
 
@@ -130,7 +130,7 @@ func (p *Packager) loadSkeleton() error {
 		}
 	}
 
-	checksumChecksum, err := generatePackageChecksums(p.tmp.Base)
+	checksumChecksum, err := p.generatePackageChecksums(p.tmp.Base())
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
 	}

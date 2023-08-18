@@ -43,7 +43,7 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	if p.provider == nil {
-		provider, err := ProviderFromSource(p.cfg.PkgSource, p.cfg.PkgOpts.Shasum, p.tmp.Base)
+		provider, err := ProviderFromSource(p.cfg.PkgSource, p.cfg.PkgOpts.Shasum, p.tmp.Base(), p.cfg.PkgOpts.PublicKeyPath)
 		if err != nil {
 			return err
 		}
@@ -51,27 +51,21 @@ func (p *Packager) Deploy() (err error) {
 	}
 	optionalComponents := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
 
-	loaded, pkg, err := p.provider.LoadPackage(optionalComponents)
+	pkg, err := p.provider.LoadPackage(optionalComponents)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
-	}
-
-	p.cfg.Pkg = *pkg
-
-	if err := p.provider.Validate(loaded, p.cfg.PkgOpts.PublicKeyPath); err != nil {
-		return fmt.Errorf("unable to validate the package paths: %w", err)
 	}
 
 	for idx, component := range p.cfg.Pkg.Components {
 		// Handle component configuration deprecations
 		var warnings []string
-		p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+		pkg.Components[idx], warnings = deprecated.MigrateComponent(pkg.Build, component)
 		p.warnings = append(p.warnings, warnings...)
 
 		// extract the component tarball if it exists
-		tb := filepath.Join(p.tmp.ComponentsDir, component.Name+".tar")
+		tb := p.tmp.GetComponentTarballPath(component.Name)
 		if !utils.InvalidPath(tb) {
-			if err := archiver.Unarchive(tb, p.tmp.ComponentsDir); err != nil {
+			if err := archiver.Unarchive(tb, p.tmp.ComponentsDirectory()); err != nil {
 				return fmt.Errorf("unable to extract the component: %w", err)
 			}
 
@@ -81,12 +75,12 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	// If a SBOM tar file exist, temporarily place them in the deploy directory
-	if !utils.InvalidPath(p.tmp.SbomTar) {
-		if err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
+	if !utils.InvalidPath(p.tmp.SBOMTar()) {
+		if err = archiver.Unarchive(p.tmp.SBOMTar(), p.tmp.SBOMDirectory()); err != nil {
 			return fmt.Errorf("unable to extract the sbom data from the component: %w", err)
 		}
-		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
-		if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
+		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.SBOMDirectory(), "sbom-viewer-*"))
+		if err := sbom.OutputSBOMFiles(p.tmp.Base(), types.ZarfSBOMDir, ""); err != nil {
 			// Don't stop the deployment, let the user decide if they want to continue the deployment
 			message.Warnf("Unable to process the SBOM files for this package: %s", err.Error())
 		}
@@ -354,7 +348,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		}
 
 		// Replace temp target directory and home directory
-		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
+		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base(), 1)
 		file.Target = config.GetAbsHomePath(file.Target)
 
 		fileList := []string{}
@@ -466,7 +460,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	}
 
 	imgConfig := images.ImgConfig{
-		ImagesPath:    p.tmp.ImagesDir,
+		ImagesPath:    p.tmp.ImagesDirectory(),
 		ImgList:       componentImages,
 		NoChecksum:    noImgChecksum,
 		RegInfo:       p.cfg.State.RegistryInfo,

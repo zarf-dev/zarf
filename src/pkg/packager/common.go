@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -32,7 +31,7 @@ type Packager struct {
 	cfg            *types.PackagerConfig
 	cluster        *cluster.Cluster
 	remote         *oci.OrasRemote
-	tmp            types.LoadedPackagePaths
+	tmp            types.PackagePathsMap
 	arch           string
 	warnings       []string
 	valueTemplate  *template.Values
@@ -110,15 +109,25 @@ func NewOrDie(config *types.PackagerConfig) *Packager {
 
 // SetTempDirectory sets the temp directory for the packager.
 func (p *Packager) SetTempDirectory(path string) error {
-	if p.tmp.Base != "" {
+	if p.tmp.Base() != "" {
 		p.ClearTempPaths()
 	}
 
-	tmp, err := createPaths(path)
-	if err != nil {
-		return fmt.Errorf("unable to create package temp paths: %w", err)
+	if path == "" {
+		var err error
+		path, err = utils.MakeTempDir()
+		if err != nil {
+			return err
+		}
+	} else {
+		if err := utils.CreateDirectory(path, 0700); err != nil {
+			return fmt.Errorf("unable to create temp directory: %w", err)
+		}
 	}
-	p.tmp = tmp
+
+	message.Debug("Using temporary directory:", path)
+
+	p.tmp = types.PackagePaths{Base: path}.Paths()
 	return nil
 }
 
@@ -166,27 +175,19 @@ func GetInitPackageRemote(arch string) string {
 // ClearTempPaths removes the temp directory and any files within it.
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
-	_ = os.RemoveAll(p.tmp.Base)
-	_ = os.RemoveAll(config.ZarfSBOMDir)
+	_ = os.RemoveAll(p.tmp.Base())
+	_ = os.RemoveAll(types.ZarfSBOMDir)
 }
 
 func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
-	base := filepath.Join(p.tmp.ComponentsDir, component.Name)
-
-	err = utils.CreateDirectory(base, 0700)
-	if err != nil {
+	if err := utils.CreateDirectory(p.tmp.ComponentsDirectory(), 0700); err != nil {
 		return paths, err
 	}
 
-	paths = types.ComponentPaths{
-		Base:           base,
-		Temp:           filepath.Join(base, types.TempFolder),
-		Files:          filepath.Join(base, types.FilesFolder),
-		Charts:         filepath.Join(base, types.ChartsFolder),
-		Repos:          filepath.Join(base, types.ReposFolder),
-		Manifests:      filepath.Join(base, types.ManifestsFolder),
-		DataInjections: filepath.Join(base, types.DataInjectionsFolder),
-		Values:         filepath.Join(base, types.ValuesFolder),
+	paths = p.tmp.GetComponentPaths(component.Name)
+
+	if err := utils.CreateDirectory(paths.Base, 0700); err != nil {
+		return paths, err
 	}
 
 	if len(component.Files) > 0 {
@@ -244,46 +245,6 @@ func isValidFileExtension(filename string) bool {
 	}
 
 	return false
-}
-
-func createPaths(basePath string) (paths types.LoadedPackagePaths, err error) {
-	if basePath == "" {
-		basePath, err = utils.MakeTempDir()
-		if err != nil {
-			return paths, err
-		}
-	} else {
-		if err := utils.CreateDirectory(basePath, 0700); err != nil {
-			return paths, fmt.Errorf("unable to create temp directory: %w", err)
-		}
-	}
-	message.Debug("Using temporary directory:", basePath)
-	paths = types.LoadedPackagePaths{
-		Base:          basePath,
-		ComponentsDir: filepath.Join(basePath, config.ZarfComponentsDir),
-
-		LoadedInitPackagePaths: types.LoadedInitPackagePaths{
-			InjectBinary: filepath.Join(basePath, "zarf-injector"),
-			SeedImages:   filepath.Join(basePath, "seed-images"),
-		},
-
-		LoadedImagePaths: types.LoadedImagePaths{
-			ImagesDir:      filepath.Join(basePath, "images"),
-			ImagesIndex:    filepath.Join(basePath, "images", "index.json"),
-			ImagesLayout:   filepath.Join(basePath, "images", "layout.json"),
-			ImagesBlobsDir: filepath.Join(basePath, "images", "blobs", "sha256"),
-		},
-
-		LoadedMetadataPaths: types.LoadedMetadataPaths{
-			Checksums: filepath.Join(basePath, config.ZarfChecksumsTxt),
-			ZarfYaml:  filepath.Join(basePath, config.ZarfYAML),
-			ZarfSig:   filepath.Join(basePath, config.ZarfYAMLSignature),
-			SbomTar:   filepath.Join(basePath, config.ZarfSBOMTar),
-			Sboms:     filepath.Join(basePath, "sboms"),
-		},
-	}
-
-	return paths, err
 }
 
 func getRequestedComponentList(requestedComponents string) []string {
@@ -369,8 +330,12 @@ func ValidatePackageSignature(directory string, publicKeyPath string) error {
 		return nil
 	}
 
+	metadataPaths := types.PackagePaths{
+		Base: directory,
+	}.Paths().MetadataPaths()
+
 	// Handle situations where there is no signature within the package
-	sigExist := !utils.InvalidPath(filepath.Join(directory, config.ZarfYAMLSignature))
+	sigExist := !utils.InvalidPath(metadataPaths[types.ZarfYAMLSignature])
 	if !sigExist && publicKeyPath == "" {
 		// Nobody was expecting a signature, so we can just return
 		return nil
@@ -383,7 +348,7 @@ func ValidatePackageSignature(directory string, publicKeyPath string) error {
 	}
 
 	// Validate the signature with the key we were provided
-	if err := utils.CosignVerifyBlob(filepath.Join(directory, config.ZarfYAML), filepath.Join(directory, config.ZarfYAMLSignature), publicKeyPath); err != nil {
+	if err := utils.CosignVerifyBlob(metadataPaths[types.ZarfYAML], metadataPaths[types.ZarfYAMLSignature], publicKeyPath); err != nil {
 		return fmt.Errorf("package signature did not match the provided key: %w", err)
 	}
 
@@ -409,7 +374,7 @@ func (p *Packager) getSigPublishPassword(_ bool) ([]byte, error) {
 }
 
 func (p *Packager) archiveComponent(component types.ZarfComponent) error {
-	componentPath := filepath.Join(p.tmp.ComponentsDir, component.Name)
+	componentPath := p.tmp.GetComponentPaths(component.Name).Base
 	size, err := utils.GetDirSize(componentPath)
 	if err != nil {
 		return err
@@ -427,7 +392,8 @@ func (p *Packager) archiveComponent(component types.ZarfComponent) error {
 	return os.RemoveAll(componentPath)
 }
 
-func (p *Packager) archivePackage(sourceDir string, destinationTarball string) error {
+func (p *Packager) archivePackage(destinationTarball string) error {
+	sourceDir := p.tmp.Base()
 	spinner := message.NewProgressSpinner("Writing %s to %s", sourceDir, destinationTarball)
 	defer spinner.Stop()
 	// Make the archive

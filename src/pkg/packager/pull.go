@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -23,30 +24,30 @@ func (p *Packager) Pull() error {
 	if err != nil {
 		return err
 	}
-	_, err = p.remote.PullPackage(p.tmp.Base, config.CommonOptions.OCIConcurrency)
+	pathsToCheck, err := p.remote.PullPackage(p.tmp.Base(), config.CommonOptions.OCIConcurrency)
 	if err != nil {
 		return err
 	}
 
 	message.Successf("Pulled %s", p.cfg.PullOpts.PackageSource)
 
-	err = utils.ReadYaml(p.tmp.ZarfYaml, &p.cfg.Pkg)
+	err = utils.ReadYaml(p.tmp[types.ZarfYAML], &p.cfg.Pkg)
 	if err != nil {
 		return err
 	}
 
-	if err = ValidatePackageSignature(p.tmp.Base, p.cfg.PullOpts.PublicKeyPath); err != nil {
+	if err = ValidatePackageSignature(p.tmp.Base(), p.cfg.PullOpts.PublicKeyPath); err != nil {
 		return err
 	} else if !config.CommonOptions.Insecure {
 		message.Successf("Package signature is valid")
 	}
 
-	if err = p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, nil); err != nil {
+	if err = p.validatePackageChecksums(p.tmp.Base(), p.cfg.Pkg.Metadata.AggregateChecksum, pathsToCheck); err != nil {
 		return fmt.Errorf("unable to validate the package checksums: %w", err)
 	}
 
 	// Get all the layers from within the temp directory
-	allTheLayers, err := filepath.Glob(filepath.Join(p.tmp.Base, "*"))
+	allTheLayers, err := filepath.Glob(filepath.Join(p.tmp.Base(), "*"))
 	if err != nil {
 		return err
 	}

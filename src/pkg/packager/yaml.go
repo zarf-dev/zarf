@@ -82,5 +82,5 @@ func (p *Packager) writeYaml() error {
 	// Record the latest version of Zarf without breaking changes to the package structure.
 	p.cfg.Pkg.Build.LastNonBreakingVersion = deprecated.LastNonBreakingVersion
 
-	return utils.WriteYaml(p.tmp.ZarfYaml, p.cfg.Pkg, 0400)
+	return utils.WriteYaml(p.tmp[types.ZarfYAML], p.cfg.Pkg, 0400)
 }

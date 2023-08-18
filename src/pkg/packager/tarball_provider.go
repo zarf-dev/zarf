@@ -4,7 +4,9 @@
 // Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
-import "github.com/defenseunicorns/zarf/src/types"
+import (
+	"github.com/defenseunicorns/zarf/src/types"
+)
 
 type tarballProvider struct {
 	src string
@@ -12,12 +14,13 @@ type tarballProvider struct {
 	DefaultValidator
 }
 
-func (tp *tarballProvider) LoadPackage(optionalComponents []string) (*types.LoadedPackagePaths, *types.ZarfPackage, error) {
-	return nil, nil, nil
+func (tp *tarballProvider) LoadPackage(optionalComponents []string) (*types.ZarfPackage, error) {
+	return nil, nil
 }
 
-func (tp *tarballProvider) LoadPackageMetadata(wantSBOM bool) (*types.LoadedMetadataPaths, *types.ZarfPackage, error) {
-	return nil, nil, nil
+func (tp *tarballProvider) LoadPackageMetadata(wantSBOM bool) (*types.ZarfPackage, error) {
+
+	return &types.ZarfPackage{}, tp.Validate([]string{})
 }
 
 // func (p *Packager) handleIfPartialPkg() error {

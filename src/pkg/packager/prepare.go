@@ -41,7 +41,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 		message.Note(fmt.Sprintf("Using base directory %s", baseDir))
 	}
 
-	if err := p.readYaml(config.ZarfYAML); err != nil {
+	if err := p.readYaml(types.ZarfYAML); err != nil {
 		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 

@@ -34,7 +34,7 @@ func (p *Packager) Remove() (err error) {
 			message.Fatalf(nil, lang.CmdPackageRemoveTarballErr)
 		}
 
-		if err := archiver.Extract(packageName, config.ZarfYAML, p.tmp.Base); err != nil {
+		if err := archiver.Extract(packageName, types.ZarfYAML, p.tmp.Base()); err != nil {
 			message.Fatalf(err, lang.CmdPackageRemoveExtractErr)
 		}
 	}
@@ -47,14 +47,14 @@ func (p *Packager) Remove() (err error) {
 		}
 
 		// pull the package from the remote
-		if _, err = p.remote.PullPackageMetadata(p.tmp.Base); err != nil {
+		if _, err = p.remote.PullPackageMetadata(p.tmp.Base()); err != nil {
 			return fmt.Errorf("unable to pull the package from the remote: %w", err)
 		}
 	}
 
 	// If this came from a real package, read the package config and reset the packageName
 	if ZarfPackagePattern.MatchString(packageName) || ZarfInitPattern.MatchString(packageName) || helpers.IsOCIURL(packageName) {
-		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
+		if err := p.readYaml(p.tmp[types.ZarfYAML]); err != nil {
 			return err
 		}
 		packageName = p.cfg.Pkg.Metadata.Name

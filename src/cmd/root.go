@@ -50,7 +50,7 @@ var rootCmd = &cobra.Command{
 			if strings.Contains(args[0], config.ZarfPackagePrefix) || strings.Contains(args[0], "zarf-init") {
 				message.Warnf(lang.RootCmdDeprecatedDeploy, args[0])
 			}
-			if args[0] == config.ZarfYAML {
+			if args[0] == types.ZarfYAML {
 				message.Warn(lang.RootCmdDeprecatedCreate)
 			}
 		}

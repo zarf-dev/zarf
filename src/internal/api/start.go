@@ -21,6 +21,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -119,7 +120,7 @@ func LaunchAPIServer() {
 	}
 
 	// Setup the static SBOM server
-	sbomSub := os.DirFS(config.ZarfSBOMDir)
+	sbomSub := os.DirFS(types.ZarfSBOMDir)
 	sbomFs := http.FileServer(http.FS(sbomSub))
 
 	// Serve the SBOM viewer files
@@ -129,7 +130,7 @@ func LaunchAPIServer() {
 		// Extract the file name from the URL
 		file := strings.TrimPrefix(r.URL.Path, "/sbom-viewer/")
 
-		// Ensure SBOM file exists in the config.ZarfSBOMDir
+		// Ensure SBOM file exists in the types.ZarfSBOMDir
 		if test, err := sbomSub.Open(file); err != nil {
 			// If the file doesn't exist, redirect to the homepage
 			r.URL.Path = "/"

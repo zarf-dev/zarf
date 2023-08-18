@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
@@ -157,7 +156,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 		suite.NoError(err)
 		suite.DirExists(unpacked)
 
-		err = utils.ReadYaml(filepath.Join(unpacked, config.ZarfYAML), &pkg)
+		err = utils.ReadYaml(filepath.Join(unpacked, types.ZarfYAML), &pkg)
 		suite.NoError(err)
 		suite.NotNil(pkg)
 

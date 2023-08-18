@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // validatePackageChecksums validates the checksums of a Zarf package.
@@ -51,7 +51,7 @@ func (p *Packager) validatePackageChecksums(baseDir string, aggregateChecksum st
 		return err
 	}
 
-	checksumPath := filepath.Join(baseDir, config.ZarfChecksumsTxt)
+	checksumPath := filepath.Join(baseDir, types.ZarfChecksumsTxt)
 	actualAggregateChecksum, err := utils.GetSHA256OfFile(checksumPath)
 	if err != nil {
 		return fmt.Errorf("unable to get checksum of: %s", err.Error())
@@ -60,9 +60,9 @@ func (p *Packager) validatePackageChecksums(baseDir string, aggregateChecksum st
 		return fmt.Errorf("invalid aggregate checksum: (expected: %s, received: %s)", aggregateChecksum, actualAggregateChecksum)
 	}
 
-	checkedMap[filepath.Join(baseDir, config.ZarfChecksumsTxt)] = true
-	checkedMap[filepath.Join(baseDir, config.ZarfYAML)] = true
-	checkedMap[filepath.Join(baseDir, config.ZarfYAMLSignature)] = true
+	checkedMap[filepath.Join(baseDir, types.ZarfChecksumsTxt)] = true
+	checkedMap[filepath.Join(baseDir, types.ZarfYAML)] = true
+	checkedMap[filepath.Join(baseDir, types.ZarfYAMLSignature)] = true
 
 	err = lineByLine(checksumPath, func(line string) error {
 		split := strings.Split(line, " ")

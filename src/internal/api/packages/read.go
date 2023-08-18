@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -42,7 +41,7 @@ func ReadPackage(path string) (pkg types.APIZarfPackage, err error) {
 
 	// Check for zarf.yaml in the package and read into file
 	err = archiver.Walk(pkg.Path, func(f archiver.File) error {
-		if f.Name() == config.ZarfYAML {
+		if f.Name() == types.ZarfYAML {
 			file, err = io.ReadAll(f)
 			if err != nil {
 				return err

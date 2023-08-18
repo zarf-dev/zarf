@@ -5,13 +5,7 @@
 package packager
 
 import (
-	"fmt"
-
-	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/mholt/archiver/v3"
 )
 
 // Inspect list the contents of a package.
@@ -19,18 +13,17 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	wantSBOM := includeSBOM || outputSBOM != ""
 
 	if p.provider == nil {
-		provider, err := ProviderFromSource(p.cfg.PkgOpts.PackagePath, p.cfg.PkgOpts.Shasum, p.tmp.Base)
+		provider, err := ProviderFromSource(p.cfg.PkgOpts.PackagePath, p.cfg.PkgOpts.Shasum, p.tmp.Base(), p.cfg.PkgOpts.PublicKeyPath)
 		if err != nil {
 			return err
 		}
 		p.provider = provider
 	}
 
-	metatdataPaths, pkg, err := p.provider.LoadPackageMetadata(wantSBOM)
+	pkg, err := p.provider.LoadPackageMetadata(wantSBOM)
 	if err != nil {
 		return err
 	}
-	p.cfg.Pkg = *pkg
 
 	// // Handle OCI packages that have been published to a registry
 	// if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
@@ -56,50 +49,35 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	// 		return fmt.Errorf("unable to extract %s: %w", config.ZarfChecksumsTxt, err)
 	// 	}
 
-	// 	if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
-	// 		return fmt.Errorf("unable to extract %s: %w", config.ZarfYAML, err)
+	// 	if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, types.ZarfYAML, p.tmp.Base); err != nil {
+	// 		return fmt.Errorf("unable to extract %s: %w", types.ZarfYAML, err)
 	// 	}
-	// 	if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfYAMLSignature, p.tmp.Base); err != nil {
-	// 		return fmt.Errorf("unable to extract %s: %w", config.ZarfYAMLSignature, err)
+	// 	if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, types.ZarfYAMLSignature, p.tmp.Base); err != nil {
+	// 		return fmt.Errorf("unable to extract %s: %w", types.ZarfYAMLSignature, err)
 	// 	}
 	// 	if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
 	// 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
 	// 	}
 	// 	if wantSBOM {
-	// 		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfSBOMTar, p.tmp.Base); err != nil {
-	// 			return fmt.Errorf("unable to extract %s: %w", config.ZarfSBOMTar, err)
+	// 		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, types.ZarfSBOMTar, p.tmp.Base); err != nil {
+	// 			return fmt.Errorf("unable to extract %s: %w", types.ZarfSBOMTar, err)
 	// 		}
 	// 	}
 	// }
 
-	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
+	utils.ColorPrintYAML(pkg, nil, false)
 
 	// Validate the package checksums and signatures if specified, and warn if the package was signed but a key was not provided
-	if err := p.provider.Validate(&types.LoadedPackagePaths{LoadedMetadataPaths: *metatdataPaths}, p.cfg.PkgOpts.PublicKeyPath); err != nil {
-		if err == ErrPkgSigButNoKey {
-			message.Warn("The package was signed but no public key was provided, skipping signature validation")
-		} else {
-			return fmt.Errorf("unable to validate the package signature: %w", err)
-		}
-	}
+	// if err := p.provider.Validate(&types.LoadedPackagePaths{LoadedMetadataPaths: *metatdataPaths}, p.cfg.PkgOpts.PublicKeyPath); err != nil {
+	// 	if err == ErrPkgSigButNoKey {
+	// 		message.Warn("The package was signed but no public key was provided, skipping signature validation")
+	// 	} else {
+	// 		return fmt.Errorf("unable to validate the package signature: %w", err)
+	// 	}
+	// }
 
 	if wantSBOM {
-		// Extract the SBOM files from the sboms.tar file
-		if err := archiver.Unarchive(metatdataPaths.SbomTar, p.tmp.Sboms); err != nil {
-			return fmt.Errorf("unable to extract the SBOM files: %w", err)
-		}
-	}
-
-	// Open a browser to view the SBOM if specified
-	if includeSBOM {
-		sbom.ViewSBOMFiles(p.tmp.Sboms)
-	}
-
-	// Output the SBOM files into a directory if specified
-	if outputSBOM != "" {
-		if err := sbom.OutputSBOMFiles(p.tmp, outputSBOM, p.cfg.Pkg.Metadata.Name); err != nil {
-			return err
-		}
+		return UnarchiveAndViewSBOMs(p.tmp.SBOMTar(), outputSBOM, pkg.Metadata.Name, includeSBOM)
 	}
 
 	return nil

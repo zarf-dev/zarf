@@ -75,8 +75,8 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		}
 
 		// remove zarf.yaml from path if path has zarf.yaml suffix
-		if strings.HasSuffix(path, config.ZarfYAML) {
-			path = strings.Split(path, config.ZarfYAML)[0]
+		if strings.HasSuffix(path, types.ZarfYAML) {
+			path = strings.Split(path, types.ZarfYAML)[0]
 		}
 
 		// add a forward slash to end of path if it does not have one
@@ -85,7 +85,7 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		}
 
 		// ensure there is a zarf.yaml in provided path
-		if utils.InvalidPath(filepath.Join(path, config.ZarfYAML)) {
+		if utils.InvalidPath(filepath.Join(path, types.ZarfYAML)) {
 			return fmt.Errorf(lang.PkgValidateErrImportPathInvalid, composedComponent.Import.Path)
 		}
 	} else {

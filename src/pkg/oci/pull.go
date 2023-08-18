@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -24,7 +23,7 @@ import (
 
 var (
 	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
-	PackageAlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
+	PackageAlwaysPull = []string{types.ZarfYAML, types.ZarfChecksumsTxt, types.ZarfYAMLSignature}
 )
 
 // FileDescriptorExists returns true if the given file exists in the given directory with the expected SHA.
@@ -101,13 +100,13 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			for _, image := range component.Images {
 				images[image] = true
 			}
-			layers = append(layers, root.Locate(filepath.Join(config.ZarfComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
+			layers = append(layers, root.Locate(filepath.Join(types.ZarfComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 		}
 	}
 	// Append the sboms.tar layer if it exists
 	//
 	// Since sboms.tar is not a heavy addition 99% of the time, we'll just always pull it
-	sbomsDescriptor := root.Locate(config.ZarfSBOMTar)
+	sbomsDescriptor := root.Locate(types.ZarfSBOMTar)
 	if !IsEmptyDescriptor(sbomsDescriptor) {
 		layers = append(layers, sbomsDescriptor)
 	}

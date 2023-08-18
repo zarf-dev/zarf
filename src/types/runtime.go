@@ -4,6 +4,10 @@
 // Package types contains all the types used by Zarf.
 package types
 
+import (
+	"path/filepath"
+)
+
 // Constants to keep track of folders within components
 const (
 	TempFolder           = "temp"
@@ -16,6 +20,23 @@ const (
 
 	RawVariableType  VariableType = "raw"
 	FileVariableType VariableType = "file"
+
+	ZarfYAML          = "zarf.yaml"
+	ZarfYAMLSignature = "zarf.yaml.sig"
+	ZarfChecksumsTxt  = "checksums.txt"
+
+	ZarfImageCacheDir = "images"
+	ZarfComponentsDir = "components"
+
+	ZarfSBOMDir = "zarf-sbom"
+	ZarfSBOMTar = "sboms.tar"
+
+	IndexJSON = "index.json"
+	OCILayout = "oci-layout"
+
+	SeedImagesDir        = "seed-images"
+	InjectorBinary       = "zarf-injector"
+	InjectorPayloadTarGz = "payload.tgz"
 )
 
 // VariableType represents a type of a Zarf package variable
@@ -41,9 +62,8 @@ type ZarfPackageOptions struct {
 }
 
 type PackageProvider interface {
-	LoadPackage(optionalComponents []string) (*LoadedPackagePaths, *ZarfPackage, error)
-	LoadPackageMetadata(wantSBOM bool) (*LoadedMetadataPaths, *ZarfPackage, error)
-	Validate(loaded *LoadedPackagePaths, keyPath string) error
+	LoadPackage(optionalComponents []string) (*ZarfPackage, error)
+	LoadPackageMetadata(wantSBOM bool) (*ZarfPackage, error)
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.
@@ -124,6 +144,69 @@ type ComponentSBOM struct {
 	ComponentPath ComponentPaths
 }
 
+type PackagePaths struct {
+	Base string
+}
+
+func (lp PackagePaths) Paths() PackagePathsMap {
+	paths := PackagePathsMap{
+		"base": lp.Base,
+
+		// metadata paths
+		ZarfYAML:          filepath.Join(lp.Base, ZarfYAML),
+		ZarfYAMLSignature: filepath.Join(lp.Base, ZarfYAMLSignature),
+		ZarfChecksumsTxt:  filepath.Join(lp.Base, ZarfChecksumsTxt),
+
+		// sboms paths
+		ZarfSBOMDir: filepath.Join(lp.Base, ZarfSBOMDir),
+		ZarfSBOMTar: filepath.Join(lp.Base, ZarfSBOMTar),
+
+		// init pkg injection nonsense
+		InjectorBinary:       filepath.Join(lp.Base, InjectorBinary),
+		SeedImagesDir:        filepath.Join(lp.Base, SeedImagesDir),
+		InjectorPayloadTarGz: filepath.Join(lp.Base, InjectorPayloadTarGz),
+
+		// components paths
+		ZarfComponentsDir: filepath.Join(lp.Base, ZarfComponentsDir),
+
+		// images paths
+		ZarfImageCacheDir: filepath.Join(lp.Base, ZarfImageCacheDir),
+		IndexJSON:         filepath.Join(lp.Base, ZarfImageCacheDir, IndexJSON),
+		OCILayout:         filepath.Join(lp.Base, ZarfImageCacheDir, OCILayout),
+	}
+	return paths
+}
+
+type PackagePathsMap map[string]string
+
+func (pm PackagePathsMap) Base() string {
+	return pm["base"]
+}
+
+func (pm PackagePathsMap) MetadataPaths() map[string]string {
+	return map[string]string{
+		ZarfYAML:          pm[ZarfYAML],
+		ZarfYAMLSignature: pm[ZarfYAMLSignature],
+		ZarfChecksumsTxt:  pm[ZarfChecksumsTxt],
+	}
+}
+
+func (pm PackagePathsMap) ImagesDirectory() string {
+	return pm[ZarfImageCacheDir]
+}
+
+func (pm PackagePathsMap) ComponentsDirectory() string {
+	return pm[ZarfComponentsDir]
+}
+
+func (pm PackagePathsMap) SBOMDirectory() string {
+	return pm[ZarfSBOMDir]
+}
+
+func (pm PackagePathsMap) SBOMTar() string {
+	return pm[ZarfSBOMTar]
+}
+
 // ComponentPaths is a struct that represents all of the subdirectories for a Zarf component.
 type ComponentPaths struct {
 	Base           string
@@ -136,36 +219,25 @@ type ComponentPaths struct {
 	DataInjections string
 }
 
-type LoadedInitPackagePaths struct {
-	InjectBinary string
-	SeedImages   string
+func (pm PackagePathsMap) GetComponentPaths(componentName string) ComponentPaths {
+	base := pm[ZarfComponentsDir]
+	return ComponentPaths{
+		Base:           filepath.Join(base, componentName),
+		Temp:           filepath.Join(base, componentName, TempFolder),
+		Files:          filepath.Join(base, componentName, FilesFolder),
+		Charts:         filepath.Join(base, componentName, ChartsFolder),
+		Values:         filepath.Join(base, componentName, ValuesFolder),
+		Repos:          filepath.Join(base, componentName, ReposFolder),
+		Manifests:      filepath.Join(base, componentName, ManifestsFolder),
+		DataInjections: filepath.Join(base, componentName, DataInjectionsFolder),
+	}
 }
 
-type LoadedMetadataPaths struct {
-	ZarfYaml  string
-	ZarfSig   string
-	Checksums string
-	SbomTar   string
-	Sboms     string
+func (pm PackagePathsMap) GetComponentTarballPath(componentName string) string {
+	return filepath.Join(pm[ZarfComponentsDir], componentName+".tar")
 }
 
-type LoadedImagePaths struct {
-	ImagesDir      string
-	ImagesIndex    string
-	ImagesLayout   string
-	ImagesBlobsDir string
-}
-
-// LoadedPackagePaths is a struct that represents all of the subdirectories for a Zarf package.
-type LoadedPackagePaths struct {
-	Base          string
-	ComponentsDir string
-	LoadedInitPackagePaths
-	LoadedImagePaths
-	LoadedMetadataPaths
-}
-
-// DifferentialData contains image and repository information about the package a Differential Package is based on.
+// DifferentialData contains image and repository information about the package a Differential Package is Based on.
 type DifferentialData struct {
 	DifferentialPackagePath    string
 	DifferentialPackageVersion string
