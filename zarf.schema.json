@@ -152,7 +152,6 @@
     "ZarfChart": {
       "required": [
         "name",
-        "version",
         "namespace"
       ],
       "properties": {

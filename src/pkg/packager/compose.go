@@ -305,12 +305,42 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	}
 
 	// Append slices where they exist.
-	target.Charts = append(target.Charts, override.Charts...)
 	target.DataInjections = append(target.DataInjections, override.DataInjections...)
 	target.Files = append(target.Files, override.Files...)
 	target.Images = append(target.Images, override.Images...)
-	target.Manifests = append(target.Manifests, override.Manifests...)
 	target.Repos = append(target.Repos, override.Repos...)
+
+	// Merge charts with the same name to keep them unique
+	for _, overrideChart := range override.Charts {
+		existing := false
+		for _, targetChart := range target.Charts {
+			if targetChart.Name == overrideChart.Name {
+				targetChart.Namespace = overrideChart.Namespace
+				targetChart.ValuesFiles = append(targetChart.ValuesFiles, overrideChart.ValuesFiles...)
+				existing = true
+			}
+		}
+
+		if !existing {
+			target.Charts = append(target.Charts, overrideChart)
+		}
+	}
+
+	// Merge manifests with the same name to keep them unique
+	for _, overrideManifest := range override.Manifests {
+		existing := false
+		for _, targetManifest := range target.Manifests {
+			if targetManifest.Name == overrideManifest.Name {
+				targetManifest.Files = append(targetManifest.Files, overrideManifest.Files...)
+				existing = true
+			}
+		}
+
+		if !existing {
+			target.Manifests = append(target.Manifests, overrideManifest)
+		}
+	}
+
 	// Check for nil array
 	if override.Extensions.BigBang != nil {
 		if override.Extensions.BigBang.ValuesFiles != nil {
