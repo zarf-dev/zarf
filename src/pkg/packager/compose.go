@@ -290,9 +290,9 @@ func (p *Packager) fixComposedActionFilepaths(pathAncestry string, actions []typ
 // Sets Name, Default, Required and Description to the original components values.
 func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
 	target.Name = override.Name
+	target.Group = override.Group
 	target.Default = override.Default
 	target.Required = override.Required
-	target.Group = override.Group
 
 	// Override description if it was provided.
 	if override.Description != "" {
