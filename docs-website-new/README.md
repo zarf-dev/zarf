@@ -1,29 +1,27 @@
-# Doc Site Template
+# Zarf Hugo Doc Site
 
-[![CI Status](https://github.com/defenseunicorns/doc-site-template/actions/workflows/ci.yaml/badge.svg)](https://github.com/defenseunicorns/doc-site-template/actions)
+This site is built using the [Defense Unicorns](https://github.com/defenseunicorns/defense-unicorns-hugo-theme) theme
+for Hugo
 
-This site uses the [Defense Unicorns](https://github.com/defenseunicorns/defense-unicorns-hugo-theme) theme for Hugo
-which is a fork of the Google Docsy theme. The Docsy documentation can be used as a guide for [building content](https://www.docsy.dev/docs/adding-content/).
+## Contributing content
 
-## Contributing
+Content is created using standard markdown with [frontmatter](https://main--starlit-valkyrie-7f1dd9.netlify.app/docs/adding-content/content/#page-frontmatter) to control page order, title, menu title, etc. More rich
+user interactions can be implemented using the [shortcodes from the theme](https://main--starlit-valkyrie-7f1dd9.netlify.app/docs/adding-content/shortcodes/) or by creating local shortcodes for
+specialized interactions.
 
-This repository enforces [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/) messages. See the
-documentation for [`release-please`](https://github.com/googleapis/release-please#how-should-i-write-my-commits) for
-correctly formatting commit messages
+## Converting documents
 
-## Getting Started
+The current documentation is formatted and structured for Docusaurus. In addition, the auto-generated docs are built
+with that format. The `setup-docs.sh` script is run by `npm start` to copy some example files to reachable locations, convert all of the existing
+documentation, and move the Docusaurus documentation to a backup folder pending deletion. Once the conversion
+meets expectations, the old documentation will be removed and cleanup will begin.
 
-Create a new repository from this template
+### Post Conversion TODOs
 
-![How to use](static/img/how-to-use.png)
+- Modify the API documentation generator to create documents with the correct frontmatter and shortcodes
+- Consolidate all scripts used for generating automated docs to simplify maintenance.
 
-Clone your new site
-
-```bash
-git clone <git repo>
-cd <new repo>
-npm ci
-```
+## Running Locally
 
 To run the site for local development:
 
@@ -32,7 +30,3 @@ npm start
 ```
 
 Then navigate to [http://localhost:1313/](http://localhost:1313/)
-
-## Style guide
-
-[Color Palette](https://www.figma.com/file/aNnt9Ip7IFTs9hnfqrYGl4/Unicorn-UI?type=design&mode=design)
