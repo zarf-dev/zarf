@@ -31,7 +31,12 @@ func TestComponentWebhooks(t *testing.T) {
 	// Remove the Pepr webhook package.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "component-webhooks", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-
 	stdOut, stdErr, err = e2e.Kubectl("delete", "namespace", "pepr-system")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Remove the dos-games package.
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Kubectl("delete", "namespace", "dos-games")
 	require.NoError(t, err, stdOut, stdErr)
 }
