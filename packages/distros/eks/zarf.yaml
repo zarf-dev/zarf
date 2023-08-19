@@ -17,7 +17,7 @@ variables:
     default: us-east-1
 
   - name: CLUSTER_VERSION
-    default: "1.23"
+    default: "1.27"
 
 components:
   - name: load-eksctl
