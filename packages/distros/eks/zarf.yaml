@@ -6,18 +6,25 @@ metadata:
   version: 0.0.2
 
 variables:
-  - name: CLUSTER_NAME
+  - name: EKS_CLUSTER_NAME
+    description: The name for the EKS cluster
     prompt: true
 
-  - name: INSTANCE_TYPE
-    description: The instance type for the worker nodes
+  - name: EKS_INSTANCE_TYPE
+    description: The EC2 instance type for the worker nodes
     default: t3.small
 
-  - name: CLUSTER_REGION
+  - name: EKS_CLUSTER_REGION
+    description: The AWS region to setup the cluster and associated networking
     default: us-east-1
 
-  - name: CLUSTER_VERSION
+  - name: EKS_CLUSTER_VERSION
+    description: The Kubernetes version to use for the cluster
     default: "1.27"
+
+  - name: EBS_DRIVER_VERSION
+    description: The AEBS driver version to use for the cluster (must be available on the K8s version)
+    default: "v1.21.0-eksbuild.1"
 
 components:
   - name: load-eksctl
