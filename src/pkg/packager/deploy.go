@@ -155,6 +155,17 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 	// Process all the components we are deploying
 	for _, component := range componentsToDeploy {
+		deployedComponent := types.DeployedComponent{Name: component.Name, Status: types.ComponentStatusDeploying, ObservedGeneration: p.generation}
+
+		// Add the component to the list of deployedComponents
+		deployedComponents = append(deployedComponents, deployedComponent)
+
+		// Update the package secret to indicate that we are about to deploy this component
+		if p.cluster != nil && !p.cfg.IsInitConfig {
+			if _, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation); err != nil {
+				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+			}
+		}
 
 		// Deploy the component
 		var charts []types.InstalledChart
@@ -166,16 +177,15 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 		onDeploy := component.Actions.OnDeploy
 
-		// If there was an error deploying this component, attempt to run any onFailure actions and return the error.
-		if err != nil {
+		onFailure := func() {
 			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, p.valueTemplate); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
+		}
+		if err != nil {
+			onFailure()
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
 		}
-
-		deployedComponent := types.DeployedComponent{Name: component.Name, Status: types.ComponentStatusDeploying, ObservedGeneration: p.generation}
-		deployedComponents = append(deployedComponents, deployedComponent)
 
 		// Update the deployed component secret
 		idx := len(deployedComponents) - 1
@@ -192,8 +202,8 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 		}
 
-		// Run any onSuccess actions for this component
 		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
+			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
 	}
