@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
 	"os"
@@ -409,7 +408,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != file.Shasum {
+			if actualShasum, _ := utils.GetSHA256OfFile(dst); actualShasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 			}
 		}

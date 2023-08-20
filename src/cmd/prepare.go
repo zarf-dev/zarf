@@ -5,8 +5,8 @@
 package cmd
 
 import (
-	"crypto"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -79,7 +79,22 @@ var prepareComputeFileSha256sum = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		fileName := args[0]
-		hash, err := utils.GetCryptoHashFromFile(fileName, crypto.SHA256)
+		var data io.ReadCloser
+		var err error
+		if helpers.IsURL(fileName) {
+			message.Warn("This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link.")
+
+			data = utils.Fetch(fileName)
+		} else {
+			data, err = os.Open(fileName)
+			if err != nil {
+				message.Fatalf(err, lang.CmdPrepareSha256sumHashErr)
+			}
+		}
+		defer data.Close()
+
+		var hash string
+		hash, err = helpers.GetSHA256Hash(data)
 		if err != nil {
 			message.Fatal(err, lang.CmdPrepareSha256sumHashErr)
 		} else {

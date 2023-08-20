@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
 	"os"
@@ -343,7 +342,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if shasum, _ := utils.GetCryptoHashFromFile(fileLocation, crypto.SHA256); shasum != file.Shasum {
+			if shasum, _ := utils.GetSHA256OfFile(fileLocation); shasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
 			}
 		}

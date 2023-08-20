@@ -6,7 +6,6 @@ package utils
 
 import (
 	"bufio"
-	"crypto"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -28,27 +27,6 @@ const (
 	dotCharacter  = 46
 	tmpPathPrefix = "zarf-"
 )
-
-// GetCryptoHashFromFile returns the computed SHA256 Sum of a given file
-func GetCryptoHashFromFile(path string, hashName crypto.Hash) (string, error) {
-	var data io.ReadCloser
-	var err error
-
-	if helpers.IsURL(path) {
-		// Handle download from URL
-		message.Warn("This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link.")
-		data = Fetch(path)
-	} else {
-		// Handle local file
-		data, err = os.Open(path)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	defer data.Close()
-	return helpers.GetCryptoHash(data, hashName)
-}
 
 // TextTemplate represents a value to be templated into a text file.
 type TextTemplate struct {
