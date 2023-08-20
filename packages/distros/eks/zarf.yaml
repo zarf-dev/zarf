@@ -59,7 +59,7 @@ components:
           - cmd: ./eksctl create cluster --dry-run -f eks.yaml
           - cmd: sleep 15
           - cmd: ./eksctl create cluster -f eks.yaml
-          - cmd: ./eksctl utils write-kubeconfig -c ${ZARF_VAR_CLUSTER_NAME}
+          - cmd: ./eksctl utils write-kubeconfig -c ${ZARF_VAR_EKS_CLUSTER_NAME}
           - cmd: ./zarf tools kubectl create namespace zarf
           - cmd: ./zarf tools kubectl create secret generic zarf-eks-yaml -n zarf --from-file=eks.yaml
 
