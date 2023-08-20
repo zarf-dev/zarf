@@ -4,71 +4,74 @@
 // Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
-// // Handle case where deploying remote package validated via sget
-// if strings.HasPrefix(p.cfg.PkgOpts.PackagePath, utils.SGETURLPrefix) {
-// 	return partialPaths, p.handleSgetPackage()
-// }
+import (
+	"fmt"
+	"os"
+	"path/filepath"
 
-// // If packagePath has partial in the name, we need to combine the partials into a single package
-// if err := p.handleIfPartialPkg(); err != nil {
-// 	return fmt.Errorf("unable to process partial package: %w", err)
-// }
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
+)
 
-// func (p *Packager) handleSgetPackage() error {
-// 	message.Warn(lang.WarnSGetDeprecation)
-
-// 	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.PkgOpts.PackagePath)
-// 	defer spinner.Stop()
-
-// 	// Create the local file for the package
-// 	localPath := filepath.Join(p.tmp.Base, "remote.tar.zst")
-// 	destinationFile, err := os.Create(localPath)
-// 	if err != nil {
-// 		return fmt.Errorf("unable to create the destination file: %w", err)
-// 	}
-// 	defer destinationFile.Close()
-
-// 	// If this is a DefenseUnicorns package, use an internal sget public key
-// 	if strings.HasPrefix(p.cfg.PkgOpts.PackagePath, fmt.Sprintf("%s://defenseunicorns", utils.SGETURLScheme)) {
-// 		os.Setenv("DU_SGET_KEY", config.CosignPublicKey)
-// 		p.cfg.PkgOpts.SGetKeyPath = "env://DU_SGET_KEY"
-// 	}
-
-// 	// Sget the package
-// 	err = utils.Sget(context.TODO(), p.cfg.PkgOpts.PackagePath, p.cfg.PkgOpts.SGetKeyPath, destinationFile)
-// 	if err != nil {
-// 		return fmt.Errorf("unable to get the remote package via sget: %w", err)
-// 	}
-
-// 	p.cfg.PkgOpts.PackagePath = localPath
-
-// 	spinner.Success()
-// 	return nil
-// }
-
-type httpProvider struct {
-	src      string
-	dst      string
-	shasum   string
-	insecure bool
+type URLProvider struct {
+	source         string
+	outputTarball  string
+	destinationDir string
+	opts           *types.ZarfPackageOptions
+	insecure       bool
 }
 
-func (hp *httpProvider) LoadPackage(optionalComponents []string) ([]string, error) {
-	// packageURL = fmt.Sprintf("%s@%s", p.cfg.PkgOpts.PackagePath, p.cfg.PkgOpts.Shasum)
-	// if !config.CommonOptions.Insecure && p.cfg.PkgOpts.Shasum == "" {
-	// 	return partialPaths, fmt.Errorf("remote package provided without a shasum, use --insecure to ignore")
-	// }
-	// message.Debug("Identified source as HTTPS")
-	// tmp, err := utils.MakeTempDir()
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// defer os.RemoveAll(tmp)
-	// if err := utils.DownloadToFile(source, tmp, ""); err != nil {
-	// 	return nil, err
-	// }
-	// if err := archiver.Unarchive(source, destination); err != nil {
-	// 	return nil, err
-	// }
-	return nil, nil
+func (up *URLProvider) fetchTarball() error {
+	if !up.insecure && up.opts.Shasum == "" {
+		return fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
+	}
+	var packageURL string
+	if up.opts.Shasum != "" {
+		packageURL = fmt.Sprintf("%s@%s", up.source, up.opts.Shasum)
+	} else {
+		packageURL = up.source
+	}
+
+	tmp, err := utils.MakeTempDir()
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmp)
+
+	dstTarball := filepath.Join(tmp, "package.tar.zst")
+
+	if err := utils.DownloadToFile(packageURL, dstTarball, up.opts.SGetKeyPath); err != nil {
+		return err
+	}
+
+	up.outputTarball = dstTarball
+	return nil
+}
+
+func (up *URLProvider) LoadPackage(optionalComponents []string) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+	if err := up.fetchTarball(); err != nil {
+		return nil, nil, err
+	}
+
+	tp := &TarballProvider{
+		source:         up.outputTarball,
+		destinationDir: up.destinationDir,
+		opts:           up.opts,
+	}
+
+	return tp.LoadPackage(optionalComponents)
+}
+
+func (up *URLProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+	if err := up.fetchTarball(); err != nil {
+		return nil, nil, err
+	}
+
+	tp := &TarballProvider{
+		source:         up.outputTarball,
+		destinationDir: up.destinationDir,
+		opts:           up.opts,
+	}
+
+	return tp.LoadPackageMetadata(wantSBOM)
 }

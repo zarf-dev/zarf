@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -34,6 +35,10 @@ func identifySourceType(source string) string {
 		default:
 			return ""
 		}
+	}
+
+	if strings.HasPrefix(source, utils.SGETURLPrefix) {
+		return "sget"
 	}
 
 	if utils.InvalidPath(source) {
@@ -69,6 +74,12 @@ func ProviderFromSource(pkgOpts *types.ZarfPackageOptions, destination string) (
 	case "tarball":
 		message.Debug("Identified source", source, "as tarball package")
 		provider = &TarballProvider{source: source, destinationDir: destination, opts: pkgOpts}
+	case "http", "https":
+		message.Debug("Identified source", source, "as remote URL package")
+		provider = &URLProvider{source: source, destinationDir: destination, opts: pkgOpts, insecure: config.CommonOptions.Insecure}
+	case "sget":
+		message.Warn(lang.WarnSGetDeprecation)
+		provider = &URLProvider{source: source, destinationDir: destination, opts: pkgOpts, insecure: config.CommonOptions.Insecure}
 	case "partial":
 		message.Debug("Identified source", source, "as partial package")
 		provider = &PartialTarballProvider{source: source, destinationDir: destination, opts: pkgOpts}

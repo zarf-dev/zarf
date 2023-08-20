@@ -68,6 +68,8 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPa
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = tp.destinationDir
 
+	pathsToCheck := []string{types.ZarfYAML, types.ZarfChecksumsTxt}
+
 	for pathInArchive := range loaded.MetadataPaths() {
 		if err := archiver.Extract(tp.source, pathInArchive, tp.destinationDir); err != nil {
 			return nil, nil, err
@@ -79,13 +81,14 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPa
 			return nil, nil, err
 		}
 		loaded[types.ZarfSBOMTar] = filepath.Join(tp.destinationDir, types.ZarfSBOMTar)
+		pathsToCheck = append(pathsToCheck, types.ZarfSBOMTar)
 	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
 		return nil, nil, err
 	}
 
-	if err := validate.PackageIntegrity(loaded, nil, pkg.Metadata.AggregateChecksum); err != nil {
+	if err := validate.PackageIntegrity(loaded, pathsToCheck, pkg.Metadata.AggregateChecksum); err != nil {
 		return nil, nil, err
 	}
 

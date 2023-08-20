@@ -41,7 +41,7 @@ func (p *Packager) Publish() error {
 
 		err := p.readYaml(p.tmp[types.ZarfYAML])
 		if err != nil {
-			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
+			return fmt.Errorf("unable to read %s in %s: %w", types.ZarfYAML, p.tmp[types.ZarfYAML], err)
 		}
 		referenceSuffix = p.arch
 	}
