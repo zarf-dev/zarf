@@ -5,12 +5,16 @@
 package packager
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
@@ -22,14 +26,9 @@ type TarballProvider struct {
 	opts           *types.ZarfPackageOptions
 }
 
-func (tp *TarballProvider) LoadPackage(optionalComponents []string) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (tp *TarballProvider) LoadPackage(_ []string) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = tp.destinationDir
-
-	if len(optionalComponents) > 0 {
-		// TODO: implement
-		return nil, nil, nil
-	}
 
 	err = archiver.Walk(tp.source, func(f archiver.File) error {
 		if f.IsDir() {
@@ -93,95 +92,121 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPa
 	return pkg, loaded, nil
 }
 
-// func (p *Packager) handleIfPartialPkg() error {
-// 	message.Debugf("Checking for partial package: %s", p.cfg.PkgOpts.PackagePath)
+type PartialTarballProvider struct {
+	source         string
+	outputTarball  string
+	destinationDir string
+	opts           *types.ZarfPackageOptions
+}
 
-// 	// If packagePath has partial in the name, we need to combine the partials into a single package
-// 	if !strings.Contains(p.cfg.PkgOpts.PackagePath, ".part000") {
-// 		message.Debug("No partial package detected")
-// 		return nil
-// 	}
+func (ptp *PartialTarballProvider) reassembleTarball() error {
+	pattern := strings.Replace(ptp.source, ".part000", ".part*", 1)
+	fileList, err := filepath.Glob(pattern)
+	if err != nil {
+		return fmt.Errorf("unable to find partial package files: %s", err)
+	}
 
-// 	message.Debug("Partial package detected")
+	// Ensure the files are in order so they are appended in the correct order
+	sort.Strings(fileList)
 
-// 	// Replace part 000 with *
-// 	pattern := strings.Replace(p.cfg.PkgOpts.PackagePath, ".part000", ".part*", 1)
-// 	fileList, err := filepath.Glob(pattern)
-// 	if err != nil {
-// 		return fmt.Errorf("unable to find partial package files: %s", err)
-// 	}
+	// Create the new package
+	destination := strings.Replace(ptp.source, ".part000", "", 1)
+	pkgFile, err := os.Create(destination)
+	if err != nil {
+		return fmt.Errorf("unable to create new package file: %s", err)
+	}
+	defer pkgFile.Close()
 
-// 	// Ensure the files are in order so they are appended in the correct order
-// 	sort.Strings(fileList)
+	// Remove the new package if there is an error
+	defer func() {
+		// If there is an error, remove the new package
+		if ptp.source != destination {
+			os.Remove(destination)
+		}
+	}()
 
-// 	// Create the new package
-// 	destination := strings.Replace(p.cfg.PkgOpts.PackagePath, ".part000", "", 1)
-// 	pkgFile, err := os.Create(destination)
-// 	if err != nil {
-// 		return fmt.Errorf("unable to create new package file: %s", err)
-// 	}
-// 	defer pkgFile.Close()
+	var pkgData types.ZarfPartialPackageData
+	for idx, file := range fileList {
+		// The first file contains metadata about the package
+		if idx == 0 {
+			var bytes []byte
 
-// 	// Remove the new package if there is an error
-// 	defer func() {
-// 		// If there is an error, remove the new package
-// 		if p.cfg.PkgOpts.PackagePath != destination {
-// 			os.Remove(destination)
-// 		}
-// 	}()
+			if bytes, err = os.ReadFile(file); err != nil {
+				return fmt.Errorf("unable to read file %s: %w", file, err)
+			}
 
-// 	var pgkData types.ZarfPartialPackageData
+			if err := json.Unmarshal(bytes, &pkgData); err != nil {
+				return fmt.Errorf("unable to unmarshal file %s: %w", file, err)
+			}
 
-// 	// Loop through the partial packages and append them to the new package
-// 	for idx, file := range fileList {
-// 		// The first file contains metadata about the package
-// 		if idx == 0 {
-// 			var bytes []byte
+			count := len(fileList) - 1
+			if count != pkgData.Count {
+				return fmt.Errorf("package is missing parts, expected %d, found %d", pkgData.Count, count)
+			}
 
-// 			if bytes, err = os.ReadFile(file); err != nil {
-// 				return fmt.Errorf("unable to read file %s: %w", file, err)
-// 			}
+			if len(ptp.opts.Shasum) > 0 && pkgData.Sha256Sum != ptp.opts.Shasum {
+				return fmt.Errorf("mismatch in CLI options and package metadata, expected %s, found %s", ptp.opts.Shasum, pkgData.Sha256Sum)
+			}
 
-// 			if err := json.Unmarshal(bytes, &pgkData); err != nil {
-// 				return fmt.Errorf("unable to unmarshal file %s: %w", file, err)
-// 			}
+			continue
+		}
 
-// 			count := len(fileList) - 1
-// 			if count != pgkData.Count {
-// 				return fmt.Errorf("package is missing parts, expected %d, found %d", pgkData.Count, count)
-// 			}
+		// Open the file
+		f, err := os.Open(file)
+		if err != nil {
+			return fmt.Errorf("unable to open file %s: %w", file, err)
+		}
+		defer f.Close()
 
-// 			continue
-// 		}
+		// Add the file contents to the package
+		if _, err = io.Copy(pkgFile, f); err != nil {
+			return fmt.Errorf("unable to copy file %s: %w", file, err)
+		}
+	}
 
-// 		// Open the file
-// 		f, err := os.Open(file)
-// 		if err != nil {
-// 			return fmt.Errorf("unable to open file %s: %w", file, err)
-// 		}
-// 		defer f.Close()
+	var shasum string
+	if shasum, err = utils.GetSHA256OfFile(destination); err != nil {
+		return fmt.Errorf("unable to get sha256sum of package: %w", err)
+	}
 
-// 		// Add the file contents to the package
-// 		if _, err = io.Copy(pkgFile, f); err != nil {
-// 			return fmt.Errorf("unable to copy file %s: %w", file, err)
-// 		}
-// 	}
+	if shasum != pkgData.Sha256Sum {
+		return fmt.Errorf("package sha256sum does not match, expected %s, found %s", pkgData.Sha256Sum, shasum)
+	}
 
-// 	var shasum string
-// 	if shasum, err = utils.GetCryptoHashFromFile(destination, crypto.SHA256); err != nil {
-// 		return fmt.Errorf("unable to get sha256sum of package: %w", err)
-// 	}
+	// Remove the partial packages to reduce disk space before extracting
+	for _, file := range fileList {
+		_ = os.Remove(file)
+	}
 
-// 	if shasum != pgkData.Sha256Sum {
-// 		return fmt.Errorf("package sha256sum does not match, expected %s, found %s", pgkData.Sha256Sum, shasum)
-// 	}
+	ptp.outputTarball = destination
 
-// 	// Remove the partial packages to reduce disk space before extracting
-// 	for _, file := range fileList {
-// 		_ = os.Remove(file)
-// 	}
+	message.Infof("Reassembled package: %s", filepath.Base(ptp.outputTarball))
 
-// 	// Success, update the package path
-// 	p.cfg.PkgOpts.PackagePath = destination
-// 	return nil
-// }
+	return nil
+}
+
+func (ptp *PartialTarballProvider) LoadPackage(optionalComponents []string) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+	if err := ptp.reassembleTarball(); err != nil {
+		return nil, nil, err
+	}
+
+	tp := &TarballProvider{
+		source:         ptp.outputTarball,
+		destinationDir: ptp.destinationDir,
+		opts:           ptp.opts,
+	}
+	return tp.LoadPackage(optionalComponents)
+}
+
+func (ptp *PartialTarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+	if err := ptp.reassembleTarball(); err != nil {
+		return nil, nil, err
+	}
+
+	tp := &TarballProvider{
+		source:         ptp.outputTarball,
+		destinationDir: ptp.destinationDir,
+		opts:           ptp.opts,
+	}
+	return tp.LoadPackageMetadata(wantSBOM)
+}

@@ -7,6 +7,7 @@ package packager
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -30,8 +31,6 @@ func identifySourceType(source string) string {
 			return "https"
 		case "http":
 			return "http"
-		case "file":
-			return "file"
 		default:
 			return ""
 		}
@@ -41,11 +40,13 @@ func identifySourceType(source string) string {
 		return ""
 	}
 
+	if strings.Contains(source, ".part000") {
+		return "partial"
+	}
+
 	if isValidFileExtension(source) {
 		return "tarball"
 	}
-
-	// TODO: handle partial packages
 
 	return ""
 }
@@ -57,7 +58,7 @@ func ProviderFromSource(pkgOpts *types.ZarfPackageOptions, destination string) (
 
 	switch identifySourceType(source) {
 	case "oci":
-		message.Debug("Identified source as OCI")
+		message.Debug("Identified source", source, "as OCI package")
 		provider = &OCIProvider{source: source, destinationDir: destination, opts: pkgOpts}
 		remote, err := oci.NewOrasRemote(source)
 		if err != nil {
@@ -66,8 +67,11 @@ func ProviderFromSource(pkgOpts *types.ZarfPackageOptions, destination string) (
 		remote.WithInsecureConnection(config.CommonOptions.Insecure)
 		provider.(*OCIProvider).OrasRemote = remote
 	case "tarball":
-		message.Debug("Identified source as tarball")
+		message.Debug("Identified source", source, "as tarball package")
 		provider = &TarballProvider{source: source, destinationDir: destination, opts: pkgOpts}
+	case "partial":
+		message.Debug("Identified source", source, "as partial package")
+		provider = &PartialTarballProvider{source: source, destinationDir: destination, opts: pkgOpts}
 	default:
 		return nil, fmt.Errorf("could not identify source type for %q", source)
 	}
