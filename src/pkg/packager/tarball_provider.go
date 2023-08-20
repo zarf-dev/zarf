@@ -5,58 +5,92 @@
 package packager
 
 import (
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 )
 
-type tarballProvider struct {
-	src string
-	dst types.PackagePathsMap
+type TarballProvider struct {
+	source         string
+	destinationDir string
+	opts           *types.ZarfPackageOptions
 }
 
-func (tp *tarballProvider) LoadPackage(optionalComponents []string) (pkg *types.ZarfPackage, err error) {
+func (tp *TarballProvider) LoadPackage(optionalComponents []string) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+	loaded = make(types.PackagePathsMap)
+	loaded["base"] = tp.destinationDir
+
 	if len(optionalComponents) > 0 {
 		// TODO: implement
-		return nil, nil
+		return nil, nil, nil
 	}
 
-	if err := archiver.Unarchive(tp.src, tp.dst.Base()); err != nil {
-		return nil, err
+	err = archiver.Walk(tp.source, func(f archiver.File) error {
+		if f.IsDir() {
+			return fmt.Errorf("unexpected directory in package tarball: %s", f.Name())
+		}
+		dstPath := filepath.Join(tp.destinationDir, f.Name())
+		dst, err := os.Open(dstPath)
+		if err != nil {
+			return err
+		}
+		defer dst.Close()
+
+		_, err = io.Copy(dst, f)
+		if err != nil {
+			return err
+		}
+
+		loaded[f.Name()] = filepath.Join(tp.destinationDir, f.Name())
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if err := utils.ReadYaml(tp.dst[types.ZarfYAML], &pkg); err != nil {
-		return nil, err
+	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
+		return nil, nil, err
 	}
 
-	if err := validate.PackageIntegrity(tp.dst, nil, pkg.Metadata.AggregateChecksum); err != nil {
-		return nil, err
+	if err := validate.PackageIntegrity(loaded, nil, pkg.Metadata.AggregateChecksum); err != nil {
+		return nil, nil, err
 	}
 
-	return pkg, nil
+	return pkg, loaded, nil
 }
 
-func (tp *tarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackage, err error) {
-	pathsToExtract := tp.dst.MetadataPaths()
-	if wantSBOM {
-		pathsToExtract[types.ZarfSBOMTar] = tp.dst[types.ZarfSBOMTar]
-	}
-	for pathInArchive := range pathsToExtract {
-		if err := archiver.Extract(tp.src, pathInArchive, tp.dst.Base()); err != nil {
-			return nil, err
+func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+	loaded = make(types.PackagePathsMap)
+	loaded["base"] = tp.destinationDir
+
+	for pathInArchive := range loaded.MetadataPaths() {
+		if err := archiver.Extract(tp.source, pathInArchive, tp.destinationDir); err != nil {
+			return nil, nil, err
 		}
+		loaded[pathInArchive] = filepath.Join(tp.destinationDir, pathInArchive)
+	}
+	if wantSBOM {
+		if err := archiver.Extract(tp.source, types.ZarfSBOMTar, tp.destinationDir); err != nil {
+			return nil, nil, err
+		}
+		loaded[types.ZarfSBOMTar] = filepath.Join(tp.destinationDir, types.ZarfSBOMTar)
 	}
 
-	if err := utils.ReadYaml(tp.dst[types.ZarfYAML], &pkg); err != nil {
-		return nil, err
+	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
+		return nil, nil, err
 	}
 
-	if err := validate.PackageIntegrity(tp.dst, nil, pkg.Metadata.AggregateChecksum); err != nil {
-		return nil, err
+	if err := validate.PackageIntegrity(loaded, nil, pkg.Metadata.AggregateChecksum); err != nil {
+		return nil, nil, err
 	}
 
-	return pkg, nil
+	return pkg, loaded, nil
 }
 
 // func (p *Packager) handleIfPartialPkg() error {

@@ -50,25 +50,27 @@ func identifySourceType(source string) string {
 	return ""
 }
 
-func ProviderFromSource(source string, shasum string, destination types.PackagePathsMap, keyPath string) (types.PackageProvider, error) {
+func ProviderFromSource(pkgOpts *types.ZarfPackageOptions, destination string) (types.PackageProvider, error) {
+	var provider types.PackageProvider
+
+	source := pkgOpts.PackagePath
+
 	switch identifySourceType(source) {
 	case "oci":
 		message.Debug("Identified source as OCI")
-		provider := ociProvider{src: source, dst: destination}
+		provider = &OCIProvider{source: source, destinationDir: destination, opts: pkgOpts}
 		remote, err := oci.NewOrasRemote(source)
 		if err != nil {
 			return nil, err
 		}
 		remote.WithInsecureConnection(config.CommonOptions.Insecure)
-		provider.OrasRemote = remote
-		return &provider, nil
-	// case "https", "http":
-	// 	message.Debug("Identified source as HTTP(S)")
-	// 	return &httpProvider{src: source, dst: destination, shasum: shasum, insecure: config.CommonOptions.Insecure, DefaultValidator: defaultValidator}, nil
+		provider.(*OCIProvider).OrasRemote = remote
 	case "tarball":
 		message.Debug("Identified source as tarball")
-		return &tarballProvider{src: source, dst: destination}, nil
+		provider = &TarballProvider{source: source, destinationDir: destination, opts: pkgOpts}
 	default:
 		return nil, fmt.Errorf("could not identify source type for %q", source)
 	}
+
+	return provider, nil
 }

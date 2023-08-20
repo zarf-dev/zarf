@@ -43,7 +43,7 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	if p.provider == nil {
-		provider, err := ProviderFromSource(p.cfg.PkgSource, p.cfg.PkgOpts.Shasum, p.tmp, p.cfg.PkgOpts.PublicKeyPath)
+		provider, err := ProviderFromSource(&p.cfg.PkgOpts, p.tmp.Base())
 		if err != nil {
 			return err
 		}
@@ -51,10 +51,11 @@ func (p *Packager) Deploy() (err error) {
 	}
 	optionalComponents := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
 
-	pkg, err := p.provider.LoadPackage(optionalComponents)
+	pkg, loaded, err := p.provider.LoadPackage(optionalComponents)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
+	p.tmp = loaded
 
 	for idx, component := range p.cfg.Pkg.Components {
 		// Handle component configuration deprecations

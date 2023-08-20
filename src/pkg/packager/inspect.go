@@ -14,37 +14,17 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	wantSBOM := includeSBOM || outputSBOM != ""
 
 	if p.provider == nil {
-		provider, err := ProviderFromSource(p.cfg.PkgOpts.PackagePath, p.cfg.PkgOpts.Shasum, p.tmp, p.cfg.PkgOpts.PublicKeyPath)
+		provider, err := ProviderFromSource(&p.cfg.PkgOpts, p.tmp.Base())
 		if err != nil {
 			return err
 		}
 		p.provider = provider
 	}
 
-	pkg, err := p.provider.LoadPackageMetadata(wantSBOM)
+	pkg, loaded, err := p.provider.LoadPackageMetadata(wantSBOM)
 	if err != nil {
 		return err
 	}
-
-	// // Handle OCI packages that have been published to a registry
-	// if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
-	// 	message.Debugf("Pulling layers %v from %s", partialPaths, p.cfg.PkgOpts.PackagePath)
-
-	// 	err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	layersToPull, err := p.remote.LayersFromPaths(partialPaths)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	if partialPaths, err = p.remote.PullPackage(p.tmp.Base, config.CommonOptions.OCIConcurrency, layersToPull...); err != nil {
-	// 		return fmt.Errorf("unable to pull the package: %w", err)
-	// 	}
-	// 	if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
-	// 		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
-	// 	}
-	// } else {
 
 	utils.ColorPrintYAML(pkg, nil, false)
 
@@ -58,7 +38,7 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	// }
 
 	if wantSBOM {
-		return UnarchiveAndViewSBOMs(p.tmp[types.ZarfSBOMTar], outputSBOM, pkg.Metadata.Name, includeSBOM)
+		return UnarchiveAndViewSBOMs(loaded[types.ZarfSBOMTar], outputSBOM, pkg.Metadata.Name, includeSBOM)
 	}
 
 	return nil
