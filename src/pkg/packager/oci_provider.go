@@ -46,7 +46,7 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg *types.Zarf
 		loaded[path] = filepath.Join(op.destinationDir, path)
 	}
 
-	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
+	if err := utils.ReadYaml(loaded[types.ZarfYAML], pkg); err != nil {
 		return nil, nil, err
 	}
 
@@ -85,7 +85,7 @@ func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackag
 		loaded[path] = filepath.Join(op.destinationDir, path)
 	}
 
-	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
+	if err := utils.ReadYaml(loaded[types.ZarfYAML], pkg); err != nil {
 		return nil, nil, err
 	}
 

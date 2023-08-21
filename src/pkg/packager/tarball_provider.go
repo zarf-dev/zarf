@@ -53,7 +53,7 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg *types.ZarfPackage, load
 		return nil, nil, err
 	}
 
-	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
+	if err := utils.ReadYaml(loaded[types.ZarfYAML], pkg); err != nil {
 		return nil, nil, err
 	}
 
@@ -84,7 +84,7 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPa
 		pathsToCheck = append(pathsToCheck, types.ZarfSBOMTar)
 	}
 
-	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
+	if err := utils.ReadYaml(loaded[types.ZarfYAML], pkg); err != nil {
 		return nil, nil, err
 	}
 
