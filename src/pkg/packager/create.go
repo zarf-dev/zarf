@@ -285,12 +285,7 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 	}
 
 	for filesIdx, file := range component.Files {
-		var path string
-		if file.ArchivePath != "" {
-			path = filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), file.Target)
-		} else {
-			path = filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
-		}
+		path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		appendSBOMFiles(path)
 	}
 
@@ -384,50 +379,62 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			if isSkeleton {
 				continue
 			}
-
-			if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
-			}
-
 			if file.ArchivePath != "" {
 
-				compressFileName, _ := helpers.ExtractBasePathFromURL(file.Source)
-				targetFile := filepath.Join(filepath.Dir(dst), filepath.Base(file.Target))
-				targetDir := filepath.Join(filepath.Dir(dst), filepath.Dir(file.Target))
-				archiveFile := filepath.Join(filepath.Dir(targetFile), compressFileName)
-
-				// Rename the targetFile to the archiveFile so that we can extract it
-				err = os.Rename(targetFile, archiveFile)
+				// get the compressedFileName from the source
+				compressedFileName, err := helpers.ExtractBasePathFromURL(file.Source)
 				if err != nil {
-					return fmt.Errorf(lang.ErrWritingFile, dst, err)
+					return fmt.Errorf(lang.ErrFileNameExtract, file.Source, err.Error())
 				}
 
-				// Extract the ArchivePath from the archive file into the targetDir
-				err = archiver.Extract(archiveFile, file.ArchivePath, targetDir)
-				if err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ArchivePath, archiveFile, err)
+				compressedFile := filepath.Join(componentPath.Temp, compressedFileName)
+
+				// If the file is an archive, download it to the componentPath.Temp
+				if err := utils.DownloadToFile(file.Source, compressedFile, component.CosignKeyPath); err != nil {
+					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
+				// dst = /var/folders/v0/slmrzc4s6kx4n7jb77ch9fc80000gn/T/zarf-1676087642/components/load-eksctl/files/1/eksctl_Darwin_x86_64
 
-				// Update the new file.Target to reflect extracted file
-				file.Target = filepath.Join(targetDir, filepath.Base(file.Target))
-				extractedArchiveFile := filepath.Join(targetDir, file.ArchivePath)
-
-				// If the extractedArchiveFile has a different name than file.Target
-				// rename for cases when file.Target = dir/binary
-				if file.Target != extractedArchiveFile {
-					err = os.Rename(filepath.Join(targetDir, file.ArchivePath), file.Target)
+				dirDst := filepath.Dir(dst)
+				err = archiver.Extract(compressedFile, file.ArchivePath, dirDst)
+				if err != nil {
+					return fmt.Errorf(lang.ErrFileExtract, file.ArchivePath, compressedFileName, err.Error())
+				}
+				// this extracts to /var/folders/v0/slmrzc4s6kx4n7jb77ch9fc80000gn/T/zarf-3537766959/components/load-eksctl/files/1/eksctl
+				updatedExtractedFileOrDir := filepath.Join(dirDst, file.ArchivePath)
+				if updatedExtractedFileOrDir != dst {
+					err = os.Rename(updatedExtractedFileOrDir, dst)
 					if err != nil {
 						return fmt.Errorf(lang.ErrWritingFile, dst, err)
 					}
 				}
 
-				dst = filepath.Join(targetDir, filepath.Base(file.Target))
+			} else {
+				if err := utils.DownloadToFile(file.Source, dst, component.CosignKeyPath); err != nil {
+					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+				}
+			}
 
-			}
 		} else {
-			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
-				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+			if file.ArchivePath != "" {
+				dirDst := filepath.Dir(dst)
+				err = archiver.Extract(file.Source, file.ArchivePath, dirDst)
+				if err != nil {
+					return fmt.Errorf(lang.ErrFileExtract, file.ArchivePath, file.Source, err.Error())
+				}
+				updatedExtractedFileOrDir := filepath.Join(dirDst, file.ArchivePath)
+				if updatedExtractedFileOrDir != dst {
+					err = os.Rename(updatedExtractedFileOrDir, dst)
+					if err != nil {
+						return fmt.Errorf(lang.ErrWritingFile, dst, err)
+					}
+				}
+			} else {
+				if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
+					return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+				}
 			}
+
 			if isSkeleton {
 				p.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
 			}

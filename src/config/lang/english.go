@@ -29,6 +29,7 @@ const (
 	ErrUnarchive           = "failed to unarchive %s: %s"
 	ErrConfirmCancel       = "confirm selection canceled: %s"
 	ErrFileExtract         = "failed to extract filename %s from archive %s: %s"
+	ErrFileNameExtract     = "failed to extract filename from URL %s: %s"
 )
 
 // Zarf CLI commands.
