@@ -62,8 +62,8 @@ type ZarfPackageOptions struct {
 }
 
 type PackageProvider interface {
-	LoadPackage(optionalComponents []string) (*ZarfPackage, PackagePathsMap, error)
-	LoadPackageMetadata(wantSBOM bool) (*ZarfPackage, PackagePathsMap, error)
+	LoadPackage(optionalComponents []string) (ZarfPackage, PackagePathsMap, error)
+	LoadPackageMetadata(wantSBOM bool) (ZarfPackage, PackagePathsMap, error)
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.

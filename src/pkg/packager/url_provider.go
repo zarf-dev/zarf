@@ -48,9 +48,9 @@ func (up *URLProvider) fetchTarball() error {
 	return nil
 }
 
-func (up *URLProvider) LoadPackage(optionalComponents []string) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (up *URLProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	if err := up.fetchTarball(); err != nil {
-		return nil, nil, err
+		return pkg, nil, err
 	}
 
 	tp := &TarballProvider{
@@ -62,9 +62,9 @@ func (up *URLProvider) LoadPackage(optionalComponents []string) (pkg *types.Zarf
 	return tp.LoadPackage(optionalComponents)
 }
 
-func (up *URLProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (up *URLProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	if err := up.fetchTarball(); err != nil {
-		return nil, nil, err
+		return pkg, nil, err
 	}
 
 	tp := &TarballProvider{

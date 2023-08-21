@@ -23,7 +23,7 @@ type OCIProvider struct {
 	*oci.OrasRemote
 }
 
-func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = op.destinationDir
 	layersToPull := []ocispec.Descriptor{}
@@ -32,39 +32,39 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg *types.Zarf
 	if len(optionalComponents) > 0 && config.CommonOptions.Confirm {
 		layers, err := op.LayersFromRequestedComponents(optionalComponents)
 		if err != nil {
-			return nil, nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
+			return pkg, nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
 		}
 		layersToPull = append(layersToPull, layers...)
 	}
 
 	pathsToCheck, err := op.PullPackage(op.destinationDir, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to pull the package: %w", err)
+		return pkg, nil, fmt.Errorf("unable to pull the package: %w", err)
 	}
 
 	for _, path := range pathsToCheck {
 		loaded[path] = filepath.Join(op.destinationDir, path)
 	}
 
-	if err := utils.ReadYaml(loaded[types.ZarfYAML], pkg); err != nil {
-		return nil, nil, err
+	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
+		return pkg, nil, err
 	}
 
 	if err := validate.PackageIntegrity(loaded, pathsToCheck, pkg.Metadata.AggregateChecksum); err != nil {
-		return nil, nil, err
+		return pkg, nil, err
 	}
 
 	return pkg, loaded, nil
 }
 
-func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = op.destinationDir
 	var pathsToCheck []string
 
 	metatdataDescriptors, err := op.PullPackageMetadata(op.destinationDir)
 	if err != nil {
-		return nil, nil, err
+		return pkg, nil, err
 	}
 
 	for _, desc := range metatdataDescriptors {
@@ -74,7 +74,7 @@ func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackag
 	if wantSBOM {
 		sbomDescriptors, err := op.PullPackageSBOM(op.destinationDir)
 		if err != nil {
-			return nil, nil, err
+			return pkg, nil, err
 		}
 		for _, desc := range sbomDescriptors {
 			pathsToCheck = append(pathsToCheck, desc.Annotations[ocispec.AnnotationTitle])
@@ -85,12 +85,12 @@ func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackag
 		loaded[path] = filepath.Join(op.destinationDir, path)
 	}
 
-	if err := utils.ReadYaml(loaded[types.ZarfYAML], pkg); err != nil {
-		return nil, nil, err
+	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
+		return pkg, nil, err
 	}
 
 	if err := validate.PackageIntegrity(loaded, pathsToCheck, pkg.Metadata.AggregateChecksum); err != nil {
-		return nil, nil, err
+		return pkg, nil, err
 	}
 
 	return pkg, loaded, nil

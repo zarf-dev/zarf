@@ -26,7 +26,7 @@ type TarballProvider struct {
 	opts           *types.ZarfPackageOptions
 }
 
-func (tp *TarballProvider) LoadPackage(_ []string) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = tp.destinationDir
 
@@ -50,21 +50,21 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg *types.ZarfPackage, load
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return pkg, nil, err
 	}
 
-	if err := utils.ReadYaml(loaded[types.ZarfYAML], pkg); err != nil {
-		return nil, nil, err
+	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
+		return pkg, nil, err
 	}
 
 	if err := validate.PackageIntegrity(loaded, nil, pkg.Metadata.AggregateChecksum); err != nil {
-		return nil, nil, err
+		return pkg, nil, err
 	}
 
 	return pkg, loaded, nil
 }
 
-func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = tp.destinationDir
 
@@ -72,24 +72,24 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPa
 
 	for pathInArchive := range loaded.MetadataPaths() {
 		if err := archiver.Extract(tp.source, pathInArchive, tp.destinationDir); err != nil {
-			return nil, nil, err
+			return pkg, nil, err
 		}
 		loaded[pathInArchive] = filepath.Join(tp.destinationDir, pathInArchive)
 	}
 	if wantSBOM {
 		if err := archiver.Extract(tp.source, types.ZarfSBOMTar, tp.destinationDir); err != nil {
-			return nil, nil, err
+			return pkg, nil, err
 		}
 		loaded[types.ZarfSBOMTar] = filepath.Join(tp.destinationDir, types.ZarfSBOMTar)
 		pathsToCheck = append(pathsToCheck, types.ZarfSBOMTar)
 	}
 
-	if err := utils.ReadYaml(loaded[types.ZarfYAML], pkg); err != nil {
-		return nil, nil, err
+	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
+		return pkg, nil, err
 	}
 
 	if err := validate.PackageIntegrity(loaded, pathsToCheck, pkg.Metadata.AggregateChecksum); err != nil {
-		return nil, nil, err
+		return pkg, nil, err
 	}
 
 	return pkg, loaded, nil
@@ -188,9 +188,9 @@ func (ptp *PartialTarballProvider) reassembleTarball() error {
 	return nil
 }
 
-func (ptp *PartialTarballProvider) LoadPackage(optionalComponents []string) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (ptp *PartialTarballProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	if err := ptp.reassembleTarball(); err != nil {
-		return nil, nil, err
+		return pkg, nil, err
 	}
 
 	tp := &TarballProvider{
@@ -201,9 +201,9 @@ func (ptp *PartialTarballProvider) LoadPackage(optionalComponents []string) (pkg
 	return tp.LoadPackage(optionalComponents)
 }
 
-func (ptp *PartialTarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg *types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (ptp *PartialTarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	if err := ptp.reassembleTarball(); err != nil {
-		return nil, nil, err
+		return pkg, nil, err
 	}
 
 	tp := &TarballProvider{
