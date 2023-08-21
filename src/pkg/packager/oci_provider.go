@@ -16,6 +16,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+// OCIProvider is a package provider for OCI registries.
 type OCIProvider struct {
 	source         string
 	destinationDir string
@@ -23,6 +24,7 @@ type OCIProvider struct {
 	*oci.OrasRemote
 }
 
+// LoadPackage loads a package from an OCI registry.
 func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = op.destinationDir
@@ -57,6 +59,7 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 	return pkg, loaded, nil
 }
 
+// LoadPackageMetadata loads a package's metadata from an OCI registry.
 func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = op.destinationDir

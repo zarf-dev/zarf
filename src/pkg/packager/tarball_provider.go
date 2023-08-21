@@ -20,12 +20,14 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
+// TarballProvider is a package provider for tarballs.
 type TarballProvider struct {
 	source         string
 	destinationDir string
 	opts           *types.ZarfPackageOptions
 }
 
+// LoadPackage loads a package from a tarball.
 func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = tp.destinationDir
@@ -64,6 +66,7 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 	return pkg, loaded, nil
 }
 
+// LoadPackageMetadata loads a package's metadata from a tarball.
 func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = tp.destinationDir
@@ -95,6 +98,7 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPac
 	return pkg, loaded, nil
 }
 
+// PartialTarballProvider is a package provider for partial tarballs.
 type PartialTarballProvider struct {
 	source         string
 	outputTarball  string
@@ -102,6 +106,7 @@ type PartialTarballProvider struct {
 	opts           *types.ZarfPackageOptions
 }
 
+// reassembleTarball reassembles the partial tarball into a single tarball.
 func (ptp *PartialTarballProvider) reassembleTarball() (err error) {
 	pattern := strings.Replace(ptp.source, ".part000", ".part*", 1)
 	fileList, err := filepath.Glob(pattern)
@@ -188,6 +193,7 @@ func (ptp *PartialTarballProvider) reassembleTarball() (err error) {
 	return nil
 }
 
+// LoadPackage loads a package from a partial tarball.
 func (ptp *PartialTarballProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	if err := ptp.reassembleTarball(); err != nil {
 		return pkg, nil, err
@@ -201,6 +207,7 @@ func (ptp *PartialTarballProvider) LoadPackage(optionalComponents []string) (pkg
 	return tp.LoadPackage(optionalComponents)
 }
 
+// LoadPackageMetadata loads a package's metadata from a partial tarball.
 func (ptp *PartialTarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	if err := ptp.reassembleTarball(); err != nil {
 		return pkg, nil, err

@@ -61,8 +61,11 @@ type ZarfPackageOptions struct {
 	PublicKeyPath      string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
+// PackageProvider is an interface for package providers.
 type PackageProvider interface {
+	// LoadPackage loads a package from a source.
 	LoadPackage(optionalComponents []string) (ZarfPackage, PackagePathsMap, error)
+	// LoadPackageMetadata loads a package's metadata from a source.
 	LoadPackageMetadata(wantSBOM bool) (ZarfPackage, PackagePathsMap, error)
 }
 
@@ -144,10 +147,13 @@ type ComponentSBOM struct {
 	ComponentPath ComponentPaths
 }
 
+// PackagePaths is a wrapper struct that contains all of the paths for a Zarf package.
 type PackagePaths struct {
+	// Base is the base directory for the package.
 	Base string
 }
 
+// Paths returns a map of all the static paths for a Zarf package.
 func (lp PackagePaths) Paths() PackagePathsMap {
 	paths := PackagePathsMap{
 		"base": lp.Base,
@@ -177,12 +183,15 @@ func (lp PackagePaths) Paths() PackagePathsMap {
 	return paths
 }
 
+// PackagePathsMap is a map of all the static paths for a Zarf package.
 type PackagePathsMap map[string]string
 
+// Base returns the base directory for the package.
 func (pm PackagePathsMap) Base() string {
 	return pm["base"]
 }
 
+// MetadataPaths returns a map of all the metadata paths for a Zarf package.
 func (pm PackagePathsMap) MetadataPaths() map[string]string {
 	return map[string]string{
 		ZarfYAML:          pm[ZarfYAML],
@@ -203,6 +212,7 @@ type ComponentPaths struct {
 	DataInjections string
 }
 
+// GetComponentPaths returns a ComponentPaths struct for a given component.
 func (pm PackagePathsMap) GetComponentPaths(componentName string) ComponentPaths {
 	base := pm[ZarfComponentsDir]
 	return ComponentPaths{
@@ -217,6 +227,7 @@ func (pm PackagePathsMap) GetComponentPaths(componentName string) ComponentPaths
 	}
 }
 
+// GetComponentTarballPath returns the path to the tarball for a given component.
 func (pm PackagePathsMap) GetComponentTarballPath(componentName string) string {
 	return filepath.Join(pm[ZarfComponentsDir], componentName+".tar")
 }

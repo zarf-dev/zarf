@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// URLProvider is a package provider for http, https and sget URLs.
 type URLProvider struct {
 	source         string
 	outputTarball  string
@@ -21,6 +22,7 @@ type URLProvider struct {
 	insecure       bool
 }
 
+// fetchTarball downloads the tarball from the URL.
 func (up *URLProvider) fetchTarball() error {
 	// TODO: do we want to support caching if the SHA is provided?
 
@@ -50,6 +52,7 @@ func (up *URLProvider) fetchTarball() error {
 	return nil
 }
 
+// LoadPackage loads a package from an http, https or sget URL.
 func (up *URLProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	if err := up.fetchTarball(); err != nil {
 		return pkg, nil, err
@@ -64,6 +67,7 @@ func (up *URLProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 	return tp.LoadPackage(optionalComponents)
 }
 
+// LoadPackageMetadata loads a package's metadata from an http, https or sget URL.
 func (up *URLProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	if err := up.fetchTarball(); err != nil {
 		return pkg, nil, err
