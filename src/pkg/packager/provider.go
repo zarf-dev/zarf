@@ -73,9 +73,10 @@ func ProviderFromSource(pkgOpts *types.ZarfPackageOptions, destination string) (
 		message.Debug("Identified source", source, "as tarball package")
 		provider = &TarballProvider{source: source, destinationDir: destination, opts: pkgOpts}
 	case "http", "https":
-		message.Debug("Identified source", source, "as remote URL package")
+		message.Debug("Identified source", source, "as HTTP(S) package")
 		provider = &URLProvider{source: source, destinationDir: destination, opts: pkgOpts, insecure: config.CommonOptions.Insecure}
 	case "sget":
+		message.Debug("Identified source", source, "as SGET package")
 		message.Warn(lang.WarnSGetDeprecation)
 		provider = &URLProvider{source: source, destinationDir: destination, opts: pkgOpts, insecure: config.CommonOptions.Insecure}
 	case "partial":

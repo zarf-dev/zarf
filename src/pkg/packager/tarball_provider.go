@@ -35,7 +35,7 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 			return nil
 		}
 		dstPath := filepath.Join(tp.destinationDir, f.Name())
-		dst, err := os.Open(dstPath)
+		dst, err := os.Create(dstPath)
 		if err != nil {
 			return err
 		}
@@ -102,7 +102,7 @@ type PartialTarballProvider struct {
 	opts           *types.ZarfPackageOptions
 }
 
-func (ptp *PartialTarballProvider) reassembleTarball() error {
+func (ptp *PartialTarballProvider) reassembleTarball() (err error) {
 	pattern := strings.Replace(ptp.source, ".part000", ".part*", 1)
 	fileList, err := filepath.Glob(pattern)
 	if err != nil {
@@ -123,7 +123,7 @@ func (ptp *PartialTarballProvider) reassembleTarball() error {
 	// Remove the new package if there is an error
 	defer func() {
 		// If there is an error, remove the new package
-		if ptp.source != destination {
+		if ptp.outputTarball != destination {
 			os.Remove(destination)
 		}
 	}()

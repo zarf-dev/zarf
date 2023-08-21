@@ -22,6 +22,8 @@ type URLProvider struct {
 }
 
 func (up *URLProvider) fetchTarball() error {
+	// TODO: do we want to support caching if the SHA is provided?
+
 	if !up.insecure && up.opts.Shasum == "" {
 		return fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
 	}
