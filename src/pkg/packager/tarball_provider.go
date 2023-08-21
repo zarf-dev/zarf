@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"archive/tar"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,11 +33,19 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = tp.destinationDir
 
+	pathsToCheck := []string{}
+
 	err = archiver.Walk(tp.source, func(f archiver.File) error {
 		if f.IsDir() {
-			return nil
+			return os.MkdirAll(filepath.Join(tp.destinationDir, f.Name()), 0755)
 		}
-		dstPath := filepath.Join(tp.destinationDir, f.Name())
+		header, ok := f.Header.(*tar.Header)
+		if !ok {
+			return fmt.Errorf("expected header to be *tar.Header but was %T", f.Header)
+		}
+
+		name := header.Name
+		dstPath := filepath.Join(tp.destinationDir, name)
 		dst, err := os.Create(dstPath)
 		if err != nil {
 			return err
@@ -48,7 +57,8 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 			return err
 		}
 
-		loaded[f.Name()] = filepath.Join(tp.destinationDir, f.Name())
+		loaded[name] = filepath.Join(tp.destinationDir, name)
+		pathsToCheck = append(pathsToCheck, name)
 		return nil
 	})
 	if err != nil {
@@ -59,7 +69,7 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 		return pkg, nil, err
 	}
 
-	if err := validate.PackageIntegrity(loaded, nil, pkg.Metadata.AggregateChecksum); err != nil {
+	if err := validate.PackageIntegrity(loaded, pathsToCheck, pkg.Metadata.AggregateChecksum); err != nil {
 		return pkg, nil, err
 	}
 

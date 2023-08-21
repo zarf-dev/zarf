@@ -54,7 +54,7 @@ func (p *Packager) Deploy() (err error) {
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	p.tmp = loaded
+	p.arch = config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
 
 	for idx, component := range p.cfg.Pkg.Components {
 		// Handle component configuration deprecations
@@ -75,8 +75,8 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	// If a SBOM tar file exist, temporarily place them in the deploy directory
-	if !utils.InvalidPath(p.tmp[types.ZarfSBOMTar]) {
-		if err = archiver.Unarchive(p.tmp[types.ZarfSBOMTar], p.tmp[types.ZarfSBOMDir]); err != nil {
+	if !utils.InvalidPath(loaded[types.ZarfSBOMTar]) {
+		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], p.tmp[types.ZarfSBOMDir]); err != nil {
 			return fmt.Errorf("unable to extract the sbom data from the component: %w", err)
 		}
 		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp[types.ZarfSBOMDir], "sbom-viewer-*"))
