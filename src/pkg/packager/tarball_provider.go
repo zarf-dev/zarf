@@ -32,7 +32,7 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 
 	err = archiver.Walk(tp.source, func(f archiver.File) error {
 		if f.IsDir() {
-			return fmt.Errorf("unexpected directory in package tarball: %s", f.Name())
+			return nil
 		}
 		dstPath := filepath.Join(tp.destinationDir, f.Name())
 		dst, err := os.Open(dstPath)
