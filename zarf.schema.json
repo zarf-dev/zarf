@@ -792,7 +792,7 @@
           "type": "array",
           "description": "List of symlinks to create during package deploy"
         },
-        "archivePath": {
+        "extractPath": {
           "type": "string",
           "description": "Local folder or file to be extracted from a 'source' archive"
         }

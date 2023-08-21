@@ -977,7 +977,7 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="components_items_files_items_archivePath"></a>archivePath</strong>
+<strong> <a name="components_items_files_items_extractPath"></a>extractPath</strong>
 </summary>
 &nbsp;
 <blockquote>

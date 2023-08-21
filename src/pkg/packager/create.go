@@ -389,7 +389,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				continue
 			}
 
-			if file.ArchivePath != "" {
+			if file.ExtractPath != "" {
 
 				// get the compressedFileName from the source
 				compressedFileName, err := helpers.ExtractBasePathFromURL(file.Source)
@@ -400,18 +400,18 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				compressedFile := filepath.Join(componentPath.Temp, compressedFileName)
 
 				// If the file is an archive, download it to the componentPath.Temp
-				if err := utils.DownloadToFile(file.Source, compressedFile, component.CosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 				// dst = /var/folders/v0/slmrzc4s6kx4n7jb77ch9fc80000gn/T/zarf-1676087642/components/load-eksctl/files/1/eksctl_Darwin_x86_64
 
 				dirDst := filepath.Dir(dst)
-				err = archiver.Extract(compressedFile, file.ArchivePath, dirDst)
+				err = archiver.Extract(compressedFile, file.ExtractPath, dirDst)
 				if err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ArchivePath, compressedFileName, err.Error())
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
 				}
 				// this extracts to /var/folders/v0/slmrzc4s6kx4n7jb77ch9fc80000gn/T/zarf-3537766959/components/load-eksctl/files/1/eksctl
-				updatedExtractedFileOrDir := filepath.Join(dirDst, file.ArchivePath)
+				updatedExtractedFileOrDir := filepath.Join(dirDst, file.ExtractPath)
 				if updatedExtractedFileOrDir != dst {
 					err = os.Rename(updatedExtractedFileOrDir, dst)
 					if err != nil {
@@ -426,13 +426,13 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			}
 
 		} else {
-			if file.ArchivePath != "" {
+			if file.ExtractPath != "" {
 				dirDst := filepath.Dir(dst)
-				err = archiver.Extract(file.Source, file.ArchivePath, dirDst)
+				err = archiver.Extract(file.Source, file.ExtractPath, dirDst)
 				if err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ArchivePath, file.Source, err.Error())
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
 				}
-				updatedExtractedFileOrDir := filepath.Join(dirDst, file.ArchivePath)
+				updatedExtractedFileOrDir := filepath.Join(dirDst, file.ExtractPath)
 				if updatedExtractedFileOrDir != dst {
 					err = os.Rename(updatedExtractedFileOrDir, dst)
 					if err != nil {

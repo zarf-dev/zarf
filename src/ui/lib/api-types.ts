@@ -716,13 +716,13 @@ export interface BigBang {
 
 export interface ZarfFile {
     /**
-     * Local folder or file to be extracted from a 'source' archive
-     */
-    archivePath?: string;
-    /**
      * (files only) Determines if the file should be made executable during package deploy
      */
     executable?: boolean;
+    /**
+     * Local folder or file to be extracted from a 'source' archive
+     */
+    extractPath?: string;
     /**
      * (files only) Optional SHA256 checksum of the file
      */
@@ -1593,8 +1593,8 @@ const typeMap: any = {
         { json: "version", js: "version", typ: "" },
     ], false),
     "ZarfFile": o([
-        { json: "archivePath", js: "archivePath", typ: u(undefined, "") },
         { json: "executable", js: "executable", typ: u(undefined, true) },
+        { json: "extractPath", js: "extractPath", typ: u(undefined, "") },
         { json: "shasum", js: "shasum", typ: u(undefined, "") },
         { json: "source", js: "source", typ: "" },
         { json: "symlinks", js: "symlinks", typ: u(undefined, a("")) },
