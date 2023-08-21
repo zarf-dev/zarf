@@ -5,16 +5,23 @@
 package cluster
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	k8sTesting "k8s.io/client-go/testing"
 )
+
+func marshalDeployedPackage(deployedPackage *types.DeployedPackage) (rawData []byte) {
+	rawData, _ = json.Marshal(deployedPackage)
+	return rawData
+}
 
 // TestPackageSecretNeedsWait verifies that Zarf waits for webhooks to complete correctly.
 func TestPackageSecretNeedsWait(t *testing.T) {
@@ -29,21 +36,23 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		expectedError error
 	}
 
+	var (
+		componentName = "test-component"
+		packageName   = "test-package"
+		secretName    = "test-secret"
+		webhookName   = "test-webhook"
+	)
+
 	testCases := []testCase{
 		{
 			name:       "NoWebhooks",
-			secretName: "test-secret",
+			secretName: secretName,
 			webhookStatus: &corev1.Secret{
 				Data: map[string][]byte{
-					"data": []byte(`{
-						"name": "test-package",
-						"data": {},
-						"cliVersion": "1.0",
-						"generation": 1,
-						"deployedComponents": [],
-						"componentWebhooks": {},
-						"connectStrings": {}
-					}`),
+					"data": marshalDeployedPackage(&types.DeployedPackage{
+						Name:              packageName,
+						ComponentWebhooks: map[string]map[string]types.Webhook{},
+					}),
 				},
 			},
 			needsWait:     false,
@@ -52,25 +61,20 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:       "WebhookRunning",
-			secretName: "test-secret",
+			secretName: secretName,
 			webhookStatus: &corev1.Secret{
 				Data: map[string][]byte{
-					"data": []byte(`{
-						"name": "test-package",
-						"data": {},
-						"cliVersion": "1.0",
-						"generation": 1,
-						"deployedComponents": [],
-						"componentWebhooks": {
-							"componentA": {
-								"webhookA": {
-									"status": "Running",
-									"waitDurationSeconds": 10
-								}
-							}
+					"data": marshalDeployedPackage(&types.DeployedPackage{
+						Name: packageName,
+						ComponentWebhooks: map[string]map[string]types.Webhook{
+							componentName: {
+								webhookName: types.Webhook{
+									Status:              string(types.WebhookStatusRunning),
+									WaitDurationSeconds: 10,
+								},
+							},
 						},
-						"connectStrings": {}
-					}`),
+					}),
 				},
 			},
 			needsWait:     true,
@@ -79,24 +83,19 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:       "WebhookSucceeded",
-			secretName: "test-secret",
+			secretName: secretName,
 			webhookStatus: &corev1.Secret{
 				Data: map[string][]byte{
-					"data": []byte(`{
-						"name": "test-package",
-						"data": {},
-						"cliVersion": "1.0",
-						"generation": 1,
-						"deployedComponents": [],
-						"componentWebhooks": {
-							"componentA": {
-								"webhookA": {
-									"status": "Succeeded"
-								}
-							}
+					"data": marshalDeployedPackage(&types.DeployedPackage{
+						Name: packageName,
+						ComponentWebhooks: map[string]map[string]types.Webhook{
+							componentName: {
+								webhookName: types.Webhook{
+									Status: string(types.WebhookStatusSucceeded),
+								},
+							},
 						},
-						"connectStrings": {}
-					}`),
+					}),
 				},
 			},
 			needsWait:     false,
@@ -105,24 +104,19 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:       "WebhookFailed",
-			secretName: "test-secret",
+			secretName: secretName,
 			webhookStatus: &corev1.Secret{
 				Data: map[string][]byte{
-					"data": []byte(`{
-						"name": "test-package",
-						"data": {},
-						"cliVersion": "1.0",
-						"generation": 1,
-						"deployedComponents": [],
-						"componentWebhooks": {
-							"componentA": {
-								"webhookA": {
-									"status": "Failed"
-								}
-							}
+					"data": marshalDeployedPackage(&types.DeployedPackage{
+						Name: packageName,
+						ComponentWebhooks: map[string]map[string]types.Webhook{
+							componentName: {
+								webhookName: types.Webhook{
+									Status: string(types.WebhookStatusFailed),
+								},
+							},
 						},
-						"connectStrings": {}
-					}`),
+					}),
 				},
 			},
 			needsWait:     false,
@@ -131,24 +125,19 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:       "WebhookRemoving",
-			secretName: "test-secret",
+			secretName: secretName,
 			webhookStatus: &corev1.Secret{
 				Data: map[string][]byte{
-					"data": []byte(`{
-						"name": "test-package",
-						"data": {},
-						"cliVersion": "1.0",
-						"generation": 1,
-						"deployedComponents": [],
-						"componentWebhooks": {
-							"componentA": {
-								"webhookA": {
-									"status": "Removing"
-								}
-							}
+					"data": marshalDeployedPackage(&types.DeployedPackage{
+						Name: packageName,
+						ComponentWebhooks: map[string]map[string]types.Webhook{
+							componentName: {
+								webhookName: types.Webhook{
+									Status: string(types.WebhookStatusRemoving),
+								},
+							},
 						},
-						"connectStrings": {}
-					}`),
+					}),
 				},
 			},
 			needsWait:     false,
