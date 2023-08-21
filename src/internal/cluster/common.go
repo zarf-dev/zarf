@@ -14,7 +14,7 @@ import (
 
 // Cluster is a wrapper for the k8s package that provides Zarf-specific cluster management functions.
 type Cluster struct {
-	Kube *k8s.K8s
+	*k8s.K8s
 }
 
 const (
@@ -48,12 +48,12 @@ func NewClusterWithWait(timeout time.Duration, withSpinner bool) (*Cluster, erro
 	c := &Cluster{}
 	var err error
 
-	c.Kube, err = k8s.New(message.Debugf, labels)
+	c.K8s, err = k8s.New(message.Debugf, labels)
 	if err != nil {
 		return c, err
 	}
 
-	err = c.Kube.WaitForHealthyCluster(timeout)
+	err = c.WaitForHealthyCluster(timeout)
 	if err != nil {
 		return c, err
 	}
@@ -69,14 +69,13 @@ func NewClusterWithWait(timeout time.Duration, withSpinner bool) (*Cluster, erro
 func NewCluster() (*Cluster, error) {
 	c := &Cluster{}
 	var err error
-
-	c.Kube, err = k8s.New(message.Debugf, labels)
+	c.K8s, err = k8s.New(message.Debugf, labels)
 	if err != nil {
 		return nil, err
 	}
 
 	// Dogsled the version output. We just want to ensure no errors were returned to validate cluster connection.
-	_, err = c.Kube.GetServerVersion()
+	_, err = c.GetServerVersion()
 	if err != nil {
 		return nil, err
 	}

@@ -8,14 +8,11 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Check for any extensions in use and runs the appropriate functions.
 func (p *Packager) processExtensions() error {
-	message.Debugf("packager.processExtensions()")
-
 	components := []types.ZarfComponent{}
 
 	// Create component paths and process extensions for each component.
@@ -44,8 +41,6 @@ func (p *Packager) processExtensions() error {
 
 // Mutate any local files to be relative to the parent
 func (p *Packager) composeExtensions(pathAncestry string, component types.ZarfComponent) types.ZarfComponent {
-	message.Debugf("packager.composeExtentions()")
-
 	// Big Bang
 	if component.Extensions.BigBang != nil {
 		component = bigbang.Compose(pathAncestry, component)
@@ -56,8 +51,6 @@ func (p *Packager) composeExtensions(pathAncestry string, component types.ZarfCo
 
 // Check for any extensions in use and skeletonize their local files.
 func (p *Packager) skeletonizeExtensions() error {
-	message.Debugf("packager.skeletonizeExtentions()")
-
 	components := []types.ZarfComponent{}
 
 	// Create component paths and process extensions for each component.

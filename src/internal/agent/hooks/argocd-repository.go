@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
@@ -39,7 +40,7 @@ func NewRepositoryMutationHook() operations.Hook {
 func mutateRepository(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	var (
-		zarfState types.ZarfState
+		zarfState *types.ZarfState
 		patches   []operations.PatchOperation
 		isPatched bool
 

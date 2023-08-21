@@ -73,7 +73,11 @@ spec:
             - name: config
               mountPath: "/etc/docker/registry"
       affinity:
+{{- if (eq "ReadWriteMany" .Values.persistence.accessMode) }}
+        podAntiAffinity:
+{{- else }}
         podAffinity:
+{{- end }}
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 100
               podAffinityTerm:

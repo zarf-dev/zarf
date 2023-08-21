@@ -34,7 +34,7 @@ func ReadState(w http.ResponseWriter, _ *http.Request) {
 func UpdateState(w http.ResponseWriter, _ *http.Request) {
 	message.Debug("state.Update()")
 
-	var data types.ZarfState
+	var data *types.ZarfState
 
 	if err := cluster.NewClusterOrDie().SaveZarfState(data); err != nil {
 		message.ErrorWebf(err, w, lang.ErrLoadState)

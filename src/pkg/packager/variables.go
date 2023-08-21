@@ -6,12 +6,11 @@ package packager
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -20,9 +19,6 @@ func (p *Packager) fillActiveTemplate() error {
 	templateMap := map[string]string{}
 
 	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
-		// Ensure uppercase keys
-		setFromCLIConfig := helpers.TransformMapKeys(p.cfg.CreateOpts.SetVariables, strings.ToUpper)
-
 		yamlTemplates, err := utils.FindYamlTemplates(&p.cfg.Pkg, templatePrefix, "###")
 		if err != nil {
 			return err
@@ -33,14 +29,14 @@ func (p *Packager) fillActiveTemplate() error {
 				p.warnings = append(p.warnings, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
 			}
 
-			_, present := setFromCLIConfig[key]
+			_, present := p.cfg.CreateOpts.SetVariables[key]
 			if !present && !config.CommonOptions.Confirm {
-				setVal, err := p.promptVariable(types.ZarfPackageVariable{
+				setVal, err := interactive.PromptVariable(types.ZarfPackageVariable{
 					Name: key,
 				})
 
 				if err == nil {
-					setFromCLIConfig[key] = setVal
+					p.cfg.CreateOpts.SetVariables[key] = setVal
 				} else {
 					return err
 				}
@@ -49,7 +45,7 @@ func (p *Packager) fillActiveTemplate() error {
 			}
 		}
 
-		for key, value := range setFromCLIConfig {
+		for key, value := range p.cfg.CreateOpts.SetVariables {
 			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
 		}
 
@@ -78,9 +74,7 @@ func (p *Packager) fillActiveTemplate() error {
 
 // setVariableMapInConfig handles setting the active variables used to template component files.
 func (p *Packager) setVariableMapInConfig() error {
-	// Ensure uppercase keys
-	setVariableValues := helpers.TransformMapKeys(p.cfg.DeployOpts.SetVariables, strings.ToUpper)
-	for name, value := range setVariableValues {
+	for name, value := range p.cfg.PkgOpts.SetVariables {
 		p.setVariableInConfig(name, value, false, false, "")
 	}
 
@@ -101,7 +95,7 @@ func (p *Packager) setVariableMapInConfig() error {
 		// Variable is set to prompt the user
 		if variable.Prompt && !config.CommonOptions.Confirm {
 			// Prompt the user for the variable
-			val, err := p.promptVariable(variable)
+			val, err := interactive.PromptVariable(variable)
 
 			if err != nil {
 				return err

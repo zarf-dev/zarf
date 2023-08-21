@@ -33,8 +33,6 @@ func (k *K8s) CreateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, e
 
 	match, err := k.Clientset.CoreV1().Namespaces().Get(context.TODO(), namespace.Name, metaOptions)
 
-	k.Log("%#v", match)
-
 	if err != nil || match.Name != namespace.Name {
 		return k.Clientset.CoreV1().Namespaces().Create(context.TODO(), namespace, createOptions)
 	}

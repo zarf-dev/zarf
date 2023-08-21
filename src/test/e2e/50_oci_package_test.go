@@ -5,14 +5,18 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
+	"oras.land/oras-go/v2/registry/remote"
 )
 
 type RegistryClientTestSuite struct {
@@ -40,8 +44,7 @@ func (suite *RegistryClientTestSuite) TearDownSuite() {
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
 	e2e.CleanFiles(local)
 
-	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
-	suite.NoError(err)
+	e2e.TeardownRegistry(suite.T(), 555)
 }
 
 func (suite *RegistryClientTestSuite) Test_0_Publish() {
@@ -78,7 +81,7 @@ func (suite *RegistryClientTestSuite) Test_1_Pull() {
 	// Pull the package via OCI.
 	stdOut, stdErr, err := e2e.Zarf("package", "pull", "oci://"+ref, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
-	suite.Contains(stdErr, "Pulled "+ref)
+	suite.Contains(stdErr, "Pulled oci://"+ref)
 
 	// Verify the package was pulled.
 	suite.FileExists(out)
@@ -99,7 +102,6 @@ func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 	// Deploy the package via OCI.
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", "oci://"+ref, "--components=demo-helm-oci-chart", "--insecure", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
-	suite.Contains(stdErr, "Pulled "+ref)
 
 	// Remove the package via OCI.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "oci://"+ref, "--insecure", "--confirm")
@@ -140,6 +142,54 @@ func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {
 	// Deploy the local package.
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", local, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
+}
+
+func (suite *RegistryClientTestSuite) Test_5_Copy() {
+	t := suite.T()
+	ref := suite.Reference.String()
+	dstRegistryPort := 556
+	dstRef := strings.Replace(ref, fmt.Sprint(555), fmt.Sprint(dstRegistryPort), 1)
+
+	e2e.SetupDockerRegistry(t, dstRegistryPort)
+	defer e2e.TeardownRegistry(t, dstRegistryPort)
+
+	ctx := context.TODO()
+
+	src, err := oci.NewOrasRemote(ref)
+	suite.NoError(err)
+	src.WithInsecureConnection(true)
+	src.WithContext(ctx)
+
+	dst, err := oci.NewOrasRemote(dstRef)
+	suite.NoError(err)
+	dst.WithInsecureConnection(true)
+	dst.WithContext(ctx)
+
+	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])
+	suite.NoError(err)
+	reg.PlainHTTP = true
+	attempt := 0
+	for attempt <= 5 {
+		err = reg.Ping(ctx)
+		if err == nil {
+			break
+		}
+		attempt++
+		time.Sleep(2 * time.Second)
+	}
+	require.Less(t, attempt, 5, "failed to ping registry")
+
+	err = oci.CopyPackage(ctx, src, dst, nil, 5)
+	suite.NoError(err)
+
+	srcRoot, err := src.FetchRoot()
+	suite.NoError(err)
+
+	for _, layer := range srcRoot.Layers {
+		ok, err := dst.Repo().Exists(ctx, layer)
+		suite.True(ok)
+		suite.NoError(err)
+	}
 }
 
 func TestRegistryClientTestSuite(t *testing.T) {

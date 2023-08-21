@@ -27,12 +27,15 @@ func (p *Packager) Pull() error {
 	if err != nil {
 		return err
 	}
+
+	message.Successf("Pulled %s", p.cfg.PullOpts.PackageSource)
+
 	err = utils.ReadYaml(p.tmp.ZarfYaml, &p.cfg.Pkg)
 	if err != nil {
 		return err
 	}
 
-	if err = p.validatePackageSignature(p.cfg.PullOpts.PublicKeyPath); err != nil {
+	if err = ValidatePackageSignature(p.tmp.Base, p.cfg.PullOpts.PublicKeyPath); err != nil {
 		return err
 	} else if !config.CommonOptions.Insecure {
 		message.Successf("Package signature is valid")
