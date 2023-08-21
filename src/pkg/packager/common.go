@@ -503,7 +503,7 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 	cliVersion := config.CLIVersion
 	lastNonBreakingVersion := p.cfg.Pkg.Build.LastNonBreakingVersion
 
-	if lastNonBreakingVersion == "" || cliVersion == "UnknownVersion" {
+	if lastNonBreakingVersion == "" || cliVersion == "UnknownVersion" || cliVersion == "unset" {
 		return nil
 	}
 

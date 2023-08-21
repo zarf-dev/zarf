@@ -178,6 +178,13 @@ func TestValidateLastNonBreakingVersion(t *testing.T) {
 			returnError:            false,
 			throwWarning:           false,
 		},
+		{
+			name:                   "default CLI version",
+			cliVersion:             "unset",
+			lastNonBreakingVersion: "v0.27.0",
+			returnError:            false,
+			throwWarning:           false,
+		},
 	}
 
 	for _, testCase := range testCases {
