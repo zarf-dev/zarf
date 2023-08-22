@@ -103,9 +103,9 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 }
 
 // PackageSecretNeedsWait checks if the the package status or any of the component statuses are being mutated by a webhook and need to be waited on.
-func (c *Cluster) PackageSecretNeedsWait(secretName string) (bool, int, error) {
+func (c *Cluster) PackageSecretNeedsWait(secret *corev1.Secret) (bool, int, error) {
 	// Get the secret that describes the deployed package
-	packageSecret, err := c.GetSecret(ZarfNamespaceName, secretName)
+	packageSecret, err := c.GetSecret(ZarfNamespaceName, secret.Name)
 	if err != nil {
 		return false, 0, err
 	}
@@ -139,7 +139,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 		return packageSecret, err
 	}
 
-	packageNeedsWait, waitSeconds, err := c.PackageSecretNeedsWait(packageSecret.Name)
+	packageNeedsWait, waitSeconds, err := c.PackageSecretNeedsWait(packageSecret)
 	if err != nil {
 		return packageSecret, err
 	}
@@ -166,7 +166,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 		default:
 			// Wait for 3 seconds before checking the secret again
 			time.Sleep(3 * time.Second)
-			packageNeedsWait, _, err = c.PackageSecretNeedsWait(packageSecret.Name)
+			packageNeedsWait, _, err = c.PackageSecretNeedsWait(packageSecret)
 			if err != nil {
 				return packageSecret, err
 			}

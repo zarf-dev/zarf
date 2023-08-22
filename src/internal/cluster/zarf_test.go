@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	k8sTesting "k8s.io/client-go/testing"
@@ -29,8 +30,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 
 	type testCase struct {
 		name          string
-		secretName    string
-		webhookStatus *corev1.Secret
+		secret        *corev1.Secret
 		needsWait     bool
 		waitSeconds   int
 		expectedError error
@@ -45,9 +45,11 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:       "NoWebhooks",
-			secretName: secretName,
-			webhookStatus: &corev1.Secret{
+			name: "NoWebhooks",
+			secret: &corev1.Secret{
+				ObjectMeta: v1.ObjectMeta{
+					Name: secretName,
+				},
 				Data: map[string][]byte{
 					"data": marshalDeployedPackage(&types.DeployedPackage{
 						Name:              packageName,
@@ -60,9 +62,11 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name:       "WebhookRunning",
-			secretName: secretName,
-			webhookStatus: &corev1.Secret{
+			name: "WebhookRunning",
+			secret: &corev1.Secret{
+				ObjectMeta: v1.ObjectMeta{
+					Name: secretName,
+				},
 				Data: map[string][]byte{
 					"data": marshalDeployedPackage(&types.DeployedPackage{
 						Name: packageName,
@@ -82,9 +86,11 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name:       "WebhookSucceeded",
-			secretName: secretName,
-			webhookStatus: &corev1.Secret{
+			name: "WebhookSucceeded",
+			secret: &corev1.Secret{
+				ObjectMeta: v1.ObjectMeta{
+					Name: secretName,
+				},
 				Data: map[string][]byte{
 					"data": marshalDeployedPackage(&types.DeployedPackage{
 						Name: packageName,
@@ -103,9 +109,11 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name:       "WebhookFailed",
-			secretName: secretName,
-			webhookStatus: &corev1.Secret{
+			name: "WebhookFailed",
+			secret: &corev1.Secret{
+				ObjectMeta: v1.ObjectMeta{
+					Name: secretName,
+				},
 				Data: map[string][]byte{
 					"data": marshalDeployedPackage(&types.DeployedPackage{
 						Name: packageName,
@@ -124,9 +132,11 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name:       "WebhookRemoving",
-			secretName: secretName,
-			webhookStatus: &corev1.Secret{
+			name: "WebhookRemoving",
+			secret: &corev1.Secret{
+				ObjectMeta: v1.ObjectMeta{
+					Name: secretName,
+				},
 				Data: map[string][]byte{
 					"data": marshalDeployedPackage(&types.DeployedPackage{
 						Name: packageName,
@@ -162,13 +172,13 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			}
 
 			mockClient.PrependReactor("get", "secrets", func(action k8sTesting.Action) (handled bool, ret runtime.Object, err error) {
-				if action.(k8sTesting.GetAction).GetName() == testCase.secretName {
-					return true, testCase.webhookStatus, nil
+				if action.(k8sTesting.GetAction).GetName() == testCase.secret.Name {
+					return true, testCase.secret, nil
 				}
 				return false, nil, errors.New("actual secret name does not equal expected secret name")
 			})
 
-			needsWait, waitSeconds, err := c.PackageSecretNeedsWait(testCase.secretName)
+			needsWait, waitSeconds, err := c.PackageSecretNeedsWait(testCase.secret)
 
 			require.Equal(t, testCase.needsWait, needsWait)
 			require.Equal(t, testCase.waitSeconds, waitSeconds)
