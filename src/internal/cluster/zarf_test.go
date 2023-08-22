@@ -9,6 +9,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
@@ -31,6 +32,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 	type testCase struct {
 		name          string
 		secret        *corev1.Secret
+		component     types.ZarfComponent
 		needsWait     bool
 		waitSeconds   int
 		expectedError error
@@ -39,13 +41,14 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 	var (
 		componentName = "test-component"
 		packageName   = "test-package"
-		secretName    = "test-secret"
 		webhookName   = "test-webhook"
+		secretName    = config.ZarfPackagePrefix + packageName
 	)
 
 	testCases := []testCase{
 		{
-			name: "NoWebhooks",
+			name:      "NoWebhooks",
+			component: types.ZarfComponent{Name: componentName},
 			secret: &corev1.Secret{
 				ObjectMeta: v1.ObjectMeta{
 					Name: secretName,
@@ -62,7 +65,8 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name: "WebhookRunning",
+			name:      "WebhookRunning",
+			component: types.ZarfComponent{Name: componentName},
 			secret: &corev1.Secret{
 				ObjectMeta: v1.ObjectMeta{
 					Name: secretName,
@@ -85,8 +89,35 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			waitSeconds:   10,
 			expectedError: nil,
 		},
+		// Ensure we only wait on running webhooks for the provided component
 		{
-			name: "WebhookSucceeded",
+			name:      "WebhookRunningOnDifferentComponent",
+			component: types.ZarfComponent{Name: componentName},
+			secret: &corev1.Secret{
+				ObjectMeta: v1.ObjectMeta{
+					Name: secretName,
+				},
+				Data: map[string][]byte{
+					"data": marshalDeployedPackage(&types.DeployedPackage{
+						Name: packageName,
+						ComponentWebhooks: map[string]map[string]types.Webhook{
+							"different-component": {
+								webhookName: types.Webhook{
+									Status:              string(types.WebhookStatusRunning),
+									WaitDurationSeconds: 10,
+								},
+							},
+						},
+					}),
+				},
+			},
+			needsWait:     false,
+			waitSeconds:   0,
+			expectedError: nil,
+		},
+		{
+			name:      "WebhookSucceeded",
+			component: types.ZarfComponent{Name: componentName},
 			secret: &corev1.Secret{
 				ObjectMeta: v1.ObjectMeta{
 					Name: secretName,
@@ -109,7 +140,8 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name: "WebhookFailed",
+			name:      "WebhookFailed",
+			component: types.ZarfComponent{Name: componentName},
 			secret: &corev1.Secret{
 				ObjectMeta: v1.ObjectMeta{
 					Name: secretName,
@@ -132,7 +164,8 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name: "WebhookRemoving",
+			name:      "WebhookRemoving",
+			component: types.ZarfComponent{Name: componentName},
 			secret: &corev1.Secret{
 				ObjectMeta: v1.ObjectMeta{
 					Name: secretName,
@@ -178,7 +211,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 				return false, nil, errors.New("actual secret name does not equal expected secret name")
 			})
 
-			needsWait, waitSeconds, err := c.PackageSecretNeedsWait(testCase.secret)
+			needsWait, waitSeconds, err := c.PackageSecretNeedsWait(packageName, testCase.component)
 
 			require.Equal(t, testCase.needsWait, needsWait)
 			require.Equal(t, testCase.waitSeconds, waitSeconds)

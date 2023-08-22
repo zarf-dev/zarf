@@ -170,7 +170,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 		// Update the package secret to indicate that we are attempting to deploy this component
 		if p.cluster != nil && !p.cfg.IsInitConfig {
-			if _, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation); err != nil {
+			if _, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component); err != nil {
 				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
@@ -198,7 +198,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			deployedComponents[idx].Status = types.ComponentStatusFailed
 
 			if p.cluster != nil {
-				_, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation)
+				_, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component)
 				if err != nil && deployedComponent.Name != config.ZarfInjector {
 					message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 				}
@@ -214,7 +214,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Save deployed package information to k8s
 		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 		if p.cluster != nil {
-			_, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation)
+			_, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component)
 			if err != nil && deployedComponent.Name != config.ZarfInjector {
 				message.Warnf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}

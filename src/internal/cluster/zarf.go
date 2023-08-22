@@ -53,7 +53,7 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, []error) {
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
 func (c *Cluster) GetDeployedPackage(packageName string) (deployedPackage types.DeployedPackage, err error) {
-	// Get the secret that describes the deployed init package
+	// Get the secret that describes the deployed package
 	secret, err := c.GetSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName)
 	if err != nil {
 		return deployedPackage, err
@@ -102,44 +102,40 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 	spinner.Success()
 }
 
-// PackageSecretNeedsWait checks if the the package status or any of the component statuses are being mutated by a webhook and need to be waited on.
-func (c *Cluster) PackageSecretNeedsWait(secret *corev1.Secret) (bool, int, error) {
-	// Get the secret that describes the deployed package
-	packageSecret, err := c.GetSecret(ZarfNamespaceName, secret.Name)
+// PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on.
+func (c *Cluster) PackageSecretNeedsWait(packageName string, component types.ZarfComponent) (bool, int, error) {
+	deployedPackage, err := c.GetDeployedPackage(packageName)
 	if err != nil {
 		return false, 0, err
 	}
 
-	// Parse the secret
-	var deployedPackage types.DeployedPackage
-	err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage)
-	if err != nil {
-		return false, 0, err
+	// Look for the specified component
+	hookMap, componentExists := deployedPackage.ComponentWebhooks[component.Name]
+	if !componentExists {
+		return false, 0, nil // Component not found, no need to wait
 	}
 
-	// Check if there are any component level statuses that we need to wait for
-	for componentName, hookMap := range deployedPackage.ComponentWebhooks {
-		for hookName, webhook := range hookMap {
-			if webhook.Status == string(types.WebhookStatusRunning) {
-				message.Debugf("The component %s is still running the webhook %s", componentName, hookName)
-				return true, webhook.WaitDurationSeconds, nil
-			}
+	// Check if there are any webhook statuses for the specified component that we need to wait for
+	for hookName, webhook := range hookMap {
+		if webhook.Status == string(types.WebhookStatusRunning) {
+			message.Debugf("The component %s is still running the webhook %s", component.Name, hookName)
+			return true, webhook.WaitDurationSeconds, nil
 		}
 	}
 
-	// If we get here, none of the components need to wait for a webhook to run
+	// If we get here, the specified component doesn't need to wait for a webhook to run
 	return false, 0, nil
 }
 
 // RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
-func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int) (*corev1.Secret, error) {
+func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int, component types.ZarfComponent) (*corev1.Secret, error) {
 
 	packageSecret, err := c.RecordPackageDeployment(pkg, components, connectStrings, generation)
 	if err != nil {
 		return packageSecret, err
 	}
 
-	packageNeedsWait, waitSeconds, err := c.PackageSecretNeedsWait(packageSecret)
+	packageNeedsWait, waitSeconds, err := c.PackageSecretNeedsWait(pkg.Metadata.Name, component)
 	if err != nil {
 		return packageSecret, err
 	}
@@ -166,7 +162,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 		default:
 			// Wait for 3 seconds before checking the secret again
 			time.Sleep(3 * time.Second)
-			packageNeedsWait, _, err = c.PackageSecretNeedsWait(packageSecret)
+			packageNeedsWait, _, err = c.PackageSecretNeedsWait(pkg.Metadata.Name, component)
 			if err != nil {
 				return packageSecret, err
 			}
