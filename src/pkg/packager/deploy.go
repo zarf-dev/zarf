@@ -23,7 +23,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -112,12 +111,6 @@ func (p *Packager) attemptClusterChecks() error {
 	// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
 	var err error
 	if p.cluster, err = cluster.NewCluster(); err == nil {
-
-		// Get the init package from the cluster
-		if p.currentInitPackage, err = p.cluster.GetDeployedPackage("init"); err == nil {
-			// We use the build.version for now because it is the most reliable way to get this version info pre v0.26.0
-			deprecated.PrintBreakingChanges(p.currentInitPackage.Data.Build.Version)
-		}
 
 		// Check if t he package has already been deployed and get its generation
 		if existingDeployedPackage, err := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); err == nil {

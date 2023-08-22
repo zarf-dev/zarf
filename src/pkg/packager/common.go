@@ -34,17 +34,16 @@ import (
 
 // Packager is the main struct for managing packages.
 type Packager struct {
-	cfg                *types.PackagerConfig
-	cluster            *cluster.Cluster
-	remote             *oci.OrasRemote
-	tmp                types.TempPaths
-	arch               string
-	warnings           []string
-	valueTemplate      *template.Values
-	hpaModified        bool
-	connectStrings     types.ConnectStrings
-	currentInitPackage types.DeployedPackage
-	generation         int
+	cfg            *types.PackagerConfig
+	cluster        *cluster.Cluster
+	remote         *oci.OrasRemote
+	tmp            types.TempPaths
+	arch           string
+	warnings       []string
+	valueTemplate  *template.Values
+	hpaModified    bool
+	connectStrings types.ConnectStrings
+	generation     int
 }
 
 // Zarf Packager Variables.
