@@ -44,8 +44,9 @@ func (p *Packager) Remove() (err error) {
 			if err != nil {
 				return err
 			}
+			p.cfg.Pkg = pkg
 			// Filter out components that are not compatible with this system if we have loaded from a tarball
-			p.filterComponents(&pkg)
+			p.filterComponents(&p.cfg.Pkg)
 			packageName = pkg.Metadata.Name
 
 			// If we have package components check them for images, charts, manifests, etc
