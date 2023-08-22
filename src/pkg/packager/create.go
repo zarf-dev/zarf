@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
 	"os"
@@ -383,6 +382,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		rel := filepath.Join(types.FilesFolder, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(componentPath.Base, rel)
+		destinationDir := filepath.Dir(dst)
 
 		if helpers.IsURL(file.Source) {
 			if isSkeleton {
@@ -404,18 +404,9 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 
-				dirDst := filepath.Dir(dst)
-				err = archiver.Extract(compressedFile, file.ExtractPath, dirDst)
+				err = archiver.Extract(compressedFile, file.ExtractPath, destinationDir)
 				if err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
-				}
-
-				updatedExtractedFileOrDir := filepath.Join(dirDst, file.ExtractPath)
-				if updatedExtractedFileOrDir != dst {
-					err = os.Rename(updatedExtractedFileOrDir, dst)
-					if err != nil {
-						return fmt.Errorf(lang.ErrWritingFile, dst, err)
-					}
 				}
 
 			} else {
@@ -426,17 +417,9 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		} else {
 			if file.ExtractPath != "" {
-				dirDst := filepath.Dir(dst)
-				err = archiver.Extract(file.Source, file.ExtractPath, dirDst)
+				err = archiver.Extract(file.Source, file.ExtractPath, destinationDir)
 				if err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
-				}
-				updatedExtractedFileOrDir := filepath.Join(dirDst, file.ExtractPath)
-				if updatedExtractedFileOrDir != dst {
-					err = os.Rename(updatedExtractedFileOrDir, dst)
-					if err != nil {
-						return fmt.Errorf(lang.ErrWritingFile, dst, err)
-					}
 				}
 			} else {
 				if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
@@ -449,9 +432,20 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			}
 		}
 
+		if file.ExtractPath != "" {
+			// Make sure dst reflects the actual file or directory.
+			updatedExtractedFileOrDir := filepath.Join(destinationDir, file.ExtractPath)
+			if updatedExtractedFileOrDir != dst {
+				err = os.Rename(updatedExtractedFileOrDir, dst)
+				if err != nil {
+					return fmt.Errorf(lang.ErrWritingFile, dst, err)
+				}
+			}
+		}
+
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256)
+			actualShasum, _ := utils.GetSHA256OfFile(dst)
 			if actualShasum != file.Shasum {
 				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
 			}
