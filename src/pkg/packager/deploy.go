@@ -107,9 +107,8 @@ func (p *Packager) Deploy() (err error) {
 
 // attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
-func (p *Packager) attemptClusterChecks() error {
+func (p *Packager) attemptClusterChecks() (err error) {
 	// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
-	var err error
 	if p.cluster, err = cluster.NewCluster(); p.cluster != nil {
 
 		// Check if t he package has already been deployed and get its generation
