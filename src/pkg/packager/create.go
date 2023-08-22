@@ -403,14 +403,13 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				if err := utils.DownloadToFile(file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
-				// dst = /var/folders/v0/slmrzc4s6kx4n7jb77ch9fc80000gn/T/zarf-1676087642/components/load-eksctl/files/1/eksctl_Darwin_x86_64
 
 				dirDst := filepath.Dir(dst)
 				err = archiver.Extract(compressedFile, file.ExtractPath, dirDst)
 				if err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
 				}
-				// this extracts to /var/folders/v0/slmrzc4s6kx4n7jb77ch9fc80000gn/T/zarf-3537766959/components/load-eksctl/files/1/eksctl
+
 				updatedExtractedFileOrDir := filepath.Join(dirDst, file.ExtractPath)
 				if updatedExtractedFileOrDir != dst {
 					err = os.Rename(updatedExtractedFileOrDir, dst)
