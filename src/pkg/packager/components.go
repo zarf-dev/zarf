@@ -6,7 +6,6 @@ package packager
 
 import (
 	"fmt"
-	"runtime"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -17,7 +16,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-func (p *Packager) getValidComponents() []types.ZarfComponent {
+func (p *Packager) getValidComponents(pkg *types.ZarfPackage) []types.ZarfComponent {
 	var validComponentsList []types.ZarfComponent
 	var orderedKeys []string
 	var choiceComponents []string
@@ -28,7 +27,7 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 	requestedNames := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
 
 	// Break up components into choice groups
-	for _, component := range p.cfg.Pkg.Components {
+	for _, component := range pkg.Components {
 		key := component.Group
 		// If not a choice group, then use the component name as the key
 		if key == "" {
@@ -90,27 +89,6 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 	}
 
 	return validComponentsList
-}
-
-func (p *Packager) isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {
-	// Ignore only filters that are empty
-	var validArch, validOS bool
-
-	// Test for valid architecture
-	if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == p.arch {
-		validArch = true
-	} else {
-		message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.Cluster.Architecture, p.arch)
-	}
-
-	// Test for a valid OS
-	if !filterByOS || component.Only.LocalOS == "" || component.Only.LocalOS == runtime.GOOS {
-		validOS = true
-	} else {
-		message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.LocalOS, runtime.GOOS)
-	}
-
-	return validArch && validOS
 }
 
 // Match on the first requested component that is not in the list of valid components and return the component name.

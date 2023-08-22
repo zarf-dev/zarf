@@ -55,8 +55,9 @@ func (p *Packager) Deploy() (err error) {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	p.arch = config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
+	p.cfg.Pkg = pkg
 
-	for idx, component := range p.cfg.Pkg.Components {
+	for idx, component := range pkg.Components {
 		// Handle component configuration deprecations
 		var warnings []string
 		pkg.Components[idx], warnings = deprecated.MigrateComponent(pkg.Build, component)
@@ -120,7 +121,7 @@ func (p *Packager) Deploy() (err error) {
 	}()
 
 	// Filter out components that are not compatible with this system
-	p.filterComponents(true)
+	p.filterComponents(&p.cfg.Pkg)
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
@@ -138,7 +139,7 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy := p.getValidComponents()
+	componentsToDeploy := p.getValidComponents(&p.cfg.Pkg)
 
 	// Generate a value template
 	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
@@ -174,7 +175,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Save deployed package information to k8s
 		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
 		if p.cluster != nil {
-			err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, p.connectStrings)
+			err = p.cluster.RecordPackageDeployment(&p.cfg.Pkg, deployedComponents, p.connectStrings)
 			if err != nil {
 				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}

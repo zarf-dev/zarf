@@ -10,55 +10,19 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/mholt/archiver/v3"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func (p *Packager) Remove() (err error) {
-	packageName := p.cfg.PkgOpts.PackagePath
-	spinner := message.NewProgressSpinner("Removing zarf package %s", packageName)
+	spinner := message.NewProgressSpinner("Removing Zarf package %s", p.cfg.PkgOpts.PackagePath)
 	defer spinner.Stop()
-
-	// If the user input is a path to a package, extract the package
-	if ZarfPackagePattern.MatchString(packageName) || ZarfInitPattern.MatchString(packageName) {
-		if utils.InvalidPath(packageName) {
-			message.Fatalf(nil, lang.CmdPackageRemoveTarballErr)
-		}
-
-		if err := archiver.Extract(packageName, types.ZarfYAML, p.tmp.Base()); err != nil {
-			message.Fatalf(err, lang.CmdPackageRemoveExtractErr)
-		}
-	}
-
-	// If the user input is a path to a oci, pull the package
-	if helpers.IsOCIURL(packageName) {
-		err := p.SetOCIRemote(packageName)
-		if err != nil {
-			message.Fatalf(err, "Unable to set OCI remote: %s", err.Error())
-		}
-
-		// pull the package from the remote
-		if _, err = p.remote.PullPackageMetadata(p.tmp.Base()); err != nil {
-			return fmt.Errorf("unable to pull the package from the remote: %w", err)
-		}
-	}
-
-	// If this came from a real package, read the package config and reset the packageName
-	if ZarfPackagePattern.MatchString(packageName) || ZarfInitPattern.MatchString(packageName) || helpers.IsOCIURL(packageName) {
-		if err := p.readYaml(p.tmp[types.ZarfYAML]); err != nil {
-			return err
-		}
-		packageName = p.cfg.Pkg.Metadata.Name
-	}
 
 	// If components were provided; just remove the things we were asked to remove
 	requestedComponents := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
@@ -67,26 +31,37 @@ func (p *Packager) Remove() (err error) {
 	// Determine if we need the cluster
 	requiresCluster := false
 
-	// Filter out components that are not compatible with this system if we have loaded from a tarball
-	p.filterComponents(true)
+	var packageName string
 
-	// If we have package components check them for images, charts, manifests, etc
-	for _, component := range p.cfg.Pkg.Components {
-		// Flip requested based on if this is a partial removal
-		requested := !partialRemove
+	if p.provider == nil {
+		provider, err := ProviderFromSource(&p.cfg.PkgOpts, p.tmp.Base())
+		if err != nil {
+			requiresCluster = true
+			packageName = p.cfg.PkgOpts.PackagePath
+			message.Debugf("%q does not satisfy any current providers, assuming it is a package deployed to a cluster", p.cfg.PkgOpts.PackagePath)
+		} else {
+			pkg, _, err := provider.LoadPackageMetadata(false)
+			if err != nil {
+				return err
+			}
+			// Filter out components that are not compatible with this system if we have loaded from a tarball
+			p.filterComponents(&pkg)
+			packageName = pkg.Metadata.Name
 
-		if helpers.SliceContains(requestedComponents, component.Name) {
-			requested = true
+			// If we have package components check them for images, charts, manifests, etc
+			for _, component := range pkg.Components {
+				// Flip requested based on if this is a partial removal
+				requested := !partialRemove
+
+				if helpers.SliceContains(requestedComponents, component.Name) {
+					requested = true
+				}
+
+				if requested {
+					requiresCluster = p.requiresCluster(component)
+				}
+			}
 		}
-
-		if requested {
-			requiresCluster = p.requiresCluster(component)
-		}
-	}
-
-	// If we don't have a package defined we will need to pull it from the cluster
-	if len(p.cfg.Pkg.Components) < 1 {
-		requiresCluster = true
 	}
 
 	// Get the secret for the deployed package
@@ -141,7 +116,7 @@ func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, pa
 
 		// Save the new secret with the removed components removed from the secret
 		newPackageSecret := p.cluster.GenerateSecret(cluster.ZarfNamespaceName, secretName, corev1.SecretTypeOpaque)
-		newPackageSecret.Labels[cluster.ZarfPackageInfoLabel] = p.cfg.Pkg.Metadata.Name
+		newPackageSecret.Labels[cluster.ZarfPackageInfoLabel] = packageName
 
 		newPackageSecretData, _ := json.Marshal(deployedPackage)
 		newPackageSecret.Data["data"] = newPackageSecretData

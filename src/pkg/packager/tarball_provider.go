@@ -37,15 +37,22 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 
 	err = archiver.Walk(tp.source, func(f archiver.File) error {
 		if f.IsDir() {
-			return os.MkdirAll(filepath.Join(tp.destinationDir, f.Name()), 0755)
+			return nil
 		}
 		header, ok := f.Header.(*tar.Header)
 		if !ok {
 			return fmt.Errorf("expected header to be *tar.Header but was %T", f.Header)
 		}
+		fullPath := header.Name
 
-		name := header.Name
-		dstPath := filepath.Join(tp.destinationDir, name)
+		dir := filepath.Dir(fullPath)
+		if dir != "." {
+			if err := os.MkdirAll(filepath.Join(tp.destinationDir, dir), 0755); err != nil {
+				return err
+			}
+		}
+
+		dstPath := filepath.Join(tp.destinationDir, fullPath)
 		dst, err := os.Create(dstPath)
 		if err != nil {
 			return err
@@ -57,8 +64,8 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 			return err
 		}
 
-		loaded[name] = filepath.Join(tp.destinationDir, name)
-		pathsToCheck = append(pathsToCheck, name)
+		loaded[fullPath] = filepath.Join(tp.destinationDir, fullPath)
+		pathsToCheck = append(pathsToCheck, fullPath)
 		return nil
 	})
 	if err != nil {
