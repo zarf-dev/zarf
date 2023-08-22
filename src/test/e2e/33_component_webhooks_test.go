@@ -26,7 +26,7 @@ func TestComponentWebhooks(t *testing.T) {
 	gamesPath := fmt.Sprintf("build/zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", gamesPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Waiting for component webhooks to complete")
+	require.Contains(t, stdErr, "Waiting for webhook 'test-webhook' to complete for component 'baseline'")
 
 	// Remove the Pepr webhook package.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "component-webhooks", "--confirm")

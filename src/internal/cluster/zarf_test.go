@@ -35,6 +35,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		component     types.ZarfComponent
 		needsWait     bool
 		waitSeconds   int
+		hookName      string
 		expectedError error
 	}
 
@@ -62,6 +63,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			},
 			needsWait:     false,
 			waitSeconds:   0,
+			hookName:      "",
 			expectedError: nil,
 		},
 		{
@@ -87,6 +89,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			},
 			needsWait:     true,
 			waitSeconds:   10,
+			hookName:      webhookName,
 			expectedError: nil,
 		},
 		// Ensure we only wait on running webhooks for the provided component
@@ -113,6 +116,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			},
 			needsWait:     false,
 			waitSeconds:   0,
+			hookName:      "",
 			expectedError: nil,
 		},
 		{
@@ -137,6 +141,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			},
 			needsWait:     false,
 			waitSeconds:   0,
+			hookName:      "",
 			expectedError: nil,
 		},
 		{
@@ -161,6 +166,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			},
 			needsWait:     false,
 			waitSeconds:   0,
+			hookName:      "",
 			expectedError: nil,
 		},
 		{
@@ -185,6 +191,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			},
 			needsWait:     false,
 			waitSeconds:   0,
+			hookName:      "",
 			expectedError: nil,
 		},
 	}
@@ -211,10 +218,11 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 				return false, nil, errors.New("actual secret name does not equal expected secret name")
 			})
 
-			needsWait, waitSeconds, err := c.PackageSecretNeedsWait(packageName, testCase.component)
+			needsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(packageName, testCase.component)
 
 			require.Equal(t, testCase.needsWait, needsWait)
 			require.Equal(t, testCase.waitSeconds, waitSeconds)
+			require.Equal(t, testCase.hookName, hookName)
 			require.Equal(t, testCase.expectedError, err)
 		})
 	}
