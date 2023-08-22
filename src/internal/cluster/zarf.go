@@ -250,15 +250,17 @@ func (c *Cluster) DisableRegHPAScaleDown() error {
 	return nil
 }
 
-// GetInstalledCharts returns any installed Helm Charts that are tracked by a package secret.
-func (c *Cluster) GetInstalledCharts(packageName string) (installedCharts []types.InstalledChart, err error) {
+// GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.
+func (c *Cluster) GetInstalledChartsForComponent(packageName string, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	deployedPackage, err := c.GetDeployedPackage(packageName)
 	if err != nil {
 		return installedCharts, err
 	}
 
 	for _, deployedComponent := range deployedPackage.DeployedComponents {
-		installedCharts = append(installedCharts, deployedComponent.InstalledCharts...)
+		if deployedComponent.Name == component.Name {
+			installedCharts = append(installedCharts, deployedComponent.InstalledCharts...)
+		}
 	}
 
 	return installedCharts, nil

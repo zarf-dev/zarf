@@ -145,17 +145,17 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		p.generation = 1 // If this is the first deployment, set the generation to 1
 	}
 
-	// Fetch any installed Helm charts for this package
-	var installedCharts []types.InstalledChart
-	if p.cluster != nil {
-		installedCharts, err = p.cluster.GetInstalledCharts(p.cfg.Pkg.Metadata.Name)
-		if err != nil {
-			message.Debugf("Unable to fetch installed Helm charts for package '%s': %s", p.cfg.Pkg.Metadata.Name, err.Error())
-		}
-	}
-
 	// Process all the components we are deploying
 	for _, component := range componentsToDeploy {
+
+		// Fetch any installed Helm charts for this component
+		var installedCharts []types.InstalledChart
+		if p.cluster != nil {
+			installedCharts, err = p.cluster.GetInstalledChartsForComponent(p.cfg.Pkg.Metadata.Name, component)
+			if err != nil {
+				message.Debugf("Unable to fetch installed Helm charts for component '%s': %s", component.Name, err.Error())
+			}
+		}
 
 		// Update the component status to "Deploying" and increment ObservedGeneration
 		deployedComponent := types.DeployedComponent{Name: component.Name, Status: types.ComponentStatusDeploying, ObservedGeneration: p.generation}
@@ -163,8 +163,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 		idx := len(deployedComponents) - 1
 
-		// Account for any previously installed Helm Charts before updating the package secret.
-		// This prevents us from potentially overwriting any existing installed charts data being tracked in the package secret.
+		// This prevents us from potentially overwriting any existing installed charts for this component in the package secret.
 		if installedCharts != nil {
 			deployedComponents[idx].InstalledCharts = installedCharts
 		}
