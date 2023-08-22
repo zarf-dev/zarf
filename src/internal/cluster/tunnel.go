@@ -242,7 +242,7 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 		tunnel.remotePort = 3000
 
 	case ZarfInjector:
-		tunnel.resourceName = "zarf-injector"
+		tunnel.resourceName = config.ZarfInjector
 		tunnel.remotePort = 5000
 
 	default:

@@ -32,6 +32,8 @@ const (
 
 	ZarfAgentHost = "agent-hook.zarf.svc"
 
+	ZarfInjector = "zarf-injector"
+
 	ZarfConnectLabelName             = "zarf.dev/connect-name"
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
 	ZarfConnectAnnotationURL         = "zarf.dev/connect-url"
