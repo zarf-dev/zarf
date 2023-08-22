@@ -103,10 +103,11 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 }
 
 // PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on.
-func (c *Cluster) PackageSecretNeedsWait(packageName string, component types.ZarfComponent) (needsWait bool, waitSeconds int, hookName string, err error) {
-	deployedPackage, err := c.GetDeployedPackage(packageName)
-	if err != nil {
-		return false, 0, "", err
+func (c *Cluster) PackageSecretNeedsWait(secret *corev1.Secret, component types.ZarfComponent) (needsWait bool, waitSeconds int, hookName string, err error) {
+	deployedPackage := types.DeployedPackage{}
+
+	if err = json.Unmarshal(secret.Data["data"], &deployedPackage); err != nil {
+		return false, 0, "", fmt.Errorf("unable to unmarshal secret data into DeployedPackage struct: %w", err)
 	}
 
 	// Look for the specified component
@@ -134,7 +135,18 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 		return packageSecret, err
 	}
 
-	packageNeedsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(pkg.Metadata.Name, component)
+	// Skip YOLO packages
+	deployedPackage := types.DeployedPackage{}
+	isYOLOPackage := deployedPackage.Data.Metadata.YOLO
+
+	if err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage); err != nil {
+		return packageSecret, fmt.Errorf("unable to unmarshal secret data into DeployedPackage struct: %w", err)
+	}
+	if isYOLOPackage {
+		return packageSecret, nil
+	}
+
+	packageNeedsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(packageSecret, component)
 	if err != nil {
 		return packageSecret, err
 	}
@@ -161,7 +173,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 		default:
 			// Wait for 3 seconds before checking the secret again
 			time.Sleep(3 * time.Second)
-			packageNeedsWait, _, _, err = c.PackageSecretNeedsWait(pkg.Metadata.Name, component)
+			packageNeedsWait, _, _, err = c.PackageSecretNeedsWait(packageSecret, component)
 			if err != nil {
 				return packageSecret, err
 			}

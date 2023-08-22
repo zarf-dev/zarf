@@ -120,13 +120,13 @@ func (c *Cluster) StopInjectionMadness() error {
 	}
 
 	// Remove the configmaps
-	labelMatch := map[string]string{config.ZarfInjector: "payload"}
+	labelMatch := map[string]string{"zarf-injector": "payload"}
 	if err := c.DeleteConfigMapsByLabel(ZarfNamespaceName, labelMatch); err != nil {
 		return err
 	}
 
 	// Remove the injector service
-	return c.DeleteService(ZarfNamespaceName, config.ZarfInjector)
+	return c.DeleteService(ZarfNamespaceName, "zarf-injector")
 }
 
 func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []string, spinner *message.Spinner) ([]transform.Image, error) {
@@ -253,7 +253,7 @@ func (c *Cluster) createInjectorConfigmap(tempPath types.TempPaths) error {
 	configData := make(map[string][]byte)
 
 	// Add the injector binary data to the configmap
-	if configData[config.ZarfInjector], err = os.ReadFile(tempPath.InjectBinary); err != nil {
+	if configData["zarf-injector"], err = os.ReadFile(tempPath.InjectBinary); err != nil {
 		return err
 	}
 
@@ -269,18 +269,18 @@ func (c *Cluster) createInjectorConfigmap(tempPath types.TempPaths) error {
 }
 
 func (c *Cluster) createService() (*corev1.Service, error) {
-	service := c.GenerateService(ZarfNamespaceName, config.ZarfInjector)
+	service := c.GenerateService(ZarfNamespaceName, "zarf-injector")
 
 	service.Spec.Type = corev1.ServiceTypeNodePort
 	service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
 		Port: int32(5000),
 	})
 	service.Spec.Selector = map[string]string{
-		"app": config.ZarfInjector,
+		"app": "zarf-injector",
 	}
 
 	// Attempt to purse the service silently
-	_ = c.DeleteService(ZarfNamespaceName, config.ZarfInjector)
+	_ = c.DeleteService(ZarfNamespaceName, "zarf-injector")
 
 	return c.CreateService(service)
 }
@@ -290,7 +290,7 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 	pod := c.GeneratePod("injector", ZarfNamespaceName)
 	executeMode := int32(0777)
 
-	pod.Labels["app"] = config.ZarfInjector
+	pod.Labels["app"] = "zarf-injector"
 
 	// Ensure zarf agent doesn't break the injector on future runs
 	pod.Labels[agentLabel] = "ignore"
@@ -322,7 +322,7 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 				{
 					Name:      "init",
 					MountPath: "/zarf-init/zarf-injector",
-					SubPath:   config.ZarfInjector,
+					SubPath:   "zarf-injector",
 				},
 				{
 					Name:      "seed",

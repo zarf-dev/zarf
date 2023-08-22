@@ -261,7 +261,7 @@ func createPaths(basePath string) (paths types.TempPaths, err error) {
 	paths = types.TempPaths{
 		Base: basePath,
 
-		InjectBinary: filepath.Join(basePath, config.ZarfInjector),
+		InjectBinary: filepath.Join(basePath, "zarf-injector"),
 		SeedImages:   filepath.Join(basePath, "seed-images"),
 		Images:       filepath.Join(basePath, "images"),
 		Components:   filepath.Join(basePath, config.ZarfComponentsDir),
