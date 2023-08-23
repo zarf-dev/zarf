@@ -256,6 +256,7 @@ const (
 	CmdPackageDeployFlagPublicKey                      = "Path to public key file for validating signed packages"
 	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "the version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
+	CmdPackageDeployUnsetCLIVersionWarn                = "CLIVersion is set to the default value of '%s'. This could potentially cause issues with package creation and deployment. To avoid such issues, please set the value to a valid semantic version."
 	CmdPackageDeployErr                                = "Failed to deploy package: %s"
 
 	CmdPackageInspectFlagSbom      = "View SBOM contents while inspecting the package"

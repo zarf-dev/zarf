@@ -10,7 +10,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -183,12 +182,17 @@ func TestValidateLastNonBreakingVersion(t *testing.T) {
 			cliVersion:             "unset",
 			lastNonBreakingVersion: "v0.27.0",
 			returnError:            false,
-			throwWarning:           false,
+			throwWarning:           true,
+			expectedWarningMessage: fmt.Sprintf(lang.CmdPackageDeployUnsetCLIVersionWarn, config.CLIVersion),
 		},
 	}
 
 	for _, testCase := range testCases {
+		testCase := testCase
+
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
 			config.CLIVersion = testCase.cliVersion
 
 			p := &Packager{
@@ -205,14 +209,14 @@ func TestValidateLastNonBreakingVersion(t *testing.T) {
 
 			switch {
 			case testCase.returnError:
-				assert.ErrorContains(t, err, testCase.expectedErrorMessage)
-				assert.Empty(t, p.warnings, "Expected no warnings for test case: %s", testCase.name)
+				require.ErrorContains(t, err, testCase.expectedErrorMessage)
+				require.Empty(t, p.warnings, "Expected no warnings for test case: %s", testCase.name)
 			case testCase.throwWarning:
-				assert.Contains(t, p.warnings, testCase.expectedWarningMessage)
-				assert.NoError(t, err, "Expected no error for test case: %s", testCase.name)
+				require.Contains(t, p.warnings, testCase.expectedWarningMessage)
+				require.NoError(t, err, "Expected no error for test case: %s", testCase.name)
 			default:
-				assert.NoError(t, err, "Expected no error for test case: %s", testCase.name)
-				assert.Empty(t, p.warnings, "Expected no warnings for test case: %s", testCase.name)
+				require.NoError(t, err, "Expected no error for test case: %s", testCase.name)
+				require.Empty(t, p.warnings, "Expected no warnings for test case: %s", testCase.name)
 			}
 		})
 	}
