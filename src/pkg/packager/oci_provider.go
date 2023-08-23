@@ -41,6 +41,15 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 		layersToPull = append(layersToPull, layers...)
 	}
 
+	isPartial := true
+	root, err := op.FetchRoot()
+	if err != nil {
+		return pkg, nil, err
+	}
+	if len(root.Layers) == len(layersToPull) {
+		isPartial = false
+	}
+
 	pathsToCheck, err := op.PullPackage(op.destinationDir, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
 		return pkg, nil, fmt.Errorf("unable to pull the package: %w", err)
@@ -54,7 +63,7 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 		return pkg, nil, err
 	}
 
-	if err := validate.PackageIntegrity(loaded, pathsToCheck, pkg.Metadata.AggregateChecksum); err != nil {
+	if err := validate.PackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, isPartial); err != nil {
 		return pkg, nil, err
 	}
 
@@ -114,7 +123,7 @@ func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage
 		return pkg, nil, err
 	}
 
-	if err := validate.PackageIntegrity(loaded, pathsToCheck, pkg.Metadata.AggregateChecksum); err != nil {
+	if err := validate.PackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, true); err != nil {
 		return pkg, nil, err
 	}
 

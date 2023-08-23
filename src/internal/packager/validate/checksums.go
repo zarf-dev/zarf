@@ -14,13 +14,20 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func PackageIntegrity(loaded types.PackagePathsMap, pathsToCheck []string, aggregateChecksum string) error {
+func PackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum string, isPartial bool) error {
 	spinner := message.NewProgressSpinner("Validating package checksums")
 	defer spinner.Stop()
+
+	// ensure checksums.txt and zarf.yaml were loaded
+	if _, ok := loaded[types.ZarfChecksumsTxt]; !ok {
+		return fmt.Errorf("unable to validate checksums, checksums.txt was not loaded")
+	}
+	if _, ok := loaded[types.ZarfYAML]; !ok {
+		return fmt.Errorf("unable to validate checksums, zarf.yaml was not loaded")
+	}
 
 	checksumPath := loaded[types.ZarfChecksumsTxt]
 	actualAggregateChecksum, err := utils.GetSHA256OfFile(checksumPath)
@@ -29,16 +36,6 @@ func PackageIntegrity(loaded types.PackagePathsMap, pathsToCheck []string, aggre
 	}
 	if actualAggregateChecksum != aggregateChecksum {
 		return fmt.Errorf("invalid aggregate checksum: (expected: %s, received: %s)", aggregateChecksum, actualAggregateChecksum)
-	}
-
-	isPartial := false
-	if len(pathsToCheck) > 0 {
-		pathsToCheck = helpers.Unique(pathsToCheck)
-		isPartial = true
-		message.Debugf("Validating checksums for a subset of files in the package - %v", pathsToCheck)
-		for idx, path := range pathsToCheck {
-			pathsToCheck[idx] = filepath.Join(loaded.Base(), path)
-		}
 	}
 
 	checkedMap, err := pathCheckMap(loaded.Base())
@@ -65,7 +62,7 @@ func PackageIntegrity(loaded types.PackagePathsMap, pathsToCheck []string, aggre
 		if utils.InvalidPath(path) {
 			if !isPartial && !checkedMap[path] {
 				return fmt.Errorf("unable to validate checksums - missing file: %s", rel)
-			} else if helpers.SliceContains(pathsToCheck, path) {
+			} else if _, ok := loaded[rel]; ok {
 				return fmt.Errorf("unable to validate partial checksums - missing file: %s", rel)
 			}
 			// it's okay if we're doing a partial check and the file isn't there as long as the path isn't in the list of paths to check
@@ -91,7 +88,7 @@ func PackageIntegrity(loaded types.PackagePathsMap, pathsToCheck []string, aggre
 
 	// If we're doing a partial check, make sure we've checked all the files we were asked to check
 	if isPartial {
-		for _, path := range pathsToCheck {
+		for _, path := range loaded {
 			if !checkedMap[path] {
 				return fmt.Errorf("unable to validate partial checksums, %s did not get checked", path)
 			}

@@ -25,7 +25,7 @@ func (p *Packager) Pull() error {
 	if err != nil {
 		return err
 	}
-	pathsToCheck, err := p.remote.PullPackage(p.tmp.Base(), config.CommonOptions.OCIConcurrency)
+	_, err = p.remote.PullPackage(p.tmp.Base(), config.CommonOptions.OCIConcurrency)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func (p *Packager) Pull() error {
 		message.Successf("Package signature is valid")
 	}
 
-	if err := validate.PackageIntegrity(p.tmp, pathsToCheck, p.cfg.Pkg.Metadata.AggregateChecksum); err != nil {
+	if err := validate.PackageIntegrity(p.tmp, p.cfg.Pkg.Metadata.AggregateChecksum, false); err != nil {
 		return fmt.Errorf("unable to validate the package checksums: %w", err)
 	}
 

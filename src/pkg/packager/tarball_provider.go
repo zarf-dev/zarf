@@ -33,8 +33,6 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = tp.destinationDir
 
-	pathsToCheck := []string{}
-
 	err = archiver.Walk(tp.source, func(f archiver.File) error {
 		if f.IsDir() {
 			return nil
@@ -65,7 +63,6 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 		}
 
 		loaded[fullPath] = filepath.Join(tp.destinationDir, fullPath)
-		pathsToCheck = append(pathsToCheck, fullPath)
 		return nil
 	})
 	if err != nil {
@@ -76,7 +73,7 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 		return pkg, nil, err
 	}
 
-	if err := validate.PackageIntegrity(loaded, pathsToCheck, pkg.Metadata.AggregateChecksum); err != nil {
+	if err := validate.PackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, false); err != nil {
 		return pkg, nil, err
 	}
 
@@ -97,7 +94,7 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], loaded[types.ZarfSBOMDir]); err != nil {
 			return pkg, nil, err
 		}
-		loaded[types.ZarfSBOMTar] = filepath.Join(tp.destinationDir, types.ZarfSBOMTar)
+		loaded[types.ZarfSBOMDir] = filepath.Join(tp.destinationDir, types.ZarfSBOMDir)
 	}
 
 	return pkg, loaded, nil
@@ -107,8 +104,6 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded["base"] = tp.destinationDir
-
-	pathsToCheck := []string{types.ZarfYAML, types.ZarfChecksumsTxt}
 
 	for pathInArchive := range loaded.MetadataPaths() {
 		if err := archiver.Extract(tp.source, pathInArchive, tp.destinationDir); err != nil {
@@ -121,14 +116,13 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPac
 			return pkg, nil, err
 		}
 		loaded[types.ZarfSBOMTar] = filepath.Join(tp.destinationDir, types.ZarfSBOMTar)
-		pathsToCheck = append(pathsToCheck, types.ZarfSBOMTar)
 	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
 		return pkg, nil, err
 	}
 
-	if err := validate.PackageIntegrity(loaded, pathsToCheck, pkg.Metadata.AggregateChecksum); err != nil {
+	if err := validate.PackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, true); err != nil {
 		return pkg, nil, err
 	}
 
