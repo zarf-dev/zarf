@@ -28,6 +28,7 @@ func marshalDeployedPackage(deployedPackage *types.DeployedPackage) (rawData []b
 // TestPackageSecretNeedsWait verifies that Zarf waits for webhooks to complete correctly.
 func TestPackageSecretNeedsWait(t *testing.T) {
 	t.Parallel()
+
 	type testCase struct {
 		name          string
 		secret        *corev1.Secret
@@ -37,12 +38,14 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		hookName      string
 		expectedError error
 	}
+
 	var (
 		componentName = "test-component"
 		packageName   = "test-package"
 		webhookName   = "test-webhook"
 		secretName    = config.ZarfPackagePrefix + packageName
 	)
+
 	testCases := []testCase{
 		{
 			name:      "NoWebhooks",
@@ -194,6 +197,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		testCase := testCase
+
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
