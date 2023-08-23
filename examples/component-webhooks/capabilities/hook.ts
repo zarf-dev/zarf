@@ -1,10 +1,6 @@
 import {
   Capability,
-  PeprRequest,
-  RegisterKind,
   a,
-  fetch,
-  fetchStatus,
   Log,
   k8s,
 } from "pepr";
@@ -70,7 +66,7 @@ When(a.Secret).IsCreatedOrUpdated().InNamespace("zarf").WithLabel("package-deplo
             }
 
             // Update the secret with information denoting that a test-webhook is running for this component
-            secretData.componentWebhooks[component.name] = {"test-webhook": {"name": "test-webhook", "status": "Running", "waitDurationSeconds": 300, "observedGeneration": secretData.generation}}
+            secretData.componentWebhooks[component.name] = {"test-webhook": {"name": "test-webhook", "status": "Running", "observedGeneration": secretData.generation}}
 
             // Call an async function that simulates background processing and then updates the secret with the new status when it's complete
             sleepAndChangeStatus(secret.metadata.name, component.name)
@@ -119,7 +115,7 @@ async function sleepAndChangeStatus(secretName : string, componentName : string)
 
       return await k8sCoreApi.patchNamespacedSecret(secretName, "zarf", v1Secret, undefined, undefined, undefined, undefined, undefined, {headers: {'Content-Type': 'application/strategic-merge-patch+json'}})
   }).catch( err => {
-      Log.error(`Ran int o an error when trying to update the package secret: ${JSON.stringify(err)}`)
+      Log.error(`unable to update the package secret: ${JSON.stringify(err)}`)
       return err
   })
 }

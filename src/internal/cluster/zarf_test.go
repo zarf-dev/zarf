@@ -6,13 +6,18 @@ package cluster
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	k8sTesting "k8s.io/client-go/testing"
 )
 
 func marshalDeployedPackage(deployedPackage *types.DeployedPackage) (rawData []byte) {
@@ -23,7 +28,6 @@ func marshalDeployedPackage(deployedPackage *types.DeployedPackage) (rawData []b
 // TestPackageSecretNeedsWait verifies that Zarf waits for webhooks to complete correctly.
 func TestPackageSecretNeedsWait(t *testing.T) {
 	t.Parallel()
-
 	type testCase struct {
 		name          string
 		secret        *corev1.Secret
@@ -33,14 +37,12 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		hookName      string
 		expectedError error
 	}
-
 	var (
 		componentName = "test-component"
 		packageName   = "test-package"
 		webhookName   = "test-webhook"
 		secretName    = config.ZarfPackagePrefix + packageName
 	)
-
 	testCases := []testCase{
 		{
 			name:      "NoWebhooks",
@@ -190,16 +192,28 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			expectedError: nil,
 		},
 	}
-
 	for _, testCase := range testCases {
 		testCase := testCase
-
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			c := &Cluster{}
+			// Create a mock client and set up a GetSecret call.
+			mockClient := fake.NewSimpleClientset()
 
-			needsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(testCase.secret, testCase.component)
+			c := &Cluster{
+				K8s: &k8s.K8s{
+					Clientset: mockClient,
+				},
+			}
+
+			mockClient.PrependReactor("get", "secrets", func(action k8sTesting.Action) (handled bool, ret runtime.Object, err error) {
+				if action.(k8sTesting.GetAction).GetName() == testCase.secret.Name {
+					return true, testCase.secret, nil
+				}
+				return false, nil, errors.New("actual secret name does not equal expected secret name")
+			})
+
+			needsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(packageName, testCase.component)
 
 			require.Equal(t, testCase.needsWait, needsWait)
 			require.Equal(t, testCase.waitSeconds, waitSeconds)
