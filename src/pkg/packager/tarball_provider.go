@@ -97,6 +97,7 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], loaded[types.ZarfSBOMDir]); err != nil {
 			return pkg, nil, err
 		}
+		loaded[types.ZarfSBOMTar] = filepath.Join(tp.destinationDir, types.ZarfSBOMTar)
 	}
 
 	return pkg, loaded, nil

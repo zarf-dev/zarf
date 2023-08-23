@@ -75,6 +75,7 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], loaded[types.ZarfSBOMDir]); err != nil {
 			return pkg, nil, err
 		}
+		loaded[types.ZarfSBOMDir] = filepath.Join(op.destinationDir, types.ZarfSBOMDir)
 	}
 
 	return pkg, loaded, nil
