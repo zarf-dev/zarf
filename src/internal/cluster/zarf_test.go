@@ -8,11 +8,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func marshalDeployedPackage(deployedPackage *types.DeployedPackage) (rawData []byte) {
@@ -38,7 +36,6 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		componentName = "test-component"
 		packageName   = "test-package"
 		webhookName   = "test-webhook"
-		secretName    = config.ZarfPackagePrefix + packageName
 	)
 
 	testCases := []testCase{
@@ -46,9 +43,6 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			name:      "NoWebhooks",
 			component: types.ZarfComponent{Name: componentName},
 			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Name: secretName,
-				},
 				Data: map[string][]byte{
 					"data": marshalDeployedPackage(&types.DeployedPackage{
 						Name:              packageName,
@@ -65,9 +59,6 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			name:      "WebhookRunning",
 			component: types.ZarfComponent{Name: componentName},
 			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Name: secretName,
-				},
 				Data: map[string][]byte{
 					"data": marshalDeployedPackage(&types.DeployedPackage{
 						Name: packageName,
@@ -92,9 +83,6 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			name:      "WebhookRunningOnDifferentComponent",
 			component: types.ZarfComponent{Name: componentName},
 			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Name: secretName,
-				},
 				Data: map[string][]byte{
 					"data": marshalDeployedPackage(&types.DeployedPackage{
 						Name: packageName,
@@ -118,9 +106,6 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			name:      "WebhookSucceeded",
 			component: types.ZarfComponent{Name: componentName},
 			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Name: secretName,
-				},
 				Data: map[string][]byte{
 					"data": marshalDeployedPackage(&types.DeployedPackage{
 						Name: packageName,
@@ -143,9 +128,6 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			name:      "WebhookFailed",
 			component: types.ZarfComponent{Name: componentName},
 			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Name: secretName,
-				},
 				Data: map[string][]byte{
 					"data": marshalDeployedPackage(&types.DeployedPackage{
 						Name: packageName,
@@ -168,9 +150,6 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			name:      "WebhookRemoving",
 			component: types.ZarfComponent{Name: componentName},
 			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Name: secretName,
-				},
 				Data: map[string][]byte{
 					"data": marshalDeployedPackage(&types.DeployedPackage{
 						Name: packageName,
@@ -190,6 +169,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			expectedError: nil,
 		},
 	}
+
 	for _, testCase := range testCases {
 		testCase := testCase
 
