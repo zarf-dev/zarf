@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -37,8 +38,17 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	// 	}
 	// }
 
-	if wantSBOM {
-		return UnarchiveAndViewSBOMs(loaded[types.ZarfSBOMTar], outputSBOM, pkg.Metadata.Name, includeSBOM)
+	sbomDir := loaded[types.ZarfSBOMDir]
+
+	if outputSBOM != "" {
+		if err := sbom.OutputSBOMFiles(loaded[types.ZarfSBOMDir], outputSBOM, pkg.Metadata.Name); err != nil {
+			return err
+		}
+		sbomDir = outputSBOM
+	}
+
+	if includeSBOM {
+		sbom.ViewSBOMFiles(sbomDir)
 	}
 
 	return nil

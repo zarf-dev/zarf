@@ -80,6 +80,25 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 		return pkg, nil, err
 	}
 
+	// unpack component tarballs
+	for _, component := range pkg.Components {
+		tb := filepath.Join(types.ZarfComponentsDir, fmt.Sprintf("%s.tar", component.Name))
+		if _, ok := loaded[tb]; ok {
+			defer os.Remove(loaded[tb])
+			defer delete(loaded, tb)
+			if err = archiver.Unarchive(loaded[tb], loaded[types.ZarfComponentsDir]); err != nil {
+				return pkg, nil, err
+			}
+		}
+	}
+
+	// unpack sboms.tar
+	if _, ok := loaded[types.ZarfSBOMTar]; ok {
+		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], loaded[types.ZarfSBOMDir]); err != nil {
+			return pkg, nil, err
+		}
+	}
+
 	return pkg, loaded, nil
 }
 
@@ -110,6 +129,15 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPac
 
 	if err := validate.PackageIntegrity(loaded, pathsToCheck, pkg.Metadata.AggregateChecksum); err != nil {
 		return pkg, nil, err
+	}
+
+	// unpack sboms.tar
+	if _, ok := loaded[types.ZarfSBOMTar]; ok {
+		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], loaded[types.ZarfSBOMDir]); err != nil {
+			return pkg, nil, err
+		}
+	} else if wantSBOM {
+		return pkg, nil, fmt.Errorf("package does not contain SBOMs")
 	}
 
 	return pkg, loaded, nil

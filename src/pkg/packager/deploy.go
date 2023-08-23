@@ -27,7 +27,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/mholt/archiver/v3"
 	"github.com/pterm/pterm"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -56,30 +55,17 @@ func (p *Packager) Deploy() (err error) {
 	}
 	p.arch = config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
 	p.cfg.Pkg = pkg
+	p.tmp = loaded
 
 	for idx, component := range pkg.Components {
 		// Handle component configuration deprecations
 		var warnings []string
-		pkg.Components[idx], warnings = deprecated.MigrateComponent(pkg.Build, component)
+		p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
 		p.warnings = append(p.warnings, warnings...)
-
-		// extract the component tarball if it exists
-		tb := p.tmp.GetComponentTarballPath(component.Name)
-		if !utils.InvalidPath(tb) {
-			if err := archiver.Unarchive(tb, p.tmp[types.ZarfComponentsDir]); err != nil {
-				return fmt.Errorf("unable to extract the component: %w", err)
-			}
-
-			// After extracting the component, remove the compressed tarball to release disk space
-			defer os.Remove(tb)
-		}
 	}
 
-	// If a SBOM tar file exist, temporarily place them in the deploy directory
-	if !utils.InvalidPath(loaded[types.ZarfSBOMTar]) {
-		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], p.tmp[types.ZarfSBOMDir]); err != nil {
-			return fmt.Errorf("unable to extract the sbom data from the component: %w", err)
-		}
+	// If SBOMs were loaded, temporarily place them in the deploy directory
+	if _, ok := p.tmp[types.ZarfSBOMDir]; ok {
 		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp[types.ZarfSBOMDir], "sbom-viewer-*"))
 		if err := sbom.OutputSBOMFiles(p.tmp.Base(), types.ZarfSBOMDir, ""); err != nil {
 			// Don't stop the deployment, let the user decide if they want to continue the deployment

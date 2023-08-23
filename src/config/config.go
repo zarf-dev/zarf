@@ -162,7 +162,7 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 
 // GetValidPackageExtensions returns the valid package extensions.
 func GetValidPackageExtensions() [3]string {
-	return [...]string{".tar.zst", ".tar", ".zip"}
+	return [...]string{".tar.zst", ".tar", ".tar.gz"}
 }
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.

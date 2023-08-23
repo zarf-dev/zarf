@@ -251,27 +251,20 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Output the SBOM files into a directory if specified.
-	if p.cfg.CreateOpts.SBOMOutputDir != "" || p.cfg.CreateOpts.ViewSBOM {
-		tarballPath := p.tmp[types.ZarfSBOMDir]
-		return UnarchiveAndViewSBOMs(tarballPath, p.cfg.CreateOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name, p.cfg.CreateOpts.ViewSBOM)
-	}
+	if p.cfg.CreateOpts.ViewSBOM || p.cfg.CreateOpts.SBOMOutputDir != "" {
+		outputSBOM := p.cfg.CreateOpts.SBOMOutputDir
+		sbomDir := p.tmp[types.ZarfSBOMDir]
 
-	return nil
-}
-
-func UnarchiveAndViewSBOMs(tarballPath, outputDir, packageName string, viewAfter bool) error {
-	if err := archiver.Unarchive(tarballPath, strings.TrimSuffix(tarballPath, ".tar")); err != nil {
-		return err
-	}
-
-	if outputDir != "" {
-		if err := sbom.OutputSBOMFiles(strings.TrimSuffix(tarballPath, ".tar"), outputDir, packageName); err != nil {
-			return err
+		if outputSBOM != "" {
+			if err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, p.cfg.Pkg.Metadata.Name); err != nil {
+				return err
+			}
+			sbomDir = outputSBOM
 		}
-	}
 
-	if viewAfter {
-		sbom.ViewSBOMFiles(strings.TrimSuffix(tarballPath, ".tar"))
+		if p.cfg.CreateOpts.ViewSBOM {
+			sbom.ViewSBOMFiles(sbomDir)
+		}
 	}
 
 	return nil

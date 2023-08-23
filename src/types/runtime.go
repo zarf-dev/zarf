@@ -227,11 +227,6 @@ func (pm PackagePathsMap) GetComponentPaths(componentName string) ComponentPaths
 	}
 }
 
-// GetComponentTarballPath returns the path to the tarball for a given component.
-func (pm PackagePathsMap) GetComponentTarballPath(componentName string) string {
-	return filepath.Join(pm[ZarfComponentsDir], componentName+".tar")
-}
-
 // DifferentialData contains image and repository information about the package a Differential Package is Based on.
 type DifferentialData struct {
 	DifferentialPackagePath    string
