@@ -81,6 +81,12 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 	for _, component := range pkg.Components {
 		tb := filepath.Join(types.ZarfComponentsDir, fmt.Sprintf("%s.tar", component.Name))
 		if _, ok := loaded[tb]; ok {
+			if _, ok := loaded[types.ZarfComponentsDir]; !ok {
+				loaded[types.ZarfComponentsDir] = filepath.Join(tp.destinationDir, types.ZarfComponentsDir)
+				if err := utils.CreateDirectory(loaded[types.ZarfComponentsDir], 0755); err != nil {
+					return pkg, nil, err
+				}
+			}
 			defer os.Remove(loaded[tb])
 			defer delete(loaded, tb)
 			if err = archiver.Unarchive(loaded[tb], loaded[types.ZarfComponentsDir]); err != nil {
@@ -91,10 +97,10 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 
 	// unpack sboms.tar
 	if _, ok := loaded[types.ZarfSBOMTar]; ok {
+		loaded[types.ZarfSBOMDir] = filepath.Join(tp.destinationDir, types.ZarfSBOMDir)
 		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], loaded[types.ZarfSBOMDir]); err != nil {
 			return pkg, nil, err
 		}
-		loaded[types.ZarfSBOMDir] = filepath.Join(tp.destinationDir, types.ZarfSBOMDir)
 	}
 
 	return pkg, loaded, nil
@@ -128,6 +134,7 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPac
 
 	// unpack sboms.tar
 	if _, ok := loaded[types.ZarfSBOMTar]; ok {
+		loaded[types.ZarfSBOMDir] = filepath.Join(tp.destinationDir, types.ZarfSBOMDir)
 		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], loaded[types.ZarfSBOMDir]); err != nil {
 			return pkg, nil, err
 		}
