@@ -501,13 +501,13 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 	cliVersion := config.CLIVersion
 	lastNonBreakingVersion := p.cfg.Pkg.Build.LastNonBreakingVersion
 
-	if lastNonBreakingVersion == "" || cliVersion == "UnknownVersion" {
+	if lastNonBreakingVersion == "" {
 		return nil
 	}
 
-	if cliVersion == "unset" {
-		unsetWarning := fmt.Sprintf(lang.CmdPackageDeployUnsetCLIVersionWarn, config.CLIVersion)
-		p.warnings = append(p.warnings, unsetWarning)
+	if cliVersion == "unset" || cliVersion == "UnknownVersion" {
+		warning := fmt.Sprintf(lang.CmdPackageDeployUnsetCLIVersionWarn, config.CLIVersion)
+		p.warnings = append(p.warnings, warning)
 		return nil
 	}
 
@@ -518,7 +518,9 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 
 	cliSemVer, err := semver.NewVersion(cliVersion)
 	if err != nil {
-		return fmt.Errorf("unable to parse Zarf CLI version '%s' : %w", cliVersion, err)
+		warning := fmt.Sprintf("unable to parse Zarf CLI version '%s' : %s", cliVersion, err.Error())
+		p.warnings = append(p.warnings, warning)
+		return nil
 	}
 
 	if cliSemVer.LessThan(lastNonBreakingSemVer) {
@@ -529,6 +531,7 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 			lastNonBreakingVersion,
 		)
 		p.warnings = append(p.warnings, warning)
+		return nil
 	}
 
 	return nil

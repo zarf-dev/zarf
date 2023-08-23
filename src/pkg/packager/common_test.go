@@ -137,9 +137,9 @@ func TestValidateLastNonBreakingVersion(t *testing.T) {
 			name:                   "invalid semantic version (CLI version)",
 			cliVersion:             "invalidSemanticVersion",
 			lastNonBreakingVersion: "v0.0.1",
-			throwWarning:           false,
-			returnError:            true,
-			expectedErrorMessage:   "unable to parse Zarf CLI version",
+			returnError:            false,
+			throwWarning:           true,
+			expectedWarningMessage: "unable to parse Zarf CLI version 'invalidSemanticVersion' : Invalid Semantic Version",
 		},
 		{
 			name:                   "invalid semantic version (lastNonBreakingVersion)",
@@ -171,11 +171,12 @@ func TestValidateLastNonBreakingVersion(t *testing.T) {
 			throwWarning:           false,
 		},
 		{
-			name:                   "default CLI version in E2E tests",
-			cliVersion:             "UnknownVersion", // This is used as a default version in the E2E tests
+			name:                   "CLI version in E2E tests",
+			cliVersion:             "UnknownVersion",
 			lastNonBreakingVersion: "v0.27.0",
 			returnError:            false,
-			throwWarning:           false,
+			throwWarning:           true,
+			expectedWarningMessage: fmt.Sprintf(lang.CmdPackageDeployUnsetCLIVersionWarn, "UnknownVersion"),
 		},
 		{
 			name:                   "default CLI version",
