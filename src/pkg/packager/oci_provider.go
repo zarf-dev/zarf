@@ -29,7 +29,7 @@ type OCIProvider struct {
 // LoadPackage loads a package from an OCI registry.
 func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
-	loaded["base"] = op.destinationDir
+	loaded[types.BaseDir] = op.destinationDir
 	layersToPull := []ocispec.Descriptor{}
 
 	// only pull specified components and their images if optionalComponents AND --confirm are set
@@ -93,7 +93,7 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 // LoadPackageMetadata loads a package's metadata from an OCI registry.
 func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
-	loaded["base"] = op.destinationDir
+	loaded[types.BaseDir] = op.destinationDir
 	var pathsToCheck []string
 
 	metatdataDescriptors, err := op.PullPackageMetadata(op.destinationDir)

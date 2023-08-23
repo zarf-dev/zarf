@@ -88,7 +88,10 @@ func PackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum string, is
 
 	// If we're doing a partial check, make sure we've checked all the files we were asked to check
 	if isPartial {
-		for _, path := range loaded {
+		for rel, path := range loaded {
+			if rel == types.BaseDir {
+				continue
+			}
 			if !checkedMap[path] {
 				return fmt.Errorf("unable to validate partial checksums, %s did not get checked", path)
 			}

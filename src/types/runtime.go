@@ -37,6 +37,8 @@ const (
 	SeedImagesDir        = "seed-images"
 	InjectorBinary       = "zarf-injector"
 	InjectorPayloadTarGz = "payload.tgz"
+
+	BaseDir = "base"
 )
 
 // VariableType represents a type of a Zarf package variable
@@ -156,7 +158,7 @@ type PackagePaths struct {
 // Paths returns a map of all the static paths for a Zarf package.
 func (lp PackagePaths) Paths() PackagePathsMap {
 	paths := PackagePathsMap{
-		"base": lp.Base,
+		BaseDir: lp.Base,
 
 		// metadata paths
 		ZarfYAML:          filepath.Join(lp.Base, ZarfYAML),
@@ -188,7 +190,7 @@ type PackagePathsMap map[string]string
 
 // Base returns the base directory for the package.
 func (pm PackagePathsMap) Base() string {
-	return pm["base"]
+	return pm[BaseDir]
 }
 
 // MetadataPaths returns a map of all the metadata paths for a Zarf package.

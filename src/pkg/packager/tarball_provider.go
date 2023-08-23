@@ -31,7 +31,7 @@ type TarballProvider struct {
 // LoadPackage loads a package from a tarball.
 func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
-	loaded["base"] = tp.destinationDir
+	loaded[types.BaseDir] = tp.destinationDir
 
 	err = archiver.Walk(tp.source, func(f archiver.File) error {
 		if f.IsDir() {
@@ -103,7 +103,7 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 // LoadPackageMetadata loads a package's metadata from a tarball.
 func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
-	loaded["base"] = tp.destinationDir
+	loaded[types.BaseDir] = tp.destinationDir
 
 	for pathInArchive := range loaded.MetadataPaths() {
 		if err := archiver.Extract(tp.source, pathInArchive, tp.destinationDir); err != nil {
