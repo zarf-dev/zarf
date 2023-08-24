@@ -427,9 +427,6 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				}
 			}
 
-			if isSkeleton {
-				p.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
-			}
 		}
 
 		if file.ExtractPath != "" {
