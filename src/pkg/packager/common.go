@@ -505,12 +505,6 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 		return nil
 	}
 
-	if cliVersion == "unset" || cliVersion == "UnknownVersion" {
-		warning := fmt.Sprintf(lang.CmdPackageDeployUnsetCLIVersionWarn, config.CLIVersion)
-		p.warnings = append(p.warnings, warning)
-		return nil
-	}
-
 	lastNonBreakingSemVer, err := semver.NewVersion(lastNonBreakingVersion)
 	if err != nil {
 		return fmt.Errorf("unable to parse lastNonBreakingVersion '%s' from Zarf package build data : %w", lastNonBreakingVersion, err)
@@ -518,7 +512,7 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 
 	cliSemVer, err := semver.NewVersion(cliVersion)
 	if err != nil {
-		warning := fmt.Sprintf("unable to parse Zarf CLI version '%s' : %s", cliVersion, err.Error())
+		warning := fmt.Sprintf(lang.CmdPackageDeployInvalidCLIVersionWarn, config.CLIVersion)
 		p.warnings = append(p.warnings, warning)
 		return nil
 	}
