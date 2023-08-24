@@ -136,9 +136,9 @@ func (suite *SkeletonSuite) Test_1_Compose_Example() {
   actions:
     onDeploy:
       before:
-        - cmd: ./zarf tools kubectl get -n dos-games-override deployment -o jsonpath={.items[0].metadata.creationTimestamp}
-          setVariables:
-          - name: WORDPRESS_BLOG_NAME`)
+      - cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}
+        setVariables:
+        - name: WORDPRESS_BLOG_NAME`)
 
 	// Ensure that the variables were merged
 	suite.Contains(stdErr, `
