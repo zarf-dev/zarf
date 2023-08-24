@@ -254,6 +254,7 @@ const (
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
 	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
 	CmdPackageDeployFlagPublicKey                      = "Path to public key file for validating signed packages"
+	CmdPackageDeployFlagComponentWebhooks              = "Allow Zarf to wait for external webhooks to execute as each package component is deployed"
 	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "the version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
 	CmdPackageDeployErr                                = "Failed to deploy package: %s"

@@ -157,7 +157,6 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			}
 		}
 
-		// Update the component status to "Deploying" and increment ObservedGeneration
 		deployedComponent := types.DeployedComponent{Name: component.Name, Status: types.ComponentStatusDeploying, ObservedGeneration: p.generation}
 		deployedComponents = append(deployedComponents, deployedComponent)
 
@@ -168,12 +167,10 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			deployedComponents[idx].InstalledCharts = installedCharts
 		}
 
+		waitForWebhooks := p.cfg.PkgOpts.ComponentWebhooks
+
 		// Update the package secret to indicate that we are attempting to deploy this component
-		if p.cluster != nil && !p.cfg.IsInitConfig {
-			if _, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component); err != nil {
-				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
-			}
-		}
+		p.updatePackageSecretOnDeploy(deployedComponents, component, waitForWebhooks)
 
 		// Deploy the component
 		var charts []types.InstalledChart
@@ -197,12 +194,8 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 			deployedComponents[idx].Status = types.ComponentStatusFailed
 
-			if p.cluster != nil {
-				_, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component)
-				if err != nil {
-					message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
-				}
-			}
+			// Update the package secret to indicate that we failed to deploy this component
+			p.updatePackageSecretOnDeploy(deployedComponents, component, waitForWebhooks)
 
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, deployErr)
 		}
@@ -210,15 +203,8 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		deployedComponents[idx].InstalledCharts = charts
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 
-		// Save deployed package information to k8s
-		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
-		if p.cluster != nil {
-			_, err = p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component)
-			if err != nil {
-				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
-			}
-
-		}
+		// Update the package secret to indicate that we successfully deployed this component
+		p.updatePackageSecretOnDeploy(deployedComponents, component, waitForWebhooks)
 
 		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
 			onFailure()
@@ -227,6 +213,22 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	}
 
 	return deployedComponents, nil
+}
+
+func (p *Packager) updatePackageSecretOnDeploy(deployedComponents []types.DeployedComponent, component types.ZarfComponent, waitForWebhooks bool) {
+	if waitForWebhooks {
+		if p.cluster != nil && !p.cfg.IsInitConfig {
+			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component); err != nil {
+				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+			}
+		}
+	} else {
+		if p.cluster != nil {
+			if _, err := p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation); err != nil {
+				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+			}
+		}
+	}
 }
 
 func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []types.InstalledChart, err error) {
