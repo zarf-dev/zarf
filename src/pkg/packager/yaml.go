@@ -61,8 +61,6 @@ func (p *Packager) filterComponents(pkg *types.ZarfPackage) {
 
 // writeYaml adds build information and writes the config to the temp directory.
 func (p *Packager) writeYaml() error {
-	message.Debug("config.BuildConfig()")
-
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue.
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.

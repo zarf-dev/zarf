@@ -46,10 +46,6 @@ var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
 func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, paths types.PackagePathsMap) error {
-	if len(componentSBOMs) == 0 {
-		return nil
-	}
-
 	imageCount := len(imgList)
 	componentCount := len(componentSBOMs)
 	builder := Builder{

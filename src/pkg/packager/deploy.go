@@ -67,7 +67,8 @@ func (p *Packager) Deploy() (err error) {
 	// If SBOMs were loaded, temporarily place them in the deploy directory
 	if _, ok := p.tmp[types.ZarfSBOMDir]; ok {
 		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp[types.ZarfSBOMDir], "sbom-viewer-*"))
-		if err := sbom.OutputSBOMFiles(p.tmp.Base(), types.ZarfSBOMDir, ""); err != nil {
+		_, err := sbom.OutputSBOMFiles(p.tmp[types.ZarfSBOMDir], types.ZarfSBOMDir, "")
+		if err != nil {
 			// Don't stop the deployment, let the user decide if they want to continue the deployment
 			message.Warnf("Unable to process the SBOM files for this package: %s", err.Error())
 		}

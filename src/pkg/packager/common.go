@@ -381,13 +381,13 @@ func (p *Packager) archiveComponent(component types.ZarfComponent) error {
 	}
 	if size > 0 {
 		tb := fmt.Sprintf("%s.tar", componentPath)
-		message.Debugf("Archiving %s to '%s'", component.Name, tb)
+		message.Debugf("Archiving component %q to %q", component.Name, tb)
 		err := archiver.Archive([]string{componentPath}, tb)
 		if err != nil {
 			return err
 		}
 	} else {
-		message.Debugf("Component %s is empty, skipping archiving", component.Name)
+		message.Debugf("Component %q is empty, skipping archiving", component.Name)
 	}
 	return os.RemoveAll(componentPath)
 }

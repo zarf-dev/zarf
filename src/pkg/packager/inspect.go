@@ -41,10 +41,11 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 	sbomDir := loaded[types.ZarfSBOMDir]
 
 	if outputSBOM != "" {
-		if err := sbom.OutputSBOMFiles(loaded[types.ZarfSBOMDir], outputSBOM, pkg.Metadata.Name); err != nil {
+		out, err := sbom.OutputSBOMFiles(loaded[types.ZarfSBOMDir], outputSBOM, pkg.Metadata.Name)
+		if err != nil {
 			return err
 		}
-		sbomDir = outputSBOM
+		sbomDir = out
 	}
 
 	if includeSBOM {

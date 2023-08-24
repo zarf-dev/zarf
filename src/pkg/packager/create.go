@@ -255,11 +255,16 @@ func (p *Packager) Create(baseDir string) error {
 		outputSBOM := p.cfg.CreateOpts.SBOMOutputDir
 		sbomDir := p.tmp[types.ZarfSBOMDir]
 
+		if err := archiver.Unarchive(p.tmp[types.ZarfSBOMTar], sbomDir); err != nil {
+			return fmt.Errorf("unable to unarchive SBOM tarball: %w", err)
+		}
+
 		if outputSBOM != "" {
-			if err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, p.cfg.Pkg.Metadata.Name); err != nil {
+			out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, p.cfg.Pkg.Metadata.Name)
+			if err != nil {
 				return err
 			}
-			sbomDir = outputSBOM
+			sbomDir = out
 		}
 
 		if p.cfg.CreateOpts.ViewSBOM {

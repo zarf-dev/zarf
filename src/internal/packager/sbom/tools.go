@@ -42,18 +42,18 @@ func ViewSBOMFiles(directory string) {
 }
 
 // OutputSBOMFiles outputs the sbom files into a specified directory.
-func OutputSBOMFiles(sourceDir, outputDir, packageName string) error {
+func OutputSBOMFiles(sourceDir, outputDir, packageName string) (string, error) {
 	packagePath := filepath.Join(outputDir, packageName)
 
 	if err := os.RemoveAll(packagePath); err != nil {
-		return err
+		return "", err
 	}
 
 	if err := utils.CreateDirectory(packagePath, 0700); err != nil {
-		return err
+		return "", err
 	}
 
-	return utils.CreatePathAndCopy(sourceDir, packagePath)
+	return packagePath, utils.CreatePathAndCopy(sourceDir, packagePath)
 }
 
 // IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections)
