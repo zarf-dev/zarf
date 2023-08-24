@@ -77,7 +77,7 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 
 	// unpack component tarballs
 	for _, component := range pkg.Components {
-		tb := filepath.Join(op.destinationDir, types.ZarfComponentsDir, fmt.Sprintf("%s.tar", component.Name))
+		tb := filepath.Join(types.ZarfComponentsDir, fmt.Sprintf("%s.tar", component.Name))
 		if _, ok := loaded[tb]; ok {
 			defer os.Remove(loaded[tb])
 			defer delete(loaded, tb)

@@ -87,7 +87,7 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 
 	// unpack component tarballs
 	for _, component := range pkg.Components {
-		tb := filepath.Join(tp.destinationDir, types.ZarfComponentsDir, fmt.Sprintf("%s.tar", component.Name))
+		tb := filepath.Join(types.ZarfComponentsDir, fmt.Sprintf("%s.tar", component.Name))
 		if _, ok := loaded[tb]; ok {
 			defer os.Remove(loaded[tb])
 			defer delete(loaded, tb)
