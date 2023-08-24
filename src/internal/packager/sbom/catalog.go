@@ -45,20 +45,23 @@ var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
-// func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, imagesPath, sbomPath string) error {
-func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, sbomDir string, imagesDir string) error {
+func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, paths types.PackagePathsMap) error {
+	if len(componentSBOMs) == 0 {
+		return nil
+	}
+
 	imageCount := len(imgList)
 	componentCount := len(componentSBOMs)
 	builder := Builder{
 		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
 		cachePath:  config.GetAbsCachePath(),
-		imagesPath: imagesDir,
-		outputDir:  sbomDir,
+		imagesPath: paths[types.ZarfImageCacheDir],
+		outputDir:  paths[types.ZarfSBOMDir],
 	}
 	defer builder.spinner.Stop()
 
 	// Ensure the sbom directory exists
-	_ = utils.CreateDirectory(sbomDir, 0700)
+	_ = utils.CreateDirectory(paths[types.ZarfSBOMDir], 0700)
 
 	// Generate a list of images and files for the sbom viewer
 	json, err := builder.generateJSONList(componentSBOMs, imgList)
@@ -74,7 +77,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, s
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
 		// Get the image that we are creating an SBOM for
-		img, err := utils.LoadOCIImage(imagesDir, tag)
+		img, err := utils.LoadOCIImage(paths[types.ZarfImageCacheDir], tag)
 		if err != nil {
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err
@@ -127,19 +130,18 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, s
 		}
 	}
 
-	allSBOMFiles, err := filepath.Glob(filepath.Join(sbomDir, "*"))
+	allSBOMFiles, err := filepath.Glob(filepath.Join(paths[types.ZarfSBOMDir], "*"))
 	if err != nil {
 		builder.spinner.Errorf(err, "Unable to get a list of all SBOM files")
 		return err
 	}
 
-	sbomTarballPath := fmt.Sprintf("%s.tar", sbomDir)
-	if err = archiver.Archive(allSBOMFiles, sbomTarballPath); err != nil {
+	if err = archiver.Archive(allSBOMFiles, paths[types.ZarfSBOMTar]); err != nil {
 		builder.spinner.Errorf(err, "Unable to create the sbom archive")
 		return err
 	}
 
-	if err = os.RemoveAll(sbomDir); err != nil {
+	if err = os.RemoveAll(paths[types.ZarfSBOMDir]); err != nil {
 		builder.spinner.Errorf(err, "Unable to remove the temporary SBOM directory")
 		return err
 	}

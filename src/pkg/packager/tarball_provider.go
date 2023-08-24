@@ -62,7 +62,7 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 			return err
 		}
 
-		loaded[fullPath] = filepath.Join(tp.destinationDir, fullPath)
+		loaded[fullPath] = dstPath
 		return nil
 	})
 	if err != nil {
@@ -77,16 +77,18 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 		return pkg, nil, err
 	}
 
+	// always create and "load" components dir
+	if _, ok := loaded[types.ZarfComponentsDir]; !ok {
+		loaded[types.ZarfComponentsDir] = filepath.Join(tp.destinationDir, types.ZarfComponentsDir)
+		if err := utils.CreateDirectory(loaded[types.ZarfComponentsDir], 0755); err != nil {
+			return pkg, nil, err
+		}
+	}
+
 	// unpack component tarballs
 	for _, component := range pkg.Components {
-		tb := filepath.Join(types.ZarfComponentsDir, fmt.Sprintf("%s.tar", component.Name))
+		tb := filepath.Join(tp.destinationDir, types.ZarfComponentsDir, fmt.Sprintf("%s.tar", component.Name))
 		if _, ok := loaded[tb]; ok {
-			if _, ok := loaded[types.ZarfComponentsDir]; !ok {
-				loaded[types.ZarfComponentsDir] = filepath.Join(tp.destinationDir, types.ZarfComponentsDir)
-				if err := utils.CreateDirectory(loaded[types.ZarfComponentsDir], 0755); err != nil {
-					return pkg, nil, err
-				}
-			}
 			defer os.Remove(loaded[tb])
 			defer delete(loaded, tb)
 			if err = archiver.Unarchive(loaded[tb], loaded[types.ZarfComponentsDir]); err != nil {

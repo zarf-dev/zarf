@@ -182,7 +182,7 @@ func (p *Packager) Create(baseDir string) error {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp[types.ZarfSBOMDir], p.tmp[types.ZarfImageCacheDir]); err != nil {
+		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
