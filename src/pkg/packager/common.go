@@ -525,7 +525,6 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 			lastNonBreakingVersion,
 		)
 		p.warnings = append(p.warnings, warning)
-		return nil
 	}
 
 	return nil
