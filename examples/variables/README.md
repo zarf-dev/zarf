@@ -62,7 +62,7 @@ Zarf `variables` can also have additional fields that describe how Zarf will han
 
 :::info
 
-Variables with `type: file` will be set to the filepath in actions due to constraints on the size of environment variables in the shell.  This also allows for additional processing of this file by its filename.
+Variables with `type: file` will be set to the filepath in `actions` due to constraints on the size of environment variables in the shell.  This also allows for additional processing of the file by its filename.
 
 :::
 
