@@ -60,6 +60,12 @@ Zarf `variables` can also have additional fields that describe how Zarf will han
 
 <Properties item="ZarfPackageVariable" />
 
+:::info
+
+Variables with `type: file` will be set to the filepath in actions due to constraints on the size of environment variables in the shell.  This also allows for additional processing of this file by its filename.
+
+:::
+
 :::note
 
 The fields `default`, `description` and `prompt` are not available on `setVariables` since they always take the standard output of an action command and will not be interacted with directly by a deploy user.

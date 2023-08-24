@@ -30,10 +30,14 @@ type SkeletonSuite struct {
 }
 
 var (
-	importEverything   = filepath.Join("src", "test", "packages", "51-import-everything")
-	importception      = filepath.Join("src", "test", "packages", "51-import-everything", "inception")
-	everythingExternal = filepath.Join("src", "test", "packages", "everything-external")
-	absNoCode          = filepath.Join("/", "tmp", "nocode")
+	composeExample       = filepath.Join("examples", "composable-packages")
+	composeExamplePath   = filepath.Join("build", fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
+	importEverything     = filepath.Join("src", "test", "packages", "51-import-everything")
+	importEverythingPath = filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
+	importception        = filepath.Join("src", "test", "packages", "51-import-everything", "inception")
+	importceptionPath    = filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch))
+	everythingExternal   = filepath.Join("src", "test", "packages", "everything-external")
+	absNoCode            = filepath.Join("/", "tmp", "nocode")
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
@@ -64,7 +68,13 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	suite.NoError(err)
 	err = os.RemoveAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
-	err = os.RemoveAll(filepath.Join("files"))
+	err = os.RemoveAll("files")
+	suite.NoError(err)
+	err = os.RemoveAll(composeExamplePath)
+	suite.NoError(err)
+	err = os.RemoveAll(importEverythingPath)
+	suite.NoError(err)
+	err = os.RemoveAll(importceptionPath)
 	suite.NoError(err)
 }
 
@@ -72,8 +82,13 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.T().Log("E2E: Skeleton Package Publish oci://")
 	ref := suite.Reference.String()
 
+	wordpress := filepath.Join("examples", "wordpress")
+	_, stdErr, err := e2e.Zarf("package", "publish", wordpress, "oci://"+ref, "--insecure")
+	suite.NoError(err)
+	suite.Contains(stdErr, "Published "+ref)
+
 	helmCharts := filepath.Join("examples", "helm-charts")
-	_, stdErr, err := e2e.Zarf("package", "publish", helmCharts, "oci://"+ref, "--insecure")
+	_, stdErr, err = e2e.Zarf("package", "publish", helmCharts, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
@@ -99,20 +114,53 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_1_Compose() {
+func (suite *SkeletonSuite) Test_1_Compose_Example() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
-	_, _, err := e2e.Zarf("package", "create", importEverything, "--confirm", "-o", "build", "--insecure")
+	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--insecure", "--no-color", "--confirm")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "create", importception, "--confirm", "-o", "build", "--insecure")
+	// Ensure that common names merge
+	suite.Contains(stdErr, `
+  manifests:
+  - name: multi-games
+    namespace: dos-games
+    files:
+    - ../dos-games/manifests/deployment.yaml
+    - ../dos-games/manifests/service.yaml
+    - quake-service.yaml`)
+
+	// Ensure that the action was appended
+	suite.Contains(stdErr, `
+  - docker.io/bitnami/wordpress:6.2.0-debian-11-r18
+  actions:
+    onDeploy:
+      before:
+        - cmd: ./zarf tools kubectl get -n dos-games-override deployment -o jsonpath={.items[0].metadata.creationTimestamp}
+          setVariables:
+          - name: WORDPRESS_BLOG_NAME`)
+
+	// Ensure that the variables were merged
+	suite.Contains(stdErr, `
+- name: WORDPRESS_BLOG_NAME
+  description: The blog name that is used for the WordPress admin account
+  default: The Zarf Blog
+  prompt: true`)
+}
+
+func (suite *SkeletonSuite) Test_2_Compose_Everything_Inception() {
+	suite.T().Log("E2E: Skeleton Package Compose oci://")
+
+	_, _, err := e2e.Zarf("package", "create", importEverything, "-o", "build", "--insecure", "--confirm")
+	suite.NoError(err)
+
+	_, _, err = e2e.Zarf("package", "create", importception, "-o", "build", "--insecure", "--confirm")
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_2_Component_Templates() {
+func (suite *SkeletonSuite) Test_3_Component_Templates() {
 	suite.T().Log("E2E: Component Templates")
 	e2e.SetupWithCluster(suite.T())
-	importEverythingPath := fmt.Sprintf("build/zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch)
 
 	_, stdErr, err := e2e.Zarf("package", "inspect", importEverythingPath)
 	suite.NoError(err)
@@ -133,10 +181,9 @@ func (suite *SkeletonSuite) Test_2_Component_Templates() {
 	for _, target := range targets {
 		suite.Contains(stdErr, target)
 	}
-
 }
 
-func (suite *SkeletonSuite) Test_3_FilePaths() {
+func (suite *SkeletonSuite) Test_4_FilePaths() {
 	suite.T().Log("E2E: Skeleton Package File Paths")
 
 	pkgTars := []string{

@@ -313,15 +313,15 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	// Merge charts with the same name to keep them unique
 	for _, overrideChart := range override.Charts {
 		existing := false
-		for _, targetChart := range target.Charts {
-			if targetChart.Name == overrideChart.Name {
+		for idx := range target.Charts {
+			if target.Charts[idx].Name == overrideChart.Name {
 				if overrideChart.Namespace != "" {
-					targetChart.Namespace = overrideChart.Namespace
+					target.Charts[idx].Namespace = overrideChart.Namespace
 				}
 				if overrideChart.ReleaseName != "" {
-					targetChart.ReleaseName = overrideChart.ReleaseName
+					target.Charts[idx].ReleaseName = overrideChart.ReleaseName
 				}
-				targetChart.ValuesFiles = append(targetChart.ValuesFiles, overrideChart.ValuesFiles...)
+				target.Charts[idx].ValuesFiles = append(target.Charts[idx].ValuesFiles, overrideChart.ValuesFiles...)
 				existing = true
 			}
 		}
@@ -334,13 +334,13 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	// Merge manifests with the same name to keep them unique
 	for _, overrideManifest := range override.Manifests {
 		existing := false
-		for _, targetManifest := range target.Manifests {
-			if targetManifest.Name == overrideManifest.Name {
+		for idx := range target.Manifests {
+			if target.Manifests[idx].Name == overrideManifest.Name {
 				if overrideManifest.Namespace != "" {
-					targetManifest.Namespace = overrideManifest.Namespace
+					target.Manifests[idx].Namespace = overrideManifest.Namespace
 				}
-				targetManifest.Files = append(targetManifest.Files, overrideManifest.Files...)
-				targetManifest.Kustomizations = append(targetManifest.Files, overrideManifest.Kustomizations...)
+				target.Manifests[idx].Files = append(target.Manifests[idx].Files, overrideManifest.Files...)
+				target.Manifests[idx].Kustomizations = append(target.Manifests[idx].Kustomizations, overrideManifest.Kustomizations...)
 
 				existing = true
 			}

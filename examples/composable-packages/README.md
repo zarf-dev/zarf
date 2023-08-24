@@ -45,8 +45,8 @@ To view the example in its entirety, select the `Edit this page` link below the 
 Creating this example requires a locally hosted container registry that has the `wordpress` skeleton package published and available. You can do this by running the following commands:
 
 ```bash
-docker run -d -p 5000:5000 --restart=always --name registry registry:2
-zarf package publish examples/wordpress oci://127.0.0.1:5000 --insecure
+docker run -d -p 555:555 --restart=always --name registry registry:2
+zarf package publish examples/wordpress oci://127.0.0.1:555 --insecure
 ```
 
 You will also need to pass the `--insecure` flag to `zarf package create` to pull from the `http` registry:
