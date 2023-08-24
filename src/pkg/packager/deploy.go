@@ -111,7 +111,7 @@ func (p *Packager) attemptClusterChecks() (err error) {
 	// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
 	if p.cluster, err = cluster.NewCluster(); p.cluster != nil {
 
-		// Check if t he package has already been deployed and get its generation
+		// Check if the package has already been deployed and get its generation
 		if existingDeployedPackage, err := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); err == nil {
 			// If there is no error, then this package has been deployed before. Figure out what generation we are on.
 			// Increment the package generation within the secret

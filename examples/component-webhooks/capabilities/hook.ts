@@ -87,8 +87,8 @@ When(a.Secret).IsCreatedOrUpdated().InNamespace("zarf").WithLabel("package-deplo
 // sleepAndChangeStatus sleeps for 30 seconds then changes the status of the 'test-webhook' to 'Succeeded'.
 async function sleepAndChangeStatus(secretName : string, componentName : string)  {
 
-  // Perform a sleep for 30 seconds that simulates background processing
-  await sleep(30)
+  // Perform a sleep that simulates background processing
+  await sleep(10)
 
   // Configure the k8s api client
   const kc = new k8s.KubeConfig();
