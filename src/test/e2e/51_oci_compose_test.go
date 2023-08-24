@@ -31,11 +31,11 @@ type SkeletonSuite struct {
 
 var (
 	composeExample       = filepath.Join("examples", "composable-packages")
-	composeExamplePath   = filepath.Join("build", fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
+	composeExamplePath   string
 	importEverything     = filepath.Join("src", "test", "packages", "51-import-everything")
-	importEverythingPath = filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
+	importEverythingPath string
 	importception        = filepath.Join("src", "test", "packages", "51-import-everything", "inception")
-	importceptionPath    = filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch))
+	importceptionPath    string
 	everythingExternal   = filepath.Join("src", "test", "packages", "everything-external")
 	absNoCode            = filepath.Join("/", "tmp", "nocode")
 )
@@ -58,6 +58,11 @@ func (suite *SkeletonSuite) SetupSuite() {
 
 	e2e.SetupDockerRegistry(suite.T(), 555)
 	suite.Reference.Registry = "localhost:555"
+
+	// Setup the package paths after e2e has been initialized
+	composeExamplePath = filepath.Join("build", fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
+	importEverythingPath = filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
+	importceptionPath = filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch))
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
@@ -156,11 +161,6 @@ func (suite *SkeletonSuite) Test_2_Compose_Everything_Inception() {
 
 	_, _, err = e2e.Zarf("package", "create", importception, "-o", "build", "--insecure", "--confirm")
 	suite.NoError(err)
-}
-
-func (suite *SkeletonSuite) Test_3_Component_Templates() {
-	suite.T().Log("E2E: Component Templates")
-	e2e.SetupWithCluster(suite.T())
 
 	_, stdErr, err := e2e.Zarf("package", "inspect", importEverythingPath)
 	suite.NoError(err)
@@ -183,7 +183,7 @@ func (suite *SkeletonSuite) Test_3_Component_Templates() {
 	}
 }
 
-func (suite *SkeletonSuite) Test_4_FilePaths() {
+func (suite *SkeletonSuite) Test_3_FilePaths() {
 	suite.T().Log("E2E: Skeleton Package File Paths")
 
 	pkgTars := []string{
