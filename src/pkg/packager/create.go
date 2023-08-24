@@ -440,6 +440,13 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			}
 		}
 
+		if isSkeleton {
+			// Change the source to the new relative source directory (any remote files will have been skipped above)
+			p.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
+			// Remove the extractPath from a skeleton since it will already extract it
+			p.cfg.Pkg.Components[index].Files[filesIdx].ExtractPath = ""
+		}
+
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
 			actualShasum, _ := utils.GetSHA256OfFile(dst)
