@@ -447,7 +447,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		if file.Shasum != "" {
 			actualShasum, _ := utils.GetSHA256OfFile(dst)
 			if actualShasum != file.Shasum {
-				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
+				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", dst, file.Shasum, actualShasum)
 			}
 
 		}
