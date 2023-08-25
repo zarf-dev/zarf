@@ -48,7 +48,7 @@ When(a.Secret)
     if (component.status === "Deploying") {
       Log.debug(`The component ${component.name} is deploying`);
 
-      const componentWebhook = secretData.componentWebhooks[component.name]?.["test-webhook"];
+      const componentWebhook = secretData.componentWebhooks?.[component?.name]?.["test-webhook"];
 
       // Check if the component has a webhook running for the current package generation
       if (componentWebhook?.observedGeneration === secretData.generation) {
