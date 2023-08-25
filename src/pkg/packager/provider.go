@@ -13,36 +13,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 func identifySourceType(source string) string {
 	if helpers.IsURL(source) {
-		if helpers.IsOCIURL(source) {
-			return "oci"
-		}
 		parsed, _ := url.Parse(source)
-		if !isValidFileExtension(source) {
-			return ""
-		}
-		switch parsed.Scheme {
-		case "https":
-			return "https"
-		case "http":
-			return "http"
-		default:
-			return ""
-		}
-	}
-
-	if strings.HasPrefix(source, utils.SGETURLPrefix) {
-		return "sget"
-	}
-
-	if utils.InvalidPath(source) {
-		return ""
+		return parsed.Scheme
 	}
 
 	if strings.Contains(source, ".part000") {
