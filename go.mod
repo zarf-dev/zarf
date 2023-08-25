@@ -23,6 +23,7 @@ require (
 	github.com/go-git/go-git/v5 v5.7.0
 	github.com/go-logr/logr v1.2.4
 	github.com/goccy/go-yaml v1.11.0
+	github.com/gofrs/flock v0.8.1
 	github.com/google/go-containerregistry v0.15.2
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/moby/moby v24.0.2+incompatible
@@ -39,6 +40,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.12.0
 	golang.org/x/sync v0.3.0
+	golang.org/x/term v0.11.0
 	helm.sh/helm/v3 v3.12.2
 	k8s.io/api v0.27.4
 	k8s.io/apimachinery v0.27.4
@@ -389,7 +391,6 @@ require (
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
-	golang.org/x/term v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.9.1 // indirect

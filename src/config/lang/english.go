@@ -401,6 +401,9 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
+	CmdToolsHelmShort = "Subset of the Helm CLI included with Zarf to help manage helm charts."
+	CmdToolsHelmLong  = "Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the air gap."
+
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory"
 	CmdToolsClearCacheDir           = "Cache directory set to: %s"
 	CmdToolsClearCacheErr           = "Unable to clear the cache directory %s"

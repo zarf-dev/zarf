@@ -213,7 +213,7 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 	// Build the deps from the helm chart
 	err = man.Build()
 	if e, ok := err.(downloader.ErrRepoNotFound); ok {
-		return fmt.Errorf("%s. Please add the missing repo via 'helm repo add <name> <url>'", e.Error())
+		return fmt.Errorf("%s. Please add the missing repo via 'zarf tools helm repo add <name> <url>'", e.Error())
 	} else if err != nil {
 		return err
 	}
