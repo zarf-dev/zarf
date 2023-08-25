@@ -330,7 +330,7 @@ func bindDeployFlags(v *viper.Viper) {
 	deployFlags.StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(common.VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(common.VPkgDeploySget), lang.CmdPackageDeployFlagSget)
 	deployFlags.StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgDeployPublicKey), lang.CmdPackageDeployFlagPublicKey)
-	deployFlags.BoolVar(&pkgConfig.PkgOpts.ComponentWebhooks, "component-webhooks", v.GetBool(common.VPkgDeployComponentWebhooks), lang.CmdPackageDeployFlagComponentWebhooks)
+	deployFlags.BoolVar(&pkgConfig.PkgOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
 
 	deployFlags.MarkHidden("sget")
 }

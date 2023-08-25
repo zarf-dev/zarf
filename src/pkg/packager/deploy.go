@@ -167,10 +167,12 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			deployedComponents[idx].InstalledCharts = installedCharts
 		}
 
-		waitForWebhooks := p.cfg.PkgOpts.ComponentWebhooks
-
 		// Update the package secret to indicate that we are attempting to deploy this component
-		p.updatePackageSecretOnDeploy(deployedComponents, component, waitForWebhooks)
+		if p.cluster != nil {
+			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.PkgOpts.SkipWebhooks); err != nil {
+				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+			}
+		}
 
 		// Deploy the component
 		var charts []types.InstalledChart
@@ -195,7 +197,11 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			deployedComponents[idx].Status = types.ComponentStatusFailed
 
 			// Update the package secret to indicate that we failed to deploy this component
-			p.updatePackageSecretOnDeploy(deployedComponents, component, waitForWebhooks)
+			if p.cluster != nil {
+				if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.PkgOpts.SkipWebhooks); err != nil {
+					message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				}
+			}
 
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, deployErr)
 		}
@@ -204,7 +210,11 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 
 		// Update the package secret to indicate that we successfully deployed this component
-		p.updatePackageSecretOnDeploy(deployedComponents, component, waitForWebhooks)
+		if p.cluster != nil {
+			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.PkgOpts.SkipWebhooks); err != nil {
+				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+			}
+		}
 
 		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
 			onFailure()
@@ -213,22 +223,6 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	}
 
 	return deployedComponents, nil
-}
-
-func (p *Packager) updatePackageSecretOnDeploy(deployedComponents []types.DeployedComponent, component types.ZarfComponent, waitForWebhooks bool) {
-	if waitForWebhooks {
-		if p.cluster != nil && !p.cfg.IsInitConfig {
-			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component); err != nil {
-				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
-			}
-		}
-	} else {
-		if p.cluster != nil {
-			if _, err := p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation); err != nil {
-				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
-			}
-		}
-	}
 }
 
 func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []types.InstalledChart, err error) {

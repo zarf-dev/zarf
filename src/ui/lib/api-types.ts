@@ -166,7 +166,7 @@ export interface RegistryInfo {
 
 export interface ZarfPackageOptions {
     /**
-     * Allow Zarf to wait for external webhooks to execute as each package component is deployed
+     * Skip waiting for external webhooks to execute as each package component is deployed
      */
     componentWebhooks: boolean;
     /**

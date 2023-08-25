@@ -128,14 +128,19 @@ func (c *Cluster) PackageSecretNeedsWait(secret *corev1.Secret, component types.
 }
 
 // RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
-func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int, component types.ZarfComponent) (*corev1.Secret, error) {
+func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int, component types.ZarfComponent, skipWebhooks bool) (*corev1.Secret, error) {
 
 	packageSecret, err := c.RecordPackageDeployment(pkg, components, connectStrings, generation)
 	if err != nil {
 		return packageSecret, err
 	}
 
-	// Skip YOLO packages
+	// Skip checking webhook status when '--skip-webhooks' flag is provided
+	if skipWebhooks {
+		return packageSecret, nil
+	}
+
+	// Skip checking webhook status on YOLO packages
 	deployedPackage := types.DeployedPackage{}
 	isYOLOPackage := deployedPackage.Data.Metadata.YOLO
 
@@ -146,6 +151,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 		return packageSecret, nil
 	}
 
+	// Check webhook status for the component
 	packageNeedsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(packageSecret, component)
 	if err != nil {
 		return packageSecret, err
