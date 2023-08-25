@@ -72,7 +72,7 @@ func (c *Cluster) StartInjectionMadness(tmp types.PackagePathsMap, injectorSeedT
 	}
 
 	c.spinner.Updatef("Loading the seed image from the package")
-	if seedImages, err = c.loadSeedImages(tmp[types.ZarfImageCacheDir], tmp[types.SeedImagesDir], injectorSeedTags); err != nil {
+	if seedImages, err = c.loadSeedImages(tmp[types.ZarfImagesDir], tmp[types.SeedImagesDir], injectorSeedTags); err != nil {
 		c.spinner.Fatalf(err, "Unable to load the injector seed image from the package")
 	}
 

@@ -95,6 +95,14 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 				return pkg, nil, err
 			}
 		}
+
+		// also "load" the images dir if any component has images
+		if _, ok := loaded[types.ZarfImagesDir]; !ok && len(component.Images) > 0 {
+			loaded[types.ZarfImagesDir] = filepath.Join(tp.destinationDir, types.ZarfImagesDir)
+			if err := utils.CreateDirectory(loaded[types.ZarfImagesDir], 0755); err != nil {
+				return pkg, nil, err
+			}
+		}
 	}
 
 	// unpack sboms.tar

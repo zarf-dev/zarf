@@ -25,7 +25,7 @@ const (
 	ZarfYAMLSignature = "zarf.yaml.sig"
 	ZarfChecksumsTxt  = "checksums.txt"
 
-	ZarfImageCacheDir = "images"
+	ZarfImagesDir     = "images"
 	ZarfComponentsDir = "components"
 
 	ZarfSBOMDir = "zarf-sbom"
@@ -167,9 +167,9 @@ func DefaultPackagePaths(base string) PackagePathsMap {
 		ZarfComponentsDir: filepath.Join(base, ZarfComponentsDir),
 
 		// images paths
-		ZarfImageCacheDir: filepath.Join(base, ZarfImageCacheDir),
-		IndexJSON:         filepath.Join(base, ZarfImageCacheDir, IndexJSON),
-		OCILayout:         filepath.Join(base, ZarfImageCacheDir, OCILayout),
+		ZarfImagesDir: filepath.Join(base, ZarfImagesDir),
+		IndexJSON:     filepath.Join(base, ZarfImagesDir, IndexJSON),
+		OCILayout:     filepath.Join(base, ZarfImagesDir, OCILayout),
 	}
 }
 

@@ -51,7 +51,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, p
 	builder := Builder{
 		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
 		cachePath:  config.GetAbsCachePath(),
-		imagesPath: paths[types.ZarfImageCacheDir],
+		imagesPath: paths[types.ZarfImagesDir],
 		outputDir:  paths[types.ZarfSBOMDir],
 	}
 	defer builder.spinner.Stop()
@@ -73,7 +73,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, p
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
 		// Get the image that we are creating an SBOM for
-		img, err := utils.LoadOCIImage(paths[types.ZarfImageCacheDir], tag)
+		img, err := utils.LoadOCIImage(paths[types.ZarfImagesDir], tag)
 		if err != nil {
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err
@@ -157,7 +157,7 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 	}
 
 	// Create the sbom.
-	imageCachePath := filepath.Join(b.cachePath, types.ZarfImageCacheDir)
+	imageCachePath := filepath.Join(b.cachePath, types.ZarfImagesDir)
 
 	// Ensure the image cache directory exists.
 	if err := utils.CreateDirectory(imageCachePath, 0700); err != nil {

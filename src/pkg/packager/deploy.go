@@ -448,7 +448,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	}
 
 	imgConfig := images.ImgConfig{
-		ImagesPath:    p.tmp[types.ZarfImageCacheDir],
+		ImagesPath:    p.tmp[types.ZarfImagesDir],
 		ImgList:       componentImages,
 		NoChecksum:    noImgChecksum,
 		RegInfo:       p.cfg.State.RegistryInfo,
