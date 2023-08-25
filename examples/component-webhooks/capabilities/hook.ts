@@ -19,66 +19,66 @@ export const Webhook = new Capability({
 const {When} = Webhook;
 
 When(a.Secret)
-.IsCreatedOrUpdated()
-.InNamespace("zarf")
-.WithLabel("package-deploy-info")
-.Then(request => {
-  const secret = request.Raw;
-  let secretData;
-  let secretString: string;
-  let manuallyDecoded = false;
+  .IsCreatedOrUpdated()
+  .InNamespace("zarf")
+  .WithLabel("package-deploy-info")
+  .Then(request => {
+    const secret = request.Raw;
+    let secretData;
+    let secretString: string;
+    let manuallyDecoded = false;
 
-  // Pepr does not decode/encode non-ASCII characters in secret data: https://github.com/defenseunicorns/pepr/issues/219
-  try {
-    secretString = atob(secret.data.data);
-    manuallyDecoded = true;
-  } catch (error) {
-    secretString = secret.data.data;
-  }
+    // Pepr does not decode/encode non-ASCII characters in secret data: https://github.com/defenseunicorns/pepr/issues/219
+    try {
+      secretString = atob(secret.data.data);
+      manuallyDecoded = true;
+    } catch (error) {
+      secretString = secret.data.data;
+    }
 
-  // Parse the secret object
-  try {
-    secretData = JSON.parse(secretString);
-  } catch (error) {
-    Log.error("failed to parse the secret.data.data: " + error);
-    return;
-  }
+    // Parse the secret object
+    try {
+      secretData = JSON.parse(secretString);
+    } catch (error) {
+      Log.error("failed to parse the secret.data.data: " + error);
+      return;
+    }
 
-  for (const component of secretData?.deployedComponents ?? []) {
-    if (component.status === "Deploying") {
-      Log.debug(`The component ${component.name} is deploying`);
+    for (const component of secretData?.deployedComponents ?? []) {
+      if (component.status === "Deploying") {
+        Log.debug(`The component ${component.name} is deploying`);
 
-      const componentWebhook = secretData.componentWebhooks?.[component?.name]?.["test-webhook"];
+        const componentWebhook = secretData.componentWebhooks?.[component?.name]?.["test-webhook"];
 
-      // Check if the component has a webhook running for the current package generation
-      if (componentWebhook?.observedGeneration === secretData.generation) {
-        Log.debug(`The component ${component.name} has already had a webhook executed for it. Not executing another.`);
-      } else {
-        // Seed the componentWebhooks map/object
-        if (!secretData.componentWebhooks) {
-          secretData.componentWebhooks = {};
+        // Check if the component has a webhook running for the current package generation
+        if (componentWebhook?.observedGeneration === secretData.generation) {
+          Log.debug(`The component ${component.name} has already had a webhook executed for it. Not executing another.`);
+        } else {
+          // Seed the componentWebhooks map/object
+          if (!secretData.componentWebhooks) {
+            secretData.componentWebhooks = {};
+          }
+
+          // Update the secret noting that the webhook is running for this component
+          secretData.componentWebhooks[component.name] = {
+            "test-webhook": {
+              "name": "test-webhook",
+              "status": "Running",
+              "observedGeneration": secretData.generation,
+            },
+          };
+
+          // Call an async function that simulates background processing and then updates the secret with the new status when it's complete
+          sleepAndChangeStatus(secret.metadata.name, component.name);
         }
-
-        // Update the secret noting that the webhook is running for this component
-        secretData.componentWebhooks[component.name] = {
-          "test-webhook": {
-            "name": "test-webhook",
-            "status": "Running",
-            "observedGeneration": secretData.generation,
-          },
-        };
-
-        // Call an async function that simulates background processing and then updates the secret with the new status when it's complete
-        sleepAndChangeStatus(secret.metadata.name, component.name);
       }
     }
-  }
 
-  if (manuallyDecoded === true) {
-    secret.data.data = btoa(JSON.stringify(secretData));
-  } else {
-    secret.data.data = JSON.stringify(secretData);
-  }
+    if (manuallyDecoded === true) {
+      secret.data.data = btoa(JSON.stringify(secretData));
+    } else {
+      secret.data.data = JSON.stringify(secretData);
+    }
 });
 
 // sleepAndChangeStatus sleeps for the specified duration and changes the status of the 'test-webhook' to 'Succeeded'.
