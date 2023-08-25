@@ -8,12 +8,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/registry"
 )
@@ -90,4 +93,37 @@ func RemoveDuplicateDescriptors(descriptors []ocispec.Descriptor) []ocispec.Desc
 		}
 	}
 	return list
+}
+
+// GetInitPackageURL returns the URL for the init package for the given architecture and version.
+func GetInitPackageURL(arch, version string) string {
+	return fmt.Sprintf("ghcr.io/defenseunicorns/packages/init:%s-%s", arch, version)
+}
+
+// DownloadInitPackage downloads the init package for the given architecture and version to the given destination.
+func DownloadPackage(url, destinationTarball string, concurrency int) error {
+	remote, err := NewOrasRemote(url)
+	if err != nil {
+		return err
+	}
+
+	tmp, err := utils.MakeTempDir()
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmp)
+
+	_, err = remote.PullPackage(tmp, concurrency)
+	if err != nil {
+		return err
+	}
+
+	allTheLayers, err := filepath.Glob(filepath.Join(tmp, "*"))
+	if err != nil {
+		return err
+	}
+
+	_ = os.Remove(destinationTarball)
+
+	return archiver.Archive(allTheLayers, destinationTarball)
 }
