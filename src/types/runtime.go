@@ -149,7 +149,8 @@ type ComponentSBOM struct {
 	ComponentPath ComponentPaths
 }
 
-func StaticPackagePaths(base string) PackagePathsMap {
+// DefaultPackagePaths returns a PackagePathsMap with all the default static paths for a Zarf package.
+func DefaultPackagePaths(base string) PackagePathsMap {
 	return PackagePathsMap{
 		BaseDir: base,
 
