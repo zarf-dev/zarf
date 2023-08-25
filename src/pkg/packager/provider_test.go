@@ -8,23 +8,47 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
 
+var ocip *OCIProvider
+var sgetp *URLProvider
+var httpsp *URLProvider
+var tarballp *TarballProvider
+var partialp *PartialTarballProvider
+var packagep *types.PackageProvider
+
+type source struct {
+	src      string
+	srcType  string
+	provider types.PackageProvider
+}
+
+var sources = []source{
+	{src: "oci://ghcr.io/defenseunicorns/packages/init:1.0.0-amd64", srcType: "oci", provider: ocip},
+	{src: "sget://github.com/defenseunicorns/zarf-hello-world:x86", srcType: "sget", provider: sgetp},
+	{src: "sget://defenseunicorns/zarf-hello-world:x86_64", srcType: "sget", provider: sgetp},
+	{src: "https://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "https", provider: httpsp},
+	{src: "http://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "http", provider: httpsp},
+	{src: "zarf-init-amd64-v1.0.0.tar.zst", srcType: "tarball", provider: tarballp},
+	{src: "zarf-package-manifests-amd64-v1.0.0.tar", srcType: "tarball", provider: tarballp},
+	{src: "zarf-package-manifests-amd64-v1.0.0.tar.zst", srcType: "tarball", provider: tarballp},
+	{src: "some-dir/.part000", srcType: "partial", provider: partialp},
+}
+
 func Test_identifySourceType(t *testing.T) {
-	sourceMap := map[string]string{
-		"oci://ghcr.io/defenseunicorns/packages/init:1.0.0-amd64":                                         "oci",
-		"sget://github.com/defenseunicorns/zarf-hello-world:x86":                                          "sget",
-		"sget://defenseunicorns/zarf-hello-world:x86_64":                                                  "sget",
-		"https://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst": "https",
-		"http://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst":  "http",
-		"zarf-init-amd64-v1.0.0.tar.zst":                                                                  "tarball",
-		"zarf-package-manifests-amd64-v1.0.0.tar":                                                         "tarball",
-		"zarf-package-manifests-amd64-v1.0.0.tar.zst":                                                     "tarball",
-		"some-dir/.part000": "partial",
+	for _, source := range sources {
+		actual := identifySourceType(source.src)
+		require.Equalf(t, source.srcType, actual, fmt.Sprintf("source: %s", source))
 	}
-	for source, expected := range sourceMap {
-		actual := identifySourceType(source)
-		require.Equalf(t, expected, actual, fmt.Sprintf("source: %s", source))
+}
+
+func TestProviderFromSource(t *testing.T) {
+	for _, source := range sources {
+		actual, err := ProviderFromSource(&types.ZarfPackageOptions{PackagePath: source.src}, "")
+		require.NoError(t, err)
+		require.IsType(t, source.provider, actual)
+		require.Implements(t, packagep, actual)
 	}
 }
