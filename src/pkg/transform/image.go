@@ -29,6 +29,11 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 		return "", err
 	}
 
+	// check if image has already been transformed
+	if targetHost == image.Host {
+		return srcReference, nil
+	}
+
 	// Generate a crc32 hash of the image host + name
 	checksum := helpers.GetCRCHash(image.Name)
 
