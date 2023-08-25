@@ -147,8 +147,16 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 	// Process all the components we are deploying
 	for _, component := range componentsToDeploy {
+		deployedComponent := types.DeployedComponent{
+			Name:               component.Name,
+			Status:             types.ComponentStatusDeploying,
+			ObservedGeneration: p.generation,
+		}
+		deployedComponents = append(deployedComponents, deployedComponent)
 
-		// Fetch any installed Helm charts for this component
+		idx := len(deployedComponents) - 1
+
+		// Ensure we don't overwrite any installedCharts data
 		var installedCharts []types.InstalledChart
 		if p.cluster != nil {
 			installedCharts, err = p.cluster.GetInstalledChartsForComponent(p.cfg.Pkg.Metadata.Name, component)
@@ -156,16 +164,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 				message.Debugf("Unable to fetch installed Helm charts for component '%s': %s", component.Name, err.Error())
 			}
 		}
-
-		deployedComponent := types.DeployedComponent{Name: component.Name, Status: types.ComponentStatusDeploying, ObservedGeneration: p.generation}
-		deployedComponents = append(deployedComponents, deployedComponent)
-
-		idx := len(deployedComponents) - 1
-
-		// This prevents us from potentially overwriting any existing installed charts for this component in the package secret.
-		if installedCharts != nil {
-			deployedComponents[idx].InstalledCharts = installedCharts
-		}
+		deployedComponents[idx].InstalledCharts = installedCharts
 
 		// Update the package secret to indicate that we are attempting to deploy this component
 		if p.cluster != nil {
@@ -194,9 +193,8 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		if deployErr != nil {
 			onFailure()
 
-			deployedComponents[idx].Status = types.ComponentStatusFailed
-
 			// Update the package secret to indicate that we failed to deploy this component
+			deployedComponents[idx].Status = types.ComponentStatusFailed
 			if p.cluster != nil {
 				if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.PkgOpts.SkipWebhooks); err != nil {
 					message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
@@ -206,10 +204,9 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, deployErr)
 		}
 
+		// Update the package secret to indicate that we successfully deployed this component
 		deployedComponents[idx].InstalledCharts = charts
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
-
-		// Update the package secret to indicate that we successfully deployed this component
 		if p.cluster != nil {
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.PkgOpts.SkipWebhooks); err != nil {
 				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
