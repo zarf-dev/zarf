@@ -121,6 +121,10 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			manifestDescriptor := helpers.Find(index.Manifests, func(layer ocispec.Descriptor) bool {
 				return layer.Annotations[ocispec.AnnotationBaseImageName] == image
 			})
+
+			// even though these are technically image manifests, we store them as Zarf blobs
+			manifestDescriptor.MediaType = ZarfLayerMediaTypeBlob
+
 			manifest, err := o.FetchManifest(manifestDescriptor)
 			if err != nil {
 				return nil, err
