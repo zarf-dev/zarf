@@ -13,8 +13,7 @@ import (
 )
 
 var ocip *OCIProvider
-var sgetp *URLProvider
-var httpsp *URLProvider
+var urlp *URLProvider
 var tarballp *TarballProvider
 var partialp *PartialTarballProvider
 var packagep *types.PackageProvider
@@ -27,10 +26,10 @@ type source struct {
 
 var sources = []source{
 	{src: "oci://ghcr.io/defenseunicorns/packages/init:1.0.0-amd64", srcType: "oci", provider: ocip},
-	{src: "sget://github.com/defenseunicorns/zarf-hello-world:x86", srcType: "sget", provider: sgetp},
-	{src: "sget://defenseunicorns/zarf-hello-world:x86_64", srcType: "sget", provider: sgetp},
-	{src: "https://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "https", provider: httpsp},
-	{src: "http://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "http", provider: httpsp},
+	{src: "sget://github.com/defenseunicorns/zarf-hello-world:x86", srcType: "sget", provider: urlp},
+	{src: "sget://defenseunicorns/zarf-hello-world:x86_64", srcType: "sget", provider: urlp},
+	{src: "https://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "https", provider: urlp},
+	{src: "http://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "http", provider: urlp},
 	{src: "zarf-init-amd64-v1.0.0.tar.zst", srcType: "tarball", provider: tarballp},
 	{src: "zarf-package-manifests-amd64-v1.0.0.tar", srcType: "tarball", provider: tarballp},
 	{src: "zarf-package-manifests-amd64-v1.0.0.tar.zst", srcType: "tarball", provider: tarballp},
