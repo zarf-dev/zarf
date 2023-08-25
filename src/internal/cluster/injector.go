@@ -30,10 +30,18 @@ var payloadChunkSize = 1024 * 768
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
 func (c *Cluster) StartInjectionMadness(tmp types.PackagePathsMap, injectorSeedTags []string) {
-	binaryPath := tmp[types.InjectorBinary]
-	imagesDir := tmp[types.ZarfImageCacheDir]
-	seedImagesDir := tmp[types.SeedImagesDir]
-	injectorPayload := tmp[types.InjectorPayloadTarGz]
+	injectionMadnessKeys := []string{
+		types.InjectorBinary,
+		types.SeedImagesDir,
+		types.InjectorPayloadTarGz,
+	}
+
+	// Ensure the tmp map has all the keys we need, and set the defaults
+	for _, key := range injectionMadnessKeys {
+		if _, ok := tmp[key]; !ok {
+			tmp[key] = filepath.Join(tmp[types.BaseDir], key)
+		}
+	}
 
 	c.spinner = message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer c.spinner.Stop()
@@ -52,7 +60,7 @@ func (c *Cluster) StartInjectionMadness(tmp types.PackagePathsMap, injectorSeedT
 	}
 
 	c.spinner.Updatef("Creating the injector configmap")
-	if err = c.createInjectorConfigmap(binaryPath); err != nil {
+	if err = c.createInjectorConfigmap(tmp[types.InjectorBinary]); err != nil {
 		c.spinner.Fatalf(err, "Unable to create the injector configmap")
 	}
 
@@ -64,12 +72,12 @@ func (c *Cluster) StartInjectionMadness(tmp types.PackagePathsMap, injectorSeedT
 	}
 
 	c.spinner.Updatef("Loading the seed image from the package")
-	if seedImages, err = c.loadSeedImages(imagesDir, seedImagesDir, injectorSeedTags); err != nil {
+	if seedImages, err = c.loadSeedImages(tmp[types.ZarfImageCacheDir], tmp[types.SeedImagesDir], injectorSeedTags); err != nil {
 		c.spinner.Fatalf(err, "Unable to load the injector seed image from the package")
 	}
 
 	c.spinner.Updatef("Loading the seed registry configmaps")
-	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigmaps(seedImagesDir, injectorPayload); err != nil {
+	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigmaps(tmp[types.SeedImagesDir], tmp[types.InjectorPayloadTarGz]); err != nil {
 		c.spinner.Fatalf(err, "Unable to generate the injector payload configmaps")
 	}
 

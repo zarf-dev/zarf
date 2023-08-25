@@ -149,40 +149,27 @@ type ComponentSBOM struct {
 	ComponentPath ComponentPaths
 }
 
-// PackagePaths is a wrapper struct that contains all of the paths for a Zarf package.
-type PackagePaths struct {
-	// Base is the base directory for the package.
-	Base string
-}
-
-// Paths returns a map of all the static paths for a Zarf package.
-func (lp PackagePaths) Paths() PackagePathsMap {
-	paths := PackagePathsMap{
-		BaseDir: lp.Base,
+func StaticPackagePaths(base string) PackagePathsMap {
+	return PackagePathsMap{
+		BaseDir: base,
 
 		// metadata paths
-		ZarfYAML:          filepath.Join(lp.Base, ZarfYAML),
-		ZarfYAMLSignature: filepath.Join(lp.Base, ZarfYAMLSignature),
-		ZarfChecksumsTxt:  filepath.Join(lp.Base, ZarfChecksumsTxt),
+		ZarfYAML:          filepath.Join(base, ZarfYAML),
+		ZarfYAMLSignature: filepath.Join(base, ZarfYAMLSignature),
+		ZarfChecksumsTxt:  filepath.Join(base, ZarfChecksumsTxt),
 
 		// sboms paths
-		ZarfSBOMDir: filepath.Join(lp.Base, ZarfSBOMDir),
-		ZarfSBOMTar: filepath.Join(lp.Base, ZarfSBOMTar),
-
-		// init pkg injection nonsense
-		InjectorBinary:       filepath.Join(lp.Base, InjectorBinary),
-		SeedImagesDir:        filepath.Join(lp.Base, SeedImagesDir),
-		InjectorPayloadTarGz: filepath.Join(lp.Base, InjectorPayloadTarGz),
+		ZarfSBOMDir: filepath.Join(base, ZarfSBOMDir),
+		ZarfSBOMTar: filepath.Join(base, ZarfSBOMTar),
 
 		// components paths
-		ZarfComponentsDir: filepath.Join(lp.Base, ZarfComponentsDir),
+		ZarfComponentsDir: filepath.Join(base, ZarfComponentsDir),
 
 		// images paths
-		ZarfImageCacheDir: filepath.Join(lp.Base, ZarfImageCacheDir),
-		IndexJSON:         filepath.Join(lp.Base, ZarfImageCacheDir, IndexJSON),
-		OCILayout:         filepath.Join(lp.Base, ZarfImageCacheDir, OCILayout),
+		ZarfImageCacheDir: filepath.Join(base, ZarfImageCacheDir),
+		IndexJSON:         filepath.Join(base, ZarfImageCacheDir, IndexJSON),
+		OCILayout:         filepath.Join(base, ZarfImageCacheDir, OCILayout),
 	}
-	return paths
 }
 
 // PackagePathsMap is a map of all the static paths for a Zarf package.

@@ -127,7 +127,7 @@ func (p *Packager) SetTempDirectory(path string) error {
 
 	message.Debug("Using temporary directory:", path)
 
-	p.tmp = types.PackagePaths{Base: path}.Paths()
+	p.tmp = types.StaticPackagePaths(path)
 	return nil
 }
 
@@ -330,9 +330,7 @@ func ValidatePackageSignature(directory string, publicKeyPath string) error {
 		return nil
 	}
 
-	metadataPaths := types.PackagePaths{
-		Base: directory,
-	}.Paths().MetadataPaths()
+	metadataPaths := types.StaticPackagePaths(directory).MetadataPaths()
 
 	// Handle situations where there is no signature within the package
 	sigExist := !utils.InvalidPath(metadataPaths[types.ZarfYAMLSignature])
