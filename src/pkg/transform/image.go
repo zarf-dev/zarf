@@ -29,13 +29,8 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 		return "", err
 	}
 
-	targetHostImage, err := ParseImageRef(targetHost)
-	if err != nil {
-		return "", err
-	}
-
 	// check if image has already been transformed
-	if targetHostImage.Host == image.Host {
+	if targetHost == image.Host {
 		return srcReference, nil
 	}
 
