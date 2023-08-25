@@ -32,11 +32,13 @@ func identifySourceType(source string) string {
 			return "https"
 		case "http":
 			return "http"
-		case utils.SGETURLScheme:
-			return "sget"
 		default:
 			return ""
 		}
+	}
+
+	if strings.HasPrefix(source, utils.SGETURLPrefix) {
+		return "sget"
 	}
 
 	if utils.InvalidPath(source) {
