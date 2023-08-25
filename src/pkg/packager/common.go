@@ -496,14 +496,12 @@ func (p *Packager) validatePackageArchitecture() (err error) {
 	return nil
 }
 
-// validateLastNonBreakingVersion compares the Zarf CLI version against a package's LastNonBreakingVersion.
-// It will return an error if there is an error parsing either of the two versions,
-// and will throw a warning if the CLI version is less than the LastNonBreakingVersion.
+// validateLastNonBreakingVersion validates the Zarf CLI version against a package's LastNonBreakingVersion.
 func (p *Packager) validateLastNonBreakingVersion() (err error) {
 	cliVersion := config.CLIVersion
 	lastNonBreakingVersion := p.cfg.Pkg.Build.LastNonBreakingVersion
 
-	if lastNonBreakingVersion == "" || cliVersion == "UnknownVersion" {
+	if lastNonBreakingVersion == "" {
 		return nil
 	}
 
@@ -514,7 +512,9 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 
 	cliSemVer, err := semver.NewVersion(cliVersion)
 	if err != nil {
-		return fmt.Errorf("unable to parse Zarf CLI version '%s' : %w", cliVersion, err)
+		warning := fmt.Sprintf(lang.CmdPackageDeployInvalidCLIVersionWarn, config.CLIVersion)
+		p.warnings = append(p.warnings, warning)
+		return nil
 	}
 
 	if cliSemVer.LessThan(lastNonBreakingSemVer) {
