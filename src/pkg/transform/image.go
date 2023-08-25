@@ -30,7 +30,11 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	}
 
 	// check if image has already been transformed
-	if targetHost == image.Host {
+	isPatched, err := helpers.DoHostnamesMatch(targetHost, image.Host)
+	if err != nil {
+		return "", err
+	}
+	if isPatched {
 		return srcReference, nil
 	}
 
