@@ -91,6 +91,7 @@ By default, the default directories depend on the Operating System. The defaults
 | Windows          | %TEMP%\helm               | %APPDATA%\helm                 | %APPDATA%\helm          |
 `
 
+// NewRootCmd is a modified version of newRootCmd from the Helm CLI that returns a subset of the Helm CLI
 func NewRootCmd(actionConfig *action.Configuration, out io.Writer, args []string) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:          "helm",
@@ -157,7 +158,7 @@ func NewRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 	flags.ParseErrorsWhitelist.UnknownFlags = true
 	flags.Parse(args)
 
-	registryClient, err := newDefaultRegistryClient(false)
+	registryClient, err := newDefaultRegistryClient()
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +263,7 @@ func checkForExpiredRepos(repofile string) {
 
 }
 
-func newDefaultRegistryClient(plainHTTP bool) (*registry.Client, error) {
+func newDefaultRegistryClient() (*registry.Client, error) {
 	opts := []registry.ClientOption{
 		registry.ClientOptDebug(settings.Debug),
 		registry.ClientOptEnableCache(true),
