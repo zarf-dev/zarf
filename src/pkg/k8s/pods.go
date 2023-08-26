@@ -9,6 +9,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +19,7 @@ const waitLimit = 30
 
 // GeneratePod creates a new pod without adding it to the k8s cluster.
 func (k *K8s) GeneratePod(name, namespace string) *corev1.Pod {
-	return &corev1.Pod{
+	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Pod",
@@ -26,9 +27,13 @@ func (k *K8s) GeneratePod(name, namespace string) *corev1.Pod {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    k.Labels,
 		},
 	}
+
+	// Merge in common labels so that later modifications to the pod can't mutate them
+	pod.ObjectMeta.Labels = helpers.MergeMap[string](k.Labels, pod.ObjectMeta.Labels)
+
+	return pod
 }
 
 // DeletePod removes a pod from the cluster by namespace & name.
