@@ -205,7 +205,7 @@ func NewRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 	loadPlugins(cmd, out)
 
 	// Check permissions on critical files
-	checkPerms()
+	// checkPerms()
 
 	// Check for expired repositories
 	checkForExpiredRepos(settings.RepositoryConfig)
