@@ -563,7 +563,7 @@ const (
 	PkgValidateErrChart                   = "invalid chart definition: %w"
 	PkgValidateErrChartName               = "chart %s exceed the maximum length of %d characters"
 	PkgValidateErrChartNameMissing        = "chart %s must include a name"
-	PkgValidateErrChartNameNotUnique      = "chart name '%s' is not unique"
+	PkgValidateErrChartNameNotUnique      = "chart name %q is not unique"
 	PkgValidateErrChartNamespaceMissing   = "chart %s must include a namespace"
 	PkgValidateErrChartURLOrPath          = "chart %s must only have a url or localPath"
 	PkgValidateErrChartVersion            = "chart %s must include a chart version"
