@@ -24,11 +24,9 @@ type URLProvider struct {
 }
 
 // fetchTarball downloads the tarball from the URL.
-func (up *URLProvider) fetchTarball() error {
-	// TODO: do we want to support caching if the SHA is provided?
-
+func (up *URLProvider) fetchTarball() (tb string, err error) {
 	if !up.insecure && up.opts.Shasum == "" && !strings.HasPrefix(up.source, utils.SGETURLPrefix) {
-		return fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
+		return "", fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
 	}
 	var packageURL string
 	if up.opts.Shasum != "" {
@@ -37,30 +35,32 @@ func (up *URLProvider) fetchTarball() error {
 		packageURL = up.source
 	}
 
+	// this tmp dir is cleaned up by the defer in the caller
 	tmp, err := utils.MakeTempDir()
 	if err != nil {
-		return err
+		return "", err
 	}
-	defer os.RemoveAll(tmp)
 
 	dstTarball := filepath.Join(tmp, "package.tar.zst")
 
 	if err := utils.DownloadToFile(packageURL, dstTarball, up.opts.SGetKeyPath); err != nil {
-		return err
+		return "", err
 	}
 
-	up.outputTarball = dstTarball
-	return nil
+	return dstTarball, nil
 }
 
 // LoadPackage loads a package from an http, https or sget URL.
 func (up *URLProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
-	if err := up.fetchTarball(); err != nil {
+	tb, err := up.fetchTarball()
+	if err != nil {
 		return pkg, nil, err
 	}
 
+	defer os.RemoveAll(filepath.Dir(tb))
+
 	tp := &TarballProvider{
-		source:         up.outputTarball,
+		source:         tb,
 		destinationDir: up.destinationDir,
 		opts:           up.opts,
 	}
@@ -70,12 +70,15 @@ func (up *URLProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 
 // LoadPackageMetadata loads a package's metadata from an http, https or sget URL.
 func (up *URLProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
-	if err := up.fetchTarball(); err != nil {
+	tb, err := up.fetchTarball()
+	if err != nil {
 		return pkg, nil, err
 	}
 
+	defer os.RemoveAll(filepath.Dir(tb))
+
 	tp := &TarballProvider{
-		source:         up.outputTarball,
+		source:         tb,
 		destinationDir: up.destinationDir,
 		opts:           up.opts,
 	}
