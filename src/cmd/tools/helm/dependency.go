@@ -14,7 +14,7 @@ limitations under the License.
 */
 
 /*
-NOTICE: This file's 'package' and other references have been modified / removed to fit within Zarf's package structure.
+NOTICE: This file's 'package' and some functionality has been modified / removed to fit within Zarf's package structure.
 */
 
 package helm
