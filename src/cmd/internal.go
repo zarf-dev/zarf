@@ -72,10 +72,27 @@ var generateCLIDocs = &cobra.Command{
 						addHiddenDummyFlag(toolCmd, "no-color")
 					}
 
+					// Remove the default values from all of the helm commands during the CLI command doc generation
 					if toolCmd.Use == "helm" {
 						toolCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
-							flag.DefValue = ""
+							if flag.Value.Type() == "string" {
+								flag.DefValue = ""
+							}
 						})
+						for _, helmCmd := range toolCmd.Commands() {
+							helmCmd.Flags().VisitAll(func(flag *pflag.Flag) {
+								if flag.Value.Type() == "string" {
+									flag.DefValue = ""
+								}
+							})
+							for _, helmSubCmd := range helmCmd.Commands() {
+								helmSubCmd.Flags().VisitAll(func(flag *pflag.Flag) {
+									if flag.Value.Type() == "string" {
+										flag.DefValue = ""
+									}
+								})
+							}
+						}
 					}
 				}
 			}

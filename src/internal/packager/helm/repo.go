@@ -14,8 +14,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/registry"
 
@@ -192,10 +194,46 @@ func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, err
 
 // buildChartDependencies builds the helm chart dependencies
 func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
+	// Modify the dependencies to only include those that are actually enabled by chart values
+	c := &chart.Chart{}
+	err := utils.ReadYaml(filepath.Join(h.Chart.LocalPath, "Chart.yaml"), c)
+	if err != nil {
+		spinner.Errorf(err, "Failed to load Chart.yaml from %s (%s)", h.Chart.LocalPath, err.Error())
+		return err
+	}
+
+	chartValues, err := h.parseChartValues()
+	if err != nil {
+		spinner.Errorf(err, "Failed to load chart values for %s (%s)", h.Chart.Name, err.Error())
+		return err
+	}
+
+	renderedDeps := []*chart.Dependency{}
+	for _, dep := range c.Metadata.Dependencies {
+		if dep.Condition != "" {
+			value, err := chartValues.PathValue(dep.Condition)
+			if err == nil && value == true {
+				renderedDeps = append(renderedDeps, dep)
+			}
+		} else {
+			renderedDeps = append(renderedDeps, dep)
+		}
+	}
+
+	c.Metadata.Dependencies = renderedDeps
+
+	err = utils.WriteYaml(filepath.Join(h.Chart.LocalPath, "Chart.yaml"), c, 0600)
+	if err != nil {
+		spinner.Errorf(err, "Failed to save Chart.yaml to %s (%s)", h.Chart.LocalPath, err.Error())
+		return err
+	}
+
+	// Download and build the specified dependencies
 	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
 	if err != nil {
 		spinner.Fatalf(err, "Unable to create a new registry client")
 	}
+
 	h.Settings = cli.New()
 	man := &downloader.Manager{
 		Out:            os.Stdout,
@@ -206,9 +244,8 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 		RepositoryConfig: h.Settings.RepositoryConfig,
 		RepositoryCache:  h.Settings.RepositoryCache,
 		Debug:            false,
+		Verify:           downloader.VerifyIfPossible,
 	}
-	// Verify the chart
-	man.Verify = downloader.VerifyIfPossible
 
 	// Build the deps from the helm chart
 	err = man.Build()
