@@ -94,7 +94,7 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) {
 	}
 
 	if config.NoColor {
-		// If no color is specified strip any color codes from the output
+		// If no color is specified strip any color codes from the output - https://regex101.com/r/YFyIwC/2
 		ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
 		outputYAML = ansiRegex.ReplaceAllString(outputYAML, "")
 	}
