@@ -582,7 +582,7 @@ const (
 	PkgValidateErrManifestFileOrKustomize = "manifest %s must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %s exceed the maximum length of %d characters"
 	PkgValidateErrManifestNameMissing     = "manifest %s must include a name"
-	PkgValidateErrManifestNameNotUnique   = "manifest name '%s' is not unique"
+	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
 	PkgValidateErrName                    = "invalid package name: %w"
 	PkgValidateErrPkgConstantName         = "constant name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrPkgName                 = "package name '%s' must be all lowercase and contain no special characters except -"
