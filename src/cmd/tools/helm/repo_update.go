@@ -137,7 +137,7 @@ func updateCharts(repos []*repo.ChartRepository, out io.Writer, failOnRepoUpdate
 	wg.Wait()
 
 	if len(repoFailList) > 0 && failOnRepoUpdateFail {
-		return fmt.Errorf("Failed to update the following repositories: %s",
+		return fmt.Errorf("failed to update the following repositories: %s",
 			repoFailList)
 	}
 
