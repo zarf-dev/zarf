@@ -324,16 +324,14 @@ var (
 )
 
 // ValidatePackageSignature validates the signature of a package
-func ValidatePackageSignature(directory string, publicKeyPath string) error {
+func ValidatePackageSignature(paths types.PackagePathsMap, publicKeyPath string) error {
 	// If the insecure flag was provided ignore the signature validation
 	if config.CommonOptions.Insecure {
 		return nil
 	}
 
-	metadataPaths := types.DefaultPackagePaths(directory).MetadataPaths()
-
 	// Handle situations where there is no signature within the package
-	sigExist := !utils.InvalidPath(metadataPaths[types.ZarfYAMLSignature])
+	sigExist := !utils.InvalidPath(paths[types.ZarfYAMLSignature])
 	if !sigExist && publicKeyPath == "" {
 		// Nobody was expecting a signature, so we can just return
 		return nil
@@ -346,7 +344,7 @@ func ValidatePackageSignature(directory string, publicKeyPath string) error {
 	}
 
 	// Validate the signature with the key we were provided
-	if err := utils.CosignVerifyBlob(metadataPaths[types.ZarfYAML], metadataPaths[types.ZarfYAMLSignature], publicKeyPath); err != nil {
+	if err := utils.CosignVerifyBlob(paths[types.ZarfYAML], paths[types.ZarfYAMLSignature], publicKeyPath); err != nil {
 		return fmt.Errorf("package signature did not match the provided key: %w", err)
 	}
 

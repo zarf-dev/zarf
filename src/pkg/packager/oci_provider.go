@@ -5,12 +5,14 @@
 package packager
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -64,6 +66,10 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 	}
 
 	if err := validate.PackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, isPartial); err != nil {
+		return pkg, nil, err
+	}
+
+	if err := ValidatePackageSignature(loaded, op.opts.PublicKeyPath); err != nil {
 		return pkg, nil, err
 	}
 
@@ -141,6 +147,14 @@ func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage
 
 	if err := validate.PackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, true); err != nil {
 		return pkg, nil, err
+	}
+
+	if err := ValidatePackageSignature(loaded, op.opts.PublicKeyPath); err != nil {
+		if errors.Is(err, ErrPkgKeyButNoSig) {
+			message.Warn("The package was signed but no public key was provided, skipping signature validation")
+		} else {
+			return pkg, nil, err
+		}
 	}
 
 	// unpack sboms.tar

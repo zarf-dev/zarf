@@ -7,6 +7,7 @@ package packager
 import (
 	"archive/tar"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -140,6 +141,14 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPac
 
 	if err := validate.PackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, true); err != nil {
 		return pkg, nil, err
+	}
+
+	if err := ValidatePackageSignature(loaded, tp.opts.PublicKeyPath); err != nil {
+		if errors.Is(err, ErrPkgKeyButNoSig) {
+			message.Warn("The package was signed but no public key was provided, skipping signature validation")
+		} else {
+			return pkg, nil, err
+		}
 	}
 
 	// unpack sboms.tar
