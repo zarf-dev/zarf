@@ -150,7 +150,7 @@ func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage
 	}
 
 	if err := ValidatePackageSignature(loaded, op.opts.PublicKeyPath); err != nil {
-		if errors.Is(err, ErrPkgKeyButNoSig) {
+		if errors.Is(err, ErrPkgSigButNoKey) {
 			message.Warn("The package was signed but no public key was provided, skipping signature validation")
 		} else {
 			return pkg, nil, err
