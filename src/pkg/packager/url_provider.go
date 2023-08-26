@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -26,7 +27,7 @@ type URLProvider struct {
 func (up *URLProvider) fetchTarball() error {
 	// TODO: do we want to support caching if the SHA is provided?
 
-	if !up.insecure && up.opts.Shasum == "" {
+	if !up.insecure && up.opts.Shasum == "" && !strings.HasPrefix(up.source, utils.SGETURLPrefix) {
 		return fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
 	}
 	var packageURL string
