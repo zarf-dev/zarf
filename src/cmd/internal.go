@@ -22,6 +22,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
+	"github.com/spf13/pflag"
 )
 
 var internalCmd = &cobra.Command{
@@ -69,6 +70,12 @@ var generateCLIDocs = &cobra.Command{
 						addHiddenDummyFlag(toolCmd, "tmpdir")
 						addHiddenDummyFlag(toolCmd, "insecure")
 						addHiddenDummyFlag(toolCmd, "no-color")
+					}
+
+					if toolCmd.Use == "helm" {
+						toolCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
+							flag.DefValue = ""
+						})
 					}
 				}
 			}
