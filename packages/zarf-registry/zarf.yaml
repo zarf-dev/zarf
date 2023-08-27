@@ -7,6 +7,10 @@ variables:
     description: "Optional: Use an existing PVC for the registry instead of creating a new one. If this is set, the REGISTRY_PVC_SIZE variable will be ignored."
     default: ""
 
+  - name: REGISTRY_PVC_ENABLED
+    description: Toggle the creation and use of a PVC off/on
+    default: "true"
+
   - name: REGISTRY_PVC_SIZE
     description: The size of the persistent volume claim for the registry
     default: 20Gi
@@ -42,6 +46,11 @@ variables:
   - name: REGISTRY_HPA_ENABLE
     description: Enable the Horizontal Pod Autoscaler for the registry
     default: "true"
+
+  - name: REGISTRY_EXTRA_ENVS
+    description: Array of additional environment variables passed to the registry container
+    default: ""
+    autoIndent: true
 
 constants:
   - name: REGISTRY_IMAGE
