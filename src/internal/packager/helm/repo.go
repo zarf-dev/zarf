@@ -14,14 +14,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/cli/values"
 	"helm.sh/helm/v3/pkg/registry"
+	"k8s.io/client-go/util/homedir"
 
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/downloader"
@@ -69,13 +67,13 @@ func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
 	defer spinner.Stop()
 
 	// Validate the chart
-	_, err := loader.LoadDir(h.Chart.LocalPath)
+	chart, err := loader.LoadDir(h.Chart.LocalPath)
 	if err != nil {
 		spinner.Errorf(err, "Validation failed for chart from %s (%s)", h.Chart.LocalPath, err.Error())
 		return "", err
 	}
 
-	err = h.buildChartDependencies(spinner)
+	err = h.buildChartDependencies(spinner, chart)
 	if err != nil {
 		spinner.Errorf(err, "Unable to build dependencies for the chart: %s", err.Error())
 		return "", err
@@ -195,51 +193,7 @@ func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, err
 }
 
 // buildChartDependencies builds the helm chart dependencies
-func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
-	// Modify the dependencies to only include those that are actually enabled by chart values
-	c := &chart.Chart{}
-	err := utils.ReadYaml(filepath.Join(h.Chart.LocalPath, "Chart.yaml"), c)
-	if err != nil {
-		spinner.Errorf(err, "Failed to load Chart.yaml from %s (%s)", h.Chart.LocalPath, err.Error())
-		return err
-	}
-
-	var chartValues chartutil.Values
-	valueOpts := &values.Options{
-		ValueFiles: h.Chart.ValuesFiles,
-	}
-
-	httpProvider := getter.Provider{
-		Schemes: []string{"http", "https"},
-		New:     getter.NewHTTPGetter,
-	}
-	providers := getter.Providers{httpProvider}
-	chartValues, err = valueOpts.MergeValues(providers)
-	if err != nil {
-		spinner.Errorf(err, "Failed to load chart values for %s (%s)", h.Chart.Name, err.Error())
-		return err
-	}
-
-	renderedDeps := []*chart.Dependency{}
-	for _, dep := range c.Metadata.Dependencies {
-		if dep.Condition != "" {
-			value, err := chartValues.PathValue(dep.Condition)
-			if err == nil && value == true {
-				renderedDeps = append(renderedDeps, dep)
-			}
-		} else {
-			renderedDeps = append(renderedDeps, dep)
-		}
-	}
-
-	c.Metadata.Dependencies = renderedDeps
-
-	err = utils.WriteYaml(filepath.Join(h.Chart.LocalPath, "Chart.yaml"), c, 0600)
-	if err != nil {
-		spinner.Errorf(err, "Failed to save Chart.yaml to %s (%s)", h.Chart.LocalPath, err.Error())
-		return err
-	}
-
+func (h *Helm) buildChartDependencies(spinner *message.Spinner, chart *chart.Chart) error {
 	// Download and build the specified dependencies
 	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
 	if err != nil {
@@ -247,8 +201,13 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 	}
 
 	h.Settings = cli.New()
+	defaultKeyring := filepath.Join(homedir.HomeDir(), ".gnupg", "pubring.gpg")
+	if v, ok := os.LookupEnv("GNUPGHOME"); ok {
+		defaultKeyring = filepath.Join(v, "pubring.gpg")
+	}
+
 	man := &downloader.Manager{
-		Out:            os.Stdout,
+		Out:            &message.DebugWriter{},
 		ChartPath:      h.Chart.LocalPath,
 		Getters:        getter.All(h.Settings),
 		RegistryClient: regClient,
@@ -257,14 +216,17 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 		RepositoryCache:  h.Settings.RepositoryCache,
 		Debug:            false,
 		Verify:           downloader.VerifyIfPossible,
+		Keyring:          defaultKeyring,
 	}
 
 	// Build the deps from the helm chart
 	err = man.Build()
 	if e, ok := err.(downloader.ErrRepoNotFound); ok {
-		return fmt.Errorf("%s. Please add the missing repo via 'zarf tools helm repo add <name> <url>'", e.Error())
+		// If we encounter a repo not found error point the user to `zarf tools helm repo add`
+		message.Warnf("%s. Please add the missing repo via 'zarf tools helm repo add <name> <url>'", e.Error())
 	} else if err != nil {
-		return err
+		// Warn the user of any issues but don't fail - any actual issues will cause a fail during packaging (e.g. the charts we are building may exist already, we just can't get updates)
+		message.Warnf("%s", err.Error())
 	}
 
 	return nil
