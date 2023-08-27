@@ -7,6 +7,9 @@ package helpers
 import (
 	"fmt"
 	"net/url"
+	"path"
+
+	"github.com/defenseunicorns/zarf/src/config/lang"
 )
 
 // Nonstandard URL schemes or prefixes
@@ -39,4 +42,18 @@ func DoHostnamesMatch(url1 string, url2 string) (bool, error) {
 	}
 
 	return parsedURL1.Hostname() == parsedURL2.Hostname(), nil
+}
+
+// ExtractBasePathFromURL returns filename from URL string
+func ExtractBasePathFromURL(urlStr string) (string, error) {
+	if !IsURL(urlStr) {
+		return "", fmt.Errorf(lang.PkgValidateErrImportURLInvalid, urlStr)
+	}
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return "", err
+	}
+
+	filename := path.Base(parsedURL.Path)
+	return filename, nil
 }
