@@ -6,6 +6,7 @@ package transform
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/distribution/distribution/reference"
@@ -30,7 +31,7 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	}
 
 	// check if image has already been transformed
-	if targetHost == image.Host {
+	if targetHost == image.Host || strings.HasPrefix(targetHost, image.Host) {
 		return srcReference, nil
 	}
 
@@ -51,6 +52,12 @@ func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string,
 	if err != nil {
 		return "", err
 	}
+
+	// check if image has already been transformed
+	if targetHost == image.Host || strings.HasPrefix(targetHost, image.Host) {
+		return srcReference, nil
+	}
+
 	return fmt.Sprintf("%s/%s%s", targetHost, image.Path, image.TagOrDigest), nil
 }
 
