@@ -116,6 +116,22 @@ func TestUseCLI(t *testing.T) {
 		require.Error(t, err, stdOut, stdErr)
 	})
 
+	t.Run("zarf package to test archive path", func(t *testing.T) {
+		t.Parallel()
+		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+
+		path := "zarf-package-distro-eks-multi-0.0.2.tar.zst"
+		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+
+		require.FileExists(t, "binaries/eksctl_Darwin_x86_64")
+		require.FileExists(t, "binaries/eksctl_Darwin_arm64")
+		require.FileExists(t, "binaries/eksctl_Linux_x86_64")
+
+		e2e.CleanFiles("binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64")
+	})
+
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
