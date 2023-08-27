@@ -78,6 +78,10 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 		return pkg, nil, err
 	}
 
+	if err := ValidatePackageSignature(loaded, tp.opts.PublicKeyPath); err != nil {
+		return pkg, nil, err
+	}
+
 	// always create and "load" components dir
 	if _, ok := loaded[types.ZarfComponentsDir]; !ok {
 		loaded[types.ZarfComponentsDir] = filepath.Join(tp.destinationDir, types.ZarfComponentsDir)

@@ -11,10 +11,8 @@ import (
 )
 
 // Inspect list the contents of a package.
-func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string) error {
-	wantSBOM := includeSBOM || outputSBOM != ""
-
-	p.cfg.PkgOpts.PublicKeyPath = inspectPublicKey
+func (p *Packager) Inspect() error {
+	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
 
 	if p.provider == nil {
 		provider, err := ProviderFromSource(&p.cfg.PkgOpts, p.tmp.Base())
@@ -33,15 +31,15 @@ func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey
 
 	sbomDir := loaded[types.ZarfSBOMDir]
 
-	if outputSBOM != "" {
-		out, err := sbom.OutputSBOMFiles(loaded[types.ZarfSBOMDir], outputSBOM, pkg.Metadata.Name)
+	if p.cfg.InspectOpts.SBOMOutputDir != "" {
+		out, err := sbom.OutputSBOMFiles(sbomDir, p.cfg.InspectOpts.SBOMOutputDir, pkg.Metadata.Name)
 		if err != nil {
 			return err
 		}
 		sbomDir = out
 	}
 
-	if includeSBOM {
+	if p.cfg.InspectOpts.ViewSBOM {
 		sbom.ViewSBOMFiles(sbomDir)
 	}
 

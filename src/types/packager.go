@@ -18,6 +18,9 @@ type PackagerConfig struct {
 	// InitOpts tracks user-defined values for the active Zarf initialization.
 	InitOpts ZarfInitOptions
 
+	// InspectOpts tracks user-defined options used to inspect the package
+	InspectOpts ZarfInspectOptions
+
 	// PublishOpts tracks user-defined options used to publish the package
 	PublishOpts ZarfPublishOptions
 

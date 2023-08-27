@@ -26,10 +26,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var includeInspectSBOM bool
-var outputInspectSBOM string
-var inspectPublicKey string
-
 var packageCmd = &cobra.Command{
 	Use:     "package",
 	Aliases: []string{"p"},
@@ -116,7 +112,7 @@ var packageInspectCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Inspect the package
-		if err := pkgClient.Inspect(includeInspectSBOM, outputInspectSBOM, inspectPublicKey); err != nil {
+		if err := pkgClient.Inspect(); err != nil {
 			message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
 		}
 	},
@@ -336,9 +332,9 @@ func bindDeployFlags(v *viper.Viper) {
 
 func bindInspectFlags(v *viper.Viper) {
 	inspectFlags := packageInspectCmd.Flags()
-	inspectFlags.BoolVarP(&includeInspectSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
-	inspectFlags.StringVar(&outputInspectSBOM, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
-	inspectFlags.StringVarP(&inspectPublicKey, "key", "k", v.GetString(common.VPkgDeployPublicKey), lang.CmdPackageInspectFlagPublicKey)
+	inspectFlags.BoolVarP(&pkgConfig.InspectOpts.ViewSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
+	inspectFlags.StringVar(&pkgConfig.InspectOpts.SBOMOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
+	inspectFlags.StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgDeployPublicKey), lang.CmdPackageInspectFlagPublicKey)
 }
 
 func bindRemoveFlags(v *viper.Viper) {

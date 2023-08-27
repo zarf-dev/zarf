@@ -63,6 +63,12 @@ type ZarfPackageOptions struct {
 	PublicKeyPath      string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
+// ZarfInspectOptions tracks the user-defined preferences during a package inspection.
+type ZarfInspectOptions struct {
+	ViewSBOM      bool   `json:"sbom" jsonschema:"description=View SBOM contents while inspecting the package"`
+	SBOMOutputDir string `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package inspection"`
+}
+
 // PackageProvider is an interface for package providers.
 type PackageProvider interface {
 	// LoadPackage loads a package from a source.
