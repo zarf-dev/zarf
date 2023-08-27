@@ -18,7 +18,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli"
+	"helm.sh/helm/v3/pkg/cli/values"
 	"helm.sh/helm/v3/pkg/registry"
 
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -202,7 +204,17 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 		return err
 	}
 
-	chartValues, err := h.parseChartValues()
+	var chartValues chartutil.Values
+	valueOpts := &values.Options{
+		ValueFiles: h.Chart.ValuesFiles,
+	}
+
+	httpProvider := getter.Provider{
+		Schemes: []string{"http", "https"},
+		New:     getter.NewHTTPGetter,
+	}
+	providers := getter.Providers{httpProvider}
+	chartValues, err = valueOpts.MergeValues(providers)
 	if err != nil {
 		spinner.Errorf(err, "Failed to load chart values for %s (%s)", h.Chart.Name, err.Error())
 		return err
