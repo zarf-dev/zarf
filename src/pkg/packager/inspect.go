@@ -14,6 +14,8 @@ import (
 func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string) error {
 	wantSBOM := includeSBOM || outputSBOM != ""
 
+	p.cfg.PkgOpts.PublicKeyPath = inspectPublicKey
+
 	if p.provider == nil {
 		provider, err := ProviderFromSource(&p.cfg.PkgOpts, p.tmp.Base())
 		if err != nil {
