@@ -975,6 +975,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="components_items_files_items_extractPath"></a>extractPath</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Local folder or file to be extracted from a 'source' archive
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
