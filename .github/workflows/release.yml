@@ -63,6 +63,11 @@ jobs:
           make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=$GITHUB_REF_NAME
           make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=$GITHUB_REF_NAME
 
+      - name: Publish Init Package as OCI and Skeleton
+        run: |
+          make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/defenseunicorns/packages
+          make publish-init-package ARCH=arm64 REPOSITORY_URL=ghcr.io/defenseunicorns/packages
+
       # Create a CVE report based on this build
       - name: Create release time CVE report
         run: "make cve-report"
@@ -141,18 +146,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_GOV_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
           aws-region: us-gov-west-1
-
-      - name: Login to GHCR
-        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.1.0
-        with:
-          registry: ghcr.io
-          username: dummy
-          password: ${{ github.token }}
-
-      - name: Publish Init Package as OCI and Skeleton
-        run: |
-          make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/defenseunicorns/packages
-          make publish-init-package ARCH=arm64 REPOSITORY_URL=ghcr.io/defenseunicorns/packages
 
       - name: Skip brew latest for pre-release tags
         run: |
