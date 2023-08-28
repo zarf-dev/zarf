@@ -118,14 +118,14 @@ func downloadInitPackage(downloadCacheTarget string) error {
 	url := oci.GetInitPackageURL(config.GetArch(), config.CLIVersion)
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
-	message.Question(fmt.Sprintf(lang.CmdInitDownloadAsk, url))
+	message.Question(fmt.Sprintf(lang.CmdInitPullAsk, url))
 
-	message.Note(lang.CmdInitDownloadNote)
+	message.Note(lang.CmdInitPullNote)
 
 	// Prompt the user if --confirm not specified
 	if !confirmDownload {
 		prompt := &survey.Confirm{
-			Message: lang.CmdInitDownloadConfirm,
+			Message: lang.CmdInitPullConfirm,
 		}
 		if err := survey.AskOne(prompt, &confirmDownload); err != nil {
 			return fmt.Errorf(lang.ErrConfirmCancel, err.Error())
@@ -137,7 +137,7 @@ func downloadInitPackage(downloadCacheTarget string) error {
 		return oci.DownloadPackageTarball(url, downloadCacheTarget, config.CommonOptions.OCIConcurrency)
 	}
 	// Otherwise, exit and tell the user to manually download the init-package
-	return errors.New(lang.CmdInitDownloadErrManual)
+	return errors.New(lang.CmdInitPullErrManual)
 }
 
 func validateInitFlags() error {
