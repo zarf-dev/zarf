@@ -17,6 +17,7 @@ var imageRefs = []string{
 	"defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
 	"ghcr.io/stefanprodan/podinfo:6.3.3",
 	"registry1.dso.mil/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0",
+	"gitlab.com/project/gitea/gitea:1.19.3-rootless-zarf-3431384023",
 }
 
 var badImageRefs = []string{
@@ -34,6 +35,7 @@ func TestImageTransformHost(t *testing.T) {
 		"gitlab.com/project/defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3-zarf-2985051089",
 		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0-zarf-2003217571",
+		"gitlab.com/project/gitea/gitea:1.19.3-rootless-zarf-3431384023",
 	}
 
 	for idx, ref := range imageRefs {
@@ -56,6 +58,7 @@ func TestImageTransformHostWithoutChecksum(t *testing.T) {
 		"gitlab.com/project/defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3",
 		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0",
+		"gitlab.com/project/gitea/gitea:1.19.3-rootless-zarf-3431384023",
 	}
 
 	for idx, ref := range imageRefs {
@@ -78,6 +81,7 @@ func TestParseImageRef(t *testing.T) {
 		{"docker.io/", "defenseunicorns/zarf-agent", "", "sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de"},
 		{"ghcr.io/", "stefanprodan/podinfo", "6.3.3", ""},
 		{"registry1.dso.mil/", "ironbank/opensource/defenseunicorns/zarf/zarf-agent", "v0.25.0", ""},
+		{"gitlab.com/", "project/gitea/gitea", "1.19.3-rootless-zarf-3431384023", ""},
 	}
 
 	for idx, ref := range imageRefs {
