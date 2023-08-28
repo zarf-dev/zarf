@@ -134,7 +134,7 @@ func downloadInitPackage(downloadCacheTarget string) error {
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		return oci.DownloadPackage(url, downloadCacheTarget, config.CommonOptions.OCIConcurrency)
+		return oci.DownloadPackageTarball(url, downloadCacheTarget, config.CommonOptions.OCIConcurrency)
 	}
 	// Otherwise, exit and tell the user to manually download the init-package
 	return errors.New(lang.CmdInitDownloadErrManual)

@@ -100,8 +100,8 @@ func GetInitPackageURL(arch, version string) string {
 	return fmt.Sprintf("ghcr.io/defenseunicorns/packages/init:%s-%s", version, arch)
 }
 
-// DownloadPackage downloads the given OCI package and saves as a tarball.
-func DownloadPackage(url, destinationTarball string, concurrency int) error {
+// DownloadPackageTarball downloads the given OCI package and saves as a tarball.
+func DownloadPackageTarball(url, destinationTarball string, concurrency int) error {
 	remote, err := NewOrasRemote(url)
 	if err != nil {
 		return err
