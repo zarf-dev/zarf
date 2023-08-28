@@ -16,7 +16,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/registry"
 	"k8s.io/client-go/util/homedir"
@@ -67,13 +66,13 @@ func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
 	defer spinner.Stop()
 
 	// Validate the chart
-	chart, err := loader.LoadDir(h.Chart.LocalPath)
+	_, err := loader.LoadDir(h.Chart.LocalPath)
 	if err != nil {
 		spinner.Errorf(err, "Validation failed for chart from %s (%s)", h.Chart.LocalPath, err.Error())
 		return "", err
 	}
 
-	err = h.buildChartDependencies(spinner, chart)
+	err = h.buildChartDependencies(spinner)
 	if err != nil {
 		spinner.Errorf(err, "Unable to build dependencies for the chart: %s", err.Error())
 		return "", err
@@ -193,7 +192,7 @@ func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, err
 }
 
 // buildChartDependencies builds the helm chart dependencies
-func (h *Helm) buildChartDependencies(spinner *message.Spinner, chart *chart.Chart) error {
+func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 	// Download and build the specified dependencies
 	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
 	if err != nil {
