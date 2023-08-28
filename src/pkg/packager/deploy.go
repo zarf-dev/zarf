@@ -147,6 +147,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 	// Process all the components we are deploying
 	for _, component := range componentsToDeploy {
+
 		deployedComponent := types.DeployedComponent{
 			Name:               component.Name,
 			Status:             types.ComponentStatusDeploying,
@@ -156,7 +157,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 		idx := len(deployedComponents) - 1
 
-		// Ensure we don't overwrite any installedCharts data
+		// Ensure we don't overwrite any installedCharts data when updating the package secret
 		var installedCharts []types.InstalledChart
 		if p.cluster != nil {
 			installedCharts, err = p.cluster.GetInstalledChartsForComponent(p.cfg.Pkg.Metadata.Name, component)
