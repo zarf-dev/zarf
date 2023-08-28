@@ -724,6 +724,10 @@ export interface ZarfFile {
      */
     executable?: boolean;
     /**
+     * Local folder or file to be extracted from a 'source' archive
+     */
+    extractPath?: string;
+    /**
      * (files only) Optional SHA256 checksum of the file
      */
     shasum?: string;
@@ -1606,6 +1610,7 @@ const typeMap: any = {
     ], false),
     "ZarfFile": o([
         { json: "executable", js: "executable", typ: u(undefined, true) },
+        { json: "extractPath", js: "extractPath", typ: u(undefined, "") },
         { json: "shasum", js: "shasum", typ: u(undefined, "") },
         { json: "source", js: "source", typ: "" },
         { json: "symlinks", js: "symlinks", typ: u(undefined, a("")) },
