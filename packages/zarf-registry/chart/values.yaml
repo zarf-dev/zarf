@@ -53,3 +53,8 @@ autoscaling:
   minReplicas: 1
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
+
+extraEnvVars: []
+## Additional ENV variables to set
+# - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+#   value: "/var/lib/example"
