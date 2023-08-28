@@ -192,13 +192,13 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 		base := filepath.Join(unpackedPath, "components", component.Name)
 		componentPaths := types.ComponentPaths{
 			Base:           base,
-			Temp:           filepath.Join(base, types.TempFolder),
-			Files:          filepath.Join(base, types.FilesFolder),
-			Charts:         filepath.Join(base, types.ChartsFolder),
-			Repos:          filepath.Join(base, types.ReposFolder),
-			Manifests:      filepath.Join(base, types.ManifestsFolder),
-			DataInjections: filepath.Join(base, types.DataInjectionsFolder),
-			Values:         filepath.Join(base, types.ValuesFolder),
+			Temp:           filepath.Join(base, types.TempDir),
+			Files:          filepath.Join(base, types.FilesDir),
+			Charts:         filepath.Join(base, types.ChartsDir),
+			Repos:          filepath.Join(base, types.ReposDir),
+			Manifests:      filepath.Join(base, types.ManifestsDir),
+			DataInjections: filepath.Join(base, types.DataInjectionsDir),
+			Values:         filepath.Join(base, types.ValuesDir),
 		}
 
 		if isSkeleton && component.DeprecatedCosignKeyPath != "" {

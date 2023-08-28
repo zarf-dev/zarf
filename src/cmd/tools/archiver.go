@@ -56,7 +56,7 @@ var archiverDecompressCmd = &cobra.Command{
 				if strings.HasSuffix(path, ".tar") {
 					dst := filepath.Join(strings.TrimSuffix(path, ".tar"), "..")
 					// Unpack sboms.tar differently since it has a different folder structure than components
-					if info.Name() == types.ZarfSBOMTar {
+					if info.Name() == types.SBOMTar {
 						dst = strings.TrimSuffix(path, ".tar")
 					}
 					err := archiver.Unarchive(path, dst)

@@ -176,11 +176,11 @@ func GetInitPackageRemote(arch string) string {
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
 	_ = os.RemoveAll(p.tmp.Base())
-	_ = os.RemoveAll(types.ZarfSBOMDir)
+	_ = os.RemoveAll(types.SBOMDir)
 }
 
 func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
-	if err := utils.CreateDirectory(p.tmp[types.ZarfComponentsDir], 0700); err != nil {
+	if err := utils.CreateDirectory(p.tmp[types.ComponentsDir], 0700); err != nil {
 		return paths, err
 	}
 
@@ -331,7 +331,7 @@ func ValidatePackageSignature(paths types.PackagePathsMap, publicKeyPath string)
 	}
 
 	// Handle situations where there is no signature within the package
-	sigExist := !utils.InvalidPath(paths[types.ZarfYAMLSignature])
+	sigExist := !utils.InvalidPath(paths[types.PackageSignature])
 	if !sigExist && publicKeyPath == "" {
 		// Nobody was expecting a signature, so we can just return
 		return nil
@@ -344,7 +344,7 @@ func ValidatePackageSignature(paths types.PackagePathsMap, publicKeyPath string)
 	}
 
 	// Validate the signature with the key we were provided
-	if err := utils.CosignVerifyBlob(paths[types.ZarfYAML], paths[types.ZarfYAMLSignature], publicKeyPath); err != nil {
+	if err := utils.CosignVerifyBlob(paths[types.ZarfYAML], paths[types.PackageSignature], publicKeyPath); err != nil {
 		return fmt.Errorf("package signature did not match the provided key: %w", err)
 	}
 

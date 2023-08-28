@@ -207,7 +207,7 @@ func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Imag
 	}
 
 	spinner.Updatef("Preparing image %s", src)
-	imageCachePath := filepath.Join(config.GetAbsCachePath(), types.ZarfImagesDir)
+	imageCachePath := filepath.Join(config.GetAbsCachePath(), types.ImagesDir)
 	img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 
 	return img, nil

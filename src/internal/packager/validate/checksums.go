@@ -22,7 +22,7 @@ func PackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum string, is
 	defer spinner.Stop()
 
 	// ensure checksums.txt and zarf.yaml were loaded
-	if _, ok := loaded[types.ZarfChecksumsTxt]; !ok {
+	if _, ok := loaded[types.PackageChecksums]; !ok {
 		// TODO: right now older packages (the SGET one in CI) do not have checksums.txt
 		// disabling this check for now, but we should re-enable it once we have a new SGET package
 		if aggregateChecksum == "" {
@@ -35,7 +35,7 @@ func PackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum string, is
 		return fmt.Errorf("unable to validate checksums, zarf.yaml was not loaded")
 	}
 
-	checksumPath := loaded[types.ZarfChecksumsTxt]
+	checksumPath := loaded[types.PackageChecksums]
 	actualAggregateChecksum, err := utils.GetSHA256OfFile(checksumPath)
 	if err != nil {
 		return fmt.Errorf("unable to get checksum of: %s", err.Error())

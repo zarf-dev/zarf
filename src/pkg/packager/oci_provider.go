@@ -34,6 +34,9 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 	loaded[types.BaseDir] = op.destinationDir
 	layersToPull := []ocispec.Descriptor{}
 
+	message.Debugf("Loading package from %q", op.source)
+	message.Debugf("Loaded package base directory: %q", op.destinationDir)
+
 	// only pull specified components and their images if optionalComponents AND --confirm are set
 	if len(optionalComponents) > 0 && config.CommonOptions.Confirm {
 		layers, err := op.LayersFromRequestedComponents(optionalComponents)
@@ -74,37 +77,41 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 	}
 
 	// always create and "load" components dir
-	if _, ok := loaded[types.ZarfComponentsDir]; !ok {
-		loaded[types.ZarfComponentsDir] = filepath.Join(op.destinationDir, types.ZarfComponentsDir)
-		if err := utils.CreateDirectory(loaded[types.ZarfComponentsDir], 0755); err != nil {
+	if _, ok := loaded[types.ComponentsDir]; !ok {
+		message.Debugf("Creating %q dir", types.ComponentsDir)
+		loaded[types.ComponentsDir] = filepath.Join(op.destinationDir, types.ComponentsDir)
+		if err := utils.CreateDirectory(loaded[types.ComponentsDir], 0755); err != nil {
 			return pkg, nil, err
 		}
 	}
 
 	// unpack component tarballs
 	for _, component := range pkg.Components {
-		tb := filepath.Join(types.ZarfComponentsDir, fmt.Sprintf("%s.tar", component.Name))
+		tb := filepath.Join(types.ComponentsDir, fmt.Sprintf("%s.tar", component.Name))
 		if _, ok := loaded[tb]; ok {
+			message.Debugf("Unarchiving %q", tb)
 			defer os.Remove(loaded[tb])
 			defer delete(loaded, tb)
-			if err = archiver.Unarchive(loaded[tb], loaded[types.ZarfComponentsDir]); err != nil {
+			if err = archiver.Unarchive(loaded[tb], loaded[types.ComponentsDir]); err != nil {
 				return pkg, nil, err
 			}
 		}
 
 		// also "load" the images dir if any component has images
-		if _, ok := loaded[types.ZarfImagesDir]; !ok && len(component.Images) > 0 {
-			loaded[types.ZarfImagesDir] = filepath.Join(op.destinationDir, types.ZarfImagesDir)
-			if err := utils.CreateDirectory(loaded[types.ZarfImagesDir], 0755); err != nil {
+		if _, ok := loaded[types.ImagesDir]; !ok && len(component.Images) > 0 {
+			message.Debugf("Creating %q dir", types.ImagesDir)
+			loaded[types.ImagesDir] = filepath.Join(op.destinationDir, types.ImagesDir)
+			if err := utils.CreateDirectory(loaded[types.ImagesDir], 0755); err != nil {
 				return pkg, nil, err
 			}
 		}
 	}
 
 	// unpack sboms.tar
-	if _, ok := loaded[types.ZarfSBOMTar]; ok {
-		loaded[types.ZarfSBOMDir] = filepath.Join(op.destinationDir, types.ZarfSBOMDir)
-		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], loaded[types.ZarfSBOMDir]); err != nil {
+	if _, ok := loaded[types.SBOMTar]; ok {
+		message.Debugf("Unarchiving %q", types.SBOMTar)
+		loaded[types.SBOMDir] = filepath.Join(op.destinationDir, types.SBOMDir)
+		if err = archiver.Unarchive(loaded[types.SBOMTar], loaded[types.SBOMDir]); err != nil {
 			return pkg, nil, err
 		}
 	}
@@ -158,9 +165,9 @@ func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage
 	}
 
 	// unpack sboms.tar
-	if _, ok := loaded[types.ZarfSBOMTar]; ok {
-		loaded[types.ZarfSBOMDir] = filepath.Join(op.destinationDir, types.ZarfSBOMDir)
-		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], loaded[types.ZarfSBOMDir]); err != nil {
+	if _, ok := loaded[types.SBOMTar]; ok {
+		loaded[types.SBOMDir] = filepath.Join(op.destinationDir, types.SBOMDir)
+		if err = archiver.Unarchive(loaded[types.SBOMTar], loaded[types.SBOMDir]); err != nil {
 			return pkg, nil, err
 		}
 	} else if wantSBOM {

@@ -120,7 +120,7 @@ func LaunchAPIServer() {
 	}
 
 	// Setup the static SBOM server
-	sbomSub := os.DirFS(types.ZarfSBOMDir)
+	sbomSub := os.DirFS(types.SBOMDir)
 	sbomFs := http.FileServer(http.FS(sbomSub))
 
 	// Serve the SBOM viewer files

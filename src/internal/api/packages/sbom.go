@@ -48,7 +48,7 @@ func DeleteSBOM(w http.ResponseWriter, _ *http.Request) {
 
 // cleanupSBOM removes the SBOM directory
 func cleanupSBOM() error {
-	err := os.RemoveAll(types.ZarfSBOMDir)
+	err := os.RemoveAll(types.SBOMDir)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func extractSBOM(escapedPath string) (sbom types.APIPackageSBOM, err error) {
 	}
 
 	// Join the current working directory with the zarf-sbom directory
-	sbomPath := filepath.Join(cwd, types.ZarfSBOMDir)
+	sbomPath := filepath.Join(cwd, types.SBOMDir)
 
 	// ensure the zarf-sbom directory is empty
 	if _, err := os.Stat(sbomPath); !os.IsNotExist(err) {
@@ -88,14 +88,14 @@ func extractSBOM(escapedPath string) (sbom types.APIPackageSBOM, err error) {
 	}
 
 	// Extract the sbom.tar from the package
-	err = archiver.Extract(path, types.ZarfSBOMTar, sbomPath)
+	err = archiver.Extract(path, types.SBOMTar, sbomPath)
 	if err != nil {
 		cleanupSBOM()
 		return sbom, err
 	}
 
 	// Unarchive the sbom.tar
-	err = archiver.Unarchive(filepath.Join(sbomPath, types.ZarfSBOMTar), sbomPath)
+	err = archiver.Unarchive(filepath.Join(sbomPath, types.SBOMTar), sbomPath)
 	if err != nil {
 		cleanupSBOM()
 		return sbom, err

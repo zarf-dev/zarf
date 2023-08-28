@@ -163,7 +163,7 @@ func (p *Packager) Create(baseDir string) error {
 
 		doPull := func() error {
 			imgConfig := images.ImgConfig{
-				ImagesPath:        p.tmp[types.ZarfImagesDir],
+				ImagesPath:        p.tmp[types.ImagesDir],
 				ImgList:           imgList,
 				Insecure:          config.CommonOptions.Insecure,
 				Architectures:     []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
@@ -217,7 +217,7 @@ func (p *Packager) Create(baseDir string) error {
 	// Sign the config file if a key was provided
 	if p.cfg.CreateOpts.SigningKeyPath != "" {
 		mp := p.tmp.MetadataPaths()
-		_, err := utils.CosignSignBlob(mp[types.ZarfYAML], mp[types.ZarfYAMLSignature], p.cfg.CreateOpts.SigningKeyPath, p.getSigCreatePassword)
+		_, err := utils.CosignSignBlob(mp[types.ZarfYAML], mp[types.PackageSignature], p.cfg.CreateOpts.SigningKeyPath, p.getSigCreatePassword)
 		if err != nil {
 			return fmt.Errorf("unable to sign the package: %w", err)
 		}
@@ -253,9 +253,9 @@ func (p *Packager) Create(baseDir string) error {
 	// Output the SBOM files into a directory if specified.
 	if p.cfg.CreateOpts.ViewSBOM || p.cfg.CreateOpts.SBOMOutputDir != "" {
 		outputSBOM := p.cfg.CreateOpts.SBOMOutputDir
-		sbomDir := p.tmp[types.ZarfSBOMDir]
+		sbomDir := p.tmp[types.SBOMDir]
 
-		if err := archiver.Unarchive(p.tmp[types.ZarfSBOMTar], sbomDir); err != nil {
+		if err := archiver.Unarchive(p.tmp[types.SBOMTar], sbomDir); err != nil {
 			return fmt.Errorf("unable to unarchive SBOM tarball: %w", err)
 		}
 
@@ -343,7 +343,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		}
 
 		if isSkeleton && chart.URL == "" {
-			rel := filepath.Join(types.ChartsFolder, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+			rel := filepath.Join(types.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			dst := filepath.Join(componentPath.Base, rel)
 
 			err := utils.CreatePathAndCopy(chart.LocalPath, dst)
@@ -360,7 +360,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		}
 
 		for valuesIdx, path := range chart.ValuesFiles {
-			rel := fmt.Sprintf("%s-%d", helm.StandardName(types.ValuesFolder, chart), valuesIdx)
+			rel := fmt.Sprintf("%s-%d", helm.StandardName(types.ValuesDir, chart), valuesIdx)
 			dst := filepath.Join(componentPath.Base, rel)
 
 			if helpers.IsURL(path) {
@@ -384,7 +384,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	for filesIdx, file := range component.Files {
 		message.Debugf("Loading %#v", file)
 
-		rel := filepath.Join(types.FilesFolder, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		rel := filepath.Join(types.FilesDir, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(componentPath.Base, rel)
 		destinationDir := filepath.Dir(dst)
 
@@ -473,7 +473,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		for dataIdx, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 
-			rel := filepath.Join(types.DataInjectionsFolder, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+			rel := filepath.Join(types.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 			dst := filepath.Join(componentPath.Base, rel)
 
 			if helpers.IsURL(data.Source) {
@@ -510,7 +510,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		// Iterate over all manifests.
 		for manifestIdx, manifest := range component.Manifests {
 			for fileIdx, path := range manifest.Files {
-				rel := filepath.Join(types.ManifestsFolder, fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+				rel := filepath.Join(types.ManifestsDir, fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
 				dst := filepath.Join(componentPath.Base, rel)
 
 				// Copy manifests without any processing.
@@ -537,7 +537,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				spinner.Updatef("Building kustomization for %s", path)
 
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
-				rel := filepath.Join(types.ManifestsFolder, kname)
+				rel := filepath.Join(types.ManifestsDir, kname)
 				dst := filepath.Join(componentPath.Base, rel)
 
 				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
@@ -604,7 +604,7 @@ func (p *Packager) generatePackageChecksums(basePath string) (string, error) {
 	}
 
 	// Create the checksums file
-	checksumsFilePath := p.tmp.MetadataPaths()[types.ZarfChecksumsTxt]
+	checksumsFilePath := p.tmp.MetadataPaths()[types.PackageChecksums]
 	if err := utils.WriteFile(checksumsFilePath, []byte(checksumsData)); err != nil {
 		return "", err
 	}

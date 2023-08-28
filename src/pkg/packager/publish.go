@@ -63,7 +63,7 @@ func (p *Packager) Publish() error {
 
 	// Sign the package if a key has been provided
 	if p.cfg.PublishOpts.SigningKeyPath != "" {
-		_, err := utils.CosignSignBlob(p.tmp[types.ZarfYAML], p.tmp[types.ZarfYAMLSignature], p.cfg.PublishOpts.SigningKeyPath, p.getSigPublishPassword)
+		_, err := utils.CosignSignBlob(p.tmp[types.ZarfYAML], p.tmp[types.PackageSignature], p.cfg.PublishOpts.SigningKeyPath, p.getSigPublishPassword)
 		if err != nil {
 			return fmt.Errorf("unable to sign the package: %w", err)
 		}

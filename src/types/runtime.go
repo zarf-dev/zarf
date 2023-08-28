@@ -10,26 +10,26 @@ import (
 
 // Constants to keep track of folders within components
 const (
-	TempFolder           = "temp"
-	FilesFolder          = "files"
-	ChartsFolder         = "charts"
-	ReposFolder          = "repos"
-	ManifestsFolder      = "manifests"
-	DataInjectionsFolder = "data"
-	ValuesFolder         = "values"
+	TempDir           = "temp"
+	FilesDir          = "files"
+	ChartsDir         = "charts"
+	ReposDir          = "repos"
+	ManifestsDir      = "manifests"
+	DataInjectionsDir = "data"
+	ValuesDir         = "values"
 
 	RawVariableType  VariableType = "raw"
 	FileVariableType VariableType = "file"
 
-	ZarfYAML          = "zarf.yaml"
-	ZarfYAMLSignature = "zarf.yaml.sig"
-	ZarfChecksumsTxt  = "checksums.txt"
+	ZarfYAML         = "zarf.yaml"
+	PackageSignature = "zarf.yaml.sig"
+	PackageChecksums = "checksums.txt"
 
-	ZarfImagesDir     = "images"
-	ZarfComponentsDir = "components"
+	ImagesDir     = "images"
+	ComponentsDir = "components"
 
-	ZarfSBOMDir = "zarf-sbom"
-	ZarfSBOMTar = "sboms.tar"
+	SBOMDir = "zarf-sbom"
+	SBOMTar = "sboms.tar"
 
 	IndexJSON = "index.json"
 	OCILayout = "oci-layout"
@@ -176,21 +176,21 @@ func DefaultPackagePaths(base string) PackagePathsMap {
 		BaseDir: base,
 
 		// metadata paths
-		ZarfYAML:          filepath.Join(base, ZarfYAML),
-		ZarfYAMLSignature: filepath.Join(base, ZarfYAMLSignature),
-		ZarfChecksumsTxt:  filepath.Join(base, ZarfChecksumsTxt),
+		ZarfYAML:         filepath.Join(base, ZarfYAML),
+		PackageSignature: filepath.Join(base, PackageSignature),
+		PackageChecksums: filepath.Join(base, PackageChecksums),
 
 		// sboms paths
-		ZarfSBOMDir: filepath.Join(base, ZarfSBOMDir),
-		ZarfSBOMTar: filepath.Join(base, ZarfSBOMTar),
+		SBOMDir: filepath.Join(base, SBOMDir),
+		SBOMTar: filepath.Join(base, SBOMTar),
 
 		// components paths
-		ZarfComponentsDir: filepath.Join(base, ZarfComponentsDir),
+		ComponentsDir: filepath.Join(base, ComponentsDir),
 
 		// images paths
-		ZarfImagesDir: filepath.Join(base, ZarfImagesDir),
-		IndexJSON:     filepath.Join(base, ZarfImagesDir, IndexJSON),
-		OCILayout:     filepath.Join(base, ZarfImagesDir, OCILayout),
+		ImagesDir: filepath.Join(base, ImagesDir),
+		IndexJSON: filepath.Join(base, ImagesDir, IndexJSON),
+		OCILayout: filepath.Join(base, ImagesDir, OCILayout),
 	}
 }
 
@@ -205,9 +205,9 @@ func (pm PackagePathsMap) Base() string {
 // MetadataPaths returns a map of all the metadata paths for a Zarf package.
 func (pm PackagePathsMap) MetadataPaths() map[string]string {
 	return map[string]string{
-		ZarfYAML:          pm[ZarfYAML],
-		ZarfYAMLSignature: pm[ZarfYAMLSignature],
-		ZarfChecksumsTxt:  pm[ZarfChecksumsTxt],
+		ZarfYAML:         pm[ZarfYAML],
+		PackageSignature: pm[PackageSignature],
+		PackageChecksums: pm[PackageChecksums],
 	}
 }
 
@@ -225,16 +225,16 @@ type ComponentPaths struct {
 
 // GetComponentPaths returns a ComponentPaths struct for a given component.
 func (pm PackagePathsMap) GetComponentPaths(componentName string) ComponentPaths {
-	base := pm[ZarfComponentsDir]
+	base := pm[ComponentsDir]
 	return ComponentPaths{
 		Base:           filepath.Join(base, componentName),
-		Temp:           filepath.Join(base, componentName, TempFolder),
-		Files:          filepath.Join(base, componentName, FilesFolder),
-		Charts:         filepath.Join(base, componentName, ChartsFolder),
-		Values:         filepath.Join(base, componentName, ValuesFolder),
-		Repos:          filepath.Join(base, componentName, ReposFolder),
-		Manifests:      filepath.Join(base, componentName, ManifestsFolder),
-		DataInjections: filepath.Join(base, componentName, DataInjectionsFolder),
+		Temp:           filepath.Join(base, componentName, TempDir),
+		Files:          filepath.Join(base, componentName, FilesDir),
+		Charts:         filepath.Join(base, componentName, ChartsDir),
+		Values:         filepath.Join(base, componentName, ValuesDir),
+		Repos:          filepath.Join(base, componentName, ReposDir),
+		Manifests:      filepath.Join(base, componentName, ManifestsDir),
+		DataInjections: filepath.Join(base, componentName, DataInjectionsDir),
 	}
 }
 

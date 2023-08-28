@@ -34,6 +34,9 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 	loaded = make(types.PackagePathsMap)
 	loaded[types.BaseDir] = tp.destinationDir
 
+	message.Debugf("Loading package from %q", tp.source)
+	message.Debugf("Loaded package base directory: %q", tp.destinationDir)
+
 	err = archiver.Walk(tp.source, func(f archiver.File) error {
 		if f.IsDir() {
 			return nil
@@ -64,6 +67,7 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 		}
 
 		loaded[fullPath] = dstPath
+		message.Debugf("Loaded %q --> %q", fullPath, dstPath)
 		return nil
 	})
 	if err != nil {
@@ -83,37 +87,41 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 	}
 
 	// always create and "load" components dir
-	if _, ok := loaded[types.ZarfComponentsDir]; !ok {
-		loaded[types.ZarfComponentsDir] = filepath.Join(tp.destinationDir, types.ZarfComponentsDir)
-		if err := utils.CreateDirectory(loaded[types.ZarfComponentsDir], 0755); err != nil {
+	if _, ok := loaded[types.ComponentsDir]; !ok {
+		message.Debugf("Creating %q dir", types.ComponentsDir)
+		loaded[types.ComponentsDir] = filepath.Join(tp.destinationDir, types.ComponentsDir)
+		if err := utils.CreateDirectory(loaded[types.ComponentsDir], 0755); err != nil {
 			return pkg, nil, err
 		}
 	}
 
 	// unpack component tarballs
 	for _, component := range pkg.Components {
-		tb := filepath.Join(types.ZarfComponentsDir, fmt.Sprintf("%s.tar", component.Name))
+		tb := filepath.Join(types.ComponentsDir, fmt.Sprintf("%s.tar", component.Name))
 		if _, ok := loaded[tb]; ok {
+			message.Debugf("Unarchiving %q", tb)
 			defer os.Remove(loaded[tb])
 			defer delete(loaded, tb)
-			if err = archiver.Unarchive(loaded[tb], loaded[types.ZarfComponentsDir]); err != nil {
+			if err = archiver.Unarchive(loaded[tb], loaded[types.ComponentsDir]); err != nil {
 				return pkg, nil, err
 			}
 		}
 
 		// also "load" the images dir if any component has images
-		if _, ok := loaded[types.ZarfImagesDir]; !ok && len(component.Images) > 0 {
-			loaded[types.ZarfImagesDir] = filepath.Join(tp.destinationDir, types.ZarfImagesDir)
-			if err := utils.CreateDirectory(loaded[types.ZarfImagesDir], 0755); err != nil {
+		if _, ok := loaded[types.ImagesDir]; !ok && len(component.Images) > 0 {
+			message.Debugf("Creating %q dir", types.ImagesDir)
+			loaded[types.ImagesDir] = filepath.Join(tp.destinationDir, types.ImagesDir)
+			if err := utils.CreateDirectory(loaded[types.ImagesDir], 0755); err != nil {
 				return pkg, nil, err
 			}
 		}
 	}
 
 	// unpack sboms.tar
-	if _, ok := loaded[types.ZarfSBOMTar]; ok {
-		loaded[types.ZarfSBOMDir] = filepath.Join(tp.destinationDir, types.ZarfSBOMDir)
-		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], loaded[types.ZarfSBOMDir]); err != nil {
+	if _, ok := loaded[types.SBOMTar]; ok {
+		message.Debugf("Unarchiving %q", types.SBOMTar)
+		loaded[types.SBOMDir] = filepath.Join(tp.destinationDir, types.SBOMDir)
+		if err = archiver.Unarchive(loaded[types.SBOMTar], loaded[types.SBOMDir]); err != nil {
 			return pkg, nil, err
 		}
 	}
@@ -133,10 +141,10 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPac
 		loaded[pathInArchive] = filepath.Join(tp.destinationDir, pathInArchive)
 	}
 	if wantSBOM {
-		if err := archiver.Extract(tp.source, types.ZarfSBOMTar, tp.destinationDir); err != nil {
+		if err := archiver.Extract(tp.source, types.SBOMTar, tp.destinationDir); err != nil {
 			return pkg, nil, err
 		}
-		loaded[types.ZarfSBOMTar] = filepath.Join(tp.destinationDir, types.ZarfSBOMTar)
+		loaded[types.SBOMTar] = filepath.Join(tp.destinationDir, types.SBOMTar)
 	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
@@ -156,9 +164,9 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPac
 	}
 
 	// unpack sboms.tar
-	if _, ok := loaded[types.ZarfSBOMTar]; ok {
-		loaded[types.ZarfSBOMDir] = filepath.Join(tp.destinationDir, types.ZarfSBOMDir)
-		if err = archiver.Unarchive(loaded[types.ZarfSBOMTar], loaded[types.ZarfSBOMDir]); err != nil {
+	if _, ok := loaded[types.SBOMTar]; ok {
+		loaded[types.SBOMDir] = filepath.Join(tp.destinationDir, types.SBOMDir)
+		if err = archiver.Unarchive(loaded[types.SBOMTar], loaded[types.SBOMDir]); err != nil {
 			return pkg, nil, err
 		}
 	} else if wantSBOM {

@@ -51,13 +51,13 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, p
 	builder := Builder{
 		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
 		cachePath:  config.GetAbsCachePath(),
-		imagesPath: paths[types.ZarfImagesDir],
-		outputDir:  paths[types.ZarfSBOMDir],
+		imagesPath: paths[types.ImagesDir],
+		outputDir:  paths[types.SBOMDir],
 	}
 	defer builder.spinner.Stop()
 
 	// Ensure the sbom directory exists
-	_ = utils.CreateDirectory(paths[types.ZarfSBOMDir], 0700)
+	_ = utils.CreateDirectory(paths[types.SBOMDir], 0700)
 
 	// Generate a list of images and files for the sbom viewer
 	json, err := builder.generateJSONList(componentSBOMs, imgList)
@@ -73,7 +73,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, p
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
 
 		// Get the image that we are creating an SBOM for
-		img, err := utils.LoadOCIImage(paths[types.ZarfImagesDir], tag)
+		img, err := utils.LoadOCIImage(paths[types.ImagesDir], tag)
 		if err != nil {
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err
@@ -126,18 +126,18 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, p
 		}
 	}
 
-	allSBOMFiles, err := filepath.Glob(filepath.Join(paths[types.ZarfSBOMDir], "*"))
+	allSBOMFiles, err := filepath.Glob(filepath.Join(paths[types.SBOMDir], "*"))
 	if err != nil {
 		builder.spinner.Errorf(err, "Unable to get a list of all SBOM files")
 		return err
 	}
 
-	if err = archiver.Archive(allSBOMFiles, paths[types.ZarfSBOMTar]); err != nil {
+	if err = archiver.Archive(allSBOMFiles, paths[types.SBOMTar]); err != nil {
 		builder.spinner.Errorf(err, "Unable to create the sbom archive")
 		return err
 	}
 
-	if err = os.RemoveAll(paths[types.ZarfSBOMDir]); err != nil {
+	if err = os.RemoveAll(paths[types.SBOMDir]); err != nil {
 		builder.spinner.Errorf(err, "Unable to remove the temporary SBOM directory")
 		return err
 	}
@@ -157,7 +157,7 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 	}
 
 	// Create the sbom.
-	imageCachePath := filepath.Join(b.cachePath, types.ZarfImagesDir)
+	imageCachePath := filepath.Join(b.cachePath, types.ImagesDir)
 
 	// Ensure the image cache directory exists.
 	if err := utils.CreateDirectory(imageCachePath, 0700); err != nil {
