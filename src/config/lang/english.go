@@ -144,10 +144,10 @@ const (
 	CmdInitErrValidateArtifact  = "the 'artifact-push-username' and 'artifact-push-token' flags must be provided if the 'artifact-url' flag is provided"
 	CmdInitErrUnableCreateCache = "Unable to create the cache directory: %s"
 
-	CmdInitDownloadAsk       = "It seems the init package could not be found locally, but can be downloaded from %s"
-	CmdInitDownloadNote      = "Note: This will require an internet connection."
-	CmdInitDownloadConfirm   = "Do you want to download this init package?"
-	CmdInitDownloadErrManual = "download the init package manually and place it in the current working directory"
+	CmdInitPullAsk       = "It seems the init package could not be found locally, but can be pulled from oci://%s"
+	CmdInitPullNote      = "Note: This will require an internet connection."
+	CmdInitPullConfirm   = "Do you want to pull this init package?"
+	CmdInitPullErrManual = "pull the init package manually and place it in the current working directory"
 
 	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
 
