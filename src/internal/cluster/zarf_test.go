@@ -26,6 +26,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		name          string
 		secret        *corev1.Secret
 		component     types.ZarfComponent
+		skipWebhooks  bool
 		needsWait     bool
 		waitSeconds   int
 		hookName      string
@@ -168,6 +169,58 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			hookName:      "",
 			expectedError: nil,
 		},
+		{
+			name:      "SkipWaitForYOLO",
+			component: types.ZarfComponent{Name: componentName},
+			secret: &corev1.Secret{
+				Data: map[string][]byte{
+					"data": marshalDeployedPackage(&types.DeployedPackage{
+						Name: packageName,
+						Data: types.ZarfPackage{
+							Metadata: types.ZarfMetadata{
+								YOLO: true,
+							},
+						},
+						ComponentWebhooks: map[string]map[string]types.Webhook{
+							componentName: {
+								webhookName: types.Webhook{
+									Status:              string(types.WebhookStatusRunning),
+									WaitDurationSeconds: 10,
+								},
+							},
+						},
+					}),
+				},
+			},
+			needsWait:     false,
+			waitSeconds:   0,
+			hookName:      "",
+			expectedError: nil,
+		},
+		{
+			name:         "SkipWebhooksFlagUsed",
+			component:    types.ZarfComponent{Name: componentName},
+			skipWebhooks: true,
+			secret: &corev1.Secret{
+				Data: map[string][]byte{
+					"data": marshalDeployedPackage(&types.DeployedPackage{
+						Name: packageName,
+						ComponentWebhooks: map[string]map[string]types.Webhook{
+							componentName: {
+								webhookName: types.Webhook{
+									Status:              string(types.WebhookStatusRunning),
+									WaitDurationSeconds: 10,
+								},
+							},
+						},
+					}),
+				},
+			},
+			needsWait:     false,
+			waitSeconds:   0,
+			hookName:      "",
+			expectedError: nil,
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -178,7 +231,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 
 			c := &Cluster{}
 
-			needsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(testCase.secret, testCase.component)
+			needsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(testCase.secret, testCase.component, testCase.skipWebhooks)
 
 			require.Equal(t, testCase.needsWait, needsWait)
 			require.Equal(t, testCase.waitSeconds, waitSeconds)

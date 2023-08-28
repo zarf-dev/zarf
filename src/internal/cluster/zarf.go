@@ -103,11 +103,21 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 }
 
 // PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on.
-func (c *Cluster) PackageSecretNeedsWait(secret *corev1.Secret, component types.ZarfComponent) (needsWait bool, waitSeconds int, hookName string, err error) {
-	deployedPackage := types.DeployedPackage{}
+func (c *Cluster) PackageSecretNeedsWait(secret *corev1.Secret, component types.ZarfComponent, skipWebhooks bool) (needsWait bool, waitSeconds int, hookName string, err error) {
 
+	// Skip checking webhook status when '--skip-webhooks' flag is provided
+	if skipWebhooks {
+		return false, 0, "", nil
+	}
+
+	deployedPackage := types.DeployedPackage{}
 	if err = json.Unmarshal(secret.Data["data"], &deployedPackage); err != nil {
 		return false, 0, "", fmt.Errorf("unable to unmarshal secret data into DeployedPackage struct: %w", err)
+	}
+
+	// Skip checking webhook status on YOLO packages
+	if deployedPackage.Data.Metadata.YOLO {
+		return false, 0, "", nil
 	}
 
 	// Look for the specified component
@@ -116,14 +126,14 @@ func (c *Cluster) PackageSecretNeedsWait(secret *corev1.Secret, component types.
 		return false, 0, "", nil // Component not found, no need to wait
 	}
 
-	// Check if there are any webhook statuses for the specified component that we need to wait for
+	// Check if there are any "Running" webhooks for the component that we need to wait for
 	for hookName, webhook := range hookMap {
 		if webhook.Status == string(types.WebhookStatusRunning) {
 			return true, webhook.WaitDurationSeconds, hookName, nil
 		}
 	}
 
-	// If we get here, the specified component doesn't need to wait for a webhook to run
+	// If we get here, the component doesn't need to wait for a webhook to run
 	return false, 0, "", nil
 }
 
@@ -135,24 +145,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 		return packageSecret, err
 	}
 
-	// Skip checking webhook status when '--skip-webhooks' flag is provided
-	if skipWebhooks {
-		return packageSecret, nil
-	}
-
-	// Skip checking webhook status on YOLO packages
-	deployedPackage := types.DeployedPackage{}
-	isYOLOPackage := deployedPackage.Data.Metadata.YOLO
-
-	if err = json.Unmarshal(packageSecret.Data["data"], &deployedPackage); err != nil {
-		return packageSecret, fmt.Errorf("unable to unmarshal secret data into DeployedPackage struct: %w", err)
-	}
-	if isYOLOPackage {
-		return packageSecret, nil
-	}
-
-	// Check webhook status for the component
-	packageNeedsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(packageSecret, component)
+	packageNeedsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(packageSecret, component, skipWebhooks)
 	if err != nil {
 		return packageSecret, err
 	}
@@ -183,7 +176,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 			if err != nil {
 				return packageSecret, err
 			}
-			packageNeedsWait, _, _, err = c.PackageSecretNeedsWait(packageSecret, component)
+			packageNeedsWait, _, _, err = c.PackageSecretNeedsWait(packageSecret, component, skipWebhooks)
 			if err != nil {
 				return packageSecret, err
 			}
