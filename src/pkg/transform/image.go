@@ -31,7 +31,7 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	}
 
 	// check if image has already been transformed
-	if targetHost == image.Host || strings.HasPrefix(targetHost, image.Host) {
+	if strings.HasPrefix(targetHost, image.Host) {
 		return srcReference, nil
 	}
 
@@ -54,7 +54,7 @@ func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string,
 	}
 
 	// check if image has already been transformed
-	if targetHost == image.Host || strings.HasPrefix(targetHost, image.Host) {
+	if strings.HasPrefix(targetHost, image.Host) {
 		return srcReference, nil
 	}
 
