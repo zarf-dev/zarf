@@ -40,7 +40,7 @@ func (p *Packager) Remove() (err error) {
 			packageName = p.cfg.PkgOpts.PackagePath
 			message.Debugf("%q does not satisfy any current providers, assuming it is a package deployed to a cluster", p.cfg.PkgOpts.PackagePath)
 		} else {
-			pkg, _, err := provider.LoadPackageMetadata(false)
+			pkg, loaded, err := provider.LoadPackageMetadata(false)
 			if err != nil {
 				return err
 			}
@@ -48,6 +48,10 @@ func (p *Packager) Remove() (err error) {
 			// Filter out components that are not compatible with this system if we have loaded from a tarball
 			p.filterComponents(&p.cfg.Pkg)
 			packageName = pkg.Metadata.Name
+
+			_, wasSigned := loaded[types.PackageSignature]
+
+			hasRemoveActions := false
 
 			// If we have package components check them for images, charts, manifests, etc
 			for _, component := range pkg.Components {
@@ -61,6 +65,17 @@ func (p *Packager) Remove() (err error) {
 				if requested {
 					requiresCluster = p.requiresCluster(component)
 				}
+
+				if component.Actions.OnRemove.Before != nil || component.Actions.OnRemove.After != nil || component.Actions.OnRemove.OnSuccess != nil || component.Actions.OnRemove.OnFailure != nil {
+					hasRemoveActions = true
+				}
+			}
+
+			// while LoadPackageMetadata does not error if the package is signed but the signature is not present
+			// we do not want to allow removal of signed packages without a signature if there are remove actions
+			// as this is arbitrary code execution from an untrusted source
+			if wasSigned && hasRemoveActions && p.cfg.PkgOpts.PublicKeyPath == "" {
+				return ErrPkgKeyButNoSig
 			}
 		}
 	}
