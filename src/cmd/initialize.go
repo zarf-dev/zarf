@@ -115,7 +115,7 @@ func downloadInitPackage(downloadCacheTarget string) error {
 	}
 
 	var confirmDownload bool
-	url := oci.GetInitPackageURL(config.CLIArch, config.CLIVersion)
+	url := oci.GetInitPackageURL(config.GetArch(), config.CLIVersion)
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
 	message.Question(fmt.Sprintf(lang.CmdInitDownloadAsk, url))

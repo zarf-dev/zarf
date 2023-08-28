@@ -132,7 +132,6 @@ ib-init-package:
 
 # INTERNAL: used to publish the init package
 publish-init-package:
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	$(ZARF_BIN) package publish build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst oci://$(REPOSITORY_URL)
 	$(ZARF_BIN) package publish . oci://$(REPOSITORY_URL)
 

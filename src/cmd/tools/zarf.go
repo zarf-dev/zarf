@@ -174,7 +174,7 @@ var downloadInitCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		initPackageName := packager.GetInitPackageName("")
 		target := filepath.Join(outputDirectory, initPackageName)
-		url := oci.GetInitPackageURL(config.CLIArch, config.CLIVersion)
+		url := oci.GetInitPackageURL(config.GetArch(), config.CLIVersion)
 
 		if err := oci.DownloadPackage(url, target, config.CommonOptions.OCIConcurrency); err != nil {
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())

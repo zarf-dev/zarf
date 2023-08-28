@@ -97,7 +97,7 @@ func RemoveDuplicateDescriptors(descriptors []ocispec.Descriptor) []ocispec.Desc
 
 // GetInitPackageURL returns the URL for the init package for the given architecture and version.
 func GetInitPackageURL(arch, version string) string {
-	return fmt.Sprintf("ghcr.io/defenseunicorns/packages/init:%s-%s", arch, version)
+	return fmt.Sprintf("ghcr.io/defenseunicorns/packages/init:%s-%s", version, arch)
 }
 
 // DownloadPackage downloads the given OCI package and saves as a tarball.
