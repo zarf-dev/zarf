@@ -61,15 +61,22 @@ spec:
               value: "Registry Realm"
             - name: REGISTRY_AUTH_HTPASSWD_PATH
               value: "/etc/docker/registry/htpasswd"
+{{- if .Values.persistence.enabled }}
             - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
               value: "/var/lib/registry"
+{{- end }}
 {{- if .Values.persistence.deleteEnabled }}
             - name: REGISTRY_STORAGE_DELETE_ENABLED
               value: "true"
 {{- end }}
+{{- with .Values.extraEnvVars }}
+{{ toYaml .  | indent 12 }}
+{{- end }}
           volumeMounts:
+{{- if .Values.persistence.enabled }}
             - name: data
               mountPath: /var/lib/registry/
+{{- end }}
             - name: config
               mountPath: "/etc/docker/registry"
       affinity:
@@ -97,6 +104,8 @@ spec:
               path: config.yml
             - key: htpasswd
               path: htpasswd
+{{- if .Values.persistence.enabled }}
         - name: data
           persistentVolumeClaim:
             claimName: {{ if .Values.persistence.existingClaim }}{{ .Values.persistence.existingClaim }}{{- else }}{{ template "docker-registry.fullname" . }}{{- end }}
+{{- end }}

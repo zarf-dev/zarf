@@ -22,6 +22,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
+	"github.com/spf13/pflag"
 )
 
 var internalCmd = &cobra.Command{
@@ -69,6 +70,29 @@ var generateCLIDocs = &cobra.Command{
 						addHiddenDummyFlag(toolCmd, "tmpdir")
 						addHiddenDummyFlag(toolCmd, "insecure")
 						addHiddenDummyFlag(toolCmd, "no-color")
+					}
+
+					// Remove the default values from all of the helm commands during the CLI command doc generation
+					if toolCmd.Use == "helm" {
+						toolCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
+							if flag.Value.Type() == "string" {
+								flag.DefValue = ""
+							}
+						})
+						for _, helmCmd := range toolCmd.Commands() {
+							helmCmd.Flags().VisitAll(func(flag *pflag.Flag) {
+								if flag.Value.Type() == "string" {
+									flag.DefValue = ""
+								}
+							})
+							for _, helmSubCmd := range helmCmd.Commands() {
+								helmSubCmd.Flags().VisitAll(func(flag *pflag.Flag) {
+									if flag.Value.Type() == "string" {
+										flag.DefValue = ""
+									}
+								})
+							}
+						}
 					}
 				}
 			}

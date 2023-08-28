@@ -18,6 +18,7 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/registry"
+	"k8s.io/client-go/util/homedir"
 
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/downloader"
@@ -192,13 +193,20 @@ func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, err
 
 // buildChartDependencies builds the helm chart dependencies
 func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
+	// Download and build the specified dependencies
 	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
 	if err != nil {
 		spinner.Fatalf(err, "Unable to create a new registry client")
 	}
+
 	h.Settings = cli.New()
+	defaultKeyring := filepath.Join(homedir.HomeDir(), ".gnupg", "pubring.gpg")
+	if v, ok := os.LookupEnv("GNUPGHOME"); ok {
+		defaultKeyring = filepath.Join(v, "pubring.gpg")
+	}
+
 	man := &downloader.Manager{
-		Out:            os.Stdout,
+		Out:            &message.DebugWriter{},
 		ChartPath:      h.Chart.LocalPath,
 		Getters:        getter.All(h.Settings),
 		RegistryClient: regClient,
@@ -206,16 +214,18 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 		RepositoryConfig: h.Settings.RepositoryConfig,
 		RepositoryCache:  h.Settings.RepositoryCache,
 		Debug:            false,
+		Verify:           downloader.VerifyIfPossible,
+		Keyring:          defaultKeyring,
 	}
-	// Verify the chart
-	man.Verify = downloader.VerifyIfPossible
 
 	// Build the deps from the helm chart
 	err = man.Build()
 	if e, ok := err.(downloader.ErrRepoNotFound); ok {
-		return fmt.Errorf("%s. Please add the missing repo via 'helm repo add <name> <url>'", e.Error())
+		// If we encounter a repo not found error point the user to `zarf tools helm repo add`
+		message.Warnf("%s. Please add the missing repo via 'zarf tools helm repo add <name> <url>'", e.Error())
 	} else if err != nil {
-		return err
+		// Warn the user of any issues but don't fail - any actual issues will cause a fail during packaging (e.g. the charts we are building may exist already, we just can't get updates)
+		message.Warnf("%s", err.Error())
 	}
 
 	return nil

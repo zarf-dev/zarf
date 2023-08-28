@@ -31,6 +31,7 @@ Collection of additional tools to make airgap easier
 * [zarf tools gen-key](zarf_tools_gen-key.md)	 - Generates a cosign public/private keypair that can be used to sign packages
 * [zarf tools gen-pki](zarf_tools_gen-pki.md)	 - Generates a Certificate Authority and PKI chain of trust for the given host
 * [zarf tools get-creds](zarf_tools_get-creds.md)	 - Displays a table of credentials for deployed Zarf services. Pass a service key to get a single credential
+* [zarf tools helm](zarf_tools_helm.md)	 - Subset of the Helm CLI included with Zarf to help manage helm charts.
 * [zarf tools kubectl](zarf_tools_kubectl.md)	 - Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information.
 * [zarf tools monitor](zarf_tools_monitor.md)	 - Launches a terminal UI to monitor the connected cluster using K9s.
 * [zarf tools registry](zarf_tools_registry.md)	 - Tools for working with container registries using go-containertools

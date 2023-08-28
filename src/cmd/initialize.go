@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -114,17 +115,17 @@ func downloadInitPackage(downloadCacheTarget string) error {
 	}
 
 	var confirmDownload bool
-	url := packager.GetInitPackageRemote("")
+	url := oci.GetInitPackageURL(config.GetArch(), config.CLIVersion)
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
-	message.Question(fmt.Sprintf(lang.CmdInitDownloadAsk, url))
+	message.Question(fmt.Sprintf(lang.CmdInitPullAsk, url))
 
-	message.Note(lang.CmdInitDownloadNote)
+	message.Note(lang.CmdInitPullNote)
 
 	// Prompt the user if --confirm not specified
 	if !confirmDownload {
 		prompt := &survey.Confirm{
-			Message: lang.CmdInitDownloadConfirm,
+			Message: lang.CmdInitPullConfirm,
 		}
 		if err := survey.AskOne(prompt, &confirmDownload); err != nil {
 			return fmt.Errorf(lang.ErrConfirmCancel, err.Error())
@@ -133,10 +134,10 @@ func downloadInitPackage(downloadCacheTarget string) error {
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		return utils.DownloadToFile(url, downloadCacheTarget, "")
+		return oci.DownloadPackageTarball(url, downloadCacheTarget, config.CommonOptions.OCIConcurrency)
 	}
 	// Otherwise, exit and tell the user to manually download the init-package
-	return errors.New(lang.CmdInitDownloadErrManual)
+	return errors.New(lang.CmdInitPullErrManual)
 }
 
 func validateInitFlags() error {
