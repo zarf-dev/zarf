@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/cli/values"
 	"helm.sh/helm/v3/pkg/getter"
@@ -42,7 +43,7 @@ func (h *Helm) loadChartFromTarball() (*chart.Chart, error) {
 }
 
 // parseChartValues reads the context of the chart values into an interface if it exists.
-func (h *Helm) parseChartValues() (map[string]any, error) {
+func (h *Helm) parseChartValues() (chartutil.Values, error) {
 	valueOpts := &values.Options{}
 
 	for idx, file := range h.Chart.ValuesFiles {

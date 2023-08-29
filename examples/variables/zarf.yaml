@@ -54,7 +54,7 @@ components:
     actions:
       onDeploy:
         after:
-          # This command uses Zarf to return the SHASUM of the terraform file (`type: file` variables will return the filepath instead of the contents when used in actions)
+          # This command uses Zarf to return the SHASUM of the terraform file (`type: file` variables will return the filepath instead of the contents when used in actions due to constraints on env var size)
           - cmd: ./zarf prepare sha256sum ${ZARF_VAR_MODIFIED_TERRAFORM}
             # `mute` is set to exclude the command output from being shown (since we are treating it as sensitive below)
             mute: true

@@ -290,9 +290,9 @@ func (p *Packager) fixComposedActionFilepaths(pathAncestry string, actions []typ
 // Sets Name, Default, Required and Description to the original components values.
 func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
 	target.Name = override.Name
+	target.Group = override.Group
 	target.Default = override.Default
 	target.Required = override.Required
-	target.Group = override.Group
 
 	// Override description if it was provided.
 	if override.Description != "" {
@@ -305,12 +305,52 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	}
 
 	// Append slices where they exist.
-	target.Charts = append(target.Charts, override.Charts...)
 	target.DataInjections = append(target.DataInjections, override.DataInjections...)
 	target.Files = append(target.Files, override.Files...)
 	target.Images = append(target.Images, override.Images...)
-	target.Manifests = append(target.Manifests, override.Manifests...)
 	target.Repos = append(target.Repos, override.Repos...)
+
+	// Merge charts with the same name to keep them unique
+	for _, overrideChart := range override.Charts {
+		existing := false
+		for idx := range target.Charts {
+			if target.Charts[idx].Name == overrideChart.Name {
+				if overrideChart.Namespace != "" {
+					target.Charts[idx].Namespace = overrideChart.Namespace
+				}
+				if overrideChart.ReleaseName != "" {
+					target.Charts[idx].ReleaseName = overrideChart.ReleaseName
+				}
+				target.Charts[idx].ValuesFiles = append(target.Charts[idx].ValuesFiles, overrideChart.ValuesFiles...)
+				existing = true
+			}
+		}
+
+		if !existing {
+			target.Charts = append(target.Charts, overrideChart)
+		}
+	}
+
+	// Merge manifests with the same name to keep them unique
+	for _, overrideManifest := range override.Manifests {
+		existing := false
+		for idx := range target.Manifests {
+			if target.Manifests[idx].Name == overrideManifest.Name {
+				if overrideManifest.Namespace != "" {
+					target.Manifests[idx].Namespace = overrideManifest.Namespace
+				}
+				target.Manifests[idx].Files = append(target.Manifests[idx].Files, overrideManifest.Files...)
+				target.Manifests[idx].Kustomizations = append(target.Manifests[idx].Kustomizations, overrideManifest.Kustomizations...)
+
+				existing = true
+			}
+		}
+
+		if !existing {
+			target.Manifests = append(target.Manifests, overrideManifest)
+		}
+	}
+
 	// Check for nil array
 	if override.Extensions.BigBang != nil {
 		if override.Extensions.BigBang.ValuesFiles != nil {

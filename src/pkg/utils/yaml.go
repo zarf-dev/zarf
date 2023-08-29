@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/fatih/color"
 	goyaml "github.com/goccy/go-yaml"
@@ -85,15 +86,21 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) {
 		}
 	}
 
-	colorizedYAML := p.PrintTokens(tokens)
+	outputYAML := p.PrintTokens(tokens)
 
 	// Inject the hints into the colorized YAML
 	for key, value := range hints {
-		colorizedYAML = strings.Replace(colorizedYAML, key, value, 1)
+		outputYAML = strings.Replace(outputYAML, key, value, 1)
+	}
+
+	if config.NoColor {
+		// If no color is specified strip any color codes from the output - https://regex101.com/r/YFyIwC/2
+		ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
+		outputYAML = ansiRegex.ReplaceAllString(outputYAML, "")
 	}
 
 	pterm.Println()
-	pterm.Println(colorizedYAML)
+	pterm.Println(outputYAML)
 }
 
 // AddRootListHint adds a hint string for a given root list key and value.

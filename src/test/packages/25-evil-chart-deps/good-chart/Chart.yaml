@@ -1,0 +1,15 @@
+apiVersion: v1
+description: The Good Chart
+name: good-chart
+version: 1.0.0
+
+maintainers:
+  - name: The Zarf Authors
+    url: https://zarf.dev
+
+dependencies:
+# This chart should be saved into the charts directory
+- name: gitlab-runner
+  version: 0.55.0
+  repository: https://charts.gitlab.io/
+  condition: gitlab-runner.install

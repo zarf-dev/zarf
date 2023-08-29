@@ -46,14 +46,14 @@ func Run(pkg types.ZarfPackage) error {
 		}
 	}
 
-	uniqueNames := make(map[string]bool)
+	uniqueComponentNames := make(map[string]bool)
 
 	for _, component := range pkg.Components {
 		// ensure component name is unique
-		if _, ok := uniqueNames[component.Name]; ok {
+		if _, ok := uniqueComponentNames[component.Name]; ok {
 			return fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, component.Name)
 		}
-		uniqueNames[component.Name] = true
+		uniqueComponentNames[component.Name] = true
 
 		if err := validateComponent(pkg, component); err != nil {
 			return fmt.Errorf(lang.PkgValidateErrComponent, err)
@@ -120,13 +120,27 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		}
 	}
 
+	uniqueChartNames := make(map[string]bool)
 	for _, chart := range component.Charts {
+		// ensure chart name is unique
+		if _, ok := uniqueChartNames[chart.Name]; ok {
+			return fmt.Errorf(lang.PkgValidateErrChartNameNotUnique, chart.Name)
+		}
+		uniqueChartNames[chart.Name] = true
+
 		if err := validateChart(chart); err != nil {
 			return fmt.Errorf(lang.PkgValidateErrChart, err)
 		}
 	}
 
+	uniqueManifestNames := make(map[string]bool)
 	for _, manifest := range component.Manifests {
+		// ensure manifest name is unique
+		if _, ok := uniqueManifestNames[manifest.Name]; ok {
+			return fmt.Errorf(lang.PkgValidateErrManifestNameNotUnique, manifest.Name)
+		}
+		uniqueManifestNames[manifest.Name] = true
+
 		if err := validateManifest(manifest); err != nil {
 			return fmt.Errorf(lang.PkgValidateErrManifest, err)
 		}

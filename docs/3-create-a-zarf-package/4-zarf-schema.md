@@ -1119,12 +1119,10 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="components_items_charts_items_version"></a>version *</strong>
+<strong> <a name="components_items_charts_items_version"></a>version</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The version of the chart to deploy; for git-based charts this is also the tag of the git repo
 

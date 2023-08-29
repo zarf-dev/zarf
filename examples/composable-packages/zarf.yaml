@@ -15,10 +15,12 @@ components:
       path: ../dos-games
       # Example optional custom name to point to in the imported package (default is to use this component's name)
       name: baseline
-    # Array keys are appended to the end of anything the imported component defined (in this case an extra service)
+    # 'name'd Zarf primitives will merge the arrays together on import:
+    # - 'manifests' of the same name will merge namespace, files and kustomizations
+    # - 'charts' of the same name will merge namespace, releaseName and valuesFiles
+    # Zarf primitives without matching 'name's will be appended to the end of the primitive's list for that component.
     manifests:
-      - name: additional-games
-        namespace: dos-games
+      - name: multi-games
         files:
           - quake-service.yaml
 
@@ -29,10 +31,10 @@ components:
     # default: false    # the initial value overrides the child component
     import:
       # The URL to the skeleton package containing this component's package definition
-      url: oci://localhost:5000/wordpress:16.0.4-skeleton
+      url: oci://localhost:555/wordpress:16.0.4-skeleton
       # Example optional custom name to point to in the imported package (default is to use this component's name)
       name: wordpress
-    # Array keys are appended to the end of anything the imported component defined (in this case an override of the blog name)
+    # Un'name'd Zarf primitives will be appended to the end of the primitive's list for that component.
     actions:
       onDeploy:
         before:
