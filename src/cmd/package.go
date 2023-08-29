@@ -85,8 +85,6 @@ var packageDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		pkgConfig.PkgSource = pkgConfig.PkgOpts.PackagePath
-
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
@@ -220,7 +218,7 @@ var packagePullCmd = &cobra.Command{
 			message.Fatal(nil, lang.CmdPackageRegistryPrefixErr)
 		}
 
-		pkgConfig.PullOpts.PackageSource = args[0]
+		pkgConfig.PkgOpts.PackagePath = args[0]
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)

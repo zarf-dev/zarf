@@ -50,8 +50,6 @@ var initCmd = &cobra.Command{
 			message.Fatal(err, err.Error())
 		}
 
-		pkgConfig.PkgSource = pkgConfig.PkgOpts.PackagePath
-
 		// Ensure uppercase keys from viper
 		v := common.GetViper()
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(

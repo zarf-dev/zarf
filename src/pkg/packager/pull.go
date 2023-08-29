@@ -10,58 +10,40 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/providers"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 )
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() error {
-	err := p.SetOCIRemote(p.cfg.PullOpts.PackageSource)
-	if err != nil {
-		return err
-	}
-	_, err = p.remote.PullPackage(p.tmp.Base(), config.CommonOptions.OCIConcurrency)
-	if err != nil {
-		return err
-	}
-
-	message.Successf("Pulled %s", p.cfg.PullOpts.PackageSource)
-
-	err = utils.ReadYaml(p.tmp[types.ZarfYAML], &p.cfg.Pkg)
+	var err error
+	p.provider, err = providers.NewFromSource(&p.cfg.PkgOpts, p.tmp.Base())
 	if err != nil {
 		return err
 	}
 
-	if err = providers.ValidatePackageSignature(p.tmp, p.cfg.PullOpts.PublicKeyPath); err != nil {
-		return err
-	} else if !config.CommonOptions.Insecure {
-		message.Successf("Package signature is valid")
-	}
-
-	if err := providers.ValidatePackageIntegrity(p.tmp, p.cfg.Pkg.Metadata.AggregateChecksum, false); err != nil {
-		return fmt.Errorf("unable to validate the package checksums: %w", err)
-	}
-
-	// Get all the layers from within the temp directory
-	allTheLayers, err := filepath.Glob(filepath.Join(p.tmp.Base(), "*"))
+	pkg, loaded, err := p.provider.LoadPackage(nil)
 	if err != nil {
 		return err
+	}
+	p.cfg.Pkg = pkg
+
+	// Get all the files loaded
+	everything := []string{}
+	for _, layer := range loaded {
+		everything = append(everything, layer)
 	}
 
 	var name string
-	if strings.HasSuffix(p.cfg.PullOpts.PackageSource, oci.SkeletonSuffix) {
+	if strings.HasSuffix(p.cfg.PkgOpts.PackagePath, oci.SkeletonSuffix) {
 		name = fmt.Sprintf("zarf-package-%s-skeleton-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Metadata.Version)
 	} else {
 		name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Build.Architecture, p.cfg.Pkg.Metadata.Version)
 	}
 	output := filepath.Join(p.cfg.PullOpts.OutputDirectory, name)
 	_ = os.Remove(output)
-	err = archiver.Archive(allTheLayers, output)
+	err = archiver.Archive(everything, output)
 	if err != nil {
 		return err
 	}
