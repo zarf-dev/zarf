@@ -640,7 +640,7 @@ export interface ZarfChart {
      * The version of the chart to deploy; for git-based charts this is also the tag of the git
      * repo
      */
-    version: string;
+    version?: string;
 }
 
 export interface ZarfDataInjection {
@@ -1585,7 +1585,7 @@ const typeMap: any = {
         { json: "releaseName", js: "releaseName", typ: u(undefined, "") },
         { json: "url", js: "url", typ: u(undefined, "") },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
-        { json: "version", js: "version", typ: "" },
+        { json: "version", js: "version", typ: u(undefined, "") },
     ], false),
     "ZarfDataInjection": o([
         { json: "compress", js: "compress", typ: u(undefined, true) },

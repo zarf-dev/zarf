@@ -144,10 +144,10 @@ const (
 	CmdInitErrValidateArtifact  = "the 'artifact-push-username' and 'artifact-push-token' flags must be provided if the 'artifact-url' flag is provided"
 	CmdInitErrUnableCreateCache = "Unable to create the cache directory: %s"
 
-	CmdInitDownloadAsk       = "It seems the init package could not be found locally, but can be downloaded from %s"
-	CmdInitDownloadNote      = "Note: This will require an internet connection."
-	CmdInitDownloadConfirm   = "Do you want to download this init package?"
-	CmdInitDownloadErrManual = "download the init package manually and place it in the current working directory"
+	CmdInitPullAsk       = "It seems the init package could not be found locally, but can be pulled from oci://%s"
+	CmdInitPullNote      = "Note: This will require an internet connection."
+	CmdInitPullConfirm   = "Do you want to pull this init package?"
+	CmdInitPullErrManual = "pull the init package manually and place it in the current working directory"
 
 	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
 
@@ -405,6 +405,9 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
+	CmdToolsHelmShort = "Subset of the Helm CLI included with Zarf to help manage helm charts."
+	CmdToolsHelmLong  = "Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the air gap."
+
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory"
 	CmdToolsClearCacheDir           = "Cache directory set to: %s"
 	CmdToolsClearCacheErr           = "Unable to clear the cache directory %s"
@@ -566,6 +569,7 @@ const (
 	PkgValidateErrChart                   = "invalid chart definition: %w"
 	PkgValidateErrChartName               = "chart %s exceed the maximum length of %d characters"
 	PkgValidateErrChartNameMissing        = "chart %s must include a name"
+	PkgValidateErrChartNameNotUnique      = "chart name %q is not unique"
 	PkgValidateErrChartNamespaceMissing   = "chart %s must include a namespace"
 	PkgValidateErrChartURLOrPath          = "chart %s must only have a url or localPath"
 	PkgValidateErrChartVersion            = "chart %s must include a chart version"
@@ -584,6 +588,7 @@ const (
 	PkgValidateErrManifestFileOrKustomize = "manifest %s must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %s exceed the maximum length of %d characters"
 	PkgValidateErrManifestNameMissing     = "manifest %s must include a name"
+	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
 	PkgValidateErrName                    = "invalid package name: %w"
 	PkgValidateErrPkgConstantName         = "constant name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrPkgName                 = "package name '%s' must be all lowercase and contain no special characters except -"

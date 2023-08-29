@@ -130,6 +130,11 @@ ib-init-package:
 		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
 		--set REGISTRY_IMAGE_TAG="2.8.2"
 
+# INTERNAL: used to publish the init package
+publish-init-package:
+	$(ZARF_BIN) package publish build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst oci://$(REPOSITORY_URL)
+	$(ZARF_BIN) package publish . oci://$(REPOSITORY_URL)
+
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
