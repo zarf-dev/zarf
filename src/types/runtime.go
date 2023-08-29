@@ -109,7 +109,6 @@ type ZarfPublishOptions struct {
 // ZarfPullOptions tracks the user-defined preferences during a package pull.
 type ZarfPullOptions struct {
 	OutputDirectory string `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
-	PublicKeyPath   string `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.

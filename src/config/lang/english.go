@@ -219,6 +219,8 @@ const (
 	CmdPackageShort           = "Zarf package commands for creating, deploying, and inspecting packages"
 	CmdPackageFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
 
+	CmdPackageFlagPublicKey = "Path to a public key file that will be used to validate a signed package"
+
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
 	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +
 		"Private registries and repositories are accessed via credentials in your local '~/.docker/config.json', " +
@@ -263,7 +265,6 @@ const (
 
 	CmdPackageInspectFlagSbom      = "View SBOM contents while inspecting the package"
 	CmdPackageInspectFlagSbomOut   = "Specify an output directory for the SBOMs from the inspected Zarf package"
-	CmdPackageInspectFlagValidate  = "Validate any checksums and signatures while inspecting the package"
 	CmdPackageInspectFlagPublicKey = "Path to a public key file that will be used to validate a signed package"
 	CmdPackageInspectErr           = "Failed to inspect package: %s"
 
