@@ -104,13 +104,19 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPac
 		if err := archiver.Extract(tp.source, pathInArchive, tp.destinationDir); err != nil {
 			return pkg, nil, err
 		}
-		loaded[pathInArchive] = filepath.Join(tp.destinationDir, pathInArchive)
+		pathOnDisk := filepath.Join(tp.destinationDir, pathInArchive)
+		if !utils.InvalidPath(pathOnDisk) {
+			loaded[pathInArchive] = pathOnDisk
+		}
 	}
 	if wantSBOM {
 		if err := archiver.Extract(tp.source, types.SBOMTar, tp.destinationDir); err != nil {
 			return pkg, nil, err
 		}
-		loaded[types.SBOMTar] = filepath.Join(tp.destinationDir, types.SBOMTar)
+		pathOnDisk := filepath.Join(tp.destinationDir, types.SBOMTar)
+		if !utils.InvalidPath(pathOnDisk) {
+			loaded[types.SBOMTar] = pathOnDisk
+		}
 	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {

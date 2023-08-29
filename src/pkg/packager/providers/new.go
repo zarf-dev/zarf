@@ -40,7 +40,6 @@ func NewFromSource(pkgOpts *types.ZarfPackageOptions, destination string) (types
 
 	switch identifySourceType(source) {
 	case "oci":
-		message.Debug("Identified source", source, "as OCI package")
 		provider = &OCIProvider{source: source, destinationDir: destination, opts: pkgOpts}
 		remote, err := oci.NewOrasRemote(source)
 		if err != nil {
@@ -49,21 +48,19 @@ func NewFromSource(pkgOpts *types.ZarfPackageOptions, destination string) (types
 		remote.WithInsecureConnection(config.CommonOptions.Insecure)
 		provider.(*OCIProvider).OrasRemote = remote
 	case "tarball":
-		message.Debug("Identified source", source, "as tarball package")
 		provider = &TarballProvider{source: source, destinationDir: destination, opts: pkgOpts}
 	case "http", "https":
-		message.Debug("Identified source", source, "as HTTP(S) package")
 		provider = &URLProvider{source: source, destinationDir: destination, opts: pkgOpts, insecure: config.CommonOptions.Insecure}
 	case "sget":
-		message.Debug("Identified source", source, "as SGET package")
 		message.Warn(lang.WarnSGetDeprecation)
 		provider = &URLProvider{source: source, destinationDir: destination, opts: pkgOpts, insecure: config.CommonOptions.Insecure}
 	case "partial":
-		message.Debug("Identified source", source, "as partial package")
 		provider = &PartialTarballProvider{source: source, destinationDir: destination, opts: pkgOpts}
 	default:
 		return nil, fmt.Errorf("could not identify source type for %q", source)
 	}
+
+	message.Debugf("Using %T for %q", provider, source)
 
 	return provider, nil
 }

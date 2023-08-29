@@ -32,6 +32,10 @@ func ValidatePackageSignature(paths types.PackagePathsMap, publicKeyPath string)
 		return nil
 	}
 
+	if publicKeyPath != "" {
+		message.Debugf("Using public key %q for signature validation", publicKeyPath)
+	}
+
 	// Handle situations where there is no signature within the package
 	sigExist := !utils.InvalidPath(paths[types.PackageSignature])
 	if !sigExist && publicKeyPath == "" {

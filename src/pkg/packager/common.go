@@ -124,7 +124,7 @@ func (p *Packager) SetTempDirectory(path string) error {
 		}
 	}
 
-	message.Debug("Using temporary directory:", path)
+	message.Debugf("Packager using temporary directory: %q", path)
 
 	p.tmp = types.DefaultPackagePaths(path)
 	return nil

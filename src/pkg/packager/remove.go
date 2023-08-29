@@ -55,7 +55,7 @@ func (p *Packager) Remove() (err error) {
 			hasRemoveActions := false
 
 			// If we have package components check them for images, charts, manifests, etc
-			for _, component := range pkg.Components {
+			for _, component := range p.cfg.Pkg.Components {
 				// Flip requested based on if this is a partial removal
 				requested := !partialRemove
 
@@ -76,7 +76,7 @@ func (p *Packager) Remove() (err error) {
 			// we do not want to allow removal of signed packages without a signature if there are remove actions
 			// as this is arbitrary code execution from an untrusted source
 			if wasSigned && hasRemoveActions && p.cfg.PkgOpts.PublicKeyPath == "" {
-				return providers.ErrPkgKeyButNoSig
+				return providers.ErrPkgSigButNoKey
 			}
 		}
 	}
