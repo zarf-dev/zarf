@@ -19,7 +19,7 @@ zarf package deploy [ PACKAGE ] [flags]
       --components string          Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
       --confirm                    Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
   -h, --help                       help for deploy
-  -k, --key string                 Path to public key file for validating signed packages
+  -k, --key string                 Path to a public key file that will be used to validate a signed package
       --set stringToString         Specify deployment variables to set on the command line (KEY=value) (default [])
       --shasum string              Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
 ```

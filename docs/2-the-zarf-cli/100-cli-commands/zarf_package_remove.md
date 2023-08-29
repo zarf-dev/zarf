@@ -13,6 +13,7 @@ zarf package remove { PACKAGE_NAME | PACKAGE_FILE } --confirm [flags]
       --components string   Comma-separated list of components to uninstall
       --confirm             REQUIRED. Confirm the removal action to prevent accidental deletions
   -h, --help                help for remove
+  -k, --key string          Path to a public key file that will be used to validate a signed package
 ```
 
 ## Options inherited from parent commands

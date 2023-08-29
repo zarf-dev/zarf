@@ -18,7 +18,6 @@ const (
 	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
 	ErrSaveState           = "Failed to save the Zarf State to the Kubernetes cluster."
 	ErrLoadPackageSecret   = "Failed to load %s's secret from the Kubernetes cluster"
-	ErrMarshal             = "failed to marshal file: %w"
 	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
 	ErrTunnelFailed        = "Failed to create a tunnel to the Kubernetes cluster."
 	ErrUnmarshal           = "failed to unmarshal file: %w"

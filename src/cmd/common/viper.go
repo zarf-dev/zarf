@@ -81,6 +81,14 @@ const (
 	VPkgDeploySget       = "package.deploy.sget"
 	VPkgDeployPublicKey  = "package.deploy.public_key"
 
+	// Package inspect config keys
+
+	VPkgInspectPublicKey = "package.inspect.public_key"
+
+	// Package remove config keys
+
+	VPkgRemovePublicKey = "package.remove.public_key"
+
 	// Package publish config keys
 
 	VPkgPublishSigningKey         = "package.publish.signing_key"
