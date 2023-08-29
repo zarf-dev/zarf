@@ -6,7 +6,6 @@ package providers
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -74,44 +73,12 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 		return pkg, nil, err
 	}
 
-	// always create and "load" components dir
-	if _, ok := loaded[types.ComponentsDir]; !ok {
-		message.Debugf("Creating %q dir", types.ComponentsDir)
-		loaded[types.ComponentsDir] = filepath.Join(op.destinationDir, types.ComponentsDir)
-		if err := utils.CreateDirectory(loaded[types.ComponentsDir], 0755); err != nil {
-			return pkg, nil, err
-		}
+	if err := LoadComponents(&pkg, loaded); err != nil {
+		return pkg, nil, err
 	}
 
-	// unpack component tarballs
-	for _, component := range pkg.Components {
-		tb := filepath.Join(types.ComponentsDir, fmt.Sprintf("%s.tar", component.Name))
-		if _, ok := loaded[tb]; ok {
-			message.Debugf("Unarchiving %q", tb)
-			defer os.Remove(loaded[tb])
-			defer delete(loaded, tb)
-			if err = archiver.Unarchive(loaded[tb], loaded[types.ComponentsDir]); err != nil {
-				return pkg, nil, err
-			}
-		}
-
-		// also "load" the images dir if any component has images
-		if _, ok := loaded[types.ImagesDir]; !ok && len(component.Images) > 0 {
-			message.Debugf("Creating %q dir", types.ImagesDir)
-			loaded[types.ImagesDir] = filepath.Join(op.destinationDir, types.ImagesDir)
-			if err := utils.CreateDirectory(loaded[types.ImagesDir], 0755); err != nil {
-				return pkg, nil, err
-			}
-		}
-	}
-
-	// unpack sboms.tar
-	if _, ok := loaded[types.SBOMTar]; ok {
-		message.Debugf("Unarchiving %q", types.SBOMTar)
-		loaded[types.SBOMDir] = filepath.Join(op.destinationDir, types.SBOMDir)
-		if err = archiver.Unarchive(loaded[types.SBOMTar], loaded[types.SBOMDir]); err != nil {
-			return pkg, nil, err
-		}
+	if err := LoadSBOMs(loaded); err != nil {
+		return pkg, nil, err
 	}
 
 	return pkg, loaded, nil
