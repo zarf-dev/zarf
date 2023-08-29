@@ -15,7 +15,6 @@ import "errors"
 // Debug messages will not be a part of the language strings since they are not intended to be user facing
 // Include sprintf formatting directives in the string if needed.
 const (
-	ErrLoadingConfig       = "failed to load config: %w"
 	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
 	ErrSaveState           = "Failed to save the Zarf State to the Kubernetes cluster."
 	ErrLoadPackageSecret   = "Failed to load %s's secret from the Kubernetes cluster"
