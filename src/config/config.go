@@ -188,3 +188,12 @@ func GetAbsHomePath(path string) string {
 	}
 	return path
 }
+
+// SetCommonOptions sets Zarf config options
+func SetCommonOptions(opts types.ZarfCommonOptions) {
+	CommonOptions.Insecure = opts.Insecure
+	CommonOptions.TempDirectory = opts.TempDirectory
+	CommonOptions.OCIConcurrency = opts.OCIConcurrency
+	CommonOptions.Confirm = opts.Confirm
+	CommonOptions.CachePath = opts.CachePath
+}
