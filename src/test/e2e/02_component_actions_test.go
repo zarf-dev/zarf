@@ -63,7 +63,7 @@ func TestComponentActions(t *testing.T) {
 		}
 
 		// Remove the simple script that should pass.
-		stdOut, stdErr, err = e2e.Zarf("package", "remove", path, "--components=on-deploy-and-remove", "--confirm", "-l=trace")
+		stdOut, stdErr, err = e2e.Zarf("package", "remove", path, "--components=on-deploy-and-remove", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
 		// Check that the deploy artifacts were removed.
