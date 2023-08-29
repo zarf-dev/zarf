@@ -16,6 +16,12 @@ var toolsCmd = &cobra.Command{
 	Aliases: []string{"t"},
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		config.SkipLogFile = true
+
+		// Skip for vendor-only commands
+		if common.CheckVendorOnlyFromPath(cmd) {
+			return
+		}
+
 		common.SetupCLI()
 	},
 	Short: lang.CmdToolsShort,
