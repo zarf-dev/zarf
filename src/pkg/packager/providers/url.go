@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying Zarf packages.
-package packager
+package providers
 
 import (
 	"fmt"
@@ -17,7 +16,6 @@ import (
 // URLProvider is a package provider for http, https and sget URLs.
 type URLProvider struct {
 	source         string
-	outputTarball  string
 	destinationDir string
 	opts           *types.ZarfPackageOptions
 	insecure       bool

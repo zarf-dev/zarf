@@ -6,6 +6,7 @@ package packager
 
 import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/providers"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -15,7 +16,7 @@ func (p *Packager) Inspect() error {
 	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
 
 	if p.provider == nil {
-		provider, err := ProviderFromSource(&p.cfg.PkgOpts, p.tmp.Base())
+		provider, err := providers.NewFromSource(&p.cfg.PkgOpts, p.tmp.Base())
 		if err != nil {
 			return err
 		}

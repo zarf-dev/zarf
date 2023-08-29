@@ -1,23 +1,59 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package validate provides Zarf package validation functions.
-package validate
+package providers
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func PackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum string, isPartial bool) error {
+var (
+	// ErrPkgKeyButNoSig is returned when a key was provided but the package is not signed
+	ErrPkgKeyButNoSig = errors.New("a key was provided but the package is not signed - remove the --key flag and run the command again")
+	// ErrPkgSigButNoKey is returned when a package is signed but no key was provided
+	ErrPkgSigButNoKey = errors.New("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
+)
+
+// ValidatePackageSignature validates the signature of a package
+func ValidatePackageSignature(paths types.PackagePathsMap, publicKeyPath string) error {
+	// If the insecure flag was provided ignore the signature validation
+	if config.CommonOptions.Insecure {
+		return nil
+	}
+
+	// Handle situations where there is no signature within the package
+	sigExist := !utils.InvalidPath(paths[types.PackageSignature])
+	if !sigExist && publicKeyPath == "" {
+		// Nobody was expecting a signature, so we can just return
+		return nil
+	} else if sigExist && publicKeyPath == "" {
+		// The package is signed but no key was provided
+		return ErrPkgSigButNoKey
+	} else if !sigExist && publicKeyPath != "" {
+		// A key was provided but there is no signature
+		return ErrPkgKeyButNoSig
+	}
+
+	// Validate the signature with the key we were provided
+	if err := utils.CosignVerifyBlob(paths[types.ZarfYAML], paths[types.PackageSignature], publicKeyPath); err != nil {
+		return fmt.Errorf("package signature did not match the provided key: %w", err)
+	}
+
+	return nil
+}
+
+func ValidatePackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum string, isPartial bool) error {
 	spinner := message.NewProgressSpinner("Validating package checksums")
 	defer spinner.Stop()
 

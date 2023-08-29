@@ -90,6 +90,7 @@ type PackageProvider interface {
 	//   the package is signed but no public key is provided. This is to allow for the inspection and removal of packages
 	//   that are signed but the user does not have the public key for.
 	LoadPackageMetadata(wantSBOM bool) (ZarfPackage, PackagePathsMap, error)
+	// LoadPackageMetadata(wantSBOM bool, skipValidation bool) (ZarfPackage, PackagePathsMap, error)
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.

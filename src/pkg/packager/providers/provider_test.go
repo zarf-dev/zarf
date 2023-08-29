@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying Zarf packages.
-package packager
+package providers
 
 import (
 	"fmt"
@@ -45,7 +44,7 @@ func Test_identifySourceType(t *testing.T) {
 
 func TestProviderFromSource(t *testing.T) {
 	for _, source := range sources {
-		actual, err := ProviderFromSource(&types.ZarfPackageOptions{PackagePath: source.src}, "")
+		actual, err := NewFromSource(&types.ZarfPackageOptions{PackagePath: source.src}, "")
 		require.NoError(t, err)
 		require.IsType(t, source.provider, actual)
 		require.Implements(t, packagep, actual)

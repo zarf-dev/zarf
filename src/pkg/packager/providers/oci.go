@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying Zarf packages.
-package packager
+package providers
 
 import (
 	"errors"
@@ -11,7 +10,6 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -68,7 +66,7 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 		return pkg, nil, err
 	}
 
-	if err := validate.PackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, isPartial); err != nil {
+	if err := ValidatePackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, isPartial); err != nil {
 		return pkg, nil, err
 	}
 
@@ -152,7 +150,7 @@ func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage
 		return pkg, nil, err
 	}
 
-	if err := validate.PackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, true); err != nil {
+	if err := ValidatePackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, true); err != nil {
 		return pkg, nil, err
 	}
 

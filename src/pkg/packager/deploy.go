@@ -24,6 +24,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/providers"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -41,7 +42,7 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	if p.provider == nil {
-		provider, err := ProviderFromSource(&p.cfg.PkgOpts, p.tmp.Base())
+		provider, err := providers.NewFromSource(&p.cfg.PkgOpts, p.tmp.Base())
 		if err != nil {
 			return err
 		}

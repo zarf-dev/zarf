@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying Zarf packages.
-package packager
+package providers
 
 import (
 	"fmt"
@@ -27,14 +26,14 @@ func identifySourceType(source string) string {
 		return "partial"
 	}
 
-	if isValidFileExtension(source) {
+	if config.IsValidFileExtension(source) {
 		return "tarball"
 	}
 
 	return ""
 }
 
-func ProviderFromSource(pkgOpts *types.ZarfPackageOptions, destination string) (types.PackageProvider, error) {
+func NewFromSource(pkgOpts *types.ZarfPackageOptions, destination string) (types.PackageProvider, error) {
 	var provider types.PackageProvider
 
 	source := pkgOpts.PackagePath

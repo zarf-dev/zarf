@@ -165,6 +165,16 @@ func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".tar.gz"}
 }
 
+func IsValidFileExtension(filename string) bool {
+	for _, extension := range GetValidPackageExtensions() {
+		if strings.HasSuffix(filename, extension) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // GetAbsCachePath gets the absolute cache path for images and git repos.
 func GetAbsCachePath() string {
 	return GetAbsHomePath(CommonOptions.CachePath)

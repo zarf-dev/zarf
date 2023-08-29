@@ -6,7 +6,6 @@ package packager
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -237,16 +236,6 @@ func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (pat
 	return paths, err
 }
 
-func isValidFileExtension(filename string) bool {
-	for _, extension := range config.GetValidPackageExtensions() {
-		if strings.HasSuffix(filename, extension) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func getRequestedComponentList(requestedComponents string) []string {
 	if requestedComponents != "" {
 		split := strings.Split(requestedComponents, ",")
@@ -311,41 +300,6 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 			lastNonBreakingVersion,
 		)
 		p.warnings = append(p.warnings, warning)
-	}
-
-	return nil
-}
-
-var (
-	// ErrPkgKeyButNoSig is returned when a key was provided but the package is not signed
-	ErrPkgKeyButNoSig = errors.New("a key was provided but the package is not signed - remove the --key flag and run the command again")
-	// ErrPkgSigButNoKey is returned when a package is signed but no key was provided
-	ErrPkgSigButNoKey = errors.New("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
-)
-
-// ValidatePackageSignature validates the signature of a package
-func ValidatePackageSignature(paths types.PackagePathsMap, publicKeyPath string) error {
-	// If the insecure flag was provided ignore the signature validation
-	if config.CommonOptions.Insecure {
-		return nil
-	}
-
-	// Handle situations where there is no signature within the package
-	sigExist := !utils.InvalidPath(paths[types.PackageSignature])
-	if !sigExist && publicKeyPath == "" {
-		// Nobody was expecting a signature, so we can just return
-		return nil
-	} else if sigExist && publicKeyPath == "" {
-		// The package is signed but no key was provided
-		return ErrPkgSigButNoKey
-	} else if !sigExist && publicKeyPath != "" {
-		// A key was provided but there is no signature
-		return ErrPkgKeyButNoSig
-	}
-
-	// Validate the signature with the key we were provided
-	if err := utils.CosignVerifyBlob(paths[types.ZarfYAML], paths[types.PackageSignature], publicKeyPath); err != nil {
-		return fmt.Errorf("package signature did not match the provided key: %w", err)
 	}
 
 	return nil
