@@ -24,6 +24,7 @@ func (p *Packager) Pull() error {
 		return err
 	}
 
+	// TODO: figure out either a new fn (PullPackage?) or a way to "load" w/o unpacking tarballs
 	pkg, loaded, err := p.provider.LoadPackage(nil)
 	if err != nil {
 		return err
