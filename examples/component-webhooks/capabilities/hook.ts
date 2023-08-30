@@ -22,7 +22,7 @@ When(a.Secret)
   .IsCreatedOrUpdated()
   .InNamespace("zarf")
   .WithLabel("package-deploy-info")
-  .Then(request => {
+  .Mutate(request => {
     const secret = request.Raw;
     let secretData;
     let secretString: string;
