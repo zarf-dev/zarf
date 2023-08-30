@@ -151,15 +151,13 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 //   - zarf.yaml
 //   - checksums.txt
 //   - zarf.yaml.sig
-func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (partialPaths []string, err error) {
+func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (fetchedPaths []string, err error) {
 	isPartialPull := len(layersToPull) > 0
-	ref := o.repo.Reference
-
-	message.Debug("Pulling", ref)
+	message.Debug("Pulling", o.repo.Reference)
 
 	manifest, err := o.FetchRoot()
 	if err != nil {
-		return partialPaths, err
+		return nil, err
 	}
 
 	if isPartialPull {
@@ -177,25 +175,23 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 
 	dst, err := file.New(destinationDir)
 	if err != nil {
-		return partialPaths, err
+		return nil, err
 	}
 	defer dst.Close()
 
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
-	if isPartialPull {
-		for _, layer := range layersToPull {
-			path := layer.Annotations[ocispec.AnnotationTitle]
-			// partial paths are relative to the destination directory
-			// only layers w/ a title annotation are considered
-			if len(path) > 0 {
-				partialPaths = append(partialPaths, path)
-			}
+
+	for _, layer := range layersToPull {
+		path := layer.Annotations[ocispec.AnnotationTitle]
+		// partial paths are relative to the destination directory
+		// only layers w/ a title annotation are considered
+		if len(path) > 0 {
+			fetchedPaths = append(fetchedPaths, path)
 		}
-		partialPaths = helpers.Unique(partialPaths)
 	}
 
-	return partialPaths, o.CopyWithProgress(layersToPull, dst, &copyOpts, destinationDir)
+	return fetchedPaths, o.CopyWithProgress(layersToPull, dst, &copyOpts, destinationDir)
 }
 
 // CopyWithProgress copies the given layers from the remote repository to the given store.

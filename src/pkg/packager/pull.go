@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/providers"
 	"github.com/mholt/archiver/v3"
@@ -28,6 +29,8 @@ func (p *Packager) Pull() error {
 		return err
 	}
 	p.cfg.Pkg = pkg
+
+	message.Infof("Pulled %q", p.cfg.PkgOpts.PackagePath)
 
 	// Get all the files loaded
 	everything := []string{}
