@@ -124,6 +124,7 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 
 	// Tests the URL mutation for GitRepository CRD for Flux.
 	stdOut, stdErr, err = e2e.Kubectl("get", "gitrepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
+	require.NoError(t, err, stdOut, stdErr)
 	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", config.ZarfInClusterGitServiceURL, config.ZarfGitPushUser)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
 
