@@ -104,8 +104,8 @@ var packageDeployCmd = &cobra.Command{
 }
 
 var packageMirrorCmd = &cobra.Command{
-	Use:     "mirror [ PACKAGE ]",
-	Aliases: []string{"m"},
+	Use:     "mirror-resources [ PACKAGE ]",
+	Aliases: []string{"mr"},
 	Short:   lang.CmdPackageMirrorShort,
 	Long:    lang.CmdPackageMirrorLong,
 	Args:    cobra.MaximumNArgs(1),
@@ -378,11 +378,6 @@ func bindMirrorFlags(v *viper.Viper) {
 	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(common.VInitRegistryURL), lang.CmdInitFlagRegURL)
 	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(common.VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
 	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(common.VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
-
-	// Flags for using an external artifact server
-	mirrorFlags.StringVar(&pkgConfig.InitOpts.ArtifactServer.Address, "artifact-url", v.GetString(common.VInitArtifactURL), lang.CmdInitFlagArtifactURL)
-	mirrorFlags.StringVar(&pkgConfig.InitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(common.VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
-	mirrorFlags.StringVar(&pkgConfig.InitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(common.VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
 }
 
 func bindInspectFlags(v *viper.Viper) {
