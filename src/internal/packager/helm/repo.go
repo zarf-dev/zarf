@@ -14,9 +14,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/registry"
+	"k8s.io/client-go/util/homedir"
 
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/downloader"
@@ -69,7 +71,13 @@ func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
 		spinner.Errorf(err, "Validation failed for chart from %s (%s)", h.Chart.LocalPath, err.Error())
 		return "", err
 	}
-	h.buildChartDependencies(spinner)
+
+	err = h.buildChartDependencies(spinner)
+	if err != nil {
+		spinner.Errorf(err, "Unable to build dependencies for the chart: %s", err.Error())
+		return "", err
+	}
+
 	client := action.NewPackage()
 
 	client.Destination = destination
@@ -171,7 +179,7 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 // DownloadChartFromGitToTemp downloads a chart from git into a temp directory
 func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, error) {
 	// Create the Git configuration and download the repo
-	gitCfg := git.NewWithSpinner(h.Cfg.State.GitServer, spinner)
+	gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
 
 	// Download the git repo to a temporary directory
 	err := gitCfg.DownloadRepoToTemp(h.Chart.URL)
@@ -185,13 +193,20 @@ func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, err
 
 // buildChartDependencies builds the helm chart dependencies
 func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
+	// Download and build the specified dependencies
 	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
 	if err != nil {
 		spinner.Fatalf(err, "Unable to create a new registry client")
 	}
+
 	h.Settings = cli.New()
+	defaultKeyring := filepath.Join(homedir.HomeDir(), ".gnupg", "pubring.gpg")
+	if v, ok := os.LookupEnv("GNUPGHOME"); ok {
+		defaultKeyring = filepath.Join(v, "pubring.gpg")
+	}
+
 	man := &downloader.Manager{
-		Out:            os.Stdout,
+		Out:            &message.DebugWriter{},
 		ChartPath:      h.Chart.LocalPath,
 		Getters:        getter.All(h.Settings),
 		RegistryClient: regClient,
@@ -199,14 +214,19 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 		RepositoryConfig: h.Settings.RepositoryConfig,
 		RepositoryCache:  h.Settings.RepositoryCache,
 		Debug:            false,
+		Verify:           downloader.VerifyIfPossible,
+		Keyring:          defaultKeyring,
 	}
-	// Verify the chart
-	man.Verify = downloader.VerifyIfPossible
 
 	// Build the deps from the helm chart
 	err = man.Build()
 	if e, ok := err.(downloader.ErrRepoNotFound); ok {
-		return fmt.Errorf("%s. Please add the missing repos via 'helm repo add'", e.Error())
+		// If we encounter a repo not found error point the user to `zarf tools helm repo add`
+		message.Warnf("%s. Please add the missing repo via 'zarf tools helm repo add <name> <url>'", e.Error())
+	} else if err != nil {
+		// Warn the user of any issues but don't fail - any actual issues will cause a fail during packaging (e.g. the charts we are building may exist already, we just can't get updates)
+		message.Warnf("%s", err.Error())
 	}
+
 	return nil
 }

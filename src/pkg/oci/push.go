@@ -10,11 +10,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
@@ -37,12 +34,13 @@ type ConfigPartial struct {
 }
 
 // PushLayer pushes the given layer (bytes) to the remote repository.
-func (o *OrasRemote) PushLayer(b []byte, mediaType string) (*ocispec.Descriptor, error) {
+func (o *OrasRemote) PushLayer(b []byte, mediaType string) (ocispec.Descriptor, error) {
 	desc := content.NewDescriptorFromBytes(mediaType, b)
-	return &desc, o.repo.Push(o.ctx, desc, bytes.NewReader(b))
+	return desc, o.repo.Push(o.ctx, desc, bytes.NewReader(b))
 }
 
-func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata, build *types.ZarfBuildData) (*ocispec.Descriptor, error) {
+// pushManifestConfigFromMetadata pushes the manifest config with metadata to the remote repository.
+func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata, build *types.ZarfBuildData) (ocispec.Descriptor, error) {
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,
@@ -54,11 +52,12 @@ func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata
 	}
 	manifestConfigBytes, err := json.Marshal(manifestConfig)
 	if err != nil {
-		return nil, err
+		return ocispec.Descriptor{}, err
 	}
 	return o.PushLayer(manifestConfigBytes, ocispec.MediaTypeImageConfig)
 }
 
+// manifestAnnotationsFromMetadata returns the annotations for the manifest from the given metadata.
 func (o *OrasRemote) manifestAnnotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {
 	annotations := map[string]string{
 		ocispec.AnnotationDescription: metadata.Description,
@@ -138,7 +137,8 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 		if err != nil {
 			return err
 		}
-		spinner.Updatef("Preparing layer %d/%d: %s", idx+1, len(paths), name)
+		status := fmt.Sprintf("Preparing layer %d/%d: %s", idx+1, len(paths), name)
+		spinner.Updatef(message.Truncate(status, message.TermWidth, false))
 
 		mediaType := ZarfLayerMediaTypeBlob
 
@@ -167,7 +167,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	if err != nil {
 		return err
 	}
-	root, err := o.generatePackManifest(src, descs, manifestConfigDesc, &pkg.Metadata)
+	root, err := o.generatePackManifest(src, descs, &manifestConfigDesc, &pkg.Metadata)
 	if err != nil {
 		return err
 	}
@@ -182,30 +182,6 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	}
 
 	o.Transport.ProgressBar.Successf("Published %s [%s]", o.repo.Reference, root.MediaType)
-	message.HorizontalRule()
-	if strings.HasSuffix(o.repo.Reference.String(), SkeletonSuffix) {
-		message.Title("How to import components from this skeleton:", "")
-		ex := []types.ZarfComponent{}
-		for _, c := range pkg.Components {
-			ex = append(ex, types.ZarfComponent{
-				Name: fmt.Sprintf("import-%s", c.Name),
-				Import: types.ZarfComponentImport{
-					ComponentName: c.Name,
-					URL:           fmt.Sprintf("oci://%s", o.repo.Reference),
-				},
-			})
-		}
-		utils.ColorPrintYAML(ex, nil, true)
-	} else {
-		flags := ""
-		if config.CommonOptions.Insecure {
-			flags = "--insecure"
-		}
-		message.Title("To inspect/deploy/pull:", "")
-		message.ZarfCommand("package inspect oci://%s %s", o.repo.Reference, flags)
-		message.ZarfCommand("package deploy oci://%s %s", o.repo.Reference, flags)
-		message.ZarfCommand("package pull oci://%s %s", o.repo.Reference, flags)
-	}
 
 	return nil
 }

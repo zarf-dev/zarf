@@ -34,8 +34,16 @@ func TestHelm(t *testing.T) {
 func testHelmChartsExample(t *testing.T) {
 	t.Parallel()
 	t.Log("E2E: Helm chart example")
+
+	// Create a package that needs dependencies
+	evilChartDepsPath := filepath.Join("src", "test", "packages", "25-evil-chart-deps")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", evilChartDepsPath, "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+	require.Contains(t, stdErr, "could not download https://charts.jetstack.io/charts/cert-manager-v1.11.1.tgz")
+	require.FileExists(t, filepath.Join(evilChartDepsPath, "good-chart", "charts", "gitlab-runner-0.55.0.tgz"))
+
 	// Create the package with a registry override
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io=docker.io", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io=docker.io", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the package.
@@ -86,16 +94,19 @@ func testHelmEscaping(t *testing.T) {
 func testHelmUninstallRollback(t *testing.T) {
 	t.Log("E2E: Helm Uninstall and Rollback")
 
-	goodPath := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.Arch)
+	goodPath := fmt.Sprintf("build/zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 	evilPath := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
 	// Create the evil package (with the bad configmap).
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/25-evil-dos-games/", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/25-evil-dos-games/", "--skip-sbom", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the evil package.
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
+
+	// This package contains SBOMable things but was created with --skip-sbom
+	require.Contains(t, string(stdErr), "This package does NOT contain an SBOM.")
 
 	// Ensure that this does not leave behind a dos-games chart
 	helmOut, err := exec.Command("helm", "list", "-n", "dos-games").Output()
@@ -128,7 +139,7 @@ func testHelmUninstallRollback(t *testing.T) {
 func testHelmAdoption(t *testing.T) {
 	t.Log("E2E: Helm Adopt a Deployment")
 
-	packagePath := fmt.Sprintf("build/zarf-package-dos-games-%s.tar.zst", e2e.Arch)
+	packagePath := fmt.Sprintf("build/zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 	deploymentManifest := "src/test/packages/25-manifest-adoption/deployment.yaml"
 
 	// Deploy dos-games manually into the cluster without Zarf

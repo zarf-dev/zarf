@@ -22,8 +22,6 @@ import (
 
 // New creates a new K8s client.
 func New(logger Log, defaultLabels Labels) (*K8s, error) {
-	logger("k8s.NewK8sClient()")
-
 	klog.SetLogger(funcr.New(func(prefix, args string) {
 		logger(args)
 	}, funcr.Options{}))
@@ -59,10 +57,7 @@ func (k *K8s) WaitForHealthyCluster(timeout time.Duration) error {
 	expired := time.After(timeout)
 
 	for {
-		// delay check 1 seconds
-		time.Sleep(1 * time.Second)
 		select {
-
 		// on timeout abort
 		case <-expired:
 			return fmt.Errorf("timed out waiting for cluster to report healthy")
@@ -103,6 +98,9 @@ func (k *K8s) WaitForHealthyCluster(timeout time.Duration) error {
 
 			k.Log("No pods reported 'succeeded' or 'running' state yet.")
 		}
+
+		// delay check 1 seconds
+		time.Sleep(1 * time.Second)
 	}
 }
 

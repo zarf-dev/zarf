@@ -63,6 +63,11 @@ jobs:
           make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=$GITHUB_REF_NAME
           make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=$GITHUB_REF_NAME
 
+      - name: Publish Init Package as OCI and Skeleton
+        run: |
+          make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/defenseunicorns/packages
+          make publish-init-package ARCH=arm64 REPOSITORY_URL=ghcr.io/defenseunicorns/packages
+
       # Create a CVE report based on this build
       - name: Create release time CVE report
         run: "make cve-report"
@@ -91,6 +96,9 @@ jobs:
           name: build-artifacts
           path: build/
 
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
       - name: Make Zarf executable
         run: |
           chmod +x build/zarf
@@ -99,7 +107,6 @@ jobs:
       - name: Build examples and run tests
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
-          sudo chown $USER /tmp/zarf-*.log
 
       - name: Save logs
         if: always()

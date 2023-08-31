@@ -384,12 +384,10 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="build_migrations"></a>migrations *</strong>
+<strong> <a name="build_migrations"></a>migrations</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** Any migrations that have been run on this package
 
@@ -413,12 +411,10 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="build_differential"></a>differential *</strong>
+<strong> <a name="build_differential"></a>differential</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** Whether this package was created with differential components
 
@@ -431,13 +427,12 @@ Must be one of:
 
 <details open>
 <summary>
-<strong> <a name="build_registryOverrides"></a>registryOverrides *</strong>
+<strong> <a name="build_registryOverrides"></a>registryOverrides</strong>
 </summary>
 &nbsp;
 <blockquote>
 
   ## build > registryOverrides
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** Any registry domains that were overridden on package create when pulling images
 
@@ -531,6 +526,22 @@ must respect the following conditions
 
 </blockquote>
 </details>
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="build_lastNonBreakingVersion"></a>lastNonBreakingVersion</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The minimum version of Zarf that does not have breaking package structure changes
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -765,22 +776,6 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary>
-<strong> <a name="components_items_cosignKeyPath"></a>cosignKeyPath</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Specify a path to a public key to validate signed online resources
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
 <details open>
 <summary>
 <strong> <a name="components_items_import"></a>import</strong>
@@ -980,6 +975,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="components_items_files_items_extractPath"></a>extractPath</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Local folder or file to be extracted from a 'source' archive
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -1108,12 +1119,10 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="components_items_charts_items_version"></a>version *</strong>
+<strong> <a name="components_items_charts_items_version"></a>version</strong>
 </summary>
 &nbsp;
 <blockquote>
-
-![Required](https://img.shields.io/badge/Required-red)
 
 **Description:** The version of the chart to deploy; for git-based charts this is also the tag of the git repo
 

@@ -7,6 +7,7 @@ package oci
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -16,16 +17,42 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
 )
 
 var (
-	// AlwaysPull is a list of paths that will always be pulled from the remote repository.
-	AlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
+	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
+	PackageAlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
 )
+
+// FileDescriptorExists returns true if the given file exists in the given directory with the expected SHA.
+func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDir string) bool {
+	destinationPath := filepath.Join(destinationDir, desc.Annotations[ocispec.AnnotationTitle])
+	info, err := os.Stat(destinationPath)
+	if err != nil {
+		return false
+	}
+	if info.IsDir() {
+		return false
+	}
+	if info.Size() != desc.Size {
+		return false
+	}
+
+	f, err := os.Open(destinationPath)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	actual, err := helpers.GetSHA256Hash(f)
+	if err != nil {
+		return false
+	}
+	return actual == desc.Digest.Encoded()
+}
 
 // LayersFromPaths returns the descriptors for the given paths from the root manifest.
 func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.Descriptor, err error) {
@@ -35,7 +62,7 @@ func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.
 	}
 	for _, path := range requestedPaths {
 		layer := manifest.Locate(path)
-		if o.isEmptyDescriptor(layer) {
+		if IsEmptyDescriptor(layer) {
 			return nil, fmt.Errorf("path %s does not exist in this package", path)
 		}
 		layers = append(layers, layer)
@@ -81,12 +108,12 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	//
 	// Since sboms.tar is not a heavy addition 99% of the time, we'll just always pull it
 	sbomsDescriptor := root.Locate(config.ZarfSBOMTar)
-	if !o.isEmptyDescriptor(sbomsDescriptor) {
+	if !IsEmptyDescriptor(sbomsDescriptor) {
 		layers = append(layers, sbomsDescriptor)
 	}
 	if len(images) > 0 {
 		// Add the image index and the oci-layout layers
-		layers = append(layers, root.Locate(root.indexPath), root.Locate(root.ociLayoutPath))
+		layers = append(layers, root.Locate(ZarfPackageIndexPath), root.Locate(ZarfPackageLayoutPath))
 		index, err := o.FetchImagesIndex(root)
 		if err != nil {
 			return nil, err
@@ -95,17 +122,21 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			manifestDescriptor := helpers.Find(index.Manifests, func(layer ocispec.Descriptor) bool {
 				return layer.Annotations[ocispec.AnnotationBaseImageName] == image
 			})
+
+			// even though these are technically image manifests, we store them as Zarf blobs
+			manifestDescriptor.MediaType = ZarfLayerMediaTypeBlob
+
 			manifest, err := o.FetchManifest(manifestDescriptor)
 			if err != nil {
 				return nil, err
 			}
 			// Add the manifest and the manifest config layers
-			layers = append(layers, root.Locate(filepath.Join(root.imagesBlobsDir, manifestDescriptor.Digest.Encoded())))
-			layers = append(layers, root.Locate(filepath.Join(root.imagesBlobsDir, manifest.Config.Digest.Encoded())))
+			layers = append(layers, root.Locate(filepath.Join(ZarfPackageImagesBlobsDir, manifestDescriptor.Digest.Encoded())))
+			layers = append(layers, root.Locate(filepath.Join(ZarfPackageImagesBlobsDir, manifest.Config.Digest.Encoded())))
 
 			// Add all the layers from the manifest
 			for _, layer := range manifest.Layers {
-				layerPath := filepath.Join(root.imagesBlobsDir, layer.Digest.Encoded())
+				layerPath := filepath.Join(ZarfPackageImagesBlobsDir, layer.Digest.Encoded())
 				layers = append(layers, root.Locate(layerPath))
 			}
 		}
@@ -125,28 +156,25 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	isPartialPull := len(layersToPull) > 0
 	ref := o.repo.Reference
 
-	pterm.Println()
-	message.Debugf("Pulling %s", ref.String())
-	message.Infof("Pulling Zarf package from %s", ref)
+	message.Debug("Pulling", ref)
 
 	manifest, err := o.FetchRoot()
 	if err != nil {
 		return partialPaths, err
 	}
 
-	estimatedBytes := int64(0)
 	if isPartialPull {
-		for _, path := range AlwaysPull {
+		for _, path := range PackageAlwaysPull {
 			desc := manifest.Locate(path)
 			layersToPull = append(layersToPull, desc)
 		}
-		for _, desc := range layersToPull {
-			estimatedBytes += desc.Size
-		}
 	} else {
-		estimatedBytes = manifest.SumLayersSize()
+		layersToPull = append(layersToPull, manifest.Layers...)
 	}
-	estimatedBytes += manifest.Config.Size
+	layersToPull = append(layersToPull, manifest.Config)
+
+	// de-duplicate layers
+	layersToPull = RemoveDuplicateDescriptors(layersToPull)
 
 	dst, err := file.New(destinationDir)
 	if err != nil {
@@ -157,51 +185,63 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 	if isPartialPull {
-		paths := []string{}
 		for _, layer := range layersToPull {
-			paths = append(paths, layer.Annotations[ocispec.AnnotationTitle])
-		}
-		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-			nodes, err := content.Successors(ctx, fetcher, desc)
-			if err != nil {
-				return nil, err
+			path := layer.Annotations[ocispec.AnnotationTitle]
+			// partial paths are relative to the destination directory
+			// only layers w/ a title annotation are considered
+			if len(path) > 0 {
+				partialPaths = append(partialPaths, path)
 			}
-			var ret []ocispec.Descriptor
-			for _, node := range nodes {
-				if helpers.SliceContains(paths, node.Annotations[ocispec.AnnotationTitle]) {
-					ret = append(ret, node)
-				}
-			}
-			return ret, nil
 		}
+		partialPaths = helpers.Unique(partialPaths)
+	}
+
+	return partialPaths, o.CopyWithProgress(layersToPull, dst, &copyOpts, destinationDir)
+}
+
+// CopyWithProgress copies the given layers from the remote repository to the given store.
+func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Target, copyOpts *oras.CopyOptions, destinationDir string) error {
+	estimatedBytes := int64(0)
+	shas := []string{}
+	for _, layer := range layers {
+		estimatedBytes += layer.Size
+		if len(layer.Digest.String()) > 0 {
+			shas = append(shas, layer.Digest.Encoded())
+		}
+	}
+
+	copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+		if desc.MediaType != ocispec.MediaTypeImageManifest {
+			return nil, nil
+		}
+		nodes, err := content.Successors(ctx, fetcher, desc)
+		if err != nil {
+			return nil, err
+		}
+		var ret []ocispec.Descriptor
+		for _, node := range nodes {
+			if helpers.SliceContains(shas, node.Digest.Encoded()) {
+				ret = append(ret, node)
+			}
+		}
+		return ret, nil
 	}
 
 	// Create a thread to update a progress bar as we save the package to disk
 	doneSaving := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling Zarf package data")
-	_, err = oras.Copy(o.ctx, o.repo, ref.String(), dst, ref.String(), copyOpts)
+	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling")
+	_, err := oras.Copy(o.ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), *copyOpts)
 	if err != nil {
-		return partialPaths, err
+		return err
 	}
 
 	// Send a signal to the progress bar that we're done and wait for it to finish
 	doneSaving <- 1
 	wg.Wait()
 
-	message.Debugf("Pulled %s", ref.String())
-	message.Successf("Pulled %s", ref.String())
-
-	if isPartialPull {
-		for _, layer := range layersToPull {
-			if layer.Annotations[ocispec.AnnotationTitle] != "" {
-				partialPaths = append(partialPaths, layer.Annotations[ocispec.AnnotationTitle])
-			}
-		}
-	}
-
-	return partialPaths, nil
+	return nil
 }
 
 // PullLayer pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
@@ -216,20 +256,31 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 	return utils.WriteFile(filepath.Join(destinationDir, desc.Annotations[ocispec.AnnotationTitle]), b)
 }
 
-// PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
-func (o *OrasRemote) PullPackageMetadata(destinationDir string) (err error) {
+// PullPackagePaths pulls multiple files from the remote repository and saves them to `destinationDir`.
+func (o *OrasRemote) PullPackagePaths(paths []string, destinationDir string) ([]ocispec.Descriptor, error) {
+	paths = helpers.Unique(paths)
 	root, err := o.FetchRoot()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	for _, path := range AlwaysPull {
+	layersPulled := []ocispec.Descriptor{}
+	for _, path := range paths {
 		desc := root.Locate(path)
-		if !o.isEmptyDescriptor(desc) {
+		if !IsEmptyDescriptor(desc) {
+			layersPulled = append(layersPulled, desc)
+			if o.FileDescriptorExists(desc, destinationDir) {
+				continue
+			}
 			err = o.PullLayer(desc, destinationDir)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
-	return nil
+	return layersPulled, nil
+}
+
+// PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
+func (o *OrasRemote) PullPackageMetadata(destinationDir string) ([]ocispec.Descriptor, error) {
+	return o.PullPackagePaths(PackageAlwaysPull, destinationDir)
 }

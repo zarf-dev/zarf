@@ -12,8 +12,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -37,7 +37,7 @@ func (p *Packager) confirmAction(stage string, sbomViewFiles []string) (confirm 
 			if len(sbomViewFiles) > 0 {
 				cwd, _ := os.Getwd()
 				link := pterm.FgLightCyan.Sprint(pterm.Bold.Sprint(filepath.Join(cwd, config.ZarfSBOMDir, filepath.Base(sbomViewFiles[0]))))
-				inspect := pterm.BgBlack.Sprint(pterm.FgWhite.Sprint(pterm.Bold.Sprintf("$ zarf package inspect %s", p.cfg.PkgSourcePath)))
+				inspect := pterm.BgBlack.Sprint(pterm.FgWhite.Sprint(pterm.Bold.Sprintf("$ zarf package inspect %s", p.cfg.PkgSource)))
 
 				artifactMsg := pterm.Bold.Sprintf("%d artifacts", len(sbomViewFiles)) + " to be reviewed. These are"
 				if len(sbomViewFiles) == 1 {
@@ -57,8 +57,8 @@ func (p *Packager) confirmAction(stage string, sbomViewFiles []string) (confirm 
 		}
 
 		// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
-		if cluster, err := cluster.NewCluster(); err == nil {
-			if initPackage, err := cluster.GetDeployedPackage("init"); err == nil {
+		if p.cluster != nil {
+			if initPackage, err := p.cluster.GetDeployedPackage("init"); err == nil {
 				// We use the build.version for now because it is the most reliable way to get this version info pre v0.26.0
 				deprecated.PrintBreakingChanges(initPackage.Data.Build.Version)
 			}
@@ -97,7 +97,7 @@ func (p *Packager) confirmAction(stage string, sbomViewFiles []string) (confirm 
 	// On create in interactive mode, prompt for max package size if it is still the default value of 0
 	// Note: it will not be 0 if the user has provided a value via the --max-package-size flag or Viper config
 	if stage == config.ZarfCreateStage && p.cfg.CreateOpts.MaxPackageSizeMB == 0 {
-		value, err := p.promptVariable(types.ZarfPackageVariable{
+		value, err := interactive.PromptVariable(types.ZarfPackageVariable{
 			Name:        "Maximum Package Size",
 			Description: "Specify a maximum file size for this package in Megabytes. Above this size, the package will be split into multiple files. 0 will disable this feature.",
 			Default:     "0",
@@ -120,30 +120,12 @@ func (p *Packager) confirmAction(stage string, sbomViewFiles []string) (confirm 
 	return true
 }
 
-func (p *Packager) promptVariable(variable types.ZarfPackageVariable) (value string, err error) {
-
-	if variable.Description != "" {
-		message.Question(variable.Description)
-	}
-
-	prompt := &survey.Input{
-		Message: fmt.Sprintf("Please provide a value for \"%s\"", variable.Name),
-		Default: variable.Default,
-	}
-
-	if err = survey.AskOne(prompt, &value); err != nil {
-		return "", err
-	}
-
-	return value, nil
-}
-
 func (p *Packager) getPackageYAMLHints(stage string) map[string]string {
 	hints := map[string]string{}
 
 	if stage == config.ZarfDeployStage {
 		for _, variable := range p.cfg.Pkg.Variables {
-			value, present := p.cfg.DeployOpts.SetVariables[variable.Name]
+			value, present := p.cfg.PkgOpts.SetVariables[variable.Name]
 			if !present {
 				value = fmt.Sprintf("'%s' (default)", message.Truncate(variable.Default, 20, false))
 			} else {

@@ -6,18 +6,18 @@ package oci
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
-	config "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	goyaml "github.com/goccy/go-yaml"
+	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -26,100 +26,29 @@ import (
 // prepending the provided prefix
 //
 // appending the provided suffix to the version
-func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata, suffix string) (*registry.Reference, error) {
-	registryLocation = strings.TrimPrefix(registryLocation, utils.OCIURLPrefix)
-
+func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata, suffix string) (string, error) {
 	ver := metadata.Version
 	if len(ver) == 0 {
-		return nil, errors.New("version is required for publishing")
+		return "", errors.New("version is required for publishing")
 	}
 
 	if !strings.HasSuffix(registryLocation, "/") {
 		registryLocation = registryLocation + "/"
 	}
+	registryLocation = strings.TrimPrefix(registryLocation, helpers.OCIURLPrefix)
 
 	format := "%s%s:%s-%s"
 
 	raw := fmt.Sprintf(format, registryLocation, metadata.Name, ver, suffix)
 
-	message.Debugf("raw OCI reference from metadata: %s", raw)
+	message.Debug("Raw OCI reference from metadata:", raw)
 
 	ref, err := registry.ParseReference(raw)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &ref, nil
-}
-
-// FetchRoot fetches the root manifest from the remote repository.
-func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
-	// get the manifest descriptor
-	descriptor, err := o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
-	if err != nil {
-		return nil, err
-	}
-
-	// get the manifest itself
-	bytes, err := o.FetchLayer(descriptor)
-	if err != nil {
-		return nil, err
-	}
-	manifest := ocispec.Manifest{}
-
-	if err = json.Unmarshal(bytes, &manifest); err != nil {
-		return nil, err
-	}
-	return NewZarfOCIManifest(&manifest), nil
-}
-
-// FetchManifest fetches the manifest with the given descriptor from the remote repository.
-func (o *OrasRemote) FetchManifest(desc ocispec.Descriptor) (manifest *ZarfOCIManifest, err error) {
-	bytes, err := o.FetchLayer(desc)
-	if err != nil {
-		return manifest, err
-	}
-	err = json.Unmarshal(bytes, &manifest)
-	if err != nil {
-		return manifest, err
-	}
-	return manifest, nil
-}
-
-// FetchLayer fetches the layer with the given descriptor from the remote repository.
-func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err error) {
-	return content.FetchAll(o.ctx, o.repo, desc)
-}
-
-// FetchZarfYAML fetches the zarf.yaml file from the remote repository.
-func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg types.ZarfPackage, err error) {
-	zarfYamlDescriptor := manifest.Locate(config.ZarfYAML)
-	if zarfYamlDescriptor.Digest == "" {
-		return pkg, fmt.Errorf("unable to find %s in the manifest", config.ZarfYAML)
-	}
-	zarfYamlBytes, err := o.FetchLayer(zarfYamlDescriptor)
-	if err != nil {
-		return pkg, err
-	}
-	err = goyaml.Unmarshal(zarfYamlBytes, &pkg)
-	if err != nil {
-		return pkg, err
-	}
-	return pkg, nil
-}
-
-// FetchImagesIndex fetches the images/index.json file from the remote repository.
-func (o *OrasRemote) FetchImagesIndex(manifest *ZarfOCIManifest) (index *ocispec.Index, err error) {
-	indexDescriptor := manifest.Locate(manifest.indexPath)
-	indexBytes, err := o.FetchLayer(indexDescriptor)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(indexBytes, &index)
-	if err != nil {
-		return nil, err
-	}
-	return index, nil
+	return ref.String(), nil
 }
 
 // printLayerSuccess prints a success message to the console when a layer has been successfully published/pulled to/from a registry.
@@ -135,6 +64,66 @@ func (o *OrasRemote) printLayerSuccess(_ context.Context, desc ocispec.Descripto
 	return nil
 }
 
-func (o *OrasRemote) isEmptyDescriptor(desc ocispec.Descriptor) bool {
+// IsEmptyDescriptor returns true if the given descriptor is empty.
+func IsEmptyDescriptor(desc ocispec.Descriptor) bool {
 	return desc.Digest == "" && desc.Size == 0
+}
+
+// ValidateReference validates the given url is a valid OCI reference.
+func ValidateReference(url string) error {
+	if !strings.HasPrefix(url, helpers.OCIURLPrefix) {
+		return fmt.Errorf("oci url reference must begin with %s", helpers.OCIURLPrefix)
+	}
+	sansPrefix := strings.TrimPrefix(url, helpers.OCIURLPrefix)
+	_, err := registry.ParseReference(sansPrefix)
+	return err
+}
+
+// RemoveDuplicateDescriptors removes duplicate descriptors from the given list.
+func RemoveDuplicateDescriptors(descriptors []ocispec.Descriptor) []ocispec.Descriptor {
+	keys := make(map[string]bool)
+	list := []ocispec.Descriptor{}
+	for _, entry := range descriptors {
+		if IsEmptyDescriptor(entry) {
+			continue
+		}
+		if _, value := keys[entry.Digest.Encoded()]; !value {
+			keys[entry.Digest.Encoded()] = true
+			list = append(list, entry)
+		}
+	}
+	return list
+}
+
+// GetInitPackageURL returns the URL for the init package for the given architecture and version.
+func GetInitPackageURL(arch, version string) string {
+	return fmt.Sprintf("ghcr.io/defenseunicorns/packages/init:%s-%s", version, arch)
+}
+
+// DownloadPackageTarball downloads the given OCI package and saves as a tarball.
+func DownloadPackageTarball(url, destinationTarball string, concurrency int) error {
+	remote, err := NewOrasRemote(url)
+	if err != nil {
+		return err
+	}
+
+	tmp, err := utils.MakeTempDir()
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmp)
+
+	_, err = remote.PullPackage(tmp, concurrency)
+	if err != nil {
+		return err
+	}
+
+	allTheLayers, err := filepath.Glob(filepath.Join(tmp, "*"))
+	if err != nil {
+		return err
+	}
+
+	_ = os.Remove(destinationTarball)
+
+	return archiver.Archive(allTheLayers, destinationTarball)
 }

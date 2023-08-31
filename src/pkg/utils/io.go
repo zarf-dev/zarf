@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"crypto"
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"io/fs"
@@ -35,7 +34,7 @@ func GetCryptoHashFromFile(path string, hashName crypto.Hash) (string, error) {
 	var data io.ReadCloser
 	var err error
 
-	if IsURL(path) {
+	if helpers.IsURL(path) {
 		// Handle download from URL
 		message.Warn("This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link.")
 		data = Fetch(path)
@@ -59,17 +58,10 @@ type TextTemplate struct {
 	Value      string
 }
 
-// MakeTempDir creates a temp directory with the given prefix.
-func MakeTempDir(tmpDir string) (string, error) {
-	// Create the base tmp directory if it is specified.
-	if tmpDir != "" {
-		if err := CreateDirectory(tmpDir, 0700); err != nil {
-			return "", err
-		}
-	}
-
-	tmp, err := os.MkdirTemp(tmpDir, tmpPathPrefix)
-	message.Debugf("Using temp path: '%s'", tmp)
+// MakeTempDir creates a temp directory with the zarf- prefix.
+func MakeTempDir() (string, error) {
+	tmp, err := os.MkdirTemp("", tmpPathPrefix)
+	message.Debugf("Creating temp path: '%s'", tmp)
 	return tmp, err
 }
 
@@ -406,16 +398,23 @@ func IsDir(path string) bool {
 
 // GetSHA256OfFile returns the SHA256 hash of the provided file.
 func GetSHA256OfFile(filePath string) (string, error) {
-	file, err := os.Open(filePath)
+	f, err := os.Open(filePath)
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer f.Close()
 
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
+	return helpers.GetSHA256Hash(f)
+}
+
+// SHAsMatch returns an error if the SHA256 hash of the provided file does not match the expected hash.
+func SHAsMatch(path, expected string) error {
+	sha, err := GetSHA256OfFile(path)
+	if err != nil {
+		return err
 	}
-
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	if sha != expected {
+		return fmt.Errorf("expected sha256 of %s to be %s, found %s", path, expected, sha)
+	}
+	return nil
 }

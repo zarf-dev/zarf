@@ -14,7 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/agent/state"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 )
@@ -29,7 +29,7 @@ type GenericGitRepo struct {
 	Spec struct {
 		URL       string    `json:"url"`
 		SecretRef SecretRef `json:"secretRef,omitempty"`
-	}
+	} `json:"spec"`
 }
 
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
@@ -45,7 +45,7 @@ func NewGitRepositoryMutationHook() operations.Hook {
 func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	var (
-		zarfState types.ZarfState
+		zarfState *types.ZarfState
 		patches   []operations.PatchOperation
 		isPatched bool
 
@@ -71,7 +71,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
 	if isUpdate {
-		isPatched, err = utils.DoHostnamesMatch(zarfState.GitServer.Address, src.Spec.URL)
+		isPatched, err = helpers.DoHostnamesMatch(zarfState.GitServer.Address, src.Spec.URL)
 		if err != nil {
 			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}

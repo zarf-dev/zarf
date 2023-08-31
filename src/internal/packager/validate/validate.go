@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -25,7 +26,7 @@ var (
 
 // Run performs config validations.
 func Run(pkg types.ZarfPackage) error {
-	if pkg.Kind == "ZarfInitConfig" && pkg.Metadata.YOLO {
+	if pkg.Kind == types.ZarfInitConfig && pkg.Metadata.YOLO {
 		return fmt.Errorf(lang.PkgValidateErrInitNoYOLO)
 	}
 
@@ -45,14 +46,14 @@ func Run(pkg types.ZarfPackage) error {
 		}
 	}
 
-	uniqueNames := make(map[string]bool)
+	uniqueComponentNames := make(map[string]bool)
 
 	for _, component := range pkg.Components {
 		// ensure component name is unique
-		if _, ok := uniqueNames[component.Name]; ok {
+		if _, ok := uniqueComponentNames[component.Name]; ok {
 			return fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, component.Name)
 		}
-		uniqueNames[component.Name] = true
+		uniqueComponentNames[component.Name] = true
 
 		if err := validateComponent(pkg, component); err != nil {
 			return fmt.Errorf(lang.PkgValidateErrComponent, err)
@@ -92,7 +93,7 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		if path != "" {
 			return fmt.Errorf(lang.PkgValidateErrImportOptions, composedComponent.Name)
 		}
-		ok := utils.IsOCIURL(url)
+		ok := helpers.IsOCIURL(url)
 		if !ok {
 			return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, composedComponent.Import.URL)
 		}
@@ -119,13 +120,27 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		}
 	}
 
+	uniqueChartNames := make(map[string]bool)
 	for _, chart := range component.Charts {
+		// ensure chart name is unique
+		if _, ok := uniqueChartNames[chart.Name]; ok {
+			return fmt.Errorf(lang.PkgValidateErrChartNameNotUnique, chart.Name)
+		}
+		uniqueChartNames[chart.Name] = true
+
 		if err := validateChart(chart); err != nil {
 			return fmt.Errorf(lang.PkgValidateErrChart, err)
 		}
 	}
 
+	uniqueManifestNames := make(map[string]bool)
 	for _, manifest := range component.Manifests {
+		// ensure manifest name is unique
+		if _, ok := uniqueManifestNames[manifest.Name]; ok {
+			return fmt.Errorf(lang.PkgValidateErrManifestNameNotUnique, manifest.Name)
+		}
+		uniqueManifestNames[manifest.Name] = true
+
 		if err := validateManifest(manifest); err != nil {
 			return fmt.Errorf(lang.PkgValidateErrManifest, err)
 		}

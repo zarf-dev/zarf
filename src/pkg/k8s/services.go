@@ -7,6 +7,7 @@ package k8s
 import (
 	"context"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -22,7 +23,7 @@ func (k *K8s) ReplaceService(service *corev1.Service) (*corev1.Service, error) {
 
 // GenerateService returns a K8s service struct without writing to the cluster.
 func (k *K8s) GenerateService(namespace, name string) *corev1.Service {
-	return &corev1.Service{
+	service := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Service",
@@ -31,9 +32,13 @@ func (k *K8s) GenerateService(namespace, name string) *corev1.Service {
 			Name:        name,
 			Namespace:   namespace,
 			Annotations: make(Labels),
-			Labels:      k.Labels,
 		},
 	}
+
+	// Merge in common labels so that later modifications to the service can't mutate them
+	service.ObjectMeta.Labels = helpers.MergeMap[string](k.Labels, service.ObjectMeta.Labels)
+
+	return service
 }
 
 // DeleteService removes a service from the cluster by namespace and name.

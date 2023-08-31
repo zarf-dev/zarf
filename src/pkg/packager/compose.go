@@ -12,18 +12,16 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 )
 
 // composeComponents builds the composed components list for the current config.
 func (p *Packager) composeComponents() error {
-	message.Debugf("packager.ComposeComponents()")
-
 	components := []types.ZarfComponent{}
 
 	for _, component := range p.cfg.Pkg.Components {
@@ -54,8 +52,6 @@ func (p *Packager) composeComponents() error {
 // this follows the composite design pattern outlined here: https://en.wikipedia.org/wiki/Composite_pattern
 // where 1 component parent is made up of 0...n composite or leaf children.
 func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (child types.ZarfComponent, err error) {
-	message.Debugf("packager.GetComposedComponent(%+v)", parentComponent)
-
 	// Make sure the component we're trying to import can't be accessed.
 	if err := validate.ImportPackage(&parentComponent); err != nil {
 		return child, fmt.Errorf("invalid import definition in the %s component: %w", parentComponent.Name, err)
@@ -78,8 +74,6 @@ func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (ch
 }
 
 func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry string) (child types.ZarfComponent, err error) {
-	message.Debugf("packager.getChildComponent(%+v, %s)", parent, pathAncestry)
-
 	// Figure out which component we are actually importing.
 	// NOTE: Default to the component name if a custom one was not provided.
 	childComponentName := parent.Import.ComponentName
@@ -97,7 +91,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		// Save all the OCI imported components into our build data
 		p.cfg.Pkg.Build.OCIImportedComponents[parent.Import.URL] = childComponentName
 
-		skelURL := strings.TrimPrefix(parent.Import.URL, utils.OCIURLPrefix)
+		skelURL := strings.TrimPrefix(parent.Import.URL, helpers.OCIURLPrefix)
 		cachePath = filepath.Join(config.GetAbsCachePath(), "oci", skelURL)
 		err = os.MkdirAll(cachePath, 0755)
 		if err != nil {
@@ -213,8 +207,6 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 }
 
 func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfComponent) (types.ZarfComponent, error) {
-	message.Debugf("packager.fixComposedFilepaths(%+v, %+v)", pathAncestry, child)
-
 	for fileIdx, file := range child.Files {
 		composed := p.getComposedFilePath(pathAncestry, file.Source)
 		child.Files[fileIdx].Source = composed
@@ -274,9 +266,9 @@ func (p *Packager) fixComposedFilepaths(pathAncestry string, child types.ZarfCom
 		child.Actions.OnCreate.Defaults.Dir = composedDefaultDir
 	}
 
-	if child.CosignKeyPath != "" {
-		composed := p.getComposedFilePath(pathAncestry, child.CosignKeyPath)
-		child.CosignKeyPath = composed
+	if child.DeprecatedCosignKeyPath != "" {
+		composed := p.getComposedFilePath(pathAncestry, child.DeprecatedCosignKeyPath)
+		child.DeprecatedCosignKeyPath = composed
 	}
 
 	child = p.composeExtensions(pathAncestry, child)
@@ -297,12 +289,10 @@ func (p *Packager) fixComposedActionFilepaths(pathAncestry string, actions []typ
 
 // Sets Name, Default, Required and Description to the original components values.
 func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override types.ZarfComponent) {
-	message.Debugf("packager.mergeComponentOverrides(%+v, %+v)", target, override)
-
 	target.Name = override.Name
+	target.Group = override.Group
 	target.Default = override.Default
 	target.Required = override.Required
-	target.Group = override.Group
 
 	// Override description if it was provided.
 	if override.Description != "" {
@@ -310,17 +300,57 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	}
 
 	// Override cosign key path if it was provided.
-	if override.CosignKeyPath != "" {
-		target.CosignKeyPath = override.CosignKeyPath
+	if override.DeprecatedCosignKeyPath != "" {
+		target.DeprecatedCosignKeyPath = override.DeprecatedCosignKeyPath
 	}
 
 	// Append slices where they exist.
-	target.Charts = append(target.Charts, override.Charts...)
 	target.DataInjections = append(target.DataInjections, override.DataInjections...)
 	target.Files = append(target.Files, override.Files...)
 	target.Images = append(target.Images, override.Images...)
-	target.Manifests = append(target.Manifests, override.Manifests...)
 	target.Repos = append(target.Repos, override.Repos...)
+
+	// Merge charts with the same name to keep them unique
+	for _, overrideChart := range override.Charts {
+		existing := false
+		for idx := range target.Charts {
+			if target.Charts[idx].Name == overrideChart.Name {
+				if overrideChart.Namespace != "" {
+					target.Charts[idx].Namespace = overrideChart.Namespace
+				}
+				if overrideChart.ReleaseName != "" {
+					target.Charts[idx].ReleaseName = overrideChart.ReleaseName
+				}
+				target.Charts[idx].ValuesFiles = append(target.Charts[idx].ValuesFiles, overrideChart.ValuesFiles...)
+				existing = true
+			}
+		}
+
+		if !existing {
+			target.Charts = append(target.Charts, overrideChart)
+		}
+	}
+
+	// Merge manifests with the same name to keep them unique
+	for _, overrideManifest := range override.Manifests {
+		existing := false
+		for idx := range target.Manifests {
+			if target.Manifests[idx].Name == overrideManifest.Name {
+				if overrideManifest.Namespace != "" {
+					target.Manifests[idx].Namespace = overrideManifest.Namespace
+				}
+				target.Manifests[idx].Files = append(target.Manifests[idx].Files, overrideManifest.Files...)
+				target.Manifests[idx].Kustomizations = append(target.Manifests[idx].Kustomizations, overrideManifest.Kustomizations...)
+
+				existing = true
+			}
+		}
+
+		if !existing {
+			target.Manifests = append(target.Manifests, overrideManifest)
+		}
+	}
+
 	// Check for nil array
 	if override.Extensions.BigBang != nil {
 		if override.Extensions.BigBang.ValuesFiles != nil {
@@ -372,8 +402,6 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 
 // Reads the locally imported zarf.yaml.
 func (p *Packager) getSubPackage(packagePath string, checkSumPaths []string) (importedPackage types.ZarfPackage, err error) {
-	message.Debugf("packager.getSubPackage(%s)", packagePath)
-
 	path := filepath.Join(packagePath, config.ZarfYAML)
 	if err := utils.ReadYaml(path, &importedPackage); err != nil {
 		return importedPackage, err
@@ -398,10 +426,8 @@ func (p *Packager) getSubPackage(packagePath string, checkSumPaths []string) (im
 
 // Prefix file path with importPath if original file path is not a url.
 func (p *Packager) getComposedFilePath(prefix string, path string) string {
-	message.Debugf("packager.getComposedFilePath(%s, %s)", prefix, path)
-
 	// Return original if it is a remote file.
-	if utils.IsURL(path) {
+	if helpers.IsURL(path) {
 		return path
 	}
 

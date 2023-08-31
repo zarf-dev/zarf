@@ -11,31 +11,32 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+var (
+	// ZarfPackageIndexPath is the path to the index.json file in the OCI package.
+	ZarfPackageIndexPath = filepath.Join("images", "index.json")
+	// ZarfPackageLayoutPath is the path to the oci-layout file in the OCI package.
+	ZarfPackageLayoutPath = filepath.Join("images", "oci-layout")
+	// ZarfPackageImagesBlobsDir is the path to the directory containing the image blobs in the OCI package.
+	ZarfPackageImagesBlobsDir = filepath.Join("images", "blobs", "sha256")
+)
+
 // ZarfOCIManifest is a wrapper around the OCI manifest
 //
 // it includes the path to the index.json, oci-layout, and image blobs.
 // as well as a few helper functions for locating layers and calculating the size of the layers.
 type ZarfOCIManifest struct {
 	ocispec.Manifest
-	indexPath      string
-	ociLayoutPath  string
-	imagesBlobsDir string
 }
 
 // NewZarfOCIManifest returns a new ZarfOCIManifest.
 func NewZarfOCIManifest(manifest *ocispec.Manifest) *ZarfOCIManifest {
-	return &ZarfOCIManifest{
-		Manifest:       *manifest,
-		indexPath:      filepath.Join("images", "index.json"),
-		ociLayoutPath:  filepath.Join("images", "oci-layout"),
-		imagesBlobsDir: filepath.Join("images", "blobs", "sha256"),
-	}
+	return &ZarfOCIManifest{*manifest}
 }
 
-// Locate returns the descriptor for the layer with the given path.
-func (m *ZarfOCIManifest) Locate(path string) ocispec.Descriptor {
+// Locate returns the descriptor for the first layer with the given path or digest.
+func (m *ZarfOCIManifest) Locate(uri string) ocispec.Descriptor {
 	return helpers.Find(m.Layers, func(layer ocispec.Descriptor) bool {
-		return layer.Annotations[ocispec.AnnotationTitle] == path
+		return layer.Annotations[ocispec.AnnotationTitle] == uri || layer.Digest.Encoded() == uri
 	})
 }
 

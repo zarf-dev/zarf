@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/jsonschema"
-	"github.com/defenseunicorns/zarf/src/cmd/tools"
+	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
 	"github.com/defenseunicorns/zarf/src/internal/api"
@@ -22,6 +22,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
+	"github.com/spf13/pflag"
 )
 
 var internalCmd = &cobra.Command{
@@ -60,7 +61,7 @@ var generateCLIDocs = &cobra.Command{
 			if cmd.Use == "tools" {
 				for _, toolCmd := range cmd.Commands() {
 					// If the command is a vendored command, add a dummy flag to hide root flags from the docs
-					if tools.CheckVendorOnlyFromPath(toolCmd) {
+					if common.CheckVendorOnlyFromPath(toolCmd) {
 						addHiddenDummyFlag(toolCmd, "log-level")
 						addHiddenDummyFlag(toolCmd, "architecture")
 						addHiddenDummyFlag(toolCmd, "no-log-file")
@@ -68,6 +69,30 @@ var generateCLIDocs = &cobra.Command{
 						addHiddenDummyFlag(toolCmd, "zarf-cache")
 						addHiddenDummyFlag(toolCmd, "tmpdir")
 						addHiddenDummyFlag(toolCmd, "insecure")
+						addHiddenDummyFlag(toolCmd, "no-color")
+					}
+
+					// Remove the default values from all of the helm commands during the CLI command doc generation
+					if toolCmd.Use == "helm" {
+						toolCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
+							if flag.Value.Type() == "string" {
+								flag.DefValue = ""
+							}
+						})
+						for _, helmCmd := range toolCmd.Commands() {
+							helmCmd.Flags().VisitAll(func(flag *pflag.Flag) {
+								if flag.Value.Type() == "string" {
+									flag.DefValue = ""
+								}
+							})
+							for _, helmSubCmd := range helmCmd.Commands() {
+								helmSubCmd.Flags().VisitAll(func(flag *pflag.Flag) {
+									if flag.Value.Type() == "string" {
+										flag.DefValue = ""
+									}
+								})
+							}
+						}
 					}
 				}
 			}

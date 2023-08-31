@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -50,10 +51,22 @@ func TestUseCLI(t *testing.T) {
 	t.Run("zarf version", func(t *testing.T) {
 		t.Parallel()
 		// Test `zarf version`
-		stdOut, _, err := e2e.Zarf("version")
+		version, _, err := e2e.Zarf("version")
 		require.NoError(t, err)
-		require.NotEqual(t, len(stdOut), 0, "Zarf version should not be an empty string")
-		require.NotEqual(t, stdOut, "UnknownVersion", "Zarf version should not be the default value")
+		require.NotEqual(t, len(version), 0, "Zarf version should not be an empty string")
+		version = strings.Trim(version, "\n")
+
+		// test `zarf version --output=json`
+		stdOut, _, err := e2e.Zarf("version", "--output=json")
+		require.NoError(t, err)
+		jsonVersion := fmt.Sprintf(",\"version\":\"%s\"}", version)
+		require.Contains(t, stdOut, jsonVersion, "Zarf version should be the same in all formats")
+
+		// test `zarf version --output=yaml`
+		stdOut, _, err = e2e.Zarf("version", "--output=yaml")
+		require.NoError(t, err)
+		yamlVersion := fmt.Sprintf("version: %s", version)
+		require.Contains(t, stdOut, yamlVersion, "Zarf version should be the same in all formats")
 	})
 
 	t.Run("zarf prepare find-images", func(t *testing.T) {
@@ -91,7 +104,7 @@ func TestUseCLI(t *testing.T) {
 	t.Run("changing log level", func(t *testing.T) {
 		t.Parallel()
 		// Test that changing the log level actually applies the requested level
-		_, stdErr, _ := e2e.Zarf("version", "--log-level=debug")
+		_, stdErr, _ := e2e.Zarf("internal", "crc32", "zarf", "--log-level=debug")
 		expectedOutString := "Log level set to debug"
 		require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
 	})
@@ -103,15 +116,31 @@ func TestUseCLI(t *testing.T) {
 		require.Error(t, err, stdOut, stdErr)
 	})
 
+	t.Run("zarf package to test archive path", func(t *testing.T) {
+		t.Parallel()
+		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+
+		path := "zarf-package-distro-eks-multi-0.0.2.tar.zst"
+		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+
+		require.FileExists(t, "binaries/eksctl_Darwin_x86_64")
+		require.FileExists(t, "binaries/eksctl_Darwin_arm64")
+		require.FileExists(t, "binaries/eksctl_Linux_x86_64")
+
+		e2e.CleanFiles("binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64")
+	})
+
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
-		cachePath := filepath.Join(tmpdir, ".cache-location")
-		stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/dos-games", "--zarf-cache", cachePath, "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
+		cacheDir := filepath.Join(t.TempDir(), ".cache-location")
+		stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/dos-games", "--zarf-cache", cacheDir, "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
 		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
 		require.NoError(t, err, stdOut, stdErr)
 
-		files, err := os.ReadDir(filepath.Join(cachePath, "images"))
+		files, err := os.ReadDir(filepath.Join(cacheDir, "images"))
 		require.NoError(t, err, "Encountered an unexpected error when reading image cache path")
 		require.Greater(t, len(files), 1)
 	})

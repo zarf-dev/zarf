@@ -14,7 +14,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
-	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
+	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -88,10 +88,24 @@ func manifestZarfCredentials(version string) corev1.Secret {
 
 // manifestGitRepo generates a GitRepository object for the Big Bang umbrella repo.
 func manifestGitRepo(cfg *extensions.BigBang) fluxSrcCtrl.GitRepository {
+	apiVersion := "source.toolkit.fluxcd.io/v1beta2"
+
+	// Set apiVersion to v1 on BB v2.7.0 or higher falling back to v1beta2 as needed
+	semverVersion, _ := semver.NewVersion(cfg.Version)
+	if semverVersion != nil {
+		c, _ := semver.NewConstraint(">= 2.7.0")
+		if c != nil {
+			updateFlux, _ := c.Validate(semverVersion)
+			if updateFlux && !cfg.SkipFlux {
+				apiVersion = "source.toolkit.fluxcd.io/v1"
+			}
+		}
+	}
+
 	return fluxSrcCtrl.GitRepository{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       fluxSrcCtrl.GitRepositoryKind,
-			APIVersion: "source.toolkit.fluxcd.io/v1beta2",
+			APIVersion: apiVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bb,

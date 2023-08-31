@@ -18,7 +18,7 @@ You can get the Zarf CLI on your machine in a few different ways. You can use th
 
 <!-- NOTE: The empty line after the '<TabItem ...>' lines are important for the rendering... -->
 <Tabs>
-<TabItem value="macOS" label="macOS" default>
+<TabItem value="macOS">
 
 ```bash
 brew tap defenseunicorns/tap
@@ -27,7 +27,7 @@ brew install zarf
 
 </TabItem>
 
-<TabItem value="Linux" label="Linux">
+<TabItem value="Linux">
 
 ```bash
 brew tap defenseunicorns/tap
@@ -71,7 +71,7 @@ Available Commands:
 </details>
 
 <Tabs>
-<TabItem value="homebrew" label="Installed via Homebrew" default>
+<TabItem value="Installed with Homebrew">
 
 ```bash
 zarf --help
@@ -79,9 +79,9 @@ zarf --help
 
 </TabItem>
 
-<TabItem value="custom-install" label="Downloaded from Github">
+<TabItem value="Downloaded from Github">
 
-- If you're not sure where the file was downloaded to, a good default place to look is `~/Downloads`.
+- If you're not sure where the file was downloaded, a good default place to look is `~/Downloads`.
 - While we only say `zarf` for this example command, the name of the binary is the name of the file you downloaded, which will likely have a different name.
 
 ```bash
@@ -91,7 +91,7 @@ chmod +x ~/Downloads/zarf   # Make the binary executable
 
 </TabItem>
 
-<TabItem value="manually-built" label="Manually Built">
+<TabItem value="Manually Built">
 
 - While we only say `zarf` for this example command, depending on your system, you might have to use a different name for the binary like `zarf-mac-intel` or `zarf-mac-apple`.
 
@@ -135,22 +135,3 @@ The `zarf init` command is utilized to configure a K8s cluster in preparation fo
 <!-- TODO: Write some docs (or redirect to other docs) describing when you would be able to do a `zarf package deploy` before a `zarf init` -->
 
 The `zarf package deploy` command is used to deploy an already built tar.zst package onto a machine, typically within a K8s cluster. Generally, it is presumed that the `zarf init` command has already been executed on the target machine. However, there are a few exceptional cases where this assumption does not apply.
-
-## Using a config file to make CLI command flags declarative
-
-Users can configure the `zarf init`, `zarf package create`, and `zarf package deploy` command flags, as well as global flags (with the exception of `--confirm`), through a config file to help execute commands more declaratively.
-
-By default, Zarf searches for a config file named `zarf-config.toml` in the current working directory. You can generate a config template for use by Zarf by executing the command `zarf prepare generate-config`, with an optional filename, in any of the supported formats, including `toml`, `json`, `yaml`, `ini` and `props`. For instance, to create a template config file with the `my-cool-env` in the yaml format, you can use the command `zarf prepare generate-config my-cool-env.yaml`.
-
-To use a custom config file, set the `ZARF_CONFIG` environment variable to the path of the desired config file. For example, to use the `my-cool-env.yaml` config file, you can set the `ZARF_CONFIG` environment variable to `my-cool-env.yaml`. The `ZARF_CONFIG` environment variable can be set either in the shell or in the `.env` file in the current working directory. Note that the `ZARF_CONFIG` environment variable takes precedence over the default config file.
-
-Additionally, you can also set any supported config parameter via env variable using the `ZARF_` prefix. For instance, you can set the `zarf init` `--storage-class` flag via the env variable by setting the `ZARF_INIT.STORAGE_CLASS` environment variable. Note that the `ZARF_` environment variable takes precedence over the config file.
-
-While config files set default values, these values can still be overwritten by command line flags. For example, if the config file sets the log level to `info` and the command line flag is set to `debug`, the log level will be set to `debug`. The order of precedence for command line configuration is as follows:
-
-1. Command line flags
-2. Environment variables
-3. Config file
-4. Default values
-
-For additional information, see the [Config File Example](../../examples/config-file/README.md).

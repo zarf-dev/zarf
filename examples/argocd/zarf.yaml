@@ -1,0 +1,44 @@
+kind: ZarfPackageConfig
+metadata:
+  name: argocd
+  description: Example showcasing installing ArgoCD
+
+components:
+  - name: argocd-helm-chart
+    required: true
+    charts:
+      - name: argo-cd
+        version: 5.38.1
+        namespace: argocd
+        url: https://argoproj.github.io/argo-helm
+        releaseName: argocd-baseline
+        valuesFiles:
+          - baseline/values.yaml
+    images:
+      - quay.io/argoproj/argocd:v2.7.7
+      - public.ecr.aws/docker/library/redis:7.0.11-alpine
+  - name: argocd-apps
+    required: true
+    charts:
+      - name: argocd-apps
+        version: 1.3.0
+        namespace: podinfo
+        url: https://argoproj.github.io/argo-helm
+        releaseName: argocd-apps
+        valuesFiles:
+          - apps/values.yaml
+    repos:
+      - https://github.com/stefanprodan/podinfo.git
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+    actions:
+      onDeploy:
+        after:
+          # This will use a wait action to wait for the pods to be ready
+          - description: Podinfo pod to be ready via wait action
+            wait:
+              cluster:
+                kind: pod
+                name: app.kubernetes.io/name=apps-podinfo
+                namespace: podinfo
+                condition: ready
