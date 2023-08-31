@@ -59,8 +59,13 @@ type TextTemplate struct {
 }
 
 // MakeTempDir creates a temp directory with the zarf- prefix.
-func MakeTempDir() (string, error) {
-	tmp, err := os.MkdirTemp("", tmpPathPrefix)
+func MakeTempDir(basePath string) (string, error) {
+	if InvalidPath(basePath) {
+		if err := CreateDirectory(basePath, 0700); err != nil {
+			return "", err
+		}
+	}
+	tmp, err := os.MkdirTemp(basePath, tmpPathPrefix)
 	message.Debugf("Creating temp path: '%s'", tmp)
 	return tmp, err
 }
