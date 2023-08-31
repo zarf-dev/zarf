@@ -10,18 +10,17 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
 func (p *Packager) Mirror(noImgChecksum bool) (err error) {
-	spinner := message.NewProgressSpinner("Mirroring zarf package %s", p.cfg.DeployOpts.PackagePath)
+	spinner := message.NewProgressSpinner("Mirroring zarf package %s", p.cfg.PkgOpts.PackagePath)
 	defer spinner.Stop()
 
-	if utils.IsOCIURL(p.cfg.DeployOpts.PackagePath) {
-		err := p.SetOCIRemote(p.cfg.DeployOpts.PackagePath)
+	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
+		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
 		if err != nil {
 			return err
 		}
@@ -31,7 +30,7 @@ func (p *Packager) Mirror(noImgChecksum bool) (err error) {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
 
-	if err := p.validatePackageSignature(p.cfg.DeployOpts.PublicKeyPath); err != nil {
+	if err := ValidatePackageSignature(p.tmp.Base, p.cfg.PkgOpts.PublicKeyPath); err != nil {
 		return err
 	}
 
@@ -40,7 +39,7 @@ func (p *Packager) Mirror(noImgChecksum bool) (err error) {
 		return fmt.Errorf("mirror cancelled")
 	}
 
-	state := types.ZarfState{
+	state := &types.ZarfState{
 		RegistryInfo:   p.cfg.InitOpts.RegistryInfo,
 		GitServer:      p.cfg.InitOpts.GitServer,
 		ArtifactServer: p.cfg.InitOpts.ArtifactServer,
@@ -49,7 +48,7 @@ func (p *Packager) Mirror(noImgChecksum bool) (err error) {
 
 	// Filter out components that are not compatible with this system if we have loaded from a tarball
 	p.filterComponents(true)
-	requestedComponentNames := getRequestedComponentList(p.cfg.DeployOpts.Components)
+	requestedComponentNames := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
 
 	for _, component := range p.cfg.Pkg.Components {
 		if len(requestedComponentNames) == 0 || helpers.SliceContains(requestedComponentNames, component.Name) {

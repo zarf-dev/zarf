@@ -110,9 +110,9 @@ var packageMirrorCmd = &cobra.Command{
 	Long:    lang.CmdPackageMirrorLong,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.DeployOpts.PackagePath = choosePackage(args)
+		pkgConfig.PkgOpts.PackagePath = choosePackage(args)
 
-		pkgConfig.PkgSourcePath = pkgConfig.DeployOpts.PackagePath
+		pkgConfig.PkgSource = pkgConfig.PkgOpts.PackagePath
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -367,7 +367,7 @@ func bindMirrorFlags(v *viper.Viper) {
 
 	mirrorFlags.BoolVar(&noImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
 
-	mirrorFlags.StringVar(&pkgConfig.DeployOpts.Components, "components", v.GetString(common.VInitComponents), lang.CmdPackageMirrorFlagComponents)
+	mirrorFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VInitComponents), lang.CmdPackageMirrorFlagComponents)
 
 	// Flags for using an external Git server
 	mirrorFlags.StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(common.VInitGitURL), lang.CmdInitFlagGitURL)

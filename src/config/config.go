@@ -52,6 +52,7 @@ const (
 
 	ZarfDeployStage = "Deploy"
 	ZarfCreateStage = "Create"
+	ZarfMirrorStage = "Mirror"
 )
 
 // Zarf Constants for In-Cluster Services.
@@ -73,11 +74,7 @@ const (
 	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 
-	ZarfDeployStage = "Deploy"
-	ZarfCreateStage = "Create"
-	ZarfMirrorStage = "Mirror"
-
-  ZarfLoggingUser = "zarf-admin"
+	ZarfLoggingUser = "zarf-admin"
 )
 
 // Zarf Global Configuration Variables.
