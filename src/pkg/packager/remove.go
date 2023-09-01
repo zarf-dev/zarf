@@ -13,7 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/providers"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -34,14 +34,14 @@ func (p *Packager) Remove() (err error) {
 
 	var packageName string
 
-	if p.provider == nil {
-		provider, err := providers.NewFromSource(&p.cfg.PkgOpts, p.tmp.Base())
+	if p.source == nil {
+		source, err := sources.New(&p.cfg.PkgOpts, p.tmp.Base())
 		if err != nil {
 			requiresCluster = true
 			packageName = p.cfg.PkgOpts.PackagePath
-			message.Debugf("%q does not satisfy any current providers, assuming it is a package deployed to a cluster", p.cfg.PkgOpts.PackagePath)
+			message.Debugf("%q does not satisfy any current sources, assuming it is a package deployed to a cluster", p.cfg.PkgOpts.PackagePath)
 		} else {
-			pkg, loaded, err := provider.LoadPackageMetadata(false)
+			pkg, loaded, err := source.LoadPackageMetadata(false)
 			if err != nil {
 				return err
 			}
@@ -76,7 +76,7 @@ func (p *Packager) Remove() (err error) {
 			// we do not want to allow removal of signed packages without a signature if there are remove actions
 			// as this is arbitrary code execution from an untrusted source
 			if wasSigned && hasRemoveActions && p.cfg.PkgOpts.PublicKeyPath == "" {
-				return providers.ErrPkgSigButNoKey
+				return sources.ErrPkgSigButNoKey
 			}
 		}
 	}

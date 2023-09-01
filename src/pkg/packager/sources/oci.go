@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package providers
+package sources
 
 import (
 	"errors"
@@ -17,21 +17,20 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// OCIProvider is a package provider for OCI registries.
-type OCIProvider struct {
-	source         string
+// OCISource is a package source for OCI registries.
+type OCISource struct {
 	destinationDir string
 	opts           *types.ZarfPackageOptions
 	*oci.OrasRemote
 }
 
 // LoadPackage loads a package from an OCI registry.
-func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (op *OCISource) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded[types.BaseDir] = op.destinationDir
 	layersToPull := []ocispec.Descriptor{}
 
-	message.Debugf("Loading package from %q", op.source)
+	message.Debugf("Loading package from %q", op.opts.PackagePath)
 	message.Debugf("Loaded package base directory: %q", op.destinationDir)
 
 	// only pull specified components and their images if optionalComponents AND --confirm are set
@@ -85,7 +84,7 @@ func (op *OCIProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 }
 
 // LoadPackageMetadata loads a package's metadata from an OCI registry.
-func (op *OCIProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (op *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded[types.BaseDir] = op.destinationDir
 	var pathsToCheck []string

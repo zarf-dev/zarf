@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package providers
+package sources
 
 import (
 	"archive/tar"
@@ -20,22 +20,21 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
-// TarballProvider is a package provider for tarballs.
-type TarballProvider struct {
-	source         string
+// TarballSource is a package source for tarballs.
+type TarballSource struct {
 	destinationDir string
 	opts           *types.ZarfPackageOptions
 }
 
 // LoadPackage loads a package from a tarball.
-func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (tp *TarballSource) LoadPackage(_ []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded[types.BaseDir] = tp.destinationDir
 
-	message.Debugf("Loading package from %q", tp.source)
+	message.Debugf("Loading package from %q", tp.opts.PackagePath)
 	message.Debugf("Loaded package base directory: %q", tp.destinationDir)
 
-	err = archiver.Walk(tp.source, func(f archiver.File) error {
+	err = archiver.Walk(tp.opts.PackagePath, func(f archiver.File) error {
 		if f.IsDir() {
 			return nil
 		}
@@ -96,12 +95,12 @@ func (tp *TarballProvider) LoadPackage(_ []string) (pkg types.ZarfPackage, loade
 }
 
 // LoadPackageMetadata loads a package's metadata from a tarball.
-func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (tp *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded[types.BaseDir] = tp.destinationDir
 
 	for pathInArchive := range loaded.MetadataPaths() {
-		if err := archiver.Extract(tp.source, pathInArchive, tp.destinationDir); err != nil {
+		if err := archiver.Extract(tp.opts.PackagePath, pathInArchive, tp.destinationDir); err != nil {
 			return pkg, nil, err
 		}
 		pathOnDisk := filepath.Join(tp.destinationDir, pathInArchive)
@@ -110,7 +109,7 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPac
 		}
 	}
 	if wantSBOM {
-		if err := archiver.Extract(tp.source, types.SBOMTar, tp.destinationDir); err != nil {
+		if err := archiver.Extract(tp.opts.PackagePath, types.SBOMTar, tp.destinationDir); err != nil {
 			return pkg, nil, err
 		}
 		pathOnDisk := filepath.Join(tp.destinationDir, types.SBOMTar)
@@ -148,17 +147,17 @@ func (tp *TarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPac
 	return pkg, loaded, nil
 }
 
-// PartialTarballProvider is a package provider for partial tarballs.
-type PartialTarballProvider struct {
-	source         string
+// PartialTarballSource is a package source for partial tarballs.
+type PartialTarballSource struct {
+	pkgSrc         string
 	outputTarball  string
 	destinationDir string
 	opts           *types.ZarfPackageOptions
 }
 
 // reassembleTarball reassembles the partial tarball into a single tarball.
-func (ptp *PartialTarballProvider) reassembleTarball() (err error) {
-	pattern := strings.Replace(ptp.source, ".part000", ".part*", 1)
+func (ptp *PartialTarballSource) reassembleTarball() (err error) {
+	pattern := strings.Replace(ptp.pkgSrc, ".part000", ".part*", 1)
 	fileList, err := filepath.Glob(pattern)
 	if err != nil {
 		return fmt.Errorf("unable to find partial package files: %s", err)
@@ -168,7 +167,7 @@ func (ptp *PartialTarballProvider) reassembleTarball() (err error) {
 	sort.Strings(fileList)
 
 	// Create the new package
-	destination := strings.Replace(ptp.source, ".part000", "", 1)
+	destination := strings.Replace(ptp.pkgSrc, ".part000", "", 1)
 	pkgFile, err := os.Create(destination)
 	if err != nil {
 		return fmt.Errorf("unable to create new package file: %s", err)
@@ -244,13 +243,15 @@ func (ptp *PartialTarballProvider) reassembleTarball() (err error) {
 }
 
 // LoadPackage loads a package from a partial tarball.
-func (ptp *PartialTarballProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (ptp *PartialTarballSource) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	if err := ptp.reassembleTarball(); err != nil {
 		return pkg, nil, err
 	}
 
-	tp := &TarballProvider{
-		source:         ptp.outputTarball,
+	// Update the package source to the reassembled tarball
+	ptp.opts.PackagePath = ptp.outputTarball
+
+	tp := &TarballSource{
 		destinationDir: ptp.destinationDir,
 		opts:           ptp.opts,
 	}
@@ -258,13 +259,15 @@ func (ptp *PartialTarballProvider) LoadPackage(optionalComponents []string) (pkg
 }
 
 // LoadPackageMetadata loads a package's metadata from a partial tarball.
-func (ptp *PartialTarballProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (ptp *PartialTarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	if err := ptp.reassembleTarball(); err != nil {
 		return pkg, nil, err
 	}
 
-	tp := &TarballProvider{
-		source:         ptp.outputTarball,
+	// Update the package source to the reassembled tarball
+	ptp.opts.PackagePath = ptp.outputTarball
+
+	tp := &TarballSource{
 		destinationDir: ptp.destinationDir,
 		opts:           ptp.opts,
 	}

@@ -12,20 +12,20 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/providers"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/mholt/archiver/v3"
 )
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() error {
 	var err error
-	p.provider, err = providers.NewFromSource(&p.cfg.PkgOpts, p.tmp.Base())
+	p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp.Base())
 	if err != nil {
 		return err
 	}
 
 	// TODO: figure out either a new fn (PullPackage?) or a way to "load" w/o unpacking tarballs
-	pkg, loaded, err := p.provider.LoadPackage(nil)
+	pkg, loaded, err := p.source.LoadPackage(nil)
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package providers
+package sources
 
 import (
 	"fmt"
@@ -13,24 +13,23 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// URLProvider is a package provider for http, https and sget URLs.
-type URLProvider struct {
-	source         string
+// URLSource is a package source for http, https and sget URLs.
+type URLSource struct {
 	destinationDir string
 	opts           *types.ZarfPackageOptions
 	insecure       bool
 }
 
 // fetchTarball downloads the tarball from the URL.
-func (up *URLProvider) fetchTarball() (tb string, err error) {
-	if !up.insecure && up.opts.Shasum == "" && !strings.HasPrefix(up.source, utils.SGETURLPrefix) {
+func (up *URLSource) fetchTarball() (tb string, err error) {
+	if !up.insecure && up.opts.Shasum == "" && !strings.HasPrefix(up.opts.PackagePath, utils.SGETURLPrefix) {
 		return "", fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
 	}
 	var packageURL string
 	if up.opts.Shasum != "" {
-		packageURL = fmt.Sprintf("%s@%s", up.source, up.opts.Shasum)
+		packageURL = fmt.Sprintf("%s@%s", up.opts.PackagePath, up.opts.Shasum)
 	} else {
-		packageURL = up.source
+		packageURL = up.opts.PackagePath
 	}
 
 	// this tmp dir is cleaned up by the defer in the caller
@@ -49,7 +48,7 @@ func (up *URLProvider) fetchTarball() (tb string, err error) {
 }
 
 // LoadPackage loads a package from an http, https or sget URL.
-func (up *URLProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (up *URLSource) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	tb, err := up.fetchTarball()
 	if err != nil {
 		return pkg, nil, err
@@ -57,8 +56,9 @@ func (up *URLProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 
 	defer os.RemoveAll(filepath.Dir(tb))
 
-	tp := &TarballProvider{
-		source:         tb,
+	up.opts.PackagePath = tb
+
+	tp := &TarballSource{
 		destinationDir: up.destinationDir,
 		opts:           up.opts,
 	}
@@ -67,7 +67,7 @@ func (up *URLProvider) LoadPackage(optionalComponents []string) (pkg types.ZarfP
 }
 
 // LoadPackageMetadata loads a package's metadata from an http, https or sget URL.
-func (up *URLProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (up *URLSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	tb, err := up.fetchTarball()
 	if err != nil {
 		return pkg, nil, err
@@ -75,8 +75,9 @@ func (up *URLProvider) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage
 
 	defer os.RemoveAll(filepath.Dir(tb))
 
-	tp := &TarballProvider{
-		source:         tb,
+	up.opts.PackagePath = tb
+
+	tp := &TarballSource{
 		destinationDir: up.destinationDir,
 		opts:           up.opts,
 	}

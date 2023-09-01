@@ -24,7 +24,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/providers"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -41,16 +41,16 @@ func (p *Packager) Deploy() (err error) {
 		message.Debug(err)
 	}
 
-	if p.provider == nil {
-		provider, err := providers.NewFromSource(&p.cfg.PkgOpts, p.tmp.Base())
+	if p.source == nil {
+		source, err := sources.New(&p.cfg.PkgOpts, p.tmp.Base())
 		if err != nil {
 			return err
 		}
-		p.provider = provider
+		p.source = source
 	}
 	optionalComponents := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
 
-	pkg, loaded, err := p.provider.LoadPackage(optionalComponents)
+	pkg, loaded, err := p.source.LoadPackage(optionalComponents)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}

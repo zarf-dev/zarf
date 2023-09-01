@@ -36,7 +36,7 @@ type Packager struct {
 	valueTemplate  *template.Values
 	hpaModified    bool
 	connectStrings types.ConnectStrings
-	provider       types.PackageProvider
+	source         types.PackageSource
 }
 
 // Zarf Packager Variables.
@@ -130,8 +130,8 @@ func (p *Packager) SetTempDirectory(path string) error {
 	return nil
 }
 
-func (p *Packager) WithProvider(provider types.PackageProvider) *Packager {
-	p.provider = provider
+func (p *Packager) WithSource(source types.PackageSource) *Packager {
+	p.source = source
 	return p
 }
 
