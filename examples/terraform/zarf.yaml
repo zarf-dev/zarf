@@ -1,0 +1,22 @@
+kind: ZarfPackageConfig
+metadata:
+  name: terraform-example
+  description: Deploy Terraform
+  version: 0.0.1
+  url: https://example.org
+  architecture: amd64
+
+components:
+  - name: terraform
+    required: true
+    extensions:
+      terraform:
+        version: 1.5.4
+        source: ./src
+    actions:
+      onPackage:
+        before:
+          - cmd: cd src && terraform init
+      onDeploy:
+        after:
+          - cmd: cd .terraform/terraform && terraform plan

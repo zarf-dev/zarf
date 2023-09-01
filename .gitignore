@@ -7,6 +7,7 @@
 .image-cache/
 .scratch/
 .svelte-kit
+.terraform
 .terraform.lock.hcl
 .tool-versions
 .vagrant
