@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 
@@ -132,7 +133,12 @@ func downloadInitPackage(downloadCacheTarget string) error {
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		return oci.DownloadPackageTarball(url, downloadCacheTarget, config.CommonOptions.OCIConcurrency)
+		remote, err := oci.NewOrasRemote(url)
+		if err != nil {
+			return err
+		}
+		source := sources.OCISource{OrasRemote: remote}
+		return source.Collect(downloadCacheTarget)
 	}
 	// Otherwise, exit and tell the user to manually download the init-package
 	return errors.New(lang.CmdInitPullErrManual)

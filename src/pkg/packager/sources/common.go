@@ -35,7 +35,6 @@ func LoadComponents(pkg *types.ZarfPackage, loaded types.PackagePathsMap) (err e
 				return err
 			}
 		}
-		// check here to ensure the component should have had a tarball?
 
 		// also "load" the images dir if any component has images
 		if _, ok := loaded[types.ImagesDir]; !ok && len(component.Images) > 0 {

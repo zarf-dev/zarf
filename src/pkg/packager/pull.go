@@ -13,7 +13,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
-	"github.com/mholt/archiver/v3"
 )
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
@@ -24,32 +23,39 @@ func (p *Packager) Pull() error {
 		return err
 	}
 
-	// TODO: figure out either a new fn (PullPackage?) or a way to "load" w/o unpacking tarballs
-	pkg, loaded, err := p.source.LoadPackage(nil)
-	if err != nil {
+	var name string
+
+	// TODO: need to think about better naming logic here depending upon the source type
+	// might need to be its own function implemented by each source type
+	switch p.source.(type) {
+	case *sources.OCISource:
+		root, err := p.source.(*sources.OCISource).FetchRoot()
+		if err != nil {
+			return err
+		}
+		pkg, err := p.source.(*sources.OCISource).FetchZarfYAML(root)
+		if err != nil {
+			return err
+		}
+		if strings.HasSuffix(p.cfg.PkgOpts.PackageSource, oci.SkeletonSuffix) {
+			name = fmt.Sprintf("zarf-package-%s-skeleton-%s.tar.zst", pkg.Metadata.Name, pkg.Metadata.Version)
+		} else {
+			name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", pkg.Metadata.Name, pkg.Build.Architecture, pkg.Metadata.Version)
+		}
+	case *sources.TarballSource, *sources.PartialTarballSource, *sources.URLSource:
+		// note: this is going to break on SGET because of its weird syntax, as well this will break on
+		// URLs that do not end w/ a valid file extension
+		name = filepath.Base(p.cfg.PkgOpts.PackageSource)
+	}
+
+	output := filepath.Join(p.cfg.PullOpts.OutputDirectory, name)
+	_ = os.Remove(output)
+
+	if err := p.source.Collect(output); err != nil {
 		return err
 	}
-	p.cfg.Pkg = pkg
 
 	message.Infof("Pulled %q", p.cfg.PkgOpts.PackageSource)
 
-	// Get all the files loaded
-	everything := []string{}
-	for _, layer := range loaded {
-		everything = append(everything, layer)
-	}
-
-	var name string
-	if strings.HasSuffix(p.cfg.PkgOpts.PackageSource, oci.SkeletonSuffix) {
-		name = fmt.Sprintf("zarf-package-%s-skeleton-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Metadata.Version)
-	} else {
-		name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Build.Architecture, p.cfg.Pkg.Metadata.Version)
-	}
-	output := filepath.Join(p.cfg.PullOpts.OutputDirectory, name)
-	_ = os.Remove(output)
-	err = archiver.Archive(everything, output)
-	if err != nil {
-		return err
-	}
 	return nil
 }

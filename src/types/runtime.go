@@ -91,6 +91,9 @@ type PackageSource interface {
 	//   that are signed but the user does not have the public key for.
 	LoadPackageMetadata(wantSBOM bool) (ZarfPackage, PackagePathsMap, error)
 	// LoadPackageMetadata(wantSBOM bool, skipValidation bool) (ZarfPackage, PackagePathsMap, error)
+
+	// Collect relocates a package from its source to a destination tarball.
+	Collect(dstTarball string) error
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.

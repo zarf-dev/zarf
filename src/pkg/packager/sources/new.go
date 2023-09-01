@@ -33,28 +33,27 @@ func identifySourceType(pkgSrc string) string {
 	return ""
 }
 
-func New(pkgOpts *types.ZarfPackageOptions, destination string) (types.PackageSource, error) {
+func New(pkgOpts *types.ZarfPackageOptions, destinationDir string) (types.PackageSource, error) {
 	var source types.PackageSource
 
 	pkgSrc := pkgOpts.PackageSource
 
 	switch identifySourceType(pkgSrc) {
 	case "oci":
-		source = &OCISource{destinationDir: destination, opts: pkgOpts}
 		remote, err := oci.NewOrasRemote(pkgSrc)
 		if err != nil {
 			return nil, err
 		}
-		source.(*OCISource).OrasRemote = remote
+		source = &OCISource{destinationDir, pkgOpts, remote}
 	case "tarball":
-		source = &TarballSource{destinationDir: destination, opts: pkgOpts}
+		source = &TarballSource{destinationDir, pkgOpts}
 	case "http", "https":
-		source = &URLSource{destinationDir: destination, opts: pkgOpts, insecure: config.CommonOptions.Insecure}
+		source = &URLSource{destinationDir, pkgOpts}
 	case "sget":
 		message.Warn(lang.WarnSGetDeprecation)
-		source = &URLSource{destinationDir: destination, opts: pkgOpts, insecure: config.CommonOptions.Insecure}
+		source = &URLSource{destinationDir, pkgOpts}
 	case "partial":
-		source = &PartialTarballSource{destinationDir: destination, opts: pkgOpts}
+		source = &PartialTarballSource{destinationDir, pkgOpts}
 	default:
 		return nil, fmt.Errorf("could not identify source type for %q", pkgSrc)
 	}

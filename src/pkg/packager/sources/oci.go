@@ -6,6 +6,7 @@ package sources
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -19,23 +20,23 @@ import (
 
 // OCISource is a package source for OCI registries.
 type OCISource struct {
-	destinationDir string
-	opts           *types.ZarfPackageOptions
+	DestinationDir string
+	*types.ZarfPackageOptions
 	*oci.OrasRemote
 }
 
 // LoadPackage loads a package from an OCI registry.
-func (op *OCISource) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *OCISource) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
-	loaded[types.BaseDir] = op.destinationDir
+	loaded[types.BaseDir] = s.DestinationDir
 	layersToPull := []ocispec.Descriptor{}
 
-	message.Debugf("Loading package from %q", op.opts.PackageSource)
-	message.Debugf("Loaded package base directory: %q", op.destinationDir)
+	message.Debugf("Loading package from %q", s.PackageSource)
+	message.Debugf("Loaded package base directory: %q", s.DestinationDir)
 
 	// only pull specified components and their images if optionalComponents AND --confirm are set
 	if len(optionalComponents) > 0 && config.CommonOptions.Confirm {
-		layers, err := op.LayersFromRequestedComponents(optionalComponents)
+		layers, err := s.LayersFromRequestedComponents(optionalComponents)
 		if err != nil {
 			return pkg, nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
 		}
@@ -43,7 +44,7 @@ func (op *OCISource) LoadPackage(optionalComponents []string) (pkg types.ZarfPac
 	}
 
 	isPartial := true
-	root, err := op.FetchRoot()
+	root, err := s.FetchRoot()
 	if err != nil {
 		return pkg, nil, err
 	}
@@ -51,13 +52,13 @@ func (op *OCISource) LoadPackage(optionalComponents []string) (pkg types.ZarfPac
 		isPartial = false
 	}
 
-	pathsToCheck, err := op.PullPackage(op.destinationDir, config.CommonOptions.OCIConcurrency, layersToPull...)
+	pathsToCheck, err := s.PullPackage(s.DestinationDir, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
 		return pkg, nil, fmt.Errorf("unable to pull the package: %w", err)
 	}
 
 	for _, path := range pathsToCheck {
-		loaded[path] = filepath.Join(op.destinationDir, path)
+		loaded[path] = filepath.Join(s.DestinationDir, path)
 	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
@@ -68,7 +69,7 @@ func (op *OCISource) LoadPackage(optionalComponents []string) (pkg types.ZarfPac
 		return pkg, nil, err
 	}
 
-	if err := ValidatePackageSignature(loaded, op.opts.PublicKeyPath); err != nil {
+	if err := ValidatePackageSignature(loaded, s.PublicKeyPath); err != nil {
 		return pkg, nil, err
 	}
 
@@ -84,12 +85,12 @@ func (op *OCISource) LoadPackage(optionalComponents []string) (pkg types.ZarfPac
 }
 
 // LoadPackageMetadata loads a package's metadata from an OCI registry.
-func (op *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
-	loaded[types.BaseDir] = op.destinationDir
+	loaded[types.BaseDir] = s.DestinationDir
 	var pathsToCheck []string
 
-	metatdataDescriptors, err := op.PullPackageMetadata(op.destinationDir)
+	metatdataDescriptors, err := s.PullPackageMetadata(s.DestinationDir)
 	if err != nil {
 		return pkg, nil, err
 	}
@@ -99,7 +100,7 @@ func (op *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, 
 	}
 
 	if wantSBOM {
-		sbomDescriptors, err := op.PullPackageSBOM(op.destinationDir)
+		sbomDescriptors, err := s.PullPackageSBOM(s.DestinationDir)
 		if err != nil {
 			return pkg, nil, err
 		}
@@ -109,7 +110,7 @@ func (op *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, 
 	}
 
 	for _, path := range pathsToCheck {
-		loaded[path] = filepath.Join(op.destinationDir, path)
+		loaded[path] = filepath.Join(s.DestinationDir, path)
 	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
@@ -120,7 +121,7 @@ func (op *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, 
 		return pkg, nil, err
 	}
 
-	if err := ValidatePackageSignature(loaded, op.opts.PublicKeyPath); err != nil {
+	if err := ValidatePackageSignature(loaded, s.PublicKeyPath); err != nil {
 		if errors.Is(err, ErrPkgSigButNoKey) {
 			message.Warn("The package was signed but no public key was provided, skipping signature validation")
 		} else {
@@ -130,7 +131,7 @@ func (op *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, 
 
 	// unpack sboms.tar
 	if _, ok := loaded[types.SBOMTar]; ok {
-		loaded[types.SBOMDir] = filepath.Join(op.destinationDir, types.SBOMDir)
+		loaded[types.SBOMDir] = filepath.Join(s.DestinationDir, types.SBOMDir)
 		if err = archiver.Unarchive(loaded[types.SBOMTar], loaded[types.SBOMDir]); err != nil {
 			return pkg, nil, err
 		}
@@ -139,4 +140,26 @@ func (op *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, 
 	}
 
 	return pkg, loaded, nil
+}
+
+func (s *OCISource) Collect(dstTarball string) error {
+	tmp, err := utils.MakeTempDir()
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmp)
+
+	_, err = s.PullPackage(tmp, config.CommonOptions.OCIConcurrency)
+	if err != nil {
+		return err
+	}
+
+	allTheLayers, err := filepath.Glob(filepath.Join(tmp, "*"))
+	if err != nil {
+		return err
+	}
+
+	_ = os.Remove(dstTarball)
+
+	return archiver.Archive(allTheLayers, dstTarball)
 }
