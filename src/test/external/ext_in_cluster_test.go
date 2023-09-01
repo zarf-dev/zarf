@@ -108,7 +108,7 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	fmt.Println(string(gitBody))
 	suite.NoError(err)
 	suite.Equal(200, respGit.StatusCode)
-	suite.Contains(string(gitBody), "podinfop", "git server did not contain the expected repo")
+	suite.Contains(string(gitBody), "podinfo", "git server did not contain the expected repo")
 }
 
 func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
