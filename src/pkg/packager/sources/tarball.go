@@ -31,10 +31,10 @@ func (tp *TarballSource) LoadPackage(_ []string) (pkg types.ZarfPackage, loaded 
 	loaded = make(types.PackagePathsMap)
 	loaded[types.BaseDir] = tp.destinationDir
 
-	message.Debugf("Loading package from %q", tp.opts.PackagePath)
+	message.Debugf("Loading package from %q", tp.opts.PackageSource)
 	message.Debugf("Loaded package base directory: %q", tp.destinationDir)
 
-	err = archiver.Walk(tp.opts.PackagePath, func(f archiver.File) error {
+	err = archiver.Walk(tp.opts.PackageSource, func(f archiver.File) error {
 		if f.IsDir() {
 			return nil
 		}
@@ -100,7 +100,7 @@ func (tp *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPacka
 	loaded[types.BaseDir] = tp.destinationDir
 
 	for pathInArchive := range loaded.MetadataPaths() {
-		if err := archiver.Extract(tp.opts.PackagePath, pathInArchive, tp.destinationDir); err != nil {
+		if err := archiver.Extract(tp.opts.PackageSource, pathInArchive, tp.destinationDir); err != nil {
 			return pkg, nil, err
 		}
 		pathOnDisk := filepath.Join(tp.destinationDir, pathInArchive)
@@ -109,7 +109,7 @@ func (tp *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPacka
 		}
 	}
 	if wantSBOM {
-		if err := archiver.Extract(tp.opts.PackagePath, types.SBOMTar, tp.destinationDir); err != nil {
+		if err := archiver.Extract(tp.opts.PackageSource, types.SBOMTar, tp.destinationDir); err != nil {
 			return pkg, nil, err
 		}
 		pathOnDisk := filepath.Join(tp.destinationDir, types.SBOMTar)
@@ -249,7 +249,7 @@ func (ptp *PartialTarballSource) LoadPackage(optionalComponents []string) (pkg t
 	}
 
 	// Update the package source to the reassembled tarball
-	ptp.opts.PackagePath = ptp.outputTarball
+	ptp.opts.PackageSource = ptp.outputTarball
 
 	tp := &TarballSource{
 		destinationDir: ptp.destinationDir,
@@ -265,7 +265,7 @@ func (ptp *PartialTarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.Z
 	}
 
 	// Update the package source to the reassembled tarball
-	ptp.opts.PackagePath = ptp.outputTarball
+	ptp.opts.PackageSource = ptp.outputTarball
 
 	tp := &TarballSource{
 		destinationDir: ptp.destinationDir,

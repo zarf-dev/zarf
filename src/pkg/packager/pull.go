@@ -31,7 +31,7 @@ func (p *Packager) Pull() error {
 	}
 	p.cfg.Pkg = pkg
 
-	message.Infof("Pulled %q", p.cfg.PkgOpts.PackagePath)
+	message.Infof("Pulled %q", p.cfg.PkgOpts.PackageSource)
 
 	// Get all the files loaded
 	everything := []string{}
@@ -40,7 +40,7 @@ func (p *Packager) Pull() error {
 	}
 
 	var name string
-	if strings.HasSuffix(p.cfg.PkgOpts.PackagePath, oci.SkeletonSuffix) {
+	if strings.HasSuffix(p.cfg.PkgOpts.PackageSource, oci.SkeletonSuffix) {
 		name = fmt.Sprintf("zarf-package-%s-skeleton-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Metadata.Version)
 	} else {
 		name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", p.cfg.Pkg.Metadata.Name, p.cfg.Pkg.Build.Architecture, p.cfg.Pkg.Metadata.Version)

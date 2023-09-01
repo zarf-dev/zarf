@@ -76,7 +76,7 @@ var packageDeployCmd = &cobra.Command{
 	Long:    lang.CmdPackageDeployLong,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.PkgOpts.PackagePath = choosePackage(args)
+		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		// Ensure uppercase keys from viper and CLI --set
 		v := common.GetViper()
@@ -103,7 +103,7 @@ var packageInspectCmd = &cobra.Command{
 	Long:    lang.CmdPackageInspectLong,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.PkgOpts.PackagePath = choosePackage(args)
+		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -162,7 +162,7 @@ var packageRemoveCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.PkgOpts.PackagePath = args[0]
+		pkgConfig.PkgOpts.PackageSource = args[0]
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -218,7 +218,7 @@ var packagePullCmd = &cobra.Command{
 			message.Fatal(nil, lang.CmdPackageRegistryPrefixErr)
 		}
 
-		pkgConfig.PkgOpts.PackagePath = args[0]
+		pkgConfig.PkgOpts.PackageSource = args[0]
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)

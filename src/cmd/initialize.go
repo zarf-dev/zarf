@@ -42,11 +42,11 @@ var initCmd = &cobra.Command{
 
 		// Continue running package deploy for all components like any other package
 		initPackageName := packager.GetInitPackageName("")
-		pkgConfig.PkgOpts.PackagePath = initPackageName
+		pkgConfig.PkgOpts.PackageSource = initPackageName
 
 		// Try to use an init-package in the executable directory if none exist in current working directory
 		var err error
-		if pkgConfig.PkgOpts.PackagePath, err = findInitPackage(initPackageName); err != nil {
+		if pkgConfig.PkgOpts.PackageSource, err = findInitPackage(initPackageName); err != nil {
 			message.Fatal(err, err.Error())
 		}
 

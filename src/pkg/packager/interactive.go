@@ -37,7 +37,7 @@ func (p *Packager) confirmAction(stage string, sbomViewFiles []string) (confirm 
 			if len(sbomViewFiles) > 0 {
 				cwd, _ := os.Getwd()
 				link := pterm.FgLightCyan.Sprint(pterm.Bold.Sprint(filepath.Join(cwd, types.SBOMDir, filepath.Base(sbomViewFiles[0]))))
-				inspect := pterm.BgBlack.Sprint(pterm.FgWhite.Sprint(pterm.Bold.Sprintf("$ zarf package inspect %s", p.cfg.PkgOpts.PackagePath)))
+				inspect := pterm.BgBlack.Sprint(pterm.FgWhite.Sprint(pterm.Bold.Sprintf("$ zarf package inspect %s", p.cfg.PkgOpts.PackageSource)))
 
 				artifactMsg := pterm.Bold.Sprintf("%d artifacts", len(sbomViewFiles)) + " to be reviewed. These are"
 				if len(sbomViewFiles) == 1 {

@@ -22,14 +22,14 @@ type URLSource struct {
 
 // fetchTarball downloads the tarball from the URL.
 func (up *URLSource) fetchTarball() (tb string, err error) {
-	if !up.insecure && up.opts.Shasum == "" && !strings.HasPrefix(up.opts.PackagePath, utils.SGETURLPrefix) {
+	if !up.insecure && up.opts.Shasum == "" && !strings.HasPrefix(up.opts.PackageSource, utils.SGETURLPrefix) {
 		return "", fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
 	}
 	var packageURL string
 	if up.opts.Shasum != "" {
-		packageURL = fmt.Sprintf("%s@%s", up.opts.PackagePath, up.opts.Shasum)
+		packageURL = fmt.Sprintf("%s@%s", up.opts.PackageSource, up.opts.Shasum)
 	} else {
-		packageURL = up.opts.PackagePath
+		packageURL = up.opts.PackageSource
 	}
 
 	// this tmp dir is cleaned up by the defer in the caller
@@ -56,7 +56,7 @@ func (up *URLSource) LoadPackage(optionalComponents []string) (pkg types.ZarfPac
 
 	defer os.RemoveAll(filepath.Dir(tb))
 
-	up.opts.PackagePath = tb
+	up.opts.PackageSource = tb
 
 	tp := &TarballSource{
 		destinationDir: up.destinationDir,
@@ -75,7 +75,7 @@ func (up *URLSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, 
 
 	defer os.RemoveAll(filepath.Dir(tb))
 
-	up.opts.PackagePath = tb
+	up.opts.PackageSource = tb
 
 	tp := &TarballSource{
 		destinationDir: up.destinationDir,

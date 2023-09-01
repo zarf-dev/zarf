@@ -36,7 +36,7 @@ func identifySourceType(pkgSrc string) string {
 func New(pkgOpts *types.ZarfPackageOptions, destination string) (types.PackageSource, error) {
 	var source types.PackageSource
 
-	pkgSrc := pkgOpts.PackagePath
+	pkgSrc := pkgOpts.PackageSource
 
 	switch identifySourceType(pkgSrc) {
 	case "oci":

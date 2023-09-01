@@ -22,7 +22,7 @@ import (
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func (p *Packager) Remove() (err error) {
-	spinner := message.NewProgressSpinner("Removing Zarf package %s", p.cfg.PkgOpts.PackagePath)
+	spinner := message.NewProgressSpinner("Removing Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
 	// If components were provided; just remove the things we were asked to remove
@@ -38,8 +38,8 @@ func (p *Packager) Remove() (err error) {
 		source, err := sources.New(&p.cfg.PkgOpts, p.tmp.Base())
 		if err != nil {
 			requiresCluster = true
-			packageName = p.cfg.PkgOpts.PackagePath
-			message.Debugf("%q does not satisfy any current sources, assuming it is a package deployed to a cluster", p.cfg.PkgOpts.PackagePath)
+			packageName = p.cfg.PkgOpts.PackageSource
+			message.Debugf("%q does not satisfy any current sources, assuming it is a package deployed to a cluster", p.cfg.PkgOpts.PackageSource)
 		} else {
 			pkg, loaded, err := source.LoadPackageMetadata(false)
 			if err != nil {

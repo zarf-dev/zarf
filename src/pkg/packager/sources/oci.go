@@ -30,7 +30,7 @@ func (op *OCISource) LoadPackage(optionalComponents []string) (pkg types.ZarfPac
 	loaded[types.BaseDir] = op.destinationDir
 	layersToPull := []ocispec.Descriptor{}
 
-	message.Debugf("Loading package from %q", op.opts.PackagePath)
+	message.Debugf("Loading package from %q", op.opts.PackageSource)
 	message.Debugf("Loaded package base directory: %q", op.destinationDir)
 
 	// only pull specified components and their images if optionalComponents AND --confirm are set
