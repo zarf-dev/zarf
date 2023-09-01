@@ -60,7 +60,7 @@ type TextTemplate struct {
 
 // MakeTempDir creates a temp directory with the zarf- prefix.
 func MakeTempDir(basePath string) (string, error) {
-	if InvalidPath(basePath) {
+	if basePath != "" && InvalidPath(basePath) {
 		if err := CreateDirectory(basePath, 0700); err != nil {
 			return "", err
 		}
