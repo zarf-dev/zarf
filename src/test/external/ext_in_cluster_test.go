@@ -79,10 +79,20 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	suite.NoError(err, "unable to mirror the package with zarf")
 
 	// Check that the registry contains the images we want
-	catalogArgs := []string{"tools", "registry", "catalog", "127.0.0.1:31999"}
-	stdOut, _, err := exec.CmdWithContext(context.TODO(), exec.PrintCfg(), zarfBinPath, catalogArgs...)
-	suite.NoError(err, "unable to catalog the registry with zarf")
-	suite.Contains(stdOut, "stefanprodan/podinfo", "registry did not contain the expected image")
+	tunnelReg, err := cluster.NewTunnel("external-registry", "svc", "external-registry-docker-registry", 0, 5000)
+	suite.NoError(err)
+	err = tunnelReg.Connect("", false)
+	suite.NoError(err)
+	defer tunnelReg.Close()
+
+	regCatalogURL := fmt.Sprintf("http://push-user:superSecurePassword@%s/v2/_catalog", tunnelReg.Endpoint())
+	respReg, err := http.Get(regCatalogURL)
+	suite.NoError(err)
+	regBody, err := io.ReadAll(respReg.Body)
+	suite.NoError(err)
+	fmt.Println(string(regBody))
+	suite.Equal(200, respReg.StatusCode)
+	suite.Contains(string(regBody), "stefanprodan/podinfo", "registry did not contain the expected image")
 
 	// Check that the git server contains the repos we want (TODO VERIFY NAME AND PORT)
 	tunnelGit, err := cluster.NewTunnel("git-server", "svc", "gitea-http", 0, 3000)
@@ -91,13 +101,14 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	suite.NoError(err)
 	defer tunnelGit.Close()
 
-	gitRepoURL := fmt.Sprintf("http://git-user:superSecurePassword@%s/api/v1/repos", tunnelGit.Endpoint())
+	gitRepoURL := fmt.Sprintf("http://git-user:superSecurePassword@%s/api/v1/repos/search", tunnelGit.Endpoint())
 	respGit, err := http.Get(gitRepoURL)
 	suite.NoError(err)
-	suite.Equal(200, respGit.StatusCode)
 	gitBody, err := io.ReadAll(respGit.Body)
+	fmt.Println(string(gitBody))
 	suite.NoError(err)
-	suite.Contains(string(gitBody), "podinfo", "git server did not contain the expected repo")
+	suite.Equal(200, respGit.StatusCode)
+	suite.Contains(string(gitBody), "podinfop", "git server did not contain the expected repo")
 }
 
 func (suite *ExtInClusterTestSuite) Test_1_Deploy() {

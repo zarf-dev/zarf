@@ -5,7 +5,6 @@
 package external
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,7 +29,7 @@ var outClusterCredentialArgs = []string{
 	"--git-push-username=git-user",
 	"--git-push-password=superSecurePassword",
 	"--git-url=http://" + giteaHost + ":3000",
-	"--registry-push-username=git-user",
+	"--registry-push-username=push-user",
 	"--registry-push-password=superSecurePassword",
 	"--registry-url=k3d-" + registryHost + ":5000"}
 
@@ -92,18 +91,23 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	suite.NoError(err, "unable to mirror the package with zarf")
 
 	// Check that the registry contains the images we want
-	catalogArgs := []string{"tools", "registry", "catalog", "k3d-" + registryHost + ":5000"}
-	stdOut, _, err := exec.CmdWithContext(context.TODO(), exec.PrintCfg(), zarfBinPath, catalogArgs...)
-	suite.NoError(err, "unable to catalog the registry with zarf")
-	suite.Contains(stdOut, "stefanprodan/podinfo", "registry did not contain the expected image")
+	regCatalogURL := fmt.Sprintf("http://push-user:superSecurePassword@k3d-%s:5000/v2/catalog", registryHost)
+	respReg, err := http.Get(regCatalogURL)
+	suite.NoError(err)
+	regBody, err := io.ReadAll(respReg.Body)
+	suite.NoError(err)
+	fmt.Println(string(regBody))
+	suite.Equal(200, respReg.StatusCode)
+	suite.Contains(string(regBody), "stefanprodan/podinfo", "registry did not contain the expected image")
 
 	// Check that the git server contains the repos we want
-	gitRepoURL := fmt.Sprintf("http://git-user:superSecurePassword@%s:3000/api/v1/repos", giteaHost)
+	gitRepoURL := fmt.Sprintf("http://git-user:superSecurePassword@%s:3000/api/v1/repos/search", giteaHost)
 	respGit, err := http.Get(gitRepoURL)
 	suite.NoError(err)
-	suite.Equal(200, respGit.StatusCode)
 	gitBody, err := io.ReadAll(respGit.Body)
 	suite.NoError(err)
+	fmt.Println(string(gitBody))
+	suite.Equal(200, respGit.StatusCode)
 	suite.Contains(string(gitBody), "podinfo", "git server did not contain the expected repo")
 }
 
