@@ -41,6 +41,11 @@ type ExtOutClusterTestSuite struct {
 func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
+	// Teardown any leftovers from previous tests
+	_ = exec.CmdWithPrint("k3d", "cluster", "delete")
+	_ = exec.CmdWithPrint("k3d", "registry", "delete", registryHost)
+	_ = exec.CmdWithPrint("docker", "network", "remove", network)
+
 	// Setup a network for everything to live inside
 	err := exec.CmdWithPrint("docker", "network", "create", "--driver=bridge", "--subnet="+subnet, "--gateway="+gateway, network)
 	suite.NoError(err, "unable to create the k3d registry")
