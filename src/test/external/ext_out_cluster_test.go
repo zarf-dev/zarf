@@ -96,7 +96,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	suite.NoError(err, "unable to mirror the package with zarf")
 
 	// Check that the registry contains the images we want
-	regCatalogURL := fmt.Sprintf("http://push-user:superSecurePassword@k3d-%s:5000/v2/catalog", registryHost)
+	regCatalogURL := fmt.Sprintf("http://push-user:superSecurePassword@k3d-%s:5000/v2/_catalog", registryHost)
 	respReg, err := http.Get(regCatalogURL)
 	suite.NoError(err)
 	regBody, err := io.ReadAll(respReg.Body)
