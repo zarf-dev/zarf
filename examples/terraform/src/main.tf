@@ -1,4 +1,4 @@
-resource "random_id" "id" {
-  byte_length = 8
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.1.1"
 }
-

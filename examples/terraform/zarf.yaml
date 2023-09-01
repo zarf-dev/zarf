@@ -16,7 +16,12 @@ components:
     actions:
       onPackage:
         before:
-          - cmd: cd src && terraform init
+          - cmd: |
+              cd src
+              terraform init
       onDeploy:
         after:
-          - cmd: cd .terraform/terraform && terraform plan
+          - cmd: |
+              cd .terraform/terraform
+              ~/.zarf/bin/terraform init
+              ~/.zarf/bin/terraform plan
