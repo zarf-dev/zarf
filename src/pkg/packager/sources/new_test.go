@@ -42,7 +42,7 @@ func Test_identifySourceType(t *testing.T) {
 	}
 }
 
-func TestProviderFromSource(t *testing.T) {
+func TestNew(t *testing.T) {
 	for _, source := range sources {
 		actual, err := New(&types.ZarfPackageOptions{PackagePath: source.pkgSrc}, "")
 		require.NoError(t, err)
