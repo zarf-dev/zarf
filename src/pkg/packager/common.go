@@ -246,7 +246,6 @@ func createPaths(basePath string) (paths types.TempPaths, err error) {
 		return paths, err
 	}
 
-	message.Debug("Using temporary directory:", basePath)
 	paths = types.TempPaths{
 		Base: basePath,
 
