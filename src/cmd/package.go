@@ -29,7 +29,6 @@ import (
 var includeInspectSBOM bool
 var outputInspectSBOM string
 var inspectPublicKey string
-var noImgChecksum bool
 
 var packageCmd = &cobra.Command{
 	Use:     "package",
@@ -119,7 +118,7 @@ var packageMirrorCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Deploy the package
-		if err := pkgClient.Mirror(noImgChecksum); err != nil {
+		if err := pkgClient.Mirror(); err != nil {
 			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
 		}
 	},
@@ -365,9 +364,9 @@ func bindMirrorFlags(v *viper.Viper) {
 	// Always require confirm flag (no viper)
 	mirrorFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
 
-	mirrorFlags.BoolVar(&noImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
+	mirrorFlags.BoolVar(&pkgConfig.MirrorOpts.NoImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
 
-	mirrorFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VInitComponents), lang.CmdPackageMirrorFlagComponents)
+	mirrorFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageMirrorFlagComponents)
 
 	// Flags for using an external Git server
 	mirrorFlags.StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(common.VInitGitURL), lang.CmdInitFlagGitURL)
