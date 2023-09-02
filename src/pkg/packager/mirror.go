@@ -63,7 +63,6 @@ func (p *Packager) Mirror(noImgChecksum bool) (err error) {
 
 // mirrorComponent mirrors a Zarf Component.
 func (p *Packager) mirrorComponent(component types.ZarfComponent, noImgChecksum bool) error {
-	message.Debugf("packager.mirrorComponent(%#v, %#v", p.tmp, component)
 
 	componentPath, err := p.createOrGetComponentPaths(component)
 	if err != nil {
