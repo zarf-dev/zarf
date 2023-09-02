@@ -16,7 +16,7 @@ import (
 
 // Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
 func (p *Packager) Mirror(noImgChecksum bool) (err error) {
-	spinner := message.NewProgressSpinner("Mirroring zarf package %s", p.cfg.PkgOpts.PackagePath)
+	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackagePath)
 	defer spinner.Stop()
 
 	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
