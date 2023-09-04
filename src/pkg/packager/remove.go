@@ -81,6 +81,8 @@ func (p *Packager) Remove() (err error) {
 		}
 	}
 
+	// TODO: handle if a source was provided
+
 	// Get the secret for the deployed package
 	deployedPackage := types.DeployedPackage{}
 
