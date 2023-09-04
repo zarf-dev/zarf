@@ -58,9 +58,9 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the flux repository", zarfState.GitServer.Address)
+	message.Debugf("Using the url of (%s) to mutate the flux GitRepository", zarfState.GitServer.Address)
 
-	// parse to simple struct to read the git url
+	// parse to simple struct to read the GitRepo url
 	src := &GenericGitRepo{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
@@ -82,14 +82,14 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
 		transformedURL, err := transform.GitURL(zarfState.GitServer.Address, patchedURL, zarfState.GitServer.PushUsername)
 		if err != nil {
-			message.Warnf("Unable to transform the git url, using the original url we have: %s", patchedURL)
+			message.Warnf("Unable to transform the GitRepo URL, using the original url we have: %s", patchedURL)
 		}
 		patchedURL = transformedURL.String()
-		message.Debugf("original git URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
+		message.Debugf("original GitRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 	}
 
 	// Patch updates of the repo spec
-	patches = populatePatchOperations(patchedURL, src.Spec.SecretRef.Name)
+	patches = populateGitRepoPatchOperations(patchedURL, src.Spec.SecretRef.Name)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -98,7 +98,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 }
 
 // Patch updates of the repo spec.
-func populatePatchOperations(repoURL string, secretName string) []operations.PatchOperation {
+func populateGitRepoPatchOperations(repoURL string, secretName string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
