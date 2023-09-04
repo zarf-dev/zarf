@@ -22,3 +22,15 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Merge all configmaps
+*/}}
+{{- define "docker-registry.configMaps" -}}
+{{- if .Values.caBundle }}
+- name: {{ template "docker-registry.fullname" . }}-ca-bundle
+  data:
+    ca-certificates.crt: |
+{{ .Values.caBundle | indent 6 }}
+{{- end }}
+{{- end -}}
