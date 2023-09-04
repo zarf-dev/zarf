@@ -130,6 +130,7 @@ func (p *Packager) SetTempDirectory(path string) error {
 	return nil
 }
 
+// WithSource returns a packager with the provided source.
 func (p *Packager) WithSource(source types.PackageSource) *Packager {
 	p.source = source
 	return p

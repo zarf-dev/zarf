@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package sources contains core implementations of the PackageSource interface.
 package sources
 
 import (
@@ -142,6 +143,7 @@ func (s *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, l
 	return pkg, loaded, nil
 }
 
+// Collect pulls a package from an OCI registry and writes it to a tarball.
 func (s *OCISource) Collect(dstTarball string) error {
 	tmp, err := utils.MakeTempDir()
 	if err != nil {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package sources contains core implementations of the PackageSource interface.
 package sources
 
 import (
@@ -147,6 +148,7 @@ func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackag
 	return pkg, loaded, nil
 }
 
+// Collect for the TarballSource is essentially an `mv`
 func (s *TarballSource) Collect(destinationTarball string) error {
 	return os.Rename(s.PackageSource, destinationTarball)
 }
@@ -157,7 +159,7 @@ type PartialTarballSource struct {
 	*types.ZarfPackageOptions
 }
 
-// reassembleTarball reassembles the partial tarball into a single tarball.
+// Collect turns a partial tarball into a full tarball.
 func (s *PartialTarballSource) Collect(dstTarball string) error {
 	pattern := strings.Replace(s.PackageSource, ".part000", ".part*", 1)
 	fileList, err := filepath.Glob(pattern)

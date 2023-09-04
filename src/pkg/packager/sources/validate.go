@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package sources contains core implementations of the PackageSource interface.
 package sources
 
 import (
@@ -57,6 +58,7 @@ func ValidatePackageSignature(paths types.PackagePathsMap, publicKeyPath string)
 	return nil
 }
 
+// ValidatePackageIntegrity validates the integrity of a package by comparing checksums
 func ValidatePackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum string, isPartial bool) error {
 	spinner := message.NewProgressSpinner("Validating package checksums")
 	defer spinner.Stop()

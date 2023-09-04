@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package sources contains core implementations of the PackageSource interface.
 package sources
 
 import (
@@ -20,22 +21,19 @@ type URLSource struct {
 	*types.ZarfPackageOptions
 }
 
-func (up *URLSource) Collect(dstTarball string) error {
-	if !config.CommonOptions.Insecure && up.Shasum == "" && !strings.HasPrefix(up.PackageSource, utils.SGETURLPrefix) {
+// Collect downloads a package from the source URL.
+func (s *URLSource) Collect(dstTarball string) error {
+	if !config.CommonOptions.Insecure && s.Shasum == "" && !strings.HasPrefix(s.PackageSource, utils.SGETURLPrefix) {
 		return fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
 	}
 	var packageURL string
-	if up.Shasum != "" {
-		packageURL = fmt.Sprintf("%s@%s", up.PackageSource, up.Shasum)
+	if s.Shasum != "" {
+		packageURL = fmt.Sprintf("%s@%s", s.PackageSource, s.Shasum)
 	} else {
-		packageURL = up.PackageSource
+		packageURL = s.PackageSource
 	}
 
-	if err := utils.DownloadToFile(packageURL, dstTarball, up.SGetKeyPath); err != nil {
-		return err
-	}
-
-	return nil
+	return utils.DownloadToFile(packageURL, dstTarball, s.SGetKeyPath)
 }
 
 // LoadPackage loads a package from an http, https or sget URL.

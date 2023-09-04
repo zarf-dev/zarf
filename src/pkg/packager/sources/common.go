@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package sources contains core implementations of the PackageSource interface.
 package sources
 
 import (
@@ -14,6 +15,7 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
+// LoadComponents loads components from a package.
 func LoadComponents(pkg *types.ZarfPackage, loaded types.PackagePathsMap) (err error) {
 	// always create and "load" components dir
 	if _, ok := loaded[types.ComponentsDir]; !ok {
@@ -48,6 +50,7 @@ func LoadComponents(pkg *types.ZarfPackage, loaded types.PackagePathsMap) (err e
 	return nil
 }
 
+// LoadSBOMs loads SBOMs from a package.
 func LoadSBOMs(loaded types.PackagePathsMap) (err error) {
 	// unpack sboms.tar
 	if _, ok := loaded[types.SBOMTar]; ok {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package sources contains core implementations of the PackageSource interface.
 package sources
 
 import (
@@ -33,6 +34,7 @@ func identifySourceType(pkgSrc string) string {
 	return ""
 }
 
+// New returns a new PackageSource based on the provided package options.
 func New(pkgOpts *types.ZarfPackageOptions, destinationDir string) (types.PackageSource, error) {
 	var source types.PackageSource
 

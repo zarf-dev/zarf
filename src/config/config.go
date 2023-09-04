@@ -165,6 +165,7 @@ func GetValidPackageExtensions() [3]string {
 	return [...]string{".tar.zst", ".tar", ".tar.gz"}
 }
 
+// IsValidFileExtension returns true if the filename has a valid package extension.
 func IsValidFileExtension(filename string) bool {
 	for _, extension := range GetValidPackageExtensions() {
 		if strings.HasSuffix(filename, extension) {
