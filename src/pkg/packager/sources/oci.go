@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -27,13 +28,15 @@ type OCISource struct {
 }
 
 // LoadPackage loads a package from an OCI registry.
-func (s *OCISource) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *OCISource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded[types.BaseDir] = s.DestinationDir
 	layersToPull := []ocispec.Descriptor{}
 
 	message.Debugf("Loading package from %q", s.PackageSource)
 	message.Debugf("Loaded package base directory: %q", s.DestinationDir)
+
+	optionalComponents := helpers.StringToSlice(s.OptionalComponents)
 
 	// only pull specified components and their images if optionalComponents AND --confirm are set
 	if len(optionalComponents) > 0 && config.CommonOptions.Confirm {

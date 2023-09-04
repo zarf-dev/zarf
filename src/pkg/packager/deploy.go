@@ -48,9 +48,8 @@ func (p *Packager) Deploy() (err error) {
 		}
 		p.source = source
 	}
-	optionalComponents := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
 
-	pkg, loaded, err := p.source.LoadPackage(optionalComponents)
+	pkg, loaded, err := p.source.LoadPackage()
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}

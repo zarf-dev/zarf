@@ -37,7 +37,7 @@ func (s *URLSource) Collect(dstTarball string) error {
 }
 
 // LoadPackage loads a package from an http, https or sget URL.
-func (s *URLSource) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *URLSource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	tmp, err := utils.MakeTempDir()
 	if err != nil {
 		return pkg, nil, err
@@ -57,7 +57,7 @@ func (s *URLSource) LoadPackage(optionalComponents []string) (pkg types.ZarfPack
 		s.ZarfPackageOptions,
 	}
 
-	return tp.LoadPackage(optionalComponents)
+	return tp.LoadPackage()
 }
 
 // LoadPackageMetadata loads a package's metadata from an http, https or sget URL.

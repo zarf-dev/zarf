@@ -81,7 +81,7 @@ type PackageSource interface {
 	// and expects the package structure to follow the default Zarf package structure.
 	//
 	// If your package does not follow the default Zarf package structure, you will need to implement your own source.
-	LoadPackage(optionalComponents []string) (ZarfPackage, PackagePathsMap, error)
+	LoadPackage() (ZarfPackage, PackagePathsMap, error)
 	// LoadPackageMetadata loads a package's metadata from a source.
 	//
 	// This function follows the same principles as LoadPackage, with a few exceptions:

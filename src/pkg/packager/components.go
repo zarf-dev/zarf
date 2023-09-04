@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 )
@@ -24,7 +25,7 @@ func (p *Packager) getValidComponents(pkg *types.ZarfPackage) []types.ZarfCompon
 	componentGroups := make(map[string][]types.ZarfComponent)
 
 	// The component list is comma-delimited list
-	requestedNames := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
+	requestedNames := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
 
 	// Break up components into choice groups
 	for _, component := range pkg.Components {

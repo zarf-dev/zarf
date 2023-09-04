@@ -232,18 +232,6 @@ func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (pat
 	return paths, err
 }
 
-func getRequestedComponentList(requestedComponents string) []string {
-	if requestedComponents != "" {
-		split := strings.Split(requestedComponents, ",")
-		for idx, component := range split {
-			split[idx] = strings.ToLower(strings.TrimSpace(component))
-		}
-		return split
-	}
-
-	return []string{}
-}
-
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() (err error) {
 	// Ignore this check if the package architecture is explicitly "multi"

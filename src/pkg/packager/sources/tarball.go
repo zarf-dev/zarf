@@ -28,7 +28,7 @@ type TarballSource struct {
 }
 
 // LoadPackage loads a package from a tarball.
-func (s *TarballSource) LoadPackage(_ []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *TarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = make(types.PackagePathsMap)
 	loaded[types.BaseDir] = s.DestinationDir
 
@@ -236,7 +236,7 @@ func (s *PartialTarballSource) Collect(dstTarball string) error {
 }
 
 // LoadPackage loads a package from a partial tarball.
-func (s *PartialTarballSource) LoadPackage(optionalComponents []string) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *PartialTarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	dstTarball := strings.Replace(s.PackageSource, ".part000", "", 1)
 
 	if err := s.Collect(dstTarball); err != nil {
@@ -251,7 +251,7 @@ func (s *PartialTarballSource) LoadPackage(optionalComponents []string) (pkg typ
 		s.DestinationDir,
 		s.ZarfPackageOptions,
 	}
-	return tp.LoadPackage(optionalComponents)
+	return tp.LoadPackage()
 }
 
 // LoadPackageMetadata loads a package's metadata from a partial tarball.
