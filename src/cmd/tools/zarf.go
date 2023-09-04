@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -176,7 +177,14 @@ var downloadInitCmd = &cobra.Command{
 		target := filepath.Join(outputDirectory, initPackageName)
 		url := oci.GetInitPackageURL(config.GetArch(), config.CLIVersion)
 
-		if err := oci.DownloadPackageTarball(url, target, config.CommonOptions.OCIConcurrency); err != nil {
+		remote, err := oci.NewOrasRemote(url)
+		if err != nil {
+			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
+		}
+
+		source := &sources.OCISource{OrasRemote: remote}
+
+		if err := source.Collect(target); err != nil {
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 		}
 	},
