@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -95,4 +96,41 @@ func RemoveDuplicateDescriptors(descriptors []ocispec.Descriptor) []ocispec.Desc
 // GetInitPackageURL returns the URL for the init package for the given architecture and version.
 func GetInitPackageURL(arch, version string) string {
 	return fmt.Sprintf("ghcr.io/defenseunicorns/packages/init:%s-%s", version, arch)
+}
+
+// ZarfPackageReference is a reference to a Zarf package stored in an OCI registry.
+type ZarfPackageReference struct {
+	registry.Reference
+	Arch        string
+	PackageName string
+	Version     string
+}
+
+// ParseZarfPackageReference parses a Zarf package reference from the given artifact.
+func ParseZarfPackageReference(artifact string) (ZarfPackageReference, error) {
+	var zref ZarfPackageReference
+	parsed, err := registry.ParseReference(strings.TrimPrefix(artifact, helpers.OCIURLPrefix))
+	if err != nil {
+		return zref, err
+	}
+
+	ref := parsed.Reference
+
+	parts := strings.Split(ref, "-")
+
+	// if artifact had sha256: in it's reference, it removes the tag portion
+	// so we need to check for that
+	if len(parts) == 1 {
+		stripped := strings.TrimPrefix(artifact, fmt.Sprintf("%s%s/%s:", helpers.OCIURLPrefix, parsed.Registry, parsed.Repository))
+		stripped = strings.TrimSuffix(stripped, parsed.Reference)
+		stripped = strings.TrimSuffix(stripped, "@")
+		parts = strings.Split(stripped, "-")
+	}
+
+	zref.Reference = parsed
+	zref.Version = parts[0]
+	zref.Arch = parts[1]
+	// TODO: need a ruling on this one
+	zref.PackageName = filepath.Base(parsed.Repository)
+	return zref, nil
 }

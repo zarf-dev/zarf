@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
@@ -29,18 +28,14 @@ func (p *Packager) Pull() error {
 	// might need to be its own function implemented by each source type
 	switch p.source.(type) {
 	case *sources.OCISource:
-		root, err := p.source.(*sources.OCISource).FetchRoot()
+		zref, err := oci.ParseZarfPackageReference(p.cfg.PkgOpts.PackageSource)
 		if err != nil {
 			return err
 		}
-		pkg, err := p.source.(*sources.OCISource).FetchZarfYAML(root)
-		if err != nil {
-			return err
-		}
-		if strings.HasSuffix(p.cfg.PkgOpts.PackageSource, oci.SkeletonSuffix) {
-			name = fmt.Sprintf("zarf-package-%s-skeleton-%s.tar.zst", pkg.Metadata.Name, pkg.Metadata.Version)
+		if zref.Arch == oci.SkeletonSuffix {
+			name = fmt.Sprintf("zarf-package-%s-skeleton-%s.tar.zst", zref.PackageName, zref.Version)
 		} else {
-			name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", pkg.Metadata.Name, pkg.Build.Architecture, pkg.Metadata.Version)
+			name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", zref.PackageName, zref.Arch, zref.Version)
 		}
 	case *sources.TarballSource, *sources.PartialTarballSource, *sources.URLSource:
 		// note: this is going to break on SGET because of its weird syntax, as well this will break on
@@ -55,7 +50,7 @@ func (p *Packager) Pull() error {
 		return err
 	}
 
-	message.Infof("Pulled %q", p.cfg.PkgOpts.PackageSource)
+	message.Infof("Pulled %q into %q", p.cfg.PkgOpts.PackageSource, output)
 
 	return nil
 }
