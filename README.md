@@ -18,12 +18,12 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 - 💸 **Free and Open-Source.** Zarf will always be free to use and maintained by the open-source community.
 - ⭐️ **Zero Dependencies.** As a statically compiled binary, the Zarf CLI has zero dependencies to run on any machine. 
-- 🔓 **No Vendor Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you still can use your helm charts to deploy your software manually.
-- 💻 **OS Agnostic.** Zarf supports numerous operating systems. A full matrix of supported OSes, architectures and featuresets is coming soon.
-- 📦 **Highly Distributable.** Integrate and deploy software from multiple secure development environments including edge, embedded systems, secure cloud, data centers, and even local environments.
+- 🔓 **No Vendor Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you can still use your Helm charts to deploy your software manually.
+- 💻 **OS Agnostic.** Zarf supports numerous operating systems. A full matrix of supported OSes, architectures, and feature sets is coming soon.
+- 📦 **Highly Distributable.** Integrate and deploy software from multiple secure development environments, including edge, embedded systems, secure cloud, data centers, and even local environments.
 - 🚀 **Develop Connected, Deploy Disconnected.** Teams can build and configure individual applications or entire DevSecOps environments while connected to the internet. Once created, they can be packaged and shipped to a disconnected environment to be deployed.
 - 💿 **Single File Deployments.** Zarf allows you to package the parts of the internet your app needs into a single compressed file to be installed without connectivity.
-- ♻️ **Declarative Deployments.** Zarf packages define the precise state for your application enabling it to be deployed the same way every time.
+- ♻️ **Declarative Deployments.** Zarf packages define the precise state for your application, enabling it to be deployed the same way every time.
 - 🦖 **Inherit Legacy Code.** Zarf packages can wrap legacy code and projects - allowing them to be deployed to modern DevSecOps environments.
 
 ## 📦 Out of the Box Features
@@ -37,8 +37,8 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 - Powerful component lifecycle [actions](https://docs.zarf.dev/docs/create-a-zarf-package/component-actions)
 - Deploy a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
 - Builtin logging stack with [Loki](https://grafana.com/oss/loki/)
-- Builtin Git server with [Gitea](https://gitea.io/en-us/)
-- Builtin Docker registry
+- Built-in Git server with [Gitea](https://gitea.io/en-us/)
+- Built-in Docker registry
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
 - [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
 - Builtin [command to find images](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a Helm chart
@@ -56,23 +56,44 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 _<https://www.youtube.com/watch?v=WnOYlFVVKDE>_
 
-## Getting Started
+## ✅ Getting Started
 
-To try Zarf out for yourself, visit the ["Try It Now"](https://zarf.dev/install) section on our website, and if you want to learn more about Zarf and its use cases visit [docs.zarf.dev](https://docs.zarf.dev/docs/zarf-overview).
+To try Zarf out for yourself, visit the ["Try It Now"](https://zarf.dev/install) section on our website. 
 
-From the docs you can learn more about [installation](https://docs.zarf.dev/docs/getting-started/#installing-zarf), [using the CLI](https://docs.zarf.dev/docs/the-zarf-cli/), [making packages](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-packages/), and the [Zarf package schema](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-schema).
+To learn more about Zarf and its use cases, visit [docs.zarf.dev](https://docs.zarf.dev/docs/zarf-overview). From the docs, you can learn more about:
+- [installation](https://docs.zarf.dev/docs/getting-started/#installing-zarf)
+- [using the CLI](https://docs.zarf.dev/docs/the-zarf-cli/),
+- [making packages](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-packages/),
+- [Zarf package schema](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-schema).
 
-Using Zarf in Github workflows? Check out the [setup-zarf](https://github.com/defenseunicorns/setup-zarf) action. Install any version of Zarf and its `init` package with zero added dependencies.
+Using Zarf in GitHub workflows? Check out the [setup-zarf](https://github.com/defenseunicorns/setup-zarf) action. Install any version of Zarf and its `init` package with zero added dependencies.
 
-## Developing
+## 🫶 Our Community
 
-To contribute, please see our [Contributor Guide](https://docs.zarf.dev/docs/contribute-to-zarf/contributor-guide).  Below is an architectural diagram showing the basics of how Zarf functions which you can read more about [here](https://docs.zarf.dev/docs/contribute-to-zarf/nerd-notes).
+Join our community and developers on the [#Zarf slack](https://zarf.dev/slack) hosted on K8s slack. Our active community of developers, users, and contributors are available to answer questions, share examples, and fine new ways use Zarf together!
+
+We are so grateful to our Zarf community for contributing bug fixes and collaborating on new features:
+
+<a href="https://github.com/defenseunicorns/zarf/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=defenseunicorns/zarf" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
+
+## 💻 Contributing
+
+Want to contribute to Zarf? 
+Check out our [Contributor Guide](https://docs.zarf.dev/docs/contribute-to-zarf/contributor-guide) to learn more about how to set up your development environment and begin contributing. 
+We also recommend checking out our architectural diagram. 
+
+To dive deeper into the tech, you can read the [Nerd Notes](https://docs.zarf.dev/docs/contribute-to-zarf/nerd-notes) in our Docs.
 
 ![Architecture Diagram](./docs/.images/architecture.drawio.svg)
 
 [Source DrawIO](docs/.images/architecture.drawio.svg)
 
-## Special Thanks
+
+## ⭐️ Special Thanks
 
 > Early Zarf research and prototypes were developed jointly with [United States Naval Postgraduate School](https://nps.edu/) research you can read [here](https://calhoun.nps.edu/handle/10945/68688).
 
