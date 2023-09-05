@@ -148,7 +148,7 @@ func (s *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, l
 
 // Collect pulls a package from an OCI registry and writes it to a tarball.
 func (s *OCISource) Collect(dstTarball string) error {
-	tmp, err := utils.MakeTempDir()
+	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
 	}
