@@ -242,17 +242,11 @@ func isValidFileExtension(filename string) bool {
 }
 
 func createPaths(basePath string) (paths types.TempPaths, err error) {
-	if basePath == "" {
-		basePath, err = utils.MakeTempDir()
-		if err != nil {
-			return paths, err
-		}
-	} else {
-		if err := utils.CreateDirectory(basePath, 0700); err != nil {
-			return paths, fmt.Errorf("unable to create temp directory: %w", err)
-		}
+	basePath, err = utils.MakeTempDir(basePath)
+	if err != nil {
+		return paths, err
 	}
-	message.Debug("Using temporary directory:", basePath)
+
 	paths = types.TempPaths{
 		Base: basePath,
 
