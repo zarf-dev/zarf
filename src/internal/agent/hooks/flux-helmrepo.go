@@ -86,8 +86,8 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 		message.Debugf("original HelmRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 	}
 
-	// Patch updates of the repo spec
-	patches = populateHelmRepoPatchOperations(patchedURL, src.Spec.SecretRef.Name)
+	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
+	patches = populateHelmRepoPatchOperations(fmt.Sprintf("%s%s", "oci://", patchedURL), src.Spec.SecretRef.Name)
 
 	return &operations.Result{
 		Allowed:  true,

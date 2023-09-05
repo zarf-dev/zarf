@@ -7,6 +7,7 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -14,12 +15,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/agent/state"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 )
 
-// GenericGitRepo contains the URL of a git repo and the secret that corresponds to it for use with Flux.
+// OCIRepo contains the URL of a git repo and the secret that corresponds to it for use with Flux.
 type OCIRepo struct {
 	Spec struct {
 		URL       string    `json:"url"`
@@ -40,9 +40,10 @@ func NewOCIRepositoryMutationHook() operations.Hook {
 func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	var (
-		zarfState *types.ZarfState
-		patches   []operations.PatchOperation
-		isPatched bool
+		zarfState     *types.ZarfState
+		patches       []operations.PatchOperation
+		newPatchedURL string
+		isPatched     bool
 
 		isCreate = r.Operation == v1.Create
 		isUpdate = r.Operation == v1.Update
@@ -53,7 +54,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", zarfState.GitServer.Address)
+	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", zarfState.RegistryInfo.Address)
 
 	// parse to simple struct to read the OCIRepo url
 	src := &OCIRepo{}
@@ -64,29 +65,30 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	if err != nil {
 		return nil, err
 	}
+	message.Debug("PatchedURL ", patchedURL)
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
 	if isUpdate {
-		isPatched, err = helpers.DoHostnamesMatch(zarfState.GitServer.Address, patchedURL)
-		if err != nil {
-			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
+		// check if image has already been transformed
+		if strings.HasPrefix(zarfState.RegistryInfo.Address, patchedURL) {
+			isPatched = true
 		}
 	}
 
-	// Mutate the git URL if necessary
+	// Mutate the OCIRepo URL if necessary
 	if isCreate || (isUpdate && !isPatched) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-		transformedURL, err := transform.GitURL(zarfState.GitServer.Address, patchedURL, zarfState.GitServer.PushUsername)
+		newPatchedURL, err = transform.ImageTransformHost(zarfState.RegistryInfo.Address, patchedURL)
 		if err != nil {
 			message.Warnf("Unable to transform the OCIRepo URL, using the original url we have: %s", patchedURL)
 		}
-		patchedURL = transformedURL.String()
+
 		message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 	}
 
-	// Patch updates of the repo spec
-	patches = populateOCIRepoPatchOperations(patchedURL, src.Spec.SecretRef.Name)
+	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
+	patches = populateOCIRepoPatchOperations(fmt.Sprintf("%s%s", "oci://", newPatchedURL), src.Spec.SecretRef.Name)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -97,6 +99,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 // Patch updates of the repo spec.
 func populateOCIRepoPatchOperations(repoURL string, secretName string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
+	message.Debug("in populateOCIRepoPatchOperations repoURL ", repoURL)
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
 	// If a prior secret exists, replace it
