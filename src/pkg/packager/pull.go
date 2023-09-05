@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
@@ -41,6 +42,14 @@ func (p *Packager) Pull() error {
 		// note: this is going to break on SGET because of its weird syntax, as well this will break on
 		// URLs that do not end w/ a valid file extension
 		name = filepath.Base(p.cfg.PkgOpts.PackageSource)
+		if !config.IsValidFileExtension(name) {
+			// if the URL is not a valid extension, then name based on source
+			// archiver.v4 has utilities to detect the compression/format of an archive based on headers
+			// but v3 can only determine based on filename
+			// so warn the user they will have to rename the file
+			name = "zarf-package-unknown"
+			message.Warnf("Unable to determine package name based upon provided source %q", p.cfg.PkgOpts.PackageSource)
+		}
 	}
 
 	output := filepath.Join(p.cfg.PullOpts.OutputDirectory, name)

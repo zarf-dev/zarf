@@ -130,7 +130,6 @@ func ParseZarfPackageReference(artifact string) (ZarfPackageReference, error) {
 	zref.Reference = parsed
 	zref.Version = parts[0]
 	zref.Arch = parts[1]
-	// TODO: need a ruling on this one
 	zref.PackageName = filepath.Base(parsed.Repository)
 	return zref, nil
 }
