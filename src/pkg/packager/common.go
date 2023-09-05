@@ -112,21 +112,12 @@ func (p *Packager) SetTempDirectory(path string) error {
 		p.ClearTempPaths()
 	}
 
-	if path == "" {
-		var err error
-		path, err = utils.MakeTempDir()
-		if err != nil {
-			return err
-		}
-	} else {
-		if err := utils.CreateDirectory(path, 0700); err != nil {
-			return fmt.Errorf("unable to create temp directory: %w", err)
-		}
+	dir, err := utils.MakeTempDir(path)
+	if err != nil {
+		return fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
-	message.Debugf("Packager using temporary directory: %q", path)
-
-	p.tmp = types.DefaultPackagePaths(path)
+	p.tmp = types.DefaultPackagePaths(dir)
 	return nil
 }
 
