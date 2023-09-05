@@ -62,6 +62,7 @@ type DeployedPackage struct {
 type DeployedComponent struct {
 	Name               string           `json:"name"`
 	InstalledCharts    []InstalledChart `json:"installedCharts"`
+	Images             []string         `json:"images"`
 	Status             ComponentStatus  `json:"status"`
 	ObservedGeneration int              `json:"observedGeneration"`
 }

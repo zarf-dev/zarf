@@ -150,6 +150,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 		deployedComponent := types.DeployedComponent{
 			Name:               component.Name,
+			Images:             component.Images,
 			Status:             types.ComponentStatusDeploying,
 			ObservedGeneration: p.generation,
 		}

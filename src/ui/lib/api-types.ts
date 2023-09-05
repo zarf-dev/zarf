@@ -1147,6 +1147,7 @@ export interface Webhook {
 }
 
 export interface DeployedComponent {
+    images:             string[];
     installedCharts:    InstalledChart[];
     name:               string;
     observedGeneration: number;
@@ -1789,6 +1790,7 @@ const typeMap: any = {
         { json: "waitDurationSeconds", js: "waitDurationSeconds", typ: u(undefined, 0) },
     ], false),
     "DeployedComponent": o([
+        { json: "images", js: "images", typ: a("") },
         { json: "installedCharts", js: "installedCharts", typ: a(r("InstalledChart")) },
         { json: "name", js: "name", typ: "" },
         { json: "observedGeneration", js: "observedGeneration", typ: 0 },
