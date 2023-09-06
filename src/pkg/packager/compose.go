@@ -129,6 +129,10 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	for _, fetchedPath := range fetchedPaths {
 		subPkgPaths[fetchedPath] = filepath.Join(pathAncestry, parent.Import.Path, fetchedPath)
 	}
+	// always "load" the zarf.yaml
+	if _, ok := subPkgPaths[types.ZarfYAML]; !ok {
+		subPkgPaths[types.ZarfYAML] = filepath.Join(pathAncestry, parent.Import.Path, types.ZarfYAML)
+	}
 
 	subPkg, err := p.getSubPackage(subPkgPaths)
 	if err != nil {
