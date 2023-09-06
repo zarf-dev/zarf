@@ -43,6 +43,7 @@ const (
 
 	ZarfDeployStage = "Deploy"
 	ZarfCreateStage = "Create"
+	ZarfMirrorStage = "Mirror"
 )
 
 // Zarf Constants for In-Cluster Services.

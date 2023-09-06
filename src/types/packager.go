@@ -15,6 +15,9 @@ type PackagerConfig struct {
 	// DeployOpts tracks user-defined values for the active deployment
 	DeployOpts ZarfDeployOptions
 
+	// MirrorOpts tracks user-defined values for the active mirror
+	MirrorOpts ZarfMirrorOptions
+
 	// InitOpts tracks user-defined values for the active Zarf initialization.
 	InitOpts ZarfInitOptions
 
