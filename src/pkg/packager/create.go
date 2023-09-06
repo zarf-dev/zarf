@@ -619,7 +619,7 @@ func (p *Packager) loadDifferentialData() error {
 	// Save the fact that this is a differential build into the build data of the package
 	p.cfg.Pkg.Build.Differential = true
 
-	tmpDir, _ := utils.MakeTempDir()
+	tmpDir, _ := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	defer os.RemoveAll(tmpDir)
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
