@@ -4,6 +4,12 @@ import ExampleYAML from "@site/src/components/ExampleYAML";
 
 This example shows how to package `git` repositories within a Zarf package.  This package does not deploy anything itself but pushes assets to the specified `git` service to be consumed as desired.  Within Zarf, there are a few ways to include `git` repositories (as described below).
 
+:::tip
+
+Git repositories included in a package can be deployed with `zarf package deploy` if an existing Kubernetes cluster has been initialized with `zarf init`.  If you do not have an initialized cluster but want to push resources to a remote registry anyway, you can use [`zarf package mirror-resources`](./../../docs/2-the-zarf-cli/100-cli-commands/zarf_package_mirror-resources.md).
+
+:::
+
 ## Tag-Based Git Repository Clone
 
 Tag-based `git` repository cloning is the **recommended** way of cloning a `git` repository for air-gapped deployments because it wraps meaning around a specific point in git history that can easily be traced back to the online world. Tag-based clones are defined using the `scheme://host/repo@tag` format as seen in the example of the `defenseunicorns/zarf` repository (`https://github.com/defenseunicorns/zarf.git@v0.15.0`).

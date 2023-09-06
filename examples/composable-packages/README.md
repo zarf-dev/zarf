@@ -18,6 +18,8 @@ You can create a skeleton package from a `zarf.yaml` by pointing `zarf package p
 zarf package publish path/containing/package/definition oci://your-registry.com
 ```
 
+:::
+
 ## Merge Strategies
 
 When merging components together Zarf will adopt the following strategies depending on the kind of primitive (`files`, `required`, `manifests`) that it is merging:
@@ -29,8 +31,6 @@ When merging components together Zarf will adopt the following strategies depend
 | Cosign Key Path            | `cosignKeyPath` | [Deprecated] This key will only take the value of the overriding component if it is not empty |
 | Un'name'd Primitive Arrays | `actions`, `dataInjections`, `files`, `images`, `repos` | These keys will append the overriding component's version of the array to the end of the base component's array |
 | 'name'd Primitive Arrays   | `charts`, `manifests` | For any given element in the overriding component, if the element matches based on `name` then its values will be merged with the base element of the same `name`. If not then the element will be appended to the end of the array |
-
-:::
 
 ## `zarf.yaml` {#zarf.yaml}
 
