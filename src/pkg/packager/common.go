@@ -48,21 +48,29 @@ var (
 	ZarfInitPattern = regexp.MustCompile(GetInitPackageName("") + "$")
 )
 
-type PackagerOption func(*Packager)
+// Modifier is a function that modifies the packager.
+type Modifier func(*Packager)
 
-func WithSource(source types.PackageSource) PackagerOption {
+// WithSource sets the source for the packager.
+func WithSource(source types.PackageSource) Modifier {
 	return func(p *Packager) {
 		p.source = source
 	}
 }
 
-func WithCluster(cluster *cluster.Cluster) PackagerOption {
+// WithCluster sets the cluster client for the packager.
+func WithCluster(cluster *cluster.Cluster) Modifier {
 	return func(p *Packager) {
 		p.cluster = cluster
 	}
 }
 
-func New(cfg *types.PackagerConfig, opts ...PackagerOption) (*Packager, error) {
+/*
+New creates a new package instance with the provided config.
+
+Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
+*/
+func New(cfg *types.PackagerConfig, opts ...Modifier) (*Packager, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
 	}
@@ -106,7 +114,7 @@ NewOrDie creates a new package instance with the provided config or throws a fat
 
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
-func NewOrDie(config *types.PackagerConfig, opts ...PackagerOption) *Packager {
+func NewOrDie(config *types.PackagerConfig, opts ...Modifier) *Packager {
 	var (
 		err       error
 		pkgConfig *Packager
