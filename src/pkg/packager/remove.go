@@ -34,54 +34,56 @@ func (p *Packager) Remove() (err error) {
 
 	var packageName string
 
+	// if no source was provided, try to make one
 	if p.source == nil {
-		source, err := sources.New(&p.cfg.PkgOpts, p.tmp.Base())
+		p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp.Base())
+		// if we can't make one, assume it's a cluster package
 		if err != nil {
 			requiresCluster = true
 			packageName = p.cfg.PkgOpts.PackageSource
 			message.Debugf("%q does not satisfy any current sources, assuming it is a package deployed to a cluster", p.cfg.PkgOpts.PackageSource)
-		} else {
-			pkg, loaded, err := source.LoadPackageMetadata(false)
-			if err != nil {
-				return err
-			}
-			p.cfg.Pkg = pkg
-			// Filter out components that are not compatible with this system if we have loaded from a tarball
-			p.filterComponents(&p.cfg.Pkg)
-			packageName = pkg.Metadata.Name
-
-			_, wasSigned := loaded[types.PackageSignature]
-
-			hasRemoveActions := false
-
-			// If we have package components check them for images, charts, manifests, etc
-			for _, component := range p.cfg.Pkg.Components {
-				// Flip requested based on if this is a partial removal
-				requested := !partialRemove
-
-				if helpers.SliceContains(requestedComponents, component.Name) {
-					requested = true
-				}
-
-				if requested {
-					requiresCluster = p.requiresCluster(component)
-				}
-
-				if component.Actions.OnRemove.Before != nil || component.Actions.OnRemove.After != nil || component.Actions.OnRemove.OnSuccess != nil || component.Actions.OnRemove.OnFailure != nil {
-					hasRemoveActions = true
-				}
-			}
-
-			// while LoadPackageMetadata does not error if the package is signed but the signature is not present
-			// we do not want to allow removal of signed packages without a signature if there are remove actions
-			// as this is arbitrary code execution from an untrusted source
-			if wasSigned && hasRemoveActions && p.cfg.PkgOpts.PublicKeyPath == "" {
-				return sources.ErrPkgSigButNoKey
-			}
 		}
 	}
 
-	// TODO: handle if a source was provided
+	// if we have a source, load the package metadata
+	if p.source != nil {
+		pkg, loaded, err := p.source.LoadPackageMetadata(false)
+		if err != nil {
+			return err
+		}
+		p.cfg.Pkg = pkg
+		// Filter out components that are not compatible with this system if we have loaded from a tarball
+		p.filterComponents(&p.cfg.Pkg)
+		packageName = pkg.Metadata.Name
+
+		_, wasSigned := loaded[types.PackageSignature]
+
+		hasRemoveActions := false
+
+		// If we have package components check them for images, charts, manifests, etc
+		for _, component := range p.cfg.Pkg.Components {
+			// Flip requested based on if this is a partial removal
+			requested := !partialRemove
+
+			if helpers.SliceContains(requestedComponents, component.Name) {
+				requested = true
+			}
+
+			if requested {
+				requiresCluster = p.requiresCluster(component)
+			}
+
+			if component.Actions.OnRemove.Before != nil || component.Actions.OnRemove.After != nil || component.Actions.OnRemove.OnSuccess != nil || component.Actions.OnRemove.OnFailure != nil {
+				hasRemoveActions = true
+			}
+		}
+		// while LoadPackageMetadata does not error if the package is signed but the signature is not present
+		// we do not want to allow removal of signed packages without a signature if there are remove actions
+		// as this is arbitrary code execution from an untrusted source
+		if wasSigned && hasRemoveActions && p.cfg.PkgOpts.PublicKeyPath == "" {
+			return sources.ErrPkgSigButNoKey
+		}
+	}
 
 	// Get the secret for the deployed package
 	deployedPackage := types.DeployedPackage{}
