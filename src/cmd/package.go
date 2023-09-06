@@ -103,9 +103,7 @@ var packageMirrorCmd = &cobra.Command{
 	Long:    lang.CmdPackageMirrorLong,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.PkgOpts.PackagePath = choosePackage(args)
-
-		pkgConfig.PkgSource = pkgConfig.PkgOpts.PackagePath
+		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)

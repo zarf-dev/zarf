@@ -10,27 +10,25 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
 func (p *Packager) Mirror() (err error) {
-	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackagePath)
+	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
-	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
-		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
+	if p.source == nil {
+		p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp.Base())
 		if err != nil {
 			return err
 		}
 	}
 
-	if err := p.loadZarfPkg(); err != nil {
-		return fmt.Errorf("unable to load the Zarf Package: %w", err)
-	}
-
-	if err := ValidatePackageSignature(p.tmp.Base, p.cfg.PkgOpts.PublicKeyPath); err != nil {
+	p.cfg.Pkg, p.tmp, err = p.source.LoadPackage()
+	if err != nil {
 		return err
 	}
 
@@ -46,8 +44,8 @@ func (p *Packager) Mirror() (err error) {
 	p.cfg.State = state
 
 	// Filter out components that are not compatible with this system if we have loaded from a tarball
-	p.filterComponents(true)
-	requestedComponentNames := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
+	p.filterComponents(&p.cfg.Pkg)
+	requestedComponentNames := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
 
 	for _, component := range p.cfg.Pkg.Components {
 		if len(requestedComponentNames) == 0 || helpers.SliceContains(requestedComponentNames, component.Name) {
