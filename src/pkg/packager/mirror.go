@@ -40,9 +40,8 @@ func (p *Packager) Mirror() (err error) {
 	}
 
 	state := &types.ZarfState{
-		RegistryInfo:   p.cfg.InitOpts.RegistryInfo,
-		GitServer:      p.cfg.InitOpts.GitServer,
-		ArtifactServer: p.cfg.InitOpts.ArtifactServer,
+		RegistryInfo: p.cfg.InitOpts.RegistryInfo,
+		GitServer:    p.cfg.InitOpts.GitServer,
 	}
 	p.cfg.State = state
 
