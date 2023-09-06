@@ -6,7 +6,7 @@ This example provides the basis for Zarf's [Retro Arcade](../../docs/5-zarf-tuto
 
 :::note
 
-In this example, there is no "GitOps" service. Zarf is only showing off its ability to act as a standard means of packaging, distribution, and runtime.
+In this example, there is no requirement for a "GitOps" service; Zarf is only showing off its ability to act as a standard means of packaging, distribution, and deploy runtime.
 
 :::
 
