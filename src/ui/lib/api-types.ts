@@ -172,7 +172,7 @@ export interface ZarfPackageOptions {
     /**
      * Location where a Zarf package can be found
      */
-    packagePath: string;
+    packageSource: string;
     /**
      * Location where the public key component of a cosign key-pair can be found
      */
@@ -1451,7 +1451,7 @@ const typeMap: any = {
     ], false),
     "ZarfPackageOptions": o([
         { json: "optionalComponents", js: "optionalComponents", typ: "" },
-        { json: "packagePath", js: "packagePath", typ: "" },
+        { json: "packageSource", js: "packageSource", typ: "" },
         { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
