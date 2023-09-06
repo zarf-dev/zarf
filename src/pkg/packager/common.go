@@ -48,12 +48,21 @@ var (
 	ZarfInitPattern = regexp.MustCompile(GetInitPackageName("") + "$")
 )
 
-/*
-New creates a new package instance with the provided config.
+type PackagerOption func(*Packager)
 
-Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
-*/
-func New(cfg *types.PackagerConfig) (*Packager, error) {
+func WithSource(source types.PackageSource) PackagerOption {
+	return func(p *Packager) {
+		p.source = source
+	}
+}
+
+func WithCluster(cluster *cluster.Cluster) PackagerOption {
+	return func(p *Packager) {
+		p.cluster = cluster
+	}
+}
+
+func New(cfg *types.PackagerConfig, opts ...PackagerOption) (*Packager, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
 	}
@@ -85,6 +94,10 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
+	for _, opt := range opts {
+		opt(pkgConfig)
+	}
+
 	return pkgConfig, nil
 }
 
@@ -93,13 +106,13 @@ NewOrDie creates a new package instance with the provided config or throws a fat
 
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
-func NewOrDie(config *types.PackagerConfig) *Packager {
+func NewOrDie(config *types.PackagerConfig, opts ...PackagerOption) *Packager {
 	var (
 		err       error
 		pkgConfig *Packager
 	)
 
-	if pkgConfig, err = New(config); err != nil {
+	if pkgConfig, err = New(config, opts...); err != nil {
 		message.Fatalf(err, "Unable to setup the package config: %s", err.Error())
 	}
 
@@ -108,7 +121,7 @@ func NewOrDie(config *types.PackagerConfig) *Packager {
 
 // SetTempDirectory sets the temp directory for the packager.
 func (p *Packager) SetTempDirectory(path string) error {
-	if p.tmp.Base() != "" {
+	if p.tmp != nil {
 		p.ClearTempPaths()
 	}
 
@@ -119,12 +132,6 @@ func (p *Packager) SetTempDirectory(path string) error {
 
 	p.tmp = types.DefaultPackagePaths(dir)
 	return nil
-}
-
-// WithSource returns a packager with the provided source.
-func (p *Packager) WithSource(source types.PackageSource) *Packager {
-	p.source = source
-	return p
 }
 
 // GetInitPackageName returns the formatted name of the init package.
