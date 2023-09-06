@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -82,7 +83,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	}
 
 	var cachePath string
-	var checkSumPaths []string
+	var fetchedPaths []string
 	if parent.Import.URL != "" {
 		if !strings.HasSuffix(parent.Import.URL, oci.SkeletonSuffix) {
 			return child, fmt.Errorf("import URL must be a 'skeleton' package: %s", parent.Import.URL)
@@ -107,7 +108,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		if err != nil {
 			return child, err
 		}
-		checkSumPaths, err = p.remote.PullPackage(cachePath, 3, manifest.Locate(componentLayer))
+		fetchedPaths, err = p.remote.PullPackage(cachePath, 3, manifest.Locate(componentLayer))
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
@@ -123,9 +124,21 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		parent.Import.Path = rel
 	}
 
-	subPkg, err := p.getSubPackage(filepath.Join(pathAncestry, parent.Import.Path), checkSumPaths)
+	subPkgPaths := types.PackagePathsMap{}
+	subPkgPaths[types.BaseDir] = filepath.Join(pathAncestry, parent.Import.Path)
+	for _, fetchedPath := range fetchedPaths {
+		subPkgPaths[fetchedPath] = filepath.Join(pathAncestry, parent.Import.Path, fetchedPath)
+	}
+
+	subPkg, err := p.getSubPackage(subPkgPaths)
 	if err != nil {
 		return child, fmt.Errorf("unable to get sub package: %w", err)
+	}
+
+	if parent.Import.URL != "" {
+		if err := sources.ValidatePackageIntegrity(subPkgPaths, subPkg.Metadata.AggregateChecksum, true); err != nil {
+			return child, err
+		}
 	}
 
 	// Find the child component from the imported package that matches our arch.
@@ -401,8 +414,8 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 }
 
 // Reads the locally imported zarf.yaml.
-func (p *Packager) getSubPackage(packagePath string, checkSumPaths []string) (importedPackage types.ZarfPackage, err error) {
-	path := filepath.Join(packagePath, types.ZarfYAML)
+func (p *Packager) getSubPackage(paths types.PackagePathsMap) (importedPackage types.ZarfPackage, err error) {
+	path := paths[types.ZarfYAML]
 	if err := utils.ReadYaml(path, &importedPackage); err != nil {
 		return importedPackage, err
 	}
@@ -416,10 +429,6 @@ func (p *Packager) getSubPackage(packagePath string, checkSumPaths []string) (im
 	for _, importedConstant := range importedPackage.Constants {
 		p.injectImportedConstant(importedConstant)
 	}
-
-	// if len(checkSumPaths) > 0 {
-	// 	p.validatePackageChecksums(packagePath, importedPackage.Metadata.AggregateChecksum, checkSumPaths)
-	// }
 
 	return
 }
