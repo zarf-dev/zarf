@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -137,12 +136,6 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	subPkg, err := p.getSubPackage(subPkgPaths)
 	if err != nil {
 		return child, fmt.Errorf("unable to get sub package: %w", err)
-	}
-
-	if parent.Import.URL != "" {
-		if err := sources.ValidatePackageIntegrity(subPkgPaths, subPkg.Metadata.AggregateChecksum, true); err != nil {
-			return child, err
-		}
 	}
 
 	// Find the child component from the imported package that matches our arch.
