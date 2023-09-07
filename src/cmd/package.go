@@ -200,7 +200,7 @@ var packagePublishCmd = &cobra.Command{
 	Example: lang.CmdPackagePublishExample,
 	Args:    cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.PublishOpts.PackagePath = choosePackage(args)
+		pkgConfig.PkgOpts.PackageSource = args[0]
 
 		if !helpers.IsOCIURL(args[1]) {
 			message.Fatal(nil, lang.CmdPackageRegistryPrefixErr)
