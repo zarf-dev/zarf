@@ -109,7 +109,6 @@ type ZarfMirrorOptions struct {
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
 type ZarfPublishOptions struct {
 	PackageDestination string `json:"packageDestination" jsonschema:"description=Location where the Zarf package will be published to"`
-	PackagePath        string `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
 	SigningKeyPassword string `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sign the published package"`
 	SigningKeyPath     string `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
 }

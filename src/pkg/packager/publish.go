@@ -21,7 +21,7 @@ import (
 // Publish publishes the package to a registry
 func (p *Packager) Publish() (err error) {
 	var referenceSuffix string
-	if utils.IsDir(p.cfg.PublishOpts.PackagePath) {
+	if utils.IsDir(p.cfg.PkgOpts.PackageSource) {
 		referenceSuffix = oci.SkeletonSuffix
 		err := p.loadSkeleton()
 		if err != nil {
@@ -90,7 +90,7 @@ func (p *Packager) Publish() (err error) {
 }
 
 func (p *Packager) loadSkeleton() error {
-	base, err := filepath.Abs(p.cfg.PublishOpts.PackagePath)
+	base, err := filepath.Abs(p.cfg.PkgOpts.PackageSource)
 	if err != nil {
 		return err
 	}
