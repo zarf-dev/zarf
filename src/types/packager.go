@@ -38,7 +38,4 @@ type PackagerConfig struct {
 
 	// Variables set by the user
 	SetVariableMap map[string]*ZarfSetVariable
-
-	// SBOM file paths in the package
-	SBOMViewFiles []string
 }

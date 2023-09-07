@@ -42,36 +42,23 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	if p.source == nil {
-		source, err := sources.New(&p.cfg.PkgOpts, p.tmp.Base())
+		p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp.Base())
 		if err != nil {
 			return err
 		}
-		p.source = source
 	}
 
-	pkg, loaded, err := p.source.LoadPackage()
+	p.cfg.Pkg, p.tmp, err = p.source.LoadPackage()
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	p.arch = config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
-	p.cfg.Pkg = pkg
-	p.tmp = loaded
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
-	for idx, component := range pkg.Components {
+	for idx, component := range p.cfg.Pkg.Components {
 		// Handle component configuration deprecations
 		var warnings []string
 		p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
 		p.warnings = append(p.warnings, warnings...)
-	}
-
-	// If SBOMs were loaded, temporarily place them in the deploy directory
-	if _, ok := p.tmp[types.SBOMDir]; ok {
-		p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp[types.SBOMDir], "sbom-viewer-*"))
-		_, err := sbom.OutputSBOMFiles(p.tmp[types.SBOMDir], types.SBOMDir, "")
-		if err != nil {
-			// Don't stop the deployment, let the user decide if they want to continue the deployment
-			message.Warnf("Unable to process the SBOM files for this package: %s", err.Error())
-		}
 	}
 
 	if err := p.validatePackageArchitecture(); err != nil {
@@ -86,8 +73,19 @@ func (p *Packager) Deploy() (err error) {
 		return err
 	}
 
+	// If SBOMs were loaded, temporarily place them in the deploy directory
+	var sbomViewFiles []string
+	if _, ok := p.tmp[types.SBOMDir]; ok {
+		sbomViewFiles, _ = filepath.Glob(filepath.Join(p.tmp[types.SBOMDir], "sbom-viewer-*"))
+		_, err := sbom.OutputSBOMFiles(p.tmp[types.SBOMDir], types.SBOMDir, "")
+		if err != nil {
+			// Don't stop the deployment, let the user decide if they want to continue the deployment
+			message.Warnf("Unable to process the SBOM files for this package: %s", err.Error())
+		}
+	}
+
 	// Confirm the overall package deployment
-	if !p.confirmAction(config.ZarfDeployStage, p.cfg.SBOMViewFiles) {
+	if !p.confirmAction(config.ZarfDeployStage, sbomViewFiles) {
 		return fmt.Errorf("deployment cancelled")
 	}
 

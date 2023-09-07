@@ -12,15 +12,14 @@ import (
 )
 
 // Inspect list the contents of a package.
-func (p *Packager) Inspect() error {
+func (p *Packager) Inspect() (err error) {
 	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
 
 	if p.source == nil {
-		source, err := sources.New(&p.cfg.PkgOpts, p.tmp.Base())
+		p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp.Base())
 		if err != nil {
 			return err
 		}
-		p.source = source
 	}
 
 	pkg, loaded, err := p.source.LoadPackageMetadata(wantSBOM)
