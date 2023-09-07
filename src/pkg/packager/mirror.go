@@ -23,7 +23,7 @@ func (p *Packager) Mirror() (err error) {
 	defer spinner.Stop()
 
 	if p.source == nil {
-		p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp.Base())
+		p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp)
 		if err != nil {
 			return err
 		}
@@ -36,7 +36,7 @@ func (p *Packager) Mirror() (err error) {
 
 	// If SBOMs were loaded, temporarily place them in the deploy directory
 	var sbomViewFiles []string
-	if _, ok := p.tmp[types.SBOMDir]; ok {
+	if p.tmp.KeyExists(types.SBOMDir) {
 		sbomViewFiles, _ = filepath.Glob(filepath.Join(p.tmp[types.SBOMDir], "sbom-viewer-*"))
 		_, err := sbom.OutputSBOMFiles(p.tmp[types.SBOMDir], types.SBOMDir, "")
 		if err != nil {

@@ -203,7 +203,7 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Calculate all the checksums
-	checksumChecksum, err := p.generatePackageChecksums(p.tmp.Base())
+	checksumChecksum, err := p.generatePackageChecksums()
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for the package: %w", err)
 	}
@@ -580,29 +580,27 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 // generateChecksum walks through all of the files starting at the base path and generates a checksum file.
 // Each file within the basePath represents a layer within the Zarf package.
 // generateChecksum returns a SHA256 checksum of the checksums.txt file.
-func (p *Packager) generatePackageChecksums(basePath string) (string, error) {
+func (p *Packager) generatePackageChecksums() (string, error) {
 	var checksumsData string
 
-	// Add a '/' or '\' to the basePath so that the checksums file lists paths from the perspective of the basePath
-	basePathWithModifier := basePath + string(filepath.Separator)
-
-	// Walk all files in the package path and calculate their checksums
-	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			sum, err := utils.GetSHA256OfFile(path)
-			if err != nil {
-				return err
-			}
-			checksumsData += fmt.Sprintf("%s %s\n", sum, strings.TrimPrefix(path, basePathWithModifier))
+	// Loop over the "loaded" package path map
+	for rel, abs := range p.tmp {
+		if utils.IsDir(abs) {
+			return "", fmt.Errorf("unable to generate checksums for the package, %s is a directory", abs)
 		}
-		return nil
-	})
-	if err != nil {
-		return "", err
+		sum, err := utils.GetSHA256OfFile(abs)
+		if err != nil {
+			return "", err
+		}
+		checksumsData += fmt.Sprintf("%s %s\n", sum, rel)
 	}
 
+	// set the default checksums path
+	if err := p.tmp.SetDefaultRelative(types.PackageChecksums); err != nil {
+		return "", err
+	}
 	// Create the checksums file
-	checksumsFilePath := p.tmp.MetadataPaths()[types.PackageChecksums]
+	checksumsFilePath := p.tmp[types.PackageChecksums]
 	if err := utils.WriteFile(checksumsFilePath, []byte(checksumsData)); err != nil {
 		return "", err
 	}

@@ -35,16 +35,15 @@ func (c *Cluster) StartInjectionMadness(tmp types.PackagePathsMap, injectorSeedT
 		types.SeedImagesDir,
 		types.InjectorPayloadTarGz,
 	}
+	c.spinner = message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
+	defer c.spinner.Stop()
 
 	// Ensure the tmp map has all the keys we need, and set the defaults
 	for _, key := range injectionMadnessKeys {
-		if _, ok := tmp[key]; !ok {
-			tmp[key] = filepath.Join(tmp[types.BaseDir], key)
+		if err := tmp.SetDefaultRelative(key); err != nil {
+			c.spinner.Fatal(err)
 		}
 	}
-
-	c.spinner = message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
-	defer c.spinner.Stop()
 
 	var err error
 	var images k8s.ImageNodeMap

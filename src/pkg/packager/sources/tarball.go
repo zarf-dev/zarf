@@ -23,17 +23,16 @@ import (
 
 // TarballSource is a package source for tarballs.
 type TarballSource struct {
-	DestinationDir string
+	Destination types.PackagePathsMap
 	*types.ZarfPackageOptions
 }
 
 // LoadPackage loads a package from a tarball.
 func (s *TarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
-	loaded = make(types.PackagePathsMap)
-	loaded[types.BaseDir] = s.DestinationDir
+	loaded = s.Destination
 
 	message.Debugf("Loading package from %q", s.PackageSource)
-	message.Debugf("Loaded package base directory: %q", s.DestinationDir)
+	message.Debugf("Loaded package base directory: %q", loaded.Base())
 
 	err = archiver.Walk(s.PackageSource, func(f archiver.File) error {
 		if f.IsDir() {
@@ -43,16 +42,21 @@ func (s *TarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.Packa
 		if !ok {
 			return fmt.Errorf("expected header to be *tar.Header but was %T", f.Header)
 		}
-		fullPath := header.Name
+		path := header.Name
 
-		dir := filepath.Dir(fullPath)
+		// optimistically set the default relative path
+		if err := loaded.SetDefaultRelative(path); err != nil {
+			return err
+		}
+
+		dir := filepath.Dir(path)
 		if dir != "." {
-			if err := os.MkdirAll(filepath.Join(s.DestinationDir, dir), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Join(loaded.Base(), dir), 0755); err != nil {
 				return err
 			}
 		}
 
-		dstPath := filepath.Join(s.DestinationDir, fullPath)
+		dstPath := loaded[path]
 		dst, err := os.Create(dstPath)
 		if err != nil {
 			return err
@@ -64,8 +68,7 @@ func (s *TarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.Packa
 			return err
 		}
 
-		loaded[fullPath] = dstPath
-		message.Debugf("Loaded %q --> %q", fullPath, dstPath)
+		message.Debugf("Loaded %q --> %q", path, dstPath)
 		return nil
 	})
 	if err != nil {
@@ -97,25 +100,22 @@ func (s *TarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.Packa
 
 // LoadPackageMetadata loads a package's metadata from a tarball.
 func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
-	loaded = make(types.PackagePathsMap)
-	loaded[types.BaseDir] = s.DestinationDir
+	loaded = s.Destination
 
-	for pathInArchive := range loaded.MetadataPaths() {
-		if err := archiver.Extract(s.PackageSource, pathInArchive, s.DestinationDir); err != nil {
+	for rel := range loaded.MetadataPaths() {
+		if err := archiver.Extract(s.PackageSource, rel, loaded.Base()); err != nil {
 			return pkg, nil, err
 		}
-		pathOnDisk := filepath.Join(s.DestinationDir, pathInArchive)
-		if !utils.InvalidPath(pathOnDisk) {
-			loaded[pathInArchive] = pathOnDisk
+		if err := loaded.SetDefaultRelative(rel); err != nil {
+			return pkg, nil, err
 		}
 	}
 	if wantSBOM {
-		if err := archiver.Extract(s.PackageSource, types.SBOMTar, s.DestinationDir); err != nil {
+		if err := archiver.Extract(s.PackageSource, types.SBOMTar, loaded.Base()); err != nil {
 			return pkg, nil, err
 		}
-		pathOnDisk := filepath.Join(s.DestinationDir, types.SBOMTar)
-		if !utils.InvalidPath(pathOnDisk) {
-			loaded[types.SBOMTar] = pathOnDisk
+		if err := loaded.SetDefaultRelative(types.SBOMTar); err != nil {
+			return pkg, nil, err
 		}
 	}
 
@@ -136,8 +136,10 @@ func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackag
 	}
 
 	// unpack sboms.tar
-	if _, ok := loaded[types.SBOMTar]; ok {
-		loaded[types.SBOMDir] = filepath.Join(s.DestinationDir, types.SBOMDir)
+	if loaded.KeyExists(types.SBOMTar) {
+		if err := loaded.SetDefaultRelative(types.SBOMDir); err != nil {
+			return pkg, nil, err
+		}
 		if err = archiver.Unarchive(loaded[types.SBOMTar], loaded[types.SBOMDir]); err != nil {
 			return pkg, nil, err
 		}
@@ -155,7 +157,7 @@ func (s *TarballSource) Collect(destinationTarball string) error {
 
 // SplitTarballSource is a package source for split tarballs.
 type SplitTarballSource struct {
-	DestinationDir string
+	Destination types.PackagePathsMap
 	*types.ZarfPackageOptions
 }
 
@@ -216,13 +218,8 @@ func (s *SplitTarballSource) Collect(dstTarball string) error {
 		}
 	}
 
-	var shasum string
-	if shasum, err = utils.GetSHA256OfFile(dstTarball); err != nil {
-		return fmt.Errorf("unable to get sha256sum of package: %w", err)
-	}
-
-	if shasum != pkgData.Sha256Sum {
-		return fmt.Errorf("package sha256sum does not match, expected %s, found %s", pkgData.Sha256Sum, shasum)
+	if err := utils.SHAsMatch(dstTarball, pkgData.Sha256Sum); err != nil {
+		return fmt.Errorf("package integrity check failed: %w", err)
 	}
 
 	// Remove the parts to reduce disk space before extracting
@@ -230,6 +227,7 @@ func (s *SplitTarballSource) Collect(dstTarball string) error {
 		_ = os.Remove(file)
 	}
 
+	// communicate to the user that the package was reassembled
 	message.Infof("Reassembled package to: %q", dstTarball)
 
 	return nil
@@ -247,7 +245,7 @@ func (s *SplitTarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.
 	s.PackageSource = dstTarball
 
 	ts := &TarballSource{
-		s.DestinationDir,
+		s.Destination,
 		s.ZarfPackageOptions,
 	}
 	return ts.LoadPackage()
@@ -265,7 +263,7 @@ func (s *SplitTarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfP
 	s.PackageSource = dstTarball
 
 	ts := &TarballSource{
-		s.DestinationDir,
+		s.Destination,
 		s.ZarfPackageOptions,
 	}
 	return ts.LoadPackageMetadata(wantSBOM)

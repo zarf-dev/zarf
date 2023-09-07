@@ -22,19 +22,18 @@ import (
 
 // OCISource is a package source for OCI registries.
 type OCISource struct {
-	DestinationDir string
+	Destination types.PackagePathsMap
 	*types.ZarfPackageOptions
 	*oci.OrasRemote
 }
 
 // LoadPackage loads a package from an OCI registry.
 func (s *OCISource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
-	loaded = make(types.PackagePathsMap)
-	loaded[types.BaseDir] = s.DestinationDir
+	loaded = s.Destination
 	layersToPull := []ocispec.Descriptor{}
 
 	message.Debugf("Loading package from %q", s.PackageSource)
-	message.Debugf("Loaded package base directory: %q", s.DestinationDir)
+	message.Debugf("Loaded package base directory: %q", loaded.Base())
 
 	optionalComponents := helpers.StringToSlice(s.OptionalComponents)
 
@@ -56,13 +55,15 @@ func (s *OCISource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePa
 		isPartial = false
 	}
 
-	pathsToCheck, err := s.PullPackage(s.DestinationDir, config.CommonOptions.OCIConcurrency, layersToPull...)
+	pathsToCheck, err := s.PullPackage(loaded.Base(), config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
 		return pkg, nil, fmt.Errorf("unable to pull the package: %w", err)
 	}
 
 	for _, path := range pathsToCheck {
-		loaded[path] = filepath.Join(s.DestinationDir, path)
+		if err := loaded.SetDefaultRelative(path); err != nil {
+			return pkg, nil, err
+		}
 	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
@@ -90,21 +91,19 @@ func (s *OCISource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePa
 
 // LoadPackageMetadata loads a package's metadata from an OCI registry.
 func (s *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
-	loaded = make(types.PackagePathsMap)
-	loaded[types.BaseDir] = s.DestinationDir
+	loaded = s.Destination
 	var pathsToCheck []string
 
-	metatdataDescriptors, err := s.PullPackageMetadata(s.DestinationDir)
+	metatdataDescriptors, err := s.PullPackageMetadata(loaded.Base())
 	if err != nil {
 		return pkg, nil, err
 	}
-
 	for _, desc := range metatdataDescriptors {
 		pathsToCheck = append(pathsToCheck, desc.Annotations[ocispec.AnnotationTitle])
 	}
 
 	if wantSBOM {
-		sbomDescriptors, err := s.PullPackageSBOM(s.DestinationDir)
+		sbomDescriptors, err := s.PullPackageSBOM(loaded.Base())
 		if err != nil {
 			return pkg, nil, err
 		}
@@ -114,7 +113,9 @@ func (s *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, l
 	}
 
 	for _, path := range pathsToCheck {
-		loaded[path] = filepath.Join(s.DestinationDir, path)
+		if err := loaded.SetDefaultRelative(path); err != nil {
+			return pkg, nil, err
+		}
 	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
@@ -134,8 +135,10 @@ func (s *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, l
 	}
 
 	// unpack sboms.tar
-	if _, ok := loaded[types.SBOMTar]; ok {
-		loaded[types.SBOMDir] = filepath.Join(s.DestinationDir, types.SBOMDir)
+	if loaded.KeyExists(types.SBOMTar) {
+		if err := loaded.SetDefaultRelative(types.SBOMDir); err != nil {
+			return pkg, nil, err
+		}
 		if err = archiver.Unarchive(loaded[types.SBOMTar], loaded[types.SBOMDir]); err != nil {
 			return pkg, nil, err
 		}

@@ -36,7 +36,7 @@ func (p *Packager) Remove() (err error) {
 
 	// if no source was provided, try to make one
 	if p.source == nil {
-		p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp.Base())
+		p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp)
 		// if we can't make one, assume it's a cluster package
 		if err != nil {
 			requiresCluster = true
@@ -47,16 +47,15 @@ func (p *Packager) Remove() (err error) {
 
 	// if we have a source, load the package metadata
 	if p.source != nil {
-		pkg, loaded, err := p.source.LoadPackageMetadata(false)
+		p.cfg.Pkg, p.tmp, err = p.source.LoadPackageMetadata(false)
 		if err != nil {
 			return err
 		}
-		p.cfg.Pkg = pkg
 		// Filter out components that are not compatible with this system if we have loaded from a tarball
 		p.filterComponents(&p.cfg.Pkg)
-		packageName = pkg.Metadata.Name
+		packageName = p.cfg.Pkg.Metadata.Name
 
-		_, wasSigned := loaded[types.PackageSignature]
+		wasSigned := p.tmp.KeyExists(types.PackageSignature)
 
 		hasRemoveActions := false
 

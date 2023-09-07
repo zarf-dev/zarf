@@ -64,17 +64,17 @@ func ValidatePackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum st
 	defer spinner.Stop()
 
 	// ensure checksums.txt and zarf.yaml were loaded
-	if _, ok := loaded[types.PackageChecksums]; !ok {
+	if !loaded.KeyExists(types.PackageChecksums) {
 		// TODO: right now older packages (the SGET one in CI) do not have checksums.txt
 		// disabling this check for now, but we should re-enable it once we have a new SGET package
 		if aggregateChecksum == "" {
 			spinner.Successf("Checksums validated!")
 			return nil
 		}
-		return fmt.Errorf("unable to validate checksums, checksums.txt was not loaded")
+		return fmt.Errorf("unable to validate checksums, %s was not loaded", types.PackageChecksums)
 	}
-	if _, ok := loaded[types.ZarfYAML]; !ok {
-		return fmt.Errorf("unable to validate checksums, zarf.yaml was not loaded")
+	if !loaded.KeyExists(types.ZarfYAML) {
+		return fmt.Errorf("unable to validate checksums, %s was not loaded", types.ZarfYAML)
 	}
 
 	checksumPath := loaded[types.PackageChecksums]
@@ -106,7 +106,7 @@ func ValidatePackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum st
 		if utils.InvalidPath(path) {
 			if !isPartial && !checkedMap[path] {
 				return fmt.Errorf("unable to validate checksums - missing file: %s", rel)
-			} else if _, ok := loaded[rel]; ok {
+			} else if loaded.KeyExists(rel) {
 				return fmt.Errorf("unable to validate partial checksums - missing file: %s", rel)
 			}
 			// it's okay if we're doing a partial check and the file isn't there as long as the path isn't in the list of paths to check

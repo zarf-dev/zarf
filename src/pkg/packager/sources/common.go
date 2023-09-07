@@ -18,9 +18,11 @@ import (
 // LoadComponents loads components from a package.
 func LoadComponents(pkg *types.ZarfPackage, loaded types.PackagePathsMap) (err error) {
 	// always create and "load" components dir
-	if _, ok := loaded[types.ComponentsDir]; !ok {
+	if !loaded.KeyExists(types.ComponentsDir) {
 		message.Debugf("Creating %q dir", types.ComponentsDir)
-		loaded[types.ComponentsDir] = filepath.Join(loaded[types.BaseDir], types.ComponentsDir)
+		if err := loaded.SetDefaultRelative(types.ComponentsDir); err != nil {
+			return err
+		}
 		if err := utils.CreateDirectory(loaded[types.ComponentsDir], 0755); err != nil {
 			return err
 		}
@@ -29,7 +31,7 @@ func LoadComponents(pkg *types.ZarfPackage, loaded types.PackagePathsMap) (err e
 	// unpack component tarballs
 	for _, component := range pkg.Components {
 		tb := filepath.Join(types.ComponentsDir, fmt.Sprintf("%s.tar", component.Name))
-		if _, ok := loaded[tb]; ok {
+		if loaded.KeyExists(tb) {
 			message.Debugf("Unarchiving %q", tb)
 			defer os.Remove(loaded[tb])
 			defer delete(loaded, tb)
@@ -39,9 +41,11 @@ func LoadComponents(pkg *types.ZarfPackage, loaded types.PackagePathsMap) (err e
 		}
 
 		// also "load" the images dir if any component has images
-		if _, ok := loaded[types.ImagesDir]; !ok && len(component.Images) > 0 {
+		if !loaded.KeyExists(types.ImagesDir) && len(component.Images) > 0 {
 			message.Debugf("Creating %q dir", types.ImagesDir)
-			loaded[types.ImagesDir] = filepath.Join(loaded[types.BaseDir], types.ImagesDir)
+			if err := loaded.SetDefaultRelative(types.ImagesDir); err != nil {
+				return err
+			}
 			if err := utils.CreateDirectory(loaded[types.ImagesDir], 0755); err != nil {
 				return err
 			}
@@ -53,9 +57,13 @@ func LoadComponents(pkg *types.ZarfPackage, loaded types.PackagePathsMap) (err e
 // LoadSBOMs loads SBOMs from a package.
 func LoadSBOMs(loaded types.PackagePathsMap) (err error) {
 	// unpack sboms.tar
-	if _, ok := loaded[types.SBOMTar]; ok {
+	if loaded.KeyExists(types.SBOMTar) {
 		message.Debugf("Unarchiving %q", types.SBOMTar)
-		loaded[types.SBOMDir] = filepath.Join(loaded[types.BaseDir], types.SBOMDir)
+		defer os.Remove(loaded[types.SBOMTar])
+		defer delete(loaded, types.SBOMTar)
+		if err := loaded.SetDefaultRelative(types.SBOMDir); err != nil {
+			return err
+		}
 		if err = archiver.Unarchive(loaded[types.SBOMTar], loaded[types.SBOMDir]); err != nil {
 			return err
 		}

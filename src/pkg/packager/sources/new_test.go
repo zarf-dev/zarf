@@ -45,7 +45,8 @@ func Test_identifySourceType(t *testing.T) {
 
 func TestNew(t *testing.T) {
 	for _, source := range sources {
-		actual, err := New(&types.ZarfPackageOptions{PackageSource: source.pkgSrc}, "")
+		dst := types.PackagePathsMap{types.BaseDir: "/tmp"}
+		actual, err := New(&types.ZarfPackageOptions{PackageSource: source.pkgSrc}, dst)
 		require.NoError(t, err)
 		require.IsType(t, source.source, actual)
 		require.Implements(t, packagep, actual)

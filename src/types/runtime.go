@@ -5,6 +5,7 @@
 package types
 
 import (
+	"fmt"
 	"path/filepath"
 )
 
@@ -202,6 +203,33 @@ func DefaultPackagePaths(base string) PackagePathsMap {
 
 // PackagePathsMap is a map of all the static paths for a Zarf package.
 type PackagePathsMap map[string]string
+
+func (pm PackagePathsMap) SafeSet(key, val string) error {
+	if current, ok := pm[key]; ok {
+		return fmt.Errorf("key %q=%q, cannot set to %q", key, current, val)
+	}
+	pm[key] = val
+	return nil
+}
+
+func (pm PackagePathsMap) KeyExists(key string) bool {
+	val, ok := pm[key]
+	if !ok {
+		return false
+	}
+	return val != ""
+}
+
+func (pm PackagePathsMap) SetDefaultRelative(rel string) error {
+	if !pm.KeyExists(BaseDir) {
+		return fmt.Errorf("base directory not set, cannot set relative path %q", rel)
+	}
+	if filepath.IsAbs(rel) {
+		return fmt.Errorf("path %q is absolute, must be relative", rel)
+	}
+
+	return pm.SafeSet(rel, filepath.Join(pm[BaseDir], rel))
+}
 
 // Base returns the base directory for the package.
 func (pm PackagePathsMap) Base() string {

@@ -17,7 +17,7 @@ import (
 
 // URLSource is a package source for http, https and sget URLs.
 type URLSource struct {
-	DestinationDir string
+	Destination types.PackagePathsMap
 	*types.ZarfPackageOptions
 }
 
@@ -53,7 +53,7 @@ func (s *URLSource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePa
 	s.PackageSource = dstTarball
 
 	tp := &TarballSource{
-		s.DestinationDir,
+		s.Destination,
 		s.ZarfPackageOptions,
 	}
 
@@ -77,7 +77,7 @@ func (s *URLSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, l
 	s.PackageSource = dstTarball
 
 	tp := &TarballSource{
-		s.DestinationDir,
+		s.Destination,
 		s.ZarfPackageOptions,
 	}
 

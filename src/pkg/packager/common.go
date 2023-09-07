@@ -139,7 +139,9 @@ func (p *Packager) SetTempDirectory(path string) error {
 		return fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
-	p.tmp = types.DefaultPackagePaths(dir)
+	p.tmp = types.PackagePathsMap{
+		types.BaseDir: dir,
+	}
 	return nil
 }
 

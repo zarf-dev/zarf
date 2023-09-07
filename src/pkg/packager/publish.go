@@ -29,7 +29,7 @@ func (p *Packager) Publish() (err error) {
 		}
 	} else {
 		if p.source == nil {
-			p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp.Base())
+			p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp)
 			if err != nil {
 				return err
 			}
@@ -128,7 +128,7 @@ func (p *Packager) loadSkeleton() error {
 		}
 	}
 
-	checksumChecksum, err := p.generatePackageChecksums(p.tmp.Base())
+	checksumChecksum, err := p.generatePackageChecksums()
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
 	}
