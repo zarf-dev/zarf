@@ -54,10 +54,6 @@ func (p *Packager) Publish() (err error) {
 		return err
 	}
 
-	if err := sources.ValidatePackageIntegrity(p.tmp, p.cfg.Pkg.Metadata.AggregateChecksum, false); err != nil {
-		return fmt.Errorf("unable to publish package because checksums do not match: %w", err)
-	}
-
 	// Sign the package if a key has been provided
 	if p.cfg.PublishOpts.SigningKeyPath != "" {
 		_, err := utils.CosignSignBlob(p.tmp[types.ZarfYAML], p.tmp[types.PackageSignature], p.cfg.PublishOpts.SigningKeyPath, p.getSigPublishPassword)

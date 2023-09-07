@@ -78,12 +78,8 @@ func ValidatePackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum st
 	}
 
 	checksumPath := loaded[types.PackageChecksums]
-	actualAggregateChecksum, err := utils.GetSHA256OfFile(checksumPath)
-	if err != nil {
-		return fmt.Errorf("unable to get checksum of: %s", err.Error())
-	}
-	if actualAggregateChecksum != aggregateChecksum {
-		return fmt.Errorf("invalid aggregate checksum: (expected: %s, received: %s)", aggregateChecksum, actualAggregateChecksum)
+	if err := utils.SHAsMatch(checksumPath, aggregateChecksum); err != nil {
+		return err
 	}
 
 	checkedMap, err := pathCheckMap(loaded.Base())
@@ -104,8 +100,8 @@ func ValidatePackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum st
 		}
 		path := filepath.Join(loaded.Base(), rel)
 
-		status := fmt.Sprintf("Validating checksum of %s", rel)
-		spinner.Updatef(message.Truncate(status, message.TermWidth, false))
+		status := fmt.Sprintf("Validating checksum of %s", utils.First30last30(rel))
+		spinner.Updatef(status)
 
 		if utils.InvalidPath(path) {
 			if !isPartial && !checkedMap[path] {
