@@ -27,7 +27,7 @@ type HelmRepo struct {
 	} `json:"spec"`
 }
 
-// NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
+// NewHelmRepositoryMutationHook creates a new instance of the helm repo mutation hook.
 func NewHelmRepositoryMutationHook() operations.Hook {
 	message.Debug("hooks.NewGitRepositoryMutationHook()")
 	return operations.Hook{
@@ -36,7 +36,7 @@ func NewHelmRepositoryMutationHook() operations.Hook {
 	}
 }
 
-// mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
+// mutateHelmRepo mutates the repository url to point to the repository URL defined in the ZarfState.
 func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	var (
