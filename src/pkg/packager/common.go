@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -326,6 +327,9 @@ func (p *Packager) archiveComponent(component types.ZarfComponent) error {
 		if err != nil {
 			return err
 		}
+		// Add the tarball to the tmp map
+		// e.g. tmp["components/component-name.tar"] = "/tmp/zarf-123456789/components/component-name.tar"
+		p.tmp[filepath.Join(types.ComponentsDir, fmt.Sprintf("%s.tar", component.Name))] = tb
 	} else {
 		message.Debugf("Component %q is empty, skipping archiving", component.Name)
 	}

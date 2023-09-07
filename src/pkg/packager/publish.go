@@ -16,16 +16,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/mholt/archiver/v3"
 )
 
 // Publish publishes the package to a registry
-//
-// This is a wrapper around the oras library
-// and much of the code was adapted from the oras CLI - https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
-//
-// Authentication is handled via the Docker config file created w/ `zarf tools registry login`
-func (p *Packager) Publish() error {
+func (p *Packager) Publish() (err error) {
 	var referenceSuffix string
 	if utils.IsDir(p.cfg.PublishOpts.PackagePath) {
 		referenceSuffix = oci.SkeletonSuffix
@@ -34,16 +28,19 @@ func (p *Packager) Publish() error {
 			return err
 		}
 	} else {
-		// Extract the first layer of the tarball
-		if err := archiver.Unarchive(p.cfg.PublishOpts.PackagePath, p.tmp.Base()); err != nil {
-			return fmt.Errorf("unable to extract the package: %w", err)
+		if p.source == nil {
+			p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp.Base())
+			if err != nil {
+				return err
+			}
 		}
 
-		err := p.readYaml(p.tmp[types.ZarfYAML])
+		p.cfg.Pkg, p.tmp, err = p.source.LoadPackage()
 		if err != nil {
-			return fmt.Errorf("unable to read %s in %s: %w", types.ZarfYAML, p.tmp[types.ZarfYAML], err)
+			return err
 		}
-		referenceSuffix = p.arch
+
+		referenceSuffix = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 	}
 
 	// Get a reference to the registry for this package
@@ -72,7 +69,7 @@ func (p *Packager) Publish() error {
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
 
 	// Publish the package/skeleton to the registry
-	if err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base(), config.CommonOptions.OCIConcurrency); err != nil {
+	if err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp, config.CommonOptions.OCIConcurrency); err != nil {
 		return err
 	}
 	if strings.HasSuffix(p.remote.Repo().Reference.String(), oci.SkeletonSuffix) {

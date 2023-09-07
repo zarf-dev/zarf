@@ -216,15 +216,14 @@ func (p *Packager) Create(baseDir string) error {
 
 	// Sign the config file if a key was provided
 	if p.cfg.CreateOpts.SigningKeyPath != "" {
-		mp := p.tmp.MetadataPaths()
-		_, err := utils.CosignSignBlob(mp[types.ZarfYAML], mp[types.PackageSignature], p.cfg.CreateOpts.SigningKeyPath, p.getSigCreatePassword)
+		_, err := utils.CosignSignBlob(p.tmp[types.ZarfYAML], p.tmp[types.PackageSignature], p.cfg.CreateOpts.SigningKeyPath, p.getSigCreatePassword)
 		if err != nil {
 			return fmt.Errorf("unable to sign the package: %w", err)
 		}
 	}
 
 	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
-		err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base(), config.CommonOptions.OCIConcurrency)
+		err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
