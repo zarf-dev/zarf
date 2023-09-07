@@ -72,7 +72,7 @@ func (i *ImgConfig) PullAll() error {
 		src := src
 		go func() {
 			// Make sure to call Done() on the WaitGroup when the goroutine finishes
-			defer metadataImageConcurrency.WaitGroup.Done()
+			defer metadataImageConcurrency.WaitGroupDone()
 
 			srcParsed, err := transform.ParseImageRef(src)
 			if err != nil {
@@ -80,7 +80,7 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			if utils.ContextDone(metadataImageConcurrency.Context) {
+			if metadataImageConcurrency.IsDone() {
 				return
 			}
 
@@ -93,7 +93,7 @@ func (i *ImgConfig) PullAll() error {
 				}
 			}
 
-			if utils.ContextDone(metadataImageConcurrency.Context) {
+			if metadataImageConcurrency.IsDone() {
 				return
 			}
 
@@ -103,7 +103,7 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			if utils.ContextDone(metadataImageConcurrency.Context) {
+			if metadataImageConcurrency.IsDone() {
 				return
 			}
 
@@ -111,19 +111,21 @@ func (i *ImgConfig) PullAll() error {
 		}()
 	}
 
-	progressFunc := func(finishedImage srcAndImg, iteration int) {
+	onMetadataProgress := func(finishedImage srcAndImg, iteration int) {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImgList), finishedImage.src)
 		imageMap[finishedImage.src] = finishedImage.img
 	}
 
-	err := utils.WaitForConcurrencyTools(metadataImageConcurrency, progressFunc, utils.ReturnError)
-	if err != nil {
-		spinner.Warnf("Failed to load metadata for all images. This may be due to a network error or an invalid image reference.")
+	onMetadataError := func(err error) error {
+		return fmt.Errorf("Failed to load metadata for all images. This may be due to a network error or an invalid image reference: %w", err)
+	}
+
+	if err := metadataImageConcurrency.WaitWithProgress(onMetadataProgress, onMetadataError); err != nil {
 		return err
 	}
 
 	// Create the ImagePath directory
-	err = os.Mkdir(i.ImagesPath, 0755)
+	err := os.Mkdir(i.ImagesPath, 0755)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
@@ -206,7 +208,7 @@ func (i *ImgConfig) PullAll() error {
 		// and https://github.com/google/go-containerregistry/blob/v0.15.2/pkg/v1/layout/write.go#L198-L262
 		// with modifications. This allows us to dedupe layers for all images and write them concurrently.
 		go func() {
-			defer layerWritingConcurrency.WaitGroup.Done()
+			defer layerWritingConcurrency.WaitGroupDone()
 			digest, err := layer.Digest()
 			if errors.Is(err, stream.ErrNotComputed) {
 				// Allow digest errors, since streams may not have calculated the hash
@@ -234,7 +236,7 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			if utils.ContextDone(layerWritingConcurrency.Context) {
+			if layerWritingConcurrency.IsDone() {
 				return
 			}
 
@@ -251,7 +253,7 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			if utils.ContextDone(layerWritingConcurrency.Context) {
+			if layerWritingConcurrency.IsDone() {
 				return
 			}
 
@@ -262,7 +264,7 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			if utils.ContextDone(layerWritingConcurrency.Context) {
+			if layerWritingConcurrency.IsDone() {
 				return
 			}
 
@@ -281,7 +283,7 @@ func (i *ImgConfig) PullAll() error {
 
 			defer w.Close()
 
-			if utils.ContextDone(layerWritingConcurrency.Context) {
+			if layerWritingConcurrency.IsDone() {
 				return
 			}
 
@@ -294,7 +296,7 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			if utils.ContextDone(layerWritingConcurrency.Context) {
+			if layerWritingConcurrency.IsDone() {
 				return
 			}
 
@@ -318,7 +320,7 @@ func (i *ImgConfig) PullAll() error {
 			renamePath := filepath.Join(string(cranePath), "blobs", digest.Algorithm, digest.Hex)
 			os.Rename(w.Name(), renamePath)
 
-			if utils.ContextDone(layerWritingConcurrency.Context) {
+			if layerWritingConcurrency.IsDone() {
 				return
 			}
 
@@ -326,8 +328,7 @@ func (i *ImgConfig) PullAll() error {
 		}()
 	}
 
-	err = utils.WaitForConcurrencyTools(layerWritingConcurrency, func(b bool, i int) {}, utils.ReturnError)
-	if err != nil {
+	onLayerWritingError := func(err error) error {
 		// Send a signal to the progress bar that we're done and wait for the thread to finish
 		doneSaving <- 1
 		progressBarWaitGroup.Wait()
@@ -335,6 +336,10 @@ func (i *ImgConfig) PullAll() error {
 		if strings.HasPrefix(err.Error(), "expected blob size") {
 			message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
 		}
+		return err
+	}
+
+	if err := layerWritingConcurrency.WaitWithoutProgress(onLayerWritingError); err != nil {
 		return err
 	}
 
@@ -349,12 +354,12 @@ func (i *ImgConfig) PullAll() error {
 		tag, img := tag, img
 		go func() {
 			// Make sure to call Done() on the WaitGroup when the goroutine finishes
-			defer imageSavingConcurrency.WaitGroup.Done()
+			defer imageSavingConcurrency.WaitGroupDone()
 
 			// Save the image via crane
 			err := cranePath.WriteImage(img)
 
-			if utils.ContextDone(imageSavingConcurrency.Context) {
+			if imageSavingConcurrency.IsDone() {
 				return
 			}
 
@@ -367,7 +372,7 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			if utils.ContextDone(imageSavingConcurrency.Context) {
+			if imageSavingConcurrency.IsDone() {
 				return
 			}
 
@@ -378,7 +383,7 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			if utils.ContextDone(imageSavingConcurrency.Context) {
+			if imageSavingConcurrency.IsDone() {
 				return
 			}
 
@@ -386,16 +391,19 @@ func (i *ImgConfig) PullAll() error {
 		}()
 	}
 
-	imageProgressFunc := func(finishedImage digestAndTag, iteration int) {
+	onImageSavingProgress := func(finishedImage digestAndTag, iteration int) {
 		tagToDigest[finishedImage.tag] = finishedImage.digest
 	}
 
-	err = utils.WaitForConcurrencyTools(imageSavingConcurrency, imageProgressFunc, utils.ReturnError)
-	if err != nil {
+	onImageSavingError := func(err error) error {
 		// Send a signal to the progress bar that we're done and wait for the thread to finish
 		doneSaving <- 1
 		progressBarWaitGroup.Wait()
 		message.WarnErr(err, "Failed to write image config or manifest, trying again up to 3 times...")
+		return err
+	}
+
+	if err := imageSavingConcurrency.WaitWithProgress(onImageSavingProgress, onImageSavingError); err != nil {
 		return err
 	}
 

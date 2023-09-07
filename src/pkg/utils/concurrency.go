@@ -10,19 +10,19 @@ import (
 	"sync"
 )
 
-// ConcurrencyTools is a struct that facilitates easier concurrency by providing a context, cancel function, wait group, progress channel, and error channel that is compatible with the WaitForConcurrencyTools function
+// ConcurrencyTools is a struct that contains channels and a context for use in concurrent routines
 type ConcurrencyTools[P any, E any] struct {
 	ProgressChan chan P
 	ErrorChan    chan E
-	Context      context.Context
+	context      context.Context
 	Cancel       context.CancelFunc
-	WaitGroup    *sync.WaitGroup
-	RoutineCount int
+	waitGroup    *sync.WaitGroup
+	routineCount int
 }
 
 // NewConcurrencyTools returns a ConcurrencyTools struct that has the given length set for concurrency iterations
 func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.TODO())
 
 	progressChan := make(chan P, length)
 
@@ -35,17 +35,18 @@ func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
 	concurrencyTools := ConcurrencyTools[P, E]{
 		ProgressChan: progressChan,
 		ErrorChan:    errorChan,
-		Context:      ctx,
+		context:      ctx,
 		Cancel:       cancel,
-		WaitGroup:    &waitGroup,
-		RoutineCount: length,
+		waitGroup:    &waitGroup,
+		routineCount: length,
 	}
 
 	return &concurrencyTools
 }
 
-// ContextDone returns true if the context has been marked as done
-func ContextDone(ctx context.Context) bool {
+// IsDone returns true if the context is done.
+func (ct *ConcurrencyTools[P, E]) IsDone() bool {
+	ctx := ct.context
 	select {
 	case <-ctx.Done():
 		return true
@@ -54,23 +55,44 @@ func ContextDone(ctx context.Context) bool {
 	}
 }
 
-// ReturnError returns the error passed in
-func ReturnError(err error) error {
-	return err
+// WaitGroupDone decrements the internal WaitGroup counter by one.
+func (ct *ConcurrencyTools[P, E]) WaitGroupDone() {
+	ct.waitGroup.Done()
 }
 
-// WaitForConcurrencyTools waits for the concurrencyTools passed in to finish or returns the first error it encounters, it calls the errorFunc if an error is encountered and the progressFunc if a progress update is received
-func WaitForConcurrencyTools[P any, E any, PF func(P, int), EF func(E) error](concurrencyTools *ConcurrencyTools[P, E], progressFunc PF, errorFunc EF) error {
-	for i := 0; i < concurrencyTools.RoutineCount; i++ {
+// WaitWithProgress waits for all routines to finish
+//
+// onProgress is a callback function that is called when a routine sends a progress update
+//
+// onError is a callback function that is called when a routine sends an error
+func (ct *ConcurrencyTools[P, E]) WaitWithProgress(onProgress func(P, int), onError func(E) error) error {
+	for i := 0; i < ct.routineCount; i++ {
 		select {
-		case err := <-concurrencyTools.ErrorChan:
-			concurrencyTools.Cancel()
-			errResult := errorFunc(err)
+		case err := <-ct.ErrorChan:
+			ct.Cancel()
+			errResult := onError(err)
 			return errResult
-		case progress := <-concurrencyTools.ProgressChan:
-			progressFunc(progress, i)
+		case progress := <-ct.ProgressChan:
+			onProgress(progress, i)
 		}
 	}
-	concurrencyTools.WaitGroup.Wait()
+	ct.waitGroup.Wait()
+	return nil
+}
+
+// WaitWithoutProgress waits for all routines to finish without a progress callback
+//
+// onError is a callback function that is called when a routine sends an error
+func (ct *ConcurrencyTools[P, E]) WaitWithoutProgress(onError func(E) error) error {
+	for i := 0; i < ct.routineCount; i++ {
+		select {
+		case err := <-ct.ErrorChan:
+			ct.Cancel()
+			errResult := onError(err)
+			return errResult
+		case  <-ct.ProgressChan:
+		}
+	}
+	ct.waitGroup.Wait()
 	return nil
 }
