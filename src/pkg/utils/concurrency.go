@@ -19,6 +19,7 @@ type ConcurrencyTools[P any, E any] struct {
 	RoutineCount int
 }
 
+// NewConcurrencyTools returns a ConcurrencyTools struct that has the given length set for concurrency iterations
 func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -42,6 +43,7 @@ func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
 	return &concurrencyTools
 }
 
+// ContextDone returns true if the context has been marked as done
 func ContextDone(ctx context.Context) bool {
 	select {
 	case <-ctx.Done():
@@ -51,10 +53,12 @@ func ContextDone(ctx context.Context) bool {
 	}
 }
 
+// ReturnError returns the error passed in
 func ReturnError(err error) error {
 	return err
 }
 
+// WaitForConcurrencyTools waits for the concurrencyTools passed in to finish or returns the first error it encounters, it calls the errorFunc if an error is encountered and the progressFunc if a progress update is received
 func WaitForConcurrencyTools[P any, E any, PF func(P, int), EF func(E) error](concurrencyTools *ConcurrencyTools[P, E], progressFunc PF, errorFunc EF) error {
 	for i := 0; i < concurrencyTools.RoutineCount; i++ {
 		select {
