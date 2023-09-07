@@ -10,6 +10,7 @@ import (
 	"sync"
 )
 
+// ConcurrencyTools is a struct that facilitates easier concurrency by providing a context, cancel function, wait group, progress channel, and error channel that is compatible with the WaitForConcurrencyTools function
 type ConcurrencyTools[P any, E any] struct {
 	ProgressChan chan P
 	ErrorChan    chan E
