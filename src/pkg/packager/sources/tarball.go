@@ -153,18 +153,18 @@ func (s *TarballSource) Collect(destinationTarball string) error {
 	return os.Rename(s.PackageSource, destinationTarball)
 }
 
-// PartialTarballSource is a package source for partial tarballs.
-type PartialTarballSource struct {
+// SplitTarballSource is a package source for split tarballs.
+type SplitTarballSource struct {
 	DestinationDir string
 	*types.ZarfPackageOptions
 }
 
-// Collect turns a partial tarball into a full tarball.
-func (s *PartialTarballSource) Collect(dstTarball string) error {
+// Collect turns a split tarball into a full tarball.
+func (s *SplitTarballSource) Collect(dstTarball string) error {
 	pattern := strings.Replace(s.PackageSource, ".part000", ".part*", 1)
 	fileList, err := filepath.Glob(pattern)
 	if err != nil {
-		return fmt.Errorf("unable to find partial package files: %s", err)
+		return fmt.Errorf("unable to find split tarball files: %s", err)
 	}
 
 	// Ensure the files are in order so they are appended in the correct order
@@ -177,7 +177,7 @@ func (s *PartialTarballSource) Collect(dstTarball string) error {
 	}
 	defer pkgFile.Close()
 
-	var pkgData types.ZarfPartialPackageData
+	var pkgData types.ZarfSplitPackageData
 	for idx, file := range fileList {
 		// The first file contains metadata about the package
 		if idx == 0 {
@@ -225,50 +225,48 @@ func (s *PartialTarballSource) Collect(dstTarball string) error {
 		return fmt.Errorf("package sha256sum does not match, expected %s, found %s", pkgData.Sha256Sum, shasum)
 	}
 
-	// Remove the partial packages to reduce disk space before extracting
+	// Remove the parts to reduce disk space before extracting
 	for _, file := range fileList {
 		_ = os.Remove(file)
 	}
 
-	message.Infof("Reassembled package: %q", filepath.Base(dstTarball))
+	message.Infof("Reassembled package to: %q", dstTarball)
 
 	return nil
 }
 
-// LoadPackage loads a package from a partial tarball.
-func (s *PartialTarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+// LoadPackage loads a package from a split tarball.
+func (s *SplitTarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	dstTarball := strings.Replace(s.PackageSource, ".part000", "", 1)
 
 	if err := s.Collect(dstTarball); err != nil {
-		_ = os.Remove(dstTarball)
 		return pkg, nil, err
 	}
 
 	// Update the package source to the reassembled tarball
 	s.PackageSource = dstTarball
 
-	tp := &TarballSource{
+	ts := &TarballSource{
 		s.DestinationDir,
 		s.ZarfPackageOptions,
 	}
-	return tp.LoadPackage()
+	return ts.LoadPackage()
 }
 
-// LoadPackageMetadata loads a package's metadata from a partial tarball.
-func (s *PartialTarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+// LoadPackageMetadata loads a package's metadata from a split tarball.
+func (s *SplitTarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	dstTarball := strings.Replace(s.PackageSource, ".part000", "", 1)
 
 	if err := s.Collect(dstTarball); err != nil {
-		_ = os.Remove(dstTarball)
 		return pkg, nil, err
 	}
 
 	// Update the package source to the reassembled tarball
 	s.PackageSource = dstTarball
 
-	tp := &TarballSource{
+	ts := &TarballSource{
 		s.DestinationDir,
 		s.ZarfPackageOptions,
 	}
-	return tp.LoadPackageMetadata(wantSBOM)
+	return ts.LoadPackageMetadata(wantSBOM)
 }

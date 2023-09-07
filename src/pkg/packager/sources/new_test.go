@@ -15,7 +15,7 @@ import (
 var ocip *OCISource
 var urlp *URLSource
 var tarballp *TarballSource
-var partialp *PartialTarballSource
+var splitp *SplitTarballSource
 var packagep *types.PackageSource
 
 type source struct {
@@ -33,7 +33,7 @@ var sources = []source{
 	{pkgSrc: "zarf-init-amd64-v1.0.0.tar.zst", srcType: "tarball", source: tarballp},
 	{pkgSrc: "zarf-package-manifests-amd64-v1.0.0.tar", srcType: "tarball", source: tarballp},
 	{pkgSrc: "zarf-package-manifests-amd64-v1.0.0.tar.zst", srcType: "tarball", source: tarballp},
-	{pkgSrc: "some-dir/.part000", srcType: "partial", source: partialp},
+	{pkgSrc: "some-dir/.part000", srcType: "split", source: splitp},
 }
 
 func Test_identifySourceType(t *testing.T) {

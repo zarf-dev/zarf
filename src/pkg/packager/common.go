@@ -372,13 +372,13 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 		_ = os.RemoveAll(destinationTarball)
 
 		// Marshal the data into a json file.
-		jsonData, err := json.Marshal(types.ZarfPartialPackageData{
+		jsonData, err := json.Marshal(types.ZarfSplitPackageData{
 			Count:     len(chunks),
 			Bytes:     f.Size(),
 			Sha256Sum: sha256sum,
 		})
 		if err != nil {
-			return fmt.Errorf("unable to marshal the partial package data: %w", err)
+			return fmt.Errorf("unable to marshal the split package data: %w", err)
 		}
 
 		// Prepend the json data to the first chunk.

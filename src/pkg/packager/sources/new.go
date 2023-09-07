@@ -24,7 +24,7 @@ func identifySourceType(pkgSrc string) string {
 	}
 
 	if strings.Contains(pkgSrc, ".part000") {
-		return "partial"
+		return "split"
 	}
 
 	if config.IsValidFileExtension(pkgSrc) {
@@ -54,8 +54,8 @@ func New(pkgOpts *types.ZarfPackageOptions, destinationDir string) (types.Packag
 	case "sget":
 		message.Warn(lang.WarnSGetDeprecation)
 		source = &URLSource{destinationDir, pkgOpts}
-	case "partial":
-		source = &PartialTarballSource{destinationDir, pkgOpts}
+	case "split":
+		source = &SplitTarballSource{destinationDir, pkgOpts}
 	default:
 		return nil, fmt.Errorf("could not identify source type for %q", pkgSrc)
 	}

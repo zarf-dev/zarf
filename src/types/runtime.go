@@ -146,8 +146,8 @@ type ZarfCreateOptions struct {
 	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
 }
 
-// ZarfPartialPackageData contains info about a partial package.
-type ZarfPartialPackageData struct {
+// ZarfSplitPackageData contains info about a split package.
+type ZarfSplitPackageData struct {
 	Sha256Sum string `json:"sha256Sum" jsonschema:"description=The sha256sum of the package"`
 	Bytes     int64  `json:"bytes" jsonschema:"description=The size of the package in bytes"`
 	Count     int    `json:"count" jsonschema:"description=The number of parts the package is split into"`

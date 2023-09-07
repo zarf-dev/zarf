@@ -16,8 +16,7 @@ import (
 )
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
-func (p *Packager) Pull() error {
-	var err error
+func (p *Packager) Pull() (err error) {
 	p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp.Base())
 	if err != nil {
 		return err
@@ -38,7 +37,7 @@ func (p *Packager) Pull() error {
 		} else {
 			name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", zref.PackageName, zref.Arch, zref.Version)
 		}
-	case *sources.TarballSource, *sources.PartialTarballSource, *sources.URLSource:
+	case *sources.TarballSource, *sources.SplitTarballSource, *sources.URLSource:
 		// note: this is going to break on SGET because of its weird syntax, as well this will break on
 		// URLs that do not end w/ a valid file extension
 		name = filepath.Base(p.cfg.PkgOpts.PackageSource)

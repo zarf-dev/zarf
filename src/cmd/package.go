@@ -261,10 +261,10 @@ func choosePackage(args []string) string {
 		Suggest: func(toComplete string) []string {
 			files, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.tar")
 			gzFiles, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.tar.zst")
-			partialFiles, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.part000")
+			splitFiles, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.part000")
 
 			files = append(files, gzFiles...)
-			files = append(files, partialFiles...)
+			files = append(files, splitFiles...)
 			return files
 		},
 	}
