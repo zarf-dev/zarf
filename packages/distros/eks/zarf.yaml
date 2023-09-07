@@ -6,53 +6,57 @@ metadata:
   version: 0.0.2
 
 variables:
-  - name: CLUSTER_NAME
+  - name: EKS_CLUSTER_NAME
+    description: The name for the EKS cluster
     prompt: true
 
-  - name: INSTANCE_TYPE
-    description: The instance type for the worker nodes
+  - name: EKS_INSTANCE_TYPE
+    description: The EC2 instance type for the worker nodes
     default: t3.small
 
-  - name: CLUSTER_REGION
+  - name: EKS_CLUSTER_REGION
+    description: The AWS region to setup the cluster and associated networking
     default: us-east-1
 
-  - name: CLUSTER_VERSION
-    default: "1.23"
+  - name: EKS_CLUSTER_VERSION
+    description: The Kubernetes version to use for the cluster
+    default: "1.27"
+
+  - name: EBS_DRIVER_VERSION
+    description: The AEBS driver version to use for the cluster (must be available on the K8s version)
+    default: "v1.21.0-eksbuild.1"
 
 components:
   - name: load-eksctl
     required: true
-    actions:
-      onDeploy:
-        after:
-          # Remove existing eksctl
-          - cmd: rm -f eksctl
-          # Extract the correct linux or mac binary from the tarball
-          - cmd: ./zarf tools archiver decompress archives/eksctl_$(uname -s)_$(uname -m).tar.gz .
-          # Cleanup temp files
-          - cmd: rm -fr archives
     files:
       - source: eks.yaml
         target: eks.yaml
       - source: https://github.com/weaveworks/eksctl/releases/download/v0.147.0/eksctl_Darwin_amd64.tar.gz
-        target: archives/eksctl_Darwin_x86_64.tar.gz
-        shasum: d3b2a204f68eaf151b8b79bb3a28857d45d5d56353b5c430a4cd34161c8fe6fe
+        target: binaries/eksctl_Darwin_x86_64
+        executable: true
+        shasum: 6d72fe0bafa5ac62e1da3889b6987af6192b330abd9c50491bcf1c5966358f89
+        extractPath: eksctl
       - source: https://github.com/weaveworks/eksctl/releases/download/v0.147.0/eksctl_Darwin_arm64.tar.gz
-        target: archives/eksctl_Darwin_arm64.tar.gz
-        shasum: bfc14880a3c5c8fec0e338726fdfa52e375dce0a8bfa766a34e4c4224ec5c929
+        target: binaries/eksctl_Darwin_arm64
+        executable: true
+        shasum: 1d7dd5b9907de1cb3fa7832659db29f50530444d10e77b4a8eb27aa648da6fab
+        extractPath: eksctl
       - source: https://github.com/weaveworks/eksctl/releases/download/v0.147.0/eksctl_Linux_amd64.tar.gz
-        target: archives/eksctl_Linux_x86_64.tar.gz
-        shasum: 56e5746160381a288d5ad70846f0f0b4cd7f5d51e1dfe0880043cf120a2eb10a
+        target: binaries/eksctl_Linux_x86_64
+        executable: true
+        shasum: 2a47bb9c86c7531a166542aa2d8cb8e1e0be326308ebcfaf724d016abe31636b
+        extractPath: eksctl
 
   - name: deploy-eks-cluster
     description: Create an EKS cluster!
     actions:
       onDeploy:
         before:
-          - cmd: ./eksctl create cluster --dry-run -f eks.yaml
+          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster --dry-run -f eks.yaml
           - cmd: sleep 15
-          - cmd: ./eksctl create cluster -f eks.yaml
-          - cmd: ./eksctl utils write-kubeconfig -c ${ZARF_VAR_CLUSTER_NAME}
+          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster -f eks.yaml
+          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) utils write-kubeconfig -c ${ZARF_VAR_EKS_CLUSTER_NAME}
           - cmd: ./zarf tools kubectl create namespace zarf
           - cmd: ./zarf tools kubectl create secret generic zarf-eks-yaml -n zarf --from-file=eks.yaml
 
@@ -65,8 +69,8 @@ components:
           - cmd: ./zarf tools kubectl get secret -n zarf zarf-eks-yaml -o jsonpath='{.data.*}' | base64 -d > eks.yaml
           # TODO: Error handling in case the eks.yaml isn't what we expect ???
           # Use eksctl to delete the cluster
-          - cmd: ./eksctl delete cluster -f eks.yaml --disable-nodegroup-eviction --wait
+          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) delete cluster -f eks.yaml --disable-nodegroup-eviction --wait
         after:
           # clean up after ourselves
+          - cmd: rm -rf binaries
           - cmd: rm -f eks.yaml
-          - cmd: rm -f eksctl

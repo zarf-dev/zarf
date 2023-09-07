@@ -130,6 +130,11 @@ ib-init-package:
 		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
 		--set REGISTRY_IMAGE_TAG="2.8.2"
 
+# INTERNAL: used to publish the init package
+publish-init-package:
+	$(ZARF_BIN) package publish build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst oci://$(REPOSITORY_URL)
+	$(ZARF_BIN) package publish . oci://$(REPOSITORY_URL)
+
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 
@@ -170,6 +175,7 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH) --confirm
 	cd src/test/external && go test -failfast -v -timeout 30m
 
 ## NOTE: Requires an existing cluster and

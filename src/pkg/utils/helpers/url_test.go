@@ -5,6 +5,7 @@
 package helpers
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -90,6 +91,43 @@ func (suite *TestURLSuite) Test_2_DoHostnamesMatch() {
 	suite.False(b)
 }
 
+func (suite *TestURLSuite) Test_3_ExtractBasePathFromURL() {
+	goodURLs := []string{
+		"https://zarf.dev/file.txt",
+		"https://docs.zarf.dev/file.txt",
+		"https://zarf.dev/docs/file.tar.gz",
+		"https://defenseunicorns.com/file.yaml",
+		"https://google.com/file.md",
+	}
+	badURLs := []string{
+		"invalid-url",
+		"am",
+		"not",
+		"a url",
+		"info@defenseunicorns.com",
+		"12345",
+		"kubernetes.svc.default.svc.cluster.local",
+	}
+	expectations := []string{
+		"file.txt",
+		"file.txt",
+		"file.tar.gz",
+		"file.yaml",
+		"file.md",
+	}
+
+	for idx, url := range goodURLs {
+		actualURL, err := ExtractBasePathFromURL(url)
+		suite.NoError(err)
+		suite.Equal(actualURL, expectations[idx])
+	}
+	for _, url := range badURLs {
+		url, err := ExtractBasePathFromURL(url)
+		fmt.Println(url)
+		suite.Error(err)
+	}
+
+}
 func TestURL(t *testing.T) {
 	suite.Run(t, new(TestURLSuite))
 }

@@ -636,7 +636,7 @@ export interface ZarfChart {
      * The version of the chart to deploy; for git-based charts this is also the tag of the git
      * repo
      */
-    version: string;
+    version?: string;
 }
 
 export interface ZarfDataInjection {
@@ -719,6 +719,10 @@ export interface ZarfFile {
      * (files only) Determines if the file should be made executable during package deploy
      */
     executable?: boolean;
+    /**
+     * Local folder or file to be extracted from a 'source' archive
+     */
+    extractPath?: string;
     /**
      * (files only) Optional SHA256 checksum of the file
      */
@@ -1565,7 +1569,7 @@ const typeMap: any = {
         { json: "releaseName", js: "releaseName", typ: u(undefined, "") },
         { json: "url", js: "url", typ: u(undefined, "") },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
-        { json: "version", js: "version", typ: "" },
+        { json: "version", js: "version", typ: u(undefined, "") },
     ], false),
     "ZarfDataInjection": o([
         { json: "compress", js: "compress", typ: u(undefined, true) },
@@ -1590,6 +1594,7 @@ const typeMap: any = {
     ], false),
     "ZarfFile": o([
         { json: "executable", js: "executable", typ: u(undefined, true) },
+        { json: "extractPath", js: "extractPath", typ: u(undefined, "") },
         { json: "shasum", js: "shasum", typ: u(undefined, "") },
         { json: "source", js: "source", typ: "" },
         { json: "symlinks", js: "symlinks", typ: u(undefined, a("")) },

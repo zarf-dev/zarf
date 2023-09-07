@@ -157,11 +157,6 @@ func (p *Packager) GetPackageName() string {
 	return fmt.Sprintf("%s.%s", packageFileName, suffix)
 }
 
-// GetInitPackageRemote returns the URL for a remote init package for the given architecture
-func GetInitPackageRemote(arch string) string {
-	return fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", config.GithubProject, config.CLIVersion, GetInitPackageName(arch))
-}
-
 // ClearTempPaths removes the temp directory and any files within it.
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
@@ -246,17 +241,11 @@ func isValidFileExtension(filename string) bool {
 }
 
 func createPaths(basePath string) (paths types.TempPaths, err error) {
-	if basePath == "" {
-		basePath, err = utils.MakeTempDir()
-		if err != nil {
-			return paths, err
-		}
-	} else {
-		if err := utils.CreateDirectory(basePath, 0700); err != nil {
-			return paths, fmt.Errorf("unable to create temp directory: %w", err)
-		}
+	basePath, err = utils.MakeTempDir(basePath)
+	if err != nil {
+		return paths, err
 	}
-	message.Debug("Using temporary directory:", basePath)
+
 	paths = types.TempPaths{
 		Base: basePath,
 
@@ -496,14 +485,12 @@ func (p *Packager) validatePackageArchitecture() (err error) {
 	return nil
 }
 
-// validateLastNonBreakingVersion compares the Zarf CLI version against a package's LastNonBreakingVersion.
-// It will return an error if there is an error parsing either of the two versions,
-// and will throw a warning if the CLI version is less than the LastNonBreakingVersion.
+// validateLastNonBreakingVersion validates the Zarf CLI version against a package's LastNonBreakingVersion.
 func (p *Packager) validateLastNonBreakingVersion() (err error) {
 	cliVersion := config.CLIVersion
 	lastNonBreakingVersion := p.cfg.Pkg.Build.LastNonBreakingVersion
 
-	if lastNonBreakingVersion == "" || cliVersion == "UnknownVersion" {
+	if lastNonBreakingVersion == "" {
 		return nil
 	}
 
@@ -514,7 +501,9 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 
 	cliSemVer, err := semver.NewVersion(cliVersion)
 	if err != nil {
-		return fmt.Errorf("unable to parse Zarf CLI version '%s' : %w", cliVersion, err)
+		warning := fmt.Sprintf(lang.CmdPackageDeployInvalidCLIVersionWarn, config.CLIVersion)
+		p.warnings = append(p.warnings, warning)
+		return nil
 	}
 
 	if cliSemVer.LessThan(lastNonBreakingSemVer) {

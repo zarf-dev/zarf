@@ -4,6 +4,6 @@ if [ -z "$(git status -s docs/ zarf.schema.json src/ui/lib/api-types.ts)" ]; the
     echo "Success!"
     exit 0
 else
-    git status docs/ zarf.schema.json src/ui/lib/api-types.ts
+    git diff docs/ zarf.schema.json src/ui/lib/api-types.ts
     exit 1
 fi

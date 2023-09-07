@@ -29,6 +29,8 @@ const (
 	ErrRemoveFile          = "failed to remove file %s: %s"
 	ErrUnarchive           = "failed to unarchive %s: %s"
 	ErrConfirmCancel       = "confirm selection canceled: %s"
+	ErrFileExtract         = "failed to extract filename %s from archive %s: %s"
+	ErrFileNameExtract     = "failed to extract filename from URL %s: %s"
 )
 
 // Zarf CLI commands.
@@ -142,10 +144,10 @@ const (
 	CmdInitErrValidateArtifact  = "the 'artifact-push-username' and 'artifact-push-token' flags must be provided if the 'artifact-url' flag is provided"
 	CmdInitErrUnableCreateCache = "Unable to create the cache directory: %s"
 
-	CmdInitDownloadAsk       = "It seems the init package could not be found locally, but can be downloaded from %s"
-	CmdInitDownloadNote      = "Note: This will require an internet connection."
-	CmdInitDownloadConfirm   = "Do you want to download this init package?"
-	CmdInitDownloadErrManual = "download the init package manually and place it in the current working directory"
+	CmdInitPullAsk       = "It seems the init package could not be found locally, but can be pulled from oci://%s"
+	CmdInitPullNote      = "Note: This will require an internet connection."
+	CmdInitPullConfirm   = "Do you want to pull this init package?"
+	CmdInitPullErrManual = "pull the init package manually and place it in the current working directory"
 
 	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
 
@@ -226,6 +228,10 @@ const (
 	CmdPackageDeployLong  = "Unpacks resources and dependencies from a Zarf package archive and deploys them onto the target system.\n" +
 		"Kubernetes clusters are accessed via credentials in your current kubecontext defined in '~/.kube/config'"
 
+	CmdPackageMirrorShort = "Mirrors a Zarf package's internal resources to specified image registries and git repositories"
+	CmdPackageMirrorLong  = "Unpacks resources and dependencies from a Zarf package archive and mirrors them into the specified \n" +
+		"image registries and git repositories within the target environment"
+
 	CmdPackageInspectShort = "Displays the definition of a Zarf package (runs offline)"
 	CmdPackageInspectLong  = "Displays the 'zarf.yaml' definition for the specified package and optionally allows SBOMs to be viewed"
 
@@ -256,7 +262,11 @@ const (
 	CmdPackageDeployFlagPublicKey                      = "Path to public key file for validating signed packages"
 	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "the version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
+	CmdPackageDeployInvalidCLIVersionWarn              = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
 	CmdPackageDeployErr                                = "Failed to deploy package: %s"
+
+	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' status."
+	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
 
 	CmdPackageInspectFlagSbom      = "View SBOM contents while inspecting the package"
 	CmdPackageInspectFlagSbomOut   = "Specify an output directory for the SBOMs from the inspected Zarf package"
@@ -400,6 +410,9 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
 
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
+
+	CmdToolsHelmShort = "Subset of the Helm CLI included with Zarf to help manage helm charts."
+	CmdToolsHelmLong  = "Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the air gap."
 
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory"
 	CmdToolsClearCacheDir           = "Cache directory set to: %s"
@@ -562,6 +575,7 @@ const (
 	PkgValidateErrChart                   = "invalid chart definition: %w"
 	PkgValidateErrChartName               = "chart %s exceed the maximum length of %d characters"
 	PkgValidateErrChartNameMissing        = "chart %s must include a name"
+	PkgValidateErrChartNameNotUnique      = "chart name %q is not unique"
 	PkgValidateErrChartNamespaceMissing   = "chart %s must include a namespace"
 	PkgValidateErrChartURLOrPath          = "chart %s must only have a url or localPath"
 	PkgValidateErrChartVersion            = "chart %s must include a chart version"
@@ -580,6 +594,7 @@ const (
 	PkgValidateErrManifestFileOrKustomize = "manifest %s must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %s exceed the maximum length of %d characters"
 	PkgValidateErrManifestNameMissing     = "manifest %s must include a name"
+	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
 	PkgValidateErrName                    = "invalid package name: %w"
 	PkgValidateErrPkgConstantName         = "constant name '%s' must be all uppercase and contain no special characters except _"
 	PkgValidateErrPkgName                 = "package name '%s' must be all lowercase and contain no special characters except -"
