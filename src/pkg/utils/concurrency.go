@@ -20,7 +20,9 @@ type ConcurrencyTools[P any, E any] struct {
 	routineCount int
 }
 
-// NewConcurrencyTools returns a ConcurrencyTools struct that has the given length set for concurrency iterations
+// NewConcurrencyTools creates a new ConcurrencyTools struct
+//
+// Length is the number of iterations that will be performed concurrently
 func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
 	ctx, cancel := context.WithCancel(context.TODO())
 
