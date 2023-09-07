@@ -28,6 +28,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -167,7 +169,9 @@ func (p *Packager) Create(baseDir string) error {
 
 		message.HeaderInfof("📦 PACKAGE IMAGES")
 
-		doPull := func() error {
+		pulled := map[name.Tag]v1.Image{}
+
+		doPull := func() (err error) {
 			imgConfig := images.ImgConfig{
 				ImagesPath:        p.tmp[types.ImagesDir],
 				ImgList:           imgList,
@@ -176,11 +180,35 @@ func (p *Packager) Create(baseDir string) error {
 				RegistryOverrides: p.cfg.CreateOpts.RegistryOverrides,
 			}
 
-			return imgConfig.PullAll()
+			pulled, err = imgConfig.PullAll()
+			return err
 		}
 
 		if err := helpers.Retry(doPull, 3, 5*time.Second); err != nil {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
+		}
+
+		delete(p.tmp, types.ImagesDir)
+
+		for _, img := range pulled {
+			layers, err := img.Layers()
+			if err != nil {
+				return fmt.Errorf("unable to get image layers: %w", err)
+			}
+			for _, layer := range layers {
+				sha, err := layer.Digest()
+				if err != nil {
+					return fmt.Errorf("unable to get layer digest: %w", err)
+				}
+				rel := filepath.Join(oci.ZarfPackageImagesBlobsDir, sha.Hex)
+				if !p.tmp.KeyExists(rel) {
+					abs := filepath.Join(p.tmp.Base(), rel)
+					p.tmp.SafeSet(rel, abs)
+					if utils.InvalidPath(abs) {
+						return fmt.Errorf("layer was marked as pulled but does not exist: %s", abs)
+					}
+				}
+			}
 		}
 	}
 
@@ -191,6 +219,19 @@ func (p *Packager) Create(baseDir string) error {
 		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
+
+		allSBOMFiles, err := filepath.Glob(filepath.Join(p.tmp[types.SBOMDir], "*"))
+		if err != nil {
+			return err
+		}
+
+		p.tmp.SetDefaultRelative(types.SBOMTar)
+		if err = archiver.Archive(allSBOMFiles, p.tmp[types.SBOMTar]); err != nil {
+			return err
+		}
+
+		delete(p.tmp, types.SBOMDir)
+		delete(p.tmp, types.ImagesDir)
 	}
 
 	// Process the component directories into compressed tarballs
@@ -202,6 +243,7 @@ func (p *Packager) Create(baseDir string) error {
 			return fmt.Errorf("unable to archive component: %s", err.Error())
 		}
 	}
+	delete(p.tmp, types.ComponentsDir)
 
 	// In case the directory was changed, reset to prevent breaking relative target paths.
 	if originalDir != "" {
@@ -255,26 +297,33 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Output the SBOM files into a directory if specified.
-	if p.cfg.CreateOpts.ViewSBOM || p.cfg.CreateOpts.SBOMOutputDir != "" {
-		outputSBOM := p.cfg.CreateOpts.SBOMOutputDir
-		sbomDir := p.tmp[types.SBOMDir]
+	// if p.cfg.CreateOpts.ViewSBOM || p.cfg.CreateOpts.SBOMOutputDir != "" {
+	// 	outputSBOM := p.cfg.CreateOpts.SBOMOutputDir
+	// 	var sbomDir string
+	// 	if !p.tmp.KeyExists(types.SBOMDir) {
+	// 		p.tmp.SetDefaultRelative(types.SBOMDir)
+	// 		sbomDir = p.tmp[types.SBOMDir]
+	// 		if err := utils.CreateDirectory(sbomDir, 0755); err != nil {
+	// 			return fmt.Errorf("unable to create SBOM directory: %w", err)
+	// 		}
+	// 	}
 
-		if err := archiver.Unarchive(p.tmp[types.SBOMTar], sbomDir); err != nil {
-			return fmt.Errorf("unable to unarchive SBOM tarball: %w", err)
-		}
+	// 	if err := archiver.Unarchive(p.tmp[types.SBOMTar], sbomDir); err != nil {
+	// 		return fmt.Errorf("unable to unarchive SBOM tarball: %w", err)
+	// 	}
 
-		if outputSBOM != "" {
-			out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, p.cfg.Pkg.Metadata.Name)
-			if err != nil {
-				return err
-			}
-			sbomDir = out
-		}
+	// 	if outputSBOM != "" {
+	// 		out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, p.cfg.Pkg.Metadata.Name)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		sbomDir = out
+	// 	}
 
-		if p.cfg.CreateOpts.ViewSBOM {
-			sbom.ViewSBOMFiles(sbomDir)
-		}
-	}
+	// 	if p.cfg.CreateOpts.ViewSBOM {
+	// 		sbom.ViewSBOMFiles(sbomDir)
+	// 	}
+	// }
 
 	return nil
 }
@@ -590,6 +639,9 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 
 	// Loop over the "loaded" package path map
 	for rel, abs := range p.tmp {
+		if rel == types.BaseDir {
+			continue
+		}
 		if utils.IsDir(abs) {
 			return "", fmt.Errorf("unable to generate checksums for the package, %s is a directory", abs)
 		}

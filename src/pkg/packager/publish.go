@@ -126,6 +126,7 @@ func (p *Packager) loadSkeleton() error {
 			return fmt.Errorf("unable to archive component: %s", err.Error())
 		}
 	}
+	delete(p.tmp, types.ComponentsDir)
 
 	checksumChecksum, err := p.generatePackageChecksums()
 	if err != nil {

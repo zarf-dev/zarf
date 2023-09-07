@@ -27,7 +27,7 @@ import (
 )
 
 // PullAll pulls all of the images in the provided tag map.
-func (i *ImgConfig) PullAll() error {
+func (i *ImgConfig) PullAll() (map[name.Tag]v1.Image, error) {
 	var (
 		longer      string
 		imgCount    = len(i.ImgList)
@@ -54,27 +54,27 @@ func (i *ImgConfig) PullAll() error {
 
 		srcParsed, err := transform.ParseImageRef(src)
 		if err != nil {
-			return fmt.Errorf("failed to parse image ref %s: %w", src, err)
+			return nil, fmt.Errorf("failed to parse image ref %s: %w", src, err)
 		}
 
 		actualSrc := src
 		if overrideHost, present := i.RegistryOverrides[srcParsed.Host]; present {
 			actualSrc, err = transform.ImageTransformHostWithoutChecksum(overrideHost, src)
 			if err != nil {
-				return fmt.Errorf("failed to swap override host %s for %s: %w", overrideHost, src, err)
+				return nil, fmt.Errorf("failed to swap override host %s for %s: %w", overrideHost, src, err)
 			}
 		}
 
 		img, err := i.PullImage(actualSrc, spinner)
 		if err != nil {
-			return fmt.Errorf("failed to pull image %s: %w", actualSrc, err)
+			return nil, fmt.Errorf("failed to pull image %s: %w", actualSrc, err)
 		}
 		imageMap[src] = img
 	}
 
 	// Create the ImagePath directory
 	if err := utils.CreateDirectory(i.ImagesPath, 0755); err != nil {
-		return fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
+		return nil, fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
 
 	totalBytes := int64(0)
@@ -82,25 +82,25 @@ func (i *ImgConfig) PullAll() error {
 	for src, img := range imageMap {
 		tag, err := name.NewTag(src, name.WeakValidation)
 		if err != nil {
-			return fmt.Errorf("failed to create tag for image %s: %w", src, err)
+			return nil, fmt.Errorf("failed to create tag for image %s: %w", src, err)
 		}
 		tagToImage[tag] = img
 		// Get the byte size for this image
 		layers, err := img.Layers()
 		if err != nil {
-			return fmt.Errorf("unable to get layers for image %s: %w", src, err)
+			return nil, fmt.Errorf("unable to get layers for image %s: %w", src, err)
 		}
 		for _, layer := range layers {
 			layerDigest, err := layer.Digest()
 			if err != nil {
-				return fmt.Errorf("unable to get digest for image layer: %w", err)
+				return nil, fmt.Errorf("unable to get digest for image layer: %w", err)
 			}
 
 			// Only calculate this layer size if we haven't already looked at it
 			if !processedLayers[layerDigest.Hex] {
 				size, err := layer.Size()
 				if err != nil {
-					return fmt.Errorf("unable to get size of layer: %w", err)
+					return nil, fmt.Errorf("unable to get size of layer: %w", err)
 				}
 				totalBytes += size
 				processedLayers[layerDigest.Hex] = true
@@ -125,26 +125,26 @@ func (i *ImgConfig) PullAll() error {
 			if strings.HasPrefix(err.Error(), "error writing layer: expected blob size") {
 				message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
 			}
-			return fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
+			return nil, fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
 		}
 
 		// Get the image digest so we can set an annotation in the image.json later
 		imgDigest, err := img.Digest()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		tagToDigest[tag.String()] = imgDigest.String()
 	}
 
 	if err := utils.AddImageNameAnnotation(i.ImagesPath, tagToDigest); err != nil {
-		return fmt.Errorf("unable to format OCI layout: %w", err)
+		return nil, fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
 	// Send a signal to the progress bar that we're done and ait for the thread to finish
 	doneSaving <- 1
 	wg.Wait()
 
-	return nil
+	return tagToImage, nil
 }
 
 // PullImage returns a v1.Image either by loading a local tarball or the wider internet.

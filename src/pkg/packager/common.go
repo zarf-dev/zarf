@@ -184,6 +184,10 @@ func (p *Packager) ClearTempPaths() {
 }
 
 func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
+	if !p.tmp.KeyExists(types.ComponentsDir) {
+		p.tmp.SetDefaultRelative(types.ComponentsDir)
+	}
+
 	if err := utils.CreateDirectory(p.tmp[types.ComponentsDir], 0700); err != nil {
 		return paths, err
 	}
@@ -298,24 +302,6 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 	return nil
 }
 
-func (p *Packager) getSigCreatePassword(_ bool) ([]byte, error) {
-	// CLI flags take priority (also loads from viper configs)
-	if p.cfg.CreateOpts.SigningKeyPassword != "" {
-		return []byte(p.cfg.CreateOpts.SigningKeyPassword), nil
-	}
-
-	return interactive.PromptSigPassword()
-}
-
-func (p *Packager) getSigPublishPassword(_ bool) ([]byte, error) {
-	// CLI flags take priority (also loads from viper configs)
-	if p.cfg.CreateOpts.SigningKeyPassword != "" {
-		return []byte(p.cfg.CreateOpts.SigningKeyPassword), nil
-	}
-
-	return interactive.PromptSigPassword()
-}
-
 func (p *Packager) archiveComponent(component types.ZarfComponent) error {
 	componentPath := p.tmp.GetComponentPaths(component.Name).Base
 	size, err := utils.GetDirSize(componentPath)
@@ -416,7 +402,13 @@ func (p *Packager) signPackage(signingKeyPath string) error {
 	if err := p.tmp.SetDefaultRelative(types.PackageSignature); err != nil {
 		return err
 	}
-	_, err := utils.CosignSignBlob(p.tmp[types.ZarfYAML], p.tmp[types.PackageSignature], signingKeyPath, p.getSigCreatePassword)
+	passwordFunc := func(_ bool) ([]byte, error) {
+		if signingKeyPath != "" {
+			return []byte(signingKeyPath), nil
+		}
+		return interactive.PromptSigPassword()
+	}
+	_, err := utils.CosignSignBlob(p.tmp[types.ZarfYAML], p.tmp[types.PackageSignature], signingKeyPath, passwordFunc)
 	if err != nil {
 		return fmt.Errorf("unable to sign the package: %w", err)
 	}
