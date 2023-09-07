@@ -30,16 +30,11 @@ var payloadChunkSize = 1024 * 768
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
 func (c *Cluster) StartInjectionMadness(tmp types.PackagePathsMap, injectorSeedTags []string) {
-	injectionMadnessKeys := []string{
-		types.InjectorBinary,
-		types.SeedImagesDir,
-		types.InjectorPayloadTarGz,
-	}
 	c.spinner = message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer c.spinner.Stop()
 
 	// Ensure the tmp map has all the keys we need, and set the defaults
-	for _, key := range injectionMadnessKeys {
+	for _, key := range tmp.InjectionMadnessKeys() {
 		if err := tmp.SetDefaultRelative(key); err != nil {
 			c.spinner.Fatal(err)
 		}

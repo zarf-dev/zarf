@@ -159,6 +159,12 @@ func (p *Packager) Create(baseDir string) error {
 
 	// Images are handled separately from other component assets.
 	if len(imgList) > 0 {
+
+		// optimistically "load" certain paths
+		if err := p.tmp.SetDefaultImagesKeys(); err != nil {
+			return err
+		}
+
 		message.HeaderInfof("📦 PACKAGE IMAGES")
 
 		doPull := func() error {
@@ -216,9 +222,8 @@ func (p *Packager) Create(baseDir string) error {
 
 	// Sign the config file if a key was provided
 	if p.cfg.CreateOpts.SigningKeyPath != "" {
-		_, err := utils.CosignSignBlob(p.tmp[types.ZarfYAML], p.tmp[types.PackageSignature], p.cfg.CreateOpts.SigningKeyPath, p.getSigCreatePassword)
-		if err != nil {
-			return fmt.Errorf("unable to sign the package: %w", err)
+		if err := p.signPackage(p.cfg.CreateOpts.SigningKeyPath); err != nil {
+			return err
 		}
 	}
 

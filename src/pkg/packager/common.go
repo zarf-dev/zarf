@@ -411,3 +411,14 @@ func (p *Packager) SetOCIRemote(url string) error {
 	p.remote = remote
 	return nil
 }
+
+func (p *Packager) signPackage(signingKeyPath string) error {
+	if err := p.tmp.SetDefaultRelative(types.PackageSignature); err != nil {
+		return err
+	}
+	_, err := utils.CosignSignBlob(p.tmp[types.ZarfYAML], p.tmp[types.PackageSignature], signingKeyPath, p.getSigCreatePassword)
+	if err != nil {
+		return fmt.Errorf("unable to sign the package: %w", err)
+	}
+	return nil
+}

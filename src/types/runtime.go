@@ -177,30 +177,6 @@ type ComponentSBOM struct {
 	ComponentPath ComponentPaths
 }
 
-// DefaultPackagePaths returns a PackagePathsMap with all the default static paths for a Zarf package.
-func DefaultPackagePaths(base string) PackagePathsMap {
-	return PackagePathsMap{
-		BaseDir: base,
-
-		// metadata paths
-		ZarfYAML:         filepath.Join(base, ZarfYAML),
-		PackageSignature: filepath.Join(base, PackageSignature),
-		PackageChecksums: filepath.Join(base, PackageChecksums),
-
-		// sboms paths
-		SBOMDir: filepath.Join(base, SBOMDir),
-		SBOMTar: filepath.Join(base, SBOMTar),
-
-		// components paths
-		ComponentsDir: filepath.Join(base, ComponentsDir),
-
-		// images paths
-		ImagesDir: filepath.Join(base, ImagesDir),
-		IndexJSON: filepath.Join(base, ImagesDir, IndexJSON),
-		OCILayout: filepath.Join(base, ImagesDir, OCILayout),
-	}
-}
-
 // PackagePathsMap is a map of all the static paths for a Zarf package.
 type PackagePathsMap map[string]string
 
@@ -246,6 +222,23 @@ func (pm PackagePathsMap) SetDefaultRelative(rel string) error {
 	return pm.SafeSet(rel, filepath.Join(pm[BaseDir], rel))
 }
 
+// SetDefaultImagesKeys sets all the default images keys for the map.
+func (pm PackagePathsMap) SetDefaultImagesKeys() error {
+	if !pm.KeyExists(BaseDir) {
+		return fmt.Errorf("base directory not set, cannot set images directory")
+	}
+	if err := pm.SafeSet(ImagesDir, filepath.Join(pm[BaseDir], ImagesDir)); err != nil {
+		return err
+	}
+	if err := pm.SafeSet(IndexJSON, filepath.Join(pm[BaseDir], ImagesDir, IndexJSON)); err != nil {
+		return err
+	}
+	if err := pm.SafeSet(OCILayout, filepath.Join(pm[BaseDir], ImagesDir, OCILayout)); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Base returns the base directory for the package.
 //
 //	ex.
@@ -255,12 +248,21 @@ func (pm PackagePathsMap) Base() string {
 	return pm[BaseDir]
 }
 
-// MetadataPaths returns a map of all the metadata paths for a Zarf package.
-func (pm PackagePathsMap) MetadataPaths() map[string]string {
-	return map[string]string{
-		ZarfYAML:         pm[ZarfYAML],
-		PackageSignature: pm[PackageSignature],
-		PackageChecksums: pm[PackageChecksums],
+// MetadataKeys returns all the keys that are used for package metadata.
+func (pm PackagePathsMap) MetadataKeys() []string {
+	return []string{
+		ZarfYAML,
+		PackageSignature,
+		PackageChecksums,
+	}
+}
+
+// InjectionMadnessKeys returns all the keys that are used for the injection madness.
+func (pm PackagePathsMap) InjectionMadnessKeys() []string {
+	return []string{
+		InjectorBinary,
+		SeedImagesDir,
+		InjectorPayloadTarGz,
 	}
 }
 

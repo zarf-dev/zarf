@@ -6,9 +6,7 @@ package images
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -75,8 +73,7 @@ func (i *ImgConfig) PullAll() error {
 	}
 
 	// Create the ImagePath directory
-	err := os.Mkdir(i.ImagesPath, 0755)
-	if err != nil && !errors.Is(err, os.ErrExist) {
+	if err := utils.CreateDirectory(i.ImagesPath, 0755); err != nil {
 		return fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
 
@@ -147,7 +144,7 @@ func (i *ImgConfig) PullAll() error {
 	doneSaving <- 1
 	wg.Wait()
 
-	return err
+	return nil
 }
 
 // PullImage returns a v1.Image either by loading a local tarball or the wider internet.

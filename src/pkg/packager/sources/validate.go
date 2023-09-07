@@ -87,8 +87,8 @@ func ValidatePackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum st
 		return err
 	}
 
-	for _, abs := range loaded.MetadataPaths() {
-		checkedMap[abs] = true
+	for _, rel := range loaded.MetadataKeys() {
+		checkedMap[filepath.Join(loaded.Base(), rel)] = true
 	}
 
 	err = lineByLine(checksumPath, func(line string) error {

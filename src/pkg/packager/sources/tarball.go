@@ -102,7 +102,7 @@ func (s *TarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.Packa
 func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
 	loaded = s.Destination
 
-	for rel := range loaded.MetadataPaths() {
+	for _, rel := range loaded.MetadataKeys() {
 		if err := archiver.Extract(s.PackageSource, rel, loaded.Base()); err != nil {
 			return pkg, nil, err
 		}
