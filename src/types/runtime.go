@@ -204,6 +204,8 @@ func DefaultPackagePaths(base string) PackagePathsMap {
 // PackagePathsMap is a map of all the static paths for a Zarf package.
 type PackagePathsMap map[string]string
 
+// SafeSet sets a key to a value if the key does not already exist
+// and returns an error if the key already exists.
 func (pm PackagePathsMap) SafeSet(key, val string) error {
 	if current, ok := pm[key]; ok {
 		return fmt.Errorf("key %q=%q, cannot set to %q", key, current, val)
@@ -212,6 +214,13 @@ func (pm PackagePathsMap) SafeSet(key, val string) error {
 	return nil
 }
 
+// KeyExists returns whether a key exists in the map.
+//
+// It does not check if the path exists.
+//
+//	ex.
+//	pm := types.PackagePathsMap{types.BaseDir: "/tmp"}
+//	pm.KeyExists(types.BaseDir) == true
 func (pm PackagePathsMap) KeyExists(key string) bool {
 	val, ok := pm[key]
 	if !ok {
@@ -220,6 +229,12 @@ func (pm PackagePathsMap) KeyExists(key string) bool {
 	return val != ""
 }
 
+// SetDefaultRelative sets a key relative to the base directory of the map
+//
+//	ex.
+//	pm := types.PackagePathsMap{types.BaseDir: "/tmp"}
+//	pm.SetDefaultRelative(ZarfYAML)
+//	pm[ZarfYAML] == /tmp/zarf.yaml
 func (pm PackagePathsMap) SetDefaultRelative(rel string) error {
 	if !pm.KeyExists(BaseDir) {
 		return fmt.Errorf("base directory not set, cannot set relative path %q", rel)
@@ -232,6 +247,10 @@ func (pm PackagePathsMap) SetDefaultRelative(rel string) error {
 }
 
 // Base returns the base directory for the package.
+//
+//	ex.
+//	pm := types.PackagePathsMap{types.BaseDir: "/tmp"}
+//	pm.Base() == "/tmp"
 func (pm PackagePathsMap) Base() string {
 	return pm[BaseDir]
 }

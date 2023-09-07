@@ -331,7 +331,9 @@ func (p *Packager) archiveComponent(component types.ZarfComponent) error {
 		}
 		// Add the tarball to the tmp map
 		// e.g. tmp["components/component-name.tar"] = "/tmp/zarf-123456789/components/component-name.tar"
-		p.tmp[filepath.Join(types.ComponentsDir, fmt.Sprintf("%s.tar", component.Name))] = tb
+		if err := p.tmp.SetDefaultRelative(filepath.Join(types.ComponentsDir, fmt.Sprintf("%s.tar", component.Name))); err != nil {
+			return err
+		}
 	} else {
 		message.Debugf("Component %q is empty, skipping archiving", component.Name)
 	}

@@ -142,6 +142,11 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, p
 		return err
 	}
 
+	if err = paths.SetDefaultRelative(types.SBOMTar); err != nil {
+		builder.spinner.Errorf(err, "Unable to set the default relative path for the SBOM tarball")
+		return err
+	}
+
 	builder.spinner.Success()
 
 	return nil
