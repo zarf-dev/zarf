@@ -26,6 +26,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/mholt/archiver/v3"
 )
 
 // Builder is the main struct used to build SBOM artifacts.
@@ -47,8 +48,9 @@ var componentPrefix = "zarf-component-"
 func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, paths types.PackagePathsMap) error {
 	imageCount := len(imgList)
 	componentCount := len(componentSBOMs)
-	paths.SetDefaultRelative(types.ImagesDir)
+
 	paths.SetDefaultRelative(types.SBOMDir)
+
 	builder := Builder{
 		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
 		cachePath:  config.GetAbsCachePath(),
@@ -126,6 +128,25 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, p
 			return err
 		}
 	}
+
+	allSBOMFiles, err := filepath.Glob(filepath.Join(paths[types.SBOMDir], "*"))
+	if err != nil {
+		builder.spinner.Errorf(err, "Unable to glob SBOM files")
+		return err
+	}
+
+	paths.SetDefaultRelative(types.SBOMTar)
+	if err = archiver.Archive(allSBOMFiles, paths[types.SBOMTar]); err != nil {
+		builder.spinner.Errorf(err, "Unable to create SBOM tarball")
+		return err
+	}
+
+	if err := os.RemoveAll(paths[types.SBOMDir]); err != nil {
+		builder.spinner.Errorf(err, "Unable to remove SBOM directory")
+		return err
+	}
+
+	paths.Unset(types.SBOMDir)
 
 	builder.spinner.Success()
 

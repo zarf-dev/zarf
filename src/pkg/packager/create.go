@@ -188,8 +188,6 @@ func (p *Packager) Create(baseDir string) error {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 
-		p.tmp.Unset(types.ImagesDir)
-
 		for _, img := range pulled {
 			layers, err := img.Layers()
 			if err != nil {
@@ -219,24 +217,9 @@ func (p *Packager) Create(baseDir string) error {
 		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
-
-		allSBOMFiles, err := filepath.Glob(filepath.Join(p.tmp[types.SBOMDir], "*"))
-		if err != nil {
-			return err
-		}
-
-		p.tmp.SetDefaultRelative(types.SBOMTar)
-		if err = archiver.Archive(allSBOMFiles, p.tmp[types.SBOMTar]); err != nil {
-			return err
-		}
-
-		if err := os.Remove(p.tmp[types.SBOMDir]); err != nil {
-			return err
-		}
-
-		p.tmp.Unset(types.SBOMDir)
-		p.tmp.Unset(types.ImagesDir)
 	}
+
+	p.tmp.Unset(types.ImagesDir)
 
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
