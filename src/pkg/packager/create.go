@@ -188,7 +188,7 @@ func (p *Packager) Create(baseDir string) error {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 
-		delete(p.tmp, types.ImagesDir)
+		p.tmp.Unset(types.ImagesDir)
 
 		for _, img := range pulled {
 			layers, err := img.Layers()
@@ -230,8 +230,12 @@ func (p *Packager) Create(baseDir string) error {
 			return err
 		}
 
-		delete(p.tmp, types.SBOMDir)
-		delete(p.tmp, types.ImagesDir)
+		if err := os.Remove(p.tmp[types.SBOMDir]); err != nil {
+			return err
+		}
+
+		p.tmp.Unset(types.SBOMDir)
+		p.tmp.Unset(types.ImagesDir)
 	}
 
 	// Process the component directories into compressed tarballs
@@ -243,7 +247,7 @@ func (p *Packager) Create(baseDir string) error {
 			return fmt.Errorf("unable to archive component: %s", err.Error())
 		}
 	}
-	delete(p.tmp, types.ComponentsDir)
+	p.tmp.Unset(types.ComponentsDir)
 
 	// In case the directory was changed, reset to prevent breaking relative target paths.
 	if originalDir != "" {
@@ -297,33 +301,33 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Output the SBOM files into a directory if specified.
-	// if p.cfg.CreateOpts.ViewSBOM || p.cfg.CreateOpts.SBOMOutputDir != "" {
-	// 	outputSBOM := p.cfg.CreateOpts.SBOMOutputDir
-	// 	var sbomDir string
-	// 	if !p.tmp.KeyExists(types.SBOMDir) {
-	// 		p.tmp.SetDefaultRelative(types.SBOMDir)
-	// 		sbomDir = p.tmp[types.SBOMDir]
-	// 		if err := utils.CreateDirectory(sbomDir, 0755); err != nil {
-	// 			return fmt.Errorf("unable to create SBOM directory: %w", err)
-	// 		}
-	// 	}
+	if p.cfg.CreateOpts.ViewSBOM || p.cfg.CreateOpts.SBOMOutputDir != "" {
+		outputSBOM := p.cfg.CreateOpts.SBOMOutputDir
+		var sbomDir string
+		if !p.tmp.KeyExists(types.SBOMDir) {
+			p.tmp.SetDefaultRelative(types.SBOMDir)
+			sbomDir = p.tmp[types.SBOMDir]
+			if err := utils.CreateDirectory(sbomDir, 0755); err != nil {
+				return fmt.Errorf("unable to create SBOM directory: %w", err)
+			}
+		}
 
-	// 	if err := archiver.Unarchive(p.tmp[types.SBOMTar], sbomDir); err != nil {
-	// 		return fmt.Errorf("unable to unarchive SBOM tarball: %w", err)
-	// 	}
+		if err := archiver.Unarchive(p.tmp[types.SBOMTar], sbomDir); err != nil {
+			return fmt.Errorf("unable to unarchive SBOM tarball: %w", err)
+		}
 
-	// 	if outputSBOM != "" {
-	// 		out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, p.cfg.Pkg.Metadata.Name)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		sbomDir = out
-	// 	}
+		if outputSBOM != "" {
+			out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, p.cfg.Pkg.Metadata.Name)
+			if err != nil {
+				return err
+			}
+			sbomDir = out
+		}
 
-	// 	if p.cfg.CreateOpts.ViewSBOM {
-	// 		sbom.ViewSBOMFiles(sbomDir)
-	// 	}
-	// }
+		if p.cfg.CreateOpts.ViewSBOM {
+			sbom.ViewSBOMFiles(sbomDir)
+		}
+	}
 
 	return nil
 }

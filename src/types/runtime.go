@@ -222,6 +222,11 @@ func (pm PackagePathsMap) SetDefaultRelative(rel string) error {
 	return pm.SafeSet(rel, filepath.Join(pm[BaseDir], rel))
 }
 
+// Unset removes a key from the map.
+func (pm PackagePathsMap) Unset(key string) {
+	delete(pm, key)
+}
+
 // SetDefaultImagesKeys sets all the default images keys for the map.
 func (pm PackagePathsMap) SetDefaultImagesKeys() error {
 	if !pm.KeyExists(BaseDir) {
