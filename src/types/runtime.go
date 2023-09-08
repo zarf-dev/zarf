@@ -235,10 +235,10 @@ func (pm PackagePathsMap) SetDefaultImagesKeys() error {
 	if err := pm.SafeSet(ImagesDir, filepath.Join(pm[BaseDir], ImagesDir)); err != nil {
 		return err
 	}
-	if err := pm.SafeSet(IndexJSON, filepath.Join(pm[BaseDir], ImagesDir, IndexJSON)); err != nil {
+	if err := pm.SafeSet(filepath.Join(ImagesDir, IndexJSON), filepath.Join(pm[BaseDir], ImagesDir, IndexJSON)); err != nil {
 		return err
 	}
-	if err := pm.SafeSet(OCILayout, filepath.Join(pm[BaseDir], ImagesDir, OCILayout)); err != nil {
+	if err := pm.SafeSet(filepath.Join(ImagesDir, OCILayout), filepath.Join(pm[BaseDir], ImagesDir, OCILayout)); err != nil {
 		return err
 	}
 	return nil
