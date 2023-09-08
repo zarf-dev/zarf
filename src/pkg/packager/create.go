@@ -189,6 +189,7 @@ func (p *Packager) Create(baseDir string) error {
 		}
 
 		for _, img := range pulled {
+			// mark the layers as "loaded"
 			layers, err := img.Layers()
 			if err != nil {
 				return fmt.Errorf("unable to get image layers: %w", err)
@@ -205,6 +206,32 @@ func (p *Packager) Create(baseDir string) error {
 					if utils.InvalidPath(abs) {
 						return fmt.Errorf("layer was marked as pulled but does not exist: %s", abs)
 					}
+				}
+			}
+			// mark the image config as "loaded"
+			imgCfgSha, err := img.ConfigName()
+			if err != nil {
+				return fmt.Errorf("unable to get image config name: %w", err)
+			}
+			rel := filepath.Join(oci.ZarfPackageImagesBlobsDir, imgCfgSha.Hex)
+			if !p.tmp.KeyExists(rel) {
+				abs := filepath.Join(p.tmp.Base(), rel)
+				p.tmp.SafeSet(rel, abs)
+				if utils.InvalidPath(abs) {
+					return fmt.Errorf("image config was marked as pulled but does not exist: %s", abs)
+				}
+			}
+			// mark the manifest as "loaded"
+			manifestSha, err := img.Digest()
+			if err != nil {
+				return fmt.Errorf("unable to get image digest: %w", err)
+			}
+			rel = filepath.Join(oci.ZarfPackageImagesBlobsDir, manifestSha.Hex)
+			if !p.tmp.KeyExists(rel) {
+				abs := filepath.Join(p.tmp.Base(), rel)
+				p.tmp.SafeSet(rel, abs)
+				if utils.InvalidPath(abs) {
+					return fmt.Errorf("image manifest was marked as pulled but does not exist: %s", abs)
 				}
 			}
 		}

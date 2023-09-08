@@ -113,13 +113,8 @@ func ValidatePackageIntegrity(loaded types.PackagePathsMap, aggregateChecksum st
 			return nil
 		}
 
-		actualSHA, err := utils.GetSHA256OfFile(path)
-		if err != nil {
-			return fmt.Errorf("unable to get checksum of: %s", err.Error())
-		}
-
-		if sha != actualSHA {
-			return fmt.Errorf("invalid checksum for %s: (expected: %s, received: %s)", path, sha, actualSHA)
+		if err := utils.SHAsMatch(path, sha); err != nil {
+			return err
 		}
 
 		checkedMap[path] = true
