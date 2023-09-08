@@ -34,7 +34,7 @@ func LoadComponents(pkg *types.ZarfPackage, loaded types.PackagePathsMap) (err e
 		if loaded.KeyExists(tb) {
 			message.Debugf("Unarchiving %q", tb)
 			defer os.Remove(loaded[tb])
-			defer delete(loaded, tb)
+			defer loaded.Unset(tb)
 			if err = archiver.Unarchive(loaded[tb], loaded[types.ComponentsDir]); err != nil {
 				return err
 			}
@@ -60,7 +60,7 @@ func LoadSBOMs(loaded types.PackagePathsMap) (err error) {
 	if loaded.KeyExists(types.SBOMTar) {
 		message.Debugf("Unarchiving %q", types.SBOMTar)
 		defer os.Remove(loaded[types.SBOMTar])
-		defer delete(loaded, types.SBOMTar)
+		defer loaded.Unset(types.SBOMTar)
 		if err := loaded.SetDefaultRelative(types.SBOMDir); err != nil {
 			return err
 		}

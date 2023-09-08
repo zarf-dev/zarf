@@ -136,6 +136,9 @@ func (s *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, l
 
 	// unpack sboms.tar
 	if loaded.KeyExists(types.SBOMTar) {
+		message.Debugf("Unarchiving %q", types.SBOMTar)
+		defer os.Remove(loaded[types.SBOMTar])
+		defer loaded.Unset(types.SBOMTar)
 		if err := loaded.SetDefaultRelative(types.SBOMDir); err != nil {
 			return pkg, nil, err
 		}

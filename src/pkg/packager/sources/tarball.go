@@ -109,6 +109,10 @@ func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackag
 		if err := loaded.SetDefaultRelative(rel); err != nil {
 			return pkg, nil, err
 		}
+		// archiver.Extract will not return an error if the file does not exist, so we must manually check and unset the key if necessary
+		if utils.InvalidPath(loaded[rel]) {
+			loaded.Unset(rel)
+		}
 	}
 	if wantSBOM {
 		if err := archiver.Extract(s.PackageSource, types.SBOMTar, loaded.Base()); err != nil {
@@ -116,6 +120,10 @@ func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackag
 		}
 		if err := loaded.SetDefaultRelative(types.SBOMTar); err != nil {
 			return pkg, nil, err
+		}
+		// archiver.Extract will not return an error if the file does not exist, so we must manually check and unset the key if necessary
+		if utils.InvalidPath(loaded[types.SBOMTar]) {
+			loaded.Unset(types.SBOMTar)
 		}
 	}
 
@@ -137,6 +145,9 @@ func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackag
 
 	// unpack sboms.tar
 	if loaded.KeyExists(types.SBOMTar) {
+		message.Debugf("Unarchiving %q", types.SBOMTar)
+		defer os.Remove(loaded[types.SBOMTar])
+		defer loaded.Unset(types.SBOMTar)
 		if err := loaded.SetDefaultRelative(types.SBOMDir); err != nil {
 			return pkg, nil, err
 		}
