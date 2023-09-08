@@ -46,6 +46,11 @@ type ZarfDeployOptions struct {
 	AdoptExistingResources bool `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`
 }
 
+// ZarfMirrorOptions tracks the user-defined preferences during a package mirror.
+type ZarfMirrorOptions struct {
+	NoImgChecksum bool `json:"noImgChecksum" jsonschema:"description=Whether to skip adding a Zarf checksum to image references."`
+}
+
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
 type ZarfPublishOptions struct {
 	PackageDestination string `json:"packageDestination" jsonschema:"description=Location where the Zarf package will be published to"`
