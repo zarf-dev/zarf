@@ -278,7 +278,7 @@ func (p *Packager) Create(baseDir string) error {
 
 	// Sign the config file if a key was provided
 	if p.cfg.CreateOpts.SigningKeyPath != "" {
-		if err := p.signPackage(p.cfg.CreateOpts.SigningKeyPath); err != nil {
+		if err := p.signPackage(p.cfg.CreateOpts.SigningKeyPath, p.cfg.CreateOpts.SigningKeyPassword); err != nil {
 			return err
 		}
 	}

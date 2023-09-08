@@ -384,7 +384,7 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 			}
 		}
 	}
-	spinner.Successf("Package tarball successfully written")
+	spinner.Successf("Package saved to %q", destinationTarball)
 	return nil
 }
 
@@ -398,13 +398,13 @@ func (p *Packager) SetOCIRemote(url string) error {
 	return nil
 }
 
-func (p *Packager) signPackage(signingKeyPath string) error {
+func (p *Packager) signPackage(signingKeyPath, signingKeyPassword string) error {
 	if err := p.tmp.SetDefaultRelative(types.PackageSignature); err != nil {
 		return err
 	}
 	passwordFunc := func(_ bool) ([]byte, error) {
 		if signingKeyPath != "" {
-			return []byte(signingKeyPath), nil
+			return []byte(signingKeyPassword), nil
 		}
 		return interactive.PromptSigPassword()
 	}
