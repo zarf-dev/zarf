@@ -232,16 +232,13 @@ func (pm PackagePathsMap) SetDefaultImagesKeys() error {
 	if !pm.KeyExists(BaseDir) {
 		return fmt.Errorf("base directory not set, cannot set images directory")
 	}
-	if err := pm.SafeSet(ImagesDir, filepath.Join(pm[BaseDir], ImagesDir)); err != nil {
+	if err := pm.SetDefaultRelative(ImagesDir); err != nil {
 		return err
 	}
-	if err := pm.SafeSet(filepath.Join(ImagesDir, IndexJSON), filepath.Join(pm[BaseDir], ImagesDir, IndexJSON)); err != nil {
+	if err := pm.SetDefaultRelative(filepath.Join(ImagesDir, IndexJSON)); err != nil {
 		return err
 	}
-	if err := pm.SafeSet(filepath.Join(ImagesDir, OCILayout), filepath.Join(pm[BaseDir], ImagesDir, OCILayout)); err != nil {
-		return err
-	}
-	return nil
+	return pm.SetDefaultRelative(filepath.Join(ImagesDir, OCILayout))
 }
 
 // Base returns the base directory for the package.
