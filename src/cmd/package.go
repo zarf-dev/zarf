@@ -40,11 +40,9 @@ var packageCreateCmd = &cobra.Command{
 	Long:    lang.CmdPackageCreateLong,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		var baseDir string
-
 		// If a directory was provided, use that as the base directory
 		if len(args) > 0 {
-			baseDir = args[0]
+			pkgConfig.CreateOpts.BaseDir = args[0]
 		}
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
@@ -63,7 +61,7 @@ var packageCreateCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Create the package
-		if err := pkgClient.Create(baseDir); err != nil {
+		if err := pkgClient.Create(); err != nil {
 			message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
 		}
 	},

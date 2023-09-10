@@ -22,17 +22,21 @@ func (p *Packager) Inspect() (err error) {
 		}
 	}
 
-	pkg, loaded, err := p.source.LoadPackageMetadata(wantSBOM)
+	p.tmp, err = p.source.LoadPackageMetadata(wantSBOM)
 	if err != nil {
 		return err
 	}
 
-	utils.ColorPrintYAML(pkg, nil, false)
+	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML]); err != nil {
+		return err
+	}
 
-	sbomDir := loaded[types.SBOMDir]
+	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
+
+	sbomDir := p.tmp[types.SBOMDir]
 
 	if p.cfg.InspectOpts.SBOMOutputDir != "" {
-		out, err := sbom.OutputSBOMFiles(sbomDir, p.cfg.InspectOpts.SBOMOutputDir, pkg.Metadata.Name)
+		out, err := sbom.OutputSBOMFiles(sbomDir, p.cfg.InspectOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name)
 		if err != nil {
 			return err
 		}

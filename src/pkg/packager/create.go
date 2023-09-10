@@ -34,11 +34,11 @@ import (
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
-func (p *Packager) Create(baseDir string) error {
+func (p *Packager) Create() (err error) {
 
 	var originalDir string
 
-	if err := p.readYaml(filepath.Join(baseDir, types.ZarfYAML)); err != nil {
+	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(filepath.Join(p.cfg.CreateOpts.BaseDir, types.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
@@ -59,12 +59,12 @@ func (p *Packager) Create(baseDir string) error {
 	}
 
 	// Change the working directory if this run has an alternate base dir.
-	if baseDir != "" {
+	if p.cfg.CreateOpts.BaseDir != "" {
 		originalDir, _ = os.Getwd()
-		if err := os.Chdir(baseDir); err != nil {
-			return fmt.Errorf("unable to access directory '%s': %w", baseDir, err)
+		if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+			return fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
 		}
-		message.Note(fmt.Sprintf("Using build directory %s", baseDir))
+		message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 	}
 
 	if p.cfg.Pkg.Kind == types.ZarfInitConfig {

@@ -16,16 +16,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// readYaml loads the config from the given path
-func (p *Packager) readYaml(path string) error {
-	if err := utils.ReadYaml(path, &p.cfg.Pkg); err != nil {
-		return err
+func ReadZarfYAML(path string) (pkg types.ZarfPackage, arch string, err error) {
+	if err := utils.ReadYaml(path, &pkg); err != nil {
+		return pkg, "", err
 	}
-
-	// Set the arch from the package config before filtering.
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
-
-	return nil
+	return pkg, config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture), nil
 }
 
 // filterComponents removes components not matching the current OS if filterByOS is set.

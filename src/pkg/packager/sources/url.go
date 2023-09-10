@@ -37,17 +37,17 @@ func (s *URLSource) Collect(dstTarball string) error {
 }
 
 // LoadPackage loads a package from an http, https or sget URL.
-func (s *URLSource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *URLSource) LoadPackage() (loaded types.PackagePathsMap, err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 	defer os.Remove(tmp)
 
 	dstTarball := filepath.Join(tmp, "package.tar.zst")
 
 	if err := s.Collect(dstTarball); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	s.PackageSource = dstTarball
@@ -61,17 +61,17 @@ func (s *URLSource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePa
 }
 
 // LoadPackageMetadata loads a package's metadata from an http, https or sget URL.
-func (s *URLSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *URLSource) LoadPackageMetadata(wantSBOM bool) (loaded types.PackagePathsMap, err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 	defer os.Remove(tmp)
 
 	dstTarball := filepath.Join(tmp, "package.tar.zst")
 
 	if err := s.Collect(dstTarball); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	s.PackageSource = dstTarball

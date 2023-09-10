@@ -28,8 +28,9 @@ type TarballSource struct {
 }
 
 // LoadPackage loads a package from a tarball.
-func (s *TarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *TarballSource) LoadPackage() (loaded types.PackagePathsMap, err error) {
 	loaded = s.Destination
+	var pkg types.ZarfPackage
 
 	message.Debugf("Loading package from %q", s.PackageSource)
 	message.Debugf("Loaded package base directory: %q", loaded.Base())
@@ -72,42 +73,43 @@ func (s *TarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.Packa
 		return nil
 	})
 	if err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := ValidatePackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, false); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := ValidatePackageSignature(loaded, s.PublicKeyPath); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := LoadComponents(&pkg, loaded); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := LoadSBOMs(loaded); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
-	return pkg, loaded, nil
+	return loaded, nil
 }
 
 // LoadPackageMetadata loads a package's metadata from a tarball.
-func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (loaded types.PackagePathsMap, err error) {
 	loaded = s.Destination
+	var pkg types.ZarfPackage
 
 	for _, rel := range loaded.MetadataKeys() {
 		if err := archiver.Extract(s.PackageSource, rel, loaded.Base()); err != nil {
-			return pkg, nil, err
+			return nil, err
 		}
 		if err := loaded.SetDefaultRelative(rel); err != nil {
-			return pkg, nil, err
+			return nil, err
 		}
 		// archiver.Extract will not return an error if the file does not exist, so we must manually check and unset the key if necessary
 		if utils.InvalidPath(loaded[rel]) {
@@ -116,10 +118,10 @@ func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackag
 	}
 	if wantSBOM {
 		if err := archiver.Extract(s.PackageSource, types.SBOMTar, loaded.Base()); err != nil {
-			return pkg, nil, err
+			return nil, err
 		}
 		if err := loaded.SetDefaultRelative(types.SBOMTar); err != nil {
-			return pkg, nil, err
+			return nil, err
 		}
 		// archiver.Extract will not return an error if the file does not exist, so we must manually check and unset the key if necessary
 		if utils.InvalidPath(loaded[types.SBOMTar]) {
@@ -127,31 +129,31 @@ func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackag
 		}
 	}
 	if !loaded.KeyExists(types.SBOMTar) && wantSBOM {
-		return pkg, nil, fmt.Errorf("package does not contain SBOMs")
+		return nil, fmt.Errorf("package does not contain SBOMs")
 	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := ValidatePackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, true); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := ValidatePackageSignature(loaded, s.PublicKeyPath); err != nil {
 		if errors.Is(err, ErrPkgSigButNoKey) {
 			message.Warn("The package was signed but no public key was provided, skipping signature validation")
 		} else {
-			return pkg, nil, err
+			return nil, err
 		}
 	}
 
 	// unpack sboms.tar
 	if err := LoadSBOMs(loaded); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
-	return pkg, loaded, nil
+	return loaded, nil
 }
 
 // Collect for the TarballSource is essentially an `mv`
@@ -238,11 +240,11 @@ func (s *SplitTarballSource) Collect(dstTarball string) error {
 }
 
 // LoadPackage loads a package from a split tarball.
-func (s *SplitTarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *SplitTarballSource) LoadPackage() (loaded types.PackagePathsMap, err error) {
 	dstTarball := strings.Replace(s.PackageSource, ".part000", "", 1)
 
 	if err := s.Collect(dstTarball); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	// Update the package source to the reassembled tarball
@@ -256,11 +258,11 @@ func (s *SplitTarballSource) LoadPackage() (pkg types.ZarfPackage, loaded types.
 }
 
 // LoadPackageMetadata loads a package's metadata from a split tarball.
-func (s *SplitTarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *SplitTarballSource) LoadPackageMetadata(wantSBOM bool) (loaded types.PackagePathsMap, err error) {
 	dstTarball := strings.Replace(s.PackageSource, ".part000", "", 1)
 
 	if err := s.Collect(dstTarball); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	// Update the package source to the reassembled tarball

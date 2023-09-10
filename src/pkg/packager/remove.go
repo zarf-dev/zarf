@@ -47,8 +47,11 @@ func (p *Packager) Remove() (err error) {
 
 	// if we have a source, load the package metadata
 	if p.source != nil {
-		p.cfg.Pkg, p.tmp, err = p.source.LoadPackageMetadata(false)
+		p.tmp, err = p.source.LoadPackageMetadata(false)
 		if err != nil {
+			return err
+		}
+		if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML]); err != nil {
 			return err
 		}
 		// Filter out components that are not compatible with this system if we have loaded from a tarball

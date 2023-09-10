@@ -28,8 +28,9 @@ type OCISource struct {
 }
 
 // LoadPackage loads a package from an OCI registry.
-func (s *OCISource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *OCISource) LoadPackage() (loaded types.PackagePathsMap, err error) {
 	loaded = s.Destination
+	var pkg types.ZarfPackage
 	layersToPull := []ocispec.Descriptor{}
 
 	message.Debugf("Loading package from %q", s.PackageSource)
@@ -41,7 +42,7 @@ func (s *OCISource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePa
 	if len(optionalComponents) > 0 && config.CommonOptions.Confirm {
 		layers, err := s.LayersFromRequestedComponents(optionalComponents)
 		if err != nil {
-			return pkg, nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
+			return nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
 		}
 		layersToPull = append(layersToPull, layers...)
 	}
@@ -49,7 +50,7 @@ func (s *OCISource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePa
 	isPartial := true
 	root, err := s.FetchRoot()
 	if err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 	if len(root.Layers) == len(layersToPull) {
 		isPartial = false
@@ -57,46 +58,47 @@ func (s *OCISource) LoadPackage() (pkg types.ZarfPackage, loaded types.PackagePa
 
 	pathsToCheck, err := s.PullPackage(loaded.Base(), config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
-		return pkg, nil, fmt.Errorf("unable to pull the package: %w", err)
+		return nil, fmt.Errorf("unable to pull the package: %w", err)
 	}
 
 	for _, path := range pathsToCheck {
 		if err := loaded.SetDefaultRelative(path); err != nil {
-			return pkg, nil, err
+			return nil, err
 		}
 	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := ValidatePackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, isPartial); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := ValidatePackageSignature(loaded, s.PublicKeyPath); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := LoadComponents(&pkg, loaded); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := LoadSBOMs(loaded); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
-	return pkg, loaded, nil
+	return loaded, nil
 }
 
 // LoadPackageMetadata loads a package's metadata from an OCI registry.
-func (s *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, loaded types.PackagePathsMap, err error) {
+func (s *OCISource) LoadPackageMetadata(wantSBOM bool) (loaded types.PackagePathsMap, err error) {
 	loaded = s.Destination
+	var pkg types.ZarfPackage
 	var pathsToCheck []string
 
 	metatdataDescriptors, err := s.PullPackageMetadata(loaded.Base())
 	if err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 	for _, desc := range metatdataDescriptors {
 		pathsToCheck = append(pathsToCheck, desc.Annotations[ocispec.AnnotationTitle])
@@ -105,7 +107,7 @@ func (s *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, l
 	if wantSBOM {
 		sbomDescriptors, err := s.PullPackageSBOM(loaded.Base())
 		if err != nil {
-			return pkg, nil, err
+			return nil, err
 		}
 		for _, desc := range sbomDescriptors {
 			pathsToCheck = append(pathsToCheck, desc.Annotations[ocispec.AnnotationTitle])
@@ -114,35 +116,35 @@ func (s *OCISource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackage, l
 
 	for _, path := range pathsToCheck {
 		if err := loaded.SetDefaultRelative(path); err != nil {
-			return pkg, nil, err
+			return nil, err
 		}
 	}
 	if !loaded.KeyExists(types.SBOMTar) && wantSBOM {
-		return pkg, nil, fmt.Errorf("package does not contain SBOMs")
+		return nil, fmt.Errorf("package does not contain SBOMs")
 	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := ValidatePackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, true); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
 	if err := ValidatePackageSignature(loaded, s.PublicKeyPath); err != nil {
 		if errors.Is(err, ErrPkgSigButNoKey) {
 			message.Warn("The package was signed but no public key was provided, skipping signature validation")
 		} else {
-			return pkg, nil, err
+			return nil, err
 		}
 	}
 
 	// unpack sboms.tar
 	if err := LoadSBOMs(loaded); err != nil {
-		return pkg, nil, err
+		return nil, err
 	}
 
-	return pkg, loaded, nil
+	return loaded, nil
 }
 
 // Collect pulls a package from an OCI registry and writes it to a tarball.

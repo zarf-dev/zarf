@@ -32,11 +32,7 @@ func (p *Packager) Pull() (err error) {
 		if err != nil {
 			return err
 		}
-		if zref.Arch == oci.SkeletonSuffix {
-			name = fmt.Sprintf("zarf-package-%s-skeleton-%s.tar.zst", zref.PackageName, zref.Version)
-		} else {
-			name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", zref.PackageName, zref.Arch, zref.Version)
-		}
+		name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", zref.PackageName, zref.Arch, zref.Version)
 	case *sources.TarballSource, *sources.SplitTarballSource, *sources.URLSource:
 		// note: this is going to break on SGET because of its weird syntax, as well this will break on
 		// URLs that do not end w/ a valid file extension

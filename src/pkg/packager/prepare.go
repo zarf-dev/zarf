@@ -29,7 +29,7 @@ import (
 )
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
-func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOverride string) (map[string][]string, error) {
+func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOverride string) (imgMap map[string][]string, err error) {
 
 	var originalDir string
 	imagesMap := make(map[string][]string)
@@ -41,7 +41,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 		message.Note(fmt.Sprintf("Using base directory %s", baseDir))
 	}
 
-	if err := p.readYaml(types.ZarfYAML); err != nil {
+	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(types.ZarfYAML); err != nil {
 		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 

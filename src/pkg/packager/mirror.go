@@ -29,8 +29,11 @@ func (p *Packager) Mirror() (err error) {
 		}
 	}
 
-	p.cfg.Pkg, p.tmp, err = p.source.LoadPackage()
+	p.tmp, err = p.source.LoadPackage()
 	if err != nil {
+		return err
+	}
+	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML]); err != nil {
 		return err
 	}
 

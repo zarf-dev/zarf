@@ -35,12 +35,15 @@ func (p *Packager) Publish() (err error) {
 			}
 		}
 
-		p.cfg.Pkg, p.tmp, err = p.source.LoadPackage()
+		p.tmp, err = p.source.LoadPackage()
 		if err != nil {
 			return err
 		}
+		if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML]); err != nil {
+			return err
+		}
 
-		referenceSuffix = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
+		referenceSuffix = p.arch
 	}
 
 	// Get a reference to the registry for this package
@@ -92,8 +95,8 @@ func (p *Packager) loadSkeleton() error {
 	if err := os.Chdir(base); err != nil {
 		return err
 	}
-	if err := p.readYaml(types.ZarfYAML); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml in %s: %s", base, err.Error())
+	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(types.ZarfYAML); err != nil {
+		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
 	if p.cfg.Pkg.Kind == types.ZarfInitConfig {

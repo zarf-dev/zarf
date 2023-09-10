@@ -48,11 +48,14 @@ func (p *Packager) Deploy() (err error) {
 		}
 	}
 
-	p.cfg.Pkg, p.tmp, err = p.source.LoadPackage()
+	p.tmp, err = p.source.LoadPackage()
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
+	p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML])
+	if err != nil {
+		return fmt.Errorf("unable to read the package: %w", err)
+	}
 
 	for idx, component := range p.cfg.Pkg.Components {
 		// Handle component configuration deprecations
