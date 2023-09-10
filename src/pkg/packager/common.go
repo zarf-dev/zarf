@@ -42,6 +42,7 @@ type Packager struct {
 	warnings       []string
 	valueTemplate  *template.Values
 	hpaModified    bool
+	registryScaled bool
 	connectStrings types.ConnectStrings
 }
 

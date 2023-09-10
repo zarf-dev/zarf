@@ -156,3 +156,32 @@ func (c *Cluster) DisableRegHPAScaleDown() error {
 
 	return nil
 }
+
+// SetDeploymentReplicas sets the number of replicas for a deployment and waits for all replicas to be ready
+func (c *Cluster) SetDeploymentReplicas(namespace string, deploymentName string, replicas int32) error {
+	deployment, err := c.GetDeployment(namespace, deploymentName)
+	if err != nil {
+		return err
+	}
+
+	deployment.Spec.Replicas = &replicas
+	if deployment, err = c.UpdateDeployment(deployment); err != nil {
+		return err
+	}
+
+	if err = c.WaitForDeploymentReady(deployment); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ScaleUpRegistry scales up the Zarf Registry
+func (c *Cluster) ScaleUpRegistry(replicas int32) error {
+	return c.SetDeploymentReplicas(ZarfNamespaceName, "zarf-docker-registry", replicas)
+}
+
+// ScaleDownRegistry scales down the Zarf Registry to 1 replica
+func (c *Cluster) ScaleDownRegistry() error {
+	return c.SetDeploymentReplicas(ZarfNamespaceName, "zarf-docker-registry", 1)
+}

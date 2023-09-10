@@ -20,7 +20,7 @@ import (
 
 // PushToZarfRegistry pushes a provided image into the configured Zarf registry
 // This function will optionally shorten the image name while appending a checksum of the original image name.
-func (i *ImgConfig) PushToZarfRegistry() error {
+func (i *ImgConfig) PushToZarfRegistry(tmp int) error {
 	message.Debug("images.PushToZarfRegistry()")
 
 	logs.Warn.SetOutput(&message.DebugWriter{})
@@ -81,7 +81,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	}
 
 	if tunnel != nil {
-		err = tunnel.Connect(target, false)
+		err = tunnel.ConnectMulti(target, false, tmp)
 		if err != nil {
 			return err
 		}

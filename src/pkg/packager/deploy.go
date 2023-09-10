@@ -27,6 +27,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -82,12 +83,22 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	p.hpaModified = false
+	p.registryScaled = false
 	p.connectStrings = make(types.ConnectStrings)
 	// Reset registry HPA scale down whether an error occurs or not
 	defer func() {
 		if p.cluster != nil && p.hpaModified {
 			if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
 				message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
+			}
+		}
+	}()
+
+	// Reset registry scale up whether an error occurs or not
+	defer func() {
+		if p.cluster != nil && p.registryScaled {
+			if err := p.cluster.ScaleDownRegistry(); err != nil {
+				message.Debugf("unable to scale down the registry: %s", err.Error())
 			}
 		}
 	}()
@@ -261,6 +272,15 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 				p.hpaModified = true
 			}
 		}
+
+		// Scale up the registry if we are deploying images and it is not already scaled up
+		if hasImages && !p.registryScaled && p.cfg.State.RegistryInfo.InternalRegistry {
+			if err := p.cluster.ScaleUpRegistry(2); err != nil {
+				message.Debugf("unable to scale up the registry: %s", err.Error())
+			} else {
+				p.registryScaled = true
+			}
+		}
 	}
 
 	if hasImages {
@@ -431,18 +451,48 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	if len(componentImages) == 0 {
 		return nil
 	}
+	images1 := []string{}
+	images2 := []string{}
 
-	imgConfig := images.ImgConfig{
+	for idx, image := range componentImages {
+		if idx%2 == 0 {
+			images1 = append(images1, image)
+		} else if idx%2 == 1 {
+			images2 = append(images2, image)
+		}
+	}
+
+	// imgConfig := images.ImgConfig{
+	// 	ImagesPath:    p.tmp.Images,
+	// 	ImgList:       componentImages,
+	// 	NoChecksum:    noImgChecksum,
+	// 	RegInfo:       p.cfg.State.RegistryInfo,
+	// 	Insecure:      config.CommonOptions.Insecure,
+	// 	Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
+	// }
+
+	imgConfig1 := images.ImgConfig{
 		ImagesPath:    p.tmp.Images,
-		ImgList:       componentImages,
+		ImgList:       images1,
 		NoChecksum:    noImgChecksum,
 		RegInfo:       p.cfg.State.RegistryInfo,
 		Insecure:      config.CommonOptions.Insecure,
 		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 	}
 
+	imgConfig2 := imgConfig1
+	imgConfig2.ImgList = images2
+
 	return helpers.Retry(func() error {
-		return imgConfig.PushToZarfRegistry()
+		eg := new(errgroup.Group)
+		eg.Go(func() error {
+			return imgConfig1.PushToZarfRegistry(0)
+		})
+		eg.Go(func() error {
+			return imgConfig2.PushToZarfRegistry(1)
+		})
+		return eg.Wait()
+		// return imgConfig.PushToZarfRegistry(0)
 	}, 3, 5*time.Second)
 }
 

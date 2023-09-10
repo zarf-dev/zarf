@@ -260,7 +260,102 @@ func (tunnel *Tunnel) Connect(target string, blocking bool) error {
 		}
 	}
 
-	url, err := tunnel.establish()
+	url, err := tunnel.establish(0)
+
+	// Try to establish the tunnel up to 3 times.
+	if err != nil {
+		tunnel.attempt++
+		// If we have exceeded the number of attempts, exit with an error.
+		if tunnel.attempt > 3 {
+			return fmt.Errorf("unable to establish tunnel after 3 attempts: %w", err)
+		}
+		// Otherwise, retry the connection but delay increasing intervals between attempts.
+		delay := tunnel.attempt * 10
+		message.Debug(err)
+		message.Infof("Delay creating tunnel, waiting %d seconds...", delay)
+		time.Sleep(time.Duration(delay) * time.Second)
+		err = tunnel.Connect(target, blocking)
+		if err != nil {
+			return err
+		}
+	}
+
+	if blocking {
+		// Otherwise, if this is blocking it is coming from a user request so try to open the URL, but ignore errors.
+		if tunnel.autoOpen {
+			if tunnel.spinner != nil {
+				tunnel.spinner.Updatef("Tunnel established at %s, opening your default web browser (ctrl-c to end)", url)
+			}
+
+			if err := exec.LaunchURL(url); err != nil {
+				message.Debug(err)
+			}
+		} else if tunnel.spinner != nil {
+			tunnel.spinner.Updatef("Tunnel established at %s, waiting for user to interrupt (ctrl-c to end)", url)
+		}
+
+		// Dump the tunnel URL to the console for other tools to use.
+		fmt.Print(url)
+
+		// Since this blocking, set the defer now so it closes properly on sigterm.
+		defer tunnel.Close()
+
+		// Keep this open until an interrupt signal is received.
+		c := make(chan os.Signal)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			<-c
+			os.Exit(0)
+		}()
+
+		for {
+			runtime.Gosched()
+		}
+	}
+
+	return nil
+}
+
+// ConnectMulti will establish a tunnel to the specified target.
+func (tunnel *Tunnel) ConnectMulti(target string, blocking bool, tmp int) error {
+	message.Debugf("tunnel.Connect(%s, %t)", target, blocking)
+
+	switch strings.ToUpper(target) {
+	case ZarfRegistry:
+		tunnel.resourceName = "zarf-docker-registry"
+		tunnel.remotePort = 5000
+		tunnel.urlSuffix = `/v2/_catalog`
+
+	case ZarfLogging:
+		tunnel.resourceName = "zarf-loki-stack-grafana"
+		tunnel.remotePort = 3000
+		// Start the logs with something useful.
+		tunnel.urlSuffix = `/monitor/explore?orgId=1&left=%5B"now-12h","now","Loki",%7B"refId":"Zarf%20Logs","expr":"%7Bnamespace%3D%5C"zarf%5C"%7D"%7D%5D`
+
+	case ZarfGit:
+		tunnel.resourceName = "zarf-gitea-http"
+		tunnel.remotePort = 3000
+
+	case ZarfInjector:
+		tunnel.resourceName = "zarf-injector"
+		tunnel.remotePort = 5000
+
+	default:
+		if target != "" {
+			if err := tunnel.checkForZarfConnectLabel(target); err != nil {
+				return fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
+			}
+		}
+
+		if tunnel.resourceName == "" {
+			return fmt.Errorf("missing resource name")
+		}
+		if tunnel.remotePort < 1 {
+			return fmt.Errorf("missing remote port")
+		}
+	}
+
+	url, err := tunnel.establish(tmp)
 
 	// Try to establish the tunnel up to 3 times.
 	if err != nil {
@@ -385,7 +480,7 @@ func (tunnel *Tunnel) checkForZarfConnectLabel(name string) error {
 }
 
 // establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
-func (tunnel *Tunnel) establish() (string, error) {
+func (tunnel *Tunnel) establish(tmp int) (string, error) {
 	message.Debug("tunnel.Establish()")
 
 	var err error
@@ -432,7 +527,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 	}
 
 	// Find the pod to port forward to
-	podName, err := tunnel.getAttachablePodForResource()
+	podName, err := tunnel.getAttachablePodForResource(tmp)
 	if err != nil {
 		return "", fmt.Errorf("unable to find pod attached to given resource: %w", err)
 	}
@@ -450,7 +545,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 		URL()
 
 	message.Debugf("Using URL %s to create portforward", portForwardCreateURL)
-
+ 
 	// Construct the spdy client required by the client-go portforward library.
 	transport, upgrader, err := spdy.RoundTripperFor(kube.RestConfig)
 	if err != nil {
@@ -492,20 +587,20 @@ func (tunnel *Tunnel) establish() (string, error) {
 
 // getAttachablePodForResource will find a pod that can be port forwarded to the provided resource type and return
 // the name.
-func (tunnel *Tunnel) getAttachablePodForResource() (string, error) {
+func (tunnel *Tunnel) getAttachablePodForResource(tmp int) (string, error) {
 	message.Debug("tunnel.getAttachablePodForResource()")
 	switch tunnel.resourceType {
 	case PodResource:
 		return tunnel.resourceName, nil
 	case SvcResource:
-		return tunnel.getAttachablePodForService()
+		return tunnel.getAttachablePodForService(tmp)
 	default:
 		return "", fmt.Errorf("unknown resource type: %s", tunnel.resourceType)
 	}
 }
 
 // getAttachablePodForServiceE will find an active pod associated with the Service and return the pod name.
-func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
+func (tunnel *Tunnel) getAttachablePodForService(tmp int) (string, error) {
 	message.Debug("tunnel.getAttachablePodForService()")
 	service, err := tunnel.kube.GetService(tunnel.namespace, tunnel.resourceName)
 	if err != nil {
@@ -521,7 +616,7 @@ func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
 	if len(servicePods) < 1 {
 		return "", fmt.Errorf("no pods found for service %s", tunnel.resourceName)
 	}
-	return servicePods[0].Name, nil
+	return servicePods[tmp].Name, nil
 }
 
 // makeLabels is a helper to format a map of label key and value pairs into a single string for use as a selector.
