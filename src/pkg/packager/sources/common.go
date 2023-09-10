@@ -6,6 +6,7 @@ package sources
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -67,8 +68,9 @@ func LoadSBOMs(loaded types.PackagePathsMap) (err error) {
 		if err = archiver.Unarchive(loaded[types.SBOMTar], loaded[types.SBOMDir]); err != nil {
 			return err
 		}
-	} else {
-		message.Debug("Package does not contain SBOMs")
+		if utils.InvalidPath(loaded[types.SBOMDir]) {
+			return fs.ErrNotExist
+		}
 	}
 	return nil
 }

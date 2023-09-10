@@ -126,6 +126,9 @@ func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackag
 			loaded.Unset(types.SBOMTar)
 		}
 	}
+	if !loaded.KeyExists(types.SBOMTar) && wantSBOM {
+		return pkg, nil, fmt.Errorf("package does not contain SBOMs")
+	}
 
 	if err := utils.ReadYaml(loaded[types.ZarfYAML], &pkg); err != nil {
 		return pkg, nil, err
@@ -144,18 +147,8 @@ func (s *TarballSource) LoadPackageMetadata(wantSBOM bool) (pkg types.ZarfPackag
 	}
 
 	// unpack sboms.tar
-	if loaded.KeyExists(types.SBOMTar) {
-		message.Debugf("Unarchiving %q", types.SBOMTar)
-		defer os.Remove(loaded[types.SBOMTar])
-		defer loaded.Unset(types.SBOMTar)
-		if err := loaded.SetDefaultRelative(types.SBOMDir); err != nil {
-			return pkg, nil, err
-		}
-		if err = archiver.Unarchive(loaded[types.SBOMTar], loaded[types.SBOMDir]); err != nil {
-			return pkg, nil, err
-		}
-	} else if wantSBOM {
-		return pkg, nil, fmt.Errorf("package does not contain SBOMs")
+	if err := LoadSBOMs(loaded); err != nil {
+		return pkg, nil, err
 	}
 
 	return pkg, loaded, nil
