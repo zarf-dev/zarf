@@ -22,6 +22,10 @@ import (
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func (p *Packager) Remove() (err error) {
+	_, requiresCluster := p.source.(*sources.ClusterSource)
+	if requiresCluster {
+		p.cluster = p.source.(*sources.ClusterSource).Cluster
+	}
 	spinner := message.NewProgressSpinner("Removing Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
@@ -29,67 +33,50 @@ func (p *Packager) Remove() (err error) {
 	requestedComponents := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
 	partialRemove := len(requestedComponents) > 0 && requestedComponents[0] != ""
 
-	// Determine if we need the cluster
-	requiresCluster := false
-
 	var packageName string
 
-	// if we have a source, load the package metadata
-	if p.source != nil {
-		if err = p.source.LoadPackageMetadata(p.tmp, false); err != nil {
-			return err
+	if err = p.source.LoadPackageMetadata(p.tmp, false); err != nil {
+		return err
+	}
+	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML]); err != nil {
+		return err
+	}
+	p.filterComponents(&p.cfg.Pkg)
+	packageName = p.cfg.Pkg.Metadata.Name
+
+	wasSigned := p.tmp.KeyExists(types.PackageSignature)
+
+	hasRemoveActions := false
+	// If we have package components check them for images, charts, manifests, etc
+	for _, component := range p.cfg.Pkg.Components {
+		// Flip requested based on if this is a partial removal
+		requested := !partialRemove
+
+		if helpers.SliceContains(requestedComponents, component.Name) {
+			requested = true
 		}
-		if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML]); err != nil {
-			return err
-		}
-		// Filter out components that are not compatible with this system if we have loaded from a tarball
-		p.filterComponents(&p.cfg.Pkg)
-		packageName = p.cfg.Pkg.Metadata.Name
 
-		wasSigned := p.tmp.KeyExists(types.PackageSignature)
-
-		hasRemoveActions := false
-
-		// If we have package components check them for images, charts, manifests, etc
-		for _, component := range p.cfg.Pkg.Components {
-			// Flip requested based on if this is a partial removal
-			requested := !partialRemove
-
-			if helpers.SliceContains(requestedComponents, component.Name) {
-				requested = true
-			}
-
-			if requested {
-				requiresCluster = p.requiresCluster(component)
-			}
-
-			if component.Actions.OnRemove.Before != nil || component.Actions.OnRemove.After != nil || component.Actions.OnRemove.OnSuccess != nil || component.Actions.OnRemove.OnFailure != nil {
-				hasRemoveActions = true
+		if requested {
+			if p.requiresCluster(component) {
+				requiresCluster = true
 			}
 		}
-		// while LoadPackageMetadata does not error if the package is signed but the signature is not present
-		// we do not want to allow removal of signed packages without a signature if there are remove actions
-		// as this is arbitrary code execution from an untrusted source
-		if wasSigned && hasRemoveActions && p.cfg.PkgOpts.PublicKeyPath == "" {
-			return sources.ErrPkgSigButNoKey
+
+		if component.Actions.OnRemove.Before != nil || component.Actions.OnRemove.After != nil || component.Actions.OnRemove.OnSuccess != nil || component.Actions.OnRemove.OnFailure != nil {
+			hasRemoveActions = true
 		}
-	} else {
-		requiresCluster = true
-		packageName = p.cfg.PkgOpts.PackageSource
+	}
+	// while LoadPackageMetadata does not error if the package is signed but the signature is not present
+	// we do not want to allow removal of signed packages without a signature if there are remove actions
+	// as this is arbitrary code execution from an untrusted source
+	if wasSigned && hasRemoveActions && p.cfg.PkgOpts.PublicKeyPath == "" {
+		return sources.ErrPkgSigButNoKey
 	}
 
 	// Get the secret for the deployed package
 	deployedPackage := types.DeployedPackage{}
 
 	if requiresCluster {
-		// If we need the cluster, connect to it and pull the package secret
-		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, true)
-			if err != nil {
-				return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
-			}
-		}
-
 		deployedPackage, err = p.cluster.GetDeployedPackage(packageName)
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())

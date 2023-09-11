@@ -130,7 +130,12 @@ var packageInspectCmd = &cobra.Command{
 
 		src, err := sources.New(&pkgConfig.PkgOpts)
 		if err != nil {
-			message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
+			message.Debug(err.Error())
+			message.Debugf("%q does not satisfy any current sources, assuming it is a package deployed to a cluster", pkgConfig.PkgOpts.PackageSource)
+			src, err = sources.NewClusterSource(&pkgConfig.PkgOpts)
+			if err != nil {
+				message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
+			}
 		}
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
@@ -195,6 +200,10 @@ var packageRemoveCmd = &cobra.Command{
 		if err != nil {
 			message.Debug(err.Error())
 			message.Debugf("%q does not satisfy any current sources, assuming it is a package deployed to a cluster", pkgConfig.PkgOpts.PackageSource)
+			src, err = sources.NewClusterSource(&pkgConfig.PkgOpts)
+			if err != nil {
+				message.Fatalf(err, lang.CmdPackageRemoveErr, err.Error())
+			}
 		}
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))

@@ -20,8 +20,8 @@ import (
 
 var (
 	// https://regex101.com/r/vpi8a8/1
-	isLowercaseNumberHyphen     = regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
-	isUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
+	IsLowercaseNumberHyphen     = regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
+	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 )
 
 // Run performs config validations.
@@ -207,7 +207,7 @@ func validateAction(action types.ZarfComponentAction) (bool, error) {
 
 	// Validate SetVariable
 	for _, variable := range action.SetVariables {
-		if !isUppercaseNumberUnderscore(variable.Name) {
+		if !IsUppercaseNumberUnderscore(variable.Name) {
 			return containsVariables, fmt.Errorf(lang.PkgValidateMustBeUppercase, variable.Name)
 		}
 		containsVariables = true
@@ -254,7 +254,7 @@ func validateYOLO(component types.ZarfComponent) error {
 }
 
 func validatePackageName(subject string) error {
-	if !isLowercaseNumberHyphen(subject) {
+	if !IsLowercaseNumberHyphen(subject) {
 		return fmt.Errorf(lang.PkgValidateErrPkgName, subject)
 	}
 
@@ -263,7 +263,7 @@ func validatePackageName(subject string) error {
 
 func validatePackageVariable(subject types.ZarfPackageVariable) error {
 	// ensure the variable name is only capitals and underscores
-	if !isUppercaseNumberUnderscore(subject.Name) {
+	if !IsUppercaseNumberUnderscore(subject.Name) {
 		return fmt.Errorf(lang.PkgValidateMustBeUppercase, subject.Name)
 	}
 
@@ -272,7 +272,7 @@ func validatePackageVariable(subject types.ZarfPackageVariable) error {
 
 func validatePackageConstant(subject types.ZarfPackageConstant) error {
 	// ensure the constant name is only capitals and underscores
-	if !isUppercaseNumberUnderscore(subject.Name) {
+	if !IsUppercaseNumberUnderscore(subject.Name) {
 		return fmt.Errorf(lang.PkgValidateErrPkgConstantName, subject.Name)
 	}
 
