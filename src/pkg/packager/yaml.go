@@ -20,6 +20,9 @@ func ReadZarfYAML(path string) (pkg types.ZarfPackage, arch string, err error) {
 	if err := utils.ReadYaml(path, &pkg); err != nil {
 		return pkg, "", err
 	}
+	if pkg.Build.OCIImportedComponents == nil {
+		pkg.Build.OCIImportedComponents = make(map[string]string)
+	}
 	return pkg, config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture), nil
 }
 
