@@ -8,12 +8,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	"oras.land/oras-go/v2"
@@ -42,13 +40,13 @@ type OrasRemote struct {
 //
 // Registry auth is handled by the Docker CLI's credential store and checked before returning the client
 func NewOrasRemote(url string) (*OrasRemote, error) {
-	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
+	zref, err := ParseZarfPackageReference(url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse OCI reference %s: %w", url, err)
+		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
 	}
 	o := &OrasRemote{}
 
-	if err := o.setRepository(ref); err != nil {
+	if err := o.setRepository(zref.Reference); err != nil {
 		return nil, err
 	}
 
@@ -70,6 +68,10 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 	// this allows end users to use docker.io as an alias for registry-1.docker.io
 	if ref.Registry == "docker.io" {
 		ref.Registry = "registry-1.docker.io"
+	}
+	if ref.Registry == "🦄" || ref.Registry == "defenseunicorns" {
+		ref.Registry = "ghcr.io"
+		ref.Repository = "defenseunicorns/packages/" + ref.Repository
 	}
 	client, err := o.createAuthClient(ref)
 	if err != nil {

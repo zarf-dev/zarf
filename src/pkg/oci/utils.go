@@ -127,6 +127,10 @@ func ParseZarfPackageReference(artifact string) (ZarfPackageReference, error) {
 		parts = strings.Split(stripped, "-")
 	}
 
+	if len(parts) != 2 {
+		return zref, fmt.Errorf("tag does not match <version>-<arch> format")
+	}
+
 	zref.Reference = parsed
 	zref.Version = parts[0]
 	zref.Arch = parts[1]
