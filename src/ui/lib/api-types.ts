@@ -1169,6 +1169,10 @@ export interface ZarfCommonOptions {
 
 export interface ZarfCreateOptions {
     /**
+     * Location where the Zarf package will be created from
+     */
+    baseDir: string;
+    /**
      * A package's differential images and git repositories from a referenced previously built
      * package
      */
@@ -1780,6 +1784,7 @@ const typeMap: any = {
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
+        { json: "baseDir", js: "baseDir", typ: "" },
         { json: "differential", js: "differential", typ: r("DifferentialData") },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
         { json: "output", js: "output", typ: "" },
