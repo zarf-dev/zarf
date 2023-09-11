@@ -82,7 +82,7 @@ type PackageSource interface {
 	// and expects the package structure to follow the default Zarf package structure.
 	//
 	// If your package does not follow the default Zarf package structure, you will need to implement your own source.
-	LoadPackage() (PackagePathsMap, error)
+	LoadPackage(PackagePathsMap) error
 	// LoadPackageMetadata loads a package's metadata from a source.
 	//
 	// This function follows the same principles as LoadPackage, with a few exceptions:
@@ -90,7 +90,7 @@ type PackageSource interface {
 	// - Package integrity validation will display a warning instead of returning an error if
 	//   the package is signed but no public key is provided. This is to allow for the inspection and removal of packages
 	//   that are signed but the user does not have the public key for.
-	LoadPackageMetadata(wantSBOM bool) (PackagePathsMap, error)
+	LoadPackageMetadata(dst PackagePathsMap, wantSBOM bool) error
 	// LoadPackageMetadata(wantSBOM bool, skipValidation bool) (ZarfPackage, PackagePathsMap, error)
 
 	// Collect relocates a package from its source to a destination tarball.

@@ -34,21 +34,9 @@ func (p *Packager) Remove() (err error) {
 
 	var packageName string
 
-	// if no source was provided, try to make one
-	if p.source == nil {
-		p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp)
-		// if we can't make one, assume it's a cluster package
-		if err != nil {
-			requiresCluster = true
-			packageName = p.cfg.PkgOpts.PackageSource
-			message.Debugf("%q does not satisfy any current sources, assuming it is a package deployed to a cluster", p.cfg.PkgOpts.PackageSource)
-		}
-	}
-
 	// if we have a source, load the package metadata
 	if p.source != nil {
-		p.tmp, err = p.source.LoadPackageMetadata(false)
-		if err != nil {
+		if err = p.source.LoadPackageMetadata(p.tmp, false); err != nil {
 			return err
 		}
 		if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML]); err != nil {
@@ -85,6 +73,9 @@ func (p *Packager) Remove() (err error) {
 		if wasSigned && hasRemoveActions && p.cfg.PkgOpts.PublicKeyPath == "" {
 			return sources.ErrPkgSigButNoKey
 		}
+	} else {
+		requiresCluster = true
+		packageName = p.cfg.PkgOpts.PackageSource
 	}
 
 	// Get the secret for the deployed package

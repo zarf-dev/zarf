@@ -35,12 +35,8 @@ func identifySourceType(pkgSrc string) string {
 }
 
 // New returns a new PackageSource based on the provided package options.
-func New(pkgOpts *types.ZarfPackageOptions, destination types.PackagePathsMap) (types.PackageSource, error) {
+func New(pkgOpts *types.ZarfPackageOptions) (types.PackageSource, error) {
 	var source types.PackageSource
-
-	if !destination.KeyExists(types.BaseDir) {
-		return nil, fmt.Errorf("destination base directory does not exist")
-	}
 
 	pkgSrc := pkgOpts.PackageSource
 
@@ -50,16 +46,16 @@ func New(pkgOpts *types.ZarfPackageOptions, destination types.PackagePathsMap) (
 		if err != nil {
 			return nil, err
 		}
-		source = &OCISource{destination, pkgOpts, remote}
+		source = &OCISource{pkgOpts, remote}
 	case "tarball":
-		source = &TarballSource{destination, pkgOpts}
+		source = &TarballSource{pkgOpts}
 	case "http", "https":
-		source = &URLSource{destination, pkgOpts}
+		source = &URLSource{pkgOpts}
 	case "sget":
 		message.Warn(lang.WarnSGetDeprecation)
-		source = &URLSource{destination, pkgOpts}
+		source = &URLSource{pkgOpts}
 	case "split":
-		source = &SplitTarballSource{destination, pkgOpts}
+		source = &SplitTarballSource{pkgOpts}
 	default:
 		return nil, fmt.Errorf("could not identify source type for %q", pkgSrc)
 	}

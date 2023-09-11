@@ -66,6 +66,15 @@ func WithCluster(cluster *cluster.Cluster) Modifier {
 	}
 }
 
+// WithTemp sets the temp directory for the packager.
+//
+// This temp directory is used as the destination where p.source loads the package.
+func WithTemp(tmp types.PackagePathsMap) Modifier {
+	return func(p *Packager) {
+		p.tmp = tmp
+	}
+}
+
 /*
 New creates a new package instance with the provided config.
 
@@ -98,13 +107,15 @@ func New(cfg *types.PackagerConfig, opts ...Modifier) (*Packager, error) {
 		}
 	}
 
-	// Create a temp directory for the package
-	if err = pkgConfig.SetTempDirectory(config.CommonOptions.TempDirectory); err != nil {
-		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
-	}
-
 	for _, opt := range opts {
 		opt(pkgConfig)
+	}
+
+	// If the temp directory is not set, set it to the default
+	if pkgConfig.tmp == nil {
+		if err = pkgConfig.setTempDirectory(config.CommonOptions.TempDirectory); err != nil {
+			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
+		}
 	}
 
 	return pkgConfig, nil
@@ -128,12 +139,8 @@ func NewOrDie(config *types.PackagerConfig, opts ...Modifier) *Packager {
 	return pkgConfig
 }
 
-// SetTempDirectory sets the temp directory for the packager.
-func (p *Packager) SetTempDirectory(path string) error {
-	if p.tmp != nil {
-		p.ClearTempPaths()
-	}
-
+// setTempDirectory sets the temp directory for the packager.
+func (p *Packager) setTempDirectory(path string) error {
 	dir, err := utils.MakeTempDir(path)
 	if err != nil {
 		return fmt.Errorf("unable to create package temp paths: %w", err)

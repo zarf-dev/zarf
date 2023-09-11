@@ -6,7 +6,6 @@ package packager
 
 import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -15,15 +14,7 @@ import (
 func (p *Packager) Inspect() (err error) {
 	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
 
-	if p.source == nil {
-		p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp)
-		if err != nil {
-			return err
-		}
-	}
-
-	p.tmp, err = p.source.LoadPackageMetadata(wantSBOM)
-	if err != nil {
+	if err = p.source.LoadPackageMetadata(p.tmp, wantSBOM); err != nil {
 		return err
 	}
 

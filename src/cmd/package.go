@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 
 	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2/registry"
@@ -83,8 +84,12 @@ var packageDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
+		src, err := sources.New(&pkgConfig.PkgOpts)
+		if err != nil {
+			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
+		}
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
 		// Deploy the package
@@ -123,8 +128,12 @@ var packageInspectCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
+		src, err := sources.New(&pkgConfig.PkgOpts)
+		if err != nil {
+			message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
+		}
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
 		// Inspect the package
@@ -182,8 +191,13 @@ var packageRemoveCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = args[0]
 
+		src, err := sources.New(&pkgConfig.PkgOpts)
+		if err != nil {
+			message.Debug(err.Error())
+			message.Debugf("%q does not satisfy any current sources, assuming it is a package deployed to a cluster", pkgConfig.PkgOpts.PackageSource)
+		}
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
 		if err := pkgClient.Remove(); err != nil {
@@ -215,8 +229,12 @@ var packagePublishCmd = &cobra.Command{
 
 		pkgConfig.PublishOpts.PackageDestination = ref.String()
 
+		src, err := sources.New(&pkgConfig.PkgOpts)
+		if err != nil {
+			message.Fatalf(err, lang.CmdPackagePublishErr, err.Error())
+		}
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
 		// Publish the package
@@ -227,19 +245,19 @@ var packagePublishCmd = &cobra.Command{
 }
 
 var packagePullCmd = &cobra.Command{
-	Use:     "pull REFERENCE",
+	Use:     "pull PACKAGE",
 	Short:   lang.CmdPackagePullShort,
 	Example: lang.CmdPackagePullExample,
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if !helpers.IsOCIURL(args[0]) {
-			message.Fatal(nil, lang.CmdPackageRegistryPrefixErr)
-		}
-
 		pkgConfig.PkgOpts.PackageSource = args[0]
 
+		src, err := sources.New(&pkgConfig.PkgOpts)
+		if err != nil {
+			message.Fatalf(err, lang.CmdPackagePullErr, err.Error())
+		}
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
 		// Pull the package

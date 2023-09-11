@@ -17,11 +17,6 @@ import (
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() (err error) {
-	p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp)
-	if err != nil {
-		return err
-	}
-
 	var name string
 
 	// TODO: need to think about better naming logic here depending upon the source type

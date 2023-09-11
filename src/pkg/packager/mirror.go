@@ -12,7 +12,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -22,16 +21,8 @@ func (p *Packager) Mirror() (err error) {
 	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
-	if p.source == nil {
-		p.source, err = sources.New(&p.cfg.PkgOpts, p.tmp)
-		if err != nil {
-			return err
-		}
-	}
-
-	p.tmp, err = p.source.LoadPackage()
-	if err != nil {
-		return err
+	if err = p.source.LoadPackage(p.tmp); err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML]); err != nil {
 		return err
