@@ -81,7 +81,7 @@ New creates a new package instance with the provided config.
 
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
-func New(cfg *types.PackagerConfig, opts ...Modifier) (*Packager, error) {
+func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
 	}
@@ -108,8 +108,12 @@ func New(cfg *types.PackagerConfig, opts ...Modifier) (*Packager, error) {
 		}
 	}
 
-	for _, opt := range opts {
-		opt(pkgConfig)
+	for _, mod := range mods {
+		mod(pkgConfig)
+	}
+
+	if pkgConfig.source == nil {
+		return nil, fmt.Errorf("no source provided")
 	}
 
 	// If the temp directory is not set, set it to the default
@@ -127,13 +131,13 @@ NewOrDie creates a new package instance with the provided config or throws a fat
 
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
-func NewOrDie(config *types.PackagerConfig, opts ...Modifier) *Packager {
+func NewOrDie(config *types.PackagerConfig, mods ...Modifier) *Packager {
 	var (
 		err       error
 		pkgConfig *Packager
 	)
 
-	if pkgConfig, err = New(config, opts...); err != nil {
+	if pkgConfig, err = New(config, mods...); err != nil {
 		message.Fatalf(err, "Unable to setup the package config: %s", err.Error())
 	}
 
