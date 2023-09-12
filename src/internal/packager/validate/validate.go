@@ -276,6 +276,10 @@ func validatePackageConstant(subject types.ZarfPackageConstant) error {
 		return fmt.Errorf(lang.PkgValidateErrPkgConstantName, subject.Name)
 	}
 
+	if regexp.MustCompile(subject.Pattern).MatchString(subject.Value) {
+		return fmt.Errorf("pattern %q does not match provided value for constant %q", subject.Pattern, subject.Name)
+	}
+
 	return nil
 }
 

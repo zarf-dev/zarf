@@ -175,5 +175,5 @@ func (p *Packager) patternMatches(name, pattern string) error {
 		return nil
 	}
 
-	return fmt.Errorf("pattern %q does not match provided value for %q", pattern, name)
+	return fmt.Errorf("pattern %q does not match provided value for variable %q", pattern, name)
 }
