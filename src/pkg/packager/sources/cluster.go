@@ -13,7 +13,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (types.PackageSource, error) {
+// NewClusterSource creates a new cluster source.
+func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 	if !validate.IsLowercaseNumberHyphen(pkgOpts.PackageSource) {
 		return nil, fmt.Errorf("invalid package name %q", pkgOpts.PackageSource)
 	}
@@ -24,19 +25,27 @@ func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (types.PackageSource, e
 	return &ClusterSource{pkgOpts, cluster}, nil
 }
 
+// ClusterSource is a package source for clusters.
 type ClusterSource struct {
 	*types.ZarfPackageOptions
 	*cluster.Cluster
 }
 
+// LoadPackage loads a package from a cluster.
+//
+// This is not implemented.
 func (s *ClusterSource) LoadPackage(_ types.PackagePathsMap) error {
 	return fmt.Errorf("not implemented")
 }
 
+// Collect collects a package from a cluster.
+//
+// This is not implemented.
 func (s *ClusterSource) Collect(_ string) error {
 	return fmt.Errorf("not implemented")
 }
 
+// LoadPackageMetadata loads package metadata from a cluster.
 func (s *ClusterSource) LoadPackageMetadata(dst types.PackagePathsMap, _ bool) (err error) {
 	dpkg, err := s.GetDeployedPackage(s.PackageSource)
 	if err != nil {

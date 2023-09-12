@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// ReadZarfYAML reads a Zarf YAML file.
 func ReadZarfYAML(path string) (pkg types.ZarfPackage, arch string, err error) {
 	if err := utils.ReadYaml(path, &pkg); err != nil {
 		return pkg, "", err

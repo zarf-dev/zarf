@@ -16,12 +16,12 @@ var ocip *OCISource
 var urlp *URLSource
 var tarballp *TarballSource
 var splitp *SplitTarballSource
-var packagep *types.PackageSource
+var packagep *PackageSource
 
 type source struct {
 	pkgSrc  string
 	srcType string
-	source  types.PackageSource
+	source  PackageSource
 }
 
 var sources = []source{

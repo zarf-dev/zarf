@@ -70,33 +70,6 @@ type ZarfInspectOptions struct {
 	SBOMOutputDir string `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package inspection"`
 }
 
-// PackageSource is an interface for package sources.
-//
-// While this interface defines two functions, LoadPackage and LoadPackageMetadata, only one of them should be used within a packager function.
-//
-// These functions currently do not promise repeatability due to the side effect nature of loading a package.
-type PackageSource interface {
-	// LoadPackage loads a package from a source.
-	//
-	// For the default sources included in Zarf, package integrity (checksums, signatures, etc.) is validated during this function
-	// and expects the package structure to follow the default Zarf package structure.
-	//
-	// If your package does not follow the default Zarf package structure, you will need to implement your own source.
-	LoadPackage(PackagePathsMap) error
-	// LoadPackageMetadata loads a package's metadata from a source.
-	//
-	// This function follows the same principles as LoadPackage, with a few exceptions:
-	//
-	// - Package integrity validation will display a warning instead of returning an error if
-	//   the package is signed but no public key is provided. This is to allow for the inspection and removal of packages
-	//   that are signed but the user does not have the public key for.
-	LoadPackageMetadata(dst PackagePathsMap, wantSBOM bool) error
-	// LoadPackageMetadata(wantSBOM bool, skipValidation bool) (ZarfPackage, PackagePathsMap, error)
-
-	// Collect relocates a package from its source to a destination tarball.
-	Collect(dstTarball string) error
-}
-
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.
 type ZarfDeployOptions struct {
 	AdoptExistingResources bool `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`

@@ -23,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
@@ -37,7 +38,7 @@ type Packager struct {
 	valueTemplate  *template.Values
 	hpaModified    bool
 	connectStrings types.ConnectStrings
-	source         types.PackageSource
+	source         sources.PackageSource
 }
 
 // Zarf Packager Variables.
@@ -53,7 +54,7 @@ var (
 type Modifier func(*Packager)
 
 // WithSource sets the source for the packager.
-func WithSource(source types.PackageSource) Modifier {
+func WithSource(source sources.PackageSource) Modifier {
 	return func(p *Packager) {
 		p.source = source
 	}

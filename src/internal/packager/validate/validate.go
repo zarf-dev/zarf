@@ -18,8 +18,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// https://regex101.com/r/vpi8a8/1
 var (
-	// https://regex101.com/r/vpi8a8/1
 	IsLowercaseNumberHyphen     = regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
 	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 )
