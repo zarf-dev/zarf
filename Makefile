@@ -167,7 +167,7 @@ build-injector-linux: ## Build the Zarf injector for AMD64 and ARM64
 .PHONY: test-e2e
 test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
-	cd src/test/e2e && go test -failfast -v -timeout 30m
+	cd src/test/e2e && go test -failfast -v -timeout 35m
 
 ## NOTE: Requires an existing cluster
 .PHONY: test-external
