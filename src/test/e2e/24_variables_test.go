@@ -17,16 +17,28 @@ func TestVariables(t *testing.T) {
 	t.Log("E2E: Package variables")
 	e2e.SetupWithCluster(t)
 
+	evilSrc := filepath.Join("src", "test", "packages", "24-evil-variables")
+	evilPath := fmt.Sprintf("zarf-package-evil-variables-%s.tar.zst", e2e.Arch)
+
 	src := filepath.Join("examples", "variables")
 	path := filepath.Join("build", fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.Arch))
+
 	tfPath := "modified-terraform.tf"
 
-	e2e.CleanFiles(tfPath)
+	e2e.CleanFiles(tfPath, evilPath)
+
+	// Test that specifying an invalid setVariable value results in an error
+	stdOut, stdErr, err := e2e.Zarf("package", "create", evilSrc, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	expectedOutString := "variable \"HELLO_KITTEH\" does not match pattern "
+	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test that specifying an invalid constant value results in an error
-	stdOut, stdErr, err := e2e.Zarf("package", "create", src, "--set", "NGINX_VERSION=", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", src, "--set", "NGINX_VERSION=", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	expectedOutString := "constant \"NGINX_VERSION\" does not match pattern "
+	expectedOutString = "constant \"NGINX_VERSION\" does not match pattern "
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test that not specifying a prompted variable results in an error
@@ -78,5 +90,5 @@ func TestVariables(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	e2e.CleanFiles(tfPath)
+	e2e.CleanFiles(tfPath, evilPath)
 }
