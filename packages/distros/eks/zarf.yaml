@@ -3,7 +3,7 @@ metadata:
   name: distro-eks
   description: Deploy a EKS K8s cluster
   architecture: multi
-  version: 0.0.2
+  version: 0.0.3
 
 variables:
   - name: EKS_CLUSTER_NAME
@@ -32,20 +32,20 @@ components:
     files:
       - source: eks.yaml
         target: eks.yaml
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.147.0/eksctl_Darwin_amd64.tar.gz
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.156.0/eksctl_Darwin_amd64.tar.gz
         target: binaries/eksctl_Darwin_x86_64
         executable: true
-        shasum: 6d72fe0bafa5ac62e1da3889b6987af6192b330abd9c50491bcf1c5966358f89
+        shasum: 16631301fb94f2dc017de74084294e0e15a862d20f910ff6e2bad89397449e37
         extractPath: eksctl
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.147.0/eksctl_Darwin_arm64.tar.gz
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.156.0/eksctl_Darwin_arm64.tar.gz
         target: binaries/eksctl_Darwin_arm64
         executable: true
-        shasum: 1d7dd5b9907de1cb3fa7832659db29f50530444d10e77b4a8eb27aa648da6fab
+        shasum: 5494eeb09ef70c31e0b95efdcf2a7c080cd95c5c054ffae478b0436fe3b05850
         extractPath: eksctl
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.147.0/eksctl_Linux_amd64.tar.gz
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.156.0/eksctl_Linux_amd64.tar.gz
         target: binaries/eksctl_Linux_x86_64
         executable: true
-        shasum: 2a47bb9c86c7531a166542aa2d8cb8e1e0be326308ebcfaf724d016abe31636b
+        shasum: afbb44817bf5eea4af041d90f30bc6d2ede766761b4af79211c028302367ba36
         extractPath: eksctl
 
   - name: deploy-eks-cluster
@@ -57,18 +57,12 @@ components:
           - cmd: sleep 15
           - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster -f eks.yaml
           - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) utils write-kubeconfig -c ${ZARF_VAR_EKS_CLUSTER_NAME}
-          - cmd: ./zarf tools kubectl create namespace zarf
-          - cmd: ./zarf tools kubectl create secret generic zarf-eks-yaml -n zarf --from-file=eks.yaml
 
   - name: teardown-eks-cluster
     description: Delete the EKS cluster that this package was used to create.
     actions:
       onDeploy:
         before:
-          # Get the secret that stores the eks.yaml we used to create this cluster
-          - cmd: ./zarf tools kubectl get secret -n zarf zarf-eks-yaml -o jsonpath='{.data.*}' | base64 -d > eks.yaml
-          # TODO: Error handling in case the eks.yaml isn't what we expect ???
-          # Use eksctl to delete the cluster
           - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) delete cluster -f eks.yaml --disable-nodegroup-eviction --wait
         after:
           # clean up after ourselves

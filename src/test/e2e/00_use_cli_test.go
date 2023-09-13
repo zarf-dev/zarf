@@ -121,7 +121,7 @@ func TestUseCLI(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
-		path := "zarf-package-distro-eks-multi-0.0.2.tar.zst"
+		path := "zarf-package-distro-eks-multi-0.0.3.tar.zst"
 		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
