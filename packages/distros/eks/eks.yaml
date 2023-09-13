@@ -15,7 +15,6 @@ addons:
     attachPolicyARNs:
       - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
 
-
 managedNodeGroups:
 - instanceType: ###ZARF_VAR_EKS_INSTANCE_TYPE###
   name: ###ZARF_VAR_EKS_CLUSTER_NAME###-ng
