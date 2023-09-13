@@ -87,7 +87,7 @@ func (p *Packager) setVariableMapInConfig() error {
 			p.cfg.SetVariableMap[variable.Name].Sensitive = variable.Sensitive
 			p.cfg.SetVariableMap[variable.Name].AutoIndent = variable.AutoIndent
 			p.cfg.SetVariableMap[variable.Name].Type = variable.Type
-			if err := p.patternMatches(variable.Name, variable.Pattern); err != nil {
+			if err := p.checkVariablePattern(variable.Name, variable.Pattern); err != nil {
 				return err
 			}
 			continue
@@ -108,7 +108,7 @@ func (p *Packager) setVariableMapInConfig() error {
 			p.setVariableInConfig(variable.Name, val, variable.Sensitive, variable.AutoIndent, variable.Type)
 		}
 
-		if err := p.patternMatches(variable.Name, variable.Pattern); err != nil {
+		if err := p.checkVariablePattern(variable.Name, variable.Pattern); err != nil {
 			return err
 		}
 	}
@@ -169,8 +169,8 @@ func (p *Packager) findComponentTemplatesAndReload() error {
 	return nil
 }
 
-// patternMatches checks to see if a current variable is set to a value that matches its pattern
-func (p *Packager) patternMatches(name, pattern string) error {
+// checkVariablePattern checks to see if a current variable is set to a value that matches its pattern
+func (p *Packager) checkVariablePattern(name, pattern string) error {
 	if regexp.MustCompile(pattern).MatchString(p.cfg.SetVariableMap[name].Value) {
 		return nil
 	}

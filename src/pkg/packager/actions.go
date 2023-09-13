@@ -114,7 +114,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 			// If an output variable is defined, set it.
 			for _, v := range action.SetVariables {
 				p.setVariableInConfig(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
-				if err := p.patternMatches(v.Name, v.Pattern); err != nil {
+				if err := p.checkVariablePattern(v.Name, v.Pattern); err != nil {
 					return err
 				}
 			}
