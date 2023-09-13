@@ -24,7 +24,7 @@ func TestVariables(t *testing.T) {
 	e2e.CleanFiles(tfPath)
 
 	// Test that specifying an invalid constant value results in an error
-	stdOut, stdErr, err := e2e.Zarf("package", "create", src, "--set NGINX_VERSION=", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", src, "--set", "NGINX_VERSION=", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 	expectedOutString := "constant \"NGINX_VERSION\" does not match pattern "
 	require.Contains(t, stdErr, "", expectedOutString)
@@ -32,6 +32,12 @@ func TestVariables(t *testing.T) {
 	// Test that not specifying a prompted variable results in an error
 	_, stdErr, _ = e2e.Zarf("package", "deploy", path, "--confirm")
 	expectedOutString = "variable 'SITE_NAME' must be '--set' when using the '--confirm' flag"
+	require.Contains(t, stdErr, "", expectedOutString)
+
+	// Test that specifying an invalid variable value results in an error
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--set", "SITE_NAME=#INVALID", "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+	expectedOutString = "variable \"SITE_NAME\" does not match pattern "
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Deploy nginx
