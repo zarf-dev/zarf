@@ -31,7 +31,7 @@ func TestVariables(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf("package", "create", evilSrc, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
+	require.Error(t, err, stdOut, stdErr)
 	expectedOutString := "variable \"HELLO_KITTEH\" does not match pattern "
 	require.Contains(t, stdErr, "", expectedOutString)
 

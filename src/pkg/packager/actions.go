@@ -115,6 +115,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 			for _, v := range action.SetVariables {
 				p.setVariableInConfig(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
 				if err := p.checkVariablePattern(v.Name, v.Pattern); err != nil {
+					message.WarnErr(err, err.Error())
 					return err
 				}
 			}

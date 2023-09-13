@@ -50,7 +50,7 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo
 	// Convert to JSON
 	dockerConfigData, err := json.Marshal(dockerConfigJSON)
 	if err != nil {
-		message.WarnErrorf(err, "Unable to marshal the .dockerconfigjson secret data for the image pull secret")
+		message.WarnErrf(err, "Unable to marshal the .dockerconfigjson secret data for the image pull secret")
 	}
 
 	// Add to the secret data
@@ -97,7 +97,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(state *types.ZarfState) {
 				if !reflect.DeepEqual(currentRegistrySecret.Data, newRegistrySecret.Data) {
 					// Create or update the zarf registry secret
 					if err := c.CreateOrUpdateSecret(newRegistrySecret); err != nil {
-						message.WarnErrorf(err, "Problem creating registry secret for the %s namespace", namespace.Name)
+						message.WarnErrf(err, "Problem creating registry secret for the %s namespace", namespace.Name)
 					}
 				}
 			}
@@ -131,7 +131,7 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(state *types.ZarfState) {
 				if !reflect.DeepEqual(currentGitSecret.StringData, newGitSecret.StringData) {
 					// Create or update the zarf git secret
 					if err := c.CreateOrUpdateSecret(newGitSecret); err != nil {
-						message.WarnErrorf(err, "Problem creating git server secret for the %s namespace", namespace.Name)
+						message.WarnErrf(err, "Problem creating git server secret for the %s namespace", namespace.Name)
 					}
 				}
 			}

@@ -94,5 +94,5 @@ func (p *ProgressBar) Stop() {
 // Errorf marks the ProgressBar as failed in the CLI.
 func (p *ProgressBar) Errorf(err error, format string, a ...any) {
 	p.Stop()
-	WarnErrorf(err, format, a...)
+	WarnErrf(err, format, a...)
 }
