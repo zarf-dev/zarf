@@ -166,10 +166,6 @@ export interface RegistryInfo {
 
 export interface ZarfPackageOptions {
     /**
-     * Skip waiting for external webhooks to execute as each package component is deployed
-     */
-    componentWebhooks: boolean;
-    /**
      * Comma separated list of optional components
      */
     optionalComponents: string;
@@ -1466,7 +1462,6 @@ const typeMap: any = {
         { json: "secret", js: "secret", typ: "" },
     ], false),
     "ZarfPackageOptions": o([
-        { json: "componentWebhooks", js: "componentWebhooks", typ: true },
         { json: "optionalComponents", js: "optionalComponents", typ: "" },
         { json: "packagePath", js: "packagePath", typ: "" },
         { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
