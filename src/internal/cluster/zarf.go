@@ -59,11 +59,7 @@ func (c *Cluster) GetDeployedPackage(packageName string) (deployedPackage types.
 		return deployedPackage, err
 	}
 
-	if err = json.Unmarshal(secret.Data["data"], &deployedPackage); err != nil {
-		return deployedPackage, err
-	}
-
-	return deployedPackage, nil
+	return deployedPackage, json.Unmarshal(secret.Data["data"], &deployedPackage)
 }
 
 // StripZarfLabelsAndSecretsFromNamespaces removes metadata and secrets from existing namespaces no longer manged by Zarf.
