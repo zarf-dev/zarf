@@ -112,7 +112,7 @@ func (p *Packager) attemptClusterChecks() (err error) {
 	if p.cluster, err = cluster.NewCluster(); p.cluster != nil {
 
 		// Check if the package has already been deployed and get its generation
-		if existingDeployedPackage, err := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); err == nil {
+		if existingDeployedPackage, err := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
 			// If there is no error, then this package has been deployed before. Figure out what generation we are on.
 			// Increment the package generation within the secret
 			p.generation = existingDeployedPackage.Generation + 1
