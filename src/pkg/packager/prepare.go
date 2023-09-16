@@ -105,17 +105,14 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 		// resources are a slice of generic structs that represent parsed K8s resources
 		var resources []*unstructured.Unstructured
 
-		componentPath, err := p.createOrGetComponentPaths(component)
+		componentPaths, err := p.layout.Components.Create(component)
 		if err != nil {
-			return nil, fmt.Errorf("unable to create component paths: %s", err.Error())
+			return nil, err
 		}
 
 		chartOverrides := make(map[string]string)
 
 		if len(component.Charts) > 0 {
-			_ = utils.CreateDirectory(componentPath.Charts, 0700)
-			_ = utils.CreateDirectory(componentPath.Values, 0700)
-
 			for _, chart := range component.Charts {
 
 				helmCfg := helm.Helm{
@@ -125,13 +122,13 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 				helmCfg.Cfg.State = &types.ZarfState{}
 
-				err := helmCfg.PackageChart(componentPath.Charts)
+				err := helmCfg.PackageChart(componentPaths.Charts)
 				if err != nil {
 					return nil, fmt.Errorf("unable to package the chart %s: %s", chart.URL, err.Error())
 				}
 
 				for idx, path := range chart.ValuesFiles {
-					dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
+					dst := helm.StandardName(componentPaths.Values, chart) + "-" + strconv.Itoa(idx)
 					if helpers.IsURL(path) {
 						if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
 							return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
@@ -145,7 +142,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 				// Generate helm templates to pass to gitops engine
 				helmCfg = helm.Helm{
-					BasePath:          componentPath.Base,
+					BasePath:          componentPaths.Base,
 					Chart:             chart,
 					ChartLoadOverride: chartOverrides[chart.Name],
 					KubeVersion:       kubeVersionOverride,
@@ -165,7 +162,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				if overridePath, ok := chartOverrides[chart.Name]; ok {
 					chartTarball = overridePath
 				} else {
-					chartTarball = helm.StandardName(componentPath.Charts, helmCfg.Chart) + ".tgz"
+					chartTarball = helm.StandardName(componentPaths.Charts, helmCfg.Chart) + ".tgz"
 				}
 
 				annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
@@ -180,15 +177,11 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 		}
 
 		if len(component.Manifests) > 0 {
-			if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
-				return nil, fmt.Errorf("unable to create the manifest path %s: %s", componentPath.Manifests, err.Error())
-			}
-
 			for _, manifest := range component.Manifests {
 				for idx, k := range manifest.Kustomizations {
 					// Generate manifests from kustomizations and place in the package
 					kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-					destination := filepath.Join(componentPath.Manifests, kname)
+					destination := filepath.Join(componentPaths.Manifests, kname)
 					if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 						return nil, fmt.Errorf("unable to build the kustomization for %s: %s", k, err.Error())
 					}
@@ -198,7 +191,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				for idx, f := range manifest.Files {
 					if helpers.IsURL(f) {
 						mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
-						destination := filepath.Join(componentPath.Manifests, mname)
+						destination := filepath.Join(componentPaths.Manifests, mname)
 						if err := utils.DownloadToFile(f, destination, component.DeprecatedCosignKeyPath); err != nil {
 							return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 						}

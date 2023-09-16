@@ -24,6 +24,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -40,10 +41,11 @@ func (p *Packager) Deploy() (err error) {
 		message.Debug(err)
 	}
 
-	if err = p.source.LoadPackage(p.tmp); err != nil {
+	if err = p.source.LoadPackage(p.layout); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML])
+	// TODO check everything was loaded?
+	p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.layout.ZarfYAML)
 	if err != nil {
 		return fmt.Errorf("unable to read the package: %w", err)
 	}
@@ -69,9 +71,9 @@ func (p *Packager) Deploy() (err error) {
 
 	// If SBOMs were loaded, temporarily place them in the deploy directory
 	var sbomViewFiles []string
-	if p.tmp.KeyExists(types.SBOMDir) {
-		sbomViewFiles, _ = filepath.Glob(filepath.Join(p.tmp[types.SBOMDir], "sbom-viewer-*"))
-		_, err := sbom.OutputSBOMFiles(p.tmp[types.SBOMDir], types.SBOMDir, "")
+	if !utils.InvalidPath(p.layout.SBOMs.Base) {
+		sbomViewFiles, _ = filepath.Glob(filepath.Join(p.layout.SBOMs.Base, "sbom-viewer-*"))
+		_, err := sbom.OutputSBOMFiles(p.layout.SBOMs.Base, types.SBOMDir, "")
 		if err != nil {
 			// Don't stop the deployment, let the user decide if they want to continue the deployment
 			message.Warnf("Unable to process the SBOM files for this package: %s", err.Error())
@@ -201,7 +203,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		p.cluster.StartInjectionMadness(p.tmp, component.Images)
+		p.cluster.StartInjectionMadness(p.layout.Images.Base, component.Images)
 	}
 
 	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
@@ -222,10 +224,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 // Deploy a Zarf Component.
 func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
 	// Toggles for general deploy operations
-	componentPath, err := p.createOrGetComponentPaths(component)
-	if err != nil {
-		return charts, fmt.Errorf("unable to create the component paths: %w", err)
-	}
+	componentPath := p.layout.Components.Dirs[component.Name]
 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
@@ -285,7 +284,11 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	if hasDataInjections {
 		waitGroup := sync.WaitGroup{}
 		defer waitGroup.Wait()
-		p.performDataInjections(&waitGroup, componentPath, component.DataInjections)
+
+		for idx, data := range component.DataInjections {
+			waitGroup.Add(1)
+			go p.cluster.HandleDataInjection(&waitGroup, data, componentPath, idx)
+		}
 	}
 
 	if hasCharts || hasManifests {
@@ -328,7 +331,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		}
 
 		// Replace temp target directory and home directory
-		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base(), 1)
+		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.layout.Base, 1)
 		file.Target = config.GetAbsHomePath(file.Target)
 
 		fileList := []string{}
@@ -440,7 +443,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	}
 
 	imgConfig := images.ImgConfig{
-		ImagesPath:    p.tmp[types.ImagesDir],
+		ImagesPath:    p.layout.Images.Base,
 		ImgList:       componentImages,
 		NoChecksum:    noImgChecksum,
 		RegInfo:       p.cfg.State.RegistryInfo,
@@ -488,20 +491,8 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 	return nil
 }
 
-// Async move data into a container running in a pod on the k8s cluster.
-func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPath types.ComponentPaths, dataInjections []types.ZarfDataInjection) {
-	if len(dataInjections) > 0 {
-		message.Info("Loading data injections")
-	}
-
-	for idx, data := range dataInjections {
-		waitGroup.Add(1)
-		go p.cluster.HandleDataInjection(waitGroup, data, componentPath, idx)
-	}
-}
-
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 
 		// zarf magic for the value file

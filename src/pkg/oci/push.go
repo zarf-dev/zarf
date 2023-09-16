@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -99,10 +100,10 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 }
 
 // PublishPackage publishes the package to the remote repository.
-func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths types.PackagePathsMap, concurrency int) error {
+func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
 	ctx := o.ctx
 	// source file store
-	src, err := file.New(paths.Base())
+	src, err := file.New(paths.Base)
 	if err != nil {
 		return err
 	}
@@ -114,7 +115,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths types.PackageP
 
 	// Get all of the layers in the package
 	var descs []ocispec.Descriptor
-	for name, path := range paths {
+	for name, path := range paths.Files() {
 		if utils.IsDir(path) {
 			continue
 		}

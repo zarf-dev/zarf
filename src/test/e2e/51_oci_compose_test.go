@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
@@ -237,7 +238,7 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 		}
 
 		base := filepath.Join(unpackedPath, "components", component.Name)
-		componentPaths := types.ComponentPaths{
+		componentPaths := layout.ComponentPaths{
 			Base:           base,
 			Temp:           filepath.Join(base, types.TempDir),
 			Files:          filepath.Join(base, types.FilesDir),

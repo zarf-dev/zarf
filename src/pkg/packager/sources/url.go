@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -36,7 +37,7 @@ func (s *URLSource) Collect(dstTarball string) error {
 }
 
 // LoadPackage loads a package from an http, https or sget URL.
-func (s *URLSource) LoadPackage(dst types.PackagePathsMap) (err error) {
+func (s *URLSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -59,7 +60,7 @@ func (s *URLSource) LoadPackage(dst types.PackagePathsMap) (err error) {
 }
 
 // LoadPackageMetadata loads a package's metadata from an http, https or sget URL.
-func (s *URLSource) LoadPackageMetadata(dst types.PackagePathsMap, wantSBOM bool) (err error) {
+func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool) (err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err

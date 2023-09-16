@@ -14,10 +14,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/mholt/archiver/v3"
 )
 
 // composeComponents builds the composed components list for the current config.
@@ -82,7 +82,12 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	}
 
 	var cachePath string
-	var fetchedPaths []string
+
+	subPkgPaths := &layout.PackagePaths{
+		Base:     filepath.Join(pathAncestry, parent.Import.Path),
+		ZarfYAML: filepath.Join(pathAncestry, parent.Import.Path, types.ZarfYAML),
+	}
+
 	if parent.Import.URL != "" {
 		if !strings.HasSuffix(parent.Import.URL, oci.SkeletonSuffix) {
 			return child, fmt.Errorf("import URL must be a 'skeleton' package: %s", parent.Import.URL)
@@ -98,7 +103,6 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			return child, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
 		}
 
-		componentLayer := filepath.Join(types.ComponentsDir, fmt.Sprintf("%s.tar", childComponentName))
 		err = p.SetOCIRemote(parent.Import.URL)
 		if err != nil {
 			return child, err
@@ -107,10 +111,12 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		if err != nil {
 			return child, err
 		}
-		fetchedPaths, err = p.remote.PullPackage(cachePath, 3, manifest.Locate(componentLayer))
+		tb := filepath.Join(types.ComponentsDir, fmt.Sprintf("%s.tar", childComponentName))
+		fetchedLayers, err := p.remote.PullPackage(cachePath, config.CommonOptions.OCIConcurrency, manifest.Locate(tb))
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
+		subPkgPaths.SetFromLayers(fetchedLayers)
 		cwd, err := os.Getwd()
 		if err != nil {
 			return child, fmt.Errorf("unable to get current working directory: %w", err)
@@ -123,19 +129,19 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		parent.Import.Path = rel
 	}
 
-	subPkgPaths := types.PackagePathsMap{}
-	subPkgPaths[types.BaseDir] = filepath.Join(pathAncestry, parent.Import.Path)
-	for _, fetchedPath := range fetchedPaths {
-		subPkgPaths[fetchedPath] = filepath.Join(pathAncestry, parent.Import.Path, fetchedPath)
-	}
-	// always "load" the zarf.yaml
-	if _, ok := subPkgPaths[types.ZarfYAML]; !ok {
-		subPkgPaths[types.ZarfYAML] = filepath.Join(pathAncestry, parent.Import.Path, types.ZarfYAML)
+	var subPkg types.ZarfPackage
+	if err := utils.ReadYaml(subPkgPaths.ZarfYAML, &subPkg); err != nil {
+		return child, err
 	}
 
-	subPkg, err := p.getSubPackage(subPkgPaths)
-	if err != nil {
-		return child, fmt.Errorf("unable to get sub package: %w", err)
+	// Merge in child package variables (only if the variable does not exist in parent).
+	for _, importedVariable := range subPkg.Variables {
+		p.injectImportedVariable(importedVariable)
+	}
+
+	// Merge in child package constants (only if the constant does not exist in parent).
+	for _, importedConstant := range subPkg.Constants {
+		p.injectImportedConstant(importedConstant)
 	}
 
 	// Find the child component from the imported package that matches our arch.
@@ -163,27 +169,16 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	// If it's OCI, we need to unpack the component tarball
 	if parent.Import.URL != "" {
-		dir := filepath.Join(cachePath, types.ComponentsDir, child.Name)
-		componentTarball := fmt.Sprintf("%s.tar", dir)
-		parent.Import.Path = filepath.Join(parent.Import.Path, types.ComponentsDir, child.Name)
-		if !utils.InvalidPath(componentTarball) {
-			if !utils.InvalidPath(dir) {
-				err = os.RemoveAll(dir)
-				if err != nil {
-					return child, fmt.Errorf("unable to remove composed component cache path %s: %w", cachePath, err)
+		if err := subPkgPaths.Components.Unarchive(child); err != nil {
+			if os.IsNotExist(err) {
+				// If the tarball doesn't exist (skeleton component had no local resources), we need to create the directory anyways in case there are actions
+				if err := utils.CreateDirectory(parent.Import.Path, 0700); err != nil {
+					return child, fmt.Errorf("unable to create composed component cache path %s: %w", cachePath, err)
 				}
 			}
-			err = archiver.Unarchive(componentTarball, filepath.Join(cachePath, types.ComponentsDir))
-			if err != nil {
-				return child, fmt.Errorf("unable to unpack composed component tarball: %w", err)
-			}
-		} else {
-			// If the tarball doesn't exist (skeleton component had no local resources), we need to create the directory anyways in case there are actions
-			err := utils.CreateDirectory(dir, 0700)
-			if err != nil {
-				return child, fmt.Errorf("unable to create composed component cache path %s: %w", cachePath, err)
-			}
+			return child, fmt.Errorf("unable to unarchive component: %w", err)
 		}
+		parent.Import.Path = subPkgPaths.Components.Dirs[child.Name].Base
 	}
 
 	pathAncestry = filepath.Join(pathAncestry, parent.Import.Path)
@@ -408,26 +403,6 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 	if override.Only.LocalOS != "" {
 		target.Only.LocalOS = override.Only.LocalOS
 	}
-}
-
-// Reads the locally imported zarf.yaml.
-func (p *Packager) getSubPackage(paths types.PackagePathsMap) (importedPackage types.ZarfPackage, err error) {
-	path := paths[types.ZarfYAML]
-	if err := utils.ReadYaml(path, &importedPackage); err != nil {
-		return importedPackage, err
-	}
-
-	// Merge in child package variables (only if the variable does not exist in parent).
-	for _, importedVariable := range importedPackage.Variables {
-		p.injectImportedVariable(importedVariable)
-	}
-
-	// Merge in child package constants (only if the constant does not exist in parent).
-	for _, importedConstant := range importedPackage.Constants {
-		p.injectImportedConstant(importedConstant)
-	}
-
-	return
 }
 
 // Prefix file path with importPath if original file path is not a url.

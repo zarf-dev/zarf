@@ -16,6 +16,8 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
@@ -27,11 +29,12 @@ type TarballSource struct {
 }
 
 // LoadPackage loads a package from a tarball.
-func (s *TarballSource) LoadPackage(dst types.PackagePathsMap) (err error) {
+func (s *TarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 	var pkg types.ZarfPackage
 
 	message.Debugf("Loading package from %q", s.PackageSource)
-	message.Debugf("Loaded package base directory: %q", dst.Base())
+
+	pathsExtracted := []string{}
 
 	err = archiver.Walk(s.PackageSource, func(f archiver.File) error {
 		if f.IsDir() {
@@ -43,19 +46,15 @@ func (s *TarballSource) LoadPackage(dst types.PackagePathsMap) (err error) {
 		}
 		path := header.Name
 
-		// optimistically set the default relative path
-		if err := dst.SetDefaultRelative(path); err != nil {
-			return err
-		}
-
 		dir := filepath.Dir(path)
 		if dir != "." {
-			if err := os.MkdirAll(filepath.Join(dst.Base(), dir), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Join(dst.Base, dir), 0755); err != nil {
 				return err
 			}
 		}
 
-		dstPath := dst[path]
+		dstPath := filepath.Join(dst.Base, path)
+		pathsExtracted = append(pathsExtracted, dstPath)
 		dst, err := os.Create(dstPath)
 		if err != nil {
 			return err
@@ -74,7 +73,9 @@ func (s *TarballSource) LoadPackage(dst types.PackagePathsMap) (err error) {
 		return err
 	}
 
-	if err := utils.ReadYaml(dst[types.ZarfYAML], &pkg); err != nil {
+	dst.SetFromPaths(pathsExtracted)
+
+	if err := utils.ReadYaml(dst.ZarfYAML, &pkg); err != nil {
 		return err
 	}
 
@@ -90,7 +91,7 @@ func (s *TarballSource) LoadPackage(dst types.PackagePathsMap) (err error) {
 		return err
 	}
 
-	if err := LoadSBOMs(dst); err != nil {
+	if err := dst.SBOMs.Unarchive(); err != nil {
 		return err
 	}
 
@@ -98,38 +99,28 @@ func (s *TarballSource) LoadPackage(dst types.PackagePathsMap) (err error) {
 }
 
 // LoadPackageMetadata loads a package's metadata from a tarball.
-func (s *TarballSource) LoadPackageMetadata(dst types.PackagePathsMap, wantSBOM bool) (err error) {
+func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool) (err error) {
 	var pkg types.ZarfPackage
 
-	for _, rel := range dst.MetadataKeys() {
-		if err := archiver.Extract(s.PackageSource, rel, dst.Base()); err != nil {
-			return err
-		}
-		if err := dst.SetDefaultRelative(rel); err != nil {
-			return err
-		}
-		// archiver.Extract will not return an error if the file does not exist, so we must manually check and unset the key if necessary
-		if utils.InvalidPath(dst[rel]) {
-			dst.Unset(rel)
-		}
-	}
+	toExtract := oci.PackageAlwaysPull
 	if wantSBOM {
-		if err := archiver.Extract(s.PackageSource, types.SBOMTar, dst.Base()); err != nil {
-			return err
-		}
-		if err := dst.SetDefaultRelative(types.SBOMTar); err != nil {
-			return err
-		}
-		// archiver.Extract will not return an error if the file does not exist, so we must manually check and unset the key if necessary
-		if utils.InvalidPath(dst[types.SBOMTar]) {
-			dst.Unset(types.SBOMTar)
-		}
+		toExtract = append(toExtract, types.SBOMTar)
 	}
-	if !dst.KeyExists(types.SBOMTar) && wantSBOM {
-		return fmt.Errorf("package does not contain SBOMs")
+	pathsExtracted := []string{}
+
+	for _, rel := range toExtract {
+		if err := archiver.Extract(s.PackageSource, rel, dst.Base); err != nil {
+			return err
+		}
+		// archiver.Extract will not return an error if the file does not exist, so we must manually check
+		if !utils.InvalidPath(filepath.Join(dst.Base, rel)) {
+			pathsExtracted = append(pathsExtracted, filepath.Join(dst.Base, rel))
+		}
 	}
 
-	if err := utils.ReadYaml(dst[types.ZarfYAML], &pkg); err != nil {
+	dst.SetFromPaths(pathsExtracted)
+
+	if err := utils.ReadYaml(dst.ZarfYAML, &pkg); err != nil {
 		return err
 	}
 
@@ -146,7 +137,7 @@ func (s *TarballSource) LoadPackageMetadata(dst types.PackagePathsMap, wantSBOM 
 	}
 
 	// unpack sboms.tar
-	if err := LoadSBOMs(dst); err != nil {
+	if err := dst.SBOMs.Unarchive(); err != nil {
 		return err
 	}
 
@@ -236,7 +227,7 @@ func (s *SplitTarballSource) Collect(dstTarball string) error {
 }
 
 // LoadPackage loads a package from a split tarball.
-func (s *SplitTarballSource) LoadPackage(dst types.PackagePathsMap) (err error) {
+func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 	dstTarball := strings.Replace(s.PackageSource, ".part000", "", 1)
 
 	if err := s.Collect(dstTarball); err != nil {
@@ -253,7 +244,7 @@ func (s *SplitTarballSource) LoadPackage(dst types.PackagePathsMap) (err error) 
 }
 
 // LoadPackageMetadata loads a package's metadata from a split tarball.
-func (s *SplitTarballSource) LoadPackageMetadata(dst types.PackagePathsMap, wantSBOM bool) (err error) {
+func (s *SplitTarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool) (err error) {
 	dstTarball := strings.Replace(s.PackageSource, ".part000", "", 1)
 
 	if err := s.Collect(dstTarball); err != nil {

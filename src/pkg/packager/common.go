@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -23,6 +22,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
@@ -32,7 +32,7 @@ type Packager struct {
 	cfg            *types.PackagerConfig
 	cluster        *cluster.Cluster
 	remote         *oci.OrasRemote
-	tmp            types.PackagePathsMap
+	layout         *layout.PackagePaths
 	arch           string
 	warnings       []string
 	valueTemplate  *template.Values
@@ -70,9 +70,9 @@ func WithCluster(cluster *cluster.Cluster) Modifier {
 // WithTemp sets the temp directory for the packager.
 //
 // This temp directory is used as the destination where p.source loads the package.
-func WithTemp(tmp types.PackagePathsMap) Modifier {
+func WithTemp(base string) Modifier {
 	return func(p *Packager) {
-		p.tmp = tmp
+		p.layout = layout.New(base)
 	}
 }
 
@@ -95,8 +95,8 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	}
 
 	var (
-		err       error
-		pkgConfig = &Packager{
+		err  error
+		pkgr = &Packager{
 			cfg: cfg,
 		}
 	)
@@ -109,21 +109,21 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	}
 
 	for _, mod := range mods {
-		mod(pkgConfig)
+		mod(pkgr)
 	}
 
-	if pkgConfig.source == nil {
+	if pkgr.source == nil {
 		return nil, fmt.Errorf("no source provided")
 	}
 
 	// If the temp directory is not set, set it to the default
-	if pkgConfig.tmp == nil {
-		if err = pkgConfig.setTempDirectory(config.CommonOptions.TempDirectory); err != nil {
+	if pkgr.layout == nil {
+		if err = pkgr.setTempDirectory(config.CommonOptions.TempDirectory); err != nil {
 			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 		}
 	}
 
-	return pkgConfig, nil
+	return pkgr, nil
 }
 
 /*
@@ -133,15 +133,15 @@ Note: This function creates a tmp directory that should be cleaned up with p.Cle
 */
 func NewOrDie(config *types.PackagerConfig, mods ...Modifier) *Packager {
 	var (
-		err       error
-		pkgConfig *Packager
+		err  error
+		pkgr *Packager
 	)
 
-	if pkgConfig, err = New(config, mods...); err != nil {
+	if pkgr, err = New(config, mods...); err != nil {
 		message.Fatalf(err, "Unable to setup the package config: %s", err.Error())
 	}
 
-	return pkgConfig
+	return pkgr
 }
 
 // setTempDirectory sets the temp directory for the packager.
@@ -151,9 +151,7 @@ func (p *Packager) setTempDirectory(path string) error {
 		return fmt.Errorf("unable to create package temp paths: %w", err)
 	}
 
-	p.tmp = types.PackagePathsMap{
-		types.BaseDir: dir,
-	}
+	p.layout = layout.New(dir)
 	return nil
 }
 
@@ -191,70 +189,8 @@ func (p *Packager) GetPackageName() string {
 // ClearTempPaths removes the temp directory and any files within it.
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
-	_ = os.RemoveAll(p.tmp.Base())
+	_ = os.RemoveAll(p.layout.Base)
 	_ = os.RemoveAll(types.SBOMDir)
-}
-
-func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
-	if !p.tmp.KeyExists(types.ComponentsDir) {
-		p.tmp.SetDefaultRelative(types.ComponentsDir)
-	}
-
-	if err := utils.CreateDirectory(p.tmp[types.ComponentsDir], 0700); err != nil {
-		return paths, err
-	}
-
-	paths = p.tmp.GetComponentPaths(component.Name)
-
-	if err := utils.CreateDirectory(paths.Base, 0700); err != nil {
-		return paths, err
-	}
-
-	if len(component.Files) > 0 {
-		err = utils.CreateDirectory(paths.Files, 0700)
-		if err != nil {
-			return paths, err
-		}
-	}
-
-	if len(component.Charts) > 0 {
-		err = utils.CreateDirectory(paths.Charts, 0700)
-		if err != nil {
-			return paths, err
-		}
-		for _, chart := range component.Charts {
-			if len(chart.ValuesFiles) > 0 {
-				err = utils.CreateDirectory(paths.Values, 0700)
-				if err != nil {
-					return paths, err
-				}
-				break
-			}
-		}
-	}
-
-	if len(component.Repos) > 0 {
-		err = utils.CreateDirectory(paths.Repos, 0700)
-		if err != nil {
-			return paths, err
-		}
-	}
-
-	if len(component.Manifests) > 0 {
-		err = utils.CreateDirectory(paths.Manifests, 0700)
-		if err != nil {
-			return paths, err
-		}
-	}
-
-	if len(component.DataInjections) > 0 {
-		err = utils.CreateDirectory(paths.DataInjections, 0700)
-		if err != nil {
-			return paths, err
-		}
-	}
-
-	return paths, err
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
@@ -314,40 +250,15 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 	return nil
 }
 
-func (p *Packager) archiveComponent(component types.ZarfComponent) error {
-	componentPath := p.tmp.GetComponentPaths(component.Name).Base
-	size, err := utils.GetDirSize(componentPath)
-	if err != nil {
-		return err
-	}
-	if size > 0 {
-		tb := fmt.Sprintf("%s.tar", componentPath)
-		message.Debugf("Archiving component %q to %q", component.Name, tb)
-		err := archiver.Archive([]string{componentPath}, tb)
-		if err != nil {
-			return err
-		}
-		// Add the tarball to the tmp map
-		// e.g. tmp["components/component-name.tar"] = "/tmp/zarf-123456789/components/component-name.tar"
-		if err := p.tmp.SetDefaultRelative(filepath.Join(types.ComponentsDir, fmt.Sprintf("%s.tar", component.Name))); err != nil {
-			return err
-		}
-	} else {
-		message.Debugf("Component %q is empty, skipping archiving", component.Name)
-	}
-	return os.RemoveAll(componentPath)
-}
-
 func (p *Packager) archivePackage(destinationTarball string) error {
-	sourceDir := p.tmp.Base()
-	spinner := message.NewProgressSpinner("Writing %s to %s", sourceDir, destinationTarball)
+	spinner := message.NewProgressSpinner("Writing %s to %s", p.layout.Base, destinationTarball)
 	defer spinner.Stop()
 	// Make the archive
-	archiveSrc := []string{sourceDir + string(os.PathSeparator)}
+	archiveSrc := []string{p.layout.Base + string(os.PathSeparator)}
 	if err := archiver.Archive(archiveSrc, destinationTarball); err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
-	spinner.Updatef("Wrote %s to %s", sourceDir, destinationTarball)
+	spinner.Updatef("Wrote %s to %s", p.layout.Base, destinationTarball)
 
 	f, err := os.Stat(destinationTarball)
 	if err != nil {
@@ -411,16 +322,13 @@ func (p *Packager) SetOCIRemote(url string) error {
 }
 
 func (p *Packager) signPackage(signingKeyPath, signingKeyPassword string) error {
-	if err := p.tmp.SetDefaultRelative(types.PackageSignature); err != nil {
-		return err
-	}
 	passwordFunc := func(_ bool) ([]byte, error) {
 		if signingKeyPath != "" {
 			return []byte(signingKeyPassword), nil
 		}
 		return interactive.PromptSigPassword()
 	}
-	_, err := utils.CosignSignBlob(p.tmp[types.ZarfYAML], p.tmp[types.PackageSignature], signingKeyPath, passwordFunc)
+	_, err := utils.CosignSignBlob(p.layout.ZarfYAML, p.layout.Signature, signingKeyPath, passwordFunc)
 	if err != nil {
 		return fmt.Errorf("unable to sign the package: %w", err)
 	}

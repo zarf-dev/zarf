@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -21,18 +22,18 @@ func (p *Packager) Mirror() (err error) {
 	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
-	if err = p.source.LoadPackage(p.tmp); err != nil {
+	if err = p.source.LoadPackage(p.layout); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML]); err != nil {
+	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
 
 	// If SBOMs were loaded, temporarily place them in the deploy directory
 	var sbomViewFiles []string
-	if p.tmp.KeyExists(types.SBOMDir) {
-		sbomViewFiles, _ = filepath.Glob(filepath.Join(p.tmp[types.SBOMDir], "sbom-viewer-*"))
-		_, err := sbom.OutputSBOMFiles(p.tmp[types.SBOMDir], types.SBOMDir, "")
+	if !utils.InvalidPath(p.layout.SBOMs.Base) {
+		sbomViewFiles, _ = filepath.Glob(filepath.Join(p.layout.SBOMs.Base, "sbom-viewer-*"))
+		_, err := sbom.OutputSBOMFiles(p.layout.SBOMs.Base, types.SBOMDir, "")
 		if err != nil {
 			// Don't stop the deployment, let the user decide if they want to continue the deployment
 			message.Warnf("Unable to process the SBOM files for this package: %s", err.Error())
@@ -67,11 +68,7 @@ func (p *Packager) Mirror() (err error) {
 
 // mirrorComponent mirrors a Zarf Component.
 func (p *Packager) mirrorComponent(component types.ZarfComponent) error {
-
-	componentPath, err := p.createOrGetComponentPaths(component)
-	if err != nil {
-		return fmt.Errorf("unable to create the component paths: %w", err)
-	}
+	componentPaths := p.layout.Components.Dirs[component.Name]
 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
@@ -86,7 +83,7 @@ func (p *Packager) mirrorComponent(component types.ZarfComponent) error {
 	}
 
 	if hasRepos {
-		if err = p.pushReposToRepository(componentPath.Repos, component.Repos); err != nil {
+		if err := p.pushReposToRepository(componentPaths.Repos, component.Repos); err != nil {
 			return fmt.Errorf("unable to push the repos to the repository: %w", err)
 		}
 	}

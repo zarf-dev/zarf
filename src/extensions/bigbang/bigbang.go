@@ -15,6 +15,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -40,7 +41,7 @@ var tenMins = metav1.Duration{
 
 // Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
-func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	var err error
 	if err := utils.CreateDirectory(tmpPaths.Temp, 0700); err != nil {
 		return c, fmt.Errorf("unable to component temp directory: %w", err)
@@ -251,7 +252,7 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 }
 
 // Skeletonize mutates a component so that the valuesFiles can be contained inside a skeleton package
-func Skeletonize(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
 		// Define the name as the file name without the extension.
 		baseName := strings.TrimSuffix(valuesFile, filepath.Ext(valuesFile))

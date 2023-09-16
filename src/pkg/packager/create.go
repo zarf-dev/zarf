@@ -23,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -118,7 +119,7 @@ func (p *Packager) Create() (err error) {
 	}
 
 	var combinedImageList []string
-	componentSBOMs := map[string]*types.ComponentSBOM{}
+	componentSBOMs := map[string]*layout.ComponentSBOM{}
 	for idx, component := range p.cfg.Pkg.Components {
 		onCreate := component.Actions.OnCreate
 		onFailure := func() {
@@ -127,8 +128,7 @@ func (p *Packager) Create() (err error) {
 			}
 		}
 		isSkeleton := false
-		err := p.addComponent(idx, component, isSkeleton)
-		if err != nil {
+		if err := p.addComponent(idx, component, isSkeleton); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to add component: %w", err)
 		}
@@ -149,12 +149,6 @@ func (p *Packager) Create() (err error) {
 
 		// Combine all component images into a single entry for efficient layer reuse.
 		combinedImageList = append(combinedImageList, component.Images...)
-
-		// Remove the temp directory for this component before archiving.
-		err = os.RemoveAll(filepath.Join(p.tmp.GetComponentPaths(component.Name).Temp))
-		if err != nil {
-			message.Warnf("unable to remove temp directory for component %s, component tarball may contain unused artifacts: %s", component.Name, err.Error())
-		}
 	}
 
 	imgList := helpers.Unique(combinedImageList)
@@ -162,18 +156,13 @@ func (p *Packager) Create() (err error) {
 	// Images are handled separately from other component assets.
 	if len(imgList) > 0 {
 
-		// optimistically "load" certain paths
-		if err := p.tmp.SetDefaultImagesKeys(); err != nil {
-			return err
-		}
-
 		message.HeaderInfof("📦 PACKAGE IMAGES")
 
 		pulled := map[name.Tag]v1.Image{}
 
 		doPull := func() (err error) {
 			imgConfig := images.ImgConfig{
-				ImagesPath:        p.tmp[types.ImagesDir],
+				ImagesPath:        p.layout.Images.Base,
 				ImgList:           imgList,
 				Insecure:          config.CommonOptions.Insecure,
 				Architectures:     []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
@@ -199,41 +188,20 @@ func (p *Packager) Create() (err error) {
 				if err != nil {
 					return fmt.Errorf("unable to get layer digest: %w", err)
 				}
-				rel := filepath.Join(oci.ZarfPackageImagesBlobsDir, sha.Hex)
-				if !p.tmp.KeyExists(rel) {
-					abs := filepath.Join(p.tmp.Base(), rel)
-					p.tmp.SafeSet(rel, abs)
-					if utils.InvalidPath(abs) {
-						return fmt.Errorf("layer was marked as pulled but does not exist: %s", abs)
-					}
-				}
+				p.layout.Images.AddBlob(sha.Hex)
 			}
 			// mark the image config as "loaded"
 			imgCfgSha, err := img.ConfigName()
 			if err != nil {
 				return fmt.Errorf("unable to get image config name: %w", err)
 			}
-			rel := filepath.Join(oci.ZarfPackageImagesBlobsDir, imgCfgSha.Hex)
-			if !p.tmp.KeyExists(rel) {
-				abs := filepath.Join(p.tmp.Base(), rel)
-				p.tmp.SafeSet(rel, abs)
-				if utils.InvalidPath(abs) {
-					return fmt.Errorf("image config was marked as pulled but does not exist: %s", abs)
-				}
-			}
+			p.layout.Images.AddBlob(imgCfgSha.Hex)
 			// mark the manifest as "loaded"
 			manifestSha, err := img.Digest()
 			if err != nil {
 				return fmt.Errorf("unable to get image digest: %w", err)
 			}
-			rel = filepath.Join(oci.ZarfPackageImagesBlobsDir, manifestSha.Hex)
-			if !p.tmp.KeyExists(rel) {
-				abs := filepath.Join(p.tmp.Base(), rel)
-				p.tmp.SafeSet(rel, abs)
-				if utils.InvalidPath(abs) {
-					return fmt.Errorf("image manifest was marked as pulled but does not exist: %s", abs)
-				}
-			}
+			p.layout.Images.AddBlob(manifestSha.Hex)
 		}
 	}
 
@@ -241,23 +209,19 @@ func (p *Packager) Create() (err error) {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp); err != nil {
+		if err := sbom.Catalog(componentSBOMs, imgList, p.layout); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
-
-	p.tmp.Unset(types.ImagesDir)
 
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range p.cfg.Pkg.Components {
 		// Make the component a tar archive
-		err := p.archiveComponent(component)
-		if err != nil {
+		if err := p.layout.Components.Archive(component); err != nil {
 			return fmt.Errorf("unable to archive component: %s", err.Error())
 		}
 	}
-	p.tmp.Unset(types.ComponentsDir)
 
 	// In case the directory was changed, reset to prevent breaking relative target paths.
 	if originalDir != "" {
@@ -284,7 +248,7 @@ func (p *Packager) Create() (err error) {
 	}
 
 	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
-		err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp, config.CommonOptions.OCIConcurrency)
+		err := p.remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
@@ -314,17 +278,10 @@ func (p *Packager) Create() (err error) {
 	if p.cfg.CreateOpts.ViewSBOM || p.cfg.CreateOpts.SBOMOutputDir != "" {
 		outputSBOM := p.cfg.CreateOpts.SBOMOutputDir
 		var sbomDir string
-		if !p.tmp.KeyExists(types.SBOMDir) {
-			p.tmp.SetDefaultRelative(types.SBOMDir)
-			sbomDir = p.tmp[types.SBOMDir]
-			if err := utils.CreateDirectory(sbomDir, 0755); err != nil {
-				return fmt.Errorf("unable to create SBOM directory: %w", err)
-			}
+		if err := p.layout.SBOMs.Unarchive(); err != nil {
+			return fmt.Errorf("unable to unarchive SBOMs: %w", err)
 		}
-
-		if err := archiver.Unarchive(p.tmp[types.SBOMTar], sbomDir); err != nil {
-			return fmt.Errorf("unable to unarchive SBOM tarball: %w", err)
-		}
+		sbomDir = p.layout.SBOMs.Base
 
 		if outputSBOM != "" {
 			out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, p.cfg.Pkg.Metadata.Name)
@@ -342,16 +299,15 @@ func (p *Packager) Create() (err error) {
 	return nil
 }
 
-func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.ComponentSBOM, error) {
-	componentPath, err := p.createOrGetComponentPaths(component)
+func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*layout.ComponentSBOM, error) {
+	componentPaths, err := p.layout.Components.Create(component)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create the component paths: %s", err.Error())
+		return nil, err
 	}
-
 	// Create an struct to hold the SBOM information for this component.
-	componentSBOM := types.ComponentSBOM{
-		Files:         []string{},
-		ComponentPath: componentPath,
+	componentSBOM := &layout.ComponentSBOM{
+		Files:     []string{},
+		Component: componentPaths,
 	}
 
 	appendSBOMFiles := func(path string) {
@@ -364,29 +320,29 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 	}
 
 	for filesIdx, file := range component.Files {
-		path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		path := filepath.Join(componentPaths.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		appendSBOMFiles(path)
 	}
 
 	for dataIdx, data := range component.DataInjections {
-		path := filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+		path := filepath.Join(componentPaths.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 
 		appendSBOMFiles(path)
 	}
 
-	return &componentSBOM, nil
+	return componentSBOM, nil
 }
 
 func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkeleton bool) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
-	componentPath, err := p.createOrGetComponentPaths(component)
+	componentPaths, err := p.layout.Components.Create(component)
 	if err != nil {
-		return fmt.Errorf("unable to create the component paths: %s", err.Error())
+		return err
 	}
 
 	if isSkeleton && component.DeprecatedCosignKeyPath != "" {
-		dst := filepath.Join(componentPath.Base, "cosign.pub")
+		dst := filepath.Join(componentPaths.Base, "cosign.pub")
 		err := utils.CreatePathAndCopy(component.DeprecatedCosignKeyPath, dst)
 		if err != nil {
 			return err
@@ -411,7 +367,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		if isSkeleton && chart.URL == "" {
 			rel := filepath.Join(types.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
-			dst := filepath.Join(componentPath.Base, rel)
+			dst := filepath.Join(componentPaths.Base, rel)
 
 			err := utils.CreatePathAndCopy(chart.LocalPath, dst)
 			if err != nil {
@@ -420,7 +376,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
 		} else {
-			err := helmCfg.PackageChart(componentPath.Charts)
+			err := helmCfg.PackageChart(componentPaths.Charts)
 			if err != nil {
 				return err
 			}
@@ -428,7 +384,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		for valuesIdx, path := range chart.ValuesFiles {
 			rel := fmt.Sprintf("%s-%d", helm.StandardName(types.ValuesDir, chart), valuesIdx)
-			dst := filepath.Join(componentPath.Base, rel)
+			dst := filepath.Join(componentPaths.Base, rel)
 
 			if helpers.IsURL(path) {
 				if isSkeleton {
@@ -452,7 +408,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		message.Debugf("Loading %#v", file)
 
 		rel := filepath.Join(types.FilesDir, strconv.Itoa(filesIdx), filepath.Base(file.Target))
-		dst := filepath.Join(componentPath.Base, rel)
+		dst := filepath.Join(componentPaths.Base, rel)
 		destinationDir := filepath.Dir(dst)
 
 		if helpers.IsURL(file.Source) {
@@ -468,7 +424,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 					return fmt.Errorf(lang.ErrFileNameExtract, file.Source, err.Error())
 				}
 
-				compressedFile := filepath.Join(componentPath.Temp, compressedFileName)
+				compressedFile := filepath.Join(componentPaths.Temp, compressedFileName)
 
 				// If the file is an archive, download it to the componentPath.Temp
 				if err := utils.DownloadToFile(file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
@@ -488,8 +444,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		} else {
 			if file.ExtractPath != "" {
-				err = archiver.Extract(file.Source, file.ExtractPath, destinationDir)
-				if err != nil {
+				if err := archiver.Extract(file.Source, file.ExtractPath, destinationDir); err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
 				}
 			} else {
@@ -504,8 +459,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			// Make sure dst reflects the actual file or directory.
 			updatedExtractedFileOrDir := filepath.Join(destinationDir, file.ExtractPath)
 			if updatedExtractedFileOrDir != dst {
-				err = os.Rename(updatedExtractedFileOrDir, dst)
-				if err != nil {
+				if err := os.Rename(updatedExtractedFileOrDir, dst); err != nil {
 					return fmt.Errorf(lang.ErrWritingFile, dst, err)
 				}
 			}
@@ -540,7 +494,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 
 			rel := filepath.Join(types.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
-			dst := filepath.Join(componentPath.Base, rel)
+			dst := filepath.Join(componentPaths.Base, rel)
 
 			if helpers.IsURL(data.Source) {
 				if isSkeleton {
@@ -577,7 +531,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		for manifestIdx, manifest := range component.Manifests {
 			for fileIdx, path := range manifest.Files {
 				rel := filepath.Join(types.ManifestsDir, fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
-				dst := filepath.Join(componentPath.Base, rel)
+				dst := filepath.Join(componentPaths.Base, rel)
 
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", path)
@@ -604,7 +558,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
 				rel := filepath.Join(types.ManifestsDir, kname)
-				dst := filepath.Join(componentPath.Base, rel)
+				dst := filepath.Join(componentPaths.Base, rel)
 
 				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return fmt.Errorf("unable to build kustomization %s: %w", path, err)
@@ -629,7 +583,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
 			gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
-			if err := gitCfg.Pull(url, componentPath.Repos, false); err != nil {
+			if err := gitCfg.Pull(url, componentPaths.Repos, false); err != nil {
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
@@ -652,7 +606,7 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 	var checksumsData string
 
 	// Loop over the "loaded" package path map
-	for rel, abs := range p.tmp {
+	for rel, abs := range p.layout.Files() {
 		if rel == types.BaseDir {
 			continue
 		}
@@ -666,12 +620,8 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 		checksumsData += fmt.Sprintf("%s %s\n", sum, rel)
 	}
 
-	// set the default checksums path
-	if err := p.tmp.SetDefaultRelative(types.PackageChecksums); err != nil {
-		return "", err
-	}
 	// Create the checksums file
-	checksumsFilePath := p.tmp[types.PackageChecksums]
+	checksumsFilePath := p.layout.Checksums
 	if err := utils.WriteFile(checksumsFilePath, []byte(checksumsData)); err != nil {
 		return "", err
 	}

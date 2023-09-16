@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -27,12 +28,11 @@ type OCISource struct {
 }
 
 // LoadPackage loads a package from an OCI registry.
-func (s *OCISource) LoadPackage(dst types.PackagePathsMap) (err error) {
+func (s *OCISource) LoadPackage(dst *layout.PackagePaths) (err error) {
 	var pkg types.ZarfPackage
 	layersToPull := []ocispec.Descriptor{}
 
 	message.Debugf("Loading package from %q", s.PackageSource)
-	message.Debugf("Loaded package base directory: %q", dst.Base())
 
 	optionalComponents := helpers.StringToSlice(s.OptionalComponents)
 
@@ -54,18 +54,13 @@ func (s *OCISource) LoadPackage(dst types.PackagePathsMap) (err error) {
 		isPartial = false
 	}
 
-	pathsToCheck, err := s.PullPackage(dst.Base(), config.CommonOptions.OCIConcurrency, layersToPull...)
+	layersFetched, err := s.PullPackage(dst.Base, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
 		return fmt.Errorf("unable to pull the package: %w", err)
 	}
+	dst.SetFromLayers(layersFetched)
 
-	for _, path := range pathsToCheck {
-		if err := dst.SetDefaultRelative(path); err != nil {
-			return err
-		}
-	}
-
-	if err := utils.ReadYaml(dst[types.ZarfYAML], &pkg); err != nil {
+	if err := utils.ReadYaml(dst.ZarfYAML, &pkg); err != nil {
 		return err
 	}
 
@@ -81,7 +76,7 @@ func (s *OCISource) LoadPackage(dst types.PackagePathsMap) (err error) {
 		return err
 	}
 
-	if err := LoadSBOMs(dst); err != nil {
+	if err := dst.SBOMs.Unarchive(); err != nil {
 		return err
 	}
 
@@ -89,38 +84,25 @@ func (s *OCISource) LoadPackage(dst types.PackagePathsMap) (err error) {
 }
 
 // LoadPackageMetadata loads a package's metadata from an OCI registry.
-func (s *OCISource) LoadPackageMetadata(dst types.PackagePathsMap, wantSBOM bool) (err error) {
+func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool) (err error) {
 	var pkg types.ZarfPackage
-	var pathsToCheck []string
 
-	metatdataDescriptors, err := s.PullPackageMetadata(dst.Base())
+	toPull := oci.PackageAlwaysPull
+	if wantSBOM {
+		toPull = append(toPull, types.SBOMTar)
+	}
+
+	layersFetched, err := s.PullPackagePaths(toPull, dst.Base)
 	if err != nil {
 		return err
 	}
-	for _, desc := range metatdataDescriptors {
-		pathsToCheck = append(pathsToCheck, desc.Annotations[ocispec.AnnotationTitle])
-	}
+	dst.SetFromLayers(layersFetched)
 
-	if wantSBOM {
-		sbomDescriptors, err := s.PullPackageSBOM(dst.Base())
-		if err != nil {
-			return err
-		}
-		for _, desc := range sbomDescriptors {
-			pathsToCheck = append(pathsToCheck, desc.Annotations[ocispec.AnnotationTitle])
-		}
-	}
-
-	for _, path := range pathsToCheck {
-		if err := dst.SetDefaultRelative(path); err != nil {
-			return err
-		}
-	}
-	if !dst.KeyExists(types.SBOMTar) && wantSBOM {
+	if utils.InvalidPath(dst.SBOMs.Tar) && wantSBOM {
 		return fmt.Errorf("package does not contain SBOMs")
 	}
 
-	if err := utils.ReadYaml(dst[types.ZarfYAML], &pkg); err != nil {
+	if err := utils.ReadYaml(dst.ZarfYAML, &pkg); err != nil {
 		return err
 	}
 
@@ -137,7 +119,7 @@ func (s *OCISource) LoadPackageMetadata(dst types.PackagePathsMap, wantSBOM bool
 	}
 
 	// unpack sboms.tar
-	if err := LoadSBOMs(dst); err != nil {
+	if err := dst.SBOMs.Unarchive(); err != nil {
 		return err
 	}
 

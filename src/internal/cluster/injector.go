@@ -15,9 +15,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -29,18 +29,22 @@ import (
 var payloadChunkSize = 1024 * 768
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjectionMadness(tmp types.PackagePathsMap, injectorSeedTags []string) {
+func (c *Cluster) StartInjectionMadness(imagesDir string, injectorSeedTags []string) {
 	c.spinner = message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer c.spinner.Stop()
 
-	// Ensure the tmp map has all the keys we need, and set the defaults
-	for _, key := range tmp.InjectionMadnessKeys() {
-		if err := tmp.SetDefaultRelative(key); err != nil {
-			c.spinner.Fatal(err)
-		}
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		c.spinner.Fatalf(err, "Unable to create a temporary directory for the injector")
 	}
 
-	var err error
+	// TODO: gonna have to create these dirs
+	tmp := layout.InjectionMadnessPaths{
+		SeedImagesDir:        filepath.Join(tmpDir, "seed-images"),
+		InjectionBinary:      filepath.Join(tmpDir, "zarf-injector"),
+		InjectorPayloadTarGz: filepath.Join(tmpDir, "payload.tar.gz"),
+	}
+
 	var images k8s.ImageNodeMap
 	var payloadConfigmaps []string
 	var sha256sum string
@@ -54,7 +58,7 @@ func (c *Cluster) StartInjectionMadness(tmp types.PackagePathsMap, injectorSeedT
 	}
 
 	c.spinner.Updatef("Creating the injector configmap")
-	if err = c.createInjectorConfigmap(tmp[types.InjectorBinary]); err != nil {
+	if err = c.createInjectorConfigmap(tmp.InjectionBinary); err != nil {
 		c.spinner.Fatalf(err, "Unable to create the injector configmap")
 	}
 
@@ -66,12 +70,12 @@ func (c *Cluster) StartInjectionMadness(tmp types.PackagePathsMap, injectorSeedT
 	}
 
 	c.spinner.Updatef("Loading the seed image from the package")
-	if seedImages, err = c.loadSeedImages(tmp[types.ImagesDir], tmp[types.SeedImagesDir], injectorSeedTags); err != nil {
+	if seedImages, err = c.loadSeedImages(imagesDir, tmp.SeedImagesDir, injectorSeedTags); err != nil {
 		c.spinner.Fatalf(err, "Unable to load the injector seed image from the package")
 	}
 
 	c.spinner.Updatef("Loading the seed registry configmaps")
-	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigmaps(tmp[types.SeedImagesDir], tmp[types.InjectorPayloadTarGz]); err != nil {
+	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigmaps(tmp.SeedImagesDir, tmp.InjectorPayloadTarGz); err != nil {
 		c.spinner.Fatalf(err, "Unable to generate the injector payload configmaps")
 	}
 

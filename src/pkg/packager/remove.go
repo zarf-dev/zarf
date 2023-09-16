@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -35,16 +36,16 @@ func (p *Packager) Remove() (err error) {
 
 	var packageName string
 
-	if err = p.source.LoadPackageMetadata(p.tmp, false); err != nil {
+	if err = p.source.LoadPackageMetadata(p.layout, false); err != nil {
 		return err
 	}
-	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML]); err != nil {
+	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
 	p.filterComponents(&p.cfg.Pkg)
 	packageName = p.cfg.Pkg.Metadata.Name
 
-	wasSigned := p.tmp.KeyExists(types.PackageSignature)
+	wasSigned := !utils.InvalidPath(p.layout.Signature)
 
 	hasRemoveActions := false
 	// If we have package components check them for images, charts, manifests, etc

@@ -27,10 +27,10 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 	} else {
-		if err = p.source.LoadPackage(p.tmp); err != nil {
+		if err = p.source.LoadPackage(p.layout); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
-		if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.tmp[types.ZarfYAML]); err != nil {
+		if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.layout.ZarfYAML); err != nil {
 			return err
 		}
 
@@ -58,7 +58,7 @@ func (p *Packager) Publish() (err error) {
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
 
 	// Publish the package/skeleton to the registry
-	if err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp, config.CommonOptions.OCIConcurrency); err != nil {
+	if err := p.remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
 		return err
 	}
 	if strings.HasSuffix(p.remote.Repo().Reference.String(), oci.SkeletonSuffix) {
@@ -110,17 +110,14 @@ func (p *Packager) loadSkeleton() error {
 
 	for idx, component := range p.cfg.Pkg.Components {
 		isSkeleton := true
-		err := p.addComponent(idx, component, isSkeleton)
-		if err != nil {
+		if err := p.addComponent(idx, component, isSkeleton); err != nil {
 			return err
 		}
 
-		err = p.archiveComponent(component)
-		if err != nil {
-			return fmt.Errorf("unable to archive component: %s", err.Error())
+		if err := p.layout.Components.Archive(component); err != nil {
+			return err
 		}
 	}
-	p.tmp.Unset(types.ComponentsDir)
 
 	checksumChecksum, err := p.generatePackageChecksums()
 	if err != nil {

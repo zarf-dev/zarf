@@ -6,9 +6,11 @@ package sources
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -34,7 +36,7 @@ type ClusterSource struct {
 // LoadPackage loads a package from a cluster.
 //
 // This is not implemented.
-func (s *ClusterSource) LoadPackage(_ types.PackagePathsMap) error {
+func (s *ClusterSource) LoadPackage(_ *layout.PackagePaths) error {
 	return fmt.Errorf("not implemented")
 }
 
@@ -46,13 +48,13 @@ func (s *ClusterSource) Collect(_ string) error {
 }
 
 // LoadPackageMetadata loads package metadata from a cluster.
-func (s *ClusterSource) LoadPackageMetadata(dst types.PackagePathsMap, _ bool) (err error) {
+func (s *ClusterSource) LoadPackageMetadata(dst *layout.PackagePaths, _ bool) (err error) {
 	dpkg, err := s.GetDeployedPackage(s.PackageSource)
 	if err != nil {
 		return err
 	}
 
-	dst.SetDefaultRelative(types.ZarfYAML)
+	dst.ZarfYAML = filepath.Join(dst.Base, types.ZarfYAML)
 
-	return utils.WriteYaml(dst[types.ZarfYAML], dpkg.Data, 0755)
+	return utils.WriteYaml(dst.ZarfYAML, dpkg.Data, 0755)
 }
