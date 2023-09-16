@@ -19,7 +19,7 @@
     "@docusaurus/core": "2.4.1",
     "@docusaurus/preset-classic": "2.4.1",
     "@docusaurus/theme-mermaid": "2.4.1",
-    "@easyops-cn/docusaurus-search-local": "^0.35.0",
+    "@easyops-cn/docusaurus-search-local": "^0.36.0",
     "prism-react-renderer": "2.0.6",
     "custom-loaders": "file:plugins/custom-loaders"
   },
