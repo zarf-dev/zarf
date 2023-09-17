@@ -10,6 +10,7 @@ metadata:
 constants:
   - name: NGINX_VERSION
     value: "###ZARF_PKG_TMPL_NGINX_VERSION###"
+    pattern: "^[\\w\\-\\.]+$"
 
 # Demonstrates injecting custom variables into a K8s resource
 variables:
@@ -26,11 +27,13 @@ variables:
   - name: SITE_NAME
     description: The name of the site you are deploying (i.e. Lula Website)
     prompt: true
+    pattern: "^[\\w\\s\\-\\.]+$"
   # ORGANIZATION sets the organization to Defense Unicorns as a default but prompts the user if they would like to override it
   - name: ORGANIZATION
     description: The organization providing the site
     default: Defense Unicorns
     prompt: true
+    pattern: "^[\\w\\s\\-\\.]+$"
   # AWS_REGION sets the region to set in the modified-terraform file and sets `sensitive` so that it will not be saved in the log
   - name: AWS_REGION
     default: us-east-1
@@ -62,6 +65,8 @@ components:
               - name: MODIFIED_TERRAFORM_SHASUM
                 # `sensitive` is set to exclude the command output from the logs
                 sensitive: true
+                # `pattern` here will ensure that we get a properly formatted sha256 sum back from the zarf prepare command
+                pattern: "^[\\da-f]{64}$"
 
   # The following component deploys nginx to the cluster using the defined variables
   - name: variables-with-nginx

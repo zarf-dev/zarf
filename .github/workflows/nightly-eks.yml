@@ -1,7 +1,7 @@
 name: Test EKS Cluster
 on:
   schedule:
-   - cron: '0 7 * * * ' ## Every day at 0700 UTC
+   - cron: '0 7 * * *' ## Every day at 0700 UTC
 
   workflow_dispatch: ## Give us the ability to run this manually
     inputs:
@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
 
       - name: Setup golang
         uses: ./.github/actions/golang
@@ -40,7 +40,7 @@ jobs:
         uses: ./.github/actions/packages
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
+        uses: aws-actions/configure-aws-credentials@8c3f20df09ac63af7b3ae3d7c91f105f857d8497 # v4.0.0
         with:
           role-to-assume: ${{ secrets.AWS_NIGHTLY_ROLE }}
           aws-region: us-east-1
@@ -50,25 +50,23 @@ jobs:
         run: ./build/zarf package create packages/distros/eks -o build --confirm
 
       - name: Deploy the eks package
-        run: ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst --components=deploy-eks-cluster --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }},EKS_INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} --confirm
-
-      # NOTE: We are copying the secret because part of the e2e process destroys the `zarf` namespace. We still want to test the remove-ability of the eks cluster via the package.
-      - name: Copy the eks secret into a local file
         run: |
-          rm -f eks.yaml
-          ./build/zarf tools kubectl get secret -n zarf zarf-eks-yaml -o jsonpath='{.data.*}' | base64 -d > eks.yaml
+          ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.3.tar.zst \
+            --components=deploy-eks-cluster \
+            --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
+            --set=EKS_INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} \
+            --confirm
 
       - name: Run tests
         run: make test-e2e ARCH=amd64
 
-      # NOTE: We are copying the secret because part of the e2e process destroys the `zarf` namespace. We still want to test the remove-ability of the eks cluster via the package.
-      - name: Re-create zarf namespace with eks.yaml secret
-        run: |
-          ./build/zarf tools kubectl create secret generic zarf-eks-yaml -n zarf --from-file=eks.yaml
-
       - name: Teardown the cluster
         if: always()
-        run: ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.2.tar.zst --components=teardown-eks-cluster --confirm
+        run: |
+          ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.3.tar.zst \
+            --components=teardown-eks-cluster \
+            --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
+            --confirm
 
       - name: Save logs
         if: always()

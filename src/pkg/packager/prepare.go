@@ -150,7 +150,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				template, values, err := helmCfg.TemplateChart()
 
 				if err != nil {
-					message.WarnErrorf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
+					message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
 					continue
 				}
 
@@ -167,7 +167,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 				annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 				if err != nil {
-					message.WarnErrorf(err, "Problem looking for image annotations for %s: %s", chart.URL, err.Error())
+					message.WarnErrf(err, "Problem looking for image annotations for %s: %s", chart.URL, err.Error())
 					continue
 				}
 				for _, image := range annotatedImages {
@@ -201,7 +201,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 					// Read the contents of each file
 					contents, err := os.ReadFile(f)
 					if err != nil {
-						message.WarnErrorf(err, "Unable to read the file %s", f)
+						message.WarnErrf(err, "Unable to read the file %s", f)
 						continue
 					}
 
@@ -216,7 +216,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 		for _, resource := range resources {
 			if matchedImages, maybeImages, err = p.processUnstructuredImages(resource, matchedImages, maybeImages); err != nil {
-				message.WarnErrorf(err, "Problem processing K8s resource %s", resource.GetName())
+				message.WarnErrf(err, "Problem processing K8s resource %s", resource.GetName())
 			}
 		}
 
