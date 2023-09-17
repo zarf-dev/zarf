@@ -476,6 +476,10 @@
           "type": "boolean",
           "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
         },
+        "pattern": {
+          "type": "string",
+          "description": "An optional regex pattern that a variable value must match before a package deployment can continue."
+        },
         "type": {
           "enum": [
             "raw",
@@ -982,6 +986,10 @@
         "autoIndent": {
           "type": "boolean",
           "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_CONST_."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "An optional regex pattern that a constant value must match before a package can be created."
         }
       },
       "additionalProperties": false,
@@ -1016,6 +1024,10 @@
         "autoIndent": {
           "type": "boolean",
           "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "An optional regex pattern that a variable value must match before a package can be deployed."
         },
         "type": {
           "enum": [

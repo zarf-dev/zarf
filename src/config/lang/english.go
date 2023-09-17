@@ -597,6 +597,7 @@ const (
 	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
 	PkgValidateErrName                    = "invalid package name: %w"
 	PkgValidateErrPkgConstantName         = "constant name '%s' must be all uppercase and contain no special characters except _"
+	PkgValidateErrPkgConstantPattern      = "provided value for constant %q does not match pattern \"%s\""
 	PkgValidateErrPkgName                 = "package name '%s' must be all lowercase and contain no special characters except -"
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrYOLONoArch              = "cluster architecture not allowed"
