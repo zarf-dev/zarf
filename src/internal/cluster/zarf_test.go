@@ -5,32 +5,25 @@
 package cluster
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 )
-
-func marshalDeployedPackage(deployedPackage *types.DeployedPackage) (rawData []byte) {
-	rawData, _ = json.Marshal(deployedPackage)
-	return rawData
-}
 
 // TestPackageSecretNeedsWait verifies that Zarf waits for webhooks to complete correctly.
 func TestPackageSecretNeedsWait(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		name          string
-		secret        *corev1.Secret
-		component     types.ZarfComponent
-		skipWebhooks  bool
-		needsWait     bool
-		waitSeconds   int
-		hookName      string
-		expectedError error
+		name            string
+		deployedPackage types.DeployedPackage
+		component       types.ZarfComponent
+		skipWebhooks    bool
+		needsWait       bool
+		waitSeconds     int
+		hookName        string
+		expectedError   error
 	}
 
 	var (
@@ -43,13 +36,9 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		{
 			name:      "NoWebhooks",
 			component: types.ZarfComponent{Name: componentName},
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					"data": marshalDeployedPackage(&types.DeployedPackage{
-						Name:              packageName,
-						ComponentWebhooks: map[string]map[string]types.Webhook{},
-					}),
-				},
+			deployedPackage: types.DeployedPackage{
+				Name:              packageName,
+				ComponentWebhooks: map[string]map[string]types.Webhook{},
 			},
 			needsWait:     false,
 			waitSeconds:   0,
@@ -59,19 +48,15 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		{
 			name:      "WebhookRunning",
 			component: types.ZarfComponent{Name: componentName},
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					"data": marshalDeployedPackage(&types.DeployedPackage{
-						Name: packageName,
-						ComponentWebhooks: map[string]map[string]types.Webhook{
-							componentName: {
-								webhookName: types.Webhook{
-									Status:              string(types.WebhookStatusRunning),
-									WaitDurationSeconds: 10,
-								},
-							},
+			deployedPackage: types.DeployedPackage{
+				Name: packageName,
+				ComponentWebhooks: map[string]map[string]types.Webhook{
+					componentName: {
+						webhookName: types.Webhook{
+							Status:              string(types.WebhookStatusRunning),
+							WaitDurationSeconds: 10,
 						},
-					}),
+					},
 				},
 			},
 			needsWait:     true,
@@ -83,19 +68,15 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		{
 			name:      "WebhookRunningOnDifferentComponent",
 			component: types.ZarfComponent{Name: componentName},
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					"data": marshalDeployedPackage(&types.DeployedPackage{
-						Name: packageName,
-						ComponentWebhooks: map[string]map[string]types.Webhook{
-							"different-component": {
-								webhookName: types.Webhook{
-									Status:              string(types.WebhookStatusRunning),
-									WaitDurationSeconds: 10,
-								},
-							},
+			deployedPackage: types.DeployedPackage{
+				Name: packageName,
+				ComponentWebhooks: map[string]map[string]types.Webhook{
+					"different-component": {
+						webhookName: types.Webhook{
+							Status:              string(types.WebhookStatusRunning),
+							WaitDurationSeconds: 10,
 						},
-					}),
+					},
 				},
 			},
 			needsWait:     false,
@@ -106,18 +87,14 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		{
 			name:      "WebhookSucceeded",
 			component: types.ZarfComponent{Name: componentName},
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					"data": marshalDeployedPackage(&types.DeployedPackage{
-						Name: packageName,
-						ComponentWebhooks: map[string]map[string]types.Webhook{
-							componentName: {
-								webhookName: types.Webhook{
-									Status: string(types.WebhookStatusSucceeded),
-								},
-							},
+			deployedPackage: types.DeployedPackage{
+				Name: packageName,
+				ComponentWebhooks: map[string]map[string]types.Webhook{
+					componentName: {
+						webhookName: types.Webhook{
+							Status: string(types.WebhookStatusSucceeded),
 						},
-					}),
+					},
 				},
 			},
 			needsWait:     false,
@@ -128,18 +105,14 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		{
 			name:      "WebhookFailed",
 			component: types.ZarfComponent{Name: componentName},
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					"data": marshalDeployedPackage(&types.DeployedPackage{
-						Name: packageName,
-						ComponentWebhooks: map[string]map[string]types.Webhook{
-							componentName: {
-								webhookName: types.Webhook{
-									Status: string(types.WebhookStatusFailed),
-								},
-							},
+			deployedPackage: types.DeployedPackage{
+				Name: packageName,
+				ComponentWebhooks: map[string]map[string]types.Webhook{
+					componentName: {
+						webhookName: types.Webhook{
+							Status: string(types.WebhookStatusFailed),
 						},
-					}),
+					},
 				},
 			},
 			needsWait:     false,
@@ -150,18 +123,14 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		{
 			name:      "WebhookRemoving",
 			component: types.ZarfComponent{Name: componentName},
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					"data": marshalDeployedPackage(&types.DeployedPackage{
-						Name: packageName,
-						ComponentWebhooks: map[string]map[string]types.Webhook{
-							componentName: {
-								webhookName: types.Webhook{
-									Status: string(types.WebhookStatusRemoving),
-								},
-							},
+			deployedPackage: types.DeployedPackage{
+				Name: packageName,
+				ComponentWebhooks: map[string]map[string]types.Webhook{
+					componentName: {
+						webhookName: types.Webhook{
+							Status: string(types.WebhookStatusRemoving),
 						},
-					}),
+					},
 				},
 			},
 			needsWait:     false,
@@ -172,24 +141,20 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		{
 			name:      "SkipWaitForYOLO",
 			component: types.ZarfComponent{Name: componentName},
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					"data": marshalDeployedPackage(&types.DeployedPackage{
-						Name: packageName,
-						Data: types.ZarfPackage{
-							Metadata: types.ZarfMetadata{
-								YOLO: true,
-							},
+			deployedPackage: types.DeployedPackage{
+				Name: packageName,
+				Data: types.ZarfPackage{
+					Metadata: types.ZarfMetadata{
+						YOLO: true,
+					},
+				},
+				ComponentWebhooks: map[string]map[string]types.Webhook{
+					componentName: {
+						webhookName: types.Webhook{
+							Status:              string(types.WebhookStatusRunning),
+							WaitDurationSeconds: 10,
 						},
-						ComponentWebhooks: map[string]map[string]types.Webhook{
-							componentName: {
-								webhookName: types.Webhook{
-									Status:              string(types.WebhookStatusRunning),
-									WaitDurationSeconds: 10,
-								},
-							},
-						},
-					}),
+					},
 				},
 			},
 			needsWait:     false,
@@ -201,19 +166,15 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			name:         "SkipWebhooksFlagUsed",
 			component:    types.ZarfComponent{Name: componentName},
 			skipWebhooks: true,
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					"data": marshalDeployedPackage(&types.DeployedPackage{
-						Name: packageName,
-						ComponentWebhooks: map[string]map[string]types.Webhook{
-							componentName: {
-								webhookName: types.Webhook{
-									Status:              string(types.WebhookStatusRunning),
-									WaitDurationSeconds: 10,
-								},
-							},
+			deployedPackage: types.DeployedPackage{
+				Name: packageName,
+				ComponentWebhooks: map[string]map[string]types.Webhook{
+					componentName: {
+						webhookName: types.Webhook{
+							Status:              string(types.WebhookStatusRunning),
+							WaitDurationSeconds: 10,
 						},
-					}),
+					},
 				},
 			},
 			needsWait:     false,
@@ -231,7 +192,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 
 			c := &Cluster{}
 
-			needsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(testCase.secret, testCase.component, testCase.skipWebhooks)
+			needsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(testCase.deployedPackage, testCase.component, testCase.skipWebhooks)
 
 			require.Equal(t, testCase.needsWait, needsWait)
 			require.Equal(t, testCase.waitSeconds, waitSeconds)
