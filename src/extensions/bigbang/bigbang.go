@@ -151,7 +151,7 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 	for _, hrNamespacedName := range namespacedHelmReleaseNames {
 		hr := hrDependencies[hrNamespacedName]
 		action := types.ZarfComponentAction{
-			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hr.Metadata.Name),
+			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hrNamespacedName),
 			MaxTotalSeconds: &maxTotalSeconds,
 			Wait: &types.ZarfComponentActionWait{
 				Cluster: &types.ZarfComponentActionWaitCluster{
