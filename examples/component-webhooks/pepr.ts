@@ -10,7 +10,6 @@ import { Webhook } from "./capabilities/hook";
  * This is where you register your Pepr configurations and capabilities.
  */
 new PeprModule(cfg, [
-
   // Your additional capabilities go here
   Webhook,
 ]);
