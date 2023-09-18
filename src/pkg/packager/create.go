@@ -37,8 +37,6 @@ import (
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create() (err error) {
 
-	var originalDir string
-
 	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(filepath.Join(p.cfg.CreateOpts.BaseDir, types.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
@@ -59,14 +57,10 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	// Change the working directory if this run has an alternate base dir.
-	if p.cfg.CreateOpts.BaseDir != "" {
-		originalDir, _ = os.Getwd()
-		if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-			return fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
-		}
-		message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
+	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+		return fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
 	}
+	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
 	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
@@ -221,11 +215,6 @@ func (p *Packager) Create() (err error) {
 		if err := p.layout.Components.Archive(component); err != nil {
 			return fmt.Errorf("unable to archive component: %s", err.Error())
 		}
-	}
-
-	// In case the directory was changed, reset to prevent breaking relative target paths.
-	if originalDir != "" {
-		_ = os.Chdir(originalDir)
 	}
 
 	// Calculate all the checksums

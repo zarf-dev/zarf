@@ -113,7 +113,10 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	}
 
 	if pkgr.source == nil {
-		return nil, fmt.Errorf("no source provided")
+		// source can be nil if the package is being created
+		if pkgr.cfg.CreateOpts.BaseDir == "" {
+			return nil, fmt.Errorf("no source provided")
+		}
 	}
 
 	// If the temp directory is not set, set it to the default

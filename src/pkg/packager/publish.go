@@ -7,7 +7,6 @@ package packager
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -20,7 +19,7 @@ import (
 // Publish publishes the package to a registry
 func (p *Packager) Publish() (err error) {
 	var referenceSuffix string
-	if utils.IsDir(p.cfg.PkgOpts.PackageSource) {
+	if p.cfg.CreateOpts.BaseDir != "" {
 		referenceSuffix = oci.SkeletonSuffix
 		err := p.loadSkeleton()
 		if err != nil {
@@ -78,12 +77,8 @@ func (p *Packager) Publish() (err error) {
 	return nil
 }
 
-func (p *Packager) loadSkeleton() error {
-	base, err := filepath.Abs(p.cfg.PkgOpts.PackageSource)
-	if err != nil {
-		return err
-	}
-	if err := os.Chdir(base); err != nil {
+func (p *Packager) loadSkeleton() (err error) {
+	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return err
 	}
 	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(types.ZarfYAML); err != nil {

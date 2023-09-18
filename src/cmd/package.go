@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 
 	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2/registry"
@@ -44,6 +46,12 @@ var packageCreateCmd = &cobra.Command{
 		// If a directory was provided, use that as the base directory
 		if len(args) > 0 {
 			pkgConfig.CreateOpts.BaseDir = args[0]
+		} else {
+			var err error
+			pkgConfig.CreateOpts.BaseDir, err = os.Getwd()
+			if err != nil {
+				message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
+			}
 		}
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
@@ -234,6 +242,10 @@ var packagePublishCmd = &cobra.Command{
 		err := ref.ValidateRegistry()
 		if err != nil {
 			message.Fatalf(nil, "%s", err.Error())
+		}
+
+		if utils.IsDir(pkgConfig.PkgOpts.PackageSource) {
+			pkgConfig.CreateOpts.BaseDir = pkgConfig.PkgOpts.PackageSource
 		}
 
 		pkgConfig.PublishOpts.PackageDestination = ref.String()
