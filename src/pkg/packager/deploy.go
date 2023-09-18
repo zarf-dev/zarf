@@ -154,19 +154,16 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			Status:             types.ComponentStatusDeploying,
 			ObservedGeneration: p.generation,
 		}
-		deployedComponents = append(deployedComponents, deployedComponent)
-
-		idx := len(deployedComponents) - 1
-
 		// Ensure we don't overwrite any installedCharts data when updating the package secret
-		var installedCharts []types.InstalledChart
 		if p.cluster != nil {
-			installedCharts, err = p.cluster.GetInstalledChartsForComponent(p.cfg.Pkg.Metadata.Name, component)
+			deployedComponent.InstalledCharts, err = p.cluster.GetInstalledChartsForComponent(p.cfg.Pkg.Metadata.Name, component)
 			if err != nil {
 				message.Debugf("Unable to fetch installed Helm charts for component '%s': %s", component.Name, err.Error())
 			}
 		}
-		deployedComponents[idx].InstalledCharts = installedCharts
+		
+		deployedComponents = append(deployedComponents, deployedComponent)
+		idx := len(deployedComponents) - 1
 
 		// Update the package secret to indicate that we are attempting to deploy this component
 		if p.cluster != nil {
