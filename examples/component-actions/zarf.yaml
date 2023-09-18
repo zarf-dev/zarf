@@ -37,7 +37,7 @@ components:
               - thing=stuff
             # maxRetries is the number of times to retry the action if it fails
             maxRetries: 0
-            # maxTotalSeconds is the maximum amount of times the action can run before it is killed, including retries
+            # maxTotalSeconds is the maximum amount of times the action can run before it is killed, over all retries
             maxTotalSeconds: 30
             # mute determine if actions output should be printed to the console
             mute: false
@@ -145,12 +145,10 @@ components:
     actions:
       # runs during "zarf package deploy"
       onDeploy:
-        # defaults allow you to specify default values for the actions in that acitonSet
+        # defaults allow you to specify default values for the actions in that actionSet
         defaults:
-          # maxTotalSeconds is the maximum amount of time the action can run before it is killed, including retries
+          # maxTotalSeconds is the maximum amount of time the action can run before it is killed, over all retries
           maxTotalSeconds: 1
-          # maxRetries is the maximum number of times the action will be retried on failure
-          maxRetries: 3
         before:
           # this action will fail after 1 second
           - cmd: sleep 10

@@ -1,0 +1,16 @@
+kind: ZarfPackageConfig
+metadata:
+  name: evil-variables
+  description: Test package to demonstrate bad ways to use Zarf variables
+
+components:
+  - name: bad-set-variables-pattern
+    required: true
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "Hello Kitteh"
+            setVariables:
+              - name: HELLO_KITTEH
+                # "Hello Kitteh" should not match a 40 char 0-f shasum string.
+                pattern: "^[\\da-f]{64}$"

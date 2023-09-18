@@ -7,6 +7,7 @@ package test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,18 +17,43 @@ func TestVariables(t *testing.T) {
 	t.Log("E2E: Package variables")
 	e2e.SetupWithCluster(t)
 
-	path := fmt.Sprintf("build/zarf-package-variables-%s.tar.zst", e2e.Arch)
+	evilSrc := filepath.Join("src", "test", "packages", "24-evil-variables")
+	evilPath := fmt.Sprintf("zarf-package-evil-variables-%s.tar.zst", e2e.Arch)
+
+	src := filepath.Join("examples", "variables")
+	path := filepath.Join("build", fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.Arch))
+
 	tfPath := "modified-terraform.tf"
 
-	e2e.CleanFiles(tfPath)
+	e2e.CleanFiles(tfPath, evilPath)
+
+	// Test that specifying an invalid setVariable value results in an error
+	stdOut, stdErr, err := e2e.Zarf("package", "create", evilSrc, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+	expectedOutString := "variable \"HELLO_KITTEH\" does not match pattern "
+	require.Contains(t, stdErr, "", expectedOutString)
+
+	// Test that specifying an invalid constant value results in an error
+	stdOut, stdErr, err = e2e.Zarf("package", "create", src, "--set", "NGINX_VERSION=", "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+	expectedOutString = "constant \"NGINX_VERSION\" does not match pattern "
+	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test that not specifying a prompted variable results in an error
-	_, stdErr, _ := e2e.Zarf("package", "deploy", path, "--confirm")
-	expectedOutString := "variable 'SITE_NAME' must be '--set' when using the '--confirm' flag"
+	_, stdErr, _ = e2e.Zarf("package", "deploy", path, "--confirm")
+	expectedOutString = "variable 'SITE_NAME' must be '--set' when using the '--confirm' flag"
+	require.Contains(t, stdErr, "", expectedOutString)
+
+	// Test that specifying an invalid variable value results in an error
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--set", "SITE_NAME=#INVALID", "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+	expectedOutString = "variable \"SITE_NAME\" does not match pattern "
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Deploy nginx
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm", "--set", "SITE_NAME=Lula Web", "--set", "AWS_REGION=unicorn-land", "-l", "trace")
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm", "--set", "SITE_NAME=Lula Web", "--set", "AWS_REGION=unicorn-land", "-l", "trace")
 	require.NoError(t, err, stdOut, stdErr)
 	// Verify that the variables were shown to the user in the formats we expect
 	require.Contains(t, stdErr, "currently set to 'Defense Unicorns' (default)")
@@ -64,5 +90,5 @@ func TestVariables(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	e2e.CleanFiles(tfPath)
+	e2e.CleanFiles(tfPath, evilPath)
 }
