@@ -150,7 +150,6 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 		deployedComponent := types.DeployedComponent{
 			Name:               component.Name,
-			Images:             component.Images,
 			Status:             types.ComponentStatusDeploying,
 			ObservedGeneration: p.generation,
 		}
@@ -161,7 +160,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 				message.Debugf("Unable to fetch installed Helm charts for component '%s': %s", component.Name, err.Error())
 			}
 		}
-		
+
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
 
