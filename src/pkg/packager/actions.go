@@ -100,6 +100,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 	timeout := time.After(duration)
 
 	// Keep trying until the max retries is reached.
+retryCmd:
 	for remaining := cfg.MaxRetries + 1; remaining > 0; remaining-- {
 
 		// Perform the action run.
@@ -135,7 +136,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		if cfg.MaxTotalSeconds < 1 {
 			spinner.Updatef("Waiting for \"%s\" (no timeout)", cmdEscaped)
 			if err := tryCmd(context.TODO()); err != nil {
-				continue
+				continue retryCmd
 			}
 
 			return nil
@@ -144,23 +145,31 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		// Run the command on repeat until success or timeout.
 		spinner.Updatef("Waiting for \"%s\" (timeout: %ds)", cmdEscaped, cfg.MaxTotalSeconds)
 		select {
-		// On timeout abort.
+		// On timeout break the loop to abort.
 		case <-timeout:
-			cancel()
-			return fmt.Errorf("command \"%s\" timed out", cmdEscaped)
+			break retryCmd
 
 		// Otherwise, try running the command.
 		default:
 			ctx, cancel = context.WithTimeout(context.Background(), duration)
 			defer cancel()
-			if err := tryCmd(ctx); err == nil {
-				return nil
+			if err := tryCmd(ctx); err != nil {
+				continue retryCmd
 			}
+
+			return nil
 		}
 	}
 
-	// If we've reached this point, the retry limit has been reached.
-	return fmt.Errorf("command \"%s\" failed after %d retries", cmdEscaped, cfg.MaxRetries)
+	select {
+	case <-timeout:
+		// If we reached this point, the timeout was reached.
+		return fmt.Errorf("command \"%s\" timed out after %d seconds", cmdEscaped, cfg.MaxTotalSeconds)
+
+	default:
+		// If we reached this point, the retry limit was reached.
+		return fmt.Errorf("command \"%s\" failed after %d retries", cmdEscaped, cfg.MaxRetries)
+	}
 }
 
 // convertWaitToCmd will return the wait command if it exists, otherwise it will return the original command.
