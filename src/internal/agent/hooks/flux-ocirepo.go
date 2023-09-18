@@ -102,7 +102,9 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	}
 
 	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
-	patches = populateOCIRepoPatchOperations(fmt.Sprintf("%s%s", "oci://", newPatchedURL), src.Spec.SecretRef.Name, crcHash)
+	// repoURL := cluster.FetchInternalRegistryKubeDNSName()
+	repoURL := fmt.Sprintf("%s%s", "oci://", newPatchedURL)
+	patches = populateOCIRepoPatchOperations(repoURL, src.Spec.SecretRef.Name, crcHash)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -112,6 +114,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 // Patch updates of the repo spec.
 func populateOCIRepoPatchOperations(repoURL, secretName, crcHash string) []operations.PatchOperation {
+	repoURL = "oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/manifests/podinfo"
 	var patches []operations.PatchOperation
 	message.Debug("in populateOCIRepoPatchOperations repoURL ", repoURL)
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))

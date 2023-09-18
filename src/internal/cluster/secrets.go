@@ -7,6 +7,7 @@ package cluster
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +30,11 @@ type DockerConfigEntryWithAuth struct {
 	Auth string `json:"auth"`
 }
 
+// FetchImagePullSecret fetches the private registry secret from Zarf Namespace.
+func (c *Cluster) FetchImagePullSecret() (*corev1.Secret, error) {
+	return c.GetSecret(ZarfNamespaceName, config.ZarfImagePullSecretName)
+}
+
 // GenerateRegistryPullCreds generates a secret containing the registry credentials.
 func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo types.RegistryInfo) *corev1.Secret {
 	secretDockerConfig := c.GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
@@ -38,10 +44,25 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
 
 	registry := registryInfo.Address
+
+	// Build zarf-docker-registry service address string
+	kubeDNSRegistryURL := "zarf-docker-registry.zarf.svc.cluster.local:5000"
+	registryServiceInfo, err := ServiceInfoFromNodePortURL(registry)
+	if err != nil {
+		message.WarnErrorf(err, "Unable to get service info for the registry, using default")
+	} else {
+		kubeDNSRegistryURL = fmt.Sprintf("%s.%s.svc.cluster.local:%d", registryServiceInfo.Name, registryServiceInfo.Namespace, registryServiceInfo.Port)
+	}
+
 	// Create the expected structure for the dockerconfigjson
 	dockerConfigJSON := DockerConfig{
 		Auths: DockerConfigEntry{
+			// nodePort for zarf-docker-registry
 			registry: DockerConfigEntryWithAuth{
+				Auth: authEncodedValue,
+			},
+			// internal dns for zarf-docker-registry
+			kubeDNSRegistryURL: DockerConfigEntryWithAuth{
 				Auth: authEncodedValue,
 			},
 		},
