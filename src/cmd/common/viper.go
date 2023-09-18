@@ -160,7 +160,7 @@ func printViperConfigUsed() {
 	if vConfigError != nil {
 		// Config file not found; ignore
 		if _, ok := vConfigError.(viper.ConfigFileNotFoundError); !ok {
-			message.WarnErrorf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
+			message.WarnErrf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
 		}
 	} else {
 		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())

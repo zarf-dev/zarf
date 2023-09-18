@@ -170,8 +170,8 @@ func WarnErr(err any, message string) {
 	Warnf(message)
 }
 
-// WarnErrorf prints an error message as a warning with a given format.
-func WarnErrorf(err any, format string, a ...any) {
+// WarnErrf prints an error message as a warning with a given format.
+func WarnErrf(err any, format string, a ...any) {
 	debugPrinter(2, err)
 	Warnf(format, a...)
 }
