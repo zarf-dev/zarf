@@ -50,7 +50,7 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo
 	// Convert to JSON
 	dockerConfigData, err := json.Marshal(dockerConfigJSON)
 	if err != nil {
-		message.WarnErrorf(err, "Unable to marshal the .dockerconfigjson secret data for the image pull secret")
+		message.WarnErrf(err, "Unable to marshal the .dockerconfigjson secret data for the image pull secret")
 	}
 
 	// Add to the secret data
