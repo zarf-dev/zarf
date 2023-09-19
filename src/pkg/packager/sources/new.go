@@ -38,8 +38,7 @@ type PackageSource interface {
 	// - Package integrity validation will display a warning instead of returning an error if
 	//   the package is signed but no public key is provided. This is to allow for the inspection and removal of packages
 	//   that are signed but the user does not have the public key for.
-	LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool) error
-	// LoadPackageMetadata(wantSBOM bool, skipValidation bool) (ZarfPackage, PackagePathsMap, error)
+	LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) error
 
 	// Collect relocates a package from its source to a destination tarball.
 	Collect(string) error

@@ -60,7 +60,7 @@ func (s *URLSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 }
 
 // LoadPackageMetadata loads a package's metadata from an http, https or sget URL.
-func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool) (err error) {
+func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -79,5 +79,5 @@ func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool)
 		s.ZarfPackageOptions,
 	}
 
-	return tp.LoadPackageMetadata(dst, wantSBOM)
+	return tp.LoadPackageMetadata(dst, wantSBOM, skipValidation)
 }

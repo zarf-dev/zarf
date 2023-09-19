@@ -117,7 +117,11 @@ var packageMirrorCmd = &cobra.Command{
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		src, err := sources.New(&pkgConfig.PkgOpts)
+		if err != nil {
+			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
+		}
+		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
 		// Deploy the package

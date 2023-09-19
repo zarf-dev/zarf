@@ -99,7 +99,7 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 }
 
 // LoadPackageMetadata loads a package's metadata from a tarball.
-func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool) (err error) {
+func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (err error) {
 	var pkg types.ZarfPackage
 
 	toExtract := oci.PackageAlwaysPull
@@ -129,7 +129,7 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 	}
 
 	if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
-		if errors.Is(err, ErrPkgSigButNoKey) {
+		if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
 			message.Warn("The package was signed but no public key was provided, skipping signature validation")
 		} else {
 			return err
@@ -244,7 +244,7 @@ func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 }
 
 // LoadPackageMetadata loads a package's metadata from a split tarball.
-func (s *SplitTarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool) (err error) {
+func (s *SplitTarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (err error) {
 	dstTarball := strings.Replace(s.PackageSource, ".part000", "", 1)
 
 	if err := s.Collect(dstTarball); err != nil {
@@ -257,5 +257,5 @@ func (s *SplitTarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantS
 	ts := &TarballSource{
 		s.ZarfPackageOptions,
 	}
-	return ts.LoadPackageMetadata(dst, wantSBOM)
+	return ts.LoadPackageMetadata(dst, wantSBOM, skipValidation)
 }

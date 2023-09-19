@@ -35,7 +35,9 @@ func (p *Packager) Remove() (err error) {
 
 	var packageName string
 
-	if err = p.source.LoadPackageMetadata(p.layout, false); err != nil {
+	// we do not want to allow removal of signed packages without a signature if there are remove actions
+	// as this is arbitrary code execution from an untrusted source
+	if err = p.source.LoadPackageMetadata(p.layout, false, false); err != nil {
 		return err
 	}
 	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.layout.ZarfYAML); err != nil {
@@ -44,9 +46,6 @@ func (p *Packager) Remove() (err error) {
 	p.filterComponents(&p.cfg.Pkg)
 	packageName = p.cfg.Pkg.Metadata.Name
 
-	wasSigned := p.layout.Signature != ""
-
-	hasRemoveActions := false
 	// If we have package components check them for images, charts, manifests, etc
 	for _, component := range p.cfg.Pkg.Components {
 		// Flip requested based on if this is a partial removal
@@ -61,16 +60,6 @@ func (p *Packager) Remove() (err error) {
 				requiresCluster = true
 			}
 		}
-
-		if component.Actions.OnRemove.Before != nil || component.Actions.OnRemove.After != nil || component.Actions.OnRemove.OnSuccess != nil || component.Actions.OnRemove.OnFailure != nil {
-			hasRemoveActions = true
-		}
-	}
-	// while LoadPackageMetadata does not error if the package is signed but the signature is not present
-	// we do not want to allow removal of signed packages without a signature if there are remove actions
-	// as this is arbitrary code execution from an untrusted source
-	if wasSigned && hasRemoveActions && p.cfg.PkgOpts.PublicKeyPath == "" {
-		return sources.ErrPkgSigButNoKey
 	}
 
 	// Get the secret for the deployed package

@@ -84,7 +84,7 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths) (err error) {
 }
 
 // LoadPackageMetadata loads a package's metadata from an OCI registry.
-func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool) (err error) {
+func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (err error) {
 	var pkg types.ZarfPackage
 
 	toPull := oci.PackageAlwaysPull
@@ -111,7 +111,7 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool)
 	}
 
 	if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
-		if errors.Is(err, ErrPkgSigButNoKey) {
+		if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
 			message.Warn("The package was signed but no public key was provided, skipping signature validation")
 		} else {
 			return err

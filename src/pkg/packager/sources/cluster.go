@@ -48,7 +48,7 @@ func (s *ClusterSource) Collect(_ string) error {
 }
 
 // LoadPackageMetadata loads package metadata from a cluster.
-func (s *ClusterSource) LoadPackageMetadata(dst *layout.PackagePaths, _ bool) (err error) {
+func (s *ClusterSource) LoadPackageMetadata(dst *layout.PackagePaths, _ bool, _ bool) (err error) {
 	dpkg, err := s.GetDeployedPackage(s.PackageSource)
 	if err != nil {
 		return err
