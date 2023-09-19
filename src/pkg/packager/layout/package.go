@@ -72,7 +72,6 @@ func (pp *PackagePaths) SetFromLayers(layers []ocispec.Descriptor) {
 }
 
 func (pp *PackagePaths) SetFromPaths(paths []string) {
-	message.Debug("setting from paths", paths)
 	for _, rel := range paths {
 		switch path := rel; {
 		case path == ZarfYAML:

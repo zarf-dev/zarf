@@ -204,7 +204,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		p.cluster.StartInjectionMadness(p.layout.Images.Base, component.Images)
+		p.cluster.StartInjectionMadness(p.layout.Base, p.layout.Images.Base, component.Images)
 	}
 
 	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)

@@ -29,22 +29,23 @@ import (
 var payloadChunkSize = 1024 * 768
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjectionMadness(imagesDir string, injectorSeedTags []string) {
+func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injectorSeedTags []string) {
 	c.spinner = message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer c.spinner.Stop()
 
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		c.spinner.Fatalf(err, "Unable to create a temporary directory for the injector")
-	}
-
-	// TODO: gonna have to create these dirs
 	tmp := layout.InjectionMadnessPaths{
-		SeedImagesDir:        filepath.Join(tmpDir, "seed-images"),
-		InjectionBinary:      filepath.Join(tmpDir, "zarf-injector"),
+		SeedImagesDir: filepath.Join(tmpDir, "seed-images"),
+		// should already exist
+		InjectionBinary: filepath.Join(tmpDir, "zarf-injector"),
+		// gets created here
 		InjectorPayloadTarGz: filepath.Join(tmpDir, "payload.tar.gz"),
 	}
 
+	if err := utils.CreateDirectory(tmp.SeedImagesDir, 0700); err != nil {
+		c.spinner.Fatalf(err, "Unable to create the seed images directory")
+	}
+
+	var err error
 	var images k8s.ImageNodeMap
 	var payloadConfigmaps []string
 	var sha256sum string
