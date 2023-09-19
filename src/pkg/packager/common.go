@@ -112,12 +112,8 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 		mod(pkgr)
 	}
 
-	if pkgr.source == nil {
-		// source can be nil if the package is being created
-		if pkgr.cfg.CreateOpts.BaseDir == "" {
-			return nil, fmt.Errorf("no source provided")
-		}
-		// otherwise, attempt to make a source
+	// source can be nil if the package is being created
+	if pkgr.source == nil && pkgr.cfg.CreateOpts.BaseDir == "" {
 		pkgr.source, err = sources.New(&pkgr.cfg.PkgOpts)
 		if err != nil {
 			return nil, err
