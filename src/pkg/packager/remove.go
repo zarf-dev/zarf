@@ -66,6 +66,12 @@ func (p *Packager) Remove() (err error) {
 	deployedPackage := types.DeployedPackage{}
 
 	if requiresCluster {
+		if p.cluster == nil {
+			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, false)
+			if err != nil {
+				return err
+			}
+		}
 		deployedPackage, err = p.cluster.GetDeployedPackage(packageName)
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())
