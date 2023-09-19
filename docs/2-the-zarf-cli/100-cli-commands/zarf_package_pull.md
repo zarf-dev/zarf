@@ -4,7 +4,7 @@
 Pulls a Zarf package from a remote registry and save to the local file system
 
 ```
-zarf package pull REFERENCE [flags]
+zarf package pull PACKAGE [flags]
 ```
 
 ## Examples
