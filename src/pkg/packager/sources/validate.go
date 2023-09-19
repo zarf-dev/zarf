@@ -73,7 +73,7 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 			spinner.Successf("Checksums validated!")
 			return nil
 		}
-		return fmt.Errorf("unable to validate checksums, %s was not loaded", layout.PackageChecksums)
+		return fmt.Errorf("unable to validate checksums, %s was not loaded", layout.Checksums)
 	}
 	if utils.InvalidPath(loaded.ZarfYAML) {
 		return fmt.Errorf("unable to validate checksums, %s was not loaded", layout.ZarfYAML)
@@ -90,8 +90,8 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 	}
 
 	checkedMap[layout.ZarfYAML] = true
-	checkedMap[layout.PackageChecksums] = true
-	checkedMap[layout.PackageSignature] = true
+	checkedMap[layout.Checksums] = true
+	checkedMap[layout.Signature] = true
 
 	err = lineByLine(checksumPath, func(line string) error {
 		split := strings.Split(line, " ")

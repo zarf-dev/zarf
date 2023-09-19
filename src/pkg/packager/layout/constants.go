@@ -12,9 +12,9 @@ const (
 	DataInjectionsDir = "data"
 	ValuesDir         = "values"
 
-	ZarfYAML         = "zarf.yaml"
-	PackageSignature = "zarf.yaml.sig"
-	PackageChecksums = "checksums.txt"
+	ZarfYAML  = "zarf.yaml"
+	Signature = "zarf.yaml.sig"
+	Checksums = "checksums.txt"
 
 	ImagesDir     = "images"
 	ComponentsDir = "components"

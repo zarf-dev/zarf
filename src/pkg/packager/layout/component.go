@@ -78,25 +78,25 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 		return err
 	}
 	if len(component.Files) > 0 {
-		cs.Files = filepath.Join(cs.Base, "files")
+		cs.Files = filepath.Join(cs.Base, FilesDir)
 	}
 	if len(component.Charts) > 0 {
-		cs.Charts = filepath.Join(cs.Base, "charts")
+		cs.Charts = filepath.Join(cs.Base, ChartsDir)
 		for _, chart := range component.Charts {
 			if len(chart.ValuesFiles) > 0 {
-				cs.Values = filepath.Join(cs.Base, "charts", chart.Name)
+				cs.Values = filepath.Join(cs.Base, ChartsDir, chart.Name)
 				break
 			}
 		}
 	}
 	if len(component.Repos) > 0 {
-		cs.Repos = filepath.Join(cs.Base, "repos")
+		cs.Repos = filepath.Join(cs.Base, ReposDir)
 	}
 	if len(component.Manifests) > 0 {
-		cs.Manifests = filepath.Join(cs.Base, "manifests")
+		cs.Manifests = filepath.Join(cs.Base, ManifestsDir)
 	}
 	if len(component.DataInjections) > 0 {
-		cs.DataInjections = filepath.Join(cs.Base, "data-injections")
+		cs.DataInjections = filepath.Join(cs.Base, DataInjectionsDir)
 	}
 	c.Dirs[name] = cs
 	delete(c.Tarballs, name)
@@ -120,19 +120,19 @@ func (c *Components) Create(component types.ZarfComponent) (cl *ComponentPaths, 
 	}
 
 	if len(component.Files) > 0 {
-		cl.Files = filepath.Join(base, "files")
+		cl.Files = filepath.Join(base, FilesDir)
 		if err = utils.CreateDirectory(cl.Files, 0700); err != nil {
 			return
 		}
 	}
 
 	if len(component.Charts) > 0 {
-		cl.Charts = filepath.Join(base, "charts")
+		cl.Charts = filepath.Join(base, ChartsDir)
 		if err = utils.CreateDirectory(cl.Charts, 0700); err != nil {
 			return
 		}
 		for _, chart := range component.Charts {
-			cl.Values = filepath.Join(base, "values")
+			cl.Values = filepath.Join(base, ValuesDir)
 			if len(chart.ValuesFiles) > 0 {
 				if err = utils.CreateDirectory(cl.Values, 0700); err != nil {
 					return
@@ -143,21 +143,21 @@ func (c *Components) Create(component types.ZarfComponent) (cl *ComponentPaths, 
 	}
 
 	if len(component.Repos) > 0 {
-		cl.Repos = filepath.Join(base, "repos")
+		cl.Repos = filepath.Join(base, ReposDir)
 		if err = utils.CreateDirectory(cl.Repos, 0700); err != nil {
 			return
 		}
 	}
 
 	if len(component.Manifests) > 0 {
-		cl.Manifests = filepath.Join(base, "manifests")
+		cl.Manifests = filepath.Join(base, ManifestsDir)
 		if err = utils.CreateDirectory(cl.Manifests, 0700); err != nil {
 			return
 		}
 	}
 
 	if len(component.DataInjections) > 0 {
-		cl.DataInjections = filepath.Join(base, "data-injections")
+		cl.DataInjections = filepath.Join(base, DataInjectionsDir)
 		if err = utils.CreateDirectory(cl.DataInjections, 0700); err != nil {
 			return
 		}

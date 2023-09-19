@@ -98,7 +98,7 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool)
 	}
 	dst.SetFromLayers(layersFetched)
 
-	if utils.InvalidPath(string(dst.SBOMs)) && wantSBOM {
+	if utils.InvalidPath(dst.SBOMs.Path) && wantSBOM {
 		return fmt.Errorf("package does not contain SBOMs")
 	}
 

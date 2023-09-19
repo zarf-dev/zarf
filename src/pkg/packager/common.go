@@ -325,6 +325,7 @@ func (p *Packager) SetOCIRemote(url string) error {
 }
 
 func (p *Packager) signPackage(signingKeyPath, signingKeyPassword string) error {
+	p.layout = p.layout.WithSignature(signingKeyPath)
 	passwordFunc := func(_ bool) ([]byte, error) {
 		if signingKeyPath != "" {
 			return []byte(signingKeyPassword), nil

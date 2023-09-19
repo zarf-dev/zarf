@@ -23,7 +23,7 @@ func (p *Packager) Inspect() (err error) {
 
 	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 
-	sbomDir := string(p.layout.SBOMs)
+	sbomDir := p.layout.SBOMs.Path
 
 	if p.cfg.InspectOpts.SBOMOutputDir != "" {
 		out, err := sbom.OutputSBOMFiles(sbomDir, p.cfg.InspectOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name)

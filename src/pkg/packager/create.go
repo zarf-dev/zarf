@@ -149,6 +149,7 @@ func (p *Packager) Create() (err error) {
 
 	// Images are handled separately from other component assets.
 	if len(imgList) > 0 {
+		p.layout = p.layout.WithImages()
 
 		message.HeaderInfof("📦 PACKAGE IMAGES")
 
@@ -203,6 +204,7 @@ func (p *Packager) Create() (err error) {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
+		p.layout = p.layout.WithSBOMs()
 		if err := sbom.Catalog(componentSBOMs, imgList, p.layout); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
@@ -270,7 +272,7 @@ func (p *Packager) Create() (err error) {
 		if err := p.layout.SBOMs.Unarchive(); err != nil {
 			return fmt.Errorf("unable to unarchive SBOMs: %w", err)
 		}
-		sbomDir = string(p.layout.SBOMs)
+		sbomDir = p.layout.SBOMs.Path
 
 		if outputSBOM != "" {
 			out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, p.cfg.Pkg.Metadata.Name)
@@ -596,7 +598,7 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 
 	// Loop over the "loaded" files
 	for rel, abs := range p.layout.Files() {
-		if rel == layout.ZarfYAML || rel == layout.PackageChecksums {
+		if rel == layout.ZarfYAML || rel == layout.Checksums {
 			continue
 		}
 		sum, err := utils.GetSHA256OfFile(abs)

@@ -71,7 +71,7 @@ func (p *Packager) Deploy() (err error) {
 
 	// If SBOMs were loaded, temporarily place them in the deploy directory
 	var sbomViewFiles []string
-	sbomDir := string(p.layout.SBOMs)
+	sbomDir := p.layout.SBOMs.Path
 	if !utils.InvalidPath(sbomDir) {
 		sbomViewFiles, _ = filepath.Glob(filepath.Join(sbomDir, "sbom-viewer-*"))
 		_, err := sbom.OutputSBOMFiles(sbomDir, layout.SBOMDir, "")

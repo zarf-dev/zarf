@@ -31,29 +31,32 @@ type InjectionMadnessPaths struct {
 func New(baseDir string) *PackagePaths {
 	return &PackagePaths{
 		Base:      baseDir,
-		ZarfYAML:  filepath.Join(baseDir, "zarf.yaml"),
-		Checksums: filepath.Join(baseDir, "checksums.txt"),
+		ZarfYAML:  filepath.Join(baseDir, ZarfYAML),
+		Checksums: filepath.Join(baseDir, Checksums),
 		Components: Components{
-			Base: filepath.Join(baseDir, "components"),
+			Base: filepath.Join(baseDir, ComponentsDir),
 		},
-		Images: Images{
-			Base: filepath.Join(baseDir, "images"),
-		},
-		SBOMs: SBOMs(filepath.Join(baseDir, "zarf-sboms")),
 	}
 }
 
 func (pp *PackagePaths) WithSignature(keyPath string) *PackagePaths {
 	if keyPath != "" {
-		pp.Signature = filepath.Join(pp.Base, "zarf.yaml.sig")
+		pp.Signature = filepath.Join(pp.Base, Signature)
 	}
 	return pp
 }
 
 func (pp *PackagePaths) WithImages() *PackagePaths {
-	pp.Images.Base = filepath.Join(pp.Base, "images")
-	pp.Images.OCILayout = filepath.Join(pp.Images.Base, "oci-layout")
-	pp.Images.Index = filepath.Join(pp.Images.Base, "index.json")
+	pp.Images.Base = filepath.Join(pp.Base, ImagesDir)
+	pp.Images.OCILayout = filepath.Join(pp.Images.Base, OCILayout)
+	pp.Images.Index = filepath.Join(pp.Images.Base, IndexJSON)
+	return pp
+}
+
+func (pp *PackagePaths) WithSBOMs() *PackagePaths {
+	pp.SBOMs = SBOMs{
+		Path: filepath.Join(pp.Base, SBOMDir),
+	}
 	return pp
 }
 
@@ -70,19 +73,21 @@ func (pp *PackagePaths) SetFromLayers(layers []ocispec.Descriptor) {
 func (pp *PackagePaths) SetFromPaths(paths []string) {
 	for _, abs := range paths {
 		switch path := abs; {
-		case path == "zarf.yaml":
+		case path == ZarfYAML:
 			pp.ZarfYAML = path
-		case path == "zarf.yaml.sig":
+		case path == Signature:
 			pp.Signature = path
-		case path == "checksums.txt":
+		case path == Checksums:
 			pp.Checksums = path
-		case path == filepath.Join("images", "oci-layout"):
+		case path == SBOMTar:
+			pp.SBOMs.Path = path
+		case path == filepath.Join(ImagesDir, "oci-layout"):
 			pp.Images.OCILayout = path
-		case path == filepath.Join("images", "index.json"):
+		case path == filepath.Join(ImagesDir, "index.json"):
 			pp.Images.Index = path
-		case strings.HasPrefix(path, filepath.Join("images", "blobs", "sha256")):
+		case strings.HasPrefix(path, filepath.Join(ImagesDir, "blobs", "sha256")):
 			pp.Images.AddBlob(filepath.Base(path))
-		case (strings.HasPrefix("components", path) && strings.HasSuffix(path, ".tar")):
+		case (strings.HasPrefix(ComponentsDir, path) && strings.HasSuffix(path, ".tar")):
 			name := filepath.Base(path)
 			withoutSuffix := strings.TrimSuffix(name, filepath.Ext(name))
 			pp.Components.Tarballs[withoutSuffix] = path
@@ -118,6 +123,6 @@ func (pp *PackagePaths) Files() map[string]string {
 		add(tarball)
 	}
 
-	add(string(pp.SBOMs))
+	add(pp.SBOMs.Path)
 	return pathMap
 }

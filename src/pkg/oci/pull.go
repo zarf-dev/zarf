@@ -24,7 +24,7 @@ import (
 
 var (
 	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
-	PackageAlwaysPull = []string{layout.ZarfYAML, layout.PackageChecksums, layout.PackageSignature}
+	PackageAlwaysPull = []string{layout.ZarfYAML, layout.Checksums, layout.Signature}
 )
 
 // FileDescriptorExists returns true if the given file exists in the given directory with the expected SHA.

@@ -48,7 +48,7 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imgList []string, 
 	imageCount := len(imgList)
 	componentCount := len(componentSBOMs)
 
-	sbomDir := string(paths.SBOMs)
+	sbomDir := paths.SBOMs.Path
 
 	builder := Builder{
 		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),

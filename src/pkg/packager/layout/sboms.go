@@ -17,33 +17,35 @@ type ComponentSBOM struct {
 	Component *ComponentPaths
 }
 
-type SBOMs string
+type SBOMs struct {
+	Path string
+}
 
-func (s SBOMs) Unarchive() (err error) {
-	if utils.InvalidPath(string(s)) {
+func (s *SBOMs) Unarchive() (err error) {
+	if utils.InvalidPath(s.Path) {
 		return fs.ErrNotExist
 	}
-	if utils.IsDir(string(s)) {
+	if utils.IsDir(s.Path) {
 		return nil
 	}
-	tb := string(s)
-	dir := filepath.Join(filepath.Dir(tb), "zarf-sboms")
+	tb := s.Path
+	dir := filepath.Join(filepath.Dir(tb), SBOMDir)
 	if err := archiver.Unarchive(tb, dir); err != nil {
 		return err
 	}
-	s = SBOMs(dir)
+	s.Path = dir
 	return os.Remove(tb)
 }
 
-func (s SBOMs) Archive() (err error) {
-	if utils.InvalidPath(string(s)) {
+func (s *SBOMs) Archive() (err error) {
+	if utils.InvalidPath(s.Path) {
 		return fs.ErrNotExist
 	}
-	if !utils.IsDir(string(s)) {
+	if !utils.IsDir(s.Path) {
 		return nil
 	}
-	dir := string(s)
-	tb := filepath.Join(filepath.Dir(dir), "sboms.tar")
+	dir := s.Path
+	tb := filepath.Join(filepath.Dir(dir), SBOMTar)
 
 	allSBOMFiles, err := filepath.Glob(filepath.Join(dir, "*"))
 	if err != nil {
@@ -53,6 +55,6 @@ func (s SBOMs) Archive() (err error) {
 	if err = archiver.Archive(allSBOMFiles, tb); err != nil {
 		return
 	}
-	s = SBOMs(tb)
+	s.Path = tb
 	return os.RemoveAll(dir)
 }
