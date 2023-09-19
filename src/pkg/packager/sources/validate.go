@@ -38,7 +38,7 @@ func ValidatePackageSignature(paths *layout.PackagePaths, publicKeyPath string) 
 	}
 
 	// Handle situations where there is no signature within the package
-	sigExist := paths.Signature != "" && !utils.InvalidPath(paths.Signature)
+	sigExist := paths.Signature != ""
 	if !sigExist && publicKeyPath == "" {
 		// Nobody was expecting a signature, so we can just return
 		return nil
