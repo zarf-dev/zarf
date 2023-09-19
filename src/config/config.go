@@ -162,8 +162,8 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 }
 
 // GetValidPackageExtensions returns the valid package extensions.
-func GetValidPackageExtensions() [3]string {
-	return [...]string{".tar.zst", ".tar", ".tar.gz"}
+func GetValidPackageExtensions() [2]string {
+	return [...]string{".tar.zst", ".tar"}
 }
 
 // IsValidFileExtension returns true if the filename has a valid package extension.

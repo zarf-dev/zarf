@@ -54,7 +54,7 @@ func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
-	return o.PushLayer(manifestConfigBytes, ocispec.MediaTypeImageConfig)
+	return o.PushLayer(manifestConfigBytes, ZarfConfigMediaType)
 }
 
 // manifestAnnotationsFromMetadata returns the annotations for the manifest from the given metadata.
@@ -116,9 +116,6 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 	// Get all of the layers in the package
 	var descs []ocispec.Descriptor
 	for name, path := range paths.Files() {
-		if utils.IsDir(path) {
-			continue
-		}
 		spinner.Updatef("Preparing layer %s", utils.First30last30(name))
 
 		mediaType := ZarfLayerMediaTypeBlob

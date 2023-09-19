@@ -23,6 +23,8 @@ import (
 const (
 	// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
+	// ZarfConfigMediaType is the media type for the manifest config
+	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
 	// SkeletonSuffix is the reference suffix used for skeleton packages
 	SkeletonSuffix = "skeleton"
 )
