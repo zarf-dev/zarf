@@ -110,11 +110,15 @@ var prepareFindImages = &cobra.Command{
 	Short:   lang.CmdPrepareFindImagesShort,
 	Long:    lang.CmdPrepareFindImagesLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		var baseDir string
-
 		// If a directory was provided, use that as the base directory
 		if len(args) > 0 {
-			baseDir = args[0]
+			pkgConfig.CreateOpts.BaseDir = args[0]
+		} else {
+			cwd, err := os.Getwd()
+			if err != nil {
+				message.Fatalf(err, lang.CmdPrepareFindImagesErr)
+			}
+			pkgConfig.CreateOpts.BaseDir = cwd
 		}
 
 		// Ensure uppercase keys from viper
@@ -127,8 +131,8 @@ var prepareFindImages = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Find all the images the package might need
-		if _, err := pkgClient.FindImages(baseDir, repoHelmChartPath, kubeVersionOverride); err != nil {
-			message.Fatalf(err, lang.CmdPrepareFindImagesErr, baseDir)
+		if _, err := pkgClient.FindImages(repoHelmChartPath, kubeVersionOverride); err != nil {
+			message.Fatalf(err, lang.CmdPrepareFindImagesErr)
 		}
 	},
 }

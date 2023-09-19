@@ -30,17 +30,18 @@ import (
 )
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
-func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOverride string) (imgMap map[string][]string, err error) {
-
-	var originalDir string
+func (p *Packager) FindImages(repoHelmChartPath string, kubeVersionOverride string) (imgMap map[string][]string, err error) {
 	imagesMap := make(map[string][]string)
 
-	// Change the working directory if this run has an alternate base dir
-	if baseDir != "" {
-		originalDir, _ = os.Getwd()
-		_ = os.Chdir(baseDir)
-		message.Note(fmt.Sprintf("Using base directory %s", baseDir))
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
 	}
+
+	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+		return nil, fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
+	}
+	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
 	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(layout.ZarfYAML); err != nil {
 		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
@@ -256,9 +257,9 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 	fmt.Println(componentDefinition)
 
-	// In case the directory was changed, reset to prevent breaking relative target paths
-	if originalDir != "" {
-		_ = os.Chdir(originalDir)
+	// Return to the original working directory
+	if err := os.Chdir(cwd); err != nil {
+		return nil, err
 	}
 
 	return imagesMap, nil

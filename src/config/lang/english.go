@@ -320,7 +320,7 @@ const (
 	CmdPrepareFindImagesShort = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests"
 	CmdPrepareFindImagesLong  = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
 		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
-	CmdPrepareFindImagesErr = "Unable to find images for the package definition %s"
+	CmdPrepareFindImagesErr = "Unable to find images"
 
 	CmdPrepareGenerateConfigShort = "Generates a config file for Zarf"
 	CmdPrepareGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
