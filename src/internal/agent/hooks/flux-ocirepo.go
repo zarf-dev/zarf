@@ -13,9 +13,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/internal/agent/state"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
+
 	v1 "k8s.io/api/admission/v1"
 )
 
@@ -61,6 +63,8 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
 
+	message.Debugf("Zarf State %+v\n", zarfState)
+
 	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", zarfState.RegistryInfo.Address)
 
 	// parse to simple struct to read the OCIRepo url
@@ -87,7 +91,16 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	if isCreate || (isUpdate && !isPatched) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
 		// Must be valid DNS https://fluxcd.io/flux/components/source/ocirepositories/#writing-an-ocirepository-spec
-		newPatchedURL, err = transform.ImageTransformHostWithoutChecksumOrTag(zarfState.RegistryInfo.Address, patchedURL)
+
+		registryInternalURL := zarfState.RegistryInfo.Address
+		registryServiceInfo, err := cluster.ServiceInfoFromNodePortURL(zarfState.RegistryInfo.Address)
+		if err != nil {
+			message.WarnErrorf(err, "Unable to get service info for the registry, using default")
+		} else {
+			registryInternalURL = fmt.Sprintf("%s.%s.svc.cluster.local:%d", registryServiceInfo.Name, registryServiceInfo.Namespace, registryServiceInfo.Port)
+		}
+
+		newPatchedURL, err = transform.ImageTransformHostWithoutChecksumOrTag(registryInternalURL, patchedURL)
 		if err != nil {
 			message.Warnf("Unable to transform the OCIRepo URL, using the original url we have: %s", patchedURL)
 		}
@@ -114,7 +127,6 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 // Patch updates of the repo spec.
 func populateOCIRepoPatchOperations(repoURL, secretName, crcHash string) []operations.PatchOperation {
-	repoURL = "oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/manifests/podinfo"
 	var patches []operations.PatchOperation
 	message.Debug("in populateOCIRepoPatchOperations repoURL ", repoURL)
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
