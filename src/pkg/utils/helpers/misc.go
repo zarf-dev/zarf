@@ -23,14 +23,6 @@ func Unique[T comparable](s []T) (r []T) {
 	return r
 }
 
-// Reverse returns a new slice with the elements in reverse order.
-func Reverse[T any](s []T) (r []T) {
-	for i := len(s) - 1; i >= 0; i-- {
-		r = append(r, s[i])
-	}
-	return r
-}
-
 // Filter returns a new slice with only the elements that pass the test.
 func Filter[T any](ss []T, test func(T) bool) (r []T) {
 	for _, s := range ss {
@@ -73,26 +65,6 @@ func Retry(fn func() error, retries int, delay time.Duration) (err error) {
 	}
 
 	return err
-}
-
-// Insert returns a new slice with the element inserted at the given index.
-func Insert[T any](slice []T, index int, element T) []T {
-	if len(slice) == index {
-		return append(slice, element)
-	}
-	slice = append(slice[:index+1], slice[index:]...)
-	slice[index] = element
-	return slice
-}
-
-// SliceContains returns true if the given element is in the slice.
-func SliceContains[T comparable](s []T, e T) bool {
-	for _, v := range s {
-		if v == e {
-			return true
-		}
-	}
-	return false
 }
 
 // MergeMap merges map m2 with m1 overwriting common values with m2's values.

@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 
+	"slices"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -75,7 +77,7 @@ func (p *Packager) Remove() (err error) {
 		// Flip requested based on if this is a partial removal
 		requested := !partialRemove
 
-		if helpers.SliceContains(requestedComponents, component.Name) {
+		if slices.Contains(requestedComponents, component.Name) {
 			requested = true
 		}
 
@@ -120,9 +122,10 @@ func (p *Packager) Remove() (err error) {
 		}
 	}
 
-	for _, c := range helpers.Reverse(deployedPackage.DeployedComponents) {
+	slices.Reverse(deployedPackage.DeployedComponents)
+	for _, c := range deployedPackage.DeployedComponents {
 		// Only remove the component if it was requested or if we are removing the whole package
-		if partialRemove && !helpers.SliceContains(requestedComponents, c.Name) {
+		if partialRemove && !slices.Contains(requestedComponents, c.Name) {
 			continue
 		}
 
@@ -174,7 +177,8 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 		return deployedPackage, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
 
-	for _, chart := range helpers.Reverse(deployedComponent.InstalledCharts) {
+	slices.Reverse(deployedComponent.InstalledCharts)
+	for _, chart := range deployedComponent.InstalledCharts {
 		spinner.Updatef("Uninstalling chart '%s' from the '%s' component", chart.ChartName, deployedComponent.Name)
 
 		helmCfg := helm.Helm{}
