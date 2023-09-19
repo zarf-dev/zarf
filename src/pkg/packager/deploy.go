@@ -235,6 +235,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
+	hasFiles := len(component.Files) > 0
 
 	onDeploy := component.Actions.OnDeploy
 
@@ -242,8 +243,10 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
-	if err := p.processComponentFiles(component, componentPath.Files); err != nil {
-		return charts, fmt.Errorf("unable to process the component files: %w", err)
+	if hasFiles {
+		if err := p.processComponentFiles(component, componentPath.Files); err != nil {
+			return charts, fmt.Errorf("unable to process the component files: %w", err)
+		}
 	}
 
 	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
@@ -307,11 +310,6 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 // Move files onto the host of the machine performing the deployment.
 func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocation string) error {
-	// If there are no files to process, return early.
-	if len(component.Files) < 1 {
-		return nil
-	}
-
 	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
 	defer spinner.Stop()
 

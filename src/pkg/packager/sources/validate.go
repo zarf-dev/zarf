@@ -38,7 +38,7 @@ func ValidatePackageSignature(paths *layout.PackagePaths, publicKeyPath string) 
 	}
 
 	// Handle situations where there is no signature within the package
-	sigExist := !utils.InvalidPath(paths.Signature)
+	sigExist := paths.Signature != "" && !utils.InvalidPath(paths.Signature)
 	if !sigExist && publicKeyPath == "" {
 		// Nobody was expecting a signature, so we can just return
 		return nil
@@ -89,9 +89,9 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 		return err
 	}
 
-	checkedMap[layout.ZarfYAML] = true
-	checkedMap[layout.Checksums] = true
-	checkedMap[layout.Signature] = true
+	checkedMap[loaded.ZarfYAML] = true
+	checkedMap[loaded.Checksums] = true
+	checkedMap[loaded.Signature] = true
 
 	err = lineByLine(checksumPath, func(line string) error {
 		split := strings.Split(line, " ")

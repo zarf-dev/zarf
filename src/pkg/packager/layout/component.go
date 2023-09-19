@@ -34,6 +34,9 @@ type Components struct {
 
 func (c *Components) Archive(component types.ZarfComponent) (err error) {
 	name := component.Name
+	if _, ok := c.Dirs[name]; !ok {
+		return nil
+	}
 	base := c.Dirs[name].Base
 	_ = os.RemoveAll(c.Dirs[name].Temp)
 	size, err := utils.GetDirSize(base)
@@ -60,7 +63,10 @@ func (c *Components) Archive(component types.ZarfComponent) (err error) {
 
 func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 	name := component.Name
-	tb := c.Tarballs[name]
+	tb, ok := c.Tarballs[name]
+	if !ok {
+		return nil
+	}
 
 	if utils.InvalidPath(tb) {
 		return &fs.PathError{
@@ -70,11 +76,13 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 		}
 	}
 
+	message.Debugf("Unarchiving %q", tb)
+
 	defer os.Remove(tb)
 	cs := &ComponentPaths{
 		Base: filepath.Join(c.Base, name),
 	}
-	if err := archiver.Unarchive(tb, cs.Base); err != nil {
+	if err := archiver.Unarchive(tb, c.Base); err != nil {
 		return err
 	}
 	if len(component.Files) > 0 {
@@ -97,6 +105,9 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 	}
 	if len(component.DataInjections) > 0 {
 		cs.DataInjections = filepath.Join(cs.Base, DataInjectionsDir)
+	}
+	if c.Dirs == nil {
+		c.Dirs = make(map[string]*ComponentPaths)
 	}
 	c.Dirs[name] = cs
 	delete(c.Tarballs, name)

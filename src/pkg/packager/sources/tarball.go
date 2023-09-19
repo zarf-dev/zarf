@@ -54,7 +54,7 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 		}
 
 		dstPath := filepath.Join(dst.Base, path)
-		pathsExtracted = append(pathsExtracted, dstPath)
+		pathsExtracted = append(pathsExtracted, path)
 		dst, err := os.Create(dstPath)
 		if err != nil {
 			return err
@@ -114,7 +114,7 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 		}
 		// archiver.Extract will not return an error if the file does not exist, so we must manually check
 		if !utils.InvalidPath(filepath.Join(dst.Base, rel)) {
-			pathsExtracted = append(pathsExtracted, filepath.Join(dst.Base, rel))
+			pathsExtracted = append(pathsExtracted, rel)
 		}
 	}
 

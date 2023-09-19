@@ -57,6 +57,11 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
 	}
@@ -236,6 +241,11 @@ func (p *Packager) Create() (err error) {
 		if err := p.signPackage(p.cfg.CreateOpts.SigningKeyPath, p.cfg.CreateOpts.SigningKeyPassword); err != nil {
 			return err
 		}
+	}
+
+	// cd back
+	if err := os.Chdir(cwd); err != nil {
+		return err
 	}
 
 	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {

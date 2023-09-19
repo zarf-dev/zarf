@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -71,26 +72,37 @@ func (pp *PackagePaths) SetFromLayers(layers []ocispec.Descriptor) {
 }
 
 func (pp *PackagePaths) SetFromPaths(paths []string) {
-	for _, abs := range paths {
-		switch path := abs; {
+	message.Debug("setting from paths", paths)
+	for _, rel := range paths {
+		switch path := rel; {
 		case path == ZarfYAML:
-			pp.ZarfYAML = path
+			pp.ZarfYAML = filepath.Join(pp.Base, path)
 		case path == Signature:
-			pp.Signature = path
+			pp.Signature = filepath.Join(pp.Base, path)
 		case path == Checksums:
-			pp.Checksums = path
+			pp.Checksums = filepath.Join(pp.Base, path)
 		case path == SBOMTar:
-			pp.SBOMs.Path = path
+			pp.SBOMs.Path = filepath.Join(pp.Base, path)
 		case path == filepath.Join(ImagesDir, "oci-layout"):
-			pp.Images.OCILayout = path
+			pp.Images.OCILayout = filepath.Join(pp.Base, path)
 		case path == filepath.Join(ImagesDir, "index.json"):
-			pp.Images.Index = path
+			pp.Images.Index = filepath.Join(pp.Base, path)
 		case strings.HasPrefix(path, filepath.Join(ImagesDir, "blobs", "sha256")):
+			if pp.Images.Base == "" {
+				pp.Images.Base = filepath.Join(pp.Base, ImagesDir)
+			}
 			pp.Images.AddBlob(filepath.Base(path))
-		case (strings.HasPrefix(ComponentsDir, path) && strings.HasSuffix(path, ".tar")):
-			name := filepath.Base(path)
-			withoutSuffix := strings.TrimSuffix(name, filepath.Ext(name))
-			pp.Components.Tarballs[withoutSuffix] = path
+		case strings.HasPrefix(path, ComponentsDir) && filepath.Ext(path) == ".tar":
+			if pp.Components.Base == "" {
+				pp.Components.Base = filepath.Join(pp.Base, ComponentsDir)
+			}
+			componentName := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+			if pp.Components.Tarballs == nil {
+				pp.Components.Tarballs = make(map[string]string)
+			}
+			pp.Components.Tarballs[componentName] = filepath.Join(pp.Base, path)
+		default:
+			message.Debug("ignoring path", path)
 		}
 	}
 }
