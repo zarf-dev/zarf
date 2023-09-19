@@ -79,11 +79,12 @@ type ZarfComponentOnlyCluster struct {
 
 // ZarfFile defines a file to deploy.
 type ZarfFile struct {
-	Source     string   `json:"source" jsonschema:"description=Local folder or file path or remote URL to pull into the package"`
-	Shasum     string   `json:"shasum,omitempty" jsonschema:"description=(files only) Optional SHA256 checksum of the file"`
-	Target     string   `json:"target" jsonschema:"description=The absolute or relative path where the file or folder should be copied to during package deploy"`
-	Executable bool     `json:"executable,omitempty" jsonschema:"description=(files only) Determines if the file should be made executable during package deploy"`
-	Symlinks   []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
+	Source      string   `json:"source" jsonschema:"description=Local folder or file path or remote URL to pull into the package"`
+	Shasum      string   `json:"shasum,omitempty" jsonschema:"description=(files only) Optional SHA256 checksum of the file"`
+	Target      string   `json:"target" jsonschema:"description=The absolute or relative path where the file or folder should be copied to during package deploy"`
+	Executable  bool     `json:"executable,omitempty" jsonschema:"description=(files only) Determines if the file should be made executable during package deploy"`
+	Symlinks    []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
+	ExtractPath string   `json:"extractPath,omitempty" jsonschema:"description=Local folder or file to be extracted from a 'source' archive"`
 }
 
 // ZarfChart defines a helm chart to be deployed.
@@ -91,7 +92,7 @@ type ZarfChart struct {
 	Name        string   `json:"name" jsonschema:"description=The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo"`
 	ReleaseName string   `json:"releaseName,omitempty" jsonschema:"description=The name of the release to create; defaults to the name of the chart"`
 	URL         string   `json:"url,omitempty" jsonschema:"oneof_required=url,example=OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo,example=helm chart repo: https://stefanprodan.github.io/podinfo,example=git repo: https://github.com/stefanprodan/podinfo" jsonschema_description:"The URL of the OCI registry, chart repository, or git repo where the helm chart is stored"`
-	Version     string   `json:"version" jsonschema:"description=The version of the chart to deploy; for git-based charts this is also the tag of the git repo"`
+	Version     string   `json:"version,omitempty" jsonschema:"description=The version of the chart to deploy; for git-based charts this is also the tag of the git repo"`
 	Namespace   string   `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
 	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of local values file paths or remote URLs to include in the package; these will be merged together"`
 	GitPath     string   `json:"gitPath,omitempty" jsonschema:"description=The path to the chart in the repo if using a git repo instead of a helm repo,example=charts/your-chart"`
@@ -172,6 +173,7 @@ type ZarfComponentActionSetVariable struct {
 	Name       string       `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
 	Sensitive  bool         `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
 	AutoIndent bool         `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
+	Pattern    string       `json:"pattern,omitempty" jsonschema:"description=An optional regex pattern that a variable value must match before a package deployment can continue."`
 	Type       VariableType `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB),enum=raw,enum=file"`
 }
 

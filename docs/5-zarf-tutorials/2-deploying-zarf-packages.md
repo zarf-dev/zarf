@@ -52,6 +52,12 @@ To accept a default value for a given variable, simply press the `enter` key.  Y
 
 ![Zarf Tools Monitor](../.images/tutorials/zarf_tools_monitor.png)
 
+:::tip
+
+Deploying packages isn't the only way to interact with them in the air gap.  If you would like to quickly inspect a package and it's SBOMs you can use [`zarf package inspect`](../4-deploy-a-zarf-package/4-view-sboms.md) to view them, and if you would like to push resources inside of a Zarf package (i.e. the images in this Wordpress package) to services in the air gap without running a deployment, you can do so with [`zarf package mirror-resources`](../2-the-zarf-cli/100-cli-commands/zarf_package_mirror-resources.md).
+
+:::
+
 ## Removal
 
 1. Use the `zarf package list` command to get a list of the installed packages.  This will give you the name of the WordPress package to remove it.

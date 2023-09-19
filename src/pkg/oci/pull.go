@@ -122,6 +122,10 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			manifestDescriptor := helpers.Find(index.Manifests, func(layer ocispec.Descriptor) bool {
 				return layer.Annotations[ocispec.AnnotationBaseImageName] == image
 			})
+
+			// even though these are technically image manifests, we store them as Zarf blobs
+			manifestDescriptor.MediaType = ZarfLayerMediaTypeBlob
+
 			manifest, err := o.FetchManifest(manifestDescriptor)
 			if err != nil {
 				return nil, err
@@ -207,9 +211,6 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 	}
 
 	copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-		if desc.MediaType != ocispec.MediaTypeImageManifest {
-			return nil, nil
-		}
 		nodes, err := content.Successors(ctx, fetcher, desc)
 		if err != nil {
 			return nil, err

@@ -17,9 +17,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -174,9 +174,9 @@ var downloadInitCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		initPackageName := packager.GetInitPackageName("")
 		target := filepath.Join(outputDirectory, initPackageName)
-		url := packager.GetInitPackageRemote("")
-		err := utils.DownloadToFile(url, target, "")
-		if err != nil {
+		url := oci.GetInitPackageURL(config.GetArch(), config.CLIVersion)
+
+		if err := oci.DownloadPackageTarball(url, target, config.CommonOptions.OCIConcurrency); err != nil {
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 		}
 	},

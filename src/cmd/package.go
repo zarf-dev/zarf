@@ -102,6 +102,28 @@ var packageDeployCmd = &cobra.Command{
 	},
 }
 
+var packageMirrorCmd = &cobra.Command{
+	Use:     "mirror-resources [ PACKAGE ]",
+	Aliases: []string{"mr"},
+	Short:   lang.CmdPackageMirrorShort,
+	Long:    lang.CmdPackageMirrorLong,
+	Args:    cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		pkgConfig.PkgOpts.PackagePath = choosePackage(args)
+
+		pkgConfig.PkgSource = pkgConfig.PkgOpts.PackagePath
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Deploy the package
+		if err := pkgClient.Mirror(); err != nil {
+			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
+		}
+	},
+}
+
 var packageInspectCmd = &cobra.Command{
 	Use:     "inspect [ PACKAGE ]",
 	Aliases: []string{"i"},
@@ -268,6 +290,7 @@ func init() {
 	rootCmd.AddCommand(packageCmd)
 	packageCmd.AddCommand(packageCreateCmd)
 	packageCmd.AddCommand(packageDeployCmd)
+	packageCmd.AddCommand(packageMirrorCmd)
 	packageCmd.AddCommand(packageInspectCmd)
 	packageCmd.AddCommand(packageRemoveCmd)
 	packageCmd.AddCommand(packageListCmd)
@@ -277,6 +300,7 @@ func init() {
 	bindPackageFlags(v)
 	bindCreateFlags(v)
 	bindDeployFlags(v)
+	bindMirrorFlags(v)
 	bindInspectFlags(v)
 	bindRemoveFlags(v)
 	bindPublishFlags(v)
@@ -332,6 +356,27 @@ func bindDeployFlags(v *viper.Viper) {
 	deployFlags.StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgDeployPublicKey), lang.CmdPackageDeployFlagPublicKey)
 
 	deployFlags.MarkHidden("sget")
+}
+
+func bindMirrorFlags(v *viper.Viper) {
+	mirrorFlags := packageMirrorCmd.Flags()
+
+	// Always require confirm flag (no viper)
+	mirrorFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
+
+	mirrorFlags.BoolVar(&pkgConfig.MirrorOpts.NoImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
+
+	mirrorFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageMirrorFlagComponents)
+
+	// Flags for using an external Git server
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(common.VInitGitURL), lang.CmdInitFlagGitURL)
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-push-username", v.GetString(common.VInitGitPushUser), lang.CmdInitFlagGitPushUser)
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.GitServer.PushPassword, "git-push-password", v.GetString(common.VInitGitPushPass), lang.CmdInitFlagGitPushPass)
+
+	// Flags for using an external registry
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(common.VInitRegistryURL), lang.CmdInitFlagRegURL)
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(common.VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
+	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(common.VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 }
 
 func bindInspectFlags(v *viper.Viper) {

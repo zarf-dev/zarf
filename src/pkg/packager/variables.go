@@ -6,6 +6,7 @@ package packager
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -53,7 +54,7 @@ func (p *Packager) fillActiveTemplate() error {
 	}
 
 	// update the component templates on the package
-	err := p.findComponentTemplatesAndReload(&p.cfg.Pkg)
+	err := p.findComponentTemplatesAndReload()
 	if err != nil {
 		return err
 	}
@@ -86,6 +87,9 @@ func (p *Packager) setVariableMapInConfig() error {
 			p.cfg.SetVariableMap[variable.Name].Sensitive = variable.Sensitive
 			p.cfg.SetVariableMap[variable.Name].AutoIndent = variable.AutoIndent
 			p.cfg.SetVariableMap[variable.Name].Type = variable.Type
+			if err := p.checkVariablePattern(variable.Name, variable.Pattern); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -102,6 +106,10 @@ func (p *Packager) setVariableMapInConfig() error {
 			}
 
 			p.setVariableInConfig(variable.Name, val, variable.Sensitive, variable.AutoIndent, variable.Type)
+		}
+
+		if err := p.checkVariablePattern(variable.Name, variable.Pattern); err != nil {
+			return err
 		}
 	}
 
@@ -147,17 +155,25 @@ func (p *Packager) injectImportedConstant(importedConstant types.ZarfPackageCons
 }
 
 // findComponentTemplatesAndReload appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
-func (p *Packager) findComponentTemplatesAndReload(config any) error {
-
+func (p *Packager) findComponentTemplatesAndReload() error {
 	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
-	for i, component := range config.(*types.ZarfPackage).Components {
+	for i, component := range p.cfg.Pkg.Components {
 		mappings := map[string]string{}
 		mappings["###ZARF_COMPONENT_NAME###"] = component.Name
-		err := utils.ReloadYamlTemplate(&config.(*types.ZarfPackage).Components[i], mappings)
+		err := utils.ReloadYamlTemplate(&p.cfg.Pkg.Components[i], mappings)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// checkVariablePattern checks to see if a current variable is set to a value that matches its pattern
+func (p *Packager) checkVariablePattern(name, pattern string) error {
+	if regexp.MustCompile(pattern).MatchString(p.cfg.SetVariableMap[name].Value) {
+		return nil
+	}
+
+	return fmt.Errorf("provided value for variable %q does not match pattern \"%s\"", name, pattern)
 }

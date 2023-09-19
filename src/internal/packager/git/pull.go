@@ -9,6 +9,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -18,7 +19,7 @@ import (
 func (g *Git) DownloadRepoToTemp(gitURL string) error {
 	g.Spinner.Updatef("g.DownloadRepoToTemp(%s)", gitURL)
 
-	path, err := utils.MakeTempDir()
+	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return fmt.Errorf("unable to create tmpdir: %w", err)
 	}

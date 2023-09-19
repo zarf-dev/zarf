@@ -459,6 +459,11 @@ export interface ZarfComponentActionSetVariable {
      */
     name: string;
     /**
+     * An optional regex pattern that a variable value must match before a package deployment
+     * can continue.
+     */
+    pattern?: string;
+    /**
      * Whether to mark this variable as sensitive to not print it in the Zarf log
      */
     sensitive?: boolean;
@@ -636,7 +641,7 @@ export interface ZarfChart {
      * The version of the chart to deploy; for git-based charts this is also the tag of the git
      * repo
      */
-    version: string;
+    version?: string;
 }
 
 export interface ZarfDataInjection {
@@ -719,6 +724,10 @@ export interface ZarfFile {
      * (files only) Determines if the file should be made executable during package deploy
      */
     executable?: boolean;
+    /**
+     * Local folder or file to be extracted from a 'source' archive
+     */
+    extractPath?: string;
     /**
      * (files only) Optional SHA256 checksum of the file
      */
@@ -876,6 +885,11 @@ export interface ZarfPackageConstant {
      */
     name: string;
     /**
+     * An optional regex pattern that a constant value must match before a package can be
+     * created.
+     */
+    pattern?: string;
+    /**
      * The value to set for the constant during deploy
      */
     value: string;
@@ -969,6 +983,11 @@ export interface ZarfPackageVariable {
      * The name to be used for the variable
      */
     name: string;
+    /**
+     * An optional regex pattern that a variable value must match before a package can be
+     * deployed.
+     */
+    pattern?: string;
     /**
      * Whether to prompt the user for input for this variable
      */
@@ -1525,6 +1544,7 @@ const typeMap: any = {
     "ZarfComponentActionSetVariable": o([
         { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "name", js: "name", typ: "" },
+        { json: "pattern", js: "pattern", typ: u(undefined, "") },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
         { json: "type", js: "type", typ: u(undefined, r("Type")) },
     ], false),
@@ -1565,7 +1585,7 @@ const typeMap: any = {
         { json: "releaseName", js: "releaseName", typ: u(undefined, "") },
         { json: "url", js: "url", typ: u(undefined, "") },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
-        { json: "version", js: "version", typ: "" },
+        { json: "version", js: "version", typ: u(undefined, "") },
     ], false),
     "ZarfDataInjection": o([
         { json: "compress", js: "compress", typ: u(undefined, true) },
@@ -1590,6 +1610,7 @@ const typeMap: any = {
     ], false),
     "ZarfFile": o([
         { json: "executable", js: "executable", typ: u(undefined, true) },
+        { json: "extractPath", js: "extractPath", typ: u(undefined, "") },
         { json: "shasum", js: "shasum", typ: u(undefined, "") },
         { json: "source", js: "source", typ: "" },
         { json: "symlinks", js: "symlinks", typ: u(undefined, a("")) },
@@ -1628,6 +1649,7 @@ const typeMap: any = {
         { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
+        { json: "pattern", js: "pattern", typ: u(undefined, "") },
         { json: "value", js: "value", typ: "" },
     ], false),
     "ZarfMetadata": o([
@@ -1650,6 +1672,7 @@ const typeMap: any = {
         { json: "default", js: "default", typ: u(undefined, "") },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
+        { json: "pattern", js: "pattern", typ: u(undefined, "") },
         { json: "prompt", js: "prompt", typ: u(undefined, true) },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
         { json: "type", js: "type", typ: u(undefined, r("Type")) },

@@ -64,6 +64,7 @@ type ZarfPackageVariable struct {
 	Prompt      bool         `json:"prompt,omitempty" jsonschema:"description=Whether to prompt the user for input for this variable"`
 	Sensitive   bool         `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
 	AutoIndent  bool         `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
+	Pattern     string       `json:"pattern,omitempty" jsonschema:"description=An optional regex pattern that a variable value must match before a package can be deployed."`
 	Type        VariableType `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB),enum=raw,enum=file"`
 }
 
@@ -74,4 +75,5 @@ type ZarfPackageConstant struct {
 	// Include a description that will only be displayed during package create/deploy confirm prompts
 	Description string `json:"description,omitempty" jsonschema:"description=A description of the constant to explain its purpose on package create or deploy confirmation prompts"`
 	AutoIndent  bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_CONST_."`
+	Pattern     string `json:"pattern,omitempty" jsonschema:"description=An optional regex pattern that a constant value must match before a package can be created."`
 }

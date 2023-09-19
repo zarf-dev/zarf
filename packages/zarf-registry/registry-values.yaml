@@ -1,4 +1,5 @@
 persistence:
+  enabled: ###ZARF_VAR_REGISTRY_PVC_ENABLED###
   storageClass: "###ZARF_STORAGE_CLASS###"
   size: "###ZARF_VAR_REGISTRY_PVC_SIZE###"
   existingClaim: "###ZARF_VAR_REGISTRY_EXISTING_PVC###"
@@ -38,3 +39,6 @@ autoscaling:
   minReplicas: "###ZARF_VAR_REGISTRY_HPA_MIN###"
   maxReplicas: "###ZARF_VAR_REGISTRY_HPA_MAX###"
   targetCPUUtilizationPercentage: 80
+
+extraEnvVars:
+  ###ZARF_VAR_REGISTRY_EXTRA_ENVS###

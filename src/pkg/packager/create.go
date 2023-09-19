@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
 	"os"
@@ -295,7 +294,6 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*types.Compone
 
 	for filesIdx, file := range component.Files {
 		path := filepath.Join(componentPath.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
-
 		appendSBOMFiles(path)
 	}
 
@@ -384,28 +382,78 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 		rel := filepath.Join(types.FilesFolder, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(componentPath.Base, rel)
+		destinationDir := filepath.Dir(dst)
 
 		if helpers.IsURL(file.Source) {
 			if isSkeleton {
 				continue
 			}
-			if err := utils.DownloadToFile(file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+
+			if file.ExtractPath != "" {
+
+				// get the compressedFileName from the source
+				compressedFileName, err := helpers.ExtractBasePathFromURL(file.Source)
+				if err != nil {
+					return fmt.Errorf(lang.ErrFileNameExtract, file.Source, err.Error())
+				}
+
+				compressedFile := filepath.Join(componentPath.Temp, compressedFileName)
+
+				// If the file is an archive, download it to the componentPath.Temp
+				if err := utils.DownloadToFile(file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
+					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+				}
+
+				err = archiver.Extract(compressedFile, file.ExtractPath, destinationDir)
+				if err != nil {
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
+				}
+
+			} else {
+				if err := utils.DownloadToFile(file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+				}
 			}
+
 		} else {
-			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
-				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+			if file.ExtractPath != "" {
+				err = archiver.Extract(file.Source, file.ExtractPath, destinationDir)
+				if err != nil {
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
+				}
+			} else {
+				if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
+					return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+				}
 			}
-			if isSkeleton {
-				p.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
+
+		}
+
+		if file.ExtractPath != "" {
+			// Make sure dst reflects the actual file or directory.
+			updatedExtractedFileOrDir := filepath.Join(destinationDir, file.ExtractPath)
+			if updatedExtractedFileOrDir != dst {
+				err = os.Rename(updatedExtractedFileOrDir, dst)
+				if err != nil {
+					return fmt.Errorf(lang.ErrWritingFile, dst, err)
+				}
 			}
+		}
+
+		if isSkeleton {
+			// Change the source to the new relative source directory (any remote files will have been skipped above)
+			p.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
+			// Remove the extractPath from a skeleton since it will already extract it
+			p.cfg.Pkg.Components[index].Files[filesIdx].ExtractPath = ""
 		}
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			if actualShasum, _ := utils.GetCryptoHashFromFile(dst, crypto.SHA256); actualShasum != file.Shasum {
-				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, actualShasum)
+			actualShasum, _ := utils.GetSHA256OfFile(dst)
+			if actualShasum != file.Shasum {
+				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", dst, file.Shasum, actualShasum)
 			}
+
 		}
 
 		if file.Executable || utils.IsDir(dst) {
@@ -571,7 +619,7 @@ func (p *Packager) loadDifferentialData() error {
 	// Save the fact that this is a differential build into the build data of the package
 	p.cfg.Pkg.Build.Differential = true
 
-	tmpDir, _ := utils.MakeTempDir()
+	tmpDir, _ := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	defer os.RemoveAll(tmpDir)
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
