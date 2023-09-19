@@ -1,4 +1,4 @@
-import { Capability, a, Log } from "pepr";
+import { Capability, a, Log, k8s } from "pepr";
 
 /**
  *  The Webhook Capability is an example capability to demonstrate using webhooks to interact with Zarf package deployments.
@@ -17,7 +17,7 @@ When(a.Secret)
   .IsCreatedOrUpdated()
   .InNamespace("zarf")
   .WithLabel("package-deploy-info")
-  .Mutate(async request => {
+  .Mutate(request => {
     const secret = request.Raw;
     let secretData;
     let secretString: string;
@@ -63,23 +63,14 @@ When(a.Secret)
           // Update the secret noting that the webhook is running for this component
           secretData.componentWebhooks[deployedComponent.name] = {
             "test-webhook": {
-              name: "test-webhook",
-              status: "Running",
-              observedGeneration: secretData.generation,
+              "name": "test-webhook",
+              "status": "Running",
+              "observedGeneration": secretData.generation,
             },
           };
 
-          try {
-            await sleep(10);
-            secretData.componentWebhooks[deployedComponent?.name][
-              "test-webhook"
-            ].status = "Succeeded";
-          } catch (err) {
-            secretData.componentWebhooks[deployedComponent?.name][
-              "test-webhook"
-            ].status = "Failed";
-            Log.error(`Error sleeping: ${err}`);
-          }
+          // Call an async function that simulates background processing and then updates the secret with the new status when it's complete
+          sleepAndChangeStatus(secret.metadata.name, deployedComponent.name);
         }
       }
     }
@@ -90,6 +81,53 @@ When(a.Secret)
       secret.data.data = JSON.stringify(secretData);
     }
   });
+
+// sleepAndChangeStatus sleeps for the specified duration and changes the status of the 'test-webhook' to 'Succeeded'.
+async function sleepAndChangeStatus(secretName: string, componentName: string) {
+  await sleep(30);
+
+  // Configure the k8s api client
+  const kc = new k8s.KubeConfig();
+  kc.loadFromDefault();
+  const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
+
+  try {
+    const response = await k8sCoreApi.readNamespacedSecret(secretName, "zarf");
+    const v1Secret = response.body;
+
+    const secretString = atob(v1Secret.data.data);
+    const secretData = JSON.parse(secretString);
+
+    // Update the webhook status if the observedGeneration matches
+    const componentWebhook =
+      secretData.componentWebhooks[componentName]?.["test-webhook"];
+
+    if (componentWebhook?.observedGeneration === secretData.generation) {
+      componentWebhook.status = "Succeeded";
+
+      secretData.componentWebhooks[componentName]["test-webhook"] =
+        componentWebhook;
+    }
+
+    v1Secret.data.data = btoa(JSON.stringify(secretData));
+
+    // Patch the secret back to the cluster
+    await k8sCoreApi.patchNamespacedSecret(
+      secretName,
+      "zarf",
+      v1Secret,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { headers: { "Content-Type": "application/strategic-merge-patch+json" } },
+    );
+  } catch (err) {
+    Log.error(`Unable to update the package secret: ${JSON.stringify(err)}`);
+    return err;
+  }
+}
 
 function sleep(seconds: number) {
   return new Promise(resolve => setTimeout(resolve, seconds * 1000));
