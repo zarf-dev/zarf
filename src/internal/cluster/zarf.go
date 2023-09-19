@@ -161,8 +161,8 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 		case <-timeout:
 			return types.DeployedPackage{}, errors.New("timed out waiting for package deployment to complete")
 		default:
-			// Wait for 3 seconds before checking the secret again
-			time.Sleep(3 * time.Second)
+			// Wait for 1 second before checking the secret again
+			time.Sleep(1 * time.Second)
 			deployedPackage, err = c.GetDeployedPackage(deployedPackage.Name)
 			if err != nil {
 				return types.DeployedPackage{}, err
