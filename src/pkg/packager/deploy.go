@@ -71,9 +71,10 @@ func (p *Packager) Deploy() (err error) {
 
 	// If SBOMs were loaded, temporarily place them in the deploy directory
 	var sbomViewFiles []string
-	if !utils.InvalidPath(p.layout.SBOMs.Base) {
-		sbomViewFiles, _ = filepath.Glob(filepath.Join(p.layout.SBOMs.Base, "sbom-viewer-*"))
-		_, err := sbom.OutputSBOMFiles(p.layout.SBOMs.Base, types.SBOMDir, "")
+	sbomDir := string(p.layout.SBOMs)
+	if !utils.InvalidPath(sbomDir) {
+		sbomViewFiles, _ = filepath.Glob(filepath.Join(sbomDir, "sbom-viewer-*"))
+		_, err := sbom.OutputSBOMFiles(sbomDir, types.SBOMDir, "")
 		if err != nil {
 			// Don't stop the deployment, let the user decide if they want to continue the deployment
 			message.Warnf("Unable to process the SBOM files for this package: %s", err.Error())

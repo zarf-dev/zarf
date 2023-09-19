@@ -33,6 +33,13 @@ func New(baseDir string) *PackagePaths {
 		Base:      baseDir,
 		ZarfYAML:  filepath.Join(baseDir, "zarf.yaml"),
 		Checksums: filepath.Join(baseDir, "checksums.txt"),
+		Components: Components{
+			Base: filepath.Join(baseDir, "components"),
+		},
+		Images: Images{
+			Base: filepath.Join(baseDir, "images"),
+		},
+		SBOMs: SBOMs(filepath.Join(baseDir, "zarf-sboms")),
 	}
 }
 
@@ -40,11 +47,6 @@ func (pp *PackagePaths) WithSignature(keyPath string) *PackagePaths {
 	if keyPath != "" {
 		pp.Signature = filepath.Join(pp.Base, "zarf.yaml.sig")
 	}
-	return pp
-}
-
-func (pp *PackagePaths) WithSBOMsDir() *PackagePaths {
-	pp.SBOMs.Base = filepath.Join(pp.Base, "sboms")
 	return pp
 }
 
@@ -90,18 +92,30 @@ func (pp *PackagePaths) SetFromPaths(paths []string) {
 
 // Files returns a map of all the files in the package.
 func (pp *PackagePaths) Files() map[string]string {
-	// TODO: check this for completeness
+	pathMap := make(map[string]string)
 	stripBase := func(path string) string {
 		rel, _ := filepath.Rel(pp.Base, path)
 		return rel
 	}
-	paths := map[string]string{
-		stripBase(pp.ZarfYAML):  pp.ZarfYAML,
-		stripBase(pp.Signature): pp.Signature,
-		stripBase(pp.Checksums): pp.Checksums,
+	add := func(path string) {
+		if filepath.Ext(path) != "" {
+			pathMap[stripBase(path)] = path
+		}
 	}
+	add(pp.ZarfYAML)
+	add(pp.Signature)
+	add(pp.Checksums)
+
+	add(pp.Images.OCILayout)
+	add(pp.Images.Index)
+	for _, blob := range pp.Images.Blobs {
+		add(blob)
+	}
+
 	for _, tarball := range pp.Components.Tarballs {
-		paths[stripBase(tarball)] = tarball
+		add(tarball)
 	}
-	return paths
+
+	add(string(pp.SBOMs))
+	return pathMap
 }

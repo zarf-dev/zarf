@@ -49,16 +49,18 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imgList []string, 
 	imageCount := len(imgList)
 	componentCount := len(componentSBOMs)
 
+	sbomDir := string(paths.SBOMs)
+
 	builder := Builder{
 		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
 		cachePath:  config.GetAbsCachePath(),
 		imagesPath: paths.Images.Base,
-		outputDir:  paths.SBOMs.Base,
+		outputDir:  sbomDir,
 	}
 	defer builder.spinner.Stop()
 
 	// Ensure the sbom directory exists
-	_ = utils.CreateDirectory(paths.SBOMs.Base, 0700)
+	_ = utils.CreateDirectory(sbomDir, 0700)
 
 	// Generate a list of images and files for the sbom viewer
 	json, err := builder.generateJSONList(componentSBOMs, imgList)

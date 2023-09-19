@@ -46,6 +46,9 @@ func (c *Components) Archive(component types.ZarfComponent) (err error) {
 		if err := archiver.Archive([]string{base}, tb); err != nil {
 			return err
 		}
+		if c.Tarballs == nil {
+			c.Tarballs = make(map[string]string)
+		}
 		c.Tarballs[name] = tb
 	} else {
 		message.Debugf("Component %q is empty, skipping archiving", component.Name)
@@ -158,6 +161,10 @@ func (c *Components) Create(component types.ZarfComponent) (cl *ComponentPaths, 
 		if err = utils.CreateDirectory(cl.DataInjections, 0700); err != nil {
 			return
 		}
+	}
+
+	if c.Dirs == nil {
+		c.Dirs = make(map[string]*ComponentPaths)
 	}
 
 	c.Dirs[name] = cl

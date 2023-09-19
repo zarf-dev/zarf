@@ -270,7 +270,7 @@ func (p *Packager) Create() (err error) {
 		if err := p.layout.SBOMs.Unarchive(); err != nil {
 			return fmt.Errorf("unable to unarchive SBOMs: %w", err)
 		}
-		sbomDir = p.layout.SBOMs.Base
+		sbomDir = string(p.layout.SBOMs)
 
 		if outputSBOM != "" {
 			out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, p.cfg.Pkg.Metadata.Name)
@@ -596,11 +596,8 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 
 	// Loop over the "loaded" package path map
 	for rel, abs := range p.layout.Files() {
-		if rel == types.BaseDir {
+		if rel == types.ZarfYAML || rel == types.PackageChecksums {
 			continue
-		}
-		if utils.IsDir(abs) {
-			return "", fmt.Errorf("unable to generate checksums for the package, %s is a directory", abs)
 		}
 		sum, err := utils.GetSHA256OfFile(abs)
 		if err != nil {
