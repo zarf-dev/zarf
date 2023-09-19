@@ -83,9 +83,9 @@ func (pp *PackagePaths) SetFromPaths(paths []string) {
 			pp.Checksums = filepath.Join(pp.Base, path)
 		case path == SBOMTar:
 			pp.SBOMs.Path = filepath.Join(pp.Base, path)
-		case path == filepath.Join(ImagesDir, "oci-layout"):
+		case path == filepath.Join(ImagesDir, OCILayout):
 			pp.Images.OCILayout = filepath.Join(pp.Base, path)
-		case path == filepath.Join(ImagesDir, "index.json"):
+		case path == filepath.Join(ImagesDir, IndexJSON):
 			pp.Images.Index = filepath.Join(pp.Base, path)
 		case strings.HasPrefix(path, filepath.Join(ImagesDir, "blobs", "sha256")):
 			if pp.Images.Base == "" {
@@ -115,9 +115,10 @@ func (pp *PackagePaths) Files() map[string]string {
 		return rel
 	}
 	add := func(path string) {
-		if filepath.Ext(path) != "" {
-			pathMap[stripBase(path)] = path
+		if path == "" {
+			return
 		}
+		pathMap[stripBase(path)] = path
 	}
 	add(pp.ZarfYAML)
 	add(pp.Signature)
@@ -126,15 +127,15 @@ func (pp *PackagePaths) Files() map[string]string {
 	add(pp.Images.OCILayout)
 	add(pp.Images.Index)
 	for _, blob := range pp.Images.Blobs {
-		if blob != "" {
-			pathMap[stripBase(blob)] = blob
-		}
+		add(blob)
 	}
 
 	for _, tarball := range pp.Components.Tarballs {
 		add(tarball)
 	}
 
-	add(pp.SBOMs.Path)
+	if filepath.Ext(pp.SBOMs.Path) == ".tar" {
+		add(pp.SBOMs.Path)
+	}
 	return pathMap
 }

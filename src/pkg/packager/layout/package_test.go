@@ -20,4 +20,17 @@ func TestPackage_Files(t *testing.T) {
 	}
 
 	require.Equal(t, expected, files)
+
+	pp = pp.WithImages()
+
+	files = pp.Files()
+
+	expected = map[string]string{
+		"zarf.yaml":         "test/zarf.yaml",
+		"checksums.txt":     "test/checksums.txt",
+		"images/index.json": "test/images/index.json",
+		"images/oci-layout": "test/images/oci-layout",
+	}
+
+	require.Equal(t, expected, files)
 }
