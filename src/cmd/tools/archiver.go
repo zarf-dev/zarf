@@ -12,7 +12,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 )
@@ -56,7 +56,7 @@ var archiverDecompressCmd = &cobra.Command{
 				if strings.HasSuffix(path, ".tar") {
 					dst := filepath.Join(strings.TrimSuffix(path, ".tar"), "..")
 					// Unpack sboms.tar differently since it has a different folder structure than components
-					if info.Name() == types.SBOMTar {
+					if info.Name() == layout.SBOMTar {
 						dst = strings.TrimSuffix(path, ".tar")
 					}
 					err := archiver.Unarchive(path, dst)

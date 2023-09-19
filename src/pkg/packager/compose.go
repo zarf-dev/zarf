@@ -85,7 +85,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	subPkgPaths := &layout.PackagePaths{
 		Base:     filepath.Join(pathAncestry, parent.Import.Path),
-		ZarfYAML: filepath.Join(pathAncestry, parent.Import.Path, types.ZarfYAML),
+		ZarfYAML: filepath.Join(pathAncestry, parent.Import.Path, layout.ZarfYAML),
 	}
 
 	if parent.Import.URL != "" {
@@ -111,7 +111,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		if err != nil {
 			return child, err
 		}
-		tb := filepath.Join(types.ComponentsDir, fmt.Sprintf("%s.tar", childComponentName))
+		tb := filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", childComponentName))
 		fetchedLayers, err := p.remote.PullPackage(cachePath, config.CommonOptions.OCIConcurrency, manifest.Locate(tb))
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)

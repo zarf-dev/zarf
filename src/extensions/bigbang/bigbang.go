@@ -263,7 +263,7 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 		// Add the skeleton name prefix.
 		skelName := fmt.Sprintf("bb-ext-skeleton-values-%s.yaml", baseName)
 
-		rel := filepath.Join(types.TempDir, skelName)
+		rel := filepath.Join(layout.TempDir, skelName)
 		dst := filepath.Join(tmpPaths.Base, rel)
 
 		if err := utils.CreatePathAndCopy(valuesFile, dst); err != nil {

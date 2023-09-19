@@ -24,7 +24,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
@@ -149,7 +148,7 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 	}
 
 	// Create the sbom.
-	imageCachePath := filepath.Join(b.cachePath, types.ImagesDir)
+	imageCachePath := filepath.Join(b.cachePath, layout.ImagesDir)
 
 	// Ensure the image cache directory exists.
 	if err := utils.CreateDirectory(imageCachePath, 0700); err != nil {

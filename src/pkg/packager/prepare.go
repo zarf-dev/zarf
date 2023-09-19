@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -41,7 +42,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 		message.Note(fmt.Sprintf("Using base directory %s", baseDir))
 	}
 
-	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(types.ZarfYAML); err != nil {
+	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(layout.ZarfYAML); err != nil {
 		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 

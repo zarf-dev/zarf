@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
@@ -52,7 +53,7 @@ func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err erro
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.
 func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg types.ZarfPackage, err error) {
-	return FetchYAMLFile[types.ZarfPackage](o.FetchLayer, manifest, types.ZarfYAML)
+	return FetchYAMLFile[types.ZarfPackage](o.FetchLayer, manifest, layout.ZarfYAML)
 }
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.

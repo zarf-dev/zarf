@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -34,7 +35,7 @@ func (p *Packager) Mirror() (err error) {
 	sbomDir := string(p.layout.SBOMs)
 	if !utils.InvalidPath(sbomDir) {
 		sbomViewFiles, _ = filepath.Glob(filepath.Join(sbomDir, "sbom-viewer-*"))
-		_, err := sbom.OutputSBOMFiles(sbomDir, types.SBOMDir, "")
+		_, err := sbom.OutputSBOMFiles(sbomDir, layout.SBOMDir, "")
 		if err != nil {
 			// Don't stop the deployment, let the user decide if they want to continue the deployment
 			message.Warnf("Unable to process the SBOM files for this package: %s", err.Error())

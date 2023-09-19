@@ -89,7 +89,7 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool)
 
 	toPull := oci.PackageAlwaysPull
 	if wantSBOM {
-		toPull = append(toPull, types.SBOMTar)
+		toPull = append(toPull, layout.SBOMTar)
 	}
 
 	layersFetched, err := s.PullPackagePaths(toPull, dst.Base)

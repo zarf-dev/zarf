@@ -204,7 +204,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 		suite.NoError(err)
 		suite.DirExists(unpacked)
 
-		err = utils.ReadYaml(filepath.Join(unpacked, types.ZarfYAML), &pkg)
+		err = utils.ReadYaml(filepath.Join(unpacked, layout.ZarfYAML), &pkg)
 		suite.NoError(err)
 		suite.NotNil(pkg)
 
@@ -240,13 +240,13 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 		base := filepath.Join(unpackedPath, "components", component.Name)
 		componentPaths := layout.ComponentPaths{
 			Base:           base,
-			Temp:           filepath.Join(base, types.TempDir),
-			Files:          filepath.Join(base, types.FilesDir),
-			Charts:         filepath.Join(base, types.ChartsDir),
-			Repos:          filepath.Join(base, types.ReposDir),
-			Manifests:      filepath.Join(base, types.ManifestsDir),
-			DataInjections: filepath.Join(base, types.DataInjectionsDir),
-			Values:         filepath.Join(base, types.ValuesDir),
+			Temp:           filepath.Join(base, layout.TempDir),
+			Files:          filepath.Join(base, layout.FilesDir),
+			Charts:         filepath.Join(base, layout.ChartsDir),
+			Repos:          filepath.Join(base, layout.ReposDir),
+			Manifests:      filepath.Join(base, layout.ManifestsDir),
+			DataInjections: filepath.Join(base, layout.DataInjectionsDir),
+			Values:         filepath.Join(base, layout.ValuesDir),
 		}
 
 		if isSkeleton && component.DeprecatedCosignKeyPath != "" {

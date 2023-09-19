@@ -109,7 +109,9 @@ func (pp *PackagePaths) Files() map[string]string {
 	add(pp.Images.OCILayout)
 	add(pp.Images.Index)
 	for _, blob := range pp.Images.Blobs {
-		add(blob)
+		if blob != "" {
+			pathMap[stripBase(blob)] = blob
+		}
 	}
 
 	for _, tarball := range pp.Components.Tarballs {

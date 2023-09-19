@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -23,7 +24,7 @@ import (
 
 var (
 	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
-	PackageAlwaysPull = []string{types.ZarfYAML, types.PackageChecksums, types.PackageSignature}
+	PackageAlwaysPull = []string{layout.ZarfYAML, layout.PackageChecksums, layout.PackageSignature}
 )
 
 // FileDescriptorExists returns true if the given file exists in the given directory with the expected SHA.
@@ -100,13 +101,13 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			for _, image := range component.Images {
 				images[image] = true
 			}
-			layers = append(layers, root.Locate(filepath.Join(types.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
+			layers = append(layers, root.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 		}
 	}
 	// Append the sboms.tar layer if it exists
 	//
 	// Since sboms.tar is not a heavy addition 99% of the time, we'll just always pull it
-	sbomsDescriptor := root.Locate(types.SBOMTar)
+	sbomsDescriptor := root.Locate(layout.SBOMTar)
 	if !IsEmptyDescriptor(sbomsDescriptor) {
 		layers = append(layers, sbomsDescriptor)
 	}
@@ -273,5 +274,5 @@ func (o *OrasRemote) PullPackageMetadata(destinationDir string) ([]ocispec.Descr
 
 // PullPackageSBOM pulls the package's sboms.tar from the remote repository and saves it to `destinationDir`.
 func (o *OrasRemote) PullPackageSBOM(destinationDir string) ([]ocispec.Descriptor, error) {
-	return o.PullPackagePaths([]string{types.SBOMTar}, destinationDir)
+	return o.PullPackagePaths([]string{layout.SBOMTar}, destinationDir)
 }

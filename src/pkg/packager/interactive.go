@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
@@ -36,7 +37,7 @@ func (p *Packager) confirmAction(stage string, sbomViewFiles []string) (confirm 
 
 			if len(sbomViewFiles) > 0 {
 				cwd, _ := os.Getwd()
-				link := pterm.FgLightCyan.Sprint(pterm.Bold.Sprint(filepath.Join(cwd, types.SBOMDir, filepath.Base(sbomViewFiles[0]))))
+				link := pterm.FgLightCyan.Sprint(pterm.Bold.Sprint(filepath.Join(cwd, layout.SBOMDir, filepath.Base(sbomViewFiles[0]))))
 				inspect := pterm.BgBlack.Sprint(pterm.FgWhite.Sprint(pterm.Bold.Sprintf("$ zarf package inspect %s", p.cfg.PkgOpts.PackageSource)))
 
 				artifactMsg := pterm.Bold.Sprintf("%d artifacts", len(sbomViewFiles)) + " to be reviewed. These are"

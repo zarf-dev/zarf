@@ -37,7 +37,7 @@ import (
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create() (err error) {
 
-	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(filepath.Join(p.cfg.CreateOpts.BaseDir, types.ZarfYAML)); err != nil {
+	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
@@ -355,7 +355,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		}
 
 		if isSkeleton && chart.URL == "" {
-			rel := filepath.Join(types.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+			rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			dst := filepath.Join(componentPaths.Base, rel)
 
 			err := utils.CreatePathAndCopy(chart.LocalPath, dst)
@@ -372,7 +372,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		}
 
 		for valuesIdx, path := range chart.ValuesFiles {
-			rel := fmt.Sprintf("%s-%d", helm.StandardName(types.ValuesDir, chart), valuesIdx)
+			rel := fmt.Sprintf("%s-%d", helm.StandardName(layout.ValuesDir, chart), valuesIdx)
 			dst := filepath.Join(componentPaths.Base, rel)
 
 			if helpers.IsURL(path) {
@@ -396,7 +396,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	for filesIdx, file := range component.Files {
 		message.Debugf("Loading %#v", file)
 
-		rel := filepath.Join(types.FilesDir, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		rel := filepath.Join(layout.FilesDir, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(componentPaths.Base, rel)
 		destinationDir := filepath.Dir(dst)
 
@@ -482,7 +482,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		for dataIdx, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 
-			rel := filepath.Join(types.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+			rel := filepath.Join(layout.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 			dst := filepath.Join(componentPaths.Base, rel)
 
 			if helpers.IsURL(data.Source) {
@@ -519,7 +519,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		// Iterate over all manifests.
 		for manifestIdx, manifest := range component.Manifests {
 			for fileIdx, path := range manifest.Files {
-				rel := filepath.Join(types.ManifestsDir, fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+				rel := filepath.Join(layout.ManifestsDir, fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
 				dst := filepath.Join(componentPaths.Base, rel)
 
 				// Copy manifests without any processing.
@@ -546,7 +546,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				spinner.Updatef("Building kustomization for %s", path)
 
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
-				rel := filepath.Join(types.ManifestsDir, kname)
+				rel := filepath.Join(layout.ManifestsDir, kname)
 				dst := filepath.Join(componentPaths.Base, rel)
 
 				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
@@ -594,9 +594,9 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 func (p *Packager) generatePackageChecksums() (string, error) {
 	var checksumsData string
 
-	// Loop over the "loaded" package path map
+	// Loop over the "loaded" files
 	for rel, abs := range p.layout.Files() {
-		if rel == types.ZarfYAML || rel == types.PackageChecksums {
+		if rel == layout.ZarfYAML || rel == layout.PackageChecksums {
 			continue
 		}
 		sum, err := utils.GetSHA256OfFile(abs)
@@ -642,18 +642,18 @@ func (p *Packager) loadDifferentialData() error {
 		if err != nil {
 			return err
 		}
-		err = utils.WriteYaml(filepath.Join(tmpDir, types.ZarfYAML), pkg, 0600)
+		err = utils.WriteYaml(filepath.Join(tmpDir, layout.ZarfYAML), pkg, 0600)
 		if err != nil {
 			return err
 		}
 	} else {
-		if err := archiver.Extract(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, types.ZarfYAML, tmpDir); err != nil {
+		if err := archiver.Extract(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, layout.ZarfYAML, tmpDir); err != nil {
 			return fmt.Errorf("unable to extract the differential zarf package spec: %s", err.Error())
 		}
 	}
 
 	var differentialZarfConfig types.ZarfPackage
-	if err := utils.ReadYaml(filepath.Join(tmpDir, types.ZarfYAML), &differentialZarfConfig); err != nil {
+	if err := utils.ReadYaml(filepath.Join(tmpDir, layout.ZarfYAML), &differentialZarfConfig); err != nil {
 		return fmt.Errorf("unable to load the differential zarf package spec: %s", err.Error())
 	}
 

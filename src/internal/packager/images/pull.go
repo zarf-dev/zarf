@@ -13,9 +13,9 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -204,7 +204,7 @@ func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Imag
 	}
 
 	spinner.Updatef("Preparing image %s", src)
-	imageCachePath := filepath.Join(config.GetAbsCachePath(), types.ImagesDir)
+	imageCachePath := filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
 	img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 
 	return img, nil

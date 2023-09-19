@@ -19,9 +19,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/components"
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -120,7 +120,7 @@ func LaunchAPIServer() {
 	}
 
 	// Setup the static SBOM server
-	sbomSub := os.DirFS(types.SBOMDir)
+	sbomSub := os.DirFS(layout.SBOMDir)
 	sbomFs := http.FileServer(http.FS(sbomSub))
 
 	// Serve the SBOM viewer files

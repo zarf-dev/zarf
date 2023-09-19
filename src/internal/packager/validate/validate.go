@@ -13,6 +13,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -75,8 +76,8 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		}
 
 		// remove zarf.yaml from path if path has zarf.yaml suffix
-		if strings.HasSuffix(path, types.ZarfYAML) {
-			path = strings.Split(path, types.ZarfYAML)[0]
+		if strings.HasSuffix(path, layout.ZarfYAML) {
+			path = strings.Split(path, layout.ZarfYAML)[0]
 		}
 
 		// add a forward slash to end of path if it does not have one
@@ -85,7 +86,7 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		}
 
 		// ensure there is a zarf.yaml in provided path
-		if utils.InvalidPath(filepath.Join(path, types.ZarfYAML)) {
+		if utils.InvalidPath(filepath.Join(path, layout.ZarfYAML)) {
 			return fmt.Errorf(lang.PkgValidateErrImportPathInvalid, composedComponent.Import.Path)
 		}
 	} else {

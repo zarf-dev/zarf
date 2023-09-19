@@ -4,37 +4,9 @@
 // Package types contains all the types used by Zarf.
 package types
 
-// Constants to keep track of folders within components
 const (
-	TempDir           = "temp"
-	FilesDir          = "files"
-	ChartsDir         = "charts"
-	ReposDir          = "repos"
-	ManifestsDir      = "manifests"
-	DataInjectionsDir = "data"
-	ValuesDir         = "values"
-
 	RawVariableType  VariableType = "raw"
 	FileVariableType VariableType = "file"
-
-	ZarfYAML         = "zarf.yaml"
-	PackageSignature = "zarf.yaml.sig"
-	PackageChecksums = "checksums.txt"
-
-	ImagesDir     = "images"
-	ComponentsDir = "components"
-
-	SBOMDir = "zarf-sbom"
-	SBOMTar = "sboms.tar"
-
-	IndexJSON = "index.json"
-	OCILayout = "oci-layout"
-
-	SeedImagesDir        = "seed-images"
-	InjectorBinary       = "zarf-injector"
-	InjectorPayloadTarGz = "payload.tgz"
-
-	BaseDir = "base"
 )
 
 // VariableType represents a type of a Zarf package variable

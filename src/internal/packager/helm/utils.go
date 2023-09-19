@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -24,7 +24,7 @@ import (
 // loadChartFromTarball returns a helm chart from a tarball.
 func (h *Helm) loadChartFromTarball() (*chart.Chart, error) {
 	// Get the path the temporary helm chart tarball
-	sourceFile := StandardName(filepath.Join(h.BasePath, types.ChartsDir), h.Chart) + ".tgz"
+	sourceFile := StandardName(filepath.Join(h.BasePath, layout.ChartsDir), h.Chart) + ".tgz"
 	if h.ChartLoadOverride != "" {
 		sourceFile = h.ChartLoadOverride
 	}
@@ -47,7 +47,7 @@ func (h *Helm) parseChartValues() (chartutil.Values, error) {
 	valueOpts := &values.Options{}
 
 	for idx, file := range h.Chart.ValuesFiles {
-		path := StandardName(filepath.Join(h.BasePath, types.ValuesDir), h.Chart) + "-" + strconv.Itoa(idx)
+		path := StandardName(filepath.Join(h.BasePath, layout.ValuesDir), h.Chart) + "-" + strconv.Itoa(idx)
 		// If we are overriding the chart path, assuming this is for zarf prepare
 		if h.ChartLoadOverride != "" {
 			path = file

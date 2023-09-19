@@ -193,7 +193,7 @@ func (p *Packager) GetPackageName() string {
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
 	_ = os.RemoveAll(p.layout.Base)
-	_ = os.RemoveAll(types.SBOMDir)
+	_ = os.RemoveAll(layout.SBOMDir)
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.

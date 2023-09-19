@@ -104,7 +104,7 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 
 	toExtract := oci.PackageAlwaysPull
 	if wantSBOM {
-		toExtract = append(toExtract, types.SBOMTar)
+		toExtract = append(toExtract, layout.SBOMTar)
 	}
 	pathsExtracted := []string{}
 

@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -81,7 +82,7 @@ func (p *Packager) loadSkeleton() (err error) {
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return err
 	}
-	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(types.ZarfYAML); err != nil {
+	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(layout.ZarfYAML); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 

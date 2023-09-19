@@ -17,7 +17,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 )
 
 var (
@@ -74,10 +73,10 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 			spinner.Successf("Checksums validated!")
 			return nil
 		}
-		return fmt.Errorf("unable to validate checksums, %s was not loaded", types.PackageChecksums)
+		return fmt.Errorf("unable to validate checksums, %s was not loaded", layout.PackageChecksums)
 	}
 	if utils.InvalidPath(loaded.ZarfYAML) {
-		return fmt.Errorf("unable to validate checksums, %s was not loaded", types.ZarfYAML)
+		return fmt.Errorf("unable to validate checksums, %s was not loaded", layout.ZarfYAML)
 	}
 
 	checksumPath := loaded.Checksums
@@ -90,9 +89,9 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 		return err
 	}
 
-	checkedMap[types.ZarfYAML] = true
-	checkedMap[types.PackageChecksums] = true
-	checkedMap[types.PackageSignature] = true
+	checkedMap[layout.ZarfYAML] = true
+	checkedMap[layout.PackageChecksums] = true
+	checkedMap[layout.PackageSignature] = true
 
 	err = lineByLine(checksumPath, func(line string) error {
 		split := strings.Split(line, " ")
