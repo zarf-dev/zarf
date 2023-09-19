@@ -117,6 +117,11 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 		if pkgr.cfg.CreateOpts.BaseDir == "" {
 			return nil, fmt.Errorf("no source provided")
 		}
+		// otherwise, attempt to make a source
+		pkgr.source, err = sources.New(&pkgr.cfg.PkgOpts)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// If the temp directory is not set, set it to the default

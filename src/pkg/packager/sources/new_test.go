@@ -38,7 +38,7 @@ var sources = []source{
 
 func Test_identifySourceType(t *testing.T) {
 	for _, source := range sources {
-		actual := identifySourceType(source.pkgSrc)
+		actual := Identify(source.pkgSrc)
 		require.Equalf(t, source.srcType, actual, fmt.Sprintf("source: %s", source))
 	}
 }

@@ -92,12 +92,8 @@ var packageDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		src, err := sources.New(&pkgConfig.PkgOpts)
-		if err != nil {
-			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
-		}
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
+		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
 		// Deploy the package
@@ -117,11 +113,7 @@ var packageMirrorCmd = &cobra.Command{
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		// Configure the packager
-		src, err := sources.New(&pkgConfig.PkgOpts)
-		if err != nil {
-			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
-		}
-		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
+		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
 		// Deploy the package
@@ -140,15 +132,17 @@ var packageInspectCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
-		src, err := sources.New(&pkgConfig.PkgOpts)
-		if err != nil {
-			message.Debug(err.Error())
+		var src sources.PackageSource
+		var err error
+		identifiedSrc := sources.Identify(pkgConfig.PkgOpts.PackageSource)
+		if identifiedSrc == "" {
 			message.Debugf("%q does not satisfy any current sources, assuming it is a package deployed to a cluster", pkgConfig.PkgOpts.PackageSource)
 			src, err = sources.NewClusterSource(&pkgConfig.PkgOpts)
 			if err != nil {
 				message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
 			}
 		}
+
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
@@ -208,9 +202,10 @@ var packageRemoveCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = args[0]
 
-		src, err := sources.New(&pkgConfig.PkgOpts)
-		if err != nil {
-			message.Debug(err.Error())
+		var src sources.PackageSource
+		var err error
+		identifiedSrc := sources.Identify(pkgConfig.PkgOpts.PackageSource)
+		if identifiedSrc == "" {
 			message.Debugf("%q does not satisfy any current sources, assuming it is a package deployed to a cluster", pkgConfig.PkgOpts.PackageSource)
 			src, err = sources.NewClusterSource(&pkgConfig.PkgOpts)
 			if err != nil {
@@ -254,12 +249,8 @@ var packagePublishCmd = &cobra.Command{
 
 		pkgConfig.PublishOpts.PackageDestination = ref.String()
 
-		src, err := sources.New(&pkgConfig.PkgOpts)
-		if err != nil {
-			message.Fatalf(err, lang.CmdPackagePublishErr, err.Error())
-		}
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
+		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
 		// Publish the package
@@ -277,12 +268,8 @@ var packagePullCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = args[0]
 
-		src, err := sources.New(&pkgConfig.PkgOpts)
-		if err != nil {
-			message.Fatalf(err, lang.CmdPackagePullErr, err.Error())
-		}
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
+		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
 		// Pull the package

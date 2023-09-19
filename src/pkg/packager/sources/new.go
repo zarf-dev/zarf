@@ -44,7 +44,7 @@ type PackageSource interface {
 	Collect(string) error
 }
 
-func identifySourceType(pkgSrc string) string {
+func Identify(pkgSrc string) string {
 	if helpers.IsURL(pkgSrc) {
 		parsed, _ := url.Parse(pkgSrc)
 		return parsed.Scheme
@@ -67,7 +67,7 @@ func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 
 	pkgSrc := pkgOpts.PackageSource
 
-	switch identifySourceType(pkgSrc) {
+	switch Identify(pkgSrc) {
 	case "oci":
 		remote, err := oci.NewOrasRemote(pkgSrc)
 		if err != nil {
