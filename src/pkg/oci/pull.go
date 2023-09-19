@@ -211,9 +211,6 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 	}
 
 	copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-		if desc.MediaType != ocispec.MediaTypeImageManifest {
-			return nil, nil
-		}
 		nodes, err := content.Successors(ctx, fetcher, desc)
 		if err != nil {
 			return nil, err
