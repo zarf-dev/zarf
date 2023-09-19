@@ -23,6 +23,14 @@ func Unique[T comparable](s []T) (r []T) {
 	return r
 }
 
+// Reverse returns a new slice with the elements in reverse order.
+func Reverse[T any](s []T) (r []T) {
+	for i := len(s) - 1; i >= 0; i-- {
+		r = append(r, s[i])
+	}
+	return r
+}
+
 // Filter returns a new slice with only the elements that pass the test.
 func Filter[T any](ss []T, test func(T) bool) (r []T) {
 	for _, s := range ss {

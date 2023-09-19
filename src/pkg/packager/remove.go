@@ -122,8 +122,7 @@ func (p *Packager) Remove() (err error) {
 		}
 	}
 
-	slices.Reverse(deployedPackage.DeployedComponents)
-	for _, c := range deployedPackage.DeployedComponents {
+	for _, c := range helpers.Reverse(deployedPackage.DeployedComponents) {
 		// Only remove the component if it was requested or if we are removing the whole package
 		if partialRemove && !slices.Contains(requestedComponents, c.Name) {
 			continue
@@ -177,8 +176,7 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 		return deployedPackage, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
 
-	slices.Reverse(deployedComponent.InstalledCharts)
-	for _, chart := range deployedComponent.InstalledCharts {
+	for _, chart := range helpers.Reverse(deployedComponent.InstalledCharts) {
 		spinner.Updatef("Uninstalling chart '%s' from the '%s' component", chart.ChartName, deployedComponent.Name)
 
 		helmCfg := helm.Helm{}
