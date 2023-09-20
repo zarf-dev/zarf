@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
@@ -76,10 +75,7 @@ func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 		source = &OCISource{pkgOpts, remote}
 	case "tarball":
 		source = &TarballSource{pkgOpts}
-	case "http", "https":
-		source = &URLSource{pkgOpts}
-	case "sget":
-		message.Warn(lang.WarnSGetDeprecation)
+	case "http", "https", "sget":
 		source = &URLSource{pkgOpts}
 	case "split":
 		source = &SplitTarballSource{pkgOpts}

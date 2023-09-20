@@ -5,22 +5,18 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCosignDeploy(t *testing.T) {
-	t.Log("E2E: Cosign deploy")
+	t.Log("E2E: GHCR OCI deploy")
 	e2e.SetupWithCluster(t)
 
 	// Test with command from https://zarf.dev/install/
-	command := fmt.Sprintf("%s package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m) --confirm", e2e.ZarfBinPath)
-
-	stdOut, stdErr, err := exec.CmdWithContext(context.TODO(), exec.PrintCfg(), "sh", "-c", command)
+	stdOut, stdErr, err := e2e.Zarf("package", "deploy", fmt.Sprintf("oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0-%s", e2e.Arch), "--key=https://zarf.dev/cosign.pub", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
