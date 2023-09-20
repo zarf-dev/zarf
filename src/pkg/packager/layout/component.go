@@ -119,7 +119,7 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 	return os.Remove(tb)
 }
 
-func (c *Components) Create(component types.ZarfComponent) (cl *ComponentPaths, err error) {
+func (c *Components) Create(component types.ZarfComponent) (cp *ComponentPaths, err error) {
 	if err = utils.CreateDirectory(c.Base, 0700); err != nil {
 		return nil, err
 	}
@@ -131,31 +131,31 @@ func (c *Components) Create(component types.ZarfComponent) (cl *ComponentPaths, 
 		return nil, err
 	}
 
-	cl = &ComponentPaths{
+	cp = &ComponentPaths{
 		Base: base,
 	}
 
-	cl.Temp = filepath.Join(base, TempDir)
-	if err = utils.CreateDirectory(cl.Temp, 0700); err != nil {
+	cp.Temp = filepath.Join(base, TempDir)
+	if err = utils.CreateDirectory(cp.Temp, 0700); err != nil {
 		return nil, err
 	}
 
 	if len(component.Files) > 0 {
-		cl.Files = filepath.Join(base, FilesDir)
-		if err = utils.CreateDirectory(cl.Files, 0700); err != nil {
+		cp.Files = filepath.Join(base, FilesDir)
+		if err = utils.CreateDirectory(cp.Files, 0700); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(component.Charts) > 0 {
-		cl.Charts = filepath.Join(base, ChartsDir)
-		if err = utils.CreateDirectory(cl.Charts, 0700); err != nil {
+		cp.Charts = filepath.Join(base, ChartsDir)
+		if err = utils.CreateDirectory(cp.Charts, 0700); err != nil {
 			return nil, err
 		}
 		for _, chart := range component.Charts {
-			cl.Values = filepath.Join(base, ValuesDir)
+			cp.Values = filepath.Join(base, ValuesDir)
 			if len(chart.ValuesFiles) > 0 {
-				if err = utils.CreateDirectory(cl.Values, 0700); err != nil {
+				if err = utils.CreateDirectory(cp.Values, 0700); err != nil {
 					return nil, err
 				}
 				break
@@ -164,22 +164,22 @@ func (c *Components) Create(component types.ZarfComponent) (cl *ComponentPaths, 
 	}
 
 	if len(component.Repos) > 0 {
-		cl.Repos = filepath.Join(base, ReposDir)
-		if err = utils.CreateDirectory(cl.Repos, 0700); err != nil {
+		cp.Repos = filepath.Join(base, ReposDir)
+		if err = utils.CreateDirectory(cp.Repos, 0700); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(component.Manifests) > 0 {
-		cl.Manifests = filepath.Join(base, ManifestsDir)
-		if err = utils.CreateDirectory(cl.Manifests, 0700); err != nil {
+		cp.Manifests = filepath.Join(base, ManifestsDir)
+		if err = utils.CreateDirectory(cp.Manifests, 0700); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(component.DataInjections) > 0 {
-		cl.DataInjections = filepath.Join(base, DataInjectionsDir)
-		if err = utils.CreateDirectory(cl.DataInjections, 0700); err != nil {
+		cp.DataInjections = filepath.Join(base, DataInjectionsDir)
+		if err = utils.CreateDirectory(cp.DataInjections, 0700); err != nil {
 			return nil, err
 		}
 	}
@@ -188,6 +188,6 @@ func (c *Components) Create(component types.ZarfComponent) (cl *ComponentPaths, 
 		c.Dirs = make(map[string]*ComponentPaths)
 	}
 
-	c.Dirs[name] = cl
-	return cl, nil
+	c.Dirs[name] = cp
+	return cp, nil
 }

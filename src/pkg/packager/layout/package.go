@@ -4,10 +4,15 @@
 package layout
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/google/go-containerregistry/pkg/crane"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -21,6 +26,8 @@ type PackagePaths struct {
 	Components Components
 	SBOMs      SBOMs
 	Images     Images
+
+	isLegacyLayout bool
 }
 
 type InjectionMadnessPaths struct {
@@ -38,6 +45,101 @@ func New(baseDir string) *PackagePaths {
 			Base: filepath.Join(baseDir, ComponentsDir),
 		},
 	}
+}
+
+func (pp *PackagePaths) MigrateLegacy() (err error) {
+	var pkg types.ZarfPackage
+	base := pp.Base
+
+	// legacy layout does not contain a checksums file, nor a signature
+	if utils.InvalidPath(pp.Checksums) && pp.Signature == "" {
+		if err := utils.ReadYaml(pp.ZarfYAML, &pkg); err != nil {
+			return err
+		}
+		buildVer, err := semver.NewVersion(pkg.Build.Version)
+		if err != nil {
+			return err
+		}
+		if !buildVer.LessThan(semver.MustParse("v0.25.0")) {
+			return nil
+		}
+		pp.isLegacyLayout = true
+		message.Warn("Detected legacy package layout, migrating to new layout")
+	} else {
+		return nil
+	}
+
+	// Migrate legacy sboms
+	legacySBOMs := filepath.Join(base, "sboms")
+	if !utils.InvalidPath(legacySBOMs) {
+		pp = pp.WithSBOMs()
+		message.Debugf("Migrating %q to %q", legacySBOMs, pp.SBOMs.Path)
+		if err := os.Rename(legacySBOMs, pp.SBOMs.Path); err != nil {
+			return err
+		}
+	}
+
+	// Migrate legacy images
+	legacyImagesTar := filepath.Join(base, "images.tar")
+	if !utils.InvalidPath(legacyImagesTar) {
+		pp = pp.WithImages()
+		message.Debugf("Migrating %q to %q", legacyImagesTar, pp.Images.Base)
+		defer os.Remove(legacyImagesTar)
+		imgTags := []string{}
+		for _, component := range pkg.Components {
+			imgTags = append(imgTags, component.Images...)
+		}
+		// convert images to oci layout
+		// until this for-loop is complete, there will be a duplication of images, resulting in some wasted space
+		tagToDigest := make(map[string]string)
+		for _, tag := range imgTags {
+			img, err := crane.LoadTag(legacyImagesTar, tag)
+			if err != nil {
+				return err
+			}
+			if err := crane.SaveOCI(img, pp.Images.Base); err != nil {
+				return err
+			}
+			// Get the image digest so we can set an annotation in the image.json later
+			imgDigest, err := img.Digest()
+			if err != nil {
+				return err
+			}
+			tagToDigest[tag] = imgDigest.String()
+
+			layers, err := img.Layers()
+			if err != nil {
+				return err
+			}
+			for _, layer := range layers {
+				digest, err := layer.Digest()
+				if err != nil {
+					return err
+				}
+				pp.Images.AddBlob(digest.Hex)
+			}
+		}
+		if err := utils.AddImageNameAnnotation(pp.Images.Base, tagToDigest); err != nil {
+			return err
+		}
+	}
+
+	// Migrate legacy components
+	//
+	// Migration of paths within components occurs during `deploy`
+	// no other operation should need to know about legacy component paths
+	for _, component := range pkg.Components {
+		_, err := pp.Components.Create(component)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (pp *PackagePaths) IsLegacyLayout() bool {
+	return pp.isLegacyLayout
 }
 
 func (pp *PackagePaths) WithSignature(keyPath string) *PackagePaths {

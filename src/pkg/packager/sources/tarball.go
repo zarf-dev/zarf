@@ -87,12 +87,18 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 		return err
 	}
 
-	if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, false); err != nil {
+	if err := dst.MigrateLegacy(); err != nil {
 		return err
 	}
 
-	if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
-		return err
+	if !dst.IsLegacyLayout() {
+		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, false); err != nil {
+			return err
+		}
+
+		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
+			return err
+		}
 	}
 
 	for _, component := range pkg.Components {
@@ -136,15 +142,21 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 		return err
 	}
 
-	if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, true); err != nil {
+	if err := dst.MigrateLegacy(); err != nil {
 		return err
 	}
 
-	if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
-		if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
-			message.Warn("The package was signed but no public key was provided, skipping signature validation")
-		} else {
+	if !dst.IsLegacyLayout() {
+		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, true); err != nil {
 			return err
+		}
+
+		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
+			if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
+				message.Warn("The package was signed but no public key was provided, skipping signature validation")
+			} else {
+				return err
+			}
 		}
 	}
 

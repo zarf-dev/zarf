@@ -3,7 +3,11 @@
 
 package layout
 
-import "path/filepath"
+import (
+	"path/filepath"
+
+	"slices"
+)
 
 type Images struct {
 	Base      string
@@ -14,6 +18,8 @@ type Images struct {
 
 func (i *Images) AddBlob(blob string) {
 	// TODO: verify sha256 hex
-	base := filepath.Join(i.Base, "blobs", "sha256")
-	i.Blobs = append(i.Blobs, filepath.Join(base, blob))
+	abs := filepath.Join(i.Base, "blobs", "sha256", blob)
+	if !slices.Contains(i.Blobs, abs) {
+		i.Blobs = append(i.Blobs, abs)
+	}
 }

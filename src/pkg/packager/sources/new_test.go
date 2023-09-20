@@ -12,11 +12,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var ocip *OCISource
-var urlp *URLSource
-var tarballp *TarballSource
-var splitp *SplitTarballSource
-var packagep *PackageSource
+var ociS *OCISource
+var urlS *URLSource
+var tarballS *TarballSource
+var splitS *SplitTarballSource
+var packageS *PackageSource
 
 type source struct {
 	pkgSrc  string
@@ -25,15 +25,15 @@ type source struct {
 }
 
 var sources = []source{
-	{pkgSrc: "oci://ghcr.io/defenseunicorns/packages/init:1.0.0-amd64", srcType: "oci", source: ocip},
-	{pkgSrc: "sget://github.com/defenseunicorns/zarf-hello-world:x86", srcType: "sget", source: urlp},
-	{pkgSrc: "sget://defenseunicorns/zarf-hello-world:x86_64", srcType: "sget", source: urlp},
-	{pkgSrc: "https://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "https", source: urlp},
-	{pkgSrc: "http://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "http", source: urlp},
-	{pkgSrc: "zarf-init-amd64-v1.0.0.tar.zst", srcType: "tarball", source: tarballp},
-	{pkgSrc: "zarf-package-manifests-amd64-v1.0.0.tar", srcType: "tarball", source: tarballp},
-	{pkgSrc: "zarf-package-manifests-amd64-v1.0.0.tar.zst", srcType: "tarball", source: tarballp},
-	{pkgSrc: "some-dir/.part000", srcType: "split", source: splitp},
+	{pkgSrc: "oci://ghcr.io/defenseunicorns/packages/init:1.0.0-amd64", srcType: "oci", source: ociS},
+	{pkgSrc: "sget://github.com/defenseunicorns/zarf-hello-world:x86", srcType: "sget", source: urlS},
+	{pkgSrc: "sget://defenseunicorns/zarf-hello-world:x86_64", srcType: "sget", source: urlS},
+	{pkgSrc: "https://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "https", source: urlS},
+	{pkgSrc: "http://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "http", source: urlS},
+	{pkgSrc: "zarf-init-amd64-v1.0.0.tar.zst", srcType: "tarball", source: tarballS},
+	{pkgSrc: "zarf-package-manifests-amd64-v1.0.0.tar", srcType: "tarball", source: tarballS},
+	{pkgSrc: "zarf-package-manifests-amd64-v1.0.0.tar.zst", srcType: "tarball", source: tarballS},
+	{pkgSrc: "some-dir/.part000", srcType: "split", source: splitS},
 }
 
 func Test_identifySourceType(t *testing.T) {
@@ -48,6 +48,6 @@ func TestNew(t *testing.T) {
 		actual, err := New(&types.ZarfPackageOptions{PackageSource: source.pkgSrc})
 		require.NoError(t, err)
 		require.IsType(t, source.source, actual)
-		require.Implements(t, packagep, actual)
+		require.Implements(t, packageS, actual)
 	}
 }
