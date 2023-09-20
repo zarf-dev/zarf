@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"slices"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -97,7 +99,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	}
 	for _, component := range pkg.Components {
 		// If we requested this component, or it is required, we need to pull its images and tarball
-		if helpers.SliceContains(requestedComponents, component.Name) || component.Required {
+		if slices.Contains(requestedComponents, component.Name) || component.Required {
 			for _, image := range component.Images {
 				images[image] = true
 			}
@@ -217,7 +219,7 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 		}
 		var ret []ocispec.Descriptor
 		for _, node := range nodes {
-			if helpers.SliceContains(shas, node.Digest.Encoded()) {
+			if slices.Contains(shas, node.Digest.Encoded()) {
 				ret = append(ret, node)
 			}
 		}
