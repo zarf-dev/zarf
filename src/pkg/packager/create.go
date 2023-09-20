@@ -236,16 +236,16 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
 	}
 
+	// cd back
+	if err := os.Chdir(cwd); err != nil {
+		return err
+	}
+
 	// Sign the config file if a key was provided
 	if p.cfg.CreateOpts.SigningKeyPath != "" {
 		if err := p.signPackage(p.cfg.CreateOpts.SigningKeyPath, p.cfg.CreateOpts.SigningKeyPassword); err != nil {
 			return err
 		}
-	}
-
-	// cd back
-	if err := os.Chdir(cwd); err != nil {
-		return err
 	}
 
 	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
