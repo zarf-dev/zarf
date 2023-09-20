@@ -1007,12 +1007,12 @@ export interface ClusterSummary {
     distro:      string;
     hasZarf:     boolean;
     k8sRevision: string;
-    rawConfig:   RawConfigClass;
+    rawConfig:   Config;
     reachable:   boolean;
     zarfState:   ZarfState;
 }
 
-export interface RawConfigClass {
+export interface Config {
     apiVersion?:       string;
     clusters:          { [key: string]: Cluster };
     contexts:          { [key: string]: Context };
@@ -1029,18 +1029,16 @@ export interface Cluster {
     "disable-compression"?:        boolean;
     extensions?:                   { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
     "insecure-skip-tls-verify"?:   boolean;
-    LocationOfOrigin:              string;
     "proxy-url"?:                  string;
     server:                        string;
     "tls-server-name"?:            string;
 }
 
 export interface Context {
-    cluster:          string;
-    extensions?:      { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
-    LocationOfOrigin: string;
-    namespace?:       string;
-    user:             string;
+    cluster:     string;
+    extensions?: { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
+    namespace?:  string;
+    user:        string;
 }
 
 export interface Preferences {
@@ -1060,7 +1058,6 @@ export interface AuthInfo {
     "client-key-data"?:         string;
     exec?:                      ExecConfig;
     extensions?:                { [key: string]: any[] | boolean | number | number | { [key: string]: any } | null | string };
-    LocationOfOrigin:           string;
     password?:                  string;
     token?:                     string;
     tokenFile?:                 string;
@@ -1073,16 +1070,13 @@ export interface AuthProviderConfig {
 }
 
 export interface ExecConfig {
-    apiVersion?:             string;
-    args:                    string[];
-    command:                 string;
-    Config:                  any[] | boolean | number | number | { [key: string]: any } | null | string;
-    env:                     ExecEnvVar[];
-    installHint?:            string;
-    InteractiveMode:         string;
-    provideClusterInfo:      boolean;
-    StdinUnavailable:        boolean;
-    StdinUnavailableMessage: string;
+    apiVersion?:        string;
+    args:               string[];
+    command:            string;
+    env:                ExecEnvVar[];
+    installHint?:       string;
+    interactiveMode?:   string;
+    provideClusterInfo: boolean;
 }
 
 export interface ExecEnvVar {
@@ -1681,11 +1675,11 @@ const typeMap: any = {
         { json: "distro", js: "distro", typ: "" },
         { json: "hasZarf", js: "hasZarf", typ: true },
         { json: "k8sRevision", js: "k8sRevision", typ: "" },
-        { json: "rawConfig", js: "rawConfig", typ: r("RawConfigClass") },
+        { json: "rawConfig", js: "rawConfig", typ: r("Config") },
         { json: "reachable", js: "reachable", typ: true },
         { json: "zarfState", js: "zarfState", typ: r("ZarfState") },
     ], false),
-    "RawConfigClass": o([
+    "Config": o([
         { json: "apiVersion", js: "apiVersion", typ: u(undefined, "") },
         { json: "clusters", js: "clusters", typ: m(r("Cluster")) },
         { json: "contexts", js: "contexts", typ: m(r("Context")) },
@@ -1701,7 +1695,6 @@ const typeMap: any = {
         { json: "disable-compression", js: "disable-compression", typ: u(undefined, true) },
         { json: "extensions", js: "extensions", typ: u(undefined, m(u(a("any"), true, 3.14, 0, m("any"), null, ""))) },
         { json: "insecure-skip-tls-verify", js: "insecure-skip-tls-verify", typ: u(undefined, true) },
-        { json: "LocationOfOrigin", js: "LocationOfOrigin", typ: "" },
         { json: "proxy-url", js: "proxy-url", typ: u(undefined, "") },
         { json: "server", js: "server", typ: "" },
         { json: "tls-server-name", js: "tls-server-name", typ: u(undefined, "") },
@@ -1709,7 +1702,6 @@ const typeMap: any = {
     "Context": o([
         { json: "cluster", js: "cluster", typ: "" },
         { json: "extensions", js: "extensions", typ: u(undefined, m(u(a("any"), true, 3.14, 0, m("any"), null, ""))) },
-        { json: "LocationOfOrigin", js: "LocationOfOrigin", typ: "" },
         { json: "namespace", js: "namespace", typ: u(undefined, "") },
         { json: "user", js: "user", typ: "" },
     ], false),
@@ -1729,7 +1721,6 @@ const typeMap: any = {
         { json: "client-key-data", js: "client-key-data", typ: u(undefined, "") },
         { json: "exec", js: "exec", typ: u(undefined, r("ExecConfig")) },
         { json: "extensions", js: "extensions", typ: u(undefined, m(u(a("any"), true, 3.14, 0, m("any"), null, ""))) },
-        { json: "LocationOfOrigin", js: "LocationOfOrigin", typ: "" },
         { json: "password", js: "password", typ: u(undefined, "") },
         { json: "token", js: "token", typ: u(undefined, "") },
         { json: "tokenFile", js: "tokenFile", typ: u(undefined, "") },
@@ -1743,13 +1734,10 @@ const typeMap: any = {
         { json: "apiVersion", js: "apiVersion", typ: u(undefined, "") },
         { json: "args", js: "args", typ: a("") },
         { json: "command", js: "command", typ: "" },
-        { json: "Config", js: "Config", typ: u(a("any"), true, 3.14, 0, m("any"), null, "") },
         { json: "env", js: "env", typ: a(r("ExecEnvVar")) },
         { json: "installHint", js: "installHint", typ: u(undefined, "") },
-        { json: "InteractiveMode", js: "InteractiveMode", typ: "" },
+        { json: "interactiveMode", js: "interactiveMode", typ: u(undefined, "") },
         { json: "provideClusterInfo", js: "provideClusterInfo", typ: true },
-        { json: "StdinUnavailable", js: "StdinUnavailable", typ: true },
-        { json: "StdinUnavailableMessage", js: "StdinUnavailableMessage", typ: "" },
     ], false),
     "ExecEnvVar": o([
         { json: "name", js: "name", typ: "" },

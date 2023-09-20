@@ -4,7 +4,7 @@ metadata:
   name: yolo-big-bang
   description: Deploy Big Bang Core in YOLO mode
   # renovate: datasource=gitlab-releases depName=big-bang/bigbang versioning=semver registryUrl=https://repo1.dso.mil/
-  version: 2.5.0
+  version: 2.10.0
   url: https://p1.dso.mil/products/big-bang
   architecture: amd64
   yolo: true
@@ -33,7 +33,7 @@ components:
     extensions:
       bigbang:
         # renovate: datasource=gitlab-releases depName=big-bang/bigbang versioning=semver registryUrl=https://repo1.dso.mil/
-        version: 2.5.0
+        version: 2.10.0
         valuesFiles:
           - credentials.yaml
           - ../config/ingress.yaml

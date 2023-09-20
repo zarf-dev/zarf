@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"slices"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -50,7 +52,7 @@ func (p *Packager) Mirror() (err error) {
 	requestedComponentNames := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
 
 	for _, component := range p.cfg.Pkg.Components {
-		if len(requestedComponentNames) == 0 || helpers.SliceContains(requestedComponentNames, component.Name) {
+		if len(requestedComponentNames) == 0 || slices.Contains(requestedComponentNames, component.Name) {
 			if err := p.mirrorComponent(component); err != nil {
 				return err
 			}
