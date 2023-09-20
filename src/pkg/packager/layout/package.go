@@ -118,6 +118,16 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 				}
 				pp.Images.AddBlob(digest.Hex)
 			}
+			imgCfgSha, err := img.ConfigName()
+			if err != nil {
+				return err
+			}
+			pp.Images.AddBlob(imgCfgSha.Hex)
+			manifestSha, err := img.Digest()
+			if err != nil {
+				return err
+			}
+			pp.Images.AddBlob(manifestSha.Hex)
 		}
 		if err := utils.AddImageNameAnnotation(pp.Images.Base, tagToDigest); err != nil {
 			return err
