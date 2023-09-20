@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"

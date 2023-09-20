@@ -18,8 +18,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/api/components"
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 

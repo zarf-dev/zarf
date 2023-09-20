@@ -9,8 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"

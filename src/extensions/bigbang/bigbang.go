@@ -14,8 +14,8 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"

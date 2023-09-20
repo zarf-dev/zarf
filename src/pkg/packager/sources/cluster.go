@@ -10,7 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )

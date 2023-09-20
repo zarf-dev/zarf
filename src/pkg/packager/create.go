@@ -21,9 +21,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -178,30 +178,9 @@ func (p *Packager) Create() (err error) {
 		}
 
 		for _, img := range pulled {
-			// mark the layers as "loaded"
-			layers, err := img.Layers()
-			if err != nil {
-				return fmt.Errorf("unable to get image layers: %w", err)
+			if err := p.layout.Images.AddV1Image(img); err != nil {
+				return err
 			}
-			for _, layer := range layers {
-				sha, err := layer.Digest()
-				if err != nil {
-					return fmt.Errorf("unable to get layer digest: %w", err)
-				}
-				p.layout.Images.AddBlob(sha.Hex)
-			}
-			// mark the image config as "loaded"
-			imgCfgSha, err := img.ConfigName()
-			if err != nil {
-				return fmt.Errorf("unable to get image config name: %w", err)
-			}
-			p.layout.Images.AddBlob(imgCfgSha.Hex)
-			// mark the manifest as "loaded"
-			manifestSha, err := img.Digest()
-			if err != nil {
-				return fmt.Errorf("unable to get image digest: %w", err)
-			}
-			p.layout.Images.AddBlob(manifestSha.Hex)
 		}
 	}
 

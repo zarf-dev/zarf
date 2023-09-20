@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"html/template"
 
-	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 )
 
 func (b *Builder) createSBOMViewerAsset(identifier string, jsonData []byte) error {

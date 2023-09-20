@@ -107,27 +107,9 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 			}
 			tagToDigest[tag] = imgDigest.String()
 
-			layers, err := img.Layers()
-			if err != nil {
+			if err := pp.Images.AddV1Image(img); err != nil {
 				return err
 			}
-			for _, layer := range layers {
-				digest, err := layer.Digest()
-				if err != nil {
-					return err
-				}
-				pp.Images.AddBlob(digest.Hex)
-			}
-			imgCfgSha, err := img.ConfigName()
-			if err != nil {
-				return err
-			}
-			pp.Images.AddBlob(imgCfgSha.Hex)
-			manifestSha, err := img.Digest()
-			if err != nil {
-				return err
-			}
-			pp.Images.AddBlob(manifestSha.Hex)
 		}
 		if err := utils.AddImageNameAnnotation(pp.Images.Base, tagToDigest); err != nil {
 			return err

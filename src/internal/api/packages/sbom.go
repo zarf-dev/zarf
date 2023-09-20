@@ -13,8 +13,8 @@ import (
 	"syscall"
 
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-chi/chi/v5"

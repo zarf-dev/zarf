@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 )

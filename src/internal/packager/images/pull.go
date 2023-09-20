@@ -12,8 +12,8 @@ import (
 	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
