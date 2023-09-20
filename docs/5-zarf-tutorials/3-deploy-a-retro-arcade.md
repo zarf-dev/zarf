@@ -21,9 +21,7 @@ Before beginning this tutorial you will need the following:
 
 ## Deploying the Arcade
 
-<!-- TODO: (@WSTARR) This should point to an OCI version of this at some point. -->
-
-1. The `dos-games` package is easily deployable via `sget://` by running `zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)`.
+1. The `dos-games` package is easily deployable via `oci://` by running `zarf package deploy oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub`.
 
 :::tip
 

@@ -20,13 +20,13 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
 
-	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
-	"github.com/sigstore/cosign/pkg/cosign"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-	sigs "github.com/sigstore/cosign/pkg/signature"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 
 	// Register the provider-specific plugins
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
@@ -105,6 +105,10 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 		return fmt.Errorf("getting Fulcio intermediates: %w", err)
 	}
 
+	co.IgnoreTlog = true
+	co.IgnoreSCT = true
+	co.Offline = true
+
 	verifyMsg := fmt.Sprintf("%s cosign verified: ", image)
 
 	sp, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
@@ -175,22 +179,16 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 }
 
 // CosignVerifyBlob verifies the zarf.yaml.sig was signed with the key provided by the flag
-func CosignVerifyBlob(blobPath string, sigPath string, keyPath string) error {
-	ctx := context.TODO()
+func CosignVerifyBlob(blobRef string, sigRef string, keyPath string) error {
 	keyOptions := options.KeyOpts{KeyRef: keyPath}
-	certRef := ""
-	certEmail := ""
-	certIdentity := ""
-	certOidcIssuer := ""
-	certChain := ""
-	certGithubWorkflowTrigger := ""
-	certGithubWorkflowSha := ""
-	certGithubWorkflowName := ""
-	certGithubWorkflowRepository := ""
-	certGithubWorkflowRef := ""
-	enforceSCT := false
-
-	err := verify.VerifyBlobCmd(ctx, keyOptions, certRef, certEmail, certIdentity, certOidcIssuer, certChain, sigPath, blobPath, certGithubWorkflowTrigger, certGithubWorkflowSha, certGithubWorkflowName, certGithubWorkflowRepository, certGithubWorkflowRef, enforceSCT)
+	cmd := &verify.VerifyBlobCmd{
+		KeyOpts:    keyOptions,
+		SigRef:     sigRef,
+		IgnoreSCT:  true,
+		Offline:    true,
+		IgnoreTlog: true,
+	}
+	err := cmd.Exec(context.TODO(), blobRef)
 	if err == nil {
 		message.Successf("Package signature validated!")
 	}
@@ -202,25 +200,19 @@ func CosignVerifyBlob(blobPath string, sigPath string, keyPath string) error {
 func CosignSignBlob(blobPath string, outputSigPath string, keyPath string, passwordFunc func(bool) ([]byte, error)) ([]byte, error) {
 	rootOptions := &options.RootOptions{Verbose: false, Timeout: options.DefaultTimeout}
 
-	regOptions := options.RegistryOptions{
-		AllowInsecure:      true,
-		KubernetesKeychain: false,
-		RefOpts:            options.ReferenceOptions{TagPrefix: ""},
-		Keychain:           nil,
-	}
-
 	keyOptions := options.KeyOpts{KeyRef: keyPath,
 		PassFunc: passwordFunc}
 	b64 := true
 	outputCertificate := ""
+	tlogUpload := false
 
 	sig, err := sign.SignBlobCmd(rootOptions,
 		keyOptions,
-		regOptions,
 		blobPath,
 		b64,
 		outputSigPath,
-		outputCertificate)
+		outputCertificate,
+		tlogUpload)
 
 	return sig, err
 }

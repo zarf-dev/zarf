@@ -59,6 +59,6 @@ $ zarf connect [service name]
 
 :::note
 
-You can also specify a package locally, or via oci or sget such as `zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)`
+You can also specify a package locally, or via oci such as `zarf package deploy oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub`
 
 :::
