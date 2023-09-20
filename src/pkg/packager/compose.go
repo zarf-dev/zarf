@@ -83,10 +83,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	var cachePath string
 
-	subPkgPaths := &layout.PackagePaths{
-		Base:     filepath.Join(pathAncestry, parent.Import.Path),
-		ZarfYAML: filepath.Join(pathAncestry, parent.Import.Path, layout.ZarfYAML),
-	}
+	subPkgPaths := layout.New(parent.Import.Path)
 
 	if parent.Import.URL != "" {
 		if !strings.HasSuffix(parent.Import.URL, oci.SkeletonSuffix) {
@@ -116,7 +113,6 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 		if err != nil {
 			return child, fmt.Errorf("unable to pull skeleton from %s: %w", skelURL, err)
 		}
-		subPkgPaths.SetFromLayers(fetchedLayers)
 		cwd, err := os.Getwd()
 		if err != nil {
 			return child, fmt.Errorf("unable to get current working directory: %w", err)
@@ -127,10 +123,12 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			return child, fmt.Errorf("unable to get relative path: %w", err)
 		}
 		parent.Import.Path = rel
+		subPkgPaths = layout.New(parent.Import.Path)
+		subPkgPaths.SetFromLayers(fetchedLayers)
 	}
 
 	var subPkg types.ZarfPackage
-	if err := utils.ReadYaml(subPkgPaths.ZarfYAML, &subPkg); err != nil {
+	if err := utils.ReadYaml(filepath.Join(pathAncestry, subPkgPaths.ZarfYAML), &subPkg); err != nil {
 		return child, err
 	}
 
@@ -169,16 +167,17 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 
 	// If it's OCI, we need to unpack the component tarball
 	if parent.Import.URL != "" {
+		parent.Import.Path = filepath.Join(parent.Import.Path, layout.ComponentsDir, child.Name)
 		if err := subPkgPaths.Components.Unarchive(child); err != nil {
 			if os.IsNotExist(err) {
 				// If the tarball doesn't exist (skeleton component had no local resources), we need to create the directory anyways in case there are actions
-				if err := utils.CreateDirectory(parent.Import.Path, 0700); err != nil {
+				if err := utils.CreateDirectory(filepath.Join(subPkgPaths.Components.Base, child.Name), 0700); err != nil {
 					return child, fmt.Errorf("unable to create composed component cache path %s: %w", cachePath, err)
 				}
+			} else {
+				return child, fmt.Errorf("unable to unarchive component: %w", err)
 			}
-			return child, fmt.Errorf("unable to unarchive component: %w", err)
 		}
-		parent.Import.Path = subPkgPaths.Components.Dirs[child.Name].Base
 	}
 
 	pathAncestry = filepath.Join(pathAncestry, parent.Import.Path)

@@ -91,8 +91,6 @@ func (g *Git) checkoutHashAsBranch(hash plumbing.Hash, branch plumbing.Reference
 // checkout performs a `git checkout` on the path provided using the options provided
 // It assumes the caller knows what to do and does not perform any safety checks.
 func (g *Git) checkout(checkoutOptions *git.CheckoutOptions) error {
-	message.Debugf("git checkout: %s", message.JSONValue(checkoutOptions))
-
 	// Open the given repo
 	repo, err := git.PlainOpen(g.GitPath)
 	if err != nil {
