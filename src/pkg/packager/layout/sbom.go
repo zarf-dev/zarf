@@ -22,8 +22,12 @@ type SBOMs struct {
 }
 
 func (s *SBOMs) Unarchive() (err error) {
-	if utils.InvalidPath(s.Path) {
-		return fs.ErrNotExist
+	if s.Path == "" || utils.InvalidPath(s.Path) {
+		return &fs.PathError{
+			Op:   "stat",
+			Path: s.Path,
+			Err:  fs.ErrNotExist,
+		}
 	}
 	if utils.IsDir(s.Path) {
 		return nil
@@ -38,8 +42,12 @@ func (s *SBOMs) Unarchive() (err error) {
 }
 
 func (s *SBOMs) Archive() (err error) {
-	if utils.InvalidPath(s.Path) {
-		return fs.ErrNotExist
+	if s.Path == "" || utils.InvalidPath(s.Path) {
+		return &fs.PathError{
+			Op:   "stat",
+			Path: s.Path,
+			Err:  fs.ErrNotExist,
+		}
 	}
 	if !utils.IsDir(s.Path) {
 		return nil

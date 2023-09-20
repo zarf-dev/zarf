@@ -15,6 +15,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+var (
+	// veryify that ClusterSource implements PackageSource
+	_ PackageSource = (*ClusterSource)(nil)
+)
+
 // NewClusterSource creates a new cluster source.
 func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 	if !validate.IsLowercaseNumberHyphen(pkgOpts.PackageSource) {

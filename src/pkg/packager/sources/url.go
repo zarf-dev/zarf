@@ -16,6 +16,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+var (
+	// veryify that URLSource implements PackageSource
+	_ PackageSource = (*URLSource)(nil)
+)
+
 // URLSource is a package source for http, https and sget URLs.
 type URLSource struct {
 	*types.ZarfPackageOptions
@@ -52,11 +57,11 @@ func (s *URLSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 
 	s.PackageSource = dstTarball
 
-	tp := &TarballSource{
+	ts := &TarballSource{
 		s.ZarfPackageOptions,
 	}
 
-	return tp.LoadPackage(dst)
+	return ts.LoadPackage(dst)
 }
 
 // LoadPackageMetadata loads a package's metadata from an http, https or sget URL.
@@ -75,9 +80,9 @@ func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 
 	s.PackageSource = dstTarball
 
-	tp := &TarballSource{
+	ts := &TarballSource{
 		s.ZarfPackageOptions,
 	}
 
-	return tp.LoadPackageMetadata(dst, wantSBOM, skipValidation)
+	return ts.LoadPackageMetadata(dst, wantSBOM, skipValidation)
 }

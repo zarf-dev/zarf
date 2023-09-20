@@ -23,6 +23,14 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
+var (
+	// veryify that TarballSource implements PackageSource
+	_ PackageSource = (*TarballSource)(nil)
+
+	// veryify that SplitTarballSource implements PackageSource
+	_ PackageSource = (*SplitTarballSource)(nil)
+)
+
 // TarballSource is a package source for tarballs.
 type TarballSource struct {
 	*types.ZarfPackageOptions
@@ -87,12 +95,16 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 		return err
 	}
 
-	if err := LoadComponents(&pkg, dst); err != nil {
-		return err
+	for _, component := range pkg.Components {
+		if err := dst.Components.Unarchive(component); err != nil {
+			return err
+		}
 	}
 
-	if err := dst.SBOMs.Unarchive(); err != nil {
-		return err
+	if dst.SBOMs.Path != "" {
+		if err := dst.SBOMs.Unarchive(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -136,9 +148,10 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 		}
 	}
 
-	// unpack sboms.tar
-	if err := dst.SBOMs.Unarchive(); err != nil {
-		return err
+	if wantSBOM {
+		if err := dst.SBOMs.Unarchive(); err != nil {
+			return err
+		}
 	}
 
 	return nil

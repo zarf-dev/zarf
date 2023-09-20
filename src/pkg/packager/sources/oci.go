@@ -21,6 +21,11 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+var (
+	// veryify that OCISource implements PackageSource
+	_ PackageSource = (*OCISource)(nil)
+)
+
 // OCISource is a package source for OCI registries.
 type OCISource struct {
 	*types.ZarfPackageOptions
@@ -72,12 +77,16 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths) (err error) {
 		return err
 	}
 
-	if err := LoadComponents(&pkg, dst); err != nil {
-		return err
+	for _, component := range pkg.Components {
+		if err := dst.Components.Unarchive(component); err != nil {
+			return err
+		}
 	}
 
-	if err := dst.SBOMs.Unarchive(); err != nil {
-		return err
+	if dst.SBOMs.Path != "" {
+		if err := dst.SBOMs.Unarchive(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -98,10 +107,6 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 	}
 	dst.SetFromLayers(layersFetched)
 
-	if utils.InvalidPath(dst.SBOMs.Path) && wantSBOM {
-		return fmt.Errorf("package does not contain SBOMs")
-	}
-
 	if err := utils.ReadYaml(dst.ZarfYAML, &pkg); err != nil {
 		return err
 	}
@@ -119,8 +124,10 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 	}
 
 	// unpack sboms.tar
-	if err := dst.SBOMs.Unarchive(); err != nil {
-		return err
+	if wantSBOM {
+		if err := dst.SBOMs.Unarchive(); err != nil {
+			return err
+		}
 	}
 
 	return nil
