@@ -84,7 +84,7 @@ When(a.Secret)
 
 // sleepAndChangeStatus sleeps for the specified duration and changes the status of the 'test-webhook' to 'Succeeded'.
 async function sleepAndChangeStatus(secretName: string, componentName: string) {
-  await sleep(30);
+  await sleep(10);
 
   // Configure the k8s api client
   const kc = new k8s.KubeConfig();
