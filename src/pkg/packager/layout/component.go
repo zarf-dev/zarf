@@ -130,6 +130,11 @@ func (c *Components) Create(component types.ZarfComponent) (cl *ComponentPaths, 
 		Base: base,
 	}
 
+	cl.Temp = filepath.Join(base, TempDir)
+	if err = utils.CreateDirectory(cl.Temp, 0700); err != nil {
+		return nil, err
+	}
+
 	if len(component.Files) > 0 {
 		cl.Files = filepath.Join(base, FilesDir)
 		if err = utils.CreateDirectory(cl.Files, 0700); err != nil {
