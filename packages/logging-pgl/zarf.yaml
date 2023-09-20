@@ -9,7 +9,7 @@ components:
       Aggregates logs from different containers and presents them in a web dashboard.
       Recommended if no other logging stack is deployed in the cluster.
     images:
-      - docker.io/grafana/promtail:2.7.4
+      - docker.io/grafana/promtail:2.8.3
       - grafana/grafana:8.3.5
       - grafana/loki:2.6.1
       - quay.io/kiwigrid/k8s-sidecar:1.19.2
@@ -22,7 +22,7 @@ components:
       - name: loki-stack
         releaseName: zarf-loki-stack
         url: https://grafana.github.io/helm-charts
-        version: 2.9.10
+        version: 2.9.11
         namespace: zarf
         valuesFiles:
           - pgl-values.yaml

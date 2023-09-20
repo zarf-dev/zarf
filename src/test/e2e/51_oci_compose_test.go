@@ -115,7 +115,7 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1-skeleton", "-o", "build", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/big-bang-example:2.5.0-skeleton", "-o", "build", "--insecure")
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/big-bang-example:2.10.0-skeleton", "-o", "build", "--insecure")
 	suite.NoError(err)
 }
 
@@ -191,7 +191,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 		filepath.Join("build", "zarf-package-import-everything-skeleton-0.0.1.tar.zst"),
 		filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
 		filepath.Join("build", "zarf-package-helm-charts-skeleton-0.0.1.tar.zst"),
-		filepath.Join("build", "zarf-package-big-bang-example-skeleton-2.5.0.tar.zst"),
+		filepath.Join("build", "zarf-package-big-bang-example-skeleton-2.10.0.tar.zst"),
 	}
 
 	for _, pkgTar := range pkgTars {

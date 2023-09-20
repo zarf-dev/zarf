@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"slices"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -58,7 +60,7 @@ func (p *Packager) Mirror() (err error) {
 	requestedComponentNames := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
 
 	for _, component := range p.cfg.Pkg.Components {
-		if len(requestedComponentNames) == 0 || helpers.SliceContains(requestedComponentNames, component.Name) {
+		if len(requestedComponentNames) == 0 || slices.Contains(requestedComponentNames, component.Name) {
 			if err := p.mirrorComponent(component); err != nil {
 				return err
 			}

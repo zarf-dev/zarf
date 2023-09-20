@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 
+	"slices"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
@@ -51,7 +53,7 @@ func (p *Packager) Remove() (err error) {
 		// Flip requested based on if this is a partial removal
 		requested := !partialRemove
 
-		if helpers.SliceContains(requestedComponents, component.Name) {
+		if slices.Contains(requestedComponents, component.Name) {
 			requested = true
 		}
 
@@ -93,7 +95,7 @@ func (p *Packager) Remove() (err error) {
 
 	for _, c := range helpers.Reverse(deployedPackage.DeployedComponents) {
 		// Only remove the component if it was requested or if we are removing the whole package
-		if partialRemove && !helpers.SliceContains(requestedComponents, c.Name) {
+		if partialRemove && !slices.Contains(requestedComponents, c.Name) {
 			continue
 		}
 
