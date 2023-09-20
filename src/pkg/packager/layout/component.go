@@ -45,7 +45,7 @@ func (c *Components) Archive(component types.ZarfComponent) (err error) {
 	}
 	if size > 0 {
 		tb := fmt.Sprintf("%s.tar", base)
-		message.Debugf("Archiving %q", base)
+		message.Debugf("Archiving %q", name)
 		if err := archiver.Archive([]string{base}, tb); err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func (c *Components) Archive(component types.ZarfComponent) (err error) {
 		}
 		c.Tarballs[name] = tb
 	} else {
-		message.Debugf("Component %q is empty, skipping archiving", component.Name)
+		message.Debugf("Component %q is empty, skipping archiving", name)
 	}
 
 	delete(c.Dirs, name)
@@ -76,14 +76,8 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 		}
 	}
 
-	message.Debugf("Unarchiving %q", tb)
-
-	defer os.Remove(tb)
 	cs := &ComponentPaths{
 		Base: filepath.Join(c.Base, name),
-	}
-	if err := archiver.Unarchive(tb, c.Base); err != nil {
-		return err
 	}
 	if len(component.Files) > 0 {
 		cs.Files = filepath.Join(cs.Base, FilesDir)
@@ -111,7 +105,18 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 	}
 	c.Dirs[name] = cs
 	delete(c.Tarballs, name)
-	return nil
+
+	// if the component is already unarchived, skip
+	if !utils.InvalidPath(cs.Base) {
+		message.Debugf("Component %q already unarchived", name)
+		return nil
+	}
+
+	message.Debugf("Unarchiving %q", tb)
+	if err := archiver.Unarchive(tb, c.Base); err != nil {
+		return err
+	}
+	return os.Remove(tb)
 }
 
 func (c *Components) Create(component types.ZarfComponent) (cl *ComponentPaths, err error) {
