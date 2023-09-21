@@ -30,7 +30,7 @@ components:
     actions:
       onCreate:
         before:
-          - cmd: "test \"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\" != \"local\" || make init-package-local-agent AGENT_IMAGE_TAG=\"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\" ARCH=\"###ZARF_PKG_ARCH###\" fi"
+          - cmd: "test \"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\" != \"local\" || make init-package-local-agent AGENT_IMAGE_TAG=\"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\" ARCH=\"###ZARF_PKG_ARCH###\""
             dir: ../..
             description: Build the local agent image (if 'AGENT_IMAGE_TAG' was specified as 'local')
       onDeploy:
