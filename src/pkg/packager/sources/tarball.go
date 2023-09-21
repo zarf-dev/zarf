@@ -42,6 +42,12 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 
 	message.Debugf("Loading package from %q", s.PackageSource)
 
+	if s.Shasum != "" {
+		if err := utils.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
+			return err
+		}
+	}
+
 	pathsExtracted := []string{}
 
 	err = archiver.Walk(s.PackageSource, func(f archiver.File) error {
@@ -119,6 +125,12 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 // LoadPackageMetadata loads a package's metadata from a tarball.
 func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (err error) {
 	var pkg types.ZarfPackage
+
+	if s.Shasum != "" {
+		if err := utils.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
+			return err
+		}
+	}
 
 	toExtract := oci.PackageAlwaysPull
 	if wantSBOM {
@@ -261,6 +273,8 @@ func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 
 	// Update the package source to the reassembled tarball
 	s.PackageSource = dstTarball
+	// Clear the shasum so it is not used for validation
+	s.Shasum = ""
 
 	ts := &TarballSource{
 		s.ZarfPackageOptions,

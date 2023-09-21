@@ -56,6 +56,8 @@ func (s *URLSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 	}
 
 	s.PackageSource = dstTarball
+	// Clear the shasum so that it doesn't get used again
+	s.Shasum = ""
 
 	ts := &TarballSource{
 		s.ZarfPackageOptions,
