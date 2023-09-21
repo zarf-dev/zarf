@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/cache"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/moby/moby/client"
 	"github.com/pterm/pterm"
@@ -206,8 +204,10 @@ func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Imag
 	}
 
 	spinner.Updatef("Preparing image %s", src)
-	imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
-	img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
+	// imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
+
+	// TODO: Skip cache for sig/att
+	// img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 
 	return img, nil
 }

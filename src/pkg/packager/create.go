@@ -28,7 +28,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/mholt/archiver/v3"
+	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
@@ -88,6 +90,58 @@ func (p *Packager) Create(baseDir string) error {
 	// After templates are filled process any create extensions
 	if err := p.processExtensions(); err != nil {
 		return err
+	}
+
+	// copy cosign tree logic to build image list of signatures
+	var nameOpts []name.Option
+
+	// Add signatures and attestations for images
+	for i, c := range p.cfg.Pkg.Components {
+		var imageSigList []string
+		for _, image := range c.Images {
+			ref, err := name.ParseReference(image, nameOpts...)
+
+			if err != nil {
+				return err
+			}
+
+			var remoteOpts []ociremote.Option
+			simg, err := ociremote.SignedEntity(ref, remoteOpts...)
+			if err != nil {
+				return err
+			}
+			sigRef, err := ociremote.SignatureTag(ref, remoteOpts...)
+			if err != nil {
+				return err
+			}
+			attRef, err := ociremote.AttestationTag(ref, remoteOpts...)
+			if err != nil {
+				return err
+			}
+
+			sigs, err := simg.Signatures()
+			if err == nil {
+				layers, err := sigs.Layers()
+				if err != nil {
+					return err
+				}
+				if len(layers) > 0 {
+					imageSigList = append(imageSigList, sigRef.String())
+				}
+			}
+
+			atts, err := simg.Attestations()
+			if err == nil {
+				layers, err := atts.Layers()
+				if err != nil {
+					return err
+				}
+				if len(layers) > 0 {
+					imageSigList = append(imageSigList, attRef.String())
+				}
+			}
+		}
+		p.cfg.Pkg.Components[i].Images = append(p.cfg.Pkg.Components[i].Images, imageSigList...)
 	}
 
 	// After we have a full zarf.yaml remove unnecessary repos and images if we are building a differential package
