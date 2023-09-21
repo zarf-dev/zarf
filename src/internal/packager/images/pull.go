@@ -248,7 +248,7 @@ func (i *ImgConfig) PullAll() error {
 
 			// Create the directory for the blob if it doesn't exist
 			dir := filepath.Join(string(cranePath), "blobs", digest.Algorithm)
-			if err := os.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
+			if err := utils.CreateDirectory(dir, os.ModePerm); err != nil {
 				layerWritingConcurrency.ErrorChan <- err
 				return
 			}
