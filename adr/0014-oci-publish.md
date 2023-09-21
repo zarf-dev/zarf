@@ -53,7 +53,7 @@ For an example of this in action, please see the corresponding [tutorial](../doc
 
 Backwards compatibility was an important considering when making these changes. We had to implement logic to make sure a new version of the Zarf binary could still operate with older versions of Zarf packages.
 
-At the moment we are testing the backwards compatibility by virtue of maintaining the `./src/test/e2e/27_cosign_deploy_test.go` where we are deploying an old Zarf package via `sget`.
+At the moment we are testing the backwards compatibility by virtue of maintaining the `./src/test/e2e/27_cosign_deploy_test.go` where we are deploying an old Zarf package via `sget` (which itself is now deprecated).
 
 One thing we may want to look at more in the future is how we can get more intricate tests around the backwards compatibility.
 
