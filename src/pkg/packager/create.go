@@ -96,52 +96,58 @@ func (p *Packager) Create(baseDir string) error {
 	var nameOpts []name.Option
 
 	// Add signatures and attestations for images
-	for i, c := range p.cfg.Pkg.Components {
-		var imageSigList []string
-		for _, image := range c.Images {
-			ref, err := name.ParseReference(image, nameOpts...)
+	var combinedSbomImgList []string
+	if p.cfg.CreateOpts.SkipSigs {
+		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
+	} else {
+		for i, c := range p.cfg.Pkg.Components {
+			var imageSigList []string
+			for _, image := range c.Images {
+				ref, err := name.ParseReference(image, nameOpts...)
 
-			if err != nil {
-				return err
-			}
-
-			var remoteOpts []ociremote.Option
-			simg, err := ociremote.SignedEntity(ref, remoteOpts...)
-			if err != nil {
-				return err
-			}
-			sigRef, err := ociremote.SignatureTag(ref, remoteOpts...)
-			if err != nil {
-				return err
-			}
-			attRef, err := ociremote.AttestationTag(ref, remoteOpts...)
-			if err != nil {
-				return err
-			}
-
-			sigs, err := simg.Signatures()
-			if err == nil {
-				layers, err := sigs.Layers()
 				if err != nil {
 					return err
 				}
-				if len(layers) > 0 {
-					imageSigList = append(imageSigList, sigRef.String())
-				}
-			}
 
-			atts, err := simg.Attestations()
-			if err == nil {
-				layers, err := atts.Layers()
+				var remoteOpts []ociremote.Option
+				simg, err := ociremote.SignedEntity(ref, remoteOpts...)
 				if err != nil {
 					return err
 				}
-				if len(layers) > 0 {
-					imageSigList = append(imageSigList, attRef.String())
+				sigRef, err := ociremote.SignatureTag(ref, remoteOpts...)
+				if err != nil {
+					return err
+				}
+				attRef, err := ociremote.AttestationTag(ref, remoteOpts...)
+				if err != nil {
+					return err
+				}
+
+				sigs, err := simg.Signatures()
+				if err == nil {
+					layers, err := sigs.Layers()
+					if err != nil {
+						return err
+					}
+					if len(layers) > 0 {
+						imageSigList = append(imageSigList, sigRef.String())
+					}
+				}
+
+				atts, err := simg.Attestations()
+				if err == nil {
+					layers, err := atts.Layers()
+					if err != nil {
+						return err
+					}
+					if len(layers) > 0 {
+						imageSigList = append(imageSigList, attRef.String())
+					}
 				}
 			}
+			combinedSbomImgList = append(combinedSbomImgList, p.cfg.Pkg.Components[i].Images...)
+			p.cfg.Pkg.Components[i].Images = append(p.cfg.Pkg.Components[i].Images, imageSigList...)
 		}
-		p.cfg.Pkg.Components[i].Images = append(p.cfg.Pkg.Components[i].Images, imageSigList...)
 	}
 
 	// After we have a full zarf.yaml remove unnecessary repos and images if we are building a differential package
@@ -237,7 +243,7 @@ func (p *Packager) Create(baseDir string) error {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp); err != nil {
+		if err := sbom.Catalog(componentSBOMs, combinedSbomImgList, p.tmp); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}

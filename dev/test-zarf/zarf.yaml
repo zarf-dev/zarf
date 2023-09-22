@@ -11,3 +11,4 @@ components:
       - registry1.dso.mil/ironbank/chainguard-dev/wolfi/static:stable
       - registry1.dso.mil/ironbank/opensource/grafana/loki:2.9.1
       - cgr.dev/chainguard/static:latest
+      - docker.io/alpine:latest
