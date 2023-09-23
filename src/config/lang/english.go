@@ -299,14 +299,17 @@ const (
 	CmdPackageChooseErr = "Package path selection canceled: %s"
 
 	// zarf prepare
-	CmdPrepareShort = "Tools to help prepare assets for packaging"
-
-	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
+	CmdPrepareShort                 = "Tools to help prepare assets for packaging"
+	CmdPreparePatchRegistryCredsMsg = "NOTE: Zarf will not automatically add credentials for the internal registry to the manifest, this should be done by the user."
+	CmdPreparePatchShort            = "Displays a table of patch commands for file types. Pass a file type key and a file to patch a single file."
+	CmdPreparePatchLong             = "Displays a table of patch commands for file types. Pass a file type key and a file to patch a single file. i.e. 'zarf prepare patch git ./manifest.yaml'"
+	CmdPreparePatchGitShort         = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
-	CmdPreparePatchGitOverwritePrompt = "Overwrite the file %s with these changes?"
-	CmdPreparePatchGitOverwriteErr    = "Confirm overwrite canceled: %s"
-	CmdPreparePatchGitFileReadErr     = "Unable to read the file %s"
-	CmdPreparePatchGitFileWriteErr    = "Unable to write the changes back to the file"
+	CmdPreparePatchGitOverwritePrompt = "Deprecated: Overwrite the file %s with these changes?"
+	CmdPreparePatchGitOverwriteErr    = "Deprecated: Confirm overwrite canceled: %s"
+	CmdPreparePatchGitFileReadErr     = "Deprecated: Unable to read the file %s"
+	CmdPreparePatchFileReadErr        = "Unable to read the file %s"
+	CmdPreparePatchGitFileWriteErr    = "Deprecated: Unable to write the changes back to the file"
 
 	CmdPrepareSha256sumShort   = "Generates a SHA256SUM for the given file"
 	CmdPrepareSha256sumHashErr = "Unable to compute the SHA256SUM hash"
@@ -323,10 +326,19 @@ const (
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 	CmdPrepareGenerateConfigErr = "Unable to write the config file %s, make sure the file doesn't already exist"
 
-	CmdPrepareFlagSet           = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
-	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
-	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."
-	CmdPrepareFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
+	CmdPrepareFlagSet                 = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
+	CmdPrepareFlagRepoChartPath       = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
+	CmdPrepareFlagGitAccount          = "Deprecated: User or organization name for the git account that the repos are created under."
+	CmdPrepareFlagKubeVersion         = "Override the default helm template KubeVersion when performing a package chart template"
+	CmdPreparePatchInvalidFileTypeErr = "Invalid filetype '%s'  - valid filetypes are: oci and git"
+	CmdPreparePatchExample            = `
+	# Print all Zarf patch commands:
+	zarf prepare patch
+
+	# Patch specific file types with a host:
+	zarf prepare patch git 127.0.0.1:31999 ./manifest.yaml
+	zarf prepare patch oci 127.0.0.1:31999 ./manifest.yaml
+	`
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"

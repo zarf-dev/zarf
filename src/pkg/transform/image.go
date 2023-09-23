@@ -6,6 +6,7 @@ package transform
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -21,6 +22,29 @@ type Image struct {
 	Digest      string
 	Reference   string
 	TagOrDigest string
+}
+
+// MutateOCIURLsInText changes the oci url hostname to use the targetBaseURL.
+func MutateOCIURLsInText(text, replaceHostname string) string {
+	// Define the regex pattern to match oci:// URLs with hostname and path
+	ociURLRegex := regexp.MustCompile(`(oci:\/\/)([^\/]+)(\/[^ ]*)`)
+
+	// Use ReplaceAllStringFunc to replace matching URLs while preserving the path
+	result := ociURLRegex.ReplaceAllStringFunc(text, func(match string) string {
+		// Split the match into oci://, hostname, and path
+		parts := ociURLRegex.FindStringSubmatch(match)
+
+		// Check if there are enough parts to replace
+		if len(parts) >= 4 {
+			// Replace the hostname with the specified hostname
+			return parts[1] + replaceHostname + parts[3]
+		}
+
+		// If the match doesn't have enough parts, return it unchanged
+		return match
+	})
+
+	return result
 }
 
 // ImageTransformHost replaces the base url for an image and adds a crc32 of the original url to the end of the src (note image refs are not full URLs).

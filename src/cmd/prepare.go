@@ -28,10 +28,63 @@ var prepareCmd = &cobra.Command{
 	Aliases: []string{"prep"},
 	Short:   lang.CmdPrepareShort,
 }
+var patchCmd = &cobra.Command{
+	Use:     "patch TYPE HOST FILE",
+	Short:   lang.CmdPreparePatchShort,
+	Long:    lang.CmdPreparePatchLong,
+	Example: lang.CmdPreparePatchExample,
+	Aliases: []string{"p"},
+	Args:    cobra.ExactArgs(3),
+	Run: func(cmd *cobra.Command, args []string) {
+		fileType, host, fileName := args[0], args[1], args[2]
 
-var prepareTransformGitLinks = &cobra.Command{
+		// Warn user to add regcreds to the manifests on their own
+		message.Warn(lang.CmdPreparePatchRegistryCredsMsg)
+
+		// Read the contents of the given file
+		content, err := os.ReadFile(fileName)
+		if err != nil {
+			message.Fatalf(err, lang.CmdPreparePatchFileReadErr, fileName)
+		}
+
+		text := string(content)
+		var processedText string
+
+		switch strings.ToLower(fileType) {
+		case "git":
+			pkgConfig.InitOpts.GitServer.Address = host
+			processedText = transform.MutateGitURLsInText(message.Warnf, pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
+		case "oci":
+			pkgConfig.InitOpts.RegistryInfo.Address = host
+			processedText = transform.MutateOCIURLsInText(text, pkgConfig.InitOpts.RegistryInfo.Address)
+		default:
+			message.Fatalf(nil, lang.CmdPreparePatchInvalidFileTypeErr, fileType)
+		}
+		// Print the differences
+		message.PrintDiff(text, processedText)
+
+		// Ask the user before this destructive action
+		confirm := false
+		prompt := &survey.Confirm{
+			Message: fmt.Sprintf(lang.CmdPreparePatchGitOverwritePrompt, fileName),
+		}
+		if err := survey.AskOne(prompt, &confirm); err != nil {
+			message.Fatalf(nil, lang.CmdPreparePatchGitOverwriteErr, err.Error())
+		}
+
+		if confirm {
+			// Overwrite the file
+			err = os.WriteFile(fileName, []byte(processedText), 0640)
+			if err != nil {
+				message.Fatal(err, lang.CmdPreparePatchGitFileWriteErr)
+			}
+		}
+	},
+}
+var deprecatedPrepareTransformGitLinks = &cobra.Command{
 	Use:     "patch-git HOST FILE",
 	Aliases: []string{"p"},
+	Hidden:  true,
 	Short:   lang.CmdPreparePatchGitShort,
 	Args:    cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -143,7 +196,8 @@ func init() {
 	v := common.InitViper()
 
 	rootCmd.AddCommand(prepareCmd)
-	prepareCmd.AddCommand(prepareTransformGitLinks)
+	prepareCmd.AddCommand(deprecatedPrepareTransformGitLinks)
+	prepareCmd.AddCommand(patchCmd)
 	prepareCmd.AddCommand(prepareComputeFileSha256sum)
 	prepareCmd.AddCommand(prepareFindImages)
 	prepareCmd.AddCommand(prepareGenerateConfigFile)
@@ -156,5 +210,5 @@ func init() {
 	// allow for the override of the default helm KubeVersion
 	prepareFindImages.Flags().StringVar(&kubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
 
-	prepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdPrepareFlagGitAccount)
+	deprecatedPrepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdPrepareFlagGitAccount)
 }
