@@ -28,7 +28,7 @@ func ReadZarfYAML(path string) (pkg types.ZarfPackage, arch string, err error) {
 }
 
 // filterComponents removes components not matching the current OS if filterByOS is set.
-func (p *Packager) filterComponents(pkg *types.ZarfPackage) {
+func (p *Packager) filterComponents() {
 	// Filter each component to only compatible platforms.
 	filteredComponents := []types.ZarfComponent{}
 	for _, component := range p.cfg.Pkg.Components {
@@ -55,7 +55,7 @@ func (p *Packager) filterComponents(pkg *types.ZarfPackage) {
 		}
 	}
 	// Update the active package with the filtered components.
-	pkg.Components = filteredComponents
+	p.cfg.Pkg.Components = filteredComponents
 }
 
 // writeYaml adds build information and writes the config to the temp directory.

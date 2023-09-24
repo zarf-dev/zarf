@@ -56,7 +56,7 @@ func (p *Packager) Mirror() (err error) {
 	p.cfg.State = state
 
 	// Filter out components that are not compatible with this system if we have loaded from a tarball
-	p.filterComponents(&p.cfg.Pkg)
+	p.filterComponents()
 	requestedComponentNames := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
 
 	for _, component := range p.cfg.Pkg.Components {

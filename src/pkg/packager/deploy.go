@@ -103,7 +103,7 @@ func (p *Packager) Deploy() (err error) {
 	}()
 
 	// Filter out components that are not compatible with this system
-	p.filterComponents(&p.cfg.Pkg)
+	p.filterComponents()
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
@@ -121,7 +121,7 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy := p.getValidComponents(&p.cfg.Pkg)
+	componentsToDeploy := p.getValidComponents()
 
 	// Generate a value template
 	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
