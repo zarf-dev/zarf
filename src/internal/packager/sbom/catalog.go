@@ -47,19 +47,16 @@ var componentPrefix = "zarf-component-"
 func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imgList []string, paths *layout.PackagePaths) error {
 	imageCount := len(imgList)
 	componentCount := len(componentSBOMs)
-
-	sbomDir := paths.SBOMs.Path
-
 	builder := Builder{
 		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
 		cachePath:  config.GetAbsCachePath(),
 		imagesPath: paths.Images.Base,
-		outputDir:  sbomDir,
+		outputDir:  paths.SBOMs.Path,
 	}
 	defer builder.spinner.Stop()
 
 	// Ensure the sbom directory exists
-	_ = utils.CreateDirectory(sbomDir, 0700)
+	_ = utils.CreateDirectory(builder.outputDir, 0700)
 
 	// Generate a list of images and files for the sbom viewer
 	json, err := builder.generateJSONList(componentSBOMs, imgList)

@@ -45,7 +45,7 @@ func (p *Packager) Remove() (err error) {
 	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
-	p.filterComponents(&p.cfg.Pkg)
+	p.filterComponents()
 	packageName = p.cfg.Pkg.Metadata.Name
 
 	// If we have package components check them for images, charts, manifests, etc

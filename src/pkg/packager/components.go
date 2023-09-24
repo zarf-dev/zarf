@@ -17,7 +17,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-func (p *Packager) getValidComponents(pkg *types.ZarfPackage) []types.ZarfComponent {
+func (p *Packager) getValidComponents() []types.ZarfComponent {
 	var validComponentsList []types.ZarfComponent
 	var orderedKeys []string
 	var choiceComponents []string
@@ -28,7 +28,7 @@ func (p *Packager) getValidComponents(pkg *types.ZarfPackage) []types.ZarfCompon
 	requestedNames := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
 
 	// Break up components into choice groups
-	for _, component := range pkg.Components {
+	for _, component := range p.cfg.Pkg.Components {
 		key := component.Group
 		// If not a choice group, then use the component name as the key
 		if key == "" {
