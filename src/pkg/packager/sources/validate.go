@@ -21,7 +21,7 @@ import (
 
 var (
 	// ErrPkgKeyButNoSig is returned when a key was provided but the package is not signed
-	ErrPkgKeyButNoSig = errors.New("a key was provided but the package is not signed - remove the --key flag and run the command again")
+	ErrPkgKeyButNoSig = errors.New("a key was provided but the package is not signed - the package may be corrupted or the --key flag was erroneously specified")
 	// ErrPkgSigButNoKey is returned when a package is signed but no key was provided
 	ErrPkgSigButNoKey = errors.New("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
 )
@@ -144,6 +144,7 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 		}
 	}
 
+  // Check that all of the files in the loaded directory were checked (i.e. no files were weren't expecting got added)
 	for path, checked := range checkedMap {
 		if !checked {
 			return fmt.Errorf("unable to validate checksums, %s did not get checked", path)

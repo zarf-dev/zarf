@@ -31,7 +31,7 @@ func ReadZarfYAML(path string) (pkg types.ZarfPackage, arch string, err error) {
 func (p *Packager) filterComponents(pkg *types.ZarfPackage) {
 	// Filter each component to only compatible platforms.
 	filteredComponents := []types.ZarfComponent{}
-	for _, component := range pkg.Components {
+	for _, component := range p.cfg.Pkg.Components {
 		// Ignore only filters that are empty
 		var validArch, validOS bool
 
