@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package layout contains functions for interacting with Zarf's package layout on disk.
 package layout
 
 import (
@@ -15,6 +16,7 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
+// ComponentPaths contains paths for a component.
 type ComponentPaths struct {
 	Base           string
 	Temp           string
@@ -26,12 +28,14 @@ type ComponentPaths struct {
 	DataInjections string
 }
 
+// Components contains paths for components.
 type Components struct {
 	Base     string
 	Dirs     map[string]*ComponentPaths
 	Tarballs map[string]string
 }
 
+// Archive archives a component.
 func (c *Components) Archive(component types.ZarfComponent) (err error) {
 	name := component.Name
 	if _, ok := c.Dirs[name]; !ok {
@@ -61,6 +65,7 @@ func (c *Components) Archive(component types.ZarfComponent) (err error) {
 	return os.RemoveAll(base)
 }
 
+// Unarchive unarchives a component.
 func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 	name := component.Name
 	tb, ok := c.Tarballs[name]
@@ -119,6 +124,7 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 	return os.Remove(tb)
 }
 
+// Create creates a new component directory structure.
 func (c *Components) Create(component types.ZarfComponent) (cp *ComponentPaths, err error) {
 	if err = utils.CreateDirectory(c.Base, 0700); err != nil {
 		return nil, err

@@ -43,6 +43,7 @@ type PackageSource interface {
 	Collect(string) error
 }
 
+// Identify returns the type of package source based on the provided package source string.
 func Identify(pkgSrc string) string {
 	if helpers.IsURL(pkgSrc) {
 		parsed, _ := url.Parse(pkgSrc)

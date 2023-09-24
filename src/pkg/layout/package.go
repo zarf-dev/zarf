@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package layout contains functions for interacting with Zarf's package layout on disk.
 package layout
 
 import (
@@ -16,6 +17,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+// PackagePaths is the default package layout.
 type PackagePaths struct {
 	Base      string
 	ZarfYAML  string
@@ -30,12 +32,14 @@ type PackagePaths struct {
 	isLegacyLayout bool
 }
 
+// InjectionMadnessPaths contains paths for injection madness.
 type InjectionMadnessPaths struct {
 	InjectionBinary      string
 	SeedImagesDir        string
 	InjectorPayloadTarGz string
 }
 
+// New returns a new PackagePaths struct.
 func New(baseDir string) *PackagePaths {
 	return &PackagePaths{
 		Base:      baseDir,
@@ -47,6 +51,7 @@ func New(baseDir string) *PackagePaths {
 	}
 }
 
+// MigrateLegacy migrates a legacy package layout to the new layout.
 func (pp *PackagePaths) MigrateLegacy() (err error) {
 	var pkg types.ZarfPackage
 	base := pp.Base
@@ -130,10 +135,12 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	return nil
 }
 
+// IsLegacyLayout returns true if the package is using the legacy layout.
 func (pp *PackagePaths) IsLegacyLayout() bool {
 	return pp.isLegacyLayout
 }
 
+// WithSignature sets the signature path if the keyPath is not empty.
 func (pp *PackagePaths) WithSignature(keyPath string) *PackagePaths {
 	if keyPath != "" {
 		pp.Signature = filepath.Join(pp.Base, Signature)
@@ -141,6 +148,7 @@ func (pp *PackagePaths) WithSignature(keyPath string) *PackagePaths {
 	return pp
 }
 
+// WithImages sets the default image paths.
 func (pp *PackagePaths) WithImages() *PackagePaths {
 	pp.Images.Base = filepath.Join(pp.Base, ImagesDir)
 	pp.Images.OCILayout = filepath.Join(pp.Images.Base, OCILayout)
@@ -148,6 +156,7 @@ func (pp *PackagePaths) WithImages() *PackagePaths {
 	return pp
 }
 
+// WithSBOMs sets the default sbom paths.
 func (pp *PackagePaths) WithSBOMs() *PackagePaths {
 	pp.SBOMs = SBOMs{
 		Path: filepath.Join(pp.Base, SBOMDir),
@@ -155,6 +164,7 @@ func (pp *PackagePaths) WithSBOMs() *PackagePaths {
 	return pp
 }
 
+// SetFromLayers maps layers to package paths.
 func (pp *PackagePaths) SetFromLayers(layers []ocispec.Descriptor) {
 	paths := []string{}
 	for _, layer := range layers {
@@ -165,6 +175,7 @@ func (pp *PackagePaths) SetFromLayers(layers []ocispec.Descriptor) {
 	pp.SetFromPaths(paths)
 }
 
+// SetFromPaths maps paths to package paths.
 func (pp *PackagePaths) SetFromPaths(paths []string) {
 	for _, rel := range paths {
 		switch path := rel; {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package layout contains functions for interacting with Zarf's package layout on disk.
 package layout
 
 import (
@@ -11,6 +12,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
+// Images contains paths for images.
 type Images struct {
 	Base      string
 	Index     string
@@ -18,6 +20,7 @@ type Images struct {
 	Blobs     []string
 }
 
+// AddBlob adds a blob to the Images struct.
 func (i *Images) AddBlob(blob string) {
 	// TODO: verify sha256 hex
 	abs := filepath.Join(i.Base, "blobs", "sha256", blob)
@@ -26,6 +29,7 @@ func (i *Images) AddBlob(blob string) {
 	}
 }
 
+// AddV1Image adds a v1.Image to the Images struct.
 func (i *Images) AddV1Image(img v1.Image) error {
 	layers, err := img.Layers()
 	if err != nil {

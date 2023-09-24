@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package layout contains functions for interacting with Zarf's package layout on disk.
 package layout
 
 import (
@@ -12,15 +13,18 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
+// ComponentSBOM contains paths for a component's SBOM.
 type ComponentSBOM struct {
 	Files     []string
 	Component *ComponentPaths
 }
 
+// SBOMs contains paths for SBOMs.
 type SBOMs struct {
 	Path string
 }
 
+// Unarchive unarchives the package's SBOMs.
 func (s *SBOMs) Unarchive() (err error) {
 	if s.Path == "" || utils.InvalidPath(s.Path) {
 		return &fs.PathError{
@@ -41,6 +45,7 @@ func (s *SBOMs) Unarchive() (err error) {
 	return os.Remove(tb)
 }
 
+// Archive archives the package's SBOMs.
 func (s *SBOMs) Archive() (err error) {
 	if s.Path == "" || utils.InvalidPath(s.Path) {
 		return &fs.PathError{

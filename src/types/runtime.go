@@ -5,7 +5,9 @@
 package types
 
 const (
-	RawVariableType  VariableType = "raw"
+	// RawVariableType is the default type for a Zarf package variable
+	RawVariableType VariableType = "raw"
+	// FileVariableType is a type for a Zarf package variable that loads its contents from a file
 	FileVariableType VariableType = "file"
 )
 

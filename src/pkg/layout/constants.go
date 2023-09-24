@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package layout contains functions for interacting with Zarf's package layout on disk.
 package layout
 
+// Constants used in the default package layout.
 const (
 	TempDir           = "temp"
 	FilesDir          = "files"
