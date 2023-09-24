@@ -130,7 +130,7 @@ func LaunchAPIServer() {
 		// Extract the file name from the URL
 		file := strings.TrimPrefix(r.URL.Path, "/sbom-viewer/")
 
-		// Ensure SBOM file exists in the types.ZarfSBOMDir
+		// Ensure SBOM file exists in the layout.SBOMDir
 		if test, err := sbomSub.Open(file); err != nil {
 			// If the file doesn't exist, redirect to the homepage
 			r.URL.Path = "/"
