@@ -46,7 +46,7 @@ func (p *Packager) Create() (err error) {
 		if err != nil {
 			return err
 		}
-		err = p.SetOCIRemote(ref)
+		err = p.setOCIRemote(ref)
 		if err != nil {
 			return err
 		}
@@ -621,7 +621,7 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if helpers.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		err := p.SetOCIRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
+		err := p.setOCIRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
 		if err != nil {
 			return err
 		}

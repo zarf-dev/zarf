@@ -100,7 +100,7 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 			return child, fmt.Errorf("unable to create cache path %s: %w", cachePath, err)
 		}
 
-		err = p.SetOCIRemote(parent.Import.URL)
+		err = p.setOCIRemote(parent.Import.URL)
 		if err != nil {
 			return child, err
 		}

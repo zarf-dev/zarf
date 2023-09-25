@@ -315,8 +315,8 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 	return nil
 }
 
-// SetOCIRemote sets the remote OCI client for the package.
-func (p *Packager) SetOCIRemote(url string) error {
+// setOCIRemote sets the remote OCI client for the package.
+func (p *Packager) setOCIRemote(url string) error {
 	remote, err := oci.NewOrasRemote(url)
 	if err != nil {
 		return err
