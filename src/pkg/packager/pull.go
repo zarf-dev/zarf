@@ -69,17 +69,17 @@ func (p *Packager) Pull() (err error) {
 			return err
 		}
 
-		newName := fmt.Sprintf("zarf-package-%s-%s", pkg.Metadata.Name, pkg.Build.Architecture)
+		name := fmt.Sprintf("zarf-package-%s-%s", pkg.Metadata.Name, pkg.Build.Architecture)
 
 		if pkg.Metadata.Version != "" {
-			newName = fmt.Sprintf("%s-%s", newName, pkg.Metadata.Version)
+			name = fmt.Sprintf("%s-%s", name, pkg.Metadata.Version)
 		}
 
-		newName = newName + filepath.Ext(output)
-		if err := os.Rename(output, newName); err != nil {
+		name = filepath.Join(p.cfg.PullOpts.OutputDirectory, name+filepath.Ext(output))
+		if err := os.Rename(output, name); err != nil {
 			return err
 		}
-		output = newName
+		output = name
 	}
 
 	message.Infof("Pulled %q into %q", p.cfg.PkgOpts.PackageSource, output)
