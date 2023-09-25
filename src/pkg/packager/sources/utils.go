@@ -22,21 +22,32 @@ func TransformUnkownTarball(path string) (string, error) {
 		return path, nil
 	}
 
-	format, err := archiver.ByExtension(path)
+	// rename to .tar.zst and check if it's a valid tar.zst
+	tzst := fmt.Sprintf("%s.tar.zst", path)
+	if err := os.Rename(path, tzst); err != nil {
+		return "", err
+	}
+	format, err := archiver.ByExtension(tzst)
 	if err != nil {
 		return "", err
 	}
-
-	_, ok := format.(*archiver.Tar)
+	_, ok := format.(*archiver.TarZstd)
 	if ok {
-		tb := fmt.Sprintf("%s.tar", path)
-		return tb, os.Rename(path, tb)
+		return tzst, nil
 	}
 
-	_, ok = format.(*archiver.TarZstd)
+	// rename to .tar and check if it's a valid tar
+	tb := fmt.Sprintf("%s.tar", path)
+	if err := os.Rename(tzst, tb); err != nil {
+		return "", err
+	}
+	format, err = archiver.ByExtension(tb)
+	if err != nil {
+		return "", err
+	}
+	_, ok = format.(*archiver.Tar)
 	if ok {
-		tb := fmt.Sprintf("%s.tar.zst", path)
-		return tb, os.Rename(path, tb)
+		return tb, nil
 	}
 
 	return "", fmt.Errorf("%s is not a supported tarball format (%+v)", path, config.GetValidPackageExtensions())
