@@ -150,7 +150,7 @@ func (p *Packager) Create(baseDir string) error {
 		for _, src := range component.Images {
 			ref, err := transform.ParseImageRef(src)
 			if err != nil {
-				return fmt.Errorf("failed to create tag for image %s: %w", src, err)
+				return fmt.Errorf("failed to create ref for image %s: %w", src, err)
 			}
 			combinedImageList = append(combinedImageList, ref.Reference)
 		}
@@ -728,7 +728,7 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 		newRepoList := []string{}
 		// Generate a list of all unique images for this component
 		for _, img := range component.Images {
-			// If a image doesn't have a tag (or is a commonly reused tag), we will include this image in the differential package
+			// If a image doesn't have a ref (or is a commonly reused ref), we will include this image in the differential package
 			imgRef, err := transform.ParseImageRef(img)
 			if err != nil {
 				return fmt.Errorf("unable to parse image ref %s: %s", img, err.Error())

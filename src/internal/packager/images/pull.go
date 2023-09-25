@@ -32,14 +32,14 @@ import (
 	"github.com/pterm/pterm"
 )
 
-// PullAll pulls all of the images in the provided tag map.
+// PullAll pulls all of the images in the provided ref map.
 func (i *ImgConfig) PullAll() error {
 	var (
 		longer      string
 		imgCount    = len(i.ImgList)
 		imageMap    = map[string]v1.Image{}
-		tagToImage  = map[transform.Image]v1.Image{}
-		tagToDigest = make(map[string]string)
+		refToImage  = map[transform.Image]v1.Image{}
+		refToDigest = make(map[string]string)
 	)
 
 	// Give some additional user feedback on larger image sets
@@ -135,9 +135,9 @@ func (i *ImgConfig) PullAll() error {
 	for src, img := range imageMap {
 		ref, err := transform.ParseImageRef(src)
 		if err != nil {
-			return fmt.Errorf("failed to create tag for image %s: %w", src, err)
+			return fmt.Errorf("failed to create ref for image %s: %w", src, err)
 		}
-		tagToImage[ref] = img
+		refToImage[ref] = img
 		// Get the byte size for this image
 		layers, err := img.Layers()
 		if err != nil {
@@ -163,9 +163,9 @@ func (i *ImgConfig) PullAll() error {
 	}
 	spinner.Updatef("Preparing image sources and cache for image pulling")
 
-	type digestAndTag struct {
+	type refAndDigest struct {
 		digest string
-		tag    string
+		ref    string
 	}
 
 	// Create special sauce crane Path object
@@ -180,12 +180,12 @@ func (i *ImgConfig) PullAll() error {
 		}
 	}
 
-	for tag, img := range tagToImage {
+	for ref, img := range refToImage {
 		imgDigest, err := img.Digest()
 		if err != nil {
-			return fmt.Errorf("unable to get digest for image %s: %w", tag, err)
+			return fmt.Errorf("unable to get digest for image %s: %w", ref, err)
 		}
-		tagToDigest[tag.Reference] = imgDigest.String()
+		refToDigest[ref.Reference] = imgDigest.String()
 	}
 
 	spinner.Success()
@@ -343,15 +343,15 @@ func (i *ImgConfig) PullAll() error {
 		return err
 	}
 
-	imageSavingConcurrency := utils.NewConcurrencyTools[digestAndTag, error](len(tagToImage))
+	imageSavingConcurrency := utils.NewConcurrencyTools[refAndDigest, error](len(refToImage))
 
 	defer imageSavingConcurrency.Cancel()
 
 	// Spawn a goroutine for each image to write it's config and manifest to disk using crane
 	// All layers should already be in place so this should be extremely fast
-	for tag, img := range tagToImage {
-		// Create a closure so that we can pass the tag and img into the goroutine
-		tag, img := tag, img
+	for ref, img := range refToImage {
+		// Create a closure so that we can pass the ref and img into the goroutine
+		ref, img := ref, img
 		go func() {
 			// Make sure to call Done() on the WaitGroup when the goroutine finishes
 			defer imageSavingConcurrency.WaitGroupDone()
@@ -368,7 +368,7 @@ func (i *ImgConfig) PullAll() error {
 				if strings.HasPrefix(err.Error(), "error writing layer: expected blob size") {
 					message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
 				}
-				imageSavingConcurrency.ErrorChan <- fmt.Errorf("error when trying to save the img (%s): %w", tag.Reference, err)
+				imageSavingConcurrency.ErrorChan <- fmt.Errorf("error when trying to save the img (%s): %w", ref.Reference, err)
 				return
 			}
 
@@ -387,12 +387,12 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			imageSavingConcurrency.ProgressChan <- digestAndTag{digest: imgDigest.String(), tag: tag.Reference}
+			imageSavingConcurrency.ProgressChan <- refAndDigest{digest: imgDigest.String(), ref: ref.Reference}
 		}()
 	}
 
-	onImageSavingProgress := func(finishedImage digestAndTag, iteration int) {
-		tagToDigest[finishedImage.tag] = finishedImage.digest
+	onImageSavingProgress := func(finishedImage refAndDigest, iteration int) {
+		refToDigest[finishedImage.ref] = finishedImage.digest
 	}
 
 	onImageSavingError := func(err error) error {
@@ -409,7 +409,7 @@ func (i *ImgConfig) PullAll() error {
 
 	// for every image sequentially append OCI descriptor
 
-	for tag, img := range tagToImage {
+	for ref, img := range refToImage {
 		desc, err := partial.Descriptor(img)
 		if err != nil {
 			return err
@@ -425,10 +425,10 @@ func (i *ImgConfig) PullAll() error {
 			return err
 		}
 
-		tagToDigest[tag.Reference] = imgDigest.String()
+		refToDigest[ref.Reference] = imgDigest.String()
 	}
 
-	if err := utils.AddImageNameAnnotation(i.ImagesPath, tagToDigest); err != nil {
+	if err := utils.AddImageNameAnnotation(i.ImagesPath, refToDigest); err != nil {
 		return fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 

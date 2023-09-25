@@ -15,8 +15,8 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// LoadOCIImage returns a v1.Image with the image tag specified from a location provided, or an error if the image cannot be found.
-func LoadOCIImage(imgPath, imgTag string) (v1.Image, error) {
+// LoadOCIImage returns a v1.Image with the image ref specified from a location provided, or an error if the image cannot be found.
+func LoadOCIImage(imgPath, imgRef string) (v1.Image, error) {
 	// Use the manifest within the index.json to load the specific image we want
 	layoutPath := layout.Path(imgPath)
 	imgIdx, err := layoutPath.ImageIndex()
@@ -28,19 +28,19 @@ func LoadOCIImage(imgPath, imgTag string) (v1.Image, error) {
 		return nil, err
 	}
 
-	// Search through all the manifests within this package until we find the annotation that matches our tag
+	// Search through all the manifests within this package until we find the annotation that matches our ref
 	for _, manifest := range idxManifest.Manifests {
-		if manifest.Annotations[ocispec.AnnotationBaseImageName] == imgTag {
+		if manifest.Annotations[ocispec.AnnotationBaseImageName] == imgRef {
 			// This is the image we are looking for, load it and then return
 			return layoutPath.Image(manifest.Digest)
 		}
 	}
 
-	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", imgTag, imgPath)
+	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", imgRef, imgPath)
 }
 
-// AddImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image tag <-> digest shasum will be.
-func AddImageNameAnnotation(ociPath string, tagToDigest map[string]string) error {
+// AddImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image ref <-> digest shasum will be.
+func AddImageNameAnnotation(ociPath string, refToDigest map[string]string) error {
 	indexPath := filepath.Join(ociPath, "index.json")
 
 	// Read the file contents and turn it into a usable struct that we can manipulate
@@ -61,16 +61,16 @@ func AddImageNameAnnotation(ociPath string, tagToDigest map[string]string) error
 
 		var baseImageName string
 
-		for tag, digest := range tagToDigest {
+		for ref, digest := range refToDigest {
 			if digest == manifest.Digest.String() {
-				baseImageName = tag
+				baseImageName = ref
 			}
 		}
 
 		if baseImageName != "" {
 			manifest.Annotations[ocispec.AnnotationBaseImageName] = baseImageName
 			index.Manifests[idx] = manifest
-			delete(tagToDigest, baseImageName)
+			delete(refToDigest, baseImageName)
 		}
 	}
 

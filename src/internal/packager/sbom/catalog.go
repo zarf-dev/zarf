@@ -72,24 +72,24 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 
 	// Generate SBOM for each image
 	currImage := 1
-	for _, tag := range imgList {
-		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
+	for _, ref := range imgList {
+		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, ref)
 
 		// Get the image that we are creating an SBOM for
-		img, err := utils.LoadOCIImage(tmpPaths.Images, tag)
+		img, err := utils.LoadOCIImage(tmpPaths.Images, ref)
 		if err != nil {
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err
 		}
 
-		jsonData, err := builder.createImageSBOM(img, tag)
+		jsonData, err := builder.createImageSBOM(img, ref)
 		if err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", tag)
+			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", ref)
 			return err
 		}
 
-		if err = builder.createSBOMViewerAsset(tag, jsonData); err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", tag)
+		if err = builder.createSBOMViewerAsset(ref, jsonData); err != nil {
+			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", ref)
 			return err
 		}
 
@@ -152,11 +152,11 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 
 // createImageSBOM uses syft to generate SBOM for an image,
 // some code/structure migrated from https://github.com/testifysec/go-witness/blob/v0.1.12/attestation/syft/syft.go.
-func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
+func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 	// Get the image reference.
-	ref, err := transform.ParseImageRef(tagStr)
+	ref, err := transform.ParseImageRef(src)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create tag for image %s: %w", tagStr, err)
+		return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
 	}
 
 	// Create the sbom.
@@ -199,7 +199,7 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 		return nil, err
 	}
 
-	// Write the sbom to disk using the image tag as the filename
+	// Write the sbom to disk using the image ref as the filename
 	filename := fmt.Sprintf("%s.json", ref.Reference)
 	sbomFile, err := b.createSBOMFile(filename)
 	if err != nil {
