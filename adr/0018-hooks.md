@@ -30,7 +30,7 @@ Neither one of these current solutions are ideal. We don't want to require overl
 
 Potential considerations:
 
-1. Internal Zarf Implementation
+### Internal Zarf Implementation
 
   Clusters that have hooks will have `zarf-hook-*` secret(s) in the 'zarf' namespace. This secret will contain the hook's configuration and any other required metadata. As part of the package deployment process, Zarf will check if the cluster has any hooks and run them if they exist. Given the scenario above, there is no longer a need for an ECR specific Zarf package to be created. An ECR hook would perform the proper configuration for any package deployed onto that cluster; thereby requiring no extra manual intervention from the package deployer.
 
@@ -99,6 +99,22 @@ Potential considerations:
   - Since 'Internal' hooks are built into the CLI, the only way to get updates for the hook is to  update the CLI.
   - External hooks will have a few security concerns that we will have to work through.
   - Implementing hooks internally adds more complexity to the Zarf CLI. This is especially true if we end up using WASM as the execution engine for hooks.
+
+### Webhooks
+
+  Webhooks, such as Pepr, can act as a K8s controller that enables Kubernetes mutations. We are (or will be) considering using Pepr to replace the `Zarf Agent`. Pepr is capable to accomplishing most of what Zarf wants to do with the concept of Hooks. Zarf hook configuration could be saved as secrets that Zarf will be able to use. As Zarf is deploying packages onto a cluster, it can check for secrets the represent hooks (as it would if hook execution is handled internally as stated above) and get information on how to run the webhook from the secret. This would likely mean that the secret that describes the hook would have a `URL` instead of an `OCIReference` as well as config information that it would pass through to the hook. With the webhook approach, lifecycle management is a lot more flexible as the webhook can operate on native kubernetes events such as a secret getting created / updated.
+
+  Pros:
+
+  - Pepr as a solution would be more flexible than the internal Zarf implementation of Hooks since the webhook could be anywhere.
+  - Using Pepr would reduce the complexity of Zarf's codebase.
+  - It will be easier to secure third party hooks when Pepr is the one running them.
+  - Lifecycle management would be a lot easier with a webhook solution like Pepr.
+
+  Cons:
+
+  - Pepr is a new project that hasn't been stress tested in production yet (but neither has Hooks).
+  - The Pepr image needs to be pushed to an image registry before it is deployed. This will require a new bootstrapping solution to solve the ECR problem we identified above.
 
 ## Decision
 
