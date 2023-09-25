@@ -39,7 +39,7 @@ func TestDosGames(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	testCreate := filepath.Join("src", "test", "packages", "26-image-dos-games")
-	testDeploy := filepath.Join("build", fmt.Sprintf("zarf-package-dos-games-images-%s-1.0.0.tar.zst", e2e.Arch))
+	testDeploy := filepath.Join("build", fmt.Sprintf("zarf-package-dos-games-images-%s.tar.zst", e2e.Arch))
 
 	// Create the game image test package
 	stdOut, stdErr, err = e2e.Zarf("package", "create", testCreate, "-o", "build", "--confirm")
