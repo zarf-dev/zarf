@@ -196,13 +196,13 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 		ComponentWebhooks:  componentWebhooks,
 	}
 
-	stateData, err := json.Marshal(deployedPackage)
+	packageData, err := json.Marshal(deployedPackage)
 	if err != nil {
 		return nil, err
 	}
 
 	// Update the package secret
-	deployedPackageSecret.Data = map[string][]byte{"data": stateData}
+	deployedPackageSecret.Data = map[string][]byte{"data": packageData}
 	var updatedSecret *corev1.Secret
 	if updatedSecret, err = c.CreateOrUpdateSecret(deployedPackageSecret); err != nil {
 		return nil, fmt.Errorf("failed to record package deployment in secret '%s'", deployedPackageSecret.Name)
