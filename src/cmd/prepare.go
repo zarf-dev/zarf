@@ -115,7 +115,7 @@ var prepareFindImages = &cobra.Command{
 		} else {
 			cwd, err := os.Getwd()
 			if err != nil {
-				message.Fatalf(err, lang.CmdPrepareFindImagesErr)
+				message.Fatalf(err, lang.CmdPrepareFindImagesErr, err.Error())
 			}
 			pkgConfig.CreateOpts.BaseDir = cwd
 		}

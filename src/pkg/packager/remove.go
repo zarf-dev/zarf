@@ -107,14 +107,14 @@ func (p *Packager) Remove() (err error) {
 	return nil
 }
 
-func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, packageName string) {
+func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage) {
 	// Only attempt to update the package secret if we are actually connected to a cluster
 	if p.cluster != nil {
-		secretName := config.ZarfPackagePrefix + packageName
+		secretName := config.ZarfPackagePrefix + deployedPackage.Name
 
 		// Save the new secret with the removed components removed from the secret
 		newPackageSecret := p.cluster.GenerateSecret(cluster.ZarfNamespaceName, secretName, corev1.SecretTypeOpaque)
-		newPackageSecret.Labels[cluster.ZarfPackageInfoLabel] = packageName
+		newPackageSecret.Labels[cluster.ZarfPackageInfoLabel] = deployedPackage.Name
 
 		newPackageSecretData, _ := json.Marshal(deployedPackage)
 		newPackageSecret.Data["data"] = newPackageSecretData
@@ -168,7 +168,7 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 		deployedComponent.InstalledCharts = helpers.RemoveMatches(deployedComponent.InstalledCharts, func(t types.InstalledChart) bool {
 			return t.ChartName == chart.ChartName
 		})
-		p.updatePackageSecret(deployedPackage, deployedPackage.Name)
+		p.updatePackageSecret(deployedPackage)
 	}
 
 	if err := p.runActions(onRemove.Defaults, onRemove.After, nil); err != nil {
@@ -202,7 +202,7 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 			}
 		}
 	} else {
-		p.updatePackageSecret(deployedPackage, deployedPackage.Name)
+		p.updatePackageSecret(deployedPackage)
 	}
 
 	return deployedPackage, nil
