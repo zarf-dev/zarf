@@ -52,7 +52,7 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, []error) {
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
-func (c *Cluster) GetDeployedPackage(packageName string) (deployedPackage types.DeployedPackage, err error) {
+func (c *Cluster) GetDeployedPackage(packageName string) (deployedPackage *types.DeployedPackage, err error) {
 	// Get the secret that describes the deployed package
 	secret, err := c.GetSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName)
 	if err != nil {
@@ -99,7 +99,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 }
 
 // PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on.
-func (c *Cluster) PackageSecretNeedsWait(deployedPackage types.DeployedPackage, component types.ZarfComponent, skipWebhooks bool) (needsWait bool, waitSeconds int, hookName string, err error) {
+func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage, component types.ZarfComponent, skipWebhooks bool) (needsWait bool, waitSeconds int, hookName string, err error) {
 
 	// Skip checking webhook status when '--skip-webhooks' flag is provided
 	if skipWebhooks {
@@ -129,20 +129,20 @@ func (c *Cluster) PackageSecretNeedsWait(deployedPackage types.DeployedPackage, 
 }
 
 // RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
-func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int, component types.ZarfComponent, skipWebhooks bool) (deployedPackage types.DeployedPackage, err error) {
+func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int, component types.ZarfComponent, skipWebhooks bool) (deployedPackage *types.DeployedPackage, err error) {
 
 	deployedPackage, err = c.RecordPackageDeployment(pkg, components, connectStrings, generation)
 	if err != nil {
-		return types.DeployedPackage{}, err
+		return nil, err
 	}
 
 	packageNeedsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
 	if err != nil {
-		return types.DeployedPackage{}, err
+		return nil, err
 	}
 	// If no webhooks need to complete, we can return immediately.
 	if !packageNeedsWait {
-		return types.DeployedPackage{}, nil
+		return nil, nil
 	}
 
 	// Timebox the amount of time we wait for a webhook to complete before erroring
@@ -159,17 +159,17 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 		select {
 		// On timeout, abort and return an error.
 		case <-timeout:
-			return types.DeployedPackage{}, errors.New("timed out waiting for package deployment to complete")
+			return nil, errors.New("timed out waiting for package deployment to complete")
 		default:
 			// Wait for 1 second before checking the secret again
 			time.Sleep(1 * time.Second)
 			deployedPackage, err = c.GetDeployedPackage(deployedPackage.Name)
 			if err != nil {
-				return types.DeployedPackage{}, err
+				return nil, err
 			}
 			packageNeedsWait, _, _, err = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
 			if err != nil {
-				return types.DeployedPackage{}, err
+				return nil, err
 			}
 		}
 	}
@@ -179,7 +179,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int) (deployedPackage types.DeployedPackage, err error) {
+func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int) (deployedPackage *types.DeployedPackage, err error) {
 	packageName := pkg.Metadata.Name
 
 	// Generate a secret that describes the package that is being deployed
@@ -194,7 +194,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 	}
 	componentWebhooks := existingPackageSecret.ComponentWebhooks
 
-	deployedPackage = types.DeployedPackage{
+	deployedPackage = &types.DeployedPackage{
 		Name:               packageName,
 		CLIVersion:         config.CLIVersion,
 		Data:               pkg,
@@ -206,18 +206,18 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 
 	stateData, err := json.Marshal(deployedPackage)
 	if err != nil {
-		return types.DeployedPackage{}, err
+		return nil, err
 	}
 
 	// Update the package secret
 	deployedPackageSecret.Data = map[string][]byte{"data": stateData}
 	var updatedSecret *corev1.Secret
 	if updatedSecret, err = c.CreateOrUpdateSecret(deployedPackageSecret); err != nil {
-		return types.DeployedPackage{}, fmt.Errorf("failed to record package deployment in secret '%s'", deployedPackageSecret.Name)
+		return nil, fmt.Errorf("failed to record package deployment in secret '%s'", deployedPackageSecret.Name)
 	}
 
 	if err := json.Unmarshal(updatedSecret.Data["data"], &deployedPackage); err != nil {
-		return types.DeployedPackage{}, err
+		return nil, err
 	}
 
 	return deployedPackage, nil

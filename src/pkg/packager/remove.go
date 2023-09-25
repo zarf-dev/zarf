@@ -92,7 +92,7 @@ func (p *Packager) Remove() (err error) {
 	}
 
 	// Get the secret for the deployed package
-	deployedPackage := types.DeployedPackage{}
+	deployedPackage := &types.DeployedPackage{}
 
 	if requiresCluster {
 		// If we need the cluster, connect to it and pull the package secret
@@ -136,7 +136,7 @@ func (p *Packager) Remove() (err error) {
 	return nil
 }
 
-func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, packageName string) {
+func (p *Packager) updatePackageSecret(deployedPackage *types.DeployedPackage, packageName string) {
 	// Only attempt to update the package secret if we are actually connected to a cluster
 	if p.cluster != nil {
 		secretName := config.ZarfPackagePrefix + packageName
@@ -157,7 +157,7 @@ func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage, pa
 	}
 }
 
-func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deployedComponent types.DeployedComponent, spinner *message.Spinner) (types.DeployedPackage, error) {
+func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deployedComponent types.DeployedComponent, spinner *message.Spinner) (*types.DeployedPackage, error) {
 	components := deployedPackage.Data.Components
 
 	c := helpers.Find(components, func(t types.ZarfComponent) bool {
@@ -173,7 +173,7 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 
 	if err := p.runActions(onRemove.Defaults, onRemove.Before, nil); err != nil {
 		onFailure()
-		return deployedPackage, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
+		return nil, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
 
 	for _, chart := range helpers.Reverse(deployedComponent.InstalledCharts) {
