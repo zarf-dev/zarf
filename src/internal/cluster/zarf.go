@@ -101,13 +101,8 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 // PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on.
 func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage, component types.ZarfComponent, skipWebhooks bool) (needsWait bool, waitSeconds int, hookName string, err error) {
 
-	// Skip checking webhook status when '--skip-webhooks' flag is provided
-	if skipWebhooks {
-		return false, 0, "", nil
-	}
-
-	// Skip checking webhook status on YOLO packages
-	if deployedPackage.Data.Metadata.YOLO {
+	// Skip checking webhook status when '--skip-webhooks' flag is provided and for YOLO packages
+	if skipWebhooks || deployedPackage.Data.Metadata.YOLO {
 		return false, 0, "", nil
 	}
 
@@ -188,11 +183,14 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 	deployedPackageSecret.Labels[ZarfPackageInfoLabel] = packageName
 
 	// Attempt to load information about webhooks for the package
+	var componentWebhooks map[string]map[string]types.Webhook
 	existingPackageSecret, err := c.GetDeployedPackage(packageName)
 	if err != nil {
 		message.Debugf("Unable to fetch existing secret for package '%s': %s", packageName, err.Error())
 	}
-	componentWebhooks := existingPackageSecret.ComponentWebhooks
+	if existingPackageSecret != nil {
+		componentWebhooks = existingPackageSecret.ComponentWebhooks
+	}
 
 	deployedPackage = &types.DeployedPackage{
 		Name:               packageName,
