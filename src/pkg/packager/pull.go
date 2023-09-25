@@ -39,6 +39,8 @@ func (p *Packager) Pull() (err error) {
 		if !config.IsValidFileExtension(name) {
 			name = "zarf-package-unknown"
 		}
+	default:
+		return fmt.Errorf("pull only currently supports internal source types, received: %T", p.source)
 	}
 
 	output := filepath.Join(p.cfg.PullOpts.OutputDirectory, name)
