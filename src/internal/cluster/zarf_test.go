@@ -23,7 +23,6 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		needsWait       bool
 		waitSeconds     int
 		hookName        string
-		expectedError   error
 	}
 
 	var (
@@ -40,10 +39,9 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 				Name:              packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{},
 			},
-			needsWait:     false,
-			waitSeconds:   0,
-			hookName:      "",
-			expectedError: nil,
+			needsWait:   false,
+			waitSeconds: 0,
+			hookName:    "",
 		},
 		{
 			name:      "WebhookRunning",
@@ -59,10 +57,9 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
-			needsWait:     true,
-			waitSeconds:   10,
-			hookName:      webhookName,
-			expectedError: nil,
+			needsWait:   true,
+			waitSeconds: 10,
+			hookName:    webhookName,
 		},
 		// Ensure we only wait on running webhooks for the provided component
 		{
@@ -79,10 +76,9 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
-			needsWait:     false,
-			waitSeconds:   0,
-			hookName:      "",
-			expectedError: nil,
+			needsWait:   false,
+			waitSeconds: 0,
+			hookName:    "",
 		},
 		{
 			name:      "WebhookSucceeded",
@@ -97,10 +93,9 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
-			needsWait:     false,
-			waitSeconds:   0,
-			hookName:      "",
-			expectedError: nil,
+			needsWait:   false,
+			waitSeconds: 0,
+			hookName:    "",
 		},
 		{
 			name:      "WebhookFailed",
@@ -115,10 +110,9 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
-			needsWait:     false,
-			waitSeconds:   0,
-			hookName:      "",
-			expectedError: nil,
+			needsWait:   false,
+			waitSeconds: 0,
+			hookName:    "",
 		},
 		{
 			name:      "WebhookRemoving",
@@ -133,10 +127,9 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
-			needsWait:     false,
-			waitSeconds:   0,
-			hookName:      "",
-			expectedError: nil,
+			needsWait:   false,
+			waitSeconds: 0,
+			hookName:    "",
 		},
 		{
 			name:      "SkipWaitForYOLO",
@@ -157,10 +150,9 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
-			needsWait:     false,
-			waitSeconds:   0,
-			hookName:      "",
-			expectedError: nil,
+			needsWait:   false,
+			waitSeconds: 0,
+			hookName:    "",
 		},
 		{
 			name:         "SkipWebhooksFlagUsed",
@@ -177,10 +169,9 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
-			needsWait:     false,
-			waitSeconds:   0,
-			hookName:      "",
-			expectedError: nil,
+			needsWait:   false,
+			waitSeconds: 0,
+			hookName:    "",
 		},
 	}
 
@@ -192,12 +183,11 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 
 			c := &Cluster{}
 
-			needsWait, waitSeconds, hookName, err := c.PackageSecretNeedsWait(testCase.deployedPackage, testCase.component, testCase.skipWebhooks)
+			needsWait, waitSeconds, hookName := c.PackageSecretNeedsWait(testCase.deployedPackage, testCase.component, testCase.skipWebhooks)
 
 			require.Equal(t, testCase.needsWait, needsWait)
 			require.Equal(t, testCase.waitSeconds, waitSeconds)
 			require.Equal(t, testCase.hookName, hookName)
-			require.Equal(t, testCase.expectedError, err)
 		})
 	}
 }
