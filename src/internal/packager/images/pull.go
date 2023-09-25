@@ -38,7 +38,7 @@ func (i *ImgConfig) PullAll() error {
 		longer      string
 		imgCount    = len(i.ImgList)
 		imageMap    = map[string]v1.Image{}
-		tagToImage  = map[name.Tag]v1.Image{}
+		tagToImage  = map[transform.Image]v1.Image{}
 		tagToDigest = make(map[string]string)
 	)
 
@@ -133,11 +133,11 @@ func (i *ImgConfig) PullAll() error {
 	totalBytes := int64(0)
 	processedLayers := make(map[string]v1.Layer)
 	for src, img := range imageMap {
-		tag, err := name.NewTag(src, name.WeakValidation)
+		ref, err := transform.ParseImageRef(src)
 		if err != nil {
 			return fmt.Errorf("failed to create tag for image %s: %w", src, err)
 		}
-		tagToImage[tag] = img
+		tagToImage[ref] = img
 		// Get the byte size for this image
 		layers, err := img.Layers()
 		if err != nil {
@@ -185,7 +185,7 @@ func (i *ImgConfig) PullAll() error {
 		if err != nil {
 			return fmt.Errorf("unable to get digest for image %s: %w", tag, err)
 		}
-		tagToDigest[tag.String()] = imgDigest.String()
+		tagToDigest[tag.Reference] = imgDigest.String()
 	}
 
 	spinner.Success()
@@ -368,7 +368,7 @@ func (i *ImgConfig) PullAll() error {
 				if strings.HasPrefix(err.Error(), "error writing layer: expected blob size") {
 					message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
 				}
-				imageSavingConcurrency.ErrorChan <- fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
+				imageSavingConcurrency.ErrorChan <- fmt.Errorf("error when trying to save the img (%s): %w", tag.Reference, err)
 				return
 			}
 
@@ -387,7 +387,7 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			imageSavingConcurrency.ProgressChan <- digestAndTag{digest: imgDigest.String(), tag: tag.String()}
+			imageSavingConcurrency.ProgressChan <- digestAndTag{digest: imgDigest.String(), tag: tag.Reference}
 		}()
 	}
 
@@ -425,7 +425,7 @@ func (i *ImgConfig) PullAll() error {
 			return err
 		}
 
-		tagToDigest[tag.String()] = imgDigest.String()
+		tagToDigest[tag.Reference] = imgDigest.String()
 	}
 
 	if err := utils.AddImageNameAnnotation(i.ImagesPath, tagToDigest); err != nil {

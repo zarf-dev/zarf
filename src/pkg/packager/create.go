@@ -147,7 +147,13 @@ func (p *Packager) Create(baseDir string) error {
 		}
 
 		// Combine all component images into a single entry for efficient layer reuse.
-		combinedImageList = append(combinedImageList, component.Images...)
+		for _, src := range component.Images {
+			ref, err := transform.ParseImageRef(src)
+			if err != nil {
+				return fmt.Errorf("failed to create tag for image %s: %w", src, err)
+			}
+			combinedImageList = append(combinedImageList, ref.Reference)
+		}
 
 		// Remove the temp directory for this component before archiving.
 		err = os.RemoveAll(filepath.Join(p.tmp.Components, component.Name, types.TempFolder))

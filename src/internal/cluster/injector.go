@@ -136,8 +136,11 @@ func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedTags []st
 	// Load the injector-specific images and save them as seed-images
 	for _, src := range injectorSeedTags {
 		spinner.Updatef("Loading the seed image '%s' from the package", src)
-
-		img, err := utils.LoadOCIImage(tempPath.Images, src)
+		ref, err := transform.ParseImageRef(src)
+		if err != nil {
+			return seedImages, fmt.Errorf("failed to create tag for image %s: %w", src, err)
+		}
+		img, err := utils.LoadOCIImage(tempPath.Images, ref.Reference)
 		if err != nil {
 			return seedImages, err
 		}

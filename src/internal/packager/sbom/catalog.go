@@ -22,9 +22,9 @@ import (
 	"github.com/anchore/syft/syft/source"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 )
@@ -154,9 +154,9 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 // some code/structure migrated from https://github.com/testifysec/go-witness/blob/v0.1.12/attestation/syft/syft.go.
 func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 	// Get the image reference.
-	tag, err := name.NewTag(tagStr, name.WeakValidation)
+	ref, err := transform.ParseImageRef(tagStr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create tag for image %s: %w", tagStr, err)
 	}
 
 	// Create the sbom.
@@ -167,7 +167,7 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 		return nil, err
 	}
 
-	syftImage := image.NewImage(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(tag.String()))
+	syftImage := image.NewImage(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(ref.Reference))
 	if err := syftImage.Read(); err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 	}
 
 	// Write the sbom to disk using the image tag as the filename
-	filename := fmt.Sprintf("%s.json", tag)
+	filename := fmt.Sprintf("%s.json", ref.Reference)
 	sbomFile, err := b.createSBOMFile(filename)
 	if err != nil {
 		return nil, err

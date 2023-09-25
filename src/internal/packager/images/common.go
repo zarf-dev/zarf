@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -38,12 +39,17 @@ func (i *ImgConfig) GetLegacyImgTarballPath() string {
 }
 
 // LoadImageFromPackage returns a v1.Image from the image tag specified, or an error if the image cannot be found.
-func (i ImgConfig) LoadImageFromPackage(imgTag string) (v1.Image, error) {
+func (i ImgConfig) LoadImageFromPackage(src string) (v1.Image, error) {
 	// If the package still has a images.tar that contains all of the images, use crane to load the specific tag we want
 	if _, statErr := os.Stat(i.GetLegacyImgTarballPath()); statErr == nil {
-		return crane.LoadTag(i.GetLegacyImgTarballPath(), imgTag, config.GetCraneOptions(i.Insecure, i.Architectures...)...)
+		return crane.LoadTag(i.GetLegacyImgTarballPath(), src, config.GetCraneOptions(i.Insecure, i.Architectures...)...)
+	}
+
+	ref, err := transform.ParseImageRef(src)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tag for image %s: %w", src, err)
 	}
 
 	// Load the image from the OCI formatted images directory
-	return utils.LoadOCIImage(i.ImagesPath, imgTag)
+	return utils.LoadOCIImage(i.ImagesPath, ref.Reference)
 }
