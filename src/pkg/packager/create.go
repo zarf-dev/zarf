@@ -98,7 +98,7 @@ func (p *Packager) Create(baseDir string) error {
 	// Add signatures and attestations for images
 	var combinedSbomImgList []string
 	if p.cfg.CreateOpts.SkipSigs {
-		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
+		message.Debug("Skipping image signature pulling per --skip-sigs flag")
 	} else {
 		for i, c := range p.cfg.Pkg.Components {
 			var imageSigList []string
