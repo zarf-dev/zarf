@@ -68,10 +68,10 @@ type DeployedComponent struct {
 
 // Webhook contains information about a Component Webhook operating on a Zarf package secret.
 type Webhook struct {
-	Name                string `json:"name"`
-	WaitDurationSeconds int    `json:"waitDurationSeconds,omitempty"`
-	Status              string `json:"status"`
-	ObservedGeneration  int    `json:"observedGeneration"`
+	Name                string        `json:"name"`
+	WaitDurationSeconds int           `json:"waitDurationSeconds,omitempty"`
+	Status              WebhookStatus `json:"status"`
+	ObservedGeneration  int           `json:"observedGeneration"`
 }
 
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.

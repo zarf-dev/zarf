@@ -114,7 +114,7 @@ func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage,
 
 	// Check if there are any "Running" webhooks for the component that we need to wait for
 	for hookName, webhook := range hookMap {
-		if webhook.Status == string(types.WebhookStatusRunning) {
+		if webhook.Status == types.WebhookStatusRunning {
 			return true, webhook.WaitDurationSeconds, hookName
 		}
 	}

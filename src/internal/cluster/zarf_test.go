@@ -51,7 +51,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 				ComponentWebhooks: map[string]map[string]types.Webhook{
 					componentName: {
 						webhookName: types.Webhook{
-							Status:              string(types.WebhookStatusRunning),
+							Status:              types.WebhookStatusRunning,
 							WaitDurationSeconds: 10,
 						},
 					},
@@ -70,7 +70,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 				ComponentWebhooks: map[string]map[string]types.Webhook{
 					"different-component": {
 						webhookName: types.Webhook{
-							Status:              string(types.WebhookStatusRunning),
+							Status:              types.WebhookStatusRunning,
 							WaitDurationSeconds: 10,
 						},
 					},
@@ -88,7 +88,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 				ComponentWebhooks: map[string]map[string]types.Webhook{
 					componentName: {
 						webhookName: types.Webhook{
-							Status: string(types.WebhookStatusSucceeded),
+							Status: types.WebhookStatusSucceeded,
 						},
 					},
 				},
@@ -105,7 +105,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 				ComponentWebhooks: map[string]map[string]types.Webhook{
 					componentName: {
 						webhookName: types.Webhook{
-							Status: string(types.WebhookStatusFailed),
+							Status: types.WebhookStatusFailed,
 						},
 					},
 				},
@@ -122,7 +122,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 				ComponentWebhooks: map[string]map[string]types.Webhook{
 					componentName: {
 						webhookName: types.Webhook{
-							Status: string(types.WebhookStatusRemoving),
+							Status: types.WebhookStatusRemoving,
 						},
 					},
 				},
@@ -144,7 +144,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 				ComponentWebhooks: map[string]map[string]types.Webhook{
 					componentName: {
 						webhookName: types.Webhook{
-							Status:              string(types.WebhookStatusRunning),
+							Status:              types.WebhookStatusRunning,
 							WaitDurationSeconds: 10,
 						},
 					},
@@ -163,7 +163,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 				ComponentWebhooks: map[string]map[string]types.Webhook{
 					componentName: {
 						webhookName: types.Webhook{
-							Status:              string(types.WebhookStatusRunning),
+							Status:              types.WebhookStatusRunning,
 							WaitDurationSeconds: 10,
 						},
 					},
