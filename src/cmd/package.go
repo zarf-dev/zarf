@@ -331,6 +331,7 @@ func bindPackageFlags(v *viper.Viper) {
 	packageFlags := packageCmd.PersistentFlags()
 	v.SetDefault(common.VPkgOCIConcurrency, 3)
 	packageFlags.IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(common.VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	packageFlags.StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 }
 
 func bindCreateFlags(v *viper.Viper) {
@@ -373,7 +374,6 @@ func bindDeployFlags(v *viper.Viper) {
 	deployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(common.VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(common.VPkgDeploySget), lang.CmdPackageDeployFlagSget)
-	deployFlags.StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgDeployPublicKey), lang.CmdPackageFlagPublicKey)
 
 	deployFlags.MarkHidden("sget")
 }
@@ -403,15 +403,12 @@ func bindInspectFlags(v *viper.Viper) {
 	inspectFlags := packageInspectCmd.Flags()
 	inspectFlags.BoolVarP(&pkgConfig.InspectOpts.ViewSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
 	inspectFlags.StringVar(&pkgConfig.InspectOpts.SBOMOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
-	inspectFlags.StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgInspectPublicKey), lang.CmdPackageFlagPublicKey)
 }
 
 func bindRemoveFlags(v *viper.Viper) {
 	removeFlags := packageRemoveCmd.Flags()
 	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageRemoveFlagConfirm)
 	removeFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
-	removeFlags.StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgRemovePublicKey), lang.CmdPackageFlagPublicKey)
-
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
 }
 
@@ -424,5 +421,4 @@ func bindPublishFlags(v *viper.Viper) {
 func bindPullFlags(v *viper.Viper) {
 	pullFlags := packagePullCmd.Flags()
 	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(common.VPkgPullOutputDir), lang.CmdPackagePullFlagOutputDirectory)
-	pullFlags.StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgPullPublicKey), lang.CmdPackageFlagPublicKey)
 }

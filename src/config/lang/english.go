@@ -214,10 +214,9 @@ const (
 	CmdInternalCrc32Short = "Generates a decimal CRC32 for the given text"
 
 	// zarf package
-	CmdPackageShort           = "Zarf package commands for creating, deploying, and inspecting packages"
-	CmdPackageFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
-
-	CmdPackageFlagPublicKey = "Path to a public key file that will be used to validate a signed package"
+	CmdPackageShort             = "Zarf package commands for creating, deploying, and inspecting packages"
+	CmdPackageFlagConcurrency   = "Number of concurrent layer operations to perform when interacting with a remote package."
+	CmdPackageFlagFlagPublicKey = "Path to public key file for validating signed packages"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
 	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +
@@ -259,7 +258,6 @@ const (
 	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
 	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
-	CmdPackageDeployFlagPublicKey                      = "Path to public key file for validating signed packages"
 	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "the version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
 	CmdPackageDeployInvalidCLIVersionWarn              = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
@@ -268,10 +266,9 @@ const (
 	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' status."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
 
-	CmdPackageInspectFlagSbom      = "View SBOM contents while inspecting the package"
-	CmdPackageInspectFlagSbomOut   = "Specify an output directory for the SBOMs from the inspected Zarf package"
-	CmdPackageInspectFlagPublicKey = "Path to a public key file that will be used to validate a signed package"
-	CmdPackageInspectErr           = "Failed to inspect package: %s"
+	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
+	CmdPackageInspectFlagSbomOut = "Specify an output directory for the SBOMs from the inspected Zarf package"
+	CmdPackageInspectErr         = "Failed to inspect package: %s"
 
 	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
@@ -296,9 +293,7 @@ const (
 
 	CmdPackagePullShort               = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample             = "	zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64"
-	CmdPackagePullPublicKey           = "Path to public key file for validating signed packages"
 	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
-	CmdPackagePullFlagPublicKey       = "Path to public key file for validating signed packages"
 	CmdPackagePullErr                 = "Failed to pull package: %s"
 
 	CmdPackageChoose    = "Choose or type the package file"
