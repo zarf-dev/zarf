@@ -13,7 +13,6 @@ zarf package remove { PACKAGE_NAME | PACKAGE_FILE } --confirm [flags]
       --components string   Comma-separated list of components to uninstall
       --confirm             REQUIRED. Confirm the removal action to prevent accidental deletions
   -h, --help                help for remove
-  -k, --key string          Path to a public key file that will be used to validate a signed package
 ```
 
 ## Options inherited from parent commands
@@ -21,6 +20,7 @@ zarf package remove { PACKAGE_NAME | PACKAGE_FILE } --confirm [flags]
 ```
   -a, --architecture string   Architecture for OCI images and Zarf packages
       --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -k, --key string            Path to public key file for validating signed packages
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color              Disable colors in output
       --no-log-file           Disable log file creation

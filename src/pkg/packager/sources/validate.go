@@ -58,8 +58,6 @@ func ValidatePackageSignature(paths *layout.PackagePaths, publicKeyPath string) 
 	return nil
 }
 
-// TODO: fix validatepackageintegrity
-
 // ValidatePackageIntegrity validates the integrity of a package by comparing checksums
 func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum string, isPartial bool) error {
 	spinner := message.NewProgressSpinner("Validating package checksums")
