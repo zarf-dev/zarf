@@ -197,10 +197,10 @@ var packageListCmd = &cobra.Command{
 var packageRemoveCmd = &cobra.Command{
 	Use:     "remove { PACKAGE_NAME | PACKAGE_FILE } --confirm",
 	Aliases: []string{"u"},
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.PkgOpts.PackageSource = args[0]
+		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		var src sources.PackageSource
 		var err error
@@ -288,10 +288,10 @@ func choosePackage(args []string) string {
 		Message: lang.CmdPackageChoose,
 		Suggest: func(toComplete string) []string {
 			files, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.tar")
-			gzFiles, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.tar.zst")
+			zstFiles, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.tar.zst")
 			splitFiles, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.part000")
 
-			files = append(files, gzFiles...)
+			files = append(files, zstFiles...)
 			files = append(files, splitFiles...)
 			return files
 		},
