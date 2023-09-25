@@ -30,7 +30,10 @@ import (
 )
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
-func (p *Packager) FindImages(repoHelmChartPath string, kubeVersionOverride string) (imgMap map[string][]string, err error) {
+func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
+	repoHelmChartPath := p.cfg.FindImagesOpts.RepoHelmChartPath
+	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
+
 	imagesMap := make(map[string][]string)
 
 	cwd, err := os.Getwd()

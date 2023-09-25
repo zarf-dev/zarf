@@ -309,13 +309,14 @@ const (
 	CmdPreparePatchGitFileReadErr     = "Unable to read the file %s"
 	CmdPreparePatchGitFileWriteErr    = "Unable to write the changes back to the file"
 
-	CmdPrepareSha256sumShort   = "Generates a SHA256SUM for the given file"
-	CmdPrepareSha256sumHashErr = "Unable to compute the SHA256SUM hash"
+	CmdPrepareSha256sumShort         = "Generates a SHA256SUM for the given file"
+	CmdPrepareSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
+	CmdPrepareSha256sumHashErr       = "Unable to compute the SHA256SUM hash"
 
 	CmdPrepareFindImagesShort = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests"
 	CmdPrepareFindImagesLong  = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
 		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
-	CmdPrepareFindImagesErr = "Unable to find images"
+	CmdPrepareFindImagesErr = "Unable to find images: %s"
 
 	CmdPrepareGenerateConfigShort = "Generates a config file for Zarf"
 	CmdPrepareGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +

@@ -67,12 +67,6 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 
 	// ensure checksums.txt and zarf.yaml were loaded
 	if utils.InvalidPath(loaded.Checksums) {
-		// TODO: right now older packages (the SGET one in CI) do not have checksums.txt
-		// disabling this check for now, but we should re-enable it once we have a new SGET package
-		if aggregateChecksum == "" {
-			spinner.Successf("Checksums validated!")
-			return nil
-		}
 		return fmt.Errorf("unable to validate checksums, %s was not loaded", layout.Checksums)
 	}
 	if utils.InvalidPath(loaded.ZarfYAML) {
@@ -135,16 +129,14 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 		return err
 	}
 
-	// If we're doing a partial check, make sure we've checked all the files we were asked to check
-	if isPartial {
-		for _, path := range loaded.Files() {
-			if !checkedMap[path] {
-				return fmt.Errorf("unable to validate partial checksums, %s did not get checked", path)
-			}
+	// Make sure we've checked all the files we loaded
+	for _, path := range loaded.Files() {
+		if !checkedMap[path] {
+			return fmt.Errorf("unable to validate loaded checksums, %s did not get checked", path)
 		}
 	}
 
-  // Check that all of the files in the loaded directory were checked (i.e. no files were weren't expecting got added)
+	// Check that all of the files in the loaded directory were checked (i.e. no files were weren't expecting got added)
 	for path, checked := range checkedMap {
 		if !checked {
 			return fmt.Errorf("unable to validate checksums, %s did not get checked", path)

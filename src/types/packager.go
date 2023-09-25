@@ -30,6 +30,9 @@ type PackagerConfig struct {
 	// PullOpts tracks user-defined options used to pull packages
 	PullOpts ZarfPullOptions
 
+	// FindImagesOpts tracks user-defined options used to find images
+	FindImagesOpts ZarfFindImagesOptions
+
 	// The package data
 	Pkg ZarfPackage
 

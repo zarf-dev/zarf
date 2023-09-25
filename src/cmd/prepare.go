@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var repoHelmChartPath, kubeVersionOverride string
 var prepareCmd = &cobra.Command{
 	Use:     "prepare",
 	Aliases: []string{"prep"},
@@ -82,7 +81,7 @@ var prepareComputeFileSha256sum = &cobra.Command{
 		var data io.ReadCloser
 		var err error
 		if helpers.IsURL(fileName) {
-			message.Warn("This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link.")
+			message.Warn(lang.CmdPrepareSha256sumRemoteWarning)
 
 			data = utils.Fetch(fileName)
 		} else {
@@ -131,8 +130,8 @@ var prepareFindImages = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Find all the images the package might need
-		if _, err := pkgClient.FindImages(repoHelmChartPath, kubeVersionOverride); err != nil {
-			message.Fatalf(err, lang.CmdPrepareFindImagesErr)
+		if _, err := pkgClient.FindImages(); err != nil {
+			message.Fatalf(err, lang.CmdPrepareFindImagesErr, err.Error())
 		}
 	},
 }
@@ -167,11 +166,11 @@ func init() {
 	prepareCmd.AddCommand(prepareFindImages)
 	prepareCmd.AddCommand(prepareGenerateConfigFile)
 
-	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
+	prepareFindImages.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
 	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPrepareFlagSet)
 	// allow for the override of the default helm KubeVersion
-	prepareFindImages.Flags().StringVar(&kubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
+	prepareFindImages.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
 
 	prepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdPrepareFlagGitAccount)
 }
