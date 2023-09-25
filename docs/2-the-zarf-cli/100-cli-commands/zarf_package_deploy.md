@@ -22,7 +22,7 @@ zarf package deploy [ PACKAGE ] [flags]
   -k, --key string                 Path to public key file for validating signed packages
       --set stringToString         Specify deployment variables to set on the command line (KEY=value) (default [])
       --shasum string              Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
-      --skip-webhooks              Skip waiting for external webhooks to execute as each package component is deployed
+      --skip-webhooks              [alpha] Skip waiting for external webhooks to execute as each package component is deployed
 ```
 
 ## Options inherited from parent commands
