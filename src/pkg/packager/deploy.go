@@ -109,12 +109,11 @@ func (p *Packager) Deploy() (err error) {
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
 func (p *Packager) attemptClusterChecks() (err error) {
 	// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
-	if p.cluster, err = cluster.NewCluster(); p.cluster != nil {
+	if p.cluster, _ = cluster.NewCluster(); p.cluster != nil {
 
 		// Check if the package has already been deployed and get its generation
-		if existingDeployedPackage, err := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); err == nil {
-			// If there is no error, then this package has been deployed before. Figure out what generation we are on.
-			// Increment the package generation within the secret
+		if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
+			// If this package has been deployed before, increment the package generation within the secret
 			p.generation = existingDeployedPackage.Generation + 1
 		}
 
