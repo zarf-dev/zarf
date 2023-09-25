@@ -46,7 +46,7 @@ func TestDosGames(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the game image test package
-	stdOut, stdErr, err = e2e.Zarf("package", "create", testDeploy, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", testDeploy, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
