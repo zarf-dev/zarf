@@ -6,21 +6,25 @@ package packager
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
+	"github.com/defenseunicorns/zarf/src/types"
+	goyaml "github.com/goccy/go-yaml"
+	"github.com/mholt/archiver/v3"
 )
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
 func (p *Packager) Pull() (err error) {
 	var name string
 
-	// TODO: need to think about better naming logic here depending upon the source type
-	// might need to be its own function implemented by each source type
 	switch p.source.(type) {
 	case *sources.OCISource:
 		zref, err := oci.ParseZarfPackageReference(p.cfg.PkgOpts.PackageSource)
@@ -28,17 +32,12 @@ func (p *Packager) Pull() (err error) {
 			return err
 		}
 		name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", zref.PackageName, zref.Arch, zref.Version)
-	case *sources.TarballSource, *sources.SplitTarballSource, *sources.URLSource:
-		// note: this is going to break on SGET because of its weird syntax, as well this will break on
-		// URLs that do not end w/ a valid file extension
+	case *sources.SplitTarballSource:
+		name = strings.Replace(p.cfg.PkgOpts.PackageSource, ".part000", "", 1)
+	case *sources.TarballSource, *sources.URLSource:
 		name = filepath.Base(p.cfg.PkgOpts.PackageSource)
 		if !config.IsValidFileExtension(name) {
-			// if the URL is not a valid extension, then name based on source
-			// archiver.v4 has utilities to detect the compression/format of an archive based on headers
-			// but v3 can only determine based on filename
-			// so warn the user they will have to rename the file
 			name = "zarf-package-unknown"
-			message.Warnf("Unable to determine package name based upon provided source %q. Please manually rename %q to the desired package name.", p.cfg.PkgOpts.PackageSource, name)
 		}
 	}
 
@@ -47,6 +46,40 @@ func (p *Packager) Pull() (err error) {
 
 	if err := p.source.Collect(output); err != nil {
 		return err
+	}
+
+	if !config.IsValidFileExtension(output) {
+		output, err = sources.TransformUnkownTarball(output)
+		if err != nil {
+			return err
+		}
+		var pkg types.ZarfPackage
+		if err := archiver.Walk(output, func(f archiver.File) error {
+			if f.Name() == layout.ZarfYAML {
+				b, err := io.ReadAll(f)
+				if err != nil {
+					return err
+				}
+				if err := goyaml.Unmarshal(b, &pkg); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+
+		newName := fmt.Sprintf("zarf-package-%s-%s", pkg.Metadata.Name, pkg.Build.Architecture)
+
+		if pkg.Metadata.Version != "" {
+			newName = fmt.Sprintf("%s-%s", newName, pkg.Metadata.Version)
+		}
+
+		newName = newName + filepath.Ext(output)
+		if err := os.Rename(output, newName); err != nil {
+			return err
+		}
+		output = newName
 	}
 
 	message.Infof("Pulled %q into %q", p.cfg.PkgOpts.PackageSource, output)

@@ -49,9 +49,14 @@ func (s *URLSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 	}
 	defer os.Remove(tmp)
 
-	dstTarball := filepath.Join(tmp, "package.tar.zst")
+	dstTarball := filepath.Join(tmp, "package-unknown")
 
 	if err := s.Collect(dstTarball); err != nil {
+		return err
+	}
+
+	dstTarball, err = TransformUnkownTarball(dstTarball)
+	if err != nil {
 		return err
 	}
 
@@ -74,9 +79,14 @@ func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 	}
 	defer os.Remove(tmp)
 
-	dstTarball := filepath.Join(tmp, "package.tar.zst")
+	dstTarball := filepath.Join(tmp, "package-unknown")
 
 	if err := s.Collect(dstTarball); err != nil {
+		return err
+	}
+
+	dstTarball, err = TransformUnkownTarball(dstTarball)
+	if err != nil {
 		return err
 	}
 
