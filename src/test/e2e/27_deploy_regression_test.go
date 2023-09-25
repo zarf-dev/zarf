@@ -27,7 +27,7 @@ func TestGHCRDeploy(t *testing.T) {
 	}
 
 	// Test with command from https://zarf.dev/install/
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", fmt.Sprintf("oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0-%s@sha256:%s", e2e.Arch, sha), "--key=https://zarf.dev/cosign.pub", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "deploy", fmt.Sprintf("oci://🦄/dos-games:1.0.0-%s@sha256:%s", e2e.Arch, sha), "--key=https://zarf.dev/cosign.pub", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")

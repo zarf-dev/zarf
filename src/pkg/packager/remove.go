@@ -69,7 +69,7 @@ func (p *Packager) Remove() (err error) {
 
 	if requiresCluster {
 		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, false)
+			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, true)
 			if err != nil {
 				return err
 			}

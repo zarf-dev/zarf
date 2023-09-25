@@ -38,7 +38,7 @@ func (p *Packager) Pull() (err error) {
 			// but v3 can only determine based on filename
 			// so warn the user they will have to rename the file
 			name = "zarf-package-unknown"
-			message.Warnf("Unable to determine package name based upon provided source %q", p.cfg.PkgOpts.PackageSource)
+			message.Warnf("Unable to determine package name based upon provided source %q. Please manually rename %q to the desired package name.", p.cfg.PkgOpts.PackageSource, name)
 		}
 	}
 

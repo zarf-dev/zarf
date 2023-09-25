@@ -44,7 +44,6 @@ func (p *Packager) Deploy() (err error) {
 	if err = p.source.LoadPackage(p.layout); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	// TODO check everything was loaded?
 	p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.layout.ZarfYAML)
 	if err != nil {
 		return fmt.Errorf("unable to read the package: %w", err)

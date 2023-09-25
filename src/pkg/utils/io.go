@@ -76,9 +76,6 @@ func CreateFile(filepath string) error {
 
 // InvalidPath checks if the given path is valid (if it is a permissions error it is there we just don't have access)
 func InvalidPath(path string) bool {
-	if path == "" {
-		return false
-	}
 	_, err := os.Stat(path)
 	return !os.IsPermission(err) && err != nil
 }

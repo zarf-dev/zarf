@@ -22,7 +22,9 @@ type Images struct {
 
 // AddBlob adds a blob to the Images struct.
 func (i *Images) AddBlob(blob string) {
-	// TODO: verify sha256 hex
+	if len(blob) != 64 {
+		return
+	}
 	abs := filepath.Join(i.Base, "blobs", "sha256", blob)
 	if !slices.Contains(i.Blobs, abs) {
 		i.Blobs = append(i.Blobs, abs)
