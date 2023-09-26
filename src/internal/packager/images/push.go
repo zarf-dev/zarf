@@ -102,7 +102,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 				return err
 			}
 
-			message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, ref, offlineNameCRC)
+			message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, ref.Reference, offlineNameCRC)
 
 			if err = crane.Push(img, offlineNameCRC, pushOptions...); err != nil {
 				return err
@@ -116,7 +116,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 			return err
 		}
 
-		message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, ref, offlineName)
+		message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, ref.Reference, offlineName)
 
 		if err = crane.Push(img, offlineName, pushOptions...); err != nil {
 			return err

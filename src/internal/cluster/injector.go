@@ -129,12 +129,12 @@ func (c *Cluster) StopInjectionMadness() error {
 	return c.DeleteService(ZarfNamespaceName, "zarf-injector")
 }
 
-func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedRefs []string, spinner *message.Spinner) ([]transform.Image, error) {
+func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedSrcs []string, spinner *message.Spinner) ([]transform.Image, error) {
 	seedImages := []transform.Image{}
 	refToDigest := make(map[string]string)
 
 	// Load the injector-specific images and save them as seed-images
-	for _, src := range injectorSeedRefs {
+	for _, src := range injectorSeedSrcs {
 		spinner.Updatef("Loading the seed image '%s' from the package", src)
 		ref, err := transform.ParseImageRef(src)
 		if err != nil {

@@ -107,7 +107,7 @@ func (i *ImgConfig) PullAll() error {
 	}
 
 	onMetadataProgress := func(finishedImage refAndImg, iteration int) {
-		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImgList), finishedImage.ref)
+		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImgList), finishedImage.ref.Reference)
 		imageMap[finishedImage.ref] = finishedImage.img
 	}
 
@@ -174,7 +174,7 @@ func (i *ImgConfig) PullAll() error {
 	for ref, img := range refToImage {
 		imgDigest, err := img.Digest()
 		if err != nil {
-			return fmt.Errorf("unable to get digest for image %s: %w", ref, err)
+			return fmt.Errorf("unable to get digest for image %s: %w", ref.Reference, err)
 		}
 		refToDigest[ref.Reference] = imgDigest.String()
 	}

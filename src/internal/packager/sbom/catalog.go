@@ -73,7 +73,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []transform
 	// Generate SBOM for each image
 	currImage := 1
 	for _, ref := range imgList {
-		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, ref)
+		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, ref.Reference)
 
 		// Get the image that we are creating an SBOM for
 		img, err := utils.LoadOCIImage(tmpPaths.Images, ref)
@@ -84,12 +84,12 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []transform
 
 		jsonData, err := builder.createImageSBOM(img, ref.Reference)
 		if err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", ref)
+			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", ref.Reference)
 			return err
 		}
 
 		if err = builder.createSBOMViewerAsset(ref.Reference, jsonData); err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", ref)
+			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", ref.Reference)
 			return err
 		}
 
@@ -156,7 +156,7 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 	// Get the image reference.
 	ref, err := transform.ParseImageRef(src)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
+		return nil, fmt.Errorf("failed to create ref for image %s: %w", ref.Reference, err)
 	}
 
 	// Create the sbom.
