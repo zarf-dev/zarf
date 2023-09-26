@@ -25,6 +25,10 @@ import (
 func (p *Packager) Pull() (err error) {
 	var name string
 
+	if p.cfg.PkgOpts.OptionalComponents != "" {
+		return fmt.Errorf("pull does not support optional components")
+	}
+
 	switch p.source.(type) {
 	case *sources.OCISource:
 		zref, err := oci.ParseZarfPackageReference(p.cfg.PkgOpts.PackageSource)

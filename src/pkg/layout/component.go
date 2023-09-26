@@ -35,11 +35,22 @@ type Components struct {
 	Tarballs map[string]string
 }
 
+var ErrNotLoaded = fmt.Errorf("not loaded")
+
+func IsNotLoaded(err error) bool {
+	u, ok := err.(*fs.PathError)
+	return ok && u.Unwrap() == ErrNotLoaded
+}
+
 // Archive archives a component.
 func (c *Components) Archive(component types.ZarfComponent) (err error) {
 	name := component.Name
 	if _, ok := c.Dirs[name]; !ok {
-		return nil
+		return &fs.PathError{
+			Op:   "check dir map for",
+			Path: name,
+			Err:  ErrNotLoaded,
+		}
 	}
 	base := c.Dirs[name].Base
 	_ = os.RemoveAll(c.Dirs[name].Temp)
@@ -70,7 +81,11 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 	name := component.Name
 	tb, ok := c.Tarballs[name]
 	if !ok {
-		return nil
+		return &fs.PathError{
+			Op:   "check tarball map for",
+			Path: name,
+			Err:  ErrNotLoaded,
+		}
 	}
 
 	if utils.InvalidPath(tb) {

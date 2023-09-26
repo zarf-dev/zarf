@@ -41,13 +41,12 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths) (err error) {
 
 	optionalComponents := helpers.StringToSlice(s.OptionalComponents)
 
-	// only pull specified components and their images if optionalComponents AND --confirm are set
-	if len(optionalComponents) > 0 && config.CommonOptions.Confirm {
-		layers, err := s.LayersFromRequestedComponents(optionalComponents)
+	// pull only needed layers if --confirm is set
+	if config.CommonOptions.Confirm {
+		layersToPull, err = s.LayersFromRequestedComponents(optionalComponents)
 		if err != nil {
 			return fmt.Errorf("unable to get published component image layers: %s", err.Error())
 		}
-		layersToPull = append(layersToPull, layers...)
 	}
 
 	isPartial := true
