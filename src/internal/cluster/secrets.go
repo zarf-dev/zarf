@@ -45,7 +45,6 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo
 	// Build zarf-docker-registry service address string
 	registryServiceInfo, err := ServiceInfoFromNodePortURL(registry)
 	if err != nil {
-		message.WarnErrorf(err, "Unable to get service info for the registry, using default")
 		dockerConfigJSON = DockerConfig{
 			Auths: DockerConfigEntry{
 				// nodePort for zarf-docker-registry

@@ -7,14 +7,15 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/internal/agent/state"
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 )
@@ -22,6 +23,7 @@ import (
 // HelmRepo contains the URL of a helm repo and the secret that corresponds to it for use with Flux.
 type HelmRepo struct {
 	Spec struct {
+		Type      string    `json:"type"`
 		URL       string    `json:"url"`
 		SecretRef SecretRef `json:"secretRef,omitempty"`
 	} `json:"spec"`
@@ -38,14 +40,15 @@ func NewHelmRepositoryMutationHook() operations.Hook {
 
 // mutateHelmRepo mutates the repository url to point to the repository URL defined in the ZarfState.
 func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
-
+	message.Warn("HELM REPOMUTATE")
 	var (
-		zarfState *types.ZarfState
-		patches   []operations.PatchOperation
-		isPatched bool
-
-		isCreate = r.Operation == v1.Create
-		isUpdate = r.Operation == v1.Update
+		zarfState     *types.ZarfState
+		patches       []operations.PatchOperation
+		isPatched     bool
+		repoURL       string
+		newPatchedURL string
+		isCreate      = r.Operation == v1.Create
+		isUpdate      = r.Operation == v1.Update
 	)
 
 	// Form the zarfState.GitServer.Address from the zarfState
@@ -53,41 +56,58 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the flux HelmRepository", zarfState.GitServer.Address)
+	// Mutate the oci URL so that the hostname matches the hostname in the Zarf state
+	// Must be valid DNS https://fluxcd.io/flux/components/source/helmrepositories/#writing-a-helmrepository-spec
+
+	registryInternalURL := zarfState.RegistryInfo.Address
+	registryServiceInfo, err := cluster.ServiceInfoFromNodePortURL(zarfState.RegistryInfo.Address)
+	if err != nil {
+		message.WarnErrorf(err, lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
+	} else {
+		registryInternalURL = fmt.Sprintf("%s.%s.svc.cluster.local:%d", registryServiceInfo.Name, registryServiceInfo.Namespace, registryServiceInfo.Port)
+	}
+
+	message.Debugf("Using the url of (%s) to mutate the flux HelmRepository", registryInternalURL)
 
 	// parse to simple struct to read the HelmRepo url
 	src := &HelmRepo{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
+
+	if strings.ToLower(src.Spec.Type) != "oci" {
+		message.Warnf(lang.AgentWarningNotOCIType, src.Spec.Type)
+		return nil, nil
+	}
+
 	patchedURL, err := removeOCIProtocol(src.Spec.URL)
 	if err != nil {
 		return nil, err
 	}
+	// necessary so it doesn't double mutate
+	newPatchedURL = patchedURL
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
 	if isUpdate {
-		isPatched, err = helpers.DoHostnamesMatch(zarfState.GitServer.Address, patchedURL)
-		if err != nil {
-			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
-		}
+		isPatched = strings.Contains(patchedURL, registryInternalURL)
 	}
 
-	// Mutate the git URL if necessary
+	// Mutate the HelmRepo URL if necessary
 	if isCreate || (isUpdate && !isPatched) {
-		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-		transformedURL, err := transform.GitURL(zarfState.GitServer.Address, patchedURL, zarfState.GitServer.PushUsername)
+		newPatchedURL, err = transform.ImageTransformHostWithoutChecksumOrTag(registryInternalURL, patchedURL)
 		if err != nil {
-			message.Warnf("Unable to transform the HelmRepo URL, using the original url we have: %s", patchedURL)
+			message.Warnf(lang.WarnUnableToTransform, "HelmRepo", patchedURL)
 		}
-		patchedURL = transformedURL.String()
-		message.Debugf("original HelmRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
+
+		message.Debugf("original HelmRepo URL of (%s) got mutated to (%s)", src.Spec.URL, newPatchedURL)
 	}
+
+	repoURL = fmt.Sprintf("%s%s", "oci://", newPatchedURL)
 
 	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
-	patches = populateHelmRepoPatchOperations(fmt.Sprintf("%s%s", "oci://", patchedURL), src.Spec.SecretRef.Name)
+	patches = populateHelmRepoPatchOperations(repoURL, src.Spec.SecretRef.Name)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -102,10 +122,10 @@ func populateHelmRepoPatchOperations(repoURL string, secretName string) []operat
 
 	// If a prior secret exists, replace it
 	if secretName != "" {
-		patches = append(patches, operations.ReplacePatchOperation("/spec/secretRef/name", config.ZarfGitServerSecretName))
+		patches = append(patches, operations.ReplacePatchOperation("/spec/secretRef/name", config.ZarfImagePullSecretName))
 	} else {
 		// Otherwise, add the new secret
-		patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfGitServerSecretName}))
+		patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfImagePullSecretName}))
 	}
 
 	return patches

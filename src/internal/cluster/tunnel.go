@@ -125,7 +125,7 @@ func ServiceInfoFromNodePortURL(nodePortURL string) (*ServiceInfo, error) {
 		return nil, fmt.Errorf("node port services should use the port range 30000-32767")
 	}
 
-	kube, err := k8s.NewWithWait(message.Debugf, labels, DefaultTimeout)
+	kube, err := k8s.New(message.Debugf, labels)
 	if err != nil {
 		return nil, err
 	}
