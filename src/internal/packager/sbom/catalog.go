@@ -156,7 +156,7 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 	// Get the image reference.
 	ref, err := transform.ParseImageRef(src)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create ref for image %s: %w", ref.Reference, err)
+		return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
 	}
 
 	// Create the sbom.
