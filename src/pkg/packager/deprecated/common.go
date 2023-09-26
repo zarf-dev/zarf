@@ -5,6 +5,7 @@
 package deprecated
 
 import (
+	"fmt"
 	"strings"
 
 	"slices"
@@ -65,6 +66,11 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 		if migratedComponent, warning = migrateSetVariableToSetVariables(migratedComponent); warning != "" {
 			warnings = append(warnings, warning)
 		}
+	}
+
+	// Show a warning if the component contains a group as that has been deprecated and will be removed.
+	if component.Group != "" {
+		warnings = append(warnings, fmt.Sprintf("Component %s is using group which has been deprecated and will be removed in v1.0.0.  Please migrate to another solution.", component.Name))
 	}
 
 	// Future migrations here.
