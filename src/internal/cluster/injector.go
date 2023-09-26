@@ -140,7 +140,7 @@ func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedRefs []st
 		if err != nil {
 			return seedImages, fmt.Errorf("failed to create ref for image %s: %w", src, err)
 		}
-		img, err := utils.LoadOCIImage(tempPath.Images, ref.Reference)
+		img, err := utils.LoadOCIImage(tempPath.Images, ref)
 		if err != nil {
 			return seedImages, err
 		}

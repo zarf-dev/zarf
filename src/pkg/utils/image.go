@@ -10,13 +10,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // LoadOCIImage returns a v1.Image with the image ref specified from a location provided, or an error if the image cannot be found.
-func LoadOCIImage(imgPath, imgRef string) (v1.Image, error) {
+func LoadOCIImage(imgPath string, imgRef transform.Image) (v1.Image, error) {
 	// Use the manifest within the index.json to load the specific image we want
 	layoutPath := layout.Path(imgPath)
 	imgIdx, err := layoutPath.ImageIndex()
@@ -30,13 +31,16 @@ func LoadOCIImage(imgPath, imgRef string) (v1.Image, error) {
 
 	// Search through all the manifests within this package until we find the annotation that matches our ref
 	for _, manifest := range idxManifest.Manifests {
-		if manifest.Annotations[ocispec.AnnotationBaseImageName] == imgRef {
+		if manifest.Annotations[ocispec.AnnotationBaseImageName] == imgRef.Reference ||
+			// A backwards compatibility shim for older Zarf versions that would leave docker.io off of image annotations
+			(manifest.Annotations[ocispec.AnnotationBaseImageName] == imgRef.Path+imgRef.TagOrDigest && imgRef.Host == "docker.io") {
+
 			// This is the image we are looking for, load it and then return
 			return layoutPath.Image(manifest.Digest)
 		}
 	}
 
-	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", imgRef, imgPath)
+	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", imgRef.Reference, imgPath)
 }
 
 // AddImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image ref <-> digest shasum will be.

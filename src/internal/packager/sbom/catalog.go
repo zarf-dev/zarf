@@ -47,7 +47,7 @@ var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
 // func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, imagesPath, sbomPath string) error {
-func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, tmpPaths types.TempPaths) error {
+func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []transform.Image, tmpPaths types.TempPaths) error {
 	imageCount := len(imgList)
 	componentCount := len(componentSBOMs)
 	builder := Builder{
@@ -82,13 +82,13 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, t
 			return err
 		}
 
-		jsonData, err := builder.createImageSBOM(img, ref)
+		jsonData, err := builder.createImageSBOM(img, ref.Reference)
 		if err != nil {
 			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", ref)
 			return err
 		}
 
-		if err = builder.createSBOMViewerAsset(ref, jsonData); err != nil {
+		if err = builder.createSBOMViewerAsset(ref.Reference, jsonData); err != nil {
 			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", ref)
 			return err
 		}

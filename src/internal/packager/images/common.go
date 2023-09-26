@@ -20,7 +20,7 @@ import (
 type ImgConfig struct {
 	ImagesPath string
 
-	ImgList []string
+	ImgList []transform.Image
 
 	RegInfo types.RegistryInfo
 
@@ -39,17 +39,12 @@ func (i *ImgConfig) GetLegacyImgTarballPath() string {
 }
 
 // LoadImageFromPackage returns a v1.Image from the image ref specified, or an error if the image cannot be found.
-func (i ImgConfig) LoadImageFromPackage(src string) (v1.Image, error) {
+func (i ImgConfig) LoadImageFromPackage(ref transform.Image) (v1.Image, error) {
 	// If the package still has a images.tar that contains all of the images, use crane to load the specific ref (tag) we want
 	if _, statErr := os.Stat(i.GetLegacyImgTarballPath()); statErr == nil {
-		return crane.LoadTag(i.GetLegacyImgTarballPath(), src, config.GetCraneOptions(i.Insecure, i.Architectures...)...)
-	}
-
-	ref, err := transform.ParseImageRef(src)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
+		return crane.LoadTag(i.GetLegacyImgTarballPath(), ref.Reference, config.GetCraneOptions(i.Insecure, i.Architectures...)...)
 	}
 
 	// Load the image from the OCI formatted images directory
-	return utils.LoadOCIImage(i.ImagesPath, ref.Reference)
+	return utils.LoadOCIImage(i.ImagesPath, ref)
 }

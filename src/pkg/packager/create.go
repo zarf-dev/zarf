@@ -116,7 +116,7 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	var combinedImageList []string
+	var combinedImageList []transform.Image
 	componentSBOMs := map[string]*types.ComponentSBOM{}
 	for idx, component := range p.cfg.Pkg.Components {
 		onCreate := component.Actions.OnCreate
@@ -152,7 +152,7 @@ func (p *Packager) Create(baseDir string) error {
 			if err != nil {
 				return fmt.Errorf("failed to create ref for image %s: %w", src, err)
 			}
-			combinedImageList = append(combinedImageList, ref.Reference)
+			combinedImageList = append(combinedImageList, ref)
 		}
 
 		// Remove the temp directory for this component before archiving.

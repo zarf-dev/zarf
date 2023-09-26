@@ -37,7 +37,7 @@ func (i *ImgConfig) PullAll() error {
 	var (
 		longer      string
 		imgCount    = len(i.ImgList)
-		imageMap    = map[string]v1.Image{}
+		imageMap    = map[transform.Image]v1.Image{}
 		refToImage  = map[transform.Image]v1.Image{}
 		refToDigest = make(map[string]string)
 	)
@@ -55,40 +55,35 @@ func (i *ImgConfig) PullAll() error {
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	type srcAndImg struct {
-		src string
+	type refAndImg struct {
+		ref transform.Image
 		img v1.Image
 	}
 
-	metadataImageConcurrency := utils.NewConcurrencyTools[srcAndImg, error](len(i.ImgList))
+	metadataImageConcurrency := utils.NewConcurrencyTools[refAndImg, error](len(i.ImgList))
 
 	defer metadataImageConcurrency.Cancel()
 
 	spinner.Updatef("Fetching image metadata (0 of %d)", len(i.ImgList))
 
 	// Spawn a goroutine for each image to load its metadata
-	for _, src := range i.ImgList {
+	for _, ref := range i.ImgList {
 		// Create a closure so that we can pass the src into the goroutine
-		src := src
+		ref := ref
 		go func() {
 			// Make sure to call Done() on the WaitGroup when the goroutine finishes
 			defer metadataImageConcurrency.WaitGroupDone()
-
-			srcParsed, err := transform.ParseImageRef(src)
-			if err != nil {
-				metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to parse image ref %s: %w", src, err)
-				return
-			}
 
 			if metadataImageConcurrency.IsDone() {
 				return
 			}
 
-			actualSrc := src
-			if overrideHost, present := i.RegistryOverrides[srcParsed.Host]; present {
-				actualSrc, err = transform.ImageTransformHostWithoutChecksum(overrideHost, src)
+			actualSrc := ref.Reference
+			if overrideHost, present := i.RegistryOverrides[ref.Host]; present {
+				var err error
+				actualSrc, err = transform.ImageTransformHostWithoutChecksum(overrideHost, ref.Reference)
 				if err != nil {
-					metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to swap override host %s for %s: %w", overrideHost, src, err)
+					metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to swap override host %s for %s: %w", overrideHost, ref.Reference, err)
 					return
 				}
 			}
@@ -107,13 +102,13 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			metadataImageConcurrency.ProgressChan <- srcAndImg{src: src, img: img}
+			metadataImageConcurrency.ProgressChan <- refAndImg{ref: ref, img: img}
 		}()
 	}
 
-	onMetadataProgress := func(finishedImage srcAndImg, iteration int) {
-		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImgList), finishedImage.src)
-		imageMap[finishedImage.src] = finishedImage.img
+	onMetadataProgress := func(finishedImage refAndImg, iteration int) {
+		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImgList), finishedImage.ref)
+		imageMap[finishedImage.ref] = finishedImage.img
 	}
 
 	onMetadataError := func(err error) error {
@@ -132,16 +127,12 @@ func (i *ImgConfig) PullAll() error {
 
 	totalBytes := int64(0)
 	processedLayers := make(map[string]v1.Layer)
-	for src, img := range imageMap {
-		ref, err := transform.ParseImageRef(src)
-		if err != nil {
-			return fmt.Errorf("failed to create ref for image %s: %w", src, err)
-		}
+	for ref, img := range imageMap {
 		refToImage[ref] = img
 		// Get the byte size for this image
 		layers, err := img.Layers()
 		if err != nil {
-			return fmt.Errorf("unable to get layers for image %s: %w", src, err)
+			return fmt.Errorf("unable to get layers for image %s: %w", ref.Reference, err)
 		}
 		for _, layer := range layers {
 			layerDigest, err := layer.Digest()
