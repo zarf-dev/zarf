@@ -249,7 +249,7 @@
         },
         "group": {
           "type": "string",
-          "description": "Create a user selector field based on all components in the same group"
+          "description": "[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0."
         },
         "cosignKeyPath": {
           "type": "string",
