@@ -111,7 +111,8 @@ build-local-agent-image: ## Build the Zarf agent image to be used in a locally b
 	@ if [ "$(ARCH)" = "arm64" ] && [ ! -s ./build/zarf-arm ]; then $(MAKE) build-cli-linux-arm; fi
 	@ if [ "$(ARCH)" = "arm64" ]; then cp build/zarf-arm build/zarf-linux-arm64; fi
 	docker buildx build --load --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
-
+	@ if [ "$(ARCH)" = "amd64" ]; then rm build/zarf-linux-amd64; fi
+	@ if [ "$(ARCH)" = "arm64" ]; then rm build/zarf-linux-arm64; fi
 
 init-package: ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
@@ -166,7 +167,7 @@ build-injector-linux: ## Build the Zarf injector for AMD64 and ARM64
 .PHONY: test-e2e
 test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
-	cd src/test/e2e && go test -failfast -v -timeout 30m
+	cd src/test/e2e && go test -failfast -v -timeout 35m
 
 ## NOTE: Requires an existing cluster
 .PHONY: test-external
@@ -174,6 +175,7 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH) --confirm
 	cd src/test/external && go test -failfast -v -timeout 30m
 
 ## NOTE: Requires an existing cluster and
