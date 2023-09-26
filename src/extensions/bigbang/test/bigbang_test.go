@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -45,43 +47,52 @@ func TestMain(m *testing.M) {
 
 func TestReleases(t *testing.T) {
 	// Initialize the cluster with the Git server and AMD64 architecture
-	zarfExec(t, "init", "--confirm", "--components", "git-server", "--architecture", "amd64")
+	arch := "amd64"
+	stdOut, stdErr, err := zarfExec(t, "init", "--confirm", "--components", "git-server", "--architecture", arch)
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Remove the init package to free up disk space on the test runner
+	_ = os.RemoveAll(fmt.Sprintf("zarf-init-%s-%s", arch, getZarfVersion(t)))
 
 	// Build the previous version
 	bbVersion := fmt.Sprintf("--set=BB_VERSION=%s", previous)
 	bbMajor := fmt.Sprintf("--set=BB_MAJOR=%s", previous[0:1])
-	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, bbMajor, "--confirm")
+	stdOut, stdErr, err = zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, bbMajor, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the previous version
-	pkgPath := fmt.Sprintf("zarf-package-big-bang-test-amd64-%s.tar.zst", previous)
-	zarfExec(t, "package", "deploy", pkgPath, "--confirm")
+	pkgPath := fmt.Sprintf("zarf-package-big-bang-test-%s-%s.tar.zst", arch, previous)
+	stdOut, stdErr, err = zarfExec(t, "package", "deploy", pkgPath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	// HACK: scale down the flux deployments due to very-low CPU in the test runner
 	fluxControllers := []string{"helm-controller", "source-controller", "kustomize-controller", "notification-controller"}
 	for _, deployment := range fluxControllers {
-		zarfExec(t, "tools", "kubectl", "-n", "flux-system", "scale", "deployment", deployment, "--replicas=0")
+		_, _, _ = zarfExec(t, "tools", "kubectl", "-n", "flux-system", "scale", "deployment", deployment, "--replicas=0")
 	}
 
 	// Cluster info
-	zarfExec(t, "tools", "kubectl", "describe", "nodes")
+	_, _, _ = zarfExec(t, "tools", "kubectl", "describe", "nodes")
 
 	// Build the latest version
 	bbVersion = fmt.Sprintf("--set=BB_VERSION=%s", latest)
 	bbMajor = fmt.Sprintf("--set=BB_MAJOR=%s", latest[0:1])
-	zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, bbMajor, "--differential", pkgPath, "--confirm")
+	stdOut, stdErr, err = zarfExec(t, "package", "create", "../src/extensions/bigbang/test/package", bbVersion, bbMajor, "--differential", pkgPath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	// Remove the previous version package
 	_ = os.RemoveAll(pkgPath)
 
 	// Clean up zarf cache now that all packages are built to reduce disk pressure
-	zarfExec(t, "tools", "clear-cache")
+	_, _, _ = zarfExec(t, "tools", "clear-cache")
 
 	// Deploy the latest version
-	pkgPath = fmt.Sprintf("zarf-package-big-bang-test-amd64-%s-differential-%s.tar.zst", previous, latest)
-	zarfExec(t, "package", "deploy", pkgPath, "--confirm")
+	pkgPath = fmt.Sprintf("zarf-package-big-bang-test-%s-%s-differential-%s.tar.zst", arch, previous, latest)
+	stdOut, stdErr, err = zarfExec(t, "package", "deploy", pkgPath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	// Cluster info
-	zarfExec(t, "tools", "kubectl", "describe", "nodes")
+	_, _, _ = zarfExec(t, "tools", "kubectl", "describe", "nodes")
 
 	// Test connectivity to Twistlock
 	testConnection(t)
@@ -103,9 +114,16 @@ func testConnection(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 }
 
-func zarfExec(t *testing.T, args ...string) {
-	err := exec.CmdWithPrint(zarf, args...)
-	require.NoError(t, err)
+func zarfExec(t *testing.T, args ...string) (string, string, error) {
+	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), zarf, args...)
+}
+
+// getZarfVersion returns the current build/zarf version
+func getZarfVersion(t *testing.T) string {
+	// Get the version of the CLI
+	stdOut, stdErr, err := zarfExec(t, "version")
+	require.NoError(t, err, stdOut, stdErr)
+	return strings.Trim(stdOut, "\n")
 }
 
 func getReleases() (latest, previous string, err error) {
