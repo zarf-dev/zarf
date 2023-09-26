@@ -760,22 +760,6 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary>
-<strong> <a name="components_items_group"></a>group</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Create a user selector field based on all components in the same group
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
 <details open>
 <summary>
 <strong> <a name="components_items_import"></a>import</strong>

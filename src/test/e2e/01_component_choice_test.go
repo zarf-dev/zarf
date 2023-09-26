@@ -28,6 +28,7 @@ func TestComponentChoice(t *testing.T) {
 	// We currently don't have a pattern to actually test the interactive prompt, so just testing automation for now
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--components=first-choice,second-choice", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
+	require.Contains(t, stdErr, "Component first-choice is using group which has been deprecated", "output should show a warning for group being deprecated.")
 
 	// Deploy a single choice and expect success
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=first-choice", "--confirm")
