@@ -35,11 +35,10 @@ import (
 // PullAll pulls all of the images in the provided ref map.
 func (i *ImgConfig) PullAll() error {
 	var (
-		longer      string
-		imgCount    = len(i.ImgList)
-		imageMap    = map[transform.Image]v1.Image{}
-		refToImage  = map[transform.Image]v1.Image{}
-		refToDigest = make(map[string]string)
+		longer               string
+		imgCount             = len(i.ImgList)
+		refToImage           = map[transform.Image]v1.Image{}
+		refReferenceToDigest = make(map[string]string)
 	)
 
 	// Give some additional user feedback on larger image sets
@@ -108,7 +107,7 @@ func (i *ImgConfig) PullAll() error {
 
 	onMetadataProgress := func(finishedImage refAndImg, iteration int) {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImgList), finishedImage.ref.Reference)
-		imageMap[finishedImage.ref] = finishedImage.img
+		refToImage[finishedImage.ref] = finishedImage.img
 	}
 
 	onMetadataError := func(err error) error {
@@ -127,8 +126,7 @@ func (i *ImgConfig) PullAll() error {
 
 	totalBytes := int64(0)
 	processedLayers := make(map[string]v1.Layer)
-	for ref, img := range imageMap {
-		refToImage[ref] = img
+	for ref, img := range refToImage {
 		// Get the byte size for this image
 		layers, err := img.Layers()
 		if err != nil {
@@ -176,7 +174,7 @@ func (i *ImgConfig) PullAll() error {
 		if err != nil {
 			return fmt.Errorf("unable to get digest for image %s: %w", ref.Reference, err)
 		}
-		refToDigest[ref.Reference] = imgDigest.String()
+		refReferenceToDigest[ref.Reference] = imgDigest.String()
 	}
 
 	spinner.Success()
@@ -383,7 +381,7 @@ func (i *ImgConfig) PullAll() error {
 	}
 
 	onImageSavingProgress := func(finishedImage refAndDigest, iteration int) {
-		refToDigest[finishedImage.ref] = finishedImage.digest
+		refReferenceToDigest[finishedImage.ref] = finishedImage.digest
 	}
 
 	onImageSavingError := func(err error) error {
@@ -416,10 +414,10 @@ func (i *ImgConfig) PullAll() error {
 			return err
 		}
 
-		refToDigest[ref.Reference] = imgDigest.String()
+		refReferenceToDigest[ref.Reference] = imgDigest.String()
 	}
 
-	if err := utils.AddImageNameAnnotation(i.ImagesPath, refToDigest); err != nil {
+	if err := utils.AddImageNameAnnotation(i.ImagesPath, refReferenceToDigest); err != nil {
 		return fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 

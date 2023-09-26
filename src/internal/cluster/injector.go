@@ -29,7 +29,7 @@ import (
 var payloadChunkSize = 1024 * 768
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths, injectorSeedRefs []string) {
+func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths, injectorSeedSrcs []string) {
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer spinner.Stop()
 
@@ -59,7 +59,7 @@ func (c *Cluster) StartInjectionMadness(tempPath types.TempPaths, injectorSeedRe
 	}
 
 	spinner.Updatef("Loading the seed image from the package")
-	if seedImages, err = c.loadSeedImages(tempPath, injectorSeedRefs, spinner); err != nil {
+	if seedImages, err = c.loadSeedImages(tempPath, injectorSeedSrcs, spinner); err != nil {
 		spinner.Fatalf(err, "Unable to load the injector seed image from the package")
 	}
 
