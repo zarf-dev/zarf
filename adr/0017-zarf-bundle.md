@@ -4,7 +4,7 @@ Date: 2023-06-13
 
 ## Status
 
-Pending
+[Migrated](https://github.com/defenseunicorns/uds-cli)
 
 ## Context
 
@@ -75,6 +75,8 @@ Cons:
 > :warning: **NOTE**: The package manager could also be made to be OCI-only but would come with the same OCI pros/cons.
 
 ## Decision
+
+> :warning: **NOTE**: This functionality was migrated to [uds-cli](https://github.com/defenseunicorns/uds-cli) - this ADR is kept here for historical purposes.
 
 The current proposition (subject to change before acceptance) is **Zarf Bundles**, which a following PR will focus on and create a POC of.
 
