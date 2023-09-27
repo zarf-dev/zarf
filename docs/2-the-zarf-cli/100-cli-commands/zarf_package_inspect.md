@@ -8,7 +8,7 @@ Displays the definition of a Zarf package (runs offline)
 Displays the 'zarf.yaml' definition for the specified package and optionally allows SBOMs to be viewed
 
 ```
-zarf package inspect [ PACKAGE ] [flags]
+zarf package inspect [ PACKAGE_SOURCE ] [flags]
 ```
 
 ## Options

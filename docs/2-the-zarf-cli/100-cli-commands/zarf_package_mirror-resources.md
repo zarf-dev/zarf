@@ -9,7 +9,7 @@ Unpacks resources and dependencies from a Zarf package archive and mirrors them 
 image registries and git repositories within the target environment
 
 ```
-zarf package mirror-resources [ PACKAGE ] [flags]
+zarf package mirror-resources [ PACKAGE_SOURCE ] [flags]
 ```
 
 ## Options

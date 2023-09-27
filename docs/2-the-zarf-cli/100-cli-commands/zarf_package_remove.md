@@ -4,7 +4,7 @@
 Removes a Zarf package that has been deployed already (runs offline)
 
 ```
-zarf package remove { PACKAGE_NAME | PACKAGE_FILE } --confirm [flags]
+zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
 ```
 
 ## Options

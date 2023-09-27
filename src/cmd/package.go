@@ -77,7 +77,7 @@ var packageCreateCmd = &cobra.Command{
 }
 
 var packageDeployCmd = &cobra.Command{
-	Use:     "deploy [ PACKAGE ]",
+	Use:     "deploy [ PACKAGE_SOURCE ]",
 	Aliases: []string{"d"},
 	Short:   lang.CmdPackageDeployShort,
 	Long:    lang.CmdPackageDeployLong,
@@ -104,7 +104,7 @@ var packageDeployCmd = &cobra.Command{
 }
 
 var packageMirrorCmd = &cobra.Command{
-	Use:     "mirror-resources [ PACKAGE ]",
+	Use:     "mirror-resources [ PACKAGE_SOURCE ]",
 	Aliases: []string{"mr"},
 	Short:   lang.CmdPackageMirrorShort,
 	Long:    lang.CmdPackageMirrorLong,
@@ -124,7 +124,7 @@ var packageMirrorCmd = &cobra.Command{
 }
 
 var packageInspectCmd = &cobra.Command{
-	Use:     "inspect [ PACKAGE ]",
+	Use:     "inspect [ PACKAGE_SOURCE ]",
 	Aliases: []string{"i"},
 	Short:   lang.CmdPackageInspectShort,
 	Long:    lang.CmdPackageInspectLong,
@@ -195,7 +195,7 @@ var packageListCmd = &cobra.Command{
 }
 
 var packageRemoveCmd = &cobra.Command{
-	Use:     "remove { PACKAGE_NAME | PACKAGE_FILE } --confirm",
+	Use:     "remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm",
 	Aliases: []string{"u"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
@@ -223,7 +223,7 @@ var packageRemoveCmd = &cobra.Command{
 }
 
 var packagePublishCmd = &cobra.Command{
-	Use:     "publish { PACKAGE | SKELETON DIRECTORY } REPOSITORY",
+	Use:     "publish { PACKAGE_SOURCE | SKELETON DIRECTORY } REPOSITORY",
 	Short:   lang.CmdPackagePublishShort,
 	Example: lang.CmdPackagePublishExample,
 	Args:    cobra.ExactArgs(2),
@@ -261,7 +261,7 @@ var packagePublishCmd = &cobra.Command{
 }
 
 var packagePullCmd = &cobra.Command{
-	Use:     "pull PACKAGE",
+	Use:     "pull PACKAGE_SOURCE",
 	Short:   lang.CmdPackagePullShort,
 	Example: lang.CmdPackagePullExample,
 	Args:    cobra.ExactArgs(1),

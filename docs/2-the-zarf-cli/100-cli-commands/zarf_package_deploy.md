@@ -9,7 +9,7 @@ Unpacks resources and dependencies from a Zarf package archive and deploys them 
 Kubernetes clusters are accessed via credentials in your current kubecontext defined in '~/.kube/config'
 
 ```
-zarf package deploy [ PACKAGE ] [flags]
+zarf package deploy [ PACKAGE_SOURCE ] [flags]
 ```
 
 ## Options
