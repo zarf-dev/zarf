@@ -42,7 +42,7 @@ func (p *Packager) Remove() (err error) {
 	if err = p.source.LoadPackageMetadata(p.layout, false, false); err != nil {
 		return err
 	}
-	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.layout.ZarfYAML); err != nil {
+	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
 	p.filterComponents()

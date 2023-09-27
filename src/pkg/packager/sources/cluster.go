@@ -48,8 +48,8 @@ func (s *ClusterSource) LoadPackage(_ *layout.PackagePaths) error {
 // Collect collects a package from a cluster.
 //
 // This is not implemented.
-func (s *ClusterSource) Collect(_ string) error {
-	return fmt.Errorf("not implemented")
+func (s *ClusterSource) Collect(_ string) (string, error) {
+	return "", fmt.Errorf("not implemented")
 }
 
 // LoadPackageMetadata loads package metadata from a cluster.

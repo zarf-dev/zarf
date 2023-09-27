@@ -27,9 +27,9 @@ type URLSource struct {
 }
 
 // Collect downloads a package from the source URL.
-func (s *URLSource) Collect(dstTarball string) error {
+func (s *URLSource) Collect(dir string) (string, error) {
 	if !config.CommonOptions.Insecure && s.Shasum == "" && !strings.HasPrefix(s.PackageSource, utils.SGETURLPrefix) {
-		return fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
+		return "", fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
 	}
 	var packageURL string
 	if s.Shasum != "" {
@@ -38,7 +38,13 @@ func (s *URLSource) Collect(dstTarball string) error {
 		packageURL = s.PackageSource
 	}
 
-	return utils.DownloadToFile(packageURL, dstTarball, s.SGetKeyPath)
+	dstTarball := filepath.Join(dir, "zarf-package-url-unknown")
+
+	if err := utils.DownloadToFile(packageURL, dstTarball, s.SGetKeyPath); err != nil {
+		return "", err
+	}
+
+	return RenameFromMetadata(dstTarball)
 }
 
 // LoadPackage loads a package from an http, https or sget URL.
@@ -49,13 +55,7 @@ func (s *URLSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 	}
 	defer os.Remove(tmp)
 
-	dstTarball := filepath.Join(tmp, "package-unknown")
-
-	if err := s.Collect(dstTarball); err != nil {
-		return err
-	}
-
-	dstTarball, err = TransformUnkownTarball(dstTarball)
+	dstTarball, err := s.Collect(tmp)
 	if err != nil {
 		return err
 	}
@@ -79,13 +79,7 @@ func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 	}
 	defer os.Remove(tmp)
 
-	dstTarball := filepath.Join(tmp, "package-unknown")
-
-	if err := s.Collect(dstTarball); err != nil {
-		return err
-	}
-
-	dstTarball, err = TransformUnkownTarball(dstTarball)
+	dstTarball, err := s.Collect(tmp)
 	if err != nil {
 		return err
 	}

@@ -69,7 +69,6 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 			return nil
 		}
 		pp.isLegacyLayout = true
-		message.Warn("Detected deprecated package layout, migrating to new layout - support for this package will be dropped in v1.0.0")
 	} else {
 		return nil
 	}

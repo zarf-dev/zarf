@@ -16,15 +16,35 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// ReadZarfYAML reads a Zarf YAML file.
-func ReadZarfYAML(path string) (pkg types.ZarfPackage, arch string, err error) {
+// readZarfYAML reads a Zarf YAML file.
+func (p *Packager) readZarfYAML(path string) error {
+	var warnings []string
+	var pkg types.ZarfPackage
+
 	if err := utils.ReadYaml(path, &pkg); err != nil {
-		return pkg, "", err
+		return err
 	}
+
+	if p.layout.IsLegacyLayout() {
+		warning := "Detected deprecated package layout, migrating to new layout - support for this package will be dropped in v1.0.0"
+		p.warnings = append(p.warnings, warning)
+	}
+
 	if pkg.Build.OCIImportedComponents == nil {
 		pkg.Build.OCIImportedComponents = make(map[string]string)
 	}
-	return pkg, config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture), nil
+
+	p.cfg.Pkg = pkg
+
+	for idx, component := range pkg.Components {
+		// Handle component configuration deprecations
+		p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(pkg.Build, component)
+		p.warnings = append(p.warnings, warnings...)
+	}
+
+	p.arch = config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
+
+	return nil
 }
 
 // filterComponents removes components not matching the current OS if filterByOS is set.

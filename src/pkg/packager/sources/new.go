@@ -40,7 +40,7 @@ type PackageSource interface {
 	LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) error
 
 	// Collect relocates a package from its source to a tarball in a given destination directory.
-	Collect(string) error
+	Collect(destinationDirectory string) (tarball string, err error)
 }
 
 // Identify returns the type of package source based on the provided package source string.

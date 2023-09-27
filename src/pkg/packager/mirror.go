@@ -28,7 +28,7 @@ func (p *Packager) Mirror() (err error) {
 	if err = p.source.LoadPackage(p.layout); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.layout.ZarfYAML); err != nil {
+	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
 

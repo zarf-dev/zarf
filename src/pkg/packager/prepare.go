@@ -46,7 +46,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(layout.ZarfYAML); err != nil {
+	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
 		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 

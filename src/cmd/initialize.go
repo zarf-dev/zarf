@@ -102,8 +102,8 @@ func findInitPackage(initPackageName string) (string, error) {
 	}
 
 	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
-	downloadCacheTarget := filepath.Join(config.GetAbsCachePath(), initPackageName)
-	if err := downloadInitPackage(downloadCacheTarget); err != nil {
+	downloadCacheTarget, err := downloadInitPackage(config.GetAbsCachePath())
+	if err != nil {
 		if errors.Is(err, lang.ErrInitNotFound) {
 			message.Fatal(err, err.Error())
 		} else {
@@ -113,9 +113,9 @@ func findInitPackage(initPackageName string) (string, error) {
 	return downloadCacheTarget, nil
 }
 
-func downloadInitPackage(downloadCacheTarget string) error {
+func downloadInitPackage(cacheDirectory string) (string, error) {
 	if config.CommonOptions.Confirm {
-		return lang.ErrInitNotFound
+		return "", lang.ErrInitNotFound
 	}
 
 	var confirmDownload bool
@@ -132,7 +132,7 @@ func downloadInitPackage(downloadCacheTarget string) error {
 			Message: lang.CmdInitPullConfirm,
 		}
 		if err := survey.AskOne(prompt, &confirmDownload); err != nil {
-			return fmt.Errorf(lang.ErrConfirmCancel, err.Error())
+			return "", fmt.Errorf(lang.ErrConfirmCancel, err.Error())
 		}
 	}
 
@@ -140,13 +140,13 @@ func downloadInitPackage(downloadCacheTarget string) error {
 	if confirmDownload {
 		remote, err := oci.NewOrasRemote(url)
 		if err != nil {
-			return err
+			return "", err
 		}
 		source := sources.OCISource{OrasRemote: remote}
-		return source.Collect(downloadCacheTarget)
+		return source.Collect(cacheDirectory)
 	}
 	// Otherwise, exit and tell the user to manually download the init-package
-	return errors.New(lang.CmdInitPullErrManual)
+	return "", errors.New(lang.CmdInitPullErrManual)
 }
 
 func validateInitFlags() error {

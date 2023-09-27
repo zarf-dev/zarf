@@ -177,6 +177,7 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 }
 
 // Collect for the TarballSource is essentially an `mv`
-func (s *TarballSource) Collect(destinationTarball string) error {
-	return os.Rename(s.PackageSource, destinationTarball)
+func (s *TarballSource) Collect(dir string) (string, error) {
+	dst := filepath.Join(dir, filepath.Base(s.PackageSource))
+	return dst, os.Rename(s.PackageSource, dst)
 }

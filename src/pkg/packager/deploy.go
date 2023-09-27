@@ -24,7 +24,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -44,16 +43,8 @@ func (p *Packager) Deploy() (err error) {
 	if err = p.source.LoadPackage(p.layout); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.layout.ZarfYAML)
-	if err != nil {
-		return fmt.Errorf("unable to read the package: %w", err)
-	}
-
-	for idx, component := range p.cfg.Pkg.Components {
-		// Handle component configuration deprecations
-		var warnings []string
-		p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
-		p.warnings = append(p.warnings, warnings...)
+	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
+		return err
 	}
 
 	if err := p.validatePackageArchitecture(); err != nil {

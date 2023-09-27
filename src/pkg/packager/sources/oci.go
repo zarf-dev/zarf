@@ -145,24 +145,44 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 }
 
 // Collect pulls a package from an OCI registry and writes it to a tarball.
-func (s *OCISource) Collect(dstTarball string) error {
+func (s *OCISource) Collect(dir string) (string, error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer os.RemoveAll(tmp)
 
-	_, err = s.PullPackage(tmp, config.CommonOptions.OCIConcurrency)
+	fetched, err := s.PullPackage(tmp, config.CommonOptions.OCIConcurrency)
 	if err != nil {
-		return err
+		return "", err
+	}
+
+	loaded := layout.New(tmp)
+	loaded.SetFromLayers(fetched)
+
+	var pkg types.ZarfPackage
+
+	if err := utils.ReadYaml(loaded.ZarfYAML, &pkg); err != nil {
+		return "", err
+	}
+
+	name := NameFromMetadata(&pkg)
+
+	dstTarball := filepath.Join(dir, name)
+
+	// honor uncompressed flag
+	if pkg.Metadata.Uncompressed {
+		dstTarball = dstTarball + ".tar"
+	} else {
+		dstTarball = dstTarball + ".tar.zst"
 	}
 
 	allTheLayers, err := filepath.Glob(filepath.Join(tmp, "*"))
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	_ = os.Remove(dstTarball)
 
-	return archiver.Archive(allTheLayers, dstTarball)
+	return dstTarball, archiver.Archive(allTheLayers, dstTarball)
 }

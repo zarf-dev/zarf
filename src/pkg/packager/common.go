@@ -257,9 +257,14 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 func (p *Packager) archivePackage(destinationTarball string) error {
 	spinner := message.NewProgressSpinner("Writing %s to %s", p.layout.Base, destinationTarball)
 	defer spinner.Stop()
+
+	contents := []string{}
+	for _, abs := range p.layout.Files() {
+		contents = append(contents, abs)
+	}
+
 	// Make the archive
-	archiveSrc := []string{p.layout.Base + string(os.PathSeparator)}
-	if err := archiver.Archive(archiveSrc, destinationTarball); err != nil {
+	if err := archiver.Archive(contents, destinationTarball); err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
 	spinner.Updatef("Wrote %s to %s", p.layout.Base, destinationTarball)

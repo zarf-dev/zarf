@@ -7,7 +7,6 @@ package tools
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"slices"
 
@@ -20,7 +19,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -174,8 +172,6 @@ var downloadInitCmd = &cobra.Command{
 	Use:   "download-init",
 	Short: lang.CmdToolsDownloadInitShort,
 	Run: func(cmd *cobra.Command, args []string) {
-		initPackageName := packager.GetInitPackageName("")
-		target := filepath.Join(outputDirectory, initPackageName)
 		url := oci.GetInitPackageURL(config.GetArch(), config.CLIVersion)
 
 		remote, err := oci.NewOrasRemote(url)
@@ -185,7 +181,8 @@ var downloadInitCmd = &cobra.Command{
 
 		source := &sources.OCISource{OrasRemote: remote}
 
-		if err := source.Collect(target); err != nil {
+		_, err = source.Collect(outputDirectory)
+		if err != nil {
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 		}
 	},

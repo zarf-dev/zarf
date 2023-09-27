@@ -30,7 +30,7 @@ func (p *Packager) Publish() (err error) {
 		if err = p.source.LoadPackage(p.layout); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
-		if p.cfg.Pkg, p.arch, err = ReadZarfYAML(p.layout.ZarfYAML); err != nil {
+		if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 			return err
 		}
 
@@ -82,7 +82,7 @@ func (p *Packager) loadSkeleton() (err error) {
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return err
 	}
-	if p.cfg.Pkg, p.arch, err = ReadZarfYAML(layout.ZarfYAML); err != nil {
+	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
