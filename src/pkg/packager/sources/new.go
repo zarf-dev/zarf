@@ -39,7 +39,7 @@ type PackageSource interface {
 	//   that are signed but the user does not have the public key for.
 	LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) error
 
-	// Collect relocates a package from its source to a destination tarball.
+	// Collect relocates a package from its source to a tarball in a given destination directory.
 	Collect(string) error
 }
 
@@ -69,6 +69,9 @@ func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 
 	switch Identify(pkgSrc) {
 	case "oci":
+		if pkgOpts.Shasum != "" {
+			pkgSrc = fmt.Sprintf("%s@sha256:%s", pkgSrc, pkgOpts.Shasum)
+		}
 		remote, err := oci.NewOrasRemote(pkgSrc)
 		if err != nil {
 			return nil, err

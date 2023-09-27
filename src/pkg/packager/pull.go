@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
@@ -31,11 +30,7 @@ func (p *Packager) Pull() (err error) {
 
 	switch p.source.(type) {
 	case *sources.OCISource:
-		zref, err := oci.ParseZarfPackageReference(p.cfg.PkgOpts.PackageSource)
-		if err != nil {
-			return err
-		}
-		name = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", zref.PackageName, zref.Arch, zref.Version)
+		name = "zarf-package-unknown-oci.tar.zst"
 	case *sources.SplitTarballSource:
 		name = strings.Replace(p.cfg.PkgOpts.PackageSource, ".part000", "", 1)
 	case *sources.TarballSource, *sources.URLSource:
@@ -75,7 +70,18 @@ func (p *Packager) Pull() (err error) {
 			return err
 		}
 
-		name := fmt.Sprintf("zarf-package-%s-%s", pkg.Metadata.Name, pkg.Build.Architecture)
+		var kind string
+
+		switch pkg.Kind {
+		case types.ZarfInitConfig:
+			kind = "init"
+		case types.ZarfPackageConfig:
+			kind = "package"
+		default:
+			kind = strings.ToLower(string(pkg.Kind))
+		}
+
+		name := fmt.Sprintf("zarf-%s-%s-%s", kind, pkg.Metadata.Name, pkg.Build.Architecture)
 
 		if pkg.Metadata.Version != "" {
 			name = fmt.Sprintf("%s-%s", name, pkg.Metadata.Version)

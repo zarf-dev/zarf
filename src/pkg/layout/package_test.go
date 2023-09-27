@@ -22,7 +22,7 @@ func TestPackage_Files(t *testing.T) {
 
 	require.Equal(t, expected, files)
 
-	pp = pp.WithImages()
+	pp = pp.AddImages()
 
 	files = pp.Files()
 

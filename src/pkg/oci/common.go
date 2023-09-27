@@ -42,13 +42,13 @@ type OrasRemote struct {
 //
 // Registry auth is handled by the Docker CLI's credential store and checked before returning the client
 func NewOrasRemote(url string) (*OrasRemote, error) {
-	zref, err := ParseZarfPackageReference(url)
+	ref, err := registry.ParseReference(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
 	}
 	o := &OrasRemote{}
 
-	if err := o.setRepository(zref.Reference); err != nil {
+	if err := o.setRepository(ref); err != nil {
 		return nil, err
 	}
 

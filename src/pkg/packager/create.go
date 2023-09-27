@@ -154,7 +154,7 @@ func (p *Packager) Create() (err error) {
 
 	// Images are handled separately from other component assets.
 	if len(imgList) > 0 {
-		p.layout = p.layout.WithImages()
+		p.layout = p.layout.AddImages()
 
 		message.HeaderInfof("📦 PACKAGE IMAGES")
 
@@ -188,7 +188,7 @@ func (p *Packager) Create() (err error) {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		p.layout = p.layout.WithSBOMs()
+		p.layout = p.layout.AddSBOMs()
 		if err := sbom.Catalog(componentSBOMs, imgList, p.layout); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}

@@ -77,7 +77,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	// Migrate legacy sboms
 	legacySBOMs := filepath.Join(base, "sboms")
 	if !utils.InvalidPath(legacySBOMs) {
-		pp = pp.WithSBOMs()
+		pp = pp.AddSBOMs()
 		message.Debugf("Migrating %q to %q", legacySBOMs, pp.SBOMs.Path)
 		if err := os.Rename(legacySBOMs, pp.SBOMs.Path); err != nil {
 			return err
@@ -87,7 +87,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	// Migrate legacy images
 	legacyImagesTar := filepath.Join(base, "images.tar")
 	if !utils.InvalidPath(legacyImagesTar) {
-		pp = pp.WithImages()
+		pp = pp.AddImages()
 		message.Debugf("Migrating %q to %q", legacyImagesTar, pp.Images.Base)
 		defer os.Remove(legacyImagesTar)
 		imgTags := []string{}
@@ -140,24 +140,24 @@ func (pp *PackagePaths) IsLegacyLayout() bool {
 	return pp.isLegacyLayout
 }
 
-// WithSignature sets the signature path if the keyPath is not empty.
-func (pp *PackagePaths) WithSignature(keyPath string) *PackagePaths {
+// AddSignature sets the signature path if the keyPath is not empty.
+func (pp *PackagePaths) AddSignature(keyPath string) *PackagePaths {
 	if keyPath != "" {
 		pp.Signature = filepath.Join(pp.Base, Signature)
 	}
 	return pp
 }
 
-// WithImages sets the default image paths.
-func (pp *PackagePaths) WithImages() *PackagePaths {
+// AddImages sets the default image paths.
+func (pp *PackagePaths) AddImages() *PackagePaths {
 	pp.Images.Base = filepath.Join(pp.Base, ImagesDir)
 	pp.Images.OCILayout = filepath.Join(pp.Images.Base, OCILayout)
 	pp.Images.Index = filepath.Join(pp.Images.Base, IndexJSON)
 	return pp
 }
 
-// WithSBOMs sets the default sbom paths.
-func (pp *PackagePaths) WithSBOMs() *PackagePaths {
+// AddSBOMs sets the default sbom paths.
+func (pp *PackagePaths) AddSBOMs() *PackagePaths {
 	pp.SBOMs = SBOMs{
 		Path: filepath.Join(pp.Base, SBOMDir),
 	}
