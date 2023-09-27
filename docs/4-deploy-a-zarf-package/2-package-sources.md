@@ -2,7 +2,7 @@
 
 Zarf supports interacting with Zarf packages from a variety of sources. For library users of Zarf looking to implement their own, please refer to the `PackageSource` interface in `src/pkg/packager/sources/new.go`.
 
-> all commands below are assumed to be prefixed w/ `zarf package`
+> All commands below unless otherise shown are assumed to be prefixed w/ `zarf package`
 >
 > By saying a source is supported on `publish`, this means that the source is supported as the first argument to `publish`. Currently, only OCI references are supported as the second argument to `publish`.
 
@@ -17,6 +17,10 @@ The default result of a `create`.
 Satisfied by: `zarf-package-*.tar` or `zarf-package-*.tar.zst`.
 
 > Note that Zarf currently only supports `tar` and `tar.zst` as archival/compression formats.
+>
+> Whether or not a created package is compressed is determined by `.metadata.uncompressed` in the `zarf.yaml`.
+>
+> The default is `false` (compressed), and the package will be created w/ the `.tar.zst` extension.
 
 Examples:
 
@@ -28,7 +32,7 @@ zarf-package-dos-games-amd64-1.0.0.tar
 some-dir/zarf-package-yolo-arm64.tar.zst
 ```
 
-- `zarf package create <dir> ...` results in a local `.tar.zst` in `<dir>`
+- `zarf package create <dir> ...` results in a local tarball in `<dir>`
 - `zarf package deploy <tarball> ...`
 - `zarf package inspect <tarball> ...`
 - `zarf package remove <tarball> ...`
@@ -45,6 +49,8 @@ some-dir/zarf-package-yolo-arm64.tar.zst
 ### HTTP(S) URL
 
 > Supported on: `deploy`, `inspect`, `remove`, `publish`, `pull`, `mirror-resources`
+
+HTTP(S) URLs are essentially tarball sources that are being stored on a remote server. Zarf will download the tarball to a temporary directory and then perform the operation on the tarball. This tarball is _not_ cached and repeated operations will result in repeated downloads. Utilize `pull` to fetch and persist the tarball locally.
 
 ### Split Tarball
 
