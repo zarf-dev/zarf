@@ -97,8 +97,8 @@ func (p *Packager) Create(baseDir string) error {
 
 	// Add signatures and attestations for images
 	var combinedSbomImgList []string
-	if p.cfg.CreateOpts.SkipSigs {
-		message.Debug("Skipping image signature pulling per --skip-sigs flag")
+	if p.cfg.CreateOpts.SkipCosignLookup {
+		message.Debug("Skipping cosign artifact lookups per --skip-cosign-lookup flag")
 	} else {
 		for i, c := range p.cfg.Pkg.Components {
 			var imageSigList []string
@@ -110,18 +110,12 @@ func (p *Packager) Create(baseDir string) error {
 				}
 
 				var remoteOpts []ociremote.Option
-				simg, err := ociremote.SignedEntity(ref, remoteOpts...)
-				if err != nil {
-					return err
+				simg, _ := ociremote.SignedEntity(ref, remoteOpts...)
+				if simg == nil {
+					continue
 				}
-				sigRef, err := ociremote.SignatureTag(ref, remoteOpts...)
-				if err != nil {
-					return err
-				}
-				attRef, err := ociremote.AttestationTag(ref, remoteOpts...)
-				if err != nil {
-					return err
-				}
+				sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)
+				attRef, _ := ociremote.AttestationTag(ref, remoteOpts...)
 
 				sigs, err := simg.Signatures()
 				if err == nil {

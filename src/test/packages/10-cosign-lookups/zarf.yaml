@@ -1,0 +1,9 @@
+kind: ZarfPackageConfig
+metadata:
+  name: cosign-lookups
+  description: Test package for cosign image artifact lookups
+
+components:
+  - name: test
+    images:
+      - cgr.dev/chainguard/static:latest
