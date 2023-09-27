@@ -1,4 +1,9 @@
-{{ schema.keywords.get("title").literal | default("Zarf Package Schema") | md_heading(0) }}
+---
+title: {{ schema.keywords.get("title").literal | default("Zarf Package Schema") }}
+weight: 4
+type: docs
+---
+
 {% set contentBase %}
 {% with schema=schema, skip_headers=False %}
     {% include "content.md" %}
