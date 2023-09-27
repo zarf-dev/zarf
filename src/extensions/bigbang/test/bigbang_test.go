@@ -52,7 +52,8 @@ func TestReleases(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Remove the init package to free up disk space on the test runner
-	_ = os.RemoveAll(fmt.Sprintf("zarf-init-%s-%s", arch, getZarfVersion(t)))
+	err = os.RemoveAll(fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, getZarfVersion(t)))
+	require.NoError(t, err)
 
 	// Build the previous version
 	bbVersion := fmt.Sprintf("--set=BB_VERSION=%s", previous)
@@ -81,7 +82,8 @@ func TestReleases(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Remove the previous version package
-	_ = os.RemoveAll(pkgPath)
+	err = os.RemoveAll(pkgPath)
+	require.NoError(t, err)
 
 	// Clean up zarf cache now that all packages are built to reduce disk pressure
 	_, _, _ = zarfExec(t, "tools", "clear-cache")
