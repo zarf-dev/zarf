@@ -1217,6 +1217,10 @@ export interface ZarfCreateOptions {
      */
     signingKeyPath: string;
     /**
+     * Disable the lookup of cosign image artifacts during package creation
+     */
+    skipCosignLookup: boolean;
+    /**
      * Disable the generation of SBOM materials during package creation
      */
     skipSBOM: boolean;
@@ -1796,6 +1800,7 @@ const typeMap: any = {
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "signingKeyPassword", js: "signingKeyPassword", typ: "" },
         { json: "signingKeyPath", js: "signingKeyPath", typ: "" },
+        { json: "skipCosignLookup", js: "skipCosignLookup", typ: true },
         { json: "skipSBOM", js: "skipSBOM", typ: true },
     ], false),
     "DifferentialData": o([

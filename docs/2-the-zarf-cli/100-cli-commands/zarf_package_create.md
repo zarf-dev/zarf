@@ -27,6 +27,7 @@ zarf package create [ DIRECTORY ] [flags]
   -s, --sbom                               View SBOM contents after creating the package
       --sbom-out string                    Specify an output directory for the SBOMs from the created Zarf package
       --set stringToString                 Specify package variables to set on the command line (KEY=value) (default [])
+      --skip-cosign-lookup                 Skip looking up and pulling cosign artifacts (signatures, attestations, etc) for images in this package
       --skip-sbom                          Skip generating SBOM for this package
 ```
 
