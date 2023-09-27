@@ -310,7 +310,8 @@ export interface ZarfComponent {
      */
     files?: ZarfFile[];
     /**
-     * Create a user selector field based on all components in the same group
+     * [Deprecated] Create a user selector field based on all components in the same group. This
+     * will be removed in Zarf v1.0.0.
      */
     group?: string;
     /**
