@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"slices"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -79,7 +81,7 @@ func (p *Packager) validatePackageChecksums(baseDir string, aggregateChecksum st
 		if utils.InvalidPath(path) {
 			if !isPartial && !checkedMap[path] {
 				return fmt.Errorf("unable to validate checksums - missing file: %s", rel)
-			} else if helpers.SliceContains(pathsToCheck, path) {
+			} else if slices.Contains(pathsToCheck, path) {
 				return fmt.Errorf("unable to validate partial checksums - missing file: %s", rel)
 			}
 			// it's okay if we're doing a partial check and the file isn't there as long as the path isn't in the list of paths to check

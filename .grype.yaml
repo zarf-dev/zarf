@@ -12,3 +12,6 @@ ignore:
 
   # From semver - This comes through nodemon which is only used for development
   - vulnerability: GHSA-c2qf-rxjj-qqgw
+
+  # From k8s.io/apiserver - This is a false positive due to the difference in versioning between the library / binary k8s versioning
+  - vulnerability: GHSA-82hx-w2r5-c2wq
