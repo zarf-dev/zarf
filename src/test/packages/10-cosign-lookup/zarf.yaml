@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: cosign-lookups
+  name: cosign-lookup
   description: Test package for cosign image artifact lookups
 
 components:

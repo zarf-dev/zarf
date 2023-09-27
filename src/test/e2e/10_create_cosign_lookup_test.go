@@ -33,7 +33,7 @@ func TestCosignLookup(t *testing.T) {
 
 	// Extract the yaml of the differential package
 	err = archiver.Extract(packageName, config.ZarfYAML, tmpdir)
-	require.NoError(t, err, "unable to extract zarf.yaml from the differential git package")
+	require.NoError(t, err, "unable to extract zarf.yaml from the package")
 
 	// Load the extracted zarf.yaml specification
 	var zarfConfig types.ZarfPackage
