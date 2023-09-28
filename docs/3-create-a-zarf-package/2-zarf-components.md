@@ -29,13 +29,13 @@ There are certain fields that will be common across all component definitions. T
 
 ### Actions
 
-<Properties item="ZarfComponent" include={["actions"]} />
+<Properties item="ZarfComponentActions" />
 
-Component actions are explored in the [component actions documentation](7-component-actions.md).
+Actions allow for custom functionality to be run at different points in the Zarf lifecycle.  They are explored more in the [component actions documentation](7-component-actions.md).
 
 ### Files
 
-<Properties item="ZarfComponent" include={["files"]} />
+<Properties item="ZarfFile" />
 
 Files can be:
 
@@ -56,7 +56,7 @@ Files can be:
 
 ### Helm Charts
 
-<Properties item="ZarfComponent" include={["charts"]} />
+<Properties item="ZarfChart" />
 
 Charts using the `localPath` key can be:
 
@@ -83,7 +83,7 @@ Charts using the `url` key can be:
 
 ### Kubernetes Manifests
 
-<Properties item="ZarfComponent" include={["manifests"]} />
+<Properties item="ZarfManifest" />
 
 Manifests under the `files` key can be:
 
@@ -93,6 +93,12 @@ Manifests under the `files` key can be:
 Manifests under the `kustomizations` key can be:
 
 - Any valid Kustomize reference both local and [remote](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md) (ie. anything you could do a `kustomize build` on)
+
+:::note
+
+In order to maintain consistency throughout the deployment lifecycle, Zarf dynamically generates a Helm Chart from the named manifest entries that you specify.  This means that any given set of files under a manifest entry will be applied according to [Helm Chart template and manifest install ordering](https://github.com/helm/helm/blob/main/pkg/releaseutil/manifest_sorter.go#L78).
+
+:::
 
 #### Manifest Examples
 
@@ -104,12 +110,6 @@ Manifests under the `kustomizations` key can be:
 <ExampleYAML src={require('../../examples/manifests/zarf.yaml')} component="nginx-remote" />
 </TabItem>
 <TabItem value="Kustomizations">
-
-:::note
-
-In order to maintain consistency throughout the deployment lifecycle, Zarf dynamically generates a Helm Chart from the named manifest entries that you specify.  This means that any given set of files under a manifest entry will be applied according to [Helm Chart template and manifest install ordering](https://github.com/helm/helm/blob/main/pkg/releaseutil/manifest_sorter.go#L78).
-
-:::
 
 :::info
 
@@ -164,13 +164,13 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 
 ### Data Injections
 
-<Properties item="ZarfComponent" include={["dataInjections"]} />
+<Properties item="ZarfDataInjection" />
 
 <ExampleYAML src={require('../../examples/kiwix/zarf.yaml')} component="kiwix-serve" />
 
 ### Component Imports
 
-<Properties item="ZarfComponent" include={["import"]} />
+<Properties item="ZarfComponentImport" />
 
 <Tabs queryString="import-examples">
 <TabItem value="Local Path">
@@ -191,7 +191,7 @@ This process will also merge `variables` and `constants` defined in the imported
 
 ### Extensions
 
-<Properties item="ZarfComponent" include={["extensions"]} />
+<Properties item="ZarfComponentExtensions" />
 
 <ExampleYAML src={require('../../examples/big-bang/zarf.yaml')} component="bigbang" />
 
