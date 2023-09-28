@@ -131,7 +131,7 @@ func (c *Cluster) StopInjectionMadness() error {
 
 func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedSrcs []string, spinner *message.Spinner) ([]transform.Image, error) {
 	seedImages := []transform.Image{}
-	refToDigest := make(map[string]string)
+	localReferenceToDigest := make(map[string]string)
 
 	// Load the injector-specific images and save them as seed-images
 	for _, src := range injectorSeedSrcs {
@@ -155,10 +155,10 @@ func (c *Cluster) loadSeedImages(tempPath types.TempPaths, injectorSeedSrcs []st
 			return seedImages, err
 		}
 		// This is done _without_ the domain (different from pull.go) since the injector only handles local images
-		refToDigest[ref.Path+ref.TagOrDigest] = imgDigest.String()
+		localReferenceToDigest[ref.Path+ref.TagOrDigest] = imgDigest.String()
 	}
 
-	if err := utils.AddImageNameAnnotation(tempPath.SeedImages, refToDigest); err != nil {
+	if err := utils.AddImageNameAnnotation(tempPath.SeedImages, localReferenceToDigest); err != nil {
 		return seedImages, fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
