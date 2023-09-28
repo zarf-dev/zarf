@@ -132,16 +132,7 @@ var packageInspectCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
-		var src sources.PackageSource
-		var err error
-		identifiedSrc := sources.Identify(pkgConfig.PkgOpts.PackageSource)
-		if identifiedSrc == "" {
-			message.Debugf("%q does not satisfy any current sources, assuming it is a package deployed to a cluster", pkgConfig.PkgOpts.PackageSource)
-			src, err = sources.NewClusterSource(&pkgConfig.PkgOpts)
-			if err != nil {
-				message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
-			}
-		}
+		src := identifyAndFallbackToClusterSource()
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
@@ -202,16 +193,7 @@ var packageRemoveCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
-		var src sources.PackageSource
-		var err error
-		identifiedSrc := sources.Identify(pkgConfig.PkgOpts.PackageSource)
-		if identifiedSrc == "" {
-			message.Debugf("%q does not satisfy any current sources, assuming it is a package deployed to a cluster", pkgConfig.PkgOpts.PackageSource)
-			src, err = sources.NewClusterSource(&pkgConfig.PkgOpts)
-			if err != nil {
-				message.Fatalf(err, lang.CmdPackageRemoveErr, err.Error())
-			}
-		}
+		src := identifyAndFallbackToClusterSource()
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
@@ -302,6 +284,19 @@ func choosePackage(args []string) string {
 	}
 
 	return path
+}
+
+func identifyAndFallbackToClusterSource() (src sources.PackageSource) {
+	var err error
+	identifiedSrc := sources.Identify(pkgConfig.PkgOpts.PackageSource)
+	if identifiedSrc == "" {
+		message.Debugf(lang.CmdPackageClusterSourceFallback, pkgConfig.PkgOpts.PackageSource)
+		src, err = sources.NewClusterSource(&pkgConfig.PkgOpts)
+		if err != nil {
+			message.Fatalf(err, lang.CmdPackageInvalidSource, pkgConfig.PkgOpts.PackageSource, err.Error())
+		}
+	}
+	return src
 }
 
 func init() {

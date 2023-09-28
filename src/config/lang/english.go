@@ -296,8 +296,10 @@ const (
 	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
 	CmdPackagePullErr                 = "Failed to pull package: %s"
 
-	CmdPackageChoose    = "Choose or type the package file"
-	CmdPackageChooseErr = "Package path selection canceled: %s"
+	CmdPackageChoose                = "Choose or type the package file"
+	CmdPackageChooseErr             = "Package path selection canceled: %s"
+	CmdPackageClusterSourceFallback = "%q does not satisfy any current sources, assuming it is a package deployed to a cluster"
+	CmdPackageInvalidSource         = "Unable to identify source from %q: %s"
 
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"
