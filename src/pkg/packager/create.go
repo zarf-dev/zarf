@@ -113,7 +113,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
-	if !p.confirmAction(config.ZarfCreateStage, nil) {
+	if !p.confirmAction(config.ZarfCreateStage) {
 		return fmt.Errorf("package creation canceled")
 	}
 

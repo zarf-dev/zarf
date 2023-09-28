@@ -71,3 +71,13 @@ func (s *SBOMs) Archive() (err error) {
 	s.Path = tb
 	return os.RemoveAll(dir)
 }
+
+// IsDir returns true if the SBOMs are a directory.
+func (s SBOMs) IsDir() bool {
+	return utils.IsDir(s.Path)
+}
+
+// IsTarball returns true if the SBOMs are a tarball.
+func (s SBOMs) IsTarball() bool {
+	return !s.IsDir() && filepath.Ext(s.Path) == ".tar"
+}

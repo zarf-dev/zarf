@@ -6,16 +6,12 @@ package packager
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"slices"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -32,20 +28,12 @@ func (p *Packager) Mirror() (err error) {
 		return err
 	}
 
-	// If SBOMs were loaded, temporarily place them in the deploy directory
-	var sbomViewFiles []string
-	sbomDir := p.layout.SBOMs.Path
-	if !utils.InvalidPath(sbomDir) {
-		sbomViewFiles, _ = filepath.Glob(filepath.Join(sbomDir, "sbom-viewer-*"))
-		_, err := sbom.OutputSBOMFiles(sbomDir, layout.SBOMDir, "")
-		if err != nil {
-			// Don't stop the deployment, let the user decide if they want to continue the deployment
-			message.Warnf("Unable to process the SBOM files for this package: %s", err.Error())
-		}
+	if err := p.stageSBOMFiles(); err != nil {
+		return err
 	}
 
 	// Confirm the overall package mirror
-	if !p.confirmAction(config.ZarfMirrorStage, sbomViewFiles) {
+	if !p.confirmAction(config.ZarfMirrorStage) {
 		return fmt.Errorf("mirror cancelled")
 	}
 

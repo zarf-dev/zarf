@@ -20,7 +20,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
-	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -59,20 +58,12 @@ func (p *Packager) Deploy() (err error) {
 		return err
 	}
 
-	// If SBOMs were loaded, temporarily place them in the deploy directory
-	var sbomViewFiles []string
-	sbomDir := p.layout.SBOMs.Path
-	if !utils.InvalidPath(sbomDir) {
-		sbomViewFiles, _ = filepath.Glob(filepath.Join(sbomDir, "sbom-viewer-*"))
-		_, err := sbom.OutputSBOMFiles(sbomDir, layout.SBOMDir, "")
-		if err != nil {
-			// Don't stop the deployment, let the user decide if they want to continue the deployment
-			message.Warnf("Unable to process the SBOM files for this package: %s", err.Error())
-		}
+	if err := p.stageSBOMFiles(); err != nil {
+		return err
 	}
 
 	// Confirm the overall package deployment
-	if !p.confirmAction(config.ZarfDeployStage, sbomViewFiles) {
+	if !p.confirmAction(config.ZarfDeployStage) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
