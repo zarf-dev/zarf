@@ -329,7 +329,7 @@ func (p *Packager) setOCIRemote(url string) error {
 func (p *Packager) signPackage(signingKeyPath, signingKeyPassword string) error {
 	p.layout = p.layout.AddSignature(signingKeyPath)
 	passwordFunc := func(_ bool) ([]byte, error) {
-		if signingKeyPath != "" {
+		if signingKeyPassword != "" {
 			return []byte(signingKeyPassword), nil
 		}
 		return interactive.PromptSigPassword()
