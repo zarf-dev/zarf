@@ -1,8 +1,6 @@
 # Package Sources
 
-Zarf supports interacting with Zarf packages from a variety of sources. For library users of Zarf looking to implement their own, please refer to the `PackageSource` interface in `src/pkg/packager/sources/new.go`.
-
-Zarf currently supports the following package sources:
+Zarf currently supports consuming the following package sources:
 
 - Local Tarball (`.tar` and `.tar.zst`)
 - Split Tarball (`.part...`)
@@ -18,7 +16,13 @@ The following commands accept a source as their first argument:
 - `zarf package pull <source>`
 - `zarf package mirror-resources <source>`
 
+:::note
+
 There is a special Cluster source available on `inspect` and `remove` that allows for referencing a package via its name:
 
 - `zarf package inspect <package name>`
 - `zarf package remove <package name>`
+
+Inspecting a package deployed to a cluster will not be able to show the package's SBOMs, as they are not currently persisted to the cluster.
+
+:::

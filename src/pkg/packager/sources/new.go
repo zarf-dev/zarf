@@ -19,7 +19,7 @@ import (
 
 // PackageSource is an interface for package sources.
 //
-// While this interface defines two functions, LoadPackage and LoadPackageMetadata, only one of them should be used within a packager function.
+// While this interface defines three functions, LoadPackage, LoadPackageMetadata, and Collect; only one of them should be used within a packager function.
 //
 // These functions currently do not promise repeatability due to the side effect nature of loading a package.
 type PackageSource interface {
