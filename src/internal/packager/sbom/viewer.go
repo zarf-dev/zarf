@@ -73,11 +73,11 @@ func (b *Builder) loadFileJS(name string) template.JS {
 }
 
 // This could be optimized, but loop over all the images and components to create a list of json files.
-func (b *Builder) generateJSONList(componentToFiles map[string]*types.ComponentSBOM, imgList []transform.Image) ([]byte, error) {
+func (b *Builder) generateJSONList(componentToFiles map[string]*types.ComponentSBOM, imageList []transform.Image) ([]byte, error) {
 	var jsonList []string
 
-	for _, ref := range imgList {
-		normalized := b.getNormalizedFileName(ref.Reference)
+	for _, refInfo := range imageList {
+		normalized := b.getNormalizedFileName(refInfo.Reference)
 		jsonList = append(jsonList, normalized)
 	}
 

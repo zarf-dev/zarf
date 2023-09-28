@@ -20,7 +20,7 @@ import (
 
 // PushToZarfRegistry pushes a provided image into the configured Zarf registry
 // This function will optionally shorten the image name while appending a checksum of the original image name.
-func (i *ImgConfig) PushToZarfRegistry() error {
+func (i *ImageConfig) PushToZarfRegistry() error {
 	message.Debug("images.PushToZarfRegistry()")
 
 	logs.Warn.SetOutput(&message.DebugWriter{})
@@ -29,7 +29,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 	imageMap := map[transform.Image]v1.Image{}
 	var totalSize int64
 	// Build an image list from the references
-	for _, ref := range i.ImgList {
+	for _, ref := range i.ImageList {
 		img, err := i.LoadImageFromPackage(ref)
 		if err != nil {
 			return err
@@ -49,7 +49,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 	httpTransport.TLSClientConfig.InsecureSkipVerify = i.Insecure
-	progressBar := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images to the zarf registry", len(i.ImgList)))
+	progressBar := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images to the zarf registry", len(i.ImageList)))
 	craneTransport := utils.NewTransport(httpTransport, progressBar)
 
 	pushOptions := config.GetCraneOptions(i.Insecure, i.Architectures...)
@@ -123,7 +123,7 @@ func (i *ImgConfig) PushToZarfRegistry() error {
 		}
 	}
 
-	progressBar.Successf("Pushed %d images to the zarf registry", len(i.ImgList))
+	progressBar.Successf("Pushed %d images to the zarf registry", len(i.ImageList))
 
 	return nil
 }

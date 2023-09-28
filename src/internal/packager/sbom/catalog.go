@@ -47,8 +47,8 @@ var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
 // func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, imagesPath, sbomPath string) error {
-func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []transform.Image, tmpPaths types.TempPaths) error {
-	imageCount := len(imgList)
+func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imageList []transform.Image, tmpPaths types.TempPaths) error {
+	imageCount := len(imageList)
 	componentCount := len(componentSBOMs)
 	builder := Builder{
 		spinner:     message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
@@ -63,7 +63,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []transform
 	_ = utils.CreateDirectory(builder.tmpSBOMPath, 0700)
 
 	// Generate a list of images and files for the sbom viewer
-	json, err := builder.generateJSONList(componentSBOMs, imgList)
+	json, err := builder.generateJSONList(componentSBOMs, imageList)
 	if err != nil {
 		builder.spinner.Errorf(err, "Unable to generate the SBOM image list")
 		return err
@@ -72,24 +72,24 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []transform
 
 	// Generate SBOM for each image
 	currImage := 1
-	for _, ref := range imgList {
-		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, ref.Reference)
+	for _, refInfo := range imageList {
+		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, refInfo.Reference)
 
 		// Get the image that we are creating an SBOM for
-		img, err := utils.LoadOCIImage(tmpPaths.Images, ref)
+		img, err := utils.LoadOCIImage(tmpPaths.Images, refInfo)
 		if err != nil {
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err
 		}
 
-		jsonData, err := builder.createImageSBOM(img, ref.Reference)
+		jsonData, err := builder.createImageSBOM(img, refInfo.Reference)
 		if err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", ref.Reference)
+			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", refInfo.Reference)
 			return err
 		}
 
-		if err = builder.createSBOMViewerAsset(ref.Reference, jsonData); err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", ref.Reference)
+		if err = builder.createSBOMViewerAsset(refInfo.Reference, jsonData); err != nil {
+			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", refInfo.Reference)
 			return err
 		}
 
@@ -122,7 +122,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []transform
 	}
 
 	// Include the compare tool if there are any image SBOMs OR component SBOMs
-	if len(componentSBOMs) > 0 || len(imgList) > 0 {
+	if len(componentSBOMs) > 0 || len(imageList) > 0 {
 		if err := builder.createSBOMCompareAsset(); err != nil {
 			builder.spinner.Errorf(err, "Unable to create SBOM compare tool")
 			return err

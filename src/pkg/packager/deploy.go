@@ -444,9 +444,9 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 
 	imgList := helpers.Unique(combinedImageList)
 
-	imgConfig := images.ImgConfig{
+	imgConfig := images.ImageConfig{
 		ImagesPath:    p.tmp.Images,
-		ImgList:       imgList,
+		ImageList:     imgList,
 		NoChecksum:    noImgChecksum,
 		RegInfo:       p.cfg.State.RegistryInfo,
 		Insecure:      config.CommonOptions.Insecure,

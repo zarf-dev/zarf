@@ -16,11 +16,11 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-// ImgConfig is the main struct for managing container images.
-type ImgConfig struct {
+// ImageConfig is the main struct for managing container images.
+type ImageConfig struct {
 	ImagesPath string
 
-	ImgList []transform.Image
+	ImageList []transform.Image
 
 	RegInfo types.RegistryInfo
 
@@ -34,17 +34,17 @@ type ImgConfig struct {
 }
 
 // GetLegacyImgTarballPath returns the ImagesPath as if it were a path to a tarball instead of a directory.
-func (i *ImgConfig) GetLegacyImgTarballPath() string {
+func (i *ImageConfig) GetLegacyImgTarballPath() string {
 	return fmt.Sprintf("%s.tar", i.ImagesPath)
 }
 
-// LoadImageFromPackage returns a v1.Image from the image ref specified, or an error if the image cannot be found.
-func (i ImgConfig) LoadImageFromPackage(ref transform.Image) (v1.Image, error) {
-	// If the package still has a images.tar that contains all of the images, use crane to load the specific ref (tag) we want
+// LoadImageFromPackage returns a v1.Image from the specified image, or an error if the image cannot be found.
+func (i ImageConfig) LoadImageFromPackage(refInfo transform.Image) (v1.Image, error) {
+	// If the package still has a images.tar that contains all of the images, use crane to load the specific reference (crane tag) we want
 	if _, statErr := os.Stat(i.GetLegacyImgTarballPath()); statErr == nil {
-		return crane.LoadTag(i.GetLegacyImgTarballPath(), ref.Reference, config.GetCraneOptions(i.Insecure, i.Architectures...)...)
+		return crane.LoadTag(i.GetLegacyImgTarballPath(), refInfo.Reference, config.GetCraneOptions(i.Insecure, i.Architectures...)...)
 	}
 
 	// Load the image from the OCI formatted images directory
-	return utils.LoadOCIImage(i.ImagesPath, ref)
+	return utils.LoadOCIImage(i.ImagesPath, refInfo)
 }

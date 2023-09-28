@@ -43,8 +43,8 @@ func LoadOCIImage(imgPath string, imgRef transform.Image) (v1.Image, error) {
 	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", imgRef.Reference, imgPath)
 }
 
-// AddImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image ref <-> digest shasum will be.
-func AddImageNameAnnotation(ociPath string, refToDigest map[string]string) error {
+// AddImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image reference <-> digest shasum will be.
+func AddImageNameAnnotation(ociPath string, referenceToDigest map[string]string) error {
 	indexPath := filepath.Join(ociPath, "index.json")
 
 	// Read the file contents and turn it into a usable struct that we can manipulate
@@ -65,16 +65,16 @@ func AddImageNameAnnotation(ociPath string, refToDigest map[string]string) error
 
 		var baseImageName string
 
-		for ref, digest := range refToDigest {
+		for reference, digest := range referenceToDigest {
 			if digest == manifest.Digest.String() {
-				baseImageName = ref
+				baseImageName = reference
 			}
 		}
 
 		if baseImageName != "" {
 			manifest.Annotations[ocispec.AnnotationBaseImageName] = baseImageName
 			index.Manifests[idx] = manifest
-			delete(refToDigest, baseImageName)
+			delete(referenceToDigest, baseImageName)
 		}
 	}
 

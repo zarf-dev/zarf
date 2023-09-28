@@ -267,7 +267,7 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	imageRefToDigest := map[string]string{}
+	referenceToDigest := map[string]string{}
 	for _, image := range imageCatalog {
 		imageRef := fmt.Sprintf("%s/%s", registryAddress, image)
 		tags, err := crane.ListTags(imageRef, authOption)
@@ -280,28 +280,28 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 			if err != nil {
 				return err
 			}
-			imageRefToDigest[taggedImageRef] = digest
+			referenceToDigest[taggedImageRef] = digest
 		}
 	}
 
 	// Figure out which images are in the registry but not needed by packages
 	imageDigestsToPrune := map[string]bool{}
-	for imageRef, digest := range imageRefToDigest {
+	for digestRef, digest := range referenceToDigest {
 		if _, ok := pkgImages[digest]; !ok {
-			ref, err := transform.ParseImageRef(imageRef)
+			refInfo, err := transform.ParseImageRef(digestRef)
 			if err != nil {
 				return err
 			}
-			imageRef = fmt.Sprintf("%s@%s", ref.Name, digest)
-			imageDigestsToPrune[imageRef] = true
+			digestRef = fmt.Sprintf("%s@%s", refInfo.Name, digest)
+			imageDigestsToPrune[digestRef] = true
 		}
 	}
 
 	if len(imageDigestsToPrune) > 0 {
 		message.Note(lang.CmdToolsRegistryPruneImageList)
 
-		for imageRef := range imageDigestsToPrune {
-			message.Info(imageRef)
+		for digestRef := range imageDigestsToPrune {
+			message.Info(digestRef)
 		}
 
 		confirm := config.CommonOptions.Confirm
@@ -317,9 +317,9 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 			}
 		}
 		if confirm {
-			// Delete the image references that are to be pruned
-			for imageRef := range imageDigestsToPrune {
-				err = crane.Delete(imageRef, authOption)
+			// Delete the digest references that are to be pruned
+			for digestRef := range imageDigestsToPrune {
+				err = crane.Delete(digestRef, authOption)
 				if err != nil {
 					return err
 				}

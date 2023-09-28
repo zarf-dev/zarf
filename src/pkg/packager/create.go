@@ -148,11 +148,11 @@ func (p *Packager) Create(baseDir string) error {
 
 		// Combine all component images into a single entry for efficient layer reuse.
 		for _, src := range component.Images {
-			ref, err := transform.ParseImageRef(src)
+			refInfo, err := transform.ParseImageRef(src)
 			if err != nil {
 				return fmt.Errorf("failed to create ref for image %s: %w", src, err)
 			}
-			combinedImageList = append(combinedImageList, ref)
+			combinedImageList = append(combinedImageList, refInfo)
 		}
 
 		// Remove the temp directory for this component before archiving.
@@ -162,16 +162,16 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	imgList := helpers.Unique(combinedImageList)
+	imageList := helpers.Unique(combinedImageList)
 
 	// Images are handled separately from other component assets.
-	if len(imgList) > 0 {
+	if len(imageList) > 0 {
 		message.HeaderInfof("📦 PACKAGE IMAGES")
 
 		doPull := func() error {
-			imgConfig := images.ImgConfig{
+			imgConfig := images.ImageConfig{
 				ImagesPath:        p.tmp.Images,
-				ImgList:           imgList,
+				ImageList:         imageList,
 				Insecure:          config.CommonOptions.Insecure,
 				Architectures:     []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 				RegistryOverrides: p.cfg.CreateOpts.RegistryOverrides,
@@ -189,7 +189,7 @@ func (p *Packager) Create(baseDir string) error {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp); err != nil {
+		if err := sbom.Catalog(componentSBOMs, imageList, p.tmp); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
