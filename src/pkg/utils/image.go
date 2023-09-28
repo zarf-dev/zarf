@@ -17,7 +17,7 @@ import (
 )
 
 // LoadOCIImage returns a v1.Image with the image ref specified from a location provided, or an error if the image cannot be found.
-func LoadOCIImage(imgPath string, imgRef transform.Image) (v1.Image, error) {
+func LoadOCIImage(imgPath string, refInfo transform.Image) (v1.Image, error) {
 	// Use the manifest within the index.json to load the specific image we want
 	layoutPath := layout.Path(imgPath)
 	imgIdx, err := layoutPath.ImageIndex()
@@ -31,16 +31,16 @@ func LoadOCIImage(imgPath string, imgRef transform.Image) (v1.Image, error) {
 
 	// Search through all the manifests within this package until we find the annotation that matches our ref
 	for _, manifest := range idxManifest.Manifests {
-		if manifest.Annotations[ocispec.AnnotationBaseImageName] == imgRef.Reference ||
+		if manifest.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Reference ||
 			// A backwards compatibility shim for older Zarf versions that would leave docker.io off of image annotations
-			(manifest.Annotations[ocispec.AnnotationBaseImageName] == imgRef.Path+imgRef.TagOrDigest && imgRef.Host == "docker.io") {
+			(manifest.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Path+refInfo.TagOrDigest && refInfo.Host == "docker.io") {
 
 			// This is the image we are looking for, load it and then return
 			return layoutPath.Image(manifest.Digest)
 		}
 	}
 
-	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", imgRef.Reference, imgPath)
+	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", refInfo.Reference, imgPath)
 }
 
 // AddImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image reference <-> digest shasum will be.

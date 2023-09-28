@@ -26,15 +26,15 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	imageMap := map[transform.Image]v1.Image{}
+	refInfoToImage := map[transform.Image]v1.Image{}
 	var totalSize int64
 	// Build an image list from the references
-	for _, ref := range i.ImageList {
-		img, err := i.LoadImageFromPackage(ref)
+	for _, refInfo := range i.ImageList {
+		img, err := i.LoadImageFromPackage(refInfo)
 		if err != nil {
 			return err
 		}
-		imageMap[ref] = img
+		refInfoToImage[refInfo] = img
 		imgSize, err := calcImgSize(img)
 		if err != nil {
 			return err
@@ -91,18 +91,18 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 		registryURL = i.RegInfo.Address
 	}
 
-	for ref, img := range imageMap {
-		refTruncated := message.Truncate(ref.Reference, 55, true)
+	for refInfo, img := range refInfoToImage {
+		refTruncated := message.Truncate(refInfo.Reference, 55, true)
 		progressBar.UpdateTitle(fmt.Sprintf("Pushing %s", refTruncated))
 
 		// If this is not a no checksum image push it for use with the Zarf agent
 		if !i.NoChecksum {
-			offlineNameCRC, err := transform.ImageTransformHost(registryURL, ref.Reference)
+			offlineNameCRC, err := transform.ImageTransformHost(registryURL, refInfo.Reference)
 			if err != nil {
 				return err
 			}
 
-			message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, ref.Reference, offlineNameCRC)
+			message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, refInfo.Reference, offlineNameCRC)
 
 			if err = crane.Push(img, offlineNameCRC, pushOptions...); err != nil {
 				return err
@@ -111,12 +111,12 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 
 		// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
 		// (this may result in collisions but this is acceptable for this use case)
-		offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, ref.Reference)
+		offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, refInfo.Reference)
 		if err != nil {
 			return err
 		}
 
-		message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, ref.Reference, offlineName)
+		message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, refInfo.Reference, offlineName)
 
 		if err = crane.Push(img, offlineName, pushOptions...); err != nil {
 			return err

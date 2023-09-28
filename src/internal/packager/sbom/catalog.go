@@ -46,7 +46,6 @@ var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
-// func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imgList []string, imagesPath, sbomPath string) error {
 func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imageList []transform.Image, tmpPaths types.TempPaths) error {
 	imageCount := len(imageList)
 	componentCount := len(componentSBOMs)
@@ -154,7 +153,7 @@ func Catalog(componentSBOMs map[string]*types.ComponentSBOM, imageList []transfo
 // some code/structure migrated from https://github.com/testifysec/go-witness/blob/v0.1.12/attestation/syft/syft.go.
 func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 	// Get the image reference.
-	ref, err := transform.ParseImageRef(src)
+	refInfo, err := transform.ParseImageRef(src)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
 	}
@@ -167,7 +166,7 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 		return nil, err
 	}
 
-	syftImage := image.NewImage(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(ref.Reference))
+	syftImage := image.NewImage(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(refInfo.Reference))
 	if err := syftImage.Read(); err != nil {
 		return nil, err
 	}
@@ -200,7 +199,7 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 	}
 
 	// Write the sbom to disk using the image ref as the filename
-	filename := fmt.Sprintf("%s.json", ref.Reference)
+	filename := fmt.Sprintf("%s.json", refInfo.Reference)
 	sbomFile, err := b.createSBOMFile(filename)
 	if err != nil {
 		return nil, err

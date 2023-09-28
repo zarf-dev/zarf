@@ -41,6 +41,16 @@ func (i *ImageConfig) PullAll() error {
 		referenceToDigest = make(map[string]string)
 	)
 
+	type imgInfo struct {
+		refInfo transform.Image
+		img     v1.Image
+	}
+
+	type digestInfo struct {
+		refInfo transform.Image
+		digest  string
+	}
+
 	// Give some additional user feedback on larger image sets
 	if imageCount > 15 {
 		longer = "This step may take a couple of minutes to complete."
@@ -54,12 +64,7 @@ func (i *ImageConfig) PullAll() error {
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	type refAndImg struct {
-		refInfo transform.Image
-		img     v1.Image
-	}
-
-	metadataImageConcurrency := utils.NewConcurrencyTools[refAndImg, error](len(i.ImageList))
+	metadataImageConcurrency := utils.NewConcurrencyTools[imgInfo, error](len(i.ImageList))
 
 	defer metadataImageConcurrency.Cancel()
 
@@ -101,11 +106,11 @@ func (i *ImageConfig) PullAll() error {
 				return
 			}
 
-			metadataImageConcurrency.ProgressChan <- refAndImg{refInfo: refInfo, img: img}
+			metadataImageConcurrency.ProgressChan <- imgInfo{refInfo: refInfo, img: img}
 		}()
 	}
 
-	onMetadataProgress := func(finishedImage refAndImg, iteration int) {
+	onMetadataProgress := func(finishedImage imgInfo, iteration int) {
 		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImageList), finishedImage.refInfo.Reference)
 		refInfoToImage[finishedImage.refInfo] = finishedImage.img
 	}
@@ -151,11 +156,6 @@ func (i *ImageConfig) PullAll() error {
 		}
 	}
 	spinner.Updatef("Preparing image sources and cache for image pulling")
-
-	type refInfoAndDigest struct {
-		refInfo transform.Image
-		digest  string
-	}
 
 	// Create special sauce crane Path object
 	// If it already exists use it
@@ -332,7 +332,7 @@ func (i *ImageConfig) PullAll() error {
 		return err
 	}
 
-	imageSavingConcurrency := utils.NewConcurrencyTools[refInfoAndDigest, error](len(refInfoToImage))
+	imageSavingConcurrency := utils.NewConcurrencyTools[digestInfo, error](len(refInfoToImage))
 
 	defer imageSavingConcurrency.Cancel()
 
@@ -376,11 +376,11 @@ func (i *ImageConfig) PullAll() error {
 				return
 			}
 
-			imageSavingConcurrency.ProgressChan <- refInfoAndDigest{digest: imgDigest.String(), refInfo: refInfo}
+			imageSavingConcurrency.ProgressChan <- digestInfo{digest: imgDigest.String(), refInfo: refInfo}
 		}()
 	}
 
-	onImageSavingProgress := func(finishedImage refInfoAndDigest, iteration int) {
+	onImageSavingProgress := func(finishedImage digestInfo, iteration int) {
 		referenceToDigest[finishedImage.refInfo.Reference] = finishedImage.digest
 	}
 
