@@ -33,6 +33,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 	var originalDir string
 	imagesMap := make(map[string][]string)
+	erroredCharts := []string{}
 
 	// Change the working directory if this run has an alternate base dir
 	if baseDir != "" {
@@ -154,6 +155,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 				if err != nil {
 					message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
+					erroredCharts = append(erroredCharts, chart.URL)
 					continue
 				}
 
@@ -171,6 +173,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 				if err != nil {
 					message.WarnErrf(err, "Problem looking for image annotations for %s: %s", chart.URL, err.Error())
+					erroredCharts = append(erroredCharts, chart.URL)
 					continue
 				}
 				for _, image := range annotatedImages {
@@ -265,6 +268,10 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 	// In case the directory was changed, reset to prevent breaking relative target paths
 	if originalDir != "" {
 		_ = os.Chdir(originalDir)
+	}
+
+	if len(erroredCharts) > 0 {
+		return imagesMap, fmt.Errorf("the following charts had errors: %s", erroredCharts)
 	}
 
 	return imagesMap, nil
