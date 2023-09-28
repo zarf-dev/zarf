@@ -60,6 +60,7 @@ func identifyUnknownTarball(path string) (string, error) {
 	return "", fmt.Errorf("%s is not a supported tarball format (%+v)", path, config.GetValidPackageExtensions())
 }
 
+// RenameFromMetadata renames a tarball based on its metadata.
 func RenameFromMetadata(path string) (string, error) {
 	var pkg types.ZarfPackage
 
@@ -100,6 +101,7 @@ func RenameFromMetadata(path string) (string, error) {
 	return tb, os.Rename(path, tb)
 }
 
+// NameFromMetadata generates a name from a package's metadata.
 func NameFromMetadata(pkg *types.ZarfPackage, isSkeleton bool) string {
 	var name string
 

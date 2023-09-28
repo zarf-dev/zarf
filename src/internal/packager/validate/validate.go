@@ -20,8 +20,10 @@ import (
 )
 
 var (
+	// IsLowercaseNumberHyphen is a regex for lowercase, numbers and hyphens.
 	// https://regex101.com/r/FLdG9G/1
 	IsLowercaseNumberHyphen = regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
+	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
 	// https://regex101.com/r/tfsEuZ/1
 	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 )

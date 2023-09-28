@@ -35,8 +35,10 @@ type Components struct {
 	Tarballs map[string]string
 }
 
+// ErrNotLoaded is returned when a path is not loaded.
 var ErrNotLoaded = fmt.Errorf("not loaded")
 
+// IsNotLoaded checks if an error is ErrNotLoaded.
 func IsNotLoaded(err error) bool {
 	u, ok := err.(*fs.PathError)
 	return ok && u.Unwrap() == ErrNotLoaded

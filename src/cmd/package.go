@@ -399,7 +399,7 @@ func bindMirrorFlags(v *viper.Viper) {
 	mirrorFlags.StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(common.VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 }
 
-func bindInspectFlags(v *viper.Viper) {
+func bindInspectFlags(_ *viper.Viper) {
 	inspectFlags := packageInspectCmd.Flags()
 	inspectFlags.BoolVarP(&pkgConfig.InspectOpts.ViewSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
 	inspectFlags.StringVar(&pkgConfig.InspectOpts.SBOMOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
