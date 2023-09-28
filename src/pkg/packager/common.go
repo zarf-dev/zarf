@@ -344,7 +344,7 @@ func (p *Packager) signPackage(signingKeyPath, signingKeyPassword string) error 
 	return nil
 }
 
-func (p *Packager) stageSBOMFiles() error {
+func (p *Packager) stageSBOMViewFiles() error {
 	if p.layout.SBOMs.IsTarball() {
 		return fmt.Errorf("unable to process the SBOM files for this package: %s is a tarball", p.layout.SBOMs.Path)
 	}

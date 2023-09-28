@@ -28,7 +28,7 @@ func (p *Packager) Mirror() (err error) {
 		return err
 	}
 
-	if err := p.stageSBOMFiles(); err != nil {
+	if err := p.stageSBOMViewFiles(); err != nil {
 		return err
 	}
 
