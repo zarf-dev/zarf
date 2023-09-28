@@ -91,7 +91,7 @@ func RenameFromMetadata(path string) (string, error) {
 		return "", err
 	}
 
-	name := NameFromMetadata(&pkg)
+	name := NameFromMetadata(&pkg, false)
 
 	name = fmt.Sprintf("%s%s", name, ext)
 
@@ -100,10 +100,14 @@ func RenameFromMetadata(path string) (string, error) {
 	return tb, os.Rename(path, tb)
 }
 
-func NameFromMetadata(pkg *types.ZarfPackage) string {
+func NameFromMetadata(pkg *types.ZarfPackage, isSkeleton bool) string {
 	var name string
 
 	arch := config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
+
+	if isSkeleton {
+		arch = "skeleton"
+	}
 
 	switch pkg.Kind {
 	case types.ZarfInitConfig:

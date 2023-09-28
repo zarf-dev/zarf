@@ -61,7 +61,7 @@ func (p *Packager) Publish() (err error) {
 		if err := p.remote.Repo().Manifests().PushReference(ctx, expected, bytes.NewReader(b), srcRemote.Repo().Reference.Reference); err != nil {
 			return err
 		}
-		message.Successf("Successfully published %s to %s", srcRemote.Repo().Reference, p.remote.Repo().Reference)
+		message.Infof("Published %s to %s", srcRemote.Repo().Reference, p.remote.Repo().Reference)
 		return nil
 	}
 

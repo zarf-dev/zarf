@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
@@ -173,7 +174,8 @@ func (s *OCISource) Collect(dir string) (string, error) {
 		return "", err
 	}
 
-	name := NameFromMetadata(&pkg)
+	isSkeleton := strings.HasSuffix(s.Repo().Reference.Reference, oci.SkeletonSuffix)
+	name := NameFromMetadata(&pkg, isSkeleton)
 
 	dstTarball := filepath.Join(dir, name)
 
