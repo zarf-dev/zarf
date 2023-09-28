@@ -8,10 +8,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	zarfconfig "github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	"oras.land/oras-go/v2"
@@ -42,7 +44,7 @@ type OrasRemote struct {
 //
 // Registry auth is handled by the Docker CLI's credential store and checked before returning the client
 func NewOrasRemote(url string) (*OrasRemote, error) {
-	ref, err := registry.ParseReference(url)
+	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
 	}

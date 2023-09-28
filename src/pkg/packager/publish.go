@@ -5,6 +5,8 @@
 package packager
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -13,12 +15,56 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/content"
 )
 
 // Publish publishes the package to a registry
 func (p *Packager) Publish() (err error) {
+	_, isOCISource := p.source.(*sources.OCISource)
+	if isOCISource {
+		ctx := context.TODO()
+		// oci --> oci is a special case, where we will use oci.CopyPackage so that we can transfer the package
+		// w/o layers touching the filesystem
+		srcRemote := p.source.(*sources.OCISource).OrasRemote
+		srcRemote.WithContext(ctx)
+
+		parts := strings.Split(srcRemote.Repo().Reference.Repository, "/")
+		packageName := parts[len(parts)-1]
+
+		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
+
+		err = p.setOCIRemote(p.cfg.PublishOpts.PackageDestination)
+		if err != nil {
+			return err
+		}
+		p.remote.WithContext(ctx)
+
+		if err := oci.CopyPackage(ctx, srcRemote, p.remote, nil, config.CommonOptions.OCIConcurrency); err != nil {
+			return err
+		}
+
+		srcManifest, err := srcRemote.FetchRoot()
+		if err != nil {
+			return err
+		}
+		b, err := srcManifest.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		expected := content.NewDescriptorFromBytes(ocispec.MediaTypeImageManifest, b)
+
+		// tag the manifest the same as the source
+		if err := p.remote.Repo().Manifests().PushReference(ctx, expected, bytes.NewReader(b), srcRemote.Repo().Reference.Reference); err != nil {
+			return err
+		}
+		message.Successf("Successfully published %s to %s", srcRemote.Repo().Reference, p.remote.Repo().Reference)
+		return nil
+	}
+
 	var referenceSuffix string
 	if p.cfg.CreateOpts.BaseDir != "" {
 		referenceSuffix = oci.SkeletonSuffix
