@@ -198,7 +198,7 @@ func (p *Packager) Create() (err error) {
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range p.cfg.Pkg.Components {
 		// Make the component a tar archive
-		if err := p.layout.Components.Archive(component); err != nil {
+		if err := p.layout.Components.Archive(component, true); err != nil {
 			return fmt.Errorf("unable to archive component: %s", err.Error())
 		}
 	}

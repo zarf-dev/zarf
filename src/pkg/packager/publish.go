@@ -156,7 +156,7 @@ func (p *Packager) loadSkeleton() (err error) {
 			return err
 		}
 
-		if err := p.layout.Components.Archive(component); err != nil {
+		if err := p.layout.Components.Archive(component, false); err != nil {
 			return err
 		}
 	}

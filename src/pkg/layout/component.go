@@ -45,7 +45,7 @@ func IsNotLoaded(err error) bool {
 }
 
 // Archive archives a component.
-func (c *Components) Archive(component types.ZarfComponent) (err error) {
+func (c *Components) Archive(component types.ZarfComponent, cleanupTemp bool) (err error) {
 	name := component.Name
 	if _, ok := c.Dirs[name]; !ok {
 		return &fs.PathError{
@@ -55,7 +55,9 @@ func (c *Components) Archive(component types.ZarfComponent) (err error) {
 		}
 	}
 	base := c.Dirs[name].Base
-	_ = os.RemoveAll(c.Dirs[name].Temp)
+	if cleanupTemp {
+		_ = os.RemoveAll(c.Dirs[name].Temp)
+	}
 	size, err := utils.GetDirSize(base)
 	if err != nil {
 		return err
