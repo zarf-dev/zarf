@@ -29,13 +29,13 @@ There are certain fields that will be common across all component definitions. T
 
 ### Actions
 
-<Properties item="ZarfComponentActions" />
+<Properties item="ZarfComponent" include={["actions"]} />
 
-Actions allow for custom functionality to be run at different points in the Zarf lifecycle.  They are explored more in the [component actions documentation](7-component-actions.md).
+Component actions are explored more in the [component actions documentation](7-component-actions.md).
 
 ### Files
 
-<Properties item="ZarfFile" />
+<Properties item="ZarfComponent" include={["files"]} />
 
 Files can be:
 
@@ -56,7 +56,7 @@ Files can be:
 
 ### Helm Charts
 
-<Properties item="ZarfChart" />
+<Properties item="ZarfComponent" include={["charts"]} />
 
 Charts using the `localPath` key can be:
 
@@ -83,7 +83,7 @@ Charts using the `url` key can be:
 
 ### Kubernetes Manifests
 
-<Properties item="ZarfManifest" />
+<Properties item="ZarfComponent" include={["manifests"]} />
 
 Manifests under the `files` key can be:
 
@@ -164,13 +164,13 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 
 ### Data Injections
 
-<Properties item="ZarfDataInjection" />
+<Properties item="ZarfComponent" include={["dataInjections"]} />
 
 <ExampleYAML src={require('../../examples/kiwix/zarf.yaml')} component="kiwix-serve" />
 
 ### Component Imports
 
-<Properties item="ZarfComponentImport" />
+<Properties item="ZarfComponent" include={["import"]} />
 
 <Tabs queryString="import-examples">
 <TabItem value="Local Path">
@@ -191,7 +191,7 @@ This process will also merge `variables` and `constants` defined in the imported
 
 ### Extensions
 
-<Properties item="ZarfComponentExtensions" />
+<Properties item="ZarfComponent" include={["extensions"]} />
 
 <ExampleYAML src={require('../../examples/big-bang/zarf.yaml')} component="bigbang" />
 
