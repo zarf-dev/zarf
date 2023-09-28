@@ -141,11 +141,21 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 
 // Create creates a new component directory structure.
 func (c *Components) Create(component types.ZarfComponent) (cp *ComponentPaths, err error) {
+	name := component.Name
+
+	_, ok := c.Tarballs[name]
+	if ok {
+		return nil, &fs.PathError{
+			Op:   "create component paths",
+			Path: name,
+			Err:  fmt.Errorf("component tarball for %q exists, use Unarchive instead", name),
+		}
+	}
+
 	if err = utils.CreateDirectory(c.Base, 0700); err != nil {
 		return nil, err
 	}
 
-	name := component.Name
 	base := filepath.Join(c.Base, name)
 
 	if err = utils.CreateDirectory(base, 0700); err != nil {

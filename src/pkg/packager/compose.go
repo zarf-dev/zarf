@@ -169,9 +169,10 @@ func (p *Packager) getChildComponent(parent types.ZarfComponent, pathAncestry st
 	if parent.Import.URL != "" {
 		parent.Import.Path = filepath.Join(parent.Import.Path, layout.ComponentsDir, child.Name)
 		if err := subPkgPaths.Components.Unarchive(child); err != nil {
-			if os.IsNotExist(err) {
+			if layout.IsNotLoaded(err) {
 				// If the tarball doesn't exist (skeleton component had no local resources), we need to create the directory anyways in case there are actions
-				if err := utils.CreateDirectory(filepath.Join(subPkgPaths.Components.Base, child.Name), 0700); err != nil {
+				_, err := subPkgPaths.Components.Create(child)
+				if err != nil {
 					return child, fmt.Errorf("unable to create composed component cache path %s: %w", cachePath, err)
 				}
 			} else {
