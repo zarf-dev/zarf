@@ -66,6 +66,10 @@ jobs:
       - name: Setup K3d
         uses: ./.github/actions/k3d
 
+      # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
+      - name: Cleanup files
+        uses: ./.github/actions/cleanup-files
+
       - name: Run tests
         run: |
           chmod +x build/zarf
@@ -91,6 +95,10 @@ jobs:
 
       - name: Setup golang
         uses: ./.github/actions/golang
+
+      # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
+      - name: Cleanup files
+        uses: ./.github/actions/cleanup-files
 
       - name: Run tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
@@ -126,6 +134,10 @@ jobs:
           kind delete cluster && kind create cluster
           kubectl scale deploy -n kube-system coredns --replicas=1
 
+      # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
+      - name: Cleanup files
+        uses: ./.github/actions/cleanup-files
+
       - name: Run tests
         run: |
           chmod +x build/zarf
@@ -154,6 +166,10 @@ jobs:
 
       - name: Setup Minikube
         run: minikube start --driver=docker
+
+      # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
+      - name: Cleanup files
+        uses: ./.github/actions/cleanup-files
 
       - name: Run tests
         run: |
