@@ -60,7 +60,7 @@ func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
 
 // Zarf executes a Zarf command.
 func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
-	if !slices.Contains(args, "--tmpdir") {
+	if !slices.Contains(args, "--tmpdir") && !slices.Contains(args, "tools") {
 		tmpdir, err := os.MkdirTemp("", "zarf-")
 		if err != nil {
 			return "", "", err
