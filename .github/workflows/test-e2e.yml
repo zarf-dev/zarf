@@ -66,13 +66,16 @@ jobs:
       - name: Setup K3d
         uses: ./.github/actions/k3d
 
+      - name: Make Zarf executable
+        run: |
+          chmod +x build/zarf
+
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
 
       - name: Run tests
         run: |
-          chmod +x build/zarf
           make test-e2e ARCH=amd64
 
       - name: Save logs
@@ -96,6 +99,10 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
+      - name: Make Zarf executable
+        run: |
+          chmod +x build/zarf
+
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
@@ -105,7 +112,6 @@ jobs:
         #       in a previous step. This test run will use Zarf to create a K3s cluster, and a brand new cluster will be
         #       used for each test
         run: |
-          chmod +x build/zarf
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
 
       - name: Save logs
@@ -134,13 +140,16 @@ jobs:
           kind delete cluster && kind create cluster
           kubectl scale deploy -n kube-system coredns --replicas=1
 
+      - name: Make Zarf executable
+        run: |
+          chmod +x build/zarf
+
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
 
       - name: Run tests
         run: |
-          chmod +x build/zarf
           make test-e2e ARCH=amd64
 
       - name: Save logs
@@ -167,13 +176,16 @@ jobs:
       - name: Setup Minikube
         run: minikube start --driver=docker
 
+      - name: Make Zarf executable
+        run: |
+          chmod +x build/zarf
+
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
 
       - name: Run tests
         run: |
-          chmod +x build/zarf
           make test-e2e ARCH=amd64
 
       - name: Save logs
