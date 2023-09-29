@@ -38,6 +38,12 @@ Given the registry is a core part of any Kubernetes deployment you MUST either s
 
 :::
 
+:::info
+
+The Zarf Registry is initially injected as a series of config maps that bootstraps itself into the cluster and then binds to a NodePort to allow the kubelet to pull images and setup the final registry deployment.  Doing this keeps Zarf cluster agnostic however does require that the kubelet be able to reach out to a cluster NodePort service which may require changes to firewall configurations like allowing UDP traffic between nodes if using something like VXLAN tunneling.
+
+:::
+
 :::tip
 
 You can further customize how the registry behaves by setting variables such as `REGISTRY_PVC_SIZE` with a [config file](../2-the-zarf-cli/index.md#using-a-config-file-to-make-cli-command-flags-declarative) or `--set` on `zarf init`.
