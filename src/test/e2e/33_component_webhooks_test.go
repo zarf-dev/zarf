@@ -21,6 +21,7 @@ func TestComponentWebhooks(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	stdOut, stdErr, err = e2e.Zarf("tools", "wait-for", "deployment", "pepr-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b", "available", "-n=pepr-system")
 	require.NoError(t, err, stdOut, stdErr)
+	defer e2e.CleanFiles(webhookPath)
 
 	// Ensure package deployments wait for webhooks to complete.
 	gamesPath := fmt.Sprintf("build/zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
