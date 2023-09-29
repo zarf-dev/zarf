@@ -96,7 +96,7 @@ Manifests under the `kustomizations` key can be:
 
 :::note
 
-In order to maintain consistency throughout the deployment lifecycle, Zarf dynamically generates a Helm Chart from the named manifest entries that you specify.  This means that any given set of files under a manifest entry will be applied according to [Helm Chart template and manifest install ordering](https://github.com/helm/helm/blob/main/pkg/releaseutil/manifest_sorter.go#L78).
+Zarf dynamically generates a Helm Chart from the named manifest entries that you specify.  This means that any given set of files under a manifest entry will be applied according to [Helm Chart template and manifest install ordering](https://github.com/helm/helm/blob/main/pkg/releaseutil/manifest_sorter.go#L78) and not necessarily in the order that files are declared.  If ordering is important, consider moving each file into its own manifest entry in the `manifests` array.
 
 :::
 
