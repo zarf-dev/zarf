@@ -113,7 +113,7 @@ var prepareFindImages = &cobra.Command{
 
 		// Find all the images the package might need
 		if _, err := pkgClient.FindImages(baseDir, repoHelmChartPath, kubeVersionOverride); err != nil {
-			message.Fatalf(err, lang.CmdPrepareFindImagesErr, baseDir)
+			message.Fatalf(err, lang.CmdPrepareFindImagesErr, baseDir, err.Error())
 		}
 	},
 }
