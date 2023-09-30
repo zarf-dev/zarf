@@ -206,9 +206,10 @@ const (
 		"This is called internally by the supported Gitea package component."
 	CmdInternalArtifactRegistryGiteaTokenErr = "Unable to create an artifact registry token for the Gitea service."
 
-	CmdInternalUIShort = "[beta] Launches the Zarf Web UI"
-	CmdInternalUILong  = "[beta] This command launches the Zarf deployment Web UI to connect to clusters and deploy packages" +
-		"using a Web GUI instead of the CLI."
+	CmdInternalUIShort = "[Deprecated] Launches the Zarf Web UI"
+	CmdInternalUILong  = "[Deprecated] This command launches the Zarf deployment Web UI to connect to clusters and deploy packages" +
+		"using a Web GUI instead of the CLI. "
+	CmdInternalUIDeprecated = "Deprecated: This command has been replaced by https://github.com/defenseunicorns/zarf-ui and will be removed in the next Zarf release."
 
 	CmdInternalIsValidHostnameShort = "Checks if the current machine's hostname is RFC1123 compliant"
 	CmdInternalIsValidHostnameErr   = "The hostname '%s' is not valid. Ensure the hostname meets RFC1123 requirements https://www.rfc-editor.org/rfc/rfc1123.html."
@@ -405,8 +406,8 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsRegistryFlagNonDist        = "Allow pushing non-distributable (foreign) layers"
 	CmdToolsRegistryFlagPlatform       = "Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64)."
 
-	CmdToolsGetGitPasswdShort       = "Deprecated: Returns the push user's password for the Git server"
-	CmdToolsGetGitPasswdLong        = "Deprecated: Reads the password for a user with push access to the configured Git server in Zarf State. Note that this command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
+	CmdToolsGetGitPasswdShort       = "[Deprecated] Returns the push user's password for the Git server"
+	CmdToolsGetGitPasswdLong        = "[Deprecated] Reads the password for a user with push access to the configured Git server in Zarf State. Note that this command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
 	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
 
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."

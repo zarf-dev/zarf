@@ -76,7 +76,7 @@ func RenderProgressBarForLocalDirWrite(filepath string, expectedTotal int64, wg 
 			// Read the directory size
 			currentBytes, dirErr := GetDirSize(filepath)
 			if dirErr != nil {
-				message.Warnf("unable to get the updated progress of the image pull: %s", dirErr.Error())
+				message.Debugf("unable to get the updated progress of the image pull: %s", dirErr.Error())
 				time.Sleep(200 * time.Millisecond)
 				continue
 			}

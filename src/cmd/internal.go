@@ -189,6 +189,7 @@ var uiCmd = &cobra.Command{
 	Short: lang.CmdInternalUIShort,
 	Long:  lang.CmdInternalUILong,
 	Run: func(cmd *cobra.Command, args []string) {
+		message.Warn(lang.CmdInternalUIDeprecated)
 		api.LaunchAPIServer()
 	},
 }
