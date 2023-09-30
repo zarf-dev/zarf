@@ -4,14 +4,14 @@ Date: 2023-09-28
 
 ## Status
 
-Pending
+Accepted
 
 ## Context
 
 Zarf natively supports creating the following package sources:
 
 - Local Tarball (`.tar` and `.tar.zst`)
-  - Via `zarf package create <dir> -o <dir>`, whether or not the resulting tarball is compressed is determined by `metadata.uncompressed` in `zarf.yaml`
+  - Via `zarf package create <dir> -o <dir>`, with compression determined by `metadata.uncompressed` in `zarf.yaml`
 - Split Tarball (`.part...`)
   - Via `zarf package create <dir> --max-package-size <size> -o <dir>`
 - OCI package (`oci://`)
@@ -28,7 +28,7 @@ However, the current loading abilities of Zarf have been inconsistent depending 
 
 ## Decision
 
-Zarf must support the `deploy`, `inspect`, `remove`, `publish`, `pull`, and `mirror-resources` commands for all package sources.
+Zarf must support the `deploy`, `inspect`, `remove`, `publish`, `pull`, and `mirror-resources` commands across package sources.
 
 For common behavior to be exhibited by all sources, the `PackageSource` interface has been introduced along with the `layout` library.
 

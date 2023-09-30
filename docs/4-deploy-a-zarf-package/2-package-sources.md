@@ -2,12 +2,12 @@
 
 Zarf currently supports consuming the following package sources:
 
-- Local Tarball (`.tar` and `.tar.zst`)
-- Split Tarball (`.part...`)
-- HTTP(S) URL
-- Published OCI package (`oci://`)
+- Local Tarball Path (`.tar` and `.tar.zst`) - The default output on `zarf package create`
+- Split Tarball Path (`.part...`) - Optionally created by specifying `--max-package-size`
+- Remote Tarball URL (`http://` and `https://` ) - A package tarball hosted on a web server
+- Remote OCI Reference (`oci://`) - A package published to an OCI compatible registry
 
-The following commands accept a source as their first argument:
+A source can be used with the following commands as their first argument:
 
 - `zarf package deploy <source>`
 - `zarf package inspect <source>`
@@ -18,7 +18,7 @@ The following commands accept a source as their first argument:
 
 :::note
 
-There is a special Cluster source available on `inspect` and `remove` that allows for referencing a package via its name:
+In addition to the traditional sources, there is also a special Cluster source available on `inspect` and `remove` that allows for referencing a package via its name:
 
 - `zarf package inspect <package name>`
 - `zarf package remove <package name>`
