@@ -32,63 +32,62 @@ import (
 	"github.com/pterm/pterm"
 )
 
-// PullAll pulls all of the images in the provided tag map.
-func (i *ImgConfig) PullAll() error {
+// PullAll pulls all of the images in the provided ref map.
+func (i *ImageConfig) PullAll() error {
 	var (
-		longer      string
-		imgCount    = len(i.ImgList)
-		imageMap    = map[string]v1.Image{}
-		tagToImage  = map[name.Tag]v1.Image{}
-		tagToDigest = make(map[string]string)
+		longer            string
+		imageCount        = len(i.ImageList)
+		refInfoToImage    = map[transform.Image]v1.Image{}
+		referenceToDigest = make(map[string]string)
 	)
 
+	type imgInfo struct {
+		refInfo transform.Image
+		img     v1.Image
+	}
+
+	type digestInfo struct {
+		refInfo transform.Image
+		digest  string
+	}
+
 	// Give some additional user feedback on larger image sets
-	if imgCount > 15 {
+	if imageCount > 15 {
 		longer = "This step may take a couple of minutes to complete."
-	} else if imgCount > 5 {
+	} else if imageCount > 5 {
 		longer = "This step may take several seconds to complete."
 	}
 
-	spinner := message.NewProgressSpinner("Loading metadata for %d images. %s", imgCount, longer)
+	spinner := message.NewProgressSpinner("Loading metadata for %d images. %s", imageCount, longer)
 	defer spinner.Stop()
 
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	type srcAndImg struct {
-		src string
-		img v1.Image
-	}
-
-	metadataImageConcurrency := utils.NewConcurrencyTools[srcAndImg, error](len(i.ImgList))
+	metadataImageConcurrency := utils.NewConcurrencyTools[imgInfo, error](len(i.ImageList))
 
 	defer metadataImageConcurrency.Cancel()
 
-	spinner.Updatef("Fetching image metadata (0 of %d)", len(i.ImgList))
+	spinner.Updatef("Fetching image metadata (0 of %d)", len(i.ImageList))
 
 	// Spawn a goroutine for each image to load its metadata
-	for _, src := range i.ImgList {
+	for _, refInfo := range i.ImageList {
 		// Create a closure so that we can pass the src into the goroutine
-		src := src
+		refInfo := refInfo
 		go func() {
 			// Make sure to call Done() on the WaitGroup when the goroutine finishes
 			defer metadataImageConcurrency.WaitGroupDone()
-
-			srcParsed, err := transform.ParseImageRef(src)
-			if err != nil {
-				metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to parse image ref %s: %w", src, err)
-				return
-			}
 
 			if metadataImageConcurrency.IsDone() {
 				return
 			}
 
-			actualSrc := src
-			if overrideHost, present := i.RegistryOverrides[srcParsed.Host]; present {
-				actualSrc, err = transform.ImageTransformHostWithoutChecksum(overrideHost, src)
+			actualSrc := refInfo.Reference
+			if overrideHost, present := i.RegistryOverrides[refInfo.Host]; present {
+				var err error
+				actualSrc, err = transform.ImageTransformHostWithoutChecksum(overrideHost, refInfo.Reference)
 				if err != nil {
-					metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to swap override host %s for %s: %w", overrideHost, src, err)
+					metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to swap override host %s for %s: %w", overrideHost, refInfo.Reference, err)
 					return
 				}
 			}
@@ -107,17 +106,17 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			metadataImageConcurrency.ProgressChan <- srcAndImg{src: src, img: img}
+			metadataImageConcurrency.ProgressChan <- imgInfo{refInfo: refInfo, img: img}
 		}()
 	}
 
-	onMetadataProgress := func(finishedImage srcAndImg, iteration int) {
-		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImgList), finishedImage.src)
-		imageMap[finishedImage.src] = finishedImage.img
+	onMetadataProgress := func(finishedImage imgInfo, iteration int) {
+		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImageList), finishedImage.refInfo.Reference)
+		refInfoToImage[finishedImage.refInfo] = finishedImage.img
 	}
 
 	onMetadataError := func(err error) error {
-		return fmt.Errorf("Failed to load metadata for all images. This may be due to a network error or an invalid image reference: %w", err)
+		return fmt.Errorf("failed to load metadata for all images. This may be due to a network error or an invalid image reference: %w", err)
 	}
 
 	if err := metadataImageConcurrency.WaitWithProgress(onMetadataProgress, onMetadataError); err != nil {
@@ -132,16 +131,11 @@ func (i *ImgConfig) PullAll() error {
 
 	totalBytes := int64(0)
 	processedLayers := make(map[string]v1.Layer)
-	for src, img := range imageMap {
-		tag, err := name.NewTag(src, name.WeakValidation)
-		if err != nil {
-			return fmt.Errorf("failed to create tag for image %s: %w", src, err)
-		}
-		tagToImage[tag] = img
+	for refInfo, img := range refInfoToImage {
 		// Get the byte size for this image
 		layers, err := img.Layers()
 		if err != nil {
-			return fmt.Errorf("unable to get layers for image %s: %w", src, err)
+			return fmt.Errorf("unable to get layers for image %s: %w", refInfo.Reference, err)
 		}
 		for _, layer := range layers {
 			layerDigest, err := layer.Digest()
@@ -163,11 +157,6 @@ func (i *ImgConfig) PullAll() error {
 	}
 	spinner.Updatef("Preparing image sources and cache for image pulling")
 
-	type digestAndTag struct {
-		digest string
-		tag    string
-	}
-
 	// Create special sauce crane Path object
 	// If it already exists use it
 	cranePath, err := layout.FromPath(i.ImagesPath)
@@ -180,12 +169,12 @@ func (i *ImgConfig) PullAll() error {
 		}
 	}
 
-	for tag, img := range tagToImage {
+	for refInfo, img := range refInfoToImage {
 		imgDigest, err := img.Digest()
 		if err != nil {
-			return fmt.Errorf("unable to get digest for image %s: %w", tag, err)
+			return fmt.Errorf("unable to get digest for image %s: %w", refInfo.Reference, err)
 		}
-		tagToDigest[tag.String()] = imgDigest.String()
+		referenceToDigest[refInfo.Reference] = imgDigest.String()
 	}
 
 	spinner.Success()
@@ -194,7 +183,7 @@ func (i *ImgConfig) PullAll() error {
 	doneSaving := make(chan int)
 	var progressBarWaitGroup sync.WaitGroup
 	progressBarWaitGroup.Add(1)
-	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &progressBarWaitGroup, doneSaving, fmt.Sprintf("Pulling %d images", imgCount))
+	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &progressBarWaitGroup, doneSaving, fmt.Sprintf("Pulling %d images", imageCount))
 
 	// Spawn a goroutine for each layer to write it to disk using crane
 
@@ -343,15 +332,15 @@ func (i *ImgConfig) PullAll() error {
 		return err
 	}
 
-	imageSavingConcurrency := utils.NewConcurrencyTools[digestAndTag, error](len(tagToImage))
+	imageSavingConcurrency := utils.NewConcurrencyTools[digestInfo, error](len(refInfoToImage))
 
 	defer imageSavingConcurrency.Cancel()
 
 	// Spawn a goroutine for each image to write it's config and manifest to disk using crane
 	// All layers should already be in place so this should be extremely fast
-	for tag, img := range tagToImage {
-		// Create a closure so that we can pass the tag and img into the goroutine
-		tag, img := tag, img
+	for refInfo, img := range refInfoToImage {
+		// Create a closure so that we can pass the refInfo and img into the goroutine
+		refInfo, img := refInfo, img
 		go func() {
 			// Make sure to call Done() on the WaitGroup when the goroutine finishes
 			defer imageSavingConcurrency.WaitGroupDone()
@@ -368,7 +357,7 @@ func (i *ImgConfig) PullAll() error {
 				if strings.HasPrefix(err.Error(), "error writing layer: expected blob size") {
 					message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
 				}
-				imageSavingConcurrency.ErrorChan <- fmt.Errorf("error when trying to save the img (%s): %w", tag.Name(), err)
+				imageSavingConcurrency.ErrorChan <- fmt.Errorf("error when trying to save the img (%s): %w", refInfo.Reference, err)
 				return
 			}
 
@@ -387,12 +376,12 @@ func (i *ImgConfig) PullAll() error {
 				return
 			}
 
-			imageSavingConcurrency.ProgressChan <- digestAndTag{digest: imgDigest.String(), tag: tag.String()}
+			imageSavingConcurrency.ProgressChan <- digestInfo{digest: imgDigest.String(), refInfo: refInfo}
 		}()
 	}
 
-	onImageSavingProgress := func(finishedImage digestAndTag, iteration int) {
-		tagToDigest[finishedImage.tag] = finishedImage.digest
+	onImageSavingProgress := func(finishedImage digestInfo, iteration int) {
+		referenceToDigest[finishedImage.refInfo.Reference] = finishedImage.digest
 	}
 
 	onImageSavingError := func(err error) error {
@@ -409,7 +398,7 @@ func (i *ImgConfig) PullAll() error {
 
 	// for every image sequentially append OCI descriptor
 
-	for tag, img := range tagToImage {
+	for refInfo, img := range refInfoToImage {
 		desc, err := partial.Descriptor(img)
 		if err != nil {
 			return err
@@ -425,10 +414,10 @@ func (i *ImgConfig) PullAll() error {
 			return err
 		}
 
-		tagToDigest[tag.String()] = imgDigest.String()
+		referenceToDigest[refInfo.Reference] = imgDigest.String()
 	}
 
-	if err := utils.AddImageNameAnnotation(i.ImagesPath, tagToDigest); err != nil {
+	if err := utils.AddImageNameAnnotation(i.ImagesPath, referenceToDigest); err != nil {
 		return fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
@@ -440,7 +429,7 @@ func (i *ImgConfig) PullAll() error {
 }
 
 // PullImage returns a v1.Image either by loading a local tarball or the wider internet.
-func (i *ImgConfig) PullImage(src string, spinner *message.Spinner) (img v1.Image, err error) {
+func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Image, err error) {
 	// Load image tarballs from the local filesystem.
 	if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
 		spinner.Updatef("Reading image tarball: %s", src)
