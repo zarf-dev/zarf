@@ -35,6 +35,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
 
 	imagesMap := make(map[string][]string)
+	erroredCharts := []string{}
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -156,6 +157,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 				if err != nil {
 					message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
+					erroredCharts = append(erroredCharts, chart.URL)
 					continue
 				}
 
@@ -173,6 +175,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 				if err != nil {
 					message.WarnErrf(err, "Problem looking for image annotations for %s: %s", chart.URL, err.Error())
+					erroredCharts = append(erroredCharts, chart.URL)
 					continue
 				}
 				for _, image := range annotatedImages {
@@ -263,6 +266,10 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	// Return to the original working directory
 	if err := os.Chdir(cwd); err != nil {
 		return nil, err
+	}
+
+	if len(erroredCharts) > 0 {
+		return imagesMap, fmt.Errorf("the following charts had errors: %s", erroredCharts)
 	}
 
 	return imagesMap, nil
