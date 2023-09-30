@@ -23,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -489,9 +490,20 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		return nil
 	}
 
-	imgConfig := images.ImgConfig{
+	var combinedImageList []transform.Image
+	for _, src := range componentImages {
+		ref, err := transform.ParseImageRef(src)
+		if err != nil {
+			return fmt.Errorf("failed to create ref for image %s: %w", src, err)
+		}
+		combinedImageList = append(combinedImageList, ref)
+	}
+
+	imageList := helpers.Unique(combinedImageList)
+
+	imgConfig := images.ImageConfig{
 		ImagesPath:    p.tmp.Images,
-		ImgList:       componentImages,
+		ImageList:     imageList,
 		NoChecksum:    noImgChecksum,
 		RegInfo:       p.cfg.State.RegistryInfo,
 		Insecure:      config.CommonOptions.Insecure,

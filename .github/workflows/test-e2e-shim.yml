@@ -11,6 +11,9 @@ on:
       - "docs/**"
       - "CODEOWNERS"
 
+permissions:
+  contents: read
+
 # This is here to act as a shim for branch protection rules to work correctly.
 # This is ugly but this seems to be the best way to do this since:
 #  - Job names in a workflow must be unique

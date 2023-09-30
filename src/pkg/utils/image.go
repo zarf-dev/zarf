@@ -10,13 +10,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// LoadOCIImage returns a v1.Image with the image tag specified from a location provided, or an error if the image cannot be found.
-func LoadOCIImage(imgPath, imgTag string) (v1.Image, error) {
+// LoadOCIImage returns a v1.Image with the image ref specified from a location provided, or an error if the image cannot be found.
+func LoadOCIImage(imgPath string, refInfo transform.Image) (v1.Image, error) {
 	// Use the manifest within the index.json to load the specific image we want
 	layoutPath := layout.Path(imgPath)
 	imgIdx, err := layoutPath.ImageIndex()
@@ -28,19 +29,22 @@ func LoadOCIImage(imgPath, imgTag string) (v1.Image, error) {
 		return nil, err
 	}
 
-	// Search through all the manifests within this package until we find the annotation that matches our tag
+	// Search through all the manifests within this package until we find the annotation that matches our ref
 	for _, manifest := range idxManifest.Manifests {
-		if manifest.Annotations[ocispec.AnnotationBaseImageName] == imgTag {
+		if manifest.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Reference ||
+			// A backwards compatibility shim for older Zarf versions that would leave docker.io off of image annotations
+			(manifest.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Path+refInfo.TagOrDigest && refInfo.Host == "docker.io") {
+
 			// This is the image we are looking for, load it and then return
 			return layoutPath.Image(manifest.Digest)
 		}
 	}
 
-	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", imgTag, imgPath)
+	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", refInfo.Reference, imgPath)
 }
 
-// AddImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image tag <-> digest shasum will be.
-func AddImageNameAnnotation(ociPath string, tagToDigest map[string]string) error {
+// AddImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image reference <-> digest shasum will be.
+func AddImageNameAnnotation(ociPath string, referenceToDigest map[string]string) error {
 	indexPath := filepath.Join(ociPath, "index.json")
 
 	// Read the file contents and turn it into a usable struct that we can manipulate
@@ -61,16 +65,16 @@ func AddImageNameAnnotation(ociPath string, tagToDigest map[string]string) error
 
 		var baseImageName string
 
-		for tag, digest := range tagToDigest {
+		for reference, digest := range referenceToDigest {
 			if digest == manifest.Digest.String() {
-				baseImageName = tag
+				baseImageName = reference
 			}
 		}
 
 		if baseImageName != "" {
 			manifest.Annotations[ocispec.AnnotationBaseImageName] = baseImageName
 			index.Manifests[idx] = manifest
-			delete(tagToDigest, baseImageName)
+			delete(referenceToDigest, baseImageName)
 		}
 	}
 

@@ -38,13 +38,13 @@ const SchemaItemProperties = ({ item, include, invert }) => {
             Object.keys(itemSchema.properties)
               .filter(includesElement)
               .sort()
-              .sort((key) => (itemSchema.required.includes(key) ? -1 : 1))
+              .sort((key) => (itemSchema.required && itemSchema.required.includes(key) ? -1 : 1))
               .map((key) => {
                 return (
                   <tr key={key}>
                     <td>
                       <code>{key}</code>
-                      {itemSchema.required.includes(key) && <em>*</em>}
+                      {itemSchema.required && itemSchema.required.includes(key) && <em>*</em>}
                     </td>
                     <td>
                       <em>{itemSchema.properties[key].type ?? "object"}</em>

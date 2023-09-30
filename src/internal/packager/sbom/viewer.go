@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -72,11 +73,11 @@ func (b *Builder) loadFileJS(name string) template.JS {
 }
 
 // This could be optimized, but loop over all the images and components to create a list of json files.
-func (b *Builder) generateJSONList(componentToFiles map[string]*types.ComponentSBOM, imgList []string) ([]byte, error) {
+func (b *Builder) generateJSONList(componentToFiles map[string]*types.ComponentSBOM, imageList []transform.Image) ([]byte, error) {
 	var jsonList []string
 
-	for _, tag := range imgList {
-		normalized := b.getNormalizedFileName(tag)
+	for _, refInfo := range imageList {
+		normalized := b.getNormalizedFileName(refInfo.Reference)
 		jsonList = append(jsonList, normalized)
 	}
 

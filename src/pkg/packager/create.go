@@ -116,7 +116,7 @@ func (p *Packager) Create(baseDir string) error {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	var combinedImageList []string
+	var combinedImageList []transform.Image
 	componentSBOMs := map[string]*types.ComponentSBOM{}
 	for idx, component := range p.cfg.Pkg.Components {
 		onCreate := component.Actions.OnCreate
@@ -147,7 +147,13 @@ func (p *Packager) Create(baseDir string) error {
 		}
 
 		// Combine all component images into a single entry for efficient layer reuse.
-		combinedImageList = append(combinedImageList, component.Images...)
+		for _, src := range component.Images {
+			refInfo, err := transform.ParseImageRef(src)
+			if err != nil {
+				return fmt.Errorf("failed to create ref for image %s: %w", src, err)
+			}
+			combinedImageList = append(combinedImageList, refInfo)
+		}
 
 		// Remove the temp directory for this component before archiving.
 		err = os.RemoveAll(filepath.Join(p.tmp.Components, component.Name, types.TempFolder))
@@ -156,16 +162,16 @@ func (p *Packager) Create(baseDir string) error {
 		}
 	}
 
-	imgList := helpers.Unique(combinedImageList)
+	imageList := helpers.Unique(combinedImageList)
 
 	// Images are handled separately from other component assets.
-	if len(imgList) > 0 {
+	if len(imageList) > 0 {
 		message.HeaderInfof("📦 PACKAGE IMAGES")
 
 		doPull := func() error {
-			imgConfig := images.ImgConfig{
+			imgConfig := images.ImageConfig{
 				ImagesPath:        p.tmp.Images,
-				ImgList:           imgList,
+				ImageList:         imageList,
 				Insecure:          config.CommonOptions.Insecure,
 				Architectures:     []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 				RegistryOverrides: p.cfg.CreateOpts.RegistryOverrides,
@@ -183,7 +189,7 @@ func (p *Packager) Create(baseDir string) error {
 	if p.cfg.CreateOpts.SkipSBOM {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		if err := sbom.Catalog(componentSBOMs, imgList, p.tmp); err != nil {
+		if err := sbom.Catalog(componentSBOMs, imageList, p.tmp); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
@@ -722,7 +728,7 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 		newRepoList := []string{}
 		// Generate a list of all unique images for this component
 		for _, img := range component.Images {
-			// If a image doesn't have a tag (or is a commonly reused tag), we will include this image in the differential package
+			// If a image doesn't have a ref (or is a commonly reused ref), we will include this image in the differential package
 			imgRef, err := transform.ParseImageRef(img)
 			if err != nil {
 				return fmt.Errorf("unable to parse image ref %s: %s", img, err.Error())
