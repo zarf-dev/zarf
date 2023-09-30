@@ -82,7 +82,10 @@ var (
 	// CLIVersion track the version of the CLI
 	CLIVersion = "unset"
 
-	// CommonOptions tracks user-defined values that apply across commands.
+	// UseSystemZarf sets whether to use Zarf from the system path if Zarf is being used as a library
+	UseSystemZarf = false
+
+	// CommonOptions tracks user-defined values that apply across commands
 	CommonOptions types.ZarfCommonOptions
 
 	// CLIArch is the computer architecture of the device executing the CLI commands
