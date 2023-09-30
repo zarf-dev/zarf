@@ -19,9 +19,8 @@ import (
 // readZarfYAML reads a Zarf YAML file.
 func (p *Packager) readZarfYAML(path string) error {
 	var warnings []string
-	var pkg types.ZarfPackage
 
-	if err := utils.ReadYaml(path, &pkg); err != nil {
+	if err := utils.ReadYaml(path, &p.cfg.Pkg); err != nil {
 		return err
 	}
 
@@ -30,19 +29,19 @@ func (p *Packager) readZarfYAML(path string) error {
 		p.warnings = append(p.warnings, warning)
 	}
 
-	if pkg.Build.OCIImportedComponents == nil {
-		pkg.Build.OCIImportedComponents = make(map[string]string)
+	if p.cfg.Pkg.Build.OCIImportedComponents == nil {
+		p.cfg.Pkg.Build.OCIImportedComponents = make(map[string]string)
 	}
 
-	p.cfg.Pkg = pkg
-
-	for idx, component := range pkg.Components {
-		// Handle component configuration deprecations
-		p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(pkg.Build, component)
-		p.warnings = append(p.warnings, warnings...)
+	if len(p.cfg.Pkg.Build.Migrations) > 0 {
+		for idx, component := range p.cfg.Pkg.Components {
+			// Handle component configuration deprecations
+			p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+			p.warnings = append(p.warnings, warnings...)
+		}
 	}
 
-	p.arch = config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
 	return nil
 }
