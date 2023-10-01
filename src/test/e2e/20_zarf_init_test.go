@@ -7,7 +7,6 @@ package test
 import (
 	"encoding/base64"
 	"fmt"
-	"path/filepath"
 	"testing"
 
 	"encoding/json"
@@ -29,13 +28,12 @@ func TestZarfInit(t *testing.T) {
 	initPackageVersion := e2e.GetZarfVersion(t)
 
 	var (
-		initPackage           = filepath.Join("build", fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, initPackageVersion))
 		mismatchedArch        = e2e.GetMismatchedArch()
 		mismatchedInitPackage = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
 		expectedErrorMessage  = fmt.Sprintf("this package architecture is %s", mismatchedArch)
 	)
 	t.Cleanup(func() {
-		e2e.CleanFiles(initPackage, mismatchedInitPackage)
+		e2e.CleanFiles(mismatchedInitPackage)
 	})
 
 	// Build init package with different arch than the cluster arch.
