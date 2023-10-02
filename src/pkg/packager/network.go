@@ -44,7 +44,7 @@ func (p *Packager) handlePackagePath() (partialPaths []string, err error) {
 	}
 
 	// Handle case where deploying remote package validated via sget
-	if strings.HasPrefix(p.cfg.PkgOpts.PackagePath, utils.SGETURLPrefix) {
+	if strings.HasPrefix(p.cfg.PkgOpts.PackagePath, helpers.SGETURLPrefix) {
 		return partialPaths, p.handleSgetPackage()
 	}
 
@@ -92,7 +92,7 @@ func (p *Packager) handleSgetPackage() error {
 	defer destinationFile.Close()
 
 	// If this is a DefenseUnicorns package, use an internal sget public key
-	if strings.HasPrefix(p.cfg.PkgOpts.PackagePath, fmt.Sprintf("%s://defenseunicorns", utils.SGETURLScheme)) {
+	if strings.HasPrefix(p.cfg.PkgOpts.PackagePath, fmt.Sprintf("%s://defenseunicorns", helpers.SGETURLScheme)) {
 		os.Setenv("DU_SGET_KEY", config.CosignPublicKey)
 		p.cfg.PkgOpts.SGetKeyPath = "env://DU_SGET_KEY"
 	}

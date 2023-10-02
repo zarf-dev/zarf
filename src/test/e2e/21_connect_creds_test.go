@@ -56,10 +56,12 @@ func TestMetrics(t *testing.T) {
 	t.Log("E2E: Emits metrics")
 	e2e.SetupWithCluster(t)
 
-	tunnel, err := cluster.NewTunnel("zarf", "svc", "agent-hook", 8888, 8443)
-
+	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	err = tunnel.Connect("", false)
+
+	tunnel, err := c.NewTunnel("zarf", "svc", "agent-hook", "", 8888, 8443)
+	require.NoError(t, err)
+	_, err = tunnel.Connect()
 	require.NoError(t, err)
 	defer tunnel.Close()
 
@@ -118,9 +120,9 @@ func connectToZarfServices(t *testing.T) {
 	gitArtifactToken := strings.TrimSpace(stdOut)
 
 	// Connect to Gitea
-	tunnelGit, err := cluster.NewZarfTunnel()
+	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	err = tunnelGit.Connect(cluster.ZarfGit, false)
+	tunnelGit, err := c.Connect(cluster.ZarfGit)
 	require.NoError(t, err)
 	defer tunnelGit.Close()
 
@@ -139,9 +141,9 @@ func connectToZarfServices(t *testing.T) {
 	require.Equal(t, 200, respGit.StatusCode)
 
 	// Connect to the Logging Stack
-	tunnelLog, err := cluster.NewZarfTunnel()
+	c, err = cluster.NewCluster()
 	require.NoError(t, err)
-	err = tunnelLog.Connect(cluster.ZarfLogging, false)
+	tunnelLog, err := c.Connect(cluster.ZarfLogging)
 	require.NoError(t, err)
 	defer tunnelLog.Close()
 

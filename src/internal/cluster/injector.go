@@ -219,14 +219,12 @@ func (c *Cluster) createPayloadConfigmaps(tempPath types.TempPaths, spinner *mes
 
 // Test for pod readiness and seed image presence.
 func (c *Cluster) injectorIsReady(seedImages []transform.Image, spinner *message.Spinner) bool {
-	// Establish the zarf connect tunnel
-	tunnel, err := NewZarfTunnel()
+	tunnel, err := c.NewTunnel(ZarfNamespaceName, k8s.SvcResource, ZarfInjectorName, "", 0, ZarfInjectorPort)
 	if err != nil {
-		message.Warnf("Unable to establish a tunnel to look for seed images: %#v", err)
 		return false
 	}
-	tunnel.AddSpinner(spinner)
-	err = tunnel.Connect(ZarfInjector, false)
+
+	_, err = tunnel.Connect()
 	if err != nil {
 		return false
 	}

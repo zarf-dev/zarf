@@ -21,6 +21,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -38,7 +39,7 @@ func LaunchAPIServer() {
 	// Otherwise, use a random available port
 	if port == "" {
 		// If we can't find an available port, just use the default
-		if portRaw, err := utils.GetAvailablePort(); err != nil {
+		if portRaw, err := helpers.GetAvailablePort(); err != nil {
 			port = "8080"
 		} else {
 			port = fmt.Sprintf("%d", portRaw)

@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+
+	"cuelang.org/go/pkg/strings"
 )
 
 // List of supported distros via distro detection.
@@ -134,4 +136,13 @@ func (k *K8s) GetServerVersion() (version string, err error) {
 	}
 
 	return versionInfo.String(), nil
+}
+
+// MakeLabels is a helper to format a map of label key and value pairs into a single string for use as a selector.
+func MakeLabels(labels map[string]string) string {
+	var out []string
+	for key, value := range labels {
+		out = append(out, fmt.Sprintf("%s=%s", key, value))
+	}
+	return strings.Join(out, ",")
 }

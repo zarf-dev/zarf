@@ -78,10 +78,13 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	err := exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
 	suite.NoError(err, "unable to mirror the package with zarf")
 
-	// Check that the registry contains the images we want
-	tunnelReg, err := cluster.NewTunnel("external-registry", "svc", "external-registry-docker-registry", 0, 5000)
+	c, err := cluster.NewCluster()
 	suite.NoError(err)
-	err = tunnelReg.Connect("", false)
+
+	// Check that the registry contains the images we want
+	tunnelReg, err := c.NewTunnel("external-registry", "svc", "external-registry-docker-registry", "", 0, 5000)
+	suite.NoError(err)
+	_, err = tunnelReg.Connect()
 	suite.NoError(err)
 	defer tunnelReg.Close()
 
@@ -95,9 +98,10 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	suite.Contains(string(regBody), "stefanprodan/podinfo", "registry did not contain the expected image")
 
 	// Check that the git server contains the repos we want (TODO VERIFY NAME AND PORT)
-	tunnelGit, err := cluster.NewTunnel("git-server", "svc", "gitea-http", 0, 3000)
+
+	tunnelGit, err := c.NewTunnel("git-server", "svc", "gitea-http", "", 0, 3000)
 	suite.NoError(err)
-	err = tunnelGit.Connect("", false)
+	_, err = tunnelGit.Connect()
 	suite.NoError(err)
 	defer tunnelGit.Close()
 

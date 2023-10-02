@@ -89,11 +89,13 @@ func TestReleases(t *testing.T) {
 
 func testConnection(t *testing.T) {
 	// Establish the tunnel config
-	tunnel, err := cluster.NewTunnel("twistlock", "svc", "twistlock-console", 0, 8081)
+	c, err := cluster.NewCluster()
+	require.NoError(t, err)
+	tunnel, err := c.NewTunnel("twistlock", "svc", "twistlock-console", "", 0, 8081)
 	require.NoError(t, err)
 
 	// Establish the tunnel connection
-	err = tunnel.Connect("", false)
+	_, err = tunnel.Connect()
 	require.NoError(t, err)
 	defer tunnel.Close()
 

@@ -57,8 +57,6 @@ const (
 
 // Zarf Constants for In-Cluster Services.
 const (
-	IPV4Localhost = "127.0.0.1"
-
 	ZarfArtifactTokenName = "zarf-artifact-registry-token"
 
 	ZarfImagePullSecretName = "private-registry"

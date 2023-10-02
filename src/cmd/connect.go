@@ -5,9 +5,17 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+	"os/signal"
+	"runtime"
+	"syscall"
+
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/spf13/cobra"
 )
 
@@ -30,22 +38,52 @@ var (
 				target = args[0]
 			}
 			spinner := message.NewProgressSpinner("Preparing a tunnel to connect to %s", target)
-
-			tunnel, err := cluster.NewTunnel(connectNamespace, connectResourceType, connectResourceName, connectLocalPort, connectRemotePort)
+			c, err := cluster.NewCluster()
 			if err != nil {
-				message.Fatal(err, lang.ErrTunnelFailed)
-			}
-			// If the cliOnly flag is false (default), enable auto-open
-			if !cliOnly {
-				tunnel.EnableAutoOpen()
+				spinner.Fatalf(err, "Unable to connect to the cluster: %s", err.Error())
 			}
 
-			tunnel.AddSpinner(spinner)
-			err = tunnel.Connect(target, true)
+			var tunnel *k8s.Tunnel
+			if connectResourceName != "" {
+				zt := cluster.NewTunnelInfo(connectNamespace, connectResourceType, connectResourceName, "", connectLocalPort, connectRemotePort)
+				tunnel, err = c.ConnectTunnelInfo(zt)
+			} else {
+				tunnel, err = c.Connect(target)
+			}
 			if err != nil {
 				spinner.Fatalf(err, "Unable to connect to the service: %s", err.Error())
 			}
-			spinner.Success()
+
+			defer tunnel.Close()
+			url := tunnel.FullURL()
+
+			// Dump the tunnel URL to the console for other tools to use.
+			fmt.Print(url)
+
+			if cliOnly {
+				spinner.Updatef("Tunnel established at %s, waiting for user to interrupt (ctrl-c to end)", url)
+			} else {
+				spinner.Updatef("Tunnel established at %s, opening your default web browser (ctrl-c to end)", url)
+
+				if err := exec.LaunchURL(url); err != nil {
+					message.Debug(err)
+				}
+			}
+
+			// Keep this open until an interrupt signal is received.
+			interruptChan := make(chan os.Signal, 1)
+			signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
+			go func() {
+				<-interruptChan
+				spinner.Successf("Tunnel to %s successfully closed due to user interrupt", url)
+				os.Exit(0)
+			}()
+
+			exec.SuppressGlobalInterrupt = true
+
+			for {
+				runtime.Gosched()
+			}
 		},
 	}
 
@@ -65,7 +103,7 @@ func init() {
 
 	connectCmd.Flags().StringVar(&connectResourceName, "name", "", lang.CmdConnectFlagName)
 	connectCmd.Flags().StringVar(&connectNamespace, "namespace", cluster.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
-	connectCmd.Flags().StringVar(&connectResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
+	connectCmd.Flags().StringVar(&connectResourceType, "type", k8s.SvcResource, lang.CmdConnectFlagType)
 	connectCmd.Flags().IntVar(&connectLocalPort, "local-port", 0, lang.CmdConnectFlagLocalPort)
 	connectCmd.Flags().IntVar(&connectRemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)
 	connectCmd.Flags().BoolVar(&cliOnly, "cli-only", false, lang.CmdConnectFlagCliOnly)

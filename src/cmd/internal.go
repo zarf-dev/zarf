@@ -17,7 +17,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
@@ -198,7 +197,7 @@ var isValidHostname = &cobra.Command{
 	Use:   "is-valid-hostname",
 	Short: lang.CmdInternalIsValidHostnameShort,
 	Run: func(cmd *cobra.Command, args []string) {
-		if valid := utils.IsValidHostName(); !valid {
+		if valid := helpers.IsValidHostName(); !valid {
 			hostname, _ := os.Hostname()
 			message.Fatalf(nil, lang.CmdInternalIsValidHostnameErr, hostname)
 		}

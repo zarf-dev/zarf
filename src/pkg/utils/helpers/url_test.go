@@ -128,6 +128,11 @@ func (suite *TestURLSuite) Test_3_ExtractBasePathFromURL() {
 	}
 
 }
+
+func (suite *TestURLSuite) Test_4_IsValidHostname() {
+
+}
+
 func TestURL(t *testing.T) {
 	suite.Run(t, new(TestURLSuite))
 }
