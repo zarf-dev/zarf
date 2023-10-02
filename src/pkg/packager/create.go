@@ -29,7 +29,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 )
@@ -117,8 +116,8 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	var combinedImageList []string
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
+	var combinedImageList []transform.Image
 	for idx, component := range p.cfg.Pkg.Components {
 		onCreate := component.Actions.OnCreate
 		onFailure := func() {
@@ -147,23 +146,31 @@ func (p *Packager) Create() (err error) {
 		}
 
 		// Combine all component images into a single entry for efficient layer reuse.
-		combinedImageList = append(combinedImageList, component.Images...)
+		for _, src := range component.Images {
+			refInfo, err := transform.ParseImageRef(src)
+			if err != nil {
+				return fmt.Errorf("failed to create ref for image %s: %w", src, err)
+			}
+			combinedImageList = append(combinedImageList, refInfo)
+		}
 	}
 
-	imgList := helpers.Unique(combinedImageList)
+	imageList := helpers.Unique(combinedImageList)
 
 	// Images are handled separately from other component assets.
-	if len(imgList) > 0 {
+	if len(imageList) > 0 {
+		message.HeaderInfof("📦 PACKAGE IMAGES")
+
 		p.layout = p.layout.AddImages()
 
 		message.HeaderInfof("📦 PACKAGE IMAGES")
 
-		pulled := map[name.Tag]v1.Image{}
+		pulled := map[transform.Image]v1.Image{}
 
-		doPull := func() (err error) {
-			imgConfig := images.ImgConfig{
+		doPull := func() error {
+			imgConfig := images.ImageConfig{
 				ImagesPath:        p.layout.Images.Base,
-				ImgList:           imgList,
+				ImageList:         imageList,
 				Insecure:          config.CommonOptions.Insecure,
 				Architectures:     []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 				RegistryOverrides: p.cfg.CreateOpts.RegistryOverrides,
@@ -189,7 +196,7 @@ func (p *Packager) Create() (err error) {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
 		p.layout = p.layout.AddSBOMs()
-		if err := sbom.Catalog(componentSBOMs, imgList, p.layout); err != nil {
+		if err := sbom.Catalog(componentSBOMs, imageList, p.layout); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
@@ -719,7 +726,7 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 		newRepoList := []string{}
 		// Generate a list of all unique images for this component
 		for _, img := range component.Images {
-			// If a image doesn't have a tag (or is a commonly reused tag), we will include this image in the differential package
+			// If a image doesn't have a ref (or is a commonly reused ref), we will include this image in the differential package
 			imgRef, err := transform.ParseImageRef(img)
 			if err != nil {
 				return fmt.Errorf("unable to parse image ref %s: %s", img, err.Error())

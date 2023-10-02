@@ -29,7 +29,7 @@ import (
 var payloadChunkSize = 1024 * 768
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injectorSeedTags []string) {
+func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injectorSeedSrcs []string) {
 	c.spinner = message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer c.spinner.Stop()
 
@@ -71,7 +71,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 	}
 
 	c.spinner.Updatef("Loading the seed image from the package")
-	if seedImages, err = c.loadSeedImages(imagesDir, tmp.SeedImagesDir, injectorSeedTags); err != nil {
+	if seedImages, err = c.loadSeedImages(imagesDir, tmp.SeedImagesDir, injectorSeedSrcs); err != nil {
 		c.spinner.Fatalf(err, "Unable to load the injector seed image from the package")
 	}
 
@@ -141,26 +141,25 @@ func (c *Cluster) StopInjectionMadness() error {
 	return c.DeleteService(ZarfNamespaceName, "zarf-injector")
 }
 
-func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedTags []string) ([]transform.Image, error) {
+func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSrcs []string) ([]transform.Image, error) {
 	seedImages := []transform.Image{}
-	tagToDigest := make(map[string]string)
+	localReferenceToDigest := make(map[string]string)
 
 	// Load the injector-specific images and save them as seed-images
-	for _, src := range injectorSeedTags {
+	for _, src := range injectorSeedSrcs {
 		c.spinner.Updatef("Loading the seed image '%s' from the package", src)
-
-		img, err := utils.LoadOCIImage(imagesDir, src)
+		ref, err := transform.ParseImageRef(src)
+		if err != nil {
+			return seedImages, fmt.Errorf("failed to create ref for image %s: %w", src, err)
+		}
+		img, err := utils.LoadOCIImage(imagesDir, ref)
 		if err != nil {
 			return seedImages, err
 		}
 
 		crane.SaveOCI(img, seedImagesDir)
 
-		imgRef, err := transform.ParseImageRef(src)
-		if err != nil {
-			return seedImages, err
-		}
-		seedImages = append(seedImages, imgRef)
+		seedImages = append(seedImages, ref)
 
 		// Get the image digest so we can set an annotation in the image.json later
 		imgDigest, err := img.Digest()
@@ -168,10 +167,10 @@ func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedTa
 			return seedImages, err
 		}
 		// This is done _without_ the domain (different from pull.go) since the injector only handles local images
-		tagToDigest[imgRef.Path+imgRef.TagOrDigest] = imgDigest.String()
+		localReferenceToDigest[ref.Path+ref.TagOrDigest] = imgDigest.String()
 	}
 
-	if err := utils.AddImageNameAnnotation(seedImagesDir, tagToDigest); err != nil {
+	if err := utils.AddImageNameAnnotation(seedImagesDir, localReferenceToDigest); err != nil {
 		return seedImages, fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 

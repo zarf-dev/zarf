@@ -23,8 +23,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
@@ -44,8 +44,8 @@ var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
-func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imgList []string, paths *layout.PackagePaths) error {
-	imageCount := len(imgList)
+func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imageList []transform.Image, paths *layout.PackagePaths) error {
+	imageCount := len(imageList)
 	componentCount := len(componentSBOMs)
 	builder := Builder{
 		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
@@ -59,7 +59,7 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imgList []string, 
 	_ = utils.CreateDirectory(builder.outputDir, 0700)
 
 	// Generate a list of images and files for the sbom viewer
-	json, err := builder.generateJSONList(componentSBOMs, imgList)
+	json, err := builder.generateJSONList(componentSBOMs, imageList)
 	if err != nil {
 		builder.spinner.Errorf(err, "Unable to generate the SBOM image list")
 		return err
@@ -68,24 +68,24 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imgList []string, 
 
 	// Generate SBOM for each image
 	currImage := 1
-	for _, tag := range imgList {
-		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, tag)
+	for _, refInfo := range imageList {
+		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, refInfo.Reference)
 
 		// Get the image that we are creating an SBOM for
-		img, err := utils.LoadOCIImage(paths.Images.Base, tag)
+		img, err := utils.LoadOCIImage(paths.Images.Base, refInfo)
 		if err != nil {
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
 			return err
 		}
 
-		jsonData, err := builder.createImageSBOM(img, tag)
+		jsonData, err := builder.createImageSBOM(img, refInfo.Reference)
 		if err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", tag)
+			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", refInfo.Reference)
 			return err
 		}
 
-		if err = builder.createSBOMViewerAsset(tag, jsonData); err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", tag)
+		if err = builder.createSBOMViewerAsset(refInfo.Reference, jsonData); err != nil {
+			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", refInfo.Reference)
 			return err
 		}
 
@@ -118,7 +118,7 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imgList []string, 
 	}
 
 	// Include the compare tool if there are any image SBOMs OR component SBOMs
-	if len(componentSBOMs) > 0 || len(imgList) > 0 {
+	if len(componentSBOMs) > 0 || len(imageList) > 0 {
 		if err := builder.createSBOMCompareAsset(); err != nil {
 			builder.spinner.Errorf(err, "Unable to create SBOM compare tool")
 			return err
@@ -137,11 +137,11 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imgList []string, 
 
 // createImageSBOM uses syft to generate SBOM for an image,
 // some code/structure migrated from https://github.com/testifysec/go-witness/blob/v0.1.12/attestation/syft/syft.go.
-func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
+func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 	// Get the image reference.
-	tag, err := name.NewTag(tagStr, name.WeakValidation)
+	refInfo, err := transform.ParseImageRef(src)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
 	}
 
 	// Create the sbom.
@@ -152,7 +152,7 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 		return nil, err
 	}
 
-	syftImage := image.NewImage(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(tag.String()))
+	syftImage := image.NewImage(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(refInfo.Reference))
 	if err := syftImage.Read(); err != nil {
 		return nil, err
 	}
@@ -184,8 +184,8 @@ func (b *Builder) createImageSBOM(img v1.Image, tagStr string) ([]byte, error) {
 		return nil, err
 	}
 
-	// Write the sbom to disk using the image tag as the filename
-	filename := fmt.Sprintf("%s.json", tag)
+	// Write the sbom to disk using the image ref as the filename
+	filename := fmt.Sprintf("%s.json", refInfo.Reference)
 	sbomFile, err := b.createSBOMFile(filename)
 	if err != nil {
 		return nil, err
