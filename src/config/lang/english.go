@@ -81,6 +81,13 @@ const (
 	CmdConnectFlagRemotePort = "Specify the remote port of the resource to bind to.  E.g. remote-port=8080"
 	CmdConnectFlagCliOnly    = "Disable browser auto-open"
 
+	CmdConnectPreparingTunnel = "Preparing a tunnel to connect to %s"
+	CmdConnectErrCluster      = "Unable to connect to the cluster: %s"
+	CmdConnectErrService      = "Unable to connect to the service: %s"
+	CmdConnectEstablishedCLI  = "Tunnel established at %s, waiting for user to interrupt (ctrl-c to end)"
+	CmdConnectEstablishedWeb  = "Tunnel established at %s, opening your default web browser (ctrl-c to end)"
+	CmdConnectTunnelClosed    = "Tunnel to %s successfully closed due to user interrupt"
+
 	// zarf destroy
 	CmdDestroyShort = "Tears down Zarf and removes its components from the environment"
 	CmdDestroyLong  = "Tear down Zarf.\n\n" +

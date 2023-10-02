@@ -37,10 +37,10 @@ var (
 			if len(args) > 0 {
 				target = args[0]
 			}
-			spinner := message.NewProgressSpinner("Preparing a tunnel to connect to %s", target)
+			spinner := message.NewProgressSpinner(lang.CmdConnectPreparingTunnel, target)
 			c, err := cluster.NewCluster()
 			if err != nil {
-				spinner.Fatalf(err, "Unable to connect to the cluster: %s", err.Error())
+				spinner.Fatalf(err, lang.CmdConnectErrCluster, err.Error())
 			}
 
 			var tunnel *k8s.Tunnel
@@ -51,7 +51,7 @@ var (
 				tunnel, err = c.Connect(target)
 			}
 			if err != nil {
-				spinner.Fatalf(err, "Unable to connect to the service: %s", err.Error())
+				spinner.Fatalf(err, lang.CmdConnectErrService, err.Error())
 			}
 
 			defer tunnel.Close()
@@ -61,9 +61,9 @@ var (
 			fmt.Print(url)
 
 			if cliOnly {
-				spinner.Updatef("Tunnel established at %s, waiting for user to interrupt (ctrl-c to end)", url)
+				spinner.Updatef(lang.CmdConnectEstablishedCLI, url)
 			} else {
-				spinner.Updatef("Tunnel established at %s, opening your default web browser (ctrl-c to end)", url)
+				spinner.Updatef(lang.CmdConnectEstablishedWeb, url)
 
 				if err := exec.LaunchURL(url); err != nil {
 					message.Debug(err)
@@ -75,7 +75,7 @@ var (
 			signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
 			go func() {
 				<-interruptChan
-				spinner.Successf("Tunnel to %s successfully closed due to user interrupt", url)
+				spinner.Successf(lang.CmdConnectTunnelClosed, url)
 				os.Exit(0)
 			}()
 
