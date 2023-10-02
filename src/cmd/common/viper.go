@@ -76,10 +76,11 @@ const (
 
 	// Package deploy config keys
 
-	VPkgDeploySet        = "package.deploy.set"
-	VPkgDeployComponents = "package.deploy.components"
-	VPkgDeployShasum     = "package.deploy.shasum"
-	VPkgDeploySget       = "package.deploy.sget"
+	VPkgDeploySet          = "package.deploy.set"
+	VPkgDeployComponents   = "package.deploy.components"
+	VPkgDeployShasum       = "package.deploy.shasum"
+	VPkgDeploySget         = "package.deploy.sget"
+	VPkgDeploySkipWebhooks = "package.deploy.skip_webhooks"
 
 	// Package publish config keys
 

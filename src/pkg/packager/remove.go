@@ -65,7 +65,7 @@ func (p *Packager) Remove() (err error) {
 	}
 
 	// Get the secret for the deployed package
-	deployedPackage := types.DeployedPackage{}
+	deployedPackage := &types.DeployedPackage{}
 
 	if requiresCluster {
 		if p.cluster == nil {
@@ -119,7 +119,7 @@ func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage) {
 		newPackageSecretData, _ := json.Marshal(deployedPackage)
 		newPackageSecret.Data["data"] = newPackageSecretData
 
-		err := p.cluster.CreateOrUpdateSecret(newPackageSecret)
+		_, err := p.cluster.CreateOrUpdateSecret(newPackageSecret)
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
@@ -128,7 +128,7 @@ func (p *Packager) updatePackageSecret(deployedPackage types.DeployedPackage) {
 	}
 }
 
-func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deployedComponent types.DeployedComponent, spinner *message.Spinner) (types.DeployedPackage, error) {
+func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deployedComponent types.DeployedComponent, spinner *message.Spinner) (*types.DeployedPackage, error) {
 	components := deployedPackage.Data.Components
 
 	c := helpers.Find(components, func(t types.ZarfComponent) bool {
@@ -144,7 +144,7 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 
 	if err := p.runActions(onRemove.Defaults, onRemove.Before, nil); err != nil {
 		onFailure()
-		return deployedPackage, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
+		return nil, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
 
 	for _, chart := range helpers.Reverse(deployedComponent.InstalledCharts) {
@@ -168,7 +168,7 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 		deployedComponent.InstalledCharts = helpers.RemoveMatches(deployedComponent.InstalledCharts, func(t types.InstalledChart) bool {
 			return t.ChartName == chart.ChartName
 		})
-		p.updatePackageSecret(deployedPackage)
+		p.updatePackageSecret(*deployedPackage)
 	}
 
 	if err := p.runActions(onRemove.Defaults, onRemove.After, nil); err != nil {
@@ -202,7 +202,7 @@ func (p *Packager) removeComponent(deployedPackage types.DeployedPackage, deploy
 			}
 		}
 	} else {
-		p.updatePackageSecret(deployedPackage)
+		p.updatePackageSecret(*deployedPackage)
 	}
 
 	return deployedPackage, nil

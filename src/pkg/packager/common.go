@@ -42,6 +42,7 @@ type Packager struct {
 	connectStrings types.ConnectStrings
 	sbomViewFiles  []string
 	source         sources.PackageSource
+	generation     int
 }
 
 // Zarf Packager Variables.
@@ -201,23 +202,20 @@ func (p *Packager) ClearTempPaths() {
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
-func (p *Packager) validatePackageArchitecture() (err error) {
-	// Ignore this check if the package architecture is explicitly "multi"
-	if p.arch == "multi" {
+func (p *Packager) validatePackageArchitecture() error {
+	// Ignore this check if the architecture is explicitly "multi" or we don't have a cluster connection
+	if p.arch == "multi" || p.cluster == nil {
 		return nil
 	}
 
-	// Fetch cluster architecture only if we're already connected to a cluster.
-	if p.cluster != nil {
-		clusterArch, err := p.cluster.GetArchitecture()
-		if err != nil {
-			return lang.ErrUnableToCheckArch
-		}
+	clusterArch, err := p.cluster.GetArchitecture()
+	if err != nil {
+		return lang.ErrUnableToCheckArch
+	}
 
-		// Check if the package architecture and the cluster architecture are the same.
-		if p.arch != clusterArch {
-			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
-		}
+	// Check if the package architecture and the cluster architecture are the same.
+	if p.arch != clusterArch {
+		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
 	}
 
 	return nil
