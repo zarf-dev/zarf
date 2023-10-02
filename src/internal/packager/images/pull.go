@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -25,15 +26,15 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/cache"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
-	"github.com/google/go-containerregistry/pkg/v1/layout"
+	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/stream"
 	"github.com/moby/moby/client"
 	"github.com/pterm/pterm"
 )
 
-// PullAll pulls all of the images in the provided ref map.
-func (i *ImageConfig) PullAll() error {
+// PullAll pulls all of the images in the provided tag map.
+func (i *ImageConfig) PullAll() (map[transform.Image]v1.Image, error) {
 	var (
 		longer            string
 		imageCount        = len(i.ImageList)
@@ -120,13 +121,12 @@ func (i *ImageConfig) PullAll() error {
 	}
 
 	if err := metadataImageConcurrency.WaitWithProgress(onMetadataProgress, onMetadataError); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Create the ImagePath directory
-	err := os.Mkdir(i.ImagesPath, 0755)
-	if err != nil && !errors.Is(err, os.ErrExist) {
-		return fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
+	if err := utils.CreateDirectory(i.ImagesPath, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
 
 	totalBytes := int64(0)
@@ -135,19 +135,19 @@ func (i *ImageConfig) PullAll() error {
 		// Get the byte size for this image
 		layers, err := img.Layers()
 		if err != nil {
-			return fmt.Errorf("unable to get layers for image %s: %w", refInfo.Reference, err)
+			return nil, fmt.Errorf("unable to get layers for image %s: %w", refInfo.Reference, err)
 		}
 		for _, layer := range layers {
 			layerDigest, err := layer.Digest()
 			if err != nil {
-				return fmt.Errorf("unable to get digest for image layer: %w", err)
+				return nil, fmt.Errorf("unable to get digest for image layer: %w", err)
 			}
 
 			// Only calculate this layer size if we haven't already looked at it
 			if _, ok := processedLayers[layerDigest.Hex]; !ok {
 				size, err := layer.Size()
 				if err != nil {
-					return fmt.Errorf("unable to get size of layer: %w", err)
+					return nil, fmt.Errorf("unable to get size of layer: %w", err)
 				}
 				totalBytes += size
 				processedLayers[layerDigest.Hex] = layer
@@ -159,20 +159,20 @@ func (i *ImageConfig) PullAll() error {
 
 	// Create special sauce crane Path object
 	// If it already exists use it
-	cranePath, err := layout.FromPath(i.ImagesPath)
+	cranePath, err := clayout.FromPath(i.ImagesPath)
 	// Use crane pattern for creating OCI layout if it doesn't exist
 	if err != nil {
 		// If it doesn't exist create it
-		cranePath, err = layout.Write(i.ImagesPath, empty.Index)
+		cranePath, err = clayout.Write(i.ImagesPath, empty.Index)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	for refInfo, img := range refInfoToImage {
 		imgDigest, err := img.Digest()
 		if err != nil {
-			return fmt.Errorf("unable to get digest for image %s: %w", refInfo.Reference, err)
+			return nil, fmt.Errorf("unable to get digest for image %s: %w", refInfo.Reference, err)
 		}
 		referenceToDigest[refInfo.Reference] = imgDigest.String()
 	}
@@ -329,7 +329,7 @@ func (i *ImageConfig) PullAll() error {
 	}
 
 	if err := layerWritingConcurrency.WaitWithoutProgress(onLayerWritingError); err != nil {
-		return err
+		return nil, err
 	}
 
 	imageSavingConcurrency := utils.NewConcurrencyTools[digestInfo, error](len(refInfoToImage))
@@ -393,7 +393,7 @@ func (i *ImageConfig) PullAll() error {
 	}
 
 	if err := imageSavingConcurrency.WaitWithProgress(onImageSavingProgress, onImageSavingError); err != nil {
-		return err
+		return nil, err
 	}
 
 	// for every image sequentially append OCI descriptor
@@ -401,31 +401,31 @@ func (i *ImageConfig) PullAll() error {
 	for refInfo, img := range refInfoToImage {
 		desc, err := partial.Descriptor(img)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		cranePath.AppendDescriptor(*desc)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		imgDigest, err := img.Digest()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		referenceToDigest[refInfo.Reference] = imgDigest.String()
 	}
 
 	if err := utils.AddImageNameAnnotation(i.ImagesPath, referenceToDigest); err != nil {
-		return fmt.Errorf("unable to format OCI layout: %w", err)
+		return nil, fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
 	// Send a signal to the progress bar that we're done and wait for the thread to finish
 	doneSaving <- 1
 	progressBarWaitGroup.Wait()
 
-	return err
+	return refInfoToImage, nil
 }
 
 // PullImage returns a v1.Image either by loading a local tarball or the wider internet.
@@ -485,7 +485,7 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 	}
 
 	spinner.Updatef("Preparing image %s", src)
-	imageCachePath := filepath.Join(config.GetAbsCachePath(), config.ZarfImageCacheDir)
+	imageCachePath := filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
 	img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 
 	return img, nil

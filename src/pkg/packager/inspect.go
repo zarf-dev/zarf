@@ -5,97 +5,36 @@
 package packager
 
 import (
-	"fmt"
-
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
-	"github.com/mholt/archiver/v3"
 )
 
 // Inspect list the contents of a package.
-func (p *Packager) Inspect(includeSBOM bool, outputSBOM string, inspectPublicKey string) error {
-	wantSBOM := includeSBOM || outputSBOM != ""
+func (p *Packager) Inspect() (err error) {
+	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
 
-	partialPaths := []string{config.ZarfYAML}
-	if wantSBOM {
-		partialPaths = append(partialPaths, config.ZarfSBOMTar)
+	if err = p.source.LoadPackageMetadata(p.layout, wantSBOM, true); err != nil {
+		return err
 	}
 
-	// Handle OCI packages that have been published to a registry
-	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
-		message.Debugf("Pulling layers %v from %s", partialPaths, p.cfg.PkgOpts.PackagePath)
-
-		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
-		if err != nil {
-			return err
-		}
-		layersToPull, err := p.remote.LayersFromPaths(partialPaths)
-		if err != nil {
-			return err
-		}
-		if partialPaths, err = p.remote.PullPackage(p.tmp.Base, config.CommonOptions.OCIConcurrency, layersToPull...); err != nil {
-			return fmt.Errorf("unable to pull the package: %w", err)
-		}
-		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
-			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
-		}
-	} else {
-		// This package exists on the local file system - extract the first layer of the tarball
-		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfChecksumsTxt, p.tmp.Base); err != nil {
-			return fmt.Errorf("unable to extract %s: %w", config.ZarfChecksumsTxt, err)
-		}
-
-		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfYAML, p.tmp.Base); err != nil {
-			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAML, err)
-		}
-		if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfYAMLSignature, p.tmp.Base); err != nil {
-			return fmt.Errorf("unable to extract %s: %w", config.ZarfYAMLSignature, err)
-		}
-		if err := p.readYaml(p.tmp.ZarfYaml); err != nil {
-			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
-		}
-		if wantSBOM {
-			if err := archiver.Extract(p.cfg.PkgOpts.PackagePath, config.ZarfSBOMTar, p.tmp.Base); err != nil {
-				return fmt.Errorf("unable to extract %s: %w", config.ZarfSBOMTar, err)
-			}
-		}
-	}
-
-	if err := p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, partialPaths); err != nil {
-		return fmt.Errorf("unable to validate the package checksums, the package may have been tampered with: %s", err.Error())
+	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
+		return err
 	}
 
 	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 
-	// Validate the package checksums and signatures if specified, and warn if the package was signed but a key was not provided
-	if err := ValidatePackageSignature(p.tmp.Base, inspectPublicKey); err != nil {
-		if err == ErrPkgSigButNoKey {
-			message.Warn("The package was signed but no public key was provided, skipping signature validation")
-		} else {
-			return fmt.Errorf("unable to validate the package signature: %w", err)
-		}
-	}
+	sbomDir := p.layout.SBOMs.Path
 
-	if wantSBOM {
-		// Extract the SBOM files from the sboms.tar file
-		if err := archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
-			return fmt.Errorf("unable to extract the SBOM files: %w", err)
-		}
-	}
-
-	// Open a browser to view the SBOM if specified
-	if includeSBOM {
-		sbom.ViewSBOMFiles(p.tmp)
-	}
-
-	// Output the SBOM files into a directory if specified
-	if outputSBOM != "" {
-		if err := sbom.OutputSBOMFiles(p.tmp, outputSBOM, p.cfg.Pkg.Metadata.Name); err != nil {
+	if p.cfg.InspectOpts.SBOMOutputDir != "" {
+		out, err := sbom.OutputSBOMFiles(sbomDir, p.cfg.InspectOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name)
+		if err != nil {
 			return err
 		}
+		sbomDir = out
+	}
+
+	if p.cfg.InspectOpts.ViewSBOM {
+		sbom.ViewSBOMFiles(sbomDir)
 	}
 
 	return nil

@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -29,20 +30,24 @@ import (
 )
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
-func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOverride string) (map[string][]string, error) {
+func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
+	repoHelmChartPath := p.cfg.FindImagesOpts.RepoHelmChartPath
+	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
 
-	var originalDir string
 	imagesMap := make(map[string][]string)
 	erroredCharts := []string{}
 
-	// Change the working directory if this run has an alternate base dir
-	if baseDir != "" {
-		originalDir, _ = os.Getwd()
-		_ = os.Chdir(baseDir)
-		message.Note(fmt.Sprintf("Using base directory %s", baseDir))
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
 	}
 
-	if err := p.readYaml(config.ZarfYAML); err != nil {
+	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+		return nil, fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
+	}
+	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
+
+	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
 		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
@@ -106,17 +111,14 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 		// resources are a slice of generic structs that represent parsed K8s resources
 		var resources []*unstructured.Unstructured
 
-		componentPath, err := p.createOrGetComponentPaths(component)
+		componentPaths, err := p.layout.Components.Create(component)
 		if err != nil {
-			return nil, fmt.Errorf("unable to create component paths: %s", err.Error())
+			return nil, err
 		}
 
 		chartOverrides := make(map[string]string)
 
 		if len(component.Charts) > 0 {
-			_ = utils.CreateDirectory(componentPath.Charts, 0700)
-			_ = utils.CreateDirectory(componentPath.Values, 0700)
-
 			for _, chart := range component.Charts {
 
 				helmCfg := helm.Helm{
@@ -126,13 +128,13 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 				helmCfg.Cfg.State = &types.ZarfState{}
 
-				err := helmCfg.PackageChart(componentPath.Charts)
+				err := helmCfg.PackageChart(componentPaths.Charts)
 				if err != nil {
 					return nil, fmt.Errorf("unable to package the chart %s: %s", chart.URL, err.Error())
 				}
 
 				for idx, path := range chart.ValuesFiles {
-					dst := helm.StandardName(componentPath.Values, chart) + "-" + strconv.Itoa(idx)
+					dst := helm.StandardName(componentPaths.Values, chart) + "-" + strconv.Itoa(idx)
 					if helpers.IsURL(path) {
 						if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
 							return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
@@ -146,7 +148,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 				// Generate helm templates to pass to gitops engine
 				helmCfg = helm.Helm{
-					BasePath:          componentPath.Base,
+					BasePath:          componentPaths.Base,
 					Chart:             chart,
 					ChartLoadOverride: chartOverrides[chart.Name],
 					KubeVersion:       kubeVersionOverride,
@@ -167,7 +169,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				if overridePath, ok := chartOverrides[chart.Name]; ok {
 					chartTarball = overridePath
 				} else {
-					chartTarball = helm.StandardName(componentPath.Charts, helmCfg.Chart) + ".tgz"
+					chartTarball = helm.StandardName(componentPaths.Charts, helmCfg.Chart) + ".tgz"
 				}
 
 				annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
@@ -183,15 +185,11 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 		}
 
 		if len(component.Manifests) > 0 {
-			if err := utils.CreateDirectory(componentPath.Manifests, 0700); err != nil {
-				return nil, fmt.Errorf("unable to create the manifest path %s: %s", componentPath.Manifests, err.Error())
-			}
-
 			for _, manifest := range component.Manifests {
 				for idx, k := range manifest.Kustomizations {
 					// Generate manifests from kustomizations and place in the package
 					kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-					destination := filepath.Join(componentPath.Manifests, kname)
+					destination := filepath.Join(componentPaths.Manifests, kname)
 					if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 						return nil, fmt.Errorf("unable to build the kustomization for %s: %s", k, err.Error())
 					}
@@ -201,7 +199,7 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 				for idx, f := range manifest.Files {
 					if helpers.IsURL(f) {
 						mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
-						destination := filepath.Join(componentPath.Manifests, mname)
+						destination := filepath.Join(componentPaths.Manifests, mname)
 						if err := utils.DownloadToFile(f, destination, component.DeprecatedCosignKeyPath); err != nil {
 							return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 						}
@@ -265,9 +263,9 @@ func (p *Packager) FindImages(baseDir, repoHelmChartPath string, kubeVersionOver
 
 	fmt.Println(componentDefinition)
 
-	// In case the directory was changed, reset to prevent breaking relative target paths
-	if originalDir != "" {
-		_ = os.Chdir(originalDir)
+	// Return to the original working directory
+	if err := os.Chdir(cwd); err != nil {
+		return nil, err
 	}
 
 	if len(erroredCharts) > 0 {

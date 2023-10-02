@@ -9,7 +9,7 @@ Unpacks resources and dependencies from a Zarf package archive and deploys them 
 Kubernetes clusters are accessed via credentials in your current kubecontext defined in '~/.kube/config'
 
 ```
-zarf package deploy [ PACKAGE ] [flags]
+zarf package deploy [ PACKAGE_SOURCE ] [flags]
 ```
 
 ## Options
@@ -19,7 +19,6 @@ zarf package deploy [ PACKAGE ] [flags]
       --components string          Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
       --confirm                    Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
   -h, --help                       help for deploy
-  -k, --key string                 Path to public key file for validating signed packages
       --set stringToString         Specify deployment variables to set on the command line (KEY=value) (default [])
       --shasum string              Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
       --skip-webhooks              [alpha] Skip waiting for external webhooks to execute as each package component is deployed
@@ -30,6 +29,7 @@ zarf package deploy [ PACKAGE ] [flags]
 ```
   -a, --architecture string   Architecture for OCI images and Zarf packages
       --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -k, --key string            Path to public key file for validating signed packages
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color              Disable colors in output
       --no-log-file           Disable log file creation

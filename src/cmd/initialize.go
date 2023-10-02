@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 
@@ -42,15 +43,18 @@ var initCmd = &cobra.Command{
 
 		// Continue running package deploy for all components like any other package
 		initPackageName := packager.GetInitPackageName("")
-		pkgConfig.PkgOpts.PackagePath = initPackageName
+		pkgConfig.PkgOpts.PackageSource = initPackageName
 
 		// Try to use an init-package in the executable directory if none exist in current working directory
 		var err error
-		if pkgConfig.PkgOpts.PackagePath, err = findInitPackage(initPackageName); err != nil {
+		if pkgConfig.PkgOpts.PackageSource, err = findInitPackage(initPackageName); err != nil {
 			message.Fatal(err, err.Error())
 		}
 
-		pkgConfig.PkgSource = pkgConfig.PkgOpts.PackagePath
+		src, err := sources.New(&pkgConfig.PkgOpts)
+		if err != nil {
+			message.Fatal(err, err.Error())
+		}
 
 		// Ensure uppercase keys from viper
 		v := common.GetViper()
@@ -58,7 +62,7 @@ var initCmd = &cobra.Command{
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
 		// Deploy everything
@@ -98,8 +102,8 @@ func findInitPackage(initPackageName string) (string, error) {
 	}
 
 	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
-	downloadCacheTarget := filepath.Join(config.GetAbsCachePath(), initPackageName)
-	if err := downloadInitPackage(downloadCacheTarget); err != nil {
+	downloadCacheTarget, err := downloadInitPackage(config.GetAbsCachePath())
+	if err != nil {
 		if errors.Is(err, lang.ErrInitNotFound) {
 			message.Fatal(err, err.Error())
 		} else {
@@ -109,9 +113,9 @@ func findInitPackage(initPackageName string) (string, error) {
 	return downloadCacheTarget, nil
 }
 
-func downloadInitPackage(downloadCacheTarget string) error {
+func downloadInitPackage(cacheDirectory string) (string, error) {
 	if config.CommonOptions.Confirm {
-		return lang.ErrInitNotFound
+		return "", lang.ErrInitNotFound
 	}
 
 	var confirmDownload bool
@@ -128,16 +132,21 @@ func downloadInitPackage(downloadCacheTarget string) error {
 			Message: lang.CmdInitPullConfirm,
 		}
 		if err := survey.AskOne(prompt, &confirmDownload); err != nil {
-			return fmt.Errorf(lang.ErrConfirmCancel, err.Error())
+			return "", fmt.Errorf(lang.ErrConfirmCancel, err.Error())
 		}
 	}
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		return oci.DownloadPackageTarball(url, downloadCacheTarget, config.CommonOptions.OCIConcurrency)
+		remote, err := oci.NewOrasRemote(url)
+		if err != nil {
+			return "", err
+		}
+		source := sources.OCISource{OrasRemote: remote}
+		return source.Collect(cacheDirectory)
 	}
 	// Otherwise, exit and tell the user to manually download the init-package
-	return errors.New(lang.CmdInitPullErrManual)
+	return "", errors.New(lang.CmdInitPullErrManual)
 }
 
 func validateInitFlags() error {

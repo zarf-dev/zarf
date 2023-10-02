@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -178,4 +179,17 @@ func MergeNonZero[T any](original T, overrides T) T {
 		}
 	}
 	return originalValue.Interface().(T)
+}
+
+// StringToSlice converts a comma-separated string to a slice of lowercase strings.
+func StringToSlice(s string) []string {
+	if s != "" {
+		split := strings.Split(s, ",")
+		for idx, element := range split {
+			split[idx] = strings.ToLower(strings.TrimSpace(element))
+		}
+		return split
+	}
+
+	return []string{}
 }

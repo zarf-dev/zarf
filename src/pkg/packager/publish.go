@@ -5,43 +5,81 @@
 package packager
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/mholt/archiver/v3"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/content"
 )
 
 // Publish publishes the package to a registry
-//
-// This is a wrapper around the oras library
-// and much of the code was adapted from the oras CLI - https://github.com/oras-project/oras/blob/main/cmd/oras/push.go
-//
-// Authentication is handled via the Docker config file created w/ `zarf tools registry login`
-func (p *Packager) Publish() error {
+func (p *Packager) Publish() (err error) {
+	_, isOCISource := p.source.(*sources.OCISource)
+	if isOCISource {
+		ctx := context.TODO()
+		// oci --> oci is a special case, where we will use oci.CopyPackage so that we can transfer the package
+		// w/o layers touching the filesystem
+		srcRemote := p.source.(*sources.OCISource).OrasRemote
+		srcRemote.WithContext(ctx)
+
+		parts := strings.Split(srcRemote.Repo().Reference.Repository, "/")
+		packageName := parts[len(parts)-1]
+
+		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
+
+		err = p.setOCIRemote(p.cfg.PublishOpts.PackageDestination)
+		if err != nil {
+			return err
+		}
+		p.remote.WithContext(ctx)
+
+		if err := oci.CopyPackage(ctx, srcRemote, p.remote, nil, config.CommonOptions.OCIConcurrency); err != nil {
+			return err
+		}
+
+		srcManifest, err := srcRemote.FetchRoot()
+		if err != nil {
+			return err
+		}
+		b, err := srcManifest.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		expected := content.NewDescriptorFromBytes(ocispec.MediaTypeImageManifest, b)
+
+		// tag the manifest the same as the source
+		if err := p.remote.Repo().Manifests().PushReference(ctx, expected, bytes.NewReader(b), srcRemote.Repo().Reference.Reference); err != nil {
+			return err
+		}
+		message.Infof("Published %s to %s", srcRemote.Repo().Reference, p.remote.Repo().Reference)
+		return nil
+	}
+
 	var referenceSuffix string
-	if utils.IsDir(p.cfg.PublishOpts.PackagePath) {
+	if p.cfg.CreateOpts.BaseDir != "" {
 		referenceSuffix = oci.SkeletonSuffix
 		err := p.loadSkeleton()
 		if err != nil {
 			return err
 		}
 	} else {
-		// Extract the first layer of the tarball
-		if err := archiver.Unarchive(p.cfg.PublishOpts.PackagePath, p.tmp.Base); err != nil {
-			return fmt.Errorf("unable to extract the package: %w", err)
+		if err = p.source.LoadPackage(p.layout); err != nil {
+			return fmt.Errorf("unable to load the package: %w", err)
+		}
+		if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
+			return err
 		}
 
-		err := p.readYaml(p.tmp.ZarfYaml)
-		if err != nil {
-			return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
-		}
 		referenceSuffix = p.arch
 	}
 
@@ -51,27 +89,22 @@ func (p *Packager) Publish() error {
 		return err
 	}
 
-	err = p.SetOCIRemote(ref)
+	err = p.setOCIRemote(ref)
 	if err != nil {
 		return err
 	}
 
-	if err := p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, nil); err != nil {
-		return fmt.Errorf("unable to publish package because checksums do not match: %w", err)
-	}
-
 	// Sign the package if a key has been provided
 	if p.cfg.PublishOpts.SigningKeyPath != "" {
-		_, err := utils.CosignSignBlob(p.tmp.ZarfYaml, p.tmp.ZarfSig, p.cfg.PublishOpts.SigningKeyPath, p.getSigPublishPassword)
-		if err != nil {
-			return fmt.Errorf("unable to sign the package: %w", err)
+		if err := p.signPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword); err != nil {
+			return err
 		}
 	}
 
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
 
 	// Publish the package/skeleton to the registry
-	if err := p.remote.PublishPackage(&p.cfg.Pkg, p.tmp.Base, config.CommonOptions.OCIConcurrency); err != nil {
+	if err := p.remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
 		return err
 	}
 	if strings.HasSuffix(p.remote.Repo().Reference.String(), oci.SkeletonSuffix) {
@@ -91,16 +124,12 @@ func (p *Packager) Publish() error {
 	return nil
 }
 
-func (p *Packager) loadSkeleton() error {
-	base, err := filepath.Abs(p.cfg.PublishOpts.PackagePath)
-	if err != nil {
+func (p *Packager) loadSkeleton() (err error) {
+	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return err
 	}
-	if err := os.Chdir(base); err != nil {
-		return err
-	}
-	if err := p.readYaml(config.ZarfYAML); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml in %s: %s", base, err.Error())
+	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
+		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
 	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
@@ -123,18 +152,16 @@ func (p *Packager) loadSkeleton() error {
 
 	for idx, component := range p.cfg.Pkg.Components {
 		isSkeleton := true
-		err := p.addComponent(idx, component, isSkeleton)
-		if err != nil {
+		if err := p.addComponent(idx, component, isSkeleton); err != nil {
 			return err
 		}
 
-		err = p.archiveComponent(component)
-		if err != nil {
-			return fmt.Errorf("unable to archive component: %s", err.Error())
+		if err := p.layout.Components.Archive(component, false); err != nil {
+			return err
 		}
 	}
 
-	checksumChecksum, err := generatePackageChecksums(p.tmp.Base)
+	checksumChecksum, err := p.generatePackageChecksums()
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
 	}

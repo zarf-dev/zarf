@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 )
@@ -41,7 +42,17 @@ func DeployPackage(w http.ResponseWriter, r *http.Request) {
 
 	globalConfig.CommonOptions.Confirm = true
 
-	pkgClient := packager.NewOrDie(&cfg)
+	src, err := sources.New(&cfg.PkgOpts)
+	if err != nil {
+		message.ErrorWebf(err, w, "Unable to create a package source")
+		return
+	}
+	pkgClient, err := packager.New(&cfg, packager.WithSource(src))
+	if err != nil {
+		pkgClient.ClearTempPaths()
+		message.ErrorWebf(err, w, "Unable to create a packager instance")
+		return
+	}
 	defer pkgClient.ClearTempPaths()
 
 	if err := pkgClient.Deploy(); err != nil {

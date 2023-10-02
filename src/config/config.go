@@ -39,16 +39,7 @@ const (
 	ZarfManagedByLabel     = "app.kubernetes.io/managed-by"
 	ZarfCleanupScriptsPath = "/opt/zarf"
 
-	ZarfImageCacheDir = "images"
-
-	ZarfYAML          = "zarf.yaml"
-	ZarfYAMLSignature = "zarf.yaml.sig"
-	ZarfChecksumsTxt  = "checksums.txt"
-	ZarfSBOMDir       = "zarf-sbom"
-	ZarfSBOMTar       = "sboms.tar"
 	ZarfPackagePrefix = "zarf-package-"
-
-	ZarfComponentsDir = "components"
 
 	ZarfDeployStage = "Deploy"
 	ZarfCreateStage = "Create"
@@ -175,8 +166,19 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 }
 
 // GetValidPackageExtensions returns the valid package extensions.
-func GetValidPackageExtensions() [3]string {
-	return [...]string{".tar.zst", ".tar", ".zip"}
+func GetValidPackageExtensions() [2]string {
+	return [...]string{".tar.zst", ".tar"}
+}
+
+// IsValidFileExtension returns true if the filename has a valid package extension.
+func IsValidFileExtension(filename string) bool {
+	for _, extension := range GetValidPackageExtensions() {
+		if strings.HasSuffix(filename, extension) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.

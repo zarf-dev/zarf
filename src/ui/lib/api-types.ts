@@ -172,7 +172,7 @@ export interface ZarfPackageOptions {
     /**
      * Location where a Zarf package can be found
      */
-    packagePath: string;
+    packageSource: string;
     /**
      * Location where the public key component of a cosign key-pair can be found
      */
@@ -1190,6 +1190,10 @@ export interface ZarfCommonOptions {
 
 export interface ZarfCreateOptions {
     /**
+     * Location where the Zarf package will be created from
+     */
+    baseDir: string;
+    /**
      * A package's differential images and git repositories from a referenced previously built
      * package
      */
@@ -1472,7 +1476,7 @@ const typeMap: any = {
     ], false),
     "ZarfPackageOptions": o([
         { json: "optionalComponents", js: "optionalComponents", typ: "" },
-        { json: "packagePath", js: "packagePath", typ: "" },
+        { json: "packageSource", js: "packageSource", typ: "" },
         { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
@@ -1808,6 +1812,7 @@ const typeMap: any = {
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
+        { json: "baseDir", js: "baseDir", typ: "" },
         { json: "differential", js: "differential", typ: r("DifferentialData") },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
         { json: "output", js: "output", typ: "" },

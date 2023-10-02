@@ -6,13 +6,13 @@ package packager
 
 import (
 	"fmt"
-	"runtime"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 )
@@ -25,7 +25,7 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 	componentGroups := make(map[string][]types.ZarfComponent)
 
 	// The component list is comma-delimited list
-	requestedNames := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
+	requestedNames := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
 
 	// Break up components into choice groups
 	for _, component := range p.cfg.Pkg.Components {
@@ -65,7 +65,7 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 
 			if requested {
 				// Mark deployment as appliance mode if this is an init config and the k3s component is enabled
-				if component.Name == k8s.DistroIsK3s && p.cfg.IsInitConfig {
+				if component.Name == k8s.DistroIsK3s && p.cfg.Pkg.Kind == types.ZarfInitConfig {
 					p.cfg.InitOpts.ApplianceMode = true
 				}
 				// Add the component to the list of valid components
@@ -90,27 +90,6 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 	}
 
 	return validComponentsList
-}
-
-func (p *Packager) isCompatibleComponent(component types.ZarfComponent, filterByOS bool) bool {
-	// Ignore only filters that are empty
-	var validArch, validOS bool
-
-	// Test for valid architecture
-	if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == p.arch {
-		validArch = true
-	} else {
-		message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.Cluster.Architecture, p.arch)
-	}
-
-	// Test for a valid OS
-	if !filterByOS || component.Only.LocalOS == "" || component.Only.LocalOS == runtime.GOOS {
-		validOS = true
-	} else {
-		message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.LocalOS, runtime.GOOS)
-	}
-
-	return validArch && validOS
 }
 
 // Match on the first requested component that is not in the list of valid components and return the component name.

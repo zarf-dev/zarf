@@ -31,7 +31,7 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 	var totalSize int64
 	// Build an image list from the references
 	for _, refInfo := range i.ImageList {
-		img, err := i.LoadImageFromPackage(refInfo)
+		img, err := utils.LoadOCIImage(i.ImagesPath, refInfo)
 		if err != nil {
 			return err
 		}
