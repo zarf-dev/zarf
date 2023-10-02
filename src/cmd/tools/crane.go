@@ -114,7 +114,12 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 			return originalCatalogFn(cmd, args)
 		}
 
-		c := cluster.NewClusterOrDie()
+		message.Note(lang.CmdToolsRegistryZarfState)
+
+		c, err := cluster.NewCluster()
+		if err != nil {
+			return err
+		}
 
 		// Load Zarf state
 		zarfState, err := c.LoadZarfState()
@@ -160,6 +165,8 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 		if err != nil {
 			return originalListFn(cmd, args)
 		}
+
+		message.Note(lang.CmdToolsRegistryZarfState)
 
 		// Load the state (if able)
 		zarfState, err := c.LoadZarfState()

@@ -355,7 +355,9 @@ const (
 
 	CmdToolsArchiverUnarchiveAllErr = "Unable to unarchive all nested tarballs"
 
-	CmdToolsRegistryShort          = "Tools for working with container registries using go-containertools"
+	CmdToolsRegistryShort     = "Tools for working with container registries using go-containertools"
+	CmdToolsRegistryZarfState = "Retrieving registry information from Zarf state"
+
 	CmdToolsRegistryCatalogExample = `
 	# list the repos internal to Zarf
 	$ zarf tools registry catalog
