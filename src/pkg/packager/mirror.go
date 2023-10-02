@@ -18,26 +18,22 @@ import (
 
 // Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
 func (p *Packager) Mirror() (err error) {
-	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackagePath)
+	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
-	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
-		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
-		if err != nil {
-			return err
-		}
+	if err = p.source.LoadPackage(p.layout); err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
+	}
+	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
+		return err
 	}
 
-	if err := p.loadZarfPkg(); err != nil {
-		return fmt.Errorf("unable to load the Zarf Package: %w", err)
-	}
-
-	if err := ValidatePackageSignature(p.tmp.Base, p.cfg.PkgOpts.PublicKeyPath); err != nil {
+	if err := p.stageSBOMViewFiles(); err != nil {
 		return err
 	}
 
 	// Confirm the overall package mirror
-	if !p.confirmAction(config.ZarfMirrorStage, p.cfg.SBOMViewFiles) {
+	if !p.confirmAction(config.ZarfMirrorStage) {
 		return fmt.Errorf("mirror cancelled")
 	}
 
@@ -48,8 +44,8 @@ func (p *Packager) Mirror() (err error) {
 	p.cfg.State = state
 
 	// Filter out components that are not compatible with this system if we have loaded from a tarball
-	p.filterComponents(true)
-	requestedComponentNames := getRequestedComponentList(p.cfg.PkgOpts.OptionalComponents)
+	p.filterComponents()
+	requestedComponentNames := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
 
 	for _, component := range p.cfg.Pkg.Components {
 		if len(requestedComponentNames) == 0 || slices.Contains(requestedComponentNames, component.Name) {
@@ -64,11 +60,7 @@ func (p *Packager) Mirror() (err error) {
 
 // mirrorComponent mirrors a Zarf Component.
 func (p *Packager) mirrorComponent(component types.ZarfComponent) error {
-
-	componentPath, err := p.createOrGetComponentPaths(component)
-	if err != nil {
-		return fmt.Errorf("unable to create the component paths: %w", err)
-	}
+	componentPaths := p.layout.Components.Dirs[component.Name]
 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
@@ -83,7 +75,7 @@ func (p *Packager) mirrorComponent(component types.ZarfComponent) error {
 	}
 
 	if hasRepos {
-		if err = p.pushReposToRepository(componentPath.Repos, component.Repos); err != nil {
+		if err := p.pushReposToRepository(componentPaths.Repos, component.Repos); err != nil {
 			return fmt.Errorf("unable to push the repos to the repository: %w", err)
 		}
 	}

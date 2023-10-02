@@ -18,6 +18,7 @@ zarf package list [flags]
 ```
   -a, --architecture string   Architecture for OCI images and Zarf packages
       --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -k, --key string            Path to public key file for validating signed packages
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color              Disable colors in output
       --no-log-file           Disable log file creation

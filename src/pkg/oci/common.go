@@ -25,6 +25,8 @@ import (
 const (
 	// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
+	// ZarfConfigMediaType is the media type for the manifest config
+	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
 	// SkeletonSuffix is the reference suffix used for skeleton packages
 	SkeletonSuffix = "skeleton"
 )
@@ -44,7 +46,7 @@ type OrasRemote struct {
 func NewOrasRemote(url string) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse OCI reference %s: %w", url, err)
+		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
 	}
 	o := &OrasRemote{}
 
@@ -70,6 +72,10 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 	// this allows end users to use docker.io as an alias for registry-1.docker.io
 	if ref.Registry == "docker.io" {
 		ref.Registry = "registry-1.docker.io"
+	}
+	if ref.Registry == "🦄" || ref.Registry == "defenseunicorns" {
+		ref.Registry = "ghcr.io"
+		ref.Repository = "defenseunicorns/packages/" + ref.Repository
 	}
 	client, err := o.createAuthClient(ref)
 	if err != nil {

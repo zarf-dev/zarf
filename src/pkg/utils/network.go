@@ -6,7 +6,6 @@ package utils
 
 import (
 	"context"
-	"crypto"
 	"fmt"
 	"io"
 	"net"
@@ -106,7 +105,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 
 	// If the file has a checksum, validate it
 	if len(checksum) > 0 {
-		received, err := GetCryptoHashFromFile(dst, crypto.SHA256)
+		received, err := GetSHA256OfFile(dst)
 		if err != nil {
 			return err
 		}

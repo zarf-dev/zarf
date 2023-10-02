@@ -15,11 +15,9 @@ import "errors"
 // Debug messages will not be a part of the language strings since they are not intended to be user facing
 // Include sprintf formatting directives in the string if needed.
 const (
-	ErrLoadingConfig       = "failed to load config: %w"
 	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
 	ErrSaveState           = "Failed to save the Zarf State to the Kubernetes cluster."
 	ErrLoadPackageSecret   = "Failed to load %s's secret from the Kubernetes cluster"
-	ErrMarshal             = "failed to marshal file: %w"
 	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
 	ErrTunnelFailed        = "Failed to create a tunnel to the Kubernetes cluster."
 	ErrUnmarshal           = "failed to unmarshal file: %w"
@@ -216,8 +214,9 @@ const (
 	CmdInternalCrc32Short = "Generates a decimal CRC32 for the given text"
 
 	// zarf package
-	CmdPackageShort           = "Zarf package commands for creating, deploying, and inspecting packages"
-	CmdPackageFlagConcurrency = "Number of concurrent layer operations to perform when interacting with a remote package."
+	CmdPackageShort             = "Zarf package commands for creating, deploying, and inspecting packages"
+	CmdPackageFlagConcurrency   = "Number of concurrent layer operations to perform when interacting with a remote package."
+	CmdPackageFlagFlagPublicKey = "Path to public key file for validating signed packages"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
 	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +
@@ -259,7 +258,6 @@ const (
 	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install"
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
 	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
-	CmdPackageDeployFlagPublicKey                      = "Path to public key file for validating signed packages"
 	CmdPackageDeployFlagSkipWebhooks                   = "[alpha] Skip waiting for external webhooks to execute as each package component is deployed"
 	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "the version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
@@ -269,11 +267,9 @@ const (
 	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' status."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
 
-	CmdPackageInspectFlagSbom      = "View SBOM contents while inspecting the package"
-	CmdPackageInspectFlagSbomOut   = "Specify an output directory for the SBOMs from the inspected Zarf package"
-	CmdPackageInspectFlagValidate  = "Validate any checksums and signatures while inspecting the package"
-	CmdPackageInspectFlagPublicKey = "Path to a public key file that will be used to validate a signed package"
-	CmdPackageInspectErr           = "Failed to inspect package: %s"
+	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
+	CmdPackageInspectFlagSbomOut = "Specify an output directory for the SBOMs from the inspected Zarf package"
+	CmdPackageInspectErr         = "Failed to inspect package: %s"
 
 	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
@@ -298,13 +294,13 @@ const (
 
 	CmdPackagePullShort               = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample             = "	zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64"
-	CmdPackagePullPublicKey           = "Path to public key file for validating signed packages"
 	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
-	CmdPackagePullFlagPublicKey       = "Path to public key file for validating signed packages"
 	CmdPackagePullErr                 = "Failed to pull package: %s"
 
-	CmdPackageChoose    = "Choose or type the package file"
-	CmdPackageChooseErr = "Package path selection canceled: %s"
+	CmdPackageChoose                = "Choose or type the package file"
+	CmdPackageChooseErr             = "Package path selection canceled: %s"
+	CmdPackageClusterSourceFallback = "%q does not satisfy any current sources, assuming it is a package deployed to a cluster"
+	CmdPackageInvalidSource         = "Unable to identify source from %q: %s"
 
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"
@@ -316,13 +312,14 @@ const (
 	CmdPreparePatchGitFileReadErr     = "Unable to read the file %s"
 	CmdPreparePatchGitFileWriteErr    = "Unable to write the changes back to the file"
 
-	CmdPrepareSha256sumShort   = "Generates a SHA256SUM for the given file"
-	CmdPrepareSha256sumHashErr = "Unable to compute the SHA256SUM hash"
+	CmdPrepareSha256sumShort         = "Generates a SHA256SUM for the given file"
+	CmdPrepareSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
+	CmdPrepareSha256sumHashErr       = "Unable to compute the SHA256SUM hash"
 
 	CmdPrepareFindImagesShort = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests"
 	CmdPrepareFindImagesLong  = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
 		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
-	CmdPrepareFindImagesErr = "Unable to find images for the package definition %s: %s"
+	CmdPrepareFindImagesErr = "Unable to find images: %s"
 
 	CmdPrepareGenerateConfigShort = "Generates a config file for Zarf"
 	CmdPrepareGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +

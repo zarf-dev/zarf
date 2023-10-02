@@ -5,15 +5,11 @@
 package packager
 
 import (
-	"crypto"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -26,9 +22,10 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
@@ -37,12 +34,14 @@ type Packager struct {
 	cfg            *types.PackagerConfig
 	cluster        *cluster.Cluster
 	remote         *oci.OrasRemote
-	tmp            types.TempPaths
+	layout         *layout.PackagePaths
 	arch           string
 	warnings       []string
 	valueTemplate  *template.Values
 	hpaModified    bool
 	connectStrings types.ConnectStrings
+	sbomViewFiles  []string
+	source         sources.PackageSource
 	generation     int
 }
 
@@ -55,12 +54,38 @@ var (
 	ZarfInitPattern = regexp.MustCompile(GetInitPackageName("") + "$")
 )
 
+// Modifier is a function that modifies the packager.
+type Modifier func(*Packager)
+
+// WithSource sets the source for the packager.
+func WithSource(source sources.PackageSource) Modifier {
+	return func(p *Packager) {
+		p.source = source
+	}
+}
+
+// WithCluster sets the cluster client for the packager.
+func WithCluster(cluster *cluster.Cluster) Modifier {
+	return func(p *Packager) {
+		p.cluster = cluster
+	}
+}
+
+// WithTemp sets the temp directory for the packager.
+//
+// This temp directory is used as the destination where p.source loads the package.
+func WithTemp(base string) Modifier {
+	return func(p *Packager) {
+		p.layout = layout.New(base)
+	}
+}
+
 /*
 New creates a new package instance with the provided config.
 
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
-func New(cfg *types.PackagerConfig) (*Packager, error) {
+func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
 	}
@@ -74,8 +99,8 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 	}
 
 	var (
-		err       error
-		pkgConfig = &Packager{
+		err  error
+		pkgr = &Packager{
 			cfg: cfg,
 		}
 	)
@@ -87,12 +112,26 @@ func New(cfg *types.PackagerConfig) (*Packager, error) {
 		}
 	}
 
-	// Create a temp directory for the package
-	if err = pkgConfig.SetTempDirectory(config.CommonOptions.TempDirectory); err != nil {
-		return nil, fmt.Errorf("unable to create package temp paths: %w", err)
+	for _, mod := range mods {
+		mod(pkgr)
 	}
 
-	return pkgConfig, nil
+	// Fill the source if it wasn't provided - note source can be nil if the package is being created
+	if pkgr.source == nil && pkgr.cfg.CreateOpts.BaseDir == "" {
+		pkgr.source, err = sources.New(&pkgr.cfg.PkgOpts)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// If the temp directory is not set, set it to the default
+	if pkgr.layout == nil {
+		if err = pkgr.setTempDirectory(config.CommonOptions.TempDirectory); err != nil {
+			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
+		}
+	}
+
+	return pkgr, nil
 }
 
 /*
@@ -100,30 +139,27 @@ NewOrDie creates a new package instance with the provided config or throws a fat
 
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
-func NewOrDie(config *types.PackagerConfig) *Packager {
+func NewOrDie(config *types.PackagerConfig, mods ...Modifier) *Packager {
 	var (
-		err       error
-		pkgConfig *Packager
+		err  error
+		pkgr *Packager
 	)
 
-	if pkgConfig, err = New(config); err != nil {
+	if pkgr, err = New(config, mods...); err != nil {
 		message.Fatalf(err, "Unable to setup the package config: %s", err.Error())
 	}
 
-	return pkgConfig
+	return pkgr
 }
 
-// SetTempDirectory sets the temp directory for the packager.
-func (p *Packager) SetTempDirectory(path string) error {
-	if p.tmp.Base != "" {
-		p.ClearTempPaths()
-	}
-
-	tmp, err := createPaths(path)
+// setTempDirectory sets the temp directory for the packager.
+func (p *Packager) setTempDirectory(path string) error {
+	dir, err := utils.MakeTempDir(path)
 	if err != nil {
 		return fmt.Errorf("unable to create package temp paths: %w", err)
 	}
-	p.tmp = tmp
+
+	p.layout = layout.New(dir)
 	return nil
 }
 
@@ -138,7 +174,7 @@ func GetInitPackageName(arch string) string {
 
 // GetPackageName returns the formatted name of the package.
 func (p *Packager) GetPackageName() string {
-	if p.cfg.IsInitConfig {
+	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
 		return GetInitPackageName(p.arch)
 	}
 
@@ -161,306 +197,8 @@ func (p *Packager) GetPackageName() string {
 // ClearTempPaths removes the temp directory and any files within it.
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
-	_ = os.RemoveAll(p.tmp.Base)
-	_ = os.RemoveAll(config.ZarfSBOMDir)
-}
-
-func (p *Packager) createOrGetComponentPaths(component types.ZarfComponent) (paths types.ComponentPaths, err error) {
-	base := filepath.Join(p.tmp.Components, component.Name)
-
-	err = utils.CreateDirectory(base, 0700)
-	if err != nil {
-		return paths, err
-	}
-
-	paths = types.ComponentPaths{
-		Base:           base,
-		Temp:           filepath.Join(base, types.TempFolder),
-		Files:          filepath.Join(base, types.FilesFolder),
-		Charts:         filepath.Join(base, types.ChartsFolder),
-		Repos:          filepath.Join(base, types.ReposFolder),
-		Manifests:      filepath.Join(base, types.ManifestsFolder),
-		DataInjections: filepath.Join(base, types.DataInjectionsFolder),
-		Values:         filepath.Join(base, types.ValuesFolder),
-	}
-
-	if len(component.Files) > 0 {
-		err = utils.CreateDirectory(paths.Files, 0700)
-		if err != nil {
-			return paths, err
-		}
-	}
-
-	if len(component.Charts) > 0 {
-		err = utils.CreateDirectory(paths.Charts, 0700)
-		if err != nil {
-			return paths, err
-		}
-		for _, chart := range component.Charts {
-			if len(chart.ValuesFiles) > 0 {
-				err = utils.CreateDirectory(paths.Values, 0700)
-				if err != nil {
-					return paths, err
-				}
-				break
-			}
-		}
-	}
-
-	if len(component.Repos) > 0 {
-		err = utils.CreateDirectory(paths.Repos, 0700)
-		if err != nil {
-			return paths, err
-		}
-	}
-
-	if len(component.Manifests) > 0 {
-		err = utils.CreateDirectory(paths.Manifests, 0700)
-		if err != nil {
-			return paths, err
-		}
-	}
-
-	if len(component.DataInjections) > 0 {
-		err = utils.CreateDirectory(paths.DataInjections, 0700)
-		if err != nil {
-			return paths, err
-		}
-	}
-
-	return paths, err
-}
-
-func isValidFileExtension(filename string) bool {
-	for _, extension := range config.GetValidPackageExtensions() {
-		if strings.HasSuffix(filename, extension) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func createPaths(basePath string) (paths types.TempPaths, err error) {
-	basePath, err = utils.MakeTempDir(basePath)
-	if err != nil {
-		return paths, err
-	}
-
-	paths = types.TempPaths{
-		Base: basePath,
-
-		InjectBinary: filepath.Join(basePath, "zarf-injector"),
-		SeedImages:   filepath.Join(basePath, "seed-images"),
-		Images:       filepath.Join(basePath, "images"),
-		Components:   filepath.Join(basePath, config.ZarfComponentsDir),
-		SbomTar:      filepath.Join(basePath, config.ZarfSBOMTar),
-		Sboms:        filepath.Join(basePath, "sboms"),
-		Checksums:    filepath.Join(basePath, config.ZarfChecksumsTxt),
-		ZarfYaml:     filepath.Join(basePath, config.ZarfYAML),
-		ZarfSig:      filepath.Join(basePath, config.ZarfYAMLSignature),
-	}
-
-	return paths, err
-}
-
-func getRequestedComponentList(requestedComponents string) []string {
-	if requestedComponents != "" {
-		split := strings.Split(requestedComponents, ",")
-		for idx, component := range split {
-			split[idx] = strings.ToLower(strings.TrimSpace(component))
-		}
-		return split
-	}
-
-	return []string{}
-}
-
-func (p *Packager) loadZarfPkg() error {
-	pathsToCheck, err := p.handlePackagePath()
-	if err != nil {
-		return fmt.Errorf("unable to handle the provided package path: %w", err)
-	}
-
-	alreadyExtracted := p.cfg.PkgOpts.PackagePath == p.tmp.Base
-
-	if alreadyExtracted && pathsToCheck == nil {
-		paths, err := utils.RecursiveFileList(p.tmp.Base, nil, false)
-		if err != nil {
-			return fmt.Errorf("unable to get a list of files in the package: %w", err)
-		}
-		for _, path := range paths {
-			pathsToCheck = append(pathsToCheck, strings.TrimPrefix(path, p.tmp.Base+string(os.PathSeparator)))
-		}
-	}
-
-	spinner := message.NewProgressSpinner("Loading Zarf Package %s", p.cfg.PkgOpts.PackagePath)
-	defer spinner.Stop()
-
-	// Make sure the user gave us a package we can work with
-	if utils.InvalidPath(p.cfg.PkgOpts.PackagePath) {
-		return fmt.Errorf("unable to find the package at %s", p.cfg.PkgOpts.PackagePath)
-	}
-
-	// If packagePath has partial in the name, we need to combine the partials into a single package
-	if err := p.handleIfPartialPkg(); err != nil {
-		return fmt.Errorf("unable to process partial package: %w", err)
-	}
-
-	// If the package was pulled from OCI, there is no need to extract it since it is unpacked already
-	if !alreadyExtracted {
-		// Extract the archive
-		spinner.Updatef("Extracting the package, this may take a few moments")
-		if err := archiver.Unarchive(p.cfg.PkgOpts.PackagePath, p.tmp.Base); err != nil {
-			return fmt.Errorf("unable to extract the package: %w", err)
-		}
-	}
-
-	// Load the config from the extracted archive zarf.yaml
-	spinner.Updatef("Loading the Zarf package config")
-	configPath := p.tmp.ZarfYaml
-	if err := p.readYaml(configPath); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml in %s: %w", p.tmp.Base, err)
-	}
-
-	// Validate the checksums of all the things!!!
-	if err := p.validatePackageChecksums(p.tmp.Base, p.cfg.Pkg.Metadata.AggregateChecksum, pathsToCheck); err != nil {
-		return fmt.Errorf("unable to validate the package checksums: %w", err)
-	}
-
-	// Get a list of paths for the components of the package
-	componentTarballs, err := os.ReadDir(p.tmp.Components)
-	if err != nil && !utils.InvalidPath(p.tmp.Components) {
-		return fmt.Errorf("unable to get a list of components... %w", err)
-	}
-	for _, path := range componentTarballs {
-		// If the components are tarballs, extract them!
-		componentPath := filepath.Join(p.tmp.Components, path.Name())
-		if !path.IsDir() && strings.HasSuffix(path.Name(), ".tar") {
-			if err := archiver.Unarchive(componentPath, p.tmp.Components); err != nil {
-				return fmt.Errorf("unable to extract the component: %w", err)
-			}
-
-			// After extracting the component, remove the compressed tarball to release disk space
-			_ = os.Remove(filepath.Join(p.tmp.Components, path.Name()))
-		}
-	}
-
-	// If a SBOM tar file exist, temporarily place them in the deploy directory
-	if !utils.InvalidPath(p.tmp.SbomTar) {
-		if err = archiver.Unarchive(p.tmp.SbomTar, p.tmp.Sboms); err != nil {
-			return fmt.Errorf("unable to extract the sbom data from the component: %w", err)
-		}
-	}
-
-	p.cfg.SBOMViewFiles, _ = filepath.Glob(filepath.Join(p.tmp.Sboms, "sbom-viewer-*"))
-	if err := sbom.OutputSBOMFiles(p.tmp, config.ZarfSBOMDir, ""); err != nil {
-		// Don't stop the deployment, let the user decide if they want to continue the deployment
-		spinner.Errorf(err, "Unable to process the SBOM files for this package")
-	}
-
-	// Handle component configuration deprecations
-	for idx, component := range p.cfg.Pkg.Components {
-		var warnings []string
-		p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
-		p.warnings = append(p.warnings, warnings...)
-	}
-
-	spinner.Success()
-	return nil
-}
-
-func (p *Packager) handleIfPartialPkg() error {
-	message.Debugf("Checking for partial package: %s", p.cfg.PkgOpts.PackagePath)
-
-	// If packagePath has partial in the name, we need to combine the partials into a single package
-	if !strings.Contains(p.cfg.PkgOpts.PackagePath, ".part000") {
-		message.Debug("No partial package detected")
-		return nil
-	}
-
-	message.Debug("Partial package detected")
-
-	// Replace part 000 with *
-	pattern := strings.Replace(p.cfg.PkgOpts.PackagePath, ".part000", ".part*", 1)
-	fileList, err := filepath.Glob(pattern)
-	if err != nil {
-		return fmt.Errorf("unable to find partial package files: %s", err)
-	}
-
-	// Ensure the files are in order so they are appended in the correct order
-	sort.Strings(fileList)
-
-	// Create the new package
-	destination := strings.Replace(p.cfg.PkgOpts.PackagePath, ".part000", "", 1)
-	pkgFile, err := os.Create(destination)
-	if err != nil {
-		return fmt.Errorf("unable to create new package file: %s", err)
-	}
-	defer pkgFile.Close()
-
-	// Remove the new package if there is an error
-	defer func() {
-		// If there is an error, remove the new package
-		if p.cfg.PkgOpts.PackagePath != destination {
-			os.Remove(destination)
-		}
-	}()
-
-	var pgkData types.ZarfPartialPackageData
-
-	// Loop through the partial packages and append them to the new package
-	for idx, file := range fileList {
-		// The first file contains metadata about the package
-		if idx == 0 {
-			var bytes []byte
-
-			if bytes, err = os.ReadFile(file); err != nil {
-				return fmt.Errorf("unable to read file %s: %w", file, err)
-			}
-
-			if err := json.Unmarshal(bytes, &pgkData); err != nil {
-				return fmt.Errorf("unable to unmarshal file %s: %w", file, err)
-			}
-
-			count := len(fileList) - 1
-			if count != pgkData.Count {
-				return fmt.Errorf("package is missing parts, expected %d, found %d", pgkData.Count, count)
-			}
-
-			continue
-		}
-
-		// Open the file
-		f, err := os.Open(file)
-		if err != nil {
-			return fmt.Errorf("unable to open file %s: %w", file, err)
-		}
-		defer f.Close()
-
-		// Add the file contents to the package
-		if _, err = io.Copy(pkgFile, f); err != nil {
-			return fmt.Errorf("unable to copy file %s: %w", file, err)
-		}
-	}
-
-	var shasum string
-	if shasum, err = utils.GetCryptoHashFromFile(destination, crypto.SHA256); err != nil {
-		return fmt.Errorf("unable to get sha256sum of package: %w", err)
-	}
-
-	if shasum != pgkData.Sha256Sum {
-		return fmt.Errorf("package sha256sum does not match, expected %s, found %s", pgkData.Sha256Sum, shasum)
-	}
-
-	// Remove the partial packages to reduce disk space before extracting
-	for _, file := range fileList {
-		_ = os.Remove(file)
-	}
-
-	// Success, update the package path
-	p.cfg.PkgOpts.PackagePath = destination
-	return nil
+	_ = os.RemoveAll(p.layout.Base)
+	_ = os.RemoveAll(layout.SBOMDir)
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
@@ -517,87 +255,16 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 	return nil
 }
 
-var (
-	// ErrPkgKeyButNoSig is returned when a key was provided but the package is not signed
-	ErrPkgKeyButNoSig = errors.New("a key was provided but the package is not signed - remove the --key flag and run the command again")
-	// ErrPkgSigButNoKey is returned when a package is signed but no key was provided
-	ErrPkgSigButNoKey = errors.New("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
-)
-
-// ValidatePackageSignature validates the signature of a package
-func ValidatePackageSignature(directory string, publicKeyPath string) error {
-	// If the insecure flag was provided ignore the signature validation
-	if config.CommonOptions.Insecure {
-		return nil
-	}
-
-	// Handle situations where there is no signature within the package
-	sigExist := !utils.InvalidPath(filepath.Join(directory, config.ZarfYAMLSignature))
-	if !sigExist && publicKeyPath == "" {
-		// Nobody was expecting a signature, so we can just return
-		return nil
-	} else if sigExist && publicKeyPath == "" {
-		// The package is signed but no key was provided
-		return ErrPkgSigButNoKey
-	} else if !sigExist && publicKeyPath != "" {
-		// A key was provided but there is no signature
-		return ErrPkgKeyButNoSig
-	}
-
-	// Validate the signature with the key we were provided
-	if err := utils.CosignVerifyBlob(filepath.Join(directory, config.ZarfYAML), filepath.Join(directory, config.ZarfYAMLSignature), publicKeyPath); err != nil {
-		return fmt.Errorf("package signature did not match the provided key: %w", err)
-	}
-
-	return nil
-}
-
-func (p *Packager) getSigCreatePassword(_ bool) ([]byte, error) {
-	// CLI flags take priority (also loads from viper configs)
-	if p.cfg.CreateOpts.SigningKeyPassword != "" {
-		return []byte(p.cfg.CreateOpts.SigningKeyPassword), nil
-	}
-
-	return interactive.PromptSigPassword()
-}
-
-func (p *Packager) getSigPublishPassword(_ bool) ([]byte, error) {
-	// CLI flags take priority (also loads from viper configs)
-	if p.cfg.CreateOpts.SigningKeyPassword != "" {
-		return []byte(p.cfg.CreateOpts.SigningKeyPassword), nil
-	}
-
-	return interactive.PromptSigPassword()
-}
-
-func (p *Packager) archiveComponent(component types.ZarfComponent) error {
-	componentPath := filepath.Join(p.tmp.Components, component.Name)
-	size, err := utils.GetDirSize(componentPath)
-	if err != nil {
-		return err
-	}
-	if size > 0 {
-		tar := fmt.Sprintf("%s.tar", componentPath)
-		message.Debugf("Archiving %s to '%s'", component.Name, tar)
-		err := archiver.Archive([]string{componentPath}, tar)
-		if err != nil {
-			return err
-		}
-	} else {
-		message.Debugf("Component %s is empty, skipping archiving", component.Name)
-	}
-	return os.RemoveAll(componentPath)
-}
-
-func (p *Packager) archivePackage(sourceDir string, destinationTarball string) error {
-	spinner := message.NewProgressSpinner("Writing %s to %s", sourceDir, destinationTarball)
+func (p *Packager) archivePackage(destinationTarball string) error {
+	spinner := message.NewProgressSpinner("Writing %s to %s", p.layout.Base, destinationTarball)
 	defer spinner.Stop()
+
 	// Make the archive
-	archiveSrc := []string{sourceDir + string(os.PathSeparator)}
+	archiveSrc := []string{p.layout.Base + string(os.PathSeparator)}
 	if err := archiver.Archive(archiveSrc, destinationTarball); err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
-	spinner.Updatef("Wrote %s to %s", sourceDir, destinationTarball)
+	spinner.Updatef("Wrote %s to %s", p.layout.Base, destinationTarball)
 
 	f, err := os.Stat(destinationTarball)
 	if err != nil {
@@ -624,13 +291,13 @@ func (p *Packager) archivePackage(sourceDir string, destinationTarball string) e
 		_ = os.RemoveAll(destinationTarball)
 
 		// Marshal the data into a json file.
-		jsonData, err := json.Marshal(types.ZarfPartialPackageData{
+		jsonData, err := json.Marshal(types.ZarfSplitPackageData{
 			Count:     len(chunks),
 			Bytes:     f.Size(),
 			Sha256Sum: sha256sum,
 		})
 		if err != nil {
-			return fmt.Errorf("unable to marshal the partial package data: %w", err)
+			return fmt.Errorf("unable to marshal the split package data: %w", err)
 		}
 
 		// Prepend the json data to the first chunk.
@@ -646,16 +313,49 @@ func (p *Packager) archivePackage(sourceDir string, destinationTarball string) e
 			}
 		}
 	}
-	spinner.Successf("Package tarball successfully written")
+	spinner.Successf("Package saved to %q", destinationTarball)
 	return nil
 }
 
-// SetOCIRemote sets the remote OCI client for the package.
-func (p *Packager) SetOCIRemote(url string) error {
+// setOCIRemote sets the remote OCI client for the package.
+func (p *Packager) setOCIRemote(url string) error {
 	remote, err := oci.NewOrasRemote(url)
 	if err != nil {
 		return err
 	}
 	p.remote = remote
+	return nil
+}
+
+func (p *Packager) signPackage(signingKeyPath, signingKeyPassword string) error {
+	p.layout = p.layout.AddSignature(signingKeyPath)
+	passwordFunc := func(_ bool) ([]byte, error) {
+		if signingKeyPassword != "" {
+			return []byte(signingKeyPassword), nil
+		}
+		return interactive.PromptSigPassword()
+	}
+	_, err := utils.CosignSignBlob(p.layout.ZarfYAML, p.layout.Signature, signingKeyPath, passwordFunc)
+	if err != nil {
+		return fmt.Errorf("unable to sign the package: %w", err)
+	}
+	return nil
+}
+
+func (p *Packager) stageSBOMViewFiles() error {
+	if p.layout.SBOMs.IsTarball() {
+		return fmt.Errorf("unable to process the SBOM files for this package: %s is a tarball", p.layout.SBOMs.Path)
+	}
+	// If SBOMs were loaded, temporarily place them in the deploy directory
+	sbomDir := p.layout.SBOMs.Path
+	if !utils.InvalidPath(sbomDir) {
+		p.sbomViewFiles, _ = filepath.Glob(filepath.Join(sbomDir, "sbom-viewer-*"))
+		_, err := sbom.OutputSBOMFiles(sbomDir, layout.SBOMDir, "")
+		if err != nil {
+			// Don't stop the deployment, let the user decide if they want to continue the deployment
+			warning := fmt.Sprintf("Unable to process the SBOM files for this package: %s", err.Error())
+			p.warnings = append(p.warnings, warning)
+		}
+	}
 	return nil
 }

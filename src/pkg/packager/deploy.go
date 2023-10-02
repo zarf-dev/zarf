@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
 	"os"
@@ -22,6 +21,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -40,18 +40,10 @@ func (p *Packager) Deploy() (err error) {
 		message.Debug(err)
 	}
 
-	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
-		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
-		if err != nil {
-			return err
-		}
+	if err = p.source.LoadPackage(p.layout); err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
 	}
-
-	if err := p.loadZarfPkg(); err != nil {
-		return fmt.Errorf("unable to load the Zarf Package: %w", err)
-	}
-
-	if err := ValidatePackageSignature(p.tmp.Base, p.cfg.PkgOpts.PublicKeyPath); err != nil {
+	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
 
@@ -59,9 +51,8 @@ func (p *Packager) Deploy() (err error) {
 		return err
 	}
 
-	// Now that we have read the zarf.yaml, check the package kind
-	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
-		p.cfg.IsInitConfig = true
+	if err := p.stageSBOMViewFiles(); err != nil {
+		return err
 	}
 
 	if err := p.attemptClusterChecks(); err != nil {
@@ -69,7 +60,7 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	// Confirm the overall package deployment
-	if !p.confirmAction(config.ZarfDeployStage, p.cfg.SBOMViewFiles) {
+	if !p.confirmAction(config.ZarfDeployStage) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
@@ -90,7 +81,7 @@ func (p *Packager) Deploy() (err error) {
 	}()
 
 	// Filter out components that are not compatible with this system
-	p.filterComponents(true)
+	p.filterComponents()
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
@@ -174,7 +165,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Deploy the component
 		var charts []types.InstalledChart
 		var deployErr error
-		if p.cfg.IsInitConfig {
+		if p.cfg.Pkg.Kind == types.ZarfInitConfig {
 			charts, deployErr = p.deployInitComponent(component)
 		} else {
 			charts, deployErr = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
@@ -252,7 +243,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		p.cluster.StartInjectionMadness(p.tmp, component.Images)
+		p.cluster.StartInjectionMadness(p.layout.Base, p.layout.Images.Base, component.Images)
 	}
 
 	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
@@ -273,10 +264,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 // Deploy a Zarf Component.
 func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
 	// Toggles for general deploy operations
-	componentPath, err := p.createOrGetComponentPaths(component)
-	if err != nil {
-		return charts, fmt.Errorf("unable to create the component paths: %w", err)
-	}
+	componentPath := p.layout.Components.Dirs[component.Name]
 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
@@ -286,6 +274,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
+	hasFiles := len(component.Files) > 0
 
 	onDeploy := component.Actions.OnDeploy
 
@@ -293,8 +282,10 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
-	if err := p.processComponentFiles(component, componentPath.Files); err != nil {
-		return charts, fmt.Errorf("unable to process the component files: %w", err)
+	if hasFiles {
+		if err := p.processComponentFiles(component, componentPath.Files); err != nil {
+			return charts, fmt.Errorf("unable to process the component files: %w", err)
+		}
 	}
 
 	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
@@ -336,7 +327,11 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	if hasDataInjections {
 		waitGroup := sync.WaitGroup{}
 		defer waitGroup.Wait()
-		p.performDataInjections(&waitGroup, componentPath, component.DataInjections)
+
+		for idx, data := range component.DataInjections {
+			waitGroup.Add(1)
+			go p.cluster.HandleDataInjection(&waitGroup, data, componentPath, idx)
+		}
 	}
 
 	if hasCharts || hasManifests {
@@ -354,11 +349,6 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 // Move files onto the host of the machine performing the deployment.
 func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocation string) error {
-	// If there are no files to process, return early.
-	if len(component.Files) < 1 {
-		return nil
-	}
-
 	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
 	defer spinner.Stop()
 
@@ -373,13 +363,13 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if shasum, _ := utils.GetCryptoHashFromFile(fileLocation, crypto.SHA256); shasum != file.Shasum {
-				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
+			if err := utils.SHAsMatch(fileLocation, file.Shasum); err != nil {
+				return err
 			}
 		}
 
 		// Replace temp target directory and home directory
-		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
+		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.layout.Base, 1)
 		file.Target = config.GetAbsHomePath(file.Target)
 
 		fileList := []string{}
@@ -502,7 +492,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 	imageList := helpers.Unique(combinedImageList)
 
 	imgConfig := images.ImageConfig{
-		ImagesPath:    p.tmp.Images,
+		ImagesPath:    p.layout.Images.Base,
 		ImageList:     imageList,
 		NoChecksum:    noImgChecksum,
 		RegInfo:       p.cfg.State.RegistryInfo,
@@ -550,20 +540,8 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 	return nil
 }
 
-// Async move data into a container running in a pod on the k8s cluster.
-func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPath types.ComponentPaths, dataInjections []types.ZarfDataInjection) {
-	if len(dataInjections) > 0 {
-		message.Info("Loading data injections")
-	}
-
-	for idx, data := range dataInjections {
-		waitGroup.Add(1)
-		go p.cluster.HandleDataInjection(waitGroup, data, componentPath, idx)
-	}
-}
-
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 
 		// zarf magic for the value file
@@ -650,7 +628,7 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 	pterm.Println()
 
 	// If not init config, print the application connection table
-	if !p.cfg.IsInitConfig {
+	if !(p.cfg.Pkg.Kind == types.ZarfInitConfig) {
 		message.PrintConnectStringTable(p.connectStrings)
 	} else {
 		// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds

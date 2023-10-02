@@ -15,6 +15,7 @@ import (
 // Cluster is a wrapper for the k8s package that provides Zarf-specific cluster management functions.
 type Cluster struct {
 	*k8s.K8s
+	spinner *message.Spinner
 }
 
 const (
