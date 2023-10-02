@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"cuelang.org/go/pkg/strings"
+	"strings"
 )
 
 // List of supported distros via distro detection.
