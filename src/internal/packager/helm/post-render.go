@@ -209,7 +209,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		currentRegistrySecret, _ := c.GetSecret(name, config.ZarfImagePullSecretName)
 		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentRegistrySecret.Data, validRegistrySecret.Data) {
 			// Create or update the zarf registry secret
-			if err := c.CreateOrUpdateSecret(validRegistrySecret); err != nil {
+			if _, err := c.CreateOrUpdateSecret(validRegistrySecret); err != nil {
 				message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
 			}
 
@@ -217,7 +217,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.options.Cfg.State.GitServer)
 
 			// Create or update the zarf git server secret
-			if err := c.CreateOrUpdateSecret(gitServerSecret); err != nil {
+			if _, err := c.CreateOrUpdateSecret(gitServerSecret); err != nil {
 				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
 			}
 		}

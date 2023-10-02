@@ -247,7 +247,7 @@ func (c *Cluster) SaveZarfState(state *types.ZarfState) error {
 	}
 
 	// Attempt to create or update the secret and return.
-	if err := c.CreateOrUpdateSecret(secret); err != nil {
+	if _, err := c.CreateOrUpdateSecret(secret); err != nil {
 		return fmt.Errorf("unable to create the zarf state secret")
 	}
 
