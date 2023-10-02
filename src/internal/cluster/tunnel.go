@@ -41,6 +41,7 @@ type TunnelInfo struct {
 	urlSuffix    string
 }
 
+// NewTunnelInfo returns a new TunnelInfo object for connecting to a cluster
 func NewTunnelInfo(namespace, resourceType, resourceName, urlSuffix string, localPort, remotePort int) TunnelInfo {
 	return TunnelInfo{
 		namespace:    namespace,
@@ -122,6 +123,7 @@ func (c *Cluster) Connect(target string) (*k8s.Tunnel, error) {
 	return c.ConnectTunnelInfo(zt)
 }
 
+// ConnectTunnelInfo connects to the cluster with the provided TunnelInfo
 func (c *Cluster) ConnectTunnelInfo(zt TunnelInfo) (*k8s.Tunnel, error) {
 	tunnel, err := c.NewTunnel(zt.namespace, zt.resourceType, zt.resourceName, zt.urlSuffix, zt.localPort, zt.remotePort)
 	if err != nil {
@@ -136,6 +138,7 @@ func (c *Cluster) ConnectTunnelInfo(zt TunnelInfo) (*k8s.Tunnel, error) {
 	return tunnel, nil
 }
 
+// ConnectToZarfRegistryEndpoint determines if a registry endpoint is in cluster, and if so opens a tunnel to connect to it
 func (c *Cluster) ConnectToZarfRegistryEndpoint(registryInfo types.RegistryInfo) (string, *k8s.Tunnel, error) {
 	registryEndpoint := registryInfo.Address
 

@@ -207,7 +207,7 @@ func (tunnel *Tunnel) getAttachablePodForResource() (string, error) {
 	}
 }
 
-// getAttachablePodForServiceE will find an active pod associated with the Service and return the pod name.
+// getAttachablePodForService will find an active pod associated with the Service and return the pod name.
 func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
 	service, err := tunnel.kube.GetService(tunnel.namespace, tunnel.resourceName)
 	if err != nil {
