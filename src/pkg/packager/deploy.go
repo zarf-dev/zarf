@@ -52,14 +52,6 @@ func (p *Packager) Deploy() (err error) {
 		return fmt.Errorf("unable to load the Zarf Package: %w", err)
 	}
 
-	if err := p.validatePackageArchitecture(); err != nil {
-		if errors.Is(err, lang.ErrUnableToCheckArch) {
-			message.Warnf("Unable to validate package architecture: %s", err.Error())
-		} else {
-			return err
-		}
-	}
-
 	if err := ValidatePackageSignature(p.tmp.Base, p.cfg.PkgOpts.PublicKeyPath); err != nil {
 		return err
 	}
@@ -71,6 +63,10 @@ func (p *Packager) Deploy() (err error) {
 	// Now that we have read the zarf.yaml, check the package kind
 	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
 		p.cfg.IsInitConfig = true
+	}
+
+	if err := p.attemptClusterChecks(); err != nil {
+		return err
 	}
 
 	// Confirm the overall package deployment
@@ -111,6 +107,31 @@ func (p *Packager) Deploy() (err error) {
 	return nil
 }
 
+// attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
+// NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
+func (p *Packager) attemptClusterChecks() (err error) {
+	// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
+	if p.cluster, _ = cluster.NewCluster(); p.cluster != nil {
+
+		// Check if the package has already been deployed and get its generation
+		if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
+			// If this package has been deployed before, increment the package generation within the secret
+			p.generation = existingDeployedPackage.Generation + 1
+		}
+
+		// Check the clusters architecture vs the package spec
+		if err := p.validatePackageArchitecture(); err != nil {
+			if errors.Is(err, lang.ErrUnableToCheckArch) {
+				message.Warnf("Unable to validate package architecture: %s", err.Error())
+			} else {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
 	componentsToDeploy := p.getValidComponents()
@@ -120,16 +141,46 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
 	}
 
-	for _, component := range componentsToDeploy {
-		var charts []types.InstalledChart
+	// Check if this package has been deployed before and grab relevant information about already deployed components
+	if p.generation == 0 {
+		p.generation = 1 // If this is the first deployment, set the generation to 1
+	}
 
-		if p.cfg.IsInitConfig {
-			charts, err = p.deployInitComponent(component)
-		} else {
-			charts, err = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
+	// Process all the components we are deploying
+	for _, component := range componentsToDeploy {
+
+		deployedComponent := types.DeployedComponent{
+			Name:               component.Name,
+			Status:             types.ComponentStatusDeploying,
+			ObservedGeneration: p.generation,
+		}
+		// Ensure we don't overwrite any installedCharts data when updating the package secret
+		if p.cluster != nil {
+			deployedComponent.InstalledCharts, err = p.cluster.GetInstalledChartsForComponent(p.cfg.Pkg.Metadata.Name, component)
+			if err != nil {
+				message.Debugf("Unable to fetch installed Helm charts for component '%s': %s", component.Name, err.Error())
+			}
 		}
 
-		deployedComponent := types.DeployedComponent{Name: component.Name}
+		deployedComponents = append(deployedComponents, deployedComponent)
+		idx := len(deployedComponents) - 1
+
+		// Update the package secret to indicate that we are attempting to deploy this component
+		if p.cluster != nil {
+			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
+				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+			}
+		}
+
+		// Deploy the component
+		var charts []types.InstalledChart
+		var deployErr error
+		if p.cfg.IsInitConfig {
+			charts, deployErr = p.deployInitComponent(component)
+		} else {
+			charts, deployErr = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
+		}
+
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
@@ -137,20 +188,26 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
-		if err != nil {
+
+		if deployErr != nil {
 			onFailure()
-			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
+
+			// Update the package secret to indicate that we failed to deploy this component
+			deployedComponents[idx].Status = types.ComponentStatusFailed
+			if p.cluster != nil {
+				if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
+					message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				}
+			}
+
+			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, deployErr)
 		}
 
-		// Deploy the component
-		deployedComponent.InstalledCharts = charts
-		deployedComponents = append(deployedComponents, deployedComponent)
-
-		// Save deployed package information to k8s
-		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
+		// Update the package secret to indicate that we successfully deployed this component
+		deployedComponents[idx].InstalledCharts = charts
+		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 		if p.cluster != nil {
-			err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, p.connectStrings)
-			if err != nil {
+			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
 				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}

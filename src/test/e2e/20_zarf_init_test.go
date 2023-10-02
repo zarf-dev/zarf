@@ -39,14 +39,16 @@ func TestZarfInit(t *testing.T) {
 	// Build init package with different arch than the cluster arch.
 	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/20-mismatched-arch-init", "--architecture", mismatchedArch, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	// Check that `zarf init` returns an error because of the mismatched architectures.
-	// We need to use the --architecture flag here to force zarf to find the package.
+
 	componentsFlag := ""
 	if e2e.ApplianceMode {
 		// make sure init fails in appliance mode when we try to initialize a k3s cluster
 		// with behavior from the k3s component's actions
 		componentsFlag = "--components=k3s"
 	}
+
+	// Check that `zarf init` returns an error because of the mismatched architectures.
+	// We need to use the --architecture flag here to force zarf to find the package.
 	_, stdErr, err = e2e.Zarf("init", "--architecture", mismatchedArch, componentsFlag, "--confirm")
 	require.Error(t, err, stdErr)
 	require.Contains(t, stdErr, expectedErrorMessage)

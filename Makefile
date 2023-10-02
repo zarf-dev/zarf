@@ -160,6 +160,8 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
 
+	@test -s ./build/zarf-package-component-webhooks-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/component-webhooks -o build -a $(ARCH) --confirm
+
 build-injector-linux: ## Build the Zarf injector for AMD64 and ARM64
 	docker run --rm --user "$(id -u)":"$(id -g)" -v $$PWD/src/injector:/usr/src/zarf-injector -w /usr/src/zarf-injector rust:1.71.0-bookworm make build-injector-linux
 
@@ -188,8 +190,9 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	cd src/test/upgrade && go test -failfast -v -timeout 30m
 
 .PHONY: test-unit
-test-unit: ensure-ui-build-dir ## Run unit tests within the src/pkg and the bigbang extension directory
+test-unit: ensure-ui-build-dir ## Run unit tests
 	cd src/pkg && go test ./... -failfast -v -timeout 30m
+	cd src/internal && go test ./... -failfast -v timeout 30m
 	cd src/extensions/bigbang && go test ./. -failfast -v timeout 30m
 
 .PHONY: test-ui

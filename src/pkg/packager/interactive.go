@@ -15,7 +15,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
@@ -53,14 +52,6 @@ func (p *Packager) confirmAction(stage string, sbomViewFiles []string) (confirm 
 				pterm.Println(viewLater)
 			} else {
 				message.Warn("This package does NOT contain an SBOM.  If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.")
-			}
-		}
-
-		// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
-		if p.cluster != nil {
-			if initPackage, err := p.cluster.GetDeployedPackage("init"); err == nil {
-				// We use the build.version for now because it is the most reliable way to get this version info pre v0.26.0
-				deprecated.PrintBreakingChanges(initPackage.Data.Build.Version)
 			}
 		}
 	}
