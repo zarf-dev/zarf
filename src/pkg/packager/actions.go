@@ -214,8 +214,10 @@ func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (st
 		return cmd, err
 	}
 
+	binaryPath = fmt.Sprintf("%s %s", binaryPath, config.ActionsCommandZarfPrefix)
+
 	// If a library user has chosen to override config to use system Zarf instead, reset the binary path.
-	if config.UseSystemZarf {
+	if config.ActionsUseSystemZarf {
 		binaryPath = "zarf"
 	}
 
