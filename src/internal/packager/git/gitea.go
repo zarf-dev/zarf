@@ -15,6 +15,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
@@ -30,12 +31,17 @@ type CreateTokenResponse struct {
 func (g *Git) CreateReadOnlyUser() error {
 	message.Debugf("git.CreateReadOnlyUser()")
 
-	// Establish a git tunnel to send the repo
-	tunnel, err := cluster.NewZarfTunnel()
+	c, err := cluster.NewCluster()
 	if err != nil {
 		return err
 	}
-	err = tunnel.Connect(cluster.ZarfGit, false)
+
+	// Establish a git tunnel to send the repo
+	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	if err != nil {
+		return err
+	}
+	_, err = tunnel.Connect()
 	if err != nil {
 		return err
 	}
@@ -118,12 +124,17 @@ func (g *Git) CreateReadOnlyUser() error {
 func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	message.Debugf("git.CreatePackageRegistryToken()")
 
-	// Establish a git tunnel to send the repo
-	tunnel, err := cluster.NewZarfTunnel()
+	c, err := cluster.NewCluster()
 	if err != nil {
 		return CreateTokenResponse{}, err
 	}
-	err = tunnel.Connect(cluster.ZarfGit, false)
+
+	// Establish a git tunnel to send the repo
+	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	if err != nil {
+		return CreateTokenResponse{}, err
+	}
+	_, err = tunnel.Connect()
 	if err != nil {
 		return CreateTokenResponse{}, err
 	}

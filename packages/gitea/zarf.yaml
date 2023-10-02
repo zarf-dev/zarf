@@ -58,11 +58,11 @@ components:
     actions:
       onDeploy:
         after:
-          - cmd: ./zarf internal create-read-only-gitea-user
+          - cmd: ./zarf internal create-read-only-gitea-user --no-progress
             maxRetries: 3
             maxTotalSeconds: 60
             description: Create the read-only Gitea user
-          - cmd: ./zarf internal create-artifact-registry-token
+          - cmd: ./zarf internal create-artifact-registry-token --no-progress
             maxRetries: 3
             maxTotalSeconds: 60
             description: Create an artifact registry token

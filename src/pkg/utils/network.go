@@ -8,23 +8,15 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-)
-
-// Nonstandard URL schemes or prefixes
-const (
-	SGETURLPrefix = "sget://"
-	SGETURLScheme = "sget"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
 // Fetch fetches the response body from a given URL.
@@ -88,7 +80,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 		return fmt.Errorf("unable to parse the URL: %s", src)
 	}
 	// If the source url starts with the sget protocol use that, otherwise do a typical GET call
-	if parsed.Scheme == SGETURLScheme {
+	if parsed.Scheme == helpers.SGETURLScheme {
 		err = Sget(context.TODO(), src, cosignKeyPath, file)
 		if err != nil {
 			return fmt.Errorf("unable to download file with sget: %s: %w", src, err)
@@ -114,54 +106,6 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 		}
 	}
 	return file.Close()
-}
-
-// GetAvailablePort retrieves an available port on the host machine. This delegates the port selection to the golang net
-// library by starting a server and then checking the port that the server is using.
-func GetAvailablePort() (int, error) {
-	message.Debug("tunnel.GetAvailablePort()")
-	l, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return 0, err
-	}
-	defer func(l net.Listener) {
-		// ignore this error because it won't help us to tell the user
-		_ = l.Close()
-	}(l)
-
-	_, p, err := net.SplitHostPort(l.Addr().String())
-	if err != nil {
-		return 0, err
-	}
-	port, err := strconv.Atoi(p)
-	if err != nil {
-		return 0, err
-	}
-	return port, err
-}
-
-// IsValidHostName returns a boolean indicating if the hostname of the host machine is valid according to https://www.ietf.org/rfc/rfc1123.txt.
-func IsValidHostName() bool {
-	// Quick & dirty character validation instead of a complete RFC validation since the OS is already allowing it
-	hostname, err := os.Hostname()
-
-	if err != nil {
-		return false
-	}
-
-	return validHostname(hostname)
-}
-
-func validHostname(hostname string) bool {
-	// Explanation: https://regex101.com/r/zUGqjP/1/
-	rfcDomain := regexp.MustCompile(`^[a-zA-Z0-9\-.]+$`)
-	// Explanation: https://regex101.com/r/vPGnzR/1/
-	localhost := regexp.MustCompile(`\.?localhost$`)
-	isValid := rfcDomain.MatchString(hostname)
-	if isValid {
-		isValid = !localhost.MatchString(hostname)
-	}
-	return isValid
 }
 
 func httpGetFile(url string, destinationFile *os.File) error {

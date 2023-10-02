@@ -25,7 +25,7 @@ func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) 
 	if !validate.IsLowercaseNumberHyphen(pkgOpts.PackageSource) {
 		return nil, fmt.Errorf("invalid package name %q", pkgOpts.PackageSource)
 	}
-	cluster, err := cluster.NewClusterWithWait(cluster.DefaultTimeout, false)
+	cluster, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)
 	if err != nil {
 		return nil, err
 	}

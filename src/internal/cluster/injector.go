@@ -30,8 +30,8 @@ var payloadChunkSize = 1024 * 768
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
 func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injectorSeedSrcs []string) {
-	c.spinner = message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
-	defer c.spinner.Stop()
+	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
+	defer spinner.Stop()
 
 	tmp := layout.InjectionMadnessPaths{
 		SeedImagesDir: filepath.Join(tmpDir, "seed-images"),
@@ -42,7 +42,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 	}
 
 	if err := utils.CreateDirectory(tmp.SeedImagesDir, 0700); err != nil {
-		c.spinner.Fatalf(err, "Unable to create the seed images directory")
+		spinner.Fatalf(err, "Unable to create the seed images directory")
 	}
 
 	var err error
@@ -53,31 +53,31 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 
 	// Get all the images from the cluster
 	timeout := 5 * time.Minute
-	c.spinner.Updatef("Getting the list of existing cluster images (%s timeout)", timeout.String())
+	spinner.Updatef("Getting the list of existing cluster images (%s timeout)", timeout.String())
 	if images, err = c.GetAllImages(timeout); err != nil {
-		c.spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
+		spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
 	}
 
-	c.spinner.Updatef("Creating the injector configmap")
+	spinner.Updatef("Creating the injector configmap")
 	if err = c.createInjectorConfigmap(tmp.InjectionBinary); err != nil {
-		c.spinner.Fatalf(err, "Unable to create the injector configmap")
+		spinner.Fatalf(err, "Unable to create the injector configmap")
 	}
 
-	c.spinner.Updatef("Creating the injector service")
+	spinner.Updatef("Creating the injector service")
 	if service, err := c.createService(); err != nil {
-		c.spinner.Fatalf(err, "Unable to create the injector service")
+		spinner.Fatalf(err, "Unable to create the injector service")
 	} else {
 		config.ZarfSeedPort = fmt.Sprintf("%d", service.Spec.Ports[0].NodePort)
 	}
 
-	c.spinner.Updatef("Loading the seed image from the package")
-	if seedImages, err = c.loadSeedImages(imagesDir, tmp.SeedImagesDir, injectorSeedSrcs); err != nil {
-		c.spinner.Fatalf(err, "Unable to load the injector seed image from the package")
+	spinner.Updatef("Loading the seed image from the package")
+	if seedImages, err = c.loadSeedImages(imagesDir, tmp.SeedImagesDir, injectorSeedSrcs, spinner); err != nil {
+		spinner.Fatalf(err, "Unable to load the injector seed image from the package")
 	}
 
-	c.spinner.Updatef("Loading the seed registry configmaps")
-	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigmaps(tmp.SeedImagesDir, tmp.InjectorPayloadTarGz); err != nil {
-		c.spinner.Fatalf(err, "Unable to generate the injector payload configmaps")
+	spinner.Updatef("Loading the seed registry configmaps")
+	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigmaps(tmp.SeedImagesDir, tmp.InjectorPayloadTarGz, spinner); err != nil {
+		spinner.Fatalf(err, "Unable to generate the injector payload configmaps")
 	}
 
 	// https://regex101.com/r/eLS3at/1
@@ -90,7 +90,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 			continue
 		}
 
-		c.spinner.Updatef("Attempting to bootstrap with the %s/%s", node, image)
+		spinner.Updatef("Attempting to bootstrap with the %s/%s", node, image)
 
 		// Make sure the pod is not there first
 		_ = c.DeletePod(ZarfNamespaceName, "injector")
@@ -112,8 +112,8 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 		}
 
 		// if no error, try and wait for a seed image to be present, return if successful
-		if c.injectorIsReady(seedImages) {
-			c.spinner.Success()
+		if c.injectorIsReady(seedImages, spinner) {
+			spinner.Success()
 			return
 		}
 
@@ -121,7 +121,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 	}
 
 	// All images were exhausted and still no happiness
-	c.spinner.Fatalf(nil, "Unable to perform the injection")
+	spinner.Fatalf(nil, "Unable to perform the injection")
 }
 
 // StopInjectionMadness handles cleanup once the seed registry is up.
@@ -141,13 +141,13 @@ func (c *Cluster) StopInjectionMadness() error {
 	return c.DeleteService(ZarfNamespaceName, "zarf-injector")
 }
 
-func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSrcs []string) ([]transform.Image, error) {
+func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSrcs []string, spinner *message.Spinner) ([]transform.Image, error) {
 	seedImages := []transform.Image{}
 	localReferenceToDigest := make(map[string]string)
 
 	// Load the injector-specific images and save them as seed-images
 	for _, src := range injectorSeedSrcs {
-		c.spinner.Updatef("Loading the seed image '%s' from the package", src)
+		spinner.Updatef("Loading the seed image '%s' from the package", src)
 		ref, err := transform.ParseImageRef(src)
 		if err != nil {
 			return seedImages, fmt.Errorf("failed to create ref for image %s: %w", src, err)
@@ -177,7 +177,7 @@ func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSr
 	return seedImages, nil
 }
 
-func (c *Cluster) createPayloadConfigmaps(seedImagesDir, tarPath string) ([]string, string, error) {
+func (c *Cluster) createPayloadConfigmaps(seedImagesDir, tarPath string, spinner *message.Spinner) ([]string, string, error) {
 	var configMaps []string
 
 	// Chunk size has to accommodate base64 encoding & etcd 1MB limit
@@ -186,7 +186,7 @@ func (c *Cluster) createPayloadConfigmaps(seedImagesDir, tarPath string) ([]stri
 		return configMaps, "", err
 	}
 
-	c.spinner.Updatef("Creating the seed registry archive to send to the cluster")
+	spinner.Updatef("Creating the seed registry archive to send to the cluster")
 	// Create a tar archive of the injector payload
 	if err := archiver.Archive(tarFileList, tarPath); err != nil {
 		return configMaps, "", err
@@ -197,7 +197,7 @@ func (c *Cluster) createPayloadConfigmaps(seedImagesDir, tarPath string) ([]stri
 		return configMaps, "", err
 	}
 
-	c.spinner.Updatef("Splitting the archive into binary configmaps")
+	spinner.Updatef("Splitting the archive into binary configmaps")
 
 	chunkCount := len(chunks)
 
@@ -211,7 +211,7 @@ func (c *Cluster) createPayloadConfigmaps(seedImagesDir, tarPath string) ([]stri
 			fileName: data,
 		}
 
-		c.spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", idx+1, chunkCount)
+		spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", idx+1, chunkCount)
 
 		// Attempt to create the configmap in the cluster
 		if _, err = c.ReplaceConfigmap(ZarfNamespaceName, fileName, configData); err != nil {
@@ -229,21 +229,19 @@ func (c *Cluster) createPayloadConfigmaps(seedImagesDir, tarPath string) ([]stri
 }
 
 // Test for pod readiness and seed image presence.
-func (c *Cluster) injectorIsReady(seedImages []transform.Image) bool {
-	// Establish the zarf connect tunnel
-	tunnel, err := NewZarfTunnel()
+func (c *Cluster) injectorIsReady(seedImages []transform.Image, spinner *message.Spinner) bool {
+	tunnel, err := c.NewTunnel(ZarfNamespaceName, k8s.SvcResource, ZarfInjectorName, "", 0, ZarfInjectorPort)
 	if err != nil {
-		message.Warnf("Unable to establish a tunnel to look for seed images: %#v", err)
 		return false
 	}
-	tunnel.AddSpinner(c.spinner)
-	err = tunnel.Connect(ZarfInjector, false)
+
+	_, err = tunnel.Connect()
 	if err != nil {
 		return false
 	}
 	defer tunnel.Close()
 
-	c.spinner.Updatef("Testing the injector for seed image availability")
+	spinner.Updatef("Testing the injector for seed image availability")
 
 	for _, seedImage := range seedImages {
 		seedRegistry := fmt.Sprintf("%s/v2/%s/manifests/%s", tunnel.HTTPEndpoint(), seedImage.Path, seedImage.Tag)
@@ -254,7 +252,7 @@ func (c *Cluster) injectorIsReady(seedImages []transform.Image) bool {
 		}
 	}
 
-	c.spinner.Updatef("Seed image found, injector is ready")
+	spinner.Updatef("Seed image found, injector is ready")
 	return true
 }
 
