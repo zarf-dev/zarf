@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
@@ -43,12 +43,12 @@ func TestCreateDifferential(t *testing.T) {
 	defer e2e.CleanFiles(differentialPackageName)
 
 	// Extract the yaml of the differential package
-	err = archiver.Extract(differentialPackageName, config.ZarfYAML, tmpdir)
+	err = archiver.Extract(differentialPackageName, layout.ZarfYAML, tmpdir)
 	require.NoError(t, err, "unable to extract zarf.yaml from the differential git package")
 
 	// Load the extracted zarf.yaml specification
 	var differentialZarfConfig types.ZarfPackage
-	err = utils.ReadYaml(filepath.Join(tmpdir, config.ZarfYAML), &differentialZarfConfig)
+	err = utils.ReadYaml(filepath.Join(tmpdir, layout.ZarfYAML), &differentialZarfConfig)
 	require.NoError(t, err, "unable to read zarf.yaml from the differential git package")
 
 	// Get a list of all images and repos that are inside of the differential package

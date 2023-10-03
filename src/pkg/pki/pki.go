@@ -14,9 +14,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
 // Based off of https://github.com/dmcgowan/quicktls/blob/master/main.go
@@ -126,7 +126,7 @@ func generateCA(validFor time.Duration) (*x509.Certificate, *rsa.PrivateKey, err
 func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, validFor time.Duration, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
 	template := newCertificate(validFor)
 
-	template.IPAddresses = append(template.IPAddresses, net.ParseIP(config.IPV4Localhost))
+	template.IPAddresses = append(template.IPAddresses, net.ParseIP(helpers.IPV4Localhost))
 
 	// Only use SANs to keep golang happy, https://go-review.googlesource.com/c/go/+/231379
 	if ip := net.ParseIP(host); ip != nil {

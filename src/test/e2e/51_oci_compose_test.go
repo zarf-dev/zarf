@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
@@ -204,7 +204,7 @@ func (suite *SkeletonSuite) Test_3_FilePaths() {
 		suite.NoError(err)
 		suite.DirExists(unpacked)
 
-		err = utils.ReadYaml(filepath.Join(unpacked, config.ZarfYAML), &pkg)
+		err = utils.ReadYaml(filepath.Join(unpacked, layout.ZarfYAML), &pkg)
 		suite.NoError(err)
 		suite.NotNil(pkg)
 
@@ -238,15 +238,15 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 		}
 
 		base := filepath.Join(unpackedPath, "components", component.Name)
-		componentPaths := types.ComponentPaths{
+		componentPaths := layout.ComponentPaths{
 			Base:           base,
-			Temp:           filepath.Join(base, types.TempFolder),
-			Files:          filepath.Join(base, types.FilesFolder),
-			Charts:         filepath.Join(base, types.ChartsFolder),
-			Repos:          filepath.Join(base, types.ReposFolder),
-			Manifests:      filepath.Join(base, types.ManifestsFolder),
-			DataInjections: filepath.Join(base, types.DataInjectionsFolder),
-			Values:         filepath.Join(base, types.ValuesFolder),
+			Temp:           filepath.Join(base, layout.TempDir),
+			Files:          filepath.Join(base, layout.FilesDir),
+			Charts:         filepath.Join(base, layout.ChartsDir),
+			Repos:          filepath.Join(base, layout.ReposDir),
+			Manifests:      filepath.Join(base, layout.ManifestsDir),
+			DataInjections: filepath.Join(base, layout.DataInjectionsDir),
+			Values:         filepath.Join(base, layout.ValuesDir),
 		}
 
 		if isSkeleton && component.DeprecatedCosignKeyPath != "" {

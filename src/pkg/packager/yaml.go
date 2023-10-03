@@ -16,24 +16,60 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// readYaml loads the config from the given path
-func (p *Packager) readYaml(path string) error {
+// readZarfYAML reads a Zarf YAML file.
+func (p *Packager) readZarfYAML(path string) error {
+	var warnings []string
+
 	if err := utils.ReadYaml(path, &p.cfg.Pkg); err != nil {
 		return err
 	}
 
-	// Set the arch from the package config before filtering.
+	if p.layout.IsLegacyLayout() {
+		warning := "Detected deprecated package layout, migrating to new layout - support for this package will be dropped in v1.0.0"
+		p.warnings = append(p.warnings, warning)
+	}
+
+	if p.cfg.Pkg.Build.OCIImportedComponents == nil {
+		p.cfg.Pkg.Build.OCIImportedComponents = make(map[string]string)
+	}
+
+	if len(p.cfg.Pkg.Build.Migrations) > 0 {
+		for idx, component := range p.cfg.Pkg.Components {
+			// Handle component configuration deprecations
+			p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
+			p.warnings = append(p.warnings, warnings...)
+		}
+	}
+
 	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
 	return nil
 }
 
 // filterComponents removes components not matching the current OS if filterByOS is set.
-func (p *Packager) filterComponents(filterByOS bool) {
+func (p *Packager) filterComponents() {
 	// Filter each component to only compatible platforms.
 	filteredComponents := []types.ZarfComponent{}
 	for _, component := range p.cfg.Pkg.Components {
-		if p.isCompatibleComponent(component, filterByOS) {
+		// Ignore only filters that are empty
+		var validArch, validOS bool
+
+		// Test for valid architecture
+		if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == p.arch {
+			validArch = true
+		} else {
+			message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.Cluster.Architecture, p.arch)
+		}
+
+		// Test for a valid OS
+		if component.Only.LocalOS == "" || component.Only.LocalOS == runtime.GOOS {
+			validOS = true
+		} else {
+			message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.LocalOS, runtime.GOOS)
+		}
+
+		// If both the OS and architecture are valid, add the component to the filtered list
+		if validArch && validOS {
 			filteredComponents = append(filteredComponents, component)
 		}
 	}
@@ -43,8 +79,6 @@ func (p *Packager) filterComponents(filterByOS bool) {
 
 // writeYaml adds build information and writes the config to the temp directory.
 func (p *Packager) writeYaml() error {
-	message.Debug("config.BuildConfig()")
-
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue.
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
@@ -82,5 +116,5 @@ func (p *Packager) writeYaml() error {
 	// Record the latest version of Zarf without breaking changes to the package structure.
 	p.cfg.Pkg.Build.LastNonBreakingVersion = deprecated.LastNonBreakingVersion
 
-	return utils.WriteYaml(p.tmp.ZarfYaml, p.cfg.Pkg, 0400)
+	return utils.WriteYaml(p.layout.ZarfYAML, p.cfg.Pkg, 0400)
 }

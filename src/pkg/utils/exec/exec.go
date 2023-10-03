@@ -23,11 +23,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// Change terminal colors.
-const colorReset = "\x1b[0m"
-const colorGreen = "\x1b[32;1m"
-const colorCyan = "\x1b[36;1m"
-const colorWhite = "\x1b[37;1m"
+// SuppressGlobalInterrupt suppresses the global error on an interrupt
+var SuppressGlobalInterrupt = false
 
 // Config is a struct for configuring the Cmd function.
 type Config struct {
@@ -217,6 +214,8 @@ func ExitOnInterrupt() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		message.Fatal(lang.ErrInterrupt, lang.ErrInterrupt.Error())
+		if !SuppressGlobalInterrupt {
+			message.Fatal(lang.ErrInterrupt, lang.ErrInterrupt.Error())
+		}
 	}()
 }

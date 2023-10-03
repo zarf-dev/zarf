@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
 	"os"
@@ -22,7 +21,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -39,26 +41,10 @@ func (p *Packager) Deploy() (err error) {
 		message.Debug(err)
 	}
 
-	if helpers.IsOCIURL(p.cfg.PkgOpts.PackagePath) {
-		err := p.SetOCIRemote(p.cfg.PkgOpts.PackagePath)
-		if err != nil {
-			return err
-		}
+	if err = p.source.LoadPackage(p.layout, true); err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
 	}
-
-	if err := p.loadZarfPkg(); err != nil {
-		return fmt.Errorf("unable to load the Zarf Package: %w", err)
-	}
-
-	if err := p.validatePackageArchitecture(); err != nil {
-		if errors.Is(err, lang.ErrUnableToCheckArch) {
-			message.Warnf("Unable to validate package architecture: %s", err.Error())
-		} else {
-			return err
-		}
-	}
-
-	if err := ValidatePackageSignature(p.tmp.Base, p.cfg.PkgOpts.PublicKeyPath); err != nil {
+	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
 
@@ -66,13 +52,16 @@ func (p *Packager) Deploy() (err error) {
 		return err
 	}
 
-	// Now that we have read the zarf.yaml, check the package kind
-	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
-		p.cfg.IsInitConfig = true
+	if err := p.stageSBOMViewFiles(); err != nil {
+		return err
+	}
+
+	if err := p.attemptClusterChecks(); err != nil {
+		return err
 	}
 
 	// Confirm the overall package deployment
-	if !p.confirmAction(config.ZarfDeployStage, p.cfg.SBOMViewFiles) {
+	if !p.confirmAction(config.ZarfDeployStage) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
@@ -93,7 +82,7 @@ func (p *Packager) Deploy() (err error) {
 	}()
 
 	// Filter out components that are not compatible with this system
-	p.filterComponents(true)
+	p.filterComponents()
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
@@ -109,6 +98,31 @@ func (p *Packager) Deploy() (err error) {
 	return nil
 }
 
+// attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
+// NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
+func (p *Packager) attemptClusterChecks() (err error) {
+	// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
+	if p.cluster, _ = cluster.NewCluster(); p.cluster != nil {
+
+		// Check if the package has already been deployed and get its generation
+		if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
+			// If this package has been deployed before, increment the package generation within the secret
+			p.generation = existingDeployedPackage.Generation + 1
+		}
+
+		// Check the clusters architecture vs the package spec
+		if err := p.validatePackageArchitecture(); err != nil {
+			if errors.Is(err, lang.ErrUnableToCheckArch) {
+				message.Warnf("Unable to validate package architecture: %s", err.Error())
+			} else {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
 	componentsToDeploy := p.getValidComponents()
@@ -118,16 +132,46 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
 	}
 
-	for _, component := range componentsToDeploy {
-		var charts []types.InstalledChart
+	// Check if this package has been deployed before and grab relevant information about already deployed components
+	if p.generation == 0 {
+		p.generation = 1 // If this is the first deployment, set the generation to 1
+	}
 
-		if p.cfg.IsInitConfig {
-			charts, err = p.deployInitComponent(component)
-		} else {
-			charts, err = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
+	// Process all the components we are deploying
+	for _, component := range componentsToDeploy {
+
+		deployedComponent := types.DeployedComponent{
+			Name:               component.Name,
+			Status:             types.ComponentStatusDeploying,
+			ObservedGeneration: p.generation,
+		}
+		// Ensure we don't overwrite any installedCharts data when updating the package secret
+		if p.cluster != nil {
+			deployedComponent.InstalledCharts, err = p.cluster.GetInstalledChartsForComponent(p.cfg.Pkg.Metadata.Name, component)
+			if err != nil {
+				message.Debugf("Unable to fetch installed Helm charts for component '%s': %s", component.Name, err.Error())
+			}
 		}
 
-		deployedComponent := types.DeployedComponent{Name: component.Name}
+		deployedComponents = append(deployedComponents, deployedComponent)
+		idx := len(deployedComponents) - 1
+
+		// Update the package secret to indicate that we are attempting to deploy this component
+		if p.cluster != nil {
+			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
+				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+			}
+		}
+
+		// Deploy the component
+		var charts []types.InstalledChart
+		var deployErr error
+		if p.cfg.Pkg.Kind == types.ZarfInitConfig {
+			charts, deployErr = p.deployInitComponent(component)
+		} else {
+			charts, deployErr = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
+		}
+
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
@@ -135,20 +179,26 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
-		if err != nil {
+
+		if deployErr != nil {
 			onFailure()
-			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
+
+			// Update the package secret to indicate that we failed to deploy this component
+			deployedComponents[idx].Status = types.ComponentStatusFailed
+			if p.cluster != nil {
+				if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
+					message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				}
+			}
+
+			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, deployErr)
 		}
 
-		// Deploy the component
-		deployedComponent.InstalledCharts = charts
-		deployedComponents = append(deployedComponents, deployedComponent)
-
-		// Save deployed package information to k8s
-		// Note: Not all packages need k8s; check if k8s is being used before saving the secret
+		// Update the package secret to indicate that we successfully deployed this component
+		deployedComponents[idx].InstalledCharts = charts
+		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 		if p.cluster != nil {
-			err = p.cluster.RecordPackageDeployment(p.cfg.Pkg, deployedComponents, p.connectStrings)
-			if err != nil {
+			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
 				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
@@ -171,7 +221,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if p.requiresCluster(component) && p.cfg.State == nil {
-		p.cluster, err = cluster.NewClusterWithWait(5*time.Minute, true)
+		p.cluster, err = cluster.NewClusterWithWait(5 * time.Minute)
 		if err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
@@ -194,7 +244,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		p.cluster.StartInjectionMadness(p.tmp, component.Images)
+		p.cluster.StartInjectionMadness(p.layout.Base, p.layout.Images.Base, component.Images)
 	}
 
 	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
@@ -215,10 +265,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 // Deploy a Zarf Component.
 func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
 	// Toggles for general deploy operations
-	componentPath, err := p.createOrGetComponentPaths(component)
-	if err != nil {
-		return charts, fmt.Errorf("unable to create the component paths: %w", err)
-	}
+	componentPath := p.layout.Components.Dirs[component.Name]
 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
@@ -228,6 +275,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
 	hasDataInjections := len(component.DataInjections) > 0
+	hasFiles := len(component.Files) > 0
 
 	onDeploy := component.Actions.OnDeploy
 
@@ -235,14 +283,16 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
-	if err := p.processComponentFiles(component, componentPath.Files); err != nil {
-		return charts, fmt.Errorf("unable to process the component files: %w", err)
+	if hasFiles {
+		if err := p.processComponentFiles(component, componentPath.Files); err != nil {
+			return charts, fmt.Errorf("unable to process the component files: %w", err)
+		}
 	}
 
 	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
 		// Make sure we have access to the cluster
 		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout, true)
+			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout)
 			if err != nil {
 				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
@@ -278,7 +328,11 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	if hasDataInjections {
 		waitGroup := sync.WaitGroup{}
 		defer waitGroup.Wait()
-		p.performDataInjections(&waitGroup, componentPath, component.DataInjections)
+
+		for idx, data := range component.DataInjections {
+			waitGroup.Add(1)
+			go p.cluster.HandleDataInjection(&waitGroup, data, componentPath, idx)
+		}
 	}
 
 	if hasCharts || hasManifests {
@@ -296,11 +350,6 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 // Move files onto the host of the machine performing the deployment.
 func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocation string) error {
-	// If there are no files to process, return early.
-	if len(component.Files) < 1 {
-		return nil
-	}
-
 	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
 	defer spinner.Stop()
 
@@ -315,13 +364,13 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if shasum, _ := utils.GetCryptoHashFromFile(fileLocation, crypto.SHA256); shasum != file.Shasum {
-				return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s", file.Source, file.Shasum, shasum)
+			if err := utils.SHAsMatch(fileLocation, file.Shasum); err != nil {
+				return err
 			}
 		}
 
 		// Replace temp target directory and home directory
-		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.tmp.Base, 1)
+		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.layout.Base, 1)
 		file.Target = config.GetAbsHomePath(file.Target)
 
 		fileList := []string{}
@@ -432,9 +481,20 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		return nil
 	}
 
-	imgConfig := images.ImgConfig{
-		ImagesPath:    p.tmp.Images,
-		ImgList:       componentImages,
+	var combinedImageList []transform.Image
+	for _, src := range componentImages {
+		ref, err := transform.ParseImageRef(src)
+		if err != nil {
+			return fmt.Errorf("failed to create ref for image %s: %w", src, err)
+		}
+		combinedImageList = append(combinedImageList, ref)
+	}
+
+	imageList := helpers.Unique(combinedImageList)
+
+	imgConfig := images.ImageConfig{
+		ImagesPath:    p.layout.Images.Base,
+		ImageList:     imageList,
 		NoChecksum:    noImgChecksum,
 		RegInfo:       p.cfg.State.RegistryInfo,
 		Insecure:      config.CommonOptions.Insecure,
@@ -452,16 +512,16 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
 			gitClient := git.New(p.cfg.State.GitServer)
-			svcInfo, err := cluster.ServiceInfoFromServiceURL(gitClient.Server.Address)
+			svcInfo, _ := k8s.ServiceInfoFromServiceURL(gitClient.Server.Address)
 
-			// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
-			if err == nil {
-				tunnel, err := cluster.NewTunnel(svcInfo.Namespace, cluster.SvcResource, svcInfo.Name, 0, svcInfo.Port)
+			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
+			if svcInfo != nil && p.cluster != nil {
+				tunnel, err := p.cluster.NewTunnel(svcInfo.Namespace, k8s.SvcResource, svcInfo.Name, "", 0, svcInfo.Port)
 				if err != nil {
 					return err
 				}
 
-				err = tunnel.Connect("", false)
+				_, err = tunnel.Connect()
 				if err != nil {
 					return err
 				}
@@ -481,20 +541,8 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 	return nil
 }
 
-// Async move data into a container running in a pod on the k8s cluster.
-func (p *Packager) performDataInjections(waitGroup *sync.WaitGroup, componentPath types.ComponentPaths, dataInjections []types.ZarfDataInjection) {
-	if len(dataInjections) > 0 {
-		message.Info("Loading data injections")
-	}
-
-	for idx, data := range dataInjections {
-		waitGroup.Add(1)
-		go p.cluster.HandleDataInjection(waitGroup, data, componentPath, idx)
-	}
-}
-
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(componentPath types.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 
 		// zarf magic for the value file
@@ -581,7 +629,7 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 	pterm.Println()
 
 	// If not init config, print the application connection table
-	if !p.cfg.IsInitConfig {
+	if !(p.cfg.Pkg.Kind == types.ZarfInitConfig) {
 		message.PrintConnectStringTable(p.connectStrings)
 	} else {
 		// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds

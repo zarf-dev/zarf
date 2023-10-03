@@ -14,6 +14,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -40,12 +41,7 @@ var tenMins = metav1.Duration{
 
 // Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
-func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
-	var err error
-	if err := utils.CreateDirectory(tmpPaths.Temp, 0700); err != nil {
-		return c, fmt.Errorf("unable to component temp directory: %w", err)
-	}
-
+func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	cfg := c.Extensions.BigBang
 	manifests := []types.ZarfManifest{}
 
@@ -251,7 +247,7 @@ func Run(YOLO bool, tmpPaths types.ComponentPaths, c types.ZarfComponent) (types
 }
 
 // Skeletonize mutates a component so that the valuesFiles can be contained inside a skeleton package
-func Skeletonize(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
 		// Define the name as the file name without the extension.
 		baseName := strings.TrimSuffix(valuesFile, filepath.Ext(valuesFile))
@@ -262,7 +258,7 @@ func Skeletonize(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.Za
 		// Add the skeleton name prefix.
 		skelName := fmt.Sprintf("bb-ext-skeleton-values-%s.yaml", baseName)
 
-		rel := filepath.Join(types.TempFolder, skelName)
+		rel := filepath.Join(layout.TempDir, skelName)
 		dst := filepath.Join(tmpPaths.Base, rel)
 
 		if err := utils.CreatePathAndCopy(valuesFile, dst); err != nil {
@@ -270,6 +266,26 @@ func Skeletonize(tmpPaths types.ComponentPaths, c types.ZarfComponent) (types.Za
 		}
 
 		c.Extensions.BigBang.ValuesFiles[valuesIdx] = rel
+	}
+
+	for fluxPatchFileIdx, fluxPatchFile := range c.Extensions.BigBang.FluxPatchFiles {
+		// Define the name as the file name without the extension.
+		baseName := strings.TrimSuffix(fluxPatchFile, filepath.Ext(fluxPatchFile))
+
+		// Replace non-alphanumeric characters with a dash.
+		baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")
+
+		// Add the skeleton name prefix.
+		skelName := fmt.Sprintf("bb-ext-skeleton-flux-patches-%s.yaml", baseName)
+
+		rel := filepath.Join(layout.TempDir, skelName)
+		dst := filepath.Join(tmpPaths.Base, rel)
+
+		if err := utils.CreatePathAndCopy(fluxPatchFile, dst); err != nil {
+			return c, err
+		}
+
+		c.Extensions.BigBang.FluxPatchFiles[fluxPatchFileIdx] = rel
 	}
 
 	return c, nil
@@ -280,6 +296,11 @@ func Compose(pathAncestry string, c types.ZarfComponent) types.ZarfComponent {
 	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
 		parentRel := filepath.Join(pathAncestry, valuesFile)
 		c.Extensions.BigBang.ValuesFiles[valuesIdx] = parentRel
+	}
+
+	for fluxPatchFileIdx, fluxPatchFile := range c.Extensions.BigBang.FluxPatchFiles {
+		parentRel := filepath.Join(pathAncestry, fluxPatchFile)
+		c.Extensions.BigBang.FluxPatchFiles[fluxPatchFileIdx] = parentRel
 	}
 
 	return c

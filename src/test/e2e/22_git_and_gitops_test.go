@@ -35,15 +35,15 @@ func TestGit(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	tunnel, err := cluster.NewZarfTunnel()
+	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	err = tunnel.Connect(cluster.ZarfGit, false)
+	tunnelGit, err := c.Connect(cluster.ZarfGit)
 	require.NoError(t, err)
-	defer tunnel.Close()
+	defer tunnelGit.Close()
 
-	testGitServerConnect(t, tunnel.HTTPEndpoint())
-	testGitServerReadOnly(t, tunnel.HTTPEndpoint())
-	testGitServerTagAndHash(t, tunnel.HTTPEndpoint())
+	testGitServerConnect(t, tunnelGit.HTTPEndpoint())
+	testGitServerReadOnly(t, tunnelGit.HTTPEndpoint())
+	testGitServerTagAndHash(t, tunnelGit.HTTPEndpoint())
 }
 
 func TestGitOpsFlux(t *testing.T) {

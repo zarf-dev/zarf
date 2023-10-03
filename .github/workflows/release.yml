@@ -102,6 +102,10 @@ jobs:
       - name: Make Zarf executable
         run: |
           chmod +x build/zarf
+      
+      # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
+      - name: Cleanup files
+        uses: ./.github/actions/cleanup-files
 
       # Build the example packages and run the tests
       - name: Build examples and run tests
@@ -157,7 +161,7 @@ jobs:
 
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@5fdedb94abba051217030cc86d4523cf3f02243d # v4.6.0
+        uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
         with:
           distribution: goreleaser
           version: latest
