@@ -36,15 +36,15 @@ func (suite *RegistryClientTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 	suite.PackagesDir = "build"
 
-	e2e.SetupDockerRegistry(suite.T(), 556)
-	suite.Reference.Registry = "localhost:556"
+	e2e.SetupDockerRegistry(suite.T(), 555)
+	suite.Reference.Registry = "localhost:555"
 }
 
 func (suite *RegistryClientTestSuite) TearDownSuite() {
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
 	e2e.CleanFiles(local)
 
-	e2e.TeardownRegistry(suite.T(), 556)
+	e2e.TeardownRegistry(suite.T(), 555)
 }
 
 func (suite *RegistryClientTestSuite) Test_0_Publish() {
@@ -151,8 +151,8 @@ func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {
 func (suite *RegistryClientTestSuite) Test_5_Copy() {
 	t := suite.T()
 	ref := suite.Reference.String()
-	dstRegistryPort := 557
-	dstRef := strings.Replace(ref, fmt.Sprint(556), fmt.Sprint(dstRegistryPort), 1)
+	dstRegistryPort := 556
+	dstRef := strings.Replace(ref, fmt.Sprint(555), fmt.Sprint(dstRegistryPort), 1)
 
 	e2e.SetupDockerRegistry(t, dstRegistryPort)
 	defer e2e.TeardownRegistry(t, dstRegistryPort)
