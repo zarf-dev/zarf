@@ -18,7 +18,6 @@ import (
 
 // Nonstandard URL schemes or prefixes
 const (
-	OCIURLScheme = "oci"
 	OCIURLPrefix = "oci://"
 
 	SGETURLPrefix = "sget://"

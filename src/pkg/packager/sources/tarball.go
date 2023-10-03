@@ -31,7 +31,7 @@ type TarballSource struct {
 }
 
 // LoadPackage loads a package from a tarball.
-func (s *TarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
+func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
 	var pkg types.ZarfPackage
 
 	message.Debugf("Loading package from %q", s.PackageSource)
@@ -75,7 +75,6 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 			return err
 		}
 
-		message.Debugf("Loaded %q --> %q", path, dstPath)
 		return nil
 	})
 	if err != nil {
@@ -102,22 +101,24 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 		}
 	}
 
-	for _, component := range pkg.Components {
-		if err := dst.Components.Unarchive(component); err != nil {
-			if layout.IsNotLoaded(err) {
-				_, err := dst.Components.Create(component)
-				if err != nil {
+	if unarchiveAll {
+		for _, component := range pkg.Components {
+			if err := dst.Components.Unarchive(component); err != nil {
+				if layout.IsNotLoaded(err) {
+					_, err := dst.Components.Create(component)
+					if err != nil {
+						return err
+					}
+				} else {
 					return err
 				}
-			} else {
-				return err
 			}
 		}
-	}
 
-	if dst.SBOMs.Path != "" {
-		if err := dst.SBOMs.Unarchive(); err != nil {
-			return err
+		if dst.SBOMs.Path != "" {
+			if err := dst.SBOMs.Unarchive(); err != nil {
+				return err
+			}
 		}
 	}
 

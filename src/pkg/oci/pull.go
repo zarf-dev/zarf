@@ -217,7 +217,8 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 	doneSaving := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling")
+	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+o.repo.Reference.String())
+	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling", successText)
 	_, err := oras.Copy(o.ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), *copyOpts)
 	if err != nil {
 		return err
