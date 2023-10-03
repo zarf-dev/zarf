@@ -74,7 +74,7 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 	} else {
-		if err = p.source.LoadPackage(p.layout); err != nil {
+		if err = p.source.LoadPackage(p.layout, false); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 		if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {

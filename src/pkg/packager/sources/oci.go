@@ -34,7 +34,7 @@ type OCISource struct {
 }
 
 // LoadPackage loads a package from an OCI registry.
-func (s *OCISource) LoadPackage(dst *layout.PackagePaths) (err error) {
+func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
 	var pkg types.ZarfPackage
 	layersToPull := []ocispec.Descriptor{}
 
@@ -83,22 +83,24 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths) (err error) {
 		}
 	}
 
-	for _, component := range pkg.Components {
-		if err := dst.Components.Unarchive(component); err != nil {
-			if layout.IsNotLoaded(err) {
-				_, err := dst.Components.Create(component)
-				if err != nil {
+	if unarchiveAll {
+		for _, component := range pkg.Components {
+			if err := dst.Components.Unarchive(component); err != nil {
+				if layout.IsNotLoaded(err) {
+					_, err := dst.Components.Create(component)
+					if err != nil {
+						return err
+					}
+				} else {
 					return err
 				}
-			} else {
-				return err
 			}
 		}
-	}
 
-	if dst.SBOMs.Path != "" {
-		if err := dst.SBOMs.Unarchive(); err != nil {
-			return err
+		if dst.SBOMs.Path != "" {
+			if err := dst.SBOMs.Unarchive(); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -171,6 +173,10 @@ func (s *OCISource) Collect(dir string) (string, error) {
 	var pkg types.ZarfPackage
 
 	if err := utils.ReadYaml(loaded.ZarfYAML, &pkg); err != nil {
+		return "", err
+	}
+
+	if err := ValidatePackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, false); err != nil {
 		return "", err
 	}
 
