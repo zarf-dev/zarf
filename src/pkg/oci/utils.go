@@ -59,7 +59,7 @@ func (o *OrasRemote) printLayerCopied(_ context.Context, desc ocispec.Descriptor
 }
 
 // printLayer prints a debug message when a layer has been successfully published/pulled to/from a registry.
-func (o *OrasRemote) printLayer(desc ocispec.Descriptor, prefix string) error {
+func (o *OrasRemote) printLayer(desc ocispec.Descriptor, suffix string) error {
 	title := desc.Annotations[ocispec.AnnotationTitle]
 	var layerInfo string
 	if title != "" {
@@ -67,7 +67,7 @@ func (o *OrasRemote) printLayer(desc ocispec.Descriptor, prefix string) error {
 	} else {
 		layerInfo = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 	}
-	message.Debugf("[%s]: %s", prefix, layerInfo)
+	message.Debugf("%s (%s)", layerInfo, suffix)
 	return nil
 }
 
