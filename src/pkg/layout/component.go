@@ -136,7 +136,7 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 		return nil
 	}
 
-	message.Debugf("Unarchiving %q", tb)
+	message.Debugf("Unarchiving %q", filepath.Base(tb))
 	if err := archiver.Unarchive(tb, c.Base); err != nil {
 		return err
 	}

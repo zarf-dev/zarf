@@ -75,7 +75,6 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 			return err
 		}
 
-		message.Debugf("Loaded %q --> %q", path, dstPath)
 		return nil
 	})
 	if err != nil {
