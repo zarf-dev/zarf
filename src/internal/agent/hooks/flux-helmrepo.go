@@ -16,7 +16,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
+
 	v1 "k8s.io/api/admission/v1"
 )
 
@@ -40,15 +42,13 @@ func NewHelmRepositoryMutationHook() operations.Hook {
 
 // mutateHelmRepo mutates the repository url to point to the repository URL defined in the ZarfState.
 func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
-	message.Warn("HELM REPOMUTATE")
 	var (
-		zarfState     *types.ZarfState
-		patches       []operations.PatchOperation
-		isPatched     bool
-		repoURL       string
-		newPatchedURL string
-		isCreate      = r.Operation == v1.Create
-		isUpdate      = r.Operation == v1.Update
+		zarfState *types.ZarfState
+		patches   []operations.PatchOperation
+		isPatched bool
+
+		isCreate = r.Operation == v1.Create
+		isUpdate = r.Operation == v1.Update
 	)
 
 	// Form the zarfState.GitServer.Address from the zarfState
@@ -58,8 +58,7 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 
 	// Mutate the oci URL so that the hostname matches the hostname in the Zarf state
 	// Must be valid DNS https://fluxcd.io/flux/components/source/helmrepositories/#writing-a-helmrepository-spec
-
-	registryInternalURL := zarfState.RegistryInfo.Address
+	registryAddress := zarfState.RegistryInfo.Address
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return nil, fmt.Errorf(lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
@@ -68,10 +67,10 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 	if err != nil {
 		message.WarnErrf(err, lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
 	} else {
-		registryInternalURL = fmt.Sprintf("%s.%s.svc.cluster.local:%d", registryServiceInfo.Name, registryServiceInfo.Namespace, registryServiceInfo.Port)
+		registryAddress = fmt.Sprintf("%s.%s.svc.cluster.local:%d", registryServiceInfo.Name, registryServiceInfo.Namespace, registryServiceInfo.Port)
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the flux HelmRepository", registryInternalURL)
+	message.Debugf("Using the url of (%s) to mutate the flux HelmRepository", registryAddress)
 
 	// parse to simple struct to read the HelmRepo url
 	src := &HelmRepo{}
@@ -83,35 +82,37 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 		message.Warnf(lang.AgentWarningNotOCIType, src.Spec.Type)
 		return nil, nil
 	}
-
-	patchedURL, err := removeOCIProtocol(src.Spec.URL)
-	if err != nil {
-		return nil, err
-	}
-	// necessary so it doesn't double mutate
-	newPatchedURL = patchedURL
+	patchedURL := src.Spec.URL
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
 	if isUpdate {
-		isPatched = strings.Contains(patchedURL, registryInternalURL)
+		isPatched, err = helpers.DoHostnamesMatch(zarfState.GitServer.Address, src.Spec.URL)
+		if err != nil {
+			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
+		}
 	}
 
 	// Mutate the HelmRepo URL if necessary
 	if isCreate || (isUpdate && !isPatched) {
-		newPatchedURL, err = transform.ImageTransformHostWithoutChecksumOrTag(registryInternalURL, patchedURL)
+		trimmedSrc := strings.TrimPrefix(src.Spec.URL, helpers.OCIURLPrefix)
+		patchedSrc, err := transform.ImageTransformHost(registryAddress, trimmedSrc)
 		if err != nil {
 			message.Warnf(lang.WarnUnableToTransform, "HelmRepo", patchedURL)
 		}
 
-		message.Debugf("original HelmRepo URL of (%s) got mutated to (%s)", src.Spec.URL, newPatchedURL)
+		patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
+		if err != nil {
+			message.Warnf(lang.WarnUnableToTransform, "HelmRepo", patchedSrc)
+		}
+		patchedURL = helpers.OCIURLPrefix + patchedRefInfo.Name
+
+		message.Debugf("original HelmRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 	}
 
-	repoURL = fmt.Sprintf("%s%s", "oci://", newPatchedURL)
-
 	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
-	patches = populateHelmRepoPatchOperations(repoURL, src.Spec.SecretRef.Name)
+	patches = populateHelmRepoPatchOperations(patchedURL, src.Spec.SecretRef.Name)
 
 	return &operations.Result{
 		Allowed:  true,

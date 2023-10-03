@@ -18,7 +18,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-
 	v1 "k8s.io/api/admission/v1"
 )
 
@@ -47,13 +46,10 @@ func NewOCIRepositoryMutationHook() operations.Hook {
 
 // mutateOCIRepo mutates the oci repository url to point to the repository URL defined in the ZarfState.
 func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
-
 	var (
-		zarfState     *types.ZarfState
-		patches       []operations.PatchOperation
-		crcHash       string
-		newPatchedURL string
-		isPatched     bool
+		zarfState *types.ZarfState
+		patches   []operations.PatchOperation
+		isPatched bool
 
 		isCreate = r.Operation == v1.Create
 		isUpdate = r.Operation == v1.Update
@@ -66,8 +62,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	// Mutate the oci URL so that the hostname matches the hostname in the Zarf state
 	// Must be valid DNS https://fluxcd.io/flux/components/source/ocirepositories/#writing-an-ocirepository-spec
-
-	registryInternalURL := zarfState.RegistryInfo.Address
+	registryAddress := zarfState.RegistryInfo.Address
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return nil, fmt.Errorf(lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
@@ -76,55 +71,50 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	if err != nil {
 		message.Warnf(lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
 	} else {
-		registryInternalURL = fmt.Sprintf("%s.%s.svc.cluster.local:%d", registryServiceInfo.Name, registryServiceInfo.Namespace, registryServiceInfo.Port)
+		registryAddress = fmt.Sprintf("%s.%s.svc.cluster.local:%d", registryServiceInfo.Name, registryServiceInfo.Namespace, registryServiceInfo.Port)
 	}
-	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", registryInternalURL)
+
+	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", registryAddress)
 
 	// parse to simple struct to read the OCIRepo url
 	src := &OCIRepo{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
-	message.Warnf("src.Spec.URL %+v\n", src)
-	patchedURL, err := removeOCIProtocol(src.Spec.URL)
-	if err != nil {
-		return nil, err
-	}
-	// necessary so it doesn't double mutate
-	newPatchedURL = patchedURL
+	patchedURL := src.Spec.URL
+	patchedTag := src.Spec.Ref.Tag
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
 	if isUpdate {
-		isPatched, err = helpers.DoHostnamesMatch(registryInternalURL, patchedURL)
+		isPatched, err = helpers.DoHostnamesMatch(registryAddress, src.Spec.URL)
 		if err != nil {
 			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}
-		message.Warnf("isPatched %t", isPatched)
 	}
 
 	// Mutate the OCIRepo URL if necessary
 	if isCreate || (isUpdate && !isPatched) {
-
-		newPatchedURL, err = transform.ImageTransformHostWithoutChecksumOrTag(registryInternalURL, patchedURL)
+		trimmedSrc := strings.TrimPrefix(src.Spec.URL, helpers.OCIURLPrefix)
+		patchedSrc, err := transform.ImageTransformHost(registryAddress, trimmedSrc)
 		if err != nil {
-			message.Warnf(lang.WarnUnableToTransform, "OCIRepo", patchedURL)
+			message.Warnf(lang.WarnUnableToTransform, "OCIRepo", patchedSrc)
 		}
 
-		// don't double mutate the ref tag
-		if !strings.Contains(src.Spec.Ref.Tag, "-zarf-") {
-			message.Debugf("CRC Hash (%s) tag is (%s)", patchedURL, src.Spec.Ref.Tag)
-			crcHash = transform.ImageCRC(patchedURL, src.Spec.Ref.Tag)
+		patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
+		if err != nil {
+			message.Warnf(lang.WarnUnableToTransform, "OCIRepo", patchedSrc)
 		}
+		patchedURL = helpers.OCIURLPrefix + patchedRefInfo.Name
+		patchedTag = patchedRefInfo.TagOrDigest
 
-		message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, newPatchedURL)
+		message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 	}
 
 	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
 	// repoURL := cluster.FetchInternalRegistryKubeDNSName()
-	repoURL := fmt.Sprintf("%s%s", "oci://", newPatchedURL)
-	patches = populateOCIRepoPatchOperations(repoURL, src.Spec.SecretRef.Name, crcHash)
+	patches = populateOCIRepoPatchOperations(patchedURL, patchedTag, src.Spec.SecretRef.Name)
 	return &operations.Result{
 		Allowed:  true,
 		PatchOps: patches,
@@ -132,7 +122,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 }
 
 // Patch updates of the repo spec.
-func populateOCIRepoPatchOperations(repoURL, secretName, crcHash string) []operations.PatchOperation {
+func populateOCIRepoPatchOperations(repoURL, repoTag, secretName string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
@@ -144,8 +134,8 @@ func populateOCIRepoPatchOperations(repoURL, secretName, crcHash string) []opera
 		patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfImagePullSecretName}))
 	}
 
-	if crcHash != "" {
-		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/tag", crcHash))
+	if repoTag != "" {
+		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/tag", repoTag))
 	}
 
 	return patches

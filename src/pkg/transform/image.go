@@ -70,20 +70,6 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	return fmt.Sprintf("%s/%s:%s-zarf-%d", targetHost, image.Path, image.Tag, checksum), nil
 }
 
-// ImageTransformHostWithoutChecksumOrTag replaces the base url for an image but avoids adding a checksum of the original url and tag
-func ImageTransformHostWithoutChecksumOrTag(targetHost, srcReference string) (string, error) {
-	image, err := ParseImageRef(srcReference)
-	if err != nil {
-		return "", err
-	}
-
-	// check if image has already been transformed
-	if strings.HasPrefix(targetHost, image.Host) {
-		return srcReference, nil
-	}
-	return fmt.Sprintf("%s/%s", targetHost, image.Path), nil
-}
-
 // ImageTransformHostWithoutChecksum replaces the base url for an image but avoids adding a checksum of the original url (note image refs are not full URLs).
 func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string, error) {
 	image, err := ParseImageRef(srcReference)
@@ -97,19 +83,6 @@ func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string,
 	}
 
 	return fmt.Sprintf("%s/%s%s", targetHost, image.Path, image.TagOrDigest), nil
-}
-
-// ImageCRC returns crc32 checksum of the original url
-func ImageCRC(srcReference, tag string) string {
-	image, err := ParseImageRef(srcReference)
-	if err != nil {
-		return ""
-	}
-
-	// Generate a crc32 hash of the image host + name
-	checksum := helpers.GetCRCHash(image.Name)
-
-	return fmt.Sprintf("%s-zarf-%d", tag, checksum)
 }
 
 // ParseImageRef parses a source reference into an Image struct

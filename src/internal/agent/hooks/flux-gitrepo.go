@@ -41,7 +41,7 @@ func NewGitRepositoryMutationHook() operations.Hook {
 	}
 }
 
-// mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
+// mutateGitRepo mutates the GitRepo URL to point to the repository URL defined in the ZarfState.
 func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 
 	var (
@@ -60,7 +60,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	message.Debugf("Using the url of (%s) to mutate the flux GitRepository", zarfState.GitServer.Address)
 
-	// parse to simple struct to read the GitRepo url
+	// parse to simple struct to read the GitRepo URL
 	src := &GenericGitRepo{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
@@ -98,7 +98,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 }
 
 // Patch updates of the repo spec.
-func populateGitRepoPatchOperations(repoURL string, secretName string) []operations.PatchOperation {
+func populateGitRepoPatchOperations(repoURL, secretName string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
