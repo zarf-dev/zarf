@@ -97,7 +97,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	goodPath := fmt.Sprintf("build/zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 	evilPath := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
-	// Create the evil package (with the bad configmap).
+	// Create the evil package (with the bad service).
 	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/25-evil-dos-games/", "--skip-sbom", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 

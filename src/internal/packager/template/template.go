@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
 // Values contains the values to be used in the template.
@@ -116,7 +117,7 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
 
 		case "zarf-seed-registry", "zarf-registry":
-			builtinMap["SEED_REGISTRY"] = fmt.Sprintf("%s:%s", config.IPV4Localhost, config.ZarfSeedPort)
+			builtinMap["SEED_REGISTRY"] = fmt.Sprintf("%s:%s", helpers.IPV4Localhost, config.ZarfSeedPort)
 			builtinMap["HTPASSWD"] = values.htpasswd
 			builtinMap["REGISTRY_SECRET"] = regInfo.Secret
 
