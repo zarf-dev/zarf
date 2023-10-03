@@ -278,6 +278,11 @@ func Compose(pathAncestry string, c types.ZarfComponent) types.ZarfComponent {
 		c.Extensions.BigBang.ValuesFiles[valuesIdx] = parentRel
 	}
 
+	for fluxPatchFileIdx, fluxPatchFile := range c.Extensions.BigBang.FluxPatchFiles {
+		parentRel := filepath.Join(pathAncestry, fluxPatchFile)
+		c.Extensions.BigBang.FluxPatchFiles[fluxPatchFileIdx] = parentRel
+	}
+
 	return c
 }
 
