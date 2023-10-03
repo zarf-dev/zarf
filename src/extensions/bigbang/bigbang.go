@@ -268,6 +268,26 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 		c.Extensions.BigBang.ValuesFiles[valuesIdx] = rel
 	}
 
+	for fluxPatchFileIdx, fluxPatchFile := range c.Extensions.BigBang.FluxPatchFiles {
+		// Define the name as the file name without the extension.
+		baseName := strings.TrimSuffix(fluxPatchFile, filepath.Ext(fluxPatchFile))
+
+		// Replace non-alphanumeric characters with a dash.
+		baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")
+
+		// Add the skeleton name prefix.
+		skelName := fmt.Sprintf("bb-ext-skeleton-flux-patches-%s.yaml", baseName)
+
+		rel := filepath.Join(layout.TempDir, skelName)
+		dst := filepath.Join(tmpPaths.Base, rel)
+
+		if err := utils.CreatePathAndCopy(fluxPatchFile, dst); err != nil {
+			return c, err
+		}
+
+		c.Extensions.BigBang.FluxPatchFiles[fluxPatchFileIdx] = rel
+	}
+
 	return c, nil
 }
 
