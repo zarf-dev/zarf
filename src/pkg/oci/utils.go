@@ -48,16 +48,26 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 	return ref.String(), nil
 }
 
-// printLayerSuccess prints a success message to the console when a layer has been successfully published/pulled to/from a registry.
-func (o *OrasRemote) printLayerSuccess(_ context.Context, desc ocispec.Descriptor) error {
+// printLayerSkipped prints a debug message when a layer has been successfully skipped.
+func (o *OrasRemote) printLayerSkipped(_ context.Context, desc ocispec.Descriptor) error {
+	return o.printLayer(desc, "skipped")
+}
+
+// printLayerCopied prints a debug message when a layer has been successfully copied to/from a registry.
+func (o *OrasRemote) printLayerCopied(_ context.Context, desc ocispec.Descriptor) error {
+	return o.printLayer(desc, "copied")
+}
+
+// printLayer prints a debug message when a layer has been successfully published/pulled to/from a registry.
+func (o *OrasRemote) printLayer(desc ocispec.Descriptor, prefix string) error {
 	title := desc.Annotations[ocispec.AnnotationTitle]
-	var format string
+	var layerInfo string
 	if title != "" {
-		format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
+		layerInfo = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
 	} else {
-		format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
+		layerInfo = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 	}
-	message.Successf(format)
+	message.Debugf("[%s]: %s", prefix, layerInfo)
 	return nil
 }
 

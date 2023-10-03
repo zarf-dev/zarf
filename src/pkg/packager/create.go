@@ -163,8 +163,6 @@ func (p *Packager) Create() (err error) {
 
 		p.layout = p.layout.AddImages()
 
-		message.HeaderInfof("📦 PACKAGE IMAGES")
-
 		pulled := map[transform.Image]v1.Image{}
 
 		doPull := func() error {

@@ -6,8 +6,6 @@ package packager
 
 import (
 	"fmt"
-
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
@@ -16,12 +14,10 @@ func (p *Packager) Pull() (err error) {
 		return fmt.Errorf("pull does not support optional components")
 	}
 
-	tb, err := p.source.Collect(p.cfg.PullOpts.OutputDirectory)
+	_, err = p.source.Collect(p.cfg.PullOpts.OutputDirectory)
 	if err != nil {
 		return err
 	}
-
-	message.Infof("Pulled %q into %q", p.cfg.PkgOpts.PackageSource, tb)
 
 	return nil
 }
