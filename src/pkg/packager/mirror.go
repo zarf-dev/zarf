@@ -29,7 +29,7 @@ func (p *Packager) Mirror() (err error) {
 	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
-	if err = p.source.LoadPackage(p.layout); err != nil {
+	if err = p.source.LoadPackage(p.layout, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
