@@ -1,10 +1,10 @@
 * @defenseunicorns/zarf
 
 # Docs & examples
-/adr/ @jeff-mccoy @Racer159 @Noxsios
-/docs/ @Madeline-UX @jeff-mccoy  @Racer159 @Noxsios
-/examples/ @jeff-mccoy @Racer159 @Noxsios
-*.md @Madeline-UX @jeff-mccoy @Racer159 @Noxsios
+/adr/ @jeff-mccoy @Racer159 @Noxsios @lucasrod16
+/docs/ @Madeline-UX @jeff-mccoy  @Racer159 @Noxsios @lucasrod16
+/examples/ @jeff-mccoy @Racer159 @Noxsios @lucasrod16
+*.md @Madeline-UX @jeff-mccoy @Racer159 @Noxsios @lucasrod16
 
 # Core code
 /src/ @jeff-mccoy @Racer159 @Noxsios
