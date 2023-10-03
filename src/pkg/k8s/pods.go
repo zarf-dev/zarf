@@ -161,7 +161,9 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []co
 	return []corev1.Pod{}
 }
 
-// FindPodContainerPort will find a pod's container from a service and return it.
+// FindPodContainerPort will find a pod's container port from a service and return it.
+//
+// Returns 0 if no port is found.
 func (k *K8s) FindPodContainerPort(svc corev1.Service) int {
 	selectorLabelsOfPods := MakeLabels(svc.Spec.Selector)
 	pods := k.WaitForPodsAndContainers(PodLookup{
