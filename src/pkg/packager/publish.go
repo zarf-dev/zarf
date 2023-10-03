@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
@@ -115,7 +116,7 @@ func (p *Packager) Publish() (err error) {
 				Name: fmt.Sprintf("import-%s", c.Name),
 				Import: types.ZarfComponentImport{
 					ComponentName: c.Name,
-					URL:           fmt.Sprintf("oci://%s", p.remote.Repo().Reference),
+					URL:           helpers.OCIURLScheme + p.remote.Repo().Reference.String(),
 				},
 			})
 		}
