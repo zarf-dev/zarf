@@ -41,7 +41,7 @@ type ClusterSource struct {
 // LoadPackage loads a package from a cluster.
 //
 // This is not implemented.
-func (s *ClusterSource) LoadPackage(_ *layout.PackagePaths) error {
+func (s *ClusterSource) LoadPackage(_ *layout.PackagePaths, _ bool) error {
 	return fmt.Errorf("not implemented")
 }
 
