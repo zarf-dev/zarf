@@ -85,7 +85,7 @@ func (suite *RegistryClientTestSuite) Test_1_Pull() {
 	// Pull the package via OCI.
 	stdOut, stdErr, err := e2e.Zarf("package", "pull", "oci://"+ref, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
-	suite.Contains(stdErr, fmt.Sprintf("Pulled %q", "oci://"+ref))
+	suite.Contains(stdErr, fmt.Sprintf("Pulling %q", "oci://"+ref))
 
 	// Verify the package was pulled.
 	suite.FileExists(out)

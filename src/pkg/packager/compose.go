@@ -361,6 +361,9 @@ func (p *Packager) mergeComponentOverrides(target *types.ZarfComponent, override
 		if override.Extensions.BigBang.ValuesFiles != nil {
 			target.Extensions.BigBang.ValuesFiles = append(target.Extensions.BigBang.ValuesFiles, override.Extensions.BigBang.ValuesFiles...)
 		}
+		if override.Extensions.BigBang.FluxPatchFiles != nil {
+			target.Extensions.BigBang.FluxPatchFiles = append(target.Extensions.BigBang.FluxPatchFiles, override.Extensions.BigBang.FluxPatchFiles...)
+		}
 	}
 
 	// Merge deprecated scripts for backwards compatibility with older zarf binaries.
