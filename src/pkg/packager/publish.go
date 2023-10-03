@@ -116,7 +116,7 @@ func (p *Packager) Publish() (err error) {
 				Name: fmt.Sprintf("import-%s", c.Name),
 				Import: types.ZarfComponentImport{
 					ComponentName: c.Name,
-					URL:           helpers.OCIURLScheme + p.remote.Repo().Reference.String(),
+					URL:           helpers.OCIURLPrefix + p.remote.Repo().Reference.String(),
 				},
 			})
 		}

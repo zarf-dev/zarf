@@ -243,9 +243,9 @@ func (p *Packager) Create() (err error) {
 			flags = "--insecure"
 		}
 		message.Title("To inspect/deploy/pull:", "")
-		message.ZarfCommand("package inspect %s %s", helpers.OCIURLScheme+p.remote.Repo().Reference.String(), flags)
-		message.ZarfCommand("package deploy %s %s", helpers.OCIURLScheme+p.remote.Repo().Reference.String(), flags)
-		message.ZarfCommand("package pull %s %s", helpers.OCIURLScheme+p.remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package inspect %s %s", helpers.OCIURLPrefix+p.remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+p.remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+p.remote.Repo().Reference.String(), flags)
 	} else {
 		// Use the output path if the user specified it.
 		packageName := filepath.Join(p.cfg.CreateOpts.Output, p.GetPackageName())
