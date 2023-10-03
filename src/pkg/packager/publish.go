@@ -73,19 +73,11 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 	} else {
-		if err = p.source.LoadPackage(p.layout); err != nil {
+		if err = p.source.LoadPackage(p.layout, false); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 		if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 			return err
-		}
-		// re-archive the components, as they are unarchived during the LoadPackage process
-		for _, component := range p.cfg.Pkg.Components {
-			if err = p.layout.Components.Archive(component, true); err != nil {
-				if !layout.IsNotLoaded(err) {
-					return err
-				}
-			}
 		}
 
 		referenceSuffix = p.arch

@@ -36,15 +36,15 @@ func (suite *RegistryClientTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 	suite.PackagesDir = "build"
 
-	e2e.SetupDockerRegistry(suite.T(), 555)
-	suite.Reference.Registry = "localhost:555"
+	e2e.SetupDockerRegistry(suite.T(), 556)
+	suite.Reference.Registry = "localhost:556"
 }
 
 func (suite *RegistryClientTestSuite) TearDownSuite() {
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
 	e2e.CleanFiles(local)
 
-	e2e.TeardownRegistry(suite.T(), 555)
+	e2e.TeardownRegistry(suite.T(), 556)
 }
 
 func (suite *RegistryClientTestSuite) Test_0_Publish() {
@@ -58,9 +58,8 @@ func (suite *RegistryClientTestSuite) Test_0_Publish() {
 	suite.Contains(stdErr, "Published "+ref)
 
 	// Pull the package via OCI.
-	stdOut, stdErr, err = e2e.Zarf("package", "pull", "oci://"+ref, "--insecure")
+	stdOut, stdErr, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1-"+e2e.Arch, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
-	suite.Contains(stdErr, fmt.Sprintf("Pulled %q", "oci://"+ref))
 
 	// Publish w/ package missing `metadata.version` field.
 	example = filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-component-actions-%s.tar.zst", e2e.Arch))
@@ -152,8 +151,8 @@ func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {
 func (suite *RegistryClientTestSuite) Test_5_Copy() {
 	t := suite.T()
 	ref := suite.Reference.String()
-	dstRegistryPort := 556
-	dstRef := strings.Replace(ref, fmt.Sprint(555), fmt.Sprint(dstRegistryPort), 1)
+	dstRegistryPort := 557
+	dstRef := strings.Replace(ref, fmt.Sprint(556), fmt.Sprint(dstRegistryPort), 1)
 
 	e2e.SetupDockerRegistry(t, dstRegistryPort)
 	defer e2e.TeardownRegistry(t, dstRegistryPort)

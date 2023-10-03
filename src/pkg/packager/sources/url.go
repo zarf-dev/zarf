@@ -49,7 +49,7 @@ func (s *URLSource) Collect(dir string) (string, error) {
 }
 
 // LoadPackage loads a package from an http, https or sget URL.
-func (s *URLSource) LoadPackage(dst *layout.PackagePaths) (err error) {
+func (s *URLSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (s *URLSource) LoadPackage(dst *layout.PackagePaths) (err error) {
 		s.ZarfPackageOptions,
 	}
 
-	return ts.LoadPackage(dst)
+	return ts.LoadPackage(dst, unarchiveAll)
 }
 
 // LoadPackageMetadata loads a package's metadata from an http, https or sget URL.
