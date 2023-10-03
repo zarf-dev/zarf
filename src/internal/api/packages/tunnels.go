@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-chi/chi/v5"
@@ -17,7 +18,7 @@ import (
 
 // PackageTunnel is a struct for storing a tunnel and its connection details
 type PackageTunnel struct {
-	tunnel     *cluster.Tunnel
+	tunnel     *k8s.Tunnel
 	Connection types.APIDeployedPackageConnection `json:"connection,omitempty"`
 }
 
@@ -72,14 +73,13 @@ func ConnectTunnel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tunnel, err := cluster.NewZarfTunnel()
-
+	c, err := cluster.NewCluster()
 	if err != nil {
-		message.ErrorWebf(err, w, "Failed to create tunnel for %s", connectionName)
+		message.ErrorWebf(err, w, "Failed to create cluster connection")
 		return
 	}
 
-	err = tunnel.Connect(connectionName, false)
+	tunnel, err := c.Connect(connectionName)
 	if err != nil {
 		message.ErrorWebf(err, w, "Failed to connect to %s", connectionName)
 		return

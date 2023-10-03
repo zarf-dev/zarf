@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -49,7 +49,7 @@ func DeleteSBOM(w http.ResponseWriter, _ *http.Request) {
 
 // cleanupSBOM removes the SBOM directory
 func cleanupSBOM() error {
-	err := os.RemoveAll(config.ZarfSBOMDir)
+	err := os.RemoveAll(layout.SBOMDir)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func extractSBOM(escapedPath string) (sbom types.APIPackageSBOM, err error) {
 	}
 
 	// Join the current working directory with the zarf-sbom directory
-	sbomPath := filepath.Join(cwd, config.ZarfSBOMDir)
+	sbomPath := filepath.Join(cwd, layout.SBOMDir)
 
 	// ensure the zarf-sbom directory is empty
 	if _, err := os.Stat(sbomPath); !os.IsNotExist(err) {
@@ -89,14 +89,14 @@ func extractSBOM(escapedPath string) (sbom types.APIPackageSBOM, err error) {
 	}
 
 	// Extract the sbom.tar from the package
-	err = archiver.Extract(path, config.ZarfSBOMTar, sbomPath)
+	err = archiver.Extract(path, layout.SBOMTar, sbomPath)
 	if err != nil {
 		cleanupSBOM()
 		return sbom, err
 	}
 
 	// Unarchive the sbom.tar
-	err = archiver.Unarchive(filepath.Join(sbomPath, config.ZarfSBOMTar), sbomPath)
+	err = archiver.Unarchive(filepath.Join(sbomPath, layout.SBOMTar), sbomPath)
 	if err != nil {
 		cleanupSBOM()
 		return sbom, err

@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Repo"
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
         with:
           ref: ${{ github.event.inputs.branchName }}
 
@@ -37,7 +37,7 @@ jobs:
           shasum zarf-injector-arm64 >> checksums.txt
 
       - name: Set AWS Credentials
-        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
+        uses: aws-actions/configure-aws-credentials@8c3f20df09ac63af7b3ae3d7c91f105f857d8497 # v4.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_GOV_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}

@@ -14,14 +14,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 )
 
-func (p *Packager) confirmAction(stage string, sbomViewFiles []string) (confirm bool) {
+func (p *Packager) confirmAction(stage string) (confirm bool) {
 
 	pterm.Println()
 	message.HeaderInfof("📦 PACKAGE DEFINITION")
@@ -34,14 +34,14 @@ func (p *Packager) confirmAction(stage string, sbomViewFiles []string) (confirm 
 			message.HorizontalRule()
 			message.Title("Software Bill of Materials", "an inventory of all software contained in this package")
 
-			if len(sbomViewFiles) > 0 {
+			if len(p.sbomViewFiles) > 0 {
 				cwd, _ := os.Getwd()
-				link := pterm.FgLightCyan.Sprint(pterm.Bold.Sprint(filepath.Join(cwd, config.ZarfSBOMDir, filepath.Base(sbomViewFiles[0]))))
-				inspect := pterm.BgBlack.Sprint(pterm.FgWhite.Sprint(pterm.Bold.Sprintf("$ zarf package inspect %s", p.cfg.PkgSource)))
+				link := pterm.FgLightCyan.Sprint(pterm.Bold.Sprint(filepath.Join(cwd, layout.SBOMDir, filepath.Base(p.sbomViewFiles[0]))))
+				inspect := pterm.BgBlack.Sprint(pterm.FgWhite.Sprint(pterm.Bold.Sprintf("$ zarf package inspect %s", p.cfg.PkgOpts.PackageSource)))
 
-				artifactMsg := pterm.Bold.Sprintf("%d artifacts", len(sbomViewFiles)) + " to be reviewed. These are"
-				if len(sbomViewFiles) == 1 {
-					artifactMsg = pterm.Bold.Sprintf("%d artifact", len(sbomViewFiles)) + " to be reviewed. This is"
+				artifactMsg := pterm.Bold.Sprintf("%d artifacts", len(p.sbomViewFiles)) + " to be reviewed. These are"
+				if len(p.sbomViewFiles) == 1 {
+					artifactMsg = pterm.Bold.Sprintf("%d artifact", len(p.sbomViewFiles)) + " to be reviewed. This is"
 				}
 
 				msg := fmt.Sprintf("This package has %s available in a temporary '%s' folder in this directory and will be removed upon deployment.\n", artifactMsg, pterm.Bold.Sprint("zarf-sbom"))
@@ -53,14 +53,6 @@ func (p *Packager) confirmAction(stage string, sbomViewFiles []string) (confirm 
 				pterm.Println(viewLater)
 			} else {
 				message.Warn("This package does NOT contain an SBOM.  If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.")
-			}
-		}
-
-		// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
-		if p.cluster != nil {
-			if initPackage, err := p.cluster.GetDeployedPackage("init"); err == nil {
-				// We use the build.version for now because it is the most reliable way to get this version info pre v0.26.0
-				deprecated.PrintBreakingChanges(initPackage.Data.Build.Version)
 			}
 		}
 	}

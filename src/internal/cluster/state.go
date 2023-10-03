@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	"slices"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/types"
 
@@ -96,7 +98,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 			namespace.Labels[agentLabel] = "ignore"
 			if _, err = c.UpdateNamespace(&namespace); err != nil {
 				// This is not a hard failure, but we should log it.
-				message.WarnErrorf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
+				message.WarnErrf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
 			}
 		}
 
@@ -245,7 +247,7 @@ func (c *Cluster) SaveZarfState(state *types.ZarfState) error {
 	}
 
 	// Attempt to create or update the secret and return.
-	if err := c.CreateOrUpdateSecret(secret); err != nil {
+	if _, err := c.CreateOrUpdateSecret(secret); err != nil {
 		return fmt.Errorf("unable to create the zarf state secret")
 	}
 
@@ -256,10 +258,10 @@ func (c *Cluster) SaveZarfState(state *types.ZarfState) error {
 func (c *Cluster) MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions, services []string) *types.ZarfState {
 	newState := *oldState
 
-	if helpers.SliceContains(services, message.RegistryKey) {
+	if slices.Contains(services, message.RegistryKey) {
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, initOptions.RegistryInfo)
 		// Set the state of the internal registry if it has changed
-		if newState.RegistryInfo.Address == fmt.Sprintf("%s:%d", config.IPV4Localhost, newState.RegistryInfo.NodePort) {
+		if newState.RegistryInfo.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, newState.RegistryInfo.NodePort) {
 			newState.RegistryInfo.InternalRegistry = true
 		} else {
 			newState.RegistryInfo.InternalRegistry = false
@@ -273,7 +275,7 @@ func (c *Cluster) MergeZarfState(oldState *types.ZarfState, initOptions types.Za
 			newState.RegistryInfo.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 		}
 	}
-	if helpers.SliceContains(services, message.GitKey) {
+	if slices.Contains(services, message.GitKey) {
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, initOptions.GitServer)
 
 		// Set the state of the internal git server if it has changed
@@ -291,7 +293,7 @@ func (c *Cluster) MergeZarfState(oldState *types.ZarfState, initOptions types.Za
 			newState.GitServer.PullPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
 		}
 	}
-	if helpers.SliceContains(services, message.ArtifactKey) {
+	if slices.Contains(services, message.ArtifactKey) {
 		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, initOptions.ArtifactServer)
 
 		// Set the state of the internal artifact server if it has changed
@@ -319,7 +321,7 @@ func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.Reg
 	// Set default url if an external registry was not provided
 	if containerRegistry.Address == "" {
 		containerRegistry.InternalRegistry = true
-		containerRegistry.Address = fmt.Sprintf("%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
+		containerRegistry.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, containerRegistry.NodePort)
 	}
 
 	// Generate a push-user password if not provided by init flag

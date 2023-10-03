@@ -7,7 +7,8 @@ package tools
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+
+	"slices"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/cmd/common"
@@ -18,11 +19,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/spf13/cobra"
 )
 
@@ -76,7 +76,7 @@ var updateCredsCmd = &cobra.Command{
 		if len(args) == 0 {
 			args = validKeys
 		} else {
-			if !helpers.SliceContains(validKeys, args[0]) {
+			if !slices.Contains(validKeys, args[0]) {
 				cmd.Help()
 				message.Fatalf(nil, lang.CmdToolsUpdateCredsInvalidServiceErr, message.RegistryKey, message.GitKey, message.ArtifactKey)
 			}
@@ -108,15 +108,15 @@ var updateCredsCmd = &cobra.Command{
 
 		if confirm {
 			// Update registry and git pull secrets
-			if helpers.SliceContains(args, message.RegistryKey) {
+			if slices.Contains(args, message.RegistryKey) {
 				c.UpdateZarfManagedImageSecrets(newState)
 			}
-			if helpers.SliceContains(args, message.GitKey) {
+			if slices.Contains(args, message.GitKey) {
 				c.UpdateZarfManagedGitSecrets(newState)
 			}
 
 			// Update artifact token (if internal)
-			if helpers.SliceContains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.InternalServer {
+			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.InternalServer {
 				g := git.New(oldState.GitServer)
 				tokenResponse, err := g.CreatePackageRegistryToken()
 				if err != nil {
@@ -139,13 +139,13 @@ var updateCredsCmd = &cobra.Command{
 				},
 			}
 
-			if helpers.SliceContains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
+			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
 				err = h.UpdateZarfRegistryValues()
 				if err != nil {
 					message.Fatalf(err, lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
 				}
 			}
-			if helpers.SliceContains(args, message.GitKey) && newState.GitServer.InternalServer {
+			if slices.Contains(args, message.GitKey) && newState.GitServer.InternalServer {
 				err = h.UpdateZarfGiteaValues()
 				if err != nil {
 					message.Fatalf(err, lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())
@@ -172,11 +172,17 @@ var downloadInitCmd = &cobra.Command{
 	Use:   "download-init",
 	Short: lang.CmdToolsDownloadInitShort,
 	Run: func(cmd *cobra.Command, args []string) {
-		initPackageName := packager.GetInitPackageName("")
-		target := filepath.Join(outputDirectory, initPackageName)
 		url := oci.GetInitPackageURL(config.GetArch(), config.CLIVersion)
 
-		if err := oci.DownloadPackageTarball(url, target, config.CommonOptions.OCIConcurrency); err != nil {
+		remote, err := oci.NewOrasRemote(url)
+		if err != nil {
+			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
+		}
+
+		source := &sources.OCISource{OrasRemote: remote}
+
+		_, err = source.Collect(outputDirectory)
+		if err != nil {
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 		}
 	},

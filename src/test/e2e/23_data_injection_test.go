@@ -37,13 +37,10 @@ func TestDataInjection(t *testing.T) {
 	require.Contains(t, stdOut, "devops.stackexchange.com_en_all_2023-05.zim")
 	require.Contains(t, stdOut, ".zarf-injection-")
 
-	// Test Named Port
-	// Set remotePort to 0 so it checks for the targetPort on the pod
-	tunnel, err := cluster.NewTunnel("kiwix", "svc", "kiwix", 8080, 0)
-
+	// need target to equal svc that we are trying to connect to call checkForZarfConnectLabel
+	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	// need target equal svc that we are trying to connect to call checkForZarfConnectLabel
-	err = tunnel.Connect("kiwix", false)
+	tunnel, err := c.Connect("kiwix")
 	require.NoError(t, err)
 	defer tunnel.Close()
 

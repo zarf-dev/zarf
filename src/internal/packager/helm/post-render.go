@@ -104,7 +104,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			var namespace corev1.Namespace
 			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shenanigans
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), &namespace); err != nil {
-				message.WarnErrorf(err, "could not parse namespace %s", rawData.GetName())
+				message.WarnErrf(err, "could not parse namespace %s", rawData.GetName())
 			} else {
 				message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
 				if namespace.Labels == nil {
@@ -209,16 +209,16 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		currentRegistrySecret, _ := c.GetSecret(name, config.ZarfImagePullSecretName)
 		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentRegistrySecret.Data, validRegistrySecret.Data) {
 			// Create or update the zarf registry secret
-			if err := c.CreateOrUpdateSecret(validRegistrySecret); err != nil {
-				message.WarnErrorf(err, "Problem creating registry secret for the %s namespace", name)
+			if _, err := c.CreateOrUpdateSecret(validRegistrySecret); err != nil {
+				message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
 			}
 
 			// Generate the git server secret
 			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.options.Cfg.State.GitServer)
 
 			// Create or update the zarf git server secret
-			if err := c.CreateOrUpdateSecret(gitServerSecret); err != nil {
-				message.WarnErrorf(err, "Problem creating git server secret for the %s namespace", name)
+			if _, err := c.CreateOrUpdateSecret(gitServerSecret); err != nil {
+				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
 			}
 		}
 	}

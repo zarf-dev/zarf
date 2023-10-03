@@ -17,8 +17,8 @@ import (
 )
 
 // ViewSBOMFiles opens a browser to view the SBOM files and pauses for user input.
-func ViewSBOMFiles(tmp types.TempPaths) {
-	sbomViewFiles, _ := filepath.Glob(filepath.Join(tmp.Sboms, "sbom-viewer-*"))
+func ViewSBOMFiles(directory string) {
+	sbomViewFiles, _ := filepath.Glob(filepath.Join(directory, "sbom-viewer-*"))
 
 	if len(sbomViewFiles) > 0 {
 		link := sbomViewFiles[0]
@@ -42,18 +42,18 @@ func ViewSBOMFiles(tmp types.TempPaths) {
 }
 
 // OutputSBOMFiles outputs the sbom files into a specified directory.
-func OutputSBOMFiles(tmp types.TempPaths, outputDir string, packageName string) error {
+func OutputSBOMFiles(sourceDir, outputDir, packageName string) (string, error) {
 	packagePath := filepath.Join(outputDir, packageName)
 
 	if err := os.RemoveAll(packagePath); err != nil {
-		return err
+		return "", err
 	}
 
 	if err := utils.CreateDirectory(packagePath, 0700); err != nil {
-		return err
+		return "", err
 	}
 
-	return utils.CreatePathAndCopy(tmp.Sboms, packagePath)
+	return packagePath, utils.CreatePathAndCopy(sourceDir, packagePath)
 }
 
 // IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections)

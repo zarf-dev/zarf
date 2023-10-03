@@ -13,15 +13,19 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 var (
-	// https://regex101.com/r/vpi8a8/1
-	isLowercaseNumberHyphen     = regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
-	isUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
+	// IsLowercaseNumberHyphen is a regex for lowercase, numbers and hyphens.
+	// https://regex101.com/r/FLdG9G/1
+	IsLowercaseNumberHyphen = regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
+	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
+	// https://regex101.com/r/tfsEuZ/1
+	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 )
 
 // Run performs config validations.
@@ -75,8 +79,8 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		}
 
 		// remove zarf.yaml from path if path has zarf.yaml suffix
-		if strings.HasSuffix(path, config.ZarfYAML) {
-			path = strings.Split(path, config.ZarfYAML)[0]
+		if strings.HasSuffix(path, layout.ZarfYAML) {
+			path = strings.Split(path, layout.ZarfYAML)[0]
 		}
 
 		// add a forward slash to end of path if it does not have one
@@ -85,7 +89,7 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		}
 
 		// ensure there is a zarf.yaml in provided path
-		if utils.InvalidPath(filepath.Join(path, config.ZarfYAML)) {
+		if utils.InvalidPath(filepath.Join(path, layout.ZarfYAML)) {
 			return fmt.Errorf(lang.PkgValidateErrImportPathInvalid, composedComponent.Import.Path)
 		}
 	} else {
@@ -207,7 +211,7 @@ func validateAction(action types.ZarfComponentAction) (bool, error) {
 
 	// Validate SetVariable
 	for _, variable := range action.SetVariables {
-		if !isUppercaseNumberUnderscore(variable.Name) {
+		if !IsUppercaseNumberUnderscore(variable.Name) {
 			return containsVariables, fmt.Errorf(lang.PkgValidateMustBeUppercase, variable.Name)
 		}
 		containsVariables = true
@@ -254,7 +258,7 @@ func validateYOLO(component types.ZarfComponent) error {
 }
 
 func validatePackageName(subject string) error {
-	if !isLowercaseNumberHyphen(subject) {
+	if !IsLowercaseNumberHyphen(subject) {
 		return fmt.Errorf(lang.PkgValidateErrPkgName, subject)
 	}
 
@@ -263,7 +267,7 @@ func validatePackageName(subject string) error {
 
 func validatePackageVariable(subject types.ZarfPackageVariable) error {
 	// ensure the variable name is only capitals and underscores
-	if !isUppercaseNumberUnderscore(subject.Name) {
+	if !IsUppercaseNumberUnderscore(subject.Name) {
 		return fmt.Errorf(lang.PkgValidateMustBeUppercase, subject.Name)
 	}
 
@@ -272,8 +276,12 @@ func validatePackageVariable(subject types.ZarfPackageVariable) error {
 
 func validatePackageConstant(subject types.ZarfPackageConstant) error {
 	// ensure the constant name is only capitals and underscores
-	if !isUppercaseNumberUnderscore(subject.Name) {
+	if !IsUppercaseNumberUnderscore(subject.Name) {
 		return fmt.Errorf(lang.PkgValidateErrPkgConstantName, subject.Name)
+	}
+
+	if !regexp.MustCompile(subject.Pattern).MatchString(subject.Value) {
+		return fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, subject.Name, subject.Pattern)
 	}
 
 	return nil

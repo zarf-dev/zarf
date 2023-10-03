@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -73,26 +74,6 @@ func Retry(fn func() error, retries int, delay time.Duration) (err error) {
 	}
 
 	return err
-}
-
-// Insert returns a new slice with the element inserted at the given index.
-func Insert[T any](slice []T, index int, element T) []T {
-	if len(slice) == index {
-		return append(slice, element)
-	}
-	slice = append(slice[:index+1], slice[index:]...)
-	slice[index] = element
-	return slice
-}
-
-// SliceContains returns true if the given element is in the slice.
-func SliceContains[T comparable](s []T, e T) bool {
-	for _, v := range s {
-		if v == e {
-			return true
-		}
-	}
-	return false
 }
 
 // MergeMap merges map m2 with m1 overwriting common values with m2's values.
@@ -198,4 +179,17 @@ func MergeNonZero[T any](original T, overrides T) T {
 		}
 	}
 	return originalValue.Interface().(T)
+}
+
+// StringToSlice converts a comma-separated string to a slice of lowercase strings.
+func StringToSlice(s string) []string {
+	if s != "" {
+		split := strings.Split(s, ",")
+		for idx, element := range split {
+			split[idx] = strings.ToLower(strings.TrimSpace(element))
+		}
+		return split
+	}
+
+	return []string{}
 }

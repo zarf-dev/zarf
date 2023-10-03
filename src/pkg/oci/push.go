@@ -8,10 +8,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
@@ -54,7 +54,7 @@ func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
-	return o.PushLayer(manifestConfigBytes, ocispec.MediaTypeImageConfig)
+	return o.PushLayer(manifestConfigBytes, ZarfConfigMediaType)
 }
 
 // manifestAnnotationsFromMetadata returns the annotations for the manifest from the given metadata.
@@ -100,10 +100,10 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 }
 
 // PublishPackage publishes the package to the remote repository.
-func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, concurrency int) error {
+func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
 	ctx := o.ctx
 	// source file store
-	src, err := file.New(sourceDir)
+	src, err := file.New(paths.Base)
 	if err != nil {
 		return err
 	}
@@ -114,31 +114,9 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 	defer spinner.Stop()
 
 	// Get all of the layers in the package
-	paths := []string{}
-	err = filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
-		// Catch any errors that happened during the walk
-		if err != nil {
-			return err
-		}
-
-		// Add any resource that is not a directory to the paths of objects we will include into the package
-		if !info.IsDir() {
-			paths = append(paths, path)
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("unable to get the layers in the package to publish: %w", err)
-	}
-
 	var descs []ocispec.Descriptor
-	for idx, path := range paths {
-		name, err := filepath.Rel(sourceDir, path)
-		if err != nil {
-			return err
-		}
-		status := fmt.Sprintf("Preparing layer %d/%d: %s", idx+1, len(paths), name)
-		spinner.Updatef(message.Truncate(status, message.TermWidth, false))
+	for name, path := range paths.Files() {
+		spinner.Updatef("Preparing layer %s", utils.First30last30(name))
 
 		mediaType := ZarfLayerMediaTypeBlob
 
@@ -148,7 +126,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, sourceDir string, co
 		}
 		descs = append(descs, desc)
 	}
-	spinner.Successf("Prepared %d layers", len(descs))
+	spinner.Successf("Prepared all layers")
 
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency

@@ -760,22 +760,6 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary>
-<strong> <a name="components_items_group"></a>group</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Create a user selector field based on all components in the same group
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
 <details open>
 <summary>
 <strong> <a name="components_items_import"></a>import</strong>
@@ -2213,6 +2197,22 @@ Must be one of:
 
 <details>
 <summary>
+<strong> <a name="components_items_actions_onCreate_before_items_setVariables_items_pattern"></a>pattern</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** An optional regex pattern that a variable value must match before a package deployment can continue.
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
 <strong> <a name="components_items_actions_onCreate_before_items_setVariables_items_type"></a>type</strong>
 </summary>
 &nbsp;
@@ -2709,6 +2709,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="constants_items_pattern"></a>pattern</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** An optional regex pattern that a constant value must match before a package can be created.
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -2838,6 +2854,22 @@ Must be one of:
 |          |           |
 | -------- | --------- |
 | **Type** | `boolean` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="variables_items_pattern"></a>pattern</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** An optional regex pattern that a variable value must match before a package can be deployed.
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>

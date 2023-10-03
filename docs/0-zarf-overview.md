@@ -189,7 +189,7 @@ zarf init
 
 
 # You are ready to deploy any Zarf Package, try out our Retro Arcade!!
-zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
+zarf package deploy oci://defenseunicorns/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub
 ```
 
 :::note
@@ -227,7 +227,7 @@ zarf init
 
 
 # You are ready to deploy any Zarf Package, try out our Retro Arcade!!
-zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)
+zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub
 ```
 
 </TabItem>

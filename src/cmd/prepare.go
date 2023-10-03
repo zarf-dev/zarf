@@ -5,8 +5,8 @@
 package cmd
 
 import (
-	"crypto"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var repoHelmChartPath, kubeVersionOverride string
 var prepareCmd = &cobra.Command{
 	Use:     "prepare",
 	Aliases: []string{"prep"},
@@ -132,7 +131,22 @@ var prepareComputeFileSha256sum = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		fileName := args[0]
-		hash, err := utils.GetCryptoHashFromFile(fileName, crypto.SHA256)
+		var data io.ReadCloser
+		var err error
+		if helpers.IsURL(fileName) {
+			message.Warn(lang.CmdPrepareSha256sumRemoteWarning)
+
+			data = utils.Fetch(fileName)
+		} else {
+			data, err = os.Open(fileName)
+			if err != nil {
+				message.Fatalf(err, lang.CmdPrepareSha256sumHashErr)
+			}
+		}
+		defer data.Close()
+
+		var hash string
+		hash, err = helpers.GetSHA256Hash(data)
 		if err != nil {
 			message.Fatal(err, lang.CmdPrepareSha256sumHashErr)
 		} else {
@@ -148,11 +162,15 @@ var prepareFindImages = &cobra.Command{
 	Short:   lang.CmdPrepareFindImagesShort,
 	Long:    lang.CmdPrepareFindImagesLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		var baseDir string
-
 		// If a directory was provided, use that as the base directory
 		if len(args) > 0 {
-			baseDir = args[0]
+			pkgConfig.CreateOpts.BaseDir = args[0]
+		} else {
+			cwd, err := os.Getwd()
+			if err != nil {
+				message.Fatalf(err, lang.CmdPrepareFindImagesErr, err.Error())
+			}
+			pkgConfig.CreateOpts.BaseDir = cwd
 		}
 
 		// Ensure uppercase keys from viper
@@ -165,8 +183,8 @@ var prepareFindImages = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Find all the images the package might need
-		if _, err := pkgClient.FindImages(baseDir, repoHelmChartPath, kubeVersionOverride); err != nil {
-			message.Fatalf(err, lang.CmdPrepareFindImagesErr, baseDir)
+		if _, err := pkgClient.FindImages(); err != nil {
+			message.Fatalf(err, lang.CmdPrepareFindImagesErr, err.Error())
 		}
 	},
 }
@@ -202,13 +220,11 @@ func init() {
 	prepareCmd.AddCommand(prepareFindImages)
 	prepareCmd.AddCommand(prepareGenerateConfigFile)
 
-	v.SetDefault(common.VPkgCreateSet, map[string]string{})
-
-	prepareFindImages.Flags().StringVarP(&repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
+	prepareFindImages.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
 	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPrepareFlagSet)
 	// allow for the override of the default helm KubeVersion
-	prepareFindImages.Flags().StringVar(&kubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
+	prepareFindImages.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
 
 	deprecatedPrepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdPrepareFlagGitAccount)
 }

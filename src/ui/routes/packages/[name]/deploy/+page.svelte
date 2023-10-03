@@ -38,11 +38,13 @@
 
 	let options: APIZarfDeployPayload = {
 		packageOpts: {
-			components: requestedComponents,
+			optionalComponents: requestedComponents,
 			sGetKeyPath: '',
-			packagePath: $pkgStore.path,
+			packageSource: $pkgStore.path,
 			setVariables: {},
-		} as ZarfPackageOptions,
+			publicKeyPath: '',
+			shasum: '',
+		},
 	};
 
 	if (isInitPkg) {

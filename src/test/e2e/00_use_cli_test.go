@@ -84,11 +84,13 @@ func TestUseCLI(t *testing.T) {
 	t.Run("zarf prepare find-images --kube-version", func(t *testing.T) {
 		t.Parallel()
 		// Test `zarf prepare find-images` on a chart that has a `kubeVersion` declaration greater than the default (v1.20.0)
-		_, stdErr, _ := e2e.Zarf("prepare", "find-images", "src/test/packages/00-kube-version-override")
+		stdOut, stdErr, err := e2e.Zarf("prepare", "find-images", "src/test/packages/00-kube-version-override")
+		require.Error(t, err, stdOut, stdErr)
 		require.Contains(t, stdErr, "Problem rendering the helm template for https://charts.jetstack.io/", "The kubeVersion declaration should prevent this from templating")
+		require.Contains(t, stdErr, "following charts had errors: [https://charts.jetstack.io/]", "Zarf should print an ending error message")
 
 		// Test `zarf prepare find-images` with `--kube-version` specified and greater than the declared minimum (v1.21.0)
-		stdOut, stdErr, err := e2e.Zarf("prepare", "find-images", "--kube-version=v1.22.0", "src/test/packages/00-kube-version-override")
+		stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "--kube-version=v1.22.0", "src/test/packages/00-kube-version-override")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "quay.io/jetstack/cert-manager-controller:v1.11.1", "The chart image should be found by Zarf")
 	})
@@ -121,7 +123,7 @@ func TestUseCLI(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
-		path := "zarf-package-distro-eks-multi-0.0.2.tar.zst"
+		path := "zarf-package-distro-eks-multi-0.0.3.tar.zst"
 		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
@@ -129,14 +131,14 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, "binaries/eksctl_Darwin_arm64")
 		require.FileExists(t, "binaries/eksctl_Linux_x86_64")
 
-		e2e.CleanFiles("binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64")
+		e2e.CleanFiles("binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path)
 	})
 
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
 		cacheDir := filepath.Join(t.TempDir(), ".cache-location")
-		stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/dos-games", "--zarf-cache", cacheDir, "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
+		stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/dos-games", "--zarf-cache", cacheDir, "--tmpdir", tmpdir, "--log-level=debug", "-o=build", "--confirm")
 		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
 		require.NoError(t, err, stdOut, stdErr)
 

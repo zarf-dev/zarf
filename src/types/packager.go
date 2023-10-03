@@ -15,8 +15,14 @@ type PackagerConfig struct {
 	// DeployOpts tracks user-defined values for the active deployment
 	DeployOpts ZarfDeployOptions
 
+	// MirrorOpts tracks user-defined values for the active mirror
+	MirrorOpts ZarfMirrorOptions
+
 	// InitOpts tracks user-defined values for the active Zarf initialization.
 	InitOpts ZarfInitOptions
+
+	// InspectOpts tracks user-defined options used to inspect the package
+	InspectOpts ZarfInspectOptions
 
 	// PublishOpts tracks user-defined options used to publish the package
 	PublishOpts ZarfPublishOptions
@@ -24,21 +30,15 @@ type PackagerConfig struct {
 	// PullOpts tracks user-defined options used to pull packages
 	PullOpts ZarfPullOptions
 
-	// Track if the package is an init package
-	IsInitConfig bool
+	// FindImagesOpts tracks user-defined options used to find images
+	FindImagesOpts ZarfFindImagesOptions
 
 	// The package data
 	Pkg ZarfPackage
-
-	// The original source of the package
-	PkgSource string
 
 	// The active zarf state
 	State *ZarfState
 
 	// Variables set by the user
 	SetVariableMap map[string]*ZarfSetVariable
-
-	// SBOM file paths in the package
-	SBOMViewFiles []string
 }

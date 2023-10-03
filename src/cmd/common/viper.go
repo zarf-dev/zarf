@@ -59,6 +59,7 @@ const (
 	// Package config keys
 
 	VPkgOCIConcurrency = "package.oci_concurrency"
+	VPkgPublicKey      = "package.public_key"
 
 	// Package create config keys
 
@@ -75,11 +76,11 @@ const (
 
 	// Package deploy config keys
 
-	VPkgDeploySet        = "package.deploy.set"
-	VPkgDeployComponents = "package.deploy.components"
-	VPkgDeployShasum     = "package.deploy.shasum"
-	VPkgDeploySget       = "package.deploy.sget"
-	VPkgDeployPublicKey  = "package.deploy.public_key"
+	VPkgDeploySet          = "package.deploy.set"
+	VPkgDeployComponents   = "package.deploy.components"
+	VPkgDeployShasum       = "package.deploy.shasum"
+	VPkgDeploySget         = "package.deploy.sget"
+	VPkgDeploySkipWebhooks = "package.deploy.skip_webhooks"
 
 	// Package publish config keys
 
@@ -89,7 +90,6 @@ const (
 	// Package pull config keys
 
 	VPkgPullOutputDir = "package.pull.output_directory"
-	VPkgPullPublicKey = "package.pull.public_key"
 )
 
 var (
@@ -160,7 +160,7 @@ func printViperConfigUsed() {
 	if vConfigError != nil {
 		// Config file not found; ignore
 		if _, ok := vConfigError.(viper.ConfigFileNotFoundError); !ok {
-			message.WarnErrorf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
+			message.WarnErrf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
 		}
 	} else {
 		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())

@@ -60,9 +60,13 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 	// Must be valid DNS https://fluxcd.io/flux/components/source/helmrepositories/#writing-a-helmrepository-spec
 
 	registryInternalURL := zarfState.RegistryInfo.Address
-	registryServiceInfo, err := cluster.ServiceInfoFromNodePortURL(zarfState.RegistryInfo.Address)
+	c, err := cluster.NewCluster()
 	if err != nil {
-		message.WarnErrorf(err, lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
+		return nil, fmt.Errorf(lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
+	}
+	registryServiceInfo, err := c.ServiceInfoFromNodePortURL(zarfState.RegistryInfo.Address)
+	if err != nil {
+		message.WarnErrf(err, lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
 	} else {
 		registryInternalURL = fmt.Sprintf("%s.%s.svc.cluster.local:%d", registryServiceInfo.Name, registryServiceInfo.Namespace, registryServiceInfo.Port)
 	}

@@ -7,6 +7,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 
 ```
   -h, --help                  help for package
+  -k, --key string            Path to public key file for validating signed packages
       --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
 ```
 
@@ -30,6 +31,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 * [zarf package deploy](zarf_package_deploy.md)	 - Deploys a Zarf package from a local file or URL (runs offline)
 * [zarf package inspect](zarf_package_inspect.md)	 - Displays the definition of a Zarf package (runs offline)
 * [zarf package list](zarf_package_list.md)	 - Lists out all of the packages that have been deployed to the cluster (runs offline)
+* [zarf package mirror-resources](zarf_package_mirror-resources.md)	 - Mirrors a Zarf package's internal resources to specified image registries and git repositories
 * [zarf package publish](zarf_package_publish.md)	 - Publishes a Zarf package to a remote registry
 * [zarf package pull](zarf_package_pull.md)	 - Pulls a Zarf package from a remote registry and save to the local file system
 * [zarf package remove](zarf_package_remove.md)	 - Removes a Zarf package that has been deployed already (runs offline)

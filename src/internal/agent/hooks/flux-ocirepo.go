@@ -61,7 +61,6 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	// Form the zarfState.RegistryServer.Address from the zarfState
 	if zarfState, err = state.GetZarfStateFromAgentPod(); err != nil {
-		message.WarnErrorf(err, "Error getting Zarf state %s", err.Error())
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
 
@@ -69,7 +68,11 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	// Must be valid DNS https://fluxcd.io/flux/components/source/ocirepositories/#writing-an-ocirepository-spec
 
 	registryInternalURL := zarfState.RegistryInfo.Address
-	registryServiceInfo, err := cluster.ServiceInfoFromNodePortURL(zarfState.RegistryInfo.Address)
+	c, err := cluster.NewCluster()
+	if err != nil {
+		return nil, fmt.Errorf(lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
+	}
+	registryServiceInfo, err := c.ServiceInfoFromNodePortURL(zarfState.RegistryInfo.Address)
 	if err != nil {
 		message.Warnf(lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
 	} else {
