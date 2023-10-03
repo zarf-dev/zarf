@@ -57,6 +57,11 @@ func (suite *RegistryClientTestSuite) Test_0_Publish() {
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Published "+ref)
 
+	// Pull the package via OCI.
+	stdOut, stdErr, err = e2e.Zarf("package", "pull", "oci://"+ref, "--insecure")
+	suite.NoError(err, stdOut, stdErr)
+	suite.Contains(stdErr, fmt.Sprintf("Pulled %q", "oci://"+ref))
+
 	// Publish w/ package missing `metadata.version` field.
 	example = filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-component-actions-%s.tar.zst", e2e.Arch))
 	_, stdErr, err = e2e.Zarf("package", "publish", example, "oci://"+ref, "--insecure")
