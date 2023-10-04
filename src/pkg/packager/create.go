@@ -218,8 +218,6 @@ func (p *Packager) Create() (err error) {
 
 		p.layout = p.layout.AddImages()
 
-		message.HeaderInfof("📦 PACKAGE IMAGES")
-
 		pulled := map[transform.Image]v1.Image{}
 
 		doPull := func() error {
@@ -300,9 +298,9 @@ func (p *Packager) Create() (err error) {
 			flags = "--insecure"
 		}
 		message.Title("To inspect/deploy/pull:", "")
-		message.ZarfCommand("package inspect oci://%s %s", p.remote.Repo().Reference, flags)
-		message.ZarfCommand("package deploy oci://%s %s", p.remote.Repo().Reference, flags)
-		message.ZarfCommand("package pull oci://%s %s", p.remote.Repo().Reference, flags)
+		message.ZarfCommand("package inspect %s %s", helpers.OCIURLPrefix+p.remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+p.remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+p.remote.Repo().Reference.String(), flags)
 	} else {
 		// Use the output path if the user specified it.
 		packageName := filepath.Join(p.cfg.CreateOpts.Output, p.GetPackageName())

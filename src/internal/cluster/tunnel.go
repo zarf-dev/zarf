@@ -195,7 +195,7 @@ func (c *Cluster) checkForZarfConnectLabel(name string) (TunnelInfo, error) {
 		zt.remotePort = svc.Spec.Ports[0].TargetPort.IntValue()
 		// if targetPort == 0, look for Port (which is required)
 		if zt.remotePort == 0 {
-			zt.remotePort = c.findPodContainerPort(svc)
+			zt.remotePort = c.FindPodContainerPort(svc)
 		}
 
 		// Add the url suffix too.
@@ -207,26 +207,4 @@ func (c *Cluster) checkForZarfConnectLabel(name string) (TunnelInfo, error) {
 	}
 
 	return zt, nil
-}
-
-// findPodContainerPort will find the container port in the pod and assign it to tunnel's remotePort.
-func (c *Cluster) findPodContainerPort(svc v1.Service) int {
-	selectorLabelsOfPods := k8s.MakeLabels(svc.Spec.Selector)
-	pods := c.WaitForPodsAndContainers(k8s.PodLookup{
-		Namespace: svc.Namespace,
-		Selector:  selectorLabelsOfPods,
-	}, nil)
-
-	for _, pod := range pods {
-		// Find the matching name on the port in the pod
-		for _, container := range pod.Spec.Containers {
-			for _, port := range container.Ports {
-				if port.Name == svc.Spec.Ports[0].TargetPort.String() {
-					return int(port.ContainerPort)
-				}
-			}
-		}
-	}
-
-	return 0
 }

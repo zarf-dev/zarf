@@ -183,7 +183,8 @@ func (i *ImageConfig) PullAll() (map[transform.Image]v1.Image, error) {
 	doneSaving := make(chan int)
 	var progressBarWaitGroup sync.WaitGroup
 	progressBarWaitGroup.Add(1)
-	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &progressBarWaitGroup, doneSaving, fmt.Sprintf("Pulling %d images", imageCount))
+	updateText := fmt.Sprintf("Pulling %d images", imageCount)
+	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &progressBarWaitGroup, doneSaving, updateText, updateText)
 
 	// Spawn a goroutine for each layer to write it to disk using crane
 
