@@ -76,7 +76,7 @@ func TestImageTransformHostWithoutChecksum(t *testing.T) {
 
 func TestMutateOCIUrlsInText(t *testing.T) {
 	originalText := `
-	# Here we handle git URLs (see below comments)
+	# Here we handle oci URLs (see below comments)
 	# We transform oci://*/* URLs
 	oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0-amd64
 	# Even URLs with things on either side
@@ -89,7 +89,7 @@ func TestMutateOCIUrlsInText(t *testing.T) {
 	https://www.defenseunicorns.com/
 	`
 	expectedText := `
-	# Here we handle git URLs (see below comments)
+	# Here we handle oci URLs (see below comments)
 	# We transform oci://*/* URLs
 	oci://new-replace-url.com/defenseunicorns/packages/dos-games:1.0.0-amd64-zarf-1025351377
 	# Even URLs with things on either side
