@@ -31,6 +31,8 @@ components:
       onCreate:
         before:
           - cmd: "test \"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\" != \"local\" || make build-local-agent-image AGENT_IMAGE_TAG=\"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\" ARCH=\"###ZARF_PKG_ARCH###\""
+            shell:
+              windows: pwsh
             dir: ../..
             description: Build the local agent image (if 'AGENT_IMAGE_TAG' was specified as 'local')
       onDeploy:
