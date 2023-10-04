@@ -27,7 +27,8 @@ var prepareCmd = &cobra.Command{
 	Aliases: []string{"prep"},
 	Short:   lang.CmdPrepareShort,
 }
-var patchCmd = &cobra.Command{
+
+var preparePatch = &cobra.Command{
 	Use:     "patch TYPE HOST FILE",
 	Short:   lang.CmdPreparePatchShort,
 	Long:    lang.CmdPreparePatchLong,
@@ -37,14 +38,14 @@ var patchCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fileType, host, fileName := args[0], args[1], args[2]
 
-		// Warn user to add regcreds to the manifests on their own
-		message.Warn(lang.CmdPreparePatchRegistryCredsMsg)
-
 		// Read the contents of the given file
 		content, err := os.ReadFile(fileName)
 		if err != nil {
 			message.Fatalf(err, lang.CmdPreparePatchFileReadErr, fileName)
 		}
+
+		// Warn user to add creds to the manifests on their own if applicable
+		message.Warn(lang.CmdPreparePatchCredsMsg)
 
 		text := string(content)
 		var processedText string
@@ -59,23 +60,24 @@ var patchCmd = &cobra.Command{
 		default:
 			message.Fatalf(nil, lang.CmdPreparePatchInvalidFileTypeErr, fileType)
 		}
+
 		// Print the differences
 		message.PrintDiff(text, processedText)
 
 		// Ask the user before this destructive action
 		confirm := false
 		prompt := &survey.Confirm{
-			Message: fmt.Sprintf(lang.CmdPreparePatchGitOverwritePrompt, fileName),
+			Message: fmt.Sprintf(lang.CmdPreparePatchOverwritePrompt, fileName),
 		}
 		if err := survey.AskOne(prompt, &confirm); err != nil {
-			message.Fatalf(nil, lang.CmdPreparePatchGitOverwriteErr, err.Error())
+			message.Fatalf(nil, lang.CmdPreparePatchOverwriteErr, err.Error())
 		}
 
 		if confirm {
 			// Overwrite the file
 			err = os.WriteFile(fileName, []byte(processedText), 0640)
 			if err != nil {
-				message.Fatal(err, lang.CmdPreparePatchGitFileWriteErr)
+				message.Fatal(err, lang.CmdPreparePatchFileWriteErr)
 			}
 		}
 	},
@@ -87,40 +89,8 @@ var deprecatedPrepareTransformGitLinks = &cobra.Command{
 	Short:   lang.CmdPreparePatchGitShort,
 	Args:    cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		host, fileName := args[0], args[1]
-
-		// Read the contents of the given file
-		content, err := os.ReadFile(fileName)
-		if err != nil {
-			message.Fatalf(err, lang.CmdPreparePatchGitFileReadErr, fileName)
-		}
-
-		pkgConfig.InitOpts.GitServer.Address = host
-
-		// Perform git url transformation via regex
-		text := string(content)
-		processedText := transform.MutateGitURLsInText(message.Warnf, pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
-
-		// Print the differences
-		message.PrintDiff(text, processedText)
-
-		// Ask the user before this destructive action
-		confirm := false
-		prompt := &survey.Confirm{
-			Message: fmt.Sprintf(lang.CmdPreparePatchGitOverwritePrompt, fileName),
-		}
-		if err := survey.AskOne(prompt, &confirm); err != nil {
-			message.Fatalf(nil, lang.CmdPreparePatchGitOverwriteErr, err.Error())
-		}
-
-		if confirm {
-			// Overwrite the file
-			err = os.WriteFile(fileName, []byte(processedText), 0640)
-			if err != nil {
-				message.Fatal(err, lang.CmdPreparePatchGitFileWriteErr)
-			}
-		}
-
+		message.Warn(lang.CmdPreparePatchGitDeprecated)
+		preparePatch.Run(preparePatch, append([]string{"git"}, args...))
 	},
 }
 
@@ -215,16 +185,17 @@ func init() {
 
 	rootCmd.AddCommand(prepareCmd)
 	prepareCmd.AddCommand(deprecatedPrepareTransformGitLinks)
-	prepareCmd.AddCommand(patchCmd)
+	prepareCmd.AddCommand(preparePatch)
 	prepareCmd.AddCommand(prepareComputeFileSha256sum)
 	prepareCmd.AddCommand(prepareFindImages)
 	prepareCmd.AddCommand(prepareGenerateConfigFile)
 
-	prepareFindImages.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
+	prepareFindImages.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFindImagesFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPrepareFlagSet)
+	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPrepareFindImagesFlagSet)
 	// allow for the override of the default helm KubeVersion
-	prepareFindImages.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
+	prepareFindImages.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdPrepareFindImagesFlagKubeVersion)
 
-	deprecatedPrepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdPrepareFlagGitAccount)
+	preparePatch.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-push-username", config.ZarfGitPushUser, lang.CmdPreparePatchFlagGitUsername)
+	deprecatedPrepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdPreparePatchFlagGitUsername)
 }
