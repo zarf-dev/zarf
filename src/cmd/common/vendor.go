@@ -10,6 +10,7 @@ import (
 
 	"slices"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/spf13/cobra"
 )
 
@@ -46,6 +47,10 @@ func CheckVendorOnlyFromPath(cmd *cobra.Command) bool {
 
 // IsVendorCmd checks if the command is a vendor command.
 func IsVendorCmd(args []string, vendoredCmds []string) bool {
+	if config.ActionsCommandZarfPrefix != "" {
+		args = args[1:]
+	}
+
 	if len(args) > 2 {
 		if args[1] == "tools" || args[1] == "t" {
 			if slices.Contains(vendoredCmds, args[2]) {
