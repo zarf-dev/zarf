@@ -2,6 +2,12 @@ import ExampleYAML from "@site/src/components/ExampleYAML";
 
 # Component Choice
 
+:::caution
+
+Component Choice is currently a [Deprecated Feature](../../docs/9-roadmap.md#alpha). This feature is will be removed in Zarf v1.0.0. Please migrate any existing packages you may have that utilize it.
+
+:::
+
 This example demonstrates how to define packages that can be chosen by the user on `zarf package deploy`.  This is done through the `group` key inside of the component specification that defines a group of components a user can select from.
 
 A package creator can also use the `default` key to specify which component will be chosen if a user uses the `--confirm` flag.
