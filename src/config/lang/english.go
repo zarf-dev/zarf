@@ -313,9 +313,9 @@ const (
 	// zarf prepare
 	CmdPrepareShort         = "Tools to help prepare assets for packaging"
 	CmdPreparePatchCredsMsg = "Zarf will not automatically add credentials to a manifest, please update the secret references manually as appropriate (i.e. 'private-registry' or 'private-git-server')."
-	CmdPreparePatchShort    = "Displays a table of patch commands for file types. Pass a file type key and a file to patch a single file."
-	CmdPreparePatchLong     = "Displays a table of patch commands for file types. Pass a file type key and a file to patch a single file. i.e. 'zarf prepare patch git ./manifest.yaml'"
-	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
+	CmdPreparePatchShort    = "Patches files to match Zarf's mutated airgap resource references"
+	CmdPreparePatchLong     = "Patches files to match Zarf's mutated airgap resource references. Useful when not using the Zarf Agent or needing to see how a given resource will be mutated."
+	CmdPreparePatchGitShort = "[Deprecated] Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
 	CmdPreparePatchOverwritePrompt = "Overwrite the file %s with these changes?"
 	CmdPreparePatchOverwriteErr    = "Confirm overwrite canceled: %s"
