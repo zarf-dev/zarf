@@ -75,95 +75,35 @@ func TestImageTransformHostWithoutChecksum(t *testing.T) {
 }
 
 func TestMutateOCIUrlsInText(t *testing.T) {
-	var cases = []string{
-		`
-		apiVersion: source.toolkit.fluxcd.io/v1beta2
-		kind: OCIRepository
-		metadata:
-		  annotations:
-			meta.helm.sh/release-name: zarf-f9a1f5988caab4452fd11c5565d2470175cd59b2
-			meta.helm.sh/release-namespace: flux-system
-		  creationTimestamp: "2023-09-20T14:17:17Z"
-		  finalizers:
-		  - finalizers.fluxcd.io
-		  generation: 1
-		  labels:
-			app.kubernetes.io/managed-by: Helm
-		  name: podinfo
-		  namespace: flux-system
-		  resourceVersion: "1361"
-		  uid: 012ae597-23f7-4a6c-b62b-7b27a3b94317
-		spec:
-		  interval: 5m0s
-		  provider: generic
-		  ref:
-			tag: latest-zarf-2823281104
-		  secretRef:
-			name: private-registry
-		  timeout: 60s
-		  url: oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/manifests/podinfo
-		`,
-		`
-		apiVersion: source.toolkit.fluxcd.io/v1beta2
-		kind: OCIRepository
-		metadata:
-		  name: podinfo
-		  namespace: flux-system
-		spec:
-		  interval: 5m0s
-		  url: oci://ghcr.io/stefanprodan/manifests/podinfo
-		  ref:
-		    tag: latest
-		`,
-		"My image test: oci://caseywylie.io/person/name/first and oci://caseywylie.io/person/car/type",
-	}
-	var expectedResults = []string{
-		`
-		apiVersion: source.toolkit.fluxcd.io/v1beta2
-		kind: OCIRepository
-		metadata:
-		  annotations:
-			meta.helm.sh/release-name: zarf-f9a1f5988caab4452fd11c5565d2470175cd59b2
-			meta.helm.sh/release-namespace: flux-system
-		  creationTimestamp: "2023-09-20T14:17:17Z"
-		  finalizers:
-		  - finalizers.fluxcd.io
-		  generation: 1
-		  labels:
-			app.kubernetes.io/managed-by: Helm
-		  name: podinfo
-		  namespace: flux-system
-		  resourceVersion: "1361"
-		  uid: 012ae597-23f7-4a6c-b62b-7b27a3b94317
-		spec:
-		  interval: 5m0s
-		  provider: generic
-		  ref:
-			tag: latest-zarf-2823281104
-		  secretRef:
-			name: private-registry
-		  timeout: 60s
-		  url: oci://new-replace-url.com/stefanprodan/manifests/podinfo
-		`,
-		`
-		apiVersion: source.toolkit.fluxcd.io/v1beta2
-		kind: OCIRepository
-		metadata:
-		  name: podinfo
-		  namespace: flux-system
-		spec:
-		  interval: 5m0s
-		  url: oci://new-replace-url.com/stefanprodan/manifests/podinfo
-		  ref:
-		    tag: latest
-		`,
-		"My image test: oci://new-replace-url.com/person/name/first and oci://new-replace-url.com/person/car/type",
-	}
+	originalText := `
+	# Here we handle git URLs (see below comments)
+	# We transform oci://*/* URLs
+	oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0-amd64
+	# Even URLs with things on either side
+	stuff oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0-amd64 andthings
+	# And ones without tags or domains
+	oci://defenseunicorns/packages/dos-games
+	# And ones with SHA digests
+	oci://localhost:555/defenseunicorns/packages/dos-games@sha256:f78e442f0f3eb3e9459b5ae6b1a8fda62f8dfe818112e7d130a4e8ae72b3cbff
+	# But not regular URLs
+	https://www.defenseunicorns.com/
+	`
+	expectedText := `
+	# Here we handle git URLs (see below comments)
+	# We transform oci://*/* URLs
+	oci://new-replace-url.com/defenseunicorns/packages/dos-games:1.0.0-amd64-zarf-1025351377
+	# Even URLs with things on either side
+	stuff oci://new-replace-url.com/defenseunicorns/packages/dos-games:1.0.0-amd64-zarf-1025351377 andthings
+	# And ones without tags or domains
+	oci://new-replace-url.com/defenseunicorns/packages/dos-games
+	# And ones with SHA digests
+	oci://new-replace-url.com/defenseunicorns/packages/dos-games@sha256:f78e442f0f3eb3e9459b5ae6b1a8fda62f8dfe818112e7d130a4e8ae72b3cbff
+	# But not regular URLs
+	https://www.defenseunicorns.com/
+	`
 
-	for idx, text := range cases {
-		newText := MutateOCIURLsInText(message.Warnf, "new-replace-url.com", text)
-		require.Equal(t, expectedResults[idx], newText)
-	}
+	resultingText := MutateOCIURLsInText(message.Warnf, "new-replace-url.com", originalText)
+	require.Equal(t, resultingText, expectedText)
 
 }
 func TestParseImageRef(t *testing.T) {

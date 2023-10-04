@@ -21,7 +21,7 @@ func MutateGitURLsInText(logger Log, targetBaseURL, text, pushUser string) strin
 	fuzzyGitURLRegex := regexp.MustCompile(`[a-z]+:\/\/[^\/]+\/(.*\.git)`)
 
 	// Use ReplaceAllStringFunc to replace matching URLs while preserving the path
-	output := fuzzyGitURLRegex.ReplaceAllStringFunc(text, func(match string) string {
+	result := fuzzyGitURLRegex.ReplaceAllStringFunc(text, func(match string) string {
 		output, err := GitURL(targetBaseURL, match, pushUser)
 		if err != nil {
 			logger("Unable to transform the git url, using the original url we have: %s", match)
@@ -29,7 +29,7 @@ func MutateGitURLsInText(logger Log, targetBaseURL, text, pushUser string) strin
 		}
 		return output.String()
 	})
-	return output
+	return result
 }
 
 // GitURLSplitRef takes a git url and returns a separated source url and zarf reference.
