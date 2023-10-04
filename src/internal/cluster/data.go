@@ -81,12 +81,12 @@ iterator:
 		// Inject into all the pods
 		for _, pod := range pods {
 			// Try to use the embedded kubectl if we can
-			zarfBinPath, err := utils.GetFinalExecutablePath()
+			zarfCommand, err := utils.GetFinalExecutableCommand()
 			kubectlBinPath := "kubectl"
 			if err != nil {
 				message.Warnf("Unable to get the zarf executable path, falling back to host kubectl: %s", err)
 			} else {
-				kubectlBinPath = fmt.Sprintf("%s tools kubectl", zarfBinPath)
+				kubectlBinPath = fmt.Sprintf("%s tools kubectl", zarfCommand)
 			}
 			kubectlCmd := fmt.Sprintf("%s exec -i -n %s %s -c %s ", kubectlBinPath, data.Target.Namespace, pod.Name, data.Target.Container)
 
