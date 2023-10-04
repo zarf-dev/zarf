@@ -56,7 +56,7 @@ var preparePatch = &cobra.Command{
 			processedText = transform.MutateGitURLsInText(message.Warnf, pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
 		case "oci":
 			pkgConfig.InitOpts.RegistryInfo.Address = host
-			processedText = transform.MutateOCIURLsInText(text, pkgConfig.InitOpts.RegistryInfo.Address)
+			processedText = transform.MutateOCIURLsInText(message.Warnf, pkgConfig.InitOpts.RegistryInfo.Address, text)
 		default:
 			message.Fatalf(nil, lang.CmdPreparePatchInvalidFileTypeErr, fileType)
 		}
