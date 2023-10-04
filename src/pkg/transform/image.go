@@ -25,23 +25,35 @@ type Image struct {
 }
 
 // MutateOCIURLsInText changes the oci url hostname to use the targetBaseURL.
-func MutateOCIURLsInText(text, replaceHostname string) string {
-	// Define the regex pattern to match oci:// URLs with hostname and path
-	ociURLRegex := regexp.MustCompile(`(oci:\/\/)([^\/]+)(\/[^ ]*)`)
+func MutateOCIURLsInText(logger Log, targetBaseURL, text string) string {
+	// For further explanation: https://regex101.com/r/UU7Gan/2
+	fuzzyOCIURLRegex := regexp.MustCompile(`oci:\/\/(?P<ref>[^\s]+\/[^@:\s]+(?P<sha>@[\w]+:[\w]+)?(?P<tag>:[^\/\s]+)?)`)
 
 	// Use ReplaceAllStringFunc to replace matching URLs while preserving the path
-	result := ociURLRegex.ReplaceAllStringFunc(text, func(match string) string {
-		// Split the match into oci://, hostname, and path
-		parts := ociURLRegex.FindStringSubmatch(match)
-
-		// Check if there are enough parts to replace
-		if len(parts) >= 4 {
-			// Replace the hostname with the specified hostname
-			return parts[1] + replaceHostname + parts[3]
+	result := fuzzyOCIURLRegex.ReplaceAllStringFunc(text, func(match string) string {
+		get, err := helpers.MatchRegex(fuzzyOCIURLRegex, match)
+		if err != nil {
+			logger("unable to parse the matched url, using the original url we have: %s", match)
+			return match
 		}
 
-		// If the match doesn't have enough parts, return it unchanged
-		return match
+		output, err := ImageTransformHost(targetBaseURL, get("ref"))
+		if err != nil {
+			logger("Unable to transform the OCI url, using the original url we have: %s: %s", match)
+			return match
+		}
+
+		outputRef, err := ParseImageRef(output)
+		if err != nil {
+			logger("Unable to parse the transformed url, using the original url we have: %s", match)
+			return match
+		}
+
+		if get("sha") == "" && get("tag") == "" {
+			return helpers.OCIURLPrefix + outputRef.Name
+		}
+
+		return helpers.OCIURLPrefix + outputRef.Reference
 	})
 
 	return result
@@ -62,7 +74,7 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	// Generate a crc32 hash of the image host + name
 	checksum := helpers.GetCRCHash(image.Name)
 
-	// If this image is specified by digest then don't add a checksum it as it will already be a specific SHA
+	// If this image is specified by digest then don't add a checksum as it will already be a specific SHA
 	if image.Digest != "" {
 		return fmt.Sprintf("%s/%s@%s", targetHost, image.Path, image.Digest), nil
 	}

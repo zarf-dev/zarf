@@ -7,6 +7,7 @@ package transform
 import (
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,32 +45,31 @@ var badGitURLs = []string{
 }
 
 func TestMutateGitURLsInText(t *testing.T) {
-	dummyLogger := func(content string, args ...any) {}
 	originalText := `
-	# Here we handle invalid URLs (see below comment)
+	# Here we handle git URLs (see below comments)
 	# We transform https://*/*.git URLs
 	https://github.com/defenseunicorns/zarf.git
 	# Even URLs with things on either side
 	stuff https://github.com/defenseunicorns/zarf.git andthings
 	# Including ssh://*/*.git URLs
 	ssh://git@github.com/defenseunicorns/zarf.git
-	# Or non .git URLs
+	# But not non .git URLs
 	https://www.defenseunicorns.com/
 	`
 
 	expectedText := `
-	# Here we handle invalid URLs (see below comment)
+	# Here we handle git URLs (see below comments)
 	# We transform https://*/*.git URLs
 	https://gitlab.com/repo-owner/zarf-1211668992.git
 	# Even URLs with things on either side
 	stuff https://gitlab.com/repo-owner/zarf-1211668992.git andthings
 	# Including ssh://*/*.git URLs
 	https://gitlab.com/repo-owner/zarf-2566185087.git
-	# Or non .git URLs
+	# But not non .git URLs
 	https://www.defenseunicorns.com/
 	`
 
-	resultingText := MutateGitURLsInText(dummyLogger, "https://gitlab.com", originalText, "repo-owner")
+	resultingText := MutateGitURLsInText(message.Warnf, "https://gitlab.com", originalText, "repo-owner")
 	require.Equal(t, expectedText, resultingText)
 }
 

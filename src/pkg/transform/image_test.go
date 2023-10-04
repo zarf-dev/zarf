@@ -7,6 +7,7 @@ package transform
 import (
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/stretchr/testify/require"
 )
 
@@ -114,7 +115,7 @@ func TestMutateOCIUrlsInText(t *testing.T) {
 		  ref:
 		    tag: latest
 		`,
-		"My image test: oci://caseywylie.io/person/name/first and oci://caseywylie.io/person/car/type.",
+		"My image test: oci://caseywylie.io/person/name/first and oci://caseywylie.io/person/car/type",
 	}
 	var expectedResults = []string{
 		`
@@ -156,11 +157,11 @@ func TestMutateOCIUrlsInText(t *testing.T) {
 		  ref:
 		    tag: latest
 		`,
-		"My image test: oci://new-replace-url.com/person/name/first and oci://new-replace-url.com/person/car/type.",
+		"My image test: oci://new-replace-url.com/person/name/first and oci://new-replace-url.com/person/car/type",
 	}
 
 	for idx, text := range cases {
-		newText := MutateOCIURLsInText(text, "new-replace-url.com")
+		newText := MutateOCIURLsInText(message.Warnf, "new-replace-url.com", text)
 		require.Equal(t, expectedResults[idx], newText)
 	}
 

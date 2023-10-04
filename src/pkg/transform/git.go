@@ -16,9 +16,12 @@ import (
 var gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)?(?P<git>\.git)?(\/)?(?P<atRef>@(?P<force>\+)?(?P<ref>[\/\+\w\-\.]+))?(?P<gitPath>\/(?P<gitPathId>info\/.*|git-upload-pack|git-receive-pack))?$`)
 
 // MutateGitURLsInText changes the gitURL hostname to use the repository Zarf is configured to use.
-func MutateGitURLsInText(logger Log, targetBaseURL string, text string, pushUser string) string {
-	extractPathRegex := regexp.MustCompile(`[a-z]+:\/\/[^\/]+\/(.*\.git)`)
-	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
+func MutateGitURLsInText(logger Log, targetBaseURL, text, pushUser string) string {
+	// For further explanation: https://regex101.com/r/xYTnst/2
+	fuzzyGitURLRegex := regexp.MustCompile(`[a-z]+:\/\/[^\/]+\/(.*\.git)`)
+
+	// Use ReplaceAllStringFunc to replace matching URLs while preserving the path
+	output := fuzzyGitURLRegex.ReplaceAllStringFunc(text, func(match string) string {
 		output, err := GitURL(targetBaseURL, match, pushUser)
 		if err != nil {
 			logger("Unable to transform the git url, using the original url we have: %s", match)
