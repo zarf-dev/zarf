@@ -80,11 +80,11 @@ func findInitPackage(initPackageName string) (string, error) {
 	}
 
 	// Next, look for the init package in the executable directory
-	zarfBinPath, err := utils.GetFinalExecutablePath()
+	binaryPath, err := utils.GetFinalExecutablePath()
 	if err != nil {
 		return "", err
 	}
-	executableDir := path.Dir(zarfBinPath)
+	executableDir := path.Dir(binaryPath)
 	if !utils.InvalidPath(filepath.Join(executableDir, initPackageName)) {
 		return filepath.Join(executableDir, initPackageName), nil
 	}
