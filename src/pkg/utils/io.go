@@ -277,7 +277,9 @@ func GetFinalExecutableCommand() (string, error) {
 		return zarfCommand, err
 	}
 
-	zarfCommand = fmt.Sprintf("%s %s", zarfCommand, config.ActionsCommandZarfPrefix)
+	if config.ActionsCommandZarfPrefix != "" {
+		zarfCommand = fmt.Sprintf("%s %s", zarfCommand, config.ActionsCommandZarfPrefix)
+	}
 
 	// If a library user has chosen to override config to use system Zarf instead, reset the binary path.
 	if config.ActionsUseSystemZarf {
