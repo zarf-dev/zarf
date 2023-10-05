@@ -34,7 +34,7 @@ func TestComponentActionEdgeCases(t *testing.T) {
 	e2e.SetupWithCluster(t)
 
 	sourcePath := filepath.Join("src", "test", "packages", "31-component-actions-edgecases")
-	packagePath := fmt.Sprintf("zarf-package-component-actions-edgecases%s.tar.zst", e2e.Arch)
+	packagePath := fmt.Sprintf("zarf-package-component-actions-edgecases-%s.tar.zst", e2e.Arch)
 
 	stdOut, stdErr, err := e2e.Zarf("package", "create", sourcePath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
