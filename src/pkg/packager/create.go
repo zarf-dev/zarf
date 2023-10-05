@@ -97,7 +97,6 @@ func (p *Packager) Create() (err error) {
 	var nameOpts []name.Option
 
 	// Add signatures and attestations for images
-	var combinedSbomImgList []string
 	if p.cfg.CreateOpts.SkipCosignLookup {
 		message.Debug("Skipping cosign artifact lookups per --skip-cosign-lookup flag")
 	} else {
@@ -120,10 +119,7 @@ func (p *Packager) Create() (err error) {
 
 				sigs, err := simg.Signatures()
 				if err == nil {
-					layers, err := sigs.Layers()
-					if err != nil {
-						return err
-					}
+					layers, _ := sigs.Layers()
 					if len(layers) > 0 {
 						imageSigList = append(imageSigList, sigRef.String())
 					}
@@ -131,16 +127,12 @@ func (p *Packager) Create() (err error) {
 
 				atts, err := simg.Attestations()
 				if err == nil {
-					layers, err := atts.Layers()
-					if err != nil {
-						return err
-					}
+					layers, _ := atts.Layers()
 					if len(layers) > 0 {
 						imageSigList = append(imageSigList, attRef.String())
 					}
 				}
 			}
-			combinedSbomImgList = append(combinedSbomImgList, p.cfg.Pkg.Components[i].Images...)
 			p.cfg.Pkg.Components[i].Images = append(p.cfg.Pkg.Components[i].Images, imageSigList...)
 		}
 	}

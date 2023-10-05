@@ -58,7 +58,7 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.NoError(err, stdOut, stdErr)
 
 	// build the package that we are going to publish
-	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.24.0", "-o", suite.tmpdir, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--skip-cosign-lookup", "--insecure", "--set=PACKAGE_VERSION=v0.24.0", "-o", suite.tmpdir, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// publish the package that we just built
@@ -67,7 +67,7 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.NoError(err, stdOut, stdErr)
 
 	// Build without differential
-	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--insecure", "--set=PACKAGE_VERSION=v0.25.0", "-o", suite.tmpdir, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--skip-cosign-lookup", "--insecure", "--set=PACKAGE_VERSION=v0.25.0", "-o", suite.tmpdir, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Extract and load the zarf.yaml config for the normally built package
@@ -78,7 +78,7 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.NoError(err, "unable to read zarf.yaml from the differential git package")
 	os.Remove(filepath.Join(suite.tmpdir, "zarf.yaml"))
 
-	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--differential", "oci://"+suite.Reference.String()+"/podinfo-with-oci-flux:v0.24.0-amd64", "--insecure", "--set=PACKAGE_VERSION=v0.25.0", "-o", suite.tmpdir, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", anotherPackagePath, "--skip-cosign-lookup", "--differential", "oci://"+suite.Reference.String()+"/podinfo-with-oci-flux:v0.24.0-amd64", "--insecure", "--set=PACKAGE_VERSION=v0.25.0", "-o", suite.tmpdir, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Extract and load the zarf.yaml config for the differentially built package

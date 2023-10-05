@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/anchore/stereoscope/pkg/file"
 	"github.com/anchore/stereoscope/pkg/image"
@@ -70,6 +71,11 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imageList []transf
 	currImage := 1
 	for _, refInfo := range imageList {
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, refInfo.Reference)
+
+		if strings.HasSuffix(refInfo.Tag, ".sig") || strings.HasSuffix(refInfo.Tag, ".att") {
+			message.Debugf("Skipping SBOM for cosign artifact %s", refInfo.Reference)
+			continue
+		}
 
 		// Get the image that we are creating an SBOM for
 		img, err := utils.LoadOCIImage(paths.Images.Base, refInfo)
