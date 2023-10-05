@@ -222,10 +222,14 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 	err = man.Build()
 	if e, ok := err.(downloader.ErrRepoNotFound); ok {
 		// If we encounter a repo not found error point the user to `zarf tools helm repo add`
-		message.Warnf("%s. Please add the missing repo via 'zarf tools helm repo add <name> <url>'", e.Error())
+		message.Warnf("%s. Please add the missing repo(s) via the following:", e.Error())
+		for _, repository := range e.Repos {
+			message.ZarfCommand(fmt.Sprintf("tools helm repo add <your-repo-name> %s", repository))
+		}
 	} else if err != nil {
 		// Warn the user of any issues but don't fail - any actual issues will cause a fail during packaging (e.g. the charts we are building may exist already, we just can't get updates)
-		message.Warnf("%s", err.Error())
+		message.ZarfCommand("tools helm dependency build --verify")
+		message.Warnf("Unable to perform a rebuild of Helm dependencies: %s", err.Error())
 	}
 
 	return nil
