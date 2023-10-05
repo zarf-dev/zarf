@@ -2,7 +2,7 @@ import ExampleYAML from '@site/src/components/ExampleYAML';
 
 # Component Webhooks
 
-:::warn
+:::caution
 
 Component Webhooks is currently an [Alpha Feature](../../docs/9-roadmap.md#alpha). This feature is not extensively tested and may be affected by breaking changes in the future. We encourage you to experiment with this feature and provide feedback to the Zarf team as we begin to stabilize this feature.
 
