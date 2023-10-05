@@ -56,8 +56,8 @@ func FindInitStream(w http.ResponseWriter, _ *http.Request) {
 	done := make(chan bool)
 	go func() {
 		// stream init packages in the execution directory
-		if execBin, err := utils.GetFinalExecutablePath(); err == nil {
-			streamDirPackages(filepath.Dir(execBin), packager.ZarfInitPattern, w)
+		if binaryPath, err := utils.GetFinalExecutablePath(); err == nil {
+			streamDirPackages(filepath.Dir(binaryPath), packager.ZarfInitPattern, w)
 		} else {
 			streamError(err, w)
 		}

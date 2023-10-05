@@ -355,6 +355,7 @@ const (
 
 	CmdToolsRegistryShort     = "Tools for working with container registries using go-containertools"
 	CmdToolsRegistryZarfState = "Retrieving registry information from Zarf state"
+	CmdToolsRegistryTunnel    = "Opening a tunnel from %s locally to %s in the cluster"
 
 	CmdToolsRegistryCatalogExample = `
 	# list the repos internal to Zarf

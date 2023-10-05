@@ -133,6 +133,7 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 		}
 
 		if tunnel != nil {
+			message.Notef(lang.CmdToolsRegistryTunnel, registryEndpoint, zarfState.RegistryInfo.Address)
 			defer tunnel.Close()
 		}
 
@@ -186,6 +187,8 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 		}
 
 		if tunnel != nil {
+			message.Notef(lang.CmdToolsRegistryTunnel, tunnel.Endpoint(), zarfState.RegistryInfo.Address)
+
 			defer tunnel.Close()
 
 			givenAddress := fmt.Sprintf("%s/", zarfState.RegistryInfo.Address)
@@ -229,6 +232,7 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 	}
 
 	if tunnel != nil {
+		message.Notef(lang.CmdToolsRegistryTunnel, registryEndpoint, zarfState.RegistryInfo.Address)
 		defer tunnel.Close()
 	}
 
