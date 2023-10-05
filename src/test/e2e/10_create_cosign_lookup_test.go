@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
@@ -32,12 +32,12 @@ func TestCosignLookup(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Extract the yaml of the differential package
-	err = archiver.Extract(packageName, config.ZarfYAML, tmpdir)
+	err = archiver.Extract(packageName, layout.ZarfYAML, tmpdir)
 	require.NoError(t, err, "unable to extract zarf.yaml from the package")
 
 	// Load the extracted zarf.yaml specification
 	var zarfConfig types.ZarfPackage
-	err = utils.ReadYaml(filepath.Join(tmpdir, config.ZarfYAML), &zarfConfig)
+	err = utils.ReadYaml(filepath.Join(tmpdir, layout.ZarfYAML), &zarfConfig)
 	require.NoError(t, err, "unable to read zarf.yaml from the package")
 
 	// Get a list of all images and repos that are inside of the differential package
