@@ -128,3 +128,9 @@ func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
 	require.NoError(t, err, stdOut, stdErr)
 	return strings.Trim(stdOut, "\n")
 }
+
+func (e2e *ZarfE2ETest) StripANSICodes(input string) string {
+	// Regex to strip any color codes from the output - https://regex101.com/r/YFyIwC/2
+	ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
+	return ansiRegex.ReplaceAllString(input, "")
+}
