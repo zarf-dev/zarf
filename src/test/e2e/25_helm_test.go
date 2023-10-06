@@ -39,7 +39,7 @@ func testHelmChartsExample(t *testing.T) {
 	evilChartDepsPath := filepath.Join("src", "test", "packages", "25-evil-chart-deps")
 	stdOut, stdErr, err := e2e.Zarf("package", "create", evilChartDepsPath, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, e2e.StripANSICodes(stdErr), "could not download https://charts.jetstack.io/charts/cert-manager-v1.11.1.tgz")
+	require.Contains(t, e2e.StripANSICodes(stdErr), "could not download\n          https://charts.jetstack.io/charts/cert-manager-v1.11.1.tgz")
 	require.FileExists(t, filepath.Join(evilChartDepsPath, "good-chart", "charts", "gitlab-runner-0.55.0.tgz"))
 
 	// Create the package with a registry override
