@@ -85,3 +85,21 @@ func AddImageNameAnnotation(ociPath string, referenceToDigest map[string]string)
 	}
 	return os.WriteFile(indexPath, indexJSONBytes, 0600)
 }
+
+func HasImageLayers(img v1.Image) (bool, error) {
+	layers, err := img.Layers()
+	if err != nil {
+		return false, err
+	}
+	for _, layer := range layers {
+		mediatype, err := layer.MediaType()
+		if err != nil {
+			return false, err
+		}
+		// Check if mediatype is a known image layer
+		if mediatype.IsLayer() {
+			return true, nil
+		}
+	}
+	return false, nil
+}

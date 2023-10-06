@@ -6,4 +6,4 @@ metadata:
 components:
   - name: test
     images:
-      - cgr.dev/chainguard/static:latest
+      - ghcr.io/defenseunicorns/zarf/agent:v0.30.0

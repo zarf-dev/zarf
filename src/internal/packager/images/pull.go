@@ -487,7 +487,12 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 
 	spinner.Updatef("Preparing image %s", src)
 
-	if !strings.HasSuffix(src, ".sig") && !strings.HasSuffix(src, ".att") {
+	isImage, err := utils.HasImageLayers(img)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check image %s layer mediatype: %w", src, err)
+	}
+
+	if isImage {
 		imageCachePath := filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
 		img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 	}

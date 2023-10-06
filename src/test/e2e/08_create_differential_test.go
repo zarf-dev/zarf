@@ -28,17 +28,17 @@ func TestCreateDifferential(t *testing.T) {
 	differentialFlag := fmt.Sprintf("--differential=%s", packageName)
 
 	// Build the package a first time
-	stdOut, stdErr, err := e2e.Zarf("package", "create", packagePath, "--skip-cosign-lookup", "--zarf-cache", cachePath, "--set=PACKAGE_VERSION=v0.25.0", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", packagePath, "--zarf-cache", cachePath, "--set=PACKAGE_VERSION=v0.25.0", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(packageName)
 
 	// Build the differential package without changing the version
-	_, stdErr, err = e2e.Zarf("package", "create", packagePath, "--skip-cosign-lookup", "--zarf-cache", cachePath, "--set=PACKAGE_VERSION=v0.25.0", differentialFlag, "--confirm")
+	_, stdErr, err = e2e.Zarf("package", "create", packagePath, "--zarf-cache", cachePath, "--set=PACKAGE_VERSION=v0.25.0", differentialFlag, "--confirm")
 	require.Error(t, err, "zarf package create should have errored when a differential package was being created without updating the package version number")
 	require.Contains(t, stdErr, "unable to create a differential package with the same version")
 
 	// Build the differential package
-	stdOut, stdErr, err = e2e.Zarf("package", "create", packagePath, "--skip-cosign-lookup", "--zarf-cache", cachePath, "--set=PACKAGE_VERSION=v0.26.0", differentialFlag, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", packagePath, "--zarf-cache", cachePath, "--set=PACKAGE_VERSION=v0.26.0", differentialFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(differentialPackageName)
 
@@ -74,8 +74,9 @@ func TestCreateDifferential(t *testing.T) {
 	expectedImages := []string{
 		"ghcr.io/stefanprodan/podinfo:latest",
 		"ghcr.io/defenseunicorns/zarf/agent:v0.26.0",
+		"ghcr.io/defenseunicorns/zarf/agent:sha256-0da3c9b61dd764a39a433f8c3f967fe534d4f3c517dfb92c43923f51fe16d179.sig",
 	}
-	require.Len(t, actualImages, 2, "zarf.yaml from the differential package does not contain the correct number of images")
+	require.Len(t, actualImages, 3, "zarf.yaml from the differential package does not contain the correct number of images")
 	for _, expectedImage := range expectedImages {
 		require.Contains(t, actualImages, expectedImage, fmt.Sprintf("unable to find expected image %s", expectedImage))
 	}

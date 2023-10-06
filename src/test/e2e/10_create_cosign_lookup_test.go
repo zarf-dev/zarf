@@ -46,8 +46,15 @@ func TestCosignLookup(t *testing.T) {
 		actualImages = append(actualImages, component.Images...)
 	}
 
-	// Images list should have image, signature, and attestation (3 total "images")
-	require.Len(t, actualImages, 3, "zarf.yaml from the package does not contain the expected number of images")
+	expectedImages := []string{
+		"ghcr.io/defenseunicorns/zarf/agent:v0.30.0",
+		"ghcr.io/defenseunicorns/zarf/agent:sha256-90863c246da361499e8f59dfae728c34b50ee2057e61e06dacdcfad983425c32.sig",
+	}
+
+	require.Len(t, actualImages, 2, "zarf.yaml from the package does not contain the expected number of images")
+	for _, expectedImage := range expectedImages {
+		require.Contains(t, actualImages, expectedImage, fmt.Sprintf("unable to find expected image %s", expectedImage))
+	}
 
 	e2e.CleanFiles(packageName)
 }

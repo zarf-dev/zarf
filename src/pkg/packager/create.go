@@ -93,47 +93,12 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	// copy cosign tree logic to build image list of signatures
-	var nameOpts []name.Option
-
 	// Add signatures and attestations for images
 	if p.cfg.CreateOpts.SkipCosignLookup {
 		message.Debug("Skipping cosign artifact lookups per --skip-cosign-lookup flag")
 	} else {
-		for i, c := range p.cfg.Pkg.Components {
-			var imageSigList []string
-			for _, image := range c.Images {
-				ref, err := name.ParseReference(image, nameOpts...)
-
-				if err != nil {
-					return err
-				}
-
-				var remoteOpts []ociremote.Option
-				simg, _ := ociremote.SignedEntity(ref, remoteOpts...)
-				if simg == nil {
-					continue
-				}
-				sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)
-				attRef, _ := ociremote.AttestationTag(ref, remoteOpts...)
-
-				sigs, err := simg.Signatures()
-				if err == nil {
-					layers, _ := sigs.Layers()
-					if len(layers) > 0 {
-						imageSigList = append(imageSigList, sigRef.String())
-					}
-				}
-
-				atts, err := simg.Attestations()
-				if err == nil {
-					layers, _ := atts.Layers()
-					if len(layers) > 0 {
-						imageSigList = append(imageSigList, attRef.String())
-					}
-				}
-			}
-			p.cfg.Pkg.Components[i].Images = append(p.cfg.Pkg.Components[i].Images, imageSigList...)
+		if err := p.getCosignArtifacts(); err != nil {
+			return err
 		}
 	}
 
@@ -203,6 +168,7 @@ func (p *Packager) Create() (err error) {
 	}
 
 	imageList := helpers.Unique(combinedImageList)
+	var sbomImageList []transform.Image
 
 	// Images are handled separately from other component assets.
 	if len(imageList) > 0 {
@@ -229,9 +195,16 @@ func (p *Packager) Create() (err error) {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 
-		for _, img := range pulled {
+		for transform, img := range pulled {
 			if err := p.layout.Images.AddV1Image(img); err != nil {
 				return err
+			}
+			isImage, err := utils.HasImageLayers(img)
+			if err != nil {
+				return fmt.Errorf("failed to check image %s layer mediatype: %w", transform.Name, err)
+			}
+			if isImage {
+				sbomImageList = append(sbomImageList, transform)
 			}
 		}
 	}
@@ -241,7 +214,7 @@ func (p *Packager) Create() (err error) {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
 		p.layout = p.layout.AddSBOMs()
-		if err := sbom.Catalog(componentSBOMs, imageList, p.layout); err != nil {
+		if err := sbom.Catalog(componentSBOMs, sbomImageList, p.layout); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
@@ -821,5 +794,45 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 		p.cfg.Pkg.Components[idx] = component
 	}
 
+	return nil
+}
+
+func (p *Packager) getCosignArtifacts() (err error) {
+	var nameOpts []name.Option
+	for i, c := range p.cfg.Pkg.Components {
+		var imageSigList []string
+		for _, image := range c.Images {
+			ref, err := name.ParseReference(image, nameOpts...)
+
+			if err != nil {
+				return err
+			}
+
+			var remoteOpts []ociremote.Option
+			simg, _ := ociremote.SignedEntity(ref, remoteOpts...)
+			if simg == nil {
+				continue
+			}
+			sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)
+			attRef, _ := ociremote.AttestationTag(ref, remoteOpts...)
+
+			sigs, err := simg.Signatures()
+			if err == nil {
+				layers, _ := sigs.Layers()
+				if len(layers) > 0 {
+					imageSigList = append(imageSigList, sigRef.String())
+				}
+			}
+
+			atts, err := simg.Attestations()
+			if err == nil {
+				layers, _ := atts.Layers()
+				if len(layers) > 0 {
+					imageSigList = append(imageSigList, attRef.String())
+				}
+			}
+		}
+		p.cfg.Pkg.Components[i].Images = append(p.cfg.Pkg.Components[i].Images, imageSigList...)
+	}
 	return nil
 }
