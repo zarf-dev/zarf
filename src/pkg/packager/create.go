@@ -30,10 +30,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
 
-	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
-	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
@@ -93,13 +91,9 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	// Add signatures and attestations for images
-	if p.cfg.CreateOpts.SkipCosignLookup {
-		message.Debug("Skipping cosign artifact lookups per --skip-cosign-lookup flag")
-	} else {
-		if err := p.getCosignArtifacts(); err != nil {
-			return err
-		}
+	// Add extra artifacts (cosign signatures, etc) to the package config
+	if err := p.addExtraArtifacts(); err != nil {
+		return err
 	}
 
 	// After we have a full zarf.yaml remove unnecessary repos and images if we are building a differential package
@@ -797,42 +791,19 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 	return nil
 }
 
-func (p *Packager) getCosignArtifacts() (err error) {
-	var nameOpts []name.Option
+func (p *Packager) addExtraArtifacts() (err error) {
 	for i, c := range p.cfg.Pkg.Components {
-		var imageSigList []string
+		var extraArtifactList []string
 		for _, image := range c.Images {
-			ref, err := name.ParseReference(image, nameOpts...)
-
-			if err != nil {
-				return err
-			}
-
-			var remoteOpts []ociremote.Option
-			simg, _ := ociremote.SignedEntity(ref, remoteOpts...)
-			if simg == nil {
-				continue
-			}
-			sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)
-			attRef, _ := ociremote.AttestationTag(ref, remoteOpts...)
-
-			sigs, err := simg.Signatures()
-			if err == nil {
-				layers, _ := sigs.Layers()
-				if len(layers) > 0 {
-					imageSigList = append(imageSigList, sigRef.String())
+			if !p.cfg.CreateOpts.SkipCosignLookup {
+				cosignArtifacts, err := utils.GetCosignArtifacts(image)
+				if err != nil {
+					return err
 				}
-			}
-
-			atts, err := simg.Attestations()
-			if err == nil {
-				layers, _ := atts.Layers()
-				if len(layers) > 0 {
-					imageSigList = append(imageSigList, attRef.String())
-				}
+				extraArtifactList = append(extraArtifactList, cosignArtifacts...)
 			}
 		}
-		p.cfg.Pkg.Components[i].Images = append(p.cfg.Pkg.Components[i].Images, imageSigList...)
+		p.cfg.Pkg.Components[i].Images = append(p.cfg.Pkg.Components[i].Images, extraArtifactList...)
 	}
 	return nil
 }
