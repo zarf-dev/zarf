@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -51,7 +50,8 @@ func TestMain(m *testing.M) {
 
 func TestReleases(t *testing.T) {
 	tmpdir := ""
-	if runtime.GOOS == "linux" {
+	// If we are in CI set the temporary directory to /mnt/zarf-tmp to reduce disk pressure
+	if os.Getenv("CI") == "true" {
 		tmpdir = "--tmpdir=/mnt/zarf-tmp"
 	}
 

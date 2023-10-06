@@ -129,6 +129,7 @@ func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
 	return strings.Trim(stdOut, "\n")
 }
 
+// StripANSICodes strips any ANSI color codes from a given string
 func (e2e *ZarfE2ETest) StripANSICodes(input string) string {
 	// Regex to strip any color codes from the output - https://regex101.com/r/YFyIwC/2
 	ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
