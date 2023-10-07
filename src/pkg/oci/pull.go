@@ -83,7 +83,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 		return nil, err
 	}
 
-	pkg, err := o.FetchZarfYAML(root)
+	pkg, err := o.FetchZarfYAML()
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	if len(images) > 0 {
 		// Add the image index and the oci-layout layers
 		layers = append(layers, root.Locate(ZarfPackageIndexPath), root.Locate(ZarfPackageLayoutPath))
-		index, err := o.FetchImagesIndex(root)
+		index, err := o.FetchImagesIndex()
 		if err != nil {
 			return nil, err
 		}

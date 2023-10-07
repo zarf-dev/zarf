@@ -52,12 +52,20 @@ func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err erro
 }
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.
-func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg types.ZarfPackage, err error) {
+func (o *OrasRemote) FetchZarfYAML() (pkg types.ZarfPackage, err error) {
+	manifest, err := o.FetchRoot()
+	if err != nil {
+		return pkg, err
+	}
 	return FetchYAMLFile[types.ZarfPackage](o.FetchLayer, manifest, layout.ZarfYAML)
 }
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.
-func (o *OrasRemote) FetchImagesIndex(manifest *ZarfOCIManifest) (index *ocispec.Index, err error) {
+func (o *OrasRemote) FetchImagesIndex() (index *ocispec.Index, err error) {
+	manifest, err := o.FetchRoot()
+	if err != nil {
+		return index, err
+	}
 	return FetchJSONFile[*ocispec.Index](o.FetchLayer, manifest, ZarfPackageIndexPath)
 }
 

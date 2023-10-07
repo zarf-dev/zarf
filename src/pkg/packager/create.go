@@ -630,11 +630,7 @@ func (p *Packager) loadDifferentialData() error {
 		if err != nil {
 			return err
 		}
-		manifest, err := p.remote.FetchRoot()
-		if err != nil {
-			return err
-		}
-		pkg, err := p.remote.FetchZarfYAML(manifest)
+		pkg, err := p.remote.FetchZarfYAML()
 		if err != nil {
 			return err
 		}
