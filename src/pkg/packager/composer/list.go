@@ -13,21 +13,21 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-type Node struct {
+type node struct {
 	cwd string
 	types.ZarfComponent
 
-	prev *Node
-	next *Node
+	prev *node
+	next *node
 }
 
-type ImportChain struct {
-	head *Node
-	tail *Node
+type importChain struct {
+	head *node
+	tail *node
 }
 
-func (ic *ImportChain) append(c types.ZarfComponent, cwd string) {
-	node := &Node{ZarfComponent: c, cwd: cwd, prev: nil, next: nil}
+func (ic *importChain) append(c types.ZarfComponent, cwd string) {
+	node := &node{ZarfComponent: c, cwd: cwd, prev: nil, next: nil}
 	if ic.head == nil {
 		ic.head = node
 		ic.tail = node
@@ -43,10 +43,12 @@ func (ic *ImportChain) append(c types.ZarfComponent, cwd string) {
 	}
 }
 
-func (ic *ImportChain) Build(head types.ZarfComponent, arch string) error {
+func NewImportChain(head types.ZarfComponent, arch string) (*importChain, error) {
+	ic := &importChain{}
+
 	cwd, err := os.Getwd()
 	if err != nil {
-		return err
+		return ic, err
 	}
 	ic.append(head, cwd)
 
@@ -57,11 +59,11 @@ func (ic *ImportChain) Build(head types.ZarfComponent, arch string) error {
 
 		if !isLocal && !isRemote {
 			// EOL
-			return nil
+			return ic, nil
 		}
 
 		if node.prev != nil && node.prev.Import.URL != "" {
-			return fmt.Errorf("detected malformed import chain, cannot import remote components from remote components")
+			return ic, fmt.Errorf("detected malformed import chain, cannot import remote components from remote components")
 		}
 
 		var pkg types.ZarfPackage
@@ -70,17 +72,17 @@ func (ic *ImportChain) Build(head types.ZarfComponent, arch string) error {
 		if isLocal {
 			cwd = filepath.Join(cwd, node.Import.Path)
 			if err := utils.ReadYaml(filepath.Join(cwd, layout.ZarfYAML), &pkg); err != nil {
-				return err
+				return ic, err
 			}
 		} else if isRemote {
 			cwd = ""
 			remote, err := oci.NewOrasRemote(node.Import.URL)
 			if err != nil {
-				return err
+				return ic, err
 			}
 			pkg, err = remote.FetchZarfYAML()
 			if err != nil {
-				return err
+				return ic, err
 			}
 		}
 
@@ -94,9 +96,9 @@ func (ic *ImportChain) Build(head types.ZarfComponent, arch string) error {
 
 		if found.Name == "" {
 			if isLocal {
-				return fmt.Errorf("component %q not found in package %q", name, filepath.Join(cwd, layout.ZarfYAML))
+				return ic, fmt.Errorf("component %q not found in package %q", name, filepath.Join(cwd, layout.ZarfYAML))
 			} else if isRemote {
-				return fmt.Errorf("component %q not found in package %q", name, node.Import.URL)
+				return ic, fmt.Errorf("component %q not found in package %q", name, node.Import.URL)
 			}
 		}
 
@@ -106,19 +108,19 @@ func (ic *ImportChain) Build(head types.ZarfComponent, arch string) error {
 
 		if arch != "" && found.Only.Cluster.Architecture != "" && found.Only.Cluster.Architecture != arch {
 			if isLocal {
-				return fmt.Errorf("component %q is not compatible with %q architecture in package %q", name, arch, filepath.Join(cwd, layout.ZarfYAML))
+				return ic, fmt.Errorf("component %q is not compatible with %q architecture in package %q", name, arch, filepath.Join(cwd, layout.ZarfYAML))
 			} else if isRemote {
-				return fmt.Errorf("component %q is not compatible with %q architecture in package %q", name, arch, node.Import.URL)
+				return ic, fmt.Errorf("component %q is not compatible with %q architecture in package %q", name, arch, node.Import.URL)
 			}
 		}
 
 		ic.append(found, cwd)
 		node = node.next
 	}
-	return nil
+	return ic, nil
 }
 
-func (ic *ImportChain) Print() {
+func (ic *importChain) Print() {
 	// components := []types.ZarfComponent{}
 	paths := []string{}
 	node := ic.head
@@ -134,7 +136,7 @@ func (ic *ImportChain) Print() {
 	fmt.Println(message.JSONValue(paths))
 }
 
-func (ic *ImportChain) Compose() (composed types.ZarfComponent) {
+func (ic *importChain) Compose() (composed types.ZarfComponent) {
 	node := ic.tail
 
 	if ic.tail.Import.URL != "" {
