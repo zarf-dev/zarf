@@ -6,11 +6,9 @@ package composer
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -19,7 +17,6 @@ import (
 
 // Node is a node in the import chain
 type Node struct {
-	cwd string
 	types.ZarfComponent
 
 	prev *Node
@@ -32,8 +29,8 @@ type ImportChain struct {
 	tail *Node
 }
 
-func (ic *ImportChain) append(c types.ZarfComponent, cwd string) {
-	node := &Node{ZarfComponent: c, cwd: cwd, prev: nil, next: nil}
+func (ic *ImportChain) append(c types.ZarfComponent) {
+	node := &Node{ZarfComponent: c, prev: nil, next: nil}
 	if ic.head == nil {
 		ic.head = node
 		ic.tail = node
@@ -53,11 +50,9 @@ func (ic *ImportChain) append(c types.ZarfComponent, cwd string) {
 func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error) {
 	ic := &ImportChain{}
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return ic, err
-	}
-	ic.append(head, cwd)
+	ic.append(head)
+
+	history := []string{}
 
 	node := ic.head
 	for node != nil {
@@ -77,12 +72,12 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 		name := node.Name
 
 		if isLocal {
-			cwd = filepath.Join(cwd, node.Import.Path)
-			if err := utils.ReadYaml(filepath.Join(cwd, layout.ZarfYAML), &pkg); err != nil {
+			history = append(history, node.Import.Path)
+			paths := append(history, layout.ZarfYAML)
+			if err := utils.ReadYaml(filepath.Join(paths...), &pkg); err != nil {
 				return ic, err
 			}
 		} else if isRemote {
-			cwd = ""
 			remote, err := oci.NewOrasRemote(node.Import.URL)
 			if err != nil {
 				return ic, err
@@ -103,9 +98,9 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 
 		if found.Name == "" {
 			if isLocal {
-				return ic, fmt.Errorf("component %q not found in package %q", name, filepath.Join(cwd, layout.ZarfYAML))
+				return ic, fmt.Errorf("component %q not found in %q", name, filepath.Join(history...))
 			} else if isRemote {
-				return ic, fmt.Errorf("component %q not found in package %q", name, node.Import.URL)
+				return ic, fmt.Errorf("component %q not found in %q", name, node.Import.URL)
 			}
 		}
 
@@ -115,34 +110,30 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 
 		if arch != "" && found.Only.Cluster.Architecture != "" && found.Only.Cluster.Architecture != arch {
 			if isLocal {
-				return ic, fmt.Errorf("component %q is not compatible with %q architecture in package %q", name, arch, filepath.Join(cwd, layout.ZarfYAML))
+				return ic, fmt.Errorf("component %q is not compatible with %q architecture in %q", name, arch, filepath.Join(history...))
 			} else if isRemote {
-				return ic, fmt.Errorf("component %q is not compatible with %q architecture in package %q", name, arch, node.Import.URL)
+				return ic, fmt.Errorf("component %q is not compatible with %q architecture in %q", name, arch, node.Import.URL)
 			}
 		}
 
-		ic.append(found, cwd)
+		ic.append(found)
 		node = node.next
 	}
 	return ic, nil
 }
 
-// Print prints the import chain
-// TODO: remove when fully implemented || replace w/ a debug flag
-func (ic *ImportChain) Print() {
-	// components := []types.ZarfComponent{}
-	paths := []string{}
+// History returns the history of the import chain
+func (ic *ImportChain) History() []string {
+	history := []string{}
 	node := ic.head
 	for node != nil {
-		// components = append(components, node)
-		paths = append(paths, node.cwd)
-		if node.cwd == "" && node.Import.URL != "" {
-			paths = append(paths, node.Import.URL)
+		history = append(history, node.Import.Path)
+		if node.Import.URL != "" {
+			history = append(history, node.Import.URL)
 		}
 		node = node.next
 	}
-	// fmt.Println(message.JSONValue(components))
-	fmt.Println(message.JSONValue(paths))
+	return history
 }
 
 // Compose merges the import chain into a single component
@@ -166,7 +157,7 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent) {
 		}
 
 		// TODO: fix the paths to be relative to the head node
-		// use node.cwd for that
+		// use history for that
 
 		// perform overrides here
 		overrideMetadata(&composed, node.ZarfComponent)
