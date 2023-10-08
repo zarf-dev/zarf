@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package composer contains functions for composing components within Zarf packages.
 package composer
 
 import (
@@ -13,21 +17,23 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-type node struct {
+// Node is a node in the import chain
+type Node struct {
 	cwd string
 	types.ZarfComponent
 
-	prev *node
-	next *node
+	prev *Node
+	next *Node
 }
 
-type importChain struct {
-	head *node
-	tail *node
+// ImportChain is a doubly linked list of components
+type ImportChain struct {
+	head *Node
+	tail *Node
 }
 
-func (ic *importChain) append(c types.ZarfComponent, cwd string) {
-	node := &node{ZarfComponent: c, cwd: cwd, prev: nil, next: nil}
+func (ic *ImportChain) append(c types.ZarfComponent, cwd string) {
+	node := &Node{ZarfComponent: c, cwd: cwd, prev: nil, next: nil}
 	if ic.head == nil {
 		ic.head = node
 		ic.tail = node
@@ -43,8 +49,9 @@ func (ic *importChain) append(c types.ZarfComponent, cwd string) {
 	}
 }
 
-func NewImportChain(head types.ZarfComponent, arch string) (*importChain, error) {
-	ic := &importChain{}
+// NewImportChain creates a new import chain from a component
+func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error) {
+	ic := &ImportChain{}
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -120,7 +127,9 @@ func NewImportChain(head types.ZarfComponent, arch string) (*importChain, error)
 	return ic, nil
 }
 
-func (ic *importChain) Print() {
+// Print prints the import chain
+// TODO: remove when fully implemented || replace w/ a debug flag
+func (ic *ImportChain) Print() {
 	// components := []types.ZarfComponent{}
 	paths := []string{}
 	node := ic.head
@@ -136,13 +145,15 @@ func (ic *importChain) Print() {
 	fmt.Println(message.JSONValue(paths))
 }
 
-func (ic *importChain) Compose() (composed types.ZarfComponent) {
+// Compose merges the import chain into a single component
+// fixing paths, overriding metadata, etc
+func (ic *ImportChain) Compose() (composed types.ZarfComponent) {
 	node := ic.tail
 
 	if ic.tail.Import.URL != "" {
 		composed = ic.tail.ZarfComponent
 		// TODO: handle remote components
-		// this should download the remote component, fix the paths, then compose it
+		// this should download the remote component tarball, fix the paths, then compose it
 		node = node.prev
 	}
 
