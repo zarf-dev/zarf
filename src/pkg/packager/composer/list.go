@@ -19,6 +19,8 @@ import (
 type Node struct {
 	types.ZarfComponent
 
+	relativeToHead string
+
 	prev *Node
 	next *Node
 }
@@ -29,8 +31,8 @@ type ImportChain struct {
 	tail *Node
 }
 
-func (ic *ImportChain) append(c types.ZarfComponent) {
-	node := &Node{ZarfComponent: c, prev: nil, next: nil}
+func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string) {
+	node := &Node{ZarfComponent: c, relativeToHead: relativeToHead, prev: nil, next: nil}
 	if ic.head == nil {
 		ic.head = node
 		ic.tail = node
@@ -48,23 +50,32 @@ func (ic *ImportChain) append(c types.ZarfComponent) {
 
 // NewImportChain creates a new import chain from a component
 func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error) {
+	if arch == "" {
+		return nil, fmt.Errorf("cannot build import chain: architecture must be provided")
+	}
+
 	ic := &ImportChain{}
 
-	ic.append(head)
+	ic.append(head, "")
 
 	history := []string{}
 
 	node := ic.head
+	// todo: verify this behavior
+	if ic.head.Only.Cluster.Architecture != "" {
+		arch = node.Only.Cluster.Architecture
+	}
 	for node != nil {
 		isLocal := node.Import.Path != "" && node.Import.URL == ""
 		isRemote := node.Import.Path == "" && node.Import.URL != ""
 
 		if !isLocal && !isRemote {
-			// EOL
+			// This is the end of the import chain,
+			// as the current node/component is not importing anything
 			return ic, nil
 		}
 
-		if node.prev != nil && node.prev.Import.URL != "" {
+		if node.prev != nil && node.prev.Import.URL != "" && isRemote {
 			return ic, fmt.Errorf("detected malformed import chain, cannot import remote components from remote components")
 		}
 
@@ -73,8 +84,8 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 
 		if isLocal {
 			history = append(history, node.Import.Path)
-			paths := append(history, layout.ZarfYAML)
-			if err := utils.ReadYaml(filepath.Join(paths...), &pkg); err != nil {
+			relativeToHead := filepath.Join(history...)
+			if err := utils.ReadYaml(filepath.Join(relativeToHead, layout.ZarfYAML), &pkg); err != nil {
 				return ic, err
 			}
 		} else if isRemote {
@@ -92,45 +103,42 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 			name = node.Import.ComponentName
 		}
 
-		found := helpers.Find(pkg.Components, func(c types.ZarfComponent) bool {
-			return c.Name == name
+		found := helpers.Filter(pkg.Components, func(c types.ZarfComponent) bool {
+			matchesName := c.Name == name
+			satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
+			return matchesName && satisfiesArch
 		})
 
-		if found.Name == "" {
+		if len(found) == 0 {
 			if isLocal {
 				return ic, fmt.Errorf("component %q not found in %q", name, filepath.Join(history...))
 			} else if isRemote {
 				return ic, fmt.Errorf("component %q not found in %q", name, node.Import.URL)
 			}
-		}
-
-		if node.Only.Cluster.Architecture != "" {
-			arch = node.Only.Cluster.Architecture
-		}
-
-		if arch != "" && found.Only.Cluster.Architecture != "" && found.Only.Cluster.Architecture != arch {
+		} else if len(found) > 1 {
+			// TODO: improve this error message / figure out the best way to present this error
 			if isLocal {
-				return ic, fmt.Errorf("component %q is not compatible with %q architecture in %q", name, arch, filepath.Join(history...))
+				return ic, fmt.Errorf("multiple components named %q found in %q", name, filepath.Join(history...))
 			} else if isRemote {
-				return ic, fmt.Errorf("component %q is not compatible with %q architecture in %q", name, arch, node.Import.URL)
+				return ic, fmt.Errorf("multiple components named %q found in %q", name, node.Import.URL)
 			}
 		}
 
-		ic.append(found)
+		ic.append(found[0], filepath.Join(history...))
 		node = node.next
 	}
 	return ic, nil
 }
 
 // History returns the history of the import chain
-func (ic *ImportChain) History() []string {
-	history := []string{}
+func (ic *ImportChain) History() (history []string) {
 	node := ic.head
 	for node != nil {
-		history = append(history, node.Import.Path)
 		if node.Import.URL != "" {
 			history = append(history, node.Import.URL)
+			continue
 		}
+		history = append(history, node.relativeToHead)
 		node = node.next
 	}
 	return history
@@ -139,32 +147,26 @@ func (ic *ImportChain) History() []string {
 // Compose merges the import chain into a single component
 // fixing paths, overriding metadata, etc
 func (ic *ImportChain) Compose() (composed types.ZarfComponent) {
+	composed = ic.tail.ZarfComponent
+
 	node := ic.tail
 
-	if ic.tail.Import.URL != "" {
-		composed = ic.tail.ZarfComponent
+	if ic.tail.prev.Import.URL != "" {
 		// TODO: handle remote components
 		// this should download the remote component tarball, fix the paths, then compose it
 		node = node.prev
 	}
 
 	for node != nil {
-		// if we are on the last node, set the starting point
-		if composed.Name == "" {
-			composed = node.ZarfComponent
-			node = node.prev
-			continue
-		}
-
-		// TODO: fix the paths to be relative to the head node
-		// use history for that
+		fixPaths(&node.ZarfComponent, node.relativeToHead)
 
 		// perform overrides here
 		overrideMetadata(&composed, node.ZarfComponent)
 		overrideDeprecated(&composed, node.ZarfComponent)
 		overrideResources(&composed, node.ZarfComponent)
-		overrideExtensions(&composed, node.ZarfComponent)
 		overrideActions(&composed, node.ZarfComponent)
+
+		composeExtensions(&composed, node.ZarfComponent, node.relativeToHead)
 
 		node = node.prev
 	}

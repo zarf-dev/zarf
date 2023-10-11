@@ -109,16 +109,3 @@ func overrideResources(c *types.ZarfComponent, override types.ZarfComponent) {
 		}
 	}
 }
-
-// TODO: improve me w/ an interface system
-func overrideExtensions(c *types.ZarfComponent, override types.ZarfComponent) {
-	// Check for nil array
-	if override.Extensions.BigBang != nil {
-		if override.Extensions.BigBang.ValuesFiles != nil {
-			c.Extensions.BigBang.ValuesFiles = append(c.Extensions.BigBang.ValuesFiles, override.Extensions.BigBang.ValuesFiles...)
-		}
-		if override.Extensions.BigBang.FluxPatchFiles != nil {
-			c.Extensions.BigBang.FluxPatchFiles = append(c.Extensions.BigBang.FluxPatchFiles, override.Extensions.BigBang.FluxPatchFiles...)
-		}
-	}
-}
