@@ -49,9 +49,15 @@ func TestMain(m *testing.M) {
 }
 
 func TestReleases(t *testing.T) {
+	tmpdir := ""
+	// If we are in CI set the temporary directory to /mnt/zarf-tmp to reduce disk pressure
+	if os.Getenv("CI") == "true" {
+		tmpdir = "--tmpdir=/mnt/zarf-tmp"
+	}
+
 	// Initialize the cluster with the Git server and AMD64 architecture
 	arch := "amd64"
-	stdOut, stdErr, err := zarfExec("init", "--confirm", "--components", "git-server", "--architecture", arch)
+	stdOut, stdErr, err := zarfExec("init", "--components", "git-server", "--architecture", arch, tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Remove the init package to free up disk space on the test runner
@@ -61,12 +67,16 @@ func TestReleases(t *testing.T) {
 	// Build the previous version
 	bbVersion := fmt.Sprintf("--set=BB_VERSION=%s", previous)
 	bbMajor := fmt.Sprintf("--set=BB_MAJOR=%s", previous[0:1])
-	stdOut, stdErr, err = zarfExec("package", "create", "../src/extensions/bigbang/test/package", bbVersion, bbMajor, "--confirm")
+	stdOut, stdErr, err = zarfExec("package", "create", "../src/extensions/bigbang/test/package", bbVersion, bbMajor, tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Clean up zarf cache to reduce disk pressure
+	stdOut, stdErr, err = zarfExec("tools", "clear-cache")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the previous version
 	pkgPath := fmt.Sprintf("zarf-package-big-bang-test-%s-%s.tar.zst", arch, previous)
-	stdOut, stdErr, err = zarfExec("package", "deploy", pkgPath, "--confirm")
+	stdOut, stdErr, err = zarfExec("package", "deploy", pkgPath, tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// HACK: scale down the flux deployments due to very-low CPU in the test runner
@@ -83,20 +93,20 @@ func TestReleases(t *testing.T) {
 	// Build the latest version
 	bbVersion = fmt.Sprintf("--set=BB_VERSION=%s", latest)
 	bbMajor = fmt.Sprintf("--set=BB_MAJOR=%s", latest[0:1])
-	stdOut, stdErr, err = zarfExec("package", "create", "../src/extensions/bigbang/test/package", bbVersion, bbMajor, "--differential", pkgPath, "--confirm")
+	stdOut, stdErr, err = zarfExec("package", "create", "../src/extensions/bigbang/test/package", bbVersion, bbMajor, "--differential", pkgPath, tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Remove the previous version package
 	err = os.RemoveAll(pkgPath)
 	require.NoError(t, err)
 
-	// Clean up zarf cache now that all packages are built to reduce disk pressure
+	// Clean up zarf cache to reduce disk pressure
 	stdOut, stdErr, err = zarfExec("tools", "clear-cache")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the latest version
 	pkgPath = fmt.Sprintf("zarf-package-big-bang-test-%s-%s-differential-%s.tar.zst", arch, previous, latest)
-	stdOut, stdErr, err = zarfExec("package", "deploy", pkgPath, "--confirm")
+	stdOut, stdErr, err = zarfExec("package", "deploy", pkgPath, tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Cluster info
