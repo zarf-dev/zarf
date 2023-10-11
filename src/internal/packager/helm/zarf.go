@@ -80,7 +80,7 @@ func (h *Helm) UpdateZarfGiteaValues() error {
 
 // UpdateZarfAgentValues updates the Zarf git server deployment with the new state values
 func (h *Helm) UpdateZarfAgentValues() error {
-	spinner := message.NewProgressSpinner("Updating Zarf Agent manifests with updated TLS")
+	spinner := message.NewProgressSpinner("Gathering information to update Zarf Agent TLS")
 	defer spinner.Stop()
 
 	err := h.createActionConfig(cluster.ZarfNamespaceName, spinner)
@@ -112,6 +112,8 @@ func (h *Helm) UpdateZarfAgentValues() error {
 		return fmt.Errorf("unable to list helm releases: %w", err)
 	}
 
+	spinner.Success()
+
 	for _, lsRelease := range releases {
 		// Update the Zarf Agent release with the new values
 		if lsRelease.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
@@ -139,6 +141,9 @@ func (h *Helm) UpdateZarfAgentValues() error {
 			}
 		}
 	}
+
+	spinner = message.NewProgressSpinner("Cleaning up Zarf Agent pods after update")
+	defer spinner.Stop()
 
 	// Force pods to be recreated to get the updated secret.
 	pods = h.Cluster.WaitForPodsAndContainers(k8s.PodLookup{
