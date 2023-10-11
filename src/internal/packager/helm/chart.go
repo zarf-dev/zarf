@@ -458,7 +458,7 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 		return err
 	}
 
-	// Use helm to re-split the manifest byte (same call used by helm to pass this data to postRender)
+	// Use helm to re-split the manifest bytes (same call used by helm to pass this data to postRender)
 	_, resources, err := releaseutil.SortManifests(map[string]string{"manifest": latestRelease.Manifest}, nil, releaseutil.InstallOrder)
 
 	if err != nil {

@@ -7,9 +7,14 @@ package helm
 import (
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"helm.sh/helm/v3/pkg/action"
 )
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
@@ -69,6 +74,83 @@ func (h *Helm) UpdateZarfGiteaValues() error {
 	if err != nil {
 		return fmt.Errorf("unable to create the new Gitea read only user: %w", err)
 	}
+
+	return nil
+}
+
+// UpdateZarfAgentValues updates the Zarf git server deployment with the new state values
+func (h *Helm) UpdateZarfAgentValues() error {
+	spinner := message.NewProgressSpinner("Updating Zarf Agent manifests with updated TLS")
+	defer spinner.Stop()
+
+	err := h.createActionConfig(cluster.ZarfNamespaceName, spinner)
+	if err != nil {
+		return fmt.Errorf("unable to initialize the K8s client: %w", err)
+	}
+
+	// Get the current agent image from one of its pods.
+	pods := h.Cluster.WaitForPodsAndContainers(k8s.PodLookup{
+		Namespace: cluster.ZarfNamespaceName,
+		Selector:  "app=agent-hook",
+	}, nil)
+
+	var currentAgentImage transform.Image
+	if len(pods) > 0 && len(pods[0].Spec.Containers) > 0 {
+		currentAgentImage, err = transform.ParseImageRef(pods[0].Spec.Containers[0].Image)
+		if err != nil {
+			return fmt.Errorf("unable to parse current agent image reference: %w", err)
+		}
+	} else {
+		return fmt.Errorf("unable to get current agent pod")
+	}
+
+	// List the releases to find the current agent release name.
+	listClient := action.NewList(h.actionConfig)
+
+	releases, err := listClient.Run()
+	if err != nil {
+		return fmt.Errorf("unable to list helm releases: %w", err)
+	}
+
+	for _, lsRelease := range releases {
+		// Update the Zarf Agent release with the new values
+		if lsRelease.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
+			h.Chart = types.ZarfChart{
+				Namespace: "zarf",
+			}
+			h.ReleaseName = lsRelease.Name
+			h.Component = types.ZarfComponent{
+				Name: "zarf-agent",
+			}
+			h.Cfg.Pkg.Constants = []types.ZarfPackageConstant{
+				{
+					Name:  "AGENT_IMAGE",
+					Value: currentAgentImage.Path,
+				},
+				{
+					Name:  "AGENT_IMAGE_TAG",
+					Value: currentAgentImage.Tag,
+				},
+			}
+
+			err := h.UpdateReleaseValues(map[string]interface{}{})
+			if err != nil {
+				return fmt.Errorf("error updating the release values: %w", err)
+			}
+		}
+	}
+
+	// Force pods to be recreated to get the updated secret.
+	pods = h.Cluster.WaitForPodsAndContainers(k8s.PodLookup{
+		Namespace: cluster.ZarfNamespaceName,
+		Selector:  "app=agent-hook",
+	}, nil)
+
+	for _, pod := range pods {
+		h.Cluster.DeletePod(cluster.ZarfNamespaceName, pod.Name)
+	}
+
+	spinner.Success()
 
 	return nil
 }

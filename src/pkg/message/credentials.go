@@ -22,6 +22,7 @@ const (
 	GitReadKey      = "git-readonly"
 	ArtifactKey     = "artifact"
 	LoggingKey      = "logging"
+	AgentKey        = "agent"
 )
 
 // PrintCredentialTable displays credentials in a table
@@ -136,6 +137,14 @@ func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("URL Address"), compareStrings(oA.Address, nA.Address, false))
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Username"), compareStrings(oA.PushUsername, nA.PushUsername, false))
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Token"), compareStrings(oA.PushToken, nA.PushToken, true))
+		case AgentKey:
+			oK := oldState.AgentTLS
+			nK := newState.AgentTLS
+			Title("Agent TLS", "the certificates used to connect to Zarf's Agent")
+			pterm.Println()
+			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Certificate Authority"), compareStrings(string(oK.CA), string(nK.CA), true))
+			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Public Certificate"), compareStrings(string(oK.Cert), string(nK.Cert), true))
+			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Private Key"), compareStrings(string(oK.Key), string(nK.Key), true))
 		}
 	}
 
