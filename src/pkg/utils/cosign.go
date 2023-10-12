@@ -238,19 +238,27 @@ func GetCosignArtifacts(image string) (cosignList []string, err error) {
 	attRef, _ := ociremote.AttestationTag(ref, remoteOpts...)
 
 	sigs, err := simg.Signatures()
-	if err == nil {
-		layers, _ := sigs.Layers()
-		if len(layers) > 0 {
-			cosignArtifactList = append(cosignArtifactList, sigRef.String())
-		}
+	if err != nil {
+		return cosignArtifactList, err
+	}
+	layers, err := sigs.Layers()
+	if err != nil {
+		return cosignArtifactList, err
+	}
+	if len(layers) > 0 {
+		cosignArtifactList = append(cosignArtifactList, sigRef.String())
 	}
 
 	atts, err := simg.Attestations()
-	if err == nil {
-		layers, _ := atts.Layers()
-		if len(layers) > 0 {
-			cosignArtifactList = append(cosignArtifactList, attRef.String())
-		}
+	if err != nil {
+		return cosignArtifactList, err
+	}
+	layers, err = atts.Layers()
+	if err != nil {
+		return cosignArtifactList, err
+	}
+	if len(layers) > 0 {
+		cosignArtifactList = append(cosignArtifactList, attRef.String())
 	}
 	return cosignArtifactList, nil
 }
