@@ -7,6 +7,7 @@ package composer
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
@@ -89,6 +90,9 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 				return ic, err
 			}
 		} else if isRemote {
+			if !strings.HasSuffix(node.Import.URL, oci.SkeletonSuffix) {
+				return ic, fmt.Errorf("remote component %q does not have a %q suffix", node.Import.URL, oci.SkeletonSuffix)
+			}
 			remote, err := oci.NewOrasRemote(node.Import.URL)
 			if err != nil {
 				return ic, err
@@ -131,14 +135,14 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 }
 
 // History returns the history of the import chain
-func (ic *ImportChain) History() (history []string) {
+func (ic *ImportChain) History() (history [][]string) {
 	node := ic.head
 	for node != nil {
 		if node.Import.URL != "" {
-			history = append(history, node.Import.URL)
+			history = append(history, []string{node.Name, node.Import.URL})
 			continue
 		}
-		history = append(history, node.relativeToHead)
+		history = append(history, []string{node.Name, node.relativeToHead, node.Import.Path})
 		node = node.next
 	}
 	return history
