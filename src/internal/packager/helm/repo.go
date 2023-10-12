@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
@@ -66,22 +67,28 @@ func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
 	defer spinner.Stop()
 
 	// Validate the chart
-	_, err := loader.LoadDir(h.Chart.LocalPath)
+	cl, err := loader.Loader(h.Chart.LocalPath)
 	if err != nil {
 		spinner.Errorf(err, "Validation failed for chart from %s (%s)", h.Chart.LocalPath, err.Error())
 		return "", err
 	}
 
-	err = h.buildChartDependencies(spinner)
-	if err != nil {
-		spinner.Errorf(err, "Unable to build dependencies for the chart: %s", err.Error())
-		return "", err
+	var path string
+	if _, ok := cl.(loader.DirLoader); ok {
+		err = h.buildChartDependencies(spinner)
+		if err != nil {
+			spinner.Errorf(err, "Unable to build dependencies for the chart: %s", err.Error())
+			return "", err
+		}
+
+		client := action.NewPackage()
+
+		client.Destination = destination
+		path, err = client.Run(h.Chart.LocalPath, nil)
+	} else {
+		path = filepath.Join(destination, filepath.Base(h.Chart.LocalPath))
+		err = utils.CreatePathAndCopy(h.Chart.LocalPath, path)
 	}
-
-	client := action.NewPackage()
-
-	client.Destination = destination
-	path, err := client.Run(h.Chart.LocalPath, nil)
 
 	if err != nil {
 		spinner.Errorf(err, "Helm is unable to save the archive and create the package %s", path)
