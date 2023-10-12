@@ -29,7 +29,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -164,7 +163,7 @@ func (p *Packager) Create() (err error) {
 
 		p.layout = p.layout.AddImages()
 
-		pulled := map[transform.Image]v1.Image{}
+		var pulled []images.ImgInfo
 
 		doPull := func() error {
 			imgConfig := images.ImageConfig{
@@ -183,16 +182,12 @@ func (p *Packager) Create() (err error) {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 
-		for transform, img := range pulled {
-			if err := p.layout.Images.AddV1Image(img); err != nil {
+		for _, imgInfo := range pulled {
+			if err := p.layout.Images.AddV1Image(imgInfo.Img); err != nil {
 				return err
 			}
-			isImage, err := utils.HasImageLayers(img)
-			if err != nil {
-				return fmt.Errorf("failed to check image %s layer mediatype: %w", transform.Name, err)
-			}
-			if isImage {
-				sbomImageList = append(sbomImageList, transform)
+			if imgInfo.HasImageLayers {
+				sbomImageList = append(sbomImageList, imgInfo.RefInfo)
 			}
 		}
 	}

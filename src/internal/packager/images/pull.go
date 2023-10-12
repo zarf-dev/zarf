@@ -33,19 +33,22 @@ import (
 	"github.com/pterm/pterm"
 )
 
+// ImgInfo wraps references/information about an image
+type ImgInfo struct {
+	RefInfo        transform.Image
+	Img            v1.Image
+	HasImageLayers bool
+}
+
 // PullAll pulls all of the images in the provided tag map.
-func (i *ImageConfig) PullAll() (map[transform.Image]v1.Image, error) {
+func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	var (
 		longer            string
 		imageCount        = len(i.ImageList)
 		refInfoToImage    = map[transform.Image]v1.Image{}
 		referenceToDigest = make(map[string]string)
+		imgInfoList       []ImgInfo
 	)
-
-	type imgInfo struct {
-		refInfo transform.Image
-		img     v1.Image
-	}
 
 	type digestInfo struct {
 		refInfo transform.Image
@@ -65,7 +68,7 @@ func (i *ImageConfig) PullAll() (map[transform.Image]v1.Image, error) {
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	metadataImageConcurrency := utils.NewConcurrencyTools[imgInfo, error](len(i.ImageList))
+	metadataImageConcurrency := utils.NewConcurrencyTools[ImgInfo, error](len(i.ImageList))
 
 	defer metadataImageConcurrency.Cancel()
 
@@ -97,7 +100,7 @@ func (i *ImageConfig) PullAll() (map[transform.Image]v1.Image, error) {
 				return
 			}
 
-			img, err := i.PullImage(actualSrc, spinner)
+			img, hasImageLayers, err := i.PullImage(actualSrc, spinner)
 			if err != nil {
 				metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to pull image %s: %w", actualSrc, err)
 				return
@@ -107,13 +110,14 @@ func (i *ImageConfig) PullAll() (map[transform.Image]v1.Image, error) {
 				return
 			}
 
-			metadataImageConcurrency.ProgressChan <- imgInfo{refInfo: refInfo, img: img}
+			metadataImageConcurrency.ProgressChan <- ImgInfo{RefInfo: refInfo, Img: img, HasImageLayers: hasImageLayers}
 		}()
 	}
 
-	onMetadataProgress := func(finishedImage imgInfo, iteration int) {
-		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImageList), finishedImage.refInfo.Reference)
-		refInfoToImage[finishedImage.refInfo] = finishedImage.img
+	onMetadataProgress := func(finishedImage ImgInfo, iteration int) {
+		spinner.Updatef("Fetching image metadata (%d of %d): %s", iteration+1, len(i.ImageList), finishedImage.RefInfo.Reference)
+		refInfoToImage[finishedImage.RefInfo] = finishedImage.Img
+		imgInfoList = append(imgInfoList, finishedImage)
 	}
 
 	onMetadataError := func(err error) error {
@@ -426,15 +430,23 @@ func (i *ImageConfig) PullAll() (map[transform.Image]v1.Image, error) {
 	doneSaving <- 1
 	progressBarWaitGroup.Wait()
 
-	return refInfoToImage, nil
+	return imgInfoList, nil
 }
 
 // PullImage returns a v1.Image either by loading a local tarball or pulling from the wider internet.
-func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Image, err error) {
+func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Image, hasImageLayers bool, err error) {
 	// Load image tarballs from the local filesystem.
 	if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
 		spinner.Updatef("Reading image tarball: %s", src)
-		return crane.Load(src, config.GetCraneOptions(true, i.Architectures...)...)
+		img, err = crane.Load(src, config.GetCraneOptions(true, i.Architectures...)...)
+		if err != nil {
+			return nil, false, err
+		}
+		hasImageLayers, err = utils.HasImageLayers(img)
+		if err != nil {
+			return nil, false, fmt.Errorf("failed to check image %s layer mediatype: %w", src, err)
+		}
+		return img, hasImageLayers, err
 	}
 
 	// If crane is unable to pull the image, try to load it from the local docker daemon.
@@ -445,21 +457,21 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		// Parse the image reference to get the image name.
 		reference, err := name.ParseReference(src)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse image reference %s: %w", src, err)
+			return nil, false, fmt.Errorf("failed to parse image reference %s: %w", src, err)
 		}
 
 		// Attempt to connect to the local docker daemon.
 		ctx := context.TODO()
 		cli, err := client.NewClientWithOpts(client.FromEnv)
 		if err != nil {
-			return nil, fmt.Errorf("docker not available: %w", err)
+			return nil, false, fmt.Errorf("docker not available: %w", err)
 		}
 		cli.NegotiateAPIVersion(ctx)
 
 		// Inspect the image to get the size.
 		rawImg, _, err := cli.ImageInspectWithRaw(ctx, src)
 		if err != nil {
-			return nil, fmt.Errorf("failed to inspect image %s via docker: %w", src, err)
+			return nil, false, fmt.Errorf("failed to inspect image %s via docker: %w", src, err)
 		}
 
 		// Warn the user if the image is large.
@@ -473,23 +485,27 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
 		// This will also take for ever to load large images.
 		if img, err = daemon.Image(reference, daemon.WithUnbufferedOpener()); err != nil {
-			return nil, fmt.Errorf("failed to load image %s from docker daemon: %w", src, err)
+			return nil, false, fmt.Errorf("failed to load image %s from docker daemon: %w", src, err)
 		}
 
 		// The pull from the docker daemon was successful, return the image.
-		return img, err
+		hasImageLayers, err = utils.HasImageLayers(img)
+		if err != nil {
+			return nil, false, fmt.Errorf("failed to check image %s layer mediatype: %w", src, err)
+		}
+		return img, hasImageLayers, err
 	}
 
 	// Manifest was found, so use crane to pull the image.
 	if img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
-		return nil, fmt.Errorf("failed to pull image %s: %w", src, err)
+		return nil, false, fmt.Errorf("failed to pull image %s: %w", src, err)
 	}
 
 	spinner.Updatef("Preparing image %s", src)
 
-	hasImageLayers, err := utils.HasImageLayers(img)
+	hasImageLayers, err = utils.HasImageLayers(img)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check image %s layer mediatype: %w", src, err)
+		return nil, false, fmt.Errorf("failed to check image %s layer mediatype: %w", src, err)
 	}
 
 	if hasImageLayers {
@@ -497,5 +513,5 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 	}
 
-	return img, nil
+	return img, hasImageLayers, nil
 }
