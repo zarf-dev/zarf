@@ -74,9 +74,8 @@ func TestCreateDifferential(t *testing.T) {
 	expectedImages := []string{
 		"ghcr.io/stefanprodan/podinfo:latest",
 		"ghcr.io/defenseunicorns/zarf/agent:v0.26.0",
-		"ghcr.io/defenseunicorns/zarf/agent:sha256-0da3c9b61dd764a39a433f8c3f967fe534d4f3c517dfb92c43923f51fe16d179.sig",
 	}
-	require.Len(t, actualImages, 3, "zarf.yaml from the differential package does not contain the correct number of images")
+	require.Len(t, actualImages, 2, "zarf.yaml from the differential package does not contain the correct number of images")
 	for _, expectedImage := range expectedImages {
 		require.Contains(t, actualImages, expectedImage, fmt.Sprintf("unable to find expected image %s", expectedImage))
 	}

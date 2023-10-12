@@ -100,9 +100,9 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.Equal(normalZarfConfig.Components[0].Name, "demo-helm-oci-chart")
 	suite.Equal(normalZarfConfig.Components[0].Charts[0].URL, "oci://ghcr.io/stefanprodan/charts/podinfo")
 	suite.Equal(normalZarfConfig.Components[0].Images[0], "ghcr.io/stefanprodan/podinfo:6.4.0")
-	suite.Len(normalZarfConfig.Components[1].Images, 3)
+	suite.Len(normalZarfConfig.Components[1].Images, 2)
 	suite.Len(normalZarfConfig.Components[1].Repos, 2)
-	suite.Len(normalZarfConfig.Components[2].Images, 2)
+	suite.Len(normalZarfConfig.Components[2].Images, 1)
 	suite.Len(normalZarfConfig.Components[2].Repos, 3)
 
 	/* Perform a bunch of asserts around the differential package */
@@ -116,7 +116,7 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	// Check the component data for the differential package
 	suite.Len(differentialZarfConfig.Components, 2)
 	suite.Equal(differentialZarfConfig.Components[0].Name, "versioned-assets")
-	suite.Len(differentialZarfConfig.Components[0].Images, 2)
+	suite.Len(differentialZarfConfig.Components[0].Images, 1)
 	suite.Equal(differentialZarfConfig.Components[0].Images[0], "ghcr.io/defenseunicorns/zarf/agent:v0.25.0")
 	suite.Len(differentialZarfConfig.Components[0].Repos, 1)
 	suite.Equal(differentialZarfConfig.Components[0].Repos[0], "https://github.com/defenseunicorns/zarf.git@refs/tags/v0.25.0")

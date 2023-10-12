@@ -84,7 +84,6 @@ type ZarfInitOptions struct {
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
 	SkipSBOM           bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
-	SkipCosignLookup   bool              `json:"skipCosignLookup" jsonschema:"description=Disable the lookup of cosign image artifacts during package creation"`
 	BaseDir            string            `json:"baseDir" jsonschema:"description=Location where the Zarf package will be created from"`
 	Output             string            `json:"output" jsonschema:"description=Location where the finalized Zarf package will be placed"`
 	ViewSBOM           bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
