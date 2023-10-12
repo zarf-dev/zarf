@@ -40,17 +40,6 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
-	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
-		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.arch)
-		if err != nil {
-			return err
-		}
-		err = p.setOCIRemote(ref)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Load the images and repos from the 'reference' package
 	if err := p.loadDifferentialData(); err != nil {
 		return err
@@ -83,6 +72,17 @@ func (p *Packager) Create() (err error) {
 	// After components are composed, template the active package.
 	if err := p.fillActiveTemplate(); err != nil {
 		return fmt.Errorf("unable to fill values in template: %s", err.Error())
+	}
+
+	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
+		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.arch)
+		if err != nil {
+			return err
+		}
+		err = p.setOCIRemote(ref)
+		if err != nil {
+			return err
+		}
 	}
 
 	// After templates are filled process any create extensions
