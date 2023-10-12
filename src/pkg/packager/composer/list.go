@@ -10,7 +10,9 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -33,6 +35,8 @@ type Node struct {
 type ImportChain struct {
 	head *Node
 	tail *Node
+
+	progress *message.ProgressBar
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
@@ -60,14 +64,14 @@ func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string, vars
 }
 
 // NewImportChain creates a new import chain from a component
-func NewImportChain(head types.ZarfComponent, arch string, headVars []types.ZarfPackageVariable, headConsts []types.ZarfPackageConstant) (*ImportChain, error) {
+func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error) {
 	if arch == "" {
 		return nil, fmt.Errorf("cannot build import chain: architecture must be provided")
 	}
 
 	ic := &ImportChain{}
 
-	ic.append(head, "", headVars, headConsts)
+	ic.append(head, "", nil, nil)
 
 	history := []string{}
 
@@ -96,6 +100,7 @@ func NewImportChain(head types.ZarfComponent, arch string, headVars []types.Zarf
 		if isLocal {
 			history = append(history, node.Import.Path)
 			relativeToHead := filepath.Join(history...)
+			// this assumes the composed package is following the zarf layout
 			if err := utils.ReadYaml(filepath.Join(relativeToHead, layout.ZarfYAML), &pkg); err != nil {
 				return ic, err
 			}
@@ -158,6 +163,18 @@ func (ic *ImportChain) History() (history [][]string) {
 	return history
 }
 
+// TODO: is this the best place to perform migrations?
+func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
+	node := ic.head
+	for node != nil {
+		migrated, w := deprecated.MigrateComponent(build, node.ZarfComponent)
+		node.ZarfComponent = migrated
+		warnings = append(warnings, w...)
+		node = node.next
+	}
+	return warnings
+}
+
 // Compose merges the import chain into a single component
 // fixing paths, overriding metadata, etc
 func (ic *ImportChain) Compose() (composed types.ZarfComponent) {
@@ -188,44 +205,48 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent) {
 	return composed
 }
 
-func (ic *ImportChain) MergeVariables() (vars []types.ZarfPackageVariable) {
+func (ic *ImportChain) MergeVariables(vars []types.ZarfPackageVariable) (merged []types.ZarfPackageVariable) {
+	merged = vars
+
 	node := ic.head
 	for node != nil {
 		// // merge the vars
 		for _, v := range node.vars {
 			exists := false
-			for _, vv := range vars {
+			for _, vv := range merged {
 				if v.Name == vv.Name {
 					exists = true
 					break
 				}
 			}
 			if !exists {
-				vars = append(vars, v)
+				merged = append(merged, v)
 			}
 		}
 		node = node.next
 	}
-	return vars
+	return merged
 }
 
-func (ic *ImportChain) MergeConstants() (consts []types.ZarfPackageConstant) {
+func (ic *ImportChain) MergeConstants(consts []types.ZarfPackageConstant) (merged []types.ZarfPackageConstant) {
+	merged = consts
+
 	node := ic.head
 	for node != nil {
 		// merge the consts
 		for _, c := range node.consts {
 			exists := false
-			for _, cc := range consts {
+			for _, cc := range merged {
 				if c.Name == cc.Name {
 					exists = true
 					break
 				}
 			}
 			if !exists {
-				consts = append(consts, c)
+				merged = append(merged, c)
 			}
 		}
 		node = node.next
 	}
-	return consts
+	return merged
 }

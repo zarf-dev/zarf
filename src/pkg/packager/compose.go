@@ -9,11 +9,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -24,19 +27,35 @@ import (
 func (p *Packager) composeComponents() error {
 	components := []types.ZarfComponent{}
 
+	pkgVars := p.cfg.Pkg.Variables
+	pkgConsts := p.cfg.Pkg.Constants
+
 	for _, component := range p.cfg.Pkg.Components {
-		if component.Import.Path == "" && component.Import.URL == "" {
-			// Migrate any deprecated component configurations now
-			migratedComponent, warnings := deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
-			components = append(components, migratedComponent)
-			p.warnings = append(p.warnings, warnings...)
-		} else {
-			composedComponent, err := p.getComposedComponent(component)
-			if err != nil {
-				return fmt.Errorf("unable to compose component %s: %w", component.Name, err)
-			}
-			components = append(components, composedComponent)
+		// build the import chain
+		start := time.Now()
+		chain, err := composer.NewImportChain(component, p.arch)
+		if err != nil {
+			return err
 		}
+		message.Debugf("Building import chain for %q took %s", component.Name, time.Since(start))
+
+		// migrate any deprecated component configurations now
+		start = time.Now()
+		warnings := chain.Migrate(p.cfg.Pkg.Build)
+		p.warnings = append(p.warnings, warnings...)
+		message.Debugf("Migrating %q took %s", component.Name, time.Since(start))
+
+		// get the composed component
+		start = time.Now()
+		composed := chain.Compose()
+		components = append(components, composed)
+		message.Debugf("Composing %q took %s", component.Name, time.Since(start))
+
+		// merge variables and constants
+		start = time.Now()
+		pkgVars = chain.MergeVariables(pkgVars)
+		pkgConsts = chain.MergeConstants(pkgConsts)
+		message.Debugf("Merging pkg vars and consts from import chain took %s", time.Since(start))
 	}
 
 	// Update the parent package config with the expanded sub components.
