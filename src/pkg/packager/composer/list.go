@@ -7,10 +7,9 @@ package composer
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -35,8 +34,6 @@ type Node struct {
 type ImportChain struct {
 	head *Node
 	tail *Node
-
-	progress *message.ProgressBar
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
@@ -81,13 +78,18 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 		arch = node.Only.Cluster.Architecture
 	}
 	for node != nil {
-		isLocal := node.Import.Path != "" && node.Import.URL == ""
-		isRemote := node.Import.Path == "" && node.Import.URL != ""
+		isLocal := node.Import.Path != ""
+		isRemote := node.Import.URL != ""
 
 		if !isLocal && !isRemote {
 			// This is the end of the import chain,
 			// as the current node/component is not importing anything
 			return ic, nil
+		}
+
+		// TODO: stuff like this should also happen in linting
+		if err := validate.ImportDefinition(&node.ZarfComponent); err != nil {
+			return ic, err
 		}
 
 		if node.prev != nil && node.prev.Import.URL != "" && isRemote {
@@ -105,9 +107,6 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 				return ic, err
 			}
 		} else if isRemote {
-			if !strings.HasSuffix(node.Import.URL, oci.SkeletonSuffix) {
-				return ic, fmt.Errorf("remote component %q does not have a %q suffix", node.Import.URL, oci.SkeletonSuffix)
-			}
 			remote, err := oci.NewOrasRemote(node.Import.URL)
 			if err != nil {
 				return ic, err
@@ -163,6 +162,8 @@ func (ic *ImportChain) History() (history [][]string) {
 	return history
 }
 
+// Migrate performs migrations on the import chain
+//
 // TODO: is this the best place to perform migrations?
 func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 	node := ic.head
@@ -205,6 +206,7 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent) {
 	return composed
 }
 
+// MergeVariables merges variables from the import chain
 func (ic *ImportChain) MergeVariables(vars []types.ZarfPackageVariable) (merged []types.ZarfPackageVariable) {
 	merged = vars
 
@@ -228,6 +230,7 @@ func (ic *ImportChain) MergeVariables(vars []types.ZarfPackageVariable) (merged 
 	return merged
 }
 
+// MergeConstants merges constants from the import chain
 func (ic *ImportChain) MergeConstants(consts []types.ZarfPackageConstant) (merged []types.ZarfPackageConstant) {
 	merged = consts
 

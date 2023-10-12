@@ -72,7 +72,7 @@ func (p *Packager) composeComponents() error {
 // where 1 component parent is made up of 0...n composite or leaf children.
 func (p *Packager) getComposedComponent(parentComponent types.ZarfComponent) (child types.ZarfComponent, err error) {
 	// Make sure the component we're trying to import can't be accessed.
-	if err := validate.ImportPackage(&parentComponent); err != nil {
+	if err := validate.ImportDefinition(&parentComponent); err != nil {
 		return child, fmt.Errorf("invalid import definition in the %s component: %w", parentComponent.Name, err)
 	}
 

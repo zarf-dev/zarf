@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -67,8 +68,8 @@ func Run(pkg types.ZarfPackage) error {
 	return nil
 }
 
-// ImportPackage validates the package trying to be imported.
-func ImportPackage(composedComponent *types.ZarfComponent) error {
+// ImportDefinition validates the component trying to be imported.
+func ImportDefinition(composedComponent *types.ZarfComponent) error {
 	path := composedComponent.Import.Path
 	url := composedComponent.Import.URL
 
@@ -100,6 +101,9 @@ func ImportPackage(composedComponent *types.ZarfComponent) error {
 		ok := helpers.IsOCIURL(url)
 		if !ok {
 			return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, composedComponent.Import.URL)
+		}
+		if !strings.HasSuffix(url, oci.SkeletonSuffix) {
+			return fmt.Errorf("remote component %q does not have a %q suffix", url, oci.SkeletonSuffix)
 		}
 	}
 
