@@ -1,9 +1,0 @@
-kind: ZarfPackageConfig
-metadata:
-  name: cosign-artifacts
-  description: Test package for cosign image artifact pulls
-
-components:
-  - name: test
-    images:
-      - ghcr.io/defenseunicorns/zarf/agent:sha256-90863c246da361499e8f59dfae728c34b50ee2057e61e06dacdcfad983425c32.sig

@@ -435,6 +435,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 // PullImage returns a v1.Image either by loading a local tarball or pulling from the wider internet.
 func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Image, hasImageLayers bool, err error) {
+	cacheImage := false
 	// Load image tarballs from the local filesystem.
 	if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
 		spinner.Updatef("Reading image tarball: %s", src)
@@ -442,15 +443,8 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		if err != nil {
 			return nil, false, err
 		}
-		hasImageLayers, err = utils.HasImageLayers(img)
-		if err != nil {
-			return nil, false, fmt.Errorf("failed to check image %s layer mediatype: %w", src, err)
-		}
-		return img, hasImageLayers, err
-	}
-
-	// If crane is unable to pull the image, try to load it from the local docker daemon.
-	if _, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
+	} else if _, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
+		// If crane is unable to pull the image, try to load it from the local docker daemon.
 		message.Debugf("crane unable to pull image %s: %s", src, err)
 		spinner.Updatef("Falling back to docker for %s. This may take some time.", src)
 
@@ -487,31 +481,25 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		if img, err = daemon.Image(reference, daemon.WithUnbufferedOpener()); err != nil {
 			return nil, false, fmt.Errorf("failed to load image %s from docker daemon: %w", src, err)
 		}
-
-		// The pull from the docker daemon was successful, return the image.
-		hasImageLayers, err = utils.HasImageLayers(img)
-		if err != nil {
-			return nil, false, fmt.Errorf("failed to check image %s layer mediatype: %w", src, err)
+	} else {
+		// Manifest was found, so use crane to pull the image.
+		if img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
+			return nil, false, fmt.Errorf("failed to pull image %s: %w", src, err)
 		}
-		return img, hasImageLayers, err
+		cacheImage = true
 	}
-
-	// Manifest was found, so use crane to pull the image.
-	if img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
-		return nil, false, fmt.Errorf("failed to pull image %s: %w", src, err)
-	}
-
-	spinner.Updatef("Preparing image %s", src)
 
 	hasImageLayers, err = utils.HasImageLayers(img)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to check image %s layer mediatype: %w", src, err)
 	}
 
-	if hasImageLayers {
+	if hasImageLayers && cacheImage {
+		spinner.Updatef("Preparing image %s", src)
 		imageCachePath := filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
 		img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 	}
 
 	return img, hasImageLayers, nil
+
 }

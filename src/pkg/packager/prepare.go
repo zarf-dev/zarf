@@ -236,15 +236,6 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				// Use print because we want this dumped to stdout
 				imagesMap[component.Name] = append(imagesMap[component.Name], image)
 				componentDefinition += fmt.Sprintf("      - %s\n", image)
-				cosignArtifacts, err := utils.GetCosignArtifacts(image)
-				if err != nil {
-					message.WarnErrf(err, "Problem looking up cosign artifacts for %s: %s", image, err.Error())
-					erroredCosignLookups = append(erroredCosignLookups, image)
-				}
-				imagesMap[component.Name] = append(imagesMap[component.Name], cosignArtifacts...)
-				for _, cosignArtifact := range cosignArtifacts {
-					componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
-				}
 			}
 		}
 
@@ -259,19 +250,34 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 					// Otherwise, add to the list of images
 					message.Debugf("Imaged digest found: %s", descriptor.Digest)
 					validImages = append(validImages, image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(image)
-					if err != nil {
-						message.WarnErrf(err, "Problem looking up cosign artifacts for %s: %s", image, err.Error())
-						erroredCosignLookups = append(erroredCosignLookups, image)
-					}
-					validImages = append(validImages, cosignArtifacts...)
 				}
 			}
 
 			if len(validImages) > 0 {
 				componentDefinition += fmt.Sprintf("      # Possible images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
 				for _, image := range validImages {
+					imagesMap[component.Name] = append(imagesMap[component.Name], image)
 					componentDefinition += fmt.Sprintf("      - %s\n", image)
+				}
+			}
+		}
+
+		// Handle cosign artifact lookups
+		if len(imagesMap[component.Name]) > 0 {
+			var cosignArtifactList []string
+			for _, image := range imagesMap[component.Name] {
+				cosignArtifacts, err := utils.GetCosignArtifacts(image)
+				if err != nil {
+					message.WarnErrf(err, "Problem looking up cosign artifacts for %s: %s", image, err.Error())
+					erroredCosignLookups = append(erroredCosignLookups, image)
+				}
+				cosignArtifactList = append(cosignArtifactList, cosignArtifacts...)
+			}
+			if len(cosignArtifactList) > 0 {
+				imagesMap[component.Name] = append(imagesMap[component.Name], cosignArtifactList...)
+				componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
+				for _, cosignArtifact := range cosignArtifactList {
+					componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
 				}
 			}
 		}

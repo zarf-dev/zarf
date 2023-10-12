@@ -14,6 +14,7 @@ components:
         localPath: chart
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
+      - ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
     actions:
       onDeploy:
         after:
@@ -34,6 +35,7 @@ components:
         gitPath: charts/podinfo
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
+      - ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
     actions:
       onDeploy:
         after:
@@ -53,6 +55,7 @@ components:
         url: oci://ghcr.io/stefanprodan/charts/podinfo
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
+      - ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
     actions:
       onDeploy:
         after:
@@ -80,6 +83,7 @@ components:
         releaseName: cool-name
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
+      - ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
     actions:
       onDeploy:
         after:
