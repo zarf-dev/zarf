@@ -20,6 +20,9 @@ import (
 type Node struct {
 	types.ZarfComponent
 
+	vars   []types.ZarfPackageVariable
+	consts []types.ZarfPackageConstant
+
 	relativeToHead string
 
 	prev *Node
@@ -32,8 +35,15 @@ type ImportChain struct {
 	tail *Node
 }
 
-func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string) {
-	node := &Node{ZarfComponent: c, relativeToHead: relativeToHead, prev: nil, next: nil}
+func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
+	node := &Node{
+		ZarfComponent:  c,
+		relativeToHead: relativeToHead,
+		vars:           vars,
+		consts:         consts,
+		prev:           nil,
+		next:           nil,
+	}
 	if ic.head == nil {
 		ic.head = node
 		ic.tail = node
@@ -50,14 +60,14 @@ func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string) {
 }
 
 // NewImportChain creates a new import chain from a component
-func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error) {
+func NewImportChain(head types.ZarfComponent, arch string, headVars []types.ZarfPackageVariable, headConsts []types.ZarfPackageConstant) (*ImportChain, error) {
 	if arch == "" {
 		return nil, fmt.Errorf("cannot build import chain: architecture must be provided")
 	}
 
 	ic := &ImportChain{}
 
-	ic.append(head, "")
+	ic.append(head, "", headVars, headConsts)
 
 	history := []string{}
 
@@ -128,7 +138,7 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 			}
 		}
 
-		ic.append(found[0], filepath.Join(history...))
+		ic.append(found[0], filepath.Join(history...), pkg.Variables, pkg.Constants)
 		node = node.next
 	}
 	return ic, nil
@@ -176,4 +186,46 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent) {
 	}
 
 	return composed
+}
+
+func (ic *ImportChain) MergeVariables() (vars []types.ZarfPackageVariable) {
+	node := ic.head
+	for node != nil {
+		// // merge the vars
+		for _, v := range node.vars {
+			exists := false
+			for _, vv := range vars {
+				if v.Name == vv.Name {
+					exists = true
+					break
+				}
+			}
+			if !exists {
+				vars = append(vars, v)
+			}
+		}
+		node = node.next
+	}
+	return vars
+}
+
+func (ic *ImportChain) MergeConstants() (consts []types.ZarfPackageConstant) {
+	node := ic.head
+	for node != nil {
+		// merge the consts
+		for _, c := range node.consts {
+			exists := false
+			for _, cc := range consts {
+				if c.Name == cc.Name {
+					exists = true
+					break
+				}
+			}
+			if !exists {
+				consts = append(consts, c)
+			}
+		}
+		node = node.next
+	}
+	return consts
 }
