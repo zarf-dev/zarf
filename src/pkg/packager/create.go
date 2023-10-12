@@ -90,11 +90,6 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	// Add extra artifacts (cosign signatures, etc) to the package config
-	if err := p.addExtraArtifacts(); err != nil {
-		return err
-	}
-
 	// After we have a full zarf.yaml remove unnecessary repos and images if we are building a differential package
 	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
 		// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
@@ -787,22 +782,5 @@ func (p *Packager) removeCopiesFromDifferentialPackage() error {
 		p.cfg.Pkg.Components[idx] = component
 	}
 
-	return nil
-}
-
-func (p *Packager) addExtraArtifacts() (err error) {
-	for i, c := range p.cfg.Pkg.Components {
-		var extraArtifactList []string
-		for _, image := range c.Images {
-			if !p.cfg.CreateOpts.SkipCosignLookup {
-				cosignArtifacts, err := utils.GetCosignArtifacts(image)
-				if err != nil {
-					return err
-				}
-				extraArtifactList = append(extraArtifactList, cosignArtifacts...)
-			}
-		}
-		p.cfg.Pkg.Components[i].Images = append(p.cfg.Pkg.Components[i].Images, extraArtifactList...)
-	}
 	return nil
 }

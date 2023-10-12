@@ -429,7 +429,7 @@ func (i *ImageConfig) PullAll() (map[transform.Image]v1.Image, error) {
 	return refInfoToImage, nil
 }
 
-// PullImage returns a v1.Image either by loading a local tarball or the wider internet.
+// PullImage returns a v1.Image either by loading a local tarball or pulling from the wider internet.
 func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Image, err error) {
 	// Load image tarballs from the local filesystem.
 	if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
@@ -487,12 +487,12 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 
 	spinner.Updatef("Preparing image %s", src)
 
-	isImage, err := utils.HasImageLayers(img)
+	hasImageLayers, err := utils.HasImageLayers(img)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check image %s layer mediatype: %w", src, err)
 	}
 
-	if isImage {
+	if hasImageLayers {
 		imageCachePath := filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
 		img = cache.Image(img, cache.NewFilesystemCache(imageCachePath))
 	}

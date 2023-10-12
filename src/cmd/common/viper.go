@@ -68,7 +68,6 @@ const (
 	VPkgCreateSbom               = "package.create.sbom"
 	VPkgCreateSbomOutput         = "package.create.sbom_output"
 	VPkgCreateSkipSbom           = "package.create.skip_sbom"
-	VPkgCreateSkipCosignLookup   = "package.create.skip_cosign_lookup"
 	VPkgCreateMaxPackageSize     = "package.create.max_package_size"
 	VPkgCreateSigningKey         = "package.create.signing_key"
 	VPkgCreateSigningKeyPassword = "package.create.signing_key_password"

@@ -1,9 +1,0 @@
-kind: ZarfPackageConfig
-metadata:
-  name: cosign-lookup
-  description: Test package for cosign image artifact lookups
-
-components:
-  - name: test
-    images:
-      - ghcr.io/defenseunicorns/zarf/agent:v0.30.0

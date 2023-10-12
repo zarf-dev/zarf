@@ -218,6 +218,7 @@ func CosignSignBlob(blobPath string, outputSigPath string, keyPath string, passw
 	return sig, err
 }
 
+// GetCosignArtifacts returns signatures and attestations for the given image
 func GetCosignArtifacts(image string) (cosignList []string, err error) {
 	var cosignArtifactList []string
 	var nameOpts []name.Option
@@ -232,6 +233,7 @@ func GetCosignArtifacts(image string) (cosignList []string, err error) {
 	if simg == nil {
 		return cosignArtifactList, nil
 	}
+	// Errors are dogsled because these functions always return a name.Tag which we can check for layers
 	sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)
 	attRef, _ := ociremote.AttestationTag(ref, remoteOpts...)
 
