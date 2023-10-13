@@ -9,7 +9,7 @@ components:
     description: A semi-contrived example that deploys podinfo using many Zarf primitives and lets us upgrade it a few times.
     required: true
     charts:
-      - name: podinfo-upgrade
+      - name: podinfo
         version: "###ZARF_PKG_VAR_PODINFO_VERSION###"
         namespace: podinfo-upgrade
         url: oci://ghcr.io/stefanprodan/charts/podinfo
