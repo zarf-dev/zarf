@@ -128,7 +128,13 @@ ib-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm . \
 		--set REGISTRY_IMAGE_DOMAIN="registry1.dso.mil/" \
 		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
-		--set REGISTRY_IMAGE_TAG="2.8.2"
+		--set REGISTRY_IMAGE_TAG="2.8.2" \
+		--set AGENT_IMAGE_DOMAIN="registry1.dso.mil/" \
+		--set AGENT_IMAGE="ironbank/opensource/defenseunicorns/zarf/zarf-agent" \
+		--set AGENT_IMAGE_TAG="v0.29.2" \
+		--set GITEA_IMAGE_DOMAIN="registry1.dso.mil/" \
+		--set GITEA_IMAGE="ironbank/opensource/go-gitea/gitea" \
+		--set GITEA_IMAGE_TAG="v1.19.3"
 
 # INTERNAL: used to publish the init package
 publish-init-package:
