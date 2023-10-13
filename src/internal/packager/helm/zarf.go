@@ -146,13 +146,12 @@ func (h *Helm) UpdateZarfAgentValues() error {
 	defer spinner.Stop()
 
 	// Force pods to be recreated to get the updated secret.
-	pods = h.Cluster.WaitForPodsAndContainers(k8s.PodLookup{
+	err = h.Cluster.DeletePods(k8s.PodLookup{
 		Namespace: cluster.ZarfNamespaceName,
 		Selector:  "app=agent-hook",
-	}, nil)
-
-	for _, pod := range pods {
-		h.Cluster.DeletePod(cluster.ZarfNamespaceName, pod.Name)
+	})
+	if err != nil {
+		return fmt.Errorf("error recycling pods for the Zarf Agent: %w", err)
 	}
 
 	spinner.Success()
