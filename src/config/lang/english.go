@@ -252,7 +252,7 @@ const (
 	CmdPackageCreateFlagSbom               = "View SBOM contents after creating the package"
 	CmdPackageCreateFlagSbomOut            = "Specify an output directory for the SBOMs from the created Zarf package"
 	CmdPackageCreateFlagSkipSbom           = "Skip generating SBOM for this package"
-	CmdPackageCreateFlagMaxPackageSize     = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting."
+	CmdPackageCreateFlagMaxPackageSize     = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts to be loaded onto smaller media (i.e. DVDs). Use 0 to disable splitting."
 	CmdPackageCreateFlagSigningKey         = "Path to private key file for signing packages"
 	CmdPackageCreateFlagSigningKeyPassword = "Password to the private key file used for signing packages"
 	CmdPackageCreateFlagDifferential       = "[beta] Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
