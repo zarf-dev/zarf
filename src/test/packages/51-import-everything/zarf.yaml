@@ -112,7 +112,7 @@ components:
     description: "import-helm-oci == ###ZARF_COMPONENT_NAME###"
     required: false
     charts:
-      - name: oci-demo
+      - name: podinfo
         version: 6.4.0
         namespace: podinfo
         url: oci://ghcr.io/stefanprodan/charts/podinfo
