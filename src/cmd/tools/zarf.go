@@ -72,7 +72,7 @@ var updateCredsCmd = &cobra.Command{
 	Aliases: []string{"uc"},
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey}
+		validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey, message.AgentKey}
 		if len(args) == 0 {
 			args = validKeys
 		} else {
@@ -120,9 +120,11 @@ var updateCredsCmd = &cobra.Command{
 				g := git.New(oldState.GitServer)
 				tokenResponse, err := g.CreatePackageRegistryToken()
 				if err != nil {
-					message.Fatalf(nil, lang.CmdToolsUpdateCredsUnableCreateToken, err.Error())
+					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
+					message.Warnf(lang.CmdToolsUpdateCredsUnableCreateToken, err.Error())
+				} else {
+					newState.ArtifactServer.PushToken = tokenResponse.Sha1
 				}
-				newState.ArtifactServer.PushToken = tokenResponse.Sha1
 			}
 
 			// Save the final Zarf State
@@ -142,13 +144,22 @@ var updateCredsCmd = &cobra.Command{
 			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
 				err = h.UpdateZarfRegistryValues()
 				if err != nil {
-					message.Fatalf(err, lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
+					// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
+					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
 				}
 			}
 			if slices.Contains(args, message.GitKey) && newState.GitServer.InternalServer {
 				err = h.UpdateZarfGiteaValues()
 				if err != nil {
-					message.Fatalf(err, lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())
+					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
+					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())
+				}
+			}
+			if slices.Contains(args, message.AgentKey) {
+				err = h.UpdateZarfAgentValues()
+				if err != nil {
+					// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
+					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())
 				}
 			}
 		}
