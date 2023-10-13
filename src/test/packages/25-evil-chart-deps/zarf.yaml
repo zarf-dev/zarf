@@ -7,7 +7,7 @@ components:
   - name: good
     required: true
     charts:
-      - name: dogs
+      - name: good-chart
         localPath: good-chart
         version: 1.0.0
         namespace: good
@@ -15,7 +15,7 @@ components:
   - name: bad
     required: true
     charts:
-      - name: cats
+      - name: bad-chart
         localPath: bad-chart
         version: 1.0.0
         namespace: bad
