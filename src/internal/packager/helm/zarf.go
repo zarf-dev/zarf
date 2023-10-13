@@ -78,7 +78,7 @@ func (h *Helm) UpdateZarfGiteaValues() error {
 	return nil
 }
 
-// UpdateZarfAgentValues updates the Zarf git server deployment with the new state values
+// UpdateZarfAgentValues updates the Zarf agent deployment with the new state values
 func (h *Helm) UpdateZarfAgentValues() error {
 	spinner := message.NewProgressSpinner("Gathering information to update Zarf Agent TLS")
 	defer spinner.Stop()
