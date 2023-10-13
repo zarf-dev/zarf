@@ -128,7 +128,7 @@ func (p *Packager) Create() (err error) {
 		isSkeleton := false
 		if err := p.addComponent(idx, component, isSkeleton); err != nil {
 			onFailure()
-			return fmt.Errorf("unable to add component: %w", err)
+			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
 		componentSBOM, err := p.getFilesToSBOM(component)
 		if err != nil {

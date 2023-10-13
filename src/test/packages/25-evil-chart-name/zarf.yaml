@@ -1,0 +1,32 @@
+kind: ZarfPackageConfig
+metadata:
+  name: helm-charts-local-tgz
+  description: Example showcasing mutiple ways to deploy helm charts
+  version: 0.0.1
+
+components:
+  - name: demo-helm-oci-chart
+    required: false
+    charts:
+      - name: asdf
+        version: 6.4.0
+        namespace: podinfo-from-oci
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: pod
+                name: app.kubernetes.io/name=podinfo
+                namespace: podinfo-from-oci
+                condition: ready
+          - wait:
+              cluster:
+                kind: deployment
+                # note this version is the same as the chart version
+                name: app.kubernetes.io/version=6.4.0
+                namespace: podinfo-from-oci
+                condition: available

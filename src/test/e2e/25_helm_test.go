@@ -34,22 +34,29 @@ func TestHelm(t *testing.T) {
 func testHelmChartsExample(t *testing.T) {
 	t.Parallel()
 	t.Log("E2E: Helm chart example")
+	tmpdir := t.TempDir()
 
 	// Create a package that has a tarball as a local chart
 	localTgzChartPath := filepath.Join("src", "test", "packages", "25-local-tgz-chart")
-	stdOut, stdErr, err := e2e.Zarf("package", "create", localTgzChartPath, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", localTgzChartPath, "--tmpdir", tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(fmt.Sprintf("zarf-package-helm-charts-local-tgz-%s-0.0.1.tar.zst", e2e.Arch))
 
 	// Create a package that needs dependencies
 	evilChartDepsPath := filepath.Join("src", "test", "packages", "25-evil-chart-deps")
-	stdOut, stdErr, err = e2e.Zarf("package", "create", evilChartDepsPath, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", evilChartDepsPath, "--tmpdir", tmpdir, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 	require.Contains(t, e2e.StripANSICodes(stdErr), "could not download\n          https://charts.jetstack.io/charts/cert-manager-v1.11.1.tgz")
 	require.FileExists(t, filepath.Join(evilChartDepsPath, "good-chart", "charts", "gitlab-runner-0.55.0.tgz"))
 
+	// Create a package with a bad chart name
+	evilChartNamePath := filepath.Join("src", "test", "packages", "25-evil-chart-name")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", evilChartNamePath, "--tmpdir", tmpdir, "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+	require.Contains(t, e2e.StripANSICodes(stdErr), "invalid chart name provided, \"asdf\" does not match \"podinfo\"")
+
 	// Create the package with a registry override
-	stdOut, stdErr, err = e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io=docker.io", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io=docker.io", "--tmpdir", tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the package.

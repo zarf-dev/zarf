@@ -284,8 +284,6 @@ func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured
 	bytes, _ := resource.MarshalJSON()
 	json = string(bytes)
 
-	message.Debug()
-
 	switch resource.GetKind() {
 	case "Deployment":
 		var deployment v1.Deployment

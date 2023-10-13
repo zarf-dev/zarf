@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/registry"
 	"k8s.io/client-go/util/homedir"
@@ -44,18 +45,20 @@ func (h *Helm) PackageChart(destination string) error {
 			}
 
 			_, err = h.PackageChartFromGit(destination)
-
 			if err != nil {
-				return fmt.Errorf("error creating chart archive, unable to pull the chart from git: %s", err.Error())
+				return fmt.Errorf("unable to pull the chart %q from git: %w", h.Chart.Name, err)
 			}
 		} else {
-			h.DownloadPublishedChart(destination)
+			err = h.DownloadPublishedChart(destination)
+			if err != nil {
+				return fmt.Errorf("unable to download the published chart %q: %w", h.Chart.Name, err)
+			}
 		}
 
 	} else {
 		_, err := h.PackageChartFromLocalFiles(destination)
 		if err != nil {
-			return fmt.Errorf("error creating chart archive, unable to package the chart: %s", err.Error())
+			return fmt.Errorf("unable to package the %q chart: %w", h.Chart.Name, err)
 		}
 	}
 	return nil
@@ -66,10 +69,8 @@ func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.Chart.Name, h.Chart.Version, h.Chart.LocalPath)
 	defer spinner.Stop()
 
-	// Validate the chart
-	cl, err := loader.Loader(h.Chart.LocalPath)
+	cl, _, err := h.loadAndValidateChart(h.Chart.LocalPath)
 	if err != nil {
-		spinner.Errorf(err, "Validation failed for chart from %s (%s)", h.Chart.LocalPath, err.Error())
 		return "", err
 	}
 
@@ -77,8 +78,7 @@ func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
 	if _, ok := cl.(loader.DirLoader); ok {
 		err = h.buildChartDependencies(spinner)
 		if err != nil {
-			spinner.Errorf(err, "Unable to build dependencies for the chart: %s", err.Error())
-			return "", err
+			return "", fmt.Errorf("unable to build dependencies for the chart: %w", err)
 		}
 
 		client := action.NewPackage()
@@ -91,8 +91,7 @@ func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
 	}
 
 	if err != nil {
-		spinner.Errorf(err, "Helm is unable to save the archive and create the package %s", path)
-		return "", err
+		return "", fmt.Errorf("unable to save the archive and create the package %s: %w", path, err)
 	}
 
 	spinner.Success()
@@ -118,7 +117,7 @@ func (h *Helm) PackageChartFromGit(destination string) (string, error) {
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func (h *Helm) DownloadPublishedChart(destination string) {
+func (h *Helm) DownloadPublishedChart(destination string) error {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.Chart.Name, h.Chart.Version, h.Chart.URL)
 	defer spinner.Stop()
 
@@ -136,7 +135,7 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 	if registry.IsOCI(h.Chart.URL) {
 		regClient, err = registry.NewClient(registry.ClientOptEnableCache(true))
 		if err != nil {
-			spinner.Fatalf(err, "Unable to create a new registry client")
+			return fmt.Errorf("unable to create a new registry client: %w", err)
 		}
 		chartURL = h.Chart.URL
 		// Explicitly set the pull version for OCI
@@ -145,7 +144,7 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 		// Perform simple chart download
 		chartURL, err = repo.FindChartInRepoURL(h.Chart.URL, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 		if err != nil {
-			spinner.Fatalf(err, "Unable to pull the helm chart")
+			return fmt.Errorf("unable to pull the helm chart: %w", err)
 		}
 	}
 
@@ -164,23 +163,25 @@ func (h *Helm) DownloadPublishedChart(destination string) {
 	// Download the file (we don't control what name helm creates here)
 	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, destination)
 	if err != nil {
-		spinner.Fatalf(err, "Unable to download the helm chart")
+		return fmt.Errorf("unable to download the helm chart: %w", err)
 	}
 
 	// Validate the chart
-	_, err = loader.LoadFile(saved)
+	_, _, err = h.loadAndValidateChart(saved)
 	if err != nil {
-		spinner.Fatalf(err, "Validation failed for chart %s (%s)", h.Chart.Name, err.Error())
+		return err
 	}
 
 	// Ensure the name is consistent for deployments
 	destinationTarball := StandardName(destination, h.Chart) + ".tgz"
 	err = os.Rename(saved, destinationTarball)
 	if err != nil {
-		spinner.Fatalf(err, "Unable to save the chart tarball")
+		return fmt.Errorf("unable to save the chart tarball: %w", err)
 	}
 
 	spinner.Success()
+
+	return nil
 }
 
 // DownloadChartFromGitToTemp downloads a chart from git into a temp directory
@@ -191,8 +192,7 @@ func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, err
 	// Download the git repo to a temporary directory
 	err := gitCfg.DownloadRepoToTemp(h.Chart.URL)
 	if err != nil {
-		spinner.Errorf(err, "Unable to download the git repo %s", h.Chart.URL)
-		return "", err
+		return "", fmt.Errorf("unable to download the git repo %s: %w", h.Chart.URL, err)
 	}
 
 	return gitCfg.GitPath, nil
@@ -240,4 +240,24 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 	}
 
 	return nil
+}
+
+func (h *Helm) loadAndValidateChart(location string) (loader.ChartLoader, *chart.Chart, error) {
+	// Validate the chart
+	cl, err := loader.Loader(location)
+	if err != nil {
+		return cl, nil, fmt.Errorf("unable to load the chart from %s: %w", location, err)
+	}
+
+	chart, err := cl.Load()
+	if err != nil {
+		return cl, chart, fmt.Errorf("validation failed for chart from %s: %w", location, err)
+	}
+
+	// Check that the chart name matches
+	if h.Chart.Name != chart.Name() {
+		return cl, chart, fmt.Errorf("invalid chart name provided, %q does not match %q", h.Chart.Name, chart.Name())
+	}
+
+	return cl, chart, nil
 }
