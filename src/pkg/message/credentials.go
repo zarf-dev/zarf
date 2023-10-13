@@ -45,14 +45,14 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 	for _, component := range componentsToDeploy {
 		// Show message if including logging stack
 		if component.Name == "logging" {
-			loginData = append(loginData, []string{"     Logging", config.ZarfLoggingUser, state.LoggingSecret, "zarf connect logging", LoggingKey})
+			loginData = append(loginData, []string{"Logging", config.ZarfLoggingUser, state.LoggingSecret, "zarf connect logging", LoggingKey})
 		}
 		// Show message if including git-server
 		if component.Name == "git-server" {
 			loginData = append(loginData,
-				[]string{"     Git", state.GitServer.PushUsername, state.GitServer.PushPassword, "zarf connect git", GitKey},
-				[]string{"     Git (read-only)", state.GitServer.PullUsername, state.GitServer.PullPassword, "zarf connect git", GitReadKey},
-				[]string{"     Artifact Token", state.ArtifactServer.PushUsername, state.ArtifactServer.PushToken, "zarf connect git", ArtifactKey},
+				[]string{"Git", state.GitServer.PushUsername, state.GitServer.PushPassword, "zarf connect git", GitKey},
+				[]string{"Git (read-only)", state.GitServer.PullUsername, state.GitServer.PullPassword, "zarf connect git", GitReadKey},
+				[]string{"Artifact Token", state.ArtifactServer.PushUsername, state.ArtifactServer.PushToken, "zarf connect git", ArtifactKey},
 			)
 		}
 	}
