@@ -47,12 +47,12 @@ func NewClusterWithWait(timeout time.Duration) (*Cluster, error) {
 
 	c.K8s, err = k8s.New(message.Debugf, labels)
 	if err != nil {
-		return c, err
+		return nil, err
 	}
 
 	err = c.WaitForHealthyCluster(timeout)
 	if err != nil {
-		return c, err
+		return nil, err
 	}
 
 	spinner.Success()
@@ -64,6 +64,7 @@ func NewClusterWithWait(timeout time.Duration) (*Cluster, error) {
 func NewCluster() (*Cluster, error) {
 	c := &Cluster{}
 	var err error
+
 	c.K8s, err = k8s.New(message.Debugf, labels)
 	if err != nil {
 		return nil, err

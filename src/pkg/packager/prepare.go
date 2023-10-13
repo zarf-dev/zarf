@@ -36,6 +36,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	imagesMap := make(map[string][]string)
 	erroredCharts := []string{}
+	erroredCosignLookups := []string{}
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -255,7 +256,28 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			if len(validImages) > 0 {
 				componentDefinition += fmt.Sprintf("      # Possible images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
 				for _, image := range validImages {
+					imagesMap[component.Name] = append(imagesMap[component.Name], image)
 					componentDefinition += fmt.Sprintf("      - %s\n", image)
+				}
+			}
+		}
+
+		// Handle cosign artifact lookups
+		if len(imagesMap[component.Name]) > 0 {
+			var cosignArtifactList []string
+			for _, image := range imagesMap[component.Name] {
+				cosignArtifacts, err := utils.GetCosignArtifacts(image)
+				if err != nil {
+					message.WarnErrf(err, "Problem looking up cosign artifacts for %s: %s", image, err.Error())
+					erroredCosignLookups = append(erroredCosignLookups, image)
+				}
+				cosignArtifactList = append(cosignArtifactList, cosignArtifacts...)
+			}
+			if len(cosignArtifactList) > 0 {
+				imagesMap[component.Name] = append(imagesMap[component.Name], cosignArtifactList...)
+				componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
+				for _, cosignArtifact := range cosignArtifactList {
+					componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
 				}
 			}
 		}
@@ -268,8 +290,18 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		return nil, err
 	}
 
-	if len(erroredCharts) > 0 {
-		return imagesMap, fmt.Errorf("the following charts had errors: %s", erroredCharts)
+	if len(erroredCharts) > 0 || len(erroredCosignLookups) > 0 {
+		errMsg := ""
+		if len(erroredCharts) > 0 {
+			errMsg = fmt.Sprintf("the following charts had errors: %s", erroredCharts)
+		}
+		if len(erroredCosignLookups) > 0 {
+			if errMsg != "" {
+				errMsg += "\n"
+			}
+			errMsg += fmt.Sprintf("the following images errored on cosign lookups: %s", erroredCosignLookups)
+		}
+		return imagesMap, fmt.Errorf(errMsg)
 	}
 
 	return imagesMap, nil
@@ -277,7 +309,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured, matchedImages, maybeImages k8s.ImageMap) (k8s.ImageMap, k8s.ImageMap, error) {
 	var imageSanityCheck = regexp.MustCompile(`(?mi)"image":"([^"]+)"`)
-	var imageFuzzyCheck = regexp.MustCompile(`(?mi)"([a-z0-9\-.\/]+:[\w][\w.\-]{0,127})"`)
+	var imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-.\/:]+:[\w.\-]*[a-z\.\-][\w.\-]*)"`)
 	var json string
 
 	contents := resource.UnstructuredContent()
