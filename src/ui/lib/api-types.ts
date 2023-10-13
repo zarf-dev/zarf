@@ -172,7 +172,7 @@ export interface ZarfPackageOptions {
     /**
      * Location where a Zarf package can be found
      */
-    packagePath: string;
+    packageSource: string;
     /**
      * Location where the public key component of a cosign key-pair can be found
      */
@@ -1137,15 +1137,26 @@ export interface ConnectString {
 
 export interface DeployedPackage {
     cliVersion:         string;
+    componentWebhooks?: { [key: string]: { [key: string]: Webhook } };
     connectStrings?:    { [key: string]: ConnectString };
     data:               ZarfPackage;
     deployedComponents: DeployedComponent[];
+    generation:         number;
     name:               string;
 }
 
+export interface Webhook {
+    name:                 string;
+    observedGeneration:   number;
+    status:               string;
+    waitDurationSeconds?: number;
+}
+
 export interface DeployedComponent {
-    installedCharts: InstalledChart[];
-    name:            string;
+    installedCharts:    InstalledChart[];
+    name:               string;
+    observedGeneration: number;
+    status:             string;
 }
 
 export interface InstalledChart {
@@ -1178,6 +1189,10 @@ export interface ZarfCommonOptions {
 }
 
 export interface ZarfCreateOptions {
+    /**
+     * Location where the Zarf package will be created from
+     */
+    baseDir: string;
     /**
      * A package's differential images and git repositories from a referenced previously built
      * package
@@ -1461,7 +1476,7 @@ const typeMap: any = {
     ], false),
     "ZarfPackageOptions": o([
         { json: "optionalComponents", js: "optionalComponents", typ: "" },
-        { json: "packagePath", js: "packagePath", typ: "" },
+        { json: "packageSource", js: "packageSource", typ: "" },
         { json: "publicKeyPath", js: "publicKeyPath", typ: "" },
         { json: "setVariables", js: "setVariables", typ: m("") },
         { json: "sGetKeyPath", js: "sGetKeyPath", typ: "" },
@@ -1766,14 +1781,24 @@ const typeMap: any = {
     ], false),
     "DeployedPackage": o([
         { json: "cliVersion", js: "cliVersion", typ: "" },
+        { json: "componentWebhooks", js: "componentWebhooks", typ: u(undefined, m(m(r("Webhook")))) },
         { json: "connectStrings", js: "connectStrings", typ: u(undefined, m(r("ConnectString"))) },
         { json: "data", js: "data", typ: r("ZarfPackage") },
         { json: "deployedComponents", js: "deployedComponents", typ: a(r("DeployedComponent")) },
+        { json: "generation", js: "generation", typ: 0 },
         { json: "name", js: "name", typ: "" },
+    ], false),
+    "Webhook": o([
+        { json: "name", js: "name", typ: "" },
+        { json: "observedGeneration", js: "observedGeneration", typ: 0 },
+        { json: "status", js: "status", typ: "" },
+        { json: "waitDurationSeconds", js: "waitDurationSeconds", typ: u(undefined, 0) },
     ], false),
     "DeployedComponent": o([
         { json: "installedCharts", js: "installedCharts", typ: a(r("InstalledChart")) },
         { json: "name", js: "name", typ: "" },
+        { json: "observedGeneration", js: "observedGeneration", typ: 0 },
+        { json: "status", js: "status", typ: "" },
     ], false),
     "InstalledChart": o([
         { json: "chartName", js: "chartName", typ: "" },
@@ -1787,6 +1812,7 @@ const typeMap: any = {
         { json: "tempDirectory", js: "tempDirectory", typ: "" },
     ], false),
     "ZarfCreateOptions": o([
+        { json: "baseDir", js: "baseDir", typ: "" },
         { json: "differential", js: "differential", typ: r("DifferentialData") },
         { json: "maxPackageSizeMB", js: "maxPackageSizeMB", typ: 0 },
         { json: "output", js: "output", typ: "" },

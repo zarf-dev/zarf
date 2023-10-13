@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -40,13 +41,13 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	message.Warnf(lang.WarnSGetDeprecation)
 
 	// If this is a DefenseUnicorns package, use an internal sget public key
-	if strings.HasPrefix(image, fmt.Sprintf("%s://defenseunicorns", SGETURLScheme)) {
+	if strings.HasPrefix(image, fmt.Sprintf("%s://defenseunicorns", helpers.SGETURLScheme)) {
 		os.Setenv("DU_SGET_KEY", config.CosignPublicKey)
 		key = "env://DU_SGET_KEY"
 	}
 
 	// Remove the custom protocol header from the url
-	image = strings.TrimPrefix(image, SGETURLPrefix)
+	image = strings.TrimPrefix(image, helpers.SGETURLPrefix)
 
 	message.Debugf("utils.Sget: image=%s, key=%s", image, key)
 

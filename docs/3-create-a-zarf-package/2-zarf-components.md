@@ -37,7 +37,7 @@ Component actions are explored in the [component actions documentation](7-compon
 
 <Properties item="ZarfComponent" include={["files"]} />
 
-Can be:
+Files can be:
 
 - Relative paths to either a file or directory (from the `zarf.yaml` file)
 - A remote URL (http/https)
@@ -58,11 +58,11 @@ Can be:
 
 <Properties item="ZarfComponent" include={["charts"]} />
 
-Can be when using the `localPath` key:
+Charts using the `localPath` key can be:
 
 - Relative paths to either a file or directory (from the `zarf.yaml` file)
 
-Can be when using the `url` key:
+Charts using the `url` key can be:
 
 - A remote URL (http/https) to a Git repository
 - A remote URL (oci://) to an OCI registry
@@ -85,14 +85,20 @@ Can be when using the `url` key:
 
 <Properties item="ZarfComponent" include={["manifests"]} />
 
-Can be when using the `files` key:
+Manifests under the `files` key can be:
 
 - Relative paths to a Kubernetes manifest file (from the `zarf.yaml` file)
 - Verified using the `url@shasum` syntax for data integrity (optional and only for remote URLs)
 
-Can be when using the `kustomizations` key:
+Manifests under the `kustomizations` key can be:
 
 - Any valid Kustomize reference both local and [remote](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md) (ie. anything you could do a `kustomize build` on)
+
+:::note
+
+Zarf dynamically generates a Helm Chart from the named manifest entries that you specify.  This means that any given set of files under a manifest entry will be applied according to [Helm Chart template and manifest install ordering](https://github.com/helm/helm/blob/main/pkg/releaseutil/manifest_sorter.go#L78) and not necessarily in the order that files are declared.  If ordering is important, consider moving each file into its own manifest entry in the `manifests` array.
+
+:::
 
 #### Manifest Examples
 

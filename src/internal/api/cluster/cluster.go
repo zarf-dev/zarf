@@ -6,7 +6,6 @@ package cluster
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/api/common"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
@@ -25,7 +24,7 @@ func Summary(w http.ResponseWriter, _ *http.Request) {
 	var hasZarf bool
 	var k8sRevision string
 
-	c, err := cluster.NewClusterWithWait(5*time.Second, false)
+	c, err := cluster.NewCluster()
 	rawConfig, _ := clientcmd.NewDefaultClientConfigLoadingRules().GetStartingConfig()
 
 	reachable = err == nil

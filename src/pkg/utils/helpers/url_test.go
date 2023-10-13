@@ -128,6 +128,31 @@ func (suite *TestURLSuite) Test_3_ExtractBasePathFromURL() {
 	}
 
 }
+
+func (suite *TestURLSuite) Test_4_IsValidHostname() {
+	goodHostnames := []string{
+		"singlehost",
+		"host.domain.com",
+		"host.domain-dash.com",
+		"127.0.0.1",
+		"I.lIKe.Pi3",
+	}
+	badHostnames := []string{
+		"invalid_hostname",
+		"localhost",
+		"something.localhost",
+	}
+
+	for _, hostname := range goodHostnames {
+		isValid := validHostname(hostname)
+		suite.Equal(isValid, true)
+	}
+	for _, hostname := range badHostnames {
+		isValid := validHostname(hostname)
+		suite.Equal(isValid, false)
+	}
+}
+
 func TestURL(t *testing.T) {
 	suite.Run(t, new(TestURLSuite))
 }

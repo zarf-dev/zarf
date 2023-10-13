@@ -13,6 +13,7 @@
 .zarf*
 *.bak
 *.key
+*.crt
 *.run.zstd
 *.tar
 *.tar.gz

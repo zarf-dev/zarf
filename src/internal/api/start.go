@@ -18,9 +18,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/api/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/api/components"
 	"github.com/defenseunicorns/zarf/src/internal/api/packages"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -38,7 +40,7 @@ func LaunchAPIServer() {
 	// Otherwise, use a random available port
 	if port == "" {
 		// If we can't find an available port, just use the default
-		if portRaw, err := utils.GetAvailablePort(); err != nil {
+		if portRaw, err := helpers.GetAvailablePort(); err != nil {
 			port = "8080"
 		} else {
 			port = fmt.Sprintf("%d", portRaw)
@@ -119,7 +121,7 @@ func LaunchAPIServer() {
 	}
 
 	// Setup the static SBOM server
-	sbomSub := os.DirFS(config.ZarfSBOMDir)
+	sbomSub := os.DirFS(layout.SBOMDir)
 	sbomFs := http.FileServer(http.FS(sbomSub))
 
 	// Serve the SBOM viewer files
@@ -129,7 +131,7 @@ func LaunchAPIServer() {
 		// Extract the file name from the URL
 		file := strings.TrimPrefix(r.URL.Path, "/sbom-viewer/")
 
-		// Ensure SBOM file exists in the config.ZarfSBOMDir
+		// Ensure SBOM file exists in the layout.SBOMDir
 		if test, err := sbomSub.Open(file); err != nil {
 			// If the file doesn't exist, redirect to the homepage
 			r.URL.Path = "/"

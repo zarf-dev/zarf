@@ -13,7 +13,7 @@ import (
 
 	"slices"
 
-	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -26,7 +26,7 @@ import (
 
 var (
 	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
-	PackageAlwaysPull = []string{config.ZarfYAML, config.ZarfChecksumsTxt, config.ZarfYAMLSignature}
+	PackageAlwaysPull = []string{layout.ZarfYAML, layout.Checksums, layout.Signature}
 )
 
 // FileDescriptorExists returns true if the given file exists in the given directory with the expected SHA.
@@ -103,13 +103,13 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			for _, image := range component.Images {
 				images[image] = true
 			}
-			layers = append(layers, root.Locate(filepath.Join(config.ZarfComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
+			layers = append(layers, root.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 		}
 	}
 	// Append the sboms.tar layer if it exists
 	//
 	// Since sboms.tar is not a heavy addition 99% of the time, we'll just always pull it
-	sbomsDescriptor := root.Locate(config.ZarfSBOMTar)
+	sbomsDescriptor := root.Locate(layout.SBOMTar)
 	if !IsEmptyDescriptor(sbomsDescriptor) {
 		layers = append(layers, sbomsDescriptor)
 	}
@@ -154,15 +154,13 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 //   - zarf.yaml
 //   - checksums.txt
 //   - zarf.yaml.sig
-func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (partialPaths []string, err error) {
+func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 	isPartialPull := len(layersToPull) > 0
-	ref := o.repo.Reference
-
-	message.Debug("Pulling", ref)
+	message.Debug("Pulling", o.repo.Reference)
 
 	manifest, err := o.FetchRoot()
 	if err != nil {
-		return partialPaths, err
+		return nil, err
 	}
 
 	if isPartialPull {
@@ -180,25 +178,14 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 
 	dst, err := file.New(destinationDir)
 	if err != nil {
-		return partialPaths, err
+		return nil, err
 	}
 	defer dst.Close()
 
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
-	if isPartialPull {
-		for _, layer := range layersToPull {
-			path := layer.Annotations[ocispec.AnnotationTitle]
-			// partial paths are relative to the destination directory
-			// only layers w/ a title annotation are considered
-			if len(path) > 0 {
-				partialPaths = append(partialPaths, path)
-			}
-		}
-		partialPaths = helpers.Unique(partialPaths)
-	}
 
-	return partialPaths, o.CopyWithProgress(layersToPull, dst, &copyOpts, destinationDir)
+	return layersToPull, o.CopyWithProgress(layersToPull, dst, &copyOpts, destinationDir)
 }
 
 // CopyWithProgress copies the given layers from the remote repository to the given store.
@@ -230,7 +217,8 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 	doneSaving := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling")
+	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+o.repo.Reference.String())
+	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling", successText)
 	_, err := oras.Copy(o.ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), *copyOpts)
 	if err != nil {
 		return err
@@ -282,4 +270,9 @@ func (o *OrasRemote) PullPackagePaths(paths []string, destinationDir string) ([]
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
 func (o *OrasRemote) PullPackageMetadata(destinationDir string) ([]ocispec.Descriptor, error) {
 	return o.PullPackagePaths(PackageAlwaysPull, destinationDir)
+}
+
+// PullPackageSBOM pulls the package's sboms.tar from the remote repository and saves it to `destinationDir`.
+func (o *OrasRemote) PullPackageSBOM(destinationDir string) ([]ocispec.Descriptor, error) {
+	return o.PullPackagePaths([]string{layout.SBOMTar}, destinationDir)
 }

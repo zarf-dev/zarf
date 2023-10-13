@@ -6,7 +6,6 @@ package utils
 
 import (
 	"bufio"
-	"crypto"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -18,6 +17,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -28,27 +28,6 @@ const (
 	dotCharacter  = 46
 	tmpPathPrefix = "zarf-"
 )
-
-// GetCryptoHashFromFile returns the computed SHA256 Sum of a given file
-func GetCryptoHashFromFile(path string, hashName crypto.Hash) (string, error) {
-	var data io.ReadCloser
-	var err error
-
-	if helpers.IsURL(path) {
-		// Handle download from URL
-		message.Warn("This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link.")
-		data = Fetch(path)
-	} else {
-		// Handle local file
-		data, err = os.Open(path)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	defer data.Close()
-	return helpers.GetCryptoHash(data, hashName)
-}
 
 // TextTemplate represents a value to be templated into a text file.
 type TextTemplate struct {
@@ -276,7 +255,7 @@ func CreatePathAndCopy(source string, destination string) error {
 	return CreateFile(destination)
 }
 
-// GetFinalExecutablePath returns the absolute path to the Zarf executable, following any symlinks along the way.
+// GetFinalExecutablePath returns the absolute path to the current executable, following any symlinks along the way.
 func GetFinalExecutablePath() (string, error) {
 	message.Debug("utils.GetExecutablePath()")
 
@@ -285,9 +264,29 @@ func GetFinalExecutablePath() (string, error) {
 		return "", err
 	}
 
-	// In case the binary is symlinked somewhere else, get the final destination!!
+	// In case the binary is symlinked somewhere else, get the final destination
 	linkedPath, err := filepath.EvalSymlinks(binaryPath)
 	return linkedPath, err
+}
+
+// GetFinalExecutableCommand returns the final path to the Zarf executable including and library prefixes and overrides.
+func GetFinalExecutableCommand() (string, error) {
+	// In case the binary is symlinked somewhere else, get the final destination
+	zarfCommand, err := GetFinalExecutablePath()
+	if err != nil {
+		return zarfCommand, err
+	}
+
+	if config.ActionsCommandZarfPrefix != "" {
+		zarfCommand = fmt.Sprintf("%s %s", zarfCommand, config.ActionsCommandZarfPrefix)
+	}
+
+	// If a library user has chosen to override config to use system Zarf instead, reset the binary path.
+	if config.ActionsUseSystemZarf {
+		zarfCommand = "zarf"
+	}
+
+	return zarfCommand, err
 }
 
 // SplitFile splits a file into multiple parts by the given size.

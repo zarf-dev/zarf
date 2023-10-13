@@ -12,12 +12,12 @@ import (
 )
 
 // Check for any extensions in use and runs the appropriate functions.
-func (p *Packager) processExtensions() error {
+func (p *Packager) processExtensions() (err error) {
 	components := []types.ZarfComponent{}
 
 	// Create component paths and process extensions for each component.
 	for _, c := range p.cfg.Pkg.Components {
-		componentPaths, err := p.createOrGetComponentPaths(c)
+		componentPaths, err := p.layout.Components.Create(c)
 		if err != nil {
 			return err
 		}
@@ -50,12 +50,12 @@ func (p *Packager) composeExtensions(pathAncestry string, component types.ZarfCo
 }
 
 // Check for any extensions in use and skeletonize their local files.
-func (p *Packager) skeletonizeExtensions() error {
+func (p *Packager) skeletonizeExtensions() (err error) {
 	components := []types.ZarfComponent{}
 
 	// Create component paths and process extensions for each component.
 	for _, c := range p.cfg.Pkg.Components {
-		componentPaths, err := p.createOrGetComponentPaths(c)
+		componentPaths, err := p.layout.Components.Create(c)
 		if err != nil {
 			return err
 		}
