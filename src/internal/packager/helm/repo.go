@@ -146,7 +146,8 @@ func (h *Helm) DownloadPublishedChart(destination string) error {
 		chartURL, err = repo.FindChartInRepoURL(h.Chart.URL, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
-				h.listAvailableChartsAndVersions(pull)
+				// Intentionally dogsled this error since this is a nice to have helper
+				_ = h.listAvailableChartsAndVersions(pull)
 			}
 			return fmt.Errorf("unable to pull the helm chart: %w", err)
 		}
@@ -267,8 +268,6 @@ func (h *Helm) loadAndValidateChart(location string) (loader.ChartLoader, *chart
 }
 
 func (h *Helm) listAvailableChartsAndVersions(pull *action.Pull) error {
-	message.Notef("Available charts and versions from %q:", h.Chart.URL)
-
 	c := repo.Entry{
 		URL:      h.Chart.URL,
 		CertFile: pull.CertFile,
@@ -310,6 +309,8 @@ func (h *Helm) listAvailableChartsAndVersions(pull *action.Pull) error {
 		versions = message.Truncate(versions, 75, false)
 		chartData = append(chartData, []string{name, versions})
 	}
+
+	message.Notef("Available charts and versions from %q:", h.Chart.URL)
 
 	// Print out the table for the user
 	header := []string{"Chart", "Versions"}
