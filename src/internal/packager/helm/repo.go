@@ -19,6 +19,7 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/cli"
+	"helm.sh/helm/v3/pkg/helmpath"
 	"helm.sh/helm/v3/pkg/registry"
 	"k8s.io/client-go/util/homedir"
 
@@ -144,6 +145,9 @@ func (h *Helm) DownloadPublishedChart(destination string) error {
 		// Perform simple chart download
 		chartURL, err = repo.FindChartInRepoURL(h.Chart.URL, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 		if err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				h.listAvailableChartsAndVersions(pull)
+			}
 			return fmt.Errorf("unable to pull the helm chart: %w", err)
 		}
 	}
@@ -260,4 +264,55 @@ func (h *Helm) loadAndValidateChart(location string) (loader.ChartLoader, *chart
 	}
 
 	return cl, chart, nil
+}
+
+func (h *Helm) listAvailableChartsAndVersions(pull *action.Pull) error {
+	message.Notef("Available charts and versions from %q:", h.Chart.URL)
+
+	c := repo.Entry{
+		URL:      h.Chart.URL,
+		CertFile: pull.CertFile,
+		KeyFile:  pull.KeyFile,
+		CAFile:   pull.CaFile,
+		Name:     h.Chart.Name,
+	}
+
+	r, err := repo.NewChartRepository(&c, getter.All(pull.Settings))
+	if err != nil {
+		return err
+	}
+	idx, err := r.DownloadIndexFile()
+	if err != nil {
+		return fmt.Errorf("looks like %q is not a valid chart repository or cannot be reached: %w", h.Chart.URL, err)
+	}
+	defer func() {
+		os.RemoveAll(filepath.Join(r.CachePath, helmpath.CacheChartsFile(r.Config.Name)))
+		os.RemoveAll(filepath.Join(r.CachePath, helmpath.CacheIndexFile(r.Config.Name)))
+	}()
+
+	// Read the index file for the repository to get chart information and return chart URL
+	repoIndex, err := repo.LoadIndexFile(idx)
+	if err != nil {
+		return err
+	}
+
+	chartData := [][]string{}
+	for name, entries := range repoIndex.Entries {
+		versions := ""
+		for idx, entry := range entries {
+			separator := ""
+			if idx < len(entries)-1 {
+				separator = ", "
+			}
+			versions += entry.Version + separator
+		}
+
+		versions = message.Truncate(versions, 75, false)
+		chartData = append(chartData, []string{name, versions})
+	}
+
+	// Print out the table for the user
+	header := []string{"Chart", "Versions"}
+	message.Table(header, chartData)
+	return nil
 }

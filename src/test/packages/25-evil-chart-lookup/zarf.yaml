@@ -1,17 +1,17 @@
 kind: ZarfPackageConfig
 metadata:
-  name: helm-charts-evil-name
-  description: A test case that checks that a helm chart name is validated against the Zarf-provided name
+  name: helm-charts-evil-lookup
+  description: A test case that checks that an index lookup is performed on helm repos to help people get chart names correct
   version: 0.0.1
 
 components:
-  - name: bad-helm-oci-chart
+  - name: bad-helm-repository-name
     required: false
     charts:
       - name: asdf
         version: 6.4.0
-        namespace: podinfo-from-oci
-        url: oci://ghcr.io/stefanprodan/charts/podinfo
+        namespace: podinfo-from-repo
+        url: https://stefanprodan.github.io/podinfo
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
     actions:

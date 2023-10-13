@@ -271,6 +271,28 @@ func HorizontalRule() {
 	pterm.Println(RuleLine)
 }
 
+// Table prints a padded table containing the specified header and data
+func Table(header []string, data [][]string) {
+	pterm.Println()
+
+	if len(header) > 0 {
+		header[0] = fmt.Sprintf("     %s", header[0])
+	}
+
+	table := pterm.TableData{
+		header,
+	}
+
+	for _, row := range data {
+		if len(row) > 0 {
+			row[0] = fmt.Sprintf("     %s", row[0])
+		}
+		table = append(table, pterm.TableData{row}...)
+	}
+
+	pterm.DefaultTable.WithHasHeader().WithData(table).Render()
+}
+
 // JSONValue prints any value as JSON.
 func JSONValue(value any) string {
 	bytes, err := json.MarshalIndent(value, "", "  ")

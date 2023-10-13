@@ -17,7 +17,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 
-	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -156,11 +155,7 @@ var packageListCmd = &cobra.Command{
 			message.Fatalf(errs, lang.CmdPackageListNoPackageWarn)
 		}
 
-		// Populate a pterm table of all the deployed packages
-		packageTable := pterm.TableData{
-			{"     Package ", "Version", "Components"},
-		}
-
+		packageData := [][]string{}
 		for _, pkg := range deployedZarfPackages {
 			var components []string
 
@@ -168,15 +163,14 @@ var packageListCmd = &cobra.Command{
 				components = append(components, component.Name)
 			}
 
-			packageTable = append(packageTable, pterm.TableData{{
-				fmt.Sprintf("     %s", pkg.Name),
-				pkg.Data.Metadata.Version,
-				fmt.Sprintf("%v", components),
-			}}...)
+			packageData = append(packageData, []string{
+				pkg.Name, pkg.Data.Metadata.Version, fmt.Sprintf("%v", components),
+			})
 		}
 
 		// Print out the table for the user
-		_ = pterm.DefaultTable.WithHasHeader().WithData(packageTable).Render()
+		header := []string{"Package ", "Version", "Components"}
+		message.Table(header, packageData)
 
 		// Print out any unmarshalling errors
 		if len(errs) > 0 {

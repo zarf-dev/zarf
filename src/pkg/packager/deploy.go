@@ -28,7 +28,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/pterm/pterm"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -626,7 +625,6 @@ func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths
 }
 
 func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) {
-	pterm.Println()
 
 	// If not init config, print the application connection table
 	if !(p.cfg.Pkg.Kind == types.ZarfInitConfig) {
