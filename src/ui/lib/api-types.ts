@@ -609,7 +609,7 @@ export interface ZarfChart {
      */
     gitPath?: string;
     /**
-     * The path to the chart folder
+     * The path to the local chart's folder or .tgz archive
      */
     localPath?: string;
     /**

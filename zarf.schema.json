@@ -196,7 +196,7 @@
         },
         "localPath": {
           "type": "string",
-          "description": "The path to the chart folder"
+          "description": "The path to the local chart's folder or .tgz archive"
         },
         "noWait": {
           "type": "boolean",
