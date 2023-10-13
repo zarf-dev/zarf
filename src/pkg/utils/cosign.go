@@ -217,3 +217,48 @@ func CosignSignBlob(blobPath string, outputSigPath string, keyPath string, passw
 
 	return sig, err
 }
+
+// GetCosignArtifacts returns signatures and attestations for the given image
+func GetCosignArtifacts(image string) (cosignList []string, err error) {
+	var cosignArtifactList []string
+	var nameOpts []name.Option
+	ref, err := name.ParseReference(image, nameOpts...)
+
+	if err != nil {
+		return cosignArtifactList, err
+	}
+
+	var remoteOpts []ociremote.Option
+	simg, _ := ociremote.SignedEntity(ref, remoteOpts...)
+	if simg == nil {
+		return cosignArtifactList, nil
+	}
+	// Errors are dogsled because these functions always return a name.Tag which we can check for layers
+	sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)
+	attRef, _ := ociremote.AttestationTag(ref, remoteOpts...)
+
+	sigs, err := simg.Signatures()
+	if err != nil {
+		return cosignArtifactList, err
+	}
+	layers, err := sigs.Layers()
+	if err != nil {
+		return cosignArtifactList, err
+	}
+	if len(layers) > 0 {
+		cosignArtifactList = append(cosignArtifactList, sigRef.String())
+	}
+
+	atts, err := simg.Attestations()
+	if err != nil {
+		return cosignArtifactList, err
+	}
+	layers, err = atts.Layers()
+	if err != nil {
+		return cosignArtifactList, err
+	}
+	if len(layers) > 0 {
+		cosignArtifactList = append(cosignArtifactList, attRef.String())
+	}
+	return cosignArtifactList, nil
+}

@@ -29,7 +29,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -156,6 +155,7 @@ func (p *Packager) Create() (err error) {
 	}
 
 	imageList := helpers.Unique(combinedImageList)
+	var sbomImageList []transform.Image
 
 	// Images are handled separately from other component assets.
 	if len(imageList) > 0 {
@@ -163,7 +163,7 @@ func (p *Packager) Create() (err error) {
 
 		p.layout = p.layout.AddImages()
 
-		pulled := map[transform.Image]v1.Image{}
+		var pulled []images.ImgInfo
 
 		doPull := func() error {
 			imgConfig := images.ImageConfig{
@@ -182,9 +182,12 @@ func (p *Packager) Create() (err error) {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 
-		for _, img := range pulled {
-			if err := p.layout.Images.AddV1Image(img); err != nil {
+		for _, imgInfo := range pulled {
+			if err := p.layout.Images.AddV1Image(imgInfo.Img); err != nil {
 				return err
+			}
+			if imgInfo.HasImageLayers {
+				sbomImageList = append(sbomImageList, imgInfo.RefInfo)
 			}
 		}
 	}
@@ -194,7 +197,7 @@ func (p *Packager) Create() (err error) {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
 		p.layout = p.layout.AddSBOMs()
-		if err := sbom.Catalog(componentSBOMs, imageList, p.layout); err != nil {
+		if err := sbom.Catalog(componentSBOMs, sbomImageList, p.layout); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
