@@ -44,4 +44,6 @@ postgresql:
   enabled: false
 
 image:
+  repository: "###ZARF_REGISTRY###/###ZARF_CONST_GITEA_IMAGE###"
+  tag: "###ZARF_VAR_GITEA_IMAGE_TAG###"
   rootless: true
