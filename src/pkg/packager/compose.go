@@ -30,6 +30,11 @@ func (p *Packager) composeComponents() error {
 	pkgVars := p.cfg.Pkg.Variables
 	pkgConsts := p.cfg.Pkg.Constants
 
+	// TODO: filter components by arch outside of composeComponents
+
+	// if ic.head.Only.Cluster.Architecture != "" {
+	// 	arch = node.Only.Cluster.Architecture
+	// }
 	for _, component := range p.cfg.Pkg.Components {
 		// build the import chain
 		start := time.Now()
@@ -47,7 +52,10 @@ func (p *Packager) composeComponents() error {
 
 		// get the composed component
 		start = time.Now()
-		composed := chain.Compose()
+		composed, err := chain.Compose()
+		if err != nil {
+			return err
+		}
 		components = append(components, composed)
 		message.Debugf("Composing %q took %s", component.Name, time.Since(start))
 

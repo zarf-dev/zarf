@@ -7,7 +7,9 @@ package composer
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
@@ -73,10 +75,6 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 	history := []string{}
 
 	node := ic.head
-	// todo: verify this behavior
-	if ic.head.Only.Cluster.Architecture != "" {
-		arch = node.Only.Cluster.Architecture
-	}
 	for node != nil {
 		isLocal := node.Import.Path != ""
 		isRemote := node.Import.URL != ""
@@ -92,6 +90,7 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 			return ic, err
 		}
 
+		// todo: explain me
 		if node.prev != nil && node.prev.Import.URL != "" && isRemote {
 			return ic, fmt.Errorf("detected malformed import chain, cannot import remote components from remote components")
 		}
@@ -173,20 +172,43 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 		warnings = append(warnings, w...)
 		node = node.next
 	}
+	// TODO: make a final warning if warnings are found
 	return warnings
 }
 
 // Compose merges the import chain into a single component
 // fixing paths, overriding metadata, etc
-func (ic *ImportChain) Compose() (composed types.ZarfComponent) {
+func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 	composed = ic.tail.ZarfComponent
+
+	if ic.tail.prev == nil {
+		return composed, nil
+	}
 
 	node := ic.tail
 
 	if ic.tail.prev.Import.URL != "" {
 		// TODO: handle remote components
-		// this should download the remote component tarball, fix the paths, then compose it
-		node = node.prev
+		ociImport := ic.tail.prev.Import
+		skelURL := strings.TrimPrefix(ociImport.URL, helpers.OCIURLPrefix)
+		cachePath := filepath.Join(config.GetAbsCachePath(), "oci", skelURL)
+		if err := utils.CreateDirectory(cachePath, 0755); err != nil {
+			return composed, err
+		}
+		// cwd, err := os.Getwd()
+		// if err != nil {
+		// 	return composed, err
+		// }
+		// rel, err = filepath.Rel(cwd, cachePath)
+		// if err != nil {
+		// 	return composed, err
+		// }
+		// ic.tail.relativeToHead = filepath.Join(rel, layout.ComponentsDir, ic.tail.Name)
+
+		// remote, err := oci.NewOrasRemote(ociImport.URL)
+		// if err != nil {
+		// 	return composed, err
+		// }
 	}
 
 	for node != nil {
@@ -203,7 +225,7 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent) {
 		node = node.prev
 	}
 
-	return composed
+	return composed, nil
 }
 
 // MergeVariables merges variables from the import chain

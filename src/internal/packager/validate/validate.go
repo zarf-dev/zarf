@@ -6,16 +6,12 @@ package validate
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -69,38 +65,23 @@ func Run(pkg types.ZarfPackage) error {
 }
 
 // ImportDefinition validates the component trying to be imported.
-func ImportDefinition(composedComponent *types.ZarfComponent) error {
-	path := composedComponent.Import.Path
-	url := composedComponent.Import.URL
+func ImportDefinition(component *types.ZarfComponent) error {
+	path := component.Import.Path
+	url := component.Import.URL
 
 	if url == "" {
-		// ensure path exists
+		// ensure path is not empty
 		if path == "" {
-			return fmt.Errorf(lang.PkgValidateErrImportPathMissing, composedComponent.Name)
-		}
-
-		// remove zarf.yaml from path if path has zarf.yaml suffix
-		if strings.HasSuffix(path, layout.ZarfYAML) {
-			path = strings.Split(path, layout.ZarfYAML)[0]
-		}
-
-		// add a forward slash to end of path if it does not have one
-		if !strings.HasSuffix(path, string(os.PathSeparator)) {
-			path = filepath.Clean(path) + string(os.PathSeparator)
-		}
-
-		// ensure there is a zarf.yaml in provided path
-		if utils.InvalidPath(filepath.Join(path, layout.ZarfYAML)) {
-			return fmt.Errorf(lang.PkgValidateErrImportPathInvalid, composedComponent.Import.Path)
+			return fmt.Errorf(lang.PkgValidateErrImportPathMissing, component.Name)
 		}
 	} else {
 		// ensure path is empty
 		if path != "" {
-			return fmt.Errorf(lang.PkgValidateErrImportOptions, composedComponent.Name)
+			return fmt.Errorf(lang.PkgValidateErrImportOptions, component.Name)
 		}
 		ok := helpers.IsOCIURL(url)
 		if !ok {
-			return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, composedComponent.Import.URL)
+			return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, component.Import.URL)
 		}
 		if !strings.HasSuffix(url, oci.SkeletonSuffix) {
 			return fmt.Errorf("remote component %q does not have a %q suffix", url, oci.SkeletonSuffix)
