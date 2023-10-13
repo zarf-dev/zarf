@@ -509,7 +509,7 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	zarf tools update-creds registry
 	zarf tools update-creds git
 	zarf tools update-creds artifact
-	zarf tools update-creds logging
+	zarf tools update-creds agent
 
 	# Update all Zarf credentials w/external services at once:
 	zarf tools update-creds \
