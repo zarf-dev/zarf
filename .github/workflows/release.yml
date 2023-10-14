@@ -151,7 +151,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_GOV_SECRET_ACCESS_KEY }}
           aws-region: us-gov-west-1
 
-      - name: Skip brew latest for pre-release tags
+      - name: Make zarf executable and skip brew latest for pre-release tags
         run: |
           chmod +x build/zarf
           if [[ $GITHUB_REF_NAME == *"rc"* ]]; then
