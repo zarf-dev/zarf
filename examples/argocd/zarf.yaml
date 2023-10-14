@@ -21,7 +21,7 @@ components:
     required: true
     charts:
       - name: argocd-apps
-        version: 1.4.1
+        version: 1.8.7
         namespace: podinfo
         url: https://argoproj.github.io/argo-helm
         releaseName: argocd-apps
