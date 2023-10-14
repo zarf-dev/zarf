@@ -7,13 +7,11 @@ package packager
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -209,20 +207,13 @@ func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string,
 
 // Perform some basic string mutations to make commands more useful.
 func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (string, error) {
-	binaryPath, err := os.Executable()
+	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {
 		return cmd, err
 	}
 
-	binaryPath = fmt.Sprintf("%s %s", binaryPath, config.ActionsCommandZarfPrefix)
-
-	// If a library user has chosen to override config to use system Zarf instead, reset the binary path.
-	if config.ActionsUseSystemZarf {
-		binaryPath = "zarf"
-	}
-
 	// Try to patch the zarf binary path in case the name isn't exactly "./zarf".
-	cmd = strings.ReplaceAll(cmd, "./zarf ", binaryPath+" ")
+	cmd = strings.ReplaceAll(cmd, "./zarf ", zarfCommand+" ")
 
 	// Make commands 'more' compatible with Windows OS PowerShell
 	if runtime.GOOS == "windows" && (exec.IsPowershell(shellPref.Windows) || shellPref.Windows == "") {

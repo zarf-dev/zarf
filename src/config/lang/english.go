@@ -368,6 +368,7 @@ const (
 
 	CmdToolsRegistryShort     = "Tools for working with container registries using go-containertools"
 	CmdToolsRegistryZarfState = "Retrieving registry information from Zarf state"
+	CmdToolsRegistryTunnel    = "Opening a tunnel from %s locally to %s in the cluster"
 
 	CmdToolsRegistryCatalogExample = `
 	# list the repos internal to Zarf
@@ -522,7 +523,7 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	zarf tools update-creds registry
 	zarf tools update-creds git
 	zarf tools update-creds artifact
-	zarf tools update-creds logging
+	zarf tools update-creds agent
 
 	# Update all Zarf credentials w/external services at once:
 	zarf tools update-creds \
@@ -545,8 +546,9 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsUpdateCredsConfirmContinue      = "Continue with these changes?"
 	CmdToolsUpdateCredsInvalidServiceErr    = "Invalid service key specified - valid keys are: %s, %s, and %s"
 	CmdToolsUpdateCredsUnableCreateToken    = "Unable to create the new Gitea artifact token: %s"
-	CmdToolsUpdateCredsUnableUpdateRegistry = "Unable to update Zarf registry: %s"
-	CmdToolsUpdateCredsUnableUpdateGit      = "Unable to update Zarf git server: %s"
+	CmdToolsUpdateCredsUnableUpdateRegistry = "Unable to update Zarf Registry values: %s"
+	CmdToolsUpdateCredsUnableUpdateGit      = "Unable to update Zarf Git Server values: %s"
+	CmdToolsUpdateCredsUnableUpdateAgent    = "Unable to update Zarf Agent TLS secrets: %s"
 
 	// zarf version
 	CmdVersionShort = "Shows the version of the running Zarf binary"
