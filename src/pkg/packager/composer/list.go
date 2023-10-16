@@ -195,9 +195,12 @@ func (ic *ImportChain) getRemote(url string) (*oci.OrasRemote, error) {
 	return ic.remote, nil
 }
 
-func (ic *ImportChain) fetchOCISkeleton(node *Node) error {
+func (ic *ImportChain) fetchOCISkeleton() error {
+	// only the 2nd to last node will have a remote import
+	node := ic.tail.prev
 	if node.Import.URL == "" {
-		return fmt.Errorf("cannot fetch remote component skeleton: no URL provided")
+		// nothing to fetch
+		return nil
 	}
 	remote, err := ic.getRemote(node.Import.URL)
 	if err != nil {
@@ -236,7 +239,7 @@ func (ic *ImportChain) fetchOCISkeleton(node *Node) error {
 	// this node is the node importing the remote component
 	// and has a filepath relative to the head of the import chain
 	// the next (tail) node will have a filepath relative from cwd to the tarball in cache
-	node.next.relativeToHead = rel
+	ic.tail.relativeToHead = rel
 
 	if exists, err := store.Exists(context.TODO(), componentDesc); err != nil {
 		return err
@@ -264,14 +267,11 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 		return composed, nil
 	}
 
-	node := ic.tail
-
-	if ic.tail.prev.Import.URL != "" {
-		if err := ic.fetchOCISkeleton(ic.tail.prev); err != nil {
-			return composed, err
-		}
+	if err := ic.fetchOCISkeleton(); err != nil {
+		return composed, err
 	}
 
+	node := ic.tail
 	for node != nil {
 		fixPaths(&node.ZarfComponent, node.relativeToHead)
 
