@@ -17,8 +17,12 @@ var assets embed.FS
 //go:embed cosign.pub
 var cosignPublicKey string
 
+//go:embed zarf.schema.json
+var zarfSchema embed.FS
+
 func main() {
 	config.UIAssets = assets
 	config.CosignPublicKey = cosignPublicKey
+	config.ZarfSchema = zarfSchema
 	cmd.Execute()
 }

@@ -3,18 +3,11 @@ package helpers
 import (
 	"bytes"
 	"encoding/json"
-	"log"
-	"os"
 
 	"github.com/santhosh-tekuri/jsonschema"
 )
 
-func ValidateZarfSchema(zarfUnmarshaledYaml interface{}, jsonFile string) bool {
-
-	zarfSchema, err := os.ReadFile(jsonFile)
-	if err != nil {
-		log.Fatalf("Error reading file: %s", err)
-	}
+func ValidateZarfSchema(zarfUnmarshaledYaml interface{}, zarfJsonSchema []byte) bool {
 
 	zarfYamlAsJsonBytes, err := json.Marshal(zarfUnmarshaledYaml)
 	if err != nil {
@@ -24,7 +17,7 @@ func ValidateZarfSchema(zarfUnmarshaledYaml interface{}, jsonFile string) bool {
 	compiler := jsonschema.NewCompiler()
 	inMemoryZarfSchema := "zarf.schema.json"
 
-	if err := compiler.AddResource(inMemoryZarfSchema, bytes.NewReader(zarfSchema)); err != nil {
+	if err := compiler.AddResource(inMemoryZarfSchema, bytes.NewReader(zarfJsonSchema)); err != nil {
 		panic(err)
 	}
 	schema, err := compiler.Compile(inMemoryZarfSchema)

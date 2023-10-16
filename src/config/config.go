@@ -94,6 +94,7 @@ var (
 
 	CosignPublicKey string
 	UIAssets        embed.FS
+	ZarfSchema      embed.FS
 
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
@@ -101,6 +102,10 @@ var (
 
 	ZarfDefaultCachePath = filepath.Join("~", ".zarf-cache")
 )
+
+func GetSchemaFile() ([]byte, error) {
+	return ZarfSchema.ReadFile("zarf.schema.json")
+}
 
 // GetArch returns the arch based on a priority list with options for overriding.
 func GetArch(archs ...string) string {

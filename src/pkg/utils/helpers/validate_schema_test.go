@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"log"
 	"os"
 	"testing"
 
@@ -12,7 +13,14 @@ func TestValidateZarfSchema(t *testing.T) {
 		want := true
 		var unmarshalledYaml interface{}
 		readYaml("../../../../zarf.yaml", &unmarshalledYaml)
-		if got := ValidateZarfSchema(unmarshalledYaml, "../../../../zarf.schema.json"); got != want {
+		zarfSchema, err := os.ReadFile("../../../../zarf.schema.json")
+		if err != nil {
+			log.Fatalf("Error reading file: %s", err)
+		}
+		if err != nil {
+			panic(err)
+		}
+		if got := ValidateZarfSchema(unmarshalledYaml, zarfSchema); got != want {
 			t.Errorf("ValidateZarfSchema = %v, want %v", got, want)
 		}
 	})
