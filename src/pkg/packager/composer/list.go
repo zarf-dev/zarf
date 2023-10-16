@@ -227,13 +227,6 @@ func (ic *ImportChain) fetchOCISkeleton(node *Node) error {
 
 	tb := filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.String())
 
-	if ok, err := store.Exists(context.TODO(), componentDesc); err != nil {
-		return err
-	} else if ok {
-		// already exists in the cache
-		return nil
-	}
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -244,8 +237,12 @@ func (ic *ImportChain) fetchOCISkeleton(node *Node) error {
 	}
 	node.relativeToHead = rel
 
-	if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, nil, cache); err != nil {
+	if exists, err := store.Exists(context.TODO(), componentDesc); err != nil {
 		return err
+	} else if !exists {
+		if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, nil, cache); err != nil {
+			return err
+		}
 	}
 
 	if !utils.InvalidPath(strings.TrimSuffix(tb, ".tar")) {
