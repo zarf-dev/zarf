@@ -2,7 +2,7 @@ module github.com/defenseunicorns/zarf
 
 go 1.21.0
 
-toolchain go1.21.1
+toolchain go1.21.3
 
 require (
 	cuelang.org/go v0.6.0
