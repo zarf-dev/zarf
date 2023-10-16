@@ -7,6 +7,7 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 
@@ -20,6 +21,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
+	"github.com/xeipuuv/gojsonschema"
+	"sigs.k8s.io/yaml"
 )
 
 var prepareCmd = &cobra.Command{
@@ -157,6 +160,16 @@ var prepareGenerateConfigFile = &cobra.Command{
 	},
 }
 
+var prepareValidateSchema = &cobra.Command{
+	Use:     "lint [ FILENAME ] [ FILENAME ]",
+	Args:    cobra.MaximumNArgs(2),
+	Short:   lang.CmdPrepareGenerateConfigShort,
+	Long:    lang.CmdPrepareGenerateConfigLong,
+	Run: func(cmd *cobra.Command, args []string) {
+
+	},
+}
+
 func init() {
 	v := common.InitViper()
 
@@ -165,6 +178,7 @@ func init() {
 	prepareCmd.AddCommand(prepareComputeFileSha256sum)
 	prepareCmd.AddCommand(prepareFindImages)
 	prepareCmd.AddCommand(prepareGenerateConfigFile)
+	prepareCmd.AddCommand(prepareValidateSchema)
 
 	prepareFindImages.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
