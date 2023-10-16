@@ -284,6 +284,8 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 // Compose merges the import chain into a single component
 // fixing paths, overriding metadata, etc
 func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
+	composed = ic.tail.ZarfComponent
+
 	if ic.tail.prev == nil {
 		// only had one component in the import chain
 		return composed, nil
@@ -293,7 +295,11 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 		return composed, err
 	}
 
-	node := ic.tail
+	// fix paths on the tail
+	fixPaths(&ic.tail.ZarfComponent, ic.tail.prev.relativeToHead)
+
+	// dont compose 2x
+	node := ic.tail.prev
 	for node != nil {
 		fixPaths(&node.ZarfComponent, node.relativeToHead)
 

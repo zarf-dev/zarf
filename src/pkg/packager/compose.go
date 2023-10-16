@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
@@ -50,6 +51,7 @@ func (p *Packager) composeComponents() error {
 		if err != nil {
 			return err
 		}
+		message.Debug("composed: ", message.JSONValue(composed))
 		components = append(components, composed)
 
 		// merge variables and constants
