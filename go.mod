@@ -18,7 +18,6 @@ require (
 	github.com/fatih/color v1.15.0
 	github.com/fluxcd/helm-controller/api v0.36.0
 	github.com/fluxcd/source-controller/api v1.1.0
-	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-git/go-git/v5 v5.9.0
 	github.com/go-logr/logr v1.2.4
 	github.com/goccy/go-yaml v1.11.2
