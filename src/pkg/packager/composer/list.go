@@ -97,9 +97,13 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 			return ic, err
 		}
 
-		// todo: explain me
+		// ensure that remote components are not importing other remote components
 		if node.prev != nil && node.prev.Import.URL != "" && isRemote {
 			return ic, fmt.Errorf("detected malformed import chain, cannot import remote components from remote components")
+		}
+		// ensure that remote components are not importing local components
+		if node.prev != nil && node.prev.Import.URL != "" && isLocal {
+			return ic, fmt.Errorf("detected malformed import chain, cannot import local components from remote components")
 		}
 
 		var pkg types.ZarfPackage
@@ -154,23 +158,39 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 	return ic, nil
 }
 
-// History returns the history of the import chain
-func (ic *ImportChain) History() (history [][]string) {
-	node := ic.head
-	for node != nil {
-		if node.Import.URL != "" {
-			history = append(history, []string{node.Name, node.Import.URL})
-			continue
+func (ic *ImportChain) String() string {
+	if ic.head.next == nil {
+		return fmt.Sprintf("[%s]", ic.head.Name)
+	}
+
+	s := strings.Builder{}
+
+	if ic.head.Import.Path != "" {
+		s.WriteString(fmt.Sprintf("[%q imports %q] --> ", ic.head.Name, ic.head.Import.Path))
+	} else {
+		s.WriteString(fmt.Sprintf("[%q imports %q] --> ", ic.head.Name, ic.head.Import.URL))
+	}
+
+	node := ic.head.next
+	for node != ic.tail {
+		name := node.Name
+		if node.Import.ComponentName != "" {
+			name = node.Import.ComponentName
 		}
-		history = append(history, []string{node.Name, node.relativeToHead, node.Import.Path})
+		if node.Import.Path != "" {
+			s.WriteString(fmt.Sprintf("[%q imports %q] --> ", name, node.Import.Path))
+		} else {
+			s.WriteString(fmt.Sprintf("[%q imports %q] --> ", name, node.Import.URL))
+		}
 		node = node.next
 	}
-	return history
+
+	s.WriteString(fmt.Sprintf("[%q]", ic.tail.Name))
+
+	return s.String()
 }
 
 // Migrate performs migrations on the import chain
-//
-// TODO: is this the best place to perform migrations?
 func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 	node := ic.head
 	for node != nil {
@@ -179,7 +199,10 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 		warnings = append(warnings, w...)
 		node = node.next
 	}
-	// TODO: make a final warning if warnings are found
+	if len(warnings) > 0 {
+		final := fmt.Sprintf("migrations were performed on the import chain of: %q", ic.head.Name)
+		warnings = append(warnings, final)
+	}
 	return warnings
 }
 

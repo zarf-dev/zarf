@@ -9,12 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
@@ -30,40 +28,33 @@ func (p *Packager) composeComponents() error {
 	pkgVars := p.cfg.Pkg.Variables
 	pkgConsts := p.cfg.Pkg.Constants
 
-	// TODO: filter components by arch outside of composeComponents
-
-	// if ic.head.Only.Cluster.Architecture != "" {
-	// 	arch = node.Only.Cluster.Architecture
-	// }
 	for _, component := range p.cfg.Pkg.Components {
+		arch := p.arch
+		// filter by architecture if set, otherwise use system architecture
+		if component.Only.Cluster.Architecture != "" {
+			arch = component.Only.Cluster.Architecture
+		}
+
 		// build the import chain
-		start := time.Now()
-		chain, err := composer.NewImportChain(component, p.arch)
+		chain, err := composer.NewImportChain(component, arch)
 		if err != nil {
 			return err
 		}
-		message.Debugf("Building import chain for %q took %s", component.Name, time.Since(start))
 
 		// migrate any deprecated component configurations now
-		start = time.Now()
 		warnings := chain.Migrate(p.cfg.Pkg.Build)
 		p.warnings = append(p.warnings, warnings...)
-		message.Debugf("Migrating %q took %s", component.Name, time.Since(start))
 
 		// get the composed component
-		start = time.Now()
 		composed, err := chain.Compose()
 		if err != nil {
 			return err
 		}
 		components = append(components, composed)
-		message.Debugf("Composing %q took %s", component.Name, time.Since(start))
 
 		// merge variables and constants
-		start = time.Now()
 		pkgVars = chain.MergeVariables(pkgVars)
 		pkgConsts = chain.MergeConstants(pkgConsts)
-		message.Debugf("Merging pkg vars and consts from import chain took %s", time.Since(start))
 	}
 
 	// Update the parent package config with the expanded sub components.
