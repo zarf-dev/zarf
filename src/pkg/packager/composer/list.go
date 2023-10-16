@@ -6,6 +6,7 @@ package composer
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -236,26 +237,33 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 		return err
 	}
 
-	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", node.Name)))
-
-	if oci.IsEmptyDescriptor(componentDesc) {
-		// nothing to fetch
-		return nil
+	name := node.Name
+	if node.Import.ComponentName != "" {
+		name = node.Import.ComponentName
 	}
 
+	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", name)))
+
 	cache := filepath.Join(config.GetAbsCachePath(), "oci")
-	store, err := ocistore.New(cache)
-	if err != nil {
+	if err := utils.CreateDirectory(cache, 0700); err != nil {
 		return err
 	}
 
-	tb := filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.String())
+	tb := filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
+
+	h := sha256.New()
+	h.Write([]byte(node.Import.URL + name))
+	id := fmt.Sprintf("%x", h.Sum(nil))
+
+	dir := filepath.Join(cache, "dirs", id)
+	if err := utils.CreateDirectory(dir, 0700); err != nil {
+		return err
+	}
 
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	dir := strings.TrimSuffix(tb, ".tar")
 	rel, err := filepath.Rel(cwd, dir)
 	if err != nil {
 		return err
@@ -265,6 +273,16 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 	// the next (tail) node will have a filepath relative from cwd to the tarball in cache
 	ic.tail.relativeToHead = rel
 
+	if oci.IsEmptyDescriptor(componentDesc) {
+		// nothing to fetch
+		return nil
+	}
+
+	store, err := ocistore.New(cache)
+	if err != nil {
+		return err
+	}
+
 	if exists, err := store.Exists(context.TODO(), componentDesc); err != nil {
 		return err
 	} else if !exists {
@@ -273,11 +291,11 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 		}
 	}
 
-	if !utils.InvalidPath(dir) {
-		// already extracted
-		return nil
+	tu := archiver.Tar{
+		OverwriteExisting: true,
+		// removes /<name>/ from the paths
+		StripComponents: 1,
 	}
-	tu := archiver.Tar{}
 	return tu.Unarchive(tb, dir)
 }
 

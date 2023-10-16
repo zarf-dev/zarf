@@ -41,6 +41,7 @@ func (p *Packager) composeComponents() error {
 		if err != nil {
 			return err
 		}
+		message.Debugf("%s", chain)
 
 		// migrate any deprecated component configurations now
 		warnings := chain.Migrate(p.cfg.Pkg.Build)
@@ -51,7 +52,6 @@ func (p *Packager) composeComponents() error {
 		if err != nil {
 			return err
 		}
-		message.Debug("composed: ", message.JSONValue(composed))
 		components = append(components, composed)
 
 		// merge variables and constants
