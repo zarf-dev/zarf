@@ -21,7 +21,7 @@ zarf package create [ DIRECTORY ] [flags]
   -h, --help                               help for create
   -k, --key string                         Path to private key file for signing packages
       --key-pass string                    Password to the private key file used for signing packages
-  -m, --max-package-size int               Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts. Use 0 to disable splitting.
+  -m, --max-package-size int               Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts to be loaded onto smaller media (i.e. DVDs). Use 0 to disable splitting.
   -o, --output string                      Specify the output (either a directory or an oci:// URL) for the created Zarf package
       --registry-override stringToString   Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet) (default [])
   -s, --sbom                               View SBOM contents after creating the package

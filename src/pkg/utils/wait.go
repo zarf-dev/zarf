@@ -65,7 +65,9 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 
 	// Set the custom message for optional namespace.
 	namespaceMsg := ""
+	namespaceFlag := ""
 	if waitNamespace != "" {
+		namespaceFlag = fmt.Sprintf("-n %s", waitNamespace)
 		namespaceMsg = fmt.Sprintf(" in namespace %s", waitNamespace)
 	}
 
@@ -90,7 +92,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 		default:
 			spinner.Updatef(existMsg)
 			// Check if the resource exists.
-			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get -n %s %s %s", zarfCommand, waitNamespace, kind, identifier)
+			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get %s %s %s", zarfCommand, namespaceFlag, kind, identifier)
 			if stdout, stderr, err := exec.Cmd(shell, shellArgs, zarfKubectlGet); err != nil {
 				message.Debug(stdout, stderr, err)
 				continue
@@ -105,8 +107,8 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 
 			spinner.Updatef(conditionMsg)
 			// Wait for the resource to meet the given condition.
-			zarfKubectlWait := fmt.Sprintf("%s tools kubectl wait -n %s %s %s --for %s%s --timeout=%s",
-				zarfCommand, waitNamespace, kind, identifier, waitType, condition, waitTimeout)
+			zarfKubectlWait := fmt.Sprintf("%s tools kubectl wait %s %s %s --for %s%s --timeout=%s",
+				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, waitTimeout)
 
 			// If there is an error, log it and try again.
 			if stdout, stderr, err := exec.Cmd(shell, shellArgs, zarfKubectlWait); err != nil {

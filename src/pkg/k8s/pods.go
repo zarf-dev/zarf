@@ -59,6 +59,21 @@ func (k *K8s) DeletePod(namespace string, name string) error {
 	}
 }
 
+// DeletePods removes a collection of pods from the cluster by pod lookup.
+func (k *K8s) DeletePods(target PodLookup) error {
+	deleteGracePeriod := int64(0)
+	deletePolicy := metav1.DeletePropagationForeground
+	return k.Clientset.CoreV1().Pods(target.Namespace).DeleteCollection(context.TODO(),
+		metav1.DeleteOptions{
+			GracePeriodSeconds: &deleteGracePeriod,
+			PropagationPolicy:  &deletePolicy,
+		},
+		metav1.ListOptions{
+			LabelSelector: target.Selector,
+		},
+	)
+}
+
 // CreatePod inserts the given pod into the cluster.
 func (k *K8s) CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	createOptions := metav1.CreateOptions{}
