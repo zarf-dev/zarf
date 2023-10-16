@@ -158,6 +158,7 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 	return ic, nil
 }
 
+// String returns a string representation of the import chain
 func (ic *ImportChain) String() string {
 	if ic.head.next == nil {
 		return fmt.Sprintf("[%s]", ic.head.Name)
@@ -311,48 +312,32 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 }
 
 // MergeVariables merges variables from the import chain
-func (ic *ImportChain) MergeVariables(vars []types.ZarfPackageVariable) (merged []types.ZarfPackageVariable) {
-	merged = vars
+func (ic *ImportChain) MergeVariables(existing []types.ZarfPackageVariable) (merged []types.ZarfPackageVariable) {
+	exists := func(v1 types.ZarfPackageVariable, v2 types.ZarfPackageVariable) bool {
+		return v1.Name == v2.Name
+	}
 
+	merged = helpers.MergeSlices(existing, merged, exists)
 	node := ic.head
 	for node != nil {
-		// // merge the vars
-		for _, v := range node.vars {
-			exists := false
-			for _, vv := range merged {
-				if v.Name == vv.Name {
-					exists = true
-					break
-				}
-			}
-			if !exists {
-				merged = append(merged, v)
-			}
-		}
+		// merge the vars
+		merged = helpers.MergeSlices(node.vars, merged, exists)
 		node = node.next
 	}
 	return merged
 }
 
 // MergeConstants merges constants from the import chain
-func (ic *ImportChain) MergeConstants(consts []types.ZarfPackageConstant) (merged []types.ZarfPackageConstant) {
-	merged = consts
+func (ic *ImportChain) MergeConstants(existing []types.ZarfPackageConstant) (merged []types.ZarfPackageConstant) {
+	exists := func(c1 types.ZarfPackageConstant, c2 types.ZarfPackageConstant) bool {
+		return c1.Name == c2.Name
+	}
 
+	merged = helpers.MergeSlices(existing, merged, exists)
 	node := ic.head
 	for node != nil {
 		// merge the consts
-		for _, c := range node.consts {
-			exists := false
-			for _, cc := range merged {
-				if c.Name == cc.Name {
-					exists = true
-					break
-				}
-			}
-			if !exists {
-				merged = append(merged, c)
-			}
-		}
+		merged = helpers.MergeSlices(node.consts, merged, exists)
 		node = node.next
 	}
 	return merged

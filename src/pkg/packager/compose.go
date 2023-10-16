@@ -61,6 +61,9 @@ func (p *Packager) composeComponents() error {
 	// This is important when the deploy package is created.
 	p.cfg.Pkg.Components = components
 
+	p.cfg.Pkg.Variables = pkgVars
+	p.cfg.Pkg.Constants = pkgConsts
+
 	return nil
 }
 
