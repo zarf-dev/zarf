@@ -231,11 +231,15 @@ func (ic *ImportChain) fetchOCISkeleton(node *Node) error {
 	if err != nil {
 		return err
 	}
-	rel, err := filepath.Rel(cwd, tb)
+	dir := strings.TrimSuffix(tb, ".tar")
+	rel, err := filepath.Rel(cwd, dir)
 	if err != nil {
 		return err
 	}
-	node.relativeToHead = rel
+	// this node is the node importing the remote component
+	// and has a filepath relative to the head of the import chain
+	// the next (tail) node will have a filepath relative from cwd to the tarball in cache
+	node.next.relativeToHead = rel
 
 	if exists, err := store.Exists(context.TODO(), componentDesc); err != nil {
 		return err
@@ -245,12 +249,12 @@ func (ic *ImportChain) fetchOCISkeleton(node *Node) error {
 		}
 	}
 
-	if !utils.InvalidPath(strings.TrimSuffix(tb, ".tar")) {
+	if !utils.InvalidPath(dir) {
 		// already extracted
 		return nil
 	}
 	tu := archiver.Tar{}
-	return tu.Unarchive(tb, strings.TrimSuffix(tb, ".tar"))
+	return tu.Unarchive(tb, dir)
 }
 
 // Compose merges the import chain into a single component
@@ -269,21 +273,6 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 		if err := ic.fetchOCISkeleton(ic.tail.prev); err != nil {
 			return composed, err
 		}
-		// TODO: handle remote components
-		// cwd, err := os.Getwd()
-		// if err != nil {
-		// 	return composed, err
-		// }
-		// rel, err = filepath.Rel(cwd, cachePath)
-		// if err != nil {
-		// 	return composed, err
-		// }
-		// ic.tail.relativeToHead = filepath.Join(rel, layout.ComponentsDir, ic.tail.Name)
-
-		// remote, err := oci.NewOrasRemote(ociImport.URL)
-		// if err != nil {
-		// 	return composed, err
-		// }
 	}
 
 	for node != nil {
