@@ -7,22 +7,21 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
-	"github.com/xeipuuv/gojsonschema"
-	"sigs.k8s.io/yaml"
 )
 
 var prepareCmd = &cobra.Command{
@@ -161,12 +160,16 @@ var prepareGenerateConfigFile = &cobra.Command{
 }
 
 var prepareValidateSchema = &cobra.Command{
-	Use:     "lint [ FILENAME ] [ FILENAME ]",
-	Args:    cobra.MaximumNArgs(2),
-	Short:   lang.CmdPrepareGenerateConfigShort,
-	Long:    lang.CmdPrepareGenerateConfigLong,
+	Use:   "lint [ FILENAME ] [ FILENAME ]",
+	Args:  cobra.MaximumNArgs(2),
+	Short: lang.CmdPrepareGenerateConfigShort,
+	Long:  lang.CmdPrepareGenerateConfigLong,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+		// Need to find where we load in the file
+		helpers.ValidateZarfSchema()
 	},
 }
 
