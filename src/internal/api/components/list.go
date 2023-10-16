@@ -20,6 +20,7 @@ func ListDeployedComponents(w http.ResponseWriter, r *http.Request) {
 	dp, err := cluster.NewClusterOrDie().GetDeployedPackage(pkgName)
 	if err != nil {
 		message.ErrorWebf(err, w, lang.ErrLoadPackageSecret, pkgName)
+		return
 	}
 	common.WriteJSONResponse(w, dp.DeployedComponents, http.StatusOK)
 }
