@@ -3,7 +3,6 @@ package helpers
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 
@@ -11,43 +10,41 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ReadSchema(yamlFile, jsonFile string) bool {
+func ValidateZarfSchema(yamlFile, jsonFile string) bool {
 
 	yamlBytes, err := os.ReadFile(yamlFile)
 	if err != nil {
-		log.Fatalf("Error reading YAML file: %s", yamlFile)
+		log.Fatalf("Error reading file: %s", err)
 	}
 
-	jsonBytes, err := os.ReadFile(jsonFile)
+	zarfSchema, err := os.ReadFile(jsonFile)
 	if err != nil {
-		log.Fatalf("Error reading YAML file: %s", jsonFile)
+		log.Fatalf("Error reading file: %s", err)
 	}
 
-	var m interface{}
-	err = yaml.Unmarshal(yamlBytes, &m)
-	if err != nil {
-		panic(err)
-	}
-
-	mJSON, err := json.Marshal(m)
+	var unmarshalledYaml interface{}
+	err = yaml.Unmarshal(yamlBytes, &unmarshalledYaml)
 	if err != nil {
 		panic(err)
 	}
-	yamlJsonReader := bytes.NewReader(mJSON)
-	schemaReader := bytes.NewReader(jsonBytes)
+
+	zarfYamlAsJsonBytes, err := json.Marshal(unmarshalledYaml)
+	if err != nil {
+		panic(err)
+	}
 
 	compiler := jsonschema.NewCompiler()
+	inMemoryZarfSchema := "zarf.schema.json"
 
-	if err := compiler.AddResource("schema.json", schemaReader); err != nil {
+	if err := compiler.AddResource(inMemoryZarfSchema, bytes.NewReader(zarfSchema)); err != nil {
 		panic(err)
 	}
-	schema, err := compiler.Compile("schema.json")
+	schema, err := compiler.Compile(inMemoryZarfSchema)
 	if err != nil {
 		panic(err)
 	}
-	if err := schema.Validate(yamlJsonReader); err != nil {
+	if err := schema.Validate(bytes.NewReader(zarfYamlAsJsonBytes)); err != nil {
 		panic(err)
 	}
-	fmt.Println("validation successfull")
 	return true
 }
