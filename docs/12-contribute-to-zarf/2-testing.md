@@ -106,24 +106,3 @@ To create a unit test, search for or create a file that ends with `_test.go` in 
 ## UI End-to-End Tests
 
 The end-to-end tests for the UI are executed through [Playwright](https://playwright.dev/), which is a NodeJS library designed for running end-to-end tests against a browser. These tests are run against the Zarf UI and can be located in the `./src/test/ui` directory. By utilizing Playwright, developers can verify the functionality of the UI in a realistic and reliable manner, ensuring that it meets the intended requirements and user experience. The location of the UI tests in the directory also allows for easy access and maintenance of the tests.
-
-### Running UI End-to-End Tests
-
-There are several ways to run tests depending on your specific situation, such as:
-
-```shell
-# dont forget to install dependencies
-npm --prefix src/ui ci
-
-# allow playwright to find the node modules
-export NODE_PATH=$(pwd)/src/ui/node_modules
-
-# run tests with @pre-init tag
-npm --prefix src/ui run test:pre-init
-
-# run tests with @init tag
-npm --prefix src/ui run test:init
-
-# run tests with @post-init tag
-npm --prefix src/ui run test:post-init
-```
