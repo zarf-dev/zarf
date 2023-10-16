@@ -42,7 +42,7 @@ type ImportChain struct {
 	head *Node
 	tail *Node
 
-	remotes map[string]*oci.OrasRemote
+	remote *oci.OrasRemote
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
@@ -75,9 +75,7 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 		return nil, fmt.Errorf("cannot build import chain: architecture must be provided")
 	}
 
-	ic := &ImportChain{
-		remotes: make(map[string]*oci.OrasRemote),
-	}
+	ic := &ImportChain{}
 
 	ic.append(head, "", nil, nil)
 
@@ -186,16 +184,15 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 }
 
 func (ic *ImportChain) getRemote(url string) (*oci.OrasRemote, error) {
-	if remote, ok := ic.remotes[url]; ok {
-		return remote, nil
-	} else {
-		remote, err := oci.NewOrasRemote(url)
-		if err != nil {
-			return nil, err
-		}
-		ic.remotes[url] = remote
-		return remote, nil
+	if ic.remote != nil {
+		return ic.remote, nil
 	}
+	var err error
+	ic.remote, err = oci.NewOrasRemote(url)
+	if err != nil {
+		return nil, err
+	}
+	return ic.remote, nil
 }
 
 func (ic *ImportChain) fetchOCISkeleton(node *Node) error {
