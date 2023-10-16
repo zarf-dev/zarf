@@ -5,6 +5,7 @@ metadata:
 
 components:
   - name: bad-set-variables-pattern
+    description: "###ZARF_PKG_TMPL_NUMB3R5###"
     required: true
     actions:
       onDeploy:
