@@ -322,7 +322,7 @@ const (
 
 	CmdPrepareSha256sumShort         = "Generates a SHA256SUM for the given file"
 	CmdPrepareSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
-	CmdPrepareSha256sumHashErr       = "Unable to compute the SHA256SUM hash"
+	CmdPrepareSha256sumHashErr       = "Unable to compute the SHA256SUM hash: %s"
 
 	CmdPrepareFindImagesShort = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests"
 	CmdPrepareFindImagesLong  = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
@@ -336,6 +336,7 @@ const (
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 	CmdPrepareGenerateConfigErr = "Unable to write the config file %s, make sure the file doesn't already exist"
 
+	CmdPrepareFlagExtractPath   = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
 	CmdPrepareFlagSet           = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
 	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."
