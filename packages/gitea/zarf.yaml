@@ -35,13 +35,11 @@ variables:
     description: The number of git server replicas to deploy
     default: "1"
 
-  - name: GITEA_IMAGE_TAG
-    description: Tag of git server image
-    default: "###ZARF_PKG_TMPL_GITEA_IMAGE_TAG###"
-
 constants:
   - name: GITEA_IMAGE
     value: "###ZARF_PKG_TMPL_GITEA_IMAGE###"
+  - name: GITEA_SERVER_VERSION
+    value: "###ZARF_PKG_TMPL_GITEA_SERVER_VERSION###"
 
 components:
   - name: git-server
@@ -49,7 +47,7 @@ components:
       Deploys Gitea to provide git repositories for Kubernetes configurations.
       Required for GitOps deployments if no other git server is available.
     images:
-      - "###ZARF_PKG_TMPL_GITEA_IMAGE###:###ZARF_PKG_TMPL_GITEA_IMAGE_TAG###"
+      - "###ZARF_PKG_TMPL_GITEA_IMAGE###:###ZARF_PKG_TMPL_GITEA_SERVER_VERSION###-rootless"
     manifests:
       - name: git-connect
         namespace: zarf
@@ -65,12 +63,6 @@ components:
           - gitea-values.yaml
     actions:
       onDeploy:
-        before:
-          - cmd: echo ${ZARF_VAR_GITEA_IMAGE_TAG%-rootless}
-            description: "Strip rootless from tag because helm will append it."
-            mute: true
-            setVariables:
-              - name: GITEA_IMAGE_TAG
         after:
           - cmd: ./zarf internal create-read-only-gitea-user --no-progress
             maxRetries: 3

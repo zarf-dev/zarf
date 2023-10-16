@@ -16,4 +16,4 @@ registry_image_tag = '2.8.2'
 
 # The image reference to use for the optional git-server Zarf deploys
 gitea_image = 'gitea/gitea'
-gitea_image_tag = '1.19.3'
+gitea_server_version = '1.19.3'
