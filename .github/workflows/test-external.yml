@@ -34,6 +34,9 @@ jobs:
 
       - name: Build binary and zarf packages
         uses: ./.github/actions/packages
+        with:
+          init-package: "false"
+          build-examples: "false"
 
       - name: Setup k3d
         uses: ./.github/actions/k3d
