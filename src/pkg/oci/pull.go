@@ -199,6 +199,9 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 		}
 	}
 
+	if copyOpts == nil {
+		copyOpts = &o.CopyOpts
+	}
 	copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 		nodes, err := content.Successors(ctx, fetcher, desc)
 		if err != nil {

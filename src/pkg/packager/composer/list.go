@@ -5,7 +5,9 @@
 package composer
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -17,6 +19,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/mholt/archiver/v3"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	ocistore "oras.land/oras-go/v2/content/oci"
 )
 
 // Node is a node in the import chain
@@ -36,6 +41,8 @@ type Node struct {
 type ImportChain struct {
 	head *Node
 	tail *Node
+
+	remotes map[string]*oci.OrasRemote
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
@@ -68,7 +75,9 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 		return nil, fmt.Errorf("cannot build import chain: architecture must be provided")
 	}
 
-	ic := &ImportChain{}
+	ic := &ImportChain{
+		remotes: make(map[string]*oci.OrasRemote),
+	}
 
 	ic.append(head, "", nil, nil)
 
@@ -106,7 +115,7 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 				return ic, err
 			}
 		} else if isRemote {
-			remote, err := oci.NewOrasRemote(node.Import.URL)
+			remote, err := ic.getRemote(node.Import.URL)
 			if err != nil {
 				return ic, err
 			}
@@ -176,25 +185,94 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 	return warnings
 }
 
+func (ic *ImportChain) getRemote(url string) (*oci.OrasRemote, error) {
+	if remote, ok := ic.remotes[url]; ok {
+		return remote, nil
+	} else {
+		remote, err := oci.NewOrasRemote(url)
+		if err != nil {
+			return nil, err
+		}
+		ic.remotes[url] = remote
+		return remote, nil
+	}
+}
+
+func (ic *ImportChain) fetchOCISkeleton(node *Node) error {
+	if node.Import.URL == "" {
+		return fmt.Errorf("cannot fetch remote component skeleton: no URL provided")
+	}
+	remote, err := ic.getRemote(node.Import.URL)
+	if err != nil {
+		return err
+	}
+
+	manifest, err := remote.FetchRoot()
+	if err != nil {
+		return err
+	}
+
+	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", node.Name)))
+
+	if oci.IsEmptyDescriptor(componentDesc) {
+		// nothing to fetch
+		return nil
+	}
+
+	cache := filepath.Join(config.GetAbsCachePath(), "oci")
+	store, err := ocistore.New(cache)
+	if err != nil {
+		return err
+	}
+
+	tb := filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.String())
+
+	if ok, err := store.Exists(context.TODO(), componentDesc); err != nil {
+		return err
+	} else if ok {
+		// already exists in the cache
+		return nil
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	rel, err := filepath.Rel(cwd, tb)
+	if err != nil {
+		return err
+	}
+	node.relativeToHead = rel
+
+	if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, nil, cache); err != nil {
+		return err
+	}
+
+	if !utils.InvalidPath(strings.TrimSuffix(tb, ".tar")) {
+		// already extracted
+		return nil
+	}
+	tu := archiver.Tar{}
+	return tu.Unarchive(tb, strings.TrimSuffix(tb, ".tar"))
+}
+
 // Compose merges the import chain into a single component
 // fixing paths, overriding metadata, etc
 func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 	composed = ic.tail.ZarfComponent
 
 	if ic.tail.prev == nil {
+		// only had one component in the import chain
 		return composed, nil
 	}
 
 	node := ic.tail
 
 	if ic.tail.prev.Import.URL != "" {
-		// TODO: handle remote components
-		ociImport := ic.tail.prev.Import
-		skelURL := strings.TrimPrefix(ociImport.URL, helpers.OCIURLPrefix)
-		cachePath := filepath.Join(config.GetAbsCachePath(), "oci", skelURL)
-		if err := utils.CreateDirectory(cachePath, 0755); err != nil {
+		if err := ic.fetchOCISkeleton(ic.tail.prev); err != nil {
 			return composed, err
 		}
+		// TODO: handle remote components
 		// cwd, err := os.Getwd()
 		// if err != nil {
 		// 	return composed, err
