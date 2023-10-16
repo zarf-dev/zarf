@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In most cases the default Zarf 'init' Package will provide what you need to get started deploying packages into the air gap, however there are cases where you may want to tweak this package to tailor it for your target environment.  This could include adding or removing components or including hardened versions of components specific to your use case.
+In most cases the default Zarf 'init' Package will provide what you need to get started deploying packages into the air gap, however there are cases where you may want to tweak this package to tailor it for your target environment. This could include adding or removing components or including hardened versions of components specific to your use case.
 
 In this tutorial, we will demonstrate how to build a custom [Zarf 'init' Package](../3-create-a-zarf-package/3-zarf-init-package.md) with `zarf package create`.
 
@@ -22,7 +22,7 @@ Before beginning this tutorial you will need the following:
 
 ## Building the init-package
 
-Creating the zarf 'init' package is as simple as creating any other package.  All you need to do is run the `zarf package create` command within the Zarf git repository.
+Creating the zarf 'init' package is as simple as creating any other package. All you need to do is run the `zarf package create` command within the Zarf git repository.
 
 ```bash
 $ cd zarf # Enter the zarf repository that you have cloned down
@@ -64,13 +64,13 @@ Once you enter your response for the package size, Zarf will create the Zarf 'in
 
 ## Customizing the 'init' Package
 
-The above will simply build the init package as it is defined for your version of Zarf.  To build something custom you will need to make some modifications.
+The above will simply build the init package as it is defined for your version of Zarf. To build something custom you will need to make some modifications.
 
-The Zarf 'init' Package is a [composed Zarf Package](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) made up of many sub-Zarf Packages.  The root `zarf.yaml` file is defined at the root of the Zarf git repository.
+The Zarf 'init' Package is a [composed Zarf Package](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) made up of many sub-Zarf Packages. The root `zarf.yaml` file is defined at the root of the Zarf git repository.
 
 ### Swapping Images
 
-As of v0.26.0 you can swap the `registry` and `agent` images by specifying different values in the `zarf-config.toml` file at the root of the project or by overriding them as we did above with `--set` on the command line.  This allows you to swap these images for hardened or enterprise-vetted versions like those from [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
+As of v0.26.0 you can swap the `registry` and `agent` images by specifying different values in the `zarf-config.toml` file at the root of the project or by overriding them as we did above with `--set` on the command line. This allows you to swap these images for hardened or enterprise-vetted versions like those from [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
 
 For other components, or older versions of Zarf, you can modify the manifests of the components you want to change in their individual packages under the `packages` folder of the Zarf repo.
 
@@ -87,9 +87,22 @@ $ zarf package create . --set AGENT_IMAGE_TAG=vX.X.X \
 
 :::
 
+:::note
+
+As of v0.30.1 you can change the `git-server` image just as you would `registry` or `agent`. When overriding the git-server image, you need to specifiy the `GITEA_SERVER_VERSION`, which is essentially the image tag without `-rootless` appended. This is because the gitea Helm chart, which is hardcoded to use a `rootless` image, appends `-rootless` to the image tag on its own. This creates a duplication issue (`image:x.x.x-rootless-rootless`) if you supply the rootless image tag as is and will cause an `ErrImagePull` when creating the gitea pod. Zarf still looks, though, for your image as `gitea_image:gitea_server_version-rootless`, which means the `-rootless` tagged version of the image does need to exist.
+
+```
+$ zarf package create . --set GITEA_IMAGE="registry1.dso.mil/ironbank/opensource/go-gitea/gitea" \
+  --set GITEA_SERVER_VERSION="v1.19.3"
+```
+
+Zarf and Helm then use: `registry1.dso.mil/ironbank/opensource/go-gitea/gitea:v1.19.3-rootless`
+
+:::
+
 ### Removing Components
 
-You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them.  Because the [Zarf Package is composed](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) all you need to do is remove the component that imports the component you wish to exclude.
+You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the [Zarf Package is composed](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) all you need to do is remove the component that imports the component you wish to exclude.
 
 ## Troubleshooting
 
