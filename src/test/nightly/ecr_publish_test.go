@@ -56,7 +56,7 @@ func TestECRPublishing(t *testing.T) {
 	require.FileExists(t, testPackageLocation)
 
 	// Validate that we can publish the package to ECR without an issue
-	stdOut, stdErr, err = e2e.Zarf("package", "publish", testPackageLocation, registryURL)
+	stdOut, stdErr, err = e2e.Zarf("package", "publish", testPackageLocation, registryURL, keyFlag)
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure we get a warning when trying to inspect the online published package

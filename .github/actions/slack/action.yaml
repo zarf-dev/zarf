@@ -13,26 +13,26 @@ runs:
       with:
         payload: |
           {
-            "text": "The GitHub Action Workflow **'${{ github.workflow }}'** had a result of: `${{ job.status }}`.",
+            "text": "The GitHub Workflow *'${{ github.workflow }}'* had a result of: `${{ job.status }}`.\n\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Action Log>",
             "blocks": [
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "The GitHub Action Workflow **'${{ github.workflow }}'** had a result of: `${{ job.status }}`."
+                  "text": "The GitHub Workflow *'${{ github.workflow }}'* had a result of: `${{ job.status }}`."
                 }
               },
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "View Workflow Run"
+                  "text": " "
                 },
                 "accessory": {
                   "type": "button",
                   "text": {
                     "type": "plain_text",
-                    "text": "Click Me",
+                    "text": "View Action Log",
                     "emoji": true
                   },
                   "value": "click_me_workflow_run",
@@ -44,3 +44,4 @@ runs:
           }
       env:
         SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

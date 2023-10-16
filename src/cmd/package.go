@@ -410,8 +410,8 @@ func bindRemoveFlags(v *viper.Viper) {
 
 func bindPublishFlags(v *viper.Viper) {
 	publishFlags := packagePublishCmd.Flags()
-	publishFlags.StringVarP(&pkgConfig.PublishOpts.SigningKeyPath, "key", "k", v.GetString(common.VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
-	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "key-pass", v.GetString(common.VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
+	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPath, "signing-key", v.GetString(common.VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
+	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "signing-key-pass", v.GetString(common.VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
 }
 
 func bindPullFlags(v *viper.Viper) {
