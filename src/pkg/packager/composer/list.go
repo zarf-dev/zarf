@@ -315,6 +315,8 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 
 	// fix paths on the tail
 	fixPaths(&ic.tail.ZarfComponent, ic.tail.relativeToHead)
+	// save mutated tail
+	composed = ic.tail.ZarfComponent
 
 	// dont compose 2x
 	node := ic.tail.prev
