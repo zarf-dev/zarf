@@ -23,9 +23,6 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
-      - name: Setup NodeJS
-        uses: ./.github/actions/node
-
       - name: Install tools
         uses: ./.github/actions/install-tools
 
@@ -130,9 +127,6 @@ jobs:
 
       - name: Setup golang
         uses: ./.github/actions/golang
-
-      - name: Setup NodeJS
-        uses: ./.github/actions/node
 
       - name: Install tools
         uses: ./.github/actions/install-tools

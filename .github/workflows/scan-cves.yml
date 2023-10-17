@@ -10,8 +10,6 @@ on:
     paths:
       - "go.mod"
       - "go.sum"
-      - "src/ui/package.json"
-      - "src/ui/package-lock.json"
       - "cargo.toml"
       - "cargo.lock"
 

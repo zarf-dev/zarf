@@ -25,9 +25,6 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
-      - name: Setup NodeJS
-        uses: ./.github/actions/node
-
       - name: Build the Zarf binary
         run: make build-cli-linux-amd
 

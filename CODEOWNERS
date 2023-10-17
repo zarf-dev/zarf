@@ -15,14 +15,7 @@ main.go @jeff-mccoy @Racer159 @Noxsios
 /packages/ @jeff-mccoy @Racer159 @Noxsios
 /zarf.yaml @jeff-mccoy @Racer159 @Noxsios
 
-# Web UI-specific
-/package*.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/src/internal/api @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/src/ui/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/playwright.config.ts @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/svelte.config.js @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/tsconfig.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/vite.config.ts @mike-winberry @Racer159 @Noxsios @jeff-mccoy
+# Docs Website
 /docs-website/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy
 
 # Privileged pipeline files
