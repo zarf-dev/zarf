@@ -81,18 +81,23 @@ $ zarf package create . --set AGENT_IMAGE_TAG=vX.X.X \
   --registry-override quay.io=quay.enterprise.corp
 ```
 
-:::
-
-:::note
-
-As of v0.30.1 you can change the `git-server` image just as you would `registry` or `agent`. When overriding the git-server image, you need to specifiy the `GITEA_SERVER_VERSION`, which is essentially the image tag without `-rootless` appended. This is because the gitea Helm chart, which is hardcoded to use a `rootless` image, appends `-rootless` to the image tag on its own. This creates a duplication issue (`image:x.x.x-rootless-rootless`) if you supply the rootless image tag as is and will cause an `ErrImagePull` when creating the gitea pod. Zarf still looks, though, for your image as `gitea_image:gitea_server_version-rootless`, which means the `-rootless` tagged version of the image does need to exist.
+And if you need even more control over the exact Agent, Registry, and Gitea images you can specify that with additional `--set` flags:
 
 ```
-$ zarf package create . --set GITEA_IMAGE="registry1.dso.mil/ironbank/opensource/go-gitea/gitea" \
-  --set GITEA_SERVER_VERSION="v1.19.3"
+$ zarf package create . \
+--set AGENT_IMAGE_TAG=$(zarf version) \
+--set AGENT_IMAGE="opensource/zarf" \
+--set AGENT_IMAGE_DOMAIN="custom.enterprise.corp" \
+--set REGISTRY_IMAGE_TAG=2.8.3 \
+--set REGISTRY_IMAGE="opensource/registry" \
+--set REGISTRY_IMAGE_DOMAIN="custom.enterprise.corp" \
+--set GITEA_IMAGE="custom.enterprise.corp/opensource/gitea" \
+--set GITEA_SERVER_VERSION="v1.19.3"
 ```
 
-Zarf and Helm then use: `registry1.dso.mil/ironbank/opensource/go-gitea/gitea:v1.19.3-rootless`
+⚠️ - The Gitea image and version are different than the Agent and Registry in that Zarf will always prefer the `rootless` version of a given server image. This means that the above reference would template out to be `custom.enterprise.corp/opensource/gitea:v1.19.3-rootless`. If you need to change this, edit the `packages/gitea` package.
+
+You can find all of the `--set` configurations by looking at the `zarf-config.toml` in the root of the repository.
 
 :::
 
