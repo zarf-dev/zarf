@@ -19,7 +19,7 @@ func (p *Packager) Lint() (err error) {
 	if err = p.readZarfYAML(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
-	data, _ := config.ZarfSchema.ReadFile("zarf.schema.json")
+	data, _ := config.GetSchemaFile()
 	helpers.ValidateZarfSchema(p.cfg.Pkg, data)
 
 	return nil

@@ -158,16 +158,19 @@ var prepareGenerateConfigFile = &cobra.Command{
 }
 
 var prepareValidateSchema = &cobra.Command{
-	Use:   "lint [ FILENAME ] [ FILENAME ]",
-	Args:  cobra.MaximumNArgs(2),
+	Use:   "lint ",
+	Args:  cobra.MaximumNArgs(0),
 	Short: lang.CmdPrepareGenerateConfigShort,
 	Long:  lang.CmdPrepareGenerateConfigLong,
 	Run: func(cmd *cobra.Command, args []string) {
-
+		cwd, err := os.Getwd()
+		if err != nil {
+			message.Fatalf(err, lang.CmdPrepareFindImagesErr, err.Error())
+		}
+		pkgConfig.CreateOpts.BaseDir = cwd
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
-		// Need to find where we load in the file
-		//helpers.ValidateZarfSchema()
+		pkgClient.Lint()
 	},
 }
 
