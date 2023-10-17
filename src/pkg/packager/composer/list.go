@@ -184,10 +184,11 @@ func (ic *ImportChain) String() string {
 		if node.Import.ComponentName != "" {
 			name = node.Import.ComponentName
 		}
+		s.WriteString(", which imports ")
 		if node.Import.Path != "" {
-			s.WriteString(fmt.Sprintf(", which imports %q in %s", name, node.Import.Path))
+			s.WriteString(fmt.Sprintf("%q in %s", name, node.Import.Path))
 		} else {
-			s.WriteString(fmt.Sprintf(", which imports %q in %s", name, node.Import.URL))
+			s.WriteString(fmt.Sprintf("%q in %s", name, node.Import.URL))
 		}
 
 		node = node.next
