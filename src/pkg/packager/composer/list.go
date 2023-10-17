@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -22,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/content"
 	ocistore "oras.land/oras-go/v2/content/oci"
 )
 
@@ -226,7 +228,7 @@ func (ic *ImportChain) getRemote(url string) (*oci.OrasRemote, error) {
 }
 
 func (ic *ImportChain) fetchOCISkeleton() error {
-	// only the 2nd to last node will have a remote import
+	// only the 2nd to last node may have a remote import
 	node := ic.tail.prev
 	if node.Import.URL == "" {
 		// nothing to fetch
@@ -254,8 +256,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 		return err
 	}
 
-	tb := filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
-	dir := filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
+	var tb, dir string
 
 	// if there is not tarball to fetch, create a directory named based upon
 	// the import url and the component name
@@ -265,6 +266,36 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 		id := fmt.Sprintf("%x", h.Sum(nil))
 
 		dir = filepath.Join(cache, "dirs", id)
+
+		message.Debug("creating empty directory for remote component:", filepath.Join("<zarf-cache>", "oci", "dirs", id))
+	} else {
+		tb = filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
+		dir = filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
+
+		store, err := ocistore.New(cache)
+		if err != nil {
+			return err
+		}
+
+		ctx := context.TODO()
+		// ensure the tarball is in the cache
+		exists, err := store.Exists(ctx, componentDesc)
+		if err != nil {
+			return err
+		} else if !exists {
+			copyOpts := remote.CopyOpts
+			// TODO: investigate why the default FindSuccessors in CopyWithProgress is not working
+			copyOpts.FindSuccessors = content.Successors
+			if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, copyOpts, cache); err != nil {
+				return err
+			}
+			exists, err := store.Exists(ctx, componentDesc)
+			if err != nil {
+				return err
+			} else if !exists {
+				return fmt.Errorf("failed to fetch remote component: %+v", componentDesc)
+			}
+		}
 	}
 
 	if err := utils.CreateDirectory(dir, 0700); err != nil {
@@ -285,21 +316,8 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 	ic.tail.relativeToHead = rel
 
 	if oci.IsEmptyDescriptor(componentDesc) {
-		// nothing to fetch
+		// nothing was fetched, nothing to extract
 		return nil
-	}
-
-	store, err := ocistore.New(cache)
-	if err != nil {
-		return err
-	}
-
-	if exists, err := store.Exists(context.TODO(), componentDesc); err != nil {
-		return err
-	} else if !exists {
-		if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, nil, cache); err != nil {
-			return err
-		}
 	}
 
 	tu := archiver.Tar{
