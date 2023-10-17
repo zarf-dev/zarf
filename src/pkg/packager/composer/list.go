@@ -162,15 +162,20 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 // String returns a string representation of the import chain
 func (ic *ImportChain) String() string {
 	if ic.head.next == nil {
-		return fmt.Sprintf("[%s]", ic.head.Name)
+		return fmt.Sprintf("component %q imports nothing", ic.head.Name)
 	}
 
 	s := strings.Builder{}
 
+	name := ic.head.Name
+	if ic.head.Import.ComponentName != "" {
+		name = ic.head.Import.ComponentName
+	}
+
 	if ic.head.Import.Path != "" {
-		s.WriteString(fmt.Sprintf("[%q imports %q] --> ", ic.head.Name, ic.head.Import.Path))
+		s.WriteString(fmt.Sprintf("component %q imports %q in %s", ic.head.Name, name, ic.head.Import.Path))
 	} else {
-		s.WriteString(fmt.Sprintf("[%q imports %q] --> ", ic.head.Name, ic.head.Import.URL))
+		s.WriteString(fmt.Sprintf("component %q imports %q in %s", ic.head.Name, name, ic.head.Import.URL))
 	}
 
 	node := ic.head.next
@@ -180,14 +185,13 @@ func (ic *ImportChain) String() string {
 			name = node.Import.ComponentName
 		}
 		if node.Import.Path != "" {
-			s.WriteString(fmt.Sprintf("[%q imports %q] --> ", name, node.Import.Path))
+			s.WriteString(fmt.Sprintf(", which imports %q in %s", name, node.Import.Path))
 		} else {
-			s.WriteString(fmt.Sprintf("[%q imports %q] --> ", name, node.Import.URL))
+			s.WriteString(fmt.Sprintf(", which imports %q in %s", name, node.Import.URL))
 		}
+
 		node = node.next
 	}
-
-	s.WriteString(fmt.Sprintf("[%q]", ic.tail.Name))
 
 	return s.String()
 }
@@ -250,12 +254,18 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 	}
 
 	tb := filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
+	dir := filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
 
-	h := sha256.New()
-	h.Write([]byte(node.Import.URL + name))
-	id := fmt.Sprintf("%x", h.Sum(nil))
+	// if there is not tarball to fetch, create a directory named based upon
+	// the import url and the component name
+	if oci.IsEmptyDescriptor(componentDesc) {
+		h := sha256.New()
+		h.Write([]byte(node.Import.URL + name))
+		id := fmt.Sprintf("%x", h.Sum(nil))
 
-	dir := filepath.Join(cache, "dirs", id)
+		dir = filepath.Join(cache, "dirs", id)
+	}
+
 	if err := utils.CreateDirectory(dir, 0700); err != nil {
 		return err
 	}
