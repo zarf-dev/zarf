@@ -92,7 +92,7 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 
 	ic := &ImportChain{}
 
-	ic.append(head, "", nil, nil)
+	ic.append(head, ".", nil, nil)
 
 	history := []string{}
 
@@ -126,6 +126,17 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 		if isLocal {
 			history = append(history, node.Import.Path)
 			relativeToHead := filepath.Join(history...)
+
+			// prevent circular imports (including self-imports)
+			// this is O(n^2) but the import chain should be small
+			prev := node.prev
+			for prev != nil {
+				if prev.relativeToHead == relativeToHead {
+					return ic, fmt.Errorf("detected circular import chain: %s", strings.Join(history, " -> "))
+				}
+				prev = prev.prev
+			}
+
 			// this assumes the composed package is following the zarf layout
 			if err := utils.ReadYaml(filepath.Join(relativeToHead, layout.ZarfYAML), &pkg); err != nil {
 				return ic, err
