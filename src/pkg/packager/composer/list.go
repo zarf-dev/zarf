@@ -227,11 +227,24 @@ func (ic *ImportChain) getRemote(url string) (*oci.OrasRemote, error) {
 	return ic.remote, nil
 }
 
-func (ic *ImportChain) fetchOCISkeleton() error {
+// ContainsOCIImport returns true if the import chain contains a remote import
+func (ic *ImportChain) ContainsOCIImport() bool {
 	// only the 2nd to last node may have a remote import
+	return ic.tail.prev != nil && ic.tail.prev.Import.URL != ""
+}
+
+// OCIImportDefinition returns the url and name of the remote import
+func (ic *ImportChain) OCIImportDefinition() (string, string) {
+	name := ic.tail.prev.Name
+	if ic.tail.prev.Import.ComponentName != "" {
+		name = ic.tail.prev.Import.ComponentName
+	}
+	return ic.tail.prev.Import.URL, name
+}
+
+func (ic *ImportChain) fetchOCISkeleton() error {
 	node := ic.tail.prev
-	if node.Import.URL == "" {
-		// nothing to fetch
+	if !ic.ContainsOCIImport() {
 		return nil
 	}
 	remote, err := ic.getRemote(node.Import.URL)
