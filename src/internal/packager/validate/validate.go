@@ -6,6 +6,7 @@ package validate
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -69,22 +70,32 @@ func ImportDefinition(component *types.ZarfComponent) error {
 	path := component.Import.Path
 	url := component.Import.URL
 
-	if url == "" {
-		// ensure path is not empty
-		if path == "" {
-			return fmt.Errorf(lang.PkgValidateErrImportPathMissing, component.Name)
+	// ensure path or url is provided
+	if path == "" && url == "" {
+		return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name, "neither a path nor a URL was provided")
+	}
+
+	// ensure path and url are not both provided
+	if path != "" && url != "" {
+		return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name, "both a path and a URL were provided")
+	}
+
+	// validation for path
+	if url == "" && path != "" {
+		// ensure path is not an absolute path
+		if filepath.IsAbs(path) {
+			return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name)
 		}
-	} else {
-		// ensure path is empty
-		if path != "" {
-			return fmt.Errorf(lang.PkgValidateErrImportOptions, component.Name)
-		}
+	}
+
+	// validation for url
+	if url != "" && path == "" {
 		ok := helpers.IsOCIURL(url)
 		if !ok {
-			return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, component.Import.URL)
+			return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name, "URL is not a valid OCI URL")
 		}
 		if !strings.HasSuffix(url, oci.SkeletonSuffix) {
-			return fmt.Errorf("remote component %q does not have a %q suffix", url, oci.SkeletonSuffix)
+			return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name, "OCI import URL must end with -skeleton")
 		}
 	}
 
