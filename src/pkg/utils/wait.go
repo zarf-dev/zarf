@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -46,8 +47,8 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 		waitType = "condition="
 	}
 
-	// Get the Zarf executable path.
-	zarfBinPath, err := GetFinalExecutablePath()
+	// Get the Zarf command configuration.
+	zarfCommand, err := GetFinalExecutableCommand()
 	if err != nil {
 		message.Fatal(err, lang.CmdToolsWaitForErrZarfPath)
 	}
@@ -64,7 +65,9 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 
 	// Set the custom message for optional namespace.
 	namespaceMsg := ""
+	namespaceFlag := ""
 	if waitNamespace != "" {
+		namespaceFlag = fmt.Sprintf("-n %s", waitNamespace)
 		namespaceMsg = fmt.Sprintf(" in namespace %s", waitNamespace)
 	}
 
@@ -72,6 +75,9 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 	conditionMsg := fmt.Sprintf("Waiting for %s%s%s to be %s.", kind, identifierMsg, namespaceMsg, condition)
 	existMsg := fmt.Sprintf("Waiting for %s%s%s to exist.", kind, identifierMsg, namespaceMsg)
 	spinner := message.NewProgressSpinner(existMsg)
+
+	// Get the OS shell to execute commands in
+	shell, shellArgs := exec.GetOSShell(types.ZarfComponentActionShell{Windows: "cmd"})
 
 	defer spinner.Stop()
 
@@ -86,8 +92,8 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 		default:
 			spinner.Updatef(existMsg)
 			// Check if the resource exists.
-			args := []string{"tools", "kubectl", "get", "-n", waitNamespace, kind, identifier}
-			if stdout, stderr, err := exec.Cmd(zarfBinPath, args...); err != nil {
+			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get %s %s %s", zarfCommand, namespaceFlag, kind, identifier)
+			if stdout, stderr, err := exec.Cmd(shell, shellArgs, zarfKubectlGet); err != nil {
 				message.Debug(stdout, stderr, err)
 				continue
 			}
@@ -101,12 +107,11 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 
 			spinner.Updatef(conditionMsg)
 			// Wait for the resource to meet the given condition.
-			args = []string{"tools", "kubectl", "wait", "-n", waitNamespace,
-				kind, identifier, "--for", waitType + condition,
-				"--timeout=" + waitTimeout}
+			zarfKubectlWait := fmt.Sprintf("%s tools kubectl wait %s %s %s --for %s%s --timeout=%s",
+				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, waitTimeout)
 
 			// If there is an error, log it and try again.
-			if stdout, stderr, err := exec.Cmd(zarfBinPath, args...); err != nil {
+			if stdout, stderr, err := exec.Cmd(shell, shellArgs, zarfKubectlWait); err != nil {
 				message.Debug(stdout, stderr, err)
 				continue
 			}

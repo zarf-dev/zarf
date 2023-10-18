@@ -14,6 +14,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
@@ -23,7 +24,7 @@ import (
 
 // HandleDataInjection waits for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now.
-func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath types.ComponentPaths, dataIdx int) {
+func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInjection, componentPath *layout.ComponentPaths, dataIdx int) {
 	defer wg.Done()
 
 	injectionCompletionMarker := filepath.Join(componentPath.DataInjections, config.GetDataInjectionMarker())
@@ -80,12 +81,12 @@ iterator:
 		// Inject into all the pods
 		for _, pod := range pods {
 			// Try to use the embedded kubectl if we can
-			zarfBinPath, err := utils.GetFinalExecutablePath()
+			zarfCommand, err := utils.GetFinalExecutableCommand()
 			kubectlBinPath := "kubectl"
 			if err != nil {
 				message.Warnf("Unable to get the zarf executable path, falling back to host kubectl: %s", err)
 			} else {
-				kubectlBinPath = fmt.Sprintf("%s tools kubectl", zarfBinPath)
+				kubectlBinPath = fmt.Sprintf("%s tools kubectl", zarfCommand)
 			}
 			kubectlCmd := fmt.Sprintf("%s exec -i -n %s %s -c %s ", kubectlBinPath, data.Target.Namespace, pod.Name, data.Target.Container)
 

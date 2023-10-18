@@ -5,6 +5,7 @@
 package oci
 
 import (
+	"encoding/json"
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -47,4 +48,9 @@ func (m *ZarfOCIManifest) SumLayersSize() int64 {
 		sum += layer.Size
 	}
 	return sum
+}
+
+// MarshalJSON returns the JSON encoding of the manifest.
+func (m *ZarfOCIManifest) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.Manifest)
 }

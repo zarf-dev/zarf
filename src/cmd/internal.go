@@ -13,11 +13,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
-	"github.com/defenseunicorns/zarf/src/internal/api"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
@@ -127,19 +125,6 @@ var configSchemaCmd = &cobra.Command{
 	},
 }
 
-var apiSchemaCmd = &cobra.Command{
-	Use:   "api-schema",
-	Short: lang.CmdInternalAPISchemaShort,
-	Run: func(cmd *cobra.Command, args []string) {
-		schema := jsonschema.Reflect(&types.RestAPI{})
-		output, err := json.MarshalIndent(schema, "", "  ")
-		if err != nil {
-			message.Fatal(err, lang.CmdInternalAPISchemaGenerateErr)
-		}
-		fmt.Print(string(output) + "\n")
-	},
-}
-
 var createReadOnlyGiteaUser = &cobra.Command{
 	Use:   "create-read-only-gitea-user",
 	Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
@@ -184,20 +169,11 @@ var createPackageRegistryToken = &cobra.Command{
 	},
 }
 
-var uiCmd = &cobra.Command{
-	Use:   "ui",
-	Short: lang.CmdInternalUIShort,
-	Long:  lang.CmdInternalUILong,
-	Run: func(cmd *cobra.Command, args []string) {
-		api.LaunchAPIServer()
-	},
-}
-
 var isValidHostname = &cobra.Command{
 	Use:   "is-valid-hostname",
 	Short: lang.CmdInternalIsValidHostnameShort,
 	Run: func(cmd *cobra.Command, args []string) {
-		if valid := utils.IsValidHostName(); !valid {
+		if valid := helpers.IsValidHostName(); !valid {
 			hostname, _ := os.Hostname()
 			message.Fatalf(nil, lang.CmdInternalIsValidHostnameErr, hostname)
 		}
@@ -223,10 +199,8 @@ func init() {
 	internalCmd.AddCommand(httpProxyCmd)
 	internalCmd.AddCommand(generateCLIDocs)
 	internalCmd.AddCommand(configSchemaCmd)
-	internalCmd.AddCommand(apiSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
 	internalCmd.AddCommand(createPackageRegistryToken)
-	internalCmd.AddCommand(uiCmd)
 	internalCmd.AddCommand(isValidHostname)
 	internalCmd.AddCommand(computeCrc32)
 }

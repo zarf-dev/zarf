@@ -247,7 +247,7 @@ func (c *Cluster) SaveZarfState(state *types.ZarfState) error {
 	}
 
 	// Attempt to create or update the secret and return.
-	if err := c.CreateOrUpdateSecret(secret); err != nil {
+	if _, err := c.CreateOrUpdateSecret(secret); err != nil {
 		return fmt.Errorf("unable to create the zarf state secret")
 	}
 
@@ -261,7 +261,7 @@ func (c *Cluster) MergeZarfState(oldState *types.ZarfState, initOptions types.Za
 	if slices.Contains(services, message.RegistryKey) {
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, initOptions.RegistryInfo)
 		// Set the state of the internal registry if it has changed
-		if newState.RegistryInfo.Address == fmt.Sprintf("%s:%d", config.IPV4Localhost, newState.RegistryInfo.NodePort) {
+		if newState.RegistryInfo.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, newState.RegistryInfo.NodePort) {
 			newState.RegistryInfo.InternalRegistry = true
 		} else {
 			newState.RegistryInfo.InternalRegistry = false
@@ -308,6 +308,9 @@ func (c *Cluster) MergeZarfState(oldState *types.ZarfState, initOptions types.Za
 			newState.ArtifactServer.PushToken = ""
 		}
 	}
+	if slices.Contains(services, message.AgentKey) {
+		newState.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
+	}
 
 	return &newState
 }
@@ -321,7 +324,7 @@ func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.Reg
 	// Set default url if an external registry was not provided
 	if containerRegistry.Address == "" {
 		containerRegistry.InternalRegistry = true
-		containerRegistry.Address = fmt.Sprintf("%s:%d", config.IPV4Localhost, containerRegistry.NodePort)
+		containerRegistry.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, containerRegistry.NodePort)
 	}
 
 	// Generate a push-user password if not provided by init flag

@@ -7,14 +7,11 @@ package packager
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"runtime"
-	"runtime/debug"
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -210,28 +207,13 @@ func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string,
 
 // Perform some basic string mutations to make commands more useful.
 func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (string, error) {
-	binaryPath, err := os.Executable()
+	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {
 		return cmd, err
 	}
 
-	// If zarf is used as a library, os.Executable() will return the path to the binary that called it.
-	//
-	// To verify this, we can check the build info to see if the main module path of the current executable
-	// matches Zarf's main module path.
-	//
-	// The likelyhood of this being a false positive are extremely low.
-	bi, ok := debug.ReadBuildInfo()
-	if !ok {
-		return cmd, fmt.Errorf("could not read build info")
-	}
-	isZarf := bi.Main.Path == "github.com/"+config.GithubProject
-	if !isZarf {
-		binaryPath = "zarf"
-	}
-
 	// Try to patch the zarf binary path in case the name isn't exactly "./zarf".
-	cmd = strings.ReplaceAll(cmd, "./zarf ", binaryPath+" ")
+	cmd = strings.ReplaceAll(cmd, "./zarf ", zarfCommand+" ")
 
 	// Make commands 'more' compatible with Windows OS PowerShell
 	if runtime.GOOS == "windows" && (exec.IsPowershell(shellPref.Windows) || shellPref.Windows == "") {

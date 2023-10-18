@@ -6,7 +6,6 @@ package config
 
 import (
 	"crypto/tls"
-	"embed"
 	"fmt"
 	"net/http"
 	"os"
@@ -39,16 +38,7 @@ const (
 	ZarfManagedByLabel     = "app.kubernetes.io/managed-by"
 	ZarfCleanupScriptsPath = "/opt/zarf"
 
-	ZarfImageCacheDir = "images"
-
-	ZarfYAML          = "zarf.yaml"
-	ZarfYAMLSignature = "zarf.yaml.sig"
-	ZarfChecksumsTxt  = "checksums.txt"
-	ZarfSBOMDir       = "zarf-sbom"
-	ZarfSBOMTar       = "sboms.tar"
 	ZarfPackagePrefix = "zarf-package-"
-
-	ZarfComponentsDir = "components"
 
 	ZarfDeployStage = "Deploy"
 	ZarfCreateStage = "Create"
@@ -57,8 +47,6 @@ const (
 
 // Zarf Constants for In-Cluster Services.
 const (
-	IPV4Localhost = "127.0.0.1"
-
 	ZarfArtifactTokenName = "zarf-artifact-registry-token"
 
 	ZarfImagePullSecretName = "private-registry"
@@ -82,7 +70,13 @@ var (
 	// CLIVersion track the version of the CLI
 	CLIVersion = "unset"
 
-	// CommonOptions tracks user-defined values that apply across commands.
+	// ActionsUseSystemZarf sets whether to use Zarf from the system path if Zarf is being used as a library
+	ActionsUseSystemZarf = false
+
+	// ActionsCommandZarfPrefix sets a sub command prefix that Zarf commands are under in the current binary if Zarf is being used as a library (and use system Zarf is not specified)
+	ActionsCommandZarfPrefix = ""
+
+	// CommonOptions tracks user-defined values that apply across commands
 	CommonOptions types.ZarfCommonOptions
 
 	// CLIArch is the computer architecture of the device executing the CLI commands
@@ -98,7 +92,6 @@ var (
 	NoColor bool
 
 	CosignPublicKey string
-	UIAssets        embed.FS
 
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
@@ -171,8 +164,19 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 }
 
 // GetValidPackageExtensions returns the valid package extensions.
-func GetValidPackageExtensions() [3]string {
-	return [...]string{".tar.zst", ".tar", ".zip"}
+func GetValidPackageExtensions() [2]string {
+	return [...]string{".tar.zst", ".tar"}
+}
+
+// IsValidFileExtension returns true if the filename has a valid package extension.
+func IsValidFileExtension(filename string) bool {
+	for _, extension := range GetValidPackageExtensions() {
+		if strings.HasSuffix(filename, extension) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.

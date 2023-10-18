@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"html/template"
 
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/types"
 )
 
 func (b *Builder) createSBOMViewerAsset(identifier string, jsonData []byte) error {
@@ -73,7 +73,7 @@ func (b *Builder) loadFileJS(name string) template.JS {
 }
 
 // This could be optimized, but loop over all the images and components to create a list of json files.
-func (b *Builder) generateJSONList(componentToFiles map[string]*types.ComponentSBOM, imageList []transform.Image) ([]byte, error) {
+func (b *Builder) generateJSONList(componentToFiles map[string]*layout.ComponentSBOM, imageList []transform.Image) ([]byte, error) {
 	var jsonList []string
 
 	for _, refInfo := range imageList {

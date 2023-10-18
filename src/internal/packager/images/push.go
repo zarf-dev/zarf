@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -30,7 +31,7 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 	var totalSize int64
 	// Build an image list from the references
 	for _, refInfo := range i.ImageList {
-		img, err := i.LoadImageFromPackage(refInfo)
+		img, err := utils.LoadOCIImage(i.ImagesPath, refInfo)
 		if err != nil {
 			return err
 		}
@@ -58,37 +59,22 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 
 	var (
 		err         error
-		tunnel      *cluster.Tunnel
+		tunnel      *k8s.Tunnel
 		registryURL string
-		target      string
 	)
 
-	if i.RegInfo.InternalRegistry {
-		// Establish a registry tunnel to send the images to the zarf registry
-		if tunnel, err = cluster.NewZarfTunnel(); err != nil {
-			return err
-		}
-		target = cluster.ZarfRegistry
-	} else {
-		svcInfo, err := cluster.ServiceInfoFromNodePortURL(i.RegInfo.Address)
+	registryURL = i.RegInfo.Address
 
-		// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
-		if err == nil {
-			if tunnel, err = cluster.NewTunnel(svcInfo.Namespace, cluster.SvcResource, svcInfo.Name, 0, svcInfo.Port); err != nil {
-				return err
-			}
+	c, _ := cluster.NewCluster()
+	if c != nil {
+		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(i.RegInfo)
+		if err != nil {
+			return err
 		}
 	}
 
 	if tunnel != nil {
-		err = tunnel.Connect(target, false)
-		if err != nil {
-			return err
-		}
-		registryURL = tunnel.Endpoint()
 		defer tunnel.Close()
-	} else {
-		registryURL = i.RegInfo.Address
 	}
 
 	for refInfo, img := range refInfoToImage {

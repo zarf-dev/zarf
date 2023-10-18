@@ -56,11 +56,7 @@ You can skip this confirmation by adding the `--confirm` flag when running the c
 
 :::
 
-After you confirm package creation, you have the option to specify a maximum file size for the package. To disable this feature, enter `0`.
-
-<iframe src="/docs/tutorials/package_create_size.html" height="100px" width="100%"></iframe>
-
-Once you enter your response for the package size, Zarf will create the Zarf 'init' package in the current directory. In this case, the package name should look something like `zarf-init-amd64-vX.X.X.tar.zst`, although it might differ slightly depending on your system architecture.
+After you confirm package creation, Zarf will create the Zarf 'init' package in the current directory. In this case, the package name should look something like `zarf-init-amd64-vX.X.X.tar.zst`, although it might differ slightly depending on your system architecture.
 
 ## Customizing the 'init' Package
 

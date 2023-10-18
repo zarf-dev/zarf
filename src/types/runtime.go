@@ -4,17 +4,10 @@
 // Package types contains all the types used by Zarf.
 package types
 
-// Constants to keep track of folders within components
 const (
-	TempFolder           = "temp"
-	FilesFolder          = "files"
-	ChartsFolder         = "charts"
-	ReposFolder          = "repos"
-	ManifestsFolder      = "manifests"
-	DataInjectionsFolder = "data"
-	ValuesFolder         = "values"
-
-	RawVariableType  VariableType = "raw"
+	// RawVariableType is the default type for a Zarf package variable
+	RawVariableType VariableType = "raw"
+	// FileVariableType is a type for a Zarf package variable that loads its contents from a file
 	FileVariableType VariableType = "file"
 )
 
@@ -33,16 +26,29 @@ type ZarfCommonOptions struct {
 // ZarfPackageOptions tracks the user-defined preferences during common package operations.
 type ZarfPackageOptions struct {
 	Shasum             string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package"`
-	PackagePath        string            `json:"packagePath" jsonschema:"description=Location where a Zarf package can be found"`
+	PackageSource      string            `json:"packageSource" jsonschema:"description=Location where a Zarf package can be found"`
 	OptionalComponents string            `json:"optionalComponents" jsonschema:"description=Comma separated list of optional components"`
 	SGetKeyPath        string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 	SetVariables       map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package"`
 	PublicKeyPath      string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
+// ZarfInspectOptions tracks the user-defined preferences during a package inspection.
+type ZarfInspectOptions struct {
+	ViewSBOM      bool   `json:"sbom" jsonschema:"description=View SBOM contents while inspecting the package"`
+	SBOMOutputDir string `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package inspection"`
+}
+
+// ZarfFindImagesOptions tracks the user-defined preferences during a prepare find-images search.
+type ZarfFindImagesOptions struct {
+	RepoHelmChartPath   string `json:"repoHelmChartPath" jsonschema:"description=Path to the helm chart directory"`
+	KubeVersionOverride string `json:"kubeVersionOverride" jsonschema:"description=Kubernetes version to use for the helm chart"`
+}
+
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.
 type ZarfDeployOptions struct {
 	AdoptExistingResources bool `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`
+	SkipWebhooks           bool `json:"componentWebhooks" jsonschema:"description=Skip waiting for external webhooks to execute as each package component is deployed"`
 }
 
 // ZarfMirrorOptions tracks the user-defined preferences during a package mirror.
@@ -53,16 +59,13 @@ type ZarfMirrorOptions struct {
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
 type ZarfPublishOptions struct {
 	PackageDestination string `json:"packageDestination" jsonschema:"description=Location where the Zarf package will be published to"`
-	PackagePath        string `json:"packagePath" jsonschema:"description=Location where a Zarf package to publish can be found"`
 	SigningKeyPassword string `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sign the published package"`
 	SigningKeyPath     string `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
 }
 
 // ZarfPullOptions tracks the user-defined preferences during a package pull.
 type ZarfPullOptions struct {
-	PackageSource   string `json:"packageSource" jsonschema:"description=Location where the Zarf package will be pulled from"`
 	OutputDirectory string `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
-	PublicKeyPath   string `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
@@ -81,6 +84,7 @@ type ZarfInitOptions struct {
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
 	SkipSBOM           bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
+	BaseDir            string            `json:"baseDir" jsonschema:"description=Location where the Zarf package will be created from"`
 	Output             string            `json:"output" jsonschema:"description=Location where the finalized Zarf package will be placed"`
 	ViewSBOM           bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
 	SBOMOutputDir      string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
@@ -92,8 +96,8 @@ type ZarfCreateOptions struct {
 	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
 }
 
-// ZarfPartialPackageData contains info about a partial package.
-type ZarfPartialPackageData struct {
+// ZarfSplitPackageData contains info about a split package.
+type ZarfSplitPackageData struct {
 	Sha256Sum string `json:"sha256Sum" jsonschema:"description=The sha256sum of the package"`
 	Bytes     int64  `json:"bytes" jsonschema:"description=The size of the package in bytes"`
 	Count     int    `json:"count" jsonschema:"description=The number of parts the package is split into"`
@@ -117,39 +121,7 @@ type ConnectString struct {
 // ConnectStrings is a map of connect names to connection information.
 type ConnectStrings map[string]ConnectString
 
-// ComponentSBOM contains information related to the files SBOM'ed from a component.
-type ComponentSBOM struct {
-	Files         []string
-	ComponentPath ComponentPaths
-}
-
-// ComponentPaths is a struct that represents all of the subdirectories for a Zarf component.
-type ComponentPaths struct {
-	Base           string
-	Temp           string
-	Files          string
-	Charts         string
-	Values         string
-	Repos          string
-	Manifests      string
-	DataInjections string
-}
-
-// TempPaths is a struct that represents all of the subdirectories for a Zarf package.
-type TempPaths struct {
-	Base         string
-	InjectBinary string
-	SeedImages   string
-	Images       string
-	Components   string
-	SbomTar      string
-	Sboms        string
-	ZarfYaml     string
-	ZarfSig      string
-	Checksums    string
-}
-
-// DifferentialData contains image and repository information about the package a Differential Package is based on.
+// DifferentialData contains image and repository information about the package a Differential Package is Based on.
 type DifferentialData struct {
 	DifferentialPackagePath    string
 	DifferentialPackageVersion string

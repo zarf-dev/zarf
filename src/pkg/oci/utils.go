@@ -8,16 +8,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/registry"
 )
@@ -52,16 +48,26 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 	return ref.String(), nil
 }
 
-// printLayerSuccess prints a success message to the console when a layer has been successfully published/pulled to/from a registry.
-func (o *OrasRemote) printLayerSuccess(_ context.Context, desc ocispec.Descriptor) error {
+// printLayerSkipped prints a debug message when a layer has been successfully skipped.
+func (o *OrasRemote) printLayerSkipped(_ context.Context, desc ocispec.Descriptor) error {
+	return o.printLayer(desc, "skipped")
+}
+
+// printLayerCopied prints a debug message when a layer has been successfully copied to/from a registry.
+func (o *OrasRemote) printLayerCopied(_ context.Context, desc ocispec.Descriptor) error {
+	return o.printLayer(desc, "copied")
+}
+
+// printLayer prints a debug message when a layer has been successfully published/pulled to/from a registry.
+func (o *OrasRemote) printLayer(desc ocispec.Descriptor, suffix string) error {
 	title := desc.Annotations[ocispec.AnnotationTitle]
-	var format string
+	var layerInfo string
 	if title != "" {
-		format = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
+		layerInfo = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
 	} else {
-		format = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
+		layerInfo = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 	}
-	message.Successf(format)
+	message.Debugf("%s (%s)", layerInfo, suffix)
 	return nil
 }
 
@@ -99,32 +105,4 @@ func RemoveDuplicateDescriptors(descriptors []ocispec.Descriptor) []ocispec.Desc
 // GetInitPackageURL returns the URL for the init package for the given architecture and version.
 func GetInitPackageURL(arch, version string) string {
 	return fmt.Sprintf("ghcr.io/defenseunicorns/packages/init:%s-%s", version, arch)
-}
-
-// DownloadPackageTarball downloads the given OCI package and saves as a tarball.
-func DownloadPackageTarball(url, destinationTarball string, concurrency int) error {
-	remote, err := NewOrasRemote(url)
-	if err != nil {
-		return err
-	}
-
-	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tmp)
-
-	_, err = remote.PullPackage(tmp, concurrency)
-	if err != nil {
-		return err
-	}
-
-	allTheLayers, err := filepath.Glob(filepath.Join(tmp, "*"))
-	if err != nil {
-		return err
-	}
-
-	_ = os.Remove(destinationTarball)
-
-	return archiver.Archive(allTheLayers, destinationTarball)
 }

@@ -29,7 +29,7 @@ var labels = k8s.Labels{
 
 // NewClusterOrDie creates a new Cluster instance and waits up to 30 seconds for the cluster to be ready or throws a fatal error.
 func NewClusterOrDie() *Cluster {
-	c, err := NewClusterWithWait(DefaultTimeout, true)
+	c, err := NewClusterWithWait(DefaultTimeout)
 	if err != nil {
 		message.Fatalf(err, "Failed to connect to cluster")
 	}
@@ -38,29 +38,24 @@ func NewClusterOrDie() *Cluster {
 }
 
 // NewClusterWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.
-func NewClusterWithWait(timeout time.Duration, withSpinner bool) (*Cluster, error) {
-	var spinner *message.Spinner
-	if withSpinner {
-		spinner = message.NewProgressSpinner("Waiting for cluster connection (%s timeout)", timeout.String())
-		defer spinner.Stop()
-	}
+func NewClusterWithWait(timeout time.Duration) (*Cluster, error) {
+	spinner := message.NewProgressSpinner("Waiting for cluster connection (%s timeout)", timeout.String())
+	defer spinner.Stop()
 
 	c := &Cluster{}
 	var err error
 
 	c.K8s, err = k8s.New(message.Debugf, labels)
 	if err != nil {
-		return c, err
+		return nil, err
 	}
 
 	err = c.WaitForHealthyCluster(timeout)
 	if err != nil {
-		return c, err
+		return nil, err
 	}
 
-	if spinner != nil {
-		spinner.Success()
-	}
+	spinner.Success()
 
 	return c, nil
 }
@@ -69,6 +64,7 @@ func NewClusterWithWait(timeout time.Duration, withSpinner bool) (*Cluster, erro
 func NewCluster() (*Cluster, error) {
 	c := &Cluster{}
 	var err error
+
 	c.K8s, err = k8s.New(message.Debugf, labels)
 	if err != nil {
 		return nil, err

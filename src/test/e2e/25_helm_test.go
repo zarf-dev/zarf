@@ -39,7 +39,7 @@ func testHelmChartsExample(t *testing.T) {
 	evilChartDepsPath := filepath.Join("src", "test", "packages", "25-evil-chart-deps")
 	stdOut, stdErr, err := e2e.Zarf("package", "create", evilChartDepsPath, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "could not download https://charts.jetstack.io/charts/cert-manager-v1.11.1.tgz")
+	require.Contains(t, e2e.StripANSICodes(stdErr), "could not download\n          https://charts.jetstack.io/charts/cert-manager-v1.11.1.tgz")
 	require.FileExists(t, filepath.Join(evilChartDepsPath, "good-chart", "charts", "gitlab-runner-0.55.0.tgz"))
 
 	// Create the package with a registry override
@@ -97,7 +97,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	goodPath := fmt.Sprintf("build/zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 	evilPath := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
 
-	// Create the evil package (with the bad configmap).
+	// Create the evil package (with the bad service).
 	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/25-evil-dos-games/", "--skip-sbom", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 

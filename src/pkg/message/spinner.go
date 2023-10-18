@@ -28,6 +28,7 @@ type Spinner struct {
 // NewProgressSpinner creates a new progress spinner.
 func NewProgressSpinner(format string, a ...any) *Spinner {
 	if activeSpinner != nil {
+		activeSpinner.Updatef(format, a...)
 		debugPrinter(2, "Active spinner already exists")
 		return activeSpinner
 	}
@@ -81,7 +82,7 @@ func (p *Spinner) Write(raw []byte) (int, error) {
 		// Only be fancy if preserve writes is enabled.
 		if p.preserveWrites {
 			text := pterm.Sprintf("     %s", scanner.Text())
-			pterm.Fprinto(p.spinner.Writer, strings.Repeat(" ", p.termWidth))
+			pterm.Fprinto(p.spinner.Writer, strings.Repeat(" ", pterm.GetTerminalWidth()))
 			pterm.Fprintln(p.spinner.Writer, text)
 		} else {
 			// Otherwise just update the spinner text.
@@ -99,6 +100,7 @@ func (p *Spinner) Updatef(format string, a ...any) {
 		return
 	}
 
+	pterm.Fprinto(p.spinner.Writer, strings.Repeat(" ", pterm.GetTerminalWidth()))
 	text := pterm.Sprintf(format, a...)
 	p.spinner.UpdateText(text)
 }

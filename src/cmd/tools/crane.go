@@ -114,26 +114,32 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 			return originalCatalogFn(cmd, args)
 		}
 
-		// Load Zarf state
-		zarfState, err := cluster.NewClusterOrDie().LoadZarfState()
+		message.Note(lang.CmdToolsRegistryZarfState)
+
+		c, err := cluster.NewCluster()
 		if err != nil {
 			return err
 		}
 
-		// Open a tunnel to the Zarf registry
-		tunnelReg, err := cluster.NewZarfTunnel()
+		// Load Zarf state
+		zarfState, err := c.LoadZarfState()
 		if err != nil {
 			return err
 		}
-		err = tunnelReg.Connect(cluster.ZarfRegistry, false)
+
+		registryEndpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(zarfState.RegistryInfo)
 		if err != nil {
 			return err
+		}
+
+		if tunnel != nil {
+			message.Notef(lang.CmdToolsRegistryTunnel, registryEndpoint, zarfState.RegistryInfo.Address)
+			defer tunnel.Close()
 		}
 
 		// Add the correct authentication to the crane command options
 		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PullUsername, zarfState.RegistryInfo.PullPassword)
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
-		registryEndpoint := tunnelReg.Endpoint()
 
 		return originalCatalogFn(cmd, []string{registryEndpoint})
 	}
@@ -156,13 +162,15 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 		}
 
 		// Try to connect to a Zarf initialized cluster otherwise then pass it down to crane.
-		zarfCluster, err := cluster.NewCluster()
+		c, err := cluster.NewCluster()
 		if err != nil {
 			return originalListFn(cmd, args)
 		}
 
+		message.Note(lang.CmdToolsRegistryZarfState)
+
 		// Load the state (if able)
-		zarfState, err := zarfCluster.LoadZarfState()
+		zarfState, err := c.LoadZarfState()
 		if err != nil {
 			message.Warnf(lang.CmdToolsCraneConnectedButBadStateErr, err.Error())
 			return originalListFn(cmd, args)
@@ -173,19 +181,18 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 			return originalListFn(cmd, args)
 		}
 
-		if zarfState.RegistryInfo.InternalRegistry {
-			// Open a tunnel to the Zarf registry
-			tunnelReg, err := cluster.NewZarfTunnel()
-			if err != nil {
-				return err
-			}
-			err = tunnelReg.Connect(cluster.ZarfRegistry, false)
-			if err != nil {
-				return err
-			}
+		_, tunnel, err := c.ConnectToZarfRegistryEndpoint(zarfState.RegistryInfo)
+		if err != nil {
+			return err
+		}
+
+		if tunnel != nil {
+			message.Notef(lang.CmdToolsRegistryTunnel, tunnel.Endpoint(), zarfState.RegistryInfo.Address)
+
+			defer tunnel.Close()
 
 			givenAddress := fmt.Sprintf("%s/", zarfState.RegistryInfo.Address)
-			tunnelAddress := fmt.Sprintf("%s/", tunnelReg.Endpoint())
+			tunnelAddress := fmt.Sprintf("%s/", tunnel.Endpoint())
 			args[imageNameArgumentIndex] = strings.Replace(args[imageNameArgumentIndex], givenAddress, tunnelAddress, 1)
 		}
 
@@ -201,36 +208,32 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 func pruneImages(_ *cobra.Command, _ []string) error {
 	// Try to connect to a Zarf initialized cluster
-	zarfCluster, err := cluster.NewCluster()
+	c, err := cluster.NewCluster()
 	if err != nil {
 		return err
 	}
 
 	// Load the state
-	zarfState, err := zarfCluster.LoadZarfState()
+	zarfState, err := c.LoadZarfState()
 	if err != nil {
 		return err
 	}
 
 	// Load the currently deployed packages
-	zarfPackages, errs := zarfCluster.GetDeployedZarfPackages()
+	zarfPackages, errs := c.GetDeployedZarfPackages()
 	if len(errs) > 0 {
 		return lang.ErrUnableToGetPackages
 	}
 
 	// Set up a tunnel to the registry if applicable
-	registryAddress := zarfState.RegistryInfo.Address
-	if zarfState.RegistryInfo.InternalRegistry {
-		// Open a tunnel to the Zarf registry
-		tunnelReg, err := cluster.NewZarfTunnel()
-		if err != nil {
-			return err
-		}
-		err = tunnelReg.Connect(cluster.ZarfRegistry, false)
-		if err != nil {
-			return err
-		}
-		registryAddress = tunnelReg.Endpoint()
+	registryEndpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(zarfState.RegistryInfo)
+	if err != nil {
+		return err
+	}
+
+	if tunnel != nil {
+		message.Notef(lang.CmdToolsRegistryTunnel, registryEndpoint, zarfState.RegistryInfo.Address)
+		defer tunnel.Close()
 	}
 
 	authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PushUsername, zarfState.RegistryInfo.PushPassword)
@@ -247,7 +250,7 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 			if _, ok := deployedComponents[component.Name]; ok {
 				for _, image := range component.Images {
 					// We use the no checksum image since it will always exist and will share the same digest with other tags
-					transformedImageNoCheck, err := transform.ImageTransformHostWithoutChecksum(registryAddress, image)
+					transformedImageNoCheck, err := transform.ImageTransformHostWithoutChecksum(registryEndpoint, image)
 					if err != nil {
 						return err
 					}
@@ -263,13 +266,13 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 	}
 
 	// Find which images and tags are in the registry currently
-	imageCatalog, err := crane.Catalog(registryAddress, authOption)
+	imageCatalog, err := crane.Catalog(registryEndpoint, authOption)
 	if err != nil {
 		return err
 	}
 	referenceToDigest := map[string]string{}
 	for _, image := range imageCatalog {
-		imageRef := fmt.Sprintf("%s/%s", registryAddress, image)
+		imageRef := fmt.Sprintf("%s/%s", registryEndpoint, image)
 		tags, err := crane.ListTags(imageRef, authOption)
 		if err != nil {
 			return err
