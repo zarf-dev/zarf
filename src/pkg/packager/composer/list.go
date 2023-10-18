@@ -40,7 +40,19 @@ type Node struct {
 	next *Node
 }
 
-// ImportChain is a doubly linked list of components
+// ImportName returns the name of the component to import
+//
+// If the component import has a ComponentName defined, that will be used
+// otherwise the name of the component will be used
+func (n *Node) ImportName() string {
+	name := n.ZarfComponent.Name
+	if n.Import.ComponentName != "" {
+		name = n.Import.ComponentName
+	}
+	return name
+}
+
+// ImportChain is a doubly linked list of component import definitions
 type ImportChain struct {
 	head *Node
 	tail *Node
@@ -110,7 +122,6 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 		}
 
 		var pkg types.ZarfPackage
-		name := node.Name
 
 		if isLocal {
 			history = append(history, node.Import.Path)
@@ -130,9 +141,7 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 			}
 		}
 
-		if node.Import.ComponentName != "" {
-			name = node.Import.ComponentName
-		}
+		name := node.ImportName()
 
 		found := helpers.Filter(pkg.Components, func(c types.ZarfComponent) bool {
 			matchesName := c.Name == name
@@ -147,11 +156,10 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 				return ic, fmt.Errorf("component %q not found in %q", name, node.Import.URL)
 			}
 		} else if len(found) > 1 {
-			// TODO: improve this error message / figure out the best way to present this error
 			if isLocal {
-				return ic, fmt.Errorf("multiple components named %q found in %q", name, filepath.Join(history...))
+				return ic, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, filepath.Join(history...), arch)
 			} else if isRemote {
-				return ic, fmt.Errorf("multiple components named %q found in %q", name, node.Import.URL)
+				return ic, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, node.Import.URL, arch)
 			}
 		}
 
@@ -169,10 +177,7 @@ func (ic *ImportChain) String() string {
 
 	s := strings.Builder{}
 
-	name := ic.head.Name
-	if ic.head.Import.ComponentName != "" {
-		name = ic.head.Import.ComponentName
-	}
+	name := ic.head.ImportName()
 
 	if ic.head.Import.Path != "" {
 		s.WriteString(fmt.Sprintf("component %q imports %q in %s", ic.head.Name, name, ic.head.Import.Path))
@@ -182,10 +187,7 @@ func (ic *ImportChain) String() string {
 
 	node := ic.head.next
 	for node != ic.tail {
-		name := node.Name
-		if node.Import.ComponentName != "" {
-			name = node.Import.ComponentName
-		}
+		name := node.ImportName()
 		s.WriteString(", which imports ")
 		if node.Import.Path != "" {
 			s.WriteString(fmt.Sprintf("%q in %s", name, node.Import.Path))
@@ -235,11 +237,7 @@ func (ic *ImportChain) ContainsOCIImport() bool {
 
 // OCIImportDefinition returns the url and name of the remote import
 func (ic *ImportChain) OCIImportDefinition() (string, string) {
-	name := ic.tail.prev.Name
-	if ic.tail.prev.Import.ComponentName != "" {
-		name = ic.tail.prev.Import.ComponentName
-	}
-	return ic.tail.prev.Import.URL, name
+	return ic.tail.prev.Import.URL, ic.tail.prev.ImportName()
 }
 
 func (ic *ImportChain) fetchOCISkeleton() error {
@@ -257,10 +255,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 		return err
 	}
 
-	name := node.Name
-	if node.Import.ComponentName != "" {
-		name = node.Import.ComponentName
-	}
+	name := node.ImportName()
 
 	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", name)))
 
@@ -271,7 +266,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 
 	var tb, dir string
 
-	// if there is not tarball to fetch, create a directory named based upon
+	// if there is not a tarball to fetch, create a directory named based upon
 	// the import url and the component name
 	if oci.IsEmptyDescriptor(componentDesc) {
 		h := sha256.New()
