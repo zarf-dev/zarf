@@ -138,7 +138,7 @@ const (
 	zarf init --components=git-server,logging
 
 	# Initializing w/ an internal registry but with a different nodeport:
-	zarf init --nodeport=30333
+	zarf init --set REGISTRY_NODEPORT=30333
 
 	# Initializing w/ an external registry:
 	zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
