@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -61,6 +62,10 @@ var initCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
+		// DEPRECATED_V1.0.0: these functions will need cleanup
+		setRegistryStorageClass()
+		setRegistryNodePort()
+
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
@@ -71,6 +76,42 @@ var initCmd = &cobra.Command{
 			message.Fatal(err, err.Error())
 		}
 	},
+}
+
+// DEPRECATED_V1.0.0: do not check pkgConfig.InitOpts.RegistryInfo.NodePort, always overwrite it.
+func setRegistryNodePort() {
+	if nodePortStr, ok := pkgConfig.PkgOpts.SetVariables["REGISTRY_NODEPORT"]; ok {
+		if pkgConfig.InitOpts.RegistryInfo.NodePort != 0 {
+			message.Warn(lang.WarnBothNodePortSchemesDeprecated)
+		}
+		nodePort, err := strconv.Atoi(nodePortStr)
+		if err != nil || nodePort < 30000 || nodePort > 32767 {
+			message.Fatal(err, lang.FatalNodeportInvalid)
+		}
+		pkgConfig.InitOpts.RegistryInfo.NodePort = nodePort
+	} else {
+		// if the old way is set, use it, or the default
+		if pkgConfig.InitOpts.RegistryInfo.NodePort > 0 {
+			message.Warn(lang.WarnNodePortDeprecated)
+		} else {
+			pkgConfig.InitOpts.RegistryInfo.NodePort = config.ZarfInClusterContainerRegistryNodePort
+		}
+		pkgConfig.PkgOpts.SetVariables["REGISTRY_NODEPORT"] = strconv.Itoa(pkgConfig.InitOpts.RegistryInfo.NodePort)
+	}
+}
+
+// DEPRECATED_V1.0.0: do not check pkgConfig.InitOpts.StorageClass, always overwrite it.
+func setRegistryStorageClass() {
+	if storageClass, ok := pkgConfig.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"]; ok {
+		if pkgConfig.InitOpts.StorageClass != "" {
+			message.Warn(lang.WarnBothStorageClassesDeprecated)
+		}
+		pkgConfig.InitOpts.StorageClass = storageClass
+	} else {
+		// if the old way was set (or if the old way is empty)
+		pkgConfig.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"] = pkgConfig.InitOpts.StorageClass
+		message.Warn(lang.WarnStorageClassDeprecated)
+	}
 }
 
 func findInitPackage(initPackageName string) (string, error) {
@@ -188,6 +229,7 @@ func init() {
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
 	initCmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VInitComponents), lang.CmdInitFlagComponents)
+	// [Deprecated] --storage-class is deprecated in favor of --set REGISTRY_STORAGE_CLASS (to be removed in v1.0.0)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(common.VInitStorageClass), lang.CmdInitFlagStorageClass)
 
 	// Flags for using an external Git server
@@ -199,6 +241,7 @@ func init() {
 
 	// Flags for using an external registry
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(common.VInitRegistryURL), lang.CmdInitFlagRegURL)
+	// [Deprecated] --nodeport is deprecated in favor of --set REGISTRY_NODEPORT
 	initCmd.Flags().IntVar(&pkgConfig.InitOpts.RegistryInfo.NodePort, "nodeport", v.GetInt(common.VInitRegistryNodeport), lang.CmdInitFlagRegNodePort)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(common.VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(common.VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)

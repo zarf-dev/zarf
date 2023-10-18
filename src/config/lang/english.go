@@ -31,6 +31,16 @@ const (
 	ErrFileNameExtract     = "failed to extract filename from URL %s: %s"
 )
 
+// Zarf CLI deprecation warnings
+const (
+	// remove deprecation in v1.0.0
+	WarnBothNodePortSchemesDeprecated = "--set REGISTRY_NODEPORT=<value> will override --nodeport <value>"
+	WarnStorageClassDeprecated        = "--set REGISTRY_STORAGE_CLASS=<value> will override --storage-class <value>"
+	WarnBothStorageClassesDeprecated  = "--set REGISTRY_STORAGE_CLASS=<value> will override --storage-class <value>"
+	WarnNodePortDeprecated            = "--nodeport <value> is deprecated, please use --set REGISTRY_NODEPORT=<value> instead"
+	FatalNodeportInvalid              = "Nodeport must be in the range [30000-32767]"
+)
+
 // Zarf CLI commands.
 const (
 	// common command language
@@ -158,7 +168,7 @@ const (
 
 	CmdInitFlagConfirm      = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdInitFlagComponents   = "Specify which optional components to install.  E.g. --components=git-server,logging"
-	CmdInitFlagStorageClass = "Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard"
+	CmdInitFlagStorageClass = "[DEPRECATED] This command has been replaced by 'zarf init --set REGISTRY_STORAGE_CLASS=<value>' and will be removed in Zarf v1.0.0"
 
 	CmdInitFlagGitURL      = "External git server url to use for this Zarf cluster"
 	CmdInitFlagGitPushUser = "Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'"
@@ -167,7 +177,7 @@ const (
 	CmdInitFlagGitPullPass = "Password for the pull-only user to access the git server"
 
 	CmdInitFlagRegURL      = "External registry url address to use for this Zarf cluster"
-	CmdInitFlagRegNodePort = "Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]"
+	CmdInitFlagRegNodePort = "[DEPRECATED] Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]"
 	CmdInitFlagRegPushUser = "Username to access to the registry Zarf is configured to use"
 	CmdInitFlagRegPushPass = "Password for the push-user to connect to the registry"
 	CmdInitFlagRegPullUser = "Username for pull-only access to the registry"

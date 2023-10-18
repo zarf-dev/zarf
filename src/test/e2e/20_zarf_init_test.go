@@ -69,7 +69,7 @@ func TestZarfInit(t *testing.T) {
 	}
 
 	// run `zarf init`
-	_, initStdErr, err := e2e.Zarf("init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
+	_, initStdErr, err := e2e.Zarf("init", "--components="+initComponents, "--set", "REGISTRY_NODEPORT=31337", "-l", "trace", "--confirm")
 	require.NoError(t, err)
 	require.Contains(t, initStdErr, "an inventory of all software contained in this package")
 
