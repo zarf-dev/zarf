@@ -13,7 +13,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
-	"github.com/defenseunicorns/zarf/src/internal/api"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -126,19 +125,6 @@ var configSchemaCmd = &cobra.Command{
 	},
 }
 
-var apiSchemaCmd = &cobra.Command{
-	Use:   "api-schema",
-	Short: lang.CmdInternalAPISchemaShort,
-	Run: func(cmd *cobra.Command, args []string) {
-		schema := jsonschema.Reflect(&types.RestAPI{})
-		output, err := json.MarshalIndent(schema, "", "  ")
-		if err != nil {
-			message.Fatal(err, lang.CmdInternalAPISchemaGenerateErr)
-		}
-		fmt.Print(string(output) + "\n")
-	},
-}
-
 var createReadOnlyGiteaUser = &cobra.Command{
 	Use:   "create-read-only-gitea-user",
 	Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
@@ -183,16 +169,6 @@ var createPackageRegistryToken = &cobra.Command{
 	},
 }
 
-var uiCmd = &cobra.Command{
-	Use:   "ui",
-	Short: lang.CmdInternalUIShort,
-	Long:  lang.CmdInternalUILong,
-	Run: func(cmd *cobra.Command, args []string) {
-		message.Warn(lang.CmdInternalUIDeprecated)
-		api.LaunchAPIServer()
-	},
-}
-
 var isValidHostname = &cobra.Command{
 	Use:   "is-valid-hostname",
 	Short: lang.CmdInternalIsValidHostnameShort,
@@ -223,10 +199,8 @@ func init() {
 	internalCmd.AddCommand(httpProxyCmd)
 	internalCmd.AddCommand(generateCLIDocs)
 	internalCmd.AddCommand(configSchemaCmd)
-	internalCmd.AddCommand(apiSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
 	internalCmd.AddCommand(createPackageRegistryToken)
-	internalCmd.AddCommand(uiCmd)
 	internalCmd.AddCommand(isValidHostname)
 	internalCmd.AddCommand(computeCrc32)
 }
