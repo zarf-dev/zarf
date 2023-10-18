@@ -84,7 +84,7 @@ func ImportDefinition(component *types.ZarfComponent) error {
 	if url == "" && path != "" {
 		// ensure path is not an absolute path
 		if filepath.IsAbs(path) {
-			return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name)
+			return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name, "path cannot be an absolute path")
 		}
 	}
 
