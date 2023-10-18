@@ -241,10 +241,10 @@ func (ic *ImportChain) OCIImportDefinition() (string, string) {
 }
 
 func (ic *ImportChain) fetchOCISkeleton() error {
-	node := ic.tail.prev
 	if !ic.ContainsOCIImport() {
 		return nil
 	}
+	node := ic.tail.prev
 	remote, err := ic.getRemote(node.Import.URL)
 	if err != nil {
 		return err
@@ -318,9 +318,8 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 	if err != nil {
 		return err
 	}
-	// this node is the node importing the remote component
-	// and has a filepath relative to the head of the import chain
-	// the next (tail) node will have a filepath relative from cwd to the tarball in cache
+	// the tail node is the only node whose relativeToHead is based solely upon cwd<->cache
+	// contrary to the other nodes, which are based upon the previous node
 	ic.tail.relativeToHead = rel
 
 	if oci.IsEmptyDescriptor(componentDesc) {
