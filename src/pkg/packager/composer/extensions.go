@@ -9,7 +9,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// TODO: improve me
 func composeExtensions(c *types.ZarfComponent, override types.ZarfComponent, relativeTo string) {
 	// fix the file paths
 	if override.Extensions.BigBang != nil {

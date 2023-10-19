@@ -248,6 +248,9 @@ func (ic *ImportChain) ContainsOCIImport() bool {
 
 // OCIImportDefinition returns the url and name of the remote import
 func (ic *ImportChain) OCIImportDefinition() (string, string) {
+	if !ic.ContainsOCIImport() {
+		return "", ""
+	}
 	return ic.tail.prev.Import.URL, ic.tail.prev.ImportName()
 }
 
