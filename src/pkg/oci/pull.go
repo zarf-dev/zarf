@@ -15,6 +15,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -121,6 +122,14 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			return nil, err
 		}
 		for image := range images {
+			// use docker's transform lib to parse the image ref
+			// this properly mirrors the logic within create
+			refInfo, err := transform.ParseImageRef(image)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse image ref %q: %w", image, err)
+			}
+			image = refInfo.Reference
+
 			manifestDescriptor := helpers.Find(index.Manifests, func(layer ocispec.Descriptor) bool {
 				return layer.Annotations[ocispec.AnnotationBaseImageName] == image
 			})
