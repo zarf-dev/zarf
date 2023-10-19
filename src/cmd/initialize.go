@@ -109,8 +109,10 @@ func setRegistryStorageClass() {
 		pkgConfig.InitOpts.StorageClass = storageClass
 	} else {
 		// if the old way was set (or if the old way is empty)
-		pkgConfig.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"] = pkgConfig.InitOpts.StorageClass
-		message.Warn(lang.WarnStorageClassDeprecated)
+		if pkgConfig.InitOpts.StorageClass != "" {
+			pkgConfig.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"] = pkgConfig.InitOpts.StorageClass
+			message.Warn(lang.WarnStorageClassDeprecated)
+		}
 	}
 }
 
