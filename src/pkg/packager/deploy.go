@@ -34,13 +34,6 @@ import (
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
-	// Attempt to connect to a Kubernetes cluster.
-	// Not all packages require Kubernetes, so we only want to log a debug message rather than return the error when we can't connect to a cluster.
-	p.cluster, err = cluster.NewCluster()
-	if err != nil {
-		message.Debug(err)
-	}
-
 	if err = p.source.LoadPackage(p.layout, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
@@ -53,10 +46,6 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	if err := p.stageSBOMViewFiles(); err != nil {
-		return err
-	}
-
-	if err := p.attemptClusterChecks(); err != nil {
 		return err
 	}
 
@@ -74,7 +63,7 @@ func (p *Packager) Deploy() (err error) {
 	p.connectStrings = make(types.ConnectStrings)
 	// Reset registry HPA scale down whether an error occurs or not
 	defer func() {
-		if p.cluster != nil && p.hpaModified {
+		if p.isConnectedToCluster() && p.hpaModified {
 			if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
 				message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
 			}
@@ -101,26 +90,58 @@ func (p *Packager) Deploy() (err error) {
 // attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
 func (p *Packager) attemptClusterChecks() (err error) {
-	// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
-	if p.cluster, _ = cluster.NewCluster(); p.cluster != nil {
+	if !p.isConnectedToCluster() {
+		return nil
+	}
+	// Check if the package has already been deployed and get its generation
+	if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
+		// If this package has been deployed before, increment the package generation within the secret
+		p.generation = existingDeployedPackage.Generation + 1
+	}
 
-		// Check if the package has already been deployed and get its generation
-		if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
-			// If this package has been deployed before, increment the package generation within the secret
-			p.generation = existingDeployedPackage.Generation + 1
-		}
-
-		// Check the clusters architecture vs the package spec
-		if err := p.validatePackageArchitecture(); err != nil {
-			if errors.Is(err, lang.ErrUnableToCheckArch) {
-				message.Warnf("Unable to validate package architecture: %s", err.Error())
-			} else {
-				return err
-			}
+	// Check the clusters architecture vs the package spec
+	if err := p.validatePackageArchitecture(); err != nil {
+		if errors.Is(err, lang.ErrUnableToCheckArch) {
+			message.Warnf("Unable to validate package architecture: %s", err.Error())
+		} else {
+			return err
 		}
 	}
 
 	return nil
+}
+
+func (p *Packager) isConnectedToCluster() bool {
+	return p.cluster != nil
+}
+
+func (p *Packager) connectToCluster() (err error) {
+	if p.isConnectedToCluster() {
+		old := p.cluster.RestConfig.ServerName
+
+		// If we are already connected to the cluster, check if the server name has changed
+		cluster, err := cluster.NewCluster()
+		if err != nil {
+			return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+		}
+
+		if old != cluster.RestConfig.ServerName {
+			message.Warnf("The Kubernetes cluster has changed from %q to %q", old, cluster.RestConfig.ServerName)
+
+			p.cluster = cluster
+
+			return p.attemptClusterChecks()
+		}
+
+		return nil
+	}
+
+	p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout)
+	if err != nil {
+		return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+	}
+
+	return p.attemptClusterChecks()
 }
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
@@ -146,7 +167,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			ObservedGeneration: p.generation,
 		}
 		// Ensure we don't overwrite any installedCharts data when updating the package secret
-		if p.cluster != nil {
+		if p.isConnectedToCluster() {
 			deployedComponent.InstalledCharts, err = p.cluster.GetInstalledChartsForComponent(p.cfg.Pkg.Metadata.Name, component)
 			if err != nil {
 				message.Debugf("Unable to fetch installed Helm charts for component '%s': %s", component.Name, err.Error())
@@ -157,7 +178,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		idx := len(deployedComponents) - 1
 
 		// Update the package secret to indicate that we are attempting to deploy this component
-		if p.cluster != nil {
+		if p.isConnectedToCluster() {
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
 				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
@@ -185,7 +206,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 			// Update the package secret to indicate that we failed to deploy this component
 			deployedComponents[idx].Status = types.ComponentStatusFailed
-			if p.cluster != nil {
+			if p.isConnectedToCluster() {
 				if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
 					message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 				}
@@ -197,7 +218,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Update the package secret to indicate that we successfully deployed this component
 		deployedComponents[idx].InstalledCharts = charts
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
-		if p.cluster != nil {
+		if p.isConnectedToCluster() {
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
 				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
@@ -221,8 +242,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if p.requiresCluster(component) && p.cfg.State == nil {
-		p.cluster, err = cluster.NewClusterWithWait(5 * time.Minute)
-		if err != nil {
+		if err := p.connectToCluster(); err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
 
@@ -291,12 +311,10 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
 		// Make sure we have access to the cluster
-		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout)
-			if err != nil {
-				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
-			}
+		if err := p.connectToCluster(); err != nil {
+			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
+
 		// Setup the state in the config and get the valuesTemplate
 		p.valueTemplate, err = p.setupStateValuesTemplate(component)
 		if err != nil {
@@ -515,7 +533,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 			svcInfo, _ := k8s.ServiceInfoFromServiceURL(gitClient.Server.Address)
 
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
-			if svcInfo != nil && p.cluster != nil {
+			if svcInfo != nil && p.isConnectedToCluster() {
 				tunnel, err := p.cluster.NewTunnel(svcInfo.Namespace, k8s.SvcResource, svcInfo.Name, "", 0, svcInfo.Port)
 				if err != nil {
 					return err

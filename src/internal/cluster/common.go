@@ -60,18 +60,12 @@ func NewClusterWithWait(timeout time.Duration) (*Cluster, error) {
 	return c, nil
 }
 
-// NewCluster creates a new Cluster instance and validates connection to the cluster by fetching the Kubernetes version.
+// NewCluster creates a new Cluster instance.
 func NewCluster() (*Cluster, error) {
 	c := &Cluster{}
 	var err error
 
 	c.K8s, err = k8s.New(message.Debugf, labels)
-	if err != nil {
-		return nil, err
-	}
-
-	// Dogsled the version output. We just want to ensure no errors were returned to validate cluster connection.
-	_, err = c.GetServerVersion()
 	if err != nil {
 		return nil, err
 	}
