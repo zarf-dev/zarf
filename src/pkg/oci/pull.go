@@ -128,10 +128,9 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse image ref %q: %w", image, err)
 			}
-			image = refInfo.Reference
 
 			manifestDescriptor := helpers.Find(index.Manifests, func(layer ocispec.Descriptor) bool {
-				return layer.Annotations[ocispec.AnnotationBaseImageName] == image
+				return layer.Annotations[ocispec.AnnotationBaseImageName] == image || layer.Annotations[ocispec.AnnotationRefName] == refInfo.Reference
 			})
 
 			// even though these are technically image manifests, we store them as Zarf blobs
