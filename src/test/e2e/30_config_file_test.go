@@ -107,7 +107,6 @@ func configFileDefaultTests(t *testing.T) {
 
 	initFlags := []string{
 		"components: 359049b9",
-		"storage_class: 9cae917f",
 		"git.pull_password: 8522ccca",
 		"git.pull_username: 36646dbe",
 		"git.push_password: ba00d92d",
