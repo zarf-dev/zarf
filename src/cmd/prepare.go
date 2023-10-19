@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
@@ -163,16 +164,17 @@ var prepareValidateSchema = &cobra.Command{
 	Short: lang.CmdPrepareGenerateConfigShort,
 	Long:  lang.CmdPrepareGenerateConfigLong,
 	Run: func(cmd *cobra.Command, args []string) {
+		baseDir := ""
 		if len(args) > 0 {
-			pkgConfig.CreateOpts.BaseDir = args[0]
+			baseDir = args[0]
 		} else {
 			var err error
-			pkgConfig.CreateOpts.BaseDir, err = os.Getwd()
+			baseDir, err = os.Getwd()
 			if err != nil {
 				message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
 			}
 		}
-		Lint.ValidateSchema()
+		lint.ValidateZarfSchema(baseDir)
 
 	},
 }

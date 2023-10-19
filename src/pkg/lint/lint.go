@@ -13,7 +13,7 @@ import (
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
-func Lint(baseDir string) (err error) {
+func ValidateZarfSchema(baseDir string) (err error) {
 	zarfSchema, _ := config.GetSchemaFile()
 	var zarfData interface{}
 	if err := utils.ReadYaml(filepath.Join(baseDir, layout.ZarfYAML), &zarfData); err != nil {

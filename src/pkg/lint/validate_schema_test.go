@@ -7,7 +7,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 )
 
-func TestValidateZarfSchema(t *testing.T) {
+func TestValidateSchema(t *testing.T) {
 	readSchema := func(t *testing.T) []byte {
 		t.Helper()
 		zarfSchema, err := os.ReadFile("../../../zarf.schema.json")
