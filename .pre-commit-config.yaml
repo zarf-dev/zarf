@@ -47,3 +47,5 @@ repos:
         files: "zarf.yaml"
         types: [yaml]
         args: ["--schemafile", "zarf.schema.json"]
+        exclude: |
+          (?x)^(src/pkg/utils/helpers/unsuccessful_validation/zarf.yaml)
