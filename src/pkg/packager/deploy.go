@@ -117,7 +117,8 @@ func (p *Packager) isConnectedToCluster() bool {
 
 func (p *Packager) connectToCluster() (err error) {
 	if p.isConnectedToCluster() {
-		old := p.cluster.RestConfig.ServerName
+		// TODO: what is the best way to handle this?
+		old := p.cluster.RestConfig.String()
 
 		// If we are already connected to the cluster, check if the server name has changed
 		cluster, err := cluster.NewCluster()
@@ -125,7 +126,7 @@ func (p *Packager) connectToCluster() (err error) {
 			return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
 
-		if old != cluster.RestConfig.ServerName {
+		if old != cluster.RestConfig.String() {
 			message.Warnf("The Kubernetes cluster has changed from %q to %q", old, cluster.RestConfig.ServerName)
 
 			p.cluster = cluster
