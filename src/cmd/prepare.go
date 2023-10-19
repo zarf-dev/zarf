@@ -174,8 +174,8 @@ var prepareValidateSchema = &cobra.Command{
 				message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
 			}
 		}
-		lint.ValidateZarfSchema(baseDir)
-
+		err := lint.ValidateZarfSchema(baseDir)
+		message.Fatal(err, err.Error())
 	},
 }
 
