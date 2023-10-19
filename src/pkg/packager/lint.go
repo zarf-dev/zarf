@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
@@ -20,9 +21,14 @@ func (p *Packager) Lint() (err error) {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 	fmt.Printf("This is the struct %+v\n", p.cfg.Pkg)
-	data, _ := config.GetSchemaFile()
+	zarfSchema, _ := config.GetSchemaFile()
+	var zarfData interface{}
 
-	helpers.ValidateZarfSchema(p.cfg.Pkg, data)
+	if err := utils.ReadYaml(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML), &zarfData); err != nil {
+		return err
+	}
+
+	helpers.ValidateZarfSchema(zarfData, zarfSchema)
 
 	return nil
 }

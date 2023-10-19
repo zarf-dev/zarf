@@ -3,6 +3,7 @@ package helpers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 
 	"github.com/santhosh-tekuri/jsonschema"
 )
@@ -16,6 +17,8 @@ func ValidateZarfSchema(zarfUnmarshaledYaml interface{}, zarfJsonSchema []byte) 
 
 	compiler := jsonschema.NewCompiler()
 	inMemoryZarfSchema := "zarf.schema.json"
+	fmt.Println("we are here")
+	fmt.Println(zarfYamlAsJsonBytes)
 
 	if err := compiler.AddResource(inMemoryZarfSchema, bytes.NewReader(zarfJsonSchema)); err != nil {
 		return err

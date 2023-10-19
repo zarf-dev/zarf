@@ -6,4 +6,4 @@ metadata:
 components:
   - name: k3s
     import:
-      path: packages/distros/k3s
+      pat12312h: packages/distros/k3s
