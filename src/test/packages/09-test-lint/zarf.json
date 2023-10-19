@@ -1,0 +1,216 @@
+{
+  "kind": "ZarfInitConfig",
+  "metadata": {
+    "name": "init",
+    "description": "Used to establish a new Zarf cluster"
+  },
+  "build": {
+    "terminal": "",
+    "user": "",
+    "architecture": "",
+    "timestamp": "",
+    "version": ""
+  },
+  "components": [
+    {
+      "name": "k3s",
+      "only": {
+        "cluster": {}
+      },
+      "import": {
+        "path": "packages/distros/k3s"
+      },
+      "scripts": {},
+      "extensions": {},
+      "actions": {
+        "onCreate": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onDeploy": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onRemove": {
+          "defaults": {
+            "shell": {}
+          }
+        }
+      }
+    },
+    {
+      "name": "zarf-injector",
+      "required": true,
+      "only": {
+        "cluster": {}
+      },
+      "import": {
+        "path": "packages/zarf-registry"
+      },
+      "scripts": {},
+      "extensions": {},
+      "actions": {
+        "onCreate": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onDeploy": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onRemove": {
+          "defaults": {
+            "shell": {}
+          }
+        }
+      }
+    },
+    {
+      "name": "zarf-seed-registry",
+      "required": true,
+      "only": {
+        "cluster": {}
+      },
+      "import": {
+        "path": "packages/zarf-registry"
+      },
+      "scripts": {},
+      "extensions": {},
+      "actions": {
+        "onCreate": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onDeploy": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onRemove": {
+          "defaults": {
+            "shell": {}
+          }
+        }
+      }
+    },
+    {
+      "name": "zarf-registry",
+      "required": true,
+      "only": {
+        "cluster": {}
+      },
+      "import": {
+        "path": "packages/zarf-registry"
+      },
+      "scripts": {},
+      "extensions": {},
+      "actions": {
+        "onCreate": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onDeploy": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onRemove": {
+          "defaults": {
+            "shell": {}
+          }
+        }
+      }
+    },
+    {
+      "name": "zarf-agent",
+      "required": true,
+      "only": {
+        "cluster": {}
+      },
+      "import": {
+        "path": "packages/zarf-agent"
+      },
+      "scripts": {},
+      "extensions": {},
+      "actions": {
+        "onCreate": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onDeploy": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onRemove": {
+          "defaults": {
+            "shell": {}
+          }
+        }
+      }
+    },
+    {
+      "name": "logging",
+      "only": {
+        "cluster": {}
+      },
+      "import": {
+        "path": "packages/logging-pgl"
+      },
+      "scripts": {},
+      "extensions": {},
+      "actions": {
+        "onCreate": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onDeploy": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onRemove": {
+          "defaults": {
+            "shell": {}
+          }
+        }
+      }
+    },
+    {
+      "name": "git-server",
+      "only": {
+        "cluster": {}
+      },
+      "import": {
+        "path": "packages/gitea"
+      },
+      "scripts": {},
+      "extensions": {},
+      "actions": {
+        "onCreate": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onDeploy": {
+          "defaults": {
+            "shell": {}
+          }
+        },
+        "onRemove": {
+          "defaults": {
+            "shell": {}
+          }
+        }
+      }
+    }
+  ]
+}

@@ -19,7 +19,9 @@ func (p *Packager) Lint() (err error) {
 	if err = p.readZarfYAML(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
+	fmt.Printf("This is the struct %+v\n", p.cfg.Pkg)
 	data, _ := config.GetSchemaFile()
+
 	helpers.ValidateZarfSchema(p.cfg.Pkg, data)
 
 	return nil

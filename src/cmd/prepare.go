@@ -158,16 +158,20 @@ var prepareGenerateConfigFile = &cobra.Command{
 }
 
 var prepareValidateSchema = &cobra.Command{
-	Use:   "lint ",
-	Args:  cobra.MaximumNArgs(0),
+	Use:   "lint [ DIRECTORY ]",
+	Args:  cobra.MaximumNArgs(1),
 	Short: lang.CmdPrepareGenerateConfigShort,
 	Long:  lang.CmdPrepareGenerateConfigLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		cwd, err := os.Getwd()
-		if err != nil {
-			message.Fatalf(err, lang.CmdPrepareFindImagesErr, err.Error())
+		if len(args) > 0 {
+			pkgConfig.CreateOpts.BaseDir = args[0]
+		} else {
+			var err error
+			pkgConfig.CreateOpts.BaseDir, err = os.Getwd()
+			if err != nil {
+				message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
+			}
 		}
-		pkgConfig.CreateOpts.BaseDir = cwd
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 		pkgClient.Lint()

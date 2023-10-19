@@ -9,19 +9,28 @@ import (
 )
 
 func TestValidateZarfSchema(t *testing.T) {
-	t.Run("basic read schema", func(t *testing.T) {
-		want := true
+	t.Run("Read schema success", func(t *testing.T) {
 		var unmarshalledYaml interface{}
-		readYaml("../../../../zarf.yaml", &unmarshalledYaml)
+		readYaml("successful_validation/zarf.yaml", &unmarshalledYaml)
 		zarfSchema, err := os.ReadFile("../../../../zarf.schema.json")
 		if err != nil {
 			log.Fatalf("Error reading file: %s", err)
 		}
-		if err != nil {
-			panic(err)
+		if got := ValidateZarfSchema(unmarshalledYaml, zarfSchema); got != nil {
+			t.Errorf("ValidateZarfSchema = %v, want %v", got, nil)
 		}
-		if got := ValidateZarfSchema(unmarshalledYaml, zarfSchema); got != want {
-			t.Errorf("ValidateZarfSchema = %v, want %v", got, want)
+	})
+
+	t.Run("Read schema fail", func(t *testing.T) {
+		var unmarshalledYaml interface{}
+		readYaml("unsuccessful_validation/bad_zarf.yaml", &unmarshalledYaml)
+		zarfSchema, err := os.ReadFile("../../../../zarf.schema.json")
+		if err != nil {
+			log.Fatalf("Error reading file: %s", err)
+		}
+		err = ValidateZarfSchema(unmarshalledYaml, zarfSchema)
+		if err == nil {
+			t.Errorf("ValidateZarfSchema worked on a bad file")
 		}
 	})
 }
