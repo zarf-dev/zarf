@@ -28,11 +28,13 @@ func TestVariables(t *testing.T) {
 	e2e.CleanFiles(tfPath, evilPath)
 
 	// Test that specifying an invalid setVariable value results in an error
-	stdOut, stdErr, err := e2e.Zarf("package", "create", evilSrc, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", evilSrc, "--set", "NUMB3R5=K1TT3H", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+	expectedOutString := "\"K1TT3H\""
+	require.Contains(t, stdErr, "", expectedOutString)
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	expectedOutString := "variable \"HELLO_KITTEH\" does not match pattern "
+	expectedOutString = "variable \"HELLO_KITTEH\" does not match pattern "
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test that specifying an invalid constant value results in an error

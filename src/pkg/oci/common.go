@@ -55,8 +55,8 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 	}
 
 	copyOpts := oras.DefaultCopyOptions
-	copyOpts.OnCopySkipped = o.printLayerSuccess
-	copyOpts.PostCopy = o.printLayerSuccess
+	copyOpts.OnCopySkipped = o.printLayerSkipped
+	copyOpts.PostCopy = o.printLayerCopied
 	o.CopyOpts = copyOpts
 
 	o.WithContext(context.TODO())

@@ -93,7 +93,6 @@ var (
 	NoColor bool
 
 	CosignPublicKey string
-	UIAssets        embed.FS
 	ZarfSchema      embed.FS
 
 	// Timestamp of when the CLI was started

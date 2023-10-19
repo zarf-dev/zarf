@@ -24,10 +24,17 @@ func TestConnectAndCreds(t *testing.T) {
 	t.Log("E2E: Connect")
 	e2e.SetupWithCluster(t)
 
+	prevAgentSecretData, _, err := e2e.Kubectl("get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
+	require.NoError(t, err)
+
 	connectToZarfServices(t)
 
 	stdOut, stdErr, err := e2e.Zarf("tools", "update-creds", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	newAgentSecretData, _, err := e2e.Kubectl("get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
+	require.NoError(t, err)
+	require.NotEqual(t, prevAgentSecretData, newAgentSecretData, "agent secrets should not be the same")
 
 	connectToZarfServices(t)
 

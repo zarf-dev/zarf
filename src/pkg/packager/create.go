@@ -29,7 +29,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -38,17 +37,6 @@ func (p *Packager) Create() (err error) {
 
 	if err = p.readZarfYAML(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
-	}
-
-	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
-		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.arch)
-		if err != nil {
-			return err
-		}
-		err = p.setOCIRemote(ref)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Load the images and repos from the 'reference' package
@@ -83,6 +71,17 @@ func (p *Packager) Create() (err error) {
 	// After components are composed, template the active package.
 	if err := p.fillActiveTemplate(); err != nil {
 		return fmt.Errorf("unable to fill values in template: %s", err.Error())
+	}
+
+	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
+		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.arch)
+		if err != nil {
+			return err
+		}
+		err = p.setOCIRemote(ref)
+		if err != nil {
+			return err
+		}
 	}
 
 	// After templates are filled process any create extensions
@@ -156,6 +155,7 @@ func (p *Packager) Create() (err error) {
 	}
 
 	imageList := helpers.Unique(combinedImageList)
+	var sbomImageList []transform.Image
 
 	// Images are handled separately from other component assets.
 	if len(imageList) > 0 {
@@ -163,9 +163,7 @@ func (p *Packager) Create() (err error) {
 
 		p.layout = p.layout.AddImages()
 
-		message.HeaderInfof("📦 PACKAGE IMAGES")
-
-		pulled := map[transform.Image]v1.Image{}
+		var pulled []images.ImgInfo
 
 		doPull := func() error {
 			imgConfig := images.ImageConfig{
@@ -184,9 +182,12 @@ func (p *Packager) Create() (err error) {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 
-		for _, img := range pulled {
-			if err := p.layout.Images.AddV1Image(img); err != nil {
+		for _, imgInfo := range pulled {
+			if err := p.layout.Images.AddV1Image(imgInfo.Img); err != nil {
 				return err
+			}
+			if imgInfo.HasImageLayers {
+				sbomImageList = append(sbomImageList, imgInfo.RefInfo)
 			}
 		}
 	}
@@ -196,7 +197,7 @@ func (p *Packager) Create() (err error) {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
 		p.layout = p.layout.AddSBOMs()
-		if err := sbom.Catalog(componentSBOMs, imageList, p.layout); err != nil {
+		if err := sbom.Catalog(componentSBOMs, sbomImageList, p.layout); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
@@ -245,9 +246,9 @@ func (p *Packager) Create() (err error) {
 			flags = "--insecure"
 		}
 		message.Title("To inspect/deploy/pull:", "")
-		message.ZarfCommand("package inspect oci://%s %s", p.remote.Repo().Reference, flags)
-		message.ZarfCommand("package deploy oci://%s %s", p.remote.Repo().Reference, flags)
-		message.ZarfCommand("package pull oci://%s %s", p.remote.Repo().Reference, flags)
+		message.ZarfCommand("package inspect %s %s", helpers.OCIURLPrefix+p.remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+p.remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+p.remote.Repo().Reference.String(), flags)
 	} else {
 		// Use the output path if the user specified it.
 		packageName := filepath.Join(p.cfg.CreateOpts.Output, p.GetPackageName())

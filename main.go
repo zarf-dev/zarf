@@ -6,13 +6,11 @@ package main
 
 import (
 	"embed"
+	_ "embed"
 
 	"github.com/defenseunicorns/zarf/src/cmd"
 	"github.com/defenseunicorns/zarf/src/config"
 )
-
-//go:embed all:build/ui/*
-var assets embed.FS
 
 //go:embed cosign.pub
 var cosignPublicKey string
@@ -21,7 +19,6 @@ var cosignPublicKey string
 var zarfSchema embed.FS
 
 func main() {
-	config.UIAssets = assets
 	config.CosignPublicKey = cosignPublicKey
 	config.ZarfSchema = zarfSchema
 	cmd.Execute()

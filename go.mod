@@ -18,7 +18,6 @@ require (
 	github.com/fatih/color v1.15.0
 	github.com/fluxcd/helm-controller/api v0.36.0
 	github.com/fluxcd/source-controller/api v1.1.0
-	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-git/go-git/v5 v5.9.0
 	github.com/go-logr/logr v1.2.4
 	github.com/goccy/go-yaml v1.11.2
@@ -43,9 +42,9 @@ require (
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
 	github.com/xeipuuv/gojsonschema v1.2.0
-	golang.org/x/crypto v0.13.0
+	golang.org/x/crypto v0.14.0
 	golang.org/x/sync v0.3.0
-	golang.org/x/term v0.12.0
+	golang.org/x/term v0.13.0
 	helm.sh/helm/v3 v3.12.3
 	k8s.io/api v0.28.2
 	k8s.io/apimachinery v0.28.2
@@ -435,9 +434,9 @@ require (
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63 // indirect
 	golang.org/x/mod v0.12.0 // indirect
-	golang.org/x/net v0.15.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.11.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.13.0 // indirect

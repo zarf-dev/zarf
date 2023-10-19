@@ -8,16 +8,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
-	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 )
 
@@ -84,29 +81,6 @@ func (p *Packager) confirmAction(stage string) (confirm bool) {
 	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
 		// User aborted or declined, cancel the action
 		return false
-	}
-
-	// On create in interactive mode, prompt for max package size if it is still the default value of 0
-	// Note: it will not be 0 if the user has provided a value via the --max-package-size flag or Viper config
-	if stage == config.ZarfCreateStage && p.cfg.CreateOpts.MaxPackageSizeMB == 0 {
-		value, err := interactive.PromptVariable(types.ZarfPackageVariable{
-			Name:        "Maximum Package Size",
-			Description: "Specify a maximum file size for this package in Megabytes. Above this size, the package will be split into multiple files. 0 will disable this feature.",
-			Default:     "0",
-		})
-		if err != nil {
-			// User aborted, cancel the action
-			return false
-		}
-
-		// Try to parse the value, on error warn and move on
-		maxPackageSize, err := strconv.Atoi(value)
-		if err != nil {
-			message.Warnf("Unable to parse \"%s\" as a number for the maximum file size. This package will not be split into multiple files.", value)
-			return true
-		}
-
-		p.cfg.CreateOpts.MaxPackageSizeMB = maxPackageSize
 	}
 
 	return true

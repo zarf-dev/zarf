@@ -59,6 +59,21 @@ func (k *K8s) DeletePod(namespace string, name string) error {
 	}
 }
 
+// DeletePods removes a collection of pods from the cluster by pod lookup.
+func (k *K8s) DeletePods(target PodLookup) error {
+	deleteGracePeriod := int64(0)
+	deletePolicy := metav1.DeletePropagationForeground
+	return k.Clientset.CoreV1().Pods(target.Namespace).DeleteCollection(context.TODO(),
+		metav1.DeleteOptions{
+			GracePeriodSeconds: &deleteGracePeriod,
+			PropagationPolicy:  &deletePolicy,
+		},
+		metav1.ListOptions{
+			LabelSelector: target.Selector,
+		},
+	)
+}
+
 // CreatePod inserts the given pod into the cluster.
 func (k *K8s) CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	createOptions := metav1.CreateOptions{}
@@ -159,4 +174,28 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []co
 	k.Log("Pod lookup timeout exceeded")
 
 	return []corev1.Pod{}
+}
+
+// FindPodContainerPort will find a pod's container port from a service and return it.
+//
+// Returns 0 if no port is found.
+func (k *K8s) FindPodContainerPort(svc corev1.Service) int {
+	selectorLabelsOfPods := MakeLabels(svc.Spec.Selector)
+	pods := k.WaitForPodsAndContainers(PodLookup{
+		Namespace: svc.Namespace,
+		Selector:  selectorLabelsOfPods,
+	}, nil)
+
+	for _, pod := range pods {
+		// Find the matching name on the port in the pod
+		for _, container := range pod.Spec.Containers {
+			for _, port := range container.Ports {
+				if port.Name == svc.Spec.Ports[0].TargetPort.String() {
+					return int(port.ContainerPort)
+				}
+			}
+		}
+	}
+
+	return 0
 }

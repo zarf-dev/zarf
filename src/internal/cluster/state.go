@@ -308,6 +308,9 @@ func (c *Cluster) MergeZarfState(oldState *types.ZarfState, initOptions types.Za
 			newState.ArtifactServer.PushToken = ""
 		}
 	}
+	if slices.Contains(services, message.AgentKey) {
+		newState.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
+	}
 
 	return &newState
 }

@@ -29,9 +29,6 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
-      - name: Setup NodeJS
-        uses: ./.github/actions/node
-
       - name: Build PR binary and zarf init package
         uses: ./.github/actions/packages
         with:

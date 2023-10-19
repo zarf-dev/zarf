@@ -7,7 +7,7 @@ runs:
     - run: |
         lsblk -f
 
-        sudo rm -rf zarf-sbom /tmp/zarf-* src/ui/node_modules
+        sudo rm -rf zarf-sbom /tmp/zarf-*
         sudo env "PATH=$PATH" CI=true make delete-packages
         sudo build/zarf tools clear-cache
         sudo docker system prune --all --force
