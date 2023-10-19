@@ -1,4 +1,4 @@
-package helpers
+package lint
 
 import (
 	"os"
@@ -10,7 +10,7 @@ import (
 func TestValidateZarfSchema(t *testing.T) {
 	readSchema := func(t *testing.T) []byte {
 		t.Helper()
-		zarfSchema, err := os.ReadFile("../../../../zarf.schema.json")
+		zarfSchema, err := os.ReadFile("../../../zarf.schema.json")
 		if err != nil {
 			t.Fatalf("Error reading schema file: %s", err)
 		}
@@ -31,7 +31,7 @@ func TestValidateZarfSchema(t *testing.T) {
 	t.Run("Read schema success", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml(t, "successful_validation/zarf.yaml")
 		zarfSchema := readSchema(t)
-		if got := ValidateZarfSchema(unmarshalledYaml, zarfSchema); got != nil {
+		if got := ValidateSchema(unmarshalledYaml, zarfSchema); got != nil {
 			t.Errorf("Expected successful validation, got error: %v", got)
 		}
 	})
@@ -39,7 +39,7 @@ func TestValidateZarfSchema(t *testing.T) {
 	t.Run("Read schema fail", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml(t, "unsuccessful_validation/bad_zarf.yaml")
 		zarfSchema := readSchema(t)
-		if err := ValidateZarfSchema(unmarshalledYaml, zarfSchema); err == nil {
+		if err := ValidateSchema(unmarshalledYaml, zarfSchema); err == nil {
 			t.Errorf("Expected validation to fail, but it succeeded.")
 		}
 	})

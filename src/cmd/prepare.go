@@ -172,9 +172,7 @@ var prepareValidateSchema = &cobra.Command{
 				message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
 			}
 		}
-		pkgClient := packager.NewOrDie(&pkgConfig)
-		defer pkgClient.ClearTempPaths()
-		pkgClient.Lint()
+		Lint.ValidateSchema()
 
 	},
 }

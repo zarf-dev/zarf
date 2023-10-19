@@ -1,4 +1,4 @@
-package helpers
+package lint
 
 import (
 	"bytes"
@@ -7,17 +7,17 @@ import (
 	"github.com/santhosh-tekuri/jsonschema"
 )
 
-func ValidateZarfSchema(zarfUnmarshaledYaml interface{}, zarfJsonSchema []byte) error {
+func ValidateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 
-	zarfYamlAsJsonBytes, err := json.Marshal(zarfUnmarshaledYaml)
+	zarfYamlAsJsonBytes, err := json.Marshal(unmarshalledYaml)
 	if err != nil {
 		return err
 	}
 
 	compiler := jsonschema.NewCompiler()
-	inMemoryZarfSchema := "zarf.schema.json"
+	inMemoryZarfSchema := "schema.json"
 
-	if err := compiler.AddResource(inMemoryZarfSchema, bytes.NewReader(zarfJsonSchema)); err != nil {
+	if err := compiler.AddResource(inMemoryZarfSchema, bytes.NewReader(jsonSchema)); err != nil {
 		return err
 	}
 	schema, err := compiler.Compile(inMemoryZarfSchema)
