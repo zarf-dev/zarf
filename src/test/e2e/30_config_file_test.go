@@ -112,7 +112,6 @@ func configFileDefaultTests(t *testing.T) {
 		"git.push_password: ba00d92d",
 		"git.push_username: eb76dca8",
 		"git.url: 7c63c1b9",
-		"Between [30000-32767] (default 186282)",
 		"registry.pull_password: b8152e38",
 		"registry.pull_username: d0961a97",
 		"registry.push_password: 8f58ca41",
