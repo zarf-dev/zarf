@@ -130,7 +130,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			}
 
 			manifestDescriptor := helpers.Find(index.Manifests, func(layer ocispec.Descriptor) bool {
-				return layer.Annotations[ocispec.AnnotationBaseImageName] == image ||
+				return layer.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Reference ||
 					// A backwards compatibility shim for older Zarf versions that would leave docker.io off of image annotations
 					(layer.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Path+refInfo.TagOrDigest && refInfo.Host == "docker.io")
 			})
