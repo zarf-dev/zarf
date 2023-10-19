@@ -117,10 +117,9 @@ async function sleepAndChangeStatus(secretName: string, componentName: string) {
 
   secret.data.data = btoa(JSON.stringify(secretData));
 
-  // Patch the secret back to the cluster
+  // Update the status in the package secret
   // Use Server-Side force apply to forcefully take ownership of the package secret data.data field
   // Doing a Server-Side apply without the force option will result in a FieldManagerConflict error due to Zarf owning the object.
-  // See the following PR for more information: https://github.com/defenseunicorns/kubernetes-fluent-client/pull/20
   try {
     await K8s(kind.Secret).Apply(
       {
