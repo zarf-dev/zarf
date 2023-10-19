@@ -175,6 +175,7 @@ var prepareValidateSchema = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 		pkgClient.Lint()
+
 	},
 }
 

@@ -16,19 +16,15 @@ import (
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Lint() (err error) {
-
-	if err = p.readZarfYAML(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML)); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
-	}
-	fmt.Printf("This is the struct %+v\n", p.cfg.Pkg)
 	zarfSchema, _ := config.GetSchemaFile()
 	var zarfData interface{}
-
 	if err := utils.ReadYaml(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML), &zarfData); err != nil {
 		return err
 	}
 
-	helpers.ValidateZarfSchema(zarfData, zarfSchema)
+	if err = helpers.ValidateZarfSchema(zarfData, zarfSchema); err != nil {
+		return err
+	}
 
 	return nil
 }

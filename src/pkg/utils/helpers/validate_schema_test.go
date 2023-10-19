@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"log"
 	"os"
 	"testing"
 
@@ -9,38 +8,39 @@ import (
 )
 
 func TestValidateZarfSchema(t *testing.T) {
-	t.Run("Read schema success", func(t *testing.T) {
-		var unmarshalledYaml interface{}
-		readYaml("successful_validation/zarf.yaml", &unmarshalledYaml)
+	readSchema := func(t *testing.T) []byte {
+		t.Helper()
 		zarfSchema, err := os.ReadFile("../../../../zarf.schema.json")
 		if err != nil {
-			log.Fatalf("Error reading file: %s", err)
+			t.Fatalf("Error reading schema file: %s", err)
 		}
+		return zarfSchema
+	}
+
+	readAndUnmarshalYaml := func(t *testing.T, path string) interface{} {
+		t.Helper()
+		var unmarshalledYaml interface{}
+		file, err := os.ReadFile(path)
+		goyaml.Unmarshal(file, &unmarshalledYaml)
+		if err != nil {
+			return err
+		}
+		return unmarshalledYaml
+	}
+
+	t.Run("Read schema success", func(t *testing.T) {
+		unmarshalledYaml := readAndUnmarshalYaml(t, "successful_validation/zarf.yaml")
+		zarfSchema := readSchema(t)
 		if got := ValidateZarfSchema(unmarshalledYaml, zarfSchema); got != nil {
-			t.Errorf("ValidateZarfSchema = %v, want %v", got, nil)
+			t.Errorf("Expected successful validation, got error: %v", got)
 		}
 	})
 
 	t.Run("Read schema fail", func(t *testing.T) {
-		var unmarshalledYaml interface{}
-		readYaml("unsuccessful_validation/bad_zarf.yaml", &unmarshalledYaml)
-		zarfSchema, err := os.ReadFile("../../../../zarf.schema.json")
-		if err != nil {
-			log.Fatalf("Error reading file: %s", err)
-		}
-		err = ValidateZarfSchema(unmarshalledYaml, zarfSchema)
-		if err == nil {
-			t.Errorf("ValidateZarfSchema worked on a bad file")
+		unmarshalledYaml := readAndUnmarshalYaml(t, "unsuccessful_validation/bad_zarf.yaml")
+		zarfSchema := readSchema(t)
+		if err := ValidateZarfSchema(unmarshalledYaml, zarfSchema); err == nil {
+			t.Errorf("Expected validation to fail, but it succeeded.")
 		}
 	})
-}
-
-func readYaml(path string, destConfig any) error {
-	file, err := os.ReadFile(path)
-
-	if err != nil {
-		return err
-	}
-
-	return goyaml.Unmarshal(file, destConfig)
 }
