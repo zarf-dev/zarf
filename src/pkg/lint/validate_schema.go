@@ -3,6 +3,7 @@ package lint
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 
 	"github.com/santhosh-tekuri/jsonschema"
 )
@@ -25,7 +26,7 @@ func ValidateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 		return err
 	}
 	if err := schema.Validate(bytes.NewReader(zarfYamlAsJsonBytes)); err != nil {
-		return err
+		return fmt.Errorf("this is an error I'm messing with %s", err)
 	}
 
 	return nil
