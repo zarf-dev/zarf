@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
@@ -158,27 +157,6 @@ var prepareGenerateConfigFile = &cobra.Command{
 	},
 }
 
-var prepareValidateSchema = &cobra.Command{
-	Use:   "lint [ DIRECTORY ]",
-	Args:  cobra.MaximumNArgs(1),
-	Short: lang.CmdPrepareGenerateConfigShort,
-	Long:  lang.CmdPrepareGenerateConfigLong,
-	Run: func(cmd *cobra.Command, args []string) {
-		baseDir := ""
-		if len(args) > 0 {
-			baseDir = args[0]
-		} else {
-			var err error
-			baseDir, err = os.Getwd()
-			if err != nil {
-				message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
-			}
-		}
-		err := lint.ValidateZarfSchema(baseDir)
-		message.Fatal(err, err.Error())
-	},
-}
-
 func init() {
 	v := common.InitViper()
 
@@ -187,7 +165,6 @@ func init() {
 	prepareCmd.AddCommand(prepareComputeFileSha256sum)
 	prepareCmd.AddCommand(prepareFindImages)
 	prepareCmd.AddCommand(prepareGenerateConfigFile)
-	prepareCmd.AddCommand(prepareValidateSchema)
 
 	prepareFindImages.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables

@@ -302,6 +302,9 @@ const (
 	CmdPackageClusterSourceFallback = "%q does not satisfy any current sources, assuming it is a package deployed to a cluster"
 	CmdPackageInvalidSource         = "Unable to identify source from %q: %s"
 
+	//zarf lint
+	CmdLintShort = "Tools for validating schema / ensuring best practices"
+
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"
 
