@@ -52,6 +52,16 @@ variables:
     default: ""
     autoIndent: true
 
+  - name: REGISTRY_NODEPORT
+    description: NodePort for the registry
+    default: ""
+    autoIndent: true
+
+  - name: REGISTRY_STORAGE_CLASS
+    description: StorageClass for the registry PVC
+    default: ""
+    autoIndent: true
+
 constants:
   - name: REGISTRY_IMAGE
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE###"

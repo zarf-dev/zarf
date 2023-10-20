@@ -80,39 +80,26 @@ var initCmd = &cobra.Command{
 
 // DEPRECATED_V1.0.0: do not check pkgConfig.InitOpts.RegistryInfo.NodePort, always overwrite it.
 func setRegistryNodePort() {
-	if nodePortStr, ok := pkgConfig.PkgOpts.SetVariables["REGISTRY_NODEPORT"]; ok {
-		if pkgConfig.InitOpts.RegistryInfo.NodePort != 0 {
-			message.Warn(lang.WarnBothNodePortSchemesDeprecated)
-		}
-		nodePort, err := strconv.Atoi(nodePortStr)
-		if err != nil || nodePort < 30000 || nodePort > 32767 {
-			message.Fatal(err, lang.FatalNodeportInvalid)
-		}
-		pkgConfig.InitOpts.RegistryInfo.NodePort = nodePort
+	// TODO: this will always get overriden by the defautls
+	if pkgConfig.InitOpts.RegistryInfo.NodePort != 0 {
+		message.Warn(lang.WarnNodePortDeprecated)
 	} else {
-		// if the old way is set, use it, or the default
-		if pkgConfig.InitOpts.RegistryInfo.NodePort > 0 {
-			message.Warn(lang.WarnNodePortDeprecated)
+		nodePort, err := strconv.Atoi(pkgConfig.PkgOpts.SetVariables["REGISTRY_NODEPORT"])
+		if err == nil && (nodePort >= 30000 || nodePort <= 32767) {
+			// TODO: if the nodeport is out of range, warn that we're putting it back in range
+			pkgConfig.InitOpts.RegistryInfo.NodePort = nodePort
 		} else {
 			pkgConfig.InitOpts.RegistryInfo.NodePort = config.ZarfInClusterContainerRegistryNodePort
 		}
-		pkgConfig.PkgOpts.SetVariables["REGISTRY_NODEPORT"] = strconv.Itoa(pkgConfig.InitOpts.RegistryInfo.NodePort)
 	}
 }
 
 // DEPRECATED_V1.0.0: do not check pkgConfig.InitOpts.StorageClass, always overwrite it.
 func setRegistryStorageClass() {
-	if storageClass, ok := pkgConfig.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"]; ok {
-		if pkgConfig.InitOpts.StorageClass != "" {
-			message.Warn(lang.WarnBothStorageClassesDeprecated)
-		}
-		pkgConfig.InitOpts.StorageClass = storageClass
+	if pkgConfig.InitOpts.StorageClass != "" {
+		message.Warn(lang.WarnBothStorageClassesDeprecated)
 	} else {
-		// if the old way was set (or if the old way is empty)
-		if pkgConfig.InitOpts.StorageClass != "" {
-			pkgConfig.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"] = pkgConfig.InitOpts.StorageClass
-			message.Warn(lang.WarnStorageClassDeprecated)
-		}
+		pkgConfig.InitOpts.StorageClass = pkgConfig.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"]
 	}
 }
 

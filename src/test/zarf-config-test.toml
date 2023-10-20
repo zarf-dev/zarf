@@ -8,7 +8,6 @@ insecure = true
 
 [init]
 components = 'components: 359049b9'
-storage_class = 'storage_class: 9cae917f'
 
 [init.git]
 pull_password = 'git.pull_password: 8522ccca'
