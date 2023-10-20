@@ -1,4 +1,5 @@
 import { Capability, a, Log, K8s, kind } from "pepr";
+import { DeployedPackage } from "./zarf-types";
 
 /**
  *  The Webhook Capability is an example capability to demonstrate using webhooks to interact with Zarf package deployments.
@@ -11,6 +12,8 @@ export const Webhook = new Capability({
   namespaces: ["zarf"],
 });
 
+const webhookName = "test-webhook";
+
 const { When } = Webhook;
 
 When(a.Secret)
@@ -19,7 +22,7 @@ When(a.Secret)
   .WithLabel("package-deploy-info")
   .Mutate(request => {
     const secret = request.Raw;
-    let secretData;
+    let secretData: DeployedPackage;
     let secretString: string;
     let manuallyDecoded = false;
 
@@ -46,7 +49,7 @@ When(a.Secret)
 
         const componentWebhook =
           secretData.componentWebhooks?.[deployedComponent?.name]?.[
-            "test-webhook"
+            webhookName
           ];
 
         // Check if the component has a webhook running for the current package generation
@@ -62,10 +65,11 @@ When(a.Secret)
 
           // Update the secret noting that the webhook is running for this component
           secretData.componentWebhooks[deployedComponent.name] = {
-            "test-webhook": {
-              name: "test-webhook",
+            webhookName: {
+              name: webhookName,
               status: "Running",
               observedGeneration: secretData.generation,
+              waitDurationSeconds: 15,
             },
           };
 
@@ -102,17 +106,16 @@ async function sleepAndChangeStatus(secretName: string, componentName: string) {
   }
 
   const secretString = atob(secret.data.data);
-  const secretData = JSON.parse(secretString);
+  const secretData: DeployedPackage = JSON.parse(secretString);
 
   // Update the webhook status if the observedGeneration matches
   const componentWebhook =
-    secretData.componentWebhooks[componentName]?.["test-webhook"];
+    secretData.componentWebhooks[componentName]?.[webhookName];
 
   if (componentWebhook?.observedGeneration === secretData.generation) {
     componentWebhook.status = "Succeeded";
 
-    secretData.componentWebhooks[componentName]["test-webhook"] =
-      componentWebhook;
+    secretData.componentWebhooks[componentName][webhookName] = componentWebhook;
   }
 
   secret.data.data = btoa(JSON.stringify(secretData));
