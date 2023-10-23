@@ -78,28 +78,37 @@ var initCmd = &cobra.Command{
 	},
 }
 
-// DEPRECATED_V1.0.0: do not check pkgConfig.InitOpts.RegistryInfo.NodePort, always overwrite it.
+// DEPRECATED_V1.0.0: --nodeport should be removed from the cli in v1.0.0
 func setRegistryNodePort() {
-	// TODO: this will always get overriden by the defautls
+	configVar := "REGISTRY_NODEPORT"
 	if pkgConfig.InitOpts.RegistryInfo.NodePort != 0 {
 		message.Warn(lang.WarnNodePortDeprecated)
-	} else {
-		nodePort, err := strconv.Atoi(pkgConfig.PkgOpts.SetVariables["REGISTRY_NODEPORT"])
-		if err == nil && (nodePort >= 30000 || nodePort <= 32767) {
-			// TODO: if the nodeport is out of range, warn that we're putting it back in range
-			pkgConfig.InitOpts.RegistryInfo.NodePort = nodePort
-		} else {
-			pkgConfig.InitOpts.RegistryInfo.NodePort = config.ZarfInClusterContainerRegistryNodePort
-		}
 	}
+	nodePort, err := strconv.Atoi(pkgConfig.PkgOpts.SetVariables[configVar])
+	if err != nil || nodePort < 30000 || nodePort > 32767 {
+		nodePort = pkgConfig.InitOpts.RegistryInfo.NodePort
+	} else {
+		pkgConfig.InitOpts.RegistryInfo.NodePort = nodePort
+	}
+
+	if nodePort > 32767 || nodePort < 30000 {
+		nodePort = config.ZarfInClusterContainerRegistryNodePort
+	}
+	pkgConfig.PkgOpts.SetVariables[configVar] = strconv.Itoa(nodePort)
+	pkgConfig.InitOpts.RegistryInfo.NodePort = nodePort
 }
 
-// DEPRECATED_V1.0.0: do not check pkgConfig.InitOpts.StorageClass, always overwrite it.
+// DEPRECATED_V1.0.0: --storage-class should be removed from the CLI in v1.0.0
 func setRegistryStorageClass() {
+	configVar := "REGISTRY_STORAGE_CLASS"
+	// there is no validation if this storage class is valid
 	if pkgConfig.InitOpts.StorageClass != "" {
-		message.Warn(lang.WarnBothStorageClassesDeprecated)
+		message.Warn(lang.WarnStorageClassDeprecated)
+	}
+	if pkgConfig.PkgOpts.SetVariables[configVar] == "" {
+		pkgConfig.PkgOpts.SetVariables[configVar] = pkgConfig.InitOpts.StorageClass
 	} else {
-		pkgConfig.InitOpts.StorageClass = pkgConfig.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"]
+		pkgConfig.InitOpts.StorageClass = pkgConfig.PkgOpts.SetVariables[configVar]
 	}
 }
 

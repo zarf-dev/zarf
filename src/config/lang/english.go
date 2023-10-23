@@ -34,11 +34,8 @@ const (
 // Zarf CLI deprecation warnings
 const (
 	// remove deprecation in v1.0.0
-	WarnBothNodePortSchemesDeprecated = "--set REGISTRY_NODEPORT=<value> will override --nodeport <value>"
-	WarnStorageClassDeprecated        = "--set REGISTRY_STORAGE_CLASS=<value> will override --storage-class <value>"
-	WarnBothStorageClassesDeprecated  = "--set REGISTRY_STORAGE_CLASS=<value> will override --storage-class <value>"
-	WarnNodePortDeprecated            = "--nodeport <value> is deprecated, please use --set REGISTRY_NODEPORT=<value> instead"
-	FatalNodeportInvalid              = "Nodeport must be in the range [30000-32767]"
+	WarnStorageClassDeprecated = "--storage-class <value> is deprecated, please use --set REGISTRY_STORAGE_CLASS=<value>"
+	WarnNodePortDeprecated     = "--nodeport <value> is deprecated, please use --set REGISTRY_NODEPORT=<value>"
 )
 
 // Zarf CLI commands.
