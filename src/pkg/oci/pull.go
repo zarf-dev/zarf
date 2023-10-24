@@ -15,6 +15,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -121,8 +122,17 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 			return nil, err
 		}
 		for image := range images {
+			// use docker's transform lib to parse the image ref
+			// this properly mirrors the logic within create
+			refInfo, err := transform.ParseImageRef(image)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse image ref %q: %w", image, err)
+			}
+
 			manifestDescriptor := helpers.Find(index.Manifests, func(layer ocispec.Descriptor) bool {
-				return layer.Annotations[ocispec.AnnotationBaseImageName] == image
+				return layer.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Reference ||
+					// A backwards compatibility shim for older Zarf versions that would leave docker.io off of image annotations
+					(layer.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Path+refInfo.TagOrDigest && refInfo.Host == "docker.io")
 			})
 
 			// even though these are technically image manifests, we store them as Zarf blobs
