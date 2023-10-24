@@ -92,8 +92,8 @@ func setRegistryNodePort() {
 	}
 
 	// 0 is unset, which will allow changing.
-	if nodePort > 32767 || nodePort < 30000 || nodePort != 0 {
-		nodePort = config.ZarfInClusterContainerRegistryNodePort
+	if nodePort > 32767 || nodePort < 30000 {
+		nodePort = 0
 	}
 	pkgConfig.PkgOpts.SetVariables[configVar] = strconv.Itoa(nodePort)
 	pkgConfig.InitOpts.RegistryInfo.NodePort = nodePort
