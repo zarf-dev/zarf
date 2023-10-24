@@ -113,17 +113,17 @@ var prepareComputeFileSha256sum = &cobra.Command{
 			fileName = downloadPath
 
 			defer os.RemoveAll(tmp)
-		} else {
-			if extractPath != "" {
+		}
+
+		if extractPath != "" {
+			if tmp == "" {
 				tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
 				if err != nil {
 					message.Fatalf(err, lang.CmdPrepareSha256sumHashErr, err.Error())
 				}
 				defer os.RemoveAll(tmp)
 			}
-		}
 
-		if extractPath != "" {
 			extractedFile := filepath.Join(tmp, extractPath)
 
 			err = archiver.Extract(fileName, extractPath, tmp)
