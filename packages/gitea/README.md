@@ -8,7 +8,7 @@ The default setup for this package is to use a `rootless` image, specified in th
 
 _Make sure, though, that the `x.x.x-rootless` tag does exist for Zarf to find._
 
-```
+```bash
 $ zarf package create . --set GITEA_IMAGE="custom.enterprise.corp/ironbank/opensource/gitea" \
   --set GITEA_SERVER_VERSION="v1.19.3"
 ```

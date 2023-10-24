@@ -74,7 +74,7 @@ For other components, or older versions of Zarf, you can modify the manifests of
 
 If your enterprise uses pull-through mirrors to host vetted images you can run the following command to create a Zarf 'init' package from those mirrors (where `<registry>.enterprise.corp` are your enterprise mirror(s)):
 
-```
+```bash
 $ zarf package create . --set AGENT_IMAGE_TAG=vX.X.X \
   --registry-override docker.io=dockerio.enterprise.corp \
   --registry-override ghcr.io=ghcr.enterprise.corp \
@@ -83,7 +83,7 @@ $ zarf package create . --set AGENT_IMAGE_TAG=vX.X.X \
 
 And if you need even more control over the exact Agent, Registry, and Gitea images you can specify that with additional `--set` flags:
 
-```
+```bash
 $ zarf package create . \
 --set AGENT_IMAGE_TAG=$(zarf version) \
 --set AGENT_IMAGE="opensource/zarf" \
