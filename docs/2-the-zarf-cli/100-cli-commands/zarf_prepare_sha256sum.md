@@ -10,7 +10,8 @@ zarf prepare sha256sum { FILE | URL } [flags]
 ## Options
 
 ```
-  -h, --help   help for sha256sum
+  -e, --extract-path string   The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")
+  -h, --help                  help for sha256sum
 ```
 
 ## Options inherited from parent commands
