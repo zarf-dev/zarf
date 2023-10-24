@@ -26,7 +26,7 @@ func ValidateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 		return err
 	}
 	if err := schema.Validate(bytes.NewReader(zarfYamlAsJsonBytes)); err != nil {
-		return fmt.Errorf("this is an error I'm messing with %s", err)
+		return fmt.Errorf("schema validation error: %s", err)
 	}
 
 	return nil

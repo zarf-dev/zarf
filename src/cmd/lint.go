@@ -30,7 +30,9 @@ var lintCmd = &cobra.Command{
 			}
 		}
 		err := lint.ValidateZarfSchema(baseDir)
-		message.Fatal(err, err.Error())
+		if err != nil {
+			message.Fatal(err, err.Error())
+		}
 	},
 }
 

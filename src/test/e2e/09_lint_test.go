@@ -10,11 +10,19 @@ import (
 func TestLint(t *testing.T) {
 	t.Log("E2E: Lint")
 
-	t.Run("zarf test lint", func(t *testing.T) {
+	t.Run("zarf test lint fail", func(t *testing.T) {
 		t.Log("E2E: Test lint on schema")
 
-		path := filepath.Join("src", "test", "packages", "09-lint")
+		path := filepath.Join("src", "test", "packages", "09-lint", "invalid_yaml")
 		_, _, err := e2e.Zarf("lint", path)
-		require.Error(t, err, "We should get an error here because the yaml file is bad")
+		require.Error(t, err, "Expect error here because the yaml file is not following schema")
+	})
+
+	t.Run("zarf test lint success", func(t *testing.T) {
+		t.Log("E2E: Test lint on schema")
+
+		path := filepath.Join("src", "test", "packages", "09-lint", "valid_yaml")
+		_, _, err := e2e.Zarf("lint", path)
+		require.NoError(t, err, "Expect no error here because the yaml file is following schema")
 	})
 }

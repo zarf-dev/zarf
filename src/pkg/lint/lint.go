@@ -9,6 +9,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
@@ -24,5 +25,6 @@ func ValidateZarfSchema(baseDir string) (err error) {
 		return err
 	}
 
+	message.Success("Validation successful")
 	return nil
 }
