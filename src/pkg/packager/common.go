@@ -21,6 +21,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
+	"k8s.io/utils/strings/slices"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
@@ -223,6 +224,16 @@ func (p *Packager) isConnectedToCluster() bool {
 	return p.cluster != nil
 }
 
+// hasImages returns whether the current package contains images
+func (p *Packager) hasImages() bool {
+	for _, component := range p.cfg.Pkg.Components {
+		if len(component.Images) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
 func (p *Packager) attemptClusterChecks() (err error) {
@@ -260,19 +271,19 @@ func (p *Packager) attemptClusterChecks() (err error) {
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() error {
-	// Ignore this check if the architecture is explicitly "multi" or we don't have a cluster connection
-	if p.arch == "multi" || !p.isConnectedToCluster() {
+	// Ignore this check if the architecture is explicitly "multi", we don't have a cluster connection, or the package contains no images
+	if p.arch == "multi" || !p.isConnectedToCluster() || !p.hasImages() {
 		return nil
 	}
 
-	clusterArch, err := p.cluster.GetArchitecture()
+	clusterArchitectures, err := p.cluster.GetArchitectures()
 	if err != nil {
 		return lang.ErrUnableToCheckArch
 	}
 
 	// Check if the package architecture and the cluster architecture are the same.
-	if p.arch != clusterArch {
-		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+	if !slices.Contains(clusterArchitectures, p.arch) {
+		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, strings.Join(clusterArchitectures, ", "))
 	}
 
 	return nil

@@ -35,18 +35,12 @@ const (
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
 func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 	var (
-		clusterArch string
-		distro      string
-		err         error
+		distro string
+		err    error
 	)
 
 	spinner := message.NewProgressSpinner("Gathering cluster state information")
 	defer spinner.Stop()
-
-	spinner.Updatef("Getting cluster architecture")
-	if clusterArch, err = c.GetArchitecture(); err != nil {
-		spinner.Errorf(err, "Unable to validate the cluster system architecture")
-	}
 
 	// Attempt to load an existing state prior to init.
 	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
@@ -77,7 +71,6 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 
 		// Defaults
 		state.Distro = distro
-		state.Architecture = clusterArch
 		state.LoggingSecret = utils.RandomString(config.ZarfGeneratedPasswordLen)
 
 		// Setup zarf agent PKI
@@ -132,10 +125,6 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 			message.Warn("Detected a change in Artifact Server init options on a re-init. Ignoring... To update run:")
 			message.ZarfCommand("tools update-creds artifact")
 		}
-	}
-
-	if clusterArch != state.Architecture {
-		return fmt.Errorf("cluster architecture %s does not match the Zarf state architecture %s", clusterArch, state.Architecture)
 	}
 
 	switch state.Distro {
