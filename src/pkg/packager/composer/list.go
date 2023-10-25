@@ -363,13 +363,11 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 		return composed, err
 	}
 
-	// fix paths on the tail
-	fixPaths(&ic.tail.ZarfComponent, ic.tail.relativeToHead)
-	// save mutated tail
-	composed = ic.tail.ZarfComponent
+	// start with an empty component to compose into
+	composed = types.ZarfComponent{}
 
-	// dont compose 2x
-	node := ic.tail.prev
+	// start overriding with the tail node
+	node := ic.tail
 	for node != nil {
 		fixPaths(&node.ZarfComponent, node.relativeToHead)
 
@@ -380,6 +378,9 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 		overrideActions(&composed, node.ZarfComponent)
 
 		composeExtensions(&composed, node.ZarfComponent, node.relativeToHead)
+
+		node = node.prev
+	}
 
 		node = node.prev
 	}
