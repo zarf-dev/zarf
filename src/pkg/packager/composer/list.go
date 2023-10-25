@@ -382,9 +382,6 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 		node = node.prev
 	}
 
-		node = node.prev
-	}
-
 	return composed, nil
 }
 
