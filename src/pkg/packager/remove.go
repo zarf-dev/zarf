@@ -68,11 +68,9 @@ func (p *Packager) Remove() (err error) {
 	deployedPackage := &types.DeployedPackage{}
 
 	if requiresCluster {
-		if !p.isConnectedToCluster() {
-			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout)
-			if err != nil {
-				return err
-			}
+		err = p.connectToCluster(cluster.DefaultTimeout)
+		if err != nil {
+			return err
 		}
 		deployedPackage, err = p.cluster.GetDeployedPackage(packageName)
 		if err != nil {

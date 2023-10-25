@@ -40,7 +40,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 		err         error
 	)
 
-	spinner := message.NewProgressSpinner("Gathering cluster information")
+	spinner := message.NewProgressSpinner("Gathering cluster state information")
 	defer spinner.Stop()
 
 	spinner.Updatef("Getting cluster architecture")

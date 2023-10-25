@@ -70,5 +70,11 @@ func NewCluster() (*Cluster, error) {
 		return nil, err
 	}
 
+	// Dogsled the version output. We just want to ensure no errors were returned to validate cluster connection.
+	_, err = c.GetServerVersion()
+	if err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }

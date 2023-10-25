@@ -34,15 +34,16 @@ type TarballSource struct {
 func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
 	var pkg types.ZarfPackage
 
-	message.Debugf("Loading package from %q", s.PackageSource)
+	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)
+	defer spinner.Stop()
+
+	pathsExtracted := []string{}
 
 	if s.Shasum != "" {
 		if err := utils.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
 			return err
 		}
 	}
-
-	pathsExtracted := []string{}
 
 	// Walk the package so that was can dynamically load a .tar or a .tar.zst without caring about filenames.
 	err = archiver.Walk(s.PackageSource, func(f archiver.File) error {
@@ -121,6 +122,8 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool)
 			}
 		}
 	}
+
+	spinner.Success()
 
 	return nil
 }

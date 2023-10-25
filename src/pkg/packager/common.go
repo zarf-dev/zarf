@@ -6,11 +6,13 @@ package packager
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -25,6 +27,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
@@ -199,6 +202,60 @@ func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
 	_ = os.RemoveAll(p.layout.Base)
 	_ = os.RemoveAll(layout.SBOMDir)
+}
+
+// connectToCluster attempts to connect to a cluster if a connection is not already established
+func (p *Packager) connectToCluster(timeout time.Duration) (err error) {
+	if p.isConnectedToCluster() {
+		return nil
+	}
+
+	p.cluster, err = cluster.NewClusterWithWait(timeout)
+	if err != nil {
+		return err
+	}
+
+	return p.attemptClusterChecks()
+}
+
+// isConnectedToCluster returns whether the current packager instance is connected to a cluster
+func (p *Packager) isConnectedToCluster() bool {
+	return p.cluster != nil
+}
+
+// attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
+// NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
+func (p *Packager) attemptClusterChecks() (err error) {
+
+	spinner := message.NewProgressSpinner("Gathering additional cluster information (if available)")
+	defer spinner.Stop()
+
+	// Check if the package has already been deployed and get its generation
+	if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
+		// If this package has been deployed before, increment the package generation within the secret
+		p.generation = existingDeployedPackage.Generation + 1
+	}
+
+	// Check the clusters architecture matches the package spec
+	if err := p.validatePackageArchitecture(); err != nil {
+		if errors.Is(err, lang.ErrUnableToCheckArch) {
+			message.Warnf("Unable to validate package architecture: %s", err.Error())
+		} else {
+			return err
+		}
+	}
+
+	// Check for any breaking changes between the initialized Zarf version and this CLI
+	if existingInitPackage, _ := p.cluster.GetDeployedPackage("init"); existingInitPackage != nil {
+		// Use the build version instead of the metadata since this will support older Zarf versions
+		deprecated.PrintBreakingChanges(existingInitPackage.Data.Build.Version)
+	} else {
+		message.Warnf("Unable to retrieve the initialized Zarf version.  There is potential for breaking changes.")
+	}
+
+	spinner.Success()
+
+	return nil
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.

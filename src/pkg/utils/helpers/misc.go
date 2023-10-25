@@ -193,3 +193,12 @@ func StringToSlice(s string) []string {
 
 	return []string{}
 }
+
+func AppendIfNotExists(slice []string, item string) []string {
+	for _, s := range slice {
+		if s == item {
+			return slice
+		}
+	}
+	return append(slice, item)
+}

@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,7 +14,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
@@ -37,6 +35,7 @@ func (p *Packager) Deploy() (err error) {
 	if err = p.source.LoadPackage(p.layout, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
+
 	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
@@ -85,64 +84,6 @@ func (p *Packager) Deploy() (err error) {
 	p.printTablesForDeployment(deployedComponents)
 
 	return nil
-}
-
-// attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
-// NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
-func (p *Packager) attemptClusterChecks() (err error) {
-	if !p.isConnectedToCluster() {
-		return nil
-	}
-	// Check if the package has already been deployed and get its generation
-	if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
-		// If this package has been deployed before, increment the package generation within the secret
-		p.generation = existingDeployedPackage.Generation + 1
-	}
-
-	// Check the clusters architecture vs the package spec
-	if err := p.validatePackageArchitecture(); err != nil {
-		if errors.Is(err, lang.ErrUnableToCheckArch) {
-			message.Warnf("Unable to validate package architecture: %s", err.Error())
-		} else {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (p *Packager) isConnectedToCluster() bool {
-	return p.cluster != nil
-}
-
-func (p *Packager) connectToCluster() (err error) {
-	if p.isConnectedToCluster() {
-		// TODO: what is the best way to handle this?
-		old := p.cluster.RestConfig.String()
-
-		// If we are already connected to the cluster, check if the server name has changed
-		cluster, err := cluster.NewCluster()
-		if err != nil {
-			return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
-		}
-
-		if old != cluster.RestConfig.String() {
-			message.Warnf("The Kubernetes cluster has changed from %q to %q", old, cluster.RestConfig.ServerName)
-
-			p.cluster = cluster
-
-			return p.attemptClusterChecks()
-		}
-
-		return nil
-	}
-
-	p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout)
-	if err != nil {
-		return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
-	}
-
-	return p.attemptClusterChecks()
 }
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
@@ -243,7 +184,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if p.requiresCluster(component) && p.cfg.State == nil {
-		if err := p.connectToCluster(); err != nil {
+		if err := p.connectToCluster(5 * time.Minute); err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
 
@@ -312,7 +253,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
 		// Make sure we have access to the cluster
-		if err := p.connectToCluster(); err != nil {
+		if err := p.connectToCluster(cluster.DefaultTimeout); err != nil {
 			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 		}
 

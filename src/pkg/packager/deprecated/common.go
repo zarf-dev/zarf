@@ -119,5 +119,7 @@ func PrintBreakingChanges(deployedZarfVersion string) {
 			pterm.Printfln("\n  - %s", pterm.Bold.Sprint("Mitigation:"))
 			pterm.Printfln("    %s", strings.ReplaceAll(mitigationText, "\n", "\n    "))
 		}
+
+		message.HorizontalRule()
 	}
 }
