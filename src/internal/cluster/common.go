@@ -60,7 +60,7 @@ func NewClusterWithWait(timeout time.Duration) (*Cluster, error) {
 	return c, nil
 }
 
-// NewCluster creates a new Cluster instance.
+// NewCluster creates a new Cluster instance and validates connection to the cluster by fetching the Kubernetes version.
 func NewCluster() (*Cluster, error) {
 	c := &Cluster{}
 	var err error
