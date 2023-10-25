@@ -6,7 +6,6 @@ package composer
 
 import (
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -24,7 +23,6 @@ func composeExtensions(c *types.ZarfComponent, override types.ZarfComponent, rel
 		} else {
 			if override.Extensions.BigBang.ValuesFiles != nil {
 				c.Extensions.BigBang.ValuesFiles = append(c.Extensions.BigBang.ValuesFiles, override.Extensions.BigBang.ValuesFiles...)
-				message.Warnf("%s", c.Extensions.BigBang.ValuesFiles)
 			}
 			if override.Extensions.BigBang.FluxPatchFiles != nil {
 				c.Extensions.BigBang.FluxPatchFiles = append(c.Extensions.BigBang.FluxPatchFiles, override.Extensions.BigBang.FluxPatchFiles...)

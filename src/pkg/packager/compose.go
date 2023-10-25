@@ -19,9 +19,9 @@ func (p *Packager) composeComponents() error {
 
 	for _, component := range p.cfg.Pkg.Components {
 		arch := p.arch
-		// filter by architecture if set, otherwise use system architecture
-		if component.Only.Cluster.Architecture != "" {
-			arch = component.Only.Cluster.Architecture
+		// filter by architecture
+		if component.Only.Cluster.Architecture != "" && component.Only.Cluster.Architecture != arch {
+			continue
 		}
 
 		// build the import chain
