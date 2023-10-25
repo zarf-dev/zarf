@@ -31,12 +31,6 @@ func (p *Packager) composeComponents() error {
 		}
 		message.Debugf("%s", chain)
 
-		if chain.ContainsOCIImport() {
-			url, name := chain.OCIImportDefinition()
-			// Save all the OCI imported components into our build data
-			p.cfg.Pkg.Build.OCIImportedComponents[url] = name
-		}
-
 		// migrate any deprecated component configurations now
 		warnings := chain.Migrate(p.cfg.Pkg.Build)
 		p.warnings = append(p.warnings, warnings...)

@@ -40,14 +40,6 @@ func (ic *ImportChain) ContainsOCIImport() bool {
 	return ic.tail.prev != nil && ic.tail.prev.Import.URL != ""
 }
 
-// OCIImportDefinition returns the url and name of the remote import
-func (ic *ImportChain) OCIImportDefinition() (string, string) {
-	if !ic.ContainsOCIImport() {
-		return "", ""
-	}
-	return ic.tail.prev.Import.URL, ic.tail.prev.ImportName()
-}
-
 func (ic *ImportChain) fetchOCISkeleton() error {
 	if !ic.ContainsOCIImport() {
 		return nil

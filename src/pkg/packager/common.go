@@ -94,10 +94,6 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 		cfg.SetVariableMap = make(map[string]*types.ZarfSetVariable)
 	}
 
-	if cfg.Pkg.Build.OCIImportedComponents == nil {
-		cfg.Pkg.Build.OCIImportedComponents = make(map[string]string)
-	}
-
 	var (
 		err  error
 		pkgr = &Packager{

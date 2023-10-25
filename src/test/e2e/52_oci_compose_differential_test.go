@@ -92,8 +92,6 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	// Check the metadata and build data for the normal package
 	suite.Equal(normalZarfConfig.Metadata.Version, "v0.24.0")
 	suite.False(normalZarfConfig.Build.Differential)
-	suite.Len(normalZarfConfig.Build.OCIImportedComponents, 1)
-	suite.Equal(normalZarfConfig.Build.OCIImportedComponents["oci://127.0.0.1:555/helm-charts:0.0.1-skeleton"], "demo-helm-oci-chart")
 
 	// Check the component data for the normal package
 	suite.Len(normalZarfConfig.Components, 3)
@@ -111,7 +109,6 @@ func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
 	suite.True(differentialZarfConfig.Build.Differential)
 	suite.Len(differentialZarfConfig.Build.DifferentialMissing, 1)
 	suite.Equal(differentialZarfConfig.Build.DifferentialMissing[0], "demo-helm-oci-chart")
-	suite.Len(differentialZarfConfig.Build.OCIImportedComponents, 0)
 
 	// Check the component data for the differential package
 	suite.Len(differentialZarfConfig.Components, 2)
