@@ -6,6 +6,7 @@ package composer
 
 import (
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
