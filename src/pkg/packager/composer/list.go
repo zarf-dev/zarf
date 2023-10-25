@@ -73,12 +73,8 @@ func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string, vars
 		ic.head = node
 		ic.tail = node
 	} else {
-		p := ic.head
-		for p.next != nil {
-			p = p.next
-		}
+		p := ic.tail
 		node.prev = p
-
 		p.next = node
 		ic.tail = node
 	}
