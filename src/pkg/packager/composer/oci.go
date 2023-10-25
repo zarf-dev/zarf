@@ -18,7 +18,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2/content"
 	ocistore "oras.land/oras-go/v2/content/oci"
 )
 
@@ -92,16 +91,8 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 			return err
 		} else if !exists {
 			copyOpts := remote.CopyOpts
-			// TODO: investigate why the default FindSuccessors in CopyWithProgress is not working
-			copyOpts.FindSuccessors = content.Successors
 			if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, copyOpts, cache); err != nil {
 				return err
-			}
-			exists, err := store.Exists(ctx, componentDesc)
-			if err != nil {
-				return err
-			} else if !exists {
-				return fmt.Errorf("failed to fetch remote component: %+v", componentDesc)
 			}
 		}
 	}

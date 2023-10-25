@@ -47,8 +47,7 @@ func (p *Packager) composeComponents() error {
 		pkgConsts = chain.MergeConstants(pkgConsts)
 	}
 
-	// Update the parent package config with the expanded sub components.
-	// This is important when the deploy package is created.
+	// set the filtered + composed components
 	p.cfg.Pkg.Components = components
 
 	p.cfg.Pkg.Variables = pkgVars
