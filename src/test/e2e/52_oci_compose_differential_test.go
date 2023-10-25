@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	"github.com/stretchr/testify/require"
@@ -31,7 +30,7 @@ var (
 	differentialPackageName = ""
 	normalPackageName       = ""
 	examplePackagePath      = filepath.Join("examples", "helm-charts")
-	anotherPackagePath      = filepath.Join("src", "test", "packages", "52-oci-differential")
+	anotherPackagePath      = filepath.Join("src", "test", "packages", "52-differential")
 )
 
 func (suite *OCIDifferentialSuite) SetupSuite() {
@@ -46,8 +45,7 @@ func (suite *OCIDifferentialSuite) SetupSuite() {
 }
 
 func (suite *OCIDifferentialSuite) TearDownSuite() {
-	_, _, err := exec.Cmd("docker", "rm", "-f", "registry")
-	suite.NoError(err)
+	e2e.TeardownRegistry(suite.T(), 555)
 }
 
 func (suite *OCIDifferentialSuite) Test_0_Create_Differential_OCI() {
