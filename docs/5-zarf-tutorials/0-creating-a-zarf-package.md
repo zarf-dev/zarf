@@ -230,7 +230,7 @@ To add this to our `zarf.yaml` we can simply specify it under our `wordpress` co
 
 Once you have followed the above you should now have a `zarf.yaml` file that matches the one found on the [WordPress example page](../../examples/wordpress/README.md).
 
-Creating this package is as simple as running the `zarf package create` command with the directory containing our `zarf.yaml`.  Zarf will show us the `zarf.yaml` one last time asking if we would like to build the package, and will ask us for a maximum package size (useful if you need to split a package across multiple [Compact Discs](https://en.wikipedia.org/wiki/Compact_disc)).  Upon confirmation Zarf will pull down all of the resources and bundle them into a package tarball.
+Creating this package is as simple as running the `zarf package create` command with the directory containing our `zarf.yaml`.  Zarf will show us the `zarf.yaml` one last time asking if we would like to build the package, and upon confirmation Zarf will pull down all of the resources and bundle them into a package tarball.
 
 ```bash
 zarf package create .
@@ -246,15 +246,11 @@ You can skip this confirmation by adding the `--confirm` flag when running the c
 
 :::
 
-After you confirm package creation, you have the option to specify a maximum file size for the package. To disable this feature, enter `0`.
-
-<iframe src="/docs/tutorials/package_create_size.html" height="100px" width="100%"></iframe>
-
 This will create a zarf package in the current directory with a package name that looks something like `zarf-package-wordpress-amd64-16.0.4.tar.zst`, although it might be slightly different depending on your system architecture.
 
 :::tip
 
-You can learn more about what is going on behind the scenes of this process on the [package create lifecycle page](../3-create-a-zarf-package/5-package-create-lifecycle.md), and can view other useful command flags like `--differential` and `--registry-override` on the [package create command flags page](../2-the-zarf-cli/100-cli-commands/zarf_package_create.md).
+You can learn more about what is going on behind the scenes of this process on the [package create lifecycle page](../3-create-a-zarf-package/5-package-create-lifecycle.md), and can view other useful command flags like `--max-package-size`, `--differential` and `--registry-override` on the [package create command flags page](../2-the-zarf-cli/100-cli-commands/zarf_package_create.md).
 
 :::
 
