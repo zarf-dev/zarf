@@ -194,6 +194,7 @@ func StringToSlice(s string) []string {
 	return []string{}
 }
 
+// AppendIfNotExists appends a string to a slice of strings if it is not present already on the slice.
 func AppendIfNotExists(slice []string, item string) []string {
 	for _, s := range slice {
 		if s == item {
