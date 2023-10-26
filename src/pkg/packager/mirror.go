@@ -11,7 +11,6 @@ import (
 	"slices"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -19,13 +18,6 @@ import (
 
 // Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
 func (p *Packager) Mirror() (err error) {
-	// Attempt to connect to a Kubernetes cluster.
-	// Not all packages require Kubernetes, so we only want to log a debug message rather than return the error when we can't connect to a cluster.
-	p.cluster, err = cluster.NewCluster()
-	if err != nil {
-		message.Debug(err)
-	}
-
 	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
