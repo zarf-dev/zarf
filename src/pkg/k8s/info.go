@@ -114,7 +114,7 @@ func (k *K8s) DetectDistro() (string, error) {
 	return DistroIsUnknown, nil
 }
 
-// GetArchitecture returns the cluster system architecture if found or an error if not.
+// GetArchitectures returns the cluster system architecture if found or an error if not.
 func (k *K8s) GetArchitectures() ([]string, error) {
 	nodes, err := k.GetNodes()
 	if err != nil {

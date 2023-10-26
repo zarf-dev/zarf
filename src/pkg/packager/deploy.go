@@ -108,6 +108,19 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			Status:             types.ComponentStatusDeploying,
 			ObservedGeneration: p.generation,
 		}
+
+		// If this component requires a cluster, connect to one
+		if p.requiresCluster(component) {
+			timeout := cluster.DefaultTimeout
+			if p.isInitConfig() {
+				timeout = 5 * time.Minute
+			}
+
+			if err := p.connectToCluster(timeout); err != nil {
+				return deployedComponents, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+			}
+		}
+
 		// Ensure we don't overwrite any installedCharts data when updating the package secret
 		if p.isConnectedToCluster() {
 			deployedComponent.InstalledCharts, err = p.cluster.GetInstalledChartsForComponent(p.cfg.Pkg.Metadata.Name, component)
@@ -129,7 +142,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Deploy the component
 		var charts []types.InstalledChart
 		var deployErr error
-		if p.cfg.Pkg.Kind == types.ZarfInitConfig {
+		if p.isInitConfig() {
 			charts, deployErr = p.deployInitComponent(component)
 		} else {
 			charts, deployErr = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
@@ -184,10 +197,6 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if p.requiresCluster(component) && p.cfg.State == nil {
-		if err := p.connectToCluster(5 * time.Minute); err != nil {
-			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
-		}
-
 		err = p.cluster.InitZarfState(p.cfg.InitOpts)
 		if err != nil {
 			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -252,11 +261,6 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	}
 
 	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
-		// Make sure we have access to the cluster
-		if err := p.connectToCluster(cluster.DefaultTimeout); err != nil {
-			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
-		}
-
 		// Setup the state in the config and get the valuesTemplate
 		p.valueTemplate, err = p.setupStateValuesTemplate(component)
 		if err != nil {
@@ -589,7 +593,7 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 	pterm.Println()
 
 	// If not init config, print the application connection table
-	if !(p.cfg.Pkg.Kind == types.ZarfInitConfig) {
+	if !p.isInitConfig() {
 		message.PrintConnectStringTable(p.connectStrings)
 	} else {
 		// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds

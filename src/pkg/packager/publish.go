@@ -133,7 +133,7 @@ func (p *Packager) loadSkeleton() (err error) {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 
-	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
+	if p.isInitConfig() {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 	}
 

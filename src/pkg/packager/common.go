@@ -178,7 +178,7 @@ func GetInitPackageName(arch string) string {
 
 // GetPackageName returns the formatted name of the package.
 func (p *Packager) GetPackageName() string {
-	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
+	if p.isInitConfig() {
 		return GetInitPackageName(p.arch)
 	}
 
@@ -222,6 +222,11 @@ func (p *Packager) connectToCluster(timeout time.Duration) (err error) {
 // isConnectedToCluster returns whether the current packager instance is connected to a cluster
 func (p *Packager) isConnectedToCluster() bool {
 	return p.cluster != nil
+}
+
+// isInitConfig returns whether the current packager instance is deploying an init config
+func (p *Packager) isInitConfig() bool {
+	return p.cfg.Pkg.Kind == types.ZarfInitConfig
 }
 
 // hasImages returns whether the current package contains images
