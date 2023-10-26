@@ -24,7 +24,8 @@ func TestValidatePackageArchitecture(t *testing.T) {
 	type testCase struct {
 		name          string
 		pkgArch       string
-		clusterArch   string
+		clusterArchs  []string
+		images        []string
 		expectedError error
 		getArchError  error
 	}
@@ -33,24 +34,41 @@ func TestValidatePackageArchitecture(t *testing.T) {
 		{
 			name:          "architecture match",
 			pkgArch:       "amd64",
-			clusterArch:   "amd64",
+			clusterArchs:  []string{"amd64"},
+			images:        []string{"nginx"},
 			expectedError: nil,
 		},
 		{
 			name:          "architecture mismatch",
 			pkgArch:       "arm64",
-			clusterArch:   "amd64",
+			clusterArchs:  []string{"amd64"},
+			images:        []string{"nginx"},
 			expectedError: fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, "arm64", "amd64"),
+		},
+		{
+			name:          "multiple cluster architectures",
+			pkgArch:       "arm64",
+			clusterArchs:  []string{"amd64", "arm64"},
+			images:        []string{"nginx"},
+			expectedError: nil,
 		},
 		{
 			name:          "ignore validation when package arch equals 'multi'",
 			pkgArch:       "multi",
-			clusterArch:   "not evaluated",
+			clusterArchs:  []string{"not evaluated"},
+			expectedError: nil,
+		},
+		{
+			name:          "ignore validation when a package doesn't contain images",
+			pkgArch:       "amd64",
+			images:        []string{},
+			clusterArchs:  []string{"not evaluated"},
 			expectedError: nil,
 		},
 		{
 			name:          "test the error path when fetching cluster architecture fails",
 			pkgArch:       "amd64",
+			images:        []string{"nginx"},
 			getArchError:  errors.New("error fetching cluster architecture"),
 			expectedError: lang.ErrUnableToCheckArch,
 		},
@@ -74,6 +92,15 @@ func TestValidatePackageArchitecture(t *testing.T) {
 						Log:       logger,
 					},
 				},
+				cfg: &types.PackagerConfig{
+					Pkg: types.ZarfPackage{
+						Components: []types.ZarfComponent{
+							{
+								Images: testCase.images,
+							},
+						},
+					},
+				},
 			}
 
 			// Set up test data for fetching cluster architecture.
@@ -83,17 +110,21 @@ func TestValidatePackageArchitecture(t *testing.T) {
 					return true, nil, testCase.getArchError
 				}
 
-				// Create a NodeList object to fetch cluster architecture with the mock client.
-				nodeList := &v1.NodeList{
-					Items: []v1.Node{
-						{
-							Status: v1.NodeStatus{
-								NodeInfo: v1.NodeSystemInfo{
-									Architecture: testCase.clusterArch,
-								},
+				nodeItems := []v1.Node{}
+
+				for _, arch := range testCase.clusterArchs {
+					nodeItems = append(nodeItems, v1.Node{
+						Status: v1.NodeStatus{
+							NodeInfo: v1.NodeSystemInfo{
+								Architecture: arch,
 							},
 						},
-					},
+					})
+				}
+
+				// Create a NodeList object to fetch cluster architecture with the mock client.
+				nodeList := &v1.NodeList{
+					Items: nodeItems,
 				}
 				return true, nodeList, nil
 			})
