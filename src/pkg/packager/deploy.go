@@ -262,7 +262,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
 		// Setup the state in the config and get the valuesTemplate
-		p.valueTemplate, err = p.setupStateValuesTemplate(component)
+		p.valueTemplate, err = p.setupStateValuesTemplate()
 		if err != nil {
 			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
 		}
@@ -391,8 +391,8 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 	return nil
 }
 
-// Fetch the current ZarfState from the k8s cluster and generate a p.valueTemplate from the state values.
-func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values *template.Values, err error) {
+// setupStateValuesTemplate fetched the current ZarfState from the k8s cluster and generate a p.valueTemplate from the state values.
+func (p *Packager) setupStateValuesTemplate() (values *template.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
