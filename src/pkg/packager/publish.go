@@ -26,7 +26,7 @@ import (
 // Publish publishes the package to a registry
 func (p *Packager) Publish() (err error) {
 	_, isOCISource := p.source.(*sources.OCISource)
-	if isOCISource {
+	if isOCISource && p.cfg.PublishOpts.SigningKeyPath == "" {
 		ctx := context.TODO()
 		// oci --> oci is a special case, where we will use oci.CopyPackage so that we can transfer the package
 		// w/o layers touching the filesystem

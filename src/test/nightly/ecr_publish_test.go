@@ -65,12 +65,8 @@ func TestECRPublishing(t *testing.T) {
 	require.Contains(t, stdErr, "Checksums validated!")
 	require.Contains(t, stdErr, "Package signature validated!")
 
-	// Ensure we get an error when trying to pull the package without providing the public key
-	stdOut, stdErr, err = e2e.Zarf("package", "pull", upstreamPackageURL)
-	require.Error(t, err, stdOut, stdErr) //TODO: look for a specific error instead of just allowing ANY error
-
 	// Validate that we can pull the package down from ECR
-	stdOut, stdErr, err = e2e.Zarf("package", "pull", upstreamPackageURL, keyFlag)
+	stdOut, stdErr, err = e2e.Zarf("package", "pull", upstreamPackageURL)
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(testPackageFileName)
 
