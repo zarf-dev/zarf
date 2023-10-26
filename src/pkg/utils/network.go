@@ -19,22 +19,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
-// Fetch fetches the response body from a given URL.
-func Fetch(url string) io.ReadCloser {
-	// Get the data
-	resp, err := http.Get(url)
-	if err != nil {
-		message.Fatal(err, "Unable to download the file")
-	}
-
-	// Check server response
-	if resp.StatusCode != http.StatusOK {
-		message.Fatalf(nil, "Bad HTTP status: %s", resp.Status)
-	}
-
-	return resp.Body
-}
-
 func parseChecksum(src string) (string, string, error) {
 	atSymbolCount := strings.Count(src, "@")
 	var checksum string
