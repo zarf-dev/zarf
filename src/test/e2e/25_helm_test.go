@@ -144,7 +144,7 @@ func testHelmAdoption(t *testing.T) {
 
 	// Deploy dos-games manually into the cluster without Zarf
 	kubectlOut, _, _ := e2e.Kubectl("apply", "-f", deploymentManifest)
-	require.Contains(t, string(kubectlOut), "deployment.apps/game created")
+	require.Contains(t, string(kubectlOut), "deployment.apps/game configured")
 
 	// Deploy dos-games into the cluster with Zarf
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", packagePath, "--confirm", "--adopt-existing-resources")
