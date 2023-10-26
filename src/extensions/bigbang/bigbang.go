@@ -291,16 +291,40 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 	return c, nil
 }
 
-// Compose mutates a component so that the valuesFiles are relative to the parent importing component
-func Compose(pathAncestry string, c types.ZarfComponent) types.ZarfComponent {
+// Compose mutates a component so that its local paths are relative to the provided path
+//
+// additionally, it will merge any overrides
+func Compose(c types.ZarfComponent, override types.ZarfComponent, relativeTo string) types.ZarfComponent {
 	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
-		parentRel := filepath.Join(pathAncestry, valuesFile)
-		c.Extensions.BigBang.ValuesFiles[valuesIdx] = parentRel
+		if helpers.IsURL(valuesFile) {
+			continue
+		}
+
+		fixed := filepath.Join(relativeTo, valuesFile)
+		c.Extensions.BigBang.ValuesFiles[valuesIdx] = fixed
 	}
 
 	for fluxPatchFileIdx, fluxPatchFile := range c.Extensions.BigBang.FluxPatchFiles {
-		parentRel := filepath.Join(pathAncestry, fluxPatchFile)
-		c.Extensions.BigBang.FluxPatchFiles[fluxPatchFileIdx] = parentRel
+		if helpers.IsURL(fluxPatchFile) {
+			continue
+		}
+
+		fixed := filepath.Join(relativeTo, fluxPatchFile)
+		c.Extensions.BigBang.FluxPatchFiles[fluxPatchFileIdx] = fixed
+	}
+
+	// perform any overrides
+	if override.Extensions.BigBang != nil {
+		if c.Extensions.BigBang == nil {
+			c.Extensions.BigBang = override.Extensions.BigBang
+		} else {
+			if override.Extensions.BigBang.ValuesFiles != nil {
+				c.Extensions.BigBang.ValuesFiles = append(c.Extensions.BigBang.ValuesFiles, override.Extensions.BigBang.ValuesFiles...)
+			}
+			if override.Extensions.BigBang.FluxPatchFiles != nil {
+				c.Extensions.BigBang.FluxPatchFiles = append(c.Extensions.BigBang.FluxPatchFiles, override.Extensions.BigBang.FluxPatchFiles...)
+			}
+		}
 	}
 
 	return c

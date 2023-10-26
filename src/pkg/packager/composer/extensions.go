@@ -12,21 +12,7 @@ import (
 func composeExtensions(c *types.ZarfComponent, override types.ZarfComponent, relativeTo string) {
 	// fix the file paths
 	if override.Extensions.BigBang != nil {
-		component := bigbang.Compose(relativeTo, override)
+		component := bigbang.Compose(*c, override, relativeTo)
 		c = &component
-	}
-
-	// perform any overrides
-	if override.Extensions.BigBang != nil {
-		if c.Extensions.BigBang == nil {
-			c.Extensions.BigBang = override.Extensions.BigBang
-		} else {
-			if override.Extensions.BigBang.ValuesFiles != nil {
-				c.Extensions.BigBang.ValuesFiles = append(c.Extensions.BigBang.ValuesFiles, override.Extensions.BigBang.ValuesFiles...)
-			}
-			if override.Extensions.BigBang.FluxPatchFiles != nil {
-				c.Extensions.BigBang.FluxPatchFiles = append(c.Extensions.BigBang.FluxPatchFiles, override.Extensions.BigBang.FluxPatchFiles...)
-			}
-		}
 	}
 }
