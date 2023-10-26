@@ -81,6 +81,7 @@ jobs:
         uses: ./.github/actions/cleanup-files
 
       - name: Create and deploy the upgrade test packages
+        timeout-minutes: 30
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
         run: |
