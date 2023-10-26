@@ -491,45 +491,6 @@ must respect the following conditions
 </blockquote>
 </details>
 
-<details open>
-<summary>
-<strong> <a name="build_OCIImportedComponents"></a>OCIImportedComponents</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-  ## build > OCIImportedComponents
-
-**Description:** Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names
-
-|                           |                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `object`                                                                                                                          |
-| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
-
-<details>
-<summary>
-<strong> <a name="build_OCIImportedComponents_pattern1"></a>Pattern Property .*</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-:::note
-All properties whose name matches the regular expression
-```.*``` ([Test](https://regex101.com/?regex=.%2A))
-must respect the following conditions
-:::
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
-</blockquote>
-</details>
-
 <details>
 <summary>
 <strong> <a name="build_lastNonBreakingVersion"></a>lastNonBreakingVersion</strong>
