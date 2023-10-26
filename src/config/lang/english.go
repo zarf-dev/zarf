@@ -198,9 +198,6 @@ const (
 	CmdInternalConfigSchemaShort = "Generates a JSON schema for the zarf.yaml configuration"
 	CmdInternalConfigSchemaErr   = "Unable to generate the zarf config schema"
 
-	CmdInternalAPISchemaShort       = "Generates a JSON schema from the API types"
-	CmdInternalAPISchemaGenerateErr = "Unable to generate the zarf api schema"
-
 	CmdInternalCreateReadOnlyGiteaUserShort = "Creates a read-only user in Gitea"
 	CmdInternalCreateReadOnlyGiteaUserLong  = "Creates a read-only user in Gitea by using the Gitea API. " +
 		"This is called internally by the supported Gitea package component."
@@ -210,11 +207,6 @@ const (
 	CmdInternalArtifactRegistryGiteaTokenLong  = "Creates an artifact registry token in Gitea using the Gitea API. " +
 		"This is called internally by the supported Gitea package component."
 	CmdInternalArtifactRegistryGiteaTokenErr = "Unable to create an artifact registry token for the Gitea service."
-
-	CmdInternalUIShort = "[Deprecated] Launches the Zarf Web UI"
-	CmdInternalUILong  = "[Deprecated] This command launches the Zarf deployment Web UI to connect to clusters and deploy packages" +
-		"using a Web GUI instead of the CLI. "
-	CmdInternalUIDeprecated = "Deprecated: This command has been replaced by https://github.com/defenseunicorns/zarf-ui and will be removed in the next Zarf release."
 
 	CmdInternalIsValidHostnameShort = "Checks if the current machine's hostname is RFC1123 compliant"
 	CmdInternalIsValidHostnameErr   = "The hostname '%s' is not valid. Ensure the hostname meets RFC1123 requirements https://www.rfc-editor.org/rfc/rfc1123.html."
@@ -322,7 +314,7 @@ const (
 
 	CmdPrepareSha256sumShort         = "Generates a SHA256SUM for the given file"
 	CmdPrepareSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
-	CmdPrepareSha256sumHashErr       = "Unable to compute the SHA256SUM hash"
+	CmdPrepareSha256sumHashErr       = "Unable to compute the SHA256SUM hash: %s"
 
 	CmdPrepareFindImagesShort = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests"
 	CmdPrepareFindImagesLong  = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
@@ -336,6 +328,7 @@ const (
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 	CmdPrepareGenerateConfigErr = "Unable to write the config file %s, make sure the file doesn't already exist"
 
+	CmdPrepareFlagExtractPath   = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
 	CmdPrepareFlagSet           = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
 	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."

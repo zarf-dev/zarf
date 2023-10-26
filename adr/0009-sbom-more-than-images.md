@@ -21,7 +21,7 @@ Potential considerations:
 2. Run Syft against files and dataInjections
     Pros:
         - We know these files are actually inside of the package and won't just be noise
-        - This is the most common two ways for people to include addtional artifacts in packages (we use files in our own init package)
+        - This is the most common two ways for people to include additional artifacts in packages (we use files in our own init package)
     Cons:
         - This is only a subset of what Zarf provides and someone could commit an artifact to a git repo for example
 
