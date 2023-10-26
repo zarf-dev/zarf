@@ -66,15 +66,25 @@ func TestMismatchedVersions(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a new secret with the modified data
-	jsonPkg, err = json.Marshal(initPkg)
+	jsonPkgModified, err := json.Marshal(initPkg)
 	require.NoError(t, err)
-	_, _, err = e2e.Kubectl("create", "secret", "generic", "zarf-package-init", "-n", "zarf", fmt.Sprintf("--from-literal=data=%s", string(jsonPkg)))
+	_, _, err = e2e.Kubectl("create", "secret", "generic", "zarf-package-init", "-n", "zarf", fmt.Sprintf("--from-literal=data=%s", string(jsonPkgModified)))
 	require.NoError(t, err)
 
 	path := filepath.Join("build", fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch))
 
-	// Deploy the game
+	// Deploy the games package
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, expectedWarningMessage)
+
+	// Remove the games package
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Reset the package secret
+	_, _, err = e2e.Kubectl("delete", "secret", "zarf-package-init", "-n", "zarf")
+	require.NoError(t, err)
+	_, _, err = e2e.Kubectl("create", "secret", "generic", "zarf-package-init", "-n", "zarf", fmt.Sprintf("--from-literal=data=%s", string(jsonPkg)))
+	require.NoError(t, err)
 }
