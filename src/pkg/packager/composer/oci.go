@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/content"
 	ocistore "oras.land/oras-go/v2/content/oci"
 )
 
@@ -91,6 +92,8 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 			return err
 		} else if !exists {
 			copyOpts := remote.CopyOpts
+			// TODO (@WSTARR): This overrides the FindSuccessors function to no longer filter nodes when pulling which is necessary when caching - once we implement caching more thoroughly we will need to reevaluate this.
+			copyOpts.FindSuccessors = content.Successors
 			if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, copyOpts, cache); err != nil {
 				return err
 			}
