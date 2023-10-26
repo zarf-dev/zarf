@@ -114,18 +114,30 @@ func (k *K8s) DetectDistro() (string, error) {
 	return DistroIsUnknown, nil
 }
 
-// GetArchitecture returns the cluster system architecture if found or an error if not.
-func (k *K8s) GetArchitecture() (string, error) {
+// GetArchitectures returns the cluster system architectures if found.
+func (k *K8s) GetArchitectures() ([]string, error) {
 	nodes, err := k.GetNodes()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+
+	if len(nodes.Items) == 0 {
+		return nil, errors.New("could not identify node architecture")
+	}
+
+	archMap := map[string]bool{}
 
 	for _, node := range nodes.Items {
-		return node.Status.NodeInfo.Architecture, nil
+		archMap[node.Status.NodeInfo.Architecture] = true
 	}
 
-	return "", errors.New("could not identify node architecture")
+	architectures := []string{}
+
+	for arch := range archMap {
+		architectures = append(architectures, arch)
+	}
+
+	return architectures, nil
 }
 
 // GetServerVersion retrieves and returns the k8s revision.

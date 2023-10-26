@@ -34,7 +34,8 @@ type TarballSource struct {
 func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
 	var pkg types.ZarfPackage
 
-	message.Debugf("Loading package from %q", s.PackageSource)
+	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)
+	defer spinner.Stop()
 
 	if s.Shasum != "" {
 		if err := utils.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
@@ -121,6 +122,8 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool)
 			}
 		}
 	}
+
+	spinner.Success()
 
 	return nil
 }

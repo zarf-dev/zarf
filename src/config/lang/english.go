@@ -259,8 +259,8 @@ const (
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
 	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
 	CmdPackageDeployFlagSkipWebhooks                   = "[alpha] Skip waiting for external webhooks to execute as each package component is deployed"
-	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
-	CmdPackageDeployValidateLastNonBreakingVersionWarn = "the version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
+	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster only has the %s architecture(s). These architectures must be compatible when \"images\" are present"
+	CmdPackageDeployValidateLastNonBreakingVersionWarn = "The version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
 	CmdPackageDeployInvalidCLIVersionWarn              = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
 	CmdPackageDeployErr                                = "Failed to deploy package: %s"
 
@@ -288,7 +288,7 @@ const (
 	# Publish a skeleton package to a remote registry
 	zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 `
-	CmdPackagePublishFlagSigningKey         = "Path to private key file for signing packages"
+	CmdPackagePublishFlagSigningKey         = "Path to a private key file for signing or re-signing packages with a new key"
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
 	CmdPackagePublishErr                    = "Failed to publish package: %s"
 
