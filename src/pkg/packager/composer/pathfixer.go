@@ -58,44 +58,29 @@ func fixPaths(child *types.ZarfComponent, relativeToHead string) {
 		child.DataInjections[dataInjectionsIdx].Source = composed
 	}
 
-	for actionIdx, action := range child.Actions.OnCreate.Before {
-		if action.Dir != nil {
-			composed := makePathRelativeTo(*action.Dir, relativeToHead)
-			child.Actions.OnCreate.Before[actionIdx].Dir = &composed
-		}
-	}
-
-	for actionIdx, action := range child.Actions.OnCreate.After {
-		if action.Dir != nil {
-			composed := makePathRelativeTo(*action.Dir, relativeToHead)
-			child.Actions.OnCreate.After[actionIdx].Dir = &composed
-		}
-	}
-
-	for actionIdx, action := range child.Actions.OnCreate.OnFailure {
-		if action.Dir != nil {
-			composed := makePathRelativeTo(*action.Dir, relativeToHead)
-			child.Actions.OnCreate.OnFailure[actionIdx].Dir = &composed
-		}
-	}
-
-	for actionIdx, action := range child.Actions.OnCreate.OnSuccess {
-		if action.Dir != nil {
-			composed := makePathRelativeTo(*action.Dir, relativeToHead)
-			child.Actions.OnCreate.OnSuccess[actionIdx].Dir = &composed
-		}
-	}
-
-	totalActions := len(child.Actions.OnCreate.Before) + len(child.Actions.OnCreate.After) + len(child.Actions.OnCreate.OnFailure) + len(child.Actions.OnCreate.OnSuccess)
-
-	if totalActions > 0 {
-		composedDefaultDir := makePathRelativeTo(child.Actions.OnCreate.Defaults.Dir, relativeToHead)
-		child.Actions.OnCreate.Defaults.Dir = composedDefaultDir
-	}
+	defaultDir := child.Actions.OnCreate.Defaults.Dir
+	child.Actions.OnCreate.Before = fixActionPaths(child.Actions.OnCreate.Before, defaultDir, relativeToHead)
+	child.Actions.OnCreate.After = fixActionPaths(child.Actions.OnCreate.After, defaultDir, relativeToHead)
+	child.Actions.OnCreate.OnFailure = fixActionPaths(child.Actions.OnCreate.OnFailure, defaultDir, relativeToHead)
+	child.Actions.OnCreate.OnSuccess = fixActionPaths(child.Actions.OnCreate.OnSuccess, defaultDir, relativeToHead)
 
 	// deprecated
 	if child.DeprecatedCosignKeyPath != "" {
 		composed := makePathRelativeTo(child.DeprecatedCosignKeyPath, relativeToHead)
 		child.DeprecatedCosignKeyPath = composed
 	}
+}
+
+// fixActionPaths takes a slice of actions and mutates the Dir to be relative to the head node
+func fixActionPaths(actions []types.ZarfComponentAction, defaultDir, relativeToHead string) []types.ZarfComponentAction {
+	for actionIdx, action := range actions {
+		var composed string
+		if action.Dir != nil {
+			composed = makePathRelativeTo(*action.Dir, relativeToHead)
+		} else {
+			composed = makePathRelativeTo(defaultDir, relativeToHead)
+		}
+		actions[actionIdx].Dir = &composed
+	}
+	return actions
 }
