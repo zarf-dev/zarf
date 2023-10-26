@@ -43,6 +43,7 @@ zarf tools wait-for { KIND | PROTOCOL } { NAME | SELECTOR | URI } { CONDITION | 
 ```
   -h, --help               help for wait-for
   -n, --namespace string   Specify the namespace of the resources to wait for.
+      --no-progress        Disable fancy UI progress bars, spinners, logos, etc
       --timeout string     Specify the timeout duration for the wait command. (default "5m")
 ```
 
