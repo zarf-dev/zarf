@@ -7,7 +7,7 @@ The [setup-zarf](https://github.com/defenseunicorns/setup-zarf) Github action is
 ```yaml
 # .github/workflows/zarf-package-create.yml
 jobs:
-  create_pacakge:
+  create_package:
     runs-on: ubuntu-latest
 
     name: Create my cool Zarf Package
