@@ -213,7 +213,6 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 }
 
 func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []types.InstalledChart, err error) {
-	hasExternalRegistry := p.cfg.InitOpts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
@@ -232,7 +231,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 		}
 	}
 
-	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
+	if !p.cfg.InitOpts.RegistryInfo.InternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
 		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
 		return charts, nil
 	}

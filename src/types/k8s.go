@@ -34,13 +34,20 @@ const (
 
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data.
 type ZarfState struct {
-	ZarfAppliance bool             `json:"zarfAppliance" jsonschema:"description=Indicates if Zarf was initialized while deploying its own k8s cluster"`
-	Distro        string           `json:"distro" jsonschema:"description=K8s distribution of the cluster Zarf was deployed to"`
-	Architecture  string           `json:"architecture" jsonschema:"description=Machine architecture of the k8s node(s)"`
-	StorageClass  string           `json:"storageClass" jsonschema:"Default StorageClass value Zarf uses for variable templating"`
-	AgentTLS      k8s.GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
+	// TODO: do we need this long term?
+	ZarfAppliance bool `json:"zarfAppliance" jsonschema:"description=Indicates if Zarf was initialized while deploying its own k8s cluster"`
 
-	GitServer      GitServerInfo      `json:"gitServer" jsonschema:"description=Information about the repository Zarf is configured to use"`
+	// TODO: test how the default storage class behaves, validate if we get rid of it. Getting rid of this, might cause issues downstream with upgrades.
+	Distro string `json:"distro" jsonschema:"description=K8s distribution of the cluster Zarf was deployed to"`
+
+	// TODO: validate if we need this, or can infer it from cluster.
+	Architecture string `json:"architecture" jsonschema:"description=Machine architecture of the k8s node(s)"`
+
+	AgentTLS k8s.GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
+
+	GitServer GitServerInfo `json:"gitServer" jsonschema:"description=Information about the repository Zarf is configured to use"`
+
+	// TODO: this is where the refactoring needs to be.
 	RegistryInfo   RegistryInfo       `json:"registryInfo" jsonschema:"description=Information about the container registry Zarf is configured to use"`
 	ArtifactServer ArtifactServerInfo `json:"artifactServer" jsonschema:"description=Information about the artifact registry Zarf is configured to use"`
 	LoggingSecret  string             `json:"loggingSecret" jsonschema:"description=Secret value that the internal Grafana server was seeded with"`
@@ -107,9 +114,12 @@ type RegistryInfo struct {
 	PullUsername string `json:"pullUsername" jsonschema:"description=Username of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used"`
 	PullPassword string `json:"pullPassword" jsonschema:"description=Password of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used"`
 
-	Address          string `json:"address" jsonschema:"description=URL address of the registry"`
-	NodePort         int    `json:"nodePort" jsonschema:"description=Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster"`
-	InternalRegistry bool   `json:"internalRegistry" jsonschema:"description=Indicates if we are using a registry that Zarf is directly managing"`
+	// TODO:
+	Address string `json:"address" jsonschema:"description=URL address of the registry"`
+
+	// TODO get rid of NodePort, it lives in Address
+	//NodePort         int    `json:"nodePort" jsonschema:"description=Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster"`
+	InternalRegistry bool `json:"internalRegistry" jsonschema:"description=Indicates if we are using a registry that Zarf is directly managing"`
 
 	Secret string `json:"secret" jsonschema:"description=Secret value that the registry was seeded with"`
 }

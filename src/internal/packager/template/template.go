@@ -71,6 +71,15 @@ func (values *Values) GetRegistry() string {
 	return values.registry
 }
 
+func getPort(hostport string) string {
+	hp := strings.Split(hostport, ":")
+	if len(hp) != 2 {
+		message.Warn("hostport port mismatch, using the port in port")
+		return hostport
+	}
+	return hp[1]
+}
+
 // GetVariables returns the variables to be used in the template.
 func (values *Values) GetVariables(component types.ZarfComponent) (templateMap map[string]*utils.TextTemplate, deprecations map[string]string) {
 	templateMap = make(map[string]*utils.TextTemplate)
@@ -80,17 +89,16 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 	deprecations = map[string]string{
 		fmt.Sprintf("###ZARF_%s###", depMarkerOld): fmt.Sprintf("###ZARF_%s###", depMarkerNew),
 	}
-
+	// in the event there was a modification of this, having this misaligned will break the deployment
+	// TODO: test with yolo, and external registry.
+	values.config.PkgOpts.SetVariables["REGISTRY_NODEPORT"] = getPort(values.registry)
 	if values.config.State != nil {
 		regInfo := values.config.State.RegistryInfo
 		gitInfo := values.config.State.GitServer
 
 		builtinMap := map[string]string{
-			"STORAGE_CLASS": values.config.State.StorageClass,
-
 			// Registry info
 			"REGISTRY":           values.registry,
-			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
 			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
 			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
 

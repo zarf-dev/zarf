@@ -27,6 +27,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var nodePortArg = 0
+var storageClassArg = ""
+
 // initCmd represents the init command.
 var initCmd = &cobra.Command{
 	Use:     "init",
@@ -81,35 +84,55 @@ var initCmd = &cobra.Command{
 // DEPRECATED_V1.0.0: --nodeport should be removed from the cli in v1.0.0
 func setRegistryNodePort() {
 	configVar := "REGISTRY_NODEPORT"
-	if pkgConfig.InitOpts.RegistryInfo.NodePort != 0 {
+
+	internalRegistry := pkgConfig.InitOpts.RegistryInfo.Address == ""
+
+	// warn for deprecation
+	if nodePortArg != 0 {
 		message.Warn(lang.WarnNodePortDeprecated)
 	}
-	nodePort, err := strconv.Atoi(pkgConfig.PkgOpts.SetVariables[configVar])
-	if err != nil || nodePort < 30000 || nodePort > 32767 {
-		nodePort = pkgConfig.InitOpts.RegistryInfo.NodePort
-	} else {
-		pkgConfig.InitOpts.RegistryInfo.NodePort = nodePort
+
+	// check the --set REGISTRY_NODEPORT first
+	configuredNodePort, err := strconv.Atoi(pkgConfig.PkgOpts.SetVariables[configVar])
+	if err != nil {
+		configuredNodePort = 0
 	}
 
-	// 0 is unset, which will allow changing.
-	if nodePort > 32767 || nodePort < 30000 {
-		nodePort = 0
+	// check the old --nodeport flag second
+	if configuredNodePort == 0 {
+		configuredNodePort = nodePortArg
 	}
-	pkgConfig.PkgOpts.SetVariables[configVar] = strconv.Itoa(nodePort)
-	pkgConfig.InitOpts.RegistryInfo.NodePort = nodePort
+
+	// the user can't set both that this is an external registry and the nodeport stuff.
+	if !internalRegistry && configuredNodePort != 0 {
+		message.Fatal(nil, "both --registry-url and --nodeport are set, please only use one")
+	}
+
+	if internalRegistry {
+		if configuredNodePort > 32767 || configuredNodePort < 30000 {
+			configuredNodePort = config.ZarfInClusterContainerRegistryNodePort
+		}
+		pkgConfig.PkgOpts.SetVariables[configVar] = strconv.Itoa(configuredNodePort)
+		pkgConfig.InitOpts.RegistryInfo.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, configuredNodePort)
+	} else {
+		// do not set the nodeport if this is an external registry
+		pkgConfig.PkgOpts.SetVariables[configVar] = ""
+	}
+
+	pkgConfig.InitOpts.RegistryInfo.InternalRegistry = internalRegistry
+
+	// TODO: test external registry and CLI.
 }
 
 // DEPRECATED_V1.0.0: --storage-class should be removed from the CLI in v1.0.0
 func setRegistryStorageClass() {
 	configVar := "REGISTRY_STORAGE_CLASS"
 	// there is no validation if this storage class is valid
-	if pkgConfig.InitOpts.StorageClass != "" {
+	if storageClassArg != "" {
 		message.Warn(lang.WarnStorageClassDeprecated)
 	}
 	if pkgConfig.PkgOpts.SetVariables[configVar] == "" {
-		pkgConfig.PkgOpts.SetVariables[configVar] = pkgConfig.InitOpts.StorageClass
-	} else {
-		pkgConfig.InitOpts.StorageClass = pkgConfig.PkgOpts.SetVariables[configVar]
+		pkgConfig.PkgOpts.SetVariables[configVar] = storageClassArg
 	}
 }
 
@@ -230,7 +253,7 @@ func init() {
 	initCmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VInitComponents), lang.CmdInitFlagComponents)
 
 	// [Deprecated] --storage-class is deprecated in favor of --set REGISTRY_STORAGE_CLASS (to be removed in v1.0.0)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(common.VInitStorageClass), lang.CmdInitFlagStorageClass)
+	initCmd.Flags().StringVar(&storageClassArg, "storage-class", v.GetString(common.VInitStorageClass), lang.CmdInitFlagStorageClass)
 	initCmd.Flags().MarkHidden("storage-class")
 
 	// Flags for using an external Git server
@@ -244,7 +267,7 @@ func init() {
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(common.VInitRegistryURL), lang.CmdInitFlagRegURL)
 
 	// [Deprecated] --nodeport is deprecated in favor of --set REGISTRY_NODEPORT
-	initCmd.Flags().IntVar(&pkgConfig.InitOpts.RegistryInfo.NodePort, "nodeport", v.GetInt(common.VInitRegistryNodeport), lang.CmdInitFlagRegNodePort)
+	initCmd.Flags().IntVar(&nodePortArg, "nodeport", v.GetInt(common.VInitRegistryNodeport), lang.CmdInitFlagRegNodePort)
 	initCmd.Flags().MarkHidden("nodeport")
 
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(common.VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)

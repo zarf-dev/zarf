@@ -54,7 +54,7 @@ variables:
 
   - name: REGISTRY_NODEPORT
     description: NodePort for the registry
-    default: ""
+    default: "31999"
     autoIndent: true
 
   - name: REGISTRY_STORAGE_CLASS
