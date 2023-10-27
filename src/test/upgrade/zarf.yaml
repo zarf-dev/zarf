@@ -10,6 +10,7 @@ components:
     required: true
     charts:
       - name: podinfo
+        releaseName: podinfo-upgrade
         version: "###ZARF_PKG_VAR_PODINFO_VERSION###"
         namespace: podinfo-upgrade
         url: oci://ghcr.io/stefanprodan/charts/podinfo
