@@ -91,6 +91,10 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 	}
 	// in the event there was a modification of this, having this misaligned will break the deployment
 	// TODO: test with yolo, and external registry.
+	if values.config.PkgOpts.SetVariables == nil {
+		values.config.PkgOpts.SetVariables = map[string]string{}
+	}
+
 	values.config.PkgOpts.SetVariables["REGISTRY_NODEPORT"] = getPort(values.registry)
 	if values.config.State != nil {
 		regInfo := values.config.State.RegistryInfo
