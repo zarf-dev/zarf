@@ -6,6 +6,7 @@ package composer
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -65,8 +66,10 @@ func TestCompose(t *testing.T) {
 		expectedErrorMessage string
 	}
 
-	importDirectory := "hello"
 	currentDirectory := "."
+	firstDirectory := "hello"
+	secondDirectory := "world"
+	finalDirectory := filepath.Join(firstDirectory, secondDirectory)
 
 	testCases := []testCase{
 		{
@@ -84,145 +87,19 @@ func TestCompose(t *testing.T) {
 		{
 			name: "Multiple Components",
 			ic: createChainFromSlice([]types.ZarfComponent{
-				{
-					Name: "import-hello",
-					Import: types.ZarfComponentImport{
-						Path:          importDirectory,
-						ComponentName: "end-world",
-					},
-					Files: []types.ZarfFile{
-						{
-							Source: "hello.txt",
-						},
-					},
-					Charts: []types.ZarfChart{
-						{
-							Name:      "hello",
-							LocalPath: "chart",
-							ValuesFiles: []string{
-								"values.yaml",
-							},
-						},
-					},
-					Manifests: []types.ZarfManifest{
-						{
-							Name: "hello",
-							Files: []string{
-								"manifest.yaml",
-							},
-						},
-					},
-					DataInjections: []types.ZarfDataInjection{
-						{
-							Source: "hello",
-						},
-					},
-					Actions: types.ZarfComponentActions{
-						OnCreate: types.ZarfComponentActionSet{
-							Before: []types.ZarfComponentAction{
-								{
-									Cmd: "hello",
-								},
-							},
-							After: []types.ZarfComponentAction{
-								{
-									Cmd: "hello",
-								},
-							},
-							OnSuccess: []types.ZarfComponentAction{
-								{
-									Cmd: "hello",
-								},
-							},
-							OnFailure: []types.ZarfComponentAction{
-								{
-									Cmd: "hello",
-								},
-							},
-						},
-					},
-					Extensions: extensions.ZarfComponentExtensions{
-						BigBang: &extensions.BigBang{
-							ValuesFiles: []string{
-								"values.yaml",
-							},
-							FluxPatchFiles: []string{
-								"patch.yaml",
-							},
-						},
-					},
-				},
-				{
-					Name: "end-world",
-					Files: []types.ZarfFile{
-						{
-							Source: "world.txt",
-						},
-					},
-					Charts: []types.ZarfChart{
-						{
-							Name:      "world",
-							LocalPath: "chart",
-							ValuesFiles: []string{
-								"values.yaml",
-							},
-						},
-					},
-					Manifests: []types.ZarfManifest{
-						{
-							Name: "world",
-							Files: []string{
-								"manifest.yaml",
-							},
-						},
-					},
-					DataInjections: []types.ZarfDataInjection{
-						{
-							Source: "world",
-						},
-					},
-					Actions: types.ZarfComponentActions{
-						OnCreate: types.ZarfComponentActionSet{
-							Before: []types.ZarfComponentAction{
-								{
-									Cmd: "world",
-								},
-							},
-							After: []types.ZarfComponentAction{
-								{
-									Cmd: "world",
-								},
-							},
-							OnSuccess: []types.ZarfComponentAction{
-								{
-									Cmd: "world",
-								},
-							},
-							OnFailure: []types.ZarfComponentAction{
-								{
-									Cmd: "world",
-								},
-							},
-						},
-					},
-					Extensions: extensions.ZarfComponentExtensions{
-						BigBang: &extensions.BigBang{
-							ValuesFiles: []string{
-								"values.yaml",
-							},
-							FluxPatchFiles: []string{
-								"patch.yaml",
-							},
-						},
-					},
-				},
+				createDummyComponent("hello", firstDirectory, "hello"),
+				createDummyComponent("world", secondDirectory, "world"),
+				createDummyComponent("today", "", "hello"),
 			}),
 			returnError: false,
 			expectedComposed: types.ZarfComponent{
 				Name: "import-hello",
 				Files: []types.ZarfFile{
 					{
-						Source: fmt.Sprintf("%s/world.txt", importDirectory),
+						Source: fmt.Sprintf("%s%stoday.txt", finalDirectory, string(os.PathSeparator)),
+					},
+					{
+						Source: fmt.Sprintf("%s%sworld.txt", firstDirectory, string(os.PathSeparator)),
 					},
 					{
 						Source: "hello.txt",
@@ -230,37 +107,42 @@ func TestCompose(t *testing.T) {
 				},
 				Charts: []types.ZarfChart{
 					{
-						Name:      "world",
-						LocalPath: fmt.Sprintf("%s/chart", importDirectory),
+						Name:      "hello",
+						LocalPath: fmt.Sprintf("%s%schart", finalDirectory, string(os.PathSeparator)),
 						ValuesFiles: []string{
-							fmt.Sprintf("%s/values.yaml", importDirectory),
+							fmt.Sprintf("%s%svalues.yaml", finalDirectory, string(os.PathSeparator)),
+							"values.yaml",
 						},
 					},
 					{
-						Name:      "hello",
-						LocalPath: "chart",
+						Name:      "world",
+						LocalPath: fmt.Sprintf("%s%schart", firstDirectory, string(os.PathSeparator)),
 						ValuesFiles: []string{
-							"values.yaml",
+							fmt.Sprintf("%s%svalues.yaml", firstDirectory, string(os.PathSeparator)),
 						},
 					},
 				},
 				Manifests: []types.ZarfManifest{
 					{
-						Name: "world",
+						Name: "hello",
 						Files: []string{
-							fmt.Sprintf("%s/manifest.yaml", importDirectory),
+							fmt.Sprintf("%s%smanifest.yaml", finalDirectory, string(os.PathSeparator)),
+							"manifest.yaml",
 						},
 					},
 					{
-						Name: "hello",
+						Name: "world",
 						Files: []string{
-							"manifest.yaml",
+							fmt.Sprintf("%s%smanifest.yaml", firstDirectory, string(os.PathSeparator)),
 						},
 					},
 				},
 				DataInjections: []types.ZarfDataInjection{
 					{
-						Source: fmt.Sprintf("%s/world", importDirectory),
+						Source: fmt.Sprintf("%s%stoday", finalDirectory, string(os.PathSeparator)),
+					},
+					{
+						Source: fmt.Sprintf("%s%sworld", firstDirectory, string(os.PathSeparator)),
 					},
 					{
 						Source: "hello",
@@ -270,8 +152,12 @@ func TestCompose(t *testing.T) {
 					OnCreate: types.ZarfComponentActionSet{
 						Before: []types.ZarfComponentAction{
 							{
+								Cmd: "today",
+								Dir: &finalDirectory,
+							},
+							{
 								Cmd: "world",
-								Dir: &importDirectory,
+								Dir: &firstDirectory,
 							},
 							{
 								Cmd: "hello",
@@ -280,8 +166,12 @@ func TestCompose(t *testing.T) {
 						},
 						After: []types.ZarfComponentAction{
 							{
+								Cmd: "today",
+								Dir: &finalDirectory,
+							},
+							{
 								Cmd: "world",
-								Dir: &importDirectory,
+								Dir: &firstDirectory,
 							},
 							{
 								Cmd: "hello",
@@ -290,8 +180,12 @@ func TestCompose(t *testing.T) {
 						},
 						OnSuccess: []types.ZarfComponentAction{
 							{
+								Cmd: "today",
+								Dir: &finalDirectory,
+							},
+							{
 								Cmd: "world",
-								Dir: &importDirectory,
+								Dir: &firstDirectory,
 							},
 							{
 								Cmd: "hello",
@@ -300,8 +194,12 @@ func TestCompose(t *testing.T) {
 						},
 						OnFailure: []types.ZarfComponentAction{
 							{
+								Cmd: "today",
+								Dir: &finalDirectory,
+							},
+							{
 								Cmd: "world",
-								Dir: &importDirectory,
+								Dir: &firstDirectory,
 							},
 							{
 								Cmd: "hello",
@@ -313,11 +211,13 @@ func TestCompose(t *testing.T) {
 				Extensions: extensions.ZarfComponentExtensions{
 					BigBang: &extensions.BigBang{
 						ValuesFiles: []string{
-							fmt.Sprintf("%s/values.yaml", importDirectory),
+							fmt.Sprintf("%s%svalues.yaml", finalDirectory, string(os.PathSeparator)),
+							fmt.Sprintf("%s%svalues.yaml", firstDirectory, string(os.PathSeparator)),
 							"values.yaml",
 						},
 						FluxPatchFiles: []string{
-							fmt.Sprintf("%s/patch.yaml", importDirectory),
+							fmt.Sprintf("%s%spatch.yaml", finalDirectory, string(os.PathSeparator)),
+							fmt.Sprintf("%s%spatch.yaml", firstDirectory, string(os.PathSeparator)),
 							"patch.yaml",
 						},
 					},
@@ -358,4 +258,74 @@ func createChainFromSlice(components []types.ZarfComponent) (ic *ImportChain) {
 	}
 
 	return ic
+}
+
+func createDummyComponent(name, importDir, subName string) types.ZarfComponent {
+	return types.ZarfComponent{
+		Name: fmt.Sprintf("import-%s", name),
+		Import: types.ZarfComponentImport{
+			Path: importDir,
+		},
+		Files: []types.ZarfFile{
+			{
+				Source: fmt.Sprintf("%s.txt", name),
+			},
+		},
+		Charts: []types.ZarfChart{
+			{
+				Name:      subName,
+				LocalPath: "chart",
+				ValuesFiles: []string{
+					"values.yaml",
+				},
+			},
+		},
+		Manifests: []types.ZarfManifest{
+			{
+				Name: subName,
+				Files: []string{
+					"manifest.yaml",
+				},
+			},
+		},
+		DataInjections: []types.ZarfDataInjection{
+			{
+				Source: name,
+			},
+		},
+		Actions: types.ZarfComponentActions{
+			OnCreate: types.ZarfComponentActionSet{
+				Before: []types.ZarfComponentAction{
+					{
+						Cmd: name,
+					},
+				},
+				After: []types.ZarfComponentAction{
+					{
+						Cmd: name,
+					},
+				},
+				OnSuccess: []types.ZarfComponentAction{
+					{
+						Cmd: name,
+					},
+				},
+				OnFailure: []types.ZarfComponentAction{
+					{
+						Cmd: name,
+					},
+				},
+			},
+		},
+		Extensions: extensions.ZarfComponentExtensions{
+			BigBang: &extensions.BigBang{
+				ValuesFiles: []string{
+					"values.yaml",
+				},
+				FluxPatchFiles: []string{
+					"patch.yaml",
+				},
+			},
+		},
+	}
 }
