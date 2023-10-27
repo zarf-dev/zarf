@@ -1,5 +1,5 @@
 persistence:
-  storageClass: "local-path" # 'local-path' is for k3d, 'standard' is for kind
+  storageClass: ""
 gitea:
   admin:
     username: "git-user"
