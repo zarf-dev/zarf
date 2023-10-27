@@ -349,16 +349,18 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	for chartIdx, chart := range component.Charts {
 		helmCfg := helm.New(chart, componentPaths.Charts, componentPaths.Values)
 
-		if isSkeleton && chart.URL == "" {
-			rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
-			dst := filepath.Join(componentPaths.Base, rel)
+		if isSkeleton {
+			if chart.URL == "" {
+				rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+				dst := filepath.Join(componentPaths.Base, rel)
 
-			err := utils.CreatePathAndCopy(chart.LocalPath, dst)
-			if err != nil {
-				return err
+				err := utils.CreatePathAndCopy(chart.LocalPath, dst)
+				if err != nil {
+					return err
+				}
+
+				p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
 			}
-
-			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
 
 			for valuesIdx, path := range chart.ValuesFiles {
 				if helpers.IsURL(path) {
