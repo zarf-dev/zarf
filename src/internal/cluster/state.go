@@ -129,10 +129,6 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 		}
 	}
 
-	if clusterArch != state.Architecture {
-		return fmt.Errorf("cluster architecture %s does not match the Zarf state architecture %s", clusterArch, state.Architecture)
-	}
-
 	spinner.Success()
 
 	// Save the state back to K8s
