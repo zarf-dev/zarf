@@ -83,8 +83,8 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 	bbRepo := fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version)
 
 	// Configure helm to pull down the Big Bang chart.
-	helmCfg := helm.Helm{
-		Chart: types.ZarfChart{
+	helmCfg := helm.New(
+		types.ZarfChart{
 			Name:        bb,
 			Namespace:   bb,
 			URL:         bbRepo,
@@ -92,12 +92,11 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 			ValuesFiles: cfg.ValuesFiles,
 			GitPath:     "./chart",
 		},
-		BasePath: tmpPaths.Temp,
-	}
+		path.Join(tmpPaths.Temp, bb),
+	)
 
 	// Download the chart from Git and save it to a temporary directory.
-	chartPath := path.Join(tmpPaths.Temp, bb)
-	helmCfg.ChartLoadOverride, err = helmCfg.PackageChartFromGit(chartPath)
+	err = helmCfg.PackageChartFromGit()
 	if err != nil {
 		return c, fmt.Errorf("unable to download Big Bang Chart: %w", err)
 	}
@@ -512,25 +511,14 @@ func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []st
 	spinner := message.NewProgressSpinner("Discovering images in %s", repo)
 	defer spinner.Stop()
 
-	chart := types.ZarfChart{
-		Name:    repo,
-		URL:     repo,
-		Version: matches[1],
-		GitPath: "chart",
-	}
-
-	helmCfg := helm.Helm{
-		Chart: chart,
-	}
-
-	gitPath, err := helmCfg.DownloadChartFromGitToTemp(spinner)
+	gitPath, err := helm.DownloadChartFromGitToTemp(repo, spinner)
 	if err != nil {
 		return images, err
 	}
 	defer os.RemoveAll(gitPath)
 
 	// Set the directory for the chart
-	chartPath := filepath.Join(gitPath, helmCfg.Chart.GitPath)
+	chartPath := filepath.Join(gitPath, "chart")
 
 	images, err = helm.FindAnnotatedImagesForChart(chartPath, values)
 	if err != nil {

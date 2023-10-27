@@ -16,19 +16,58 @@ import (
 
 // Helm is a config object for working with helm charts.
 type Helm struct {
-	BasePath          string
-	Chart             types.ZarfChart
-	ReleaseName       string
-	ChartLoadOverride string
-	ChartOverride     *chart.Chart
-	ValueOverride     map[string]any
-	Component         types.ZarfComponent
-	Cluster           *cluster.Cluster
-	Cfg               *types.PackagerConfig
-	KubeVersion       string
-	Settings          *cli.EnvSettings
+	chart     types.ZarfChart
+	chartPath string
+	cfg       *types.PackagerConfig
 
+	component  types.ZarfComponent
+	cluster    *cluster.Cluster
+	valuesPath string
+
+	kubeVersion string
+
+	chartOverride *chart.Chart
+	valueOverride map[string]any
+
+	settings     *cli.EnvSettings
 	actionConfig *action.Configuration
+}
+
+// New returns a new Helm config struct.
+func New(chart types.ZarfChart, chartPath string) *Helm {
+	return &Helm{
+		chart:     chart,
+		chartPath: chartPath,
+	}
+}
+
+// NewClusterOnly returns a new Helm config struct geared toward interacting with the cluster (not packages)
+func NewClusterOnly(cfg *types.PackagerConfig, cluster *cluster.Cluster) *Helm {
+	return &Helm{
+		cfg:     cfg,
+		cluster: cluster,
+	}
+}
+
+// TODO: (@WSTARR) - How to handle?
+// NewFromManifest returns a new Helm config struct geared toward interacting with Zarf Manifests instead of Charts
+// func NewFromManifest(manifest types.ZarfManifest) *Helm {
+// 	return &Helm{
+// 		chartPath: chartPath,
+// 	}
+// }
+
+// WithDeployInfo adds the necessary information to deploy a given chart
+func (h *Helm) WithDeployInfo(component types.ZarfComponent, cfg *types.PackagerConfig, cluster *cluster.Cluster, valuesPath string) {
+	h.component = component
+	h.cfg = cfg
+	h.cluster = cluster
+	h.valuesPath = valuesPath
+}
+
+// WithKubeVersion sets the Kube version for templating the chart
+func (h *Helm) WithKubeVersion(kubeVersion string) {
+	h.kubeVersion = kubeVersion
 }
 
 // StandardName generates a predictable full path for a helm chart for Zarf.

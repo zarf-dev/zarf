@@ -6,10 +6,8 @@ package helm
 
 import (
 	"fmt"
-	"path/filepath"
 	"strconv"
 
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -24,10 +22,7 @@ import (
 // loadChartFromTarball returns a helm chart from a tarball.
 func (h *Helm) loadChartFromTarball() (*chart.Chart, error) {
 	// Get the path the temporary helm chart tarball
-	sourceFile := StandardName(filepath.Join(h.BasePath, layout.ChartsDir), h.Chart) + ".tgz"
-	if h.ChartLoadOverride != "" {
-		sourceFile = h.ChartLoadOverride
-	}
+	sourceFile := StandardName(h.chartPath, h.chart) + ".tgz"
 
 	// Load the loadedChart tarball
 	loadedChart, err := loader.Load(sourceFile)
@@ -46,12 +41,8 @@ func (h *Helm) loadChartFromTarball() (*chart.Chart, error) {
 func (h *Helm) parseChartValues() (chartutil.Values, error) {
 	valueOpts := &values.Options{}
 
-	for idx, file := range h.Chart.ValuesFiles {
-		path := StandardName(filepath.Join(h.BasePath, layout.ValuesDir), h.Chart) + "-" + strconv.Itoa(idx)
-		// If we are overriding the chart path, assuming this is for zarf prepare
-		if h.ChartLoadOverride != "" {
-			path = file
-		}
+	for idx := range h.chart.ValuesFiles {
+		path := StandardName(h.valuesPath, h.chart) + "-" + strconv.Itoa(idx)
 		valueOpts.ValueFiles = append(valueOpts.ValueFiles, path)
 	}
 
@@ -68,13 +59,13 @@ func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) er
 	// Initialize helm SDK
 	actionConfig := new(action.Configuration)
 	// Set the setings for the helm SDK
-	h.Settings = cli.New()
+	h.settings = cli.New()
 
 	// Set the namespace for helm
-	h.Settings.SetNamespace(namespace)
+	h.settings.SetNamespace(namespace)
 
 	// Setup K8s connection
-	err := actionConfig.Init(h.Settings.RESTClientGetter(), namespace, "", spinner.Updatef)
+	err := actionConfig.Init(h.settings.RESTClientGetter(), namespace, "", spinner.Updatef)
 
 	// Set the actionConfig is the received Helm pointer
 	h.actionConfig = actionConfig

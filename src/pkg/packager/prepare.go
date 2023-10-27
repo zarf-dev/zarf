@@ -117,19 +117,12 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			return nil, err
 		}
 
-		chartOverrides := make(map[string]string)
-
 		if len(component.Charts) > 0 {
 			for _, chart := range component.Charts {
+				helmCfg := helm.New(chart, componentPaths.Charts)
+				helmCfg.WithKubeVersion(kubeVersionOverride)
 
-				helmCfg := helm.Helm{
-					Chart: chart,
-					Cfg:   p.cfg,
-				}
-
-				helmCfg.Cfg.State = &types.ZarfState{}
-
-				err := helmCfg.PackageChart(componentPaths.Charts)
+				err := helmCfg.PackageChart()
 				if err != nil {
 					return nil, fmt.Errorf("unable to package the chart %s: %s", chart.URL, err.Error())
 				}
@@ -148,12 +141,6 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				}
 
 				// Generate helm templates to pass to gitops engine
-				helmCfg = helm.Helm{
-					BasePath:          componentPaths.Base,
-					Chart:             chart,
-					ChartLoadOverride: chartOverrides[chart.Name],
-					KubeVersion:       kubeVersionOverride,
-				}
 				template, values, err := helmCfg.TemplateChart()
 
 				if err != nil {
@@ -166,12 +153,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				yamls, _ := utils.SplitYAML([]byte(template))
 				resources = append(resources, yamls...)
 
-				var chartTarball string
-				if overridePath, ok := chartOverrides[chart.Name]; ok {
-					chartTarball = overridePath
-				} else {
-					chartTarball = helm.StandardName(componentPaths.Charts, helmCfg.Chart) + ".tgz"
-				}
+				chartTarball := helm.StandardName(componentPaths.Charts, chart) + ".tgz"
 
 				annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 				if err != nil {

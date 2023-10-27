@@ -347,11 +347,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
-
-		helmCfg := helm.Helm{
-			Chart: chart,
-			Cfg:   p.cfg,
-		}
+		helmCfg := helm.New(chart, componentPaths.Charts)
 
 		if isSkeleton && chart.URL == "" {
 			rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
@@ -364,7 +360,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
 		} else {
-			err := helmCfg.PackageChart(componentPaths.Charts)
+			err := helmCfg.PackageChart()
 			if err != nil {
 				return err
 			}

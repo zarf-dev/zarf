@@ -30,96 +30,96 @@ import (
 )
 
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
-func (h *Helm) PackageChart(destination string) error {
-	if len(h.Chart.URL) > 0 {
-		url, refPlain, err := transform.GitURLSplitRef(h.Chart.URL)
+func (h *Helm) PackageChart() error {
+	if len(h.chart.URL) > 0 {
+		url, refPlain, err := transform.GitURLSplitRef(h.chart.URL)
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
 		isGitURL := strings.HasSuffix(url, ".git")
 		if err != nil {
-			message.Debugf("unable to parse the url, continuing with %s", h.Chart.URL)
+			message.Debugf("unable to parse the url, continuing with %s", h.chart.URL)
 		}
 
 		if isGitURL {
 			// if it is a git url append chart version as if its a tag
 			if refPlain == "" {
-				h.Chart.URL = fmt.Sprintf("%s@%s", h.Chart.URL, h.Chart.Version)
+				h.chart.URL = fmt.Sprintf("%s@%s", h.chart.URL, h.chart.Version)
 			}
 
-			_, err = h.PackageChartFromGit(destination)
+			err = h.PackageChartFromGit()
 			if err != nil {
-				return fmt.Errorf("unable to pull the chart %q from git: %w", h.Chart.Name, err)
+				return fmt.Errorf("unable to pull the chart %q from git: %w", h.chart.Name, err)
 			}
 		} else {
-			err = h.DownloadPublishedChart(destination)
+			err = h.DownloadPublishedChart()
 			if err != nil {
-				return fmt.Errorf("unable to download the published chart %q: %w", h.Chart.Name, err)
+				return fmt.Errorf("unable to download the published chart %q: %w", h.chart.Name, err)
 			}
 		}
 
 	} else {
-		_, err := h.PackageChartFromLocalFiles(destination)
+		err := h.PackageChartFromLocalFiles()
 		if err != nil {
-			return fmt.Errorf("unable to package the %q chart: %w", h.Chart.Name, err)
+			return fmt.Errorf("unable to package the %q chart: %w", h.chart.Name, err)
 		}
 	}
 	return nil
 }
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func (h *Helm) PackageChartFromLocalFiles(destination string) (string, error) {
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.Chart.Name, h.Chart.Version, h.Chart.LocalPath)
+func (h *Helm) PackageChartFromLocalFiles() error {
+	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.chart.Name, h.chart.Version, h.chart.LocalPath)
 	defer spinner.Stop()
 
-	cl, _, err := h.loadAndValidateChart(h.Chart.LocalPath)
+	cl, _, err := h.loadAndValidateChart(h.chart.LocalPath)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	var path string
 	if _, ok := cl.(loader.DirLoader); ok {
 		err = h.buildChartDependencies(spinner)
 		if err != nil {
-			return "", fmt.Errorf("unable to build dependencies for the chart: %w", err)
+			return fmt.Errorf("unable to build dependencies for the chart: %w", err)
 		}
 
 		client := action.NewPackage()
 
-		client.Destination = destination
-		path, err = client.Run(h.Chart.LocalPath, nil)
+		client.Destination = h.chartPath
+		path, err = client.Run(h.chart.LocalPath, nil)
 	} else {
-		path = filepath.Join(destination, filepath.Base(h.Chart.LocalPath))
-		err = utils.CreatePathAndCopy(h.Chart.LocalPath, path)
+		path = filepath.Join(h.chartPath, filepath.Base(h.chart.LocalPath))
+		err = utils.CreatePathAndCopy(h.chart.LocalPath, path)
 	}
 
 	if err != nil {
-		return "", fmt.Errorf("unable to save the archive and create the package %s: %w", path, err)
+		return fmt.Errorf("unable to save the archive and create the package %s: %w", path, err)
 	}
 
 	spinner.Success()
 
-	return path, nil
+	return nil
 }
 
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
-func (h *Helm) PackageChartFromGit(destination string) (string, error) {
-	spinner := message.NewProgressSpinner("Processing helm chart %s", h.Chart.Name)
+func (h *Helm) PackageChartFromGit() error {
+	spinner := message.NewProgressSpinner("Processing helm chart %s", h.chart.Name)
 	defer spinner.Stop()
 
 	// Retrieve the repo containing the chart
-	gitPath, err := h.DownloadChartFromGitToTemp(spinner)
+	gitPath, err := DownloadChartFromGitToTemp(h.chart.URL, spinner)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer os.RemoveAll(gitPath)
 
 	// Set the directory for the chart and package it
-	h.Chart.LocalPath = filepath.Join(gitPath, h.Chart.GitPath)
-	return h.PackageChartFromLocalFiles(destination)
+	h.chart.LocalPath = filepath.Join(gitPath, h.chart.GitPath)
+	return h.PackageChartFromLocalFiles()
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func (h *Helm) DownloadPublishedChart(destination string) error {
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.Chart.Name, h.Chart.Version, h.Chart.URL)
+func (h *Helm) DownloadPublishedChart() error {
+	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.chart.Name, h.chart.Version, h.chart.URL)
 	defer spinner.Stop()
 
 	// Set up the helm pull config
@@ -133,17 +133,17 @@ func (h *Helm) DownloadPublishedChart(destination string) error {
 	)
 
 	// Handle OCI registries
-	if registry.IsOCI(h.Chart.URL) {
+	if registry.IsOCI(h.chart.URL) {
 		regClient, err = registry.NewClient(registry.ClientOptEnableCache(true))
 		if err != nil {
 			return fmt.Errorf("unable to create a new registry client: %w", err)
 		}
-		chartURL = h.Chart.URL
+		chartURL = h.chart.URL
 		// Explicitly set the pull version for OCI
-		pull.Version = h.Chart.Version
+		pull.Version = h.chart.Version
 	} else {
 		// Perform simple chart download
-		chartURL, err = repo.FindChartInRepoURL(h.Chart.URL, h.Chart.Name, h.Chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+		chartURL, err = repo.FindChartInRepoURL(h.chart.URL, h.chart.Name, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				// Intentionally dogsled this error since this is a nice to have helper
@@ -166,7 +166,7 @@ func (h *Helm) DownloadPublishedChart(destination string) error {
 	}
 
 	// Download the file (we don't control what name helm creates here)
-	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, destination)
+	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, h.chartPath)
 	if err != nil {
 		return fmt.Errorf("unable to download the helm chart: %w", err)
 	}
@@ -178,7 +178,7 @@ func (h *Helm) DownloadPublishedChart(destination string) error {
 	}
 
 	// Ensure the name is consistent for deployments
-	destinationTarball := StandardName(destination, h.Chart) + ".tgz"
+	destinationTarball := StandardName(h.chartPath, h.chart) + ".tgz"
 	err = os.Rename(saved, destinationTarball)
 	if err != nil {
 		return fmt.Errorf("unable to save the chart tarball: %w", err)
@@ -190,14 +190,14 @@ func (h *Helm) DownloadPublishedChart(destination string) error {
 }
 
 // DownloadChartFromGitToTemp downloads a chart from git into a temp directory
-func (h *Helm) DownloadChartFromGitToTemp(spinner *message.Spinner) (string, error) {
+func DownloadChartFromGitToTemp(url string, spinner *message.Spinner) (string, error) {
 	// Create the Git configuration and download the repo
 	gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
 
 	// Download the git repo to a temporary directory
-	err := gitCfg.DownloadRepoToTemp(h.Chart.URL)
+	err := gitCfg.DownloadRepoToTemp(url)
 	if err != nil {
-		return "", fmt.Errorf("unable to download the git repo %s: %w", h.Chart.URL, err)
+		return "", fmt.Errorf("unable to download the git repo %s: %w", url, err)
 	}
 
 	return gitCfg.GitPath, nil
@@ -211,7 +211,7 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 		spinner.Fatalf(err, "Unable to create a new registry client")
 	}
 
-	h.Settings = cli.New()
+	h.settings = cli.New()
 	defaultKeyring := filepath.Join(homedir.HomeDir(), ".gnupg", "pubring.gpg")
 	if v, ok := os.LookupEnv("GNUPGHOME"); ok {
 		defaultKeyring = filepath.Join(v, "pubring.gpg")
@@ -219,12 +219,12 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 
 	man := &downloader.Manager{
 		Out:            &message.DebugWriter{},
-		ChartPath:      h.Chart.LocalPath,
-		Getters:        getter.All(h.Settings),
+		ChartPath:      h.chart.LocalPath,
+		Getters:        getter.All(h.settings),
 		RegistryClient: regClient,
 
-		RepositoryConfig: h.Settings.RepositoryConfig,
-		RepositoryCache:  h.Settings.RepositoryCache,
+		RepositoryConfig: h.settings.RepositoryConfig,
+		RepositoryCache:  h.settings.RepositoryCache,
 		Debug:            false,
 		Verify:           downloader.VerifyIfPossible,
 		Keyring:          defaultKeyring,
@@ -260,8 +260,8 @@ func (h *Helm) loadAndValidateChart(location string) (loader.ChartLoader, *chart
 	}
 
 	// Check that the chart name matches
-	if h.Chart.Name != chart.Name() {
-		return cl, chart, fmt.Errorf("invalid chart name provided, %q does not match %q", h.Chart.Name, chart.Name())
+	if h.chart.Name != chart.Name() {
+		return cl, chart, fmt.Errorf("invalid chart name provided, %q does not match %q", h.chart.Name, chart.Name())
 	}
 
 	return cl, chart, nil
@@ -269,11 +269,11 @@ func (h *Helm) loadAndValidateChart(location string) (loader.ChartLoader, *chart
 
 func (h *Helm) listAvailableChartsAndVersions(pull *action.Pull) error {
 	c := repo.Entry{
-		URL:      h.Chart.URL,
+		URL:      h.chart.URL,
 		CertFile: pull.CertFile,
 		KeyFile:  pull.KeyFile,
 		CAFile:   pull.CaFile,
-		Name:     h.Chart.Name,
+		Name:     h.chart.Name,
 	}
 
 	r, err := repo.NewChartRepository(&c, getter.All(pull.Settings))
@@ -282,7 +282,7 @@ func (h *Helm) listAvailableChartsAndVersions(pull *action.Pull) error {
 	}
 	idx, err := r.DownloadIndexFile()
 	if err != nil {
-		return fmt.Errorf("looks like %q is not a valid chart repository or cannot be reached: %w", h.Chart.URL, err)
+		return fmt.Errorf("looks like %q is not a valid chart repository or cannot be reached: %w", h.chart.URL, err)
 	}
 	defer func() {
 		os.RemoveAll(filepath.Join(r.CachePath, helmpath.CacheChartsFile(r.Config.Name)))
@@ -310,7 +310,7 @@ func (h *Helm) listAvailableChartsAndVersions(pull *action.Pull) error {
 		chartData = append(chartData, []string{name, versions})
 	}
 
-	message.Notef("Available charts and versions from %q:", h.Chart.URL)
+	message.Notef("Available charts and versions from %q:", h.chart.URL)
 
 	// Print out the table for the user
 	header := []string{"Chart", "Versions"}
