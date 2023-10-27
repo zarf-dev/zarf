@@ -97,7 +97,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 	)
 
 	// Download the chart from Git and save it to a temporary directory.
-	err = helmCfg.PackageChartFromGit()
+	err = helmCfg.PackageChartFromGit(c.DeprecatedCosignKeyPath)
 	if err != nil {
 		return c, fmt.Errorf("unable to download Big Bang Chart: %w", err)
 	}

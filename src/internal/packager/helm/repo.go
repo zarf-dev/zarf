@@ -32,7 +32,7 @@ import (
 )
 
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
-func (h *Helm) PackageChart() error {
+func (h *Helm) PackageChart(cosignKeyPath string) error {
 	if len(h.chart.URL) > 0 {
 		url, refPlain, err := transform.GitURLSplitRef(h.chart.URL)
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
@@ -47,19 +47,19 @@ func (h *Helm) PackageChart() error {
 				h.chart.URL = fmt.Sprintf("%s@%s", h.chart.URL, h.chart.Version)
 			}
 
-			err = h.PackageChartFromGit()
+			err = h.PackageChartFromGit(cosignKeyPath)
 			if err != nil {
 				return fmt.Errorf("unable to pull the chart %q from git: %w", h.chart.Name, err)
 			}
 		} else {
-			err = h.DownloadPublishedChart()
+			err = h.DownloadPublishedChart(cosignKeyPath)
 			if err != nil {
 				return fmt.Errorf("unable to download the published chart %q: %w", h.chart.Name, err)
 			}
 		}
 
 	} else {
-		err := h.PackageChartFromLocalFiles()
+		err := h.PackageChartFromLocalFiles(cosignKeyPath)
 		if err != nil {
 			return fmt.Errorf("unable to package the %q chart: %w", h.chart.Name, err)
 		}
@@ -68,7 +68,7 @@ func (h *Helm) PackageChart() error {
 }
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func (h *Helm) PackageChartFromLocalFiles() error {
+func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.chart.Name, h.chart.Version, h.chart.LocalPath)
 	defer spinner.Stop()
 
@@ -97,7 +97,7 @@ func (h *Helm) PackageChartFromLocalFiles() error {
 		return fmt.Errorf("unable to save the archive and create the package %s: %w", path, err)
 	}
 
-	err = h.packageValues()
+	err = h.packageValues(cosignKeyPath)
 	if err != nil {
 		return fmt.Errorf("unable to process the values for the package: %w", err)
 	}
@@ -108,7 +108,7 @@ func (h *Helm) PackageChartFromLocalFiles() error {
 }
 
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
-func (h *Helm) PackageChartFromGit() error {
+func (h *Helm) PackageChartFromGit(cosignKeyPath string) error {
 	spinner := message.NewProgressSpinner("Processing helm chart %s", h.chart.Name)
 	defer spinner.Stop()
 
@@ -121,11 +121,11 @@ func (h *Helm) PackageChartFromGit() error {
 
 	// Set the directory for the chart and package it
 	h.chart.LocalPath = filepath.Join(gitPath, h.chart.GitPath)
-	return h.PackageChartFromLocalFiles()
+	return h.PackageChartFromLocalFiles(cosignKeyPath)
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func (h *Helm) DownloadPublishedChart() error {
+func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.chart.Name, h.chart.Version, h.chart.URL)
 	defer spinner.Stop()
 
@@ -191,7 +191,7 @@ func (h *Helm) DownloadPublishedChart() error {
 		return fmt.Errorf("unable to save the chart tarball: %w", err)
 	}
 
-	err = h.packageValues()
+	err = h.packageValues(cosignKeyPath)
 	if err != nil {
 		return fmt.Errorf("unable to process the values for the package: %w", err)
 	}
@@ -215,12 +215,12 @@ func DownloadChartFromGitToTemp(url string, spinner *message.Spinner) (string, e
 	return gitCfg.GitPath, nil
 }
 
-func (h *Helm) packageValues() error {
+func (h *Helm) packageValues(cosignKeyPath string) error {
 	for valuesIdx, path := range h.chart.ValuesFiles {
 		dst := fmt.Sprintf("%s-%d", StandardName(h.valuesPath, h.chart), valuesIdx)
 
 		if helpers.IsURL(path) {
-			if err := utils.DownloadToFile(path, dst, ""); err != nil {
+			if err := utils.DownloadToFile(path, dst, cosignKeyPath); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 			}
 		} else {

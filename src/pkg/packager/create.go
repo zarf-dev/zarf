@@ -371,7 +371,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 				}
 			}
 		} else {
-			err := helmCfg.PackageChart()
+			err := helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
 			if err != nil {
 				return err
 			}

@@ -120,7 +120,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			helmCfg := helm.New(chart, componentPaths.Charts, componentPaths.Values)
 			helmCfg.WithKubeVersion(kubeVersionOverride)
 
-			err := helmCfg.PackageChart()
+			err := helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
 			if err != nil {
 				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.URL, err.Error())
 			}
