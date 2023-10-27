@@ -20,12 +20,13 @@ func (p *Packager) composeComponents() error {
 	for _, component := range p.cfg.Pkg.Components {
 		arch := p.arch
 		// filter by architecture
-		if component.Only.Cluster.Architecture != "" && component.Only.Cluster.Architecture != arch {
+		if (component.Only.Cluster.Architecture != "" && component.Only.Cluster.Architecture != arch) ||
+			(component.Only.Flavor != "" && component.Only.Flavor != p.cfg.CreateOpts.Flavor) {
 			continue
 		}
 
 		// build the import chain
-		chain, err := composer.NewImportChain(component, arch)
+		chain, err := composer.NewImportChain(component, arch, p.cfg.CreateOpts.Flavor)
 		if err != nil {
 			return err
 		}

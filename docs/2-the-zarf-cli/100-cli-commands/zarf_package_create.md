@@ -18,6 +18,7 @@ zarf package create [ DIRECTORY ] [flags]
 ```
       --confirm                            Confirm package creation without prompting
       --differential string                [beta] Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package
+  -f, --flavor string                      The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                               help for create
   -k, --key string                         Path to private key file for signing packages
       --key-pass string                    Password to the private key file used for signing packages

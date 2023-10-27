@@ -72,7 +72,7 @@ func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string, vars
 }
 
 // NewImportChain creates a new import chain from a component
-func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error) {
+func NewImportChain(head types.ZarfComponent, arch, flavor string) (*ImportChain, error) {
 	if arch == "" {
 		return nil, fmt.Errorf("cannot build import chain: architecture must be provided")
 	}
@@ -144,7 +144,8 @@ func NewImportChain(head types.ZarfComponent, arch string) (*ImportChain, error)
 		found := helpers.Filter(pkg.Components, func(c types.ZarfComponent) bool {
 			matchesName := c.Name == name
 			satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
-			return matchesName && satisfiesArch
+			satisfiesFlavor := c.Only.Flavor != "" && c.Only.Flavor != flavor
+			return matchesName && satisfiesArch && satisfiesFlavor
 		})
 
 		if len(found) == 0 {
