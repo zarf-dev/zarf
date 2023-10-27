@@ -551,14 +551,12 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 			manifest.Namespace = corev1.NamespaceDefault
 		}
 
-		// Iterate over any connectStrings and add to the main map
-		helmCfg := helm.New(types.ZarfChart{}, componentPaths.Manifests, componentPaths.Values)
-		helmCfg.WithDeployInfo(component, p.cfg, p.cluster)
-
-		// Generate the chart.
-		if err := helmCfg.GenerateChart(manifest); err != nil {
+		// Create a chart and helm cfg from a given Zarf Manifest.
+		helmCfg, err := helm.NewFromZarfManifest(manifest, componentPaths.Manifests, p.cfg.Pkg.Metadata.Name, component.Name)
+		if err != nil {
 			return installedCharts, err
 		}
+		helmCfg.WithDeployInfo(component, p.cfg, p.cluster)
 
 		// Install the chart.
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()

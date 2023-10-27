@@ -5,12 +5,7 @@
 package helm
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"fmt"
-	"os"
-	"path"
-	"strconv"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -205,62 +200,6 @@ func (h *Helm) TemplateChart() (string, chartutil.Values, error) {
 	spinner.Success()
 
 	return manifest, chartValues, nil
-}
-
-// GenerateChart generates a helm chart for a given Zarf manifest.
-func (h *Helm) GenerateChart(manifest types.ZarfManifest) error {
-	message.Debugf("helm.GenerateChart(%#v)", manifest)
-	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
-	defer spinner.Stop()
-
-	// Generate a new chart.
-	tmpChart := new(chart.Chart)
-	tmpChart.Metadata = new(chart.Metadata)
-
-	// Generate a hashed chart name.
-	rawChartName := fmt.Sprintf("raw-%s-%s-%s", h.cfg.Pkg.Metadata.Name, h.component.Name, manifest.Name)
-	hasher := sha1.New()
-	hasher.Write([]byte(rawChartName))
-	tmpChart.Metadata.Name = rawChartName
-	sha1ReleaseName := hex.EncodeToString(hasher.Sum(nil))
-
-	// This is fun, increment forward in a semver-way using epoch so helm doesn't cry.
-	tmpChart.Metadata.Version = fmt.Sprintf("0.1.%d", config.GetStartTime())
-	tmpChart.Metadata.APIVersion = chart.APIVersionV1
-
-	// Add the manifest files so helm does its thing.
-	for _, file := range manifest.Files {
-		spinner.Updatef("Processing %s", file)
-		manifest := path.Join(h.chartPath, file)
-		data, err := os.ReadFile(manifest)
-		if err != nil {
-			return fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
-		}
-
-		// Escape all chars and then wrap in {{ }}.
-		txt := strconv.Quote(string(data))
-		data = []byte("{{" + txt + "}}")
-
-		tmpChart.Templates = append(tmpChart.Templates, &chart.File{Name: manifest, Data: data})
-	}
-
-	// Generate the struct to pass to InstallOrUpgradeChart().
-	h.chart = types.ZarfChart{
-		Name: tmpChart.Metadata.Name,
-		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
-		ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
-		Version:     tmpChart.Metadata.Version,
-		Namespace:   manifest.Namespace,
-		NoWait:      manifest.NoWait,
-	}
-	h.chartOverride = tmpChart
-
-	// We don't have any values because we do not expose them in the zarf.yaml currently.
-	h.valueOverride = map[string]any{}
-
-	spinner.Success()
-
-	return nil
 }
 
 // RemoveChart removes a chart from the cluster.
