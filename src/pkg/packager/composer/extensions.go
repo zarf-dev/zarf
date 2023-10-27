@@ -10,9 +10,5 @@ import (
 )
 
 func composeExtensions(c *types.ZarfComponent, override types.ZarfComponent, relativeTo string) {
-	// fix the file paths
-	if override.Extensions.BigBang != nil {
-		component := bigbang.Compose(*c, override, relativeTo)
-		c = &component
-	}
+	bigbang.Compose(c, override, relativeTo)
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPackage_Files(t *testing.T) {
+func TestPackageFiles(t *testing.T) {
 	pp := New("test")
 
 	raw := &PackagePaths{

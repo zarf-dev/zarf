@@ -294,40 +294,34 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 // Compose mutates a component so that its local paths are relative to the provided path
 //
 // additionally, it will merge any overrides
-func Compose(c types.ZarfComponent, override types.ZarfComponent, relativeTo string) types.ZarfComponent {
-	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
-		if helpers.IsURL(valuesFile) {
-			continue
-		}
-
-		fixed := filepath.Join(relativeTo, valuesFile)
-		c.Extensions.BigBang.ValuesFiles[valuesIdx] = fixed
-	}
-
-	for fluxPatchFileIdx, fluxPatchFile := range c.Extensions.BigBang.FluxPatchFiles {
-		if helpers.IsURL(fluxPatchFile) {
-			continue
-		}
-
-		fixed := filepath.Join(relativeTo, fluxPatchFile)
-		c.Extensions.BigBang.FluxPatchFiles[fluxPatchFileIdx] = fixed
-	}
-
+func Compose(c *types.ZarfComponent, override types.ZarfComponent, relativeTo string) {
 	// perform any overrides
 	if override.Extensions.BigBang != nil {
+		for valuesIdx, valuesFile := range override.Extensions.BigBang.ValuesFiles {
+			if helpers.IsURL(valuesFile) {
+				continue
+			}
+
+			fixed := filepath.Join(relativeTo, valuesFile)
+			override.Extensions.BigBang.ValuesFiles[valuesIdx] = fixed
+		}
+
+		for fluxPatchFileIdx, fluxPatchFile := range override.Extensions.BigBang.FluxPatchFiles {
+			if helpers.IsURL(fluxPatchFile) {
+				continue
+			}
+
+			fixed := filepath.Join(relativeTo, fluxPatchFile)
+			override.Extensions.BigBang.FluxPatchFiles[fluxPatchFileIdx] = fixed
+		}
+
 		if c.Extensions.BigBang == nil {
 			c.Extensions.BigBang = override.Extensions.BigBang
 		} else {
-			if override.Extensions.BigBang.ValuesFiles != nil {
-				c.Extensions.BigBang.ValuesFiles = append(c.Extensions.BigBang.ValuesFiles, override.Extensions.BigBang.ValuesFiles...)
-			}
-			if override.Extensions.BigBang.FluxPatchFiles != nil {
-				c.Extensions.BigBang.FluxPatchFiles = append(c.Extensions.BigBang.FluxPatchFiles, override.Extensions.BigBang.FluxPatchFiles...)
-			}
+			c.Extensions.BigBang.ValuesFiles = append(c.Extensions.BigBang.ValuesFiles, override.Extensions.BigBang.ValuesFiles...)
+			c.Extensions.BigBang.FluxPatchFiles = append(c.Extensions.BigBang.FluxPatchFiles, override.Extensions.BigBang.FluxPatchFiles...)
 		}
 	}
-
-	return c
 }
 
 // isValidVersion check if the version is 1.54.0 or greater.
