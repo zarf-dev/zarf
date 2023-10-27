@@ -93,6 +93,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 			GitPath:     "./chart",
 		},
 		path.Join(tmpPaths.Temp, bb),
+		path.Join(tmpPaths.Temp, bb, "values"),
 	)
 
 	// Download the chart from Git and save it to a temporary directory.

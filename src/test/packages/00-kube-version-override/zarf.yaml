@@ -11,3 +11,5 @@ components:
     version: v1.11.1
     namespace: cert-manager
     url: https://charts.jetstack.io/
+    valuesFiles:
+      - "values.yaml"

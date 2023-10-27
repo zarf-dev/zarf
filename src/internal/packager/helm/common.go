@@ -16,13 +16,13 @@ import (
 
 // Helm is a config object for working with helm charts.
 type Helm struct {
-	chart     types.ZarfChart
-	chartPath string
-	cfg       *types.PackagerConfig
-
-	component  types.ZarfComponent
-	cluster    *cluster.Cluster
+	chart      types.ZarfChart
+	chartPath  string
 	valuesPath string
+
+	cfg       *types.PackagerConfig
+	component types.ZarfComponent
+	cluster   *cluster.Cluster
 
 	kubeVersion string
 
@@ -34,10 +34,11 @@ type Helm struct {
 }
 
 // New returns a new Helm config struct.
-func New(chart types.ZarfChart, chartPath string) *Helm {
+func New(chart types.ZarfChart, chartPath string, valuesPath string) *Helm {
 	return &Helm{
-		chart:     chart,
-		chartPath: chartPath,
+		chart:      chart,
+		chartPath:  chartPath,
+		valuesPath: valuesPath,
 	}
 }
 
@@ -58,11 +59,10 @@ func NewClusterOnly(cfg *types.PackagerConfig, cluster *cluster.Cluster) *Helm {
 // }
 
 // WithDeployInfo adds the necessary information to deploy a given chart
-func (h *Helm) WithDeployInfo(component types.ZarfComponent, cfg *types.PackagerConfig, cluster *cluster.Cluster, valuesPath string) {
+func (h *Helm) WithDeployInfo(component types.ZarfComponent, cfg *types.PackagerConfig, cluster *cluster.Cluster) {
 	h.component = component
 	h.cfg = cfg
 	h.cluster = cluster
-	h.valuesPath = valuesPath
 }
 
 // WithKubeVersion sets the Kube version for templating the chart

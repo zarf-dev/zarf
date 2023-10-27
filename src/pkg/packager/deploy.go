@@ -505,18 +505,18 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 		// Iterate over the valuesFiles and apply any Zarf variable templates
 		for idx := range chart.ValuesFiles {
-			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPath.Values, chart), idx)
+			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
 			if err := p.valueTemplate.Apply(component, chartValueName, false); err != nil {
 				return installedCharts, err
 			}
 		}
 
-		helmCfg := helm.New(chart, componentPath.Charts)
-		helmCfg.WithDeployInfo(component, p.cfg, p.cluster, componentPath.Values)
+		helmCfg := helm.New(chart, componentPaths.Charts, componentPaths.Values)
+		helmCfg.WithDeployInfo(component, p.cfg, p.cluster)
 
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
 		if err != nil {
@@ -532,10 +532,10 @@ func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths
 
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
-			if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+			if utils.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
 				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
 				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
-				if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+				if utils.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
 					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
 				}
 			}
@@ -552,8 +552,8 @@ func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths
 		}
 
 		// Iterate over any connectStrings and add to the main map
-		helmCfg := helm.New(types.ZarfChart{}, componentPath.Manifests)
-		helmCfg.WithDeployInfo(component, p.cfg, p.cluster, componentPath.Values)
+		helmCfg := helm.New(types.ZarfChart{}, componentPaths.Manifests, componentPaths.Values)
+		helmCfg.WithDeployInfo(component, p.cfg, p.cluster)
 
 		// Generate the chart.
 		if err := helmCfg.GenerateChart(manifest); err != nil {

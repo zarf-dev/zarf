@@ -11,10 +11,12 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -93,6 +95,11 @@ func (h *Helm) PackageChartFromLocalFiles() error {
 
 	if err != nil {
 		return fmt.Errorf("unable to save the archive and create the package %s: %w", path, err)
+	}
+
+	err = h.packageValues()
+	if err != nil {
+		return fmt.Errorf("unable to process the values for the package: %w", err)
 	}
 
 	spinner.Success()
@@ -184,6 +191,11 @@ func (h *Helm) DownloadPublishedChart() error {
 		return fmt.Errorf("unable to save the chart tarball: %w", err)
 	}
 
+	err = h.packageValues()
+	if err != nil {
+		return fmt.Errorf("unable to process the values for the package: %w", err)
+	}
+
 	spinner.Success()
 
 	return nil
@@ -201,6 +213,24 @@ func DownloadChartFromGitToTemp(url string, spinner *message.Spinner) (string, e
 	}
 
 	return gitCfg.GitPath, nil
+}
+
+func (h *Helm) packageValues() error {
+	for valuesIdx, path := range h.chart.ValuesFiles {
+		dst := fmt.Sprintf("%s-%d", StandardName(h.valuesPath, h.chart), valuesIdx)
+
+		if helpers.IsURL(path) {
+			if err := utils.DownloadToFile(path, dst, ""); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
+			}
+		} else {
+			if err := utils.CreatePathAndCopy(path, dst); err != nil {
+				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // buildChartDependencies builds the helm chart dependencies
