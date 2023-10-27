@@ -143,9 +143,7 @@ func NewImportChain(head types.ZarfComponent, arch, flavor string) (*ImportChain
 
 		found := helpers.Filter(pkg.Components, func(c types.ZarfComponent) bool {
 			matchesName := c.Name == name
-			satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
-			satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
-			return matchesName && satisfiesArch && satisfiesFlavor
+			return matchesName && CompatibleComponent(c, arch, flavor)
 		})
 
 		if len(found) == 0 {
@@ -282,4 +280,11 @@ func (ic *ImportChain) MergeConstants(existing []types.ZarfPackageConstant) (mer
 		node = node.next
 	}
 	return merged
+}
+
+// CompatibleComponent determines if this component is compatible with the given create options
+func CompatibleComponent(c types.ZarfComponent, arch, flavor string) bool {
+	satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
+	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
+	return satisfiesArch && satisfiesFlavor
 }
