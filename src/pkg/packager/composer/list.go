@@ -144,7 +144,7 @@ func NewImportChain(head types.ZarfComponent, arch, flavor string) (*ImportChain
 		found := helpers.Filter(pkg.Components, func(c types.ZarfComponent) bool {
 			matchesName := c.Name == name
 			satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
-			satisfiesFlavor := c.Only.Flavor != "" && c.Only.Flavor != flavor
+			satisfiesFlavor := c.Only.Flavor == "" && c.Only.Flavor == flavor
 			return matchesName && satisfiesArch && satisfiesFlavor
 		})
 
