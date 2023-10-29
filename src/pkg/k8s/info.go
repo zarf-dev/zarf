@@ -5,11 +5,14 @@
 package k8s
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"regexp"
 
 	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // List of supported distros via distro detection.
@@ -157,4 +160,19 @@ func MakeLabels(labels map[string]string) string {
 		out = append(out, fmt.Sprintf("%s=%s", key, value))
 	}
 	return strings.Join(out, ",")
+}
+
+func (k *K8s) GetDefaultStorageClass() (string, error) {
+	storageV1Client := k.Clientset.StorageV1()
+	storageClasses, err := storageV1Client.StorageClasses().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return "", fmt.Errorf("unable to get Kubernetes default storage class from the cluster : %w", err)
+	}
+
+	for _, sc := range storageClasses.Items {
+		if sc.Annotations["storageclass.kubernetes.io/is-default-class"] == "true" {
+			return sc.Name, nil
+		}
+	}
+	return "", fmt.Errorf("unable to get Kubernetes default storage class from the cluster (no default storage class found)")
 }
