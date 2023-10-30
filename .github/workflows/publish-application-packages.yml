@@ -40,6 +40,7 @@ jobs:
 
           zarf package publish ./build/zarf-package-dos-games-amd64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages
           zarf package publish ./build/zarf-package-dos-games-arm64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages
+          zarf package publish examples/dos-games oci://ghcr.io/defenseunicorns/packages
 
           zarf tools registry copy ghcr.io/defenseunicorns/packages/dos-games:1.0.0-amd64 ghcr.io/defenseunicorns/packages/dos-games:1.0.0-x86_64
           zarf tools registry copy ghcr.io/defenseunicorns/packages/dos-games:1.0.0-arm64 ghcr.io/defenseunicorns/packages/dos-games:1.0.0-aarch64
