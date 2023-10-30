@@ -22,17 +22,8 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branchName }}
 
-      # - name: Install The Latest Release Version of Zarf
-      #   uses: defenseunicorns/setup-zarf@main
-
-      - name: Setup golang
-        uses: ./.github/actions/golang
-
-      - name: Build binary and zarf packages
-        uses: ./.github/actions/packages
-        with:
-          build-examples: "false"
-          init-package: "false"
+      - name: Install The Latest Release Version of Zarf
+        uses: defenseunicorns/setup-zarf@main
 
       - name: "Login to GHCR"
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
@@ -44,18 +35,18 @@ jobs:
       - name: Build And Publish Application Packages
         # Create the dos-games package with the cosign signature, publish to ghcr and copy the tags to allow 'uname -m' to work
         run: |
-          ./build/zarf package create -o build -a amd64 examples/dos-games --signing-key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} --confirm
-          ./build/zarf package create -o build -a arm64 examples/dos-games --signing-key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} --confirm
+          zarf package create -o build -a amd64 examples/dos-games --signing-key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} --confirm
+          zarf package create -o build -a arm64 examples/dos-games --signing-key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} --confirm
 
           # Publish a the signed dos-games package
-          ./build/zarf package publish ./build/zarf-package-dos-games-amd64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages --key=https://zarf.dev/cosign.pub
-          ./build/zarf package publish ./build/zarf-package-dos-games-arm64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages --key=https://zarf.dev/cosign.pub
+          zarf package publish ./build/zarf-package-dos-games-amd64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages --key=https://zarf.dev/cosign.pub
+          zarf package publish ./build/zarf-package-dos-games-arm64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages --key=https://zarf.dev/cosign.pub
 
           # Publish a skeleton of the dos-games package
-          ./build/zarf package publish examples/dos-games oci://ghcr.io/defenseunicorns/packages
+          zarf package publish examples/dos-games oci://ghcr.io/defenseunicorns/packages
 
-          ./build/zarf tools registry copy ghcr.io/defenseunicorns/packages/dos-games:1.0.0-amd64 ghcr.io/defenseunicorns/packages/dos-games:1.0.0-x86_64
-          ./build/zarf tools registry copy ghcr.io/defenseunicorns/packages/dos-games:1.0.0-arm64 ghcr.io/defenseunicorns/packages/dos-games:1.0.0-aarch64
+          zarf tools registry copy ghcr.io/defenseunicorns/packages/dos-games:1.0.0-amd64 ghcr.io/defenseunicorns/packages/dos-games:1.0.0-x86_64
+          zarf tools registry copy ghcr.io/defenseunicorns/packages/dos-games:1.0.0-arm64 ghcr.io/defenseunicorns/packages/dos-games:1.0.0-aarch64
         env:
           AWS_REGION: ${{ secrets.COSIGN_AWS_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.COSIGN_AWS_KEY_ID }}
