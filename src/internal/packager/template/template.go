@@ -153,6 +153,10 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 		}
 	}
 
+	// TODO: order of operation hack.
+	values.config.SetVariableMap["REGISTRY_NODEPORT"].Value = values.config.PkgOpts.SetVariables["REGISTRY_NODEPORT"]
+	values.config.SetVariableMap["REGISTRY_STORAGE_CLASS"].Value = values.config.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"]
+
 	for key, variable := range values.config.SetVariableMap {
 		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = &utils.TextTemplate{
