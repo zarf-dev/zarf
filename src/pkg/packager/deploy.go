@@ -216,15 +216,14 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	if isSeedRegistry {
 		p.cluster.StartInjectionMadness(p.layout.Base, p.layout.Images.Base, component.Images)
 
-		/*
-			// Retrieve the default storage class from the cluster, it will be the default
-			if p.cfg.PkgOpts.SetVariables == nil {
-				p.cfg.PkgOpts.SetVariables = map[string]string{}
-			}
-			if c := p.cfg.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"]; c == "" {
-				p.cfg.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"], err = p.cluster.GetDefaultStorageClass()
-			}
-		*/
+		// Retrieve the default storage class from the cluster, it will be the default
+		if p.cfg.PkgOpts.SetVariables == nil {
+			p.cfg.PkgOpts.SetVariables = map[string]string{}
+		}
+		if c := p.cfg.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"]; c == "" {
+			p.cfg.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"], err = p.cluster.GetDefaultStorageClass()
+		}
+
 		if err != nil {
 			message.WarnErr(err, "Unable to get the default storage class from the cluster")
 		}
