@@ -15,7 +15,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
@@ -30,52 +29,27 @@ type SkeletonSuite struct {
 }
 
 var (
-	composeExample       = filepath.Join("examples", "composable-packages")
-	composeExamplePath   string
 	importEverything     = filepath.Join("src", "test", "packages", "51-import-everything")
 	importEverythingPath string
 	importception        = filepath.Join("src", "test", "packages", "51-import-everything", "inception")
 	importceptionPath    string
-	everythingExternal   = filepath.Join("src", "test", "packages", "everything-external")
-	absNoCode            = filepath.Join("/", "tmp", "nocode")
 )
 
 func (suite *SkeletonSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
-	err := os.MkdirAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts"), 0755)
-	suite.NoError(err)
-	err = utils.CreatePathAndCopy(filepath.Join("examples", "helm-charts", "chart"), filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
-	suite.NoError(err)
-	suite.DirExists(filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
-
-	err = utils.CreatePathAndCopy(importEverything, everythingExternal)
-	suite.NoError(err)
-	suite.DirExists(everythingExternal)
-
-	err = exec.CmdWithPrint("git", "clone", "https://github.com/kelseyhightower/nocode", absNoCode)
-	suite.NoError(err)
-	suite.DirExists(absNoCode)
 
 	e2e.SetupDockerRegistry(suite.T(), 555)
 	suite.Reference.Registry = "localhost:555"
 
 	// Setup the package paths after e2e has been initialized
-	composeExamplePath = filepath.Join("build", fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
 	importEverythingPath = filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
 	importceptionPath = filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch))
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
 	e2e.TeardownRegistry(suite.T(), 555)
-	err := os.RemoveAll(everythingExternal)
-	suite.NoError(err)
-	err = os.RemoveAll(absNoCode)
-	suite.NoError(err)
-	err = os.RemoveAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
-	suite.NoError(err)
-	err = os.RemoveAll("files")
-	suite.NoError(err)
-	err = os.RemoveAll(composeExamplePath)
+
+	err := os.RemoveAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
 	err = os.RemoveAll(importEverythingPath)
 	suite.NoError(err)
@@ -87,13 +61,8 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.T().Log("E2E: Skeleton Package Publish oci://")
 	ref := suite.Reference.String()
 
-	wordpress := filepath.Join("examples", "wordpress")
-	_, stdErr, err := e2e.Zarf("package", "publish", wordpress, "oci://"+ref, "--insecure")
-	suite.NoError(err)
-	suite.Contains(stdErr, "Published "+ref)
-
 	helmCharts := filepath.Join("examples", "helm-charts")
-	_, stdErr, err = e2e.Zarf("package", "publish", helmCharts, "oci://"+ref, "--insecure")
+	_, stdErr, err := e2e.Zarf("package", "publish", helmCharts, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
@@ -119,41 +88,7 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_1_Compose_Example() {
-	suite.T().Log("E2E: Skeleton Package Compose oci://")
-
-	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--insecure", "--no-color", "--confirm")
-	suite.NoError(err)
-
-	// Ensure that common names merge
-	suite.Contains(stdErr, `
-  manifests:
-  - name: multi-games
-    namespace: dos-games
-    files:
-    - ../dos-games/manifests/deployment.yaml
-    - ../dos-games/manifests/service.yaml
-    - quake-service.yaml`)
-
-	// Ensure that the action was appended
-	suite.Contains(stdErr, `
-  - docker.io/bitnami/wordpress:6.2.0-debian-11-r18
-  actions:
-    onDeploy:
-      before:
-      - cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}
-        setVariables:
-        - name: WORDPRESS_BLOG_NAME`)
-
-	// Ensure that the variables were merged
-	suite.Contains(stdErr, `
-- name: WORDPRESS_BLOG_NAME
-  description: The blog name that is used for the WordPress admin account
-  default: The Zarf Blog
-  prompt: true`)
-}
-
-func (suite *SkeletonSuite) Test_2_Compose_Everything_Inception() {
+func (suite *SkeletonSuite) Test_1_Compose_Everything_Inception() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
 	_, _, err := e2e.Zarf("package", "create", importEverything, "-o", "build", "--insecure", "--confirm")
@@ -167,15 +102,10 @@ func (suite *SkeletonSuite) Test_2_Compose_Everything_Inception() {
 
 	targets := []string{
 		"import-component-local == import-component-local",
-		"import-component-local-relative == import-component-local-relative",
-		"import-component-wordpress == import-component-wordpress",
 		"import-component-oci == import-component-oci",
+		"import-big-bang == import-big-bang",
 		"file-imports == file-imports",
-		"import-helm-local == import-helm-local",
-		"import-helm-local-relative == import-helm-local-relative",
-		"import-helm-oci == import-helm-oci",
-		"import-repos == import-repos",
-		"import-images == import-images",
+		"local-chart-import == local-chart-import",
 	}
 
 	for _, target := range targets {
@@ -183,8 +113,8 @@ func (suite *SkeletonSuite) Test_2_Compose_Everything_Inception() {
 	}
 }
 
-func (suite *SkeletonSuite) Test_3_FilePaths() {
-	suite.T().Log("E2E: Skeleton Package File Paths")
+func (suite *SkeletonSuite) Test_2_FilePaths() {
+	suite.T().Log("E2E: Skeleton + Package File Paths")
 
 	pkgTars := []string{
 		filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch)),

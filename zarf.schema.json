@@ -195,21 +195,7 @@
         }
       },
       "additionalProperties": false,
-      "type": "object",
-      "oneOf": [
-        {
-          "required": [
-            "url"
-          ],
-          "title": "url"
-        },
-        {
-          "required": [
-            "localPath"
-          ],
-          "title": "localPath"
-        }
-      ]
+      "type": "object"
     },
     "ZarfComponent": {
       "required": [

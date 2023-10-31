@@ -1,0 +1,65 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-compose-package
+  description: Deploy podinfo using a Helm OCI chart
+  version: 6.4.0
+
+components:
+  - name: test-compose-package
+    description: A contrived example for podinfo using many Zarf primitives for compose testing
+    required: true
+    import:
+      path: sub-package
+      name: test-compose-sub-package
+    charts:
+      - name: podinfo-compose
+        releaseName: podinfo-override
+        namespace: podinfo-override
+        valuesFiles:
+          - files/test-values.yaml
+      - name: podinfo-compose-two
+        releaseName: podinfo-compose-two
+        version: 6.4.0
+        namespace: podinfo-compose-two
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+        valuesFiles:
+          - files/test-values.yaml
+    manifests:
+      - name: connect-service
+        namespace: podinfo-override
+        files:
+          - files/service.yaml
+        kustomizations:
+          - files/
+      - name: connect-service-two
+        namespace: podinfo-compose-two
+        files:
+          - files/service.yaml
+        kustomizations:
+          - files/
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.1
+    repos:
+      - https://github.com/defenseunicorns/zarf-public-test.git@refs/heads/dragons
+    files:
+      - source: files/coffee-ipsum.txt
+        target: coffee-ipsum.txt
+    dataInjections:
+      - source: files
+        target:
+          selector: app.kubernetes.io/name=podinfo-upgrade
+          namespace: podinfo-upgrade
+          container: podinfo
+          path: /home/app/service.yaml
+    actions:
+      onCreate:
+        before:
+          - cmd: cat files/coffee-ipsum.txt
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: podinfo-compose-two
+                namespace: podinfo-compose-two
+                condition: available
