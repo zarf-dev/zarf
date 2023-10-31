@@ -21,18 +21,25 @@ type FlavorSuite struct {
 
 var (
 	flavorExample     = filepath.Join("examples", "package-flavors")
+	flavorTest        = filepath.Join("src", "test", "packages", "10-package-flavors")
 	flavorExamplePath string
+	flavorTestAMDPath = filepath.Join("build", "zarf-package-test-package-flavors-amd64.tar.zst")
+	flavorTestARMPath = filepath.Join("build", "zarf-package-test-package-flavors-arm64.tar.zst")
 )
 
 func (suite *FlavorSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
-	// Setup the package paths after e2e has been initialized
+	// Setup the example package path after e2e has been initialized
 	flavorExamplePath = filepath.Join("build", fmt.Sprintf("zarf-package-package-flavors-%s.tar.zst", e2e.Arch))
 }
 
 func (suite *FlavorSuite) TearDownSuite() {
 	err := os.RemoveAll(flavorExamplePath)
+	suite.NoError(err)
+	err = os.RemoveAll(flavorTestAMDPath)
+	suite.NoError(err)
+	err = os.RemoveAll(flavorTestARMPath)
 	suite.NoError(err)
 }
 
@@ -52,6 +59,64 @@ func (suite *FlavorSuite) Test_0_FlavorExample() {
 	suite.NotContains(stdErr, `rockylinux:9-minimal`)
 	suite.NotContains(stdErr, `almalinux:9-minimal`)
 	suite.NotContains(stdErr, `opensuse/leap:15`)
+}
+
+func (suite *FlavorSuite) Test_1_FlavorArchFiltering() {
+	suite.T().Log("E2E: Package Flavor + Arch Filtering")
+
+	_, stdErr, err := e2e.Zarf("package", "create", flavorTest, "-o", "build", "--flavor", "vanilla", "-a", "amd64", "--no-color", "--confirm")
+	suite.NoError(err)
+
+	// Ensure that the initial filter was applied
+	suite.Contains(stdErr, `
+- name: combined
+  description: vanilla-amd`)
+
+	// Ensure that the import filter was applied
+	suite.Contains(stdErr, `
+- name: via-import
+  description: vanilla-amd`)
+
+	// Ensure that the other flavors / architectures are not included
+	suite.NotContains(stdErr, `vanilla-arm`)
+	suite.NotContains(stdErr, `chocolate-amd`)
+	suite.NotContains(stdErr, `chocolate-arm`)
+
+	_, stdErr, err = e2e.Zarf("package", "create", flavorTest, "-o", "build", "--flavor", "chocolate", "-a", "amd64", "--no-color", "--confirm")
+	suite.NoError(err)
+
+	// Ensure that the initial filter was applied
+	suite.Contains(stdErr, `
+- name: combined
+  description: chocolate-amd`)
+
+	// Ensure that the import filter was applied
+	suite.Contains(stdErr, `
+- name: via-import
+  description: chocolate-amd`)
+
+	// Ensure that the other flavors / architectures are not included
+	suite.NotContains(stdErr, `vanilla-arm`)
+	suite.NotContains(stdErr, `vanilla-amd`)
+	suite.NotContains(stdErr, `chocolate-arm`)
+
+	_, stdErr, err = e2e.Zarf("package", "create", flavorTest, "-o", "build", "--flavor", "chocolate", "-a", "arm64", "--no-color", "--confirm")
+	suite.NoError(err)
+
+	// Ensure that the initial filter was applied
+	suite.Contains(stdErr, `
+- name: combined
+  description: chocolate-arm`)
+
+	// Ensure that the import filter was applied
+	suite.Contains(stdErr, `
+- name: via-import
+  description: chocolate-arm`)
+
+	// Ensure that the other flavors / architectures are not included
+	suite.NotContains(stdErr, `vanilla-arm`)
+	suite.NotContains(stdErr, `vanilla-amd`)
+	suite.NotContains(stdErr, `chocolate-amd`)
 }
 
 func TestFlavorSuite(t *testing.T) {

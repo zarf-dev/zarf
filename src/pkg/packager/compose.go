@@ -22,6 +22,10 @@ func (p *Packager) composeComponents() error {
 		// filter by architecture
 		if !composer.CompatibleComponent(component, arch, p.cfg.CreateOpts.Flavor) {
 			continue
+		} else {
+			// if a match was found, strip flavor and architecture to reduce bloat in the package definition
+			component.Only.Cluster.Architecture = ""
+			component.Only.Flavor = ""
 		}
 
 		// build the import chain
