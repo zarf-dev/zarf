@@ -89,13 +89,7 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 	deprecations = map[string]string{
 		fmt.Sprintf("###ZARF_%s###", depMarkerOld): fmt.Sprintf("###ZARF_%s###", depMarkerNew),
 	}
-	// in the event there was a modification of this, having this misaligned will break the deployment
-	// TODO: test with yolo, and external registry.
-	if values.config.PkgOpts.SetVariables == nil {
-		values.config.PkgOpts.SetVariables = map[string]string{}
-	}
 
-	values.config.PkgOpts.SetVariables["REGISTRY_NODEPORT"] = getPort(values.registry)
 	if values.config.State != nil {
 		regInfo := values.config.State.RegistryInfo
 		gitInfo := values.config.State.GitServer
@@ -153,9 +147,14 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 		}
 	}
 
-	// TODO: order of operation hack.
-	values.config.SetVariableMap["REGISTRY_NODEPORT"].Value = values.config.PkgOpts.SetVariables["REGISTRY_NODEPORT"]
-	values.config.SetVariableMap["REGISTRY_STORAGE_CLASS"].Value = values.config.PkgOpts.SetVariables["REGISTRY_STORAGE_CLASS"]
+	if values.config.PkgOpts.SetVariables != nil {
+		// TODO: verify they are the same, if not, warn the user
+		values.config.PkgOpts.SetVariables["REGISTRY_NODEPORT"] = getPort(values.registry)
+	}
+
+	// update the variable map based on things that might be set in the state of the cluster
+	values.updateVariableMap("REGISTRY_NODEPORT")
+	values.updateVariableMap("REGISTRY_STORAGE_CLASS")
 
 	for key, variable := range values.config.SetVariableMap {
 		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
@@ -179,6 +178,12 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 	message.Debugf("deprecations = %#v", deprecations)
 
 	return templateMap, deprecations
+}
+
+func (values *Values) updateVariableMap(key string) {
+	if values.config.PkgOpts.SetVariables != nil && values.config.SetVariableMap[key] != nil && values.config.PkgOpts.SetVariables[key] != "" {
+		values.config.SetVariableMap[key].Value = values.config.PkgOpts.SetVariables[key]
+	}
 }
 
 // Apply renders the template and writes the result to the given path.
