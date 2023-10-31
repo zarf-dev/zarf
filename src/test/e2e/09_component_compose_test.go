@@ -163,9 +163,9 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
     onCreate:
       before:
       - dir: sub-package
-        cmd: cat ../files/coffee-ipsum.txt
+        cmd: ls
       - dir: .
-        cmd: cat files/coffee-ipsum.txt
+        cmd: ls
     onDeploy:
       after:
       - cmd: cat coffee-ipsum.txt
