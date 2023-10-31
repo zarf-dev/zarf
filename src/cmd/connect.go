@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -73,17 +72,12 @@ var (
 			// Keep this open until an interrupt signal is received.
 			interruptChan := make(chan os.Signal, 1)
 			signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
-			go func() {
-				<-interruptChan
-				spinner.Successf(lang.CmdConnectTunnelClosed, url)
-				os.Exit(0)
-			}()
-
 			exec.SuppressGlobalInterrupt = true
 
-			for {
-				runtime.Gosched()
-			}
+			// Wait for the interrupt signal.
+			<-interruptChan
+			spinner.Successf(lang.CmdConnectTunnelClosed, url)
+			os.Exit(0)
 		},
 	}
 
