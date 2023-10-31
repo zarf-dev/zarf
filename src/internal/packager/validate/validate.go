@@ -58,7 +58,7 @@ func Run(pkg types.ZarfPackage) error {
 		uniqueComponentNames[component.Name] = true
 
 		if err := validateComponent(pkg, component); err != nil {
-			return fmt.Errorf(lang.PkgValidateErrComponent, err)
+			return fmt.Errorf(lang.PkgValidateErrComponent, component.Name, err)
 		}
 	}
 
@@ -299,7 +299,7 @@ func validateChart(chart types.ZarfChart) error {
 		return fmt.Errorf(lang.PkgValidateErrChartNamespaceMissing, chart.Name)
 	}
 
-	// Must only have a url or localPath
+	// Must have a url or localPath (and not both)
 	count := oneIfNotEmpty(chart.URL) + oneIfNotEmpty(chart.LocalPath)
 	if count != 1 {
 		return fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name)

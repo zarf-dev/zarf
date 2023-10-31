@@ -116,7 +116,7 @@ func NewImportChain(head types.ZarfComponent, arch, flavor string) (*ImportChain
 
 			// prevent circular imports (including self-imports)
 			// this is O(n^2) but the import chain should be small
-			prev := node.prev
+			prev := node
 			for prev != nil {
 				if prev.relativeToHead == relativeToHead {
 					return ic, fmt.Errorf("detected circular import chain: %s", strings.Join(history, " -> "))
