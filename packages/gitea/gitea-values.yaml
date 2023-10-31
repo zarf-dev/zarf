@@ -5,7 +5,7 @@ persistence:
   accessModes:
     - "###ZARF_VAR_GIT_SERVER_PVC_ACCESS_MODE###"
 
-replicaCount: "###ZARF_VAR_GIT_SERVER_REPLICA_COUNT###"
+replicaCount: ###ZARF_VAR_GIT_SERVER_REPLICA_COUNT###
 
 gitea:
   admin:
@@ -29,6 +29,8 @@ gitea:
     repository:
       ENABLE_PUSH_CREATE_USER: true
       FORCE_PRIVATE: true
+    session:
+      PROVIDER: db
 resources:
   requests:
     cpu: "###ZARF_VAR_GIT_SERVER_CPU_REQ###"
@@ -47,3 +49,9 @@ image:
   repository: "###ZARF_CONST_GITEA_IMAGE###"
   tag: "###ZARF_CONST_GITEA_SERVER_VERSION###"
   rootless: true
+
+postgresql-ha:
+  enabled: false
+
+redis-cluster:
+  enabled: false
