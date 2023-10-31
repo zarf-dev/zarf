@@ -5,6 +5,7 @@ metadata:
   version: 0.0.1
 
 components:
+  # Test every simple primitive that Zarf has through a local import
   - name: import-component-local
     description: "import-component-local == ###ZARF_COMPONENT_NAME###"
     required: false
@@ -12,13 +13,15 @@ components:
       path: ../09-composable-packages
       name: test-compose-package
 
+  # Test nested local to oci imports
   - name: import-component-oci
     description: "import-component-oci == ###ZARF_COMPONENT_NAME###"
     required: false
     import:
-      name: demo-helm-local-chart
-      url: oci://localhost:555/helm-charts:0.0.1-skeleton
+      name: import-component-oci
+      path: oci-import
 
+  # Test big bang extension files
   - name: import-big-bang
     description: "import-big-bang == ###ZARF_COMPONENT_NAME###"
     required: false
@@ -26,6 +29,7 @@ components:
       name: bigbang
       url: oci://localhost:555/big-bang-min:2.10.0-skeleton
 
+  # Test file imports including cosignKeyPath
   - name: file-imports
     description: "file-imports == ###ZARF_COMPONENT_NAME###"
     required: false
@@ -50,6 +54,7 @@ components:
           - cmd: test ! -f files/coffee-ipsum.txt
           - cmd: test ! -f files/zarf-readme.md
 
+  # Test local charts (for skeletons)
   - name: local-chart-import
     description: "local-chart-import == ###ZARF_COMPONENT_NAME###"
     required: false
