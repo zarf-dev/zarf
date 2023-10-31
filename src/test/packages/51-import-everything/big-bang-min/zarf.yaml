@@ -19,6 +19,7 @@ components:
       bigbang:
         repo: https://github.com/DoD-Platform-One/big-bang.git
         version: 2.10.0
+        skipFlux: true
         fluxPatchFiles:
           - flux-overrides-helm-controller.yaml
         valuesFiles:
