@@ -91,10 +91,10 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 func (suite *SkeletonSuite) Test_1_Compose_Everything_Inception() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
-	_, _, err := e2e.Zarf("package", "create", importEverything, "-o", "build", "--insecure", "--set=BB_VERSION=2.10.0", "--set=BB_MAJOR=2", "--confirm")
+	_, _, err := e2e.Zarf("package", "create", importEverything, "-o", "build", "--insecure", "--confirm")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "create", importception, "-o", "build", "--insecure", "--set=BB_VERSION=2.10.0", "--set=BB_MAJOR=2", "--confirm")
+	_, _, err = e2e.Zarf("package", "create", importception, "-o", "build", "--insecure", "--confirm")
 	suite.NoError(err)
 
 	_, stdErr, err := e2e.Zarf("package", "inspect", importEverythingPath)
