@@ -177,7 +177,8 @@ func (pp *PackagePaths) SetFromLayers(layers []ocispec.Descriptor) {
 // SetFromPaths maps paths to package paths.
 func (pp *PackagePaths) SetFromPaths(paths []string) {
 	for _, rel := range paths {
-		switch path := rel; {
+		// Convert from the standard '/' to the OS path separator for Windows support
+		switch path := filepath.FromSlash(rel); {
 		case path == ZarfYAML:
 			pp.ZarfYAML = filepath.Join(pp.Base, path)
 		case path == Signature:
@@ -186,11 +187,11 @@ func (pp *PackagePaths) SetFromPaths(paths []string) {
 			pp.Checksums = filepath.Join(pp.Base, path)
 		case path == SBOMTar:
 			pp.SBOMs.Path = filepath.Join(pp.Base, path)
-		case path == strings.Join([]string{ImagesDir, OCILayout}, "/"):
+		case path == filepath.Join(ImagesDir, OCILayout):
 			pp.Images.OCILayout = filepath.Join(pp.Base, path)
-		case path == strings.Join([]string{ImagesDir, IndexJSON}, "/"):
+		case path == filepath.Join(ImagesDir, IndexJSON):
 			pp.Images.Index = filepath.Join(pp.Base, path)
-		case strings.HasPrefix(path, strings.Join([]string{ImagesDir, "blobs", "sha256"}, "/")):
+		case strings.HasPrefix(path, filepath.Join(ImagesDir, "blobs", "sha256")):
 			if pp.Images.Base == "" {
 				pp.Images.Base = filepath.Join(pp.Base, ImagesDir)
 			}
@@ -213,16 +214,19 @@ func (pp *PackagePaths) SetFromPaths(paths []string) {
 // Files returns a map of all the files in the package.
 func (pp *PackagePaths) Files() map[string]string {
 	pathMap := make(map[string]string)
+
 	stripBase := func(path string) string {
 		rel, _ := filepath.Rel(pp.Base, path)
-		return rel
+		return filepath.ToSlash(rel)
 	}
+
 	add := func(path string) {
 		if path == "" {
 			return
 		}
 		pathMap[stripBase(path)] = path
 	}
+
 	add(pp.ZarfYAML)
 	add(pp.Signature)
 	add(pp.Checksums)
