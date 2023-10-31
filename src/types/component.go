@@ -69,7 +69,7 @@ type ZarfComponent struct {
 type ZarfComponentOnlyTarget struct {
 	LocalOS string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
 	Cluster ZarfComponentOnlyCluster `json:"cluster,omitempty" jsonschema:"description=Only deploy component to specified clusters"`
-	Flavor  string                   `json:"flavor,omitempty" jsonschema:"description=Only include this component when a matching '--flavor' is specified on create"`
+	Flavor  string                   `json:"flavor,omitempty" jsonschema:"description=Only include this component when a matching '--flavor' is specified on 'zarf package create'"`
 }
 
 // ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.

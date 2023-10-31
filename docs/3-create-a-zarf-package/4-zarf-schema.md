@@ -725,7 +725,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** Only include this component when a matching '--flavor' is specified on create
+**Description:** Only include this component when a matching '--flavor' is specified on 'zarf package create'
 
 |          |          |
 | -------- | -------- |
