@@ -31,8 +31,8 @@ components:
     dataInjections:
       - source: ../files
         target:
-          selector: app.kubernetes.io/name=podinfo-upgrade
-          namespace: podinfo-upgrade
+          selector: app.kubernetes.io/name=podinfo-compose
+          namespace: podinfo-compose
           container: podinfo
           path: /home/app/service.yaml
     actions:

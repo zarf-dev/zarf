@@ -145,14 +145,14 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
   dataInjections:
   - source: files
     target:
-      namespace: podinfo-upgrade
-      selector: app.kubernetes.io/name=podinfo-upgrade
+      namespace: podinfo-compose
+      selector: app.kubernetes.io/name=podinfo-compose
       container: podinfo
       path: /home/app/service.yaml
   - source: files
     target:
-      namespace: podinfo-upgrade
-      selector: app.kubernetes.io/name=podinfo-upgrade
+      namespace: podinfo-compose
+      selector: app.kubernetes.io/name=podinfo-compose
       container: podinfo
       path: /home/app/service.yaml
 `)

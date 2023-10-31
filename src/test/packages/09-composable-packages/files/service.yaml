@@ -9,7 +9,7 @@ metadata:
     zarf.dev/connect-name: podinfo
 spec:
   selector:
-    app.kubernetes.io/name: podinfo-upgrade
+    app.kubernetes.io/name: podinfo-compose
   ports:
     - name: http
       port: 9898
