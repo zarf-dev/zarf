@@ -1,8 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: test-compose-package
-  description: Deploy podinfo using a Helm OCI chart
-  version: 6.4.0
+  description: A contrived example for podinfo using many Zarf primitives for compose testing
 
 components:
   - name: test-compose-package

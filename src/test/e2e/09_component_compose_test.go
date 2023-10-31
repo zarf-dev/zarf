@@ -22,6 +22,8 @@ type CompositionSuite struct {
 var (
 	composeExample     = filepath.Join("examples", "composable-packages")
 	composeExamplePath string
+	composeTest        = filepath.Join("src", "test", "packages", "09-composable-packages")
+	composeTestPath    string
 )
 
 func (suite *CompositionSuite) SetupSuite() {
@@ -29,11 +31,14 @@ func (suite *CompositionSuite) SetupSuite() {
 
 	// Setup the package paths after e2e has been initialized
 	composeExamplePath = filepath.Join("build", fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
+	composeTestPath = filepath.Join("build", fmt.Sprintf("zarf-package-test-compose-package-%s.tar.zst", e2e.Arch))
 
 }
 
 func (suite *CompositionSuite) TearDownSuite() {
 	err := os.RemoveAll(composeExamplePath)
+	suite.NoError(err)
+	err = os.RemoveAll(composeTestPath)
 	suite.NoError(err)
 }
 
@@ -65,19 +70,29 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 func (suite *CompositionSuite) Test_1_FullComposability() {
 	suite.T().Log("E2E: Full Package Compose")
 
-	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--insecure", "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf("package", "create", composeTest, "-o", "build", "--insecure", "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that names merge and that composition is added appropriately
+
+	// Check metadata
 	suite.Contains(stdErr, `
 - name: test-compose-package
   description: A contrived example for podinfo using many Zarf primitives for compose testing
   required: true
+`)
+
+	// Check files
+	suite.Contains(stdErr, `
   files:
   - source: files/coffee-ipsum.txt
     target: coffee-ipsum.txt
   - source: files/coffee-ipsum.txt
     target: coffee-ipsum.txt
+`)
+
+	// Check charts
+	suite.Contains(stdErr, `
   charts:
   - name: podinfo-compose
     releaseName: podinfo-override
@@ -94,6 +109,10 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
     namespace: podinfo-compose-two
     valuesFiles:
     - files/test-values.yaml
+`)
+
+	// Check manifests
+	suite.Contains(stdErr, `
   manifests:
   - name: connect-service
     namespace: podinfo-override
@@ -109,12 +128,20 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
     - files/service.yaml
     kustomizations:
     - files
+`)
+
+	// Check images + repos
+	suite.Contains(stdErr, `
   images:
   - ghcr.io/stefanprodan/podinfo:6.4.0
   - ghcr.io/stefanprodan/podinfo:6.4.1
   repos:
   - https://github.com/defenseunicorns/zarf-public-test.git
   - https://github.com/defenseunicorns/zarf-public-test.git@refs/heads/dragons
+`)
+
+	// Check dataInjections
+	suite.Contains(stdErr, `
   dataInjections:
   - source: files
     target:
@@ -128,6 +155,10 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
       selector: app.kubernetes.io/name=podinfo-upgrade
       container: podinfo
       path: /home/app/service.yaml
+`)
+
+	// Check actions
+	suite.Contains(stdErr, `
   actions:
     onCreate:
       before:
