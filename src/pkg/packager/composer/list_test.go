@@ -97,11 +97,13 @@ func TestCompose(t *testing.T) {
 			returnError: false,
 			expectedComposed: types.ZarfComponent{
 				Name: "import-hello",
+				// Files should always be appended with corrected directories
 				Files: []types.ZarfFile{
 					{Source: fmt.Sprintf("%s%stoday.txt", finalDirectory, string(os.PathSeparator))},
 					{Source: fmt.Sprintf("%s%sworld.txt", firstDirectory, string(os.PathSeparator))},
 					{Source: "hello.txt"},
 				},
+				// Charts should be merged if names match and appended if not with corrected directories
 				Charts: []types.ZarfChart{
 					{
 						Name:      "hello",
@@ -119,6 +121,7 @@ func TestCompose(t *testing.T) {
 						},
 					},
 				},
+				// Manifests should be merged if names match and appended if not with corrected directories
 				Manifests: []types.ZarfManifest{
 					{
 						Name: "hello",
@@ -134,12 +137,14 @@ func TestCompose(t *testing.T) {
 						},
 					},
 				},
+				// DataInjections should always be appended with corrected directories
 				DataInjections: []types.ZarfDataInjection{
 					{Source: fmt.Sprintf("%s%stoday", finalDirectory, string(os.PathSeparator))},
 					{Source: fmt.Sprintf("%s%sworld", firstDirectory, string(os.PathSeparator))},
 					{Source: "hello"},
 				},
 				Actions: types.ZarfComponentActions{
+					// OnCreate actions should be appended with corrected directories that properly handle default directories
 					OnCreate: types.ZarfComponentActionSet{
 						Defaults: types.ZarfComponentActionDefaults{
 							Dir: "hello-dc",
@@ -165,6 +170,7 @@ func TestCompose(t *testing.T) {
 							{Cmd: "hello-fc", Dir: &firstDirectoryActionDefault},
 						},
 					},
+					// OnDeploy actions should be appended without corrected directories
 					OnDeploy: types.ZarfComponentActionSet{
 						Defaults: types.ZarfComponentActionDefaults{
 							Dir: "hello-dd",
@@ -190,6 +196,7 @@ func TestCompose(t *testing.T) {
 							{Cmd: "hello-fd"},
 						},
 					},
+					// OnRemove actions should be appended without corrected directories
 					OnRemove: types.ZarfComponentActionSet{
 						Defaults: types.ZarfComponentActionDefaults{
 							Dir: "hello-dr",
@@ -216,6 +223,7 @@ func TestCompose(t *testing.T) {
 						},
 					},
 				},
+				// Extensions should be appended with corrected directories
 				Extensions: extensions.ZarfComponentExtensions{
 					BigBang: &extensions.BigBang{
 						ValuesFiles: []string{
