@@ -37,6 +37,7 @@ func NewZarfOCIManifest(manifest *ocispec.Manifest) *ZarfOCIManifest {
 // Locate returns the descriptor for the first layer with the given path or digest.
 func (m *ZarfOCIManifest) Locate(pathOrDigest string) ocispec.Descriptor {
 	return helpers.Find(m.Layers, func(layer ocispec.Descriptor) bool {
+		// Convert from the OS path separator to the standard '/' for Windows support
 		return layer.Annotations[ocispec.AnnotationTitle] == filepath.ToSlash(pathOrDigest) || layer.Digest.Encoded() == pathOrDigest
 	})
 }

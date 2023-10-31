@@ -217,6 +217,7 @@ func (pp *PackagePaths) Files() map[string]string {
 
 	stripBase := func(path string) string {
 		rel, _ := filepath.Rel(pp.Base, path)
+		// Convert from the OS path separator to the standard '/' for Windows support
 		return filepath.ToSlash(rel)
 	}
 
