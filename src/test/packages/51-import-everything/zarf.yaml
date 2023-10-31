@@ -20,11 +20,11 @@ components:
       url: oci://localhost:555/helm-charts:0.0.1-skeleton
 
   - name: import-big-bang
-    description: "import-big-bang-oci == ###ZARF_COMPONENT_NAME###"
+    description: "import-big-bang == ###ZARF_COMPONENT_NAME###"
     required: false
     import:
       name: bigbang
-      url: oci://localhost:555/big-bang-example:2.12.0-skeleton
+      url: oci://localhost:555/big-bang-min:2.10.0-skeleton
 
   - name: file-imports
     description: "file-imports == ###ZARF_COMPONENT_NAME###"

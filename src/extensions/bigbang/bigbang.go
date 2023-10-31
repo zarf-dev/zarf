@@ -249,14 +249,14 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 // Skeletonize mutates a component so that the valuesFiles can be contained inside a skeleton package
 func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
-		// Define the name as the file name without the extension.
-		baseName := strings.TrimSuffix(valuesFile, filepath.Ext(valuesFile))
+		// Get the base file name for this file.
+		baseName := filepath.Base(valuesFile)
 
-		// Replace non-alphanumeric characters with a dash.
-		baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")
+		// Define the name as the file name without the extension.
+		baseName = strings.TrimSuffix(baseName, filepath.Ext(baseName))
 
 		// Add the skeleton name prefix.
-		skelName := fmt.Sprintf("bb-ext-skeleton-values-%s.yaml", baseName)
+		skelName := fmt.Sprintf("bb-skel-vals-%d-%s.yaml", valuesIdx, baseName)
 
 		rel := filepath.Join(layout.TempDir, skelName)
 		dst := filepath.Join(tmpPaths.Base, rel)
@@ -269,14 +269,14 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 	}
 
 	for fluxPatchFileIdx, fluxPatchFile := range c.Extensions.BigBang.FluxPatchFiles {
-		// Define the name as the file name without the extension.
-		baseName := strings.TrimSuffix(fluxPatchFile, filepath.Ext(fluxPatchFile))
+		// Get the base file name for this file.
+		baseName := filepath.Base(fluxPatchFile)
 
-		// Replace non-alphanumeric characters with a dash.
-		baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")
+		// Define the name as the file name without the extension.
+		baseName = strings.TrimSuffix(baseName, filepath.Ext(baseName))
 
 		// Add the skeleton name prefix.
-		skelName := fmt.Sprintf("bb-ext-skeleton-flux-patches-%s.yaml", baseName)
+		skelName := fmt.Sprintf("bb-skel-flux-patch-%d-%s.yaml", fluxPatchFileIdx, baseName)
 
 		rel := filepath.Join(layout.TempDir, skelName)
 		dst := filepath.Join(tmpPaths.Base, rel)
@@ -495,8 +495,8 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 	}
 
 	// Loop through the valuesFrom list and create a manifest for each.
-	for _, path := range cfg.ValuesFiles {
-		data, err := manifestValuesFile(path)
+	for valuesIdx, valuesFile := range cfg.ValuesFiles {
+		data, err := manifestValuesFile(valuesIdx, valuesFile)
 		if err != nil {
 			return manifest, err
 		}

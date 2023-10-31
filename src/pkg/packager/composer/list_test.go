@@ -66,10 +66,13 @@ func TestCompose(t *testing.T) {
 		expectedErrorMessage string
 	}
 
-	currentDirectory := "."
 	firstDirectory := "hello"
 	secondDirectory := "world"
 	finalDirectory := filepath.Join(firstDirectory, secondDirectory)
+
+	finalDirectoryActionDefault := filepath.Join(firstDirectory, secondDirectory, "today-dc")
+	secondDirectoryActionDefault := filepath.Join(firstDirectory, "world-dc")
+	firstDirectoryActionDefault := "hello-dc"
 
 	testCases := []testCase{
 		{
@@ -95,15 +98,9 @@ func TestCompose(t *testing.T) {
 			expectedComposed: types.ZarfComponent{
 				Name: "import-hello",
 				Files: []types.ZarfFile{
-					{
-						Source: fmt.Sprintf("%s%stoday.txt", finalDirectory, string(os.PathSeparator)),
-					},
-					{
-						Source: fmt.Sprintf("%s%sworld.txt", firstDirectory, string(os.PathSeparator)),
-					},
-					{
-						Source: "hello.txt",
-					},
+					{Source: fmt.Sprintf("%s%stoday.txt", finalDirectory, string(os.PathSeparator))},
+					{Source: fmt.Sprintf("%s%sworld.txt", firstDirectory, string(os.PathSeparator))},
+					{Source: "hello.txt"},
 				},
 				Charts: []types.ZarfChart{
 					{
@@ -138,73 +135,84 @@ func TestCompose(t *testing.T) {
 					},
 				},
 				DataInjections: []types.ZarfDataInjection{
-					{
-						Source: fmt.Sprintf("%s%stoday", finalDirectory, string(os.PathSeparator)),
-					},
-					{
-						Source: fmt.Sprintf("%s%sworld", firstDirectory, string(os.PathSeparator)),
-					},
-					{
-						Source: "hello",
-					},
+					{Source: fmt.Sprintf("%s%stoday", finalDirectory, string(os.PathSeparator))},
+					{Source: fmt.Sprintf("%s%sworld", firstDirectory, string(os.PathSeparator))},
+					{Source: "hello"},
 				},
 				Actions: types.ZarfComponentActions{
 					OnCreate: types.ZarfComponentActionSet{
+						Defaults: types.ZarfComponentActionDefaults{
+							Dir: "hello-dc",
+						},
 						Before: []types.ZarfComponentAction{
-							{
-								Cmd: "today",
-								Dir: &finalDirectory,
-							},
-							{
-								Cmd: "world",
-								Dir: &firstDirectory,
-							},
-							{
-								Cmd: "hello",
-								Dir: &currentDirectory,
-							},
+							{Cmd: "today-bc", Dir: &finalDirectoryActionDefault},
+							{Cmd: "world-bc", Dir: &secondDirectoryActionDefault},
+							{Cmd: "hello-bc", Dir: &firstDirectoryActionDefault},
 						},
 						After: []types.ZarfComponentAction{
-							{
-								Cmd: "today",
-								Dir: &finalDirectory,
-							},
-							{
-								Cmd: "world",
-								Dir: &firstDirectory,
-							},
-							{
-								Cmd: "hello",
-								Dir: &currentDirectory,
-							},
+							{Cmd: "today-ac", Dir: &finalDirectoryActionDefault},
+							{Cmd: "world-ac", Dir: &secondDirectoryActionDefault},
+							{Cmd: "hello-ac", Dir: &firstDirectoryActionDefault},
 						},
 						OnSuccess: []types.ZarfComponentAction{
-							{
-								Cmd: "today",
-								Dir: &finalDirectory,
-							},
-							{
-								Cmd: "world",
-								Dir: &firstDirectory,
-							},
-							{
-								Cmd: "hello",
-								Dir: &currentDirectory,
-							},
+							{Cmd: "today-sc", Dir: &finalDirectoryActionDefault},
+							{Cmd: "world-sc", Dir: &secondDirectoryActionDefault},
+							{Cmd: "hello-sc", Dir: &firstDirectoryActionDefault},
 						},
 						OnFailure: []types.ZarfComponentAction{
-							{
-								Cmd: "today",
-								Dir: &finalDirectory,
-							},
-							{
-								Cmd: "world",
-								Dir: &firstDirectory,
-							},
-							{
-								Cmd: "hello",
-								Dir: &currentDirectory,
-							},
+							{Cmd: "today-fc", Dir: &finalDirectoryActionDefault},
+							{Cmd: "world-fc", Dir: &secondDirectoryActionDefault},
+							{Cmd: "hello-fc", Dir: &firstDirectoryActionDefault},
+						},
+					},
+					OnDeploy: types.ZarfComponentActionSet{
+						Defaults: types.ZarfComponentActionDefaults{
+							Dir: "hello-dd",
+						},
+						Before: []types.ZarfComponentAction{
+							{Cmd: "today-bd"},
+							{Cmd: "world-bd"},
+							{Cmd: "hello-bd"},
+						},
+						After: []types.ZarfComponentAction{
+							{Cmd: "today-ad"},
+							{Cmd: "world-ad"},
+							{Cmd: "hello-ad"},
+						},
+						OnSuccess: []types.ZarfComponentAction{
+							{Cmd: "today-sd"},
+							{Cmd: "world-sd"},
+							{Cmd: "hello-sd"},
+						},
+						OnFailure: []types.ZarfComponentAction{
+							{Cmd: "today-fd"},
+							{Cmd: "world-fd"},
+							{Cmd: "hello-fd"},
+						},
+					},
+					OnRemove: types.ZarfComponentActionSet{
+						Defaults: types.ZarfComponentActionDefaults{
+							Dir: "hello-dr",
+						},
+						Before: []types.ZarfComponentAction{
+							{Cmd: "today-br"},
+							{Cmd: "world-br"},
+							{Cmd: "hello-br"},
+						},
+						After: []types.ZarfComponentAction{
+							{Cmd: "today-ar"},
+							{Cmd: "world-ar"},
+							{Cmd: "hello-ar"},
+						},
+						OnSuccess: []types.ZarfComponentAction{
+							{Cmd: "today-sr"},
+							{Cmd: "world-sr"},
+							{Cmd: "hello-sr"},
+						},
+						OnFailure: []types.ZarfComponentAction{
+							{Cmd: "today-fr"},
+							{Cmd: "world-fr"},
+							{Cmd: "hello-fr"},
 						},
 					},
 				},
@@ -295,25 +303,54 @@ func createDummyComponent(name, importDir, subName string) types.ZarfComponent {
 		},
 		Actions: types.ZarfComponentActions{
 			OnCreate: types.ZarfComponentActionSet{
+				Defaults: types.ZarfComponentActionDefaults{
+					Dir: name + "-dc",
+				},
 				Before: []types.ZarfComponentAction{
-					{
-						Cmd: name,
-					},
+					{Cmd: name + "-bc"},
 				},
 				After: []types.ZarfComponentAction{
-					{
-						Cmd: name,
-					},
+					{Cmd: name + "-ac"},
 				},
 				OnSuccess: []types.ZarfComponentAction{
-					{
-						Cmd: name,
-					},
+					{Cmd: name + "-sc"},
 				},
 				OnFailure: []types.ZarfComponentAction{
-					{
-						Cmd: name,
-					},
+					{Cmd: name + "-fc"},
+				},
+			},
+			OnDeploy: types.ZarfComponentActionSet{
+				Defaults: types.ZarfComponentActionDefaults{
+					Dir: name + "-dd",
+				},
+				Before: []types.ZarfComponentAction{
+					{Cmd: name + "-bd"},
+				},
+				After: []types.ZarfComponentAction{
+					{Cmd: name + "-ad"},
+				},
+				OnSuccess: []types.ZarfComponentAction{
+					{Cmd: name + "-sd"},
+				},
+				OnFailure: []types.ZarfComponentAction{
+					{Cmd: name + "-fd"},
+				},
+			},
+			OnRemove: types.ZarfComponentActionSet{
+				Defaults: types.ZarfComponentActionDefaults{
+					Dir: name + "-dr",
+				},
+				Before: []types.ZarfComponentAction{
+					{Cmd: name + "-br"},
+				},
+				After: []types.ZarfComponentAction{
+					{Cmd: name + "-ar"},
+				},
+				OnSuccess: []types.ZarfComponentAction{
+					{Cmd: name + "-sr"},
+				},
+				OnFailure: []types.ZarfComponentAction{
+					{Cmd: name + "-fr"},
 				},
 			},
 		},

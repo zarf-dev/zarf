@@ -66,7 +66,7 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	bigBang := filepath.Join("examples", "big-bang")
+	bigBang := filepath.Join("src", "test", "packages", "51-import-everything", "big-bang-min")
 	_, stdErr, err = e2e.Zarf("package", "publish", bigBang, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
@@ -84,17 +84,17 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1-skeleton", "-o", "build", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/big-bang-example:2.12.0-skeleton", "-o", "build", "--insecure")
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/big-bang-min:2.10.0-skeleton", "-o", "build", "--insecure")
 	suite.NoError(err)
 }
 
 func (suite *SkeletonSuite) Test_1_Compose_Everything_Inception() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
-	_, _, err := e2e.Zarf("package", "create", importEverything, "-o", "build", "--insecure", "--confirm")
+	_, _, err := e2e.Zarf("package", "create", importEverything, "-o", "build", "--insecure", "--set=BB_VERSION=2.10.0", "--set=BB_MAJOR=2", "--confirm")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "create", importception, "-o", "build", "--insecure", "--confirm")
+	_, _, err = e2e.Zarf("package", "create", importception, "-o", "build", "--insecure", "--set=BB_VERSION=2.10.0", "--set=BB_MAJOR=2", "--confirm")
 	suite.NoError(err)
 
 	_, stdErr, err := e2e.Zarf("package", "inspect", importEverythingPath)
@@ -121,7 +121,7 @@ func (suite *SkeletonSuite) Test_2_FilePaths() {
 		filepath.Join("build", "zarf-package-import-everything-skeleton-0.0.1.tar.zst"),
 		filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
 		filepath.Join("build", "zarf-package-helm-charts-skeleton-0.0.1.tar.zst"),
-		filepath.Join("build", "zarf-package-big-bang-example-skeleton-2.12.0.tar.zst"),
+		filepath.Join("build", "zarf-package-big-bang-min-skeleton-2.10.0.tar.zst"),
 	}
 
 	for _, pkgTar := range pkgTars {

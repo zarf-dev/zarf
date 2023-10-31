@@ -333,6 +333,21 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		p.cfg.Pkg.Components[index].DeprecatedCosignKeyPath = "cosign.pub"
 	}
 
+	// TODO: (@WSTARR) Shim the skeleton component's create action dirs to be empty.  This prevents actions from failing by cd'ing into directories that will be flattened.
+	if isSkeleton {
+		component.Actions.OnCreate.Defaults.Dir = ""
+		resetActions := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
+			for idx := range actions {
+				actions[idx].Dir = nil
+			}
+			return actions
+		}
+		component.Actions.OnCreate.Before = resetActions(component.Actions.OnCreate.Before)
+		component.Actions.OnCreate.After = resetActions(component.Actions.OnCreate.After)
+		component.Actions.OnCreate.OnSuccess = resetActions(component.Actions.OnCreate.OnSuccess)
+		component.Actions.OnCreate.OnFailure = resetActions(component.Actions.OnCreate.OnFailure)
+	}
+
 	onCreate := component.Actions.OnCreate
 	if !isSkeleton {
 		if err := p.runActions(onCreate.Defaults, onCreate.Before, nil); err != nil {

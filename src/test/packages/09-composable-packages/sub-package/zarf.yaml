@@ -38,7 +38,7 @@ components:
     actions:
       onCreate:
         before:
-          - cmd: cat ../files/coffee-ipsum.txt
+          - cmd: ls
       onDeploy:
         after:
           - cmd: cat coffee-ipsum.txt
