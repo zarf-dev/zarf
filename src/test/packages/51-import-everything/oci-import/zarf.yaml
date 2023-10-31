@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: import-oci
-  description: Test the import of an OCI component
+  description: Test OCI import of helm charts
   version: 0.0.1
 
 components:
