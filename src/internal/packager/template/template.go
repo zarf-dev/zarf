@@ -94,6 +94,11 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 		regInfo := values.config.State.RegistryInfo
 		gitInfo := values.config.State.GitServer
 
+		// if the address has been updated from init, we'll update it here too.
+		if values.config.InitOpts.RegistryInfo.Address != "" {
+			values.registry = values.config.InitOpts.RegistryInfo.Address
+		}
+
 		builtinMap := map[string]string{
 			// Registry info
 			"REGISTRY":           values.registry,
