@@ -35,11 +35,11 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 			key = component.Name
 		} else {
 			// Otherwise, add the component name to the choice group list for later validation
-			choiceComponents = p.appendIfNotExists(choiceComponents, component.Name)
+			choiceComponents = helpers.AppendIfNotExists(choiceComponents, component.Name)
 		}
 
 		// Preserve component order
-		orderedKeys = p.appendIfNotExists(orderedKeys, key)
+		orderedKeys = helpers.AppendIfNotExists(orderedKeys, key)
 
 		// Append the component to the list of components in the group
 		componentGroups[key] = append(componentGroups[key], component)
@@ -65,7 +65,7 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 
 			if requested {
 				// Mark deployment as appliance mode if this is an init config and the k3s component is enabled
-				if component.Name == k8s.DistroIsK3s && p.cfg.Pkg.Kind == types.ZarfInitConfig {
+				if component.Name == k8s.DistroIsK3s && p.isInitConfig() {
 					p.cfg.InitOpts.ApplianceMode = true
 				}
 				// Add the component to the list of valid components
@@ -206,15 +206,6 @@ func (p *Packager) confirmChoiceGroup(componentGroup []types.ZarfComponent) type
 	}
 
 	return componentGroup[chosen]
-}
-
-func (p *Packager) appendIfNotExists(slice []string, item string) []string {
-	for _, s := range slice {
-		if s == item {
-			return slice
-		}
-	}
-	return append(slice, item)
 }
 
 func (p *Packager) requiresCluster(component types.ZarfComponent) bool {

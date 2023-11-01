@@ -92,7 +92,7 @@ func (ct *ConcurrencyTools[P, E]) WaitWithoutProgress(onError func(E) error) err
 			ct.Cancel()
 			errResult := onError(err)
 			return errResult
-		case  <-ct.ProgressChan:
+		case <-ct.ProgressChan:
 		}
 	}
 	ct.waitGroup.Wait()

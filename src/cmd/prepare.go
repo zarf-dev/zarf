@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -20,8 +21,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 )
+
+var extractPath string
 
 var prepareCmd = &cobra.Command{
 	Use:     "prepare",
@@ -79,24 +83,68 @@ var prepareComputeFileSha256sum = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		fileName := args[0]
+
+		var tmp string
 		var data io.ReadCloser
 		var err error
+
 		if helpers.IsURL(fileName) {
 			message.Warn(lang.CmdPrepareSha256sumRemoteWarning)
 
-			data = utils.Fetch(fileName)
-		} else {
-			data, err = os.Open(fileName)
+			fileBase, err := helpers.ExtractBasePathFromURL(fileName)
 			if err != nil {
-				message.Fatalf(err, lang.CmdPrepareSha256sumHashErr)
+				message.Fatalf(err, lang.CmdPrepareSha256sumHashErr, err.Error())
 			}
+
+			if fileBase == "" {
+				fileBase = "sha-file"
+			}
+
+			tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+			if err != nil {
+				message.Fatalf(err, lang.CmdPrepareSha256sumHashErr, err.Error())
+			}
+
+			downloadPath := filepath.Join(tmp, fileBase)
+			err = utils.DownloadToFile(fileName, downloadPath, "")
+			if err != nil {
+				message.Fatalf(err, lang.CmdPrepareSha256sumHashErr, err.Error())
+			}
+
+			fileName = downloadPath
+
+			defer os.RemoveAll(tmp)
+		}
+
+		if extractPath != "" {
+			if tmp == "" {
+				tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+				if err != nil {
+					message.Fatalf(err, lang.CmdPrepareSha256sumHashErr, err.Error())
+				}
+				defer os.RemoveAll(tmp)
+			}
+
+			extractedFile := filepath.Join(tmp, extractPath)
+
+			err = archiver.Extract(fileName, extractPath, tmp)
+			if err != nil {
+				message.Fatalf(err, lang.CmdPrepareSha256sumHashErr, err.Error())
+			}
+
+			fileName = extractedFile
+		}
+
+		data, err = os.Open(fileName)
+		if err != nil {
+			message.Fatalf(err, lang.CmdPrepareSha256sumHashErr, err.Error())
 		}
 		defer data.Close()
 
 		var hash string
 		hash, err = helpers.GetSHA256Hash(data)
 		if err != nil {
-			message.Fatal(err, lang.CmdPrepareSha256sumHashErr)
+			message.Fatalf(err, lang.CmdPrepareSha256sumHashErr, err.Error())
 		} else {
 			fmt.Println(hash)
 		}
@@ -190,6 +238,8 @@ func init() {
 	prepareCmd.AddCommand(prepareFindImages)
 	prepareCmd.AddCommand(prepareGenerateConfigFile)
 	prepareCmd.AddCommand(lintCmd)
+
+	prepareComputeFileSha256sum.Flags().StringVarP(&extractPath, "extract-path", "e", "", lang.CmdPrepareFlagExtractPath)
 
 	prepareFindImages.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables

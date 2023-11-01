@@ -259,8 +259,8 @@ const (
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
 	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
 	CmdPackageDeployFlagSkipWebhooks                   = "[alpha] Skip waiting for external webhooks to execute as each package component is deployed"
-	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster has the %s architecture. These architectures must be the same"
-	CmdPackageDeployValidateLastNonBreakingVersionWarn = "the version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
+	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster only has the %s architecture(s). These architectures must be compatible when \"images\" are present"
+	CmdPackageDeployValidateLastNonBreakingVersionWarn = "The version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
 	CmdPackageDeployInvalidCLIVersionWarn              = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
 	CmdPackageDeployErr                                = "Failed to deploy package: %s"
 
@@ -288,7 +288,7 @@ const (
 	# Publish a skeleton package to a remote registry
 	zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 `
-	CmdPackagePublishFlagSigningKey         = "Path to private key file for signing packages"
+	CmdPackagePublishFlagSigningKey         = "Path to a private key file for signing or re-signing packages with a new key"
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
 	CmdPackagePublishErr                    = "Failed to publish package: %s"
 
@@ -317,7 +317,7 @@ const (
 
 	CmdPrepareSha256sumShort         = "Generates a SHA256SUM for the given file"
 	CmdPrepareSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
-	CmdPrepareSha256sumHashErr       = "Unable to compute the SHA256SUM hash"
+	CmdPrepareSha256sumHashErr       = "Unable to compute the SHA256SUM hash: %s"
 
 	CmdPrepareFindImagesShort = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests"
 	CmdPrepareFindImagesLong  = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
@@ -331,6 +331,7 @@ const (
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 	CmdPrepareGenerateConfigErr = "Unable to write the config file %s, make sure the file doesn't already exist"
 
+	CmdPrepareFlagExtractPath   = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
 	CmdPrepareFlagSet           = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
 	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."
