@@ -3,9 +3,9 @@ metadata:
   name: init-package-git-server
 
 variables:
-  - name: GIT_SERVER_EXISTING_PVC
-    description: "Optional: Use an existing PVC for the git server instead of creating a new one. If this is set, the GIT_SERVER_PVC_SIZE variable will be ignored."
-    default: ""
+  - name: GIT_SERVER_PVC_NAME
+    description: "Use this for an existing PVC for the git server, otherwise a new PVC will be made with the default name. If this is set, the GIT_SERVER_PVC_SIZE variable will be ignored."
+    default: "gitea-data"
 
   - name: GIT_SERVER_PVC_SIZE
     description: The size of the persistent volume claim for the git server
@@ -33,7 +33,7 @@ variables:
 
   - name: GIT_SERVER_REPLICA_COUNT
     description: The number of git server replicas to deploy
-    default: "1"
+    default: 1.0
 
 constants:
   - name: GITEA_IMAGE
