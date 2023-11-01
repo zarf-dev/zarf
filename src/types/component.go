@@ -91,12 +91,12 @@ type ZarfFile struct {
 type ZarfChart struct {
 	Name        string   `json:"name" jsonschema:"description=The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo"`
 	ReleaseName string   `json:"releaseName,omitempty" jsonschema:"description=The name of the release to create; defaults to the name of the chart"`
-	URL         string   `json:"url,omitempty" jsonschema:"oneof_required=url,example=OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo,example=helm chart repo: https://stefanprodan.github.io/podinfo,example=git repo: https://github.com/stefanprodan/podinfo" jsonschema_description:"The URL of the OCI registry, chart repository, or git repo where the helm chart is stored"`
+	URL         string   `json:"url,omitempty" jsonschema:"example=OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo,example=helm chart repo: https://stefanprodan.github.io/podinfo,example=git repo: https://github.com/stefanprodan/podinfo" jsonschema_description:"The URL of the OCI registry, chart repository, or git repo where the helm chart is stored"`
 	Version     string   `json:"version,omitempty" jsonschema:"description=The version of the chart to deploy; for git-based charts this is also the tag of the git repo"`
 	Namespace   string   `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
 	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of local values file paths or remote URLs to include in the package; these will be merged together"`
 	GitPath     string   `json:"gitPath,omitempty" jsonschema:"description=The path to the chart in the repo if using a git repo instead of a helm repo,example=charts/your-chart"`
-	LocalPath   string   `json:"localPath,omitempty" jsonschema:"oneof_required=localPath,description=The path to the chart folder"`
+	LocalPath   string   `json:"localPath,omitempty" jsonschema:"description=The path to the chart folder"`
 	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
 }
 

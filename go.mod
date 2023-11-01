@@ -12,7 +12,7 @@ require (
 	github.com/anchore/stereoscope v0.0.0-20231027135531-5909e353ee88
 	github.com/anchore/syft v0.84.1
 	github.com/derailed/k9s v0.27.4
-	github.com/distribution/distribution v2.8.3+incompatible
+	github.com/distribution/reference v0.5.0
 	github.com/docker/cli v24.0.6+incompatible
 	github.com/fairwindsops/pluto/v5 v5.18.4
 	github.com/fatih/color v1.15.0
@@ -186,9 +186,8 @@ require (
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/digitorus/timestamp v0.0.0-20230821155606-d1ad5ca9624c // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
-	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker v24.0.6+incompatible // indirect
+	github.com/docker/docker v24.0.7+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
