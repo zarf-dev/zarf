@@ -58,11 +58,6 @@ func (p *Packager) Create() (err error) {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 	}
 
-	// Before we compose the components (and render the imported OCI components), we need to remove any components that are not needed for a differential build
-	if err := p.removeDifferentialComponentsFromPackage(); err != nil {
-		return err
-	}
-
 	// Compose components into a single zarf.yaml file
 	if err := p.composeComponents(); err != nil {
 		return err
@@ -336,6 +331,21 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 			return err
 		}
 		p.cfg.Pkg.Components[index].DeprecatedCosignKeyPath = "cosign.pub"
+	}
+
+	// TODO: (@WSTARR) Shim the skeleton component's create action dirs to be empty.  This prevents actions from failing by cd'ing into directories that will be flattened.
+	if isSkeleton {
+		component.Actions.OnCreate.Defaults.Dir = ""
+		resetActions := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
+			for idx := range actions {
+				actions[idx].Dir = nil
+			}
+			return actions
+		}
+		component.Actions.OnCreate.Before = resetActions(component.Actions.OnCreate.Before)
+		component.Actions.OnCreate.After = resetActions(component.Actions.OnCreate.After)
+		component.Actions.OnCreate.OnSuccess = resetActions(component.Actions.OnCreate.OnSuccess)
+		component.Actions.OnCreate.OnFailure = resetActions(component.Actions.OnCreate.OnFailure)
 	}
 
 	onCreate := component.Actions.OnCreate
@@ -637,11 +647,7 @@ func (p *Packager) loadDifferentialData() error {
 		if err != nil {
 			return err
 		}
-		manifest, err := p.remote.FetchRoot()
-		if err != nil {
-			return err
-		}
-		pkg, err := p.remote.FetchZarfYAML(manifest)
+		pkg, err := p.remote.FetchZarfYAML()
 		if err != nil {
 			return err
 		}
@@ -675,44 +681,6 @@ func (p *Packager) loadDifferentialData() error {
 	p.cfg.CreateOpts.DifferentialData.DifferentialImages = allIncludedImagesMap
 	p.cfg.CreateOpts.DifferentialData.DifferentialRepos = allIncludedReposMap
 	p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
-	p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents = differentialZarfConfig.Build.OCIImportedComponents
-
-	return nil
-}
-
-// removeDifferentialComponentsFromPackage will remove unchanged OCI imported components from a differential package creation
-func (p *Packager) removeDifferentialComponentsFromPackage() error {
-	// Remove components that were imported and already built into the reference package
-	if len(p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents) > 0 {
-		componentsToRemove := []int{}
-
-		for idx, component := range p.cfg.Pkg.Components {
-			// if the component is imported from an OCI package and everything is the same, don't include this package
-			if helpers.IsOCIURL(component.Import.URL) {
-				if _, alsoExists := p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents[component.Import.URL]; alsoExists {
-
-					// If the component spec is not empty, we will still include it in the differential package
-					// NOTE: We are ignoring fields that are not relevant to the differential build
-					if component.IsEmpty([]string{"Name", "Required", "Description", "Default", "Import"}) {
-						componentsToRemove = append(componentsToRemove, idx)
-					}
-				}
-			}
-		}
-
-		// Remove the components that are already included (via OCI Import) in the reference package
-		if len(componentsToRemove) > 0 {
-			for i, componentIndex := range componentsToRemove {
-				indexToRemove := componentIndex - i
-				componentToRemove := p.cfg.Pkg.Components[indexToRemove]
-
-				// If we are removing a component, add it to the build metadata and remove it from the list of OCI components for this package
-				p.cfg.Pkg.Build.DifferentialMissing = append(p.cfg.Pkg.Build.DifferentialMissing, componentToRemove.Name)
-
-				p.cfg.Pkg.Components = append(p.cfg.Pkg.Components[:indexToRemove], p.cfg.Pkg.Components[indexToRemove+1:]...)
-			}
-		}
-	}
 
 	return nil
 }

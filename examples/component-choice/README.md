@@ -4,7 +4,7 @@ import ExampleYAML from "@site/src/components/ExampleYAML";
 
 :::caution
 
-Component Choice is currently a [Deprecated Feature](../../docs/9-roadmap.md#alpha). This feature will be removed in Zarf v1.0.0. Please migrate any existing packages you may have that utilize it.
+Component Choice is currently a [Deprecated Feature](../../docs/9-roadmap.md#alpha). This feature will be removed in Zarf v1.0.0. Please migrate any existing packages you may have that utilize it.  In doing so you may want to consider [Package Flavors](../package-flavors/README.md) as an alternative.
 
 :::
 

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: enterprise-linux
+  labels:
+    app: enterprise-linux
+spec:
+  containers:
+    - name: enterprise-linux-container
+      image: "###ZARF_VAR_IMAGE###"
+      command: [ "sh", "-c", "while true; do ls; sleep 1; done"]
+      resources:
+        requests:
+          memory: "32Mi"
+          cpu: "50m"
+        limits:
+          memory: "128Mi"
+          cpu: "250m"
