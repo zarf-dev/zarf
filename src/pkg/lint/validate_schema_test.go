@@ -37,10 +37,18 @@ func TestValidateSchema(t *testing.T) {
 	})
 
 	t.Run("Read schema fail", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshalYaml(t, "unsuccessful_validation/bad_zarf.yaml")
+		unmarshalledYaml := readAndUnmarshalYaml(t, "unsuccessful_validation/zarf.yaml")
 		zarfSchema := readSchema(t)
 		if err := ValidateSchema(unmarshalledYaml, zarfSchema); err == nil {
 			t.Errorf("Expected validation to fail, but it succeeded.")
+		}
+	})
+
+	t.Run("Read schema yaml extension", func(t *testing.T) {
+		unmarshalledYaml := readAndUnmarshalYaml(t, "yaml-extension/zarf.yaml")
+		zarfSchema := readSchema(t)
+		if got := ValidateSchema(unmarshalledYaml, zarfSchema); got != nil {
+			t.Errorf("Expected successful validation, got error: %v", got)
 		}
 	})
 }

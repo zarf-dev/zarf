@@ -16,6 +16,7 @@ func TestLint(t *testing.T) {
 		path := filepath.Join("src", "test", "packages", "09-lint", "invalid_yaml")
 		_, _, err := e2e.Zarf("lint", path)
 		require.Error(t, err, "Expect error here because the yaml file is not following schema")
+		//Require contains to make sure the messaging is roughly how we want
 	})
 
 	t.Run("zarf test lint success", func(t *testing.T) {
