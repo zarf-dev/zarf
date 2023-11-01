@@ -145,7 +145,7 @@ components:
         after:
           - wait:
               cluster:
-                kind: pod
+                kind: deployment
                 namespace: zarf
                 name: app=docker-registry
-                condition: Ready
+                condition: Available

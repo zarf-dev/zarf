@@ -6,15 +6,13 @@ package validate
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -60,46 +58,44 @@ func Run(pkg types.ZarfPackage) error {
 		uniqueComponentNames[component.Name] = true
 
 		if err := validateComponent(pkg, component); err != nil {
-			return fmt.Errorf(lang.PkgValidateErrComponent, err)
+			return fmt.Errorf(lang.PkgValidateErrComponent, component.Name, err)
 		}
 	}
 
 	return nil
 }
 
-// ImportPackage validates the package trying to be imported.
-func ImportPackage(composedComponent *types.ZarfComponent) error {
-	path := composedComponent.Import.Path
-	url := composedComponent.Import.URL
+// ImportDefinition validates the component trying to be imported.
+func ImportDefinition(component *types.ZarfComponent) error {
+	path := component.Import.Path
+	url := component.Import.URL
 
-	if url == "" {
-		// ensure path exists
-		if path == "" {
-			return fmt.Errorf(lang.PkgValidateErrImportPathMissing, composedComponent.Name)
-		}
+	// ensure path or url is provided
+	if path == "" && url == "" {
+		return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name, "neither a path nor a URL was provided")
+	}
 
-		// remove zarf.yaml from path if path has zarf.yaml suffix
-		if strings.HasSuffix(path, layout.ZarfYAML) {
-			path = strings.Split(path, layout.ZarfYAML)[0]
-		}
+	// ensure path and url are not both provided
+	if path != "" && url != "" {
+		return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name, "both a path and a URL were provided")
+	}
 
-		// add a forward slash to end of path if it does not have one
-		if !strings.HasSuffix(path, string(os.PathSeparator)) {
-			path = filepath.Clean(path) + string(os.PathSeparator)
+	// validation for path
+	if url == "" && path != "" {
+		// ensure path is not an absolute path
+		if filepath.IsAbs(path) {
+			return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name, "path cannot be an absolute path")
 		}
+	}
 
-		// ensure there is a zarf.yaml in provided path
-		if utils.InvalidPath(filepath.Join(path, layout.ZarfYAML)) {
-			return fmt.Errorf(lang.PkgValidateErrImportPathInvalid, composedComponent.Import.Path)
-		}
-	} else {
-		// ensure path is empty
-		if path != "" {
-			return fmt.Errorf(lang.PkgValidateErrImportOptions, composedComponent.Name)
-		}
+	// validation for url
+	if url != "" && path == "" {
 		ok := helpers.IsOCIURL(url)
 		if !ok {
-			return fmt.Errorf(lang.PkgValidateErrImportURLInvalid, composedComponent.Import.URL)
+			return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name, "URL is not a valid OCI URL")
+		}
+		if !strings.HasSuffix(url, oci.SkeletonSuffix) {
+			return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name, "OCI import URL must end with -skeleton")
 		}
 	}
 
@@ -303,7 +299,7 @@ func validateChart(chart types.ZarfChart) error {
 		return fmt.Errorf(lang.PkgValidateErrChartNamespaceMissing, chart.Name)
 	}
 
-	// Must only have a url or localPath
+	// Must have a url or localPath (and not both)
 	count := oneIfNotEmpty(chart.URL) + oneIfNotEmpty(chart.LocalPath)
 	if count != 1 {
 		return fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name)

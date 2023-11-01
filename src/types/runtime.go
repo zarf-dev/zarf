@@ -95,6 +95,7 @@ type ZarfCreateOptions struct {
 	SigningKeyPassword string            `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sigh the created package"`
 	DifferentialData   DifferentialData  `json:"differential" jsonschema:"description=A package's differential images and git repositories from a referenced previously built package"`
 	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
+	Flavor             string            `json:"flavor" jsonschema:"description=An optional variant that controls which components will be included in a package"`
 }
 
 // ZarfSplitPackageData contains info about a split package.
@@ -128,5 +129,4 @@ type DifferentialData struct {
 	DifferentialPackageVersion string
 	DifferentialImages         map[string]bool
 	DifferentialRepos          map[string]bool
-	DifferentialOCIComponents  map[string]string
 }

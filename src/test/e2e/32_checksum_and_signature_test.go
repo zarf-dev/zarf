@@ -17,7 +17,7 @@ func TestChecksumAndSignature(t *testing.T) {
 
 	testPackageDirPath := "examples/dos-games"
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
-	privateKeyFlag := "--key=src/test/packages/zarf-test.prv-key"
+	privateKeyFlag := "--signing-key=src/test/packages/zarf-test.prv-key"
 	publicKeyFlag := "--key=src/test/packages/zarf-test.pub"
 
 	stdOut, stdErr, err := e2e.Zarf("package", "create", testPackageDirPath, privateKeyFlag, "--confirm")

@@ -1,9 +1,0 @@
-kind: ZarfPackageConfig
-metadata:
-  name: foo
-  version: 0.0.1
-
-components:
-  - name: baz
-    import:
-      path: ../bar
