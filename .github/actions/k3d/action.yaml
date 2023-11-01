@@ -7,5 +7,6 @@ runs:
     - run: "curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash"
       shell: bash
 
-    - run: k3d cluster delete && k3d cluster create
+    # NOTE: --k3s-node-label has been added to emulate clusters (like TKGI) that mismatch kubernetes hostname and node names (see #2110)
+    - run: k3d cluster delete && k3d cluster create --k3s-node-label kubernetes.io/hostname=k3d-tkgi-emu-server-0@server:0
       shell: bash
