@@ -38,7 +38,7 @@ func NewZarfOCIManifest(manifest *ocispec.Manifest) *ZarfOCIManifest {
 func (m *ZarfOCIManifest) Locate(pathOrDigest string) ocispec.Descriptor {
 	return helpers.Find(m.Layers, func(layer ocispec.Descriptor) bool {
 		// Convert from the OS path separator to the standard '/' for Windows support
-		return layer.Annotations[ocispec.AnnotationTitle] == filepath.ToSlash(pathOrDigest) || layer.Digest.Encoded() == pathOrDigest
+		return layer.Annotations[ocispec.AnnotationTitle] == pathOrDigest || layer.Digest.Encoded() == pathOrDigest // filepath.ToSlash(pathOrDigest) || layer.Digest.Encoded() == pathOrDigest
 	})
 }
 

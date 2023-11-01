@@ -178,7 +178,5 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 }
 
 func TestCompositionSuite(t *testing.T) {
-	e2e.SetupWithCluster(t)
-
 	suite.Run(t, new(CompositionSuite))
 }

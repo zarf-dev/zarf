@@ -33,7 +33,7 @@ var (
 // FileDescriptorExists returns true if the given file exists in the given directory with the expected SHA.
 func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDir string) bool {
 	// Convert from the standard '/' to the OS path separator for Windows support
-	rel := filepath.FromSlash(desc.Annotations[ocispec.AnnotationTitle])
+	rel := desc.Annotations[ocispec.AnnotationTitle] // filepath.FromSlash(desc.Annotations[ocispec.AnnotationTitle])
 	destinationPath := filepath.Join(destinationDir, rel)
 
 	info, err := os.Stat(destinationPath)
@@ -257,7 +257,7 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 	}
 
 	// Convert from the standard '/' to the OS path separator for Windows support
-	rel := filepath.FromSlash(desc.Annotations[ocispec.AnnotationTitle])
+	rel := desc.Annotations[ocispec.AnnotationTitle] // filepath.FromSlash(desc.Annotations[ocispec.AnnotationTitle])
 
 	return utils.WriteFile(filepath.Join(destinationDir, rel), b)
 }
