@@ -120,7 +120,11 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 		}
 		if helpers.IsNotZeroAndNotEqual(initOptions.RegistryInfo, state.RegistryInfo) {
 
+			if initOptions.RegistryInfo.Address != "" {
+				state.RegistryInfo.Address = initOptions.RegistryInfo.Address
+			}
 			message.Warn("Detected a change in Image Registry init options on a re-init. Ignoring... To update run:")
+
 			message.ZarfCommand("tools update-creds registry")
 		}
 		if helpers.IsNotZeroAndNotEqual(initOptions.ArtifactServer, state.ArtifactServer) {
