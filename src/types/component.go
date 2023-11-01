@@ -29,7 +29,7 @@ type ZarfComponent struct {
 
 	// Key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
 	// Note: ignores default and required flags
-	Group string `json:"group,omitempty" jsonschema:"description=[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0.,deprecated=true"`
+	Group string `json:"group,omitempty" jsonschema:"description=[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.,deprecated=true"`
 
 	// (Deprecated) Path to cosign public key for signed online resources
 	DeprecatedCosignKeyPath string `json:"cosignKeyPath,omitempty" jsonschema:"description=[Deprecated] Specify a path to a public key to validate signed online resources. This will be removed in Zarf v1.0.0.,deprecated=true"`
@@ -69,6 +69,7 @@ type ZarfComponent struct {
 type ZarfComponentOnlyTarget struct {
 	LocalOS string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
 	Cluster ZarfComponentOnlyCluster `json:"cluster,omitempty" jsonschema:"description=Only deploy component to specified clusters"`
+	Flavor  string                   `json:"flavor,omitempty" jsonschema:"description=Only include this component when a matching '--flavor' is specified on 'zarf package create'"`
 }
 
 // ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.

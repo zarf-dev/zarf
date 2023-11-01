@@ -718,6 +718,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="components_items_only_flavor"></a>flavor</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Only include this component when a matching '--flavor' is specified on 'zarf package create'
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 

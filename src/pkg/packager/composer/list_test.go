@@ -22,6 +22,7 @@ func TestNewImportChain(t *testing.T) {
 		name                 string
 		head                 types.ZarfComponent
 		arch                 string
+		flavor               string
 		expectedErrorMessage string
 	}
 
@@ -49,7 +50,7 @@ func TestNewImportChain(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := NewImportChain(testCase.head, testCase.arch)
+			_, err := NewImportChain(testCase.head, testCase.arch, testCase.flavor)
 			require.Contains(t, err.Error(), testCase.expectedErrorMessage)
 		})
 	}
