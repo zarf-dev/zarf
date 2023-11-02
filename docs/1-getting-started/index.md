@@ -6,33 +6,100 @@ Welcome to the Zarf documentation! This section will list the various ways to in
 
 There are multiple ways to get the Zarf CLI onto your machine:
 
-- Install from [Homebrew](#installing-from-the-defense-unicorns-homebrew-tap).
+- [Install from Homebrew](#installing-from-the-defense-unicorns-homebrew-tap).
 - [Download a prebuilt binary](#downloading-a-prebuilt-binary-from-our-github-releases).
 - [Build the CLI](#building-the-cli-from-scratch) from scratch.
 
-### Installing from the Defense Unicorns Homebrew Tap
+### Installing with Homebrew
 
-[Homebrew](https://brew.sh/) is an open-source software package manager that simplifies the installation of software on macOS and Linux. With Homebrew, installing Zarf is simple:
+[Homebrew](https://brew.sh/) is an open-source software package manager that simplifies the installation of software on macOS and Linux.
+
+
+<Tabs>
+<TabItem value="macOS">
+
+With Homebrew on macOS, installing Zarf is as simple as:
 
 ```bash
-brew tap defenseunicorns/tap
-brew install zarf
+brew tap defenseunicorns/tap && brew install zarf
 ```
+
+</TabItem>
+<TabItem value="Linux">
+
+With Homebrew on Linux, installing Zarf is as simple as:
+
+```bash
+brew tap defenseunicorns/tap && brew install zarf
+```
+
+</TabItem>
+
+:::note
 
 The above command detects your OS and system architecture and installs the correct Zarf CLI binary for your machine. Once the above command is entered, the CLI should be installed on your `$PATH` and is ready for immediate use.
 
-### Downloading a Prebuilt Binary from our GitHub Releases
+:::
 
-All [Zarf releases](https://github.com/defenseunicorns/zarf/releases) on GitHub include prebuilt binaries that you can download and use. We offer a small range of combinations of OS and architecture for you to choose from.
+### Downloading from  GitHub Releases
 
-On most Linux distributions, you can install the binary onto your `$PATH` by simply moving the downloaded binary to the `/usr/local/bin` directory:
+All [Zarf releases](https://github.com/defenseunicorns/zarf/releases) on GitHub include prebuilt binaries that you can download and use. We offer range of combinations of OS and architecture for you to choose from.
+
+<Tabs>
+<TabItem value="Linux">
+
+To download Zarf on Linux you can run the following (replacing `<zarf-version>` with a version of Zarf):
 
 ```bash
-chmod +x ./path/to/downloaded/{ZARF_FILE}
-mv ./path/to/downloaded/{ZARF_FILE} /usr/local/bin/zarf
+ZARF_VERSION=<zarf-version>
+ZARF_ARCH=$([ $(uname -m) == "x86_64" ] && echo "amd64" || echo "arm64";)
+
+curl -sL https://github.com/defenseunicorns/zarf/releases/download/${ZARF_VERSION}/zarf_${ZARF_VERSION}_Linux_${ZARF_ARCH} -o zarf
+chmod +x zarf
 ```
 
-On Windows or macOS, you can install the binary onto your `$PATH` by moving the downloaded binary to the desired directory and modifying the `$PATH` environment variable to include that directory.
+On most Linux distributions, you can also install the binary onto your `$PATH` by simply moving the downloaded binary to the `/usr/local/bin` directory:
+
+```bash
+sudo mv zarf /usr/local/bin/zarf
+```
+
+</TabItem>
+<TabItem value="macOS">
+
+To download Zarf on macOS you can run the following (replacing `<zarf-version>` with a version of Zarf):
+
+```bash
+ZARF_VERSION=<zarf-version>
+ZARF_ARCH=$([ $(uname -m) == "x86_64" ] && echo "amd64" || echo "arm64";)
+
+curl -sL https://github.com/defenseunicorns/zarf/releases/download/${ZARF_VERSION}/zarf_${ZARF_VERSION}_Darwin_${ZARF_ARCH} -o zarf
+chmod +x zarf
+```
+
+You can also install the binary onto your `$PATH` by simply moving the downloaded binary to the `/usr/local/bin` directory:
+
+```bash
+sudo mv zarf /usr/local/bin/zarf
+```
+
+</TabItem>
+<TabItem value="Windows">
+
+
+To download Zarf on Windows you can run the following (replacing `<zarf-version>` with a version of Zarf and `<zarf-arch>` with either `amd64` or `arm64` depending on your system):
+
+```powershell
+$ZarfVersion="<zarf-version>"
+$ZarfArch="<zarf-arch>"
+
+Start-BitsTransfer -Source "https://github.com/defenseunicorns/zarf/releases/download/$($ZarfVersion)/zarf_$($ZarfVersion)_Windows_$($ZarfArch).exe" -Destination zarf.exe
+```
+
+You can also install the binary onto your `$PATH` by moving the downloaded binary to the desired directory and modifying the `$PATH` environment variable to include that directory.
+
+</TabItem>
+</Tabs>
 
 ### Building the CLI from Scratch
 
@@ -52,8 +119,6 @@ The `make build-cli` command builds a binary for each combination of OS and arch
 For additional information, see the [Building Your Own Zarf CLI](../2-the-zarf-cli/0-building-your-own-cli.md) page.
 
 :::
-
----
 
 ## Verifying the Zarf Install
 
