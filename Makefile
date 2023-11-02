@@ -50,6 +50,8 @@ delete-packages: ## Delete all Zarf package tarballs in the project recursively
 
 # Note: the path to the main.go file is not used due to https://github.com/golang/go/issues/51831#issuecomment-1074188363
 
+
+### Build the CLIs
 # hack to tell the make directives if there's been a change.
 SRC_FILES := $(shell find . -type f -name '*.go')
 
@@ -89,7 +91,6 @@ docs-and-schema: ## Generate the Zarf Documentation and Schema
 init-package-local-agent:
 	@test "$(AGENT_IMAGE_TAG)" != "local" || $(MAKE) build-local-agent-image
 
-
 build-local-agent-image-amd64: build-cli-linux-amd
 	@cp build/zarf build/zarf-linux-amd64
 
@@ -99,9 +100,10 @@ build-local-agent-image-arm64: build-cli-linux-arm
 build-local-agent-image: build-local-agent-image-$(ARCH)
 	@docker buildx build --load --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
 
+build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst: zarf.yaml
+	@test -s $@ || $(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
 
-init-package: build-cli ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
-	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
+init-package: build-cli build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
 
 # INTERNAL: used to build a release version of the init package with a specific agent image
 release-init-package:
@@ -120,9 +122,7 @@ publish-init-package:
 	$(ZARF_BIN) package publish build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst oci://$(REPOSITORY_URL)
 	$(ZARF_BIN) package publish . oci://$(REPOSITORY_URL)
 
-build-examples: ## Build all of the example packages
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-
+build-examples: build-cli ## Build all of the example packages
 	@test -s ./build/zarf-package-dos-games-$(ARCH)-1.0.0.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
@@ -152,20 +152,17 @@ build-injector-linux: ## Build the Zarf injector for AMD64 and ARM64
 
 ## NOTE: Requires an existing cluster or the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
-test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
-	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
+test-e2e: init-package build-examples ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
 	cd src/test/e2e && go test -failfast -v -timeout 35m
 
 ## NOTE: Requires an existing cluster
 .PHONY: test-external
-test-external: ## Run the Zarf CLI E2E tests for an external registry and cluster
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
+test-external: init-package ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
 	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH) --confirm
 	cd src/test/external && go test -failfast -v -timeout 30m
 
-## NOTE: Requires an existing cluster and
+## NOTE: Requires an existing cluster
 .PHONY: test-upgrade
 test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
