@@ -4,9 +4,9 @@ metadata:
   description: Used to establish a new Zarf cluster
 
 components:
-  - name: k3s
-    import:
-      path: packages/distros/k3s
+#  - name: k3s
+#    import:
+#      path: packages/distros/k3s
 
   # This package moves the injector & registries binaries
   - name: zarf-injector
@@ -19,6 +19,11 @@ components:
     required: true
     import:
       path: packages/zarf-registry
+
+  - name: longhorn
+    required: true
+    import:
+      path: examples/longhorn
 
   # Creates the permanent registry
   - name: zarf-registry
@@ -33,11 +38,11 @@ components:
       path: packages/zarf-agent
 
   # (Optional) Adds logging to the cluster
-  - name: logging
-    import:
-      path: packages/logging-pgl
+#  - name: logging
+#    import:
+#      path: packages/logging-pgl
 
   # (Optional) Adds a git server to the cluster
-  - name: git-server
-    import:
-      path: packages/gitea
+#  - name: git-server
+#    import:
+#      path: packages/gitea
