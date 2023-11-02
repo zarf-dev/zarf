@@ -20,7 +20,12 @@ components:
     import:
       path: packages/zarf-registry
 
-  - name: longhorn
+  - name: longhorn-images
+    required: true
+    import:
+      path: examples/longhorn
+
+  - name: longhorn-deployment
     required: true
     import:
       path: examples/longhorn
@@ -30,6 +35,11 @@ components:
     required: true
     import:
       path: packages/zarf-registry
+
+  - name: longhorn-images
+    required: true
+    import:
+      path: examples/longhorn
 
   # Creates the pod+git mutating webhook
   - name: zarf-agent

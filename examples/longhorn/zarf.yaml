@@ -25,7 +25,26 @@ components:
               awk '{gsub(/"kubectl" /, "")} 1' ./environment_check.sh > tmp && mv tmp ./environment_check.sh
               chmod +x ./environment_check.sh
               ./environment_check.sh
-  - name: longhorn
+  - name: longhorn-images
+    required: true
+    description: Push longhorn images to the zarf registry
+    images:
+      - library/registry:2.8.3
+      - longhornio/longhorn-manager:v1.5.1
+      - longhornio/longhorn-ui:v1.5.1
+      - longhornio/backing-image-manager:v1.5.1
+      - longhornio/csi-attacher:v4.2.0
+      - longhornio/csi-node-driver-registrar:v2.7.0
+      - longhornio/csi-provisioner:v3.4.1
+      - longhornio/csi-resizer:v1.7.0
+      - longhornio/csi-snapshotter:v6.2.1
+      - longhornio/livenessprobe:v2.9.0
+      - longhornio/longhorn-engine:v1.5.1
+      - longhornio/longhorn-instance-manager:v1.5.1
+      - longhornio/longhorn-share-manager:v1.5.1
+      - longhornio/support-bundle-kit:v0.0.25
+
+  - name: longhorn-deployment
     required: true
     description: Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io
     actions:
@@ -45,17 +64,3 @@ components:
         namespace: longhorn-system
         valuesFiles:
         - values.yaml
-    images:
-      - longhornio/longhorn-manager:v1.5.1
-      - longhornio/longhorn-ui:v1.5.1
-      - longhornio/backing-image-manager:v1.5.1
-      - longhornio/csi-attacher:v4.2.0
-      - longhornio/csi-node-driver-registrar:v2.7.0
-      - longhornio/csi-provisioner:v3.4.1
-      - longhornio/csi-resizer:v1.7.0
-      - longhornio/csi-snapshotter:v6.2.1
-      - longhornio/livenessprobe:v2.9.0
-      - longhornio/longhorn-engine:v1.5.1
-      - longhornio/longhorn-instance-manager:v1.5.1
-      - longhornio/longhorn-share-manager:v1.5.1
-      - longhornio/support-bundle-kit:v0.0.25
