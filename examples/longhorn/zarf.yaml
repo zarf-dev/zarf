@@ -50,7 +50,7 @@ components:
       # Set the delete confirmation flag for Longhorn
       onRemove:
         before:
-          - cmd: "./zarf tools kubectl get ns longhorn-system -o json | jq '.spec.finalizers = []' | kubectl replace --raw '/api/v1/namespaces/longhorn-system/finalize' -f -"
+          - cmd: "./zarf tools kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
     manifests:
       - name: longhorn-connect
         namespace: longhorn-system
