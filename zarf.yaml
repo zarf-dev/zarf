@@ -20,10 +20,11 @@ components:
     import:
       path: packages/zarf-registry
 
-  - name: longhorn-images
+  - name: longhorn-images-initial
     required: true
     import:
       path: examples/longhorn
+      name: longhorn-images
 
   - name: longhorn-deployment
     required: true
