@@ -54,6 +54,7 @@ delete-packages: ## Delete all Zarf package tarballs in the project recursively
 ### Build the CLIs
 # hack to tell the make directives if there's been a change.
 SRC_FILES := $(shell find . -type f -name '*.go')
+INIT_PACKAGE_FILES := $(shell find packages -type f)
 
 build-cli-linux-amd: build/zarf ## Build the Zarf CLI for Linux on AMD64
 build/zarf: $(SRC_FILES)
@@ -100,7 +101,7 @@ build-local-agent-image-arm64: build-cli-linux-arm
 build-local-agent-image: build-local-agent-image-$(ARCH)
 	@docker buildx build --load --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
 
-build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst: zarf.yaml
+build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst: zarf.yaml $(INIT_PACKAGE_FILES)
 	@test -s $@ || $(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
 
 init-package: build-cli build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
@@ -110,8 +111,7 @@ release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
 # INTERNAL: used to build an iron bank version of the init package with an ib version of the registry image
-ib-init-package:
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+ib-init-package: build-cli
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm . \
 		--set REGISTRY_IMAGE_DOMAIN="registry1.dso.mil/" \
 		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
