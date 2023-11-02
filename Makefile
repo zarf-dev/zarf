@@ -50,27 +50,36 @@ delete-packages: ## Delete all Zarf package tarballs in the project recursively
 
 # Note: the path to the main.go file is not used due to https://github.com/golang/go/issues/51831#issuecomment-1074188363
 
-build-cli-linux-amd: ## Build the Zarf CLI for Linux on AMD64
+# hack to tell the make directives if there's been a change.
+SRC_FILES := $(shell find . -type f -name '*.go')
+
+build-cli-linux-amd: build/zarf ## Build the Zarf CLI for Linux on AMD64
+build/zarf: $(SRC_FILES)
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf .
 
-build-cli-linux-arm: ## Build the Zarf CLI for Linux on ARM
+build-cli-linux-arm: build/zarf-arm ## Build the Zarf CLI for Linux on ARM
+build/zarf-arm: $(SRC_FILES)
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm .
 
-build-cli-mac-intel: ## Build the Zarf CLI for macOS on AMD64
+build-cli-mac-intel: build/zarf-mac-intel ## Build the Zarf CLI for macOS on AMD64
+build/zarf-mac-intel: $(SRC_FILES)
 	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel .
 
-build-cli-mac-apple: ## Build the Zarf CLI for macOS on ARM
+build-cli-mac-apple: build/zarf-mac-apple ## Build the Zarf CLI for macOS on ARM
+build/zarf-mac-apple: $(SRC_FILES)
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple .
 
-build-cli-windows-amd: ## Build the Zarf CLI for Windows on AMD64
-	GOOS=windows GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf.exe . ## Build the Zarf CLI for Windows on AMD64
+build-cli-windows-amd: build/zarf.exe ## Build the Zarf CLI for Windows on AMD64
+build/zarf.exe: $(SRC_FILES)
+	GOOS=windows GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf.exe .
 
-build-cli-windows-arm: ## Build the Zarf CLI for Windows on ARM
-	GOOS=windows GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm.exe . ## Build the Zarf CLI for Windows on ARM
+build-cli-windows-arm: build/zarf-arm.exe ## Build the Zarf CLI for Windows on ARM
+build/zarf-arm.exe: $(SRC_FILES)
+	GOOS=windows GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm.exe .
 
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI for Linux on AMD64 and ARM
 
-build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
+build-cli: build-cli-linux build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 docs-and-schema: ## Generate the Zarf Documentation and Schema
 	hack/gen-cli-docs.sh
@@ -80,17 +89,18 @@ docs-and-schema: ## Generate the Zarf Documentation and Schema
 init-package-local-agent:
 	@test "$(AGENT_IMAGE_TAG)" != "local" || $(MAKE) build-local-agent-image
 
-build-local-agent-image: ## Build the Zarf agent image to be used in a locally built init package
-	@ if [ "$(ARCH)" = "amd64" ] && [ ! -s ./build/zarf ]; then $(MAKE) build-cli-linux-amd; fi
-	@ if [ "$(ARCH)" = "amd64" ]; then cp build/zarf build/zarf-linux-amd64; fi
-	@ if [ "$(ARCH)" = "arm64" ] && [ ! -s ./build/zarf-arm ]; then $(MAKE) build-cli-linux-arm; fi
-	@ if [ "$(ARCH)" = "arm64" ]; then cp build/zarf-arm build/zarf-linux-arm64; fi
-	docker buildx build --load --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
-	@ if [ "$(ARCH)" = "amd64" ]; then rm build/zarf-linux-amd64; fi
-	@ if [ "$(ARCH)" = "arm64" ]; then rm build/zarf-linux-arm64; fi
 
-init-package: ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+build-local-agent-image-amd64: build-cli-linux-amd
+	@cp build/zarf build/zarf-linux-amd64
+
+build-local-agent-image-arm64: build-cli-linux-arm
+	@cp build/zarf-arm build/zarf-linux-arm64
+
+build-local-agent-image: build-local-agent-image-$(ARCH)
+	@docker buildx build --load --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
+
+
+init-package: build-cli ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
 
 # INTERNAL: used to build a release version of the init package with a specific agent image
