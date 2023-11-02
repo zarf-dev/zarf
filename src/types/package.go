@@ -52,7 +52,6 @@ type ZarfBuildData struct {
 	Differential           bool              `json:"differential,omitempty" jsonschema:"description=Whether this package was created with differential components"`
 	RegistryOverrides      map[string]string `json:"registryOverrides,omitempty" jsonschema:"description=Any registry domains that were overridden on package create when pulling images"`
 	DifferentialMissing    []string          `json:"differentialMissing,omitempty" jsonschema:"description=List of components that were not included in this package due to differential packaging"`
-	OCIImportedComponents  map[string]string `json:"OCIImportedComponents,omitempty" jsonschema:"description=Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names"`
 	LastNonBreakingVersion string            `json:"lastNonBreakingVersion,omitempty" jsonschema:"description=The minimum version of Zarf that does not have breaking package structure changes"`
 }
 

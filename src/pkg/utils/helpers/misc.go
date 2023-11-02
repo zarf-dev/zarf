@@ -8,59 +8,8 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
-	"strings"
 	"time"
 )
-
-// Unique returns a new slice with only unique elements.
-func Unique[T comparable](s []T) (r []T) {
-	exists := make(map[T]bool)
-	for _, str := range s {
-		if _, ok := exists[str]; !ok {
-			exists[str] = true
-			r = append(r, str)
-		}
-	}
-	return r
-}
-
-// Reverse returns a new slice with the elements in reverse order.
-func Reverse[T any](s []T) (r []T) {
-	for i := len(s) - 1; i >= 0; i-- {
-		r = append(r, s[i])
-	}
-	return r
-}
-
-// Filter returns a new slice with only the elements that pass the test.
-func Filter[T any](ss []T, test func(T) bool) (r []T) {
-	for _, s := range ss {
-		if test(s) {
-			r = append(r, s)
-		}
-	}
-	return r
-}
-
-// Find returns the first element that passes the test.
-func Find[T any](ss []T, test func(T) bool) (r T) {
-	for _, s := range ss {
-		if test(s) {
-			return s
-		}
-	}
-	return r
-}
-
-// RemoveMatches removes the given element from the slice that matches the test.
-func RemoveMatches[T any](ss []T, test func(T) bool) (r []T) {
-	for _, s := range ss {
-		if !test(s) {
-			r = append(r, s)
-		}
-	}
-	return r
-}
 
 // Retry will retry a function until it succeeds or the timeout is reached, timeout == retries * delay.
 func Retry(fn func() error, retries int, delay time.Duration) (err error) {
@@ -179,27 +128,4 @@ func MergeNonZero[T any](original T, overrides T) T {
 		}
 	}
 	return originalValue.Interface().(T)
-}
-
-// StringToSlice converts a comma-separated string to a slice of lowercase strings.
-func StringToSlice(s string) []string {
-	if s != "" {
-		split := strings.Split(s, ",")
-		for idx, element := range split {
-			split[idx] = strings.ToLower(strings.TrimSpace(element))
-		}
-		return split
-	}
-
-	return []string{}
-}
-
-// AppendIfNotExists appends a string to a slice of strings if it is not present already on the slice.
-func AppendIfNotExists(slice []string, item string) []string {
-	for _, s := range slice {
-		if s == item {
-			return slice
-		}
-	}
-	return append(slice, item)
 }

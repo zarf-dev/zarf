@@ -81,7 +81,7 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 func PrintBreakingChanges(deployedZarfVersion string) {
 	deployedSemver, err := semver.NewVersion(deployedZarfVersion)
 	if err != nil {
-		message.Warnf("Unable to determine init-package version from %s.  There is potential for breaking changes.", deployedZarfVersion)
+		message.Debugf("Unable to check for breaking changes between Zarf versions")
 		return
 	}
 
