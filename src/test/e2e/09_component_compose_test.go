@@ -45,7 +45,10 @@ func (suite *CompositionSuite) TearDownSuite() {
 func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 	suite.T().Log("E2E: Package Compose Example")
 
-	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--no-color", "--confirm")
+	tmpdir := suite.T().TempDir()
+	cacheDir := filepath.Join(tmpdir, ".cache-location")
+
+	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--zarf-cache", cacheDir, "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that common names merge
