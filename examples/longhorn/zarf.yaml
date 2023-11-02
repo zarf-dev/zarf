@@ -51,6 +51,15 @@ components:
       onRemove:
         before:
           - cmd: "./zarf tools kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: --all
+                namespace: longhorn-system
+                condition: available
+          - cmd: "./zarf tools kubectl rollout status daemonset -n longhorn-system"
     manifests:
       - name: longhorn-connect
         namespace: longhorn-system
