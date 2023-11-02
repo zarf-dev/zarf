@@ -1,6 +1,3 @@
-import TabItem from "@theme/TabItem";
-import Tabs from "@theme/Tabs";
-
 # The Zarf CLI
 
 Zarf is a command line interface (CLI) tool that enables secure software delivery, with a particular focus on delivery to disconnected or highly regulated environments. Zarf is a statically compiled Go binary, which means it can be utilized in any environment without requiring additional dependencies.

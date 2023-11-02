@@ -1,3 +1,6 @@
+import TabItem from "@theme/TabItem";
+import Tabs from "@theme/Tabs";
+
 # Getting Started
 
 Welcome to the Zarf documentation! This section will list the various ways to install Zarf onto your machine. It will also demonstrate how to verify the installation. Choose the installation type that best suits your needs in accordance with your operating system. Let's get started!
