@@ -41,7 +41,7 @@ The above command detects your OS and system architecture and installs the corre
 
 :::
 
-### Downloading from  GitHub Releases
+### Downloading from GitHub Releases
 
 All [Zarf releases](https://github.com/defenseunicorns/zarf/releases) on GitHub include prebuilt binaries that you can download and use. We offer range of combinations of OS and architecture for you to choose from.
 
