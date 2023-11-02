@@ -75,7 +75,7 @@ The ['init' package](../3-create-a-zarf-package/3-zarf-init-package.md) is a spe
 
 You can get it for your version of Zarf by visiting the [Zarf releases](https://github.com/defenseunicorns/zarf/releases) page and downloading it into your working directory or into `~/.zarf-cache/zarf-init-<amd64|arm64>-vX.X.X.tar.zst`)
 
-If you are online on the machine with cluster access you can also run `zarf init` without the `--confirm` flag to be given the option to download the version of the init package for your Zarf version.
+If you are online on the machine with cluster access you can also run `zarf init` without the `--confirm` flag to be given the option to download the version of the init package for your Zarf version or you can use the `zarf tools download-init` command.
 
 :::note
 

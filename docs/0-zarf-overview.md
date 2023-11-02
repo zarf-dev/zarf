@@ -211,7 +211,7 @@ This example shows how to install Zarf with the official (📜) `defenseunicorns
 
 :::tip
 
-Zarf can deploy it's own `k3s` cluster on Linux if you have `root` access. However, for this example, we use Docker and Kind.
+Zarf can deploy it's own `k3s` cluster on Linux if you have `root` access by selecting the `k3s` component on `zarf init`.
 
 :::
 
