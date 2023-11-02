@@ -37,6 +37,7 @@ brew tap defenseunicorns/tap && brew install zarf
 ```
 
 </TabItem>
+</Tabs>
 
 :::note
 
