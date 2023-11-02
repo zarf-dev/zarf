@@ -4,9 +4,9 @@ metadata:
   description: Used to establish a new Zarf cluster
 
 components:
-#  - name: k3s
-#    import:
-#      path: packages/distros/k3s
+  - name: k3s
+    import:
+      path: packages/distros/k3s
 
   # This package moves the injector & registries binaries
   - name: zarf-injector
@@ -20,12 +20,14 @@ components:
     import:
       path: packages/zarf-registry
 
+  # Push longhorn images to seed-registry
   - name: longhorn-images-initial
     required: true
     import:
       path: examples/longhorn
       name: longhorn-images
 
+  # Deploy longhorn
   - name: longhorn-deployment
     required: true
     import:
@@ -37,10 +39,13 @@ components:
     import:
       path: packages/zarf-registry
 
+  # Push longhorn (and registry) images to permanent registry
   - name: longhorn-images
     required: true
     import:
       path: examples/longhorn
+    images:
+      - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
 
   # Creates the pod+git mutating webhook
   - name: zarf-agent
@@ -49,11 +54,11 @@ components:
       path: packages/zarf-agent
 
   # (Optional) Adds logging to the cluster
-#  - name: logging
-#    import:
-#      path: packages/logging-pgl
+  - name: logging
+    import:
+      path: packages/logging-pgl
 
   # (Optional) Adds a git server to the cluster
-#  - name: git-server
-#    import:
-#      path: packages/gitea
+  - name: git-server
+    import:
+      path: packages/gitea
