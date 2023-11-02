@@ -93,7 +93,7 @@ sudo mv zarf /usr/local/bin/zarf
 
 To download Zarf on Windows you can run the following (replacing `<zarf-version>` with a version of Zarf and `<zarf-arch>` with either `amd64` or `arm64` depending on your system):
 
-```powershell
+```bash
 $ZarfVersion="<zarf-version>"
 $ZarfArch="<zarf-arch>"
 
@@ -136,8 +136,6 @@ vX.X.X  # X.X.X is replaced with the version number of your specific installatio
 
 If you are not seeing this then Zarf was not installed onto your `$PATH` correctly. [This $PATH guide](https://zwbetz.com/how-to-add-a-binary-to-your-path-on-macos-linux-windows/) should help with that.
 
----
-
 ## Downloading the ['Init' Package](../3-create-a-zarf-package/3-zarf-init-package.md)
 
 The ['init' package](../3-create-a-zarf-package/3-zarf-init-package.md) is a special Zarf package that initializes a cluster with services that are used to store resources while in the air gap and is required for most ([but not all](../../examples/yolo/README.md)) Zarf deployments.
@@ -151,8 +149,6 @@ If you are online on the machine with cluster access you can also run `zarf init
 You can build your own custom 'init' package too if you'd like. For this you should check out the [Creating a Custom 'init' Package Tutorial](../5-zarf-tutorials/8-custom-init-packages.md).
 
 :::
-
----
 
 ## Where to Next?
 
