@@ -15,15 +15,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestZarfInit(t *testing.T) {
-	t.Log("E2E: Zarf init")
+func TestZarfMismatchedInit(t *testing.T) {
+	t.Log("E2E: Zarf mismatched architecture init")
 	e2e.SetupWithCluster(t)
-
-	initComponents := "logging,git-server"
-	// Add k3s component in appliance mode
-	if e2e.ApplianceMode {
-		initComponents = "k3s,logging,git-server"
-	}
 
 	initPackageVersion := e2e.GetZarfVersion(t)
 
@@ -52,10 +46,21 @@ func TestZarfInit(t *testing.T) {
 	_, stdErr, err = e2e.Zarf("init", "--architecture", mismatchedArch, componentsFlag, "--confirm")
 	require.Error(t, err, stdErr)
 	require.Contains(t, stdErr, expectedErrorMessage)
+}
+
+func TestZarfInit(t *testing.T) {
+	t.Log("E2E: Zarf init")
+	e2e.SetupWithCluster(t)
+
+	initComponents := "logging,git-server"
+	// Add k3s component in appliance mode
+	if e2e.ApplianceMode {
+		initComponents = "k3s,logging,git-server"
+	}
 
 	if !e2e.ApplianceMode {
 		// throw a pending pod into the cluster to ensure we can properly ignore them when selecting images
-		_, _, err = e2e.Kubectl("apply", "-f", "https://raw.githubusercontent.com/kubernetes/website/main/content/en/examples/pods/pod-with-node-affinity.yaml")
+		_, _, err := e2e.Kubectl("apply", "-f", "https://raw.githubusercontent.com/kubernetes/website/main/content/en/examples/pods/pod-with-node-affinity.yaml")
 		require.NoError(t, err)
 	}
 
@@ -98,7 +103,7 @@ func TestZarfInit(t *testing.T) {
 	}
 
 	// Check that the registry is running on the correct NodePort
-	stdOut, _, err = e2e.Kubectl("get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
+	stdOut, _, err := e2e.Kubectl("get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "31337")
 
