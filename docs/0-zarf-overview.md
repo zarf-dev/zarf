@@ -17,7 +17,7 @@ Zarf was created to _**support the declarative creation & distribution of softwa
 
 Zarf is a free and open-source tool that simplifies the setup and deployment of applications and supporting resources onto air-gapped or disconnected environments. Zarf equips you with the ability to quickly and securely deploy modern software onto complex systems without relying on internet connectivity.
 
-It also simplifies the installation, update, and maintenance of supporting DevSecOps capabilities like Kubernetes clusters and logging stacks, while  providing features like out of the box SBOM compliance. Most importantly though, Zarf keeps applications and systems running even when they are disconnected.
+It also simplifies the installation, update, and maintenance of supporting DevSecOps capabilities like Kubernetes clusters and logging stacks, while providing features that ensure supply chain security, including SBOM compliance. Most importantly though, Zarf keeps applications and systems running even when they are disconnected.
 
 :::note
 
