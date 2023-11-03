@@ -181,12 +181,12 @@ components:
               - ZARF_VAR_TEST_FILENAME=test-filename-from-env.txt
 
   - name: on-create-with-network-wait-action
-    description: This component will wait for 15 seconds for a network resource to be available
+    description: This component will wait for 30 seconds for a network resource to be available
     actions:
       onCreate:
         after:
           - description: Cloudflare 1.1.1.1 site to be available
-            maxTotalSeconds: 15
+            maxTotalSeconds: 30
             wait:
               # wait for a network address to return a 200 OK response
               network:
