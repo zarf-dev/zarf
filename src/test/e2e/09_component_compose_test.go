@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -55,14 +56,25 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 	suite.NoError(err)
 
 	// Ensure that common names merge
-	suite.Contains(stdErr, `
-  manifests:
-  - name: multi-games
-    namespace: dos-games
-    files:
-    - ../dos-games/manifests/deployment.yaml
-    - ../dos-games/manifests/service.yaml
-    - quake-service.yaml`)
+	if runtime.GOOS == "windows" {
+		suite.Contains(stdErr, `
+    manifests:
+    - name: multi-games
+      namespace: dos-games
+      files:
+      - "..\\dos-games\\manifests\\deployment.yaml"
+      - "..\\dos-games\\manifests\\service.yaml"
+      - quake-service.yaml`)
+	} else {
+		suite.Contains(stdErr, `
+    manifests:
+    - name: multi-games
+      namespace: dos-games
+      files:
+      - ../dos-games/manifests/deployment.yaml
+      - ../dos-games/manifests/service.yaml
+      - quake-service.yaml`)
+	}
 
 	// Ensure that the action was appended
 	suite.Contains(stdErr, `
