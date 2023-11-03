@@ -24,6 +24,10 @@ var (
 	composeExamplePath string
 	composeTest        = filepath.Join("src", "test", "packages", "09-composable-packages")
 	composeTestPath    string
+
+	// We make the cache dir relative to the working directory to make it work on the Windows Runners
+	// - they use two drives which filepath.Rel cannot cope with.
+	relCacheDir = ".cache-location"
 )
 
 func (suite *CompositionSuite) SetupSuite() {
@@ -40,15 +44,14 @@ func (suite *CompositionSuite) TearDownSuite() {
 	suite.NoError(err)
 	err = os.RemoveAll(composeTestPath)
 	suite.NoError(err)
+	err = os.RemoveAll(relCacheDir)
+	suite.NoError(err)
 }
 
 func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 	suite.T().Log("E2E: Package Compose Example")
 
-	tmpdir := suite.T().TempDir()
-	cacheDir := filepath.Join(tmpdir, ".cache-location")
-
-	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--zarf-cache", cacheDir, "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--zarf-cache", relCacheDir, "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that common names merge
