@@ -151,10 +151,10 @@ func (e2e *ZarfE2ETest) NormalizeYAMLFilenames(input string) string {
 		line := scanner.Text()
 		get, err := helpers.MatchRegex(fileMatcher, line)
 		if err != nil {
-			output += line
+			output += line + "\n"
 			continue
 		}
-		output += fmt.Sprintf("%s\"%s\"", get("start"), strings.ReplaceAll(get("file"), "/", "\\\\"))
+		output += fmt.Sprintf("%s\"%s\"\n", get("start"), strings.ReplaceAll(get("file"), "/", "\\\\"))
 	}
 
 	return output
