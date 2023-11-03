@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -56,17 +55,7 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 	suite.NoError(err)
 
 	// Ensure that common names merge
-	if runtime.GOOS == "windows" {
-		suite.Contains(stdErr, `
-  manifests:
-  - name: multi-games
-    namespace: dos-games
-    files:
-    - "..\\dos-games\\manifests\\deployment.yaml"
-    - "..\\dos-games\\manifests\\service.yaml"
-    - quake-service.yaml`)
-	} else {
-		suite.Contains(stdErr, `
+	manifests := e2e.NormalizeYAMLFilenames(`
   manifests:
   - name: multi-games
     namespace: dos-games
@@ -74,7 +63,7 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
     - ../dos-games/manifests/deployment.yaml
     - ../dos-games/manifests/service.yaml
     - quake-service.yaml`)
-	}
+	suite.Contains(stdErr, manifests)
 
 	// Ensure that the action was appended
 	suite.Contains(stdErr, `
@@ -101,16 +90,16 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 `)
 
 	// Check files
-	suite.Contains(stdErr, `
+	suite.Contains(stdErr, e2e.NormalizeYAMLFilenames(`
   files:
   - source: files/coffee-ipsum.txt
     target: coffee-ipsum.txt
   - source: files/coffee-ipsum.txt
     target: coffee-ipsum.txt
-`)
+`))
 
 	// Check charts
-	suite.Contains(stdErr, `
+	suite.Contains(stdErr, e2e.NormalizeYAMLFilenames(`
   charts:
   - name: podinfo-compose
     releaseName: podinfo-override
@@ -127,10 +116,10 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
     namespace: podinfo-compose-two
     valuesFiles:
     - files/test-values.yaml
-`)
+`))
 
 	// Check manifests
-	suite.Contains(stdErr, `
+	suite.Contains(stdErr, e2e.NormalizeYAMLFilenames(`
   manifests:
   - name: connect-service
     namespace: podinfo-override
@@ -146,7 +135,7 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
     - files/service.yaml
     kustomizations:
     - files
-`)
+`))
 
 	// Check images + repos
 	suite.Contains(stdErr, `
