@@ -24,10 +24,7 @@ var (
 	composeExamplePath string
 	composeTest        = filepath.Join("src", "test", "packages", "09-composable-packages")
 	composeTestPath    string
-
-	// We make the cache dir relative to the working directory to make it work on the Windows Runners
-	// - they use two drives which filepath.Rel cannot cope with.
-	relCacheDir = ".cache-location"
+	relCacheDir        string
 )
 
 func (suite *CompositionSuite) SetupSuite() {
@@ -37,6 +34,9 @@ func (suite *CompositionSuite) SetupSuite() {
 	composeExamplePath = filepath.Join("build", fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
 	composeTestPath = filepath.Join("build", fmt.Sprintf("zarf-package-test-compose-package-%s.tar.zst", e2e.Arch))
 
+	// We make the cache dir relative to the working directory to make it work on the Windows Runners
+	// - they use two drives which filepath.Rel cannot cope with.
+	relCacheDir, _ = filepath.Abs(".cache-location")
 }
 
 func (suite *CompositionSuite) TearDownSuite() {
