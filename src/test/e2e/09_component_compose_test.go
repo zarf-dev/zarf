@@ -58,22 +58,22 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 	// Ensure that common names merge
 	if runtime.GOOS == "windows" {
 		suite.Contains(stdErr, `
-    manifests:
-    - name: multi-games
-      namespace: dos-games
-      files:
-      - "..\\dos-games\\manifests\\deployment.yaml"
-      - "..\\dos-games\\manifests\\service.yaml"
-      - quake-service.yaml`)
+  manifests:
+  - name: multi-games
+    namespace: dos-games
+    files:
+    - "..\\dos-games\\manifests\\deployment.yaml"
+    - "..\\dos-games\\manifests\\service.yaml"
+    - quake-service.yaml`)
 	} else {
 		suite.Contains(stdErr, `
-    manifests:
-    - name: multi-games
-      namespace: dos-games
-      files:
-      - ../dos-games/manifests/deployment.yaml
-      - ../dos-games/manifests/service.yaml
-      - quake-service.yaml`)
+  manifests:
+  - name: multi-games
+    namespace: dos-games
+    files:
+    - ../dos-games/manifests/deployment.yaml
+    - ../dos-games/manifests/service.yaml
+    - quake-service.yaml`)
 	}
 
 	// Ensure that the action was appended
