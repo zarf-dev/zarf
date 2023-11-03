@@ -25,25 +25,7 @@ components:
               awk '{gsub(/"kubectl" /, "")} 1' ./environment_check.sh > tmp && mv tmp ./environment_check.sh
               chmod +x ./environment_check.sh
               ./environment_check.sh
-  - name: longhorn-images
-    required: true
-    description: Push longhorn images to the zarf registry
-    images:
-      - longhornio/longhorn-manager:v1.5.1
-      - longhornio/longhorn-ui:v1.5.1
-      - longhornio/backing-image-manager:v1.5.1
-      - longhornio/csi-attacher:v4.2.0
-      - longhornio/csi-node-driver-registrar:v2.7.0
-      - longhornio/csi-provisioner:v3.4.1
-      - longhornio/csi-resizer:v1.7.0
-      - longhornio/csi-snapshotter:v6.2.1
-      - longhornio/livenessprobe:v2.9.0
-      - longhornio/longhorn-engine:v1.5.1
-      - longhornio/longhorn-instance-manager:v1.5.1
-      - longhornio/longhorn-share-manager:v1.5.1
-      - longhornio/support-bundle-kit:v0.0.25
-
-  - name: longhorn-deployment
+  - name: longhorn
     required: true
     description: Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io
     actions:
@@ -51,10 +33,6 @@ components:
       onRemove:
         before:
           - cmd: "./zarf tools kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
-      onDeploy:
-        after:
-          - cmd: "./zarf tools kubectl wait -n longhorn-system deployment --all --for=condition=Available"
-          - cmd: "./zarf tools kubectl rollout status daemonset -n longhorn-system"
     manifests:
       - name: longhorn-connect
         namespace: longhorn-system
@@ -63,7 +41,21 @@ components:
     charts:
       - name: longhorn
         url:  https://charts.longhorn.io
-        version: 1.5.1
+        version: 1.4.0
         namespace: longhorn-system
         valuesFiles:
         - values.yaml
+    images:
+      - longhornio/csi-attacher:v3.4.0
+      - longhornio/csi-provisioner:v2.1.2
+      - longhornio/csi-resizer:v1.3.0
+      - longhornio/csi-snapshotter:v5.0.1
+      - longhornio/csi-node-driver-registrar:v2.5.0
+      - longhornio/livenessprobe:v2.8.0
+      - longhornio/backing-image-manager:v1.4.0
+      - longhornio/longhorn-engine:v1.4.0
+      - longhornio/longhorn-instance-manager:v1.4.0
+      - longhornio/longhorn-manager:v1.4.0
+      - longhornio/longhorn-share-manager:v1.4.0
+      - longhornio/longhorn-ui:v1.4.0
+      - longhornio/support-bundle-kit:v0.0.17

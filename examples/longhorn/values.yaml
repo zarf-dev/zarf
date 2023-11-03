@@ -24,45 +24,45 @@ global:
 image:
   longhorn:
     engine:
-      repository: ###ZARF_REGISTRY###/longhornio/longhorn-engine
-      tag: v1.5.1
+      repository: longhornio/longhorn-engine
+      tag: v1.4.0
     manager:
-      repository: ###ZARF_REGISTRY###/longhornio/longhorn-manager
-      tag: v1.5.1
+      repository: longhornio/longhorn-manager
+      tag: v1.4.0
     ui:
-      repository: ###ZARF_REGISTRY###/longhornio/longhorn-ui
-      tag: v1.5.1
+      repository: longhornio/longhorn-ui
+      tag: v1.4.0
     instanceManager:
-      repository: ###ZARF_REGISTRY###/longhornio/longhorn-instance-manager
-      tag: v1.5.1
+      repository: longhornio/longhorn-instance-manager
+      tag: v1.4.0
     shareManager:
-      repository: ###ZARF_REGISTRY###/longhornio/longhorn-share-manager
-      tag: v1.5.1
+      repository: longhornio/longhorn-share-manager
+      tag: v1.4.0
     backingImageManager:
-      repository: ###ZARF_REGISTRY###/longhornio/backing-image-manager
-      tag: v1.5.1
+      repository: longhornio/backing-image-manager
+      tag: v1.4.0
     supportBundleKit:
-      repository: ###ZARF_REGISTRY###/longhornio/support-bundle-kit
-      tag: v0.0.25
+      repository: longhornio/support-bundle-kit
+      tag: v0.0.17
   csi:
     attacher:
-      repository: ###ZARF_REGISTRY###/longhornio/csi-attacher
-      tag: v4.2.0
+      repository: longhornio/csi-attacher
+      tag: v3.4.0
     provisioner:
-      repository: ###ZARF_REGISTRY###/longhornio/csi-provisioner
-      tag: v3.4.1
+      repository: longhornio/csi-provisioner
+      tag: v2.1.2
     nodeDriverRegistrar:
-      repository: ###ZARF_REGISTRY###/longhornio/csi-node-driver-registrar
-      tag: v2.7.0
+      repository: longhornio/csi-node-driver-registrar
+      tag: v2.5.0
     resizer:
-      repository: ###ZARF_REGISTRY###/longhornio/csi-resizer
-      tag: v1.7.0
+      repository: longhornio/csi-resizer
+      tag: v1.3.0
     snapshotter:
-      repository: ###ZARF_REGISTRY###/longhornio/csi-snapshotter
-      tag: v6.2.1
+      repository: longhornio/csi-snapshotter
+      tag: v5.0.1
     livenessProbe:
-      repository: ###ZARF_REGISTRY###/longhornio/livenessprobe
-      tag: v2.9.0
+      repository: longhornio/livenessprobe
+      tag: v2.8.0
   pullPolicy: IfNotPresent
 
 service:
@@ -163,7 +163,7 @@ privateRegistry:
   registryUrl: ~
   registryUser: ~
   registryPasswd: ~
-  registrySecret: private-registry
+  registrySecret: ~
 
 longhornManager:
   log:
