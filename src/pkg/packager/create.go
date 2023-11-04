@@ -609,9 +609,6 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 			continue
 		}
 
-		// Convert from the OS path separator to '/' for Windows support
-		// rel = filepath.ToSlash(rel)
-
 		sum, err := utils.GetSHA256OfFile(abs)
 		if err != nil {
 			return "", err

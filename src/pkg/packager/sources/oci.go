@@ -188,9 +188,14 @@ func (s *OCISource) Collect(dir string) (string, error) {
 		return "", err
 	}
 
+	spinner := message.NewProgressSpinner("Validating full package checksums")
+	defer spinner.Stop()
+
 	if err := ValidatePackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, false); err != nil {
 		return "", err
 	}
+
+	spinner.Success()
 
 	isSkeleton := strings.HasSuffix(s.Repo().Reference.Reference, oci.SkeletonSuffix)
 	name := NameFromMetadata(&pkg, isSkeleton)
