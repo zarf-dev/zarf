@@ -25,7 +25,7 @@ func (suite *TestNetworkSuite) SetupSuite() {
 
 func (suite *TestNetworkSuite) Test_0_parseChecksum() {
 	// zarf prepare sha256sum .adr-dir
-	adr := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/.adr-dir"
+	adr := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/-dir"
 	sum := "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3"
 	url := adr + "@" + sum
 	uri, checksum, err := parseChecksum(url)
@@ -86,6 +86,7 @@ func (suite *TestNetworkSuite) Test_1_DownloadToFile() {
 	url = adr + "?foo=bar@" + sum
 	path = filepath.Join(tmp, ".adr-dir.good")
 	suite.NoError(DownloadToFile(url, path, ""))
+	suite.FileExists(path)
 }
 
 func TestNetwork(t *testing.T) {
