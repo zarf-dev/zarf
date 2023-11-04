@@ -33,6 +33,10 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
+      - name: Run windows unit tests
+        run: make test-unit
+        shell: pwsh
+
       - name: Build windows binary
         run: make build-cli-windows-amd
         shell: pwsh
@@ -48,6 +52,6 @@ jobs:
         run: make build-examples ARCH=amd64
         shell: pwsh
 
-      - name: Run windows tests
+      - name: Run windows E2E tests
         run: make test-e2e ARCH=amd64 -e SKIP_K8S=true
         shell: pwsh
