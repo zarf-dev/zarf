@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -18,8 +17,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-var nonAlphnumeric = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 const bbV1ZarfCredentialsValues = `
 registryCredentials:
@@ -122,21 +119,21 @@ func manifestGitRepo(cfg *extensions.BigBang) fluxSrcCtrl.GitRepository {
 }
 
 // manifestValuesFile generates a Secret object for the Big Bang umbrella repo.
-func manifestValuesFile(path string) (secret corev1.Secret, err error) {
+func manifestValuesFile(idx int, path string) (secret corev1.Secret, err error) {
 	// Read the file from the path.
 	file, err := os.ReadFile(path)
 	if err != nil {
 		return secret, err
 	}
 
-	// Define the name as the file name without the extension.
-	baseName := strings.TrimSuffix(path, filepath.Ext(path))
+	// Get the base file name for this file.
+	baseName := filepath.Base(path)
 
-	// Replace non-alphanumeric characters with a dash.
-	baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")
+	// Define the name as the file name without the extension.
+	baseName = strings.TrimSuffix(baseName, filepath.Ext(baseName))
 
 	// Add the name prefix.
-	name := fmt.Sprintf("bb-ext-user-values-%s", baseName)
+	name := fmt.Sprintf("bb-usr-vals-%d-%s", idx, baseName)
 
 	// Create a secret with the file contents.
 	secret = corev1.Secret{

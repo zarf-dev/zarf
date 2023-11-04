@@ -73,6 +73,7 @@ const (
 	VPkgCreateSigningKeyPassword = "package.create.signing_key_password"
 	VPkgCreateDifferential       = "package.create.differential"
 	VPkgCreateRegistryOverride   = "package.create.registry_override"
+	VPkgCreateFlavor             = "package.create.flavor"
 
 	// Package deploy config keys
 

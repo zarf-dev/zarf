@@ -1,0 +1,33 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-sub-package-flavors
+  description: A contrived example for package flavor / arch filter testing
+
+components:
+  - name: combined
+    description: "vanilla-amd"
+    only:
+      cluster:
+        architecture: "amd64"
+      flavor: "vanilla"
+
+  - name: combined
+    description: "vanilla-arm"
+    only:
+      cluster:
+        architecture: "arm64"
+      flavor: "vanilla"
+
+  - name: combined
+    description: "chocolate-amd"
+    only:
+      cluster:
+        architecture: "amd64"
+      flavor: "chocolate"
+
+  - name: combined
+    description: "chocolate-arm"
+    only:
+      cluster:
+        architecture: "arm64"
+      flavor: "chocolate"
