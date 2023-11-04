@@ -95,30 +95,30 @@ Zarf enables secure software delivery for various environments, such as remote, 
 Once your package has arrived, you will need to:
 
 1. Install the binary onto the system.
-2. Initialize a cluster with a zarf init package.
-3. Deploy the package to your cluster.
+2. Initialize a cluster with a zarf init package (`zarf init`)
+3. Deploy the package to your cluster (`zarf package deploy`)
 
 ## Cluster Configuration Options
 
-Zarf allows the package to either deploy to an existing K8s cluster or a K3s cluster it creates. This configuration is available on deployment of the init package.
+Zarf allows the package to either deploy to a K3s cluster it creates or an existing K8s cluster. This configuration is available on deployment of the init package.
 
-### As an Appliance
+### Initialize `k3s` as an Appliance
 
 ![Appliance Cluster Diagram](.images/what-is-zarf/appliance.drawio.png)
 
 In the simplest usage scenario, you deploy the Zarf init package's builtin cluster and use it to serve your application(s) directly to end users. This configuration runs Zarf and it's init package components as a self-contained appliance and is intended for use in environments where you want to run K8s-native tooling but need to keep a small footprint (i.e. single-purpose/constrained/"Edge" environments).
 
-### With an Existing Cluster
-
-![Existing Cluster Diagram](.images/what-is-zarf/existing-cluster.drawio.png)
-
-In this use case, you configure Zarf to initialize a cluster that already exists within your environment, and use that existing cluster to host and serve your applications.  This configuration is intended for environments that may already have some supporting infrastructure such as disconnected / highly regulated cloud environments.
-
-### As a Utility Cluster
+### Initialize `k3s` as a Utility Cluster
 
 ![Utility Cluster Diagram](.images/what-is-zarf/utility-cluster.drawio.png)
 
 In a more complex use case, you deploy the Zarf init package's builtin cluster and use it to serve resources to further downstream clusters. This configuration makes your Zarf deployment a utility cluster in service of a larger system and is intended for use in places where you want to run independent, full-service production environments with their own lifecycles but you want help tracking, caching and disseminating system/dependency updates.
+
+### Skip `k3s` and Initialize to an Existing Cluster
+
+![Existing Cluster Diagram](.images/what-is-zarf/existing-cluster.drawio.png)
+
+In this use case, you configure Zarf to initialize a cluster that already exists within your environment, and use that existing cluster to host and serve your applications.  This configuration is intended for environments that may already have some supporting infrastructure such as disconnected / highly regulated cloud environments.
 
 ## Why Use Zarf?
 
