@@ -49,11 +49,13 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, fmt.Sprintf("Pulling %q", ref))
 
+	sbomTmp := suite.T().TempDir()
+
 	// Verify the package was pulled correctly.
 	suite.FileExists(out)
-	stdOut, stdErr, err = e2e.Zarf("package", "inspect", out, "--key", "https://zarf.dev/cosign.pub")
+	stdOut, stdErr, err = e2e.Zarf("package", "inspect", out, "--key", "https://zarf.dev/cosign.pub", "--sbom-out", sbomTmp)
 	suite.NoError(err, stdOut, stdErr)
-	suite.Contains(stdErr, "Checksums validated!")
+	suite.Contains(stdErr, "Validating SBOM checksums")
 	suite.Contains(stdErr, "Package signature validated!")
 
 	// Test pull w/ bad ref.

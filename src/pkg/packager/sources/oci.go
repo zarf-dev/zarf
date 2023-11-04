@@ -74,9 +74,14 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 	}
 
 	if !dst.IsLegacyLayout() {
+		spinner := message.NewProgressSpinner("Validating pulled layer checksums")
+		defer spinner.Stop()
+
 		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, isPartial); err != nil {
 			return err
 		}
+
+		spinner.Success()
 
 		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
 			return err
@@ -131,8 +136,15 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 	}
 
 	if !dst.IsLegacyLayout() {
-		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, true); err != nil {
-			return err
+		if wantSBOM {
+			spinner := message.NewProgressSpinner("Validating SBOM checksums")
+			defer spinner.Stop()
+
+			if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, true); err != nil {
+				return err
+			}
+
+			spinner.Success()
 		}
 
 		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {

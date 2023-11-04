@@ -60,9 +60,6 @@ func ValidatePackageSignature(paths *layout.PackagePaths, publicKeyPath string) 
 
 // ValidatePackageIntegrity validates the integrity of a package by comparing checksums
 func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum string, isPartial bool) error {
-	spinner := message.NewProgressSpinner("Validating package checksums")
-	defer spinner.Stop()
-
 	// ensure checksums.txt and zarf.yaml were loaded
 	if utils.InvalidPath(loaded.Checksums) {
 		return fmt.Errorf("unable to validate checksums, %s was not loaded", layout.Checksums)
@@ -90,15 +87,12 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 		sha := split[0]
 
 		// Convert from the standard '/' to the OS path separator for Windows support
-		rel := split[1] // filepath.FromSlash(split[1])
+		rel := filepath.FromSlash(split[1])
 
 		if sha == "" || rel == "" {
 			return fmt.Errorf("invalid checksum line: %s", line)
 		}
 		path := filepath.Join(loaded.Base, rel)
-
-		status := fmt.Sprintf("Validating checksum of %s", utils.First30last30(rel))
-		spinner.Updatef(status)
 
 		if utils.InvalidPath(path) {
 			if !isPartial && !checkedMap[path] {
@@ -143,8 +137,6 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 			return fmt.Errorf("unable to validate checksums, %s did not get checked", path)
 		}
 	}
-
-	spinner.Successf("Checksums validated!")
 
 	return nil
 }

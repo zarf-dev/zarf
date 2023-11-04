@@ -33,24 +33,23 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
-      - name: Run windows unit tests
+      - name: Run Windows unit tests
         run: make test-unit
         shell: pwsh
 
-      - name: Build windows binary
-        run: make build-cli-windows-amd
-        shell: pwsh
+      - name: Build Windows binary and zarf packages
+        uses: ./.github/actions/packages
+        with:
+          init-package: "false"
+          os: windows
+          shell: pwsh
 
-      # Builds an init package manually off of the v0.23.6 release since
-      # Windows in GitHub cannot natively build linux containers and
-      # the tests this workflow runs do not use the agent at all!
+      # TODO: (@WSTARR) Builds an init package manually off of the v0.30.1
+      # release since Windows in GitHub cannot natively build linux containers
+      # and the tests this workflow run do not use the agent at all!
       - name: Build init-package
         run: |
-          make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=v0.25.2
-
-      - name: Build zarf packages
-        run: make build-examples ARCH=amd64
-        shell: pwsh
+          make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=v0.30.1
 
       - name: Run windows E2E tests
         run: make test-e2e ARCH=amd64 -e SKIP_K8S=true
