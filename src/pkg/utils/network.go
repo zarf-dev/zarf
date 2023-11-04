@@ -58,6 +58,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 	if err != nil {
 		return fmt.Errorf(lang.ErrWritingFile, dst, err.Error())
 	}
+	defer file.Close()
 
 	parsed, err := url.Parse(src)
 	if err != nil {
@@ -77,11 +78,6 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 		if err != nil {
 			return err
 		}
-	}
-
-	err = file.Close()
-	if err != nil {
-		return err
 	}
 
 	// If the file has a checksum, validate it
