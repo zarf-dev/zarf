@@ -259,6 +259,186 @@ func TestCompose(t *testing.T) {
 	}
 }
 
+func TestMerging(t *testing.T) {
+	t.Parallel()
+
+	type testCase struct {
+		name           string
+		ic             *ImportChain
+		existingVars   []types.ZarfPackageVariable
+		existingConsts []types.ZarfPackageConstant
+		expectedVars   []types.ZarfPackageVariable
+		expectedConsts []types.ZarfPackageConstant
+	}
+
+	head := Node{
+		vars: []types.ZarfPackageVariable{
+			{
+				Name:    "TEST",
+				Default: "head",
+			},
+			{
+				Name: "HEAD",
+			},
+		},
+		consts: []types.ZarfPackageConstant{
+			{
+				Name:  "TEST",
+				Value: "head",
+			},
+			{
+				Name: "HEAD",
+			},
+		},
+	}
+	tail := Node{
+		vars: []types.ZarfPackageVariable{
+			{
+				Name:    "TEST",
+				Default: "tail",
+			},
+			{
+				Name: "TAIL",
+			},
+		},
+		consts: []types.ZarfPackageConstant{
+			{
+				Name:  "TEST",
+				Value: "tail",
+			},
+			{
+				Name: "TAIL",
+			},
+		},
+	}
+	head.next = &tail
+	tail.prev = &head
+	testIC := &ImportChain{head: &head, tail: &tail}
+
+	testCases := []testCase{
+		{
+			name: "empty-ic",
+			ic:   &ImportChain{},
+			existingVars: []types.ZarfPackageVariable{
+				{
+					Name: "TEST",
+				},
+			},
+			existingConsts: []types.ZarfPackageConstant{
+				{
+					Name: "TEST",
+				},
+			},
+			expectedVars: []types.ZarfPackageVariable{
+				{
+					Name: "TEST",
+				},
+			},
+			expectedConsts: []types.ZarfPackageConstant{
+				{
+					Name: "TEST",
+				},
+			},
+		},
+		{
+			name:           "no-existing",
+			ic:             testIC,
+			existingVars:   []types.ZarfPackageVariable{},
+			existingConsts: []types.ZarfPackageConstant{},
+			expectedVars: []types.ZarfPackageVariable{
+				{
+					Name:    "TEST",
+					Default: "head",
+				},
+				{
+					Name: "HEAD",
+				},
+				{
+					Name: "TAIL",
+				},
+			},
+			expectedConsts: []types.ZarfPackageConstant{
+				{
+					Name:  "TEST",
+					Value: "head",
+				},
+				{
+					Name: "HEAD",
+				},
+				{
+					Name: "TAIL",
+				},
+			},
+		},
+		{
+			name: "with-existing",
+			ic:   testIC,
+			existingVars: []types.ZarfPackageVariable{
+				{
+					Name:    "TEST",
+					Default: "existing",
+				},
+				{
+					Name: "EXISTING",
+				},
+			},
+			existingConsts: []types.ZarfPackageConstant{
+				{
+					Name:  "TEST",
+					Value: "existing",
+				},
+				{
+					Name: "EXISTING",
+				},
+			},
+			expectedVars: []types.ZarfPackageVariable{
+				{
+					Name:    "TEST",
+					Default: "existing",
+				},
+				{
+					Name: "EXISTING",
+				},
+				{
+					Name: "HEAD",
+				},
+				{
+					Name: "TAIL",
+				},
+			},
+			expectedConsts: []types.ZarfPackageConstant{
+				{
+					Name:  "TEST",
+					Value: "existing",
+				},
+				{
+					Name: "EXISTING",
+				},
+				{
+					Name: "HEAD",
+				},
+				{
+					Name: "TAIL",
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		testCase := testCase
+
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			mergedVars := testCase.ic.MergeVariables(testCase.existingVars)
+			require.EqualValues(t, testCase.expectedVars, mergedVars)
+
+			mergedConsts := testCase.ic.MergeConstants(testCase.existingConsts)
+			require.EqualValues(t, testCase.expectedConsts, mergedConsts)
+		})
+	}
+}
+
 func createChainFromSlice(components []types.ZarfComponent) (ic *ImportChain) {
 	ic = &ImportChain{}
 

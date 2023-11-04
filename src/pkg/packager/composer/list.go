@@ -256,13 +256,14 @@ func (ic *ImportChain) MergeVariables(existing []types.ZarfPackageVariable) (mer
 		return v1.Name == v2.Name
 	}
 
-	merged = helpers.MergeSlices(existing, merged, exists)
-	node := ic.head
+	node := ic.tail
 	for node != nil {
 		// merge the vars
 		merged = helpers.MergeSlices(node.vars, merged, exists)
-		node = node.next
+		node = node.prev
 	}
+	merged = helpers.MergeSlices(existing, merged, exists)
+
 	return merged
 }
 
@@ -272,13 +273,14 @@ func (ic *ImportChain) MergeConstants(existing []types.ZarfPackageConstant) (mer
 		return c1.Name == c2.Name
 	}
 
-	merged = helpers.MergeSlices(existing, merged, exists)
-	node := ic.head
+	node := ic.tail
 	for node != nil {
 		// merge the consts
 		merged = helpers.MergeSlices(node.consts, merged, exists)
-		node = node.next
+		node = node.prev
 	}
+	merged = helpers.MergeSlices(existing, merged, exists)
+
 	return merged
 }
 
