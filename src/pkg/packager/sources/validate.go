@@ -85,9 +85,7 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 	err = lineByLine(checksumPath, func(line string) error {
 		split := strings.Split(line, " ")
 		sha := split[0]
-
-		// Convert from the standard '/' to the OS path separator for Windows support
-		rel := split[1] // filepath.FromSlash(split[1])
+		rel := split[1]
 
 		if sha == "" || rel == "" {
 			return fmt.Errorf("invalid checksum line: %s", line)

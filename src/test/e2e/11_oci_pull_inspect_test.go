@@ -48,6 +48,8 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	stdOut, stdErr, err := e2e.Zarf("package", "pull", ref)
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, fmt.Sprintf("Pulling %q", ref))
+	suite.Contains(stdErr, "Validating pulled layer checksums")
+	suite.NotContains(stdErr, "Package signature validated!")
 
 	sbomTmp := suite.T().TempDir()
 
