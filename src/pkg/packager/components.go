@@ -29,17 +29,18 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 
 	// Break up components into choice groups
 	for _, component := range p.cfg.Pkg.Components {
+		matchFn := func(a, b string) bool { return a == b }
 		key := component.Group
 		// If not a choice group, then use the component name as the key
 		if key == "" {
 			key = component.Name
 		} else {
 			// Otherwise, add the component name to the choice group list for later validation
-			choiceComponents = helpers.AppendIfNotExists(choiceComponents, component.Name)
+			choiceComponents = helpers.MergeSlices(choiceComponents, []string{component.Name}, matchFn)
 		}
 
 		// Preserve component order
-		orderedKeys = helpers.AppendIfNotExists(orderedKeys, key)
+		orderedKeys = helpers.MergeSlices(orderedKeys, []string{key}, matchFn)
 
 		// Append the component to the list of components in the group
 		componentGroups[key] = append(componentGroups[key], component)

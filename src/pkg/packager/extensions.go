@@ -39,16 +39,6 @@ func (p *Packager) processExtensions() (err error) {
 	return nil
 }
 
-// Mutate any local files to be relative to the parent
-func (p *Packager) composeExtensions(pathAncestry string, component types.ZarfComponent) types.ZarfComponent {
-	// Big Bang
-	if component.Extensions.BigBang != nil {
-		component = bigbang.Compose(pathAncestry, component)
-	}
-
-	return component
-}
-
 // Check for any extensions in use and skeletonize their local files.
 func (p *Packager) skeletonizeExtensions() (err error) {
 	components := []types.ZarfComponent{}
