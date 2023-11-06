@@ -1,5 +1,6 @@
 persistence:
   storageClass: "local-path" # 'local-path' is for k3d, 'standard' is for kind
+  size: 2Gi
 gitea:
   admin:
     username: "git-user"
@@ -21,8 +22,8 @@ gitea:
       FORCE_PRIVATE: true
 resources:
   requests:
-    cpu: "200m"
-    memory: "512Mi"
+    cpu: "100m"
+    memory: "256Mi"
   limits:
     cpu: "1"
     memory: "2Gi"

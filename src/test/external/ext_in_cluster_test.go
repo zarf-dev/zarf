@@ -56,7 +56,7 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 	giteaErrStr := "unable to verify the gitea chart installed successfully"
 
 	time.Sleep(30 * time.Second)
-	args := []string{"tools", "kubectl", "get", "pod", "-A"}
+	args := []string{"tools", "kubectl", "describe", "pod", "-A"}
 	_ = exec.CmdWithPrint(zarfBinPath, args...)
 
 	success := verifyKubectlWaitSuccess(suite.T(), 2, registryWaitCmd, registryErrStr)
