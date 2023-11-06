@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
@@ -53,6 +54,11 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 	registryErrStr := "unable to verify the docker-registry chart installed successfully"
 	giteaWaitCmd := []string{"wait", "pod", "-n=git-server", "gitea-0", "--for", "condition=Ready=True", "--timeout=5s"}
 	giteaErrStr := "unable to verify the gitea chart installed successfully"
+
+	time.Sleep(30 * time.Second)
+	args := []string{"tools", "kubectl", "get", "pod", "-A"}
+	_ = exec.CmdWithPrint(zarfBinPath, args...)
+
 	success := verifyKubectlWaitSuccess(suite.T(), 2, registryWaitCmd, registryErrStr)
 	suite.True(success, registryErrStr)
 	success = verifyKubectlWaitSuccess(suite.T(), 3, giteaWaitCmd, giteaErrStr)
