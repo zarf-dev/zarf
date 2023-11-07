@@ -196,7 +196,7 @@ func (suite *RegistryClientTestSuite) Test_5_Copy() {
 	}
 }
 
-func TestRegistryClientTestSuite(t *testing.T) {
+func TestRegistryClientSuite(t *testing.T) {
 	e2e.SetupWithCluster(t)
 
 	suite.Run(t, new(RegistryClientTestSuite))

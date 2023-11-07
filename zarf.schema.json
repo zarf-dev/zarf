@@ -132,15 +132,6 @@
           "type": "array",
           "description": "List of components that were not included in this package due to differential packaging"
         },
-        "OCIImportedComponents": {
-          "patternProperties": {
-            ".*": {
-              "type": "string"
-            }
-          },
-          "type": "object",
-          "description": "Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names"
-        },
         "lastNonBreakingVersion": {
           "type": "string",
           "description": "The minimum version of Zarf that does not have breaking package structure changes"
@@ -204,21 +195,7 @@
         }
       },
       "additionalProperties": false,
-      "type": "object",
-      "oneOf": [
-        {
-          "required": [
-            "url"
-          ],
-          "title": "url"
-        },
-        {
-          "required": [
-            "localPath"
-          ],
-          "title": "localPath"
-        }
-      ]
+      "type": "object"
     },
     "ZarfComponent": {
       "required": [
@@ -249,7 +226,7 @@
         },
         "group": {
           "type": "string",
-          "description": "[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0."
+          "description": "[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead."
         },
         "cosignKeyPath": {
           "type": "string",
@@ -706,6 +683,10 @@
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentOnlyCluster",
           "description": "Only deploy component to specified clusters"
+        },
+        "flavor": {
+          "type": "string",
+          "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'"
         }
       },
       "additionalProperties": false,

@@ -24,20 +24,18 @@ components:
         files:
           - quake-service.yaml
 
-  - name: oci-wordpress-url
+  - name: oci-games-url
     # The component logic keys ('required', 'group', and 'default') always override those of the imported package
     # required: false   # the initial value overrides the child component
     # group: ""         # the initial value overrides the child component
     # default: false    # the initial value overrides the child component
     import:
       # The URL to the skeleton package containing this component's package definition
-      url: oci://localhost:555/wordpress:16.0.4-skeleton
+      url: oci://🦄/dos-games:1.0.0-skeleton
       # Example optional custom name to point to in the imported package (default is to use this component's name)
-      name: wordpress
+      name: baseline
     # Un'name'd Zarf primitives will be appended to the end of the primitive's list for that component.
     actions:
       onDeploy:
         before:
           - cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}
-            setVariables:
-              - name: WORDPRESS_BLOG_NAME
