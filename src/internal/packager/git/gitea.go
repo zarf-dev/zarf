@@ -178,6 +178,7 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	createTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens", tunnelURL, g.Server.PushUsername)
 	createTokensBody := map[string]interface{}{
 		"name": config.ZarfArtifactTokenName,
+		"scopes": []string{"read:user"},
 	}
 	createTokensData, _ := json.Marshal(createTokensBody)
 	createTokensRequest, _ := netHttp.NewRequest("POST", createTokensEndpoint, bytes.NewBuffer(createTokensData))
