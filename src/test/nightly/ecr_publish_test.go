@@ -51,12 +51,12 @@ func TestECRPublishing(t *testing.T) {
 	keyFlag := fmt.Sprintf("--key=%s", "./src/test/packages/zarf-test.pub")
 
 	// Build the package with our test signature
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/helm-charts", "--key=./src/test/packages/zarf-test.prv-key", "--confirm", fmt.Sprintf("-o=%s", tmpDir))
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/helm-charts", "--signing-key=./src/test/packages/zarf-test.prv-key", "--confirm", fmt.Sprintf("-o=%s", tmpDir))
 	require.NoError(t, err, stdOut, stdErr)
 	require.FileExists(t, testPackageLocation)
 
 	// Validate that we can publish the package to ECR without an issue
-	stdOut, stdErr, err = e2e.Zarf("package", "publish", testPackageLocation, registryURL)
+	stdOut, stdErr, err = e2e.Zarf("package", "publish", testPackageLocation, registryURL, keyFlag)
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure we get a warning when trying to inspect the online published package
@@ -65,12 +65,8 @@ func TestECRPublishing(t *testing.T) {
 	require.Contains(t, stdErr, "Checksums validated!")
 	require.Contains(t, stdErr, "Package signature validated!")
 
-	// Ensure we get an error when trying to pull the package without providing the public key
-	stdOut, stdErr, err = e2e.Zarf("package", "pull", upstreamPackageURL)
-	require.Error(t, err, stdOut, stdErr) //TODO: look for a specific error instead of just allowing ANY error
-
 	// Validate that we can pull the package down from ECR
-	stdOut, stdErr, err = e2e.Zarf("package", "pull", upstreamPackageURL, keyFlag)
+	stdOut, stdErr, err = e2e.Zarf("package", "pull", upstreamPackageURL)
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(testPackageFileName)
 

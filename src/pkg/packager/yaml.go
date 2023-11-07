@@ -29,10 +29,6 @@ func (p *Packager) readZarfYAML(path string) error {
 		p.warnings = append(p.warnings, warning)
 	}
 
-	if p.cfg.Pkg.Build.OCIImportedComponents == nil {
-		p.cfg.Pkg.Build.OCIImportedComponents = make(map[string]string)
-	}
-
 	if len(p.cfg.Pkg.Build.Migrations) > 0 {
 		for idx, component := range p.cfg.Pkg.Components {
 			// Handle component configuration deprecations
