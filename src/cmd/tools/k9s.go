@@ -14,12 +14,15 @@ import (
 
 func init() {
 	k9sCmd := &cobra.Command{
-		Use:     "monitor",
-		Aliases: []string{"m", "k9s"},
-		Short:   lang.CmdToolsMonitorShort,
+		Use:                "monitor",
+		Aliases:            []string{"m", "k9s"},
+		Short:              lang.CmdToolsMonitorShort,
+		DisableFlagParsing: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			// Hack to make k9s think it's all alone
 			os.Args = []string{os.Args[0]}
+			// Pass the rest of the arguments to k9s
+			os.Args = append(os.Args, args...)
 			k9s.Execute()
 		},
 	}
