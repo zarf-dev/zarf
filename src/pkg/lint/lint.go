@@ -14,7 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// ValidatesZarfSchema a zarf file against the zarf schema, returns an error if the file is invalid
+// ValidateZarfSchema a zarf file against the zarf schema, returns an error if the file is invalid
 func ValidateZarfSchema(baseDir string) (err error) {
 	var typedZarfData types.ZarfPackage
 	if err := utils.ReadYaml(filepath.Join(baseDir, layout.ZarfYAML), &typedZarfData); err != nil {
