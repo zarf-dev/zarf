@@ -50,6 +50,5 @@ repos:
         exclude: |
           (?x)^(
             src/pkg/lint/unsuccessful_validation/zarf.yaml|
-            src/pkg/lint/yaml-extension/zarf.yaml|
             src/test/packages/11-lint/.*
           )$

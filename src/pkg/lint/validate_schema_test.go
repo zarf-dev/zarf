@@ -22,15 +22,20 @@ func TestValidateSchema(t *testing.T) {
 	readAndUnmarshalYaml := func(t *testing.T, path string) interface{} {
 		t.Helper()
 		var unmarshalledYaml interface{}
-		file, err := os.ReadFile(path)
+		file, _ := os.ReadFile(path)
 		goyaml.Unmarshal(file, &unmarshalledYaml)
-		if err != nil {
-			return err
-		}
 		return unmarshalledYaml
 	}
 
-	t.Run("Read schema success", func(t *testing.T) {
+	readAndUnmarshallZarf := func(t *testing.T, path string) types.ZarfPackage {
+		t.Helper()
+		var unmarshalledYaml types.ZarfPackage
+		file, _ := os.ReadFile(path)
+		goyaml.Unmarshal(file, &unmarshalledYaml)
+		return unmarshalledYaml
+	}
+
+	t.Run("validate schema success", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml(t, "successful_validation/zarf.yaml")
 		zarfSchema := readSchema(t)
 		err := validateSchema(unmarshalledYaml, zarfSchema)
@@ -40,7 +45,7 @@ func TestValidateSchema(t *testing.T) {
 		}
 	})
 
-	t.Run("Read schema fail", func(t *testing.T) {
+	t.Run("validate schema fail", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml(t, "unsuccessful_validation/zarf.yaml")
 		zarfSchema := readSchema(t)
 		err := validateSchema(unmarshalledYaml, zarfSchema)
@@ -50,32 +55,17 @@ func TestValidateSchema(t *testing.T) {
 		require.EqualError(t, err, errorMessage)
 	})
 
-	t.Run("Read schema yaml extension", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshalYaml(t, "yaml-extension/zarf.yaml")
-		zarfSchema := readSchema(t)
-		err := validateSchema(unmarshalledYaml, zarfSchema)
-		require.NoError(t, err)
-		if got := validateSchema(unmarshalledYaml, zarfSchema); got != nil {
-			t.Errorf("Expected successful validation, got error: %v", got)
-		}
-	})
-
-	t.Run("Read schema yaml extension", func(t *testing.T) {
-		var unmarshalledYaml types.ZarfPackage
-		file, _ := os.ReadFile("yaml-extension/zarf.yaml")
-		goyaml.Unmarshal(file, &unmarshalledYaml)
+	t.Run("Template in component import success", func(t *testing.T) {
+		unmarshalledYaml := readAndUnmarshallZarf(t, "successful_validation/zarf.yaml")
 		err := checkForVarInComponentImport(unmarshalledYaml)
 		require.NoError(t, err)
 	})
 
-	t.Run("Read schema import-error", func(t *testing.T) {
-		var unmarshalledYaml types.ZarfPackage
-		file, _ := os.ReadFile("unsuccessful_validation/zarf.yaml")
-		goyaml.Unmarshal(file, &unmarshalledYaml)
+	t.Run("Template in component import failure", func(t *testing.T) {
+		unmarshalledYaml := readAndUnmarshallZarf(t, "unsuccessful_validation/zarf.yaml")
 		err := checkForVarInComponentImport(unmarshalledYaml)
-		errorMessage := zarfWarningPrefix + `
- - component.2.import.path will not resolve ZARF_PKG_TMPL_* variables
- - component.3.import.url will not resolve ZARF_PKG_TMPL_* variables`
+		errorMessage := zarfWarningPrefix + " component.2.import.path will not resolve ZARF_PKG_TMPL_* variables. " +
+			"component.3.import.url will not resolve ZARF_PKG_TMPL_* variables."
 		require.EqualError(t, err, errorMessage)
 	})
 }
