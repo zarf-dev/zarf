@@ -104,7 +104,7 @@ build-local-agent-image: build-local-agent-image-$(ARCH)
 build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst: zarf.yaml $(INIT_PACKAGE_FILES)
 	@test -s $@ || $(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
 
-init-package: build-cli build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
+init-package: $(ZARF_BIN) build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
 
 # INTERNAL: used to build a release version of the init package with a specific agent image
 release-init-package:
