@@ -137,6 +137,7 @@ func (e2e *ZarfE2ETest) StripANSICodes(input string) string {
 	return ansiRegex.ReplaceAllString(input, "")
 }
 
+// NormalizeYAMLFilenames normalizes YAML filenames / paths across Operating Systems (i.e Windows vs Linux)
 func (e2e *ZarfE2ETest) NormalizeYAMLFilenames(input string) string {
 	if runtime.GOOS != "windows" {
 		return input
