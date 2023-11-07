@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/santhosh-tekuri/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -44,15 +43,10 @@ func ValidateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 		return err
 	}
 
-	if result.Valid() {
-		message.Success("The document is valid\n")
-	} else {
-		errorMessage := "The document is not valid: "
-		for i, desc := range result.Errors() {
-			if i != 0 {
-				errorMessage = errorMessage + ", "
-			}
-			errorMessage = errorMessage + desc.String()
+	if !result.Valid() {
+		errorMessage := "The document is not valid:"
+		for _, desc := range result.Errors() {
+			errorMessage = errorMessage + "\n - " + desc.String()
 		}
 		err = errors.New(errorMessage)
 	}
