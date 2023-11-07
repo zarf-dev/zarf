@@ -12,6 +12,7 @@ import (
 const (
 	zarfInvalidPrefix = "zarf.yaml is not valid:"
 	zarfWarningPrefix = "zarf schema warning:"
+	zarfTemplateVar   = "###ZARF_PKG_TMPL_"
 )
 
 func ValidateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
@@ -39,12 +40,12 @@ func checkForVarInComponentImport(unmarshalledYaml types.ZarfPackage) error {
 	errorMessage := zarfWarningPrefix
 	componentWarningStart := "\n - component."
 	for i, component := range unmarshalledYaml.Components {
-		if strings.Contains(component.Import.Path, "###ZARF_PKG_TMPL_") {
+		if strings.Contains(component.Import.Path, zarfTemplateVar) {
 			errorMessage = errorMessage + componentWarningStart + strconv.Itoa(i) +
 				".import.path will not resolve ZARF_PKG_TMPL_* variables"
 			valid = false
 		}
-		if strings.Contains(component.Import.URL, "###ZARF_PKG_TMPL_") {
+		if strings.Contains(component.Import.URL, zarfTemplateVar) {
 			errorMessage = errorMessage + componentWarningStart + strconv.Itoa(i) +
 				".import.url will not resolve ZARF_PKG_TMPL_* variables"
 			valid = false
