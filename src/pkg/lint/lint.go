@@ -7,12 +7,13 @@ package lint
 import (
 	"path/filepath"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-// Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
+// Validates a zarf file against the zarf schema, returns an error if the file is invalid
 func ValidateZarfSchema(baseDir string) (err error) {
 	zarfSchema, _ := config.GetSchemaFile()
 	var zarfData interface{}
@@ -20,7 +21,7 @@ func ValidateZarfSchema(baseDir string) (err error) {
 		return err
 	}
 
-	err = ValidateSchema(zarfData, zarfSchema)
+	err = validateSchema(zarfData, zarfSchema)
 
 	if err != nil {
 		return err

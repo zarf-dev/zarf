@@ -39,9 +39,9 @@ func TestValidateSchema(t *testing.T) {
 	t.Run("Read schema success", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml(t, "successful_validation/zarf.yaml")
 		zarfSchema := readSchema(t)
-		err := ValidateSchema(unmarshalledYaml, zarfSchema)
+		err := validateSchema(unmarshalledYaml, zarfSchema)
 		require.NoError(t, err)
-		if got := ValidateSchema(unmarshalledYaml, zarfSchema); got != nil {
+		if got := validateSchema(unmarshalledYaml, zarfSchema); got != nil {
 			t.Errorf("Expected successful validation, got error: %v", got)
 		}
 	})
@@ -62,7 +62,7 @@ func TestValidateSchema(t *testing.T) {
 		// 		unmarshalledYaml,_ := unmarshallStringYaml(t, yamlContents)
 		zarfSchema := readSchema(t)
 		unmarshalledYaml := readAndUnmarshalYaml(t, "unsuccessful_validation/zarf.yaml")
-		err := ValidateSchema(unmarshalledYaml, zarfSchema)
+		err := validateSchema(unmarshalledYaml, zarfSchema)
 		errorMessage := `The document is not valid:
  - components.0.import: Additional property not-path is not allowed
  - components.1: Additional property not-import is not allowed`
@@ -83,9 +83,9 @@ func TestValidateSchema(t *testing.T) {
 	t.Run("Read schema yaml extension", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml(t, "yaml-extension/zarf.yaml")
 		zarfSchema := readSchema(t)
-		err := ValidateSchema(unmarshalledYaml, zarfSchema)
+		err := validateSchema(unmarshalledYaml, zarfSchema)
 		require.NoError(t, err)
-		if got := ValidateSchema(unmarshalledYaml, zarfSchema); got != nil {
+		if got := validateSchema(unmarshalledYaml, zarfSchema); got != nil {
 			t.Errorf("Expected successful validation, got error: %v", got)
 		}
 	})
