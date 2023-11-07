@@ -92,14 +92,10 @@ docs-and-schema: ## Generate the Zarf Documentation and Schema
 init-package-local-agent:
 	@test "$(AGENT_IMAGE_TAG)" != "local" || $(MAKE) build-local-agent-image
 
-build-local-agent-image-amd64: build-cli-linux-amd
-	@cp build/zarf build/zarf-linux-amd64
-
-build-local-agent-image-arm64: build-cli-linux-arm
-	@cp build/zarf-arm build/zarf-linux-arm64
-
-build-local-agent-image: build-local-agent-image-$(ARCH)
-	@docker buildx build --load --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
+GOARCH := $(shell go env GOARCH)
+build-local-agent-image: $(ZARF_BIN) ## Build the Zarf agent image to be used in a locally built init package
+	@cp $(ZARF_BIN) build/zarf-linux-$(GOARCH)
+	docker buildx build --load --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
 
 build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst: zarf.yaml $(INIT_PACKAGE_FILES)
 	@test -s $@ || $(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
