@@ -304,7 +304,7 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 	pod.Labels[agentLabel] = "ignore"
 
 	// Bind the pod to the node the image was found on
-	pod.Spec.NodeSelector = map[string]string{"kubernetes.io/hostname": node}
+	pod.Spec.NodeName = node
 
 	// Do not try to restart the pod as it will be deleted/re-created instead
 	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
