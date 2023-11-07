@@ -55,6 +55,8 @@ func (h *Helm) parseChartValues() (chartutil.Values, error) {
 		valueOpts.ValueFiles = append(valueOpts.ValueFiles, path)
 	}
 
+	valueOpts.ValueFiles = append(valueOpts.ValueFiles, h.AdditionalValuesFiles...)
+
 	httpProvider := getter.Provider{
 		Schemes: []string{"http", "https"},
 		New:     getter.NewHTTPGetter,
