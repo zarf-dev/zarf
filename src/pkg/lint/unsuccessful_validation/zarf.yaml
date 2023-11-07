@@ -11,3 +11,11 @@ components:
   - name: second-test-component
     not-import:
       path: packages/distros/k3s
+
+  - name: import-test
+    import:
+      path: "###ZARF_PKG_TMPL_ZEBRA###"
+
+  - name: import-url
+    import:
+      url: "oci://###ZARF_PKG_TMPL_ZEBRA###"
