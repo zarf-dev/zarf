@@ -6,7 +6,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
-func validateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
+func ValidateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 	schemaLoader := gojsonschema.NewBytesLoader(jsonSchema)
 	documentLoader := gojsonschema.NewGoLoader(unmarshalledYaml)
 

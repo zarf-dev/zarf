@@ -21,7 +21,7 @@ func ValidateZarfSchema(baseDir string) (err error) {
 		return err
 	}
 
-	err = validateSchema(zarfData, zarfSchema)
+	err = ValidateSchema(zarfData, zarfSchema)
 
 	if err != nil {
 		return err
