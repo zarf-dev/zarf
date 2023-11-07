@@ -11,13 +11,13 @@ import Tabs from "@theme/Tabs";
 
 ## What is Zarf?
 
-Zarf was created to _**support the declarative creation & distribution of software "packages" into remote/constrained/independent environments**_.
+Zarf was created to _**support the declarative creation & distribution of software "packages" into remote/constrained/standalone environments**_.
 
 > "Zarf is a tool to help deploy modern stacks into air-gapped environments; it's all about moving the bits." &mdash; Jeff
 
-Zarf is a free and open-source tool that simplifies the setup and deployment of applications and resources onto air-gapped or disconnected environments. Zarf equips you with the ability to quickly and securely deploy modern software onto complex systems without relying on internet connectivity.
+Zarf is a free and open-source tool that simplifies the setup and deployment of applications and supporting resources onto air-gapped or disconnected environments. Zarf equips you with the ability to quickly and securely deploy modern software onto complex systems without relying on internet connectivity.
 
-It also simplifies the installation, updating, and maintenance of DevSecOps capabilities like Kubernetes clusters, logging, and SBOM compliance out of the box. Most importantly, Zarf keeps applications and systems running even when they are disconnected.
+It also simplifies the installation, update, and maintenance of supporting DevSecOps capabilities like Kubernetes clusters and logging stacks, while providing features that ensure supply chain security, including SBOM compliance. Most importantly though, Zarf keeps applications and systems running even when they are disconnected.
 
 :::note
 
@@ -27,21 +27,21 @@ Check out our [glossary](1-getting-started/0-understand-the-basics.md) for an ex
 
 ## How Zarf Works
 
-Zarf simplifies and standardizes the delivery of complex software deployments. This gives users the ability to reduce tens/hundreds of individual software updates, movements, and manual installations to a few simple terminal commands. This tool equips users with the ability to pull, package, and install all the resources their applications or clusters need to run without being connected to the internet. It can also deploy any necessary resources needed to stand up infrastructure tools (such as Terraform).
+Zarf simplifies and standardizes the delivery of complex software deployments. This gives users the ability to reduce tens/hundreds of individual software updates, data transfers, and manual installations to a few simple terminal commands. This tool equips users with the ability to pull, package, and install all of the resources their applications or clusters need to run without being connected to the internet. It can also deploy any necessary resources needed to stand up infrastructure tooling (such as Open Tofu / Terraform).
 
 ![Zarf CLI + Zarf Init + Zarf Package](.images/Zarf%20Files%20-%20%203%20Bubbles.svg)
 
 A typical Zarf deployment is made up of three parts:
 
-1. The `zarf` binary:
-   - A statically compiled Go binary that can be run on any machine, server, or operating system with or without connectivity.
-   - Creates packages containing numerous software types/updates into a single distributable package (while on an internet-accessible network).
-   - Declaratively deploys package contents "into place" for use on production systems (while on an internet-isolated network).
-2. A Zarf init package:
+1. The [`zarf` binary](./2-the-zarf-cli/index.md):
+   - Is a statically compiled Go binary that can be run on any machine, server, or operating system with or without connectivity.
+   - Creates packages combining numerous types of software/updates into a single distributable package (while on a network capable of accessing them).
+   - Declaratively deploys package contents "into place" for use on production systems (while on an isolated network).
+2. A [Zarf init package](./3-create-a-zarf-package/3-zarf-init-package.md):
    - A compressed tarball package that contains the configuration needed to instantiate an environment without connectivity.
-   - Automatically seeds your cluster with a container registry.
-   - Provides additional capabilities such as logging, git server, and K8s cluster.
-3. A Zarf Package:
+   - Automatically seeds your cluster with a container registry or wires up a pre-existing one
+   - Provides additional capabilities such as logging, git server support, and/or a K8s cluster.
+3. A [Zarf Package](./3-create-a-zarf-package/1-zarf-packages.md):
    - A compressed tarball package that contains all of the files, manifests, source repositories, and images needed to deploy your infrastructure, application, and resources in a disconnected environment.
 
 :::note
@@ -59,60 +59,66 @@ For more technical information on how Zarf works and to view the Zarf architectu
 
 ## What can be Packaged?
 
-Given Zarf's being a "K8s cluster to serve _other_ K8s clusters", the following types of software can be rolled into a Zarf Package:
+The following types of software can be rolled into a Zarf Package:
 
-- Container images: to serve images for the Zarf and downstream clusters to run containers from.
-- Repositories: to serve as the git-based "source of truth" for downstream "GitOps"ed K8s clusters to watch.
-- Pre-compiled binaries: to provide the software necessary to start and support the Zarf cluster.
+- Container images + artifacts: to serve images and OCI artifacts for clusters and other consumers to pull.
+- [Repositories](../examples/git-data/README.md): to serve as the git-based "source of truth" for GitOps application deployments.
+- Pre-compiled binaries: to provide the software necessary to start and support a cluster.
 - [Component actions](3-create-a-zarf-package/7-component-actions.md): to support scripts and commands that run at various stages of the Zarf [package create lifecycle](./3-create-a-zarf-package/5-package-create-lifecycle.md), and [package deploy lifecycle](./4-deploy-a-zarf-package/1-package-deploy-lifecycle.md).
-- Helm charts, kustomizations, and other K8s manifests: to apply in a Kubernetes cluster.
+- Helm charts, kustomizations, and other K8s manifests: to apply to a Kubernetes cluster.
 - [Data injections](../examples/kiwix/README.md): to declaratively inject data into running containers in a Kubernetes cluster.
 
 ## How To Use Zarf
 
 Zarf is intended for use in a software deployment process that looks similar to this:
 
-![How Zarf works](./.images/what-is-zarf/how-to-use-it.png)
+![How Zarf works](./.images/what-is-zarf/how-to-use-zarf.drawio.png)
 
 ### (0) Connect to the Internet
 
 Zarf doesn't build software—it helps you distribute software that already exists.
 
-Zarf can pull from various places like Docker Hub, Iron Bank, GitHub, and local filesystems. In order to do this, you must ensure that Zarf has a clear path and appropriate access credentials. Be sure you know what you want to pack and how to access it before you begin using Zarf.
+Zarf can pull from various places like Docker Hub, Iron Bank, GitHub, private registries and local filesystems. In order to do this, you must ensure that Zarf has a clear path and appropriate access credentials. Be sure you know what you want to pack and how to access it before you begin using Zarf.
 
 ### (1) Create a Package
 
-This part of the process requires access to the internet. The `zarf` binary is presented with a `zarf.yaml`, it then begins downloading, packing, and compressing the software that you requested. It then outputs a single, ready-to-move distributable called "a package".
+This part of the process requires access to the internet (or a network that mirrors your resources). When the `zarf` binary is presented with a `zarf.yaml`, it then begins downloading, packing, and compressing the software that you requested. It then outputs a single, ready-to-move distributable called "a package".
 
 For additional information, see the [Creating a package](./5-zarf-tutorials/0-creating-a-zarf-package.md) section.
 
 ### (2) Ship the Package to the System Location
 
-Zarf enables secure software delivery for various environments, such as remote, constrained, independent, and air-gapped systems. Considering there are various target environments with their own appropriate transferring mechanisms, Zarf does not determine _how_ packages are moved so long as they can arrive in your downstream environment.
+Zarf enables secure software delivery for various environments, such as remote, constrained, standalone, and air-gapped systems. Considering there are various target environments with their own appropriate transferring mechanisms, Zarf does not determine _how_ packages are moved so long as they can arrive in your downstream environment.  See [Package Sources](./4-deploy-a-zarf-package/2-package-sources.md) for more information on where Zarf packages can be stored / pulled from.
 
 ### (3) Deploy the Package
 
 Once your package has arrived, you will need to:
 
 1. Install the binary onto the system.
-2. Run the zarf init package.
-3. Deploy the package to your cluster.
+2. Initialize a cluster with a zarf init package (`zarf init`)
+3. Deploy the package to your cluster (`zarf package deploy`)
 
 ## Cluster Configuration Options
 
-Zarf allows the package to either deploy to an existing K8s cluster or a local K3s cluster. This is a configuration that is available on deployment in the init package.
+Zarf allows the package to either deploy to a K3s cluster it creates or an existing K8s cluster. This configuration is available on deployment of the init package.
 
-### Appliance Cluster Mode
+### Initialize `k3s` as an Appliance
 
-![Appliance Mode Diagram](.images/what-is-zarf/appliance-mode.png)
+![Appliance Cluster Diagram](.images/what-is-zarf/appliance.drawio.png)
 
-In the simplest usage scenario, your package consists of a single application (plus dependencies) and you configure the Zarf cluster to serve your application directly to end users. This mode of operation is called "Appliance Mode" and it is intended for use in environments where you want to run K8s-native tooling but need to keep a small footprint (i.e. single-purpose/constrained/"Edge" environments).
+In the simplest usage scenario, you deploy the Zarf init package's builtin cluster and use it to serve your application(s) directly to end users. This configuration runs Zarf and it's init package components as a self-contained appliance and is intended for use in environments where you want to run K8s-native tooling but need to keep a small footprint (i.e. single-purpose/constrained/"Edge" environments).
 
-### Utility Cluster Mode
+### Initialize `k3s` as a Utility Cluster
 
-![Appliance Mode Diagram](.images/what-is-zarf/utility-mode.png)
+![Utility Cluster Diagram](.images/what-is-zarf/utility-cluster.drawio.png)
 
-In the more complex use case, your package consists of updates for many apps/systems and you configure the Zarf cluster to propagate updates to downstream systems rather than to serve users directly. This mode of operation is called "Utility Mode" and it is intended for use in places where you want to run independent, full-service production environments (ex. your own Big Bang cluster) but you need help tracking, caching and disseminating system/dependency updates.
+In a more complex use case, you deploy the Zarf init package's builtin cluster and use it to serve resources to further downstream clusters. This configuration makes your Zarf deployment a utility cluster in service of a larger system and is intended for use in places where you want to run independent, full-service production environments with their own lifecycles but you want help tracking, caching and disseminating system/dependency updates.
+
+### Skip `k3s` and Initialize to an Existing Cluster
+
+![Existing Cluster Diagram](.images/what-is-zarf/existing-cluster.drawio.png)
+
+In this use case, you configure Zarf to initialize a cluster that already exists within your environment, and use that existing cluster to host and serve your applications.  This configuration is intended for environments that may already have some supporting infrastructure such as disconnected / highly regulated cloud environments.
 
 ## Why Use Zarf?
 
@@ -194,7 +200,18 @@ zarf package deploy oci://defenseunicorns/dos-games:1.0.0-$(uname -m) --key=http
 
 :::note
 
-Zarf has no prerequisites on Linux. However, for this example, we will use Docker and Kind.
+This example shows how to install Zarf with the official (📜) `defenseunicorns` Homebrew tap, however there are many other options to install Zarf on Linux such as:
+
+- 📜 **[official]** Downloading Zarf directly from [GitHub releases](https://github.com/defenseunicorns/zarf/releases)
+- 🧑‍🤝‍🧑 **[community]** `apk add` on [Alpine Linux Edge](https://pkgs.alpinelinux.org/package/edge/testing/x86_64/zarf)
+- 🧑‍🤝‍🧑 **[community]** `asdf install` with the [ASDF Version Manager](https://github.com/defenseunicorns/asdf-zarf)
+- 🧑‍🤝‍🧑 **[community]** `nix-shell`/`nix-env` with [Nix Packages](https://search.nixos.org/packages?channel=23.05&show=zarf&from=0&size=50&sort=relevance&type=packages&query=zarf)
+
+:::
+
+:::tip
+
+Zarf can deploy it's own `k3s` cluster on Linux if you have `root` access by selecting the `k3s` component on `zarf init`.
 
 :::
 
@@ -235,8 +252,17 @@ zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.de
 
 ## Windows Commands
 
+
+:::info
+
+There is currently no Zarf Quick Start for Windows, though you can learn how to install Zarf from our Github Releases by visiting the [Getting Started page](./1-getting-started/index.md#downloading-from-github-releases)
+
+:::
+
 ```text
+
 Coming soon!
+
 ```
 
 </TabItem>

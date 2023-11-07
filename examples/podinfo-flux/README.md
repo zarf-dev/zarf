@@ -6,7 +6,7 @@ This example demonstrates how to use flux with Zarf to deploy the `stefanprodan/
 
 It uses a vanilla configuration of flux with upstream containers.
 
-If you want to learn more about how Zarf handles `git` repositories, see the [git-data](../git-data/) example.
+If you want to learn more about how Zarf handles `git` repositories, see the [git-data](../git-data/README.md) example.
 
 ## `zarf.yaml` {#zarf.yaml}
 
