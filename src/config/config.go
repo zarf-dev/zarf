@@ -102,6 +102,7 @@ var (
 	ZarfDefaultCachePath = filepath.Join("~", ".zarf-cache")
 )
 
+// GetSchemaFile returns the zarf schema file
 func GetSchemaFile() ([]byte, error) {
 	return ZarfSchema.ReadFile("zarf.schema.json")
 }
