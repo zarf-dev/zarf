@@ -15,7 +15,7 @@ const (
 	zarfTemplateVar   = "###ZARF_PKG_TMPL_"
 )
 
-func ValidateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
+func validateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 	schemaLoader := gojsonschema.NewBytesLoader(jsonSchema)
 	documentLoader := gojsonschema.NewGoLoader(unmarshalledYaml)
 
@@ -35,19 +35,19 @@ func ValidateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 	return err
 }
 
-func checkForVarInComponentImport(unmarshalledYaml types.ZarfPackage) error {
+func checkForVarInComponentImport(zarfYaml types.ZarfPackage) error {
 	valid := true
 	errorMessage := zarfWarningPrefix
-	componentWarningStart := "\n - component."
-	for i, component := range unmarshalledYaml.Components {
+	componentWarningStart := " component."
+	for i, component := range zarfYaml.Components {
 		if strings.Contains(component.Import.Path, zarfTemplateVar) {
 			errorMessage = errorMessage + componentWarningStart + strconv.Itoa(i) +
-				".import.path will not resolve ZARF_PKG_TMPL_* variables"
+				".import.path will not resolve ZARF_PKG_TMPL_* variables."
 			valid = false
 		}
 		if strings.Contains(component.Import.URL, zarfTemplateVar) {
 			errorMessage = errorMessage + componentWarningStart + strconv.Itoa(i) +
-				".import.url will not resolve ZARF_PKG_TMPL_* variables"
+				".import.url will not resolve ZARF_PKG_TMPL_* variables."
 			valid = false
 		}
 	}
