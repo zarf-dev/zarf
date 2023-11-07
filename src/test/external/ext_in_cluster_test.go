@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
@@ -29,6 +29,40 @@ var inClusterCredentialArgs = []string{
 type ExtInClusterTestSuite struct {
 	suite.Suite
 	*require.Assertions
+}
+
+func onFailure() {
+	args := []string{"tools", "kubectl", "describe", "pod", "-A"}
+	_ = exec.CmdWithPrint(zarfBinPath, args...)
+	_ = exec.CmdWithPrint("df", "-h")
+}
+
+// Helper function to output useful info in case of a false True
+func (suite *ExtInClusterTestSuite) True(success bool, errorStr string) {
+	if !success {
+		onFailure()
+	}
+	suite.Suite.True(success, errorStr)
+}
+func (suite *ExtInClusterTestSuite) NoError(err error, msgAndArgs ...interface{}) {
+	if err != nil {
+		onFailure()
+	}
+	suite.Suite.NoError(err, msgAndArgs...)
+}
+
+func (suite *ExtInClusterTestSuite) Equal(expected interface{}, actual interface{}, msgAndArgs ...interface{}) {
+	if expected != actual {
+		onFailure()
+	}
+	suite.Suite.Equal(expected, actual, msgAndArgs...)
+}
+
+func (suite *ExtInClusterTestSuite) Contains(s string, contains string, msgAndArgs ...interface{}) {
+	if !strings.Contains(s, contains) {
+		onFailure()
+	}
+	suite.Suite.Contains(s, contains, msgAndArgs...)
 }
 
 func (suite *ExtInClusterTestSuite) SetupSuite() {
@@ -55,14 +89,11 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 	giteaWaitCmd := []string{"wait", "pod", "-n=git-server", "gitea-0", "--for", "condition=Ready=True", "--timeout=5s"}
 	giteaErrStr := "unable to verify the gitea chart installed successfully"
 
-	time.Sleep(30 * time.Second)
-	args := []string{"tools", "kubectl", "describe", "pod", "-A"}
-	_ = exec.CmdWithPrint(zarfBinPath, args...)
-
 	success := verifyKubectlWaitSuccess(suite.T(), 2, registryWaitCmd, registryErrStr)
 	suite.True(success, registryErrStr)
 	success = verifyKubectlWaitSuccess(suite.T(), 3, giteaWaitCmd, giteaErrStr)
 	suite.True(success, giteaErrStr)
+
 }
 
 func (suite *ExtInClusterTestSuite) TearDownSuite() {
