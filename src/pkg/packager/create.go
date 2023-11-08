@@ -608,6 +608,7 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 		if rel == layout.ZarfYAML || rel == layout.Checksums {
 			continue
 		}
+
 		sum, err := utils.GetSHA256OfFile(abs)
 		if err != nil {
 			return "", err
