@@ -51,7 +51,7 @@ type ZarfDeployOptions struct {
 	SkipWebhooks           bool `json:"componentWebhooks" jsonschema:"description=Skip waiting for external webhooks to execute as each package component is deployed"`
 
 	// TODO (@WSTARR): This is a library only addition to Zarf and should be refactored in the future (potentially to utilize component composability). As is it should NOT be exposed directly on the CLI
-	AdditionalValuesFilesMap map[string]map[string][]string `json:"chartValuesOverrides" jsonschema:"description=[Library Only] A map of component names to chart names containing Helm Chart values files to override values on deploy"`
+	ValuesOverridesMap map[string]map[string]map[string]interface{} `json:"valuesOverridesMap" jsonschema:"description=[Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy"`
 }
 
 // ZarfMirrorOptions tracks the user-defined preferences during a package mirror.

@@ -526,10 +526,10 @@ func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths
 			Cluster:   p.cluster,
 		}
 
-		// TODO (@WSTARR): Currently this logic is library-only and is untested while it is in an experimental state.
-		if componentChartAdditionalValuesFiles, ok := p.cfg.DeployOpts.AdditionalValuesFilesMap[component.Name]; ok {
-			if additionalValuesFiles, ok := componentChartAdditionalValuesFiles[chart.Name]; ok {
-				helmCfg.AdditionalValuesFiles = additionalValuesFiles
+		// TODO (@WSTARR): Currently this logic is library-only and is untested while it is in an experimental state - it may eventually get added as shorthand in Zarf Variables though
+		if componentChartValuesOverrides, ok := p.cfg.DeployOpts.ValuesOverridesMap[component.Name]; ok {
+			if chartValuesOverrides, ok := componentChartValuesOverrides[chart.Name]; ok {
+				helmCfg.ValuesOverrides = chartValuesOverrides
 			}
 		}
 
