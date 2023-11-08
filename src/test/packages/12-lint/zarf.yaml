@@ -1,0 +1,17 @@
+kind: ZarfInitConfig
+metadata:
+  name: init
+  description: Used to establish a new Zarf cluster
+
+components:
+  - name: k3s
+    import:
+      pat12312h: packages/distros/k3s
+
+  - name: import-test
+    import:
+      path: "###ZARF_PKG_TMPL_ZEBRA###"
+
+  - name: import-url
+    import:
+      url: "oci://###ZARF_PKG_TMPL_ZEBRA###"
