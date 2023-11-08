@@ -7,6 +7,7 @@ components:
   - name: k3s
     import:
       pat12312h: packages/distros/k3s
+
   - name: import-test
     import:
       path: "###ZARF_PKG_TMPL_ZEBRA###"
