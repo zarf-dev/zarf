@@ -11,7 +11,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
-	"github.com/defenseunicorns/zarf/src/pkg/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -60,7 +59,7 @@ func (p *Packager) fillActiveTemplate() error {
 		return err
 	}
 
-	if err := promptAndSetTemplate(lint.ZarfTemplateVar, false); err != nil {
+	if err := promptAndSetTemplate(zarfTemplateVar, false); err != nil {
 		return err
 	}
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
