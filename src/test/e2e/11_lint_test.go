@@ -13,7 +13,7 @@ func TestLint(t *testing.T) {
 	t.Run("zarf test lint fail", func(t *testing.T) {
 		t.Log("E2E: Test lint on schema fail")
 
-		path := filepath.Join("src", "test", "packages", "11-lint", "invalid_yaml")
+		path := filepath.Join("src", "test", "packages", "11-lint")
 		_, stderr, err := e2e.Zarf("prepare", "lint", path)
 		require.Error(t, err, "Expect error here because the yaml file is not following schema")
 		require.Contains(t, stderr, "- components.0.import: Additional property pat12312h is not allowed")
