@@ -210,6 +210,5 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, tlsCert)
 
 		require.FileExists(t, tlsKey)
-
 	})
 }

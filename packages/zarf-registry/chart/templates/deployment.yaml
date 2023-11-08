@@ -73,10 +73,8 @@ spec:
 {{ toYaml .  | indent 12 }}
 {{- end }}
           volumeMounts:
-{{- if .Values.persistence.enabled }}
             - name: data
               mountPath: /var/lib/registry/
-{{- end }}
             - name: config
               mountPath: "/etc/docker/registry"
       affinity:
@@ -108,4 +106,8 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: {{ if .Values.persistence.existingClaim }}{{ .Values.persistence.existingClaim }}{{- else }}{{ template "docker-registry.fullname" . }}{{- end }}
+{{- else }}
+        - name: data
+          emptyDir:
+            sizeLimit: {{ .Values.persistence.size }}
 {{- end }}

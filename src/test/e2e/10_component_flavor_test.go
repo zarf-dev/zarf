@@ -120,7 +120,5 @@ func (suite *FlavorSuite) Test_1_FlavorArchFiltering() {
 }
 
 func TestFlavorSuite(t *testing.T) {
-	e2e.SetupWithCluster(t)
-
 	suite.Run(t, new(FlavorSuite))
 }

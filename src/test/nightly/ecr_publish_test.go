@@ -60,9 +60,9 @@ func TestECRPublishing(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure we get a warning when trying to inspect the online published package
-	stdOut, stdErr, err = e2e.Zarf("package", "inspect", upstreamPackageURL, keyFlag)
+	stdOut, stdErr, err = e2e.Zarf("package", "inspect", upstreamPackageURL, keyFlag, "--sbom-out", tmpDir)
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Checksums validated!")
+	require.Contains(t, stdErr, "Validating SBOM checksums")
 	require.Contains(t, stdErr, "Package signature validated!")
 
 	// Validate that we can pull the package down from ECR
@@ -73,12 +73,12 @@ func TestECRPublishing(t *testing.T) {
 	// Ensure we get a warning when trying to inspect the package without providing the public key
 	stdOut, stdErr, err = e2e.Zarf("package", "inspect", testPackageFileName)
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Checksums validated!")
+	require.NotContains(t, stdErr, "Validating SBOM checksums")
 	require.Contains(t, stdErr, "The package was signed but no public key was provided, skipping signature validation")
 
 	// Validate that we get no warnings when inspecting the package while providing the public key
 	stdOut, stdErr, err = e2e.Zarf("package", "inspect", testPackageFileName, keyFlag)
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Checksums validated!")
+	require.NotContains(t, stdErr, "Validating SBOM checksums")
 	require.Contains(t, stdErr, "Package signature validated!")
 }
