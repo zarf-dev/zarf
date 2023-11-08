@@ -58,6 +58,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 	if err != nil {
 		return fmt.Errorf(lang.ErrWritingFile, dst, err.Error())
 	}
+	defer file.Close()
 
 	parsed, err := url.Parse(src)
 	if err != nil {
@@ -89,7 +90,8 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 			return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s ", dst, checksum, received)
 		}
 	}
-	return file.Close()
+
+	return nil
 }
 
 func httpGetFile(url string, destinationFile *os.File) error {

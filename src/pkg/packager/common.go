@@ -261,8 +261,6 @@ func (p *Packager) attemptClusterChecks() (err error) {
 	if existingInitPackage, _ := p.cluster.GetDeployedPackage("init"); existingInitPackage != nil {
 		// Use the build version instead of the metadata since this will support older Zarf versions
 		deprecated.PrintBreakingChanges(existingInitPackage.Data.Build.Version)
-	} else {
-		message.Warnf("Unable to retrieve the initialized Zarf version.  There is potential for breaking changes.")
 	}
 
 	spinner.Success()
