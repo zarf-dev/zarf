@@ -11,6 +11,7 @@ import (
 	k9s "github.com/derailed/k9s/cmd"
 	"github.com/spf13/cobra"
 
+	// This allows for go linkname to be used in this file.  Go linkname is used so that we can pull the CLI flags from k9s and generate proper docs for the vendored tool.
 	_ "unsafe"
 )
 
