@@ -2,7 +2,7 @@ package lint
 
 import (
 	"errors"
-	"strconv"
+	"fmt"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/types"
@@ -27,7 +27,7 @@ func validateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 	if !result.Valid() {
 		errorMessage := zarfInvalidPrefix
 		for _, desc := range result.Errors() {
-			errorMessage = errorMessage + "\n - " + desc.String()
+			errorMessage = fmt.Sprintf("%s\n - %s", errorMessage, desc.String())
 		}
 		err = errors.New(errorMessage)
 	}
@@ -38,16 +38,16 @@ func validateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 func checkForVarInComponentImport(zarfYaml types.ZarfPackage) error {
 	valid := true
 	errorMessage := zarfWarningPrefix
-	componentWarningStart := " component."
+	componentWarningStart := "component."
 	for i, component := range zarfYaml.Components {
 		if strings.Contains(component.Import.Path, zarfTemplateVar) {
-			errorMessage = errorMessage + componentWarningStart + strconv.Itoa(i) +
-				".import.path will not resolve ZARF_PKG_TMPL_* variables."
+			errorMessage = fmt.Sprintf("%s %s%d.import.path will not resolve ZARF_PKG_TMPL_* variables.",
+				errorMessage, componentWarningStart, i)
 			valid = false
 		}
 		if strings.Contains(component.Import.URL, zarfTemplateVar) {
-			errorMessage = errorMessage + componentWarningStart + strconv.Itoa(i) +
-				".import.url will not resolve ZARF_PKG_TMPL_* variables."
+			errorMessage = fmt.Sprintf("%s %s%d.import.url will not resolve ZARF_PKG_TMPL_* variables.",
+				errorMessage, componentWarningStart, i)
 			valid = false
 		}
 	}
