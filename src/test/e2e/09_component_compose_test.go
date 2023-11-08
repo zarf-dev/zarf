@@ -24,6 +24,7 @@ var (
 	composeExamplePath string
 	composeTest        = filepath.Join("src", "test", "packages", "09-composable-packages")
 	composeTestPath    string
+	relCacheDir        string
 )
 
 func (suite *CompositionSuite) SetupSuite() {
@@ -33,6 +34,9 @@ func (suite *CompositionSuite) SetupSuite() {
 	composeExamplePath = filepath.Join("build", fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
 	composeTestPath = filepath.Join("build", fmt.Sprintf("zarf-package-test-compose-package-%s.tar.zst", e2e.Arch))
 
+	// We make the cache dir relative to the working directory to make it work on the Windows Runners
+	// - they use two drives which filepath.Rel cannot cope with.
+	relCacheDir, _ = filepath.Abs(".cache-location")
 }
 
 func (suite *CompositionSuite) TearDownSuite() {
@@ -40,16 +44,18 @@ func (suite *CompositionSuite) TearDownSuite() {
 	suite.NoError(err)
 	err = os.RemoveAll(composeTestPath)
 	suite.NoError(err)
+	err = os.RemoveAll(relCacheDir)
+	suite.NoError(err)
 }
 
 func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 	suite.T().Log("E2E: Package Compose Example")
 
-	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--zarf-cache", relCacheDir, "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that common names merge
-	suite.Contains(stdErr, `
+	manifests := e2e.NormalizeYAMLFilenames(`
   manifests:
   - name: multi-games
     namespace: dos-games
@@ -57,6 +63,7 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
     - ../dos-games/manifests/deployment.yaml
     - ../dos-games/manifests/service.yaml
     - quake-service.yaml`)
+	suite.Contains(stdErr, manifests)
 
 	// Ensure that the action was appended
 	suite.Contains(stdErr, `
@@ -83,16 +90,16 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 `)
 
 	// Check files
-	suite.Contains(stdErr, `
+	suite.Contains(stdErr, e2e.NormalizeYAMLFilenames(`
   files:
   - source: files/coffee-ipsum.txt
     target: coffee-ipsum.txt
   - source: files/coffee-ipsum.txt
     target: coffee-ipsum.txt
-`)
+`))
 
 	// Check charts
-	suite.Contains(stdErr, `
+	suite.Contains(stdErr, e2e.NormalizeYAMLFilenames(`
   charts:
   - name: podinfo-compose
     releaseName: podinfo-override
@@ -109,10 +116,10 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
     namespace: podinfo-compose-two
     valuesFiles:
     - files/test-values.yaml
-`)
+`))
 
 	// Check manifests
-	suite.Contains(stdErr, `
+	suite.Contains(stdErr, e2e.NormalizeYAMLFilenames(`
   manifests:
   - name: connect-service
     namespace: podinfo-override
@@ -128,7 +135,7 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
     - files/service.yaml
     kustomizations:
     - files
-`)
+`))
 
 	// Check images + repos
 	suite.Contains(stdErr, `
@@ -178,7 +185,5 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 }
 
 func TestCompositionSuite(t *testing.T) {
-	e2e.SetupWithCluster(t)
-
 	suite.Run(t, new(CompositionSuite))
 }
