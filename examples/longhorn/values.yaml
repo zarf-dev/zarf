@@ -98,7 +98,7 @@ persistence:
   removeSnapshotsDuringFilesystemTrim: ignored # "enabled" or "disabled" otherwise
 
 csi:
-  kubeletRootDir: "/var/lib/kubelet" 
+  kubeletRootDir: "/var/lib/kubelet"
   attacherReplicaCount: ~
   provisionerReplicaCount: ~
   resizerReplicaCount: ~

@@ -177,7 +177,8 @@ func (pp *PackagePaths) SetFromLayers(layers []ocispec.Descriptor) {
 // SetFromPaths maps paths to package paths.
 func (pp *PackagePaths) SetFromPaths(paths []string) {
 	for _, rel := range paths {
-		switch path := rel; {
+		// Convert from the standard '/' to the OS path separator for Windows support
+		switch path := filepath.FromSlash(rel); {
 		case path == ZarfYAML:
 			pp.ZarfYAML = filepath.Join(pp.Base, path)
 		case path == Signature:
@@ -213,16 +214,20 @@ func (pp *PackagePaths) SetFromPaths(paths []string) {
 // Files returns a map of all the files in the package.
 func (pp *PackagePaths) Files() map[string]string {
 	pathMap := make(map[string]string)
+
 	stripBase := func(path string) string {
 		rel, _ := filepath.Rel(pp.Base, path)
-		return rel
+		// Convert from the OS path separator to the standard '/' for Windows support
+		return filepath.ToSlash(rel)
 	}
+
 	add := func(path string) {
 		if path == "" {
 			return
 		}
 		pathMap[stripBase(path)] = path
 	}
+
 	add(pp.ZarfYAML)
 	add(pp.Signature)
 	add(pp.Checksums)

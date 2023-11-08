@@ -86,6 +86,7 @@ func (suite *TestNetworkSuite) Test_1_DownloadToFile() {
 	url = adr + "?foo=bar@" + sum
 	path = filepath.Join(tmp, ".adr-dir.good")
 	suite.NoError(DownloadToFile(url, path, ""))
+	suite.FileExists(path)
 }
 
 func TestNetwork(t *testing.T) {
