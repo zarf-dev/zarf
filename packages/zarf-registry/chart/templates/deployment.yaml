@@ -77,6 +77,12 @@ spec:
               mountPath: /var/lib/registry/
             - name: config
               mountPath: "/etc/docker/registry"
+{{- if .Values.caBundle }}
+            - mountPath: /etc/ssl/certs/ca-certificates.crt
+              name: {{ template "docker-registry.fullname" . }}-ca-bundle
+              subPath: ca-certificates.crt
+              readOnly: true
+{{- end }}
       affinity:
 {{- if (eq "ReadWriteMany" .Values.persistence.accessMode) }}
         podAntiAffinity:
@@ -110,4 +116,9 @@ spec:
         - name: data
           emptyDir:
             sizeLimit: {{ .Values.persistence.size }}
+{{- end }}
+{{- if .Values.caBundle }}
+        - name: {{ template "docker-registry.fullname" . }}-ca-bundle
+          configMap:
+            name: {{ template "docker-registry.fullname" . }}-ca-bundle
 {{- end }}

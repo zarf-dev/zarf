@@ -170,7 +170,7 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 				value = template.Value
 
 				// Check if the value is a file type and load the value contents from the file
-				if template.Type == types.FileVariableType {
+				if template.Type == types.FileVariableType && value != "" {
 					if isText, err := IsTextFile(value); err != nil || !isText {
 						message.Warnf("Refusing to load a non-text file for templating %s", templateKey)
 						line = matches[regexTemplateLine.SubexpIndex("postTemplate")]

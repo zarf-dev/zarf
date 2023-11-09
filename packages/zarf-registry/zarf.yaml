@@ -47,6 +47,12 @@ variables:
     description: Enable the Horizontal Pod Autoscaler for the registry
     default: "true"
 
+  - name: REGISTRY_CA_BUNDLE
+    description: Filepath to a bundle of trusted certificates to mount into the registry container
+    default: ""
+    autoIndent: true
+    type: file
+
   - name: REGISTRY_EXTRA_ENVS
     description: Array of additional environment variables passed to the registry container
     default: ""
