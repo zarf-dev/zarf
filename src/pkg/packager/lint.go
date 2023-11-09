@@ -86,7 +86,7 @@ func validateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 
 	if err := schema.Validate(unmarshalledYaml); err != nil {
 		if validationError, ok := err.(*jsonschema.ValidationError); ok {
-			allSchemaErrors := printAllCauses(validationError, []error{})
+			allSchemaErrors := getChildCauses(validationError, []error{})
 			var errMessage strings.Builder
 			errMessage.WriteString(zarfInvalidPrefix)
 			for _, err := range allSchemaErrors {
@@ -101,7 +101,7 @@ func validateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 	return nil
 }
 
-func printAllCauses(validationErr *jsonschema.ValidationError, errToUser []error) []error {
+func getChildCauses(validationErr *jsonschema.ValidationError, errToUser []error) []error {
 	if validationErr == nil {
 		return errToUser
 	}
@@ -111,7 +111,7 @@ func printAllCauses(validationErr *jsonschema.ValidationError, errToUser []error
 	}
 
 	for _, subCause := range validationErr.Causes {
-		errToUser = printAllCauses(subCause, errToUser)
+		errToUser = getChildCauses(subCause, errToUser)
 	}
 	return errToUser
 }
