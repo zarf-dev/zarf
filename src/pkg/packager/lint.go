@@ -17,7 +17,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/santhosh-tekuri/jsonschema/v5"
-	"github.com/xeipuuv/gojsonschema"
 )
 
 const (
@@ -48,26 +47,6 @@ func (p *Packager) ValidateZarfSchema() (err error) {
 
 	message.Success("Validation successful")
 	return nil
-}
-
-func validateSchema2(unmarshalledYaml interface{}, jsonSchema []byte) error {
-	schemaLoader := gojsonschema.NewBytesLoader(jsonSchema)
-	documentLoader := gojsonschema.NewGoLoader(unmarshalledYaml)
-
-	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
-	if err != nil {
-		return err
-	}
-
-	if !result.Valid() {
-		errorMessage := zarfInvalidPrefix
-		for _, desc := range result.Errors() {
-			errorMessage = fmt.Sprintf("%s\n - %s", errorMessage, desc.String())
-		}
-		err = errors.New(errorMessage)
-	}
-
-	return err
 }
 
 func checkForVarInComponentImport(zarfYaml types.ZarfPackage) error {
