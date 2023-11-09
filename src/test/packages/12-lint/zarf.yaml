@@ -1,12 +1,16 @@
 kind: ZarfInitConfig
 metadata:
   name: init
-  description: Used to establish a new Zarf cluster
+  description: Testing bad yaml
 
 components:
-  - name: k3s
+  - name: first-test-component
     import:
-      pat12312h: packages/distros/k3s
+      not-path: packages/distros/k3s
+
+  - name: import-test
+    import:
+      path: 123123
 
   - name: import-test
     import:
