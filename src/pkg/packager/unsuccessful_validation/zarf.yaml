@@ -8,9 +8,9 @@ components:
     import:
       not-path: packages/distros/k3s
 
-  - name: second-test-component
-    not-import:
-      path: packages/distros/k3s
+  - name: import-test
+    import:
+      path: 123123
 
   - name: import-test
     import:
