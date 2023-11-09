@@ -30,7 +30,11 @@ gitea:
       ENABLE_PUSH_CREATE_USER: true
       FORCE_PRIVATE: true
     session:
-      PROVIDER: db
+      PROVIDER: memory
+    cache:
+      ADAPTER: memory
+    queue:
+      TYPE: level
 resources:
   requests:
     cpu: "###ZARF_VAR_GIT_SERVER_CPU_REQ###"
