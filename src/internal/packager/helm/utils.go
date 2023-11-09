@@ -11,6 +11,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -61,7 +62,12 @@ func (h *Helm) parseChartValues() (chartutil.Values, error) {
 	}
 
 	providers := getter.Providers{httpProvider}
-	return valueOpts.MergeValues(providers)
+	chartValues, err := valueOpts.MergeValues(providers)
+	if err != nil {
+		return chartValues, err
+	}
+
+	return helpers.MergeMapRecursive(chartValues, h.ValuesOverrides), nil
 }
 
 func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) error {

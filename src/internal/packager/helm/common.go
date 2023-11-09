@@ -21,7 +21,7 @@ type Helm struct {
 	ReleaseName       string
 	ChartLoadOverride string
 	ChartOverride     *chart.Chart
-	ValueOverride     map[string]any
+	ValuesOverrides   map[string]any
 	Component         types.ZarfComponent
 	Cluster           *cluster.Cluster
 	Cfg               *types.PackagerConfig
