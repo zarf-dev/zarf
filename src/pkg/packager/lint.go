@@ -101,17 +101,17 @@ func validateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 	return nil
 }
 
-func getChildCauses(validationErr *jsonschema.ValidationError, errToUser []error) []error {
+func getChildCauses(validationErr *jsonschema.ValidationError, childCauses []error) []error {
 	if validationErr == nil {
-		return errToUser
+		return childCauses
 	}
 	if validationErr.Causes == nil {
-		errMessage := fmt.Sprintf(" - %s: %s", validationErr.InstanceLocation, validationErr.Message)
-		return append(errToUser, fmt.Errorf("%s", errMessage))
+		errMessage := fmt.Errorf(" - %s: %s", validationErr.InstanceLocation, validationErr.Message)
+		return append(childCauses, errMessage)
 	}
 
 	for _, subCause := range validationErr.Causes {
-		errToUser = getChildCauses(subCause, errToUser)
+		childCauses = getChildCauses(subCause, childCauses)
 	}
-	return errToUser
+	return childCauses
 }
