@@ -526,6 +526,13 @@ func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths
 			Cluster:   p.cluster,
 		}
 
+		// TODO (@WSTARR): Currently this logic is library-only and is untested while it is in an experimental state - it may eventually get added as shorthand in Zarf Variables though
+		if componentChartValuesOverrides, ok := p.cfg.DeployOpts.ValuesOverridesMap[component.Name]; ok {
+			if chartValuesOverrides, ok := componentChartValuesOverrides[chart.Name]; ok {
+				helmCfg.ValuesOverrides = chartValuesOverrides
+			}
+		}
+
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
 		if err != nil {
 			return installedCharts, err
