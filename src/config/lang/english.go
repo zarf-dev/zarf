@@ -305,9 +305,6 @@ const (
 	CmdPackageClusterSourceFallback = "%q does not satisfy any current sources, assuming it is a package deployed to a cluster"
 	CmdPackageInvalidSource         = "Unable to identify source from %q: %s"
 
-	//zarf lint
-	CmdLintShort = "Tools for validating schema / ensuring best practices"
-
 	// zarf prepare
 	CmdPrepareShort = "Tools to help prepare assets for packaging"
 
@@ -339,6 +336,8 @@ const (
 	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."
 	CmdPrepareFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
+
+	CmdPrepareLintShort = "Verifies the package schema"
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"

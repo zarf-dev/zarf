@@ -209,7 +209,7 @@ var lintCmd = &cobra.Command{
 	Use:     "lint [ DIRECTORY ]",
 	Args:    cobra.MaximumNArgs(1),
 	Aliases: []string{"l"},
-	Short:   lang.CmdLintShort,
+	Short:   lang.CmdPrepareLintShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 {
 			pkgConfig.CreateOpts.BaseDir = args[0]
