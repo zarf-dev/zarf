@@ -34,10 +34,10 @@ variables:
   - name: GIT_SERVER_REPLICA_COUNT
     description: The number of git server replicas to deploy
     default: "1"
-    
+
   - name: GIT_SERVER_DISABLE_REGISTRATION
     description: Disables the ability to register new users
-    default: true
+    default: "true"
 
 constants:
   - name: GITEA_IMAGE
