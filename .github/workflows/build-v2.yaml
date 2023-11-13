@@ -1,0 +1,194 @@
+name: Go Build and Test
+
+on:
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "CODEOWNERS"
+
+jobs:
+  build-cli:
+    name: Build CLI
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+      
+    - name: Setup golang
+      uses: ./.github/actions/golang
+
+    - name: Build CLI for all platforms
+      run: make build-cli
+
+    - name: Upload build artifacts (all the CLIs)
+      uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      with:
+        name: build-artifacts-cli
+        path: build/
+        retention-days: 1
+
+    - name: Upload build artifacts (just one for creating the packages CLI)
+      uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      with:
+        name: build-artifacts-cli-linux-amd64
+        path: build/zarf
+        retention-days: 1
+
+
+  build-injector:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+    - name: Install Rust toolchain (this one is maintained)
+      uses: dtolnay/rust-toolchain@stable
+    - name: Build injector
+      run: |
+        cd src/injector
+        make build-injector-linux
+
+    - name: Upload build artifacts (injector)
+      uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      with:
+        name: build-artifacts-injector-amd64
+        path: src/injector/target/x86_64-unknown-linux-musl/release/zarf-injector
+        retention-days: 1
+
+    - name: Upload build artifacts (injector)
+      uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      with:
+        name: build-artifacts-injector-arm64
+        path: src/injector/target/aarch64-unknown-linux-musl/release/zarf-injector
+        retention-days: 1
+  build-packages:
+    name: Build packages
+    needs: build-cli
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+        task: [build-examples, init-package]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+
+    - name: Setup golang
+      uses: ./.github/actions/golang
+
+    - name: Download build artifacts (cli)
+      uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+      with:
+        #name: build-artifacts-cli-linux-amd64
+        name: build-artifacts-cli
+        path: build/
+
+    - name: Build init package for ${{ matrix.arch }}
+      run: | 
+        chmod +x build/zarf
+        make ${{ matrix.task }} ARCH=${{ matrix.arch }}
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      with:
+        name: build-artifacts-${{ matrix.task }}-${{ matrix.arch }}
+        path: build/*.zst
+        retention-days: 1
+
+    # not really necessary, this is done
+    - name: cleanup
+      run: rm -f build/*.zst
+
+  test-unit:
+    needs: build-packages
+    name: run unit tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+
+    # for testing (with act), this will fail in the directory exists
+    - name: Download build artifacts (cli)
+      uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+      with:
+        #name: build-artifacts-cli-linux-amd64
+        name: build-artifacts-cli
+        path: build-tmp/
+
+    # for testing (with act), this will fail in the directory exists
+    - name: Download build artifacts (example packages)
+      uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+      with:
+        name: build-artifacts-build-examples-amd64
+        path: build-examples-tmp/
+
+    - name: Download build artifacts (init packages)
+      uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+      with:
+        name: build-artifacts-init-package-amd64
+        path: build/
+
+    - name: move the zarf binary back to build where the tests/makefile expect it to be
+      run: | 
+        mv ./build-tmp/zarf build
+        mv ./build-examples-tmp/* build
+        rm -rf ./build-examples-tmp
+        rm -rf ./build-tmp
+        chmod +x build/zarf
+
+    - name: Setup golang
+      uses: ./.github/actions/golang
+
+    # above here is what is needed to have packages, and run a test. for future, the following could not use the makefile to run tests if desired.
+    - name: Run the unit tests
+      run: make test-unit
+
+  test-windows:
+    needs: build-packages
+    name: run unit tests on windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+    # for testing (with act), this will fail in the directory exists
+      - name: Download build artifacts (cli)
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: build-artifacts-cli-windows-amd64
+          path: build-tmp/
+
+      # for testing (with act), this will fail in the directory exists
+      - name: Download build artifacts (example packages)
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: build-artifacts-build-examples-amd64
+          path: build-examples-tmp/
+
+      - name: Download build artifacts (init packages)
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: build-artifacts-init-package-amd64
+          path: build/
+
+      - name: Move the zarf binary back to build where the tests/makefile expect it to be
+        shell: pwsh
+        run: |
+          Move-Item -Path "./build-tmp/zarf" -Destination "build"
+          Move-Item -Path "./build-examples-tmp/*" -Destination "build"
+          Remove-Item -Recurse -Force "./build-examples-tmp"
+          Remove-Item -Recurse -Force "./build-tmp"
+
+      - name: Run Windows unit tests
+        run: make test-unit
+        shell: pwsh
