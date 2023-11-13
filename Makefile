@@ -142,9 +142,17 @@ build-injector-linux: ## Build the Zarf injector for AMD64 and ARM64
 
 ## NOTE: Requires an existing cluster or the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
-test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
+test-e2e: test-e2e-without-cluster test-e2e-with-cluster  ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
+
+.PHONY: test-e2e-with-cluster
+test-e2e-with-cluster: build-examples ## Run all of the core Zarf CLI E2E tests that DO require a cluster (builds any deps that aren't present)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
-	cd src/test/e2e && go test -failfast -v -timeout 35m
+	cd src/test/e2e && go test ./main_test.go ./[2-9]*.go -failfast -v -timeout 35m
+
+.PHONY: test-e2e-without-cluster
+test-e2e-without-cluster: build-examples ## Run all of the core Zarf CLI E2E tests  that DO NOT require a cluster (builds any deps that aren't present)
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
+	cd src/test/e2e && go test ./main_test.go ./[01]* -failfast -v -timeout 35m
 
 ## NOTE: Requires an existing cluster
 .PHONY: test-external
