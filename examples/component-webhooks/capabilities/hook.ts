@@ -65,11 +65,10 @@ When(a.Secret)
 
           // Update the secret noting that the webhook is running for this component
           secretData.componentWebhooks[deployedComponent.name] = {
-            webhookName: {
+            "test-webhook": {
               name: webhookName,
               status: "Running",
               observedGeneration: secretData.generation,
-              waitDurationSeconds: 15,
             },
           };
 
