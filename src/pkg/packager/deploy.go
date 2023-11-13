@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,7 +14,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
@@ -34,16 +32,10 @@ import (
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
-	// Attempt to connect to a Kubernetes cluster.
-	// Not all packages require Kubernetes, so we only want to log a debug message rather than return the error when we can't connect to a cluster.
-	p.cluster, err = cluster.NewCluster()
-	if err != nil {
-		message.Debug(err)
-	}
-
 	if err = p.source.LoadPackage(p.layout, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
+
 	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
@@ -53,10 +45,6 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	if err := p.stageSBOMViewFiles(); err != nil {
-		return err
-	}
-
-	if err := p.attemptClusterChecks(); err != nil {
 		return err
 	}
 
@@ -74,7 +62,7 @@ func (p *Packager) Deploy() (err error) {
 	p.connectStrings = make(types.ConnectStrings)
 	// Reset registry HPA scale down whether an error occurs or not
 	defer func() {
-		if p.cluster != nil && p.hpaModified {
+		if p.isConnectedToCluster() && p.hpaModified {
 			if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
 				message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
 			}
@@ -94,31 +82,6 @@ func (p *Packager) Deploy() (err error) {
 	message.Successf("Zarf deployment complete")
 
 	p.printTablesForDeployment(deployedComponents)
-
-	return nil
-}
-
-// attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
-// NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
-func (p *Packager) attemptClusterChecks() (err error) {
-	// Connect to the cluster (if available) to check the Zarf Agent for breaking changes
-	if p.cluster, _ = cluster.NewCluster(); p.cluster != nil {
-
-		// Check if the package has already been deployed and get its generation
-		if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
-			// If this package has been deployed before, increment the package generation within the secret
-			p.generation = existingDeployedPackage.Generation + 1
-		}
-
-		// Check the clusters architecture vs the package spec
-		if err := p.validatePackageArchitecture(); err != nil {
-			if errors.Is(err, lang.ErrUnableToCheckArch) {
-				message.Warnf("Unable to validate package architecture: %s", err.Error())
-			} else {
-				return err
-			}
-		}
-	}
 
 	return nil
 }
@@ -145,8 +108,21 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			Status:             types.ComponentStatusDeploying,
 			ObservedGeneration: p.generation,
 		}
+
+		// If this component requires a cluster, connect to one
+		if p.requiresCluster(component) {
+			timeout := cluster.DefaultTimeout
+			if p.isInitConfig() {
+				timeout = 5 * time.Minute
+			}
+
+			if err := p.connectToCluster(timeout); err != nil {
+				return deployedComponents, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+			}
+		}
+
 		// Ensure we don't overwrite any installedCharts data when updating the package secret
-		if p.cluster != nil {
+		if p.isConnectedToCluster() {
 			deployedComponent.InstalledCharts, err = p.cluster.GetInstalledChartsForComponent(p.cfg.Pkg.Metadata.Name, component)
 			if err != nil {
 				message.Debugf("Unable to fetch installed Helm charts for component '%s': %s", component.Name, err.Error())
@@ -157,7 +133,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		idx := len(deployedComponents) - 1
 
 		// Update the package secret to indicate that we are attempting to deploy this component
-		if p.cluster != nil {
+		if p.isConnectedToCluster() {
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
 				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
@@ -166,7 +142,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Deploy the component
 		var charts []types.InstalledChart
 		var deployErr error
-		if p.cfg.Pkg.Kind == types.ZarfInitConfig {
+		if p.isInitConfig() {
 			charts, deployErr = p.deployInitComponent(component)
 		} else {
 			charts, deployErr = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
@@ -185,7 +161,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 
 			// Update the package secret to indicate that we failed to deploy this component
 			deployedComponents[idx].Status = types.ComponentStatusFailed
-			if p.cluster != nil {
+			if p.isConnectedToCluster() {
 				if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
 					message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 				}
@@ -197,7 +173,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Update the package secret to indicate that we successfully deployed this component
 		deployedComponents[idx].InstalledCharts = charts
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
-		if p.cluster != nil {
+		if p.isConnectedToCluster() {
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
 				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
@@ -221,11 +197,6 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if p.requiresCluster(component) && p.cfg.State == nil {
-		p.cluster, err = cluster.NewClusterWithWait(5 * time.Minute)
-		if err != nil {
-			return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
-		}
-
 		err = p.cluster.InitZarfState(p.cfg.InitOpts)
 		if err != nil {
 			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -290,15 +261,8 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 	}
 
 	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
-		// Make sure we have access to the cluster
-		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout)
-			if err != nil {
-				return charts, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
-			}
-		}
 		// Setup the state in the config and get the valuesTemplate
-		p.valueTemplate, err = p.setupStateValuesTemplate(component)
+		p.valueTemplate, err = p.setupStateValuesTemplate()
 		if err != nil {
 			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
 		}
@@ -427,8 +391,8 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 	return nil
 }
 
-// Fetch the current ZarfState from the k8s cluster and generate a p.valueTemplate from the state values.
-func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (values *template.Values, err error) {
+// setupStateValuesTemplate fetched the current ZarfState from the k8s cluster and generate a p.valueTemplate from the state values.
+func (p *Packager) setupStateValuesTemplate() (values *template.Values, err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
@@ -462,13 +426,6 @@ func (p *Packager) setupStateValuesTemplate(component types.ZarfComponent) (valu
 	values, err = template.Generate(p.cfg)
 	if err != nil {
 		return values, err
-	}
-
-	// Only check the architecture if the package has images
-	if len(component.Images) > 0 && state.Architecture != p.arch {
-		// If the package has images but the architectures don't match, fail the deployment and warn the user to avoid ugly hidden errors with image push/pull
-		return values, fmt.Errorf("this package architecture is %s, but this cluster seems to be initialized with the %s architecture",
-			p.arch, state.Architecture)
 	}
 
 	spinner.Success()
@@ -515,7 +472,14 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 			svcInfo, _ := k8s.ServiceInfoFromServiceURL(gitClient.Server.Address)
 
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
-			if svcInfo != nil && p.cluster != nil {
+			if svcInfo != nil {
+				if !p.isConnectedToCluster() {
+					err := p.connectToCluster(5 * time.Second)
+					if err != nil {
+						return err
+					}
+				}
+
 				tunnel, err := p.cluster.NewTunnel(svcInfo.Namespace, k8s.SvcResource, svcInfo.Name, "", 0, svcInfo.Port)
 				if err != nil {
 					return err
@@ -560,6 +524,13 @@ func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths
 			Component: component,
 			Cfg:       p.cfg,
 			Cluster:   p.cluster,
+		}
+
+		// TODO (@WSTARR): Currently this logic is library-only and is untested while it is in an experimental state - it may eventually get added as shorthand in Zarf Variables though
+		if componentChartValuesOverrides, ok := p.cfg.DeployOpts.ValuesOverridesMap[component.Name]; ok {
+			if chartValuesOverrides, ok := componentChartValuesOverrides[chart.Name]; ok {
+				helmCfg.ValuesOverrides = chartValuesOverrides
+			}
 		}
 
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
@@ -629,7 +600,7 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 	pterm.Println()
 
 	// If not init config, print the application connection table
-	if !(p.cfg.Pkg.Kind == types.ZarfInitConfig) {
+	if !p.isInitConfig() {
 		message.PrintConnectStringTable(p.connectStrings)
 	} else {
 		// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds

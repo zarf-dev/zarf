@@ -73,12 +73,16 @@ spec:
 {{ toYaml .  | indent 12 }}
 {{- end }}
           volumeMounts:
-{{- if .Values.persistence.enabled }}
             - name: data
               mountPath: /var/lib/registry/
-{{- end }}
             - name: config
               mountPath: "/etc/docker/registry"
+{{- if .Values.caBundle }}
+            - mountPath: /etc/ssl/certs/ca-certificates.crt
+              name: {{ template "docker-registry.fullname" . }}-ca-bundle
+              subPath: ca-certificates.crt
+              readOnly: true
+{{- end }}
       affinity:
 {{- if (eq "ReadWriteMany" .Values.persistence.accessMode) }}
         podAntiAffinity:
@@ -108,4 +112,13 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: {{ if .Values.persistence.existingClaim }}{{ .Values.persistence.existingClaim }}{{- else }}{{ template "docker-registry.fullname" . }}{{- end }}
+{{- else }}
+        - name: data
+          emptyDir:
+            sizeLimit: {{ .Values.persistence.size }}
+{{- end }}
+{{- if .Values.caBundle }}
+        - name: {{ template "docker-registry.fullname" . }}-ca-bundle
+          configMap:
+            name: {{ template "docker-registry.fullname" . }}-ca-bundle
 {{- end }}

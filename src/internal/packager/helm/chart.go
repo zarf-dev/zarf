@@ -258,7 +258,7 @@ func (h *Helm) GenerateChart(manifest types.ZarfManifest) error {
 	h.ChartOverride = tmpChart
 
 	// We don't have any values because we do not expose them in the zarf.yaml currently.
-	h.ValueOverride = map[string]any{}
+	h.ValuesOverrides = map[string]any{}
 
 	spinner.Success()
 
@@ -426,7 +426,7 @@ func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
 		err         error
 	)
 
-	if h.ChartOverride == nil || h.ValueOverride == nil {
+	if h.ChartOverride == nil {
 		// If there is no override, get the chart and values info.
 		loadedChart, err = h.loadChartFromTarball()
 		if err != nil {
@@ -440,7 +440,7 @@ func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
 	} else {
 		// Otherwise, use the overrides instead.
 		loadedChart = h.ChartOverride
-		chartValues = h.ValueOverride
+		chartValues = h.ValuesOverrides
 	}
 
 	return loadedChart, chartValues, nil

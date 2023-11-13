@@ -18,7 +18,7 @@ jobs:
       packages: write
     steps:
       - name: "Checkout Repo"
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
           ref: ${{ github.event.inputs.branchName }}
 
@@ -35,11 +35,15 @@ jobs:
       - name: Build And Publish Application Packages
         # Create the dos-games package with the cosign signature, publish to ghcr and copy the tags to allow 'uname -m' to work
         run: |
-          zarf package create -o build -a amd64 examples/dos-games --key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} --confirm
-          zarf package create -o build -a arm64 examples/dos-games --key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} --confirm
+          zarf package create -o build -a amd64 examples/dos-games --signing-key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} --confirm
+          zarf package create -o build -a arm64 examples/dos-games --signing-key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} --confirm
 
-          zarf package publish ./build/zarf-package-dos-games-amd64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages
-          zarf package publish ./build/zarf-package-dos-games-arm64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages
+          # Publish a the signed dos-games package
+          zarf package publish ./build/zarf-package-dos-games-amd64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages --key=https://zarf.dev/cosign.pub
+          zarf package publish ./build/zarf-package-dos-games-arm64-1.0.0.tar.zst oci://ghcr.io/defenseunicorns/packages --key=https://zarf.dev/cosign.pub
+
+          # Publish a skeleton of the dos-games package
+          zarf package publish examples/dos-games oci://ghcr.io/defenseunicorns/packages
 
           zarf tools registry copy ghcr.io/defenseunicorns/packages/dos-games:1.0.0-amd64 ghcr.io/defenseunicorns/packages/dos-games:1.0.0-x86_64
           zarf tools registry copy ghcr.io/defenseunicorns/packages/dos-games:1.0.0-arm64 ghcr.io/defenseunicorns/packages/dos-games:1.0.0-aarch64

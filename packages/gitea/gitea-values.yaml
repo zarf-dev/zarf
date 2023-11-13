@@ -25,7 +25,7 @@ gitea:
     security:
       INSTALL_LOCK: true
     service:
-      DISABLE_REGISTRATION: true
+      DISABLE_REGISTRATION: "###ZARF_VAR_GIT_SERVER_DISABLE_REGISTRATION###"
     repository:
       ENABLE_PUSH_CREATE_USER: true
       FORCE_PRIVATE: true
@@ -44,4 +44,6 @@ postgresql:
   enabled: false
 
 image:
+  repository: "###ZARF_CONST_GITEA_IMAGE###"
+  tag: "###ZARF_CONST_GITEA_SERVER_VERSION###"
   rootless: true

@@ -49,6 +49,9 @@ type ZarfFindImagesOptions struct {
 type ZarfDeployOptions struct {
 	AdoptExistingResources bool `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`
 	SkipWebhooks           bool `json:"componentWebhooks" jsonschema:"description=Skip waiting for external webhooks to execute as each package component is deployed"`
+
+	// TODO (@WSTARR): This is a library only addition to Zarf and should be refactored in the future (potentially to utilize component composability). As is it should NOT be exposed directly on the CLI
+	ValuesOverridesMap map[string]map[string]map[string]interface{} `json:"valuesOverridesMap" jsonschema:"description=[Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy"`
 }
 
 // ZarfMirrorOptions tracks the user-defined preferences during a package mirror.
@@ -94,6 +97,7 @@ type ZarfCreateOptions struct {
 	SigningKeyPassword string            `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sigh the created package"`
 	DifferentialData   DifferentialData  `json:"differential" jsonschema:"description=A package's differential images and git repositories from a referenced previously built package"`
 	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
+	Flavor             string            `json:"flavor" jsonschema:"description=An optional variant that controls which components will be included in a package"`
 }
 
 // ZarfSplitPackageData contains info about a split package.
@@ -127,5 +131,4 @@ type DifferentialData struct {
 	DifferentialPackageVersion string
 	DifferentialImages         map[string]bool
 	DifferentialRepos          map[string]bool
-	DifferentialOCIComponents  map[string]string
 }

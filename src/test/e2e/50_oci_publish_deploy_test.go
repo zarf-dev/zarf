@@ -19,20 +19,20 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-type RegistryClientTestSuite struct {
+type PublishDeploySuiteTestSuite struct {
 	suite.Suite
 	*require.Assertions
 	Reference   registry.Reference
 	PackagesDir string
 }
 
-var badRef = registry.Reference{
+var badDeployRef = registry.Reference{
 	Registry:   "localhost:5000",
 	Repository: "zarf-test",
 	Reference:  "bad-tag",
 }
 
-func (suite *RegistryClientTestSuite) SetupSuite() {
+func (suite *PublishDeploySuiteTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 	suite.PackagesDir = "build"
 
@@ -40,14 +40,14 @@ func (suite *RegistryClientTestSuite) SetupSuite() {
 	suite.Reference.Registry = "localhost:555"
 }
 
-func (suite *RegistryClientTestSuite) TearDownSuite() {
+func (suite *PublishDeploySuiteTestSuite) TearDownSuite() {
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
 	e2e.CleanFiles(local)
 
 	e2e.TeardownRegistry(suite.T(), 555)
 }
 
-func (suite *RegistryClientTestSuite) Test_0_Publish() {
+func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	suite.T().Log("E2E: Package Publish oci://")
 
 	// Publish package.
@@ -70,32 +70,13 @@ func (suite *RegistryClientTestSuite) Test_0_Publish() {
 	dir := filepath.Join("examples", "helm-charts")
 	stdOut, stdErr, err = e2e.Zarf("package", "create", dir, "-o", "oci://"+ref, "--insecure", "--oci-concurrency=5", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
-}
 
-func (suite *RegistryClientTestSuite) Test_1_Pull() {
-	suite.T().Log("E2E: Package Pull oci://")
-
-	out := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
-
-	// Build the fully qualified reference.
-	suite.Reference.Repository = "helm-charts"
-	suite.Reference.Reference = fmt.Sprintf("0.0.1-%s", e2e.Arch)
-	ref := suite.Reference.String()
-
-	// Pull the package via OCI.
-	stdOut, stdErr, err := e2e.Zarf("package", "pull", "oci://"+ref, "--insecure")
+	// Inspect the published package.
+	stdOut, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/helm-charts:0.0.1-"+e2e.Arch, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
-	suite.Contains(stdErr, fmt.Sprintf("Pulling %q", "oci://"+ref))
-
-	// Verify the package was pulled.
-	suite.FileExists(out)
-
-	// Test pull w/ bad ref.
-	stdOut, stdErr, err = e2e.Zarf("package", "pull", "oci://"+badRef.String(), "--insecure")
-	suite.Error(err, stdOut, stdErr)
 }
 
-func (suite *RegistryClientTestSuite) Test_2_Deploy() {
+func (suite *PublishDeploySuiteTestSuite) Test_1_Deploy() {
 	suite.T().Log("E2E: Package Deploy oci://")
 
 	// Build the fully qualified reference.
@@ -112,30 +93,11 @@ func (suite *RegistryClientTestSuite) Test_2_Deploy() {
 	suite.NoError(err, stdOut, stdErr)
 
 	// Test deploy w/ bad ref.
-	_, stdErr, err = e2e.Zarf("package", "deploy", "oci://"+badRef.String(), "--insecure", "--confirm")
+	_, stdErr, err = e2e.Zarf("package", "deploy", "oci://"+badDeployRef.String(), "--insecure", "--confirm")
 	suite.Error(err, stdErr)
 }
 
-func (suite *RegistryClientTestSuite) Test_3_Inspect() {
-	suite.T().Log("E2E: Package Inspect oci://")
-
-	suite.Reference.Repository = "helm-charts"
-	suite.Reference.Reference = fmt.Sprintf("0.0.1-%s", e2e.Arch)
-	ref := suite.Reference.String()
-	stdOut, stdErr, err := e2e.Zarf("package", "inspect", "oci://"+ref, "--insecure")
-	suite.NoError(err, stdOut, stdErr)
-
-	// Test inspect w/ bad ref.
-	_, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+badRef.String(), "--insecure")
-	suite.Error(err, stdErr)
-
-	// Test inspect on a public package.
-	// NOTE: This also makes sure that Zarf does not attempt auth when inspecting a public package.
-	_, stdErr, err = e2e.Zarf("package", "inspect", "oci://ghcr.io/defenseunicorns/packages/dubbd-k3d:0.3.0-amd64")
-	suite.NoError(err, stdErr)
-}
-
-func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {
+func (suite *PublishDeploySuiteTestSuite) Test_2_Pull_And_Deploy() {
 	suite.T().Log("E2E: Package Pull oci:// && Package Deploy tarball")
 
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
@@ -148,7 +110,7 @@ func (suite *RegistryClientTestSuite) Test_4_Pull_And_Deploy() {
 	suite.NoError(err, stdOut, stdErr)
 }
 
-func (suite *RegistryClientTestSuite) Test_5_Copy() {
+func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	t := suite.T()
 	ref := suite.Reference.String()
 	dstRegistryPort := 556
@@ -196,8 +158,8 @@ func (suite *RegistryClientTestSuite) Test_5_Copy() {
 	}
 }
 
-func TestRegistryClientTestSuite(t *testing.T) {
+func TestPublishDeploySuite(t *testing.T) {
 	e2e.SetupWithCluster(t)
 
-	suite.Run(t, new(RegistryClientTestSuite))
+	suite.Run(t, new(PublishDeploySuiteTestSuite))
 }

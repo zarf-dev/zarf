@@ -126,34 +126,6 @@ func (p *Packager) setVariableInConfig(name, value string, sensitive bool, autoI
 	}
 }
 
-// injectImportedVariable determines if an imported package variable exists in the active config and adds it if not.
-func (p *Packager) injectImportedVariable(importedVariable types.ZarfPackageVariable) {
-	presentInActive := false
-	for _, configVariable := range p.cfg.Pkg.Variables {
-		if configVariable.Name == importedVariable.Name {
-			presentInActive = true
-		}
-	}
-
-	if !presentInActive {
-		p.cfg.Pkg.Variables = append(p.cfg.Pkg.Variables, importedVariable)
-	}
-}
-
-// injectImportedConstant determines if an imported package constant exists in the active config and adds it if not.
-func (p *Packager) injectImportedConstant(importedConstant types.ZarfPackageConstant) {
-	presentInActive := false
-	for _, configVariable := range p.cfg.Pkg.Constants {
-		if configVariable.Name == importedConstant.Name {
-			presentInActive = true
-		}
-	}
-
-	if !presentInActive {
-		p.cfg.Pkg.Constants = append(p.cfg.Pkg.Constants, importedConstant)
-	}
-}
-
 // findComponentTemplatesAndReload appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
 func (p *Packager) findComponentTemplatesAndReload() error {
 	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
