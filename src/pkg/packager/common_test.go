@@ -207,8 +207,6 @@ func TestValidateLastNonBreakingVersion(t *testing.T) {
 		testCase := testCase
 
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
 			config.CLIVersion = testCase.cliVersion
 
 			p := &Packager{
