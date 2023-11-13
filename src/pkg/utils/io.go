@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -202,7 +203,24 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 
 	textFile.Close()
 
-	return os.WriteFile(path, []byte(text), 0600)
+	zarfTemplate, err := template.New("").Delims("###{{", "}}###").Parse(text)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+
+	err = zarfTemplate.Execute(file, nil)
+	if err != nil {
+		return err
+	}
+
+	file.Close()
+
+	return nil
 
 }
 
