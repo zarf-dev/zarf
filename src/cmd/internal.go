@@ -217,7 +217,7 @@ func init() {
 
 	internalCmd.AddCommand(agentCmd)
 	internalCmd.AddCommand(httpProxyCmd)
-	internalCmd.AddCommand(generateCLIDocs)
+	internalCmd.AddCommand(genCLIDocs)
 	internalCmd.AddCommand(genConfigSchemaCmd)
 	internalCmd.AddCommand(genTypesSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
