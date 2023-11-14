@@ -112,7 +112,7 @@ var generateCLIDocs = &cobra.Command{
 }
 
 var genConfigSchemaCmd = &cobra.Command{
-	Use:     "generate-config-schema",
+	Use:     "gen-config-schema",
 	Aliases: []string{"gc"},
 	Short:   lang.CmdInternalConfigSchemaShort,
 	Run: func(cmd *cobra.Command, args []string) {
