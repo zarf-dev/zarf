@@ -48,8 +48,8 @@ var httpProxyCmd = &cobra.Command{
 	},
 }
 
-var generateCLIDocs = &cobra.Command{
-	Use:   "generate-cli-docs",
+var genCLIDocs = &cobra.Command{
+	Use:   "gen-cli-docs",
 	Short: lang.CmdInternalGenerateCliDocsShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Don't include the datestamp in the output
