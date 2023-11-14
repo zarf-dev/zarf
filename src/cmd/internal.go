@@ -132,7 +132,7 @@ type zarfTypes struct {
 }
 
 var genTypesSchemaCmd = &cobra.Command{
-	Use:     "generate-types-schema",
+	Use:     "gen-types-schema",
 	Aliases: []string{"gt"},
 	Short:   lang.CmdInternalTypesSchemaShort,
 	Run: func(cmd *cobra.Command, args []string) {
