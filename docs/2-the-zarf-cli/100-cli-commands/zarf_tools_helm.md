@@ -31,6 +31,5 @@ Subset of the Helm CLI that includes the repo and dependency commands for managi
 ## SEE ALSO
 
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
-* [zarf tools helm cm-push](zarf_tools_helm_cm-push.md)	 - Please see https://github.com/chartmuseum/helm-push for usage
 * [zarf tools helm dependency](zarf_tools_helm_dependency.md)	 - manage a chart's dependencies
 * [zarf tools helm repo](zarf_tools_helm_repo.md)	 - add, list, remove, update, and index chart repositories

@@ -26,6 +26,8 @@ const (
 )
 
 // ValidateZarfSchema a zarf file against the zarf schema, returns an error if the file is invalid
+
+//Move this out to a validater package
 func (p *Packager) ValidateZarfSchema() (err error) {
 	if err = p.readZarfYAML(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
@@ -52,7 +54,7 @@ func (p *Packager) ValidateZarfSchema() (err error) {
 func checkForVarInComponentImport(zarfYaml types.ZarfPackage) error {
 	valid := true
 	errorMessage := zarfWarningPrefix
-	componentWarningStart := "component/"
+	componentWarningStart := "/component/"
 	for i, component := range zarfYaml.Components {
 		if strings.Contains(component.Import.Path, zarfTemplateVar) {
 			errorMessage = fmt.Sprintf("%s %s%d/import/path will not resolve ZARF_PKG_TMPL_* variables.",
