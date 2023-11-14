@@ -5,6 +5,7 @@
 package test
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -134,4 +135,28 @@ func (e2e *ZarfE2ETest) StripANSICodes(input string) string {
 	// Regex to strip any color codes from the output - https://regex101.com/r/YFyIwC/2
 	ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
 	return ansiRegex.ReplaceAllString(input, "")
+}
+
+// NormalizeYAMLFilenames normalizes YAML filenames / paths across Operating Systems (i.e Windows vs Linux)
+func (e2e *ZarfE2ETest) NormalizeYAMLFilenames(input string) string {
+	if runtime.GOOS != "windows" {
+		return input
+	}
+
+	// Match YAML lines that have files in them https://regex101.com/r/C78kRD/1
+	fileMatcher := regexp.MustCompile(`^(?P<start>.* )(?P<file>[^:\n]+\/.*)$`)
+	scanner := bufio.NewScanner(strings.NewReader(input))
+
+	output := ""
+	for scanner.Scan() {
+		line := scanner.Text()
+		get, err := helpers.MatchRegex(fileMatcher, line)
+		if err != nil {
+			output += line + "\n"
+			continue
+		}
+		output += fmt.Sprintf("%s\"%s\"\n", get("start"), strings.ReplaceAll(get("file"), "/", "\\\\"))
+	}
+
+	return output
 }

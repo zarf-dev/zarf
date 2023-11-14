@@ -1,0 +1,16 @@
+{{- range (include "docker-registry.configMaps" . | fromYamlArray ) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: {{ default $.Chart.Name $.Values.nameOverride | trunc 63 | trimSuffix "-" }}
+    chart: {{ $.Chart.Name }}-{{ $.Chart.Version }}
+    heritage: {{ $.Release.Service }}
+    release: {{ $.Release.Name }}
+type: Opaque
+data:
+{{ toYaml .data | indent 2 }}
+{{- end }}

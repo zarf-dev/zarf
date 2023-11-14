@@ -32,7 +32,9 @@ var (
 
 // FileDescriptorExists returns true if the given file exists in the given directory with the expected SHA.
 func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDir string) bool {
-	destinationPath := filepath.Join(destinationDir, desc.Annotations[ocispec.AnnotationTitle])
+	rel := desc.Annotations[ocispec.AnnotationTitle]
+	destinationPath := filepath.Join(destinationDir, rel)
+
 	info, err := os.Stat(destinationPath)
 	if err != nil {
 		return false
@@ -227,12 +229,14 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 
 	// Create a thread to update a progress bar as we save the package to disk
 	doneSaving := make(chan int)
+	encounteredErr := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+o.repo.Reference.String())
-	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling", successText)
+	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, encounteredErr, "Pulling", successText)
 	_, err := oras.Copy(o.ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), copyOpts)
 	if err != nil {
+		encounteredErr <- 1
 		return err
 	}
 
@@ -252,7 +256,10 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 	if err != nil {
 		return err
 	}
-	return utils.WriteFile(filepath.Join(destinationDir, desc.Annotations[ocispec.AnnotationTitle]), b)
+
+	rel := desc.Annotations[ocispec.AnnotationTitle]
+
+	return utils.WriteFile(filepath.Join(destinationDir, rel), b)
 }
 
 // PullPackagePaths pulls multiple files from the remote repository and saves them to `destinationDir`.
