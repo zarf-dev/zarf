@@ -85,7 +85,8 @@ func validateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
 	}
 
 	if err := schema.Validate(unmarshalledYaml); err != nil {
-		if validationError, ok := err.(*jsonschema.ValidationError); ok {
+		var validationError *jsonschema.ValidationError
+		if errors.As(err, &validationError) {
 			allSchemaErrors := getChildCauses(validationError, []error{})
 			var errMessage strings.Builder
 			errMessage.WriteString(zarfInvalidPrefix)
