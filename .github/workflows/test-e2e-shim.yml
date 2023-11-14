@@ -37,7 +37,7 @@ jobs:
         run: |
           echo skipped
 
-  validate-e2e-tests-without-cluster:
+  validate-without-cluster:
     runs-on: ubuntu-latest
     steps:
       - name: Skipped
