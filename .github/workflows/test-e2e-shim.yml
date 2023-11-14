@@ -37,6 +37,13 @@ jobs:
         run: |
           echo skipped
 
+  validate-without-cluster:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skipped
+        run: |
+          echo skipped
+
   validate-k3d:
     runs-on: ubuntu-latest
     steps:
