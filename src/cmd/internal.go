@@ -111,15 +111,35 @@ var generateCLIDocs = &cobra.Command{
 	},
 }
 
-var configSchemaCmd = &cobra.Command{
-	Use:     "config-schema",
-	Aliases: []string{"c"},
+var genConfigSchemaCmd = &cobra.Command{
+	Use:     "generate-config-schema",
+	Aliases: []string{"gc"},
 	Short:   lang.CmdInternalConfigSchemaShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		schema := jsonschema.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
 			message.Fatal(err, lang.CmdInternalConfigSchemaErr)
+		}
+		fmt.Print(string(output) + "\n")
+	},
+}
+
+type zarfTypes struct {
+	DeployedPackage types.DeployedPackage
+	ZarfPackage     types.ZarfPackage
+	ZarfState       types.ZarfState
+}
+
+var genTypesSchemaCmd = &cobra.Command{
+	Use:     "generate-types-schema",
+	Aliases: []string{"gt"},
+	Short:   lang.CmdInternalTypesSchemaShort,
+	Run: func(cmd *cobra.Command, args []string) {
+		schema := jsonschema.Reflect(&zarfTypes{})
+		output, err := json.MarshalIndent(schema, "", "  ")
+		if err != nil {
+			message.Fatal(err, lang.CmdInternalTypesSchemaErr)
 		}
 		fmt.Print(string(output) + "\n")
 	},
@@ -198,7 +218,8 @@ func init() {
 	internalCmd.AddCommand(agentCmd)
 	internalCmd.AddCommand(httpProxyCmd)
 	internalCmd.AddCommand(generateCLIDocs)
-	internalCmd.AddCommand(configSchemaCmd)
+	internalCmd.AddCommand(genConfigSchemaCmd)
+	internalCmd.AddCommand(genTypesSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
 	internalCmd.AddCommand(createPackageRegistryToken)
 	internalCmd.AddCommand(isValidHostname)
