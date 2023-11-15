@@ -51,6 +51,7 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 	httpTransport.TLSClientConfig.InsecureSkipVerify = i.Insecure
 	progressBar := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images to the zarf registry", len(i.ImageList)))
+	defer progressBar.Stop()
 	craneTransport := utils.NewTransport(httpTransport, progressBar)
 
 	pushOptions := config.GetCraneOptions(i.Insecure, i.Architectures...)
