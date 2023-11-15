@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -16,7 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/xeipuuv/gojsonschema"
 )
 
 const (
@@ -27,7 +26,7 @@ const (
 
 // ValidateZarfSchema a zarf file against the zarf schema, returns an error if the file is invalid
 
-//Move this out to a validater package
+// Move this out to a validater package
 func (p *Packager) ValidateZarfSchema() (err error) {
 	if err = p.readZarfYAML(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
@@ -54,15 +53,15 @@ func (p *Packager) ValidateZarfSchema() (err error) {
 func checkForVarInComponentImport(zarfYaml types.ZarfPackage) error {
 	valid := true
 	errorMessage := zarfWarningPrefix
-	componentWarningStart := "/component/"
+	componentWarningStart := "component."
 	for i, component := range zarfYaml.Components {
 		if strings.Contains(component.Import.Path, zarfTemplateVar) {
-			errorMessage = fmt.Sprintf("%s %s%d/import/path will not resolve ZARF_PKG_TMPL_* variables.",
+			errorMessage = fmt.Sprintf("%s %s%d.import.path will not resolve ZARF_PKG_TMPL_* variables.",
 				errorMessage, componentWarningStart, i)
 			valid = false
 		}
 		if strings.Contains(component.Import.URL, zarfTemplateVar) {
-			errorMessage = fmt.Sprintf("%s %s%d/import/url will not resolve ZARF_PKG_TMPL_* variables.",
+			errorMessage = fmt.Sprintf("%s %s%d.import.url will not resolve ZARF_PKG_TMPL_* variables.",
 				errorMessage, componentWarningStart, i)
 			valid = false
 		}
@@ -74,47 +73,21 @@ func checkForVarInComponentImport(zarfYaml types.ZarfPackage) error {
 }
 
 func validateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
-	compiler := jsonschema.NewCompiler()
-	inMemoryZarfSchema := "schema.json"
+	schemaLoader := gojsonschema.NewBytesLoader(jsonSchema)
+	documentLoader := gojsonschema.NewGoLoader(unmarshalledYaml)
 
-	if err := compiler.AddResource(inMemoryZarfSchema, bytes.NewReader(jsonSchema)); err != nil {
-		return err
-	}
-
-	schema, err := compiler.Compile(inMemoryZarfSchema)
+	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
 		return err
 	}
 
-	if err := schema.Validate(unmarshalledYaml); err != nil {
-		var validationError *jsonschema.ValidationError
-		if errors.As(err, &validationError) {
-			allSchemaErrors := getChildCauses(validationError, []error{})
-			var errMessage strings.Builder
-			errMessage.WriteString(zarfInvalidPrefix)
-			for _, err := range allSchemaErrors {
-				errMessage.WriteString("\n")
-				errMessage.WriteString(err.Error())
-			}
-			return errors.New(errMessage.String())
+	if !result.Valid() {
+		errorMessage := zarfInvalidPrefix
+		for _, desc := range result.Errors() {
+			errorMessage = fmt.Sprintf("%s\n - %s", errorMessage, desc.String())
 		}
-		return err
+		err = errors.New(errorMessage)
 	}
 
-	return nil
-}
-
-func getChildCauses(validationErr *jsonschema.ValidationError, childCauses []error) []error {
-	if validationErr == nil {
-		return childCauses
-	}
-	if validationErr.Causes == nil {
-		errMessage := fmt.Errorf(" - %s: %s", validationErr.InstanceLocation, validationErr.Message)
-		return append(childCauses, errMessage)
-	}
-
-	for _, subCause := range validationErr.Causes {
-		childCauses = getChildCauses(subCause, childCauses)
-	}
-	return childCauses
+	return err
 }
