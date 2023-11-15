@@ -90,7 +90,7 @@ jobs:
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
         #       in a previous step. This test run will use this PR's Zarf to create a K3s cluster.
         run: |
-          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true APPLIANCE_MODE_KEEP=true make test-e2e ARCH=amd64
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true APPLIANCE_MODE_KEEP=true make test-e2e-with-cluster ARCH=amd64
 
       - name: "Describe nodes, pods and deployments"
         # NOTE: We describe nodes, pods and deployments here to help understand failures
