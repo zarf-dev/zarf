@@ -10,12 +10,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/gojsonschema"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/xeipuuv/gojsonschema"
 )
 
 const (

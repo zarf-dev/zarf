@@ -13,6 +13,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const brokenSchemaZarfPackage = `
+kind: ZarfInitConfig
+metadata:
+  name: init
+  description: Testing bad yaml
+
+components:
+- name: first-test-component
+  import:
+    not-path: packages/distros/k3s
+- name: import-test
+  import:
+    path: 123123
+
+- name: import-test
+  import:
+    path: "###ZARF_PKG_TMPL_ZEBRA###"
+
+- name: import-url
+  import:
+    url: "oci://###ZARF_PKG_TMPL_ZEBRA###"
+`
+
 func TestValidateSchema(t *testing.T) {
 	readFileFailFatally := func(t *testing.T, path string) []byte {
 		file, err := os.ReadFile(path)
@@ -33,7 +56,17 @@ func TestValidateSchema(t *testing.T) {
 		file := readFileFailFatally(t, path)
 		err := goyaml.Unmarshal(file, &unmarshalledYaml)
 		if err != nil {
-			t.Errorf("error unmarshalling yaml %s", err)
+			t.Errorf("error unmarshalling yaml %v", err)
+		}
+		return unmarshalledYaml
+	}
+
+	readAndUnmarshallYamlString := func(t *testing.T, yamlString string) interface{} {
+		t.Helper()
+		var unmarshalledYaml interface{}
+		err := goyaml.Unmarshal([]byte(yamlString), &unmarshalledYaml)
+		if err != nil {
+			t.Errorf("error unmarshalling yaml string %v", err)
 		}
 		return unmarshalledYaml
 	}
@@ -49,6 +82,16 @@ func TestValidateSchema(t *testing.T) {
 		return unmarshalledYaml
 	}
 
+	readAndUnmarshallZarfPackageString := func(t *testing.T, yamlString string) types.ZarfPackage {
+		t.Helper()
+		var unmarshalledYaml types.ZarfPackage
+		err := goyaml.Unmarshal([]byte(yamlString), &unmarshalledYaml)
+		if err != nil {
+			t.Errorf("error unmarshalling yaml %v", err)
+		}
+		return unmarshalledYaml
+	}
+
 	t.Run("validate schema success", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml(t, "../../../zarf.yaml")
 		zarfSchema := readSchema(t)
@@ -57,7 +100,7 @@ func TestValidateSchema(t *testing.T) {
 	})
 
 	t.Run("validate schema fail", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshalYaml(t, "../../test/packages/12-lint/zarf.yaml")
+		unmarshalledYaml := readAndUnmarshallYamlString(t, brokenSchemaZarfPackage)
 		zarfSchema := readSchema(t)
 		err := validateSchema(unmarshalledYaml, zarfSchema)
 		errorMessage := zarfInvalidPrefix + `
@@ -73,7 +116,7 @@ func TestValidateSchema(t *testing.T) {
 	})
 
 	t.Run("Template in component import failure", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshallZarfPackage(t, "../../test/packages/12-lint/zarf.yaml")
+		unmarshalledYaml := readAndUnmarshallZarfPackageString(t, brokenSchemaZarfPackage)
 		err := checkForVarInComponentImport(unmarshalledYaml)
 		errorMessage := zarfWarningPrefix + " component.2.import.path will not resolve ZARF_PKG_TMPL_* variables. " +
 			"component.3.import.url will not resolve ZARF_PKG_TMPL_* variables."
