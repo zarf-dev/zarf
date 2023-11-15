@@ -23,6 +23,7 @@ const (
 	giteaIP      = "172.31.0.99"
 	giteaHost    = "gitea.localhost"
 	registryHost = "registry.localhost"
+	clusterName  = "zarf-external-test"
 )
 
 var outClusterCredentialArgs = []string{
@@ -42,7 +43,7 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
 	// Teardown any leftovers from previous tests
-	_ = exec.CmdWithPrint("k3d", "cluster", "delete")
+	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)
 	_ = exec.CmdWithPrint("k3d", "registry", "delete", registryHost)
 	_ = exec.CmdWithPrint("docker", "network", "remove", network)
 
@@ -55,7 +56,7 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	suite.NoError(err, "unable to create the k3d registry")
 
 	// Create a k3d cluster with the proper networking and aliases
-	err = exec.CmdWithPrint("k3d", "cluster", "create", "--registry-use", "k3d-"+registryHost+":5000", "--host-alias", giteaIP+":"+giteaHost, "--network", network)
+	err = exec.CmdWithPrint("k3d", "cluster", "create", clusterName, "--registry-use", "k3d-"+registryHost+":5000", "--host-alias", giteaIP+":"+giteaHost, "--network", network)
 	suite.NoError(err, "unable to create the k3d cluster")
 
 	// Install a gitea server via docker compose to act as the 'remote' git server
@@ -75,7 +76,7 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 
 func (suite *ExtOutClusterTestSuite) TearDownSuite() {
 	// Tear down all of that stuff we made for local runs
-	err := exec.CmdWithPrint("k3d", "cluster", "delete")
+	err := exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)
 	suite.NoError(err, "unable to teardown cluster")
 
 	err = exec.CmdWithPrint("docker", "compose", "down")
