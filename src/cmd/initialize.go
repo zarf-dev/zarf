@@ -114,6 +114,7 @@ func setRegistryNodePort() {
 		}
 		pkgConfig.PkgOpts.SetVariables[configVar] = strconv.Itoa(configuredNodePort)
 		pkgConfig.InitOpts.RegistryInfo.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, configuredNodePort)
+		pkgConfig.InitOpts.RegistryInfo.NodePort = configuredNodePort
 	} else {
 		// do not set the nodeport if this is an external registry
 		pkgConfig.PkgOpts.SetVariables[configVar] = ""

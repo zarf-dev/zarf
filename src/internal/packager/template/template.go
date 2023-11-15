@@ -71,15 +71,6 @@ func (values *Values) GetRegistry() string {
 	return values.registry
 }
 
-func getPort(hostport string) string {
-	hp := strings.Split(hostport, ":")
-	if len(hp) != 2 {
-		message.Warn("hostport port mismatch, using the port in port")
-		return hostport
-	}
-	return hp[1]
-}
-
 // GetVariables returns the variables to be used in the template.
 func (values *Values) GetVariables(component types.ZarfComponent) (templateMap map[string]*utils.TextTemplate, deprecations map[string]string) {
 	templateMap = make(map[string]*utils.TextTemplate)
@@ -94,9 +85,13 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 		regInfo := values.config.State.RegistryInfo
 		gitInfo := values.config.State.GitServer
 
-		// if the address has been updated from init, we'll update it here too.
-		if values.config.InitOpts.RegistryInfo.Address != "" {
-			values.registry = values.config.InitOpts.RegistryInfo.Address
+		if values.config.SetVariableMap != nil {
+			if regInfo.NodePort > 0 {
+				values.config.SetVariableMap["REGISTRY_NODEPORT"].Value = fmt.Sprintf("%d", regInfo.NodePort)
+			}
+			if values.config.State.StorageClass != "" {
+				values.config.SetVariableMap["REGISTRY_STORAGE_CLASS"].Value = values.config.State.StorageClass
+			}
 		}
 
 		builtinMap := map[string]string{
@@ -152,15 +147,6 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 		}
 	}
 
-	if values.config.PkgOpts.SetVariables != nil {
-		// TODO: verify they are the same, if not, warn the user
-		values.config.PkgOpts.SetVariables["REGISTRY_NODEPORT"] = getPort(values.registry)
-	}
-
-	// update the variable map based on things that might be set in the state of the cluster
-	values.updateVariableMap("REGISTRY_NODEPORT")
-	values.updateVariableMap("REGISTRY_STORAGE_CLASS")
-
 	for key, variable := range values.config.SetVariableMap {
 		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = &utils.TextTemplate{
@@ -183,12 +169,6 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 	message.Debugf("deprecations = %#v", deprecations)
 
 	return templateMap, deprecations
-}
-
-func (values *Values) updateVariableMap(key string) {
-	if values.config.PkgOpts.SetVariables != nil && values.config.SetVariableMap[key] != nil && values.config.PkgOpts.SetVariables[key] != "" {
-		values.config.SetVariableMap[key].Value = values.config.PkgOpts.SetVariables[key]
-	}
 }
 
 // Apply renders the template and writes the result to the given path.

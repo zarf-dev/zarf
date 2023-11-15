@@ -113,18 +113,12 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 		state.RegistryInfo = c.fillInEmptyContainerRegistryValues(initOptions.RegistryInfo)
 		state.ArtifactServer = c.fillInEmptyArtifactServerValues(initOptions.ArtifactServer)
 	} else {
-
 		if helpers.IsNotZeroAndNotEqual(initOptions.GitServer, state.GitServer) {
 			message.Warn("Detected a change in Git Server init options on a re-init. Ignoring... To update run:")
 			message.ZarfCommand("tools update-creds git")
 		}
 		if helpers.IsNotZeroAndNotEqual(initOptions.RegistryInfo, state.RegistryInfo) {
-
-			if initOptions.RegistryInfo.Address != "" {
-				state.RegistryInfo.Address = initOptions.RegistryInfo.Address
-			}
 			message.Warn("Detected a change in Image Registry init options on a re-init. Ignoring... To update run:")
-
 			message.ZarfCommand("tools update-creds registry")
 		}
 		if helpers.IsNotZeroAndNotEqual(initOptions.ArtifactServer, state.ArtifactServer) {
@@ -289,6 +283,11 @@ func (c *Cluster) MergeZarfState(oldState *types.ZarfState, initOptions types.Za
 }
 
 func (c *Cluster) fillInEmptyContainerRegistryValues(containerRegistry types.RegistryInfo) types.RegistryInfo {
+	// Set default NodePort if none was provided
+	if containerRegistry.NodePort == 0 {
+		containerRegistry.NodePort = config.ZarfInClusterContainerRegistryNodePort
+	}
+
 	// Generate a push-user password if not provided by init flag
 	if containerRegistry.PushPassword == "" {
 		containerRegistry.PushPassword = utils.RandomString(config.ZarfGeneratedPasswordLen)
