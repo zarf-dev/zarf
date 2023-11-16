@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
+	validator "github.com/defenseunicorns/zarf/src/pkg/packager/validator"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -59,7 +60,7 @@ func (p *Packager) fillActiveTemplate() error {
 		return err
 	}
 
-	if err := promptAndSetTemplate(zarfTemplateVar, false); err != nil {
+	if err := promptAndSetTemplate(validator.ZarfTemplateVar, false); err != nil {
 		return err
 	}
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility

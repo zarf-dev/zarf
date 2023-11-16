@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	validator "github.com/defenseunicorns/zarf/src/pkg/packager/validator"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -211,18 +212,17 @@ var lintCmd = &cobra.Command{
 	Aliases: []string{"l"},
 	Short:   lang.CmdPrepareLintShort,
 	Run: func(cmd *cobra.Command, args []string) {
+		baseDir := ""
 		if len(args) > 0 {
-			pkgConfig.CreateOpts.BaseDir = args[0]
+			baseDir = args[0]
 		} else {
-			cwd, err := os.Getwd()
+			var err error
+			baseDir, err = os.Getwd()
 			if err != nil {
 				message.Fatalf(err, lang.CmdPrepareFindImagesErr, err.Error())
 			}
-			pkgConfig.CreateOpts.BaseDir = cwd
 		}
-		pkgClient := packager.NewOrDie(&pkgConfig)
-		defer pkgClient.ClearTempPaths()
-		err := pkgClient.ValidateZarfSchema()
+		err := validator.ValidateZarfSchema(baseDir)
 		if err != nil {
 			message.Fatal(err, err.Error())
 		}

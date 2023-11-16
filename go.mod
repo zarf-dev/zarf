@@ -4,6 +4,8 @@ go 1.21.1
 
 toolchain go1.21.4
 
+replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
+
 require (
 	cuelang.org/go v0.6.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
@@ -11,7 +13,6 @@ require (
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/anchore/stereoscope v0.0.0-20231027135531-5909e353ee88
 	github.com/anchore/syft v0.84.1
-	github.com/defenseunicorns/gojsonschema v0.0.0-20231115180840-cc7edfd762d7
 	github.com/derailed/k9s v0.27.4
 	github.com/distribution/reference v0.5.0
 	github.com/docker/cli v24.0.7+incompatible
@@ -42,6 +43,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.17.0
 	github.com/stretchr/testify v1.8.4
+	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/crypto v0.14.0
 	golang.org/x/sync v0.5.0
 	golang.org/x/term v0.13.0
@@ -57,7 +59,6 @@ require (
 	sigs.k8s.io/kustomize/api v0.14.0
 	sigs.k8s.io/kustomize/kyaml v0.14.3
 	sigs.k8s.io/yaml v1.4.0
-
 )
 
 require (
@@ -415,7 +416,6 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
-	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
