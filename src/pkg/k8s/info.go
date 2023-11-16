@@ -162,6 +162,7 @@ func MakeLabels(labels map[string]string) string {
 	return strings.Join(out, ",")
 }
 
+// GetDefaultStorageClass will query the cluster for the default storage class and return the name.
 func (k *K8s) GetDefaultStorageClass() (string, error) {
 	storageV1Client := k.Clientset.StorageV1()
 	storageClasses, err := storageV1Client.StorageClasses().List(context.TODO(), metav1.ListOptions{})
