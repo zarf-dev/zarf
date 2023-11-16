@@ -92,8 +92,8 @@ func TestValidateSchema(t *testing.T) {
 	t.Run("Template in component import failure", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, badZarfPackage)
 		err := checkForVarInComponentImport(unmarshalledYaml)
-		errorMessage := zarfWarningPrefix + " component.2.import.path will not resolve ZARF_PKG_TMPL_* variables. " +
-			"component.3.import.url will not resolve ZARF_PKG_TMPL_* variables."
+		errorMessage := zarfWarningPrefix + " component.2.import.path will not resolve ZARF_PKG_TMPL_* variables, " +
+			"component.3.import.url will not resolve ZARF_PKG_TMPL_* variables"
 		require.EqualError(t, err, errorMessage)
 	})
 }

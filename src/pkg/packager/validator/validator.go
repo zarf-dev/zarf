@@ -50,25 +50,21 @@ func ValidateZarfSchema(path string) (err error) {
 }
 
 func checkForVarInComponentImport(zarfYaml types.ZarfPackage) error {
-	valid := true
-	errorMessage := zarfWarningPrefix
-	componentWarningStart := "component."
+	var errorMessages []string
 	for i, component := range zarfYaml.Components {
 		if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
-			errorMessage = fmt.Sprintf("%s %s%d.import.path will not resolve ZARF_PKG_TMPL_* variables.",
-				errorMessage, componentWarningStart, i)
-			valid = false
+			errorMessages = append(errorMessages, fmt.Sprintf("component.%d.import.path will not resolve ZARF_PKG_TMPL_* variables", i))
 		}
 		if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
-			errorMessage = fmt.Sprintf("%s %s%d.import.url will not resolve ZARF_PKG_TMPL_* variables.",
-				errorMessage, componentWarningStart, i)
-			valid = false
+			errorMessages = append(errorMessages, fmt.Sprintf("component.%d.import.url will not resolve ZARF_PKG_TMPL_* variables", i))
 		}
 	}
-	if valid {
-		return nil
+
+	if len(errorMessages) > 0 {
+		return fmt.Errorf("%s %s", zarfWarningPrefix, strings.Join(errorMessages, ", "))
 	}
-	return errors.New(errorMessage)
+
+	return nil
 }
 
 func validateSchema(unmarshalledYaml interface{}, jsonSchema []byte) error {
