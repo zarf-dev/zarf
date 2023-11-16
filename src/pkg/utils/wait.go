@@ -93,7 +93,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 			spinner.Updatef(existMsg)
 			// Check if the resource exists.
 			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get %s %s %s", zarfCommand, namespaceFlag, kind, identifier)
-			if stdout, stderr, err := exec.Cmd(shell, shellArgs, zarfKubectlGet); err != nil {
+			if stdout, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlGet)...); err != nil {
 				message.Debug(stdout, stderr, err)
 				continue
 			}
@@ -111,7 +111,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, waitTimeout)
 
 			// If there is an error, log it and try again.
-			if stdout, stderr, err := exec.Cmd(shell, shellArgs, zarfKubectlWait); err != nil {
+			if stdout, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlWait)...); err != nil {
 				message.Debug(stdout, stderr, err)
 				continue
 			}
