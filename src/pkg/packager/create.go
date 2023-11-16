@@ -173,7 +173,7 @@ func (p *Packager) Create() (err error) {
 			return err
 		}
 
-		if err := helpers.Retry(doPull, 3, 5*time.Second); err != nil {
+		if err := helpers.Retry(doPull, 3, 5*time.Second, message.Warnf); err != nil {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 
