@@ -118,28 +118,28 @@ const (
 		"that the Zarf binary is located in.\n\n\n\n"
 
 	CmdInitExample = `
-	# Initializing without any optional components:
-	zarf init
+# Initializing without any optional components:
+$ zarf init
 
-	# Initializing w/ Zarfs internal git server:
-	zarf init --components=git-server
+# Initializing w/ Zarfs internal git server:
+$ zarf init --components=git-server
 
-	# Initializing w/ Zarfs internal git server and PLG stack:
-	zarf init --components=git-server,logging
+# Initializing w/ Zarfs internal git server and PLG stack:
+$ zarf init --components=git-server,logging
 
-	# Initializing w/ an internal registry but with a different nodeport:
-	zarf init --nodeport=30333
+# Initializing w/ an internal registry but with a different nodeport:
+$ zarf init --nodeport=30333
 
-	# Initializing w/ an external registry:
-	zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
+# Initializing w/ an external registry:
+$ zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
 
-	# Initializing w/ an external git server:
-	zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
+# Initializing w/ an external git server:
+$ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 
-	# Initializing w/ an external artifact server:
-	zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
+# Initializing w/ an external artifact server:
+$ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
 
-	# NOTE: Not specifying a pull username/password will use the push user for pulling as well.
+# NOTE: Not specifying a pull username/password will use the push user for pulling as well.
 `
 
 	CmdInitErrFlags             = "Invalid command flags were provided."
@@ -231,23 +231,23 @@ const (
 	CmdPackageMirrorLong  = "Unpacks resources and dependencies from a Zarf package archive and mirrors them into the specified \n" +
 		"image registries and git repositories within the target environment"
 	CmdPackageMirrorExample = `
-	# Mirror resources to internal Zarf resources
-	zarf package mirror-resources <your-package.tar.zst> \
-		--registry-url 127.0.0.1:31999 \
-		--registry-push-username zarf-push \
-		--registry-push-password <generated-registry-push-password> \
-		--git-url http://zarf-gitea-http.zarf.svc.cluster.local:3000 \
-		--git-push-username zarf-git-user \
-		--git-push-password <generated-git-push-password>
-	
-	# Mirror resources to external resources
-	zarf package mirror-resources <your-package.tar.zst> \
-		--registry-url registry.enterprise.corp \
-		--registry-push-username <registry-push-username> \
-		--registry-push-password <registry-push-password> \
-		--git-url https://git.enterprise.corp \
-		--git-push-username <git-push-username> \
-		--git-push-password <git-push-password>
+# Mirror resources to internal Zarf resources
+$ zarf package mirror-resources <your-package.tar.zst> \
+	--registry-url 127.0.0.1:31999 \
+	--registry-push-username zarf-push \
+	--registry-push-password <generated-registry-push-password> \
+	--git-url http://zarf-gitea-http.zarf.svc.cluster.local:3000 \
+	--git-push-username zarf-git-user \
+	--git-push-password <generated-git-push-password>
+
+# Mirror resources to external resources
+$ zarf package mirror-resources <your-package.tar.zst> \
+	--registry-url registry.enterprise.corp \
+	--registry-push-username <registry-push-username> \
+	--registry-push-password <registry-push-password> \
+	--git-url https://git.enterprise.corp \
+	--git-push-username <git-push-username> \
+	--git-push-password <git-push-password>
 `
 
 	CmdPackageInspectShort = "Displays the definition of a Zarf package (runs offline)"
@@ -304,18 +304,18 @@ const (
 
 	CmdPackagePublishShort   = "Publishes a Zarf package to a remote registry"
 	CmdPackagePublishExample = `
-	# Publish a package to a remote registry
-	zarf package publish my-package.tar oci://my-registry.com/my-namespace
+# Publish a package to a remote registry
+$ zarf package publish my-package.tar oci://my-registry.com/my-namespace
 
-	# Publish a skeleton package to a remote registry
-	zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
+# Publish a skeleton package to a remote registry
+$ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 `
 	CmdPackagePublishFlagSigningKey         = "Path to a private key file for signing or re-signing packages with a new key"
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
 	CmdPackagePublishErr                    = "Failed to publish package: %s"
 
 	CmdPackagePullShort               = "Pulls a Zarf package from a remote registry and save to the local file system"
-	CmdPackagePullExample             = "	zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64"
+	CmdPackagePullExample             = "$ zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64"
 	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
 	CmdPackagePullErr                 = "Failed to pull package: %s"
 
@@ -372,49 +372,49 @@ const (
 	CmdToolsRegistryTunnel    = "Opening a tunnel from %s locally to %s in the cluster"
 
 	CmdToolsRegistryCatalogExample = `
-	# list the repos internal to Zarf
-	$ zarf tools registry catalog
+# List the repos internal to Zarf
+$ zarf tools registry catalog
 
-	# list the repos for reg.example.com
-	$ zarf tools registry catalog reg.example.com
+# List the repos for reg.example.com
+$ zarf tools registry catalog reg.example.com
 `
 	CmdToolsRegistryListExample = `
-	# list the tags for a repo internal to Zarf
-	$ zarf tools registry ls 127.0.0.1:31999/stefanprodan/podinfo
+# List the tags for a repo internal to Zarf
+$ zarf tools registry ls 127.0.0.1:31999/stefanprodan/podinfo
 
-	# list the tags for a repo hosted at reg.example.com
-	$ zarf tools registry ls reg.example.com/stefanprodan/podinfo
+# List the tags for a repo hosted at reg.example.com
+$ zarf tools registry ls reg.example.com/stefanprodan/podinfo
 `
 
 	CmdToolsRegistryPushExample = `
-	# push an image into an internal repo in Zarf
-	$ zarf tools registry push image.tar 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
+# Push an image into an internal repo in Zarf
+$ zarf tools registry push image.tar 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
 
-	# push an image into an repo hosted at reg.example.com
-	$ zarf tools registry push image.tar reg.example.com/stefanprodan/podinfo:6.4.0
+# Push an image into an repo hosted at reg.example.com
+$ zarf tools registry push image.tar reg.example.com/stefanprodan/podinfo:6.4.0
 `
 
 	CmdToolsRegistryPullExample = `
-	# pull an image from an internal repo in Zarf to a local tarball
-	$ zarf tools registry pull 127.0.0.1:31999/stefanprodan/podinfo:6.4.0 image.tar
+# Pull an image from an internal repo in Zarf to a local tarball
+$ zarf tools registry pull 127.0.0.1:31999/stefanprodan/podinfo:6.4.0 image.tar
 
-	# pull an image from a repo hosted at reg.example.com to a local tarball
-	$ zarf tools registry pull reg.example.com/stefanprodan/podinfo:6.4.0 image.tar
+# Pull an image from a repo hosted at reg.example.com to a local tarball
+$ zarf tools registry pull reg.example.com/stefanprodan/podinfo:6.4.0 image.tar
 `
 
 	CmdToolsRegistryDeleteExample = `
-# delete an image digest from an internal repo in Zarf
+# Delete an image digest from an internal repo in Zarf
 $ zarf tools registry delete 127.0.0.1:31999/stefanprodan/podinfo@sha256:57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8
 
-# delete an image digest from a repo hosted at reg.example.com
+# Delete an image digest from a repo hosted at reg.example.com
 $ zarf tools registry delete reg.example.com/stefanprodan/podinfo@sha256:57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8
 `
 
 	CmdToolsRegistryDigestExample = `
-# return an image digest for an internal repo in Zarf
+# Return an image digest for an internal repo in Zarf
 $ zarf tools registry digest 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
 
-# return an image digest from a repo hosted at reg.example.com
+# Return an image digest from a repo hosted at reg.example.com
 $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 `
 
@@ -473,22 +473,22 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 		"This command can be used to wait for a Kubernetes resources to exist and be ready that may be created by a Gitops tool or a Kubernetes operator.\n" +
 		"You can also wait for arbitrary network endpoints using REST or TCP checks.\n\n"
 	CmdToolsWaitForExample = `
-	# Wait for Kubernetes resources:
-	zarf tools wait-for pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to be ready
-	zarf tools wait-for p cool-pod-name ready -n cool                     #  wait for pod (using p alias) cool-pod-name in namespace cool to be ready
-	zarf tools wait-for deployment podinfo available -n podinfo           #  wait for deployment podinfo in namespace podinfo to be available
-	zarf tools wait-for pod app=podinfo ready -n podinfo                  #  wait for pod with label app=podinfo in namespace podinfo to be ready
-	zarf tools wait-for svc zarf-docker-registry exists -n zarf           #  wait for service zarf-docker-registry in namespace zarf to exist
-	zarf tools wait-for svc zarf-docker-registry -n zarf                  #  same as above, except exists is the default condition
-	zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
-	zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
+# Wait for Kubernetes resources:
+$ zarf tools wait-for pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to be ready
+$ zarf tools wait-for p cool-pod-name ready -n cool                     #  wait for pod (using p alias) cool-pod-name in namespace cool to be ready
+$ zarf tools wait-for deployment podinfo available -n podinfo           #  wait for deployment podinfo in namespace podinfo to be available
+$ zarf tools wait-for pod app=podinfo ready -n podinfo                  #  wait for pod with label app=podinfo in namespace podinfo to be ready
+$ zarf tools wait-for svc zarf-docker-registry exists -n zarf           #  wait for service zarf-docker-registry in namespace zarf to exist
+$ zarf tools wait-for svc zarf-docker-registry -n zarf                  #  same as above, except exists is the default condition
+$ zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
+$ zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
 
-	# Wait for network endpoints:
-	zarf tools wait-for http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
-	zarf tools wait-for tcp localhost:8080                                #  wait for a connection to be established on localhost:8080
-	zarf tools wait-for https 1.1.1.1 200                                 #  wait for a 200 response from https://1.1.1.1
-	zarf tools wait-for http google.com                                   #  wait for any 2xx response from http://google.com
-	zarf tools wait-for http google.com success                           #  wait for any 2xx response from http://google.com
+# Wait for network endpoints:
+$ zarf tools wait-for http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
+$ zarf tools wait-for tcp localhost:8080                                #  wait for a connection to be established on localhost:8080
+$ zarf tools wait-for https 1.1.1.1 200                                 #  wait for a 200 response from https://1.1.1.1
+$ zarf tools wait-for http google.com                                   #  wait for any 2xx response from http://google.com
+$ zarf tools wait-for http google.com success                           #  wait for any 2xx response from http://google.com
 `
 	CmdToolsWaitForFlagTimeout        = "Specify the timeout duration for the wait command."
 	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration '%s'. Please use a valid duration string (e.g. 1s, 2m, 3h)."
@@ -502,45 +502,45 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsGetCredsShort   = "Displays a table of credentials for deployed Zarf services. Pass a service key to get a single credential"
 	CmdToolsGetCredsLong    = "Display a table of credentials for deployed Zarf services. Pass a service key to get a single credential. i.e. 'zarf tools get-creds registry'"
 	CmdToolsGetCredsExample = `
-	# Print all Zarf credentials:
-	zarf tools get-creds
+# Print all Zarf credentials:
+$ zarf tools get-creds
 
-	# Get specific Zarf credentials:
-	zarf tools get-creds registry
-	zarf tools get-creds registry-readonly
-	zarf tools get-creds git
-	zarf tools get-creds git-readonly
-	zarf tools get-creds artifact
-	zarf tools get-creds logging
+# Get specific Zarf credentials:
+$ zarf tools get-creds registry
+$ zarf tools get-creds registry-readonly
+$ zarf tools get-creds git
+$ zarf tools get-creds git-readonly
+$ zarf tools get-creds artifact
+$ zarf tools get-creds logging
 `
 
 	CmdToolsUpdateCredsShort   = "Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service"
 	CmdToolsUpdateCredsLong    = "Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service. i.e. 'zarf tools update-creds registry'"
 	CmdToolsUpdateCredsExample = `
-	# Autogenerate all Zarf credentials at once:
-	zarf tools update-creds
+# Autogenerate all Zarf credentials at once:
+$ zarf tools update-creds
 
-	# Autogenerate specific Zarf service credentials:
-	zarf tools update-creds registry
-	zarf tools update-creds git
-	zarf tools update-creds artifact
-	zarf tools update-creds agent
+# Autogenerate specific Zarf service credentials:
+$ zarf tools update-creds registry
+$ zarf tools update-creds git
+$ zarf tools update-creds artifact
+$ zarf tools update-creds agent
 
-	# Update all Zarf credentials w/external services at once:
-	zarf tools update-creds \
-		--registry-push-username={USERNAME} --registry-push-password={PASSWORD} \
-		--git-push-username={USERNAME} --git-push-password={PASSWORD} \
-		--artifact-push-username={USERNAME} --artifact-push-token={PASSWORD}
+# Update all Zarf credentials w/external services at once:
+$ zarf tools update-creds \
+	--registry-push-username={USERNAME} --registry-push-password={PASSWORD} \
+	--git-push-username={USERNAME} --git-push-password={PASSWORD} \
+	--artifact-push-username={USERNAME} --artifact-push-token={PASSWORD}
 
-	# NOTE: Any credentials omitted from flags without a service key specified will be autogenerated - URLs will only change if specified.
-	# Config options can also be set with the 'init' section of a Zarf config file.
+# NOTE: Any credentials omitted from flags without a service key specified will be autogenerated - URLs will only change if specified.
+# Config options can also be set with the 'init' section of a Zarf config file.
 
-	# Update specific Zarf credentials w/external services:
-	zarf tools update-creds registry --registry-push-username={USERNAME} --registry-push-password={PASSWORD}
-	zarf tools update-creds git --git-push-username={USERNAME} --git-push-password={PASSWORD}
-	zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifact-push-token={PASSWORD}
+# Update specific Zarf credentials w/external services:
+$ zarf tools update-creds registry --registry-push-username={USERNAME} --registry-push-password={PASSWORD}
+$ zarf tools update-creds git --git-push-username={USERNAME} --git-push-password={PASSWORD}
+$ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifact-push-token={PASSWORD}
 
-	# NOTE: Not specifying a pull username/password will keep the previous pull username/password.
+# NOTE: Not specifying a pull username/password will keep the previous pull username/password.
 `
 	CmdToolsUpdateCredsConfirmFlag          = "Confirm updating credentials without prompting"
 	CmdToolsUpdateCredsConfirmProvided      = "Confirm flag specified, continuing without prompting."

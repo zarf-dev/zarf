@@ -16,23 +16,23 @@ zarf package mirror-resources [ PACKAGE_SOURCE ] [flags]
 
 ```
 
-	# Mirror resources to internal Zarf resources
-	zarf package mirror-resources <your-package.tar.zst> \
-		--registry-url 127.0.0.1:31999 \
-		--registry-push-username zarf-push \
-		--registry-push-password <generated-registry-push-password> \
-		--git-url http://zarf-gitea-http.zarf.svc.cluster.local:3000 \
-		--git-push-username zarf-git-user \
-		--git-push-password <generated-git-push-password>
-	
-	# Mirror resources to external resources
-	zarf package mirror-resources <your-package.tar.zst> \
-		--registry-url registry.enterprise.corp \
-		--registry-push-username <registry-push-username> \
-		--registry-push-password <registry-push-password> \
-		--git-url https://git.enterprise.corp \
-		--git-push-username <git-push-username> \
-		--git-push-password <git-push-password>
+# Mirror resources to internal Zarf resources
+$ zarf package mirror-resources <your-package.tar.zst> \
+	--registry-url 127.0.0.1:31999 \
+	--registry-push-username zarf-push \
+	--registry-push-password <generated-registry-push-password> \
+	--git-url http://zarf-gitea-http.zarf.svc.cluster.local:3000 \
+	--git-push-username zarf-git-user \
+	--git-push-password <generated-git-push-password>
+
+# Mirror resources to external resources
+$ zarf package mirror-resources <your-package.tar.zst> \
+	--registry-url registry.enterprise.corp \
+	--registry-push-username <registry-push-username> \
+	--registry-push-password <registry-push-password> \
+	--git-url https://git.enterprise.corp \
+	--git-push-username <git-push-username> \
+	--git-push-password <git-push-password>
 
 ```
 

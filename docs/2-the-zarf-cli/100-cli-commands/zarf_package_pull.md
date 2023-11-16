@@ -10,7 +10,7 @@ zarf package pull PACKAGE_SOURCE [flags]
 ## Examples
 
 ```
-	zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64
+$ zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64
 ```
 
 ## Options
