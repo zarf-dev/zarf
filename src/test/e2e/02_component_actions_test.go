@@ -144,4 +144,11 @@ func TestComponentActions(t *testing.T) {
 		// Remove the templated file at the end of the test
 		e2e.CleanFiles(deployTemplatedArtifact)
 	})
+
+	t.Run("action on-deploy-immediate-failure", func(t *testing.T) {
+		t.Parallel()
+		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=on-deploy-immediate-failure", "--confirm")
+		require.Error(t, err, stdOut, stdErr)
+		require.Contains(t, stdErr, "Failed to deploy package")
+	})
 }
