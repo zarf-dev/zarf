@@ -47,7 +47,7 @@ func TestValidateSchema(t *testing.T) {
 
 	readSchema := func(t *testing.T) []byte {
 		t.Helper()
-		return readFileFailFatally(t, "../../../zarf.schema.json")
+		return readFileFailFatally(t, "../../../../zarf.schema.json")
 	}
 
 	readAndUnmarshalYaml := func(t *testing.T, path string) interface{} {
@@ -93,7 +93,7 @@ func TestValidateSchema(t *testing.T) {
 	}
 
 	t.Run("validate schema success", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshalYaml(t, "../../../zarf.yaml")
+		unmarshalledYaml := readAndUnmarshalYaml(t, "../../../../zarf.yaml")
 		zarfSchema := readSchema(t)
 		err := validateSchema(unmarshalledYaml, zarfSchema)
 		require.NoError(t, err)
@@ -110,7 +110,7 @@ func TestValidateSchema(t *testing.T) {
 	})
 
 	t.Run("Template in component import success", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshallZarfPackage(t, "../../../zarf.yaml")
+		unmarshalledYaml := readAndUnmarshallZarfPackage(t, "../../../../zarf.yaml")
 		err := checkForVarInComponentImport(unmarshalledYaml)
 		require.NoError(t, err)
 	})
