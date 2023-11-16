@@ -52,6 +52,12 @@ Within each of the `action` lists (`before`, `after`, `onSuccess`, and `onFailur
 - `setVariables` - set the standard output of the command to a list of variables that can be used in other actions or components (onDeploy only).
 - `shell` - set a preferred shell for the command to run in for a particular operating system (default is `sh` for macOS/Linux and `powershell` for Windows).
 
+:::info
+
+By default, multi-line `cmd` blocks will fail if one of the lines errors out; this is analogous to setting `set -e` in a shell script, as documented in the [GNU bash docs](https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html).
+
+:::
+
 :::note
 
 Any binaries you execute in your `cmd` actions must exist on the machine they are executed on.  You can bring binaries with a Zarf Package as `files` with the `executable` key set, or take advantage of the `./zarf `&nbsp;transformation as described in [action transformations](#action-transformations).
