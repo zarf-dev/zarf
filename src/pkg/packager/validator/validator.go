@@ -24,8 +24,6 @@ const (
 )
 
 // ValidateZarfSchema a zarf file against the zarf schema, returns an error if the file is invalid
-
-// Move this out to a validater package
 func ValidateZarfSchema(path string) (err error) {
 	var zarfTypedData types.ZarfPackage
 	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &zarfTypedData); err != nil {
