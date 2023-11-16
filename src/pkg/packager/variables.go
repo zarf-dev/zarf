@@ -11,7 +11,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
-	validator "github.com/defenseunicorns/zarf/src/pkg/packager/validator"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -60,16 +59,16 @@ func (p *Packager) fillActiveTemplate() error {
 		return err
 	}
 
-	if err := promptAndSetTemplate(validator.ZarfTemplateVar, false); err != nil {
+	if err := promptAndSetTemplate(types.ZarfPackageTemplatePrefix, false); err != nil {
 		return err
 	}
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
-	if err := promptAndSetTemplate("###ZARF_PKG_VAR_", true); err != nil {
+	if err := promptAndSetTemplate(types.ZarfPackageVariablePrefix, true); err != nil {
 		return err
 	}
 
 	// Add special variable for the current package architecture
-	templateMap["###ZARF_PKG_ARCH###"] = p.arch
+	templateMap[types.ZarfPackageArch] = p.arch
 
 	return utils.ReloadYamlTemplate(&p.cfg.Pkg, templateMap)
 }
@@ -132,7 +131,7 @@ func (p *Packager) findComponentTemplatesAndReload() error {
 	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
 	for i, component := range p.cfg.Pkg.Components {
 		mappings := map[string]string{}
-		mappings["###ZARF_COMPONENT_NAME###"] = component.Name
+		mappings[types.ZarfComponentName] = component.Name
 		err := utils.ReloadYamlTemplate(&p.cfg.Pkg.Components[i], mappings)
 		if err != nil {
 			return err

@@ -21,7 +21,6 @@ import (
 const (
 	zarfInvalidPrefix = "schema is invalid:"
 	zarfWarningPrefix = "zarf schema warning:"
-	ZarfTemplateVar   = "###ZARF_PKG_TMPL_"
 )
 
 // ValidateZarfSchema a zarf file against the zarf schema, returns an error if the file is invalid
@@ -57,12 +56,12 @@ func checkForVarInComponentImport(zarfYaml types.ZarfPackage) error {
 	errorMessage := zarfWarningPrefix
 	componentWarningStart := "component."
 	for i, component := range zarfYaml.Components {
-		if strings.Contains(component.Import.Path, ZarfTemplateVar) {
+		if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
 			errorMessage = fmt.Sprintf("%s %s%d.import.path will not resolve ZARF_PKG_TMPL_* variables.",
 				errorMessage, componentWarningStart, i)
 			valid = false
 		}
-		if strings.Contains(component.Import.URL, ZarfTemplateVar) {
+		if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
 			errorMessage = fmt.Sprintf("%s %s%d.import.url will not resolve ZARF_PKG_TMPL_* variables.",
 				errorMessage, componentWarningStart, i)
 			valid = false
