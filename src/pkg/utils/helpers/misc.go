@@ -12,12 +12,14 @@ import (
 )
 
 // Retry will retry a function until it succeeds or the timeout is reached, timeout == retries * delay.
-func Retry(fn func() error, retries int, delay time.Duration) (err error) {
+func Retry(fn func() error, retries int, delay time.Duration, logger func(format string, args ...any)) (err error) {
 	for r := 0; r < retries; r++ {
 		err = fn()
 		if err == nil {
 			break
 		}
+
+		logger("Encountered an error, retrying (%d/%d): %s", r+1, retries, err.Error())
 
 		time.Sleep(delay)
 	}
