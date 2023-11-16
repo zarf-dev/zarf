@@ -49,6 +49,5 @@ repos:
         args: ["--schemafile", "zarf.schema.json"]
         exclude: |
           (?x)^(
-            src/pkg/packager/unsuccessful_validation/zarf.yaml|
             src/test/packages/12-lint/.*
           )$

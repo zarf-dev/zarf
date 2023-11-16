@@ -9,7 +9,10 @@ const (
 	RawVariableType VariableType = "raw"
 	// FileVariableType is a type for a Zarf package variable that loads its contents from a file
 	FileVariableType VariableType = "file"
+)
 
+// Zarf looks for these strings in zarf.yaml to make dynamic changes
+const (
 	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
 	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
 	ZarfPackageArch           = "###ZARF_PKG_ARCH###"

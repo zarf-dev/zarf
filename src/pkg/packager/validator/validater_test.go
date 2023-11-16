@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package validator contains functions for interacting with, managing and deploying Zarf packages.
+// Package validator contains functions for verifying zarf yaml files are valid
 package validator
 
 import (
@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const brokenSchemaZarfPackage = `
+const badZarfPackage = `
 kind: ZarfInitConfig
 metadata:
   name: init
@@ -36,72 +36,46 @@ components:
     url: "oci://###ZARF_PKG_TMPL_ZEBRA###"
 `
 
+const goodZarfPackage = `
+kind: ZarfPackageConfig
+metadata:
+  name: good-zarf-package
+
+components:
+  - name: baseline
+    required: true
+`
+
+func readAndUnmarshalYaml[T interface{}](t *testing.T, yamlString string) T {
+	t.Helper()
+	var unmarshalledYaml T
+	err := goyaml.Unmarshal([]byte(yamlString), &unmarshalledYaml)
+	if err != nil {
+		t.Errorf("error unmarshalling yaml %v", err)
+	}
+	return unmarshalledYaml
+}
+
 func TestValidateSchema(t *testing.T) {
-	readFileFailFatally := func(t *testing.T, path string) []byte {
-		file, err := os.ReadFile(path)
+	getZarfSchema := func(t *testing.T) []byte {
+		t.Helper()
+		file, err := os.ReadFile("../../../../zarf.schema.json")
 		if err != nil {
 			t.Errorf("error reading file: %s", err)
 		}
 		return file
 	}
 
-	readSchema := func(t *testing.T) []byte {
-		t.Helper()
-		return readFileFailFatally(t, "../../../../zarf.schema.json")
-	}
-
-	readAndUnmarshalYaml := func(t *testing.T, path string) interface{} {
-		t.Helper()
-		var unmarshalledYaml interface{}
-		file := readFileFailFatally(t, path)
-		err := goyaml.Unmarshal(file, &unmarshalledYaml)
-		if err != nil {
-			t.Errorf("error unmarshalling yaml %v", err)
-		}
-		return unmarshalledYaml
-	}
-
-	readAndUnmarshallYamlString := func(t *testing.T, yamlString string) interface{} {
-		t.Helper()
-		var unmarshalledYaml interface{}
-		err := goyaml.Unmarshal([]byte(yamlString), &unmarshalledYaml)
-		if err != nil {
-			t.Errorf("error unmarshalling yaml string %v", err)
-		}
-		return unmarshalledYaml
-	}
-
-	readAndUnmarshallZarfPackage := func(t *testing.T, path string) types.ZarfPackage {
-		t.Helper()
-		var unmarshalledYaml types.ZarfPackage
-		file := readFileFailFatally(t, path)
-		err := goyaml.Unmarshal(file, &unmarshalledYaml)
-		if err != nil {
-			t.Errorf("error unmarshalling yaml %s", err)
-		}
-		return unmarshalledYaml
-	}
-
-	readAndUnmarshallZarfPackageString := func(t *testing.T, yamlString string) types.ZarfPackage {
-		t.Helper()
-		var unmarshalledYaml types.ZarfPackage
-		err := goyaml.Unmarshal([]byte(yamlString), &unmarshalledYaml)
-		if err != nil {
-			t.Errorf("error unmarshalling yaml %v", err)
-		}
-		return unmarshalledYaml
-	}
-
 	t.Run("validate schema success", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshalYaml(t, "../../../../zarf.yaml")
-		zarfSchema := readSchema(t)
+		unmarshalledYaml := readAndUnmarshalYaml[interface{}](t, goodZarfPackage)
+		zarfSchema := getZarfSchema(t)
 		err := validateSchema(unmarshalledYaml, zarfSchema)
 		require.NoError(t, err)
 	})
 
 	t.Run("validate schema fail", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshallYamlString(t, brokenSchemaZarfPackage)
-		zarfSchema := readSchema(t)
+		unmarshalledYaml := readAndUnmarshalYaml[interface{}](t, badZarfPackage)
+		zarfSchema := getZarfSchema(t)
 		err := validateSchema(unmarshalledYaml, zarfSchema)
 		errorMessage := zarfInvalidPrefix + `
  - components.0.import: Additional property not-path is not allowed
@@ -110,13 +84,13 @@ func TestValidateSchema(t *testing.T) {
 	})
 
 	t.Run("Template in component import success", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshallZarfPackage(t, "../../../../zarf.yaml")
+		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, goodZarfPackage)
 		err := checkForVarInComponentImport(unmarshalledYaml)
 		require.NoError(t, err)
 	})
 
 	t.Run("Template in component import failure", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshallZarfPackageString(t, brokenSchemaZarfPackage)
+		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, badZarfPackage)
 		err := checkForVarInComponentImport(unmarshalledYaml)
 		errorMessage := zarfWarningPrefix + " component.2.import.path will not resolve ZARF_PKG_TMPL_* variables. " +
 			"component.3.import.url will not resolve ZARF_PKG_TMPL_* variables."

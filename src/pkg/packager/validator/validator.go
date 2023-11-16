@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package validator contains functions for linting the zarf.yaml
+// Package validator contains functions for verifying zarf yaml files are valid
 package validator
 
 import (
@@ -45,7 +45,7 @@ func ValidateZarfSchema(path string) (err error) {
 		return err
 	}
 
-	message.Success("Validation successful")
+	message.Success(fmt.Sprintf("Schema validation successful for %q", zarfTypedData.Metadata.Name))
 	return nil
 }
 
