@@ -471,7 +471,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 
 	return helpers.Retry(func() error {
 		return imgConfig.PushToZarfRegistry()
-	}, 3, 5*time.Second)
+	}, 3, 5*time.Second, message.Warnf)
 }
 
 // Push all of the components git repos to the configured git server.
@@ -508,7 +508,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 		}
 
 		// Try repo push up to 3 times
-		if err := helpers.Retry(tryPush, 3, 5*time.Second); err != nil {
+		if err := helpers.Retry(tryPush, 3, 5*time.Second, message.Warnf); err != nil {
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}
