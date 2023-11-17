@@ -74,6 +74,14 @@ func (v Validator) isSuccess() bool {
 	return !v.hasWarnings() && !v.hasErrors()
 }
 
+func (v *Validator) addWarning(warning string) {
+	v.warnings = append(v.warnings, warning)
+}
+
+func (v *Validator) addError(err error) {
+	v.errors = append(v.errors, err)
+}
+
 // DisplayFormattedMessage Displays the message to the user with proper warnings, failures, or success
 // Will exit if there are errors
 func (v Validator) DisplayFormattedMessage() {
@@ -116,10 +124,10 @@ func ValidateZarfSchema(path string) (Validator, error) {
 func checkForVarInComponentImport(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
 		if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
-			validator.warnings = append(validator.warnings, fmt.Sprintf("component.%d.import.path will not resolve ZARF_PKG_TMPL_* variables", i))
+			validator.addWarning(fmt.Sprintf("component.[%d].import.path will not resolve ZARF_PKG_TMPL_* variables", i))
 		}
 		if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
-			validator.warnings = append(validator.warnings, fmt.Sprintf("component.%d.import.url will not resolve ZARF_PKG_TMPL_* variables", i))
+			validator.addWarning(fmt.Sprintf("component.[%d].import.url will not resolve ZARF_PKG_TMPL_* variables", i))
 		}
 	}
 
@@ -136,7 +144,7 @@ func validateSchema(validator *Validator) error {
 
 	if !result.Valid() {
 		for _, desc := range result.Errors() {
-			validator.errors = append(validator.errors, errors.New(desc.String()))
+			validator.addError(errors.New(desc.String()))
 		}
 	}
 

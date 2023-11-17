@@ -17,7 +17,7 @@ func TestLint(t *testing.T) {
 		_, stderr, err := e2e.Zarf("prepare", "lint", path)
 		require.Error(t, err, "Expect error here because the yaml file is not following schema")
 		require.Contains(t, stderr, "- components.0.import: Additional property not-path is not allowed")
-		require.Contains(t, stderr, "component.2.import.path will not resolve ZARF_PKG_TMPL_* variables")
+		require.Contains(t, stderr, "component.[2].import.path will not resolve ZARF_PKG_TMPL_* variables")
 	})
 
 	t.Run("zarf test lint success", func(t *testing.T) {
