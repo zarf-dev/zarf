@@ -144,6 +144,7 @@ var packageInspectCmd = &cobra.Command{
 			message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
 		}
 	},
+	ValidArgsFunction: getPackageCompletionArgs,
 }
 
 var packageListCmd = &cobra.Command{
@@ -203,23 +204,7 @@ var packageRemoveCmd = &cobra.Command{
 			message.Fatalf(err, lang.CmdPackageRemoveErr, err.Error())
 		}
 	},
-	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		var removeCandidates []string
-
-		c, err := cluster.NewCluster()
-		if err != nil {
-			return removeCandidates, cobra.ShellCompDirectiveDefault
-		}
-
-		// Get all the deployed packages
-		deployedZarfPackages, _ := c.GetDeployedZarfPackages()
-		// Populate list of package names
-		for _, pkg := range deployedZarfPackages {
-			removeCandidates = append(removeCandidates, pkg.Name)
-		}
-
-		return removeCandidates, cobra.ShellCompDirectiveDefault
-	},
+	ValidArgsFunction: getPackageCompletionArgs,
 }
 
 var packagePublishCmd = &cobra.Command{
@@ -315,6 +300,24 @@ func identifyAndFallbackToClusterSource() (src sources.PackageSource) {
 		}
 	}
 	return src
+}
+
+func getPackageCompletionArgs(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	var pkgCandidates []string
+
+	c, err := cluster.NewCluster()
+	if err != nil {
+		return pkgCandidates, cobra.ShellCompDirectiveDefault
+	}
+
+	// Get all the deployed packages
+	deployedZarfPackages, _ := c.GetDeployedZarfPackages()
+	// Populate list of package names
+	for _, pkg := range deployedZarfPackages {
+		pkgCandidates = append(pkgCandidates, pkg.Name)
+	}
+
+	return pkgCandidates, cobra.ShellCompDirectiveDefault
 }
 
 func init() {
