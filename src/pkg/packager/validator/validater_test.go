@@ -69,16 +69,16 @@ func TestValidateSchema(t *testing.T) {
 
 	t.Run("validate schema success", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[interface{}](t, goodZarfPackage)
-		validator := Validator{jsonSchema: getZarfSchema(t)}
-		validator, err := validateSchema(validator, unmarshalledYaml)
+		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
+		validator, err := validateSchema(validator)
 		require.NoError(t, err)
 		require.Empty(t, validator.errors)
 	})
 
 	t.Run("validate schema fail", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[interface{}](t, badZarfPackage)
-		validator := Validator{jsonSchema: getZarfSchema(t)}
-		validator, err := validateSchema(validator, unmarshalledYaml)
+		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
+		validator, err := validateSchema(validator)
 		require.NoError(t, err)
 		require.Equal(t, validator.errors[0], "components.0.import: Additional property not-path is not allowed")
 		require.Equal(t, validator.errors[1], "components.1.import.path: Invalid type. Expected: string, given: integer")
@@ -86,13 +86,13 @@ func TestValidateSchema(t *testing.T) {
 
 	t.Run("Template in component import success", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, goodZarfPackage)
-		validator := checkForVarInComponentImport(Validator{}, unmarshalledYaml)
-		require.Empty(t, validator)
+		validator := checkForVarInComponentImport(Validator{typedZarfPackage: unmarshalledYaml})
+		require.Empty(t, validator.warnings)
 	})
 
 	t.Run("Template in component import failure", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, badZarfPackage)
-		validator := checkForVarInComponentImport(Validator{}, unmarshalledYaml)
+		validator := checkForVarInComponentImport(Validator{typedZarfPackage: unmarshalledYaml})
 		require.Equal(t, validator.warnings[0], "component.2.import.path will not resolve ZARF_PKG_TMPL_* variables")
 		require.Equal(t, validator.warnings[1], "component.3.import.url will not resolve ZARF_PKG_TMPL_* variables")
 	})
@@ -102,7 +102,7 @@ func TestValidateSchema(t *testing.T) {
 		error2 := "components.1.import.path: Invalid type. Expected: string, given: integer"
 		validator := Validator{errors: []string{error1, error2}}
 		errorMessage := fmt.Sprintf("%s\n - %s\n - %s", validatorInvalidPrefix, error1, error2)
-		require.EqualError(t, validator.GetFormmatedError(), errorMessage)
+		require.EqualError(t, validator.GetFormatedError(), errorMessage)
 	})
 
 	t.Run("Validator Warning formatting", func(t *testing.T) {
@@ -110,6 +110,6 @@ func TestValidateSchema(t *testing.T) {
 		warning2 := "components.1.import.path: Invalid type. Expected: string, given: integer"
 		validator := Validator{warnings: []string{warning1, warning2}}
 		message := fmt.Sprintf("%s %s, %s", validatorWarningPrefix, warning1, warning2)
-		require.Equal(t, validator.GetFormmatedWarning(), message)
+		require.Equal(t, validator.GetFormatedWarning(), message)
 	})
 }

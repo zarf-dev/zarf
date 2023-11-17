@@ -23,13 +23,15 @@ const (
 )
 
 type Validator struct {
-	warnings   []string
-	errors     []string
-	jsonSchema []byte
+	warnings           []string
+	errors             []string
+	jsonSchema         []byte
+	typedZarfPackage   types.ZarfPackage
+	untypedZarfPackage interface{}
 }
 
-func (v Validator) GetFormmatedError() error {
-	if len(v.errors) == 0 {
+func (v Validator) GetFormatedError() error {
+	if !v.HasErrors() {
 		return nil
 	}
 	errorMessage := validatorInvalidPrefix
@@ -39,54 +41,56 @@ func (v Validator) GetFormmatedError() error {
 	return errors.New(errorMessage)
 }
 
-func (v Validator) GetFormmatedWarning() string {
-	if len(v.warnings) == 0 {
+func (v Validator) GetFormatedWarning() string {
+	if !v.HasWarnings() {
 		return ""
 	}
 	return fmt.Sprintf("%s %s", validatorWarningPrefix, strings.Join(v.warnings, ", "))
 }
 
-func (v Validator) GetFormmatedSuccess() string {
-	return fmt.Sprintf("Schema validation successful for %q", "init")
+func (v Validator) GetFormatedSuccess() string {
+	return fmt.Sprintf("Schema validation successful for %q", v.typedZarfPackage.Metadata.Name)
 }
 
 func (v Validator) HasWarnings() bool {
-	return !(len(v.warnings) == 0)
+	return len(v.warnings) > 0
 }
 
 func (v Validator) HasErrors() bool {
-	return !(len(v.errors) == 0)
+	return len(v.errors) > 0
+}
+
+func (v Validator) IsSuccess() bool {
+	return !v.HasWarnings() && !v.HasErrors()
 }
 
 // ValidateZarfSchema validates a zarf file against the zarf schema, returns a validator with warnings or errors if they exist
 func ValidateZarfSchema(path string) (Validator, error) {
 	validator := Validator{}
 	var err error
-	var zarfTypedData types.ZarfPackage
-	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &zarfTypedData); err != nil {
+	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &validator.typedZarfPackage); err != nil {
 		return validator, err
 	}
 
-	validator = checkForVarInComponentImport(validator, zarfTypedData)
+	validator = checkForVarInComponentImport(validator)
 
 	if validator.jsonSchema, err = config.GetSchemaFile(); err != nil {
 		return validator, err
 	}
 
-	var zarfData interface{}
-	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &zarfData); err != nil {
+	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &validator.untypedZarfPackage); err != nil {
 		return validator, err
 	}
 
-	if validator, err = validateSchema(validator, zarfData); err != nil {
+	if validator, err = validateSchema(validator); err != nil {
 		return validator, err
 	}
 
 	return validator, nil
 }
 
-func checkForVarInComponentImport(validator Validator, zarfPackage types.ZarfPackage) Validator {
-	for i, component := range zarfPackage.Components {
+func checkForVarInComponentImport(validator Validator) Validator {
+	for i, component := range validator.typedZarfPackage.Components {
 		if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
 			validator.warnings = append(validator.warnings, fmt.Sprintf("component.%d.import.path will not resolve ZARF_PKG_TMPL_* variables", i))
 		}
@@ -98,9 +102,9 @@ func checkForVarInComponentImport(validator Validator, zarfPackage types.ZarfPac
 	return validator
 }
 
-func validateSchema(validator Validator, unmarshalledYaml interface{}) (Validator, error) {
+func validateSchema(validator Validator) (Validator, error) {
 	schemaLoader := gojsonschema.NewBytesLoader(validator.jsonSchema)
-	documentLoader := gojsonschema.NewGoLoader(unmarshalledYaml)
+	documentLoader := gojsonschema.NewGoLoader(validator.untypedZarfPackage)
 
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
