@@ -148,7 +148,7 @@ var packageInspectCmd = &cobra.Command{
 
 var packageListCmd = &cobra.Command{
 	Use:     "list",
-	Aliases: []string{"l"},
+	Aliases: []string{"l", "ls"},
 	Short:   lang.CmdPackageListShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get all the deployed packages
@@ -188,7 +188,7 @@ var packageListCmd = &cobra.Command{
 
 var packageRemoveCmd = &cobra.Command{
 	Use:     "remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm",
-	Aliases: []string{"u"},
+	Aliases: []string{"u", "rm"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -202,6 +202,21 @@ var packageRemoveCmd = &cobra.Command{
 		if err := pkgClient.Remove(); err != nil {
 			message.Fatalf(err, lang.CmdPackageRemoveErr, err.Error())
 		}
+	},
+	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		var removeCandidates []string
+		// Get all the deployed packages
+		deployedZarfPackages, errs := cluster.NewClusterOrDie().GetDeployedZarfPackages()
+		if len(errs) > 0 && len(deployedZarfPackages) == 0 {
+			// Don't return an error with a completion, just return an empty list
+			return removeCandidates, cobra.ShellCompDirectiveDefault
+		}
+		// Populate list of package names
+		for _, pkg := range deployedZarfPackages {
+			removeCandidates = append(removeCandidates, pkg.Name)
+		}
+
+		return removeCandidates, cobra.ShellCompDirectiveDefault
 	},
 }
 
