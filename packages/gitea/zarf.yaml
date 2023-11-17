@@ -3,9 +3,10 @@ metadata:
   name: init-package-git-server
 
 variables:
+  #CHANGE BACK TO EXISTING CLAIM
   - name: GIT_SERVER_PVC_NAME
     description: "Use this for an existing PVC for the git server, otherwise a new PVC will be made with the default name. If this is set, the GIT_SERVER_PVC_SIZE variable will be ignored."
-    default: "gitea-data"
+    default: "data-zarf-gitea-0"
 
   - name: GIT_SERVER_PVC_SIZE
     description: The size of the persistent volume claim for the git server
@@ -67,6 +68,10 @@ components:
           - gitea-values.yaml
     actions:
       onDeploy:
+        before: 
+          - cmd: zarf tools kubectl label pvc -n zarf data-zarf-gitea-0 app.kubernetes.io/managed-by=Helm || true
+          - cmd: zarf tools kubectl annotate pvc -n zarf data-zarf-gitea-0 meta.helm.sh/release-name=zarf-gitea || true
+          - cmd: zarf tools kubectl annotate pvc -n zarf data-zarf-gitea-0 meta.helm.sh/release-namespace=zarf || true
         after:
           - cmd: ./zarf internal create-read-only-gitea-user --no-progress
             maxRetries: 3
