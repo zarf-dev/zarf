@@ -222,10 +222,20 @@ var lintCmd = &cobra.Command{
 				message.Fatalf(err, lang.CmdPrepareFindImagesErr, err.Error())
 			}
 		}
-		err := validator.ValidateZarfSchema(baseDir)
+		validator, err := validator.ValidateZarfSchema(baseDir)
 		if err != nil {
 			message.Fatal(err, err.Error())
 		}
+		if validator.HasWarnings() {
+			message.Warn(validator.GetFormmatedWarning())
+		}
+		if validator.HasErrors() {
+			message.Fatal(validator.GetFormmatedError(), validator.GetFormmatedError().Error())
+		}
+		if !validator.HasWarnings() && !validator.HasErrors() {
+			message.Success(validator.GetFormmatedSuccess())
+		}
+
 	},
 }
 
