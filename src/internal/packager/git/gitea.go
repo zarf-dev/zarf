@@ -120,6 +120,41 @@ func (g *Git) CreateReadOnlyUser() error {
 	return err
 }
 
+func (g *Git) UpdatePushUserAuth() error {
+	message.Debugf("git.UpdatePushUserAuth()")
+
+	c, err := cluster.NewCluster()
+	if err != nil {
+		return err
+	}
+
+	// Establish a git tunnel to send the repo
+	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	if err != nil {
+		return err
+	}
+	_, err = tunnel.Connect()
+	if err != nil {
+		return err
+	}
+	defer tunnel.Close()
+
+	tunnelURL := tunnel.HTTPEndpoint()
+
+	
+	// Make sure the user can't create their own repos or orgs
+	updateUserBody := map[string]interface{}{
+		"login_name":       g.Server.PushUsername,
+		"password":         g.Server.PushPassword,
+	}
+	updateUserData, _ := json.Marshal(updateUserBody)
+	updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, g.Server.PushUsername)
+	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
+	out, err := g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+	message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
+	return err
+}
+
 // CreatePackageRegistryToken uses the Gitea API to create a package registry token.
 func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	message.Debugf("git.CreatePackageRegistryToken()")

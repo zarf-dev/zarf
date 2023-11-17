@@ -50,27 +50,26 @@ func (h *Helm) UpdateZarfRegistryValues() error {
 
 // UpdateZarfGiteaValues updates the Zarf git server deployment with the new state values
 func (h *Helm) UpdateZarfGiteaValues() error {
-	giteaValues := map[string]interface{}{
-		"gitea": map[string]interface{}{
-			"admin": map[string]interface{}{
-				"username": h.Cfg.State.GitServer.PushUsername,
-				"password": h.Cfg.State.GitServer.PushPassword,
-			},
-		},
-	}
+	// giteaValues := map[string]interface{}{
+	// 	"gitea": map[string]interface{}{
+	// 		"admin": map[string]interface{}{
+	// 			"username": h.Cfg.State.GitServer.PushUsername,
+	// 			"password": h.Cfg.State.GitServer.PushPassword,
+	// 		},
+	// 	},
+	// }
 
-	h.Chart = types.ZarfChart{
-		Namespace: "zarf",
-	}
-	h.ReleaseName = "zarf-gitea"
-
-	err := h.UpdateReleaseValues(giteaValues)
-	if err != nil {
-		return fmt.Errorf("error updating the release values: %w", err)
-	}
+	// err := h.UpdateReleaseValues(giteaValues)
+	// if err != nil {
+	// 	return fmt.Errorf("error updating the release values: %w", err)
+	// }
 
 	g := git.New(h.Cfg.State.GitServer)
-	err = g.CreateReadOnlyUser()
+	// err := g.CreateReadOnlyUser()
+	
+	// _, err = g.CreatePackageRegistryToken()
+
+	err := g.UpdatePushUserAuth()
 	if err != nil {
 		return fmt.Errorf("unable to create the new Gitea read only user: %w", err)
 	}
