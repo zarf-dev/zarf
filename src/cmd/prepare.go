@@ -17,7 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/validator"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -222,7 +222,7 @@ var lintCmd = &cobra.Command{
 				message.Fatalf(err, lang.CmdPrepareFindImagesErr, err.Error())
 			}
 		}
-		validator, err := validator.ValidateZarfSchema(baseDir)
+		validator, err := lint.ValidateZarfSchema(baseDir)
 		if err != nil {
 			message.Fatal(err, err.Error())
 		}

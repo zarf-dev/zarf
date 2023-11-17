@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package validator contains functions for verifying zarf yaml files are valid
-package validator
+// Package lint contains functions for verifying zarf yaml files are valid
+package lint
 
 import (
 	"errors"

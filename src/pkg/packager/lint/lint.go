@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 // Package validator contains functions for verifying zarf yaml files are valid
-package validator
+package lint
 
 import (
 	"errors"
