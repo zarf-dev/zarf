@@ -58,7 +58,7 @@ func (v Validator) HasErrors() bool {
 	return !(len(v.errors) == 0)
 }
 
-// ValidateZarfSchema a zarf file against the zarf schema, returns an error if the file is invalid
+// ValidateZarfSchema validates a zarf file against the zarf schema, returns a validator with warnings or errors if they exist
 func ValidateZarfSchema(path string) (Validator, error) {
 	validator := Validator{}
 	var err error
@@ -69,14 +69,16 @@ func ValidateZarfSchema(path string) (Validator, error) {
 
 	validator = checkForVarInComponentImport(validator, zarfTypedData)
 
-	zarfSchema, _ := config.GetSchemaFile()
+	if validator.jsonSchema, err = config.GetSchemaFile(); err != nil {
+		return validator, err
+	}
 
 	var zarfData interface{}
 	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &zarfData); err != nil {
 		return validator, err
 	}
 
-	if validator, err = validateSchema(validator, zarfData, zarfSchema); err != nil {
+	if validator, err = validateSchema(validator, zarfData); err != nil {
 		return validator, err
 	}
 
@@ -96,8 +98,8 @@ func checkForVarInComponentImport(validator Validator, zarfPackage types.ZarfPac
 	return validator
 }
 
-func validateSchema(validator Validator, unmarshalledYaml interface{}, jsonSchema []byte) (Validator, error) {
-	schemaLoader := gojsonschema.NewBytesLoader(jsonSchema)
+func validateSchema(validator Validator, unmarshalledYaml interface{}) (Validator, error) {
+	schemaLoader := gojsonschema.NewBytesLoader(validator.jsonSchema)
 	documentLoader := gojsonschema.NewGoLoader(unmarshalledYaml)
 
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)

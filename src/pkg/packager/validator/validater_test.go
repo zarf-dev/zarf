@@ -69,18 +69,16 @@ func TestValidateSchema(t *testing.T) {
 
 	t.Run("validate schema success", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[interface{}](t, goodZarfPackage)
-		zarfSchema := getZarfSchema(t)
-		validator := Validator{}
-		validator, err := validateSchema(validator, unmarshalledYaml, zarfSchema)
+		validator := Validator{jsonSchema: getZarfSchema(t)}
+		validator, err := validateSchema(validator, unmarshalledYaml)
 		require.NoError(t, err)
 		require.Empty(t, validator.errors)
 	})
 
 	t.Run("validate schema fail", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[interface{}](t, badZarfPackage)
-		zarfSchema := getZarfSchema(t)
-		validator := Validator{}
-		validator, err := validateSchema(validator, unmarshalledYaml, zarfSchema)
+		validator := Validator{jsonSchema: getZarfSchema(t)}
+		validator, err := validateSchema(validator, unmarshalledYaml)
 		require.NoError(t, err)
 		require.Equal(t, validator.errors[0], "components.0.import: Additional property not-path is not allowed")
 		require.Equal(t, validator.errors[1], "components.1.import.path: Invalid type. Expected: string, given: integer")
