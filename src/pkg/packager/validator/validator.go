@@ -26,7 +26,7 @@ const (
 // Validator holds the warnings/errors and messaging that we get from validation
 type Validator struct {
 	warnings           []string
-	errors             []string
+	errors             []error
 	jsonSchema         []byte
 	typedZarfPackage   types.ZarfPackage
 	untypedZarfPackage interface{}
@@ -38,7 +38,7 @@ func (v Validator) getFormatedError() error {
 	}
 	errorMessage := validatorInvalidPrefix
 	for _, errorStr := range v.errors {
-		errorMessage = fmt.Sprintf("%s\n - %s", errorMessage, errorStr)
+		errorMessage = fmt.Sprintf("%s\n - %s", errorMessage, errorStr.Error())
 	}
 	return errors.New(errorMessage)
 }
@@ -66,6 +66,8 @@ func (v Validator) isSuccess() bool {
 	return !v.hasWarnings() && !v.hasErrors()
 }
 
+// DisplayFormattedMessage Displays the message to the user with proper warnings, failures, or success
+// Will exit if there are errors
 func (v Validator) DisplayFormattedMessage() {
 	if v.hasWarnings() {
 		message.Warn(v.getFormatedWarning())
@@ -126,7 +128,7 @@ func validateSchema(validator *Validator) error {
 
 	if !result.Valid() {
 		for _, desc := range result.Errors() {
-			validator.errors = append(validator.errors, desc.String())
+			validator.errors = append(validator.errors, errors.New(desc.String()))
 		}
 	}
 

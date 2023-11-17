@@ -5,6 +5,7 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -80,8 +81,8 @@ func TestValidateSchema(t *testing.T) {
 		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
 		err := validateSchema(&validator)
 		require.NoError(t, err)
-		require.Equal(t, validator.errors[0], "components.0.import: Additional property not-path is not allowed")
-		require.Equal(t, validator.errors[1], "components.1.import.path: Invalid type. Expected: string, given: integer")
+		require.EqualError(t, validator.errors[0], "components.0.import: Additional property not-path is not allowed")
+		require.EqualError(t, validator.errors[1], "components.1.import.path: Invalid type. Expected: string, given: integer")
 	})
 
 	t.Run("Template in component import success", func(t *testing.T) {
@@ -100,10 +101,10 @@ func TestValidateSchema(t *testing.T) {
 	})
 
 	t.Run("Validator Error formatting", func(t *testing.T) {
-		error1 := "components.0.import: Additional property not-path is not allowed"
-		error2 := "components.1.import.path: Invalid type. Expected: string, given: integer"
-		validator := Validator{errors: []string{error1, error2}}
-		errorMessage := fmt.Sprintf("%s\n - %s\n - %s", validatorInvalidPrefix, error1, error2)
+		error1 := errors.New("components.0.import: Additional property not-path is not allowed")
+		error2 := errors.New("components.1.import.path: Invalid type. Expected: string, given: integer")
+		validator := Validator{errors: []error{error1, error2}}
+		errorMessage := fmt.Sprintf("%s\n - %s\n - %s", validatorInvalidPrefix, error1.Error(), error2.Error())
 		require.EqualError(t, validator.getFormatedError(), errorMessage)
 	})
 
