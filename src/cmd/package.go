@@ -108,6 +108,7 @@ var packageMirrorCmd = &cobra.Command{
 	Aliases: []string{"mr"},
 	Short:   lang.CmdPackageMirrorShort,
 	Long:    lang.CmdPackageMirrorLong,
+	Example: lang.CmdPackageMirrorExample,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
