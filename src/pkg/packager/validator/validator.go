@@ -23,7 +23,7 @@ const (
 	validatorWarningPrefix = "zarf schema warning:"
 )
 
-// Validator is used by other packages to check their zarf packages for errors/warnings
+// Validator holds the warnings/errors and messaging that we get from validation
 type Validator struct {
 	warnings           []string
 	errors             []string
