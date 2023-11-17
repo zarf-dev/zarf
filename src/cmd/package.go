@@ -205,8 +205,14 @@ var packageRemoveCmd = &cobra.Command{
 	},
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		var removeCandidates []string
+
+		c, err := cluster.NewCluster()
+		if err != nil {
+			return removeCandidates, cobra.ShellCompDirectiveDefault
+		}
+
 		// Get all the deployed packages
-		deployedZarfPackages, _ := cluster.NewClusterOrDie().GetDeployedZarfPackages()
+		deployedZarfPackages, _ := c.GetDeployedZarfPackages()
 		// Populate list of package names
 		for _, pkg := range deployedZarfPackages {
 			removeCandidates = append(removeCandidates, pkg.Name)
