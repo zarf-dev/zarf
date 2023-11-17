@@ -11,10 +11,10 @@ zarf tools registry delete IMAGE [flags]
 
 ```
 
-# delete an image digest from an internal repo in Zarf
+# Delete an image digest from an internal repo in Zarf
 $ zarf tools registry delete 127.0.0.1:31999/stefanprodan/podinfo@sha256:57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8
 
-# delete an image digest from a repo hosted at reg.example.com
+# Delete an image digest from a repo hosted at reg.example.com
 $ zarf tools registry delete reg.example.com/stefanprodan/podinfo@sha256:57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8
 
 ```

@@ -11,10 +11,10 @@ zarf tools registry digest IMAGE [flags]
 
 ```
 
-# return an image digest for an internal repo in Zarf
+# Return an image digest for an internal repo in Zarf
 $ zarf tools registry digest 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
 
-# return an image digest from a repo hosted at reg.example.com
+# Return an image digest from a repo hosted at reg.example.com
 $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 
 ```

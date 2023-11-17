@@ -22,28 +22,28 @@ zarf init [flags]
 
 ```
 
-	# Initializing without any optional components:
-	zarf init
+# Initializing without any optional components:
+$ zarf init
 
-	# Initializing w/ Zarfs internal git server:
-	zarf init --components=git-server
+# Initializing w/ Zarfs internal git server:
+$ zarf init --components=git-server
 
-	# Initializing w/ Zarfs internal git server and PLG stack:
-	zarf init --components=git-server,logging
+# Initializing w/ Zarfs internal git server and PLG stack:
+$ zarf init --components=git-server,logging
 
-	# Initializing w/ an internal registry but with a different nodeport:
-	zarf init --set REGISTRY_NODEPORT=30333
+# Initializing w/ an internal registry but with a different nodeport:
+$ zarf init --set REGISTRY_NODEPORT=30333
 
-	# Initializing w/ an external registry:
-	zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
+# Initializing w/ an external registry:
+$ zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
 
-	# Initializing w/ an external git server:
-	zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
+# Initializing w/ an external git server:
+$ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 
-	# Initializing w/ an external artifact server:
-	zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
+# Initializing w/ an external artifact server:
+$ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
 
-	# NOTE: Not specifying a pull username/password will use the push user for pulling as well.
+# NOTE: Not specifying a pull username/password will use the push user for pulling as well.
 
 ```
 

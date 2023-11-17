@@ -154,9 +154,11 @@ func LaunchURL(url string) error {
 }
 
 // GetOSShell returns the shell and shellArgs based on the current OS
-func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
+func GetOSShell(shellPref types.ZarfComponentActionShell) (string, []string) {
 	var shell string
-	var shellArgs string
+	var shellArgs []string
+	powershellShellArgs := []string{"-Command", "$ErrorActionPreference = 'Stop';"}
+	shShellArgs := []string{"-e", "-c"}
 
 	switch runtime.GOOS {
 	case "windows":
@@ -165,13 +167,13 @@ func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 			shell = shellPref.Windows
 		}
 
-		shellArgs = "-Command"
+		shellArgs = powershellShellArgs
 		if shell == "cmd" {
 			// Change shellArgs to /c if cmd is chosen
-			shellArgs = "/c"
+			shellArgs = []string{"/c"}
 		} else if !IsPowershell(shell) {
 			// Change shellArgs to -c if a real shell is chosen
-			shellArgs = "-c"
+			shellArgs = shShellArgs
 		}
 	case "darwin":
 		shell = "sh"
@@ -179,10 +181,10 @@ func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 			shell = shellPref.Darwin
 		}
 
-		shellArgs = "-c"
+		shellArgs = shShellArgs
 		if IsPowershell(shell) {
 			// Change shellArgs to -Command if pwsh is chosen
-			shellArgs = "-Command"
+			shellArgs = powershellShellArgs
 		}
 	case "linux":
 		shell = "sh"
@@ -190,14 +192,14 @@ func GetOSShell(shellPref types.ZarfComponentActionShell) (string, string) {
 			shell = shellPref.Linux
 		}
 
-		shellArgs = "-c"
+		shellArgs = shShellArgs
 		if IsPowershell(shell) {
 			// Change shellArgs to -Command if pwsh is chosen
-			shellArgs = "-Command"
+			shellArgs = powershellShellArgs
 		}
 	default:
 		shell = "sh"
-		shellArgs = "-c"
+		shellArgs = shShellArgs
 	}
 
 	return shell, shellArgs

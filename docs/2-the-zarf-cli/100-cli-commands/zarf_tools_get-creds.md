@@ -15,16 +15,16 @@ zarf tools get-creds [flags]
 
 ```
 
-	# Print all Zarf credentials:
-	zarf tools get-creds
+# Print all Zarf credentials:
+$ zarf tools get-creds
 
-	# Get specific Zarf credentials:
-	zarf tools get-creds registry
-	zarf tools get-creds registry-readonly
-	zarf tools get-creds git
-	zarf tools get-creds git-readonly
-	zarf tools get-creds artifact
-	zarf tools get-creds logging
+# Get specific Zarf credentials:
+$ zarf tools get-creds registry
+$ zarf tools get-creds registry-readonly
+$ zarf tools get-creds git
+$ zarf tools get-creds git-readonly
+$ zarf tools get-creds artifact
+$ zarf tools get-creds logging
 
 ```
 
