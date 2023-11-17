@@ -5,12 +5,12 @@
 package lint
 
 import (
+	"embed"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -22,6 +22,14 @@ const (
 	validatorInvalidPrefix = "schema is invalid:"
 	validatorWarningPrefix = "zarf schema warning:"
 )
+
+var (
+	ZarfSchema embed.FS
+)
+
+func getSchemaFile() ([]byte, error) {
+	return ZarfSchema.ReadFile("zarf.schema.json")
+}
 
 // Validator holds the warnings/errors and messaging that we get from validation
 type Validator struct {
@@ -90,7 +98,7 @@ func ValidateZarfSchema(path string) (Validator, error) {
 
 	checkForVarInComponentImport(&validator)
 
-	if validator.jsonSchema, err = config.GetSchemaFile(); err != nil {
+	if validator.jsonSchema, err = getSchemaFile(); err != nil {
 		return validator, err
 	}
 

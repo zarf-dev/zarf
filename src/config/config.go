@@ -102,11 +102,6 @@ var (
 	ZarfDefaultCachePath = filepath.Join("~", ".zarf-cache")
 )
 
-// GetSchemaFile returns the zarf schema file
-func GetSchemaFile() ([]byte, error) {
-	return ZarfSchema.ReadFile("zarf.schema.json")
-}
-
 // GetArch returns the arch based on a priority list with options for overriding.
 func GetArch(archs ...string) string {
 	// List of architecture overrides.
