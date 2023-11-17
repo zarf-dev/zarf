@@ -12,6 +12,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/xeipuuv/gojsonschema"
@@ -22,6 +23,7 @@ const (
 	validatorWarningPrefix = "zarf schema warning:"
 )
 
+// Validator is used by other packages to check their zarf packages for errors/warnings
 type Validator struct {
 	warnings           []string
 	errors             []string
@@ -30,8 +32,8 @@ type Validator struct {
 	untypedZarfPackage interface{}
 }
 
-func (v Validator) GetFormatedError() error {
-	if !v.HasErrors() {
+func (v Validator) getFormatedError() error {
+	if !v.hasErrors() {
 		return nil
 	}
 	errorMessage := validatorInvalidPrefix
@@ -41,27 +43,39 @@ func (v Validator) GetFormatedError() error {
 	return errors.New(errorMessage)
 }
 
-func (v Validator) GetFormatedWarning() string {
-	if !v.HasWarnings() {
+func (v Validator) getFormatedWarning() string {
+	if !v.hasWarnings() {
 		return ""
 	}
 	return fmt.Sprintf("%s %s", validatorWarningPrefix, strings.Join(v.warnings, ", "))
 }
 
-func (v Validator) GetFormatedSuccess() string {
+func (v Validator) getFormatedSuccess() string {
 	return fmt.Sprintf("Schema validation successful for %q", v.typedZarfPackage.Metadata.Name)
 }
 
-func (v Validator) HasWarnings() bool {
+func (v Validator) hasWarnings() bool {
 	return len(v.warnings) > 0
 }
 
-func (v Validator) HasErrors() bool {
+func (v Validator) hasErrors() bool {
 	return len(v.errors) > 0
 }
 
-func (v Validator) IsSuccess() bool {
-	return !v.HasWarnings() && !v.HasErrors()
+func (v Validator) isSuccess() bool {
+	return !v.hasWarnings() && !v.hasErrors()
+}
+
+func (v Validator) DisplayFormattedMessage() {
+	if v.hasWarnings() {
+		message.Warn(v.getFormatedWarning())
+	}
+	if v.hasErrors() {
+		message.Fatal(v.getFormatedError(), v.getFormatedError().Error())
+	}
+	if v.isSuccess() {
+		message.Success(v.getFormatedSuccess())
+	}
 }
 
 // ValidateZarfSchema validates a zarf file against the zarf schema, returns a validator with warnings or errors if they exist
@@ -72,7 +86,7 @@ func ValidateZarfSchema(path string) (Validator, error) {
 		return validator, err
 	}
 
-	validator = checkForVarInComponentImport(validator)
+	checkForVarInComponentImport(&validator)
 
 	if validator.jsonSchema, err = config.GetSchemaFile(); err != nil {
 		return validator, err
@@ -82,14 +96,14 @@ func ValidateZarfSchema(path string) (Validator, error) {
 		return validator, err
 	}
 
-	if validator, err = validateSchema(validator); err != nil {
+	if err = validateSchema(&validator); err != nil {
 		return validator, err
 	}
 
 	return validator, nil
 }
 
-func checkForVarInComponentImport(validator Validator) Validator {
+func checkForVarInComponentImport(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
 		if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
 			validator.warnings = append(validator.warnings, fmt.Sprintf("component.%d.import.path will not resolve ZARF_PKG_TMPL_* variables", i))
@@ -99,16 +113,15 @@ func checkForVarInComponentImport(validator Validator) Validator {
 		}
 	}
 
-	return validator
 }
 
-func validateSchema(validator Validator) (Validator, error) {
+func validateSchema(validator *Validator) error {
 	schemaLoader := gojsonschema.NewBytesLoader(validator.jsonSchema)
 	documentLoader := gojsonschema.NewGoLoader(validator.untypedZarfPackage)
 
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
-		return validator, err
+		return err
 	}
 
 	if !result.Valid() {
@@ -117,5 +130,5 @@ func validateSchema(validator Validator) (Validator, error) {
 		}
 	}
 
-	return validator, err
+	return err
 }

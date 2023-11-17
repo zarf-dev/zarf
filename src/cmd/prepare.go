@@ -206,18 +206,6 @@ var prepareGenerateConfigFile = &cobra.Command{
 	},
 }
 
-func displayFormattedMessage(validator validator.Validator) {
-	if validator.HasWarnings() {
-		message.Warn(validator.GetFormatedWarning())
-	}
-	if validator.HasErrors() {
-		message.Fatal(validator.GetFormatedError(), validator.GetFormatedError().Error())
-	}
-	if validator.IsSuccess() {
-		message.Success(validator.GetFormatedSuccess())
-	}
-}
-
 var lintCmd = &cobra.Command{
 	Use:     "lint [ DIRECTORY ]",
 	Args:    cobra.MaximumNArgs(1),
@@ -238,7 +226,7 @@ var lintCmd = &cobra.Command{
 		if err != nil {
 			message.Fatal(err, err.Error())
 		}
-		displayFormattedMessage(validator)
+		validator.DisplayFormattedMessage()
 	},
 }
 
