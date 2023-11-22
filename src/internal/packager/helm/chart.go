@@ -78,7 +78,6 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		attempt++
 
 		histClient := action.NewHistory(h.actionConfig)
-		histClient.Max = 1
 		releases, histErr := histClient.Run(h.ReleaseName)
 
 		if attempt > 3 {
