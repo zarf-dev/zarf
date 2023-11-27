@@ -3,7 +3,6 @@ metadata:
   name: init-package-git-server
 
 variables:
-  #CHANGE BACK TO EXISTING CLAIM
   - name: GIT_SERVER_EXISTING_PVC
     description: "Optional: Use an existing PVC for the git server instead of creating a new one. If this is set, the GIT_SERVER_PVC_SIZE variable will be ignored."
     default: "data-zarf-gitea-0"
