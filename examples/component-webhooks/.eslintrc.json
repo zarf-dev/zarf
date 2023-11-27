@@ -17,7 +17,8 @@
     "ignorePatterns": [
       "node_modules",
       "dist",
-      "hack"
+      "hack",
+      "capabilities/zarf-types.ts"
     ],
     "root": true
 }

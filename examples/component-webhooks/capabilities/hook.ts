@@ -1,4 +1,5 @@
-import { Capability, a, Log, k8s } from "pepr";
+import { Capability, a, Log, K8s, kind } from "pepr";
+import { DeployedPackage } from "./zarf-types";
 
 /**
  *  The Webhook Capability is an example capability to demonstrate using webhooks to interact with Zarf package deployments.
@@ -11,6 +12,8 @@ export const Webhook = new Capability({
   namespaces: ["zarf"],
 });
 
+const webhookName = "test-webhook";
+
 const { When } = Webhook;
 
 When(a.Secret)
@@ -19,7 +22,7 @@ When(a.Secret)
   .WithLabel("package-deploy-info")
   .Mutate(request => {
     const secret = request.Raw;
-    let secretData;
+    let secretData: DeployedPackage;
     let secretString: string;
     let manuallyDecoded = false;
 
@@ -46,7 +49,7 @@ When(a.Secret)
 
         const componentWebhook =
           secretData.componentWebhooks?.[deployedComponent?.name]?.[
-            "test-webhook"
+            webhookName
           ];
 
         // Check if the component has a webhook running for the current package generation
@@ -63,9 +66,9 @@ When(a.Secret)
           // Update the secret noting that the webhook is running for this component
           secretData.componentWebhooks[deployedComponent.name] = {
             "test-webhook": {
-              "name": "test-webhook",
-              "status": "Running",
-              "observedGeneration": secretData.generation,
+              name: webhookName,
+              status: "Running",
+              observedGeneration: secretData.generation,
             },
           };
 
@@ -86,46 +89,58 @@ When(a.Secret)
 async function sleepAndChangeStatus(secretName: string, componentName: string) {
   await sleep(10);
 
-  // Configure the k8s api client
-  const kc = new k8s.KubeConfig();
-  kc.loadFromDefault();
-  const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
+  const ns = "zarf";
 
+  let secret: a.Secret;
+
+  // Fetch the package secret
   try {
-    const response = await k8sCoreApi.readNamespacedSecret(secretName, "zarf");
-    const v1Secret = response.body;
+    secret = await K8s(kind.Secret).InNamespace(ns).Get(secretName);
+  } catch (err) {
+    Log.error(
+      `Error: Failed to get package secret '${secretName}' in namespace '${ns}': ${JSON.stringify(
+        err,
+      )}`,
+    );
+  }
 
-    const secretString = atob(v1Secret.data.data);
-    const secretData = JSON.parse(secretString);
+  const secretString = atob(secret.data.data);
+  const secretData: DeployedPackage = JSON.parse(secretString);
 
-    // Update the webhook status if the observedGeneration matches
-    const componentWebhook =
-      secretData.componentWebhooks[componentName]?.["test-webhook"];
+  // Update the webhook status if the observedGeneration matches
+  const componentWebhook =
+    secretData.componentWebhooks[componentName]?.[webhookName];
 
-    if (componentWebhook?.observedGeneration === secretData.generation) {
-      componentWebhook.status = "Succeeded";
+  if (componentWebhook?.observedGeneration === secretData.generation) {
+    componentWebhook.status = "Succeeded";
 
-      secretData.componentWebhooks[componentName]["test-webhook"] =
-        componentWebhook;
-    }
+    secretData.componentWebhooks[componentName][webhookName] = componentWebhook;
+  }
 
-    v1Secret.data.data = btoa(JSON.stringify(secretData));
+  secret.data.data = btoa(JSON.stringify(secretData));
 
-    // Patch the secret back to the cluster
-    await k8sCoreApi.patchNamespacedSecret(
-      secretName,
-      "zarf",
-      v1Secret,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      { headers: { "Content-Type": "application/strategic-merge-patch+json" } },
+  // Update the status in the package secret
+  // Use Server-Side force apply to forcefully take ownership of the package secret data.data field
+  // Doing a Server-Side apply without the force option will result in a FieldManagerConflict error due to Zarf owning the object.
+  try {
+    await K8s(kind.Secret).Apply(
+      {
+        metadata: {
+          name: secretName,
+          namespace: ns,
+        },
+        data: {
+          data: secret.data.data,
+        },
+      },
+      { force: true },
     );
   } catch (err) {
-    Log.error(`Unable to update the package secret: ${JSON.stringify(err)}`);
-    return err;
+    Log.error(
+      `Error: Failed to update package secret '${secretName}' in namespace '${ns}': ${JSON.stringify(
+        err,
+      )}`,
+    );
   }
 }
 
