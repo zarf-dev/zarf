@@ -47,7 +47,7 @@ func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInj
 	// Get the OS shell to execute commands in
 	shell, shellArgs := exec.GetOSShell(types.ZarfComponentActionShell{Windows: "cmd"})
 
-	if _, _, err := exec.Cmd(shell, shellArgs, "tar --version"); err != nil {
+	if _, _, err := exec.Cmd(shell, append(shellArgs, "tar --version")...); err != nil {
 		message.WarnErr(err, "Unable to execute tar on this system.  Please ensure it is installed and on your $PATH.")
 		return
 	}
@@ -96,7 +96,7 @@ iterator:
 
 			// Must create the target directory before trying to change to it for untar
 			mkdirCmd := fmt.Sprintf("%s -- mkdir -p %s", kubectlCmd, data.Target.Path)
-			if err := exec.CmdWithPrint(shell, shellArgs, mkdirCmd); err != nil {
+			if err := exec.CmdWithPrint(shell, append(shellArgs, mkdirCmd)...); err != nil {
 				message.Warnf("Unable to create the data injection target directory %s in pod %s", data.Target.Path, pod.Name)
 				continue iterator
 			}
@@ -109,7 +109,7 @@ iterator:
 			)
 
 			// Do the actual data injection
-			if err := exec.CmdWithPrint(shell, shellArgs, cpPodCmd); err != nil {
+			if err := exec.CmdWithPrint(shell, append(shellArgs, cpPodCmd)...); err != nil {
 				message.Warnf("Error copying data into the pod %#v: %#v\n", pod.Name, err)
 				continue iterator
 			}
@@ -123,7 +123,7 @@ iterator:
 				untarCmd,
 			)
 
-			if err := exec.CmdWithPrint(shell, shellArgs, cpPodCmd); err != nil {
+			if err := exec.CmdWithPrint(shell, append(shellArgs, cpPodCmd)...); err != nil {
 				message.Warnf("Error saving the zarf sync completion file after injection into pod %#v\n", pod.Name)
 				continue iterator
 			}
