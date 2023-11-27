@@ -340,3 +340,24 @@ func debugPrinter(offset int, a ...any) {
 func errorPrinter(offset int) *pterm.PrefixPrinter {
 	return pterm.Error.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
 }
+
+func Table(header []string, data [][]string) {
+	pterm.Println()
+
+	if len(header) > 0 {
+		header[0] = fmt.Sprintf("     %s", header[0])
+	}
+
+	table := pterm.TableData{
+		header,
+	}
+
+	for _, row := range data {
+		if len(row) > 0 {
+			row[0] = fmt.Sprintf("     %s", row[0])
+		}
+		table = append(table, pterm.TableData{row}...)
+	}
+
+	pterm.DefaultTable.WithHasHeader().WithData(table).Render()
+}

@@ -6,14 +6,20 @@ package lint
 
 import (
 	"fmt"
-	"strings"
 
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// Warning holds the location of warning and the message
+type Warning struct {
+	location string
+	message  string
+}
+
 // Validator holds the warnings/errors and messaging that we get from validation
 type Validator struct {
-	warnings           []string
+	warnings           []Warning
 	errors             []error
 	jsonSchema         []byte
 	typedZarfPackage   types.ZarfPackage
@@ -31,11 +37,22 @@ func (v Validator) Error() string {
 	return errorMessage
 }
 
-func (v Validator) getFormatedWarning() string {
-	if !v.hasWarnings() {
-		return ""
+// func (v Validator) getFormatedWarning() string {
+// 	if !v.hasWarnings() {
+// 		return ""
+// 	}
+// 	return fmt.Sprintf("%s %s", validatorWarningPrefix, strings.Join(v.warnings, ", "))
+// }
+
+func (v Validator) printWarningTable() {
+	if v.hasWarnings() {
+		connectData := [][]string{}
+		for _, warning := range v.warnings {
+			connectData = append(connectData, []string{warning.location, warning.message})
+		}
+		header := []string{"Location", "Warning"}
+		message.Table(header, connectData)
 	}
-	return fmt.Sprintf("%s %s", validatorWarningPrefix, strings.Join(v.warnings, ", "))
 }
 
 func (v Validator) getFormatedSuccess() string {
@@ -54,10 +71,24 @@ func (v Validator) isSuccess() bool {
 	return !v.hasWarnings() && !v.hasErrors()
 }
 
-func (v *Validator) addWarning(warning string) {
-	v.warnings = append(v.warnings, warning)
+func (v *Validator) addWarning(location string, message string) {
+	v.warnings = append(v.warnings, Warning{location, message})
 }
 
 func (v *Validator) addError(err error) {
 	v.errors = append(v.errors, err)
+}
+
+// DisplayFormattedMessage Displays the message to the user with proper warnings, failures, or success
+// Will exit if there are errors
+func (v Validator) DisplayFormattedMessage() {
+	if v.hasWarnings() {
+		v.printWarningTable()
+	}
+	if v.hasErrors() {
+		message.Fatal(v, v.Error())
+	}
+	if v.isSuccess() {
+		message.Success(v.getFormatedSuccess())
+	}
 }

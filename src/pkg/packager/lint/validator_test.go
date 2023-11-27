@@ -21,11 +21,11 @@ func TestValidator(t *testing.T) {
 		require.EqualError(t, validator, errorMessage)
 	})
 
-	t.Run("Validator Warning formatting", func(t *testing.T) {
-		warning1 := "components.0.import: Additional property not-path is not allowed"
-		warning2 := "components.1.import.path: Invalid type. Expected: string, given: integer"
-		validator := Validator{warnings: []string{warning1, warning2}}
-		message := fmt.Sprintf("%s %s, %s", validatorWarningPrefix, warning1, warning2)
-		require.Equal(t, validator.getFormatedWarning(), message)
-	})
+	// t.Run("Validator Warning formatting", func(t *testing.T) {
+	// 	warning1 := "components.0.import: Additional property not-path is not allowed"
+	// 	warning2 := "components.1.import.path: Invalid type. Expected: string, given: integer"
+	// 	validator := Validator{warnings: []string{warning1, warning2}}
+	// 	message := fmt.Sprintf("%s %s, %s", validatorWarningPrefix, warning1, warning2)
+	// 	require.Equal(t, validator.getFormatedWarning(), message)
+	// })
 }

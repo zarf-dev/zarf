@@ -34,37 +34,32 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 	// Set output to os.Stderr to avoid creds being printed in logs
 	pterm.SetDefaultOutput(os.Stderr)
 
-	pterm.Println()
-	loginTableHeader := pterm.TableData{
-		{"     Application", "Username", "Password", "Connect", "Get-Creds Key"},
-	}
-
-	loginTable := pterm.TableData{}
+	loginData := [][]string{}
 	if state.RegistryInfo.InternalRegistry {
-		loginTable = append(loginTable, pterm.TableData{
-			{"     Registry", state.RegistryInfo.PushUsername, state.RegistryInfo.PushPassword, "zarf connect registry", RegistryKey},
-			{"     Registry (read-only)", state.RegistryInfo.PullUsername, state.RegistryInfo.PullPassword, "zarf connect registry", RegistryReadKey},
-		}...)
+		loginData = append(loginData,
+			[]string{"Registry", state.RegistryInfo.PushUsername, state.RegistryInfo.PushPassword, "zarf connect registry", RegistryKey},
+			[]string{"Registry (read-only)", state.RegistryInfo.PullUsername, state.RegistryInfo.PullPassword, "zarf connect registry", RegistryReadKey},
+		)
 	}
 
 	for _, component := range componentsToDeploy {
 		// Show message if including logging stack
 		if component.Name == "logging" {
-			loginTable = append(loginTable, pterm.TableData{{"     Logging", config.ZarfLoggingUser, state.LoggingSecret, "zarf connect logging", LoggingKey}}...)
+			loginData = append(loginData, []string{"Logging", config.ZarfLoggingUser, state.LoggingSecret, "zarf connect logging", LoggingKey})
 		}
 		// Show message if including git-server
 		if component.Name == "git-server" {
-			loginTable = append(loginTable, pterm.TableData{
-				{"     Git", state.GitServer.PushUsername, state.GitServer.PushPassword, "zarf connect git", GitKey},
-				{"     Git (read-only)", state.GitServer.PullUsername, state.GitServer.PullPassword, "zarf connect git", GitReadKey},
-				{"     Artifact Token", state.ArtifactServer.PushUsername, state.ArtifactServer.PushToken, "zarf connect git", ArtifactKey},
-			}...)
+			loginData = append(loginData,
+				[]string{"Git", state.GitServer.PushUsername, state.GitServer.PushPassword, "zarf connect git", GitKey},
+				[]string{"Git (read-only)", state.GitServer.PullUsername, state.GitServer.PullPassword, "zarf connect git", GitReadKey},
+				[]string{"Artifact Token", state.ArtifactServer.PushUsername, state.ArtifactServer.PushToken, "zarf connect git", ArtifactKey},
+			)
 		}
 	}
 
-	if len(loginTable) > 0 {
-		loginTable = append(loginTableHeader, loginTable...)
-		_ = pterm.DefaultTable.WithHasHeader().WithData(loginTable).Render()
+	if len(loginData) > 0 {
+		header := []string{"Application", "Username", "Password", "Connect", "Get-Creds Key"}
+		Table(header, loginData)
 	}
 
 	// Restore the log file if it was specified

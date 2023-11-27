@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/xeipuuv/gojsonschema"
@@ -28,20 +27,6 @@ var ZarfSchema embed.FS
 
 func getSchemaFile() ([]byte, error) {
 	return ZarfSchema.ReadFile("zarf.schema.json")
-}
-
-// DisplayFormattedMessage Displays the message to the user with proper warnings, failures, or success
-// Will exit if there are errors
-func (v Validator) DisplayFormattedMessage() {
-	if v.hasWarnings() {
-		message.Warn(v.getFormatedWarning())
-	}
-	if v.hasErrors() {
-		message.Fatal(v, v.Error())
-	}
-	if v.isSuccess() {
-		message.Success(v.getFormatedSuccess())
-	}
 }
 
 // ValidateZarfSchema validates a zarf file against the zarf schema, returns *validator with warnings or errors if they exist
@@ -73,10 +58,10 @@ func ValidateZarfSchema(path string) (*Validator, error) {
 func checkForVarInComponentImport(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
 		if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
-			validator.addWarning(fmt.Sprintf("component.[%d].import.path will not resolve ZARF_PKG_TMPL_* variables", i))
+			validator.addWarning(fmt.Sprintf("component.[%d].import.path", i), "will not resolve ZARF_PKG_TMPL_* variables")
 		}
 		if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
-			validator.addWarning(fmt.Sprintf("component.[%d].import.url will not resolve ZARF_PKG_TMPL_* variables", i))
+			validator.addWarning(fmt.Sprintf("component.[%d].import.url", i), "will not resolve ZARF_PKG_TMPL_* variables")
 		}
 	}
 
