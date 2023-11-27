@@ -11,11 +11,11 @@ zarf tools registry pull IMAGE TARBALL [flags]
 
 ```
 
-	# pull an image from an internal repo in Zarf to a local tarball
-	$ zarf tools registry pull 127.0.0.1:31999/stefanprodan/podinfo:6.4.0 image.tar
+# Pull an image from an internal repo in Zarf to a local tarball
+$ zarf tools registry pull 127.0.0.1:31999/stefanprodan/podinfo:6.4.0 image.tar
 
-	# pull an image from a repo hosted at reg.example.com to a local tarball
-	$ zarf tools registry pull reg.example.com/stefanprodan/podinfo:6.4.0 image.tar
+# Pull an image from a repo hosted at reg.example.com to a local tarball
+$ zarf tools registry pull reg.example.com/stefanprodan/podinfo:6.4.0 image.tar
 
 ```
 

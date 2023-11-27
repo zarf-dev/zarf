@@ -92,6 +92,14 @@ var generateCLIDocs = &cobra.Command{
 							}
 						}
 					}
+
+					if toolCmd.Use == "monitor" {
+						toolCmd.Flags().VisitAll(func(flag *pflag.Flag) {
+							if flag.Value.Type() == "string" {
+								flag.DefValue = ""
+							}
+						})
+					}
 				}
 			}
 		}
