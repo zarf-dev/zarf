@@ -96,29 +96,30 @@ func (v Validator) DisplayFormattedMessage() {
 	}
 }
 
-// ValidateZarfSchema validates a zarf file against the zarf schema, returns a validator with warnings or errors if they exist
-func ValidateZarfSchema(path string) (Validator, error) {
+// ValidateZarfSchema validates a zarf file against the zarf schema, returns *validator with warnings or errors if they exist
+// along with an error if the validation itself failed
+func ValidateZarfSchema(path string) (*Validator, error) {
 	validator := Validator{}
 	var err error
 	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &validator.typedZarfPackage); err != nil {
-		return validator, err
+		return &validator, err
 	}
 
 	checkForVarInComponentImport(&validator)
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
-		return validator, err
+		return &validator, err
 	}
 
 	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &validator.untypedZarfPackage); err != nil {
-		return validator, err
+		return &validator, err
 	}
 
 	if err = validateSchema(&validator); err != nil {
-		return validator, err
+		return &validator, err
 	}
 
-	return validator, nil
+	return &validator, nil
 }
 
 func checkForVarInComponentImport(validator *Validator) {
