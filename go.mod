@@ -51,7 +51,7 @@ require (
 	k8s.io/component-base v0.28.2
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/kubectl v0.28.2
-	k8s.io/utils v0.0.0-20231121161247-cf03d44ff3cf
+	k8s.io/utils v0.0.0-20231127182322-b307cd553661
 	oras.land/oras-go/v2 v2.3.1
 	sigs.k8s.io/kustomize/api v0.14.0
 	sigs.k8s.io/kustomize/kyaml v0.14.3
