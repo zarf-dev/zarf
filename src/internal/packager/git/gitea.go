@@ -84,6 +84,7 @@ func (g *Git) CreateReadOnlyUser() error {
 	return err
 }
 
+// UpdateReadOnlyUser uses the Gitea API to update a non-admin Zarf user.
 func (g *Git) UpdateReadOnlyUser(oldAdminPass string) error {
 	message.Debugf("git.UpdateReadOnlyUser()")
 
@@ -117,6 +118,7 @@ func (g *Git) UpdateReadOnlyUser(oldAdminPass string) error {
 	return err
 }
 
+// UpdatePushUser uses the Gitea API to update an admin Zarf user.
 func (g *Git) UpdatePushUser(oldAdminPass string) error {
 	message.Debugf("git.UpdatePushUser()")
 
