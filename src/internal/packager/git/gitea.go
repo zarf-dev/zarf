@@ -49,33 +49,6 @@ func (g *Git) CreateReadOnlyUser() error {
 
 	tunnelURL := tunnel.HTTPEndpoint()
 
-	// Determine if the read only user already exists
-	getUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users", tunnelURL)
-	getUserRequest, _ := netHttp.NewRequest("GET", getUserEndpoint, nil)
-	out, err := g.DoHTTPThings(getUserRequest, g.Server.PushUsername, g.Server.PushPassword)
-	message.Debugf("GET %s:\n%s", getUserEndpoint, string(out))
-	if err != nil {
-		return err
-	}
-
-	hasReadOnlyUser := false
-	var users []map[string]interface{}
-	err = json.Unmarshal(out, &users)
-	if err != nil {
-		return err
-	}
-
-	for _, user := range users {
-		if user["login"] == g.Server.PullUsername {
-			hasReadOnlyUser = true
-		}
-	}
-
-	if hasReadOnlyUser {
-		err = g.UpdateReadOnlyUser(g.Server.PushPassword, tunnelURL)
-		return err
-	}
-
 	// Create json representation of the create-user request body
 	createUserBody := map[string]interface{}{
 		"username":             g.Server.PullUsername,
@@ -91,7 +64,7 @@ func (g *Git) CreateReadOnlyUser() error {
 	// Send API request to create the user
 	createUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users", tunnelURL)
 	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
-	out, err = g.DoHTTPThings(createUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+	out, err := g.DoHTTPThings(createUserRequest, g.Server.PushUsername, g.Server.PushPassword)
 	message.Debugf("POST %s:\n%s", createUserEndpoint, string(out))
 	if err != nil {
 		return err
@@ -111,30 +84,25 @@ func (g *Git) CreateReadOnlyUser() error {
 	return err
 }
 
-func (g *Git) UpdateReadOnlyUser(oldAdminPass string, tunnelURL string) error {
+func (g *Git) UpdateReadOnlyUser(oldAdminPass string) error {
 	message.Debugf("git.UpdateReadOnlyUser()")
 
-	if tunnelURL == "" {
-		c, err := cluster.NewCluster()
-		if err != nil {
-			return err
-		}
-
-		// Establish a git tunnel to send the repo
-		tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
-		if err != nil {
-			return err
-		}
-		_, err = tunnel.Connect()
-		if err != nil {
-			return err
-		}
-		defer tunnel.Close()
-
-		tunnelURL = tunnel.HTTPEndpoint()
-	}
-
 	
+	c, err := cluster.NewCluster()
+	if err != nil {
+		return err
+	}
+	// Establish a git tunnel to send the repo
+	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	if err != nil {
+		return err
+	}
+	_, err = tunnel.Connect()
+	if err != nil {
+		return err
+	}
+	defer tunnel.Close()
+	tunnelURL := tunnel.HTTPEndpoint()
  
 	// Update the existing user's password
 	updateUserBody := map[string]interface{}{

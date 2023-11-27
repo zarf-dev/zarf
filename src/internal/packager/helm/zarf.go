@@ -52,7 +52,7 @@ func (h *Helm) UpdateZarfRegistryValues() error {
 func (h *Helm) UpdateZarfGiteaValues(oldState *types.ZarfState) error {
 	oG := oldState.GitServer
 	nG := git.New(h.Cfg.State.GitServer)
-	err := nG.UpdateReadOnlyUser(oG.PushPassword, "")
+	err := nG.UpdateReadOnlyUser(oG.PushPassword)
 	if err != nil {
 		return fmt.Errorf("unable to update gitea read only user password: %w", err)
 	}
