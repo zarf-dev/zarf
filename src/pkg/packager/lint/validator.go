@@ -5,7 +5,6 @@
 package lint
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -21,15 +20,15 @@ type Validator struct {
 	untypedZarfPackage interface{}
 }
 
-func (v Validator) getFormatedError() error {
+func (v Validator) Error() string {
 	if !v.hasErrors() {
-		return nil
+		return ""
 	}
 	errorMessage := validatorInvalidPrefix
 	for _, errorStr := range v.errors {
 		errorMessage = fmt.Sprintf("%s\n - %s", errorMessage, errorStr.Error())
 	}
-	return errors.New(errorMessage)
+	return errorMessage
 }
 
 func (v Validator) getFormatedWarning() string {

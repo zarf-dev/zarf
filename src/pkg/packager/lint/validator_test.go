@@ -18,7 +18,7 @@ func TestValidator(t *testing.T) {
 		error2 := errors.New("components.1.import.path: Invalid type. Expected: string, given: integer")
 		validator := Validator{errors: []error{error1, error2}}
 		errorMessage := fmt.Sprintf("%s\n - %s\n - %s", validatorInvalidPrefix, error1.Error(), error2.Error())
-		require.EqualError(t, validator.getFormatedError(), errorMessage)
+		require.EqualError(t, validator, errorMessage)
 	})
 
 	t.Run("Validator Warning formatting", func(t *testing.T) {

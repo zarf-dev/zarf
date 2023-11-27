@@ -37,7 +37,7 @@ func (v Validator) DisplayFormattedMessage() {
 		message.Warn(v.getFormatedWarning())
 	}
 	if v.hasErrors() {
-		message.Fatal(v.getFormatedError(), v.getFormatedError().Error())
+		message.Fatal(v, v.Error())
 	}
 	if v.isSuccess() {
 		message.Success(v.getFormatedSuccess())
