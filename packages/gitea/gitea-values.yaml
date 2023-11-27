@@ -1,6 +1,6 @@
 persistence:
   storageClass: "###ZARF_STORAGE_CLASS###"
-  claimName: "###ZARF_VAR_GIT_SERVER_PVC_NAME###"
+  claimName: "###ZARF_VAR_GIT_SERVER_EXISTING_PVC###"
   size: "###ZARF_VAR_GIT_SERVER_PVC_SIZE###"
   accessModes:
     - "###ZARF_VAR_GIT_SERVER_PVC_ACCESS_MODE###"
