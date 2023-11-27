@@ -23,9 +23,8 @@ const (
 	validatorWarningPrefix = "zarf schema warning:"
 )
 
-var (
-	ZarfSchema embed.FS
-)
+// ZarfSchema is exported so main.go can embed the schema file
+var ZarfSchema embed.FS
 
 func getSchemaFile() ([]byte, error) {
 	return ZarfSchema.ReadFile("zarf.schema.json")
