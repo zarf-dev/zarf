@@ -149,7 +149,7 @@ var updateCredsCmd = &cobra.Command{
 				}
 			}
 			if slices.Contains(args, message.GitKey) && newState.GitServer.InternalServer {
-				err = h.UpdateZarfGiteaValues()
+				err = h.UpdateZarfGiteaValues(oldState)
 				if err != nil {
 					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())
