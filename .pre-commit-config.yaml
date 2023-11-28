@@ -30,15 +30,15 @@ repos:
       - id: go-fmt
   - repo: local
     hooks:
-      - id: generate-zarf-schema
-        name: Check for outdated Zarf schema
-        entry: ./hack/verify-zarf-schema.sh
+      - id: check-docs-and-schema
+        name: Check for outdated docs and Zarf schema
+        entry: ./hack/check-zarf-docs-and-schema.sh
         files: "src/types/types.go"
         types: [go]
         language: script
         description:
-          "Runs `zarf internal config-schema > zarf.schema.json` to ensure
-          schema is up to date"
+          "Checks if there have been changes
+          made to the docs and schema"
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.14.0
     hooks:
