@@ -15,8 +15,8 @@ func TestBadRemotePackages(t *testing.T) {
 
 	t.Run("zarf package create bad images", func(t *testing.T) {
 		_, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/12-remote-pull-fail", "--confirm")
-		// expecting an error with MANIFEST_UNKNOWN
+		// expecting zarf to have an error and output to stderr
 		require.Error(t, err)
-		require.Contains(t, stdErr, "MANIFEST_UNKNOWN")
+		require.Contains(t, stdErr, "requested access to the resource is denied")
 	})
 }
