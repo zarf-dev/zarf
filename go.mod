@@ -9,7 +9,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
-	github.com/anchore/stereoscope v0.0.0-20231027135531-5909e353ee88
+	github.com/anchore/stereoscope v0.0.0-20231117203853-3610f4ef3e83
 	github.com/anchore/syft v0.84.1
 	github.com/derailed/k9s v0.27.4
 	github.com/distribution/reference v0.5.0
@@ -51,7 +51,7 @@ require (
 	k8s.io/component-base v0.28.2
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/kubectl v0.28.2
-	k8s.io/utils v0.0.0-20231121161247-cf03d44ff3cf
+	k8s.io/utils v0.0.0-20231127182322-b307cd553661
 	oras.land/oras-go/v2 v2.3.1
 	sigs.k8s.io/kustomize/api v0.14.0
 	sigs.k8s.io/kustomize/kyaml v0.14.3
