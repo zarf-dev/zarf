@@ -321,7 +321,6 @@ func init() {
 
 func bindPackageFlags(v *viper.Viper) {
 	packageFlags := packageCmd.PersistentFlags()
-	v.SetDefault(common.VPkgOCIConcurrency, 3)
 	packageFlags.IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(common.VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	packageFlags.StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 }
@@ -371,7 +370,6 @@ func bindDeployFlags(v *viper.Viper) {
 
 	deployFlags.BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
 
-	v.SetDefault(common.VPkgDeployTimeout, config.ZarfDefaultHelmTimeout)
 	deployFlags.DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	deployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)

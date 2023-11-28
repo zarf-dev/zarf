@@ -114,12 +114,12 @@ func (h *Helm) UpdateZarfAgentValues() error {
 
 	spinner.Success()
 
-	for _, lsRelease := range releases {
+	for _, release := range releases {
 		// Update the Zarf Agent release with the new values
-		if lsRelease.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
+		if release.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
 			h.chart = types.ZarfChart{
 				Namespace:   "zarf",
-				ReleaseName: lsRelease.Name,
+				ReleaseName: release.Name,
 			}
 			h.component = types.ZarfComponent{
 				Name: "zarf-agent",

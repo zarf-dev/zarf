@@ -178,10 +178,6 @@ func init() {
 
 	rootCmd.AddCommand(initCmd)
 
-	// Init package variable defaults that are non-zero values
-	v.SetDefault(common.VInitGitPushUser, config.ZarfGitPushUser)
-	v.SetDefault(common.VInitRegistryPushUser, config.ZarfRegistryPushUser)
-
 	// Init package set variable flags
 	initCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdInitFlagSet)
 
@@ -217,7 +213,6 @@ func init() {
 
 	initCmd.Flags().BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
 
-	v.SetDefault(common.VPkgDeployTimeout, config.ZarfDefaultHelmTimeout)
 	initCmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	initCmd.Flags().SortFlags = true

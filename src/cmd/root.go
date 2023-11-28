@@ -74,9 +74,6 @@ func init() {
 
 	v := common.InitViper()
 
-	v.SetDefault(common.VLogLevel, "info")
-	v.SetDefault(common.VZarfCache, config.ZarfDefaultCachePath)
-
 	rootCmd.PersistentFlags().StringVarP(&common.LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(common.VArchitecture), lang.RootCmdFlagArch)
 	rootCmd.PersistentFlags().BoolVar(&config.SkipLogFile, "no-log-file", v.GetBool(common.VNoLogFile), lang.RootCmdFlagSkipLogFile)
