@@ -99,17 +99,18 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 	}
 
 	// Generate the struct to pass to InstallOrUpgradeChart().
-	h.chart = types.ZarfChart{
-		Name: tmpChart.Metadata.Name,
-		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
-		ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
-		Version:     tmpChart.Metadata.Version,
-		Namespace:   manifest.Namespace,
-		NoWait:      manifest.NoWait,
+	h = &Helm{
+		chart: types.ZarfChart{
+			Name: tmpChart.Metadata.Name,
+			// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
+			ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
+			Version:     tmpChart.Metadata.Version,
+			Namespace:   manifest.Namespace,
+			NoWait:      manifest.NoWait,
+		},
+		chartOverride: tmpChart,
+		timeout:       config.ZarfDefaultHelmTimeout,
 	}
-	h.chartOverride = tmpChart
-
-	h.timeout = config.ZarfDefaultHelmTimeout
 
 	spinner.Success()
 
