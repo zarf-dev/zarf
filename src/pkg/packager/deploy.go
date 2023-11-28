@@ -524,8 +524,8 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 			}
 		}
 
-		helmCfg := helm.New(chart, componentPaths.Charts, componentPaths.Values)
-		helmCfg.WithDeployInfo(component, p.cfg, p.cluster, valuesOverrides, p.cfg.DeployOpts.Timeout)
+		helmCfg := helm.New(chart, componentPaths.Charts, componentPaths.Values).
+			WithDeployInfo(component, p.cfg, p.cluster, valuesOverrides, p.cfg.DeployOpts.Timeout)
 
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
 		if err != nil {
@@ -565,7 +565,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 		if err != nil {
 			return installedCharts, err
 		}
-		helmCfg.WithDeployInfo(component, p.cfg, p.cluster, nil, p.cfg.DeployOpts.Timeout)
+		helmCfg = helmCfg.WithDeployInfo(component, p.cfg, p.cluster, nil, p.cfg.DeployOpts.Timeout)
 
 		// Install the chart.
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()

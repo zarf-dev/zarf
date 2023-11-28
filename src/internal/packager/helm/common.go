@@ -118,17 +118,21 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 }
 
 // WithDeployInfo adds the necessary information to deploy a given chart
-func (h *Helm) WithDeployInfo(component types.ZarfComponent, cfg *types.PackagerConfig, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration) {
+func (h *Helm) WithDeployInfo(component types.ZarfComponent, cfg *types.PackagerConfig, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration) *Helm {
 	h.component = component
 	h.cfg = cfg
 	h.cluster = cluster
 	h.valuesOverrides = valuesOverrides
 	h.timeout = timeout
+
+	return h
 }
 
 // WithKubeVersion sets the Kube version for templating the chart
-func (h *Helm) WithKubeVersion(kubeVersion string) {
+func (h *Helm) WithKubeVersion(kubeVersion string) *Helm {
 	h.kubeVersion = kubeVersion
+
+	return h
 }
 
 // StandardName generates a predictable full path for a helm chart for Zarf.
