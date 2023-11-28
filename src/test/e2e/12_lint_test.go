@@ -14,9 +14,8 @@ func TestLint(t *testing.T) {
 		t.Log("E2E: Test lint on schema fail")
 
 		path := filepath.Join("src", "test", "packages", "12-lint")
-		_, stderr, err := e2e.Zarf("prepare", "lint", path)
-		require.Error(t, err, "Expect error here because the yaml file is not following schema")
-		require.Contains(t, stderr, "- components.0.import: Additional property not-path is not allowed")
+		_, stderr, _ := e2e.Zarf("prepare", "lint", path)
+		require.Contains(t, stderr, "components.0.import: Additional property not-path is not allowed")
 		require.Contains(t, stderr, "component.[2].import.path")
 	})
 

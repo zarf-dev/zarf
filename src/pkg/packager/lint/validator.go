@@ -8,50 +8,33 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/fatih/color"
 )
-
-// Warning holds the location of warning and the message
-type Warning struct {
-	location string
-	message  string
-}
 
 // Validator holds the warnings/errors and messaging that we get from validation
 type Validator struct {
-	warnings           []Warning
+	warnings           []string
 	errors             []error
 	jsonSchema         []byte
 	typedZarfPackage   types.ZarfPackage
 	untypedZarfPackage interface{}
 }
 
-func (v Validator) Error() string {
-	if !v.hasErrors() {
-		return ""
-	}
-	errorMessage := validatorInvalidPrefix
-	for _, errorStr := range v.errors {
-		errorMessage = fmt.Sprintf("%s\n - %s", errorMessage, errorStr.Error())
-	}
-	return errorMessage
-}
-
-// func (v Validator) getFormatedWarning() string {
-// 	if !v.hasWarnings() {
-// 		return ""
-// 	}
-// 	return fmt.Sprintf("%s %s", validatorWarningPrefix, strings.Join(v.warnings, ", "))
-// }
-
 func (v Validator) printWarningTable() {
 	if v.hasWarnings() {
+		header := []string{"Type", "Message"}
 		connectData := [][]string{}
 		for _, warning := range v.warnings {
-			connectData = append(connectData, []string{warning.location, warning.message})
+			connectData = append(connectData, []string{utils.ColorWrap("Warning", color.FgYellow), warning})
 		}
-		header := []string{"Location", "Warning"}
+		for _, err := range v.errors {
+			connectData = append(connectData, []string{utils.ColorWrap("Error", color.FgRed), err.Error()})
+		}
 		message.Table(header, connectData)
+		message.Info(fmt.Sprintf("%d warnings and %d errors in %q",
+			len(v.warnings), len(v.errors), v.typedZarfPackage.Metadata.Name))
 	}
 }
 
@@ -71,8 +54,8 @@ func (v Validator) isSuccess() bool {
 	return !v.hasWarnings() && !v.hasErrors()
 }
 
-func (v *Validator) addWarning(location string, message string) {
-	v.warnings = append(v.warnings, Warning{location, message})
+func (v *Validator) addWarning(message string) {
+	v.warnings = append(v.warnings, message)
 }
 
 func (v *Validator) addError(err error) {
@@ -82,13 +65,9 @@ func (v *Validator) addError(err error) {
 // DisplayFormattedMessage Displays the message to the user with proper warnings, failures, or success
 // Will exit if there are errors
 func (v Validator) DisplayFormattedMessage() {
-	if v.hasWarnings() {
-		v.printWarningTable()
-	}
-	if v.hasErrors() {
-		message.Fatal(v, v.Error())
-	}
 	if v.isSuccess() {
 		message.Success(v.getFormatedSuccess())
+	} else {
+		v.printWarningTable()
 	}
 }
