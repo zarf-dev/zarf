@@ -36,7 +36,7 @@ type renderer struct {
 func (h *Helm) newRenderer() (*renderer, error) {
 	message.Debugf("helm.NewRenderer()")
 
-	valueTemplate, err := template.Generate(h.Cfg)
+	valueTemplate, err := template.Generate(h.cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (h *Helm) newRenderer() (*renderer, error) {
 		options:        h,
 		namespaces: map[string]*corev1.Namespace{
 			// Add the passed-in namespace to the list
-			h.Chart.Namespace: h.Cluster.NewZarfManagedNamespace(h.Chart.Namespace),
+			h.chart.Namespace: h.cluster.NewZarfManagedNamespace(h.chart.Namespace),
 		},
 		values:       *valueTemplate,
 		actionConfig: h.actionConfig,
@@ -68,7 +68,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 
 	// Run the template engine against the chart output
-	if _, err := template.ProcessYamlFilesInPath(tempDir, r.options.Component, r.values); err != nil {
+	if _, err := template.ProcessYamlFilesInPath(tempDir, r.options.component, r.values); err != nil {
 		return nil, fmt.Errorf("error templating the helm chart: %w", err)
 	}
 
@@ -113,7 +113,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				}
 				// Now track this namespace by zarf
 				namespace.Labels[config.ZarfManagedByLabel] = "zarf"
-				namespace.Labels["zarf-helm-release"] = r.options.ReleaseName
+				namespace.Labels["zarf-helm-release"] = r.options.chart.ReleaseName
 
 				// Add it to the stack
 				r.namespaces[namespace.Name] = &namespace
@@ -141,23 +141,23 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		namespace := rawData.GetNamespace()
 		if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
 			// if this is the first time seeing this ns, we need to track that to create it as well
-			r.namespaces[namespace] = r.options.Cluster.NewZarfManagedNamespace(namespace)
+			r.namespaces[namespace] = r.options.cluster.NewZarfManagedNamespace(namespace)
 		}
 
 		// If we have been asked to adopt existing resources, process those now as well
-		if r.options.Cfg.DeployOpts.AdoptExistingResources {
+		if r.options.cfg.DeployOpts.AdoptExistingResources {
 			deployedNamespace := namespace
 			if deployedNamespace == "" {
-				deployedNamespace = r.options.Chart.Namespace
+				deployedNamespace = r.options.chart.Namespace
 			}
 
 			helmLabels := map[string]string{"app.kubernetes.io/managed-by": "Helm"}
 			helmAnnotations := map[string]string{
-				"meta.helm.sh/release-name":      r.options.ReleaseName,
-				"meta.helm.sh/release-namespace": r.options.Chart.Namespace,
+				"meta.helm.sh/release-name":      r.options.chart.ReleaseName,
+				"meta.helm.sh/release-namespace": r.options.chart.Namespace,
 			}
 
-			if err := r.options.Cluster.AddLabelsAndAnnotations(deployedNamespace, rawData.GetName(), rawData.GroupVersionKind().GroupKind(), helmLabels, helmAnnotations); err != nil {
+			if err := r.options.cluster.AddLabelsAndAnnotations(deployedNamespace, rawData.GetName(), rawData.GroupVersionKind().GroupKind(), helmLabels, helmAnnotations); err != nil {
 				// Print a debug message since this could just be because the resource doesn't exist
 				message.Debugf("Unable to adopt resource %s: %s", rawData.GetName(), err.Error())
 			}
@@ -167,7 +167,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
 	}
 
-	c := r.options.Cluster
+	c := r.options.cluster
 	existingNamespaces, _ := c.GetNamespaces()
 
 	for name, namespace := range r.namespaces {
@@ -185,8 +185,8 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			if _, err := c.CreateNamespace(namespace); err != nil {
 				return nil, fmt.Errorf("unable to create the missing namespace %s", name)
 			}
-		} else if r.options.Cfg.DeployOpts.AdoptExistingResources {
-			if r.options.Cluster.IsInitialNamespace(name) {
+		} else if r.options.cfg.DeployOpts.AdoptExistingResources {
+			if r.options.cluster.IsInitialNamespace(name) {
 				// If this is a K8s initial namespace, refuse to adopt it
 				message.Warnf("Refusing to adopt the initial namespace: %s", name)
 			} else {
@@ -198,12 +198,12 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 		// If the package is marked as YOLO and the state is empty, skip the secret creation for this namespace
-		if r.options.Cfg.Pkg.Metadata.YOLO && r.options.Cfg.State.Distro == "YOLO" {
+		if r.options.cfg.Pkg.Metadata.YOLO && r.options.cfg.State.Distro == "YOLO" {
 			continue
 		}
 
 		// Create the secret
-		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.options.Cfg.State.RegistryInfo)
+		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.options.cfg.State.RegistryInfo)
 
 		// Try to get a valid existing secret
 		currentRegistrySecret, _ := c.GetSecret(name, config.ZarfImagePullSecretName)
@@ -214,7 +214,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			}
 
 			// Generate the git server secret
-			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.options.Cfg.State.GitServer)
+			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.options.cfg.State.GitServer)
 
 			// Create or update the zarf git server secret
 			if _, err := c.CreateOrUpdateSecret(gitServerSecret); err != nil {

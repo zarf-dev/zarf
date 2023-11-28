@@ -82,6 +82,7 @@ const (
 	VPkgDeployShasum       = "package.deploy.shasum"
 	VPkgDeploySget         = "package.deploy.sget"
 	VPkgDeploySkipWebhooks = "package.deploy.skip_webhooks"
+	VPkgDeployTimeout      = "package.deploy.timeout"
 
 	// Package publish config keys
 

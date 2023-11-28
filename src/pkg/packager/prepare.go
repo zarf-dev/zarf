@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -117,111 +116,79 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			return nil, err
 		}
 
-		chartOverrides := make(map[string]string)
+		for _, chart := range component.Charts {
+			helmCfg := helm.New(chart, componentPaths.Charts, componentPaths.Values)
+			helmCfg.WithKubeVersion(kubeVersionOverride)
 
-		if len(component.Charts) > 0 {
-			for _, chart := range component.Charts {
+			err := helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
+			if err != nil {
+				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.URL, err.Error())
+			}
 
-				helmCfg := helm.Helm{
-					Chart: chart,
-					Cfg:   p.cfg,
+			// Generate helm templates for this chart
+			template, values, err := helmCfg.TemplateChart()
+
+			if err != nil {
+				message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
+				erroredCharts = append(erroredCharts, chart.URL)
+				continue
+			}
+
+			// Break the template into separate resources
+			yamls, _ := utils.SplitYAML([]byte(template))
+			resources = append(resources, yamls...)
+
+			chartTarball := helm.StandardName(componentPaths.Charts, chart) + ".tgz"
+
+			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
+			if err != nil {
+				message.WarnErrf(err, "Problem looking for image annotations for %s: %s", chart.URL, err.Error())
+				erroredCharts = append(erroredCharts, chart.URL)
+				continue
+			}
+			for _, image := range annotatedImages {
+				matchedImages[image] = true
+			}
+		}
+
+		for _, manifest := range component.Manifests {
+			for idx, k := range manifest.Kustomizations {
+				// Generate manifests from kustomizations and place in the package
+				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+				destination := filepath.Join(componentPaths.Manifests, kname)
+				if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
+					return nil, fmt.Errorf("unable to build the kustomization for %s: %s", k, err.Error())
 				}
-
-				helmCfg.Cfg.State = &types.ZarfState{}
-
-				err := helmCfg.PackageChart(componentPaths.Charts)
-				if err != nil {
-					return nil, fmt.Errorf("unable to package the chart %s: %s", chart.URL, err.Error())
-				}
-
-				for idx, path := range chart.ValuesFiles {
-					dst := helm.StandardName(componentPaths.Values, chart) + "-" + strconv.Itoa(idx)
-					if helpers.IsURL(path) {
-						if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
-							return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
-						}
-					} else {
-						if err := utils.CreatePathAndCopy(path, dst); err != nil {
-							return nil, fmt.Errorf("unable to copy values file %s: %w", path, err)
-						}
+				manifest.Files = append(manifest.Files, destination)
+			}
+			// Get all manifest files
+			for idx, f := range manifest.Files {
+				if helpers.IsURL(f) {
+					mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
+					destination := filepath.Join(componentPaths.Manifests, mname)
+					if err := utils.DownloadToFile(f, destination, component.DeprecatedCosignKeyPath); err != nil {
+						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
+					f = destination
 				}
 
-				// Generate helm templates to pass to gitops engine
-				helmCfg = helm.Helm{
-					BasePath:          componentPaths.Base,
-					Chart:             chart,
-					ChartLoadOverride: chartOverrides[chart.Name],
-					KubeVersion:       kubeVersionOverride,
-				}
-				template, values, err := helmCfg.TemplateChart()
-
+				// Read the contents of each file
+				contents, err := os.ReadFile(f)
 				if err != nil {
-					message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
-					erroredCharts = append(erroredCharts, chart.URL)
+					message.WarnErrf(err, "Unable to read the file %s", f)
 					continue
 				}
 
-				// Break the template into separate resources
-				yamls, _ := utils.SplitYAML([]byte(template))
+				// Break the manifest into separate resources
+				contentString := string(contents)
+				message.Debugf("%s", contentString)
+				yamls, _ := utils.SplitYAML(contents)
 				resources = append(resources, yamls...)
-
-				var chartTarball string
-				if overridePath, ok := chartOverrides[chart.Name]; ok {
-					chartTarball = overridePath
-				} else {
-					chartTarball = helm.StandardName(componentPaths.Charts, helmCfg.Chart) + ".tgz"
-				}
-
-				annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
-				if err != nil {
-					message.WarnErrf(err, "Problem looking for image annotations for %s: %s", chart.URL, err.Error())
-					erroredCharts = append(erroredCharts, chart.URL)
-					continue
-				}
-				for _, image := range annotatedImages {
-					matchedImages[image] = true
-				}
 			}
 		}
 
-		if len(component.Manifests) > 0 {
-			for _, manifest := range component.Manifests {
-				for idx, k := range manifest.Kustomizations {
-					// Generate manifests from kustomizations and place in the package
-					kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-					destination := filepath.Join(componentPaths.Manifests, kname)
-					if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
-						return nil, fmt.Errorf("unable to build the kustomization for %s: %s", k, err.Error())
-					}
-					manifest.Files = append(manifest.Files, destination)
-				}
-				// Get all manifest files
-				for idx, f := range manifest.Files {
-					if helpers.IsURL(f) {
-						mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
-						destination := filepath.Join(componentPaths.Manifests, mname)
-						if err := utils.DownloadToFile(f, destination, component.DeprecatedCosignKeyPath); err != nil {
-							return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
-						}
-						f = destination
-					}
-
-					// Read the contents of each file
-					contents, err := os.ReadFile(f)
-					if err != nil {
-						message.WarnErrf(err, "Unable to read the file %s", f)
-						continue
-					}
-
-					// Break the manifest into separate resources
-					contentString := string(contents)
-					message.Debugf("%s", contentString)
-					yamls, _ := utils.SplitYAML(contents)
-					resources = append(resources, yamls...)
-				}
-			}
-		}
+		spinner := message.NewProgressSpinner("Looking for images in component %q across %d resources", component.Name, len(resources))
+		defer spinner.Stop()
 
 		for _, resource := range resources {
 			if matchedImages, maybeImages, err = p.processUnstructuredImages(resource, matchedImages, maybeImages); err != nil {
@@ -262,10 +229,16 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			}
 		}
 
+		spinner.Success()
+
 		// Handle cosign artifact lookups
 		if len(imagesMap[component.Name]) > 0 {
 			var cosignArtifactList []string
-			for _, image := range imagesMap[component.Name] {
+			spinner := message.NewProgressSpinner("Looking up cosign artifacts for discovered images (0/%d)", len(imagesMap[component.Name]))
+			defer spinner.Stop()
+
+			for idx, image := range imagesMap[component.Name] {
+				spinner.Updatef("Looking up cosign artifacts for discovered images (%d/%d)", idx+1, len(imagesMap[component.Name]))
 				cosignArtifacts, err := utils.GetCosignArtifacts(image)
 				if err != nil {
 					message.WarnErrf(err, "Problem looking up cosign artifacts for %s: %s", image, err.Error())
@@ -273,6 +246,9 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				}
 				cosignArtifactList = append(cosignArtifactList, cosignArtifacts...)
 			}
+
+			spinner.Success()
+
 			if len(cosignArtifactList) > 0 {
 				imagesMap[component.Name] = append(imagesMap[component.Name], cosignArtifactList...)
 				componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
@@ -315,8 +291,6 @@ func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured
 	contents := resource.UnstructuredContent()
 	bytes, _ := resource.MarshalJSON()
 	json = string(bytes)
-
-	message.Debug()
 
 	switch resource.GetKind() {
 	case "Deployment":

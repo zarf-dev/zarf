@@ -17,7 +17,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 
-	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -157,10 +156,8 @@ var packageListCmd = &cobra.Command{
 			message.Fatalf(errs, lang.CmdPackageListNoPackageWarn)
 		}
 
-		// Populate a pterm table of all the deployed packages
-		packageTable := pterm.TableData{
-			{"     Package ", "Version", "Components"},
-		}
+		// Populate a matrix of all the deployed packages
+		packageData := [][]string{}
 
 		for _, pkg := range deployedZarfPackages {
 			var components []string
@@ -169,15 +166,14 @@ var packageListCmd = &cobra.Command{
 				components = append(components, component.Name)
 			}
 
-			packageTable = append(packageTable, pterm.TableData{{
-				fmt.Sprintf("     %s", pkg.Name),
-				pkg.Data.Metadata.Version,
-				fmt.Sprintf("%v", components),
-			}}...)
+			packageData = append(packageData, []string{
+				pkg.Name, pkg.Data.Metadata.Version, fmt.Sprintf("%v", components),
+			})
 		}
 
 		// Print out the table for the user
-		_ = pterm.DefaultTable.WithHasHeader().WithData(packageTable).Render()
+		header := []string{"Package ", "Version", "Components"}
+		message.Table(header, packageData)
 
 		// Print out any unmarshalling errors
 		if len(errs) > 0 {
@@ -373,11 +369,15 @@ func bindDeployFlags(v *viper.Viper) {
 	// Always require adopt-existing-resources flag (no viper)
 	deployFlags.BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
 
+	deployFlags.BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
+
+	v.SetDefault(common.VPkgDeployTimeout, config.ZarfDefaultHelmTimeout)
+	deployFlags.DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
+
 	deployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(common.VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(common.VPkgDeploySget), lang.CmdPackageDeployFlagSget)
-	deployFlags.BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
 
 	deployFlags.MarkHidden("sget")
 }

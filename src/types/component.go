@@ -97,7 +97,7 @@ type ZarfChart struct {
 	Namespace   string   `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
 	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of local values file paths or remote URLs to include in the package; these will be merged together"`
 	GitPath     string   `json:"gitPath,omitempty" jsonschema:"description=The path to the chart in the repo if using a git repo instead of a helm repo,example=charts/your-chart"`
-	LocalPath   string   `json:"localPath,omitempty" jsonschema:"description=The path to the chart folder"`
+	LocalPath   string   `json:"localPath,omitempty" jsonschema:"description=The path to the local chart's folder or .tgz archive"`
 	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
 }
 

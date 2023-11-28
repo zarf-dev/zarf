@@ -1127,7 +1127,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The path to the chart folder
+**Description:** The path to the local chart's folder or .tgz archive
 
 |          |          |
 | -------- | -------- |
