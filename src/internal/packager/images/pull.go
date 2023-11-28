@@ -434,7 +434,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	return imgInfoList, nil
 }
 
-// pullLocalImage returns a v1.Image will try to return the local tarball, this way we can isolate remote issues from non-existent local images.
+// pullLocalImage returns a v1.Image and will try to return the local tarball, this allows us to isolate remote issues from local issues.
 func (i *ImageConfig) pullLocalImage(src string, spinner *message.Spinner) (img v1.Image, err error) {
 	// Parse the image reference to get the image name.
 	reference, err := name.ParseReference(src)
