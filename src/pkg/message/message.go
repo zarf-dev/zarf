@@ -341,6 +341,7 @@ func errorPrinter(offset int) *pterm.PrefixPrinter {
 	return pterm.Error.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
 }
 
+// Table prints a padded table containing the specified header and data
 func Table(header []string, data [][]string) {
 	pterm.Println()
 
