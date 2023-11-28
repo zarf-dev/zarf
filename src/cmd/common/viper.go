@@ -181,10 +181,6 @@ func setDefaults() {
 	// Package defaults that are non-zero values
 	v.SetDefault(VPkgOCIConcurrency, 3)
 
-	// Init package variable defaults that are non-zero values
-	v.SetDefault(VInitGitPushUser, config.ZarfGitPushUser)
-	v.SetDefault(VInitRegistryPushUser, config.ZarfRegistryPushUser)
-
 	// Deploy opts that are non-zero values
 	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultHelmTimeout)
 }

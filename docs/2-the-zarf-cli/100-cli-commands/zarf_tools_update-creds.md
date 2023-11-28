@@ -52,13 +52,13 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
       --git-pull-password string        Password for the pull-only user to access the git server
       --git-pull-username string        Username for pull-only access to the git server
       --git-push-password string        Password for the push-user to access the git server
-      --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push' (default "zarf-git-user")
+      --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
       --git-url string                  External git server url to use for this Zarf cluster
   -h, --help                            help for update-creds
       --registry-pull-password string   Password for the pull-only user to access the registry
       --registry-pull-username string   Username for pull-only access to the registry
       --registry-push-password string   Password for the push-user to connect to the registry
-      --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
+      --registry-push-username string   Username to access to the registry Zarf is configured to use
       --registry-url string             External registry url address to use for this Zarf cluster
 ```
 

@@ -403,6 +403,11 @@ func bindDeployFlags(v *viper.Viper) {
 func bindMirrorFlags(v *viper.Viper) {
 	mirrorFlags := packageMirrorCmd.Flags()
 
+	// Init package variable defaults that are non-zero values
+	// NOTE: these are not in common.setDefaults so that zarf tools update-creds does not erroneously update values back to the default
+	v.SetDefault(common.VInitGitPushUser, config.ZarfGitPushUser)
+	v.SetDefault(common.VInitRegistryPushUser, config.ZarfRegistryPushUser)
+
 	// Always require confirm flag (no viper)
 	mirrorFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
 

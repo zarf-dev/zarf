@@ -178,6 +178,11 @@ func init() {
 
 	rootCmd.AddCommand(initCmd)
 
+	// Init package variable defaults that are non-zero values
+	// NOTE: these are not in common.setDefaults so that zarf tools update-creds does not erroneously update values back to the default
+	v.SetDefault(common.VInitGitPushUser, config.ZarfGitPushUser)
+	v.SetDefault(common.VInitRegistryPushUser, config.ZarfRegistryPushUser)
+
 	// Init package set variable flags
 	initCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdInitFlagSet)
 
