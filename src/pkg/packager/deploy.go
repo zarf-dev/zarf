@@ -524,8 +524,17 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 			}
 		}
 
-		helmCfg := helm.New(chart, componentPaths.Charts, componentPaths.Values).
-			WithDeployInfo(component, p.cfg, p.cluster, valuesOverrides, p.cfg.DeployOpts.Timeout)
+		helmCfg := helm.New(
+			chart,
+			componentPaths.Charts,
+			componentPaths.Values,
+			helm.WithDeployInfo(
+				component,
+				p.cfg,
+				p.cluster,
+				valuesOverrides,
+				p.cfg.DeployOpts.Timeout),
+		)
 
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
 		if err != nil {
@@ -561,11 +570,21 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 		}
 
 		// Create a chart and helm cfg from a given Zarf Manifest.
-		helmCfg, err := helm.NewFromZarfManifest(manifest, componentPaths.Manifests, p.cfg.Pkg.Metadata.Name, component.Name)
+		helmCfg, err := helm.NewFromZarfManifest(
+			manifest,
+			componentPaths.Manifests,
+			p.cfg.Pkg.Metadata.Name,
+			component.Name,
+			helm.WithDeployInfo(
+				component,
+				p.cfg,
+				p.cluster,
+				nil,
+				p.cfg.DeployOpts.Timeout),
+		)
 		if err != nil {
 			return installedCharts, err
 		}
-		helmCfg = helmCfg.WithDeployInfo(component, p.cfg, p.cluster, nil, p.cfg.DeployOpts.Timeout)
 
 		// Install the chart.
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()

@@ -117,8 +117,12 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		}
 
 		for _, chart := range component.Charts {
-			helmCfg := helm.New(chart, componentPaths.Charts, componentPaths.Values).
-				WithKubeVersion(kubeVersionOverride)
+			helmCfg := helm.New(
+				chart,
+				componentPaths.Charts,
+				componentPaths.Values,
+				helm.WithKubeVersion(kubeVersionOverride),
+			)
 
 			err := helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
 			if err != nil {

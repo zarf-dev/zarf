@@ -43,14 +43,23 @@ type Helm struct {
 	actionConfig *action.Configuration
 }
 
+// Modifier is a function that modifies the Helm config.
+type Modifier func(*Helm)
+
 // New returns a new Helm config struct.
-func New(chart types.ZarfChart, chartPath string, valuesPath string) *Helm {
-	return &Helm{
+func New(chart types.ZarfChart, chartPath string, valuesPath string, mods ...Modifier) *Helm {
+	h := &Helm{
 		chart:      chart,
 		chartPath:  chartPath,
 		valuesPath: valuesPath,
 		timeout:    config.ZarfDefaultHelmTimeout,
 	}
+
+	for _, mod := range mods {
+		mod(h)
+	}
+
+	return h
 }
 
 // NewClusterOnly returns a new Helm config struct geared toward interacting with the cluster (not packages)
@@ -63,7 +72,7 @@ func NewClusterOnly(cfg *types.PackagerConfig, cluster *cluster.Cluster) *Helm {
 }
 
 // NewFromZarfManifest generates a helm chart and config from a given Zarf manifest.
-func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName, componentName string) (h *Helm, err error) {
+func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName, componentName string, mods ...Modifier) (h *Helm, err error) {
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
 
@@ -112,27 +121,31 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 		timeout:       config.ZarfDefaultHelmTimeout,
 	}
 
+	for _, mod := range mods {
+		mod(h)
+	}
+
 	spinner.Success()
 
 	return h, nil
 }
 
 // WithDeployInfo adds the necessary information to deploy a given chart
-func (h *Helm) WithDeployInfo(component types.ZarfComponent, cfg *types.PackagerConfig, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration) *Helm {
-	h.component = component
-	h.cfg = cfg
-	h.cluster = cluster
-	h.valuesOverrides = valuesOverrides
-	h.timeout = timeout
-
-	return h
+func WithDeployInfo(component types.ZarfComponent, cfg *types.PackagerConfig, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration) Modifier {
+	return func(h *Helm) {
+		h.component = component
+		h.cfg = cfg
+		h.cluster = cluster
+		h.valuesOverrides = valuesOverrides
+		h.timeout = timeout
+	}
 }
 
 // WithKubeVersion sets the Kube version for templating the chart
-func (h *Helm) WithKubeVersion(kubeVersion string) *Helm {
-	h.kubeVersion = kubeVersion
-
-	return h
+func WithKubeVersion(kubeVersion string) Modifier {
+	return func(h *Helm) {
+		h.kubeVersion = kubeVersion
+	}
 }
 
 // StandardName generates a predictable full path for a helm chart for Zarf.
