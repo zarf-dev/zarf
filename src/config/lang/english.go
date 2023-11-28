@@ -198,6 +198,9 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInternalConfigSchemaShort = "Generates a JSON schema for the zarf.yaml configuration"
 	CmdInternalConfigSchemaErr   = "Unable to generate the zarf config schema"
 
+	CmdInternalTypesSchemaShort = "Generates a JSON schema for the Zarf types (DeployedPackage ZarfPackage ZarfState)"
+	CmdInternalTypesSchemaErr   = "Unable to generate the JSON schema for the Zarf types (DeployedPackage ZarfPackage ZarfState)"
+
 	CmdInternalCreateReadOnlyGiteaUserShort = "Creates a read-only user in Gitea"
 	CmdInternalCreateReadOnlyGiteaUserLong  = "Creates a read-only user in Gitea by using the Gitea API. " +
 		"This is called internally by the supported Gitea package component."
