@@ -291,11 +291,6 @@ func (h *Helm) loadAndValidateChart(location string) (loader.ChartLoader, *chart
 		return cl, chart, fmt.Errorf("validation failed for chart from %s: %w", location, err)
 	}
 
-	// Check that the chart name matches
-	if h.chart.Name != chart.Name() {
-		return cl, chart, fmt.Errorf("invalid chart name provided, %q does not match %q", h.chart.Name, chart.Name())
-	}
-
 	return cl, chart, nil
 }
 
