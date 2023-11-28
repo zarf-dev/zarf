@@ -380,6 +380,10 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 
 				rel := fmt.Sprintf("%s-%d", helm.StandardName(layout.ValuesDir, chart), valuesIdx)
 				p.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
+
+				if err := utils.CreatePathAndCopy(path, filepath.Join(componentPaths.Base, rel)); err != nil {
+					return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+				}
 			}
 		} else {
 			err := helmCfg.PackageChart(componentPaths.Charts)
