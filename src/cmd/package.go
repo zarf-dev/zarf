@@ -302,7 +302,7 @@ func identifyAndFallbackToClusterSource() (src sources.PackageSource) {
 	return src
 }
 
-func getPackageCompletionArgs(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func getPackageCompletionArgs(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	var pkgCandidates []string
 
 	c, err := cluster.NewCluster()
