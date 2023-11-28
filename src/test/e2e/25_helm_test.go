@@ -152,7 +152,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	// Ensure that we rollback properly
 	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "Rollback to 3")
+	require.Contains(t, string(helmOut), "Rollback to 5")
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
