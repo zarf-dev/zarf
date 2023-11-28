@@ -77,6 +77,9 @@ func (p *Packager) Deploy() (err error) {
 	if err != nil {
 		return fmt.Errorf("unable to deploy all components in this Zarf Package: %w", err)
 	}
+	if len(deployedComponents) == 0 {
+		message.Warn("No components were deployed")
+	}
 
 	// Notify all the things about the successful deployment
 	message.Successf("Zarf deployment complete")
