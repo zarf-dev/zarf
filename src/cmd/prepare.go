@@ -227,6 +227,9 @@ var lintCmd = &cobra.Command{
 			message.Fatal(err, err.Error())
 		}
 		validator.DisplayFormattedMessage()
+		if !validator.IsSuccess() {
+			os.Exit(1)
+		}
 	},
 }
 

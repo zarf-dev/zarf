@@ -23,7 +23,7 @@ type Validator struct {
 }
 
 func (v Validator) printWarningTable() {
-	if v.hasWarnings() {
+	if !v.IsSuccess() {
 		header := []string{"Type", "Message"}
 		connectData := [][]string{}
 		for _, warning := range v.warnings {
@@ -50,10 +50,6 @@ func (v Validator) hasErrors() bool {
 	return len(v.errors) > 0
 }
 
-func (v Validator) isSuccess() bool {
-	return !v.hasWarnings() && !v.hasErrors()
-}
-
 func (v *Validator) addWarning(message string) {
 	v.warnings = append(v.warnings, message)
 }
@@ -62,10 +58,15 @@ func (v *Validator) addError(err error) {
 	v.errors = append(v.errors, err)
 }
 
+// IsSuccess returns true if there are not any warnings or errors
+func (v Validator) IsSuccess() bool {
+	return !v.hasWarnings() && !v.hasErrors()
+}
+
 // DisplayFormattedMessage Displays the message to the user with proper warnings, failures, or success
 // Will exit if there are errors
 func (v Validator) DisplayFormattedMessage() {
-	if v.isSuccess() {
+	if v.IsSuccess() {
 		message.Success(v.getFormatedSuccess())
 	} else {
 		v.printWarningTable()

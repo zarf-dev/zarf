@@ -14,7 +14,8 @@ func TestLint(t *testing.T) {
 		t.Log("E2E: Test lint on schema fail")
 
 		path := filepath.Join("src", "test", "packages", "12-lint")
-		_, stderr, _ := e2e.Zarf("prepare", "lint", path)
+		_, stderr, err := e2e.Zarf("prepare", "lint", path)
+		require.Error(t, err, "Require an exit code since there was warnings / errors")
 		require.Contains(t, stderr, "components.0.import: Additional property not-path is not allowed")
 		require.Contains(t, stderr, "component.[2].import.path")
 	})
