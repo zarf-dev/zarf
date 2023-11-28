@@ -489,10 +489,8 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		var localErr error
 		img, localErr = i.pullLocalImage(src, spinner)
 		if localErr != nil {
-			// if local failed, return the original remote error
-			return nil, false, err
+			return nil, false, fmt.Errorf("remote repository: %w, local filesystem: %w", err, localErr)
 		}
-
 	} else {
 		// Manifest was found, so use crane to pull the image.
 		if img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
