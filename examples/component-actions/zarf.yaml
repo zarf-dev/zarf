@@ -211,3 +211,13 @@ components:
                 kind: configmap
                 name: simple-configmap
                 namespace: zarf
+
+  - name: on-deploy-immediate-failure
+    description: This component will fail on the first error instead of continuing execution
+   # the default for multi-line commands is set -e
+    actions:
+      onDeploy:
+        after:
+          - cmd: |
+              bad_cmd
+              echo "this text shouldn't be printed"

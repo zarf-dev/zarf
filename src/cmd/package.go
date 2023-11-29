@@ -22,7 +22,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
@@ -108,6 +108,7 @@ var packageMirrorCmd = &cobra.Command{
 	Aliases: []string{"mr"},
 	Short:   lang.CmdPackageMirrorShort,
 	Long:    lang.CmdPackageMirrorLong,
+	Example: lang.CmdPackageMirrorExample,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
@@ -143,11 +144,12 @@ var packageInspectCmd = &cobra.Command{
 			message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
 		}
 	},
+	ValidArgsFunction: getPackageCompletionArgs,
 }
 
 var packageListCmd = &cobra.Command{
 	Use:     "list",
-	Aliases: []string{"l"},
+	Aliases: []string{"l", "ls"},
 	Short:   lang.CmdPackageListShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get all the deployed packages
@@ -187,7 +189,7 @@ var packageListCmd = &cobra.Command{
 
 var packageRemoveCmd = &cobra.Command{
 	Use:     "remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm",
-	Aliases: []string{"u"},
+	Aliases: []string{"u", "rm"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -202,6 +204,7 @@ var packageRemoveCmd = &cobra.Command{
 			message.Fatalf(err, lang.CmdPackageRemoveErr, err.Error())
 		}
 	},
+	ValidArgsFunction: getPackageCompletionArgs,
 }
 
 var packagePublishCmd = &cobra.Command{
@@ -297,6 +300,24 @@ func identifyAndFallbackToClusterSource() (src sources.PackageSource) {
 		}
 	}
 	return src
+}
+
+func getPackageCompletionArgs(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	var pkgCandidates []string
+
+	c, err := cluster.NewCluster()
+	if err != nil {
+		return pkgCandidates, cobra.ShellCompDirectiveDefault
+	}
+
+	// Get all the deployed packages
+	deployedZarfPackages, _ := c.GetDeployedZarfPackages()
+	// Populate list of package names
+	for _, pkg := range deployedZarfPackages {
+		pkgCandidates = append(pkgCandidates, pkg.Name)
+	}
+
+	return pkgCandidates, cobra.ShellCompDirectiveDefault
 }
 
 func init() {
