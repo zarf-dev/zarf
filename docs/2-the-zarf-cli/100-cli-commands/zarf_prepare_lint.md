@@ -3,6 +3,10 @@
 
 Verifies the package schema
 
+## Synopsis
+
+Verifies the package schema and warns the user if they have variables that won't be evaluated
+
 ```
 zarf prepare lint [ DIRECTORY ] [flags]
 ```
