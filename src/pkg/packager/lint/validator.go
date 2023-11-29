@@ -22,6 +22,16 @@ type Validator struct {
 	untypedZarfPackage interface{}
 }
 
+// DisplayFormattedMessage Displays the message to the user with proper warnings, failures, or success
+// Will exit if there are errors
+func (v Validator) DisplayFormattedMessage() {
+	if v.IsSuccess() {
+		message.Success(fmt.Sprintf("Schema validation successful for %q", v.typedZarfPackage.Metadata.Name))
+	} else {
+		v.printWarningTable()
+	}
+}
+
 func (v Validator) printWarningTable() {
 	if !v.IsSuccess() {
 		header := []string{"Type", "Message"}
@@ -36,10 +46,6 @@ func (v Validator) printWarningTable() {
 		message.Info(fmt.Sprintf("%d warnings and %d errors in %q",
 			len(v.warnings), len(v.errors), v.typedZarfPackage.Metadata.Name))
 	}
-}
-
-func (v Validator) getFormatedSuccess() string {
-	return fmt.Sprintf("Schema validation successful for %q", v.typedZarfPackage.Metadata.Name)
 }
 
 func (v Validator) hasWarnings() bool {
@@ -61,14 +67,4 @@ func (v *Validator) addError(err error) {
 // IsSuccess returns true if there are not any warnings or errors
 func (v Validator) IsSuccess() bool {
 	return !v.hasWarnings() && !v.hasErrors()
-}
-
-// DisplayFormattedMessage Displays the message to the user with proper warnings, failures, or success
-// Will exit if there are errors
-func (v Validator) DisplayFormattedMessage() {
-	if v.IsSuccess() {
-		message.Success(v.getFormatedSuccess())
-	} else {
-		v.printWarningTable()
-	}
 }

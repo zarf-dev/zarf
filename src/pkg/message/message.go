@@ -318,6 +318,28 @@ func Truncate(text string, length int, invert bool) string {
 	return textEscaped
 }
 
+// Table prints a padded table containing the specified header and data
+func Table(header []string, data [][]string) {
+	pterm.Println()
+
+	if len(header) > 0 {
+		header[0] = fmt.Sprintf("     %s", header[0])
+	}
+
+	table := pterm.TableData{
+		header,
+	}
+
+	for _, row := range data {
+		if len(row) > 0 {
+			row[0] = fmt.Sprintf("     %s", row[0])
+		}
+		table = append(table, pterm.TableData{row}...)
+	}
+
+	pterm.DefaultTable.WithHasHeader().WithData(table).Render()
+}
+
 func debugPrinter(offset int, a ...any) {
 	printer := pterm.Debug.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
 	now := time.Now().Format(time.RFC3339)
@@ -339,26 +361,4 @@ func debugPrinter(offset int, a ...any) {
 
 func errorPrinter(offset int) *pterm.PrefixPrinter {
 	return pterm.Error.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
-}
-
-// Table prints a padded table containing the specified header and data
-func Table(header []string, data [][]string) {
-	pterm.Println()
-
-	if len(header) > 0 {
-		header[0] = fmt.Sprintf("     %s", header[0])
-	}
-
-	table := pterm.TableData{
-		header,
-	}
-
-	for _, row := range data {
-		if len(row) > 0 {
-			row[0] = fmt.Sprintf("     %s", row[0])
-		}
-		table = append(table, pterm.TableData{row}...)
-	}
-
-	pterm.DefaultTable.WithHasHeader().WithData(table).Render()
 }
