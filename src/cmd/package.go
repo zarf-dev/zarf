@@ -173,7 +173,7 @@ var packageListCmd = &cobra.Command{
 		}
 
 		// Print out the table for the user
-		header := []string{"Package ", "Version", "Components"}
+		header := []string{"Package", "Version", "Components"}
 		message.Table(header, packageData)
 
 		// Print out any unmarshalling errors

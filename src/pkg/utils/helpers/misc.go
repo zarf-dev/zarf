@@ -42,6 +42,17 @@ func MergeMap[T any](m1, m2 map[string]T) (r map[string]T) {
 	return r
 }
 
+// TransformMapKeys takes a map and transforms its keys using the provided function.
+func TransformMapKeys[T any](m map[string]T, transform func(string) string) (r map[string]T) {
+	r = map[string]T{}
+
+	for key, value := range m {
+		r[transform(key)] = value
+	}
+
+	return r
+}
+
 // TransformAndMergeMap transforms keys in both maps then merges map m2 with m1 overwriting common values with m2's values.
 func TransformAndMergeMap[T any](m1, m2 map[string]T, transform func(string) string) (r map[string]T) {
 	mt1 := TransformMapKeys(m1, transform)
@@ -74,17 +85,6 @@ func MergeMapRecursive(m1, m2 map[string]interface{}) (r map[string]interface{})
 	return r
 }
 
-// TransformMapKeys takes a map and transforms its keys using the provided function.
-func TransformMapKeys[T any](m map[string]T, transform func(string) string) (r map[string]T) {
-	r = map[string]T{}
-
-	for key, value := range m {
-		r[transform(key)] = value
-	}
-
-	return r
-}
-
 // MatchRegex wraps a get function around a substring match.
 func MatchRegex(regex *regexp.Regexp, str string) (func(string) string, error) {
 	// Validate the string.
@@ -112,7 +112,10 @@ func IsNotZeroAndNotEqual[T any](given T, equal T) bool {
 	}
 
 	for i := 0; i < givenValue.NumField(); i++ {
-		if !givenValue.Field(i).IsZero() && givenValue.Field(i).Interface() != equalValue.Field(i).Interface() {
+		if !givenValue.Field(i).IsZero() &&
+			givenValue.Field(i).CanInterface() &&
+			givenValue.Field(i).Interface() != equalValue.Field(i).Interface() {
+
 			return true
 		}
 	}
@@ -125,7 +128,9 @@ func MergeNonZero[T any](original T, overrides T) T {
 	overridesValue := reflect.ValueOf(&overrides)
 
 	for i := 0; i < originalValue.Elem().NumField(); i++ {
-		if !overridesValue.Elem().Field(i).IsZero() {
+		if !overridesValue.Elem().Field(i).IsZero() &&
+			overridesValue.Elem().Field(i).CanSet() {
+
 			overrideField := overridesValue.Elem().Field(i)
 			originalValue.Elem().Field(i).Set(overrideField)
 		}
