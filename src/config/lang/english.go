@@ -360,6 +360,8 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPrepareFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
 
 	CmdPrepareLintShort = "Verifies the package schema"
+	CmdPrepareLintLong  = "Verifies the package schema and warns the user if they have variables that won't be evaluated"
+	CmdPrepareLintErr   = "Unable to lint package: %s"
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"

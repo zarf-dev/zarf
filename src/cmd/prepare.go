@@ -211,6 +211,7 @@ var lintCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Aliases: []string{"l"},
 	Short:   lang.CmdPrepareLintShort,
+	Long:    lang.CmdPrepareLintLong,
 	Run: func(cmd *cobra.Command, args []string) {
 		baseDir := ""
 		if len(args) > 0 {
@@ -219,7 +220,7 @@ var lintCmd = &cobra.Command{
 			var err error
 			baseDir, err = os.Getwd()
 			if err != nil {
-				message.Fatalf(err, lang.CmdPrepareFindImagesErr, err.Error())
+				message.Fatalf(err, lang.CmdPrepareLintErr, err.Error())
 			}
 		}
 		validator, err := lint.ValidateZarfSchema(baseDir)
