@@ -13,9 +13,11 @@ import (
 )
 
 // Destroy removes ZarfInitPackage charts from the cluster and optionally all Zarf-installed charts.
-func (h *Helm) Destroy(purgeAllZarfInstallations bool) {
+func Destroy(purgeAllZarfInstallations bool) {
 	spinner := message.NewProgressSpinner("Removing Zarf-installed charts")
 	defer spinner.Stop()
+
+	h := Helm{}
 
 	// Initially load the actionConfig without a namespace
 	err := h.createActionConfig("", spinner)

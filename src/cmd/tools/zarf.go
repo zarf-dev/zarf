@@ -134,12 +134,7 @@ var updateCredsCmd = &cobra.Command{
 			}
 
 			// Update Zarf 'init' component Helm releases if present
-			h := helm.Helm{
-				Cluster: c,
-				Cfg: &types.PackagerConfig{
-					State: newState,
-				},
-			}
+			h := helm.NewClusterOnly(&types.PackagerConfig{State: newState}, c)
 
 			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
 				err = h.UpdateZarfRegistryValues()

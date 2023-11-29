@@ -16,7 +16,7 @@ func PrintConnectStringTable(connectStrings types.ConnectStrings) {
 
 	if len(connectStrings) > 0 {
 		connectData := [][]string{}
-		// Loop over each connectStrings and convert to pterm.TableData
+		// Loop over each connectStrings and convert to a string matrix
 		for name, connect := range connectStrings {
 			name = fmt.Sprintf("zarf connect %s", name)
 			connectData = append(connectData, []string{name, connect.Description})

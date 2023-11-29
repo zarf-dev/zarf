@@ -12,6 +12,8 @@ components:
         version: 6.4.0
         namespace: podinfo-from-local-chart
         localPath: chart
+        valuesFiles:
+          - values.yaml
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       # This is the cosign signature for the podinfo image for image signature verification
@@ -34,6 +36,8 @@ components:
         namespace: podinfo-from-git
         url: https://github.com/stefanprodan/podinfo.git
         gitPath: charts/podinfo
+        valuesFiles:
+          - values.yaml
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       # This is the cosign signature for the podinfo image for image signature verification
@@ -55,6 +59,8 @@ components:
         version: 6.4.0
         namespace: podinfo-from-oci
         url: oci://ghcr.io/stefanprodan/charts/podinfo
+        valuesFiles:
+          - values.yaml
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       # This is the cosign signature for the podinfo image for image signature verification
@@ -84,6 +90,8 @@ components:
         namespace: helm-alt-release-name
         url: https://stefanprodan.github.io/podinfo
         releaseName: cool-name
+        valuesFiles:
+          - values.yaml
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       # This is the cosign signature for the podinfo image for image signature verification

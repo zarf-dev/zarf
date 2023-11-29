@@ -1,0 +1,32 @@
+kind: ZarfPackageConfig
+metadata:
+  name: helm-charts-evil-lookup
+  description: A test case that checks that an index lookup is performed on helm repos to help people get chart names correct
+  version: 0.0.1
+
+components:
+  - name: bad-helm-repository-name
+    required: false
+    charts:
+      - name: asdf
+        version: 6.4.0
+        namespace: podinfo-from-repo
+        url: https://stefanprodan.github.io/podinfo
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: pod
+                name: app.kubernetes.io/name=podinfo
+                namespace: podinfo-from-oci
+                condition: ready
+          - wait:
+              cluster:
+                kind: deployment
+                # note this version is the same as the chart version
+                name: app.kubernetes.io/version=6.4.0
+                namespace: podinfo-from-oci
+                condition: available
