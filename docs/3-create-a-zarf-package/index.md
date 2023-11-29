@@ -22,7 +22,7 @@ The general flow of a Zarf package deployment on an existing initialized cluster
 
 ```shell
 # Before creating your package you can lint your zarf.yaml
-$ zarf package lint <directory>
+$ zarf prepare lint <directory>
 
 # To create a package run the following:
 $ zarf package create <directory>
