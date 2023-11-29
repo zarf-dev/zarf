@@ -80,6 +80,7 @@ func checkForVarInComponentImport(validator *Validator) {
 			validator.addWarning(fmt.Sprintf(".components.[%d].import.url: Will not resolve ZARF_PKG_TMPL_* variables", i))
 		}
 	}
+
 }
 
 func makeFieldPathYqCompat(field string) string {
