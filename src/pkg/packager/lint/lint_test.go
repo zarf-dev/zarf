@@ -34,6 +34,11 @@ components:
 - name: import-url
   import:
     url: "oci://###ZARF_PKG_TMPL_ZEBRA###"
+
+- name: full-repo
+  repos:
+    - https://github.com/defenseunicorns/zarf-public-test.git
+	-  https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1
 `
 
 const goodZarfPackage = `
@@ -96,6 +101,14 @@ func TestValidateSchema(t *testing.T) {
 		checkForVarInComponentImport(&validator)
 		require.Equal(t, validator.warnings[0], ".components.[2].import.path: Will not resolve ZARF_PKG_TMPL_* variables")
 		require.Equal(t, validator.warnings[1], ".components.[3].import.url: Will not resolve ZARF_PKG_TMPL_* variables")
+	})
+
+	t.Run("Unpinnned repo warning", func(t *testing.T) {
+		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, badZarfPackage)
+		validator := Validator{typedZarfPackage: unmarshalledYaml}
+		checkforUnpinnedRepos(&validator)
+		require.Equal(t, validator.warnings[0], ".components.[4].repos.[0]: Unpinned repository")
+		require.Equal(t, len(validator.warnings), 1)
 	})
 
 	t.Run("Wrap standalone numbers in bracket", func(t *testing.T) {

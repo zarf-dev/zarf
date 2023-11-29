@@ -34,6 +34,7 @@ func ValidateZarfSchema(path string) (*Validator, error) {
 	}
 
 	checkForVarInComponentImport(&validator)
+	checkforUnpinnedRepos(&validator)
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
 		return nil, err
@@ -50,6 +51,26 @@ func ValidateZarfSchema(path string) (*Validator, error) {
 	return &validator, nil
 }
 
+func repoIsUnpinned(repo string) bool {
+	// Pinned github and dev.azure.com repos will have @
+	// Pinned gitlab repos will have /-/
+	if !strings.Contains(repo, "@") && !strings.Contains(repo, "/-/") {
+		return true
+	}
+	return false
+}
+
+func checkforUnpinnedRepos(validator *Validator) {
+	for i, component := range validator.typedZarfPackage.Components {
+		for j, repo := range component.Repos {
+			if repoIsUnpinned(repo) {
+				validator.addWarning(fmt.Sprintf(".components.[%d].repos.[%d]: Unpinned repository", i, j))
+			}
+		}
+	}
+
+}
+
 func checkForVarInComponentImport(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
 		if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
@@ -59,7 +80,6 @@ func checkForVarInComponentImport(validator *Validator) {
 			validator.addWarning(fmt.Sprintf(".components.[%d].import.url: Will not resolve ZARF_PKG_TMPL_* variables", i))
 		}
 	}
-
 }
 
 func makeFieldPathYqCompat(field string) string {

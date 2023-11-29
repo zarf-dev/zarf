@@ -22,3 +22,8 @@ components:
   - name: import-url
     import:
       url: "oci://###ZARF_PKG_TMPL_ZEBRA###"
+
+  - name: full-repo
+    repos:
+      - https://github.com/defenseunicorns/zarf-public-test.git
+      - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1
