@@ -121,13 +121,14 @@ func IsNotZeroAndNotEqual[T any](given T, equal T) bool {
 
 // MergeNonZero is used to merge non-zero overrides from one struct into another of the same type
 func MergeNonZero[T any](original T, overrides T) T {
-	originalValue := reflect.ValueOf(original)
-	overridesValue := reflect.ValueOf(overrides)
+	originalValue := reflect.ValueOf(&original)
+	overridesValue := reflect.ValueOf(&overrides)
 
-	for i := 0; i < originalValue.NumField(); i++ {
-		if !overridesValue.Field(i).IsZero() {
-			originalValue.Field(i).Set(overridesValue.Field(i))
+	for i := 0; i < originalValue.Elem().NumField(); i++ {
+		if !overridesValue.Elem().Field(i).IsZero() {
+			overrideField := overridesValue.Elem().Field(i)
+			originalValue.Elem().Field(i).Set(overrideField)
 		}
 	}
-	return originalValue.Interface().(T)
+	return originalValue.Elem().Interface().(T)
 }
