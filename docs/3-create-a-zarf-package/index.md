@@ -21,6 +21,9 @@ To learn more about creating a Zarf package, you can check out the following res
 The general flow of a Zarf package deployment on an existing initialized cluster is as follows:
 
 ```shell
+# Before creating your package you can lint your zarf.yaml
+$ zarf prepare lint <directory>
+
 # To create a package run the following:
 $ zarf package create <directory>
 # - Enter any package templates that have not yet been defined
