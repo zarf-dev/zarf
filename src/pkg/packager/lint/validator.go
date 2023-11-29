@@ -25,7 +25,7 @@ type Validator struct {
 // DisplayFormattedMessage message sent to user based on validator results
 func (v Validator) DisplayFormattedMessage() {
 	if !v.hasWarnings() && !v.hasErrors() {
-		message.Success(fmt.Sprintf("Schema validation successful for %q", v.typedZarfPackage.Metadata.Name))
+		message.Successf("Schema validation successful for %q", v.typedZarfPackage.Metadata.Name)
 	}
 	v.printValidationTable()
 }

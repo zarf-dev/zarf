@@ -53,10 +53,10 @@ func ValidateZarfSchema(path string) (*Validator, error) {
 func checkForVarInComponentImport(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
 		if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
-			validator.addWarning(fmt.Sprintf(".component.[%d].import.path: Will not resolve ZARF_PKG_TMPL_* variables", i))
+			validator.addWarning(fmt.Sprintf(".components.[%d].import.path: Will not resolve ZARF_PKG_TMPL_* variables", i))
 		}
 		if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
-			validator.addWarning(fmt.Sprintf(".component.[%d].import.url: Will not resolve ZARF_PKG_TMPL_* variables", i))
+			validator.addWarning(fmt.Sprintf(".components.[%d].import.url: Will not resolve ZARF_PKG_TMPL_* variables", i))
 		}
 	}
 

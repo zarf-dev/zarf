@@ -17,7 +17,7 @@ func TestLint(t *testing.T) {
 		_, stderr, err := e2e.Zarf("prepare", "lint", path)
 		require.Error(t, err, "Require an exit code since there was warnings / errors")
 		require.Contains(t, stderr, ".components.[0].import: Additional property not-path is not allowed")
-		require.Contains(t, stderr, "component.[2].import.path: Will not resolve ZARF_PKG_TMPL_* variables")
+		require.Contains(t, stderr, ".components.[2].import.path: Will not resolve ZARF_PKG_TMPL_* variables")
 		require.Contains(t, stderr, ".variables: Invalid type. Expected: array, given: null")
 	})
 

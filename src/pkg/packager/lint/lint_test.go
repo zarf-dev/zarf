@@ -94,8 +94,8 @@ func TestValidateSchema(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, badZarfPackage)
 		validator := Validator{typedZarfPackage: unmarshalledYaml}
 		checkForVarInComponentImport(&validator)
-		require.Equal(t, validator.warnings[0], ".component.[2].import.path: Will not resolve ZARF_PKG_TMPL_* variables")
-		require.Equal(t, validator.warnings[1], ".component.[3].import.url: Will not resolve ZARF_PKG_TMPL_* variables")
+		require.Equal(t, validator.warnings[0], ".components.[2].import.path: Will not resolve ZARF_PKG_TMPL_* variables")
+		require.Equal(t, validator.warnings[1], ".components.[3].import.url: Will not resolve ZARF_PKG_TMPL_* variables")
 	})
 
 	t.Run("Wrap standalone numbers in bracket", func(t *testing.T) {
