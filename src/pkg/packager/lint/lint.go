@@ -78,7 +78,8 @@ func validateSchema(validator *Validator) error {
 
 	if !result.Valid() {
 		for _, desc := range result.Errors() {
-			validator.addError(errors.New(desc.String()))
+			err := errors.New(desc.String())
+			validator.addError(err)
 		}
 	}
 
