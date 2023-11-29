@@ -23,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/otiai10/copy"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -120,17 +121,55 @@ func WriteFile(path string, data []byte) error {
 	return nil
 }
 
+func templateString(mappings map[string]*TextTemplate) (interface{}, error) {
+	// lazyman(tm) I should create a better structure, not just some yaml, but it works for a demo
+	result := "zarf:\n"
+	for key, value := range mappings {
+		newKey := strings.ReplaceAll(key, "###ZARF_", "")
+		newKey = strings.ReplaceAll(newKey, "###", "")
+		result += "  " + newKey + ": " + value.Value + "\n"
+	}
+	var config interface{}
+	err := yaml.Unmarshal([]byte(result), &config)
+	if err != nil {
+		message.Warnf("Unable to unmarshal yaml: %s", err.Error())
+	}
+
+	return config, err
+}
+
 // ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
 func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, deprecations map[string]string, templateRegex string) error {
 	textFile, err := os.Open(path)
 	if err != nil {
 		return err
 	}
+	defer textFile.Close()
+
+	// Read the contents of the file
+	fileContents, err := io.ReadAll(textFile)
+	if err != nil {
+		return err
+	}
+	txtTemplate, err := template.New("").Delims("###{###{###", "###}###}###").Parse(string(fileContents))
+	if err != nil {
+		return err
+	}
+	valuesFile, err := templateString(mappings)
+	if err != nil {
+		return err
+	}
+	writer := new(strings.Builder)
+	err = txtTemplate.Execute(writer, valuesFile)
+	if err != nil {
+		return err
+	}
+	reader := strings.NewReader(writer.String())
 
 	// This regex takes a line and parses the text before and after a discovered template: https://regex101.com/r/ilUxAz/1
 	regexTemplateLine := regexp.MustCompile(fmt.Sprintf("(?P<preTemplate>.*?)(?P<template>%s)(?P<postTemplate>.*)", templateRegex))
 
-	fileScanner := bufio.NewScanner(textFile)
+	fileScanner := bufio.NewScanner(reader)
 
 	// Set the buffer to 1 MiB to handle long lines (i.e. base64 text in a secret)
 	// 1 MiB is around the documented maximum size for secrets and configmaps
@@ -201,26 +240,7 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 		}
 	}
 
-	textFile.Close()
-
-	zarfTemplate, err := template.New("").Delims("###{{", "}}###").Parse(text)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-
-	err = zarfTemplate.Execute(file, nil)
-	if err != nil {
-		return err
-	}
-
-	file.Close()
-
-	return nil
+	return os.WriteFile(path, []byte(text), 0600)
 
 }
 
