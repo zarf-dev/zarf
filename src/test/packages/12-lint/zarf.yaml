@@ -1,7 +1,10 @@
 kind: ZarfInitConfig
 metadata:
   name: init
-  description: Testing bad yaml
+  description1: Testing bad yaml
+
+
+variables:
 
 components:
   - name: first-test-component

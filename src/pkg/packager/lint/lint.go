@@ -6,20 +6,15 @@ package lint
 
 import (
 	"embed"
-	"errors"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/xeipuuv/gojsonschema"
-)
-
-const (
-	validatorInvalidPrefix = "schema is invalid:"
-	validatorWarningPrefix = "zarf schema warning:"
 )
 
 // ZarfSchema is exported so main.go can embed the schema file
@@ -58,13 +53,24 @@ func ValidateZarfSchema(path string) (*Validator, error) {
 func checkForVarInComponentImport(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
 		if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
-			validator.addWarning(fmt.Sprintf("component.[%d].import.path will not resolve ZARF_PKG_TMPL_* variables", i))
+			validator.addWarning(fmt.Sprintf(".component.[%d].import.path: Will not resolve ZARF_PKG_TMPL_* variables", i))
 		}
 		if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
-			validator.addWarning(fmt.Sprintf("component.[%d].import.url will not resolve ZARF_PKG_TMPL_* variables", i))
+			validator.addWarning(fmt.Sprintf(".component.[%d].import.url: Will not resolve ZARF_PKG_TMPL_* variables", i))
 		}
 	}
 
+}
+
+func wrapNumbersInBrackets(input string) string {
+	// . is a non-word chacter (\b) so this gets digits between two .
+	re := regexp.MustCompile(`\b\d+\b`)
+
+	wrapped := re.ReplaceAllStringFunc(input, func(match string) string {
+		return "[" + match + "]"
+	})
+
+	return wrapped
 }
 
 func validateSchema(validator *Validator) error {
@@ -78,7 +84,8 @@ func validateSchema(validator *Validator) error {
 
 	if !result.Valid() {
 		for _, desc := range result.Errors() {
-			err := errors.New(desc.String())
+			err := fmt.Errorf(
+				".%s: %s", wrapNumbersInBrackets(desc.Field()), desc.Description())
 			validator.addError(err)
 		}
 	}
