@@ -22,18 +22,22 @@ type Validator struct {
 	untypedZarfPackage interface{}
 }
 
-// DisplayFormattedMessage Displays the message to the user with proper warnings, failures, or success
-// Will exit if there are errors
+// DisplayFormattedMessage message sent to user based on validator results
 func (v Validator) DisplayFormattedMessage() {
-	if v.IsSuccess() {
+	if !v.hasWarnings() && !v.hasErrors() {
 		message.Success(fmt.Sprintf("Schema validation successful for %q", v.typedZarfPackage.Metadata.Name))
 	} else {
-		v.printWarningTable()
+		v.printValidationTable()
 	}
 }
 
-func (v Validator) printWarningTable() {
-	if !v.IsSuccess() {
+// IsSuccess returns true if there are not any errors
+func (v Validator) IsSuccess() bool {
+	return !v.hasErrors()
+}
+
+func (v Validator) printValidationTable() {
+	if v.hasWarnings() || v.hasErrors() {
 		header := []string{"Type", "Message"}
 		connectData := [][]string{}
 		for _, warning := range v.warnings {
@@ -62,9 +66,4 @@ func (v *Validator) addWarning(message string) {
 
 func (v *Validator) addError(err error) {
 	v.errors = append(v.errors, err)
-}
-
-// IsSuccess returns true if there are not any warnings or errors
-func (v Validator) IsSuccess() bool {
-	return !v.hasWarnings() && !v.hasErrors()
 }

@@ -62,15 +62,18 @@ func checkForVarInComponentImport(validator *Validator) {
 
 }
 
-func wrapNumbersInBrackets(input string) string {
+func makeFieldYqEval(field string) string {
+	if field == "(root)" {
+		return field
+	}
 	// . is a non-word chacter (\b) so this gets digits between two .
 	re := regexp.MustCompile(`\b\d+\b`)
 
-	wrapped := re.ReplaceAllStringFunc(input, func(match string) string {
+	wrappedField := re.ReplaceAllStringFunc(field, func(match string) string {
 		return "[" + match + "]"
 	})
 
-	return wrapped
+	return fmt.Sprintf(".%s", wrappedField)
 }
 
 func validateSchema(validator *Validator) error {
@@ -85,7 +88,7 @@ func validateSchema(validator *Validator) error {
 	if !result.Valid() {
 		for _, desc := range result.Errors() {
 			err := fmt.Errorf(
-				".%s: %s", wrapNumbersInBrackets(desc.Field()), desc.Description())
+				"%s: %s", makeFieldYqEval(desc.Field()), desc.Description())
 			validator.addError(err)
 		}
 	}
