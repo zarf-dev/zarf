@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -76,6 +76,9 @@ func (p *Packager) Deploy() (err error) {
 	deployedComponents, err := p.deployComponents()
 	if err != nil {
 		return fmt.Errorf("unable to deploy all components in this Zarf Package: %w", err)
+	}
+	if len(deployedComponents) == 0 {
+		message.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 	}
 
 	// Notify all the things about the successful deployment
