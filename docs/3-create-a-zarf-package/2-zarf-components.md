@@ -177,7 +177,7 @@ The [`podinfo-flux`](/examples/podinfo-flux/) example showcases a simple GitOps 
 <ExampleYAML src={require('../../examples/composable-packages/zarf.yaml')} component="local-games-path" />
 </TabItem>
 <TabItem value="OCI URL">
-<ExampleYAML src={require('../../examples/composable-packages/zarf.yaml')} component="oci-wordpress-url" />
+<ExampleYAML src={require('../../examples/composable-packages/zarf.yaml')} component="oci-games-url" />
 </TabItem>
 </Tabs>
 
