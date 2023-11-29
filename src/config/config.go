@@ -6,6 +6,7 @@ package config
 
 import (
 	"crypto/tls"
+	"embed"
 	"fmt"
 	"net/http"
 	"os"
@@ -92,6 +93,7 @@ var (
 	NoColor bool
 
 	CosignPublicKey string
+	ZarfSchema      embed.FS
 
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()

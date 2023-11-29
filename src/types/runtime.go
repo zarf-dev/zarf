@@ -11,6 +11,14 @@ const (
 	FileVariableType VariableType = "file"
 )
 
+// Zarf looks for these strings in zarf.yaml to make dynamic changes
+const (
+	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
+	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
+	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
+	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
+)
+
 // VariableType represents a type of a Zarf package variable
 type VariableType string
 

@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -205,6 +206,34 @@ var prepareGenerateConfigFile = &cobra.Command{
 	},
 }
 
+var lintCmd = &cobra.Command{
+	Use:     "lint [ DIRECTORY ]",
+	Args:    cobra.MaximumNArgs(1),
+	Aliases: []string{"l"},
+	Short:   lang.CmdPrepareLintShort,
+	Long:    lang.CmdPrepareLintLong,
+	Run: func(cmd *cobra.Command, args []string) {
+		baseDir := ""
+		if len(args) > 0 {
+			baseDir = args[0]
+		} else {
+			var err error
+			baseDir, err = os.Getwd()
+			if err != nil {
+				message.Fatalf(err, lang.CmdPrepareLintErr, err.Error())
+			}
+		}
+		validator, err := lint.ValidateZarfSchema(baseDir)
+		if err != nil {
+			message.Fatal(err, err.Error())
+		}
+		validator.DisplayFormattedMessage()
+		if !validator.IsSuccess() {
+			os.Exit(1)
+		}
+	},
+}
+
 func init() {
 	v := common.InitViper()
 
@@ -213,6 +242,7 @@ func init() {
 	prepareCmd.AddCommand(prepareComputeFileSha256sum)
 	prepareCmd.AddCommand(prepareFindImages)
 	prepareCmd.AddCommand(prepareGenerateConfigFile)
+	prepareCmd.AddCommand(lintCmd)
 
 	prepareComputeFileSha256sum.Flags().StringVarP(&extractPath, "extract-path", "e", "", lang.CmdPrepareFlagExtractPath)
 
