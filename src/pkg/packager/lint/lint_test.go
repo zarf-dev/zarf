@@ -101,13 +101,13 @@ func TestValidateSchema(t *testing.T) {
 	t.Run("Wrap standalone numbers in bracket", func(t *testing.T) {
 		input := "components12.12.import.path"
 		expected := ".components12.[12].import.path"
-		acutal := makeFieldYqEval(input)
+		acutal := makeFieldPathYqCompat(input)
 		require.Equal(t, expected, acutal)
 	})
 
 	t.Run("root doesn't change", func(t *testing.T) {
 		input := "(root)"
-		acutal := makeFieldYqEval(input)
+		acutal := makeFieldPathYqCompat(input)
 		require.Equal(t, input, acutal)
 	})
 }

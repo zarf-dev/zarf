@@ -26,9 +26,8 @@ type Validator struct {
 func (v Validator) DisplayFormattedMessage() {
 	if !v.hasWarnings() && !v.hasErrors() {
 		message.Success(fmt.Sprintf("Schema validation successful for %q", v.typedZarfPackage.Metadata.Name))
-	} else {
-		v.printValidationTable()
 	}
+	v.printValidationTable()
 }
 
 // IsSuccess returns true if there are not any errors
