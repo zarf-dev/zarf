@@ -35,21 +35,21 @@ func ValidateZarfSchema(path string) (*Validator, error) {
 	validator := Validator{}
 	var err error
 	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &validator.typedZarfPackage); err != nil {
-		return &validator, err
+		return nil, err
 	}
 
 	checkForVarInComponentImport(&validator)
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
-		return &validator, err
+		return nil, err
 	}
 
 	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &validator.untypedZarfPackage); err != nil {
-		return &validator, err
+		return nil, err
 	}
 
 	if err = validateSchema(&validator); err != nil {
-		return &validator, err
+		return nil, err
 	}
 
 	return &validator, nil
