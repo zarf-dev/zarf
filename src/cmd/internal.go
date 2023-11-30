@@ -13,9 +13,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
-	"github.com/defenseunicorns/zarf/src/internal/api"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -49,8 +48,8 @@ var httpProxyCmd = &cobra.Command{
 	},
 }
 
-var generateCLIDocs = &cobra.Command{
-	Use:   "generate-cli-docs",
+var genCLIDocs = &cobra.Command{
+	Use:   "gen-cli-docs",
 	Short: lang.CmdInternalGenerateCliDocsShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Don't include the datestamp in the output
@@ -93,6 +92,14 @@ var generateCLIDocs = &cobra.Command{
 							}
 						}
 					}
+
+					if toolCmd.Use == "monitor" {
+						toolCmd.Flags().VisitAll(func(flag *pflag.Flag) {
+							if flag.Value.Type() == "string" {
+								flag.DefValue = ""
+							}
+						})
+					}
 				}
 			}
 		}
@@ -112,9 +119,9 @@ var generateCLIDocs = &cobra.Command{
 	},
 }
 
-var configSchemaCmd = &cobra.Command{
-	Use:     "config-schema",
-	Aliases: []string{"c"},
+var genConfigSchemaCmd = &cobra.Command{
+	Use:     "gen-config-schema",
+	Aliases: []string{"gc"},
 	Short:   lang.CmdInternalConfigSchemaShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		schema := jsonschema.Reflect(&types.ZarfPackage{})
@@ -126,14 +133,21 @@ var configSchemaCmd = &cobra.Command{
 	},
 }
 
-var apiSchemaCmd = &cobra.Command{
-	Use:   "api-schema",
-	Short: lang.CmdInternalAPISchemaShort,
+type zarfTypes struct {
+	DeployedPackage types.DeployedPackage
+	ZarfPackage     types.ZarfPackage
+	ZarfState       types.ZarfState
+}
+
+var genTypesSchemaCmd = &cobra.Command{
+	Use:     "gen-types-schema",
+	Aliases: []string{"gt"},
+	Short:   lang.CmdInternalTypesSchemaShort,
 	Run: func(cmd *cobra.Command, args []string) {
-		schema := jsonschema.Reflect(&types.RestAPI{})
+		schema := jsonschema.Reflect(&zarfTypes{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
-			message.Fatal(err, lang.CmdInternalAPISchemaGenerateErr)
+			message.Fatal(err, lang.CmdInternalTypesSchemaErr)
 		}
 		fmt.Print(string(output) + "\n")
 	},
@@ -183,16 +197,6 @@ var createPackageRegistryToken = &cobra.Command{
 	},
 }
 
-var uiCmd = &cobra.Command{
-	Use:   "ui",
-	Short: lang.CmdInternalUIShort,
-	Long:  lang.CmdInternalUILong,
-	Run: func(cmd *cobra.Command, args []string) {
-		message.Warn(lang.CmdInternalUIDeprecated)
-		api.LaunchAPIServer()
-	},
-}
-
 var isValidHostname = &cobra.Command{
 	Use:   "is-valid-hostname",
 	Short: lang.CmdInternalIsValidHostnameShort,
@@ -221,12 +225,11 @@ func init() {
 
 	internalCmd.AddCommand(agentCmd)
 	internalCmd.AddCommand(httpProxyCmd)
-	internalCmd.AddCommand(generateCLIDocs)
-	internalCmd.AddCommand(configSchemaCmd)
-	internalCmd.AddCommand(apiSchemaCmd)
+	internalCmd.AddCommand(genCLIDocs)
+	internalCmd.AddCommand(genConfigSchemaCmd)
+	internalCmd.AddCommand(genTypesSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
 	internalCmd.AddCommand(createPackageRegistryToken)
-	internalCmd.AddCommand(uiCmd)
 	internalCmd.AddCommand(isValidHostname)
 	internalCmd.AddCommand(computeCrc32)
 }

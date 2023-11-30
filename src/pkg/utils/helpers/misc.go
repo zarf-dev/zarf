@@ -8,67 +8,18 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
-	"strings"
 	"time"
 )
 
-// Unique returns a new slice with only unique elements.
-func Unique[T comparable](s []T) (r []T) {
-	exists := make(map[T]bool)
-	for _, str := range s {
-		if _, ok := exists[str]; !ok {
-			exists[str] = true
-			r = append(r, str)
-		}
-	}
-	return r
-}
-
-// Reverse returns a new slice with the elements in reverse order.
-func Reverse[T any](s []T) (r []T) {
-	for i := len(s) - 1; i >= 0; i-- {
-		r = append(r, s[i])
-	}
-	return r
-}
-
-// Filter returns a new slice with only the elements that pass the test.
-func Filter[T any](ss []T, test func(T) bool) (r []T) {
-	for _, s := range ss {
-		if test(s) {
-			r = append(r, s)
-		}
-	}
-	return r
-}
-
-// Find returns the first element that passes the test.
-func Find[T any](ss []T, test func(T) bool) (r T) {
-	for _, s := range ss {
-		if test(s) {
-			return s
-		}
-	}
-	return r
-}
-
-// RemoveMatches removes the given element from the slice that matches the test.
-func RemoveMatches[T any](ss []T, test func(T) bool) (r []T) {
-	for _, s := range ss {
-		if !test(s) {
-			r = append(r, s)
-		}
-	}
-	return r
-}
-
 // Retry will retry a function until it succeeds or the timeout is reached, timeout == retries * delay.
-func Retry(fn func() error, retries int, delay time.Duration) (err error) {
+func Retry(fn func() error, retries int, delay time.Duration, logger func(format string, args ...any)) (err error) {
 	for r := 0; r < retries; r++ {
 		err = fn()
 		if err == nil {
 			break
 		}
+
+		logger("Encountered an error, retrying (%d/%d): %s", r+1, retries, err.Error())
 
 		time.Sleep(delay)
 	}
@@ -86,6 +37,17 @@ func MergeMap[T any](m1, m2 map[string]T) (r map[string]T) {
 
 	for key, value := range m2 {
 		r[key] = value
+	}
+
+	return r
+}
+
+// TransformMapKeys takes a map and transforms its keys using the provided function.
+func TransformMapKeys[T any](m map[string]T, transform func(string) string) (r map[string]T) {
+	r = map[string]T{}
+
+	for key, value := range m {
+		r[transform(key)] = value
 	}
 
 	return r
@@ -123,17 +85,6 @@ func MergeMapRecursive(m1, m2 map[string]interface{}) (r map[string]interface{})
 	return r
 }
 
-// TransformMapKeys takes a map and transforms its keys using the provided function.
-func TransformMapKeys[T any](m map[string]T, transform func(string) string) (r map[string]T) {
-	r = map[string]T{}
-
-	for key, value := range m {
-		r[transform(key)] = value
-	}
-
-	return r
-}
-
 // MatchRegex wraps a get function around a substring match.
 func MatchRegex(regex *regexp.Regexp, str string) (func(string) string, error) {
 	// Validate the string.
@@ -161,7 +112,10 @@ func IsNotZeroAndNotEqual[T any](given T, equal T) bool {
 	}
 
 	for i := 0; i < givenValue.NumField(); i++ {
-		if !givenValue.Field(i).IsZero() && givenValue.Field(i).Interface() != equalValue.Field(i).Interface() {
+		if !givenValue.Field(i).IsZero() &&
+			givenValue.Field(i).CanInterface() &&
+			givenValue.Field(i).Interface() != equalValue.Field(i).Interface() {
+
 			return true
 		}
 	}
@@ -170,26 +124,16 @@ func IsNotZeroAndNotEqual[T any](given T, equal T) bool {
 
 // MergeNonZero is used to merge non-zero overrides from one struct into another of the same type
 func MergeNonZero[T any](original T, overrides T) T {
-	originalValue := reflect.ValueOf(original)
-	overridesValue := reflect.ValueOf(overrides)
+	originalValue := reflect.ValueOf(&original)
+	overridesValue := reflect.ValueOf(&overrides)
 
-	for i := 0; i < originalValue.NumField(); i++ {
-		if !overridesValue.Field(i).IsZero() {
-			originalValue.Field(i).Set(overridesValue.Field(i))
+	for i := 0; i < originalValue.Elem().NumField(); i++ {
+		if !overridesValue.Elem().Field(i).IsZero() &&
+			overridesValue.Elem().Field(i).CanSet() {
+
+			overrideField := overridesValue.Elem().Field(i)
+			originalValue.Elem().Field(i).Set(overrideField)
 		}
 	}
-	return originalValue.Interface().(T)
-}
-
-// StringToSlice converts a comma-separated string to a slice of lowercase strings.
-func StringToSlice(s string) []string {
-	if s != "" {
-		split := strings.Split(s, ",")
-		for idx, element := range split {
-			split[idx] = strings.ToLower(strings.TrimSpace(element))
-		}
-		return split
-	}
-
-	return []string{}
+	return originalValue.Elem().Interface().(T)
 }

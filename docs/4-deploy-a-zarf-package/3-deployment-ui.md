@@ -1,26 +1,26 @@
 # Deployment Web UI
 
-Zarf has a Deployment Web UI built in that supports a number of Zarf features used during the package deployment process. For users who prefer not to use the command line tool, the Web UI creates a simple experience to deploy and manage Zarf clusters and packages. The Web UI can be used to connect to existing clusters (via a Kubeconfig), initialize a cluster, deploy packages into a cluster, update packages in the cluster, and remove packages from the cluster.
+Zarf is also available in a version that exposes a Deployment Web UI that supports a number of Zarf features used during the package deployment process. For users who prefer not to use the command line tool, the Web UI creates a simple experience to deploy and manage Zarf clusters and packages. The Web UI can be used to connect to existing clusters (via a Kubeconfig), initialize a cluster, deploy packages into a cluster, update packages in the cluster, and remove packages from the cluster.
 
 The Zarf Web UI mirrors the functionality of the Zarf CLI commands, but with a more intuitive flow and familiar web application patterns for non-technical users. The web UI does not offer any additional commands or core functionality to Zarf.
 
 ## Open the Zarf Deployment Web UI
 
-The Zarf Deployment Web UI can easily be spun up with a single command from the CLI.
+The Zarf Deployment Web UI can easily be downloaded from the [Zarf UI Github Project](https://github.com/defenseunicorns/zarf-ui/releases/latest).
 
 Follow these steps to get started using the Web UI
 
-1. Step one: [Install the Zarf binary](../1-getting-started/index.md#installing-zarf)
-2. Step two: Open a terminal shell
-3. Step three: Type in the following command: ```zarf dev UI```
+1. Step one: [Download the Zarf UI](https://github.com/defenseunicorns/zarf-ui/releases/latest) version that matches your system (i.e. `zarf-ui_v0.1.0-Darwin_arm64`)
+2. Step two: (if applicable) Mark the file as executable with `chmod +x zarf-ui_v0.1.0-Darwin_arm64`
+3. Step three: Run the binary with `./zarf-ui_v0.1.0-Darwin_arm64` or by double clicking the file in your file browser
 
-![GIF showing the Web UI launched from the CLI terminal](../.images/dashboard/Web_UI__Launch_w__Cluster_AdobeExpress.gif)
+![GIF showing the Web UI launched from the CLI terminal](../.images/dashboard/Web%20UI%20-%20Launch.gif)
 
 ## Using the Zarf Deployment Web UI
 
 ### Cluster Connection Status
 
-When Zarf is running it automatically searches for a Kubeconfig on the local machine. If the Kubeconfig is found, it searches the default cluster to determine if it is a Zarf cluster (i.e. initialized). There are two different cluster statuses the Web UI will display based on the state of the cluster found.
+When Zarf UI is running it automatically searches for a Kubeconfig on the local machine. If the Kubeconfig is found, it searches the default cluster to determine if it is a Zarf cluster (i.e. initialized). There are two different cluster statuses the Web UI will display based on the state of the cluster found.
 
 #### Cluster not Connected (Not Initialized)
 
@@ -90,12 +90,12 @@ Once a package is deployed into the cluster, the Web UI offers additional comman
 - Update: Use when you wish to update a package with a new version of the same package.
 - Remove: Use when you wish to remove a package and all of its resources from the cluster. This cannot be undone.
 
-![Web UI deployed packages table with a context menu showing additional package commands](../.images/dashboard/Web%20UI%20-%20package%20commands.png
+![Web UI deployed packages table with a context menu showing additional package commands](../.images/dashboard/Web%20UI%20-%20package%20commands.png)
 
 
 ## Technical Details
 
-The web UI is packaged into the Zarf binary, so you don't have to worry about additional dependencies or trying to install it yourself! The Web UI is served through your machine's local browser, running on `localhost`, and utilizes the Zarf go binary as the backend.
+The web UI is packaged into a separate Go binary using Zarf as a library, so you don't have to worry about additional dependencies or needing to manually hook it into Zarf! The web UI is served through your machine's local browser, running on `localhost`, and utilizes the Go binary as the backend.
 
 Use the Zarf Deployment UI to execute the existing Zarf CLI commands:
 - [Zarf tools Kubectl top](../2-the-zarf-cli/100-cli-commands/zarf_tools_kubectl.md)
@@ -103,9 +103,9 @@ Use the Zarf Deployment UI to execute the existing Zarf CLI commands:
 - [Zarf Package Deploy](../2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md)
 - [Zarf Package Remove](../2-the-zarf-cli/100-cli-commands/zarf_package_remove.md)
 - [Zarf Package List](../2-the-zarf-cli/100-cli-commands/zarf_package_list.md)
-- [Zarf Package Inspect](../2-the-zarf-cli/100-cli-commands/zarf_package_inspect.md) (coming soon)
-- [Zarf Tools Sbom](../2-the-zarf-cli/100-cli-commands/zarf_tools_sbom.md) (Coming soon)
-- [Zarf Connect](../2-the-zarf-cli/100-cli-commands/zarf_connect.md) (coming soon)
+- [Zarf Package Inspect](../2-the-zarf-cli/100-cli-commands/zarf_package_inspect.md)
+- [Zarf Tools Sbom](../2-the-zarf-cli/100-cli-commands/zarf_tools_sbom.md)
+- [Zarf Connect](../2-the-zarf-cli/100-cli-commands/zarf_connect.md)
 
 :::info
 

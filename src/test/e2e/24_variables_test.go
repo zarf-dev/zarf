@@ -28,11 +28,13 @@ func TestVariables(t *testing.T) {
 	e2e.CleanFiles(tfPath, evilPath)
 
 	// Test that specifying an invalid setVariable value results in an error
-	stdOut, stdErr, err := e2e.Zarf("package", "create", evilSrc, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", evilSrc, "--set", "NUMB3R5=K1TT3H", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+	expectedOutString := "\"K1TT3H\""
+	require.Contains(t, stdErr, "", expectedOutString)
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	expectedOutString := "variable \"HELLO_KITTEH\" does not match pattern "
+	expectedOutString = "variable \"HELLO_KITTEH\" does not match pattern "
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test that specifying an invalid constant value results in an error
@@ -84,7 +86,7 @@ func TestVariables(t *testing.T) {
 	// AWS_REGION should have been templated and also templated into this config map
 	require.Contains(t, string(kubectlOut), "unicorn-land")
 	// MODIFIED_TERRAFORM_SHASUM should have been templated
-	require.Contains(t, string(kubectlOut), "9dbeee6d45bb5631040fe1401a1f94e791eee26255717dbbba38ddcdd53f378a")
+	require.Contains(t, string(kubectlOut), "94cfec185b3e92b76d95cd2beedddf41f51a0e02284605236e4a668a2ae3d07d")
 
 	// Remove the variables example
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", path, "--confirm")

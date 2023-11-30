@@ -93,6 +93,7 @@ func TestUseCLI(t *testing.T) {
 		stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "--kube-version=v1.22.0", "src/test/packages/00-kube-version-override")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "quay.io/jetstack/cert-manager-controller:v1.11.1", "The chart image should be found by Zarf")
+		require.Contains(t, stdOut, "quay.io/jetstack/cert-manager-controller:sha256-4f1782c8316f34aae6b9ab823c3e6b7e6e4d92ec5dac21de6a17c3da44c364f1.sig", "The image signature should be found by Zarf")
 	})
 
 	t.Run("zarf deploy should fail when given a bad component input", func(t *testing.T) {
@@ -209,6 +210,5 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, tlsCert)
 
 		require.FileExists(t, tlsKey)
-
 	})
 }

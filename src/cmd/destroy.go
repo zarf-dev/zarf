@@ -11,8 +11,8 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
@@ -71,8 +71,7 @@ var destroyCmd = &cobra.Command{
 			}
 		} else {
 			// Perform chart uninstallation
-			helmCfg := helm.Helm{}
-			helmCfg.Destroy(removeComponents)
+			helm.Destroy(removeComponents)
 
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace
 			c.DeleteZarfNamespace()

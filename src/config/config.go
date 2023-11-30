@@ -93,13 +93,14 @@ var (
 	NoColor bool
 
 	CosignPublicKey string
-	UIAssets        embed.FS
+	ZarfSchema      embed.FS
 
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
 	dataInjectionMarker = ".zarf-injection-%d"
 
-	ZarfDefaultCachePath = filepath.Join("~", ".zarf-cache")
+	ZarfDefaultCachePath   = filepath.Join("~", ".zarf-cache")
+	ZarfDefaultHelmTimeout = 15 * time.Minute
 )
 
 // GetArch returns the arch based on a priority list with options for overriding.

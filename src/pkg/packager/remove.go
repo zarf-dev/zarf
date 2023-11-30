@@ -12,8 +12,8 @@ import (
 	"slices"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -68,11 +68,9 @@ func (p *Packager) Remove() (err error) {
 	deployedPackage := &types.DeployedPackage{}
 
 	if requiresCluster {
-		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout)
-			if err != nil {
-				return err
-			}
+		err = p.connectToCluster(cluster.DefaultTimeout)
+		if err != nil {
+			return err
 		}
 		deployedPackage, err = p.cluster.GetDeployedPackage(packageName)
 		if err != nil {
@@ -150,7 +148,7 @@ func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deplo
 	for _, chart := range helpers.Reverse(deployedComponent.InstalledCharts) {
 		spinner.Updatef("Uninstalling chart '%s' from the '%s' component", chart.ChartName, deployedComponent.Name)
 
-		helmCfg := helm.Helm{}
+		helmCfg := helm.NewClusterOnly(p.cfg, p.cluster)
 		if err := helmCfg.RemoveChart(chart.Namespace, chart.ChartName, spinner); err != nil {
 			if !errors.Is(err, driver.ErrReleaseNotFound) {
 				onFailure()

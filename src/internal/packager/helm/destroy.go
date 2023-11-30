@@ -7,15 +7,17 @@ package helm
 import (
 	"regexp"
 
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 )
 
 // Destroy removes ZarfInitPackage charts from the cluster and optionally all Zarf-installed charts.
-func (h *Helm) Destroy(purgeAllZarfInstallations bool) {
+func Destroy(purgeAllZarfInstallations bool) {
 	spinner := message.NewProgressSpinner("Removing Zarf-installed charts")
 	defer spinner.Stop()
+
+	h := Helm{}
 
 	// Initially load the actionConfig without a namespace
 	err := h.createActionConfig("", spinner)

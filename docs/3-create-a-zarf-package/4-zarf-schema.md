@@ -491,45 +491,6 @@ must respect the following conditions
 </blockquote>
 </details>
 
-<details open>
-<summary>
-<strong> <a name="build_OCIImportedComponents"></a>OCIImportedComponents</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-  ## build > OCIImportedComponents
-
-**Description:** Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names
-
-|                           |                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `object`                                                                                                                          |
-| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
-
-<details>
-<summary>
-<strong> <a name="build_OCIImportedComponents_pattern1"></a>Pattern Property .*</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-:::note
-All properties whose name matches the regular expression
-```.*``` ([Test](https://regex101.com/?regex=.%2A))
-must respect the following conditions
-:::
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
-</blockquote>
-</details>
-
 <details>
 <summary>
 <strong> <a name="build_lastNonBreakingVersion"></a>lastNonBreakingVersion</strong>
@@ -757,6 +718,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="components_items_only_flavor"></a>flavor</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Only include this component when a matching '--flavor' is specified on 'zarf package create'
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -806,10 +783,6 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^(?!.*###ZARF_PKG_TMPL_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_TMPL_%29.%2A%24) |
-
 </blockquote>
 </details>
 
@@ -826,9 +799,9 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                                                                           |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^oci://(?!.*###ZARF_PKG_TMPL_).*$``` [Test](https://regex101.com/?regex=%5Eoci%3A%2F%2F%28%3F%21.%2A%23%23%23ZARF_PKG_TMPL_%29.%2A%24) |
+| Restrictions                      |                                                                             |
+| --------------------------------- | --------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^oci://.*$``` [Test](https://regex101.com/?regex=%5Eoci%3A%2F%2F.%2A%24) |
 
 </blockquote>
 </details>
@@ -1002,49 +975,9 @@ Must be one of:
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `combining`                                                                                              |
+| **Type**                  | `object`                                                                                                 |
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfChart                                                                                  |
-
-<blockquote>
-
-| One of(Option)                                       |
-| ---------------------------------------------------- |
-| [url](#components_items_charts_items_oneOf_i0)       |
-| [localPath](#components_items_charts_items_oneOf_i1) |
-
-<blockquote>
-
-### <a name="components_items_charts_items_oneOf_i0"></a>Property `url`
-
-**Title:** url
-
-|                           |                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `object`                                                                                                                          |
-| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
-
-#### <a name="autogenerated_heading_2"></a>The following properties are required
-* url
-
-</blockquote>
-<blockquote>
-
-### <a name="components_items_charts_items_oneOf_i1"></a>Property `localPath`
-
-**Title:** localPath
-
-|                           |                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `object`                                                                                                                          |
-| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
-
-#### <a name="autogenerated_heading_2"></a>The following properties are required
-* localPath
-
-</blockquote>
-
-</blockquote>
 
 <details>
 <summary>
@@ -1190,7 +1123,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The path to the chart folder
+**Description:** The path to the local chart's folder or .tgz archive
 
 |          |          |
 | -------- | -------- |

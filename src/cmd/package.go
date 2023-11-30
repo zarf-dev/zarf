@@ -17,12 +17,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 
-	"github.com/pterm/pterm"
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
@@ -108,6 +107,7 @@ var packageMirrorCmd = &cobra.Command{
 	Aliases: []string{"mr"},
 	Short:   lang.CmdPackageMirrorShort,
 	Long:    lang.CmdPackageMirrorLong,
+	Example: lang.CmdPackageMirrorExample,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
@@ -143,11 +143,12 @@ var packageInspectCmd = &cobra.Command{
 			message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
 		}
 	},
+	ValidArgsFunction: getPackageCompletionArgs,
 }
 
 var packageListCmd = &cobra.Command{
 	Use:     "list",
-	Aliases: []string{"l"},
+	Aliases: []string{"l", "ls"},
 	Short:   lang.CmdPackageListShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get all the deployed packages
@@ -156,10 +157,8 @@ var packageListCmd = &cobra.Command{
 			message.Fatalf(errs, lang.CmdPackageListNoPackageWarn)
 		}
 
-		// Populate a pterm table of all the deployed packages
-		packageTable := pterm.TableData{
-			{"     Package ", "Version", "Components"},
-		}
+		// Populate a matrix of all the deployed packages
+		packageData := [][]string{}
 
 		for _, pkg := range deployedZarfPackages {
 			var components []string
@@ -168,15 +167,14 @@ var packageListCmd = &cobra.Command{
 				components = append(components, component.Name)
 			}
 
-			packageTable = append(packageTable, pterm.TableData{{
-				fmt.Sprintf("     %s", pkg.Name),
-				pkg.Data.Metadata.Version,
-				fmt.Sprintf("%v", components),
-			}}...)
+			packageData = append(packageData, []string{
+				pkg.Name, pkg.Data.Metadata.Version, fmt.Sprintf("%v", components),
+			})
 		}
 
 		// Print out the table for the user
-		_ = pterm.DefaultTable.WithHasHeader().WithData(packageTable).Render()
+		header := []string{"Package", "Version", "Components"}
+		message.Table(header, packageData)
 
 		// Print out any unmarshalling errors
 		if len(errs) > 0 {
@@ -187,7 +185,7 @@ var packageListCmd = &cobra.Command{
 
 var packageRemoveCmd = &cobra.Command{
 	Use:     "remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm",
-	Aliases: []string{"u"},
+	Aliases: []string{"u", "rm"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -202,6 +200,7 @@ var packageRemoveCmd = &cobra.Command{
 			message.Fatalf(err, lang.CmdPackageRemoveErr, err.Error())
 		}
 	},
+	ValidArgsFunction: getPackageCompletionArgs,
 }
 
 var packagePublishCmd = &cobra.Command{
@@ -299,6 +298,24 @@ func identifyAndFallbackToClusterSource() (src sources.PackageSource) {
 	return src
 }
 
+func getPackageCompletionArgs(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	var pkgCandidates []string
+
+	c, err := cluster.NewCluster()
+	if err != nil {
+		return pkgCandidates, cobra.ShellCompDirectiveDefault
+	}
+
+	// Get all the deployed packages
+	deployedZarfPackages, _ := c.GetDeployedZarfPackages()
+	// Populate list of package names
+	for _, pkg := range deployedZarfPackages {
+		pkgCandidates = append(pkgCandidates, pkg.Name)
+	}
+
+	return pkgCandidates, cobra.ShellCompDirectiveDefault
+}
+
 func init() {
 	v := common.InitViper()
 
@@ -324,7 +341,6 @@ func init() {
 
 func bindPackageFlags(v *viper.Viper) {
 	packageFlags := packageCmd.PersistentFlags()
-	v.SetDefault(common.VPkgOCIConcurrency, 3)
 	packageFlags.IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(common.VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	packageFlags.StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 }
@@ -349,11 +365,18 @@ func bindCreateFlags(v *viper.Viper) {
 	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(common.VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
 	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(common.VPkgCreateSkipSbom), lang.CmdPackageCreateFlagSkipSbom)
 	createFlags.IntVarP(&pkgConfig.CreateOpts.MaxPackageSizeMB, "max-package-size", "m", v.GetInt(common.VPkgCreateMaxPackageSize), lang.CmdPackageCreateFlagMaxPackageSize)
-	createFlags.StringVarP(&pkgConfig.CreateOpts.SigningKeyPath, "key", "k", v.GetString(common.VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
-	createFlags.StringVar(&pkgConfig.CreateOpts.SigningKeyPassword, "key-pass", v.GetString(common.VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagSigningKeyPassword)
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(common.VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
+	createFlags.StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+
+	createFlags.StringVar(&pkgConfig.CreateOpts.SigningKeyPath, "signing-key", v.GetString(common.VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
+	createFlags.StringVar(&pkgConfig.CreateOpts.SigningKeyPassword, "signing-key-pass", v.GetString(common.VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagSigningKeyPassword)
+
+	createFlags.StringVarP(&pkgConfig.CreateOpts.SigningKeyPath, "key", "k", v.GetString(common.VPkgCreateSigningKey), lang.CmdPackageCreateFlagDeprecatedKey)
+	createFlags.StringVar(&pkgConfig.CreateOpts.SigningKeyPassword, "key-pass", v.GetString(common.VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagDeprecatedKeyPassword)
 
 	createFlags.MarkHidden("output-directory")
+	createFlags.MarkHidden("key")
+	createFlags.MarkHidden("key-pass")
 }
 
 func bindDeployFlags(v *viper.Viper) {
@@ -365,17 +388,25 @@ func bindDeployFlags(v *viper.Viper) {
 	// Always require adopt-existing-resources flag (no viper)
 	deployFlags.BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
 
+	deployFlags.BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
+
+	deployFlags.DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
+
 	deployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(common.VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(common.VPkgDeploySget), lang.CmdPackageDeployFlagSget)
-	deployFlags.BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
 
 	deployFlags.MarkHidden("sget")
 }
 
 func bindMirrorFlags(v *viper.Viper) {
 	mirrorFlags := packageMirrorCmd.Flags()
+
+	// Init package variable defaults that are non-zero values
+	// NOTE: these are not in common.setDefaults so that zarf tools update-creds does not erroneously update values back to the default
+	v.SetDefault(common.VInitGitPushUser, config.ZarfGitPushUser)
+	v.SetDefault(common.VInitRegistryPushUser, config.ZarfRegistryPushUser)
 
 	// Always require confirm flag (no viper)
 	mirrorFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
@@ -410,8 +441,8 @@ func bindRemoveFlags(v *viper.Viper) {
 
 func bindPublishFlags(v *viper.Viper) {
 	publishFlags := packagePublishCmd.Flags()
-	publishFlags.StringVarP(&pkgConfig.PublishOpts.SigningKeyPath, "key", "k", v.GetString(common.VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
-	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "key-pass", v.GetString(common.VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
+	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPath, "signing-key", v.GetString(common.VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
+	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "signing-key-pass", v.GetString(common.VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
 }
 
 func bindPullFlags(v *viper.Viper) {

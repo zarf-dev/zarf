@@ -9,16 +9,17 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/cmd"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 )
-
-//go:embed all:build/ui/*
-var assets embed.FS
 
 //go:embed cosign.pub
 var cosignPublicKey string
 
+//go:embed zarf.schema.json
+var zarfSchema embed.FS
+
 func main() {
-	config.UIAssets = assets
 	config.CosignPublicKey = cosignPublicKey
+	lint.ZarfSchema = zarfSchema
 	cmd.Execute()
 }

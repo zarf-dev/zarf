@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,10 +24,17 @@ func TestConnectAndCreds(t *testing.T) {
 	t.Log("E2E: Connect")
 	e2e.SetupWithCluster(t)
 
+	prevAgentSecretData, _, err := e2e.Kubectl("get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
+	require.NoError(t, err)
+
 	connectToZarfServices(t)
 
 	stdOut, stdErr, err := e2e.Zarf("tools", "update-creds", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	newAgentSecretData, _, err := e2e.Kubectl("get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
+	require.NoError(t, err)
+	require.NotEqual(t, prevAgentSecretData, newAgentSecretData, "agent secrets should not be the same")
 
 	connectToZarfServices(t)
 
@@ -40,7 +47,7 @@ func TestConnectAndCreds(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/library/registry")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "2.8.2")
+	require.Contains(t, stdOut, "2.8.3")
 	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/promtail")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Equal(t, stdOut, "")

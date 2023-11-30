@@ -29,7 +29,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -38,17 +37,6 @@ func (p *Packager) Create() (err error) {
 
 	if err = p.readZarfYAML(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML)); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
-	}
-
-	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
-		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.arch)
-		if err != nil {
-			return err
-		}
-		err = p.setOCIRemote(ref)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Load the images and repos from the 'reference' package
@@ -66,13 +54,8 @@ func (p *Packager) Create() (err error) {
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
+	if p.isInitConfig() {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
-	}
-
-	// Before we compose the components (and render the imported OCI components), we need to remove any components that are not needed for a differential build
-	if err := p.removeDifferentialComponentsFromPackage(); err != nil {
-		return err
 	}
 
 	// Compose components into a single zarf.yaml file
@@ -83,6 +66,17 @@ func (p *Packager) Create() (err error) {
 	// After components are composed, template the active package.
 	if err := p.fillActiveTemplate(); err != nil {
 		return fmt.Errorf("unable to fill values in template: %s", err.Error())
+	}
+
+	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
+		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.arch)
+		if err != nil {
+			return err
+		}
+		err = p.setOCIRemote(ref)
+		if err != nil {
+			return err
+		}
 	}
 
 	// After templates are filled process any create extensions
@@ -128,7 +122,7 @@ func (p *Packager) Create() (err error) {
 		isSkeleton := false
 		if err := p.addComponent(idx, component, isSkeleton); err != nil {
 			onFailure()
-			return fmt.Errorf("unable to add component: %w", err)
+			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
 		componentSBOM, err := p.getFilesToSBOM(component)
 		if err != nil {
@@ -156,6 +150,7 @@ func (p *Packager) Create() (err error) {
 	}
 
 	imageList := helpers.Unique(combinedImageList)
+	var sbomImageList []transform.Image
 
 	// Images are handled separately from other component assets.
 	if len(imageList) > 0 {
@@ -163,7 +158,7 @@ func (p *Packager) Create() (err error) {
 
 		p.layout = p.layout.AddImages()
 
-		pulled := map[transform.Image]v1.Image{}
+		var pulled []images.ImgInfo
 
 		doPull := func() error {
 			imgConfig := images.ImageConfig{
@@ -178,13 +173,16 @@ func (p *Packager) Create() (err error) {
 			return err
 		}
 
-		if err := helpers.Retry(doPull, 3, 5*time.Second); err != nil {
+		if err := helpers.Retry(doPull, 3, 5*time.Second, message.Warnf); err != nil {
 			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
 		}
 
-		for _, img := range pulled {
-			if err := p.layout.Images.AddV1Image(img); err != nil {
+		for _, imgInfo := range pulled {
+			if err := p.layout.Images.AddV1Image(imgInfo.Img); err != nil {
 				return err
+			}
+			if imgInfo.HasImageLayers {
+				sbomImageList = append(sbomImageList, imgInfo.RefInfo)
 			}
 		}
 	}
@@ -194,7 +192,7 @@ func (p *Packager) Create() (err error) {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
 		p.layout = p.layout.AddSBOMs()
-		if err := sbom.Catalog(componentSBOMs, imageList, p.layout); err != nil {
+		if err := sbom.Catalog(componentSBOMs, sbomImageList, p.layout); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
@@ -335,6 +333,21 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 		p.cfg.Pkg.Components[index].DeprecatedCosignKeyPath = "cosign.pub"
 	}
 
+	// TODO: (@WSTARR) Shim the skeleton component's create action dirs to be empty.  This prevents actions from failing by cd'ing into directories that will be flattened.
+	if isSkeleton {
+		component.Actions.OnCreate.Defaults.Dir = ""
+		resetActions := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
+			for idx := range actions {
+				actions[idx].Dir = nil
+			}
+			return actions
+		}
+		component.Actions.OnCreate.Before = resetActions(component.Actions.OnCreate.Before)
+		component.Actions.OnCreate.After = resetActions(component.Actions.OnCreate.After)
+		component.Actions.OnCreate.OnSuccess = resetActions(component.Actions.OnCreate.OnSuccess)
+		component.Actions.OnCreate.OnFailure = resetActions(component.Actions.OnCreate.OnFailure)
+	}
+
 	onCreate := component.Actions.OnCreate
 	if !isSkeleton {
 		if err := p.runActions(onCreate.Defaults, onCreate.Before, nil); err != nil {
@@ -345,46 +358,37 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
 
-		helmCfg := helm.Helm{
-			Chart: chart,
-			Cfg:   p.cfg,
-		}
+		helmCfg := helm.New(chart, componentPaths.Charts, componentPaths.Values)
 
-		if isSkeleton && chart.URL == "" {
-			rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
-			dst := filepath.Join(componentPaths.Base, rel)
+		if isSkeleton {
+			if chart.LocalPath != "" {
+				rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+				dst := filepath.Join(componentPaths.Base, rel)
 
-			err := utils.CreatePathAndCopy(chart.LocalPath, dst)
-			if err != nil {
-				return err
+				err := utils.CreatePathAndCopy(chart.LocalPath, dst)
+				if err != nil {
+					return err
+				}
+
+				p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
 			}
 
-			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
+			for valuesIdx, path := range chart.ValuesFiles {
+				if helpers.IsURL(path) {
+					continue
+				}
+
+				rel := fmt.Sprintf("%s-%d", helm.StandardName(layout.ValuesDir, chart), valuesIdx)
+				p.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
+
+				if err := utils.CreatePathAndCopy(path, filepath.Join(componentPaths.Base, rel)); err != nil {
+					return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+				}
+			}
 		} else {
 			err := helmCfg.PackageChart(componentPaths.Charts)
 			if err != nil {
 				return err
-			}
-		}
-
-		for valuesIdx, path := range chart.ValuesFiles {
-			rel := fmt.Sprintf("%s-%d", helm.StandardName(layout.ValuesDir, chart), valuesIdx)
-			dst := filepath.Join(componentPaths.Base, rel)
-
-			if helpers.IsURL(path) {
-				if isSkeleton {
-					continue
-				}
-				if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
-					return fmt.Errorf(lang.ErrDownloading, path, err.Error())
-				}
-			} else {
-				if err := utils.CreatePathAndCopy(path, dst); err != nil {
-					return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
-				}
-				if isSkeleton {
-					p.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
-				}
 			}
 		}
 	}
@@ -595,6 +599,7 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 		if rel == layout.ZarfYAML || rel == layout.Checksums {
 			continue
 		}
+
 		sum, err := utils.GetSHA256OfFile(abs)
 		if err != nil {
 			return "", err
@@ -630,11 +635,7 @@ func (p *Packager) loadDifferentialData() error {
 		if err != nil {
 			return err
 		}
-		manifest, err := p.remote.FetchRoot()
-		if err != nil {
-			return err
-		}
-		pkg, err := p.remote.FetchZarfYAML(manifest)
+		pkg, err := p.remote.FetchZarfYAML()
 		if err != nil {
 			return err
 		}
@@ -668,44 +669,6 @@ func (p *Packager) loadDifferentialData() error {
 	p.cfg.CreateOpts.DifferentialData.DifferentialImages = allIncludedImagesMap
 	p.cfg.CreateOpts.DifferentialData.DifferentialRepos = allIncludedReposMap
 	p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
-	p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents = differentialZarfConfig.Build.OCIImportedComponents
-
-	return nil
-}
-
-// removeDifferentialComponentsFromPackage will remove unchanged OCI imported components from a differential package creation
-func (p *Packager) removeDifferentialComponentsFromPackage() error {
-	// Remove components that were imported and already built into the reference package
-	if len(p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents) > 0 {
-		componentsToRemove := []int{}
-
-		for idx, component := range p.cfg.Pkg.Components {
-			// if the component is imported from an OCI package and everything is the same, don't include this package
-			if helpers.IsOCIURL(component.Import.URL) {
-				if _, alsoExists := p.cfg.CreateOpts.DifferentialData.DifferentialOCIComponents[component.Import.URL]; alsoExists {
-
-					// If the component spec is not empty, we will still include it in the differential package
-					// NOTE: We are ignoring fields that are not relevant to the differential build
-					if component.IsEmpty([]string{"Name", "Required", "Description", "Default", "Import"}) {
-						componentsToRemove = append(componentsToRemove, idx)
-					}
-				}
-			}
-		}
-
-		// Remove the components that are already included (via OCI Import) in the reference package
-		if len(componentsToRemove) > 0 {
-			for i, componentIndex := range componentsToRemove {
-				indexToRemove := componentIndex - i
-				componentToRemove := p.cfg.Pkg.Components[indexToRemove]
-
-				// If we are removing a component, add it to the build metadata and remove it from the list of OCI components for this package
-				p.cfg.Pkg.Build.DifferentialMissing = append(p.cfg.Pkg.Build.DifferentialMissing, componentToRemove.Name)
-
-				p.cfg.Pkg.Components = append(p.cfg.Pkg.Components[:indexToRemove], p.cfg.Pkg.Components[indexToRemove+1:]...)
-			}
-		}
-	}
 
 	return nil
 }

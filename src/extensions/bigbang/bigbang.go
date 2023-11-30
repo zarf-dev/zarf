@@ -83,8 +83,8 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 	bbRepo := fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version)
 
 	// Configure helm to pull down the Big Bang chart.
-	helmCfg := helm.Helm{
-		Chart: types.ZarfChart{
+	helmCfg := helm.New(
+		types.ZarfChart{
 			Name:        bb,
 			Namespace:   bb,
 			URL:         bbRepo,
@@ -92,12 +92,12 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 			ValuesFiles: cfg.ValuesFiles,
 			GitPath:     "./chart",
 		},
-		BasePath: tmpPaths.Temp,
-	}
+		path.Join(tmpPaths.Temp, bb),
+		path.Join(tmpPaths.Temp, bb, "values"),
+	)
 
 	// Download the chart from Git and save it to a temporary directory.
-	chartPath := path.Join(tmpPaths.Temp, bb)
-	helmCfg.ChartLoadOverride, err = helmCfg.PackageChartFromGit(chartPath)
+	err = helmCfg.PackageChartFromGit(c.DeprecatedCosignKeyPath)
 	if err != nil {
 		return c, fmt.Errorf("unable to download Big Bang Chart: %w", err)
 	}
@@ -249,14 +249,14 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 // Skeletonize mutates a component so that the valuesFiles can be contained inside a skeleton package
 func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
-		// Define the name as the file name without the extension.
-		baseName := strings.TrimSuffix(valuesFile, filepath.Ext(valuesFile))
+		// Get the base file name for this file.
+		baseName := filepath.Base(valuesFile)
 
-		// Replace non-alphanumeric characters with a dash.
-		baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")
+		// Define the name as the file name without the extension.
+		baseName = strings.TrimSuffix(baseName, filepath.Ext(baseName))
 
 		// Add the skeleton name prefix.
-		skelName := fmt.Sprintf("bb-ext-skeleton-values-%s.yaml", baseName)
+		skelName := fmt.Sprintf("bb-skel-vals-%d-%s.yaml", valuesIdx, baseName)
 
 		rel := filepath.Join(layout.TempDir, skelName)
 		dst := filepath.Join(tmpPaths.Base, rel)
@@ -269,14 +269,14 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 	}
 
 	for fluxPatchFileIdx, fluxPatchFile := range c.Extensions.BigBang.FluxPatchFiles {
-		// Define the name as the file name without the extension.
-		baseName := strings.TrimSuffix(fluxPatchFile, filepath.Ext(fluxPatchFile))
+		// Get the base file name for this file.
+		baseName := filepath.Base(fluxPatchFile)
 
-		// Replace non-alphanumeric characters with a dash.
-		baseName = nonAlphnumeric.ReplaceAllString(baseName, "-")
+		// Define the name as the file name without the extension.
+		baseName = strings.TrimSuffix(baseName, filepath.Ext(baseName))
 
 		// Add the skeleton name prefix.
-		skelName := fmt.Sprintf("bb-ext-skeleton-flux-patches-%s.yaml", baseName)
+		skelName := fmt.Sprintf("bb-skel-flux-patch-%d-%s.yaml", fluxPatchFileIdx, baseName)
 
 		rel := filepath.Join(layout.TempDir, skelName)
 		dst := filepath.Join(tmpPaths.Base, rel)
@@ -291,19 +291,37 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 	return c, nil
 }
 
-// Compose mutates a component so that the valuesFiles are relative to the parent importing component
-func Compose(pathAncestry string, c types.ZarfComponent) types.ZarfComponent {
-	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
-		parentRel := filepath.Join(pathAncestry, valuesFile)
-		c.Extensions.BigBang.ValuesFiles[valuesIdx] = parentRel
-	}
+// Compose mutates a component so that its local paths are relative to the provided path
+//
+// additionally, it will merge any overrides
+func Compose(c *types.ZarfComponent, override types.ZarfComponent, relativeTo string) {
+	// perform any overrides
+	if override.Extensions.BigBang != nil {
+		for valuesIdx, valuesFile := range override.Extensions.BigBang.ValuesFiles {
+			if helpers.IsURL(valuesFile) {
+				continue
+			}
 
-	for fluxPatchFileIdx, fluxPatchFile := range c.Extensions.BigBang.FluxPatchFiles {
-		parentRel := filepath.Join(pathAncestry, fluxPatchFile)
-		c.Extensions.BigBang.FluxPatchFiles[fluxPatchFileIdx] = parentRel
-	}
+			fixed := filepath.Join(relativeTo, valuesFile)
+			override.Extensions.BigBang.ValuesFiles[valuesIdx] = fixed
+		}
 
-	return c
+		for fluxPatchFileIdx, fluxPatchFile := range override.Extensions.BigBang.FluxPatchFiles {
+			if helpers.IsURL(fluxPatchFile) {
+				continue
+			}
+
+			fixed := filepath.Join(relativeTo, fluxPatchFile)
+			override.Extensions.BigBang.FluxPatchFiles[fluxPatchFileIdx] = fixed
+		}
+
+		if c.Extensions.BigBang == nil {
+			c.Extensions.BigBang = override.Extensions.BigBang
+		} else {
+			c.Extensions.BigBang.ValuesFiles = append(c.Extensions.BigBang.ValuesFiles, override.Extensions.BigBang.ValuesFiles...)
+			c.Extensions.BigBang.FluxPatchFiles = append(c.Extensions.BigBang.FluxPatchFiles, override.Extensions.BigBang.FluxPatchFiles...)
+		}
+	}
 }
 
 // isValidVersion check if the version is 1.54.0 or greater.
@@ -477,8 +495,8 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 	}
 
 	// Loop through the valuesFrom list and create a manifest for each.
-	for _, path := range cfg.ValuesFiles {
-		data, err := manifestValuesFile(path)
+	for valuesIdx, valuesFile := range cfg.ValuesFiles {
+		data, err := manifestValuesFile(valuesIdx, valuesFile)
 		if err != nil {
 			return manifest, err
 		}
@@ -512,25 +530,14 @@ func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []st
 	spinner := message.NewProgressSpinner("Discovering images in %s", repo)
 	defer spinner.Stop()
 
-	chart := types.ZarfChart{
-		Name:    repo,
-		URL:     repo,
-		Version: matches[1],
-		GitPath: "chart",
-	}
-
-	helmCfg := helm.Helm{
-		Chart: chart,
-	}
-
-	gitPath, err := helmCfg.DownloadChartFromGitToTemp(spinner)
+	gitPath, err := helm.DownloadChartFromGitToTemp(repo, spinner)
 	if err != nil {
 		return images, err
 	}
 	defer os.RemoveAll(gitPath)
 
 	// Set the directory for the chart
-	chartPath := filepath.Join(gitPath, helmCfg.Chart.GitPath)
+	chartPath := filepath.Join(gitPath, "chart")
 
 	images, err = helm.FindAnnotatedImagesForChart(chartPath, values)
 	if err != nil {

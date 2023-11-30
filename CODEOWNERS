@@ -7,34 +7,27 @@
 *.md @Madeline-UX @jeff-mccoy @Racer159 @Noxsios @lucasrod16
 
 # Core code
-/src/ @jeff-mccoy @Racer159 @Noxsios
-/go.* @jeff-mccoy  @Racer159 @Noxsios
-main.go @jeff-mccoy @Racer159 @Noxsios
+/src/ @jeff-mccoy @Racer159 @Noxsios @lucasrod16
+/go.* @jeff-mccoy  @Racer159 @Noxsios @lucasrod16
+main.go @jeff-mccoy @Racer159 @Noxsios @lucasrod16
 
 # Init package
-/packages/ @jeff-mccoy @Racer159 @Noxsios
-/zarf.yaml @jeff-mccoy @Racer159 @Noxsios
+/packages/ @jeff-mccoy @Racer159 @Noxsios @lucasrod16
+/zarf.yaml @jeff-mccoy @Racer159 @Noxsios @lucasrod16
 
-# Web UI-specific
-/package*.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/src/internal/api @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/src/ui/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/playwright.config.ts @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/svelte.config.js @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/tsconfig.json @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/vite.config.ts @mike-winberry @Racer159 @Noxsios @jeff-mccoy
-/docs-website/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy
+# Docs Website
+/docs-website/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy @lucasrod16
 
 # Privileged pipeline files
-/.github/ @jeff-mccoy @Racer159 @Noxsios
-/hack/ @jeff-mccoy @Racer159 @Noxsios
-/.gitignore @jeff-mccoy @Racer159 @Noxsios
-/.golangci.yml @jeff-mccoy @Racer159 @Noxsios
-/.goreleaser.yml @jeff-mccoy @Racer159 @Noxsios
-/.grype.yaml @jeff-mccoy @Racer159 @Noxsios
-/Dockerfile @jeff-mccoy @Racer159 @Noxsios
-/renovate.json @jeff-mccoy @Racer159 @Noxsios
-/Makefile @jeff-mccoy @Racer159 @Noxsios
+/.github/ @jeff-mccoy @Racer159 @Noxsios @lucasrod16
+/hack/ @jeff-mccoy @Racer159 @Noxsios @lucasrod16
+/.gitignore @jeff-mccoy @Racer159 @Noxsios @lucasrod16
+/.golangci.yml @jeff-mccoy @Racer159 @Noxsios @lucasrod16
+/.goreleaser.yml @jeff-mccoy @Racer159 @Noxsios @lucasrod16
+/.grype.yaml @jeff-mccoy @Racer159 @Noxsios @lucasrod16
+/Dockerfile @jeff-mccoy @Racer159 @Noxsios @lucasrod16
+/renovate.json @jeff-mccoy @Racer159 @Noxsios @lucasrod16
+/Makefile @jeff-mccoy @Racer159 @Noxsios @lucasrod16
 
 # Additional privileged files
 /CODEOWNERS @jeff-mccoy @mikevanhemert @austenbryan

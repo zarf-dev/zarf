@@ -15,6 +15,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -31,7 +32,9 @@ var (
 
 // FileDescriptorExists returns true if the given file exists in the given directory with the expected SHA.
 func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDir string) bool {
-	destinationPath := filepath.Join(destinationDir, desc.Annotations[ocispec.AnnotationTitle])
+	rel := desc.Annotations[ocispec.AnnotationTitle]
+	destinationPath := filepath.Join(destinationDir, rel)
+
 	info, err := os.Stat(destinationPath)
 	if err != nil {
 		return false
@@ -83,7 +86,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 		return nil, err
 	}
 
-	pkg, err := o.FetchZarfYAML(root)
+	pkg, err := o.FetchZarfYAML()
 	if err != nil {
 		return nil, err
 	}
@@ -116,13 +119,22 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	if len(images) > 0 {
 		// Add the image index and the oci-layout layers
 		layers = append(layers, root.Locate(ZarfPackageIndexPath), root.Locate(ZarfPackageLayoutPath))
-		index, err := o.FetchImagesIndex(root)
+		index, err := o.FetchImagesIndex()
 		if err != nil {
 			return nil, err
 		}
 		for image := range images {
+			// use docker's transform lib to parse the image ref
+			// this properly mirrors the logic within create
+			refInfo, err := transform.ParseImageRef(image)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse image ref %q: %w", image, err)
+			}
+
 			manifestDescriptor := helpers.Find(index.Manifests, func(layer ocispec.Descriptor) bool {
-				return layer.Annotations[ocispec.AnnotationBaseImageName] == image
+				return layer.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Reference ||
+					// A backwards compatibility shim for older Zarf versions that would leave docker.io off of image annotations
+					(layer.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Path+refInfo.TagOrDigest && refInfo.Host == "docker.io")
 			})
 
 			// even though these are technically image manifests, we store them as Zarf blobs
@@ -185,11 +197,11 @@ func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersT
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 
-	return layersToPull, o.CopyWithProgress(layersToPull, dst, &copyOpts, destinationDir)
+	return layersToPull, o.CopyWithProgress(layersToPull, dst, copyOpts, destinationDir)
 }
 
 // CopyWithProgress copies the given layers from the remote repository to the given store.
-func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Target, copyOpts *oras.CopyOptions, destinationDir string) error {
+func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Target, copyOpts oras.CopyOptions, destinationDir string) error {
 	estimatedBytes := int64(0)
 	shas := []string{}
 	for _, layer := range layers {
@@ -199,28 +211,32 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 		}
 	}
 
-	copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-		nodes, err := content.Successors(ctx, fetcher, desc)
-		if err != nil {
-			return nil, err
-		}
-		var ret []ocispec.Descriptor
-		for _, node := range nodes {
-			if slices.Contains(shas, node.Digest.Encoded()) {
-				ret = append(ret, node)
+	if copyOpts.FindSuccessors == nil {
+		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+			nodes, err := content.Successors(ctx, fetcher, desc)
+			if err != nil {
+				return nil, err
 			}
+			var ret []ocispec.Descriptor
+			for _, node := range nodes {
+				if slices.Contains(shas, node.Digest.Encoded()) {
+					ret = append(ret, node)
+				}
+			}
+			return ret, nil
 		}
-		return ret, nil
 	}
 
 	// Create a thread to update a progress bar as we save the package to disk
 	doneSaving := make(chan int)
+	encounteredErr := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+o.repo.Reference.String())
-	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, "Pulling", successText)
-	_, err := oras.Copy(o.ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), *copyOpts)
+	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, encounteredErr, "Pulling", successText)
+	_, err := oras.Copy(o.ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), copyOpts)
 	if err != nil {
+		encounteredErr <- 1
 		return err
 	}
 
@@ -240,7 +256,10 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 	if err != nil {
 		return err
 	}
-	return utils.WriteFile(filepath.Join(destinationDir, desc.Annotations[ocispec.AnnotationTitle]), b)
+
+	rel := desc.Annotations[ocispec.AnnotationTitle]
+
+	return utils.WriteFile(filepath.Join(destinationDir, rel), b)
 }
 
 // PullPackagePaths pulls multiple files from the remote repository and saves them to `destinationDir`.
