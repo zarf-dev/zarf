@@ -35,6 +35,7 @@ func ValidateZarfSchema(path string) (*Validator, error) {
 
 	checkForVarInComponentImport(&validator)
 	checkforUnpinnedRepos(&validator)
+	checkForUnpinnedImages(&validator)
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
 		return nil, err
@@ -51,24 +52,52 @@ func ValidateZarfSchema(path string) (*Validator, error) {
 	return &validator, nil
 }
 
-func repoIsUnpinned(repo string) bool {
-	// Pinned github and dev.azure.com repos will have @
-	// Pinned gitlab repos will have /-/
-	if !strings.Contains(repo, "@") && !strings.Contains(repo, "/-/") {
+func imageIsPinned(image string) bool {
+	if strings.HasSuffix(image, ":latest") {
+		return false
+	}
+	// Pinned with shasum or equivalent
+	if strings.Contains(image, "@") {
 		return true
 	}
+	splitImage := strings.Split(image, ":")
+	// In this case we have a port and a tag
+	if len(splitImage) > 2 {
+		return true
+	} else if len(splitImage) > 1 {
+		// In this case we either have a port and a "/" afterwards for the path to the image
+		// Or we have a tag which cannot have the / character in it
+		if !strings.Contains(splitImage[len(splitImage)-1], "/") {
+			return true
+		}
+	}
 	return false
+}
+
+func repoIsPinned(repo string) bool {
+	// Pinned github and dev.azure.com repos will have @
+	// Pinned gitlab repos will have /-/
+	return (strings.Contains(repo, "@") || strings.Contains(repo, "/-/"))
 }
 
 func checkforUnpinnedRepos(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
 		for j, repo := range component.Repos {
-			if repoIsUnpinned(repo) {
+			if !repoIsPinned(repo) {
 				validator.addWarning(fmt.Sprintf(".components.[%d].repos.[%d]: Unpinned repository", i, j))
 			}
 		}
 	}
+}
 
+func checkForUnpinnedImages(validator *Validator) {
+	for i, component := range validator.typedZarfPackage.Components {
+		for j, repo := range component.Images {
+			if !imageIsPinned(repo) {
+				validator.addWarning(fmt.Sprintf(".components.[%d].images.[%d]: Unpinned image", i, j))
+			}
+		}
+	}
 }
 
 func checkForVarInComponentImport(validator *Validator) {
