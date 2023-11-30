@@ -31,11 +31,6 @@ func (p *Packager) Dev() error {
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
 	}
-	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
-
-	if p.isInitConfig() {
-		p.cfg.Pkg.Metadata.Version = config.CLIVersion
-	}
 
 	// Compose components into a single zarf.yaml file
 	if err := p.composeComponents(); err != nil {
@@ -108,9 +103,5 @@ func (p *Packager) Dev() error {
 	message.Successf("Zarf dev deployment complete")
 
 	// cd back
-	if err := os.Chdir(cwd); err != nil {
-		return err
-	}
-
-	return nil
+	return os.Chdir(cwd)
 }
