@@ -36,6 +36,7 @@ func ValidateZarfSchema(path string) (*Validator, error) {
 	checkForVarInComponentImport(&validator)
 	checkforUnpinnedRepos(&validator)
 	checkForUnpinnedImages(&validator)
+	checkForUnpinnedFiles(&validator)
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
 		return nil, err
@@ -92,9 +93,19 @@ func checkforUnpinnedRepos(validator *Validator) {
 
 func checkForUnpinnedImages(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
-		for j, repo := range component.Images {
-			if !imageIsPinned(repo) {
+		for j, image := range component.Images {
+			if !imageIsPinned(image) {
 				validator.addWarning(fmt.Sprintf(".components.[%d].images.[%d]: Unpinned image", i, j))
+			}
+		}
+	}
+}
+
+func checkForUnpinnedFiles(validator *Validator) {
+	for i, component := range validator.typedZarfPackage.Components {
+		for j, file := range component.Files {
+			if file.Shasum == "" {
+				validator.addWarning(fmt.Sprintf(".components.[%d].files.[%d]: Unpinned file", i, j))
 			}
 		}
 	}

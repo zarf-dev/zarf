@@ -45,6 +45,10 @@ components:
   - registry.com:9001/whatever/image:1.0.0
   - busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79
   - busybox:latest
+  files:
+  - source: https://github.com/k3s-io/k3s/releases/download/v1.28.2+k3s1/k3s
+    shasum: 2f041d37a2c6d54d53e106e1c7713bc48f806f3919b0d9e092f5fcbdc55b41cf
+  - source: file-without-shasum.txt
 `
 
 const goodZarfPackage = `
@@ -122,6 +126,14 @@ func TestValidateSchema(t *testing.T) {
 		validator := Validator{typedZarfPackage: unmarshalledYaml}
 		checkForUnpinnedImages(&validator)
 		require.Equal(t, validator.warnings[0], ".components.[4].images.[3]: Unpinned image")
+		require.Equal(t, len(validator.warnings), 1)
+	})
+
+	t.Run("Unpinnned file warning", func(t *testing.T) {
+		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, badZarfPackage)
+		validator := Validator{typedZarfPackage: unmarshalledYaml}
+		checkForUnpinnedFiles(&validator)
+		require.Equal(t, validator.warnings[0], ".components.[4].files.[1]: Unpinned file")
 		require.Equal(t, len(validator.warnings), 1)
 	})
 
