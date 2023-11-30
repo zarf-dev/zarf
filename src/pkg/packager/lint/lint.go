@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/xeipuuv/gojsonschema"
@@ -53,23 +54,12 @@ func ValidateZarfSchema(path string) (*Validator, error) {
 	return &validator, nil
 }
 
-func isPinnedImage(image string) bool {
-	if strings.HasSuffix(image, ":latest") {
-		return false
+func isPinnedImage(image string) (bool, error) {
+	transformedImage, err := transform.ParseImageRef(image)
+	if err != nil {
+		return false, err
 	}
-	// Pinned with image digest
-	if strings.Contains(image, "@") {
-		return true
-	}
-	splitImage := strings.Split(image, ":")
-	if len(splitImage) > 1 {
-		// In this case we either have a port and a "/" afterwards for the path to the image
-		// Or we have a tag which cannot have the / character in it
-		if !strings.Contains(splitImage[len(splitImage)-1], "/") {
-			return true
-		}
-	}
-	return false
+	return !(transformedImage.TagOrDigest == ":latest"), err
 }
 
 func isPinnedRepo(repo string) bool {
@@ -91,7 +81,12 @@ func checkforUnpinnedRepos(validator *Validator) {
 func checkForUnpinnedImages(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
 		for j, image := range component.Images {
-			if !isPinnedImage(image) {
+			pinnedImage, err := isPinnedImage(image)
+			if err != nil {
+				validator.addError(fmt.Errorf(".components.[%d].images.[%d]: Invalid image format", i, j))
+				continue
+			}
+			if !pinnedImage {
 				validator.addWarning(fmt.Sprintf(".components.[%d].images.[%d]: Unpinned image", i, j))
 			}
 		}

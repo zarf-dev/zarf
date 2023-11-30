@@ -5,6 +5,7 @@
 package lint
 
 import (
+	"errors"
 	"os"
 	"testing"
 
@@ -43,8 +44,9 @@ components:
   images:
   - ghcr.io/kiwix/kiwix-serve:3.5.0-2
   - registry.com:9001/whatever/image:1.0.0
-  - busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79
+  - busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79
   - busybox:latest
+  - badimage:badimage@@sha256:3fbc632167424a6d997e74f5
   files:
   - source: https://github.com/k3s-io/k3s/releases/download/v1.28.2+k3s1/k3s
     shasum: 2f041d37a2c6d54d53e106e1c7713bc48f806f3919b0d9e092f5fcbdc55b41cf
@@ -127,6 +129,8 @@ func TestValidateSchema(t *testing.T) {
 		checkForUnpinnedImages(&validator)
 		require.Equal(t, validator.warnings[0], ".components.[4].images.[3]: Unpinned image")
 		require.Equal(t, len(validator.warnings), 1)
+		require.EqualError(t, validator.errors[0], ".components.[4].images.[4]: Invalid image format")
+		require.Equal(t, len(validator.errors), 1)
 	})
 
 	t.Run("Unpinnned file warning", func(t *testing.T) {
@@ -150,24 +154,47 @@ func TestValidateSchema(t *testing.T) {
 		require.Equal(t, input, acutal)
 	})
 
-	t.Run("image is pinned", func(t *testing.T) {
-		input := "ghcr.io/defenseunicorns/pepr/controller:v0.15.0"
-		expcected := true
-		acutal := isPinnedImage(input)
-		require.Equal(t, expcected, acutal)
-	})
-
-	t.Run("image is unpinned", func(t *testing.T) {
-		input := "ghcr.io/defenseunicorns/pepr/controller"
-		expcected := false
-		acutal := isPinnedImage(input)
-		require.Equal(t, expcected, acutal)
-	})
-
-	t.Run("image is pinned and has port", func(t *testing.T) {
-		input := "registry.com:8080/defenseunicorns/whatever"
-		expcected := false
-		acutal := isPinnedImage(input)
-		require.Equal(t, expcected, acutal)
+	t.Run("isImagePinned", func(t *testing.T) {
+		t.Parallel()
+		tests := []struct {
+			input    string
+			expected bool
+			err      error
+		}{
+			{
+				input:    "registry.com:8080/defenseunicorns/whatever",
+				expected: false,
+				err:      nil,
+			},
+			{
+				input:    "ghcr.io/defenseunicorns/pepr/controller",
+				expected: false,
+				err:      nil,
+			},
+			{
+				input:    "ghcr.io/defenseunicorns/pepr/controller:v0.15.0",
+				expected: true,
+				err:      nil,
+			},
+			{
+				input:    "busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
+				expected: true,
+				err:      nil,
+			},
+			{
+				input:    "busybox:bad/image",
+				expected: false,
+				err:      errors.New("invalid reference format"),
+			},
+		}
+		for _, tc := range tests {
+			t.Run(tc.input, func(t *testing.T) {
+				acutal, err := isPinnedImage(tc.input)
+				if err != nil {
+					require.EqualError(t, err, tc.err.Error())
+				}
+				require.Equal(t, tc.expected, acutal)
+			})
+		}
 	})
 }
