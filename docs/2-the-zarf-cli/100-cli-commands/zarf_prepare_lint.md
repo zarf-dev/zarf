@@ -5,7 +5,7 @@ Verifies the package schema
 
 ## Synopsis
 
-Verifies the package schema and warns the user if they have variables that won't be evaluated
+Verifies the package schema, warns the user if variables that won't be evaluated, and checks for unpinned images/repos/files
 
 ```
 zarf prepare lint [ DIRECTORY ] [flags]
