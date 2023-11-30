@@ -170,5 +170,4 @@ func TestValidateSchema(t *testing.T) {
 		acutal := isPinnedImage(input)
 		require.Equal(t, expcected, acutal)
 	})
-	//Image signature ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
 }
