@@ -24,10 +24,9 @@ import (
 )
 
 var internalCmd = &cobra.Command{
-	Use:     "internal",
-	Aliases: []string{"dev"},
-	Hidden:  true,
-	Short:   lang.CmdInternalShort,
+	Use:    "internal",
+	Hidden: true,
+	Short:  lang.CmdInternalShort,
 }
 
 var agentCmd = &cobra.Command{
