@@ -57,7 +57,7 @@ func imageIsPinned(image string) bool {
 	if strings.HasSuffix(image, ":latest") {
 		return false
 	}
-	// Pinned with shasum or equivalent
+	// Pinned with image digest
 	if strings.Contains(image, "@") {
 		return true
 	}

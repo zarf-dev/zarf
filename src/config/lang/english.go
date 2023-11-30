@@ -360,8 +360,8 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."
 	CmdPrepareFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
 
-	CmdPrepareLintShort = "Verifies the package schema"
-	CmdPrepareLintLong  = "Verifies the package schema, warns the user if variables that won't be evaluated, and checks for unpinned images/repos/files"
+	CmdPrepareLintShort = "Lints package for schema and reccomended practices"
+	CmdPrepareLintLong  = "Verifies the package schema, warns the user if any variables won't be evaluated, and checks for unpinned images/repos/files"
 	CmdPrepareLintErr   = "Unable to lint package: %s"
 
 	// zarf tools
