@@ -62,10 +62,7 @@ func imageIsPinned(image string) bool {
 		return true
 	}
 	splitImage := strings.Split(image, ":")
-	// In this case we have a port and a tag
-	if len(splitImage) > 2 {
-		return true
-	} else if len(splitImage) > 1 {
+	if len(splitImage) > 1 {
 		// In this case we either have a port and a "/" afterwards for the path to the image
 		// Or we have a tag which cannot have the / character in it
 		if !strings.Contains(splitImage[len(splitImage)-1], "/") {
