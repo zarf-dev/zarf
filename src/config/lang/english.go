@@ -361,7 +361,7 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPrepareFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
 
 	CmdPrepareLintShort = "Lints package for schema and recommended practices"
-	CmdPrepareLintLong  = "Verifies the package schema, warns the user if any variables won't be evaluated, and checks for unpinned images/repos/files"
+	CmdPrepareLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
 	CmdPrepareLintErr   = "Unable to lint package: %s"
 
 	// zarf tools

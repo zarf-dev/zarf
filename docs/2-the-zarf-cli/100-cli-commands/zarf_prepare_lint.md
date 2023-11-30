@@ -5,7 +5,7 @@ Lints package for schema and recommended practices
 
 ## Synopsis
 
-Verifies the package schema, warns the user if any variables won't be evaluated, and checks for unpinned images/repos/files
+Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files
 
 ```
 zarf prepare lint [ DIRECTORY ] [flags]
