@@ -783,10 +783,6 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^(?!.*###ZARF_PKG_TMPL_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_TMPL_%29.%2A%24) |
-
 </blockquote>
 </details>
 
@@ -803,9 +799,9 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                                                                           |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^oci://(?!.*###ZARF_PKG_TMPL_).*$``` [Test](https://regex101.com/?regex=%5Eoci%3A%2F%2F%28%3F%21.%2A%23%23%23ZARF_PKG_TMPL_%29.%2A%24) |
+| Restrictions                      |                                                                             |
+| --------------------------------- | --------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^oci://.*$``` [Test](https://regex101.com/?regex=%5Eoci%3A%2F%2F.%2A%24) |
 
 </blockquote>
 </details>
@@ -1127,7 +1123,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The path to the chart folder
+**Description:** The path to the local chart's folder or .tgz archive
 
 |          |          |
 | -------- | -------- |

@@ -16,7 +16,7 @@ Before you can effectively use Zarf, it is useful to have an understanding of th
 ### AirGap Basics
 
 - [What is AirGap](https://ibm.github.io/kubernetes-networking/vpc/airgap/)
-- AirGap Kubernetes Course - Coming Soon!
+- [AirGap Kubernetes Course](https://training.linuxfoundation.org/training/modern-air-gap-software-delivery-lfs281/) - Created by Defense Unicorns
 
 ### GitOps Basics
 

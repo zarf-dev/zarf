@@ -34,16 +34,30 @@ func TestHelm(t *testing.T) {
 func testHelmChartsExample(t *testing.T) {
 	t.Parallel()
 	t.Log("E2E: Helm chart example")
+	tmpdir := t.TempDir()
+
+	// Create a package that has a tarball as a local chart
+	localTgzChartPath := filepath.Join("src", "test", "packages", "25-local-tgz-chart")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", localTgzChartPath, "--tmpdir", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	defer e2e.CleanFiles(fmt.Sprintf("zarf-package-helm-charts-local-tgz-%s-0.0.1.tar.zst", e2e.Arch))
 
 	// Create a package that needs dependencies
 	evilChartDepsPath := filepath.Join("src", "test", "packages", "25-evil-chart-deps")
-	stdOut, stdErr, err := e2e.Zarf("package", "create", evilChartDepsPath, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", evilChartDepsPath, "--tmpdir", tmpdir, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 	require.Contains(t, e2e.StripANSICodes(stdErr), "could not download\n          https://charts.jetstack.io/charts/cert-manager-v1.11.1.tgz")
 	require.FileExists(t, filepath.Join(evilChartDepsPath, "good-chart", "charts", "gitlab-runner-0.55.0.tgz"))
 
+	// Create a package with a chart name that doesn't exist in a repo
+	evilChartLookupPath := filepath.Join("src", "test", "packages", "25-evil-chart-lookup")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", evilChartLookupPath, "--tmpdir", tmpdir, "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+	require.Contains(t, e2e.StripANSICodes(stdErr), "chart \"asdf\" version \"6.4.0\" not found")
+	require.Contains(t, e2e.StripANSICodes(stdErr), "Available charts and versions from \"https://stefanprodan.github.io/podinfo\":")
+
 	// Create the package with a registry override
-	stdOut, stdErr, err = e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io=docker.io", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io=docker.io", "--tmpdir", tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the package.
@@ -102,7 +116,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the evil package.
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--timeout", "10s", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 
 	// This package contains SBOMable things but was created with --skip-sbom
@@ -123,13 +137,22 @@ func testHelmUninstallRollback(t *testing.T) {
 	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
 	// Deploy the evil package.
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--timeout", "10s", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 
-	// Ensure that the dos-games chart was not uninstalled
-	helmOut, err = exec.Command("helm", "list", "-n", "dos-games").Output()
+	// Ensure that we rollback properly
+	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+	require.Contains(t, string(helmOut), "Rollback to 1")
+
+	// Deploy the evil package (again to ensure we check full history)
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--timeout", "10s", "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+
+	// Ensure that we rollback properly
+	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
+	require.NoError(t, err)
+	require.Contains(t, string(helmOut), "Rollback to 5")
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")

@@ -122,7 +122,7 @@ func (p *Packager) Create() (err error) {
 		isSkeleton := false
 		if err := p.addComponent(idx, component, isSkeleton); err != nil {
 			onFailure()
-			return fmt.Errorf("unable to add component: %w", err)
+			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
 		componentSBOM, err := p.getFilesToSBOM(component)
 		if err != nil {
@@ -358,46 +358,37 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkel
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
 
-		helmCfg := helm.Helm{
-			Chart: chart,
-			Cfg:   p.cfg,
-		}
+		helmCfg := helm.New(chart, componentPaths.Charts, componentPaths.Values)
 
-		if isSkeleton && chart.URL == "" {
-			rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
-			dst := filepath.Join(componentPaths.Base, rel)
+		if isSkeleton {
+			if chart.LocalPath != "" {
+				rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+				dst := filepath.Join(componentPaths.Base, rel)
 
-			err := utils.CreatePathAndCopy(chart.LocalPath, dst)
-			if err != nil {
-				return err
+				err := utils.CreatePathAndCopy(chart.LocalPath, dst)
+				if err != nil {
+					return err
+				}
+
+				p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
 			}
 
-			p.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
+			for valuesIdx, path := range chart.ValuesFiles {
+				if helpers.IsURL(path) {
+					continue
+				}
+
+				rel := fmt.Sprintf("%s-%d", helm.StandardName(layout.ValuesDir, chart), valuesIdx)
+				p.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
+
+				if err := utils.CreatePathAndCopy(path, filepath.Join(componentPaths.Base, rel)); err != nil {
+					return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+				}
+			}
 		} else {
 			err := helmCfg.PackageChart(componentPaths.Charts)
 			if err != nil {
 				return err
-			}
-		}
-
-		for valuesIdx, path := range chart.ValuesFiles {
-			rel := fmt.Sprintf("%s-%d", helm.StandardName(layout.ValuesDir, chart), valuesIdx)
-			dst := filepath.Join(componentPaths.Base, rel)
-
-			if helpers.IsURL(path) {
-				if isSkeleton {
-					continue
-				}
-				if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
-					return fmt.Errorf(lang.ErrDownloading, path, err.Error())
-				}
-			} else {
-				if err := utils.CreatePathAndCopy(path, dst); err != nil {
-					return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
-				}
-				if isSkeleton {
-					p.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
-				}
 			}
 		}
 	}

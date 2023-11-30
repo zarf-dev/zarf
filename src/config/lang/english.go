@@ -284,6 +284,7 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
 	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
 	CmdPackageDeployFlagSkipWebhooks                   = "[alpha] Skip waiting for external webhooks to execute as each package component is deployed"
+	CmdPackageDeployFlagTimeout                        = "Timeout for Helm operations such as installs and rollbacks"
 	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster only has the %s architecture(s). These architectures must be compatible when \"images\" are present"
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "The version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
 	CmdPackageDeployInvalidCLIVersionWarn              = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
@@ -358,6 +359,10 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."
 	CmdPrepareFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
+
+	CmdPrepareLintShort = "Verifies the package schema"
+	CmdPrepareLintLong  = "Verifies the package schema and warns the user if they have variables that won't be evaluated"
+	CmdPrepareLintErr   = "Unable to lint package: %s"
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"

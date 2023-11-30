@@ -4,11 +4,21 @@
 // Package types contains all the types used by Zarf.
 package types
 
+import "time"
+
 const (
 	// RawVariableType is the default type for a Zarf package variable
 	RawVariableType VariableType = "raw"
 	// FileVariableType is a type for a Zarf package variable that loads its contents from a file
 	FileVariableType VariableType = "file"
+)
+
+// Zarf looks for these strings in zarf.yaml to make dynamic changes
+const (
+	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
+	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
+	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
+	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
 )
 
 // VariableType represents a type of a Zarf package variable
@@ -47,8 +57,9 @@ type ZarfFindImagesOptions struct {
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.
 type ZarfDeployOptions struct {
-	AdoptExistingResources bool `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`
-	SkipWebhooks           bool `json:"componentWebhooks" jsonschema:"description=Skip waiting for external webhooks to execute as each package component is deployed"`
+	AdoptExistingResources bool          `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`
+	SkipWebhooks           bool          `json:"componentWebhooks" jsonschema:"description=Skip waiting for external webhooks to execute as each package component is deployed"`
+	Timeout                time.Duration `json:"timeout" jsonschema:"description=Timeout for performing Helm operations"`
 
 	// TODO (@WSTARR): This is a library only addition to Zarf and should be refactored in the future (potentially to utilize component composability). As is it should NOT be exposed directly on the CLI
 	ValuesOverridesMap map[string]map[string]map[string]interface{} `json:"valuesOverridesMap" jsonschema:"description=[Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy"`

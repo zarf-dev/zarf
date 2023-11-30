@@ -97,7 +97,7 @@ type ZarfChart struct {
 	Namespace   string   `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
 	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of local values file paths or remote URLs to include in the package; these will be merged together"`
 	GitPath     string   `json:"gitPath,omitempty" jsonschema:"description=The path to the chart in the repo if using a git repo instead of a helm repo,example=charts/your-chart"`
-	LocalPath   string   `json:"localPath,omitempty" jsonschema:"description=The path to the chart folder"`
+	LocalPath   string   `json:"localPath,omitempty" jsonschema:"description=The path to the local chart's folder or .tgz archive"`
 	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
 }
 
@@ -218,9 +218,9 @@ type ZarfDataInjection struct {
 type ZarfComponentImport struct {
 	ComponentName string `json:"name,omitempty" jsonschema:"description=The name of the component to import from the referenced zarf.yaml"`
 	// For further explanation see https://regex101.com/r/nxX8vx/1
-	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from,pattern=^(?!.*###ZARF_PKG_TMPL_).*$"`
+	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from"`
 	// For further explanation see https://regex101.com/r/nxX8vx/1
-	URL string `json:"url,omitempty" jsonschema:"description=[beta] The URL to a Zarf package to import via OCI,pattern=^oci://(?!.*###ZARF_PKG_TMPL_).*$"`
+	URL string `json:"url,omitempty" jsonschema:"description=[beta] The URL to a Zarf package to import via OCI,pattern=^oci://.*$"`
 }
 
 // IsEmpty returns if the components fields (other than the fields we were told to ignore) are empty or set to the types zero-value
