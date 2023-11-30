@@ -12,7 +12,7 @@ metadata:
 spec:
   selector:
     # This is intentionally wrong to cause this to fail to deploy with helm
-    app: false
+    app: dos-games
   ports:
     - name: http
       port: 8000

@@ -50,6 +50,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 ## Options
 
 ```
+      --adopt-existing-resources        Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --artifact-push-token string      [alpha] API Token for the push-user to access the artifact registry
       --artifact-push-username string   [alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
       --artifact-url string             [alpha] External artifact registry url to use for this Zarf cluster
@@ -69,7 +70,9 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --registry-secret string          Registry secret value
       --registry-url string             External registry url address to use for this Zarf cluster
       --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
+      --skip-webhooks                   [alpha] Skip waiting for external webhooks to execute as each package component is deployed
       --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
+      --timeout duration                Timeout for Helm operations such as installs and rollbacks (default 15m0s)
 ```
 
 ## Options inherited from parent commands

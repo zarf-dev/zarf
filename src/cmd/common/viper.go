@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/spf13/viper"
@@ -82,6 +83,7 @@ const (
 	VPkgDeployShasum       = "package.deploy.shasum"
 	VPkgDeploySget         = "package.deploy.sget"
 	VPkgDeploySkipWebhooks = "package.deploy.skip_webhooks"
+	VPkgDeployTimeout      = "package.deploy.timeout"
 
 	// Package publish config keys
 
@@ -137,6 +139,9 @@ func InitViper() *viper.Viper {
 	// Optional, so ignore errors
 	vConfigError = v.ReadInConfig()
 
+	// Set default values for viper
+	setDefaults()
+
 	return v
 }
 
@@ -166,4 +171,16 @@ func printViperConfigUsed() {
 	} else {
 		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
 	}
+}
+
+func setDefaults() {
+	// Root defaults that are non-zero values
+	v.SetDefault(VLogLevel, "info")
+	v.SetDefault(VZarfCache, config.ZarfDefaultCachePath)
+
+	// Package defaults that are non-zero values
+	v.SetDefault(VPkgOCIConcurrency, 3)
+
+	// Deploy opts that are non-zero values
+	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultHelmTimeout)
 }

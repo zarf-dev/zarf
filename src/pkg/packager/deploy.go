@@ -26,7 +26,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/pterm/pterm"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -509,32 +508,36 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
-			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPath.Values, chart), idx)
+			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
 			if err := p.valueTemplate.Apply(component, chartValueName, false); err != nil {
 				return installedCharts, err
 			}
 		}
 
-		// Generate helm templates to pass to gitops engine
-		helmCfg := helm.Helm{
-			BasePath:  componentPath.Base,
-			Chart:     chart,
-			Component: component,
-			Cfg:       p.cfg,
-			Cluster:   p.cluster,
-		}
-
 		// TODO (@WSTARR): Currently this logic is library-only and is untested while it is in an experimental state - it may eventually get added as shorthand in Zarf Variables though
+		var valuesOverrides map[string]any
 		if componentChartValuesOverrides, ok := p.cfg.DeployOpts.ValuesOverridesMap[component.Name]; ok {
 			if chartValuesOverrides, ok := componentChartValuesOverrides[chart.Name]; ok {
-				helmCfg.ValuesOverrides = chartValuesOverrides
+				valuesOverrides = chartValuesOverrides
 			}
 		}
+
+		helmCfg := helm.New(
+			chart,
+			componentPaths.Charts,
+			componentPaths.Values,
+			helm.WithDeployInfo(
+				component,
+				p.cfg,
+				p.cluster,
+				valuesOverrides,
+				p.cfg.DeployOpts.Timeout),
+		)
 
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
 		if err != nil {
@@ -550,10 +553,10 @@ func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths
 
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
-			if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+			if utils.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
 				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
 				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
-				if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+				if utils.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
 					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
 				}
 			}
@@ -569,16 +572,20 @@ func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths
 			manifest.Namespace = corev1.NamespaceDefault
 		}
 
-		// Iterate over any connectStrings and add to the main map
-		helmCfg := helm.Helm{
-			BasePath:  componentPath.Manifests,
-			Component: component,
-			Cfg:       p.cfg,
-			Cluster:   p.cluster,
-		}
-
-		// Generate the chart.
-		if err := helmCfg.GenerateChart(manifest); err != nil {
+		// Create a chart and helm cfg from a given Zarf Manifest.
+		helmCfg, err := helm.NewFromZarfManifest(
+			manifest,
+			componentPaths.Manifests,
+			p.cfg.Pkg.Metadata.Name,
+			component.Name,
+			helm.WithDeployInfo(
+				component,
+				p.cfg,
+				p.cluster,
+				nil,
+				p.cfg.DeployOpts.Timeout),
+		)
+		if err != nil {
 			return installedCharts, err
 		}
 
@@ -600,7 +607,6 @@ func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths
 }
 
 func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) {
-	pterm.Println()
 
 	// If not init config, print the application connection table
 	if !p.isInitConfig() {
