@@ -39,7 +39,7 @@ var devDeployCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		// Create the package
-		if err := pkgClient.Dev(); err != nil {
+		if err := pkgClient.DevDeploy(); err != nil {
 			// TODO: put this error in lang
 			message.Fatalf(err, "failed to dev deploy: %s", err.Error())
 		}

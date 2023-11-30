@@ -15,7 +15,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
-func (p *Packager) Dev() error {
+// DevDeploy creates + deploys a package in one shot
+func (p *Packager) DevDeploy() error {
 	config.CommonOptions.Confirm = true
 
 	cwd, err := os.Getwd()
