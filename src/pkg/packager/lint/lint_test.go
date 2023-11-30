@@ -153,21 +153,21 @@ func TestValidateSchema(t *testing.T) {
 	t.Run("image is pinned", func(t *testing.T) {
 		input := "ghcr.io/defenseunicorns/pepr/controller:v0.15.0"
 		expcected := true
-		acutal := imageIsPinned(input)
+		acutal := isPinnedImage(input)
 		require.Equal(t, expcected, acutal)
 	})
 
 	t.Run("image is unpinned", func(t *testing.T) {
 		input := "ghcr.io/defenseunicorns/pepr/controller"
 		expcected := false
-		acutal := imageIsPinned(input)
+		acutal := isPinnedImage(input)
 		require.Equal(t, expcected, acutal)
 	})
 
 	t.Run("image is pinned and has port", func(t *testing.T) {
 		input := "registry.com:8080/defenseunicorns/whatever"
 		expcected := false
-		acutal := imageIsPinned(input)
+		acutal := isPinnedImage(input)
 		require.Equal(t, expcected, acutal)
 	})
 	//Image signature ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig

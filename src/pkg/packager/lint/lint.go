@@ -53,7 +53,7 @@ func ValidateZarfSchema(path string) (*Validator, error) {
 	return &validator, nil
 }
 
-func imageIsPinned(image string) bool {
+func isPinnedImage(image string) bool {
 	if strings.HasSuffix(image, ":latest") {
 		return false
 	}
@@ -72,7 +72,7 @@ func imageIsPinned(image string) bool {
 	return false
 }
 
-func repoIsPinned(repo string) bool {
+func isPinnedRepo(repo string) bool {
 	// Pinned github and dev.azure.com repos will have @
 	// Pinned gitlab repos will have /-/
 	return (strings.Contains(repo, "@") || strings.Contains(repo, "/-/"))
@@ -81,7 +81,7 @@ func repoIsPinned(repo string) bool {
 func checkforUnpinnedRepos(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
 		for j, repo := range component.Repos {
-			if !repoIsPinned(repo) {
+			if !isPinnedRepo(repo) {
 				validator.addWarning(fmt.Sprintf(".components.[%d].repos.[%d]: Unpinned repository", i, j))
 			}
 		}
@@ -91,7 +91,7 @@ func checkforUnpinnedRepos(validator *Validator) {
 func checkForUnpinnedImages(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
 		for j, image := range component.Images {
-			if !imageIsPinned(image) {
+			if !isPinnedImage(image) {
 				validator.addWarning(fmt.Sprintf(".components.[%d].images.[%d]: Unpinned image", i, j))
 			}
 		}
