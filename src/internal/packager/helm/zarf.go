@@ -51,7 +51,7 @@ func (h *Helm) UpdateZarfRegistryValues() error {
 // UpdateZarfGiteaValues updates the Zarf git server deployment with the new state values
 func (h *Helm) UpdateZarfGiteaValues(oldState *types.ZarfState) error {
 	oG := oldState.GitServer
-	nG := git.New(h.Cfg.State.GitServer)
+	nG := git.New(h.cfg.State.GitServer)
 
 	err := nG.UpdateReadOnlyUser(oG.PushPassword)
 	if err != nil {
