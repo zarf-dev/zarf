@@ -237,7 +237,11 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 		fixPaths(&node.ZarfComponent, node.relativeToHead)
 
 		// perform overrides here
-		overrideMetadata(&composed, node.ZarfComponent)
+		err := overrideMetadata(&composed, node.ZarfComponent)
+		if err != nil {
+			return composed, err
+		}
+
 		overrideDeprecated(&composed, node.ZarfComponent)
 		overrideResources(&composed, node.ZarfComponent)
 		overrideActions(&composed, node.ZarfComponent)
