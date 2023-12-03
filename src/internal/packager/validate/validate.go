@@ -18,9 +18,9 @@ import (
 )
 
 var (
-	// IsLowercaseNumberHyphen is a regex for lowercase, numbers and hyphens.
+	// IsLowercaseNumberHyphenNoEndHyphen is a regex for lowercase, numbers and hyphens.
 	// https://regex101.com/r/FLdG9G/1
-	IsLowercaseNumberHyphen = regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
+	IsLowercaseNumberHyphenNoEndHyphen = regexp.MustCompile(`^[a-z0-9\-]*[a-z0-9]$`).MatchString
 	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
 	// https://regex101.com/r/tfsEuZ/1
 	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
@@ -111,6 +111,10 @@ func oneIfNotEmpty(testString string) int {
 }
 
 func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) error {
+	if !IsLowercaseNumberHyphenNoEndHyphen(component.Name) {
+		return fmt.Errorf(lang.PkgValidateErrComponentName, component.Name)
+	}
+
 	if component.Required {
 		if component.Default {
 			return fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name)
@@ -254,7 +258,7 @@ func validateYOLO(component types.ZarfComponent) error {
 }
 
 func validatePackageName(subject string) error {
-	if !IsLowercaseNumberHyphen(subject) {
+	if !IsLowercaseNumberHyphenNoEndHyphen(subject) {
 		return fmt.Errorf(lang.PkgValidateErrPkgName, subject)
 	}
 

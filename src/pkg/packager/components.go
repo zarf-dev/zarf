@@ -7,6 +7,7 @@ package packager
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -58,14 +59,18 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 		// Loop through the components in the group
 		for _, component := range componentGroup {
 			// First check if the component is required or requested via CLI flag
-			requested := p.isRequiredOrRequested(component, requestedNames)
+			included, excluded := p.includedOrExcluded(component, requestedNames)
 
-			// If the user has not requested this component via CLI flag, then prompt them if not a choice group
-			if !requested && !userChoicePrompt {
-				requested = p.confirmOptionalComponent(component)
+			if excluded {
+				continue
 			}
 
-			if requested {
+			// If the user has not requested this component via CLI flag, then prompt them if not a choice group
+			if !included && !userChoicePrompt {
+				included = p.confirmOptionalComponent(component)
+			}
+
+			if included {
 				// Mark deployment as appliance mode if this is an init config and the k3s component is enabled
 				if component.Name == k8s.DistroIsK3s && p.isInitConfig() {
 					p.cfg.InitOpts.ApplianceMode = true
@@ -98,6 +103,10 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 func (p *Packager) validateRequests(validComponentsList []types.ZarfComponent, requestedComponentNames, choiceComponents []string) error {
 	// Loop through each requested component names
 	for _, requestedComponent := range requestedComponentNames {
+		if strings.HasSuffix(requestedComponent, "-") {
+			continue
+		}
+
 		found := false
 		// Match on the first requested component that is a valid component
 		for _, component := range validComponentsList {
@@ -125,23 +134,32 @@ func (p *Packager) validateRequests(validComponentsList []types.ZarfComponent, r
 	return nil
 }
 
-func (p *Packager) isRequiredOrRequested(component types.ZarfComponent, requestedComponentNames []string) bool {
-	// If the component is required, then just return true
+func (p *Packager) includedOrExcluded(component types.ZarfComponent, requestedComponentNames []string) (include bool, exclude bool) {
+	// If the component is required, then it is always included
 	if component.Required {
-		return true
+		return true, false
 	}
 
-	// Otherwise,check if this is one of the components that has been requested
+	// Otherwise,check if this is one of the components that has been requested from the CLI
 	for _, requestedComponent := range requestedComponentNames {
-		// If the component glob matches one of the requested components, then return true
-		// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
-		if matched, _ := path.Match(requestedComponent, component.Name); matched {
-			return true
+		// Check if the component has a trailing dash indicating it should be excluded
+		if strings.HasSuffix(requestedComponent, "-") {
+			// If the component glob matches one of the requested components, then return true
+			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
+			if matched, _ := path.Match(strings.TrimSuffix(requestedComponent, "-"), component.Name); matched {
+				return false, true
+			}
+		} else {
+			// If the component glob matches one of the requested components, then return true
+			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
+			if matched, _ := path.Match(requestedComponent, component.Name); matched {
+				return true, false
+			}
 		}
 	}
 
-	// All other cases, return false
-	return false
+	// All other cases we don't know if we should include or exclude yet
+	return false, false
 }
 
 // Confirm optional component.

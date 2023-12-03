@@ -22,7 +22,7 @@ var (
 
 // NewClusterSource creates a new cluster source.
 func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
-	if !validate.IsLowercaseNumberHyphen(pkgOpts.PackageSource) {
+	if !validate.IsLowercaseNumberHyphenNoEndHyphen(pkgOpts.PackageSource) {
 		return nil, fmt.Errorf("invalid package name %q", pkgOpts.PackageSource)
 	}
 	cluster, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)

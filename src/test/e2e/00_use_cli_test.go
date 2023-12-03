@@ -104,6 +104,17 @@ func TestUseCLI(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("zarf deploy should return a warning when no components are deployed", func(t *testing.T) {
+		t.Parallel()
+		_, _, err := e2e.Zarf("package", "create", "src/test/packages/00-no-components", "-o=build", "--confirm")
+		require.NoError(t, err)
+		// Test that excluding all components with a trailing dash results in a warning
+		path := fmt.Sprintf("build/zarf-package-no-components-%s.tar.zst", e2e.Arch)
+		_, stdErr, err := e2e.Zarf("package", "deploy", path, "--components=deselect-me-", "--confirm")
+		require.NoError(t, err)
+		require.Contains(t, stdErr, "No components were selected for deployment")
+	})
+
 	t.Run("changing log level", func(t *testing.T) {
 		t.Parallel()
 		// Test that changing the log level actually applies the requested level

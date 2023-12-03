@@ -1,0 +1,7 @@
+kind: ZarfPackageConfig
+metadata:
+  name: no-components
+
+components:
+- name: deselect-me
+  default: true
