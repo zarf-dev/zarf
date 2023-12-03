@@ -7,69 +7,25 @@ package packager
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // DevDeploy creates + deploys a package in one shot
 func (p *Packager) DevDeploy() error {
 	config.CommonOptions.Confirm = true
 
+	p.cfg.CreateOpts.Mode = types.CreateModeDev
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	// Read the zarf.yaml file
-	if err := p.readZarfYAML(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML)); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
-	}
-
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
-	}
-
-	// Compose components into a single zarf.yaml file
-	if err := p.composeComponents(); err != nil {
+	if err := p.Create(); err != nil {
 		return err
-	}
-
-	// After components are composed, template the active package.
-	if err := p.fillActiveTemplate(); err != nil {
-		return fmt.Errorf("unable to fill values in template: %s", err.Error())
-	}
-
-	// After templates are filled process any create extensions
-	if err := p.processExtensions(); err != nil {
-		return err
-	}
-
-	if err := validate.Run(p.cfg.Pkg); err != nil {
-		return fmt.Errorf("unable to validate package: %w", err)
-	}
-
-	for idx, component := range p.cfg.Pkg.Components {
-		onCreate := component.Actions.OnCreate
-		onFailure := func() {
-			if err := p.runActions(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
-				message.Debugf("unable to run component failure action: %s", err.Error())
-			}
-		}
-
-		isSkeleton := false
-		if err := p.addComponent(idx, component, isSkeleton); err != nil {
-			onFailure()
-			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
-		}
-
-		if err := p.runActions(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
-			onFailure()
-			return fmt.Errorf("unable to run component success action: %w", err)
-		}
 	}
 
 	// Set variables and prompt if --confirm is not set

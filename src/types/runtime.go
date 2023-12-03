@@ -110,7 +110,19 @@ type ZarfCreateOptions struct {
 	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
 	Flavor             string            `json:"flavor" jsonschema:"description=An optional variant that controls which components will be included in a package"`
 	IsSkeleton         bool              `json:"isSkeleton" jsonschema:"description=Whether the package being created is a skeleton"`
+	Mode               CreateMode        `json:"mode" jsonschema:"description=The mode to use when creating a package"`
 }
+
+type CreateMode string
+
+const (
+	// CreateModeDev is the mode when run under zarf dev
+	CreateModeDev CreateMode = "dev"
+	// CreateModeProd is the default mode for creating a package
+	CreateModeProd CreateMode = "prod"
+	// CreateModeSkeleton is the mode when creating a skeleton package
+	CreateModeSkeleton CreateMode = "skeleton"
+)
 
 // ZarfSplitPackageData contains info about a split package.
 type ZarfSplitPackageData struct {

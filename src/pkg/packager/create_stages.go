@@ -183,31 +183,33 @@ func (p *Packager) assemble() error {
 		}
 	}
 
-	// Ignore SBOM creation if there the flag is set.
-	if p.cfg.CreateOpts.SkipSBOM {
-		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
-	} else {
-		p.layout = p.layout.AddSBOMs()
-		if err := sbom.Catalog(componentSBOMs, sbomImageList, p.layout); err != nil {
-			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
+	if p.cfg.CreateOpts.Mode != types.CreateModeDev {
+		// Ignore SBOM creation if there the flag is set.
+		if p.cfg.CreateOpts.SkipSBOM {
+			message.Debug("Skipping image SBOM processing per --skip-sbom flag")
+		} else {
+			p.layout = p.layout.AddSBOMs()
+			if err := sbom.Catalog(componentSBOMs, sbomImageList, p.layout); err != nil {
+				return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
+			}
 		}
-	}
 
-	// Process the component directories into compressed tarballs
-	// NOTE: This is purposefully being done after the SBOM cataloging
-	for _, component := range p.cfg.Pkg.Components {
-		// Make the component a tar archive
-		if err := p.layout.Components.Archive(component, true); err != nil {
-			return fmt.Errorf("unable to archive component: %s", err.Error())
+		// Process the component directories into compressed tarballs
+		// NOTE: This is purposefully being done after the SBOM cataloging
+		for _, component := range p.cfg.Pkg.Components {
+			// Make the component a tar archive
+			if err := p.layout.Components.Archive(component, true); err != nil {
+				return fmt.Errorf("unable to archive component: %s", err.Error())
+			}
 		}
-	}
 
-	// Calculate all the checksums
-	checksumChecksum, err := p.generatePackageChecksums()
-	if err != nil {
-		return fmt.Errorf("unable to generate checksums for the package: %w", err)
+		// Calculate all the checksums
+		checksumChecksum, err := p.generatePackageChecksums()
+		if err != nil {
+			return fmt.Errorf("unable to generate checksums for the package: %w", err)
+		}
+		p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
 	}
-	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
 
 	// Save the transformed config.
 	if err := p.writeYaml(); err != nil {
