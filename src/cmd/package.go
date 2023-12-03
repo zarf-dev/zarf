@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/types"
 
 	"oras.land/oras-go/v2/registry"
 
@@ -67,6 +68,8 @@ var packageCreateCmd = &cobra.Command{
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
+
+		pkgConfig.CreateOpts.Mode = types.CreateModeProd
 
 		// Create the package
 		if err := pkgClient.Create(); err != nil {
@@ -226,6 +229,7 @@ var packagePublishCmd = &cobra.Command{
 
 		if utils.IsDir(pkgConfig.PkgOpts.PackageSource) {
 			pkgConfig.CreateOpts.BaseDir = pkgConfig.PkgOpts.PackageSource
+			pkgConfig.CreateOpts.Mode = types.CreateModeSkeleton
 		}
 
 		pkgConfig.PublishOpts.PackageDestination = ref.String()

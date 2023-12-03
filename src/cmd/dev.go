@@ -64,5 +64,9 @@ func bindDevDeployFlags(v *viper.Viper) {
 
 	devDeployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 
-	devDeployFlags.VarP(&pkgConfig.CreateOpts.Mode, "mode", "m", fmt.Sprintf("Mode in which to create the dev package. (default %s) (options %s)", types.CreateModeYOLO, []types.CreateMode{types.CreateModeProd, types.CreateModeYOLO}))
+	devDeployFlags.VarP(&pkgConfig.CreateOpts.Mode, "mode", "m", fmt.Sprintf("Mode in which to create the dev package. (options %s)", []types.CreateMode{types.CreateModeProd, types.CreateModeYOLO}))
+
+	// Have to explicitly set the default value for the mode flag because it is a custom type
+	pkgConfig.CreateOpts.Mode = types.CreateModeYOLO
+	devDeployCmd.Flags().Lookup("mode").DefValue = string(types.CreateModeYOLO)
 }

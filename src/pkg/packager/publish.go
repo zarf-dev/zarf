@@ -65,9 +65,8 @@ func (p *Packager) Publish() (err error) {
 	}
 
 	var referenceSuffix string
-	if p.cfg.CreateOpts.BaseDir != "" {
+	if p.cfg.CreateOpts.Mode == types.CreateModeSkeleton {
 		referenceSuffix = oci.SkeletonSuffix
-		p.cfg.CreateOpts.Mode = types.CreateModeSkeleton
 		if err := p.Create(); err != nil {
 			return err
 		}
