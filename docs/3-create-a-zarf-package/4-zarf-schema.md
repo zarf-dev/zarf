@@ -988,7 +988,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo
+**Description:** The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo
 
 |          |          |
 | -------- | -------- |
@@ -1004,32 +1004,11 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The name of the release to create; defaults to the name of the chart
+**Description:** The name of the Helm release to create (defaults to the Zarf name of the chart)
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
-
-</blockquote>
-</details>
-
-<details>
-<summary>
-<strong> <a name="components_items_charts_items_url"></a>url</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** The URL of the OCI registry, chart repository, or git repo where the helm chart is stored
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-**Examples:**
-
-<code>
-"OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo", "helm chart repo: https://stefanprodan.github.io/podinfo", "git repo: https://github.com/stefanprodan/podinfo"</code>
 
 </blockquote>
 </details>
@@ -1041,7 +1020,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The version of the chart to deploy; for git-based charts this is also the tag of the git repo
+**Description:** The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos')
 
 |          |          |
 | -------- | -------- |
@@ -1075,7 +1054,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** List of local values file paths or remote URLs to include in the package; these will be merged together
+**Description:** List of local values file paths or remote URLs to include in the package; these will be merged together when deployed
 
 |          |                   |
 | -------- | ----------------- |
@@ -1097,12 +1076,49 @@ Must be one of:
 
 <details>
 <summary>
+<strong> <a name="components_items_charts_items_url"></a>url</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The URL of the OCI registry, chart repository, or git repo where the helm chart is stored
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+**Examples:**
+
+<code>
+"OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo", "helm chart repo: https://stefanprodan.github.io/podinfo", "git repo: https://github.com/stefanprodan/podinfo (note the '@' syntax for 'repos' is supported here too)"</code>
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_charts_items_repoName"></a>repoName</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The name of a chart within a Helm repository (defaults to the Zarf name of the chart)
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
 <strong> <a name="components_items_charts_items_gitPath"></a>gitPath</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** The path to the chart in the repo if using a git repo instead of a helm repo
+**Description:** (git repo only) The sub directory to the chart within a git repo
 
 |          |          |
 | -------- | -------- |
@@ -1123,7 +1139,7 @@ Must be one of:
 &nbsp;
 <blockquote>
 
-**Description:** The path to the local chart's folder or .tgz archive
+**Description:** The path to a local chart's folder or .tgz archive
 
 |          |          |
 | -------- | -------- |

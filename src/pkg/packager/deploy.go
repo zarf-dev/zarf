@@ -376,7 +376,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 			// Try to remove the filepath if it exists
 			_ = os.RemoveAll(link)
 			// Make sure the parent directory exists
-			_ = utils.CreateFilePath(link)
+			_ = utils.CreateParentDirectory(link)
 			// Create the symlink
 			err := os.Symlink(file.Target, link)
 			if err != nil {
