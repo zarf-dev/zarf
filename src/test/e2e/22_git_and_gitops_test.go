@@ -31,8 +31,8 @@ func TestGit(t *testing.T) {
 	path := fmt.Sprintf("build/zarf-package-git-data-test-%s-1.0.0.tar.zst", e2e.Arch)
 	defer e2e.CleanFiles(path)
 
-	// Deploy the git data example
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
+	// Deploy the git data example (with component globbing to test that as well)
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=full-repo,specific-*", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	c, err := cluster.NewCluster()

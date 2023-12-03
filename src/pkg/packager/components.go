@@ -6,6 +6,7 @@ package packager
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -96,11 +97,13 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 // Match on the first requested component that is not in the list of valid components and return the component name.
 func (p *Packager) validateRequests(validComponentsList []types.ZarfComponent, requestedComponentNames, choiceComponents []string) error {
 	// Loop through each requested component names
-	for _, componentName := range requestedComponentNames {
+	for _, requestedComponent := range requestedComponentNames {
 		found := false
 		// Match on the first requested component that is a valid component
 		for _, component := range validComponentsList {
-			if component.Name == componentName {
+			// If the component glob matches one of the requested components, then return true
+			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
+			if matched, _ := path.Match(requestedComponent, component.Name); matched {
 				found = true
 				break
 			}
@@ -110,12 +113,12 @@ func (p *Packager) validateRequests(validComponentsList []types.ZarfComponent, r
 		if !found {
 			// If the requested component is in a choice group, then warn the user they must choose only one
 			for _, component := range choiceComponents {
-				if component == componentName {
-					return fmt.Errorf("component %s is part of a group of components and only one may be chosen", componentName)
+				if component == requestedComponent {
+					return fmt.Errorf("component %s is part of a group of components and only one may be chosen", requestedComponent)
 				}
 			}
 			// Otherwise, return an error a general error
-			return fmt.Errorf("unable to find component %s", componentName)
+			return fmt.Errorf("unable to find component %s", requestedComponent)
 		}
 	}
 
@@ -129,12 +132,11 @@ func (p *Packager) isRequiredOrRequested(component types.ZarfComponent, requeste
 	}
 
 	// Otherwise,check if this is one of the components that has been requested
-	if len(requestedComponentNames) > 0 || config.CommonOptions.Confirm {
-		for _, requestedComponent := range requestedComponentNames {
-			// If the component name matches one of the requested components, then return true
-			if requestedComponent == component.Name {
-				return true
-			}
+	for _, requestedComponent := range requestedComponentNames {
+		// If the component glob matches one of the requested components, then return true
+		// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
+		if matched, _ := path.Match(requestedComponent, component.Name); matched {
+			return true
 		}
 	}
 
