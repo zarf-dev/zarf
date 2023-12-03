@@ -5,7 +5,7 @@ metadata:
 
 components:
   - name: helm-no-wait
-    default: true
+    required: true
     manifests:
       - name: never-ready
         namespace: no-wait
