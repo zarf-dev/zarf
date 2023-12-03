@@ -109,6 +109,7 @@ type ZarfCreateOptions struct {
 	DifferentialData   DifferentialData  `json:"differential" jsonschema:"description=A package's differential images and git repositories from a referenced previously built package"`
 	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
 	Flavor             string            `json:"flavor" jsonschema:"description=An optional variant that controls which components will be included in a package"`
+	IsSkeleton         bool              `json:"isSkeleton" jsonschema:"description=Whether the package being created is a skeleton"`
 }
 
 // ZarfSplitPackageData contains info about a split package.
