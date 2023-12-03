@@ -213,3 +213,21 @@ $ zarf package deploy ./path/to/package.tar.zst --confirm
 # deploy optional-component-1 and optional-component-2 components whether they are required or not
 $ zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,optional-component-2
 ```
+
+:::tip
+
+You can deploy components in a package using globbing as well.  The following would deploy all components regardless of optional status:
+
+```bash
+# deploy optional-component-1 and optional-component-2 components whether they are required or not
+$ zarf package deploy ./path/to/package.tar.zst --components=*
+```
+
+If you have any `default` components in a package definition you can also exclude those from the CLI with a trailing `-` (similar to removing a label from a resource with `kubectl`)
+
+```bash
+# deploy optional-component-1 but exclude default-component-1
+$ zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,default-component-1-
+```
+
+:::
