@@ -115,8 +115,10 @@ type ZarfCreateOptions struct {
 	Mode               CreateMode        `json:"mode" jsonschema:"description=The mode to use when creating a package"`
 }
 
+// CreateMode is the mode in which to create a package
 type CreateMode string
 
+// String satifies the fmt.Stringer+pflag.Value interface
 func (c *CreateMode) String() string {
 	switch *c {
 	case CreateModeDev:
@@ -130,6 +132,7 @@ func (c *CreateMode) String() string {
 	}
 }
 
+// Set satifies the pflag.Value interface
 func (c *CreateMode) Set(s string) error {
 	switch s {
 	case "dev":
@@ -144,6 +147,7 @@ func (c *CreateMode) Set(s string) error {
 	return nil
 }
 
+// Type satifies the pflag.Value interface
 func (c *CreateMode) Type() string {
 	return "CreateMode"
 }
