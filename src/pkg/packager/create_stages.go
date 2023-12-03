@@ -45,7 +45,7 @@ func (p *Packager) load() error {
 		return err
 	}
 
-	if p.cfg.CreateOpts.IsSkeleton {
+	if p.cfg.CreateOpts.Mode == types.CreateModeSkeleton {
 		if err := p.skeletonizeExtensions(); err != nil {
 			return err
 		}
@@ -53,7 +53,8 @@ func (p *Packager) load() error {
 			message.Warn(warning)
 		}
 		for idx, component := range p.cfg.Pkg.Components {
-			if err := p.addComponent(idx, component, p.cfg.CreateOpts.IsSkeleton); err != nil {
+			isSkeleton := true
+			if err := p.addComponent(idx, component, isSkeleton); err != nil {
 				return err
 			}
 
@@ -106,6 +107,14 @@ func (p *Packager) load() error {
 }
 
 func (p *Packager) assemble() error {
+	// If building in dev mode, strip out all images and repos
+	if p.cfg.CreateOpts.Mode == types.CreateModeDev {
+		for idx := range p.cfg.Pkg.Components {
+			p.cfg.Pkg.Components[idx].Images = []string{}
+			p.cfg.Pkg.Components[idx].Repos = []string{}
+		}
+	}
+
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
 	var imageList []transform.Image
 	for idx, component := range p.cfg.Pkg.Components {
@@ -209,17 +218,17 @@ func (p *Packager) assemble() error {
 			return fmt.Errorf("unable to generate checksums for the package: %w", err)
 		}
 		p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
-	}
 
-	// Save the transformed config.
-	if err := p.writeYaml(); err != nil {
-		return fmt.Errorf("unable to write zarf.yaml: %w", err)
-	}
+		// Save the transformed config.
+		if err := p.writeYaml(); err != nil {
+			return fmt.Errorf("unable to write zarf.yaml: %w", err)
+		}
 
-	// Sign the config file if a key was provided
-	if p.cfg.CreateOpts.SigningKeyPath != "" {
-		if err := p.signPackage(p.cfg.CreateOpts.SigningKeyPath, p.cfg.CreateOpts.SigningKeyPassword); err != nil {
-			return err
+		// Sign the config file if a key was provided
+		if p.cfg.CreateOpts.SigningKeyPath != "" {
+			if err := p.signPackage(p.cfg.CreateOpts.SigningKeyPath, p.cfg.CreateOpts.SigningKeyPassword); err != nil {
+				return err
+			}
 		}
 	}
 

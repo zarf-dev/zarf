@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/cmd/common"
@@ -12,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -61,4 +63,6 @@ func bindDevDeployFlags(v *viper.Viper) {
 	devDeployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set-deploy", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 
 	devDeployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
+
+	devDeployFlags.VarP(&pkgConfig.CreateOpts.Mode, "mode", "m", fmt.Sprintf("Mode in which to create the dev package. (default %s) (options %s)", types.CreateModeDev, []types.CreateMode{types.CreateModeProd, types.CreateModeDev}))
 }

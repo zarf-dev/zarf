@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -24,7 +25,18 @@ func (p *Packager) DevDeploy() error {
 		return err
 	}
 
-	if err := p.Create(); err != nil {
+	if err := p.load(); err != nil {
+		return err
+	}
+
+	// Filter out components that are not compatible with this system
+	p.filterComponents()
+
+	if err := validate.Run(p.cfg.Pkg); err != nil {
+		return fmt.Errorf("unable to validate package: %w", err)
+	}
+
+	if err := p.assemble(); err != nil {
 		return err
 	}
 
@@ -33,19 +45,19 @@ func (p *Packager) DevDeploy() error {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
-	// TODO: is HPA needed for dev?
-
-	// Filter out components that are not compatible with this system
-	p.filterComponents()
-
-	// Remove images + git repos from each component
-	for idx := range p.cfg.Pkg.Components {
-		p.cfg.Pkg.Components[idx].Images = []string{}
-		p.cfg.Pkg.Components[idx].Repos = []string{}
+	if p.cfg.CreateOpts.Mode == types.CreateModeDev {
+		p.cfg.Pkg.Metadata.YOLO = true
+	} else {
+		p.hpaModified = false
+		// Reset registry HPA scale down whether an error occurs or not
+		defer func() {
+			if p.isConnectedToCluster() && p.hpaModified {
+				if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
+					message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
+				}
+			}
+		}()
 	}
-	// Set YOLO to always be true for dev
-	// TODO: this will be a flag
-	p.cfg.Pkg.Metadata.YOLO = true
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
@@ -58,6 +70,11 @@ func (p *Packager) DevDeploy() error {
 
 	// Notify all the things about the successful deployment
 	message.Successf("Zarf dev deployment complete")
+
+	message.HorizontalRule()
+	message.Title("Next steps:", "")
+
+	message.ZarfCommand("package inspect %s", p.cfg.Pkg.Metadata.Name)
 
 	// cd back
 	return os.Chdir(cwd)

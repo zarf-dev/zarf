@@ -4,7 +4,10 @@
 // Package types contains all the types used by Zarf.
 package types
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 const (
 	// RawVariableType is the default type for a Zarf package variable
@@ -109,11 +112,41 @@ type ZarfCreateOptions struct {
 	DifferentialData   DifferentialData  `json:"differential" jsonschema:"description=A package's differential images and git repositories from a referenced previously built package"`
 	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
 	Flavor             string            `json:"flavor" jsonschema:"description=An optional variant that controls which components will be included in a package"`
-	IsSkeleton         bool              `json:"isSkeleton" jsonschema:"description=Whether the package being created is a skeleton"`
 	Mode               CreateMode        `json:"mode" jsonschema:"description=The mode to use when creating a package"`
 }
 
 type CreateMode string
+
+func (c *CreateMode) String() string {
+	switch *c {
+	case CreateModeDev:
+		return "dev"
+	case CreateModeProd:
+		return "prod"
+	case CreateModeSkeleton:
+		return "skeleton"
+	default:
+		return ""
+	}
+}
+
+func (c *CreateMode) Set(s string) error {
+	switch s {
+	case "dev":
+		*c = CreateModeDev
+	case "prod":
+		*c = CreateModeProd
+	case "skeleton":
+		*c = CreateModeSkeleton
+	default:
+		return fmt.Errorf("invalid create mode: %s", s)
+	}
+	return nil
+}
+
+func (c *CreateMode) Type() string {
+	return "CreateMode"
+}
 
 const (
 	// CreateModeDev is the mode when run under zarf dev
