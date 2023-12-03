@@ -150,24 +150,9 @@
           "type": "string",
           "description": "The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo"
         },
-        "releaseName": {
-          "type": "string",
-          "description": "The name of the Helm release to create (defaults to the Zarf name of the chart)"
-        },
         "version": {
           "type": "string",
           "description": "The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos')"
-        },
-        "namespace": {
-          "type": "string",
-          "description": "The namespace to deploy the chart to"
-        },
-        "valuesFiles": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "List of local values file paths or remote URLs to include in the package; these will be merged together when deployed"
         },
         "url": {
           "type": "string",
@@ -193,9 +178,24 @@
           "type": "string",
           "description": "The path to a local chart's folder or .tgz archive"
         },
+        "namespace": {
+          "type": "string",
+          "description": "The namespace to deploy the chart to"
+        },
+        "releaseName": {
+          "type": "string",
+          "description": "The name of the Helm release to create (defaults to the Zarf name of the chart)"
+        },
         "noWait": {
           "type": "boolean",
           "description": "Whether to not wait for chart resources to be ready before continuing"
+        },
+        "valuesFiles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "List of local values file paths or remote URLs to include in the package; these will be merged together when deployed"
         }
       },
       "additionalProperties": false,
