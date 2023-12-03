@@ -121,8 +121,8 @@ type CreateMode string
 // String satifies the fmt.Stringer+pflag.Value interface
 func (c *CreateMode) String() string {
 	switch *c {
-	case CreateModeDev:
-		return "dev"
+	case CreateModeYOLO:
+		return "yolo"
 	case CreateModeProd:
 		return "prod"
 	case CreateModeSkeleton:
@@ -135,8 +135,8 @@ func (c *CreateMode) String() string {
 // Set satifies the pflag.Value interface
 func (c *CreateMode) Set(s string) error {
 	switch s {
-	case "dev":
-		*c = CreateModeDev
+	case "yolo":
+		*c = CreateModeYOLO
 	case "prod":
 		*c = CreateModeProd
 	case "skeleton":
@@ -153,8 +153,8 @@ func (c *CreateMode) Type() string {
 }
 
 const (
-	// CreateModeDev is the mode when run under zarf dev
-	CreateModeDev CreateMode = "dev"
+	// CreateModeYOLO is the default mode when run under zarf dev
+	CreateModeYOLO CreateMode = "yolo"
 	// CreateModeProd is the default mode for creating a package
 	CreateModeProd CreateMode = "prod"
 	// CreateModeSkeleton is the mode when creating a skeleton package

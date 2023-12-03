@@ -111,8 +111,8 @@ func (p *Packager) load() error {
 }
 
 func (p *Packager) assemble() error {
-	// If building in dev mode, strip out all images and repos
-	if p.cfg.CreateOpts.Mode == types.CreateModeDev {
+	// If building in yolo mode, strip out all images and repos
+	if p.cfg.CreateOpts.Mode == types.CreateModeYOLO {
 		for idx := range p.cfg.Pkg.Components {
 			p.cfg.Pkg.Components[idx].Images = []string{}
 			p.cfg.Pkg.Components[idx].Repos = []string{}
@@ -196,8 +196,8 @@ func (p *Packager) assemble() error {
 		}
 	}
 
-	if p.cfg.CreateOpts.Mode != types.CreateModeDev {
-		// Ignore SBOM creation if there the flag is set.
+	if p.cfg.CreateOpts.Mode != types.CreateModeYOLO {
+		// Ignore SBOM creation if the flag is set.
 		if p.cfg.CreateOpts.SkipSBOM {
 			message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 		} else {

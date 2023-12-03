@@ -18,8 +18,6 @@ import (
 func (p *Packager) DevDeploy() error {
 	config.CommonOptions.Confirm = true
 
-	p.cfg.CreateOpts.Mode = types.CreateModeDev
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -45,7 +43,7 @@ func (p *Packager) DevDeploy() error {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
-	if p.cfg.CreateOpts.Mode == types.CreateModeDev {
+	if p.cfg.CreateOpts.Mode == types.CreateModeYOLO {
 		p.cfg.Pkg.Metadata.YOLO = true
 	} else {
 		p.hpaModified = false
