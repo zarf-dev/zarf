@@ -139,12 +139,14 @@ func (p *Packager) assemble() error {
 			return fmt.Errorf("unable to run component success action: %w", err)
 		}
 
-		componentSBOM, err := p.getFilesToSBOM(component)
-		if err != nil {
-			return fmt.Errorf("unable to create component SBOM: %w", err)
-		}
-		if componentSBOM != nil && len(componentSBOM.Files) > 0 {
-			componentSBOMs[component.Name] = componentSBOM
+		if !p.cfg.CreateOpts.SkipSBOM {
+			componentSBOM, err := p.getFilesToSBOM(component)
+			if err != nil {
+				return fmt.Errorf("unable to create component SBOM: %w", err)
+			}
+			if componentSBOM != nil && len(componentSBOM.Files) > 0 {
+				componentSBOMs[component.Name] = componentSBOM
+			}
 		}
 
 		// Combine all component images into a single entry for efficient layer reuse.

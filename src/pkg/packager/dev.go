@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -36,6 +37,22 @@ func (p *Packager) DevDeploy() error {
 
 	if err := p.assemble(); err != nil {
 		return err
+	}
+
+	// untar components (if in prod mode)
+	if p.cfg.CreateOpts.Mode == types.CreateModeProd {
+		for _, component := range p.cfg.Pkg.Components {
+			if err := p.layout.Components.Unarchive(component); err != nil {
+				if layout.IsNotLoaded(err) {
+					_, err := p.layout.Components.Create(component)
+					if err != nil {
+						return err
+					}
+				} else {
+					return err
+				}
+			}
+		}
 	}
 
 	// Set variables and prompt if --confirm is not set

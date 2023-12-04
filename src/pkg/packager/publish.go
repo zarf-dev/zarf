@@ -67,7 +67,7 @@ func (p *Packager) Publish() (err error) {
 	var referenceSuffix string
 	if p.cfg.CreateOpts.Mode == types.CreateModeSkeleton {
 		referenceSuffix = oci.SkeletonSuffix
-		if err := p.Create(); err != nil {
+		if err := p.load(); err != nil {
 			return err
 		}
 	} else {
