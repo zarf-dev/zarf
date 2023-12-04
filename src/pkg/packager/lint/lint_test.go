@@ -154,6 +154,12 @@ func TestValidateSchema(t *testing.T) {
 		require.Equal(t, input, acutal)
 	})
 
+	// t.Run("Validate composible components", func(t *testing.T) {
+	// 	input := ""
+	// 	acutal := makeFieldPathYqCompat(input)
+	// 	require.Equal(t, input, acutal)
+	// })
+
 	t.Run("isImagePinned", func(t *testing.T) {
 		t.Parallel()
 		tests := []struct {
@@ -185,6 +191,11 @@ func TestValidateSchema(t *testing.T) {
 				input:    "busybox:bad/image",
 				expected: false,
 				err:      errors.New("invalid reference format"),
+			},
+			{
+				input:    "busybox:###ZARF_PKG_TMPL_BUSYBOX_IMAGE###",
+				expected: true,
+				err:      nil,
 			},
 		}
 		for _, tc := range tests {

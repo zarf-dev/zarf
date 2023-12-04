@@ -50,7 +50,7 @@ func TestNewImportChain(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := NewImportChain(testCase.head, testCase.arch, testCase.flavor)
+			_, err := NewImportChain(testCase.head, 0, testCase.arch, testCase.flavor)
 			require.Contains(t, err.Error(), testCase.expectedErrorMessage)
 		})
 	}
@@ -313,7 +313,7 @@ func TestMerging(t *testing.T) {
 	}
 	head.next = &tail
 	tail.prev = &head
-	testIC := &ImportChain{head: &head, tail: &tail}
+	testIC := &ImportChain{Head: &head, Tail: &tail}
 
 	testCases := []testCase{
 		{
@@ -446,12 +446,12 @@ func createChainFromSlice(components []types.ZarfComponent) (ic *ImportChain) {
 		return ic
 	}
 
-	ic.append(components[0], ".", nil, nil)
+	ic.append(components[0], 0, ".", nil, nil)
 	history := []string{}
 
 	for idx := 1; idx < len(components); idx++ {
 		history = append(history, components[idx-1].Import.Path)
-		ic.append(components[idx], filepath.Join(history...), nil, nil)
+		ic.append(components[idx], idx, filepath.Join(history...), nil, nil)
 	}
 
 	return ic

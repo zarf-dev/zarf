@@ -213,17 +213,19 @@ var lintCmd = &cobra.Command{
 	Short:   lang.CmdPrepareLintShort,
 	Long:    lang.CmdPrepareLintLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		baseDir := ""
 		if len(args) > 0 {
-			baseDir = args[0]
+			pkgConfig.CreateOpts.BaseDir = args[0]
 		} else {
 			var err error
-			baseDir, err = os.Getwd()
+			pkgConfig.CreateOpts.BaseDir, err = os.Getwd()
 			if err != nil {
 				message.Fatalf(err, lang.CmdPrepareLintErr, err.Error())
 			}
 		}
-		validator, err := lint.ValidateZarfSchema(baseDir)
+		v := common.GetViper()
+		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+		validator, err := lint.ValidateZarfSchema(pkgConfig.CreateOpts)
 		if err != nil {
 			message.Fatal(err, err.Error())
 		}

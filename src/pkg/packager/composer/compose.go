@@ -1,26 +1,28 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying Zarf packages.
-package packager
+// Package composer contains functions for composing components within Zarf packages.
+package composer
 
 import (
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// composeComponents builds the composed components list for the current config.
-func (p *Packager) composeComponents() error {
+func ComposeComponents(zarfPackage *types.ZarfPackage, createOpts types.ZarfCreateOptions,
+	warnings []string) ([]string, error) {
 	components := []types.ZarfComponent{}
 
-	pkgVars := p.cfg.Pkg.Variables
-	pkgConsts := p.cfg.Pkg.Constants
+	pkgVars := zarfPackage.Variables
+	pkgConsts := zarfPackage.Constants
 
-	for i, component := range p.cfg.Pkg.Components {
-		arch := p.arch
+	for i, component := range zarfPackage.Components {
+		//TODO allow this to be a CLI option
+		arch := config.GetArch(zarfPackage.Metadata.Architecture)
+
 		// filter by architecture
-		if !composer.CompatibleComponent(component, arch, p.cfg.CreateOpts.Flavor) {
+		if !CompatibleComponent(component, arch, createOpts.Flavor) {
 			continue
 		}
 
@@ -29,20 +31,20 @@ func (p *Packager) composeComponents() error {
 		component.Only.Flavor = ""
 
 		// build the import chain
-		chain, err := composer.NewImportChain(component, i, arch, p.cfg.CreateOpts.Flavor)
+		chain, err := NewImportChain(component, i, arch, createOpts.Flavor)
 		if err != nil {
-			return err
+			return warnings, err
 		}
 		message.Debugf("%s", chain)
 
 		// migrate any deprecated component configurations now
-		warnings := chain.Migrate(p.cfg.Pkg.Build)
-		p.warnings = append(p.warnings, warnings...)
+		warnings := chain.Migrate(zarfPackage.Build)
+		warnings = append(warnings, warnings...)
 
 		// get the composed component
 		composed, err := chain.Compose()
 		if err != nil {
-			return err
+			return warnings, err
 		}
 		components = append(components, composed)
 
@@ -52,10 +54,10 @@ func (p *Packager) composeComponents() error {
 	}
 
 	// set the filtered + composed components
-	p.cfg.Pkg.Components = components
+	zarfPackage.Components = components
 
-	p.cfg.Pkg.Variables = pkgVars
-	p.cfg.Pkg.Constants = pkgConsts
+	zarfPackage.Variables = pkgVars
+	zarfPackage.Constants = pkgConsts
 
-	return nil
+	return warnings, nil
 }
