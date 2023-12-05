@@ -7,6 +7,7 @@ package packager
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
@@ -19,6 +20,9 @@ func (p *Packager) Create() (err error) {
 	if err != nil {
 		return err
 	}
+
+	// differentials are relative to the current working directory
+	p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath = filepath.Join(cwd, p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
 
 	if err := p.load(); err != nil {
 		return err
