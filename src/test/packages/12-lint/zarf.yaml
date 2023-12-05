@@ -23,7 +23,6 @@ components:
     - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1
     - https://gitlab.com/gitlab-org/build/omnibus-mirror/pcre2/-/tree/vreverse?ref_type=heads
     images:
-    - ghcr.io/kiwix/kiwix-serve:3.5.0-2
     - registry.com:9001/whatever/image:1.0.0
     - busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79
     - busybox:###ZARF_PKG_VAR_WHATEVER_IMAGE###

@@ -114,7 +114,9 @@ func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions
 
 		for key := range yamlTemplates {
 			if deprecated {
-				validator.warnings = append(validator.warnings, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
+				validator.addWarning(ValidatorMessage{
+					description: fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key),
+				})
 			}
 			_, present := createOpts.SetVariables[key]
 			if !present {
@@ -147,7 +149,9 @@ func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions
 	templateMap[types.ZarfPackageArch] = config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
 
 	if unsetVarWarning {
-		validator.warnings = append([]string{"There are variables that are unset and won't be evaluated during lint"}, validator.warnings...)
+		validator.warnings = append([]ValidatorMessage{{
+			description: "There are variables that are unset and won't be evaluated during lint",
+		}}, validator.warnings...)
 	}
 
 	return utils.ReloadYamlTemplate(&validator.typedZarfPackage, templateMap)
@@ -187,20 +191,25 @@ func lintComponent(validator *Validator, index int, component types.ZarfComponen
 
 func checkForUnpinnedRepos(validator *Validator, index int, component types.ZarfComponent, path string) {
 	for j, repo := range component.Repos {
+		repoYqPath := fmt.Sprintf(".components.[%d].repos.[%d]", index, j)
 		if !isPinnedRepo(repo) {
-			validator.addWarning(fmt.Sprintf(".components.[%d].repos.[%d]%s: Unpinned repository", index, j, path))
+			validator.addWarning(ValidatorMessage{
+				yqPath:      repoYqPath,
+				filePath:    path,
+				description: "Unpinned repository",
+				item:        repo,
+			})
 		}
 	}
 }
 
 func checkForUnpinnedImages(validator *Validator, index int, component types.ZarfComponent, path string) {
 	for j, image := range component.Images {
-		imageYqPath := ".components.[%d].images.[%d]"
+		imageYqPath := fmt.Sprintf(".components.[%d].images.[%d]", index, j)
 		pinnedImage, err := isPinnedImage(image)
 		if err != nil {
-			validator.addError(fmt.Errorf(".components.[%d].images.[%d]%s: Invalid image format %s", index, j, path, image))
-			validator.addError2(ValidatorMessage{
-				yqPath:      fmt.Sprintf(imageYqPath, index, j),
+			validator.addError(ValidatorMessage{
+				yqPath:      imageYqPath,
 				filePath:    path,
 				description: "Invalid Image format",
 				item:        image,
@@ -208,9 +217,8 @@ func checkForUnpinnedImages(validator *Validator, index int, component types.Zar
 			continue
 		}
 		if !pinnedImage {
-			validator.addWarning(fmt.Sprintf(".components.[%d].images.[%d]%s: Unpinned image %s", index, j, path, image))
-			validator.addWarning2(ValidatorMessage{
-				yqPath:      fmt.Sprintf(imageYqPath, index, j),
+			validator.addWarning(ValidatorMessage{
+				yqPath:      imageYqPath,
 				filePath:    path,
 				description: "Unpinned image",
 				item:        image,
@@ -221,18 +229,32 @@ func checkForUnpinnedImages(validator *Validator, index int, component types.Zar
 
 func checkForUnpinnedFiles(validator *Validator, index int, component types.ZarfComponent, path string) {
 	for j, file := range component.Files {
+		fileYqPath := fmt.Sprintf(".components.[%d].files.[%d]%s: Unpinned file", index, j)
 		if file.Shasum == "" && helpers.IsURL(file.Source) {
-			validator.addWarning(fmt.Sprintf(".components.[%d].files.[%d]%s: Unpinned file", index, j, path))
+			validator.addWarning(ValidatorMessage{
+				yqPath:      fileYqPath,
+				filePath:    path,
+				description: "Unpinned image",
+				item:        file.Source,
+			})
 		}
 	}
 }
 
 func checkForVarInComponentImport(validator *Validator, index int, component types.ZarfComponent, path string) {
 	if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
-		validator.addWarning(fmt.Sprintf(".components.[%d].import.path%s: Will not resolve ZARF_PKG_TMPL_* variables", index, path))
+		validator.addWarning(ValidatorMessage{
+			yqPath:      fmt.Sprintf(".components.[%d].import.path", index),
+			filePath:    path,
+			description: "Will not resolve ZARF_PKG_TMPL_* variables",
+		})
 	}
 	if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
-		validator.addWarning(fmt.Sprintf(".components.[%d].import.url%s: Will not resolve ZARF_PKG_TMPL_* variables", index, path))
+		validator.addWarning(ValidatorMessage{
+			yqPath:      fmt.Sprintf(".components.[%d].import.url", index),
+			filePath:    path,
+			description: "Will not resolve ZARF_PKG_TMPL_* variables",
+		})
 	}
 }
 
@@ -260,9 +282,10 @@ func validateSchema(validator *Validator) error {
 
 	if !result.Valid() {
 		for _, desc := range result.Errors() {
-			err := fmt.Errorf(
-				"%s: %s", makeFieldPathYqCompat(desc.Field()), desc.Description())
-			validator.addError(err)
+			validator.addError(ValidatorMessage{
+				yqPath:      makeFieldPathYqCompat(desc.Field()),
+				description: desc.Description(),
+			})
 		}
 	}
 
