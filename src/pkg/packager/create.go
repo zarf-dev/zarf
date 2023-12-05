@@ -22,7 +22,9 @@ func (p *Packager) Create() (err error) {
 	}
 
 	// differentials are relative to the current working directory
-	p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath = filepath.Join(cwd, p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
+	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
+		p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath = filepath.Join(cwd, p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
+	}
 
 	if err := p.load(); err != nil {
 		return err
