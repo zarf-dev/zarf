@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/fatih/color"
 )
@@ -42,6 +43,10 @@ func First30last30(s string) string {
 
 // ColorWrap changes a string to an ansi color code and appends the default color to the end
 // preventing future characters from taking on the given color
+// returns string as normal if color is disabled
 func ColorWrap(str string, attr color.Attribute) string {
+	if config.NoColor {
+		return str
+	}
 	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", attr, str)
 }

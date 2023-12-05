@@ -90,7 +90,7 @@ func ValidateComposableComponenets(validator *Validator, createOpts types.ZarfCr
 			return err
 		}
 		originalPackage := validator.typedZarfPackage
-		// Skipping initial component
+		// Skipping initial component since it will be linted the usual way
 		node := chain.Head.Next
 		for node != nil {
 			validator.typedZarfPackage.Components = []types.ZarfComponent{node.ZarfComponent}
