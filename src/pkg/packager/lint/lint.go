@@ -75,7 +75,6 @@ func ValidateComposableComponenets(validator *Validator, createOpts types.ZarfCr
 		//TODO allow this to be a CLI option
 		arch := config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
 
-		// filter by architecture
 		if !composer.CompatibleComponent(component, arch, createOpts.Flavor) {
 			continue
 		}
@@ -84,11 +83,11 @@ func ValidateComposableComponenets(validator *Validator, createOpts types.ZarfCr
 		component.Only.Cluster.Architecture = ""
 		component.Only.Flavor = ""
 
-		// build the import chain
 		chain, err := composer.NewImportChain(component, i, arch, createOpts.Flavor)
 		if err != nil {
 			return err
 		}
+
 		originalPackage := validator.typedZarfPackage
 		// Skipping initial component since it will be linted the usual way
 		node := chain.Head.Next
@@ -99,7 +98,6 @@ func ValidateComposableComponenets(validator *Validator, createOpts types.ZarfCr
 			validator.typedZarfPackage = originalPackage
 			node = node.Next
 		}
-
 	}
 	return nil
 }
@@ -146,7 +144,7 @@ func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions
 	}
 
 	// Add special variable for the current package architecture
-	templateMap[types.ZarfPackageArch] = config.GetArch(validator.typedZarfPackage.Metadata.Architecture, validator.typedZarfPackage.Build.Architecture)
+	templateMap[types.ZarfPackageArch] = config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
 
 	if unsetVarWarning {
 		validator.warnings = append([]string{"There are variables that are unset and won't be evaluated during lint"}, validator.warnings...)
@@ -181,13 +179,13 @@ func lintComponents(validator *Validator) {
 }
 
 func lintComponent(validator *Validator, index int, component types.ZarfComponent, path string) {
-	checkforUnpinnedRepos(validator, index, component, path)
+	checkForUnpinnedRepos(validator, index, component, path)
 	checkForUnpinnedImages(validator, index, component, path)
 	checkForUnpinnedFiles(validator, index, component, path)
 	checkForVarInComponentImport(validator, index, component, path)
 }
 
-func checkforUnpinnedRepos(validator *Validator, index int, component types.ZarfComponent, path string) {
+func checkForUnpinnedRepos(validator *Validator, index int, component types.ZarfComponent, path string) {
 	for j, repo := range component.Repos {
 		if !isPinnedRepo(repo) {
 			validator.addWarning(fmt.Sprintf(".components.[%d].repos.[%d]%s: Unpinned repository", index, j, path))
@@ -199,11 +197,11 @@ func checkForUnpinnedImages(validator *Validator, index int, component types.Zar
 	for j, image := range component.Images {
 		pinnedImage, err := isPinnedImage(image)
 		if err != nil {
-			validator.addError(fmt.Errorf(".components.[%d].images.[%d]%s: Invalid image format", index, j, path))
+			validator.addError(fmt.Errorf(".components.[%d].images.[%d]%s: Invalid image format %s", index, j, path, image))
 			continue
 		}
 		if !pinnedImage {
-			validator.addWarning(fmt.Sprintf(".components.[%d].images.[%d]%s: Unpinned image", index, j, path))
+			validator.addWarning(fmt.Sprintf(".components.[%d].images.[%d]%s: Unpinned image %s", index, j, path, image))
 		}
 	}
 }

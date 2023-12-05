@@ -28,7 +28,7 @@ func TestLint(t *testing.T) {
 		configPath := filepath.Join(path, "zarf-config.toml")
 		os.Setenv("ZARF_CONFIG", configPath)
 		// In this case I'm guessing we should also remove color from the table?
-		_, stderr, err := e2e.Zarf("prepare", "lint", path, "--no-color")
+		_, stderr, err := e2e.Zarf("prepare", "lint", path)
 		require.Error(t, err, "Require an exit code since there was warnings / errors")
 
 		// It's a bit weird to have a period here and not in the other warnings

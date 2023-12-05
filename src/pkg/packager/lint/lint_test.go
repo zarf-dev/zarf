@@ -6,6 +6,7 @@ package lint
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 
@@ -124,21 +125,24 @@ func TestValidateSchema(t *testing.T) {
 			"https://github.com/defenseunicorns/zarf-public-test.git",
 			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1",
 			"https://gitlab.com/gitlab-org/build/omnibus-mirror/pcre2/-/tree/vreverse?ref_type=heads"}}
-		checkforUnpinnedRepos(&validator, 0, component, "")
+		checkForUnpinnedRepos(&validator, 0, component, "")
 		require.Equal(t, validator.warnings[0], ".components.[0].repos.[0]: Unpinned repository")
 		require.Equal(t, len(validator.warnings), 1)
 	})
 
 	t.Run("Unpinnned image warning", func(t *testing.T) {
 		validator := Validator{}
+		unpinnedImage := "registry.com:9001/whatever/image:1.0.0"
+		badImage := "badimage:badimage@@sha256:3fbc632167424a6d997e74f5"
 		component := types.ZarfComponent{Images: []string{
-			"registry.com:9001/whatever/image:1.0.0",
+			unpinnedImage,
 			"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
-			"badimage:badimage@@sha256:3fbc632167424a6d997e74f5"}}
+			badImage}}
 		checkForUnpinnedImages(&validator, 0, component, "")
-		require.Equal(t, validator.warnings[0], ".components.[0].images.[0]: Unpinned image")
+		require.Equal(t, fmt.Sprintf(".components.[0].images.[0]: Unpinned image %s", unpinnedImage), validator.warnings[0])
 		require.Equal(t, len(validator.warnings), 1)
-		require.EqualError(t, validator.errors[0], ".components.[0].images.[2]: Invalid image format")
+		expectedErr := fmt.Sprintf(".components.[0].images.[2]: Invalid image format %s", badImage)
+		require.EqualError(t, validator.errors[0], expectedErr)
 		require.Equal(t, len(validator.errors), 1)
 	})
 
@@ -147,7 +151,6 @@ func TestValidateSchema(t *testing.T) {
 		zarfFiles := []types.ZarfFile{
 			{
 				Source: "http://example.com/file.zip",
-				Target: "/path/to/target",
 			},
 		}
 		component := types.ZarfComponent{Files: zarfFiles}
