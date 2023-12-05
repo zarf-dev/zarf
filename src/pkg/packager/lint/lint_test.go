@@ -97,8 +97,8 @@ func TestValidateSchema(t *testing.T) {
 		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
 		err := validateSchema(&validator)
 		require.NoError(t, err)
-		require.EqualError(t, validator.errors[0], ".components.[0].import: Additional property not-path is not allowed")
-		require.EqualError(t, validator.errors[1], ".components.[1].import.path: Invalid type. Expected: string, given: integer")
+		require.Equal(t, validator.errors[0].String(), ".components.[0].import: Additional property not-path is not allowed")
+		require.Equal(t, validator.errors[1].String(), ".components.[1].import.path: Invalid type. Expected: string, given: integer")
 	})
 
 	t.Run("Template in component import success", func(t *testing.T) {
@@ -115,8 +115,10 @@ func TestValidateSchema(t *testing.T) {
 		URLComponent := types.ZarfComponent{Import: types.ZarfComponentImport{URL: "oci://###ZARF_PKG_TMPL_ZEBRA###"}}
 		checkForVarInComponentImport(&validator, 2, pathComponent, "")
 		checkForVarInComponentImport(&validator, 3, URLComponent, "")
-		require.Equal(t, validator.warnings[0], ".components.[2].import.path: Will not resolve ZARF_PKG_TMPL_* variables")
-		require.Equal(t, validator.warnings[1], ".components.[3].import.url: Will not resolve ZARF_PKG_TMPL_* variables")
+		require.Equal(t, validator.warnings[0].String(),
+			".components.[2].import.path: Will not resolve ZARF_PKG_TMPL_* variables")
+		require.Equal(t, validator.warnings[1].String(),
+			".components.[3].import.url: Will not resolve ZARF_PKG_TMPL_* variables")
 	})
 
 	t.Run("Unpinnned repo warning", func(t *testing.T) {
@@ -126,7 +128,7 @@ func TestValidateSchema(t *testing.T) {
 			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1",
 			"https://gitlab.com/gitlab-org/build/omnibus-mirror/pcre2/-/tree/vreverse?ref_type=heads"}}
 		checkForUnpinnedRepos(&validator, 0, component, "")
-		require.Equal(t, validator.warnings[0], ".components.[0].repos.[0]: Unpinned repository")
+		require.Equal(t, validator.warnings[0].String(), ".components.[0].repos.[0]: Unpinned repository")
 		require.Equal(t, len(validator.warnings), 1)
 	})
 
@@ -139,24 +141,26 @@ func TestValidateSchema(t *testing.T) {
 			"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
 			badImage}}
 		checkForUnpinnedImages(&validator, 0, component, "")
-		require.Equal(t, fmt.Sprintf(".components.[0].images.[0]: Unpinned image %s", unpinnedImage), validator.warnings[0])
+		require.Equal(t, fmt.Sprintf(".components.[0].images.[0]: Unpinned image %s", unpinnedImage), validator.warnings[0].String())
 		require.Equal(t, len(validator.warnings), 1)
 		expectedErr := fmt.Sprintf(".components.[0].images.[2]: Invalid image format %s", badImage)
-		require.EqualError(t, validator.errors[0], expectedErr)
+		require.Equal(t, validator.errors[0].String(), expectedErr)
 		require.Equal(t, len(validator.errors), 1)
 	})
 
 	t.Run("Unpinnned file warning", func(t *testing.T) {
 		validator := Validator{}
+		filename := "http://example.com/file.zip"
 		zarfFiles := []types.ZarfFile{
 			{
-				Source: "http://example.com/file.zip",
+				Source: filename,
 			},
 		}
 		component := types.ZarfComponent{Files: zarfFiles}
 		checkForUnpinnedFiles(&validator, 0, component, "")
-		require.Equal(t, validator.warnings[0], ".components.[0].files.[0]: Unpinned file")
-		require.Equal(t, len(validator.warnings), 1)
+		expected := fmt.Sprintf(".components.[0].files.[0]: Unpinned file %s", filename)
+		require.Equal(t, expected, validator.warnings[0].String())
+		require.Equal(t, 1, len(validator.warnings))
 	})
 
 	t.Run("Wrap standalone numbers in bracket", func(t *testing.T) {
@@ -172,12 +176,6 @@ func TestValidateSchema(t *testing.T) {
 		require.Equal(t, input, acutal)
 	})
 
-	// t.Run("Validate composible components", func(t *testing.T) {
-	// 	input := ""
-	// 	acutal := makeFieldPathYqCompat(input)
-	// 	require.Equal(t, input, acutal)
-	// })
-
 	t.Run("isImagePinned", func(t *testing.T) {
 		t.Parallel()
 		tests := []struct {
@@ -187,11 +185,6 @@ func TestValidateSchema(t *testing.T) {
 		}{
 			{
 				input:    "registry.com:8080/defenseunicorns/whatever",
-				expected: false,
-				err:      nil,
-			},
-			{
-				input:    "ghcr.io/defenseunicorns/pepr/controller",
 				expected: false,
 				err:      nil,
 			},

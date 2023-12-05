@@ -229,12 +229,12 @@ func checkForUnpinnedImages(validator *Validator, index int, component types.Zar
 
 func checkForUnpinnedFiles(validator *Validator, index int, component types.ZarfComponent, path string) {
 	for j, file := range component.Files {
-		fileYqPath := fmt.Sprintf(".components.[%d].files.[%d]%s: Unpinned file", index, j)
+		fileYqPath := fmt.Sprintf(".components.[%d].files.[%d]", index, j)
 		if file.Shasum == "" && helpers.IsURL(file.Source) {
 			validator.addWarning(ValidatorMessage{
 				yqPath:      fileYqPath,
 				filePath:    path,
-				description: "Unpinned image",
+				description: "Unpinned file",
 				item:        file.Source,
 			})
 		}
