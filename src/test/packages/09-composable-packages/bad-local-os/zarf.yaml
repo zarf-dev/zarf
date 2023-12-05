@@ -1,11 +1,11 @@
 kind: ZarfPackageConfig
 metadata:
   name: test-compose-package
-  description: A contrived example for podinfo using many Zarf primitives for compose testing
+  description: A contrived example for localOS compose testing
 
 components:
   - name: test-compose-package
-    description: A contrived example for podinfo using many Zarf primitives for compose testing
+    description: A contrived example for localOS compose testing
     only:
       localOS: windows
     required: true
