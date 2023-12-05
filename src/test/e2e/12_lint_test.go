@@ -38,9 +38,9 @@ func TestLint(t *testing.T) {
 		require.Contains(t, stderr, ".components.[2].repos.[0]: Unpinned repository")
 		require.Contains(t, stderr, ".metadata: Additional property description1 is not allowed")
 		require.Contains(t, stderr, ".components.[0].import: Additional property not-path is not allowed")
-		require.Contains(t, stderr, ".components.[1].images.[0] linted-import: Unpinned image")
 		require.Contains(t, stderr, ".components.[2].images.[4]: Unpinned image")
-		//require.Contains(t, stderr, ".components.[1].images.[2] in linted-import: Unpinned image")
+		require.Contains(t, stderr, ".components.[1].images.[0] linted-import: Unpinned image")
+		require.Contains(t, stderr, ".components.[1].images.[2] linted-import: Unpinned image")
 	})
 
 }

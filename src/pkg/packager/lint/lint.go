@@ -89,10 +89,14 @@ func ValidateComposableComponenets(validator *Validator, createOpts types.ZarfCr
 		if err != nil {
 			return err
 		}
+		originalPackage := validator.typedZarfPackage
 		// Skipping initial component
 		node := chain.Head.Next
 		for node != nil {
-			lintComponent(validator, node.Index, node.ZarfComponent, fmt.Sprintf(" %s", node.RelativeToHead))
+			validator.typedZarfPackage.Components = []types.ZarfComponent{node.ZarfComponent}
+			fillActiveTemplate(validator, createOpts)
+			lintComponent(validator, node.Index, validator.typedZarfPackage.Components[0], fmt.Sprintf(" %s", node.RelativeToHead))
+			validator.typedZarfPackage = originalPackage
 			node = node.Next
 		}
 
