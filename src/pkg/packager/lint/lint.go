@@ -94,7 +94,7 @@ func ValidateComposableComponenets(validator *Validator, createOpts types.ZarfCr
 		for node != nil {
 			validator.typedZarfPackage.Components = []types.ZarfComponent{node.ZarfComponent}
 			fillActiveTemplate(validator, createOpts)
-			lintComponent(validator, node.Index, validator.typedZarfPackage.Components[0], fmt.Sprintf(" %s", node.RelativeToHead))
+			lintComponent(validator, node.Index, validator.typedZarfPackage.Components[0], node.RelativeToHead)
 			validator.typedZarfPackage = originalPackage
 			node = node.Next
 		}
@@ -195,13 +195,26 @@ func checkForUnpinnedRepos(validator *Validator, index int, component types.Zarf
 
 func checkForUnpinnedImages(validator *Validator, index int, component types.ZarfComponent, path string) {
 	for j, image := range component.Images {
+		imageYqPath := ".components.[%d].images.[%d]"
 		pinnedImage, err := isPinnedImage(image)
 		if err != nil {
 			validator.addError(fmt.Errorf(".components.[%d].images.[%d]%s: Invalid image format %s", index, j, path, image))
+			validator.addError2(ValidatorMessage{
+				yqPath:      fmt.Sprintf(imageYqPath, index, j),
+				filePath:    path,
+				description: "Invalid Image format",
+				item:        image,
+			})
 			continue
 		}
 		if !pinnedImage {
 			validator.addWarning(fmt.Sprintf(".components.[%d].images.[%d]%s: Unpinned image %s", index, j, path, image))
+			validator.addWarning2(ValidatorMessage{
+				yqPath:      fmt.Sprintf(imageYqPath, index, j),
+				filePath:    path,
+				description: "Unpinned image",
+				item:        image,
+			})
 		}
 	}
 }
