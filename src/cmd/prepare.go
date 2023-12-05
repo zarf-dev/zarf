@@ -213,15 +213,7 @@ var lintCmd = &cobra.Command{
 	Short:   lang.CmdPrepareLintShort,
 	Long:    lang.CmdPrepareLintLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) > 0 {
-			pkgConfig.CreateOpts.BaseDir = args[0]
-		} else {
-			var err error
-			pkgConfig.CreateOpts.BaseDir, err = os.Getwd()
-			if err != nil {
-				message.Fatalf(err, lang.CmdPrepareLintErr, err.Error())
-			}
-		}
+		setBaseDirectory(args, &pkgConfig)
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
