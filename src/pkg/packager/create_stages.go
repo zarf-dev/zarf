@@ -85,13 +85,12 @@ func (p *Packager) load() error {
 		return err
 	}
 
-	// Load the images and repos from the 'reference' package
-	if err := p.loadDifferentialData(); err != nil {
-		return err
-	}
-
 	// After we have a full zarf.yaml remove unnecessary repos and images if we are building a differential package
 	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
+		// Load the images and repos from the 'reference' package
+		if err := p.loadDifferentialData(); err != nil {
+			return err
+		}
 		// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
 		// If the package versions are the same return an error
 		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == p.cfg.Pkg.Metadata.Version {
@@ -208,40 +207,42 @@ func (p *Packager) assemble() error {
 				return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 			}
 		}
-
-		// Process the component directories into compressed tarballs
-		// NOTE: This is purposefully being done after the SBOM cataloging
-		for _, component := range p.cfg.Pkg.Components {
-			// Make the component a tar archive
-			if err := p.layout.Components.Archive(component, true); err != nil {
-				return fmt.Errorf("unable to archive component: %s", err.Error())
-			}
-		}
-
-		// Calculate all the checksums
-		checksumChecksum, err := p.generatePackageChecksums()
-		if err != nil {
-			return fmt.Errorf("unable to generate checksums for the package: %w", err)
-		}
-		p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
-
-		// Save the transformed config.
-		if err := p.writeYaml(); err != nil {
-			return fmt.Errorf("unable to write zarf.yaml: %w", err)
-		}
-
-		// Sign the config file if a key was provided
-		if p.cfg.CreateOpts.SigningKeyPath != "" {
-			if err := p.signPackage(p.cfg.CreateOpts.SigningKeyPath, p.cfg.CreateOpts.SigningKeyPassword); err != nil {
-				return err
-			}
-		}
 	}
 
 	return nil
 }
 
 func (p *Packager) output() error {
+	// output assumes it is running from cwd, not the build directory
+
+	// Process the component directories into compressed tarballs
+	// NOTE: This is purposefully being done after the SBOM cataloging
+	for _, component := range p.cfg.Pkg.Components {
+		// Make the component a tar archive
+		if err := p.layout.Components.Archive(component, true); err != nil {
+			return fmt.Errorf("unable to archive component: %s", err.Error())
+		}
+	}
+
+	// Calculate all the checksums
+	checksumChecksum, err := p.generatePackageChecksums()
+	if err != nil {
+		return fmt.Errorf("unable to generate checksums for the package: %w", err)
+	}
+	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
+
+	// Save the transformed config.
+	if err := p.writeYaml(); err != nil {
+		return fmt.Errorf("unable to write zarf.yaml: %w", err)
+	}
+
+	// Sign the config file if a key was provided
+	if p.cfg.CreateOpts.SigningKeyPath != "" {
+		if err := p.signPackage(p.cfg.CreateOpts.SigningKeyPath, p.cfg.CreateOpts.SigningKeyPassword); err != nil {
+			return err
+		}
+	}
+
 	// Create a remote ref + client for the package (if output is OCI)
 	// then publish the package to the remote.
 	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
@@ -641,10 +642,6 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 
 // loadDifferentialData extracts the zarf config of a designated 'reference' package that we are building a differential over and creates a list of all images and repos that are in the reference package
 func (p *Packager) loadDifferentialData() error {
-	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath == "" {
-		return nil
-	}
-
 	// Save the fact that this is a differential build into the build data of the package
 	p.cfg.Pkg.Build.Differential = true
 
