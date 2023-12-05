@@ -32,11 +32,6 @@ import (
 )
 
 func (p *Packager) load() error {
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
-	}
-	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
-
 	if err := p.readZarfYAML(layout.ZarfYAML); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
@@ -49,30 +44,8 @@ func (p *Packager) load() error {
 		return err
 	}
 
-	if p.cfg.CreateOpts.Mode == types.CreateModeSkeleton {
-		if err := p.skeletonizeExtensions(); err != nil {
-			return err
-		}
-		for _, warning := range p.warnings {
-			message.Warn(warning)
-		}
-		for idx, component := range p.cfg.Pkg.Components {
-			isSkeleton := true
-			if err := p.addComponent(idx, component, isSkeleton); err != nil {
-				return err
-			}
-
-			if err := p.layout.Components.Archive(component, false); err != nil {
-				return err
-			}
-		}
-		checksumChecksum, err := p.generatePackageChecksums()
-		if err != nil {
-			return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
-		}
-		p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
-
-		return p.writeYaml()
+	if p.cfg.CreateOpts.IsSkeleton {
+		return nil
 	}
 
 	// After components are composed, template the active package.
@@ -111,7 +84,7 @@ func (p *Packager) load() error {
 
 func (p *Packager) assemble() error {
 	// If building in yolo mode, strip out all images and repos
-	if p.cfg.CreateOpts.Mode == types.CreateModeYOLO {
+	if p.cfg.CreateOpts.IsYOLO {
 		for idx := range p.cfg.Pkg.Components {
 			p.cfg.Pkg.Components[idx].Images = []string{}
 			p.cfg.Pkg.Components[idx].Repos = []string{}
@@ -197,7 +170,7 @@ func (p *Packager) assemble() error {
 		}
 	}
 
-	if p.cfg.CreateOpts.Mode != types.CreateModeYOLO {
+	if p.cfg.CreateOpts.IsYOLO {
 		// Ignore SBOM creation if the flag is set.
 		if p.cfg.CreateOpts.SkipSBOM {
 			message.Debug("Skipping image SBOM processing per --skip-sbom flag")
@@ -210,6 +183,32 @@ func (p *Packager) assemble() error {
 	}
 
 	return nil
+}
+
+func (p *Packager) assembleSkeleton() error {
+	if err := p.skeletonizeExtensions(); err != nil {
+		return err
+	}
+	for _, warning := range p.warnings {
+		message.Warn(warning)
+	}
+	for idx, component := range p.cfg.Pkg.Components {
+		isSkeleton := true
+		if err := p.addComponent(idx, component, isSkeleton); err != nil {
+			return err
+		}
+
+		if err := p.layout.Components.Archive(component, false); err != nil {
+			return err
+		}
+	}
+	checksumChecksum, err := p.generatePackageChecksums()
+	if err != nil {
+		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
+	}
+	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
+
+	return p.writeYaml()
 }
 
 func (p *Packager) output() error {

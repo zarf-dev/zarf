@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/cmd/common"
@@ -13,7 +12,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -64,9 +62,5 @@ func bindDevDeployFlags(v *viper.Viper) {
 
 	devDeployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 
-	devDeployFlags.VarP(&pkgConfig.CreateOpts.Mode, "mode", "m", fmt.Sprintf("Mode in which to create the dev package. (options %s)", []types.CreateMode{types.CreateModeProd, types.CreateModeYOLO}))
-
-	// Have to explicitly set the default value for the mode flag because it is a custom type
-	pkgConfig.CreateOpts.Mode = types.CreateModeYOLO
-	devDeployCmd.Flags().Lookup("mode").DefValue = string(types.CreateModeYOLO)
+	devDeployFlags.BoolVar(&pkgConfig.CreateOpts.IsYOLO, "yolo", true, "Whether or not to build+deploy the package in YOLO mode")
 }

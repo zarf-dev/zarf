@@ -11,7 +11,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // DevDeploy creates + deploys a package in one shot
@@ -20,6 +19,10 @@ func (p *Packager) DevDeploy() error {
 
 	cwd, err := os.Getwd()
 	if err != nil {
+		return err
+	}
+
+	if err := p.cdToBaseDir(p.cfg.CreateOpts.BaseDir, cwd); err != nil {
 		return err
 	}
 
@@ -45,12 +48,14 @@ func (p *Packager) DevDeploy() error {
 		return err
 	}
 
+	message.HeaderInfof("📦 PACKAGE DEPLOY %s", p.cfg.Pkg.Metadata.Name)
+
 	// Set variables and prompt if --confirm is not set
 	if err := p.setVariableMapInConfig(); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
-	if p.cfg.CreateOpts.Mode == types.CreateModeYOLO {
+	if p.cfg.CreateOpts.IsYOLO {
 		p.cfg.Pkg.Metadata.YOLO = true
 	} else {
 		p.hpaModified = false

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -65,9 +66,19 @@ func (p *Packager) Publish() (err error) {
 	}
 
 	var referenceSuffix string
-	if p.cfg.CreateOpts.Mode == types.CreateModeSkeleton {
+	if p.cfg.CreateOpts.IsSkeleton {
 		referenceSuffix = oci.SkeletonSuffix
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		if err := p.cdToBaseDir(p.cfg.CreateOpts.BaseDir, cwd); err != nil {
+			return err
+		}
 		if err := p.load(); err != nil {
+			return err
+		}
+		if err := p.assembleSkeleton(); err != nil {
 			return err
 		}
 	} else {

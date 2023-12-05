@@ -5,7 +5,6 @@
 package types
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -112,54 +111,9 @@ type ZarfCreateOptions struct {
 	DifferentialData   DifferentialData  `json:"differential" jsonschema:"description=A package's differential images and git repositories from a referenced previously built package"`
 	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
 	Flavor             string            `json:"flavor" jsonschema:"description=An optional variant that controls which components will be included in a package"`
-	Mode               CreateMode        `json:"mode" jsonschema:"description=The mode to use when creating a package"`
+	IsSkeleton         bool              `json:"isSkeleton" jsonschema:"description=Whether to create a skeleton package"`
+	IsYOLO             bool              `json:"isYOLO" jsonschema:"description=Whether to create a YOLO package"`
 }
-
-// CreateMode is the mode in which to create a package
-type CreateMode string
-
-// String satifies the fmt.Stringer+pflag.Value interface
-func (c *CreateMode) String() string {
-	switch *c {
-	case CreateModeYOLO:
-		return "yolo"
-	case CreateModeProd:
-		return "prod"
-	case CreateModeSkeleton:
-		return "skeleton"
-	default:
-		return ""
-	}
-}
-
-// Set satifies the pflag.Value interface
-func (c *CreateMode) Set(s string) error {
-	switch s {
-	case "yolo":
-		*c = CreateModeYOLO
-	case "prod":
-		*c = CreateModeProd
-	case "skeleton":
-		*c = CreateModeSkeleton
-	default:
-		return fmt.Errorf("invalid create mode: %s", s)
-	}
-	return nil
-}
-
-// Type satifies the pflag.Value interface
-func (c *CreateMode) Type() string {
-	return "CreateMode"
-}
-
-const (
-	// CreateModeYOLO is the default mode when run under zarf dev
-	CreateModeYOLO CreateMode = "yolo"
-	// CreateModeProd is the default mode for creating a package
-	CreateModeProd CreateMode = "prod"
-	// CreateModeSkeleton is the mode when creating a skeleton package
-	CreateModeSkeleton CreateMode = "skeleton"
-)
 
 // ZarfSplitPackageData contains info about a split package.
 type ZarfSplitPackageData struct {
