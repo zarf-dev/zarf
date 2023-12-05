@@ -112,8 +112,8 @@ func TestValidateSchema(t *testing.T) {
 		validator := Validator{}
 		pathComponent := types.ZarfComponent{Import: types.ZarfComponentImport{Path: "###ZARF_PKG_TMPL_ZEBRA###"}}
 		URLComponent := types.ZarfComponent{Import: types.ZarfComponentImport{URL: "oci://###ZARF_PKG_TMPL_ZEBRA###"}}
-		checkForVarInComponentImport(&validator, 2, pathComponent)
-		checkForVarInComponentImport(&validator, 3, URLComponent)
+		checkForVarInComponentImport(&validator, 2, pathComponent, "")
+		checkForVarInComponentImport(&validator, 3, URLComponent, "")
 		require.Equal(t, validator.warnings[0], ".components.[2].import.path: Will not resolve ZARF_PKG_TMPL_* variables")
 		require.Equal(t, validator.warnings[1], ".components.[3].import.url: Will not resolve ZARF_PKG_TMPL_* variables")
 	})
@@ -124,7 +124,7 @@ func TestValidateSchema(t *testing.T) {
 			"https://github.com/defenseunicorns/zarf-public-test.git",
 			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1",
 			"https://gitlab.com/gitlab-org/build/omnibus-mirror/pcre2/-/tree/vreverse?ref_type=heads"}}
-		checkforUnpinnedRepos(&validator, 0, component)
+		checkforUnpinnedRepos(&validator, 0, component, "")
 		require.Equal(t, validator.warnings[0], ".components.[0].repos.[0]: Unpinned repository")
 		require.Equal(t, len(validator.warnings), 1)
 	})
@@ -135,7 +135,7 @@ func TestValidateSchema(t *testing.T) {
 			"registry.com:9001/whatever/image:1.0.0",
 			"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
 			"badimage:badimage@@sha256:3fbc632167424a6d997e74f5"}}
-		checkForUnpinnedImages(&validator, 0, component)
+		checkForUnpinnedImages(&validator, 0, component, "")
 		require.Equal(t, validator.warnings[0], ".components.[0].images.[0]: Unpinned image")
 		require.Equal(t, len(validator.warnings), 1)
 		require.EqualError(t, validator.errors[0], ".components.[0].images.[2]: Invalid image format")
@@ -151,7 +151,7 @@ func TestValidateSchema(t *testing.T) {
 			},
 		}
 		component := types.ZarfComponent{Files: zarfFiles}
-		checkForUnpinnedFiles(&validator, 0, component)
+		checkForUnpinnedFiles(&validator, 0, component, "")
 		require.Equal(t, validator.warnings[0], ".components.[0].files.[0]: Unpinned file")
 		require.Equal(t, len(validator.warnings), 1)
 	})

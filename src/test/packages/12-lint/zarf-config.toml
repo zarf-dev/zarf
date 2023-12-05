@@ -1,2 +1,2 @@
 [package.create.set]
-BUSYBOX_IMAGE = 'latest'
+BUSYBOX_IMAGE = "latest"

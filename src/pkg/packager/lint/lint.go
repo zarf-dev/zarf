@@ -45,20 +45,19 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 		return nil, err
 	}
 
-	if err := os.Chdir(createOpts.BaseDir); err != nil {
-		return nil, fmt.Errorf("unable to access directory '%s': %w", createOpts.BaseDir, err)
-	}
-
-	_, err = composer.ComposeComponents(&validator.typedZarfPackage, createOpts, []string{})
-	if err != nil {
-		return nil, err
-	}
-
 	if err := fillActiveTemplate(&validator, createOpts); err != nil {
 		return nil, err
 	}
 
 	lintComponents(&validator)
+
+	if err := os.Chdir(createOpts.BaseDir); err != nil {
+		return nil, fmt.Errorf("unable to access directory '%s': %w", createOpts.BaseDir, err)
+	}
+
+	if err := ValidateComposableComponenets(&validator, createOpts); err != nil {
+		return nil, err
+	}
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
 		return nil, err
@@ -90,10 +89,13 @@ func ValidateComposableComponenets(validator *Validator, createOpts types.ZarfCr
 		if err != nil {
 			return err
 		}
-		node := chain.Tail
+		// Skipping initial component
+		node := chain.Head.Next
 		for node != nil {
-			// lintComponent(validator, node.ZarfComponent)
+			lintComponent(validator, node.Index, node.ZarfComponent, fmt.Sprintf(" %s", node.RelativeToHead))
+			node = node.Next
 		}
+
 	}
 	return nil
 }
@@ -167,50 +169,55 @@ func isPinnedRepo(repo string) bool {
 	return (strings.Contains(repo, "@") || strings.Contains(repo, "/-/"))
 }
 
+// Feels like validator may have too much with both the zarf package and the warnings
 func lintComponents(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
-		checkforUnpinnedRepos(validator, i, component)
-		checkForUnpinnedImages(validator, i, component)
-		checkForUnpinnedFiles(validator, i, component)
-		checkForVarInComponentImport(validator, i, component)
+		lintComponent(validator, i, component, "")
 	}
 }
 
-func checkforUnpinnedRepos(validator *Validator, index int, component types.ZarfComponent) {
+func lintComponent(validator *Validator, index int, component types.ZarfComponent, path string) {
+	checkforUnpinnedRepos(validator, index, component, path)
+	checkForUnpinnedImages(validator, index, component, path)
+	checkForUnpinnedFiles(validator, index, component, path)
+	checkForVarInComponentImport(validator, index, component, path)
+}
+
+func checkforUnpinnedRepos(validator *Validator, index int, component types.ZarfComponent, path string) {
 	for j, repo := range component.Repos {
 		if !isPinnedRepo(repo) {
-			validator.addWarning(fmt.Sprintf(".components.[%d].repos.[%d]: Unpinned repository", index, j))
+			validator.addWarning(fmt.Sprintf(".components.[%d].repos.[%d]%s: Unpinned repository", index, j, path))
 		}
 	}
 }
 
-func checkForUnpinnedImages(validator *Validator, index int, component types.ZarfComponent) {
+func checkForUnpinnedImages(validator *Validator, index int, component types.ZarfComponent, path string) {
 	for j, image := range component.Images {
 		pinnedImage, err := isPinnedImage(image)
 		if err != nil {
-			validator.addError(fmt.Errorf(".components.[%d].images.[%d]: Invalid image format", index, j))
+			validator.addError(fmt.Errorf(".components.[%d].images.[%d]%s: Invalid image format", index, j, path))
 			continue
 		}
 		if !pinnedImage {
-			validator.addWarning(fmt.Sprintf(".components.[%d].images.[%d]: Unpinned image", index, j))
+			validator.addWarning(fmt.Sprintf(".components.[%d].images.[%d]%s: Unpinned image", index, j, path))
 		}
 	}
 }
 
-func checkForUnpinnedFiles(validator *Validator, index int, component types.ZarfComponent) {
+func checkForUnpinnedFiles(validator *Validator, index int, component types.ZarfComponent, path string) {
 	for j, file := range component.Files {
 		if file.Shasum == "" && helpers.IsURL(file.Source) {
-			validator.addWarning(fmt.Sprintf(".components.[%d].files.[%d]: Unpinned file", index, j))
+			validator.addWarning(fmt.Sprintf(".components.[%d].files.[%d]%s: Unpinned file", index, j, path))
 		}
 	}
 }
 
-func checkForVarInComponentImport(validator *Validator, index int, component types.ZarfComponent) {
+func checkForVarInComponentImport(validator *Validator, index int, component types.ZarfComponent, path string) {
 	if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
-		validator.addWarning(fmt.Sprintf(".components.[%d].import.path: Will not resolve ZARF_PKG_TMPL_* variables", index))
+		validator.addWarning(fmt.Sprintf(".components.[%d].import.path%s: Will not resolve ZARF_PKG_TMPL_* variables", index, path))
 	}
 	if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
-		validator.addWarning(fmt.Sprintf(".components.[%d].import.url: Will not resolve ZARF_PKG_TMPL_* variables", index))
+		validator.addWarning(fmt.Sprintf(".components.[%d].import.url%s: Will not resolve ZARF_PKG_TMPL_* variables", index, path))
 	}
 }
 
