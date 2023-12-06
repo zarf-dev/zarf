@@ -15,16 +15,21 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+func ReloadComponentTemplate(component *types.ZarfComponent) error {
+	mappings := map[string]string{}
+	mappings[types.ZarfComponentName] = component.Name
+	err := utils.ReloadYamlTemplate(component, mappings)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // FindComponentTemplatesAndReload appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
 func FindComponentTemplatesAndReload(zarfPackage *types.ZarfPackage) error {
 	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
-	for i, component := range zarfPackage.Components {
-		mappings := map[string]string{}
-		mappings[types.ZarfComponentName] = component.Name
-		err := utils.ReloadYamlTemplate(&zarfPackage.Components[i], mappings)
-		if err != nil {
-			return err
-		}
+	for i := range zarfPackage.Components {
+		ReloadComponentTemplate(&zarfPackage.Components[i])
 	}
 
 	return nil

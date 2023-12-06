@@ -1,2 +1,3 @@
 [package.create.set]
 BUSYBOX_IMAGE = "latest"
+PATH = "linted-import"

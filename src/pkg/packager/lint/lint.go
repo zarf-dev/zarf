@@ -53,11 +53,12 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 		return nil, err
 	}
 
+	preVarEvalLintComponents(&validator)
+
 	if err := fillActiveTemplate(&validator, createOpts); err != nil {
 		return nil, err
 	}
 
-	// Currently I won't be able to find the ZARF_PKG_TMPL_* in import path
 	lintComponents(&validator)
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
@@ -73,16 +74,15 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 
 func LintComposableComponenets(validator *Validator, createOpts types.ZarfCreateOptions) error {
 	for i, component := range validator.typedZarfPackage.Components {
-		//TODO allow this to be a CLI option
 		arch := config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
 
 		if !composer.CompatibleComponent(component, arch, createOpts.Flavor) {
 			continue
 		}
 
-		// if a match was found, strip flavor and architecture to reduce bloat in the package definition
-		component.Only.Cluster.Architecture = ""
-		component.Only.Flavor = ""
+		// This is done in composer, should I just delete this or move it into newImportChain
+		// component.Only.Cluster.Architecture = ""
+		// component.Only.Flavor = ""
 
 		chain, err := composer.NewImportChain(component, i, arch, createOpts.Flavor)
 		if err != nil {
@@ -93,9 +93,9 @@ func LintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 		// Skipping initial component since it will be linted the usual way
 		node := chain.Head.Next()
 		for node != nil {
-			validator.typedZarfPackage.Components = []types.ZarfComponent{node.ZarfComponent}
-			fillActiveTemplate(validator, createOpts)
-			lintComponent(validator, node.GetIndex(), validator.typedZarfPackage.Components[0], node.GetRelativeToHead())
+			checkForVarInComponentImport(validator, node.GetIndex(), node.ZarfComponent, node.GetRelativeToHead())
+			fillComponentTemplate(validator, &node.ZarfComponent, createOpts)
+			lintComponent(validator, node.GetIndex(), node.ZarfComponent, node.GetRelativeToHead())
 			node = node.Next()
 		}
 		validator.typedZarfPackage = originalPackage
@@ -103,15 +103,35 @@ func LintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 	return nil
 }
 
+func fillComponentTemplate(validator *Validator, component *types.ZarfComponent, createOpts types.ZarfCreateOptions) error {
+	// update the component templates on the package
+	err := packager.ReloadComponentTemplate(component)
+	if err != nil {
+		return err
+	}
+	return fillYamlTemplate(validator, component, createOpts)
+}
+
 // Look into breaking apart this function to allow for passing in a component
 // Look into returning warnings so I don't have to pass in validator
 // Look into removing package from validator
 func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions) error {
+
+	// update the component templates on the package
+	// TODO add test to make sure this is covered still
+	err := packager.FindComponentTemplatesAndReload(&validator.typedZarfPackage)
+	if err != nil {
+		return err
+	}
+	//Does typed zarf package need to be addressed here or is it already addresssed
+	return fillYamlTemplate(validator, &validator.typedZarfPackage, createOpts)
+}
+
+func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCreateOptions) error {
 	templateMap := map[string]string{}
-	unsetVarWarning := false
 
 	setVarsAndWarn := func(templatePrefix string, deprecated bool) error {
-		yamlTemplates, err := utils.FindYamlTemplates(validator.typedZarfPackage, templatePrefix, "###")
+		yamlTemplates, err := utils.FindYamlTemplates(yamlObj, templatePrefix, "###")
 		if err != nil {
 			return err
 		}
@@ -123,8 +143,11 @@ func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions
 				})
 			}
 			_, present := createOpts.SetVariables[key]
-			if !present {
-				unsetVarWarning = true
+			if !present && !validator.hasUnSetVarWarning {
+				validator.warnings = append([]ValidatorMessage{{
+					description: "There are variables that are unset and won't be evaluated during lint",
+				}}, validator.warnings...)
+				validator.hasUnSetVarWarning = true
 			}
 		}
 
@@ -132,12 +155,6 @@ func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions
 			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
 		}
 		return nil
-	}
-
-	// update the component templates on the package
-	err := packager.FindComponentTemplatesAndReload(&validator.typedZarfPackage)
-	if err != nil {
-		return err
 	}
 
 	if err := setVarsAndWarn(types.ZarfPackageTemplatePrefix, false); err != nil {
@@ -149,16 +166,7 @@ func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions
 		return err
 	}
 
-	// Add special variable for the current package architecture
-	templateMap[types.ZarfPackageArch] = config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
-
-	if unsetVarWarning {
-		validator.warnings = append([]ValidatorMessage{{
-			description: "There are variables that are unset and won't be evaluated during lint",
-		}}, validator.warnings...)
-	}
-
-	return utils.ReloadYamlTemplate(&validator.typedZarfPackage, templateMap)
+	return utils.ReloadYamlTemplate(yamlObj, templateMap)
 }
 
 func isPinnedImage(image string) (bool, error) {
@@ -190,7 +198,6 @@ func lintComponent(validator *Validator, index int, component types.ZarfComponen
 	checkForUnpinnedRepos(validator, index, component, path)
 	checkForUnpinnedImages(validator, index, component, path)
 	checkForUnpinnedFiles(validator, index, component, path)
-	checkForVarInComponentImport(validator, index, component, path)
 }
 
 func checkForUnpinnedRepos(validator *Validator, index int, component types.ZarfComponent, path string) {
@@ -242,6 +249,12 @@ func checkForUnpinnedFiles(validator *Validator, index int, component types.Zarf
 				item:        file.Source,
 			})
 		}
+	}
+}
+
+func preVarEvalLintComponents(validator *Validator) {
+	for i, component := range validator.typedZarfPackage.Components {
+		checkForVarInComponentImport(validator, i, component, "")
 	}
 }
 

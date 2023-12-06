@@ -41,6 +41,7 @@ type Validator struct {
 	jsonSchema         []byte
 	typedZarfPackage   types.ZarfPackage
 	untypedZarfPackage interface{}
+	hasUnSetVarWarning bool
 }
 
 // DisplayFormattedMessage message sent to user based on validator results
