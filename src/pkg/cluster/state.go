@@ -13,6 +13,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/fatih/color"
 
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -157,7 +158,7 @@ func (c *Cluster) LoadZarfState() (state *types.ZarfState, err error) {
 	// Set up the API connection
 	secret, err := c.GetSecret(ZarfNamespaceName, ZarfStateSecretName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w. %s", err, utils.ColorWrap("Did you remember to zarf init?", color.Bold))
 	}
 
 	err = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
