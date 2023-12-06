@@ -23,9 +23,6 @@ import (
 type Node struct {
 	types.ZarfComponent
 
-	// We are going to use this in lint so we can give the correct path
-	// We can give the index of the zarf component within the file that's being composed on
-	// So users can have the yaml path
 	index int
 
 	vars   []types.ZarfPackageVariable
