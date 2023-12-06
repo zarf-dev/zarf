@@ -45,18 +45,19 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 		return nil, err
 	}
 
+	if err := LintComposableComponenets(&validator, createOpts); err != nil {
+		return nil, err
+	}
+
 	if err := fillActiveTemplate(&validator, createOpts); err != nil {
 		return nil, err
 	}
 
+	// Currently I won't be able to find the ZARF_PKG_TMPL_* in import path
 	lintComponents(&validator)
 
 	if err := os.Chdir(createOpts.BaseDir); err != nil {
 		return nil, fmt.Errorf("unable to access directory '%s': %w", createOpts.BaseDir, err)
-	}
-
-	if err := ValidateComposableComponenets(&validator, createOpts); err != nil {
-		return nil, err
 	}
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
@@ -70,7 +71,7 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 	return &validator, nil
 }
 
-func ValidateComposableComponenets(validator *Validator, createOpts types.ZarfCreateOptions) error {
+func LintComposableComponenets(validator *Validator, createOpts types.ZarfCreateOptions) error {
 	for i, component := range validator.typedZarfPackage.Components {
 		//TODO allow this to be a CLI option
 		arch := config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
@@ -90,18 +91,21 @@ func ValidateComposableComponenets(validator *Validator, createOpts types.ZarfCr
 
 		originalPackage := validator.typedZarfPackage
 		// Skipping initial component since it will be linted the usual way
-		node := chain.Head.Next
+		node := chain.Head.Next()
 		for node != nil {
 			validator.typedZarfPackage.Components = []types.ZarfComponent{node.ZarfComponent}
 			fillActiveTemplate(validator, createOpts)
-			lintComponent(validator, node.Index, validator.typedZarfPackage.Components[0], node.RelativeToHead)
-			validator.typedZarfPackage = originalPackage
-			node = node.Next
+			lintComponent(validator, node.GetIndex(), validator.typedZarfPackage.Components[0], node.GetRelativeToHead())
+			node = node.Next()
 		}
+		validator.typedZarfPackage = originalPackage
 	}
 	return nil
 }
 
+// Look into breaking apart this function to allow for passing in a component
+// Look into returning warnings so I don't have to pass in validator
+// Look into removing package from validator
 func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions) error {
 	templateMap := map[string]string{}
 	unsetVarWarning := false

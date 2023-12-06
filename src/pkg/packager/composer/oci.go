@@ -37,14 +37,14 @@ func (ic *ImportChain) getRemote(url string) (*oci.OrasRemote, error) {
 // ContainsOCIImport returns true if the import chain contains a remote import
 func (ic *ImportChain) ContainsOCIImport() bool {
 	// only the 2nd to last node may have a remote import
-	return ic.Tail.Prev != nil && ic.Tail.Prev.Import.URL != ""
+	return ic.Tail.prev != nil && ic.Tail.prev.Import.URL != ""
 }
 
 func (ic *ImportChain) fetchOCISkeleton() error {
 	if !ic.ContainsOCIImport() {
 		return nil
 	}
-	node := ic.Tail.Prev
+	node := ic.Tail.prev
 	remote, err := ic.getRemote(node.Import.URL)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 	}
 	// the tail node is the only node whose relativeToHead is based solely upon cwd<->cache
 	// contrary to the other nodes, which are based upon the previous node
-	ic.Tail.RelativeToHead = rel
+	ic.Tail.relativeToHead = rel
 
 	if oci.IsEmptyDescriptor(componentDesc) {
 		// nothing was fetched, nothing to extract

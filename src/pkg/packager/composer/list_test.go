@@ -311,8 +311,8 @@ func TestMerging(t *testing.T) {
 			},
 		},
 	}
-	head.Next = &tail
-	tail.Prev = &head
+	head.next = &tail
+	tail.prev = &head
 	testIC := &ImportChain{Head: &head, Tail: &tail}
 
 	testCases := []testCase{
