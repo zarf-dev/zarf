@@ -225,7 +225,7 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 	}
 
 	if err := ic.fetchOCISkeleton(); err != nil {
-		return composed, err
+		return nil, err
 	}
 
 	// start with an empty component to compose into
