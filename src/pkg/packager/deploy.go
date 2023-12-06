@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
@@ -74,7 +75,7 @@ func (p *Packager) Deploy() (err error) {
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
 	if err != nil {
-		return fmt.Errorf("unable to deploy all components in this Zarf Package: %w", err)
+		return err
 	}
 	if len(deployedComponents) == 0 {
 		message.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
@@ -165,11 +166,11 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			deployedComponents[idx].Status = types.ComponentStatusFailed
 			if p.isConnectedToCluster() {
 				if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-					message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+					message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 				}
 			}
 
-			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, deployErr)
+			return deployedComponents, fmt.Errorf("unable to deploy component %q: %w", component.Name, deployErr)
 		}
 
 		// Update the package secret to indicate that we successfully deployed this component
@@ -177,7 +178,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 		if p.isConnectedToCluster() {
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
 
@@ -222,7 +223,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
 	if err != nil {
-		return charts, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
+		return charts, fmt.Errorf("unable to deploy component %q: %w", component.Name, err)
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
@@ -266,7 +267,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		// Setup the state in the config and get the valuesTemplate
 		p.valueTemplate, err = p.setupStateValuesTemplate()
 		if err != nil {
-			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
+			return charts, err
 		}
 
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
@@ -402,7 +403,7 @@ func (p *Packager) setupStateValuesTemplate() (values *template.Values, err erro
 	state, err := p.cluster.LoadZarfState()
 	// Return on error if we are not in YOLO mode
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
-		return nil, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
+		return nil, fmt.Errorf("%s %w", lang.ErrLoadState, err)
 	} else if state == nil && p.cfg.Pkg.Metadata.YOLO {
 		state = &types.ZarfState{}
 		// YOLO mode, so minimal state needed
