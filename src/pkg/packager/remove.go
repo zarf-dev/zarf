@@ -31,10 +31,6 @@ func (p *Packager) Remove() (err error) {
 	spinner := message.NewProgressSpinner("Removing Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
-	// If components were provided; just remove the things we were asked to remove
-	requestedComponents := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
-	partialRemove := len(requestedComponents) > 0 && requestedComponents[0] != ""
-
 	var packageName string
 
 	// we do not want to allow removal of signed packages without a signature if there are remove actions
@@ -52,28 +48,16 @@ func (p *Packager) Remove() (err error) {
 	componentsToRemove := []string{}
 	packageRequiresCluster := false
 
-	for _, component := range p.cfg.Pkg.Components {
-		included, excluded := false, false
+	// If components were provided; just remove the things we were asked to remove
+	p.forRequestedComponents(func(component types.ZarfComponent) error {
+		componentsToRemove = append(componentsToRemove, component.Name)
 
-		if partialRemove {
-			included, excluded = p.includedOrExcluded(component, requestedComponents)
-
-			if excluded {
-				continue
-			}
-		} else {
-			included = true
+		if requiresCluster(component) {
+			packageRequiresCluster = true
 		}
 
-		if included {
-			componentsToRemove = append(componentsToRemove, component.Name)
-
-			if p.requiresCluster(component) {
-				packageRequiresCluster = true
-			}
-		}
-	}
-	message.Warnf("%#v", componentsToRemove)
+		return nil
+	})
 
 	// Get or build the secret for the deployed package
 	deployedPackage := &types.DeployedPackage{}

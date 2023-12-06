@@ -65,7 +65,7 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 				included = true
 			} else {
 				// First check if the component is required or requested via CLI flag
-				included, excluded = p.includedOrExcluded(component, requestedComponents)
+				included, excluded = includedOrExcluded(component, requestedComponents)
 
 				if excluded {
 					continue
@@ -74,7 +74,7 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 
 			// If the user has not requested this component via CLI flag, then prompt them if not a choice group
 			if !included && !userChoicePrompt {
-				included = p.confirmOptionalComponent(component)
+				included = confirmOptionalComponent(component)
 			}
 
 			if included {
@@ -93,21 +93,48 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 
 		// If the user has requested a choice group, then prompt them
 		if userChoicePrompt {
-			selectedComponent := p.confirmChoiceGroup(componentGroup)
+			selectedComponent := confirmChoiceGroup(componentGroup)
 			validComponentsList = append(validComponentsList, selectedComponent)
 		}
 	}
 
 	// Ensure all user requested components are valid
-	if err := p.validateRequests(validComponentsList, requestedComponents, choiceComponents); err != nil {
+	if err := validateRequests(validComponentsList, requestedComponents, choiceComponents); err != nil {
 		message.Fatalf(err, "Invalid component argument, %s", err)
 	}
 
 	return validComponentsList
 }
 
+func (p *Packager) forRequestedComponents(function func(types.ZarfComponent) error) error {
+	requestedComponents := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
+	partialMirror := len(requestedComponents) > 0 && requestedComponents[0] != ""
+
+	for _, component := range p.cfg.Pkg.Components {
+		included, excluded := false, false
+
+		if partialMirror {
+			included, excluded = includedOrExcluded(component, requestedComponents)
+
+			if excluded {
+				continue
+			}
+		} else {
+			included = true
+		}
+
+		if included {
+			if err := function(component); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // Match on the first requested component that is not in the list of valid components and return the component name.
-func (p *Packager) validateRequests(validComponentsList []types.ZarfComponent, requestedComponentNames, choiceComponents []string) error {
+func validateRequests(validComponentsList []types.ZarfComponent, requestedComponentNames, choiceComponents []string) error {
 	// Loop through each requested component names
 	for _, requestedComponent := range requestedComponentNames {
 		if strings.HasSuffix(requestedComponent, "-") {
@@ -141,7 +168,7 @@ func (p *Packager) validateRequests(validComponentsList []types.ZarfComponent, r
 	return nil
 }
 
-func (p *Packager) includedOrExcluded(component types.ZarfComponent, requestedComponentNames []string) (include bool, exclude bool) {
+func includedOrExcluded(component types.ZarfComponent, requestedComponentNames []string) (include bool, exclude bool) {
 	// Otherwise,check if this is one of the components that has been requested from the CLI
 	for _, requestedComponent := range requestedComponentNames {
 		// Check if the component has a trailing dash indicating it should be excluded
@@ -165,7 +192,7 @@ func (p *Packager) includedOrExcluded(component types.ZarfComponent, requestedCo
 }
 
 // Confirm optional component.
-func (p *Packager) confirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
+func confirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
 	// Confirm flag passed, just use defaults
 	if config.CommonOptions.Confirm {
 		return component.Default
@@ -191,7 +218,7 @@ func (p *Packager) confirmOptionalComponent(component types.ZarfComponent) (conf
 	return confirmComponent
 }
 
-func (p *Packager) confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
+func confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
 	// Confirm flag passed, just use defaults
 	if config.CommonOptions.Confirm {
 		var componentNames []string
@@ -231,7 +258,7 @@ func (p *Packager) confirmChoiceGroup(componentGroup []types.ZarfComponent) type
 	return componentGroup[chosen]
 }
 
-func (p *Packager) requiresCluster(component types.ZarfComponent) bool {
+func requiresCluster(component types.ZarfComponent) bool {
 	hasImages := len(component.Images) > 0
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0

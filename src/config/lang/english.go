@@ -290,7 +290,7 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageDeployInvalidCLIVersionWarn              = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
 	CmdPackageDeployErr                                = "Failed to deploy package: %s"
 
-	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' status."
+	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting 'default' components with a trailing '-' are also supported."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
 
 	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
@@ -299,7 +299,7 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 
 	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
-	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall"
+	CmdPackageRemoveFlagComponents = "Comma-separated list of components to uninstall.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting 'default' components with a trailing '-' are also supported."
 	CmdPackageRemoveTarballErr     = "Invalid tarball path provided"
 	CmdPackageRemoveExtractErr     = "Unable to extract the package contents"
 	CmdPackageRemoveErr            = "Unable to remove the package with an error of: %s"

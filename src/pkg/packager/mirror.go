@@ -43,15 +43,8 @@ func (p *Packager) Mirror() (err error) {
 	// Filter out components that are not compatible with this system if we have loaded from a tarball
 	p.filterComponents()
 
-	componentsToMirror := p.getValidComponents()
-
-	for _, component := range componentsToMirror {
-		if err := p.mirrorComponent(component); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	// Run mirror for each requested component
+	return p.forRequestedComponents(p.mirrorComponent)
 }
 
 // mirrorComponent mirrors a Zarf Component.

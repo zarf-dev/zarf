@@ -112,7 +112,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		}
 
 		// If this component requires a cluster, connect to one
-		if p.requiresCluster(component) {
+		if requiresCluster(component) {
 			timeout := cluster.DefaultTimeout
 			if p.isInitConfig() {
 				timeout = 5 * time.Minute
@@ -198,7 +198,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	isAgent := component.Name == "zarf-agent"
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if p.requiresCluster(component) && p.cfg.State == nil {
+	if requiresCluster(component) && p.cfg.State == nil {
 		err = p.cluster.InitZarfState(p.cfg.InitOpts)
 		if err != nil {
 			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -262,7 +262,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
+	if !p.valueTemplate.Ready() && requiresCluster(component) {
 		// Setup the state in the config and get the valuesTemplate
 		p.valueTemplate, err = p.setupStateValuesTemplate()
 		if err != nil {
