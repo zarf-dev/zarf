@@ -15,11 +15,11 @@ import "errors"
 // Debug messages will not be a part of the language strings since they are not intended to be user facing
 // Include sprintf formatting directives in the string if needed.
 const (
-	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
-	ErrSaveState           = "Failed to save the Zarf State to the Kubernetes cluster."
-	ErrLoadPackageSecret   = "Failed to load %s's secret from the Kubernetes cluster"
-	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
-	ErrTunnelFailed        = "Failed to create a tunnel to the Kubernetes cluster."
+	ErrLoadState           = "Failed to load the Zarf State from the cluster."
+	ErrSaveState           = "Failed to save the Zarf State to the cluster."
+	ErrLoadPackageSecret   = "Failed to load %s's secret from the cluster"
+	ErrNoClusterConnection = "Failed to connect to the cluster."
+	ErrTunnelFailed        = "Failed to create a tunnel to the cluster."
 	ErrUnmarshal           = "failed to unmarshal file: %w"
 	ErrWritingFile         = "failed to write file %s: %s"
 	ErrDownloading         = "failed to download %s: %s"
