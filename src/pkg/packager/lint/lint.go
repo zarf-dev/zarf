@@ -222,7 +222,7 @@ func checkForUnpinnedImages(validator *Validator, index int, component types.Zar
 			validator.addError(ValidatorMessage{
 				yqPath:      imageYqPath,
 				filePath:    path,
-				description: "Invalid Image format",
+				description: "Invalid image format",
 				item:        image,
 			})
 			continue
@@ -263,7 +263,7 @@ func checkForVarInComponentImport(validator *Validator, index int, component typ
 		validator.addWarning(ValidatorMessage{
 			yqPath:      fmt.Sprintf(".components.[%d].import.path", index),
 			filePath:    path,
-			description: "Component import path variables are not resolved by zarf",
+			description: "Zarf does not evaluate variables at component.x.import.path",
 			item:        component.Import.Path,
 		})
 	}
@@ -271,7 +271,7 @@ func checkForVarInComponentImport(validator *Validator, index int, component typ
 		validator.addWarning(ValidatorMessage{
 			yqPath:      fmt.Sprintf(".components.[%d].import.url", index),
 			filePath:    path,
-			description: "Component import URL variables are not resolved by zarf",
+			description: "Zarf does not evaluate variables at component.x.import.url",
 			item:        component.Import.URL,
 		})
 	}

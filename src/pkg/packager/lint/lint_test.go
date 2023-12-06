@@ -115,20 +115,24 @@ func TestValidateSchema(t *testing.T) {
 		URLComponent := types.ZarfComponent{Import: types.ZarfComponentImport{URL: "oci://###ZARF_PKG_TMPL_ZEBRA###"}}
 		checkForVarInComponentImport(&validator, 2, pathComponent, "")
 		checkForVarInComponentImport(&validator, 3, URLComponent, "")
-		require.Equal(t, validator.warnings[0].String(),
-			".components.[2].import.path: Will not resolve ZARF_PKG_TMPL_* variables")
-		require.Equal(t, validator.warnings[1].String(),
-			".components.[3].import.url: Will not resolve ZARF_PKG_TMPL_* variables")
+		require.Equal(t,
+			".components.[2].import.path: Zarf does not evaluate variables at component.x.import.path ###ZARF_PKG_TMPL_ZEBRA###",
+			validator.warnings[0].String())
+		require.Equal(t,
+			".components.[3].import.url: Zarf does not evaluate variables at component.x.import.url oci://###ZARF_PKG_TMPL_ZEBRA###",
+			validator.warnings[1].String())
 	})
 
 	t.Run("Unpinnned repo warning", func(t *testing.T) {
 		validator := Validator{}
+		unpinnedRepo := "https://github.com/defenseunicorns/zarf-public-test.git"
 		component := types.ZarfComponent{Repos: []string{
-			"https://github.com/defenseunicorns/zarf-public-test.git",
-			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1",
-			"https://gitlab.com/gitlab-org/build/omnibus-mirror/pcre2/-/tree/vreverse?ref_type=heads"}}
+			unpinnedRepo,
+			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1"}}
 		checkForUnpinnedRepos(&validator, 0, component, "")
-		require.Equal(t, validator.warnings[0].String(), ".components.[0].repos.[0]: Unpinned repository")
+		require.Equal(t,
+			fmt.Sprintf(".components.[0].repos.[0]: Unpinned repository %s", unpinnedRepo),
+			validator.warnings[0].String())
 		require.Equal(t, len(validator.warnings), 1)
 	})
 
