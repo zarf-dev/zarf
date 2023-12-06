@@ -31,7 +31,8 @@ func (v ValidatorMessage) String() string {
 		return v.description
 	}
 	return fmt.Sprintf("%s%s: %s%s",
-		v.yqPath, v.filePath, v.description, v.item)
+		utils.ColorWrap(v.yqPath, color.FgCyan), utils.ColorWrap(v.filePath, color.FgCyan),
+		v.description, v.item)
 }
 
 // Validator holds the warnings/errors and messaging that we get from validation

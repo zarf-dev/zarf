@@ -16,6 +16,10 @@ components:
   - name: import-test
     import:
       path: linted-import
+    files:
+    - source: https://github.com/k3s-io/k3s/releases/download/v1.28.2+k3s1/k3s
+      shasum: 2f041d37a2c6d54d53e106e1c7713bc48f806f3919b0d9e092f5fcbdc55b41cf
+      target: src/
 
   - name: full-repo
     repos:
