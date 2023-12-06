@@ -27,7 +27,7 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 	componentGroups := make(map[string][]types.ZarfComponent)
 
 	// The component list is comma-delimited list
-	requestedNames := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
+	requestedComponents := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
 
 	// Break up components into choice groups
 	for _, component := range p.cfg.Pkg.Components {
@@ -58,11 +58,18 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 
 		// Loop through the components in the group
 		for _, component := range componentGroup {
-			// First check if the component is required or requested via CLI flag
-			included, excluded := p.includedOrExcluded(component, requestedNames)
+			included, excluded := false, false
 
-			if excluded {
-				continue
+			// If the component is required, then it is always included
+			if component.Required {
+				included = true
+			} else {
+				// First check if the component is required or requested via CLI flag
+				included, excluded = p.includedOrExcluded(component, requestedComponents)
+
+				if excluded {
+					continue
+				}
 			}
 
 			// If the user has not requested this component via CLI flag, then prompt them if not a choice group
@@ -92,7 +99,7 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 	}
 
 	// Ensure all user requested components are valid
-	if err := p.validateRequests(validComponentsList, requestedNames, choiceComponents); err != nil {
+	if err := p.validateRequests(validComponentsList, requestedComponents, choiceComponents); err != nil {
 		message.Fatalf(err, "Invalid component argument, %s", err)
 	}
 
@@ -135,11 +142,6 @@ func (p *Packager) validateRequests(validComponentsList []types.ZarfComponent, r
 }
 
 func (p *Packager) includedOrExcluded(component types.ZarfComponent, requestedComponentNames []string) (include bool, exclude bool) {
-	// If the component is required, then it is always included
-	if component.Required {
-		return true, false
-	}
-
 	// Otherwise,check if this is one of the components that has been requested from the CLI
 	for _, requestedComponent := range requestedComponentNames {
 		// Check if the component has a trailing dash indicating it should be excluded

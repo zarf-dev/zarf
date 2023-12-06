@@ -8,11 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"slices"
-
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -45,13 +42,12 @@ func (p *Packager) Mirror() (err error) {
 
 	// Filter out components that are not compatible with this system if we have loaded from a tarball
 	p.filterComponents()
-	requestedComponentNames := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
 
-	for _, component := range p.cfg.Pkg.Components {
-		if len(requestedComponentNames) == 0 || slices.Contains(requestedComponentNames, component.Name) {
-			if err := p.mirrorComponent(component); err != nil {
-				return err
-			}
+	componentsToMirror := p.getValidComponents()
+
+	for _, component := range componentsToMirror {
+		if err := p.mirrorComponent(component); err != nil {
+			return err
 		}
 	}
 
