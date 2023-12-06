@@ -253,7 +253,7 @@ func TestCompose(t *testing.T) {
 			if testCase.returnError {
 				require.Contains(t, err.Error(), testCase.expectedErrorMessage)
 			} else {
-				require.EqualValues(t, testCase.expectedComposed, composed)
+				require.EqualValues(t, &testCase.expectedComposed, composed)
 			}
 		})
 	}
