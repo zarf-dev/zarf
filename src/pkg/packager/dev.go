@@ -72,7 +72,7 @@ func (p *Packager) DevDeploy() error {
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
 	if err != nil {
-		return fmt.Errorf("unable to deploy all components in this Zarf Package: %w", err)
+		return err
 	}
 	if len(deployedComponents) == 0 {
 		message.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
