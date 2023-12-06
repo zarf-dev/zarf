@@ -38,9 +38,9 @@ func TestLint(t *testing.T) {
 		require.Contains(t, stderr, ".components.[2].repos.[0]: Unpinned repository")
 		require.Contains(t, stderr, ".metadata: Additional property description1 is not allowed")
 		require.Contains(t, stderr, ".components.[0].import: Additional property not-path is not allowed")
-		require.Contains(t, stderr, ".components.[2].images.[3]: Unpinned image")
-		require.Contains(t, stderr, ".components.[1].images.[0] linted-import: Unpinned image")
-		require.Contains(t, stderr, ".components.[1].images.[2] linted-import: Unpinned image")
+		require.Contains(t, stderr, ".components.[2].images.[3]: Image not pinned with digest")
+		require.Contains(t, stderr, ".components.[1].images.[0] linted-import: Image not pinned with digest")
+		require.Contains(t, stderr, ".components.[1].images.[2] linted-import: Image not pinned with digest")
 		require.Contains(t, stderr, ".components.[3].import.path: Zarf does not evaluate variables at component.x.import.path ###ZARF_PKG_TMPL_PATH###")
 	})
 
