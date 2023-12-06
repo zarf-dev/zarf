@@ -182,9 +182,7 @@ func isPinnedImage(image string) (bool, error) {
 }
 
 func isPinnedRepo(repo string) bool {
-	// Pinned github and dev.azure.com repos will have @
-	// Pinned gitlab repos will have /-/
-	return (strings.Contains(repo, "@") || strings.Contains(repo, "/-/"))
+	return (strings.Contains(repo, "@"))
 }
 
 // Feels like validator may have too much with both the zarf package and the warnings
@@ -231,7 +229,7 @@ func checkForUnpinnedImages(validator *Validator, index int, component types.Zar
 			validator.addWarning(ValidatorMessage{
 				yqPath:      imageYqPath,
 				filePath:    path,
-				description: "Unpinned image",
+				description: "Image not pinned with digest",
 				item:        image,
 			})
 		}
@@ -245,7 +243,7 @@ func checkForUnpinnedFiles(validator *Validator, index int, component types.Zarf
 			validator.addWarning(ValidatorMessage{
 				yqPath:      fileYqPath,
 				filePath:    path,
-				description: "Unpinned file",
+				description: "No shasum for remote file",
 				item:        file.Source,
 			})
 		}
