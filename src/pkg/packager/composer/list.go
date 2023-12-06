@@ -239,7 +239,7 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 		// perform overrides here
 		err := overrideMetadata(composed, node.ZarfComponent)
 		if err != nil {
-			return composed, err
+			return nil, err
 		}
 
 		overrideDeprecated(composed, node.ZarfComponent)
