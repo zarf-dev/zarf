@@ -85,7 +85,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_1_Deploy() {
 	ref := suite.Reference.String()
 
 	// Deploy the package via OCI.
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", "oci://"+ref, "--components=demo-helm-oci-chart", "--insecure", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "deploy", "oci://"+ref, "--insecure", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Remove the package via OCI.

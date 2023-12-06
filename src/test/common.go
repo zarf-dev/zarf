@@ -130,11 +130,14 @@ func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
 	return strings.Trim(stdOut, "\n")
 }
 
-// StripANSICodes strips any ANSI color codes from a given string
-func (e2e *ZarfE2ETest) StripANSICodes(input string) string {
+// StripMessageFormatting strips any ANSI color codes and extra spaces from a given string
+func (e2e *ZarfE2ETest) StripMessageFormatting(input string) string {
 	// Regex to strip any color codes from the output - https://regex101.com/r/YFyIwC/2
 	ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
-	return ansiRegex.ReplaceAllString(input, "")
+	unAnsiInput := ansiRegex.ReplaceAllString(input, "")
+	// Regex to strip any more than two spaces or newline - https://regex101.com/r/wqQmys/1
+	multiSpaceRegex := regexp.MustCompile(`\s{2,}|\n`)
+	return multiSpaceRegex.ReplaceAllString(unAnsiInput, " ")
 }
 
 // NormalizeYAMLFilenames normalizes YAML filenames / paths across Operating Systems (i.e Windows vs Linux)
