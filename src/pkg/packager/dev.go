@@ -16,6 +16,7 @@ import (
 // DevDeploy creates + deploys a package in one shot
 func (p *Packager) DevDeploy() error {
 	config.CommonOptions.Confirm = true
+	p.cfg.CreateOpts.SkipSBOM = !p.cfg.CreateOpts.IsYOLO
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -42,6 +43,14 @@ func (p *Packager) DevDeploy() error {
 
 	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
+	}
+
+	// If building in yolo mode, strip out all images and repos
+	if p.cfg.CreateOpts.IsYOLO {
+		for idx := range p.cfg.Pkg.Components {
+			p.cfg.Pkg.Components[idx].Images = []string{}
+			p.cfg.Pkg.Components[idx].Repos = []string{}
+		}
 	}
 
 	if err := p.assemble(); err != nil {

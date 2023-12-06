@@ -83,14 +83,6 @@ func (p *Packager) load() error {
 }
 
 func (p *Packager) assemble() error {
-	// If building in yolo mode, strip out all images and repos
-	if p.cfg.CreateOpts.IsYOLO {
-		for idx := range p.cfg.Pkg.Components {
-			p.cfg.Pkg.Components[idx].Images = []string{}
-			p.cfg.Pkg.Components[idx].Repos = []string{}
-		}
-	}
-
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
 	var imageList []transform.Image
 	for idx, component := range p.cfg.Pkg.Components {
@@ -170,15 +162,13 @@ func (p *Packager) assemble() error {
 		}
 	}
 
-	if p.cfg.CreateOpts.IsYOLO {
-		// Ignore SBOM creation if the flag is set.
-		if p.cfg.CreateOpts.SkipSBOM {
-			message.Debug("Skipping image SBOM processing per --skip-sbom flag")
-		} else {
-			p.layout = p.layout.AddSBOMs()
-			if err := sbom.Catalog(componentSBOMs, sbomImageList, p.layout); err != nil {
-				return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
-			}
+	// Ignore SBOM creation if the flag is set.
+	if p.cfg.CreateOpts.SkipSBOM {
+		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
+	} else {
+		p.layout = p.layout.AddSBOMs()
+		if err := sbom.Catalog(componentSBOMs, sbomImageList, p.layout); err != nil {
+			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
 
