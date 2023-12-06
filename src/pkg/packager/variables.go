@@ -15,6 +15,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// ReloadComponentTemplate appends ###ZARF_COMPONENT_NAME### for the component, assigns value, and reloads
+// Any instance of ###ZARF_COMPONENT_NAME### within a component will be replaced with that components name
 func ReloadComponentTemplate(component *types.ZarfComponent) error {
 	mappings := map[string]string{}
 	mappings[types.ZarfComponentName] = component.Name

@@ -34,18 +34,22 @@ type Node struct {
 	next *Node
 }
 
+// GetIndex gives the component index of the node on it's original zarf file
 func (n *Node) GetIndex() int {
 	return n.index
 }
 
+// Path from downstream zarf file to upstream imported zarf file
 func (n *Node) GetRelativeToHead() string {
 	return n.relativeToHead
 }
 
+// Next node in the chain
 func (n *Node) Next() *Node {
 	return n.next
 }
 
+// Prev node in the chain
 func (n *Node) Prev() *Node {
 	return n.prev
 }

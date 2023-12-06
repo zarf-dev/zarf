@@ -49,7 +49,7 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 		return nil, fmt.Errorf("unable to access directory '%s': %w", createOpts.BaseDir, err)
 	}
 
-	if err := LintComposableComponenets(&validator, createOpts); err != nil {
+	if err := lintComposableComponenets(&validator, createOpts); err != nil {
 		return nil, err
 	}
 
@@ -72,7 +72,7 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 	return &validator, nil
 }
 
-func LintComposableComponenets(validator *Validator, createOpts types.ZarfCreateOptions) error {
+func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreateOptions) error {
 	for i, component := range validator.typedZarfPackage.Components {
 		arch := config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
 
@@ -140,13 +140,13 @@ func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCr
 
 		for key := range yamlTemplates {
 			if deprecated {
-				validator.addWarning(ValidatorMessage{
+				validator.addWarning(validatorMessage{
 					description: fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key),
 				})
 			}
 			_, present := createOpts.SetVariables[key]
 			if !present && !validator.hasUnSetVarWarning {
-				validator.warnings = append([]ValidatorMessage{{
+				validator.warnings = append([]validatorMessage{{
 					description: "There are variables that are unset and won't be evaluated during lint",
 				}}, validator.warnings...)
 				validator.hasUnSetVarWarning = true
@@ -204,7 +204,7 @@ func checkForUnpinnedRepos(validator *Validator, index int, component types.Zarf
 	for j, repo := range component.Repos {
 		repoYqPath := fmt.Sprintf(".components.[%d].repos.[%d]", index, j)
 		if !isPinnedRepo(repo) {
-			validator.addWarning(ValidatorMessage{
+			validator.addWarning(validatorMessage{
 				yqPath:      repoYqPath,
 				filePath:    path,
 				description: "Unpinned repository",
@@ -219,7 +219,7 @@ func checkForUnpinnedImages(validator *Validator, index int, component types.Zar
 		imageYqPath := fmt.Sprintf(".components.[%d].images.[%d]", index, j)
 		pinnedImage, err := isPinnedImage(image)
 		if err != nil {
-			validator.addError(ValidatorMessage{
+			validator.addError(validatorMessage{
 				yqPath:      imageYqPath,
 				filePath:    path,
 				description: "Invalid image format",
@@ -228,7 +228,7 @@ func checkForUnpinnedImages(validator *Validator, index int, component types.Zar
 			continue
 		}
 		if !pinnedImage {
-			validator.addWarning(ValidatorMessage{
+			validator.addWarning(validatorMessage{
 				yqPath:      imageYqPath,
 				filePath:    path,
 				description: "Image not pinned with digest",
@@ -242,7 +242,7 @@ func checkForUnpinnedFiles(validator *Validator, index int, component types.Zarf
 	for j, file := range component.Files {
 		fileYqPath := fmt.Sprintf(".components.[%d].files.[%d]", index, j)
 		if file.Shasum == "" && helpers.IsURL(file.Source) {
-			validator.addWarning(ValidatorMessage{
+			validator.addWarning(validatorMessage{
 				yqPath:      fileYqPath,
 				filePath:    path,
 				description: "No shasum for remote file",
@@ -260,7 +260,7 @@ func preVarEvalLintComponents(validator *Validator) {
 
 func checkForVarInComponentImport(validator *Validator, index int, component types.ZarfComponent, path string) {
 	if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
-		validator.addWarning(ValidatorMessage{
+		validator.addWarning(validatorMessage{
 			yqPath:      fmt.Sprintf(".components.[%d].import.path", index),
 			filePath:    path,
 			description: "Zarf does not evaluate variables at component.x.import.path",
@@ -268,7 +268,7 @@ func checkForVarInComponentImport(validator *Validator, index int, component typ
 		})
 	}
 	if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
-		validator.addWarning(ValidatorMessage{
+		validator.addWarning(validatorMessage{
 			yqPath:      fmt.Sprintf(".components.[%d].import.url", index),
 			filePath:    path,
 			description: "Zarf does not evaluate variables at component.x.import.url",
@@ -301,7 +301,7 @@ func validateSchema(validator *Validator) error {
 
 	if !result.Valid() {
 		for _, desc := range result.Errors() {
-			validator.addError(ValidatorMessage{
+			validator.addError(validatorMessage{
 				yqPath:      makeFieldPathYqCompat(desc.Field()),
 				description: desc.Description(),
 			})

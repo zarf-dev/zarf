@@ -13,14 +13,14 @@ import (
 	"github.com/fatih/color"
 )
 
-type ValidatorMessage struct {
+type validatorMessage struct {
 	yqPath      string
 	filePath    string
 	description string
 	item        string
 }
 
-func (v ValidatorMessage) String() string {
+func (v validatorMessage) String() string {
 	if v.filePath != "" {
 		v.filePath = fmt.Sprintf(" %s", v.filePath)
 	}
@@ -37,8 +37,8 @@ func (v ValidatorMessage) String() string {
 
 // Validator holds the warnings/errors and messaging that we get from validation
 type Validator struct {
-	warnings           []ValidatorMessage
-	errors             []ValidatorMessage
+	warnings           []validatorMessage
+	errors             []validatorMessage
 	jsonSchema         []byte
 	typedZarfPackage   types.ZarfPackage
 	untypedZarfPackage interface{}
@@ -82,10 +82,10 @@ func (v Validator) hasErrors() bool {
 	return len(v.errors) > 0
 }
 
-func (v *Validator) addWarning(vmessage ValidatorMessage) {
+func (v *Validator) addWarning(vmessage validatorMessage) {
 	v.warnings = append(v.warnings, vmessage)
 }
 
-func (v *Validator) addError(vMessage ValidatorMessage) {
+func (v *Validator) addError(vMessage validatorMessage) {
 	v.errors = append(v.errors, vMessage)
 }
