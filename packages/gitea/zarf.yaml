@@ -67,6 +67,17 @@ components:
           - gitea-values.yaml
     actions:
       onDeploy:
+        before:
+          - description: Check that the cluster has a storage class
+            shell:
+              windows: pwsh
+            cmd: |
+              STORAGE_CLASSES=$(./zarf tools kubectl get StorageClass -o jsonpath='{.items[*].metadata.name}')
+              if [ -z "${STORAGE_CLASSES}" ]; then
+                echo "No storage class was found in the cluster."
+                echo "The Zarf git server requires a storage class in the cluster to function correctly."
+                exit 1
+              fi
         after:
           - cmd: ./zarf internal create-read-only-gitea-user --no-progress
             maxRetries: 3

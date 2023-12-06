@@ -111,6 +111,19 @@ components:
     images:
       # The seed image (or images) that will be injected (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+    actions:
+      onDeploy:
+        before:
+          - description: Check that the cluster has a storage class
+            shell:
+              windows: pwsh
+            cmd: |
+              STORAGE_CLASSES=$(./zarf tools kubectl get StorageClass -o jsonpath='{.items[*].metadata.name}')
+              if [ -z "${STORAGE_CLASSES}" ]; then
+                echo "No storage class was found in the cluster."
+                echo "The Zarf registry requires a storage class in the cluster to function correctly."
+                exit 1
+              fi
 
   - name: zarf-registry
     description: |
