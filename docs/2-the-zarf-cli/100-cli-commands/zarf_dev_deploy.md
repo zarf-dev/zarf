@@ -12,9 +12,9 @@ zarf dev deploy [flags]
 ```
       --components string           Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
   -h, --help                        help for deploy
-  -m, --mode CreateMode             Mode in which to create the dev package. (options [prod yolo]) (default yolo)
       --set-create stringToString   Specify package variables to set on the command line (KEY=value) (default [])
       --set-deploy stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+      --yolo                        Whether or not to build+deploy the package in YOLO mode (default true)
 ```
 
 ## Options inherited from parent commands
