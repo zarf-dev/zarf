@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // CreateTokenResponse is the response given from creating a token in Gitea
@@ -84,49 +85,30 @@ func (g *Git) CreateReadOnlyUser() error {
 	return err
 }
 
-// UpdateReadOnlyUser uses the Gitea API to update a non-admin Zarf user.
-func (g *Git) UpdateReadOnlyUser(oldAdminPass string) error {
-	message.Debugf("git.UpdateReadOnlyUser()")
+// UpdateZarfGiteaValues updates the Zarf git server deployment with the new state values
+func (g *Git) UpdateZarfGiteaValues(oldState *types.ZarfState) error {
 
-	
-	c, err := cluster.NewCluster()
+	//Update git read only user password
+	err := g.UpdateGitUser(oldState.GitServer.PushPassword, g.Server.PullUsername, g.Server.PullPassword)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to update gitea read only user password: %w", err)
 	}
-	// Establish a git tunnel to send the repo
-	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+
+	// Update Git admin password
+	err = g.UpdateGitUser(oldState.GitServer.PushPassword, g.Server.PushUsername, g.Server.PushPassword)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to update gitea admin user password: %w", err)
 	}
-	_, err = tunnel.Connect()
-	if err != nil {
-		return err
-	}
-	defer tunnel.Close()
-	tunnelURL := tunnel.HTTPEndpoint()
- 
-	// Update the existing user's password
-	updateUserBody := map[string]interface{}{
-		"login_name": g.Server.PullUsername,
-		"password":   g.Server.PullPassword,
-	}
-	updateUserData, _ := json.Marshal(updateUserBody)
-	updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, g.Server.PullUsername)
-	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
-	out, err := g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, oldAdminPass)
-	message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
-	return err
+	return nil
 }
 
-// UpdatePushUser uses the Gitea API to update an admin Zarf user.
-func (g *Git) UpdatePushUser(oldAdminPass string) error {
-	message.Debugf("git.UpdatePushUser()")
+func (g *Git) UpdateGitUser(oldAdminPass string, username string, userpass string) error {
+	message.Debugf("git.UpdateGitUser()")
 
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return err
 	}
-
 	// Establish a git tunnel to send the repo
 	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 	if err != nil {
@@ -137,17 +119,15 @@ func (g *Git) UpdatePushUser(oldAdminPass string) error {
 		return err
 	}
 	defer tunnel.Close()
-
 	tunnelURL := tunnel.HTTPEndpoint()
 
-	
-	// Make sure the user can't create their own repos or orgs
+	// Update the existing user's password
 	updateUserBody := map[string]interface{}{
-		"login_name":      g.Server.PushUsername,
-		"password":        g.Server.PushPassword,
+		"login_name": username,
+		"password":   userpass,
 	}
 	updateUserData, _ := json.Marshal(updateUserBody)
-	updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, g.Server.PushUsername)
+	updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, username)
 	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
 	out, err := g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, oldAdminPass)
 	message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
@@ -211,7 +191,7 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 
 	createTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens", tunnelURL, g.Server.PushUsername)
 	createTokensBody := map[string]interface{}{
-		"name": config.ZarfArtifactTokenName,
+		"name":   config.ZarfArtifactTokenName,
 		"scopes": []string{"read:user"},
 	}
 	createTokensData, _ := json.Marshal(createTokensBody)

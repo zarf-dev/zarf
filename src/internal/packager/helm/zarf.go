@@ -7,7 +7,6 @@ package helm
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -45,23 +44,6 @@ func (h *Helm) UpdateZarfRegistryValues() error {
 		return fmt.Errorf("error updating the release values: %w", err)
 	}
 
-	return nil
-}
-
-// UpdateZarfGiteaValues updates the Zarf git server deployment with the new state values
-func (h *Helm) UpdateZarfGiteaValues(oldState *types.ZarfState) error {
-	oG := oldState.GitServer
-	nG := git.New(h.cfg.State.GitServer)
-
-	err := nG.UpdateReadOnlyUser(oG.PushPassword)
-	if err != nil {
-		return fmt.Errorf("unable to update gitea read only user password: %w", err)
-	}
-
-	err = nG.UpdatePushUser(oG.PushPassword)
-	if err != nil {
-		return fmt.Errorf("unable to update gitea admin user password: %w", err)
-	}
 	return nil
 }
 
