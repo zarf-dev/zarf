@@ -102,18 +102,18 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 	suite.Contains(stdErr, e2e.NormalizeYAMLFilenames(`
   charts:
   - name: podinfo-compose
-    releaseName: podinfo-override
-    url: oci://ghcr.io/stefanprodan/charts/podinfo
     version: 6.4.0
+    url: oci://ghcr.io/stefanprodan/charts/podinfo
     namespace: podinfo-override
+    releaseName: podinfo-override
     valuesFiles:
     - files/test-values.yaml
     - files/test-values.yaml
   - name: podinfo-compose-two
-    releaseName: podinfo-compose-two
-    url: oci://ghcr.io/stefanprodan/charts/podinfo
     version: 6.4.0
+    url: oci://ghcr.io/stefanprodan/charts/podinfo
     namespace: podinfo-compose-two
+    releaseName: podinfo-compose-two
     valuesFiles:
     - files/test-values.yaml
 `))
