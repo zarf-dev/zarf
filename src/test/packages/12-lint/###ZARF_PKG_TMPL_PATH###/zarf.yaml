@@ -1,0 +1,7 @@
+kind: ZarfInitConfig
+metadata:
+  name: init
+  description: Testing bad yaml imported
+
+components:
+  - name: import
