@@ -62,5 +62,5 @@ func bindDevDeployFlags(v *viper.Viper) {
 
 	devDeployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 
-	devDeployFlags.BoolVar(&pkgConfig.CreateOpts.IsYOLO, "yolo", true, "Whether or not to build+deploy the package in YOLO mode")
+	devDeployFlags.BoolVar(&pkgConfig.CreateOpts.IsYOLO, "yolo", v.GetBool(common.VDevDeployYolo), "Whether or not to build+deploy the package in YOLO mode")
 }

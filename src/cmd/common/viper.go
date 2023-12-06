@@ -93,6 +93,10 @@ const (
 	// Package pull config keys
 
 	VPkgPullOutputDir = "package.pull.output_directory"
+
+	// Dev deploy config keys
+
+	VDevDeployYolo = "dev.deploy.yolo"
 )
 
 var (
@@ -183,4 +187,7 @@ func setDefaults() {
 
 	// Deploy opts that are non-zero values
 	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultHelmTimeout)
+
+	// Dev operations are default in YOLO mode
+	v.SetDefault(VDevDeployYolo, true)
 }
