@@ -41,6 +41,7 @@ func TestLint(t *testing.T) {
 		require.Contains(t, stderr, ".components.[2].images.[3]: Unpinned image")
 		require.Contains(t, stderr, ".components.[1].images.[0] linted-import: Unpinned image")
 		require.Contains(t, stderr, ".components.[1].images.[2] linted-import: Unpinned image")
+		require.Contains(t, stderr, ".components.[3].import.path: Component import path variables are not resolved by zarf ###ZARF_PKG_TMPL_PATH###")
 	})
 
 }

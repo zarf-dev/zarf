@@ -45,6 +45,10 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 		return nil, err
 	}
 
+	if err := os.Chdir(createOpts.BaseDir); err != nil {
+		return nil, fmt.Errorf("unable to access directory '%s': %w", createOpts.BaseDir, err)
+	}
+
 	if err := LintComposableComponenets(&validator, createOpts); err != nil {
 		return nil, err
 	}
@@ -55,10 +59,6 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 
 	// Currently I won't be able to find the ZARF_PKG_TMPL_* in import path
 	lintComponents(&validator)
-
-	if err := os.Chdir(createOpts.BaseDir); err != nil {
-		return nil, fmt.Errorf("unable to access directory '%s': %w", createOpts.BaseDir, err)
-	}
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions
 	templateMap := map[string]string{}
 	unsetVarWarning := false
 
-	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
+	setVarsAndWarn := func(templatePrefix string, deprecated bool) error {
 		yamlTemplates, err := utils.FindYamlTemplates(validator.typedZarfPackage, templatePrefix, "###")
 		if err != nil {
 			return err
@@ -140,12 +140,12 @@ func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions
 		return err
 	}
 
-	if err := promptAndSetTemplate(types.ZarfPackageTemplatePrefix, false); err != nil {
+	if err := setVarsAndWarn(types.ZarfPackageTemplatePrefix, false); err != nil {
 		return err
 	}
 
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
-	if err := promptAndSetTemplate(types.ZarfPackageVariablePrefix, true); err != nil {
+	if err := setVarsAndWarn(types.ZarfPackageVariablePrefix, true); err != nil {
 		return err
 	}
 
@@ -250,14 +250,16 @@ func checkForVarInComponentImport(validator *Validator, index int, component typ
 		validator.addWarning(ValidatorMessage{
 			yqPath:      fmt.Sprintf(".components.[%d].import.path", index),
 			filePath:    path,
-			description: "Will not resolve ZARF_PKG_TMPL_* variables",
+			description: "Component import path variables are not resolved by zarf",
+			item:        component.Import.Path,
 		})
 	}
 	if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
 		validator.addWarning(ValidatorMessage{
 			yqPath:      fmt.Sprintf(".components.[%d].import.url", index),
 			filePath:    path,
-			description: "Will not resolve ZARF_PKG_TMPL_* variables",
+			description: "Component import URL variables are not resolved by zarf",
+			item:        component.Import.URL,
 		})
 	}
 }
