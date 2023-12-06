@@ -599,7 +599,7 @@ const (
 
 // src/internal/packager/validate.
 const (
-	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###.  This will be removed in Zarf v1.0.0.  Please update to ###ZARF_PKG_TMPL_%s###."
+	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_%s###."
 	PkgValidateMustBeUppercase            = "variable name %q must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
 	PkgValidateErrActionVariables         = "component %q cannot contain setVariables outside of onDeploy in actions"

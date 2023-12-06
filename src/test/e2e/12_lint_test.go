@@ -30,10 +30,11 @@ func TestLint(t *testing.T) {
 		// In this case I'm guessing we should also remove color from the table?
 		_, stderr, err := e2e.Zarf("prepare", "lint", path)
 		require.Error(t, err, "Require an exit code since there was warnings / errors")
-		strippedStderr := e2e.StripANSICodes(stderr)
+		strippedStderr := e2e.StripMessageFormatting(stderr)
 		// It's a bit weird to have a period here and not in the other warnings
 		key := "WHATEVER_IMAGE"
 		require.Contains(t, strippedStderr, "There are variables that are unset and won't be evaluated during lint")
+		// Multiple spaces in lang
 		require.Contains(t, strippedStderr, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
 		require.Contains(t, strippedStderr, ".components.[2].repos.[0]: Unpinned repository")
 		require.Contains(t, strippedStderr, ".metadata: Additional property description1 is not allowed")
