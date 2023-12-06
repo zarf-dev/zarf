@@ -45,7 +45,7 @@ func MakeTempDir(basePath string) (string, error) {
 		}
 	}
 	tmp, err := os.MkdirTemp(basePath, tmpPathPrefix)
-	message.Debug("Using temporary directory:", basePath)
+	message.Debug("Using temporary directory:", tmp)
 	return tmp, err
 }
 
@@ -234,15 +234,15 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp, skipHidden bool) (fil
 	return files, err
 }
 
-// CreateFilePath creates the parent directory for the given file path.
-func CreateFilePath(destination string) error {
+// CreateParentDirectory creates the parent directory for the given file path.
+func CreateParentDirectory(destination string) error {
 	parentDest := filepath.Dir(destination)
 	return CreateDirectory(parentDest, 0700)
 }
 
 // CreatePathAndCopy creates the parent directory for the given file path and copies the source file to the destination.
 func CreatePathAndCopy(source string, destination string) error {
-	if err := CreateFilePath(destination); err != nil {
+	if err := CreateParentDirectory(destination); err != nil {
 		return err
 	}
 
