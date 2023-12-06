@@ -70,6 +70,13 @@ type ImportChain struct {
 	remote *oci.OrasRemote
 }
 
+func (ic *ImportChain) GetRemoteName() string {
+	if ic.remote == nil {
+		return ""
+	}
+	return ic.remote.Repo().Reference.String()
+}
+
 func (ic *ImportChain) append(c types.ZarfComponent, index int, relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
 	node := &Node{
 		ZarfComponent:  c,

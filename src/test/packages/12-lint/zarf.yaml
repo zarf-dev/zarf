@@ -17,6 +17,8 @@ components:
     import:
       path: linted-import
     files:
+    # Is this a scenario we care about. The downstream overrides with a shasum.
+    # Is this even overridding or are they downloading the same file twice
     - source: https://github.com/k3s-io/k3s/releases/download/v1.28.2+k3s1/k3s
       shasum: 2f041d37a2c6d54d53e106e1c7713bc48f806f3919b0d9e092f5fcbdc55b41cf
       target: src/
@@ -42,3 +44,8 @@ components:
   - name: import
     import:
       path: "###ZARF_PKG_TMPL_PATH###"
+
+  - name: oci-games-url
+    import:
+      url: oci://🦄/dos-games:1.0.0-skeleton
+      name: baseline

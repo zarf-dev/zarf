@@ -5,3 +5,6 @@ metadata:
 
 components:
   - name: import
+    files:
+    - source: https://github.com/k3s-io/k3s/releases/download/v1.28.2+k3s1/k3s
+      target: src/

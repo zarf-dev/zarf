@@ -89,16 +89,18 @@ func LintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 			return err
 		}
 
-		originalPackage := validator.typedZarfPackage
 		// Skipping initial component since it will be linted the usual way
 		node := chain.Head.Next()
+		path := chain.GetRemoteName()
 		for node != nil {
-			checkForVarInComponentImport(validator, node.GetIndex(), node.ZarfComponent, node.GetRelativeToHead())
+			if path == "" {
+				path = node.GetRelativeToHead()
+			}
+			checkForVarInComponentImport(validator, node.GetIndex(), node.ZarfComponent, path)
 			fillComponentTemplate(validator, &node.ZarfComponent, createOpts)
-			lintComponent(validator, node.GetIndex(), node.ZarfComponent, node.GetRelativeToHead())
+			lintComponent(validator, node.GetIndex(), node.ZarfComponent, path)
 			node = node.Next()
 		}
-		validator.typedZarfPackage = originalPackage
 	}
 	return nil
 }
