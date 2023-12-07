@@ -53,7 +53,7 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 		return nil, err
 	}
 
-	preVarEvalLintComponents(&validator)
+	lintUnEvaledVariables(&validator)
 
 	if err := fillActiveTemplate(&validator, createOpts); err != nil {
 		return nil, err
@@ -90,8 +90,8 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 		}
 
 		// Skipping initial component since it will be linted the usual way
+		path := chain.Head.Import.URL
 		node := chain.Head.Next()
-		path := chain.GetRemoteName()
 		for node != nil {
 			if path == "" {
 				path = node.GetRelativeToHead()
@@ -252,7 +252,7 @@ func checkForUnpinnedFiles(validator *Validator, index int, component types.Zarf
 	}
 }
 
-func preVarEvalLintComponents(validator *Validator) {
+func lintUnEvaledVariables(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
 		checkForVarInComponentImport(validator, i, component, "")
 	}

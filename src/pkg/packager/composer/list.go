@@ -7,7 +7,6 @@ package composer
 import (
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
@@ -72,13 +71,6 @@ type ImportChain struct {
 	Tail *Node
 
 	remote *oci.OrasRemote
-}
-
-func (ic *ImportChain) GetRemoteName() string {
-	if ic.remote == nil {
-		return ""
-	}
-	return ic.remote.Repo().Reference.String()
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, index int, relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
@@ -172,10 +164,14 @@ func NewImportChain(head types.ZarfComponent, index int, arch, flavor string) (*
 
 		name := node.ImportName()
 
-		found := helpers.Filter(pkg.Components, func(c types.ZarfComponent) bool {
-			matchesName := c.Name == name
-			return matchesName && CompatibleComponent(c, arch, flavor)
-		})
+		found := []types.ZarfComponent{}
+		var index int
+		for i, component := range pkg.Components {
+			if component.Name == name && CompatibleComponent(component, arch, flavor) {
+				found = append(found, component)
+				index = i
+			}
+		}
 
 		if len(found) == 0 {
 			if isLocal {
@@ -191,13 +187,6 @@ func NewImportChain(head types.ZarfComponent, index int, arch, flavor string) (*
 			}
 		}
 
-		var index int
-		//Probably can do this better, maybe have filter also give an index
-		for i, component := range pkg.Components {
-			if reflect.DeepEqual(found[0], component) {
-				index = i
-			}
-		}
 		ic.append(found[0], index, filepath.Join(history...), pkg.Variables, pkg.Constants)
 		node = node.next
 	}
