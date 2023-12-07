@@ -54,7 +54,6 @@ require (
 	k8s.io/component-base v0.28.2
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/kubectl v0.28.2
-	k8s.io/utils v0.0.0-20231127182322-b307cd553661
 	oras.land/oras-go/v2 v2.3.1
 	sigs.k8s.io/kustomize/api v0.14.0
 	sigs.k8s.io/kustomize/kyaml v0.14.3
@@ -465,6 +464,7 @@ require (
 	k8s.io/component-helpers v0.28.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/metrics v0.28.2 // indirect
+	k8s.io/utils v0.0.0-20231127182322-b307cd553661 // indirect
 	oras.land/oras-go v1.2.4 // indirect
 	sigs.k8s.io/controller-runtime v0.16.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
