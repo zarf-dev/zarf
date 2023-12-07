@@ -79,7 +79,8 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 	}
 
 	// Handle the chart directory or tarball
-	var path string
+	var saved string
+	temp := filepath.Join(h.chartPath, "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
 		err = h.buildChartDependencies(spinner)
 		if err != nil {
@@ -88,20 +89,22 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 
 		client := action.NewPackage()
 
-		client.Destination = h.chartPath
-		path, err = client.Run(h.chart.LocalPath, nil)
+		client.Destination = temp
+		saved, err = client.Run(h.chart.LocalPath, nil)
 	} else {
-		path = filepath.Join(h.chartPath, filepath.Base(h.chart.LocalPath))
-		err = utils.CreatePathAndCopy(h.chart.LocalPath, path)
+		saved = filepath.Join(temp, filepath.Base(h.chart.LocalPath))
+		err = utils.CreatePathAndCopy(h.chart.LocalPath, saved)
 	}
+	defer os.RemoveAll(temp)
 
 	if err != nil {
-		return fmt.Errorf("unable to save the archive and create the package %s: %w", path, err)
+		return fmt.Errorf("unable to save the archive and create the package %s: %w", saved, err)
 	}
 
-	err = h.packageValues(cosignKeyPath)
+	// Finalize the chart
+	err = h.finalizeChartPackage(saved, cosignKeyPath)
 	if err != nil {
-		return fmt.Errorf("unable to process the values for the package: %w", err)
+		return err
 	}
 
 	spinner.Success()
@@ -151,8 +154,13 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		// Explicitly set the pull version for OCI
 		pull.Version = h.chart.Version
 	} else {
+		chartName := h.chart.Name
+		if h.chart.RepoName != "" {
+			chartName = h.chart.RepoName
+		}
+
 		// Perform simple chart download
-		chartURL, err = repo.FindChartInRepoURL(h.chart.URL, h.chart.Name, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+		chartURL, err = repo.FindChartInRepoURL(h.chart.URL, chartName, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				// Intentionally dogsled this error since this is just a nice to have helper
@@ -174,8 +182,14 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		},
 	}
 
-	// Download the file (we don't control what name helm creates here)
-	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, h.chartPath)
+	// Download the file into a temp directory since we don't control what name helm creates here
+	temp := filepath.Join(h.chartPath, "temp")
+	if err = utils.CreateDirectory(temp, 0700); err != nil {
+		return fmt.Errorf("unable to create helm chart temp directory: %w", err)
+	}
+	defer os.RemoveAll(temp)
+
+	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, temp)
 	if err != nil {
 		return fmt.Errorf("unable to download the helm chart: %w", err)
 	}
@@ -186,16 +200,10 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		return err
 	}
 
-	// Ensure the name is consistent for deployments
-	destinationTarball := StandardName(h.chartPath, h.chart) + ".tgz"
-	err = os.Rename(saved, destinationTarball)
+	// Finalize the chart
+	err = h.finalizeChartPackage(saved, cosignKeyPath)
 	if err != nil {
-		return fmt.Errorf("unable to save the chart tarball: %w", err)
-	}
-
-	err = h.packageValues(cosignKeyPath)
-	if err != nil {
-		return fmt.Errorf("unable to process the values for the package: %w", err)
+		return err
 	}
 
 	spinner.Success()
@@ -215,6 +223,21 @@ func DownloadChartFromGitToTemp(url string, spinner *message.Spinner) (string, e
 	}
 
 	return gitCfg.GitPath, nil
+}
+
+func (h *Helm) finalizeChartPackage(saved, cosignKeyPath string) error {
+	// Ensure the name is consistent for deployments
+	destinationTarball := StandardName(h.chartPath, h.chart) + ".tgz"
+	err := os.Rename(saved, destinationTarball)
+	if err != nil {
+		return fmt.Errorf("unable to save the final chart tarball: %w", err)
+	}
+
+	err = h.packageValues(cosignKeyPath)
+	if err != nil {
+		return fmt.Errorf("unable to process the values for the package: %w", err)
+	}
+	return nil
 }
 
 func (h *Helm) packageValues(cosignKeyPath string) error {

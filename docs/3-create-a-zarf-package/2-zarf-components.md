@@ -66,20 +66,11 @@ Charts using the `url` key can be:
 
 - A remote URL (http/https) to a Git repository
 - A remote URL (oci://) to an OCI registry
+- A remote URL (http/https) to a Helm repository
 
 #### Chart Examples
 
-<Tabs queryString="chart-examples">
-<TabItem value="localPath">
-<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-local-chart" />
-</TabItem>
-<TabItem value="URL (git)">
-<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-git-chart" />
-</TabItem>
-<TabItem value="URL (oci)">
-<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-oci-chart" />
-</TabItem>
-</Tabs>
+<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-charts" />
 
 ### Kubernetes Manifests
 
