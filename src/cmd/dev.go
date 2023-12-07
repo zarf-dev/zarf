@@ -25,6 +25,7 @@ var devCmd = &cobra.Command{
 var devDeployCmd = &cobra.Command{
 	Use:  "deploy",
 	Args: cobra.ExactArgs(1),
+	Short: lang.CmdDevDeployShort,
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.CreateOpts.BaseDir = args[0]
 

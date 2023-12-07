@@ -329,7 +329,9 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPackageInvalidSource         = "Unable to identify source from %q: %s"
 
 	// zarf dev (prepare is an alias for dev)
-	CmdDevShort          = "Commands for developing packages"
+	CmdDevShort          = "Commands useful for developing packages"
+
+	CmdDevDeployShort = "[beta] Builds and deploys a Zarf package from a given directory"
 	CmdDevDeployFlagYolo = "Whether or not to build+deploy the package in YOLO mode"
 	CmdDevDeployErr      = "Failed to dev deploy: %s"
 
