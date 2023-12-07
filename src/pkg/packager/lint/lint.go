@@ -111,18 +111,13 @@ func fillComponentTemplate(validator *Validator, component *types.ZarfComponent,
 	return fillYamlTemplate(validator, component, createOpts)
 }
 
-// Look into breaking apart this function to allow for passing in a component
-// Look into returning warnings so I don't have to pass in validator
-// Look into removing package from validator
 func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions) error {
 
-	// update the component templates on the package
-	// TODO add test to make sure this is covered still
 	err := packager.FindComponentTemplatesAndReload(&validator.typedZarfPackage)
 	if err != nil {
 		return err
 	}
-	//Does typed zarf package need to be addressed here or is it already addresssed
+
 	return fillYamlTemplate(validator, &validator.typedZarfPackage, createOpts)
 }
 
@@ -184,7 +179,6 @@ func isPinnedRepo(repo string) bool {
 	return (strings.Contains(repo, "@"))
 }
 
-// Feels like validator may have too much with both the zarf package and the warnings
 func lintComponents(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
 		lintComponent(validator, i, component, "")
