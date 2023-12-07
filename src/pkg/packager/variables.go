@@ -31,7 +31,9 @@ func ReloadComponentTemplate(component *types.ZarfComponent) error {
 func FindComponentTemplatesAndReload(zarfPackage *types.ZarfPackage) error {
 	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
 	for i := range zarfPackage.Components {
-		ReloadComponentTemplate(&zarfPackage.Components[i])
+		if err := ReloadComponentTemplate(&zarfPackage.Components[i]); err != nil {
+			return err
+		}
 	}
 
 	return nil
