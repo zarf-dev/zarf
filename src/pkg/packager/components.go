@@ -9,14 +9,11 @@ import (
 	"path"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/pterm/pterm"
 )
 
 func (p *Packager) getValidComponents() []types.ZarfComponent {
@@ -74,7 +71,7 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 
 			// If the user has not requested this component via CLI flag, then prompt them if not a choice group
 			if !included && !userChoicePrompt {
-				included = confirmOptionalComponent(component)
+				included = interactive.ConfirmOptionalComponent(component)
 			}
 
 			if included {
@@ -93,7 +90,7 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 
 		// If the user has requested a choice group, then prompt them
 		if userChoicePrompt {
-			selectedComponent := confirmChoiceGroup(componentGroup)
+			selectedComponent := interactive.ConfirmChoiceGroup(componentGroup)
 			validComponentsList = append(validComponentsList, selectedComponent)
 		}
 	}
@@ -106,14 +103,14 @@ func (p *Packager) getValidComponents() []types.ZarfComponent {
 	return validComponentsList
 }
 
-func (p *Packager) forRequestedComponents(function func(types.ZarfComponent) error) error {
+func (p *Packager) forRequestedComponents(onIncluded func(types.ZarfComponent) error) error {
 	requestedComponents := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
-	partialMirror := len(requestedComponents) > 0 && requestedComponents[0] != ""
+	isPartial := len(requestedComponents) > 0 && requestedComponents[0] != ""
 
 	for _, component := range p.cfg.Pkg.Components {
 		included, excluded := false, false
 
-		if partialMirror {
+		if isPartial {
 			included, excluded = includedOrExcluded(component, requestedComponents)
 
 			if excluded {
@@ -124,7 +121,7 @@ func (p *Packager) forRequestedComponents(function func(types.ZarfComponent) err
 		}
 
 		if included {
-			if err := function(component); err != nil {
+			if err := onIncluded(component); err != nil {
 				return err
 			}
 		}
@@ -189,73 +186,6 @@ func includedOrExcluded(component types.ZarfComponent, requestedComponentNames [
 
 	// All other cases we don't know if we should include or exclude yet
 	return false, false
-}
-
-// Confirm optional component.
-func confirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
-	// Confirm flag passed, just use defaults
-	if config.CommonOptions.Confirm {
-		return component.Default
-	}
-
-	message.HorizontalRule()
-
-	displayComponent := component
-	displayComponent.Description = ""
-	utils.ColorPrintYAML(displayComponent, nil, false)
-	if component.Description != "" {
-		message.Question(component.Description)
-	}
-
-	// Since no requested components were provided, prompt the user
-	prompt := &survey.Confirm{
-		Message: fmt.Sprintf("Deploy the %s component?", component.Name),
-		Default: component.Default,
-	}
-	if err := survey.AskOne(prompt, &confirmComponent); err != nil {
-		message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
-	}
-	return confirmComponent
-}
-
-func confirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
-	// Confirm flag passed, just use defaults
-	if config.CommonOptions.Confirm {
-		var componentNames []string
-		for _, component := range componentGroup {
-			// If the component is default, then return it
-			if component.Default {
-				return component
-			}
-			// Add each component name to the list
-			componentNames = append(componentNames, component.Name)
-		}
-		// If no default component was found, give up
-		message.Fatalf(nil, "You must specify at least one component from the group %#v when using the --confirm flag.", componentNames)
-	}
-
-	message.HorizontalRule()
-
-	var chosen int
-	var options []string
-
-	for _, component := range componentGroup {
-		text := fmt.Sprintf("Name: %s\n  Description: %s\n", component.Name, component.Description)
-		options = append(options, text)
-	}
-
-	prompt := &survey.Select{
-		Message: "Select a component to deploy:",
-		Options: options,
-	}
-
-	pterm.Println()
-
-	if err := survey.AskOne(prompt, &chosen); err != nil {
-		message.Fatalf(nil, "Component selection canceled: %s", err.Error())
-	}
-
-	return componentGroup[chosen]
 }
 
 func requiresCluster(component types.ZarfComponent) bool {
