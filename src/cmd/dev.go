@@ -19,7 +19,7 @@ import (
 var devCmd = &cobra.Command{
 	Use:     "dev",
 	Aliases: []string{"prepare"},
-	// TODO: Add Short and Long descriptions
+	Short:   lang.CmdDevShort,
 }
 
 var devDeployCmd = &cobra.Command{
@@ -41,8 +41,7 @@ var devDeployCmd = &cobra.Command{
 
 		// Create the package
 		if err := pkgClient.DevDeploy(); err != nil {
-			// TODO: put this error in lang
-			message.Fatalf(err, "failed to dev deploy: %s", err.Error())
+			message.Fatalf(err, lang.CmdDevDeployErr, err.Error())
 		}
 	},
 }
@@ -63,5 +62,5 @@ func bindDevDeployFlags(v *viper.Viper) {
 
 	devDeployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 
-	devDeployFlags.BoolVar(&pkgConfig.CreateOpts.IsYOLO, "yolo", v.GetBool(common.VDevDeployYolo), "Whether or not to build+deploy the package in YOLO mode")
+	devDeployFlags.BoolVar(&pkgConfig.CreateOpts.IsYOLO, "yolo", v.GetBool(common.VDevDeployYolo), lang.CmdDevDeployFlagYolo)
 }
