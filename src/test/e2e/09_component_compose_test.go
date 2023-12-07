@@ -20,11 +20,12 @@ type CompositionSuite struct {
 }
 
 var (
-	composeExample     = filepath.Join("examples", "composable-packages")
-	composeExamplePath string
-	composeTest        = filepath.Join("src", "test", "packages", "09-composable-packages")
-	composeTestPath    string
-	relCacheDir        string
+	composeExample        = filepath.Join("examples", "composable-packages")
+	composeExamplePath    string
+	composeTest           = filepath.Join("src", "test", "packages", "09-composable-packages")
+	composeTestPath       string
+	composeTestBadLocalOS = filepath.Join("src", "test", "packages", "09-composable-packages", "bad-local-os")
+	relCacheDir           string
 )
 
 func (suite *CompositionSuite) SetupSuite() {
@@ -87,6 +88,8 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 - name: test-compose-package
   description: A contrived example for podinfo using many Zarf primitives for compose testing
   required: true
+  only:
+    localOS: linux
 `)
 
 	// Check files
@@ -182,6 +185,14 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
             name: podinfo-compose-two
             namespace: podinfo-compose-two
             condition: available`)
+}
+
+func (suite *CompositionSuite) Test_2_ComposabilityBadLocalOS() {
+	suite.T().Log("E2E: Package Compose Example")
+
+	_, stdErr, err := e2e.Zarf("package", "create", composeTestBadLocalOS, "-o", "build", "--zarf-cache", relCacheDir, "--no-color", "--confirm")
+	suite.Error(err)
+	suite.Contains(stdErr, "\"only.localOS\" \"linux\" cannot be\n             redefined as \"windows\" during compose")
 }
 
 func TestCompositionSuite(t *testing.T) {

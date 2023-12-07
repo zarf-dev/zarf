@@ -6,6 +6,8 @@ metadata:
 
 components:
   - name: test-compose-sub-package
+    only:
+      localOS: linux
     charts:
       - name: podinfo-compose
         releaseName: podinfo-compose

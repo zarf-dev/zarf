@@ -254,8 +254,8 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 
 // Compose merges the import chain into a single component
 // fixing paths, overriding metadata, etc
-func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
-	composed = ic.tail.ZarfComponent
+func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
+	composed = &ic.tail.ZarfComponent
 
 	if ic.tail.prev == nil {
 		// only had one component in the import chain
@@ -263,11 +263,11 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 	}
 
 	if err := ic.fetchOCISkeleton(); err != nil {
-		return composed, err
+		return nil, err
 	}
 
 	// start with an empty component to compose into
-	composed = types.ZarfComponent{}
+	composed = &types.ZarfComponent{}
 
 	// start overriding with the tail node
 	node := ic.tail
@@ -275,12 +275,16 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 		fixPaths(&node.ZarfComponent, node.relativeToHead)
 
 		// perform overrides here
-		overrideMetadata(&composed, node.ZarfComponent)
-		overrideDeprecated(&composed, node.ZarfComponent)
-		overrideResources(&composed, node.ZarfComponent)
-		overrideActions(&composed, node.ZarfComponent)
+		err := overrideMetadata(composed, node.ZarfComponent)
+		if err != nil {
+			return nil, err
+		}
 
-		composeExtensions(&composed, node.ZarfComponent, node.relativeToHead)
+		overrideDeprecated(composed, node.ZarfComponent)
+		overrideResources(composed, node.ZarfComponent)
+		overrideActions(composed, node.ZarfComponent)
+
+		composeExtensions(composed, node.ZarfComponent, node.relativeToHead)
 
 		node = node.prev
 	}
