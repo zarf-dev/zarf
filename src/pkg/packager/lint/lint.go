@@ -53,9 +53,7 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 
 	lintUnEvaledVariables(&validator)
 
-	if err := fillActiveTemplate(&validator, createOpts); err != nil {
-		return nil, err
-	}
+	fillActiveTemplate(&validator, createOpts)
 
 	lintComponents(&validator)
 
@@ -102,32 +100,32 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 	}
 }
 
-func fillComponentTemplate(validator *Validator, component *types.ZarfComponent, createOpts types.ZarfCreateOptions) error {
+func fillComponentTemplate(validator *Validator, component *types.ZarfComponent, createOpts types.ZarfCreateOptions) {
 	// update the component templates on the package
 	err := packager.ReloadComponentTemplate(component)
 	if err != nil {
-		return err
+		validator.addWarning(validatorMessage{description: fmt.Sprintf("unable to find components %s", err)})
 	}
-	return fillYamlTemplate(validator, component, createOpts)
+	fillYamlTemplate(validator, component, createOpts)
 }
 
-func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions) error {
+func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions) {
 
 	err := packager.FindComponentTemplatesAndReload(&validator.typedZarfPackage)
 	if err != nil {
-		return err
+		validator.addWarning(validatorMessage{description: fmt.Sprintf("unable to find components %s", err)})
 	}
 
-	return fillYamlTemplate(validator, &validator.typedZarfPackage, createOpts)
+	fillYamlTemplate(validator, &validator.typedZarfPackage, createOpts)
 }
 
-func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCreateOptions) error {
+func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCreateOptions) {
 	templateMap := map[string]string{}
 
-	setVarsAndWarn := func(templatePrefix string, deprecated bool) error {
+	setVarsAndWarn := func(templatePrefix string, deprecated bool) {
 		yamlTemplates, err := utils.FindYamlTemplates(yamlObj, templatePrefix, "###")
 		if err != nil {
-			return err
+			validator.addWarning(validatorMessage{description: fmt.Sprintf("unable to find variables %s", err)})
 		}
 
 		for key := range yamlTemplates {
@@ -148,19 +146,14 @@ func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCr
 		for key, value := range createOpts.SetVariables {
 			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
 		}
-		return nil
 	}
 
-	if err := setVarsAndWarn(types.ZarfPackageTemplatePrefix, false); err != nil {
-		return err
-	}
+	setVarsAndWarn(types.ZarfPackageTemplatePrefix, false)
 
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
-	if err := setVarsAndWarn(types.ZarfPackageVariablePrefix, true); err != nil {
-		return err
-	}
+	setVarsAndWarn(types.ZarfPackageVariablePrefix, true)
 
-	return utils.ReloadYamlTemplate(yamlObj, templateMap)
+	utils.ReloadYamlTemplate(yamlObj, templateMap)
 }
 
 func isPinnedImage(image string) (bool, error) {
