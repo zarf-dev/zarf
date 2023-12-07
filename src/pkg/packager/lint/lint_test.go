@@ -88,13 +88,12 @@ func TestValidateSchema(t *testing.T) {
 	})
 
 	t.Run("Template in component import failure", func(t *testing.T) {
-		validator := Validator{}
 		pathVar := "###ZARF_PKG_TMPL_PATH###"
 		ociPathVar := fmt.Sprintf("oci://%s", pathVar)
 		pathComponent := types.ZarfComponent{Import: types.ZarfComponentImport{Path: pathVar}}
 		URLComponent := types.ZarfComponent{Import: types.ZarfComponentImport{URL: ociPathVar}}
-		checkForVarInComponentImport(&validator, 2, pathComponent, "")
-		checkForVarInComponentImport(&validator, 3, URLComponent, "")
+		validator := Validator{typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{pathComponent, URLComponent}}}
+		lintUnEvaledVariables(&validator)
 		require.Equal(t, pathVar, validator.warnings[0].item)
 		require.Equal(t, ociPathVar, validator.warnings[1].item)
 	})
