@@ -78,7 +78,7 @@ func (ic *ImportChain) Head() *Node {
 	return ic.head
 }
 
-// Returns the last node in the import chain
+// Tail Returns the last node in the import chain
 func (ic *ImportChain) Tail() *Node {
 	return ic.tail
 }
@@ -129,16 +129,16 @@ func NewImportChain(head types.ZarfComponent, index int, arch, flavor string) (*
 
 		// TODO: stuff like this should also happen in linting
 		if err := validate.ImportDefinition(&node.ZarfComponent); err != nil {
-			return ic, err
+			return nil, err
 		}
 
 		// ensure that remote components are not importing other remote components
 		if node.prev != nil && node.prev.Import.URL != "" && isRemote {
-			return ic, fmt.Errorf("detected malformed import chain, cannot import remote components from remote components")
+			return nil, fmt.Errorf("detected malformed import chain, cannot import remote components from remote components")
 		}
 		// ensure that remote components are not importing local components
 		if node.prev != nil && node.prev.Import.URL != "" && isLocal {
-			return ic, fmt.Errorf("detected malformed import chain, cannot import local components from remote components")
+			return nil, fmt.Errorf("detected malformed import chain, cannot import local components from remote components")
 		}
 
 		var pkg types.ZarfPackage
@@ -152,26 +152,26 @@ func NewImportChain(head types.ZarfComponent, index int, arch, flavor string) (*
 			prev := node
 			for prev != nil {
 				if prev.relativeToHead == relativeToHead {
-					return ic, fmt.Errorf("detected circular import chain: %s", strings.Join(history, " -> "))
+					return nil, fmt.Errorf("detected circular import chain: %s", strings.Join(history, " -> "))
 				}
 				prev = prev.prev
 			}
 
 			// this assumes the composed package is following the zarf layout
 			if err := utils.ReadYaml(filepath.Join(relativeToHead, layout.ZarfYAML), &pkg); err != nil {
-				return ic, err
+				return nil, err
 			}
 		} else if isRemote {
 			remote, err := ic.getRemote(node.Import.URL)
 			if err != nil {
-				return ic, err
+				return nil, err
 			}
 			// When it's a bad file, the error gets tracked here
 			// Maybe we add something like couldn't fetch zarf yaml to this
 			// So it's clearer to the user the pull failed
 			pkg, err = remote.FetchZarfYAML()
 			if err != nil {
-				return ic, err
+				return nil, err
 			}
 		}
 
@@ -188,15 +188,15 @@ func NewImportChain(head types.ZarfComponent, index int, arch, flavor string) (*
 
 		if len(found) == 0 {
 			if isLocal {
-				return ic, fmt.Errorf("component %q not found in %q", name, filepath.Join(history...))
+				return nil, fmt.Errorf("component %q not found in %q", name, filepath.Join(history...))
 			} else if isRemote {
-				return ic, fmt.Errorf("component %q not found in %q", name, node.Import.URL)
+				return nil, fmt.Errorf("component %q not found in %q", name, node.Import.URL)
 			}
 		} else if len(found) > 1 {
 			if isLocal {
-				return ic, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, filepath.Join(history...), arch)
+				return nil, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, filepath.Join(history...), arch)
 			} else if isRemote {
-				return ic, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, node.Import.URL, arch)
+				return nil, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, node.Import.URL, arch)
 			}
 		}
 

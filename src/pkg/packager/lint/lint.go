@@ -83,6 +83,7 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 		chain, err := composer.NewImportChain(component, i, arch, createOpts.Flavor)
 		if err != nil {
 			validator.addError(validatorMessage{description: err.Error()})
+			continue
 		}
 
 		path := chain.Head().Import.URL
