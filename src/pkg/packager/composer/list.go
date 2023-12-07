@@ -78,7 +78,7 @@ func (ic *ImportChain) Head() *Node {
 	return ic.head
 }
 
-// Tail Returns the last node in the import chain
+// Tail returns the last node in the import chain
 func (ic *ImportChain) Tail() *Node {
 	return ic.tail
 }
