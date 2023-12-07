@@ -118,9 +118,9 @@ func TestValidateSchema(t *testing.T) {
 			badImage}}
 		checkForUnpinnedImages(&validator, 0, component, "")
 		require.Equal(t, unpinnedImage, validator.warnings[0].item)
-		require.Equal(t, len(validator.warnings), 1)
+		require.Equal(t, 1, len(validator.warnings))
 		require.Equal(t, badImage, validator.errors[0].item)
-		require.Equal(t, len(validator.errors), 1)
+		require.Equal(t, 1, len(validator.errors))
 	})
 
 	t.Run("Unpinnned file warning", func(t *testing.T) {
