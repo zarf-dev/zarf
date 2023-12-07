@@ -17,7 +17,8 @@ import (
 )
 
 var devCmd = &cobra.Command{
-	Use: "dev",
+	Use:     "dev",
+	Aliases: []string{"prepare"},
 	// TODO: Add Short and Long descriptions
 }
 

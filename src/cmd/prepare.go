@@ -27,12 +27,6 @@ import (
 
 var extractPath string
 
-var prepareCmd = &cobra.Command{
-	Use:     "prepare",
-	Aliases: []string{"prep"},
-	Short:   lang.CmdPrepareShort,
-}
-
 var prepareTransformGitLinks = &cobra.Command{
 	Use:     "patch-git HOST FILE",
 	Aliases: []string{"p"},
@@ -237,12 +231,11 @@ var lintCmd = &cobra.Command{
 func init() {
 	v := common.InitViper()
 
-	rootCmd.AddCommand(prepareCmd)
-	prepareCmd.AddCommand(prepareTransformGitLinks)
-	prepareCmd.AddCommand(prepareComputeFileSha256sum)
-	prepareCmd.AddCommand(prepareFindImages)
-	prepareCmd.AddCommand(prepareGenerateConfigFile)
-	prepareCmd.AddCommand(lintCmd)
+	devCmd.AddCommand(prepareTransformGitLinks)
+	devCmd.AddCommand(prepareComputeFileSha256sum)
+	devCmd.AddCommand(prepareFindImages)
+	devCmd.AddCommand(prepareGenerateConfigFile)
+	devCmd.AddCommand(lintCmd)
 
 	prepareComputeFileSha256sum.Flags().StringVarP(&extractPath, "extract-path", "e", "", lang.CmdPrepareFlagExtractPath)
 

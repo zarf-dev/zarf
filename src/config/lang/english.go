@@ -342,8 +342,8 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPrepareSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
 	CmdPrepareSha256sumHashErr       = "Unable to compute the SHA256SUM hash: %s"
 
-	CmdPrepareFindImagesShort = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests"
-	CmdPrepareFindImagesLong  = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
+	CmdPrepareFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests"
+	CmdPrepareFindImagesLong  = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.\n\n" +
 		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
 	CmdPrepareFindImagesErr = "Unable to find images: %s"
 
