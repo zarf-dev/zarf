@@ -85,8 +85,8 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 			validator.addError(validatorMessage{description: err.Error()})
 		}
 
-		// Skipping initial component since it will be linted the usual way
 		path := chain.Head().Import.URL
+		// Skipping initial component since it will be linted the usual way
 		node := chain.Head().Next()
 		for node != nil {
 			if path == "" {
