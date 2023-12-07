@@ -76,10 +76,6 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 			continue
 		}
 
-		// This is done in composer, should I just delete this or move it into newImportChain
-		// component.Only.Cluster.Architecture = ""
-		// component.Only.Flavor = ""
-
 		chain, err := composer.NewImportChain(component, i, arch, createOpts.Flavor)
 		if err != nil {
 			validator.addError(validatorMessage{description: err.Error()})
