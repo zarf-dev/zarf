@@ -57,8 +57,8 @@ func init() {
 func bindDevDeployFlags(v *viper.Viper) {
 	devDeployFlags := devDeployCmd.Flags()
 
-	devDeployFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set-create", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
-	devDeployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set-deploy", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	devDeployFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	devDeployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 
 	devDeployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 

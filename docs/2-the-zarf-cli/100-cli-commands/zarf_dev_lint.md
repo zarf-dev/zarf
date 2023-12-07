@@ -32,4 +32,4 @@ zarf dev lint [ DIRECTORY ] [flags]
 
 ## SEE ALSO
 
-* [zarf dev](zarf_dev.md)	 - 
+* [zarf dev](zarf_dev.md)	 - Commands for developing packages

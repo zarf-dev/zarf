@@ -11,9 +11,9 @@ zarf dev deploy [flags]
 
 ```
       --components string           Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
+      --create-set stringToString   Specify package variables to set on the command line (KEY=value) (default [])
+      --deploy-set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
   -h, --help                        help for deploy
-      --set-create stringToString   Specify package variables to set on the command line (KEY=value) (default [])
-      --set-deploy stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
       --yolo                        Whether or not to build+deploy the package in YOLO mode (default true)
 ```
 
@@ -32,4 +32,4 @@ zarf dev deploy [flags]
 
 ## SEE ALSO
 
-* [zarf dev](zarf_dev.md)	 - 
+* [zarf dev](zarf_dev.md)	 - Commands for developing packages

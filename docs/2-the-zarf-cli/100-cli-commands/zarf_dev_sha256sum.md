@@ -29,4 +29,4 @@ zarf dev sha256sum { FILE | URL } [flags]
 
 ## SEE ALSO
 
-* [zarf dev](zarf_dev.md)	 - 
+* [zarf dev](zarf_dev.md)	 - Commands for developing packages

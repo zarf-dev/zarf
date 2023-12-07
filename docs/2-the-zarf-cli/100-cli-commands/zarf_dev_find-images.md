@@ -37,4 +37,4 @@ zarf dev find-images [ PACKAGE ] [flags]
 
 ## SEE ALSO
 
-* [zarf dev](zarf_dev.md)	 - 
+* [zarf dev](zarf_dev.md)	 - Commands for developing packages
