@@ -34,6 +34,6 @@ The `zarf package create` command is used to create a Zarf package from a `zarf.
 
 :::tip
 
-When deploying and managing packages you may find the sub-commands under `zarf prepare` useful to find resources and manipulate package definitions as needed.
+When developing packages you may find the sub-commands under `zarf dev` useful to find resources and manipulate package definitions as needed.
 
 :::
