@@ -38,17 +38,17 @@ func (n *Node) GetIndex() int {
 	return n.index
 }
 
-// Path from downstream zarf file to upstream imported zarf file
+// GetRelativeToHead gets the path from downstream zarf file to upstream imported zarf file
 func (n *Node) GetRelativeToHead() string {
 	return n.relativeToHead
 }
 
-// Next node in the chain
+// Next returns next node in the chain
 func (n *Node) Next() *Node {
 	return n.next
 }
 
-// Prev node in the chain
+// Prev returns previous node in the chain
 func (n *Node) Prev() *Node {
 	return n.prev
 }
@@ -67,10 +67,18 @@ func (n *Node) ImportName() string {
 
 // ImportChain is a doubly linked list of component import definitions
 type ImportChain struct {
-	Head *Node
-	Tail *Node
+	head *Node
+	tail *Node
 
 	remote *oci.OrasRemote
+}
+
+func (ic *ImportChain) Head() *Node {
+	return ic.head
+}
+
+func (ic *ImportChain) Tail() *Node {
+	return ic.tail
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, index int, relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
@@ -83,14 +91,14 @@ func (ic *ImportChain) append(c types.ZarfComponent, index int, relativeToHead s
 		prev:           nil,
 		next:           nil,
 	}
-	if ic.Head == nil {
-		ic.Head = node
-		ic.Tail = node
+	if ic.head == nil {
+		ic.head = node
+		ic.tail = node
 	} else {
-		p := ic.Tail
+		p := ic.tail
 		node.prev = p
 		p.next = node
-		ic.Tail = node
+		ic.tail = node
 	}
 }
 
@@ -106,7 +114,7 @@ func NewImportChain(head types.ZarfComponent, index int, arch, flavor string) (*
 
 	history := []string{}
 
-	node := ic.Head
+	node := ic.head
 	for node != nil {
 		isLocal := node.Import.Path != ""
 		isRemote := node.Import.URL != ""
@@ -195,22 +203,22 @@ func NewImportChain(head types.ZarfComponent, index int, arch, flavor string) (*
 
 // String returns a string representation of the import chain
 func (ic *ImportChain) String() string {
-	if ic.Head.next == nil {
-		return fmt.Sprintf("component %q imports nothing", ic.Head.Name)
+	if ic.head.next == nil {
+		return fmt.Sprintf("component %q imports nothing", ic.head.Name)
 	}
 
 	s := strings.Builder{}
 
-	name := ic.Head.ImportName()
+	name := ic.head.ImportName()
 
-	if ic.Head.Import.Path != "" {
-		s.WriteString(fmt.Sprintf("component %q imports %q in %s", ic.Head.Name, name, ic.Head.Import.Path))
+	if ic.head.Import.Path != "" {
+		s.WriteString(fmt.Sprintf("component %q imports %q in %s", ic.head.Name, name, ic.head.Import.Path))
 	} else {
-		s.WriteString(fmt.Sprintf("component %q imports %q in %s", ic.Head.Name, name, ic.Head.Import.URL))
+		s.WriteString(fmt.Sprintf("component %q imports %q in %s", ic.head.Name, name, ic.head.Import.URL))
 	}
 
-	node := ic.Head.next
-	for node != ic.Tail {
+	node := ic.head.next
+	for node != ic.tail {
 		name := node.ImportName()
 		s.WriteString(", which imports ")
 		if node.Import.Path != "" {
@@ -227,7 +235,7 @@ func (ic *ImportChain) String() string {
 
 // Migrate performs migrations on the import chain
 func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
-	node := ic.Head
+	node := ic.head
 	for node != nil {
 		migrated, w := deprecated.MigrateComponent(build, node.ZarfComponent)
 		node.ZarfComponent = migrated
@@ -235,7 +243,7 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 		node = node.next
 	}
 	if len(warnings) > 0 {
-		final := fmt.Sprintf("migrations were performed on the import chain of: %q", ic.Head.Name)
+		final := fmt.Sprintf("migrations were performed on the import chain of: %q", ic.head.Name)
 		warnings = append(warnings, final)
 	}
 	return warnings
@@ -244,9 +252,9 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 // Compose merges the import chain into a single component
 // fixing paths, overriding metadata, etc
 func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
-	composed = ic.Tail.ZarfComponent
+	composed = ic.tail.ZarfComponent
 
-	if ic.Tail.prev == nil {
+	if ic.tail.prev == nil {
 		// only had one component in the import chain
 		return composed, nil
 	}
@@ -259,7 +267,7 @@ func (ic *ImportChain) Compose() (composed types.ZarfComponent, err error) {
 	composed = types.ZarfComponent{}
 
 	// start overriding with the tail node
-	node := ic.Tail
+	node := ic.tail
 	for node != nil {
 		fixPaths(&node.ZarfComponent, node.relativeToHead)
 
@@ -283,7 +291,7 @@ func (ic *ImportChain) MergeVariables(existing []types.ZarfPackageVariable) (mer
 		return v1.Name == v2.Name
 	}
 
-	node := ic.Tail
+	node := ic.tail
 	for node != nil {
 		// merge the vars
 		merged = helpers.MergeSlices(node.vars, merged, exists)
@@ -300,7 +308,7 @@ func (ic *ImportChain) MergeConstants(existing []types.ZarfPackageConstant) (mer
 		return c1.Name == c2.Name
 	}
 
-	node := ic.Tail
+	node := ic.tail
 	for node != nil {
 		// merge the consts
 		merged = helpers.MergeSlices(node.consts, merged, exists)

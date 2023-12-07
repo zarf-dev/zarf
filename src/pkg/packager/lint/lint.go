@@ -90,8 +90,8 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 		}
 
 		// Skipping initial component since it will be linted the usual way
-		path := chain.Head.Import.URL
-		node := chain.Head.Next()
+		path := chain.Head().Import.URL
+		node := chain.Head().Next()
 		for node != nil {
 			if path == "" {
 				path = node.GetRelativeToHead()
