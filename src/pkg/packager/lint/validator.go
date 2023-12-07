@@ -48,7 +48,7 @@ type Validator struct {
 // DisplayFormattedMessage message sent to user based on validator results
 func (v Validator) DisplayFormattedMessage() {
 	if !v.hasWarnings() && !v.hasErrors() {
-		message.Successf("Schema validation successful for %q", v.typedZarfPackage.Metadata.Name)
+		message.Successf("0 findings for %q", v.typedZarfPackage.Metadata.Name)
 	}
 	v.printValidationTable()
 }
@@ -69,9 +69,21 @@ func (v Validator) printValidationTable() {
 			connectData = append(connectData, []string{utils.ColorWrap("Error", color.FgRed), err.String()})
 		}
 		message.Table(header, connectData)
-		message.Info(fmt.Sprintf("%d warnings and %d errors in %q",
-			len(v.warnings), len(v.errors), v.typedZarfPackage.Metadata.Name))
+		message.Info(v.getWarningAndErrorCount())
 	}
+}
+
+func (v Validator) getWarningAndErrorCount() string {
+	wordWarning := "warnings"
+	if len(v.warnings) == 1 {
+		wordWarning = "warning"
+	}
+	wordError := "errors"
+	if len(v.errors) == 1 {
+		wordError = "error"
+	}
+	return fmt.Sprintf("%d %s and %d %s in %q",
+		len(v.warnings), wordWarning, len(v.errors), wordError, v.typedZarfPackage.Metadata.Name)
 }
 
 func (v Validator) hasWarnings() bool {

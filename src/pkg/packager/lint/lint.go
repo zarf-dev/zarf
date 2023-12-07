@@ -49,9 +49,7 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 		return nil, fmt.Errorf("unable to access directory '%s': %w", createOpts.BaseDir, err)
 	}
 
-	if err := lintComposableComponenets(&validator, createOpts); err != nil {
-		return nil, err
-	}
+	lintComposableComponenets(&validator, createOpts)
 
 	lintUnEvaledVariables(&validator)
 
@@ -72,7 +70,7 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 	return &validator, nil
 }
 
-func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreateOptions) error {
+func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreateOptions) {
 	for i, component := range validator.typedZarfPackage.Components {
 		arch := config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
 
@@ -86,7 +84,7 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 
 		chain, err := composer.NewImportChain(component, i, arch, createOpts.Flavor)
 		if err != nil {
-			return err
+			validator.addError(validatorMessage{description: err.Error()})
 		}
 
 		// Skipping initial component since it will be linted the usual way
@@ -102,7 +100,6 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 			node = node.Next()
 		}
 	}
-	return nil
 }
 
 func fillComponentTemplate(validator *Validator, component *types.ZarfComponent, createOpts types.ZarfCreateOptions) error {
