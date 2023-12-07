@@ -10,6 +10,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
@@ -73,6 +74,7 @@ func TestValidateSchema(t *testing.T) {
 		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
 		err := validateSchema(&validator)
 		require.NoError(t, err)
+		config.NoColor = true
 		require.Equal(t, ".components.[0].import: Additional property not-path is not allowed", validator.errors[0].String())
 		require.Equal(t, ".components.[1].import.path: Invalid type. Expected: string, given: integer", validator.errors[1].String())
 	})

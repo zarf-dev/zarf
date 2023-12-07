@@ -101,7 +101,7 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 }
 
 func fillComponentTemplate(validator *Validator, component *types.ZarfComponent, createOpts types.ZarfCreateOptions) {
-	// update the component templates on the package
+
 	err := packager.ReloadComponentTemplate(component)
 	if err != nil {
 		validator.addWarning(validatorMessage{description: fmt.Sprintf("unable to find components %s", err)})
