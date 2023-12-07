@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // DevDeploy creates + deploys a package in one shot
@@ -64,18 +65,14 @@ func (p *Packager) DevDeploy() error {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
+	p.connectStrings = make(types.ConnectStrings)
+
 	if p.cfg.CreateOpts.IsYOLO {
 		p.cfg.Pkg.Metadata.YOLO = true
 	} else {
 		p.hpaModified = false
 		// Reset registry HPA scale down whether an error occurs or not
-		defer func() {
-			if p.isConnectedToCluster() && p.hpaModified {
-				if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
-					message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
-				}
-			}
-		}()
+		defer p.resetRegistryHPA()
 	}
 
 	// Get a list of all the components we are deploying and actually deploy them

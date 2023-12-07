@@ -22,13 +22,27 @@ $ zarf dev deploy examples/dos-games
 ```bash
 # If deploying a package in prod mode, `zarf init` must be run first
 $ zarf init --confirm
-# create and deploy dos-games in prod mode
+# Create and deploy dos-games in prod mode
 $ zarf dev deploy examples/dos-games --yolo=false
 ```
 
 ### `dev find-images`
 
-> insert docs here
+Evaluates components in a `zarf.yaml` to identify images specified in their helm charts and manifests.
+
+Components that have repos that host helm charts can be processed by providing the `--repo-chart-path`.
+
+```bash
+$ zarf dev find-images examples/wordpress
+
+components:
+
+  - name: wordpress
+    images:
+      - docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2
+      - docker.io/bitnami/mariadb:10.11.2-debian-11-r21
+      - docker.io/bitnami/wordpress:6.2.0-debian-11-r18
+```
 
 ### Misc `dev` Commands
 

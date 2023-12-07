@@ -29,6 +29,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+func (p *Packager) resetRegistryHPA() {
+	if p.isConnectedToCluster() && p.hpaModified {
+		if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
+			message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
+		}
+	}
+}
+
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
 	if err = p.source.LoadPackage(p.layout, true); err != nil {
@@ -60,13 +68,7 @@ func (p *Packager) Deploy() (err error) {
 	p.hpaModified = false
 	p.connectStrings = make(types.ConnectStrings)
 	// Reset registry HPA scale down whether an error occurs or not
-	defer func() {
-		if p.isConnectedToCluster() && p.hpaModified {
-			if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
-				message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
-			}
-		}
-	}()
+	defer p.resetRegistryHPA()
 
 	// Filter out components that are not compatible with this system
 	p.filterComponents()

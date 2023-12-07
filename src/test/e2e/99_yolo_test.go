@@ -47,3 +47,13 @@ func TestYOLOMode(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "yolo", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
+
+func TestDevDeploy(t *testing.T) {
+	e2e.SetupWithCluster(t)
+
+	stdOut, stdErr, err := e2e.Zarf("dev", "deploy", "examples/yolo")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "yolo", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
