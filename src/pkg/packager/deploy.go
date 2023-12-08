@@ -223,7 +223,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
 	if err != nil {
-		return charts, fmt.Errorf("unable to deploy component %q: %w", component.Name, err)
+		return charts, err
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
