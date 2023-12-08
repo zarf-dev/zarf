@@ -21,18 +21,16 @@ type validatorMessage struct {
 }
 
 func (v validatorMessage) String() string {
-	if v.filePath != "" {
-		v.filePath = fmt.Sprintf(" %s", v.filePath)
-	}
+	// if v.filePath != "" {
+	// 	v.filePath = fmt.Sprintf(" %s", v.filePath)
+	// }
 	if v.item != "" {
-		v.item = fmt.Sprintf(" %s", v.item)
+		v.item = fmt.Sprintf(" - %s", v.item)
 	}
 	if v.filePath == "" && v.yqPath == "" && v.item == "" {
 		return v.description
 	}
-	return fmt.Sprintf("%s%s: %s%s",
-		utils.ColorWrap(v.yqPath, color.FgCyan), utils.ColorWrap(v.filePath, color.FgCyan),
-		v.description, v.item)
+	return fmt.Sprintf("%s%s", v.description, v.item)
 }
 
 // Validator holds the warnings/errors and messaging that we get from validation
@@ -50,7 +48,7 @@ func (v Validator) DisplayFormattedMessage() {
 	if !v.hasWarnings() && !v.hasErrors() {
 		message.Successf("0 findings for %q", v.typedZarfPackage.Metadata.Name)
 	}
-	v.printValidationTable()
+	v.printValidationTable2()
 }
 
 // IsSuccess returns true if there are not any errors
@@ -60,17 +58,96 @@ func (v Validator) IsSuccess() bool {
 
 func (v Validator) printValidationTable() {
 	if v.hasWarnings() || v.hasErrors() {
-		header := []string{"Type", "Message"}
+		header := []string{"Type", "Path", "Message"}
 		connectData := [][]string{}
 		for _, warning := range v.warnings {
-			connectData = append(connectData, []string{utils.ColorWrap("Warning", color.FgYellow), warning.String()})
+			connectData = append(connectData,
+				[]string{utils.ColorWrap("Warning", color.FgYellow), warning.getPath(), warning.String()})
 		}
-		for _, err := range v.errors {
-			connectData = append(connectData, []string{utils.ColorWrap("Error", color.FgRed), err.String()})
+		for _, validatorError := range v.errors {
+			connectData = append(connectData,
+				[]string{utils.ColorWrap("Error", color.FgRed), validatorError.getPath(), validatorError.String()})
 		}
 		message.Table(header, connectData)
 		message.Info(v.getWarningAndErrorCount())
 	}
+}
+
+func (v Validator) printValidationTable2() {
+	differentPaths := v.getUniquePaths()
+	if v.hasWarnings() || v.hasErrors() {
+		for _, path := range differentPaths {
+			header := []string{"Type", "Path", "Message"}
+			connectData := make(map[string][][]string)
+			item := path
+			for _, warning := range v.warnings {
+				if warning.filePath == path {
+					if item == "" {
+						item = "original"
+					}
+					connectData[item] = append(connectData[item],
+						[]string{utils.ColorWrap("Warning", color.FgYellow), warning.getPath2(), warning.String()})
+				}
+			}
+			for _, validatorError := range v.errors {
+				if validatorError.filePath == path {
+					if item == "" {
+						item = "original"
+					}
+					connectData[item] = append(connectData[item],
+						[]string{utils.ColorWrap("Error", color.FgRed), validatorError.getPath2(), validatorError.String()})
+				}
+			}
+
+			message.Infof("Component at path: %s", item)
+			message.Table(header, connectData[item])
+			//message.Info(v.getWarningAndErrorCount())
+		}
+	}
+}
+
+func contains(slice []string, item string) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+func (v Validator) getUniquePaths() []string {
+	paths := []string{}
+	for _, warning := range v.warnings {
+		if !contains(paths, warning.filePath) {
+			paths = append(paths, warning.filePath)
+		}
+	}
+	for _, validatorError := range v.errors {
+		if !contains(paths, validatorError.filePath) {
+			paths = append(paths, validatorError.filePath)
+		}
+	}
+	return paths
+}
+
+func (vm validatorMessage) getPath() string {
+	if vm.yqPath == "" {
+		return ""
+	}
+	if vm.filePath != "" {
+		return utils.ColorWrap(fmt.Sprintf("%s %s", vm.yqPath, vm.filePath), color.FgCyan)
+	}
+	return utils.ColorWrap(vm.yqPath, color.FgCyan)
+}
+
+func (vm validatorMessage) getPath2() string {
+	if vm.yqPath == "" {
+		return ""
+	}
+	// if vm.filePath != "" {
+	// 	return utils.ColorWrap(fmt.Sprintf("%s %s", vm.yqPath, vm.filePath), color.FgCyan)
+	// }
+	return utils.ColorWrap(vm.yqPath, color.FgCyan)
 }
 
 func (v Validator) getWarningAndErrorCount() string {

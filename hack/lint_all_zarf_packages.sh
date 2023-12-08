@@ -5,6 +5,9 @@ BASEDIR=$(dirname "$0")
 cd ../$BASEDIR
 find "." -type f -name 'zarf.yaml' | while read -r yaml_file; do
   dir=$(dirname "$yaml_file")
+  if [[ "$dir" == *src/test/* ]] && [ "$use_build" != true ]; then
+      continue
+  fi
   echo "Running 'zarf prepare lint' in directory: $dir"
   if [ "$use_build" = true ]; then
     ./build/zarf prepare lint $dir

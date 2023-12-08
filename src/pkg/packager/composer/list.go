@@ -33,7 +33,7 @@ type Node struct {
 	next *Node
 }
 
-// GetIndex gives the component index of the node on it's original zarf file
+// GetIndex returns the .components index location for this node's source `zarf.yaml`
 func (n *Node) GetIndex() int {
 	return n.index
 }
@@ -73,7 +73,7 @@ type ImportChain struct {
 	remote *oci.OrasRemote
 }
 
-// Head returns the first node in the import chain
+// Head eturns the first node in the import chain
 func (ic *ImportChain) Head() *Node {
 	return ic.head
 }
@@ -178,11 +178,11 @@ func NewImportChain(head types.ZarfComponent, index int, arch, flavor string) (*
 		name := node.ImportName()
 
 		found := []types.ZarfComponent{}
-		var index int
+		index := []int{}
 		for i, component := range pkg.Components {
 			if component.Name == name && CompatibleComponent(component, arch, flavor) {
 				found = append(found, component)
-				index = i
+				index = append(index, i)
 			}
 		}
 
@@ -200,7 +200,7 @@ func NewImportChain(head types.ZarfComponent, index int, arch, flavor string) (*
 			}
 		}
 
-		ic.append(found[0], index, filepath.Join(history...), pkg.Variables, pkg.Constants)
+		ic.append(found[0], index[0], filepath.Join(history...), pkg.Variables, pkg.Constants)
 		node = node.next
 	}
 	return ic, nil
