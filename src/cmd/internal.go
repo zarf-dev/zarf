@@ -105,13 +105,13 @@ var genCLIDocs = &cobra.Command{
 		}
 
 		//Generate markdown of the Zarf command (and all of its child commands)
-		if err := os.RemoveAll("./docs/3-the-zarf-cli/100-cli-commands"); err != nil {
+		if err := os.RemoveAll("./docs/2-the-zarf-cli/100-cli-commands"); err != nil {
 			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
 		}
-		if err := os.Mkdir("./docs/3-the-zarf-cli/100-cli-commands", 0775); err != nil {
+		if err := os.Mkdir("./docs/2-the-zarf-cli/100-cli-commands", 0775); err != nil {
 			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
 		}
-		if err := doc.GenMarkdownTree(rootCmd, "./docs/3-the-zarf-cli/100-cli-commands"); err != nil {
+		if err := doc.GenMarkdownTree(rootCmd, "./docs/2-the-zarf-cli/100-cli-commands"); err != nil {
 			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
 		} else {
 			message.Success(lang.CmdInternalGenerateCliDocsSuccess)

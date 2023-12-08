@@ -9,7 +9,7 @@ The `bigbang` noun sits within the `extensions` specification of Zarf and provid
 
 <Properties item="BigBang" />
 
-To see a tutorial for the creation and deployment of this package see the [Big Bang Tutorial](../../docs/6-zarf-tutorials/6-big-bang.md).
+To see a tutorial for the creation and deployment of this package see the [Big Bang Tutorial](../../docs/5-zarf-tutorials/6-big-bang.md).
 
 ## `zarf.yaml` {#zarf.yaml}
 

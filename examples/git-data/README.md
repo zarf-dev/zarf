@@ -6,7 +6,7 @@ This example shows how to package `git` repositories within a Zarf package.  Thi
 
 :::tip
 
-Git repositories included in a package can be deployed with `zarf package deploy` if an existing Kubernetes cluster has been initialized with `zarf init`.  If you do not have an initialized cluster but want to push resources to a remote registry anyway, you can use [`zarf package mirror-resources`](./../../docs/3-the-zarf-cli/100-cli-commands/zarf_package_mirror-resources.md).
+Git repositories included in a package can be deployed with `zarf package deploy` if an existing Kubernetes cluster has been initialized with `zarf init`.  If you do not have an initialized cluster but want to push resources to a remote registry anyway, you can use [`zarf package mirror-resources`](./../../docs/2-the-zarf-cli/100-cli-commands/zarf_package_mirror-resources.md).
 
 :::
 
