@@ -6,6 +6,7 @@ package lint
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -21,12 +22,16 @@ const (
 	validationWarning ValidationType = 2
 )
 
+type packageKey struct {
+	filePath string
+	name     string
+}
+
 type validatorMessage struct {
 	yqPath         string
-	filePath       string
 	description    string
 	item           string
-	packageName    string
+	packageKey     packageKey
 	validationType ValidationType
 }
 
@@ -44,7 +49,7 @@ func (v validatorMessage) String() string {
 	if v.item != "" {
 		v.item = fmt.Sprintf(" - %s", v.item)
 	}
-	if v.filePath == "" && v.yqPath == "" && v.item == "" {
+	if v.packageKey.filePath == "" && v.yqPath == "" && v.item == "" {
 		return v.description
 	}
 	return fmt.Sprintf("%s%s", v.description, v.item)
@@ -69,63 +74,71 @@ func (v Validator) DisplayFormattedMessage() {
 
 // IsSuccess returns true if there are not any errors
 func (v Validator) IsSuccess() bool {
-	return !v.hasFindings()
+	for _, finding := range v.findings {
+		if finding.validationType == validationError {
+			return false
+		}
+	}
+	return true
 }
 
 func (v Validator) printValidationTable() {
-
 	if !v.hasFindings() {
 		return
 	}
-	packageKeys := v.getUniquePackageKeys()
-	connectData := make(map[string][][]string)
 
+	packageKeys := v.getUniquePackageKeys()
+	connectData := make(map[packageKey][][]string)
 	for _, packageKey := range packageKeys {
 		header := []string{"Type", "Path", "Message"}
 
 		for _, finding := range v.findings {
-			if finding.getPackageKey() == packageKey {
+			if finding.packageKey == packageKey {
 				connectData[packageKey] = append(connectData[packageKey],
 					[]string{finding.validationType.String(), finding.getPath(), finding.String()})
 			}
 		}
 		//We should probably move this println into info
 		pterm.Println()
-		message.Infof("Lint for package: %s", packageKey)
+		if packageKey.filePath != "" {
+			message.Infof("Linting package %q at %s", packageKey.name, packageKey.filePath)
+		} else {
+			message.Infof("Linting package %q", packageKey.name)
+		}
+
 		message.Table(header, connectData[packageKey])
 		message.Info(v.getFormattedFindingCount(packageKey))
 	}
 }
 
-func (vm validatorMessage) getPackageKey() string {
-	return fmt.Sprintf("%s %s", vm.packageName, vm.filePath)
-}
+func (v Validator) getUniquePackageKeys() []packageKey {
+	uniqueKeys := make(map[packageKey]bool)
+	var pks []packageKey
 
-func (v Validator) getUniquePackageKeys() []string {
-	paths := []string{}
 	for _, finding := range v.findings {
-		packageKey := finding.getPackageKey()
-		if !contains(paths, packageKey) {
-			paths = append(paths, packageKey)
+		if _, exists := uniqueKeys[finding.packageKey]; !exists {
+			uniqueKeys[finding.packageKey] = true
+			pks = append(pks, finding.packageKey)
 		}
 	}
-	return paths
+
+	return pks
 }
 
-func contains(slice []string, item string) bool {
+func contains(slice []any, item any) bool {
 	for _, v := range slice {
-		if v == item {
+		if reflect.DeepEqual(v, item) {
 			return true
 		}
 	}
 	return false
 }
 
-func (v Validator) getFormattedFindingCount(packageKey string) string {
+func (v Validator) getFormattedFindingCount(pk packageKey) string {
 	warningCount := 0
 	errorCount := 0
 	for _, finding := range v.findings {
-		if finding.getPackageKey() != packageKey {
+		if finding.packageKey != pk {
 			continue
 		}
 		if finding.validationType == validationWarning {
@@ -144,7 +157,7 @@ func (v Validator) getFormattedFindingCount(packageKey string) string {
 		wordError = "error"
 	}
 	return fmt.Sprintf("%d %s and %d %s in %q",
-		warningCount, wordWarning, errorCount, wordError, packageKey)
+		warningCount, wordWarning, errorCount, wordError, pk.name)
 }
 
 func (vm validatorMessage) getPath() string {
@@ -153,19 +166,6 @@ func (vm validatorMessage) getPath() string {
 	}
 	return utils.ColorWrap(vm.yqPath, color.FgCyan)
 }
-
-// func (v Validator) getWarningAndErrorCount() string {
-// 	wordWarning := "warnings"
-// 	if len(v.findings) == 1 {
-// 		wordWarning = "warning"
-// 	}
-// 	wordError := "errors"
-// 	if len(v.errors) == 1 {
-// 		wordError = "error"
-// 	}
-// 	return fmt.Sprintf("%d %s and %d %s in %q",
-// 		len(v.findings), wordWarning, len(v.errors), wordError, v.typedZarfPackage.Metadata.Name)
-// }
 
 func (v Validator) hasFindings() bool {
 	return len(v.findings) > 0

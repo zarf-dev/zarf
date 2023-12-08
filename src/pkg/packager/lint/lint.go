@@ -80,7 +80,7 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 		if err != nil {
 			validator.addError(validatorMessage{
 				description: err.Error(),
-				packageName: validator.typedZarfPackage.Metadata.Name,
+				packageKey:  packageKey{name: validator.typedZarfPackage.Metadata.Name},
 			})
 			continue
 		}
@@ -106,8 +106,7 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 	if err != nil {
 		validator.addWarning(validatorMessage{
 			description: fmt.Sprintf("unable to find components %s", err),
-			filePath:    node.GetRelativeToHead(),
-			packageName: node.GetOriginalPackageName(),
+			packageKey:  packageKey{filePath: node.GetRelativeToHead(), name: node.GetOriginalPackageName()},
 		})
 	}
 	fillYamlTemplate(validator, node, createOpts, node.GetOriginalPackageName())
@@ -119,7 +118,7 @@ func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions
 	if err != nil {
 		validator.addWarning(validatorMessage{
 			description: fmt.Sprintf("unable to find components %s", err),
-			packageName: validator.typedZarfPackage.Metadata.Name,
+			packageKey:  packageKey{name: validator.typedZarfPackage.Metadata.Name},
 		})
 	}
 
@@ -134,7 +133,7 @@ func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCr
 		if err != nil {
 			validator.addWarning(validatorMessage{
 				description: fmt.Sprintf("unable to find variables %s", err),
-				packageName: pkgName,
+				packageKey:  packageKey{name: pkgName},
 			})
 		}
 
@@ -142,14 +141,14 @@ func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCr
 			if deprecated {
 				validator.addWarning(validatorMessage{
 					description: fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key),
-					packageName: pkgName,
+					packageKey:  packageKey{name: pkgName},
 				})
 			}
 			_, present := createOpts.SetVariables[key]
 			if !present && !validator.hasUnSetVarWarning {
 				validator.findings = append([]validatorMessage{{
 					description: "There are variables that are unset and won't be evaluated during lint",
-					packageName: pkgName,
+					packageKey:  packageKey{name: pkgName},
 				}}, validator.findings...)
 				validator.hasUnSetVarWarning = true
 			}
@@ -202,10 +201,9 @@ func checkForUnpinnedRepos(validator *Validator, index int, component types.Zarf
 		if !isPinnedRepo(repo) {
 			validator.addWarning(validatorMessage{
 				yqPath:      repoYqPath,
-				filePath:    path,
+				packageKey:  packageKey{filePath: path, name: pkgName},
 				description: "Unpinned repository",
 				item:        repo,
-				packageName: pkgName,
 			})
 		}
 	}
@@ -218,20 +216,18 @@ func checkForUnpinnedImages(validator *Validator, index int, component types.Zar
 		if err != nil {
 			validator.addError(validatorMessage{
 				yqPath:      imageYqPath,
-				filePath:    path,
+				packageKey:  packageKey{filePath: path, name: pkgName},
 				description: "Invalid image format",
 				item:        image,
-				packageName: pkgName,
 			})
 			continue
 		}
 		if !pinnedImage {
 			validator.addWarning(validatorMessage{
 				yqPath:      imageYqPath,
-				filePath:    path,
+				packageKey:  packageKey{filePath: path, name: pkgName},
 				description: "Image not pinned with digest",
 				item:        image,
-				packageName: pkgName,
 			})
 		}
 	}
@@ -244,10 +240,9 @@ func checkForUnpinnedFiles(validator *Validator, index int,
 		if file.Shasum == "" && helpers.IsURL(file.Source) {
 			validator.addWarning(validatorMessage{
 				yqPath:      fileYqPath,
-				filePath:    path,
+				packageKey:  packageKey{filePath: path, name: pkgName},
 				description: "No shasum for remote file",
 				item:        file.Source,
-				packageName: pkgName,
 			})
 		}
 	}
@@ -263,19 +258,17 @@ func checkForVarInComponentImport(validator *Validator, index int, component typ
 	if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
 		validator.addWarning(validatorMessage{
 			yqPath:      fmt.Sprintf(".components.[%d].import.path", index),
-			filePath:    path,
+			packageKey:  packageKey{filePath: path, name: pkgName},
 			description: "Zarf does not evaluate variables at component.x.import.path",
 			item:        component.Import.Path,
-			packageName: pkgName,
 		})
 	}
 	if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
 		validator.addWarning(validatorMessage{
 			yqPath:      fmt.Sprintf(".components.[%d].import.url", index),
-			filePath:    path,
+			packageKey:  packageKey{filePath: path, name: pkgName},
 			description: "Zarf does not evaluate variables at component.x.import.url",
 			item:        component.Import.URL,
-			packageName: pkgName,
 		})
 	}
 }
@@ -307,7 +300,7 @@ func validateSchema(validator *Validator) error {
 			validator.addError(validatorMessage{
 				yqPath:      makeFieldPathYqCompat(desc.Field()),
 				description: desc.Description(),
-				packageName: validator.typedZarfPackage.Metadata.Name,
+				packageKey:  packageKey{name: validator.typedZarfPackage.Metadata.Name},
 			})
 		}
 	}

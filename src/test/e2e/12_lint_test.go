@@ -36,14 +36,14 @@ func TestLint(t *testing.T) {
 		require.Contains(t, strippedStderr, "There are variables that are unset and won't be evaluated during lint")
 		// Multiple spaces in lang
 		require.Contains(t, strippedStderr, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
-		require.Contains(t, strippedStderr, ".components.[2].repos.[0]: Unpinned repository")
-		require.Contains(t, strippedStderr, ".metadata: Additional property description1 is not allowed")
-		require.Contains(t, strippedStderr, ".components.[0].import: Additional property not-path is not allowed")
-		require.Contains(t, strippedStderr, ".components.[2].images.[3]: Image not pinned with digest")
-		require.Contains(t, strippedStderr, ".components.[1].images.[0] linted-import: Image not pinned with digest")
-		require.Contains(t, strippedStderr, ".components.[1].images.[2] linted-import: Image not pinned with digest")
-		require.Contains(t, strippedStderr, ".components.[3].import.path: Zarf does not evaluate variables at component.x.import.path - ###ZARF_PKG_TMPL_PATH###")
-		require.Contains(t, strippedStderr, ".components.[0].images.[0] oci://🦄/dos-games:1.0.0-skeleton: Image not pinned with digest - defenseunicorns/zarf-game:multi-tile-dark")
+		require.Contains(t, strippedStderr, ".components.[2].repos.[0] | Unpinned repository")
+		require.Contains(t, strippedStderr, ".metadata | Additional property description1 is not allowed")
+		require.Contains(t, strippedStderr, ".components.[0].import | Additional property not-path is not allowed")
+		require.Contains(t, strippedStderr, ".components.[2].images.[3] | Image not pinned with digest")
+		require.Contains(t, strippedStderr, ".components.[1].images.[0] | Image not pinned with digest")
+		require.Contains(t, strippedStderr, ".components.[1].images.[2] | Image not pinned with digest")
+		require.Contains(t, strippedStderr, ".components.[3].import.path | Zarf does not evaluate variables at component.x.import.path - ###ZARF_PKG_TMPL_PATH###")
+		require.Contains(t, strippedStderr, ".components.[0].images.[0] | Image not pinned with digest - defenseunicorns/zarf-game:multi-tile-dark")
 	})
 
 }

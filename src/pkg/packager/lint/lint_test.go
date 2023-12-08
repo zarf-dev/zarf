@@ -75,8 +75,8 @@ func TestValidateSchema(t *testing.T) {
 		err := validateSchema(&validator)
 		require.NoError(t, err)
 		config.NoColor = true
-		require.Equal(t, ".components.[0].import: Additional property not-path is not allowed", validator.findings[0].String())
-		require.Equal(t, ".components.[1].import.path: Invalid type. Expected: string, given: integer", validator.findings[1].String())
+		require.Equal(t, "Additional property not-path is not allowed", validator.findings[0].String())
+		require.Equal(t, "Invalid type. Expected: string, given: integer", validator.findings[1].String())
 	})
 
 	t.Run("Template in component import success", func(t *testing.T) {
@@ -118,9 +118,9 @@ func TestValidateSchema(t *testing.T) {
 			badImage}}
 		checkForUnpinnedImages(&validator, 0, component, "", "")
 		require.Equal(t, unpinnedImage, validator.findings[0].item)
-		require.Equal(t, 1, len(validator.findings))
 		require.Equal(t, badImage, validator.findings[1].item)
-		require.Equal(t, 1, len(validator.findings))
+		require.Equal(t, 2, len(validator.findings))
+
 	})
 
 	t.Run("Unpinnned file warning", func(t *testing.T) {
