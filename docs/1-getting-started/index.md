@@ -98,7 +98,7 @@ zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.de
 
 :::info
 
-There is currently no Zarf quick start for Windows, though you can learn how to install Zarf from our Github Releases by visiting the [Installing Zarf page](./0-installing-zarf.md).
+There is currently no Zarf quick start for Windows, though you can learn how to install Zarf from our Github Releases by visiting the [Installing Zarf page](./0-installing-zarf.md#downloading-the-cli-from-github-releases).
 
 :::
 
