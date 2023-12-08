@@ -115,8 +115,6 @@ Coming soon!
 </TabItem>
 </Tabs>
 
-Zarf is being actively developed by the community. For more information, see our [release notes](https://github.com/defenseunicorns/zarf/releases).
-
 ## Where to Next?
 
 Depending on how familiar you are with Kubernetes, DevOps, and Zarf, let's find what set of information would be most useful to you.
