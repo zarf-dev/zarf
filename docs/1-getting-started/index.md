@@ -14,6 +14,39 @@ Trying out Zarf is as simple as:
 3. `$` Entering the commands into your terminal.
 
 <Tabs>
+<TabItem value="macOS">
+
+:::info
+
+This quick start requires you to already have:
+
+- [Homebrew](https://brew.sh/) package manager installed on your machine.
+- [Docker](https://www.docker.com/) installed and running on your machine.
+
+For more install options please visit our [Installing Zarf page](./0-installing-zarf.md).
+
+:::
+
+## macOS Commands
+
+```bash
+# To install Zarf
+brew tap defenseunicorns/tap && brew install zarf
+```
+```bash
+# Next, you will need a Kubernetes cluster. This example uses KIND.
+brew install kind && kind delete cluster && kind create cluster
+```
+```bash
+# Then, you will need to deploy the Zarf Init Package
+zarf init
+```
+```bash
+# You are ready to deploy any Zarf Package, try out our Retro Arcade!!
+zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub
+```
+
+</TabItem>
 <TabItem value="Linux">
 
 :::info
@@ -32,13 +65,16 @@ For more install options please visit our [Installing Zarf page](./0-installing-
 ```bash
 # To install Zarf
 brew tap defenseunicorns/tap && brew install zarf
-
+```
+```bash
 # Next, you will need a Kubernetes cluster. This example uses KIND.
 brew install kind && kind delete cluster && kind create cluster
-
+```
+```bash
 # Then, you will need to deploy the Zarf Init Package
 zarf init
-
+```
+```bash
 # You are ready to deploy any Zarf Package, try out our Retro Arcade!!
 zarf package deploy oci://defenseunicorns/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub
 ```
@@ -59,36 +95,6 @@ This example shows how to install Zarf with the official (📜) `defenseunicorns
 Zarf can deploy it's own `k3s` cluster on Linux if you have `root` access by selecting the `k3s` component on `zarf init`.
 
 :::
-
-</TabItem>
-<TabItem value="macOS">
-
-:::info
-
-This quick start requires you to already have:
-
-- [Homebrew](https://brew.sh/) package manager installed on your machine.
-- [Docker](https://www.docker.com/) installed and running on your machine.
-
-For more install options please visit our [Installing Zarf page](./0-installing-zarf.md).
-
-:::
-
-## macOS Commands
-
-```bash
-# To install Zarf
-brew tap defenseunicorns/tap && brew install zarf
-
-# Next, you will need a Kubernetes cluster. This example uses KIND.
-brew install kind && kind delete cluster && kind create cluster
-
-# Then, you will need to deploy the Zarf Init Package
-zarf init
-
-# You are ready to deploy any Zarf Package, try out our Retro Arcade!!
-zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub
-```
 
 </TabItem>
 <TabItem value="Windows">
