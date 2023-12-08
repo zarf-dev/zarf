@@ -2,11 +2,16 @@
 sidebar_position: 1
 ---
 
+import TabItem from "@theme/TabItem";
+import Tabs from "@theme/Tabs";
+
 # Quick Start
 
-1. 💻 Select your system's OS below.
-2. ❗ Ensure you have the pre-requisite applications running.
-3. `$` Enter the commands into your terminal.
+Getting started deploying packages with Zarf is as simple as:
+
+1. 💻 Selecting your system's OS below.
+2. ❗ Ensuring you have the pre-requisite applications running.
+3. `$` Entering the commands into your terminal.
 
 <Tabs>
 <TabItem value="Linux">

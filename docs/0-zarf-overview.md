@@ -2,9 +2,6 @@
 sidebar_position: 0
 ---
 
-import TabItem from "@theme/TabItem";
-import Tabs from "@theme/Tabs";
-
 # Overview
 
 ![Zarf Underwater](.images/Zarf%20Left%20Underwater%20-%20Behind%20rock.svg)
