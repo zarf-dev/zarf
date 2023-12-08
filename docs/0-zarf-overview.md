@@ -18,7 +18,7 @@ It also simplifies the installation, update, and maintenance of supporting DevSe
 
 :::note
 
-Check out our [glossary](1-getting-started/0-understand-the-basics.md) for an explanation of common terms used in the project.
+Check out our [glossary](1-getting-started/1-understand-the-basics.md) for an explanation of common terms used in the project.
 
 :::
 

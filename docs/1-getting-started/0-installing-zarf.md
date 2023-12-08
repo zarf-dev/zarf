@@ -3,13 +3,13 @@ import Tabs from "@theme/Tabs";
 
 # Installing Zarf
 
-There are multiple ways to get the Zarf CLI onto your machine:
+Depending on your operating system and specific setup there are a few ways you can get the Zarf CLI onto your machine:
 
 - [Install from Homebrew](#installing-from-the-defense-unicorns-homebrew-tap).
 - [Download a prebuilt binary](#downloading-a-prebuilt-binary-from-our-github-releases).
 - [Build the CLI](#building-the-cli-from-scratch) from scratch.
 
-And once you have a working copy, a few things to note [Post-Install](#post-install-steps).
+[Post-Install](#post-install-steps), you can verify that Zarf is correctly on your `$PATH` and that you have an 'init' package for your environment and Zarf version.
 
 ## Installing the CLI with Homebrew
 

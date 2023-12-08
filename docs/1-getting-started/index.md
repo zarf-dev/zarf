@@ -3,7 +3,7 @@ import Tabs from "@theme/Tabs";
 
 # Getting Started
 
-Welcome to the Zarf documentation! This section will list the various ways to install Zarf onto your machine. It will also demonstrate how to verify the installation. Choose the installation type that best suits your needs in accordance with your operating system. Let's get started!
+Welcome to the Zarf documentation!  This page runs through a quick start to test Zarf on your machine and walks through next steps to get more familiar with Zarf's concepts. Let's get started!
 
 ## Quick Start
 
@@ -23,7 +23,7 @@ This quick start requires you to already have:
 - [Homebrew](https://brew.sh/) package manager installed on your machine.
 - [Docker](https://www.docker.com/) installed and running on your machine.
 
-For more install options please visit our [Installing Zarf page](./2-installing-zarf.md).
+For more install options please visit our [Installing Zarf page](./0-installing-zarf.md).
 
 :::
 
@@ -70,7 +70,7 @@ This quick start requires you to already have:
 - [Homebrew](https://brew.sh/) package manager installed on your machine.
 - [Docker](https://www.docker.com/) installed and running on your machine.
 
-For more install options please visit our [Installing Zarf page](./2-installing-zarf.md).
+For more install options please visit our [Installing Zarf page](./0-installing-zarf.md).
 
 :::
 
@@ -98,7 +98,7 @@ zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.de
 
 :::info
 
-There is currently no Zarf quick start for Windows, though you can learn how to install Zarf from our Github Releases by visiting the [Installing Zarf page](./2-installing-zarf.md).
+There is currently no Zarf quick start for Windows, though you can learn how to install Zarf from our Github Releases by visiting the [Installing Zarf page](./0-installing-zarf.md).
 
 :::
 
@@ -123,4 +123,4 @@ Depending on how familiar you are with Kubernetes, DevOps, and Zarf, let's find 
 
 - More information about the packages that Zarf creates and deploys is available in the [Understanding Zarf Packages](../3-create-a-zarf-package/1-zarf-packages.md) page.
 
-- If you want to take a step back and better understand the problem Zarf is trying to solve, you can find more context on the [Understand the Basics](./0-understand-the-basics.md) and [Core Concepts](./1-core-concepts.md) pages.
+- If you want to take a step back and better understand the problem Zarf is trying to solve, you can find more context on the [Understand the Basics](./1-understand-the-basics.md) and [Core Concepts](./2-core-concepts.md) pages.
