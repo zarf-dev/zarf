@@ -31,6 +31,11 @@ const (
 	ErrFileNameExtract     = "failed to extract filename from URL %s: %s"
 )
 
+// Lint messages
+const (
+	UnsetVarWarning = "There are variables that are unset and won't be evaluated during lint"
+)
+
 // Zarf CLI commands.
 const (
 	// common command language

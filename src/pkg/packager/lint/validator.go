@@ -6,8 +6,8 @@ package lint
 
 import (
 	"fmt"
-	"reflect"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -61,7 +61,6 @@ type Validator struct {
 	jsonSchema         []byte
 	typedZarfPackage   types.ZarfPackage
 	untypedZarfPackage interface{}
-	hasUnSetVarWarning bool
 }
 
 // DisplayFormattedMessage message sent to user based on validator results
@@ -80,6 +79,15 @@ func (v Validator) IsSuccess() bool {
 		}
 	}
 	return true
+}
+
+func (v Validator) HasUnsetVarMessageForPkg(pk packageKey) bool {
+	for _, finding := range v.findings {
+		if finding.description == lang.UnsetVarWarning && finding.packageKey == pk {
+			return true
+		}
+	}
+	return false
 }
 
 func (v Validator) printValidationTable() {
@@ -123,15 +131,6 @@ func (v Validator) getUniquePackageKeys() []packageKey {
 	}
 
 	return pks
-}
-
-func contains(slice []any, item any) bool {
-	for _, v := range slice {
-		if reflect.DeepEqual(v, item) {
-			return true
-		}
-	}
-	return false
 }
 
 func (v Validator) getFormattedFindingCount(pk packageKey) string {

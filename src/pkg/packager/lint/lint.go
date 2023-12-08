@@ -109,7 +109,7 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 			packageKey:  packageKey{filePath: node.GetRelativeToHead(), name: node.GetOriginalPackageName()},
 		})
 	}
-	fillYamlTemplate(validator, node, createOpts, node.GetOriginalPackageName())
+	fillYamlTemplate(validator, node, createOpts, node.GetOriginalPackageName(), node.GetRelativeToHead())
 }
 
 func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions) {
@@ -122,18 +122,20 @@ func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions
 		})
 	}
 
-	fillYamlTemplate(validator, &validator.typedZarfPackage, createOpts, validator.typedZarfPackage.Metadata.Name)
+	fillYamlTemplate(validator, &validator.typedZarfPackage, createOpts, validator.typedZarfPackage.Metadata.Name, "")
 }
 
-func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCreateOptions, pkgName string) {
+func fillYamlTemplate(validator *Validator, yamlObj any,
+	createOpts types.ZarfCreateOptions, pkgName string, pkgPath string) {
 	templateMap := map[string]string{}
+	pkgKey := packageKey{name: pkgName, filePath: pkgPath}
 
 	setVarsAndWarn := func(templatePrefix string, deprecated bool) {
 		yamlTemplates, err := utils.FindYamlTemplates(yamlObj, templatePrefix, "###")
 		if err != nil {
 			validator.addWarning(validatorMessage{
 				description: fmt.Sprintf("unable to find variables %s", err),
-				packageKey:  packageKey{name: pkgName},
+				packageKey:  pkgKey,
 			})
 		}
 
@@ -141,19 +143,17 @@ func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCr
 			if deprecated {
 				validator.addWarning(validatorMessage{
 					description: fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key),
-					packageKey:  packageKey{name: pkgName},
+					packageKey:  pkgKey,
 				})
 			}
 			_, present := createOpts.SetVariables[key]
-			if !present && !validator.hasUnSetVarWarning {
+			if !present && !validator.HasUnsetVarMessageForPkg(pkgKey) {
 				validator.findings = append([]validatorMessage{{
-					description: "There are variables that are unset and won't be evaluated during lint",
-					packageKey:  packageKey{name: pkgName},
+					description: lang.UnsetVarWarning,
+					packageKey:  pkgKey,
 				}}, validator.findings...)
-				validator.hasUnSetVarWarning = true
 			}
 		}
-
 		for key, value := range createOpts.SetVariables {
 			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
 		}
