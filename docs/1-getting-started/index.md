@@ -74,7 +74,7 @@ For more install options please visit our [Installing Zarf page](./0-installing-
 
 :::
 
-## MacOS Commands
+## macOS Commands
 
 ```bash
 # To install Zarf
