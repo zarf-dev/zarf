@@ -44,7 +44,7 @@ func (p *Packager) composeComponents() error {
 		if err != nil {
 			return err
 		}
-		components = append(components, composed)
+		components = append(components, *composed)
 
 		// merge variables and constants
 		pkgVars = chain.MergeVariables(pkgVars)
