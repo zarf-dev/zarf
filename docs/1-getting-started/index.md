@@ -29,20 +29,17 @@ For more install options please visit our [Installing Zarf page](./0-installing-
 
 ## macOS Commands
 
-To install Zarf with Homebrew simply run:
 ```bash
+# To install Zarf with Homebrew simply run:
 brew tap defenseunicorns/tap && brew install zarf
-```
-Next, you will need a Kubernetes cluster. This example uses KIND.
-```bash
+
+# Next, you will need a Kubernetes cluster. This example uses KIND.
 brew install kind && kind delete cluster && kind create cluster
-```
-Then, you will need to deploy the Zarf Init Package, following the prompts to download and select components
-```bash
+
+# Then, you will need to deploy the Zarf Init Package, following the prompts to download and select components
 zarf init
-```
-Now you are ready to deploy any Zarf Package, try out our Retro Arcade!!
-```bash
+
+# Now you are ready to deploy any Zarf Package, try out our Retro Arcade!!
 zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub
 ```
 
@@ -62,21 +59,18 @@ For more install options please visit our [Installing Zarf page](./0-installing-
 
 ## Linux Commands
 
-To install Zarf with Homebrew simply run:
 ```bash
+# To install Zarf with Homebrew simply run:
 brew tap defenseunicorns/tap && brew install zarf
-```
-Next, you will need a Kubernetes cluster. This example uses KIND.
-```bash
+
+# Next, you will need a Kubernetes cluster. This example uses KIND.
 brew install kind && kind delete cluster && kind create cluster
-```
-Then, you will need to deploy the Zarf Init Package, following the prompts to download and select components
-```bash
+
+# Then, you will need to deploy the Zarf Init Package, following the prompts to download and select components
 zarf init
-```
-Now you are ready to deploy any Zarf Package, try out our Retro Arcade!!
-```bash
-zarf package deploy oci://defenseunicorns/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub
+
+# Now you are ready to deploy any Zarf Package, try out our Retro Arcade!!
+zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub
 ```
 
 :::note
