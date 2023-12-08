@@ -362,12 +362,12 @@ github.com/alibabacloud-go/tea-xml v1.1.3/go.mod h1:Rq08vgCcCAjHyRi/M7xlHKUykZCE
 github.com/aliyun/credentials-go v1.1.2/go.mod h1:ozcZaMR5kLM7pwtCMEpVmQ242suV6qTJya2bDq4X1Tw=
 github.com/aliyun/credentials-go v1.3.1 h1:uq/0v7kWrxmoLGpqjx7vtQ/s03f0zR//0br/xWDTE28=
 github.com/aliyun/credentials-go v1.3.1/go.mod h1:8jKYhQuDawt8x2+fusqa1Y6mPxemTsBEN04dgcAcYz0=
-github.com/anchore/bubbly v0.0.0-20230801194016-acdb4981b461 h1:xGu4/uMWucwWV0YV3fpFIQZ6KVfS/Wfhmma8t0s0vRo=
-github.com/anchore/bubbly v0.0.0-20230801194016-acdb4981b461/go.mod h1:Ger02eh5NpPm2IqkPAy396HU1KlK3BhOeCljDYXySSk=
+github.com/anchore/bubbly v0.0.0-20231115134915-def0aba654a9 h1:p0ZIe0htYOX284Y4axJaGBvXHU0VCCzLN5Wf5XbKStU=
+github.com/anchore/bubbly v0.0.0-20231115134915-def0aba654a9/go.mod h1:3ZsFB9tzW3vl4gEiUeuSOMDnwroWxIxJelOOHUp8dSw=
 github.com/anchore/clio v0.0.0-20231016125544-c98a83e1c7fc h1:A1KFO+zZZmbNlz1+WKsCF0RKVx6XRoxsAG3lrqH9hUQ=
 github.com/anchore/clio v0.0.0-20231016125544-c98a83e1c7fc/go.mod h1:QeWvNzxsrUNxcs6haQo3OtISfXUXW0qAuiG4EQiz0GU=
-github.com/anchore/fangs v0.0.0-20231106214039-d96c8f312db4 h1:3jHs159SUguPb0YMH/mKN2+eKKme76r+6iwAZ1xlu7c=
-github.com/anchore/fangs v0.0.0-20231106214039-d96c8f312db4/go.mod h1:yPsN3NUGhU5dcBtYBa1dMNzGu1yT5ZAfSjKq9DY4aV8=
+github.com/anchore/fangs v0.0.0-20231201140849-5075d28d6d8b h1:L/djgY7ZbZ/38+wUtdkk398W3PIBJLkt1N8nU/7e47A=
+github.com/anchore/fangs v0.0.0-20231201140849-5075d28d6d8b/go.mod h1:TLcE0RE5+8oIx2/NPWem/dq1DeaMoC+fPEH7hoSzPLo=
 github.com/anchore/go-logger v0.0.0-20230725134548-c21dafa1ec5a h1:nJ2G8zWKASyVClGVgG7sfM5mwoZlZ2zYpIzN2OhjWkw=
 github.com/anchore/go-logger v0.0.0-20230725134548-c21dafa1ec5a/go.mod h1:ubLFmlsv8/DFUQrZwY5syT5/8Er3ugSr4rDFwHsE3hg=
 github.com/anchore/go-macholibre v0.0.0-20220308212642-53e6d0aaf6fb h1:iDMnx6LIjtjZ46C0akqveX83WFzhpTD3eqOthawb5vU=
@@ -384,8 +384,6 @@ github.com/anchore/packageurl-go v0.1.1-0.20230104203445-02e0a6721501 h1:AV7qjwM
 github.com/anchore/packageurl-go v0.1.1-0.20230104203445-02e0a6721501/go.mod h1:Blo6OgJNiYF41ufcgHKkbCKF2MDOMlrqhXv/ij6ocR4=
 github.com/anchore/stereoscope v0.0.0-20231117203853-3610f4ef3e83 h1:mxGIOmj+asEm8LUkPTG3/v0hi27WIlDVjiEVsUB9eqY=
 github.com/anchore/stereoscope v0.0.0-20231117203853-3610f4ef3e83/go.mod h1:GKAnytSVV1hoqB5r5Gd9M5Ph3Rzqq0zPdEJesewjC2w=
-github.com/anchore/syft v0.98.0 h1:mPDah48zZCFeSiGweqPd2C2++rOUh3/cAZylEy1VPwU=
-github.com/anchore/syft v0.98.0/go.mod h1:FMj8zZFF3mP4IAuTxb6n14CZ6ouWXpI9RZqXpnkLK+Y=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
 github.com/andybalholm/brotli v1.0.1/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
 github.com/andybalholm/brotli v1.0.6 h1:Yf9fFpf49Zrxb9NlQaluyE92/+X7UVHlhMNJN2sxfOI=
@@ -595,6 +593,8 @@ github.com/daviddengcn/go-colortext v1.0.0 h1:ANqDyC0ys6qCSvuEK7l3g5RaehL/Xck9EX
 github.com/daviddengcn/go-colortext v1.0.0/go.mod h1:zDqEI5NVUop5QPpVJUxE9UO10hRnmkD5G4Pmri9+m4c=
 github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6 h1:gwevOZ0fxT2nzM9hrtdPbsiOHjFqDRIYMzJHba3/G6Q=
 github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6/go.mod h1:StKLYMmPj1R5yIs6CK49EkcW1TvUYuw5Vri+LRk7Dy8=
+github.com/defenseunicorns/syft v0.75.1-0.20231208224950-c034a9085244 h1:CN0/B/RN08JFII11nN54nIYfc2yxhdkaNbfDOytB76M=
+github.com/defenseunicorns/syft v0.75.1-0.20231208224950-c034a9085244/go.mod h1:iD9FSCgyXpX+5Ze0BCzI7fngzT97kzaCqGnCdcQyF6E=
 github.com/deitch/magic v0.0.0-20230404182410-1ff89d7342da h1:ZOjWpVsFZ06eIhnh4mkaceTiVoktdU67+M7KDHJ268M=
 github.com/deitch/magic v0.0.0-20230404182410-1ff89d7342da/go.mod h1:B3tI9iGHi4imdLi4Asdha1Sc6feLMTfPLXh9IUYmysk=
 github.com/depcheck-test/depcheck-test v0.0.0-20220607135614-199033aaa936 h1:foGzavPWwtoyBvjWyKJYDYsyzy+23iBV7NKTwdk+LRY=
