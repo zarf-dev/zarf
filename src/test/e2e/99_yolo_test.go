@@ -49,6 +49,10 @@ func TestYOLOMode(t *testing.T) {
 }
 
 func TestDevDeploy(t *testing.T) {
+	// Don't run this test in appliance mode
+	if e2e.ApplianceMode {
+		return
+	}
 	e2e.SetupWithCluster(t)
 
 	stdOut, stdErr, err := e2e.Zarf("dev", "deploy", "examples/yolo")
