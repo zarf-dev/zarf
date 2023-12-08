@@ -41,7 +41,7 @@ components:
     charts:
       - name: longhorn
         url:  https://charts.longhorn.io
-        version: 1.4.0
+        version: 1.5.3
         namespace: longhorn-system
         valuesFiles:
         - values.yaml
