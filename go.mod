@@ -4,8 +4,9 @@ go 1.21.5
 
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema https://github.com/gojsonschema/gojsonschema/pull/5
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
+
 // TODO (@WSTARR): Pending merge into github.com/anchore/syft
-replace github.com/anchore/syft => github.com/defenseunicorns/syft v0.75.1-0.20231208224950-c034a9085244
+replace github.com/anchore/syft => github.com/defenseunicorns/syft v0.75.1-0.20231208231130-562ba667d3d1
 
 require (
 	cuelang.org/go v0.7.0
