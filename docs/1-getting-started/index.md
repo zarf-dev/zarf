@@ -16,7 +16,7 @@ Trying out Zarf is as simple as:
 <Tabs>
 <TabItem value="macOS">
 
-:::info
+:::note
 
 This quick start requires you to already have:
 
@@ -50,7 +50,7 @@ zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.de
 </TabItem>
 <TabItem value="Linux">
 
-:::info
+:::note
 
 This quick start requires you to already have:
 
@@ -83,7 +83,7 @@ zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.de
 # (Select 'Y' to confirm deployment)
 ```
 
-:::note
+:::tip
 
 This example shows how to install Zarf with the official (📜) `defenseunicorns` Homebrew tap, however there are many other options to install Zarf on Linux such as:
 
@@ -100,7 +100,7 @@ This example shows how to install Zarf with the official (📜) `defenseunicorns
 ## Windows Commands
 
 
-:::info
+:::note
 
 There is currently no Zarf quick start for Windows, though you can learn how to install Zarf from our Github Releases by visiting the [Installing Zarf page](./0-installing-zarf.md#downloading-the-cli-from-github-releases).
 
