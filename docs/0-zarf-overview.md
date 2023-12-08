@@ -159,6 +159,6 @@ In this use case, you configure Zarf to initialize a cluster that already exists
 
 :::tip
 
-To quickly try out Zarf for yourself see the [Zarf Quick Start](./1-quick-start.md)!
+To quickly try out Zarf for yourself see the [Zarf Quick Start](./1-getting-started/index.md#quick-start)!
 
 :::

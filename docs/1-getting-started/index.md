@@ -23,7 +23,7 @@ This quick start requires you to already have:
 - [Homebrew](https://brew.sh/) package manager installed on your machine.
 - [Docker](https://www.docker.com/) installed and running on your machine.
 
-For more install options please visit our [Getting Started page](./1-getting-started/index.md).
+For more install options please visit our [Installing Zarf page](./2-installing-zarf.md).
 
 :::
 
@@ -70,7 +70,7 @@ This quick start requires you to already have:
 - [Homebrew](https://brew.sh/) package manager installed on your machine.
 - [Docker](https://www.docker.com/) installed and running on your machine.
 
-For more install options please visit our [Getting Started page](./1-getting-started/index.md).
+For more install options please visit our [Installing Zarf page](./2-installing-zarf.md).
 
 :::
 
@@ -98,7 +98,7 @@ zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.de
 
 :::info
 
-There is currently no Zarf Quick Start for Windows, though you can learn how to install Zarf from our Github Releases by visiting the [Getting Started page](./1-getting-started/index.md#downloading-from-github-releases)
+There is currently no Zarf quick start for Windows, though you can learn how to install Zarf from our Github Releases by visiting the [Installing Zarf page](./2-installing-zarf.md).
 
 :::
 
