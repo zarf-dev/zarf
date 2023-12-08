@@ -66,7 +66,7 @@ func TestValidateSchema(t *testing.T) {
 		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
 		err := validateSchema(&validator)
 		require.NoError(t, err)
-		require.Empty(t, validator.errors)
+		require.Empty(t, validator.findings)
 	})
 
 	t.Run("validate schema fail", func(t *testing.T) {
@@ -75,16 +75,15 @@ func TestValidateSchema(t *testing.T) {
 		err := validateSchema(&validator)
 		require.NoError(t, err)
 		config.NoColor = true
-		require.Equal(t, ".components.[0].import: Additional property not-path is not allowed", validator.errors[0].String())
-		require.Equal(t, ".components.[1].import.path: Invalid type. Expected: string, given: integer", validator.errors[1].String())
+		require.Equal(t, ".components.[0].import: Additional property not-path is not allowed", validator.findings[0].String())
+		require.Equal(t, ".components.[1].import.path: Invalid type. Expected: string, given: integer", validator.findings[1].String())
 	})
 
 	t.Run("Template in component import success", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, goodZarfPackage)
 		validator := Validator{typedZarfPackage: unmarshalledYaml}
 		lintComponents(&validator)
-		require.Empty(t, validator.warnings)
-		require.Empty(t, validator.errors)
+		require.Empty(t, validator.findings)
 	})
 
 	t.Run("Template in component import failure", func(t *testing.T) {
@@ -94,8 +93,8 @@ func TestValidateSchema(t *testing.T) {
 		URLComponent := types.ZarfComponent{Import: types.ZarfComponentImport{URL: ociPathVar}}
 		validator := Validator{typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{pathComponent, URLComponent}}}
 		lintUnEvaledVariables(&validator)
-		require.Equal(t, pathVar, validator.warnings[0].item)
-		require.Equal(t, ociPathVar, validator.warnings[1].item)
+		require.Equal(t, pathVar, validator.findings[0].item)
+		require.Equal(t, ociPathVar, validator.findings[1].item)
 	})
 
 	t.Run("Unpinnned repo warning", func(t *testing.T) {
@@ -105,8 +104,8 @@ func TestValidateSchema(t *testing.T) {
 			unpinnedRepo,
 			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1"}}
 		checkForUnpinnedRepos(&validator, 0, component, "")
-		require.Equal(t, unpinnedRepo, validator.warnings[0].item)
-		require.Equal(t, len(validator.warnings), 1)
+		require.Equal(t, unpinnedRepo, validator.findings[0].item)
+		require.Equal(t, len(validator.findings), 1)
 	})
 
 	t.Run("Unpinnned image warning", func(t *testing.T) {
@@ -118,10 +117,10 @@ func TestValidateSchema(t *testing.T) {
 			"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
 			badImage}}
 		checkForUnpinnedImages(&validator, 0, component, "")
-		require.Equal(t, unpinnedImage, validator.warnings[0].item)
-		require.Equal(t, 1, len(validator.warnings))
-		require.Equal(t, badImage, validator.errors[0].item)
-		require.Equal(t, 1, len(validator.errors))
+		require.Equal(t, unpinnedImage, validator.findings[0].item)
+		require.Equal(t, 1, len(validator.findings))
+		require.Equal(t, badImage, validator.findings[1].item)
+		require.Equal(t, 1, len(validator.findings))
 	})
 
 	t.Run("Unpinnned file warning", func(t *testing.T) {
@@ -134,8 +133,8 @@ func TestValidateSchema(t *testing.T) {
 		}
 		component := types.ZarfComponent{Files: zarfFiles}
 		checkForUnpinnedFiles(&validator, 0, component, "")
-		require.Equal(t, filename, validator.warnings[0].item)
-		require.Equal(t, 1, len(validator.warnings))
+		require.Equal(t, filename, validator.findings[0].item)
+		require.Equal(t, 1, len(validator.findings))
 	})
 
 	t.Run("Wrap standalone numbers in bracket", func(t *testing.T) {

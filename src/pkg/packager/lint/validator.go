@@ -13,17 +13,33 @@ import (
 	"github.com/fatih/color"
 )
 
+type ValidationType int
+
+const (
+	validationError   ValidationType = 1
+	validationWarning ValidationType = 2
+)
+
 type validatorMessage struct {
-	yqPath      string
-	filePath    string
-	description string
-	item        string
+	yqPath         string
+	filePath       string
+	description    string
+	item           string
+	packageName    string
+	validationType ValidationType
+}
+
+func (vt ValidationType) String() string {
+	if vt == validationError {
+		return utils.ColorWrap("Error", color.FgRed)
+	} else if vt == validationWarning {
+		return utils.ColorWrap("Warning", color.FgYellow)
+	} else {
+		return ""
+	}
 }
 
 func (v validatorMessage) String() string {
-	// if v.filePath != "" {
-	// 	v.filePath = fmt.Sprintf(" %s", v.filePath)
-	// }
 	if v.item != "" {
 		v.item = fmt.Sprintf(" - %s", v.item)
 	}
@@ -35,8 +51,7 @@ func (v validatorMessage) String() string {
 
 // Validator holds the warnings/errors and messaging that we get from validation
 type Validator struct {
-	warnings           []validatorMessage
-	errors             []validatorMessage
+	findings           []validatorMessage
 	jsonSchema         []byte
 	typedZarfPackage   types.ZarfPackage
 	untypedZarfPackage interface{}
@@ -45,7 +60,7 @@ type Validator struct {
 
 // DisplayFormattedMessage message sent to user based on validator results
 func (v Validator) DisplayFormattedMessage() {
-	if !v.hasWarnings() && !v.hasErrors() {
+	if !v.hasFindings() {
 		message.Successf("0 findings for %q", v.typedZarfPackage.Metadata.Name)
 	}
 	v.printValidationTable2()
@@ -53,51 +68,52 @@ func (v Validator) DisplayFormattedMessage() {
 
 // IsSuccess returns true if there are not any errors
 func (v Validator) IsSuccess() bool {
-	return !v.hasErrors()
+	return !v.hasFindings()
 }
 
-func (v Validator) printValidationTable() {
-	if v.hasWarnings() || v.hasErrors() {
-		header := []string{"Type", "Path", "Message"}
-		connectData := [][]string{}
-		for _, warning := range v.warnings {
-			connectData = append(connectData,
-				[]string{utils.ColorWrap("Warning", color.FgYellow), warning.getPath(), warning.String()})
-		}
-		for _, validatorError := range v.errors {
-			connectData = append(connectData,
-				[]string{utils.ColorWrap("Error", color.FgRed), validatorError.getPath(), validatorError.String()})
-		}
-		message.Table(header, connectData)
-		message.Info(v.getWarningAndErrorCount())
-	}
-}
+// func (v Validator) printValidationTable() {
+// 	if v.hasWarnings() || v.hasErrors() {
+// 		header := []string{"Type", "Path", "Message"}
+// 		connectData := [][]string{}
+// 		for _, warning := range v.findings {
+// 			connectData = append(connectData,
+// 				[]string{utils.ColorWrap("Warning", color.FgYellow), warning.getPath(), warning.String()})
+// 		}
+// 		for _, validatorError := range v.errors {
+// 			connectData = append(connectData,
+// 				[]string{utils.ColorWrap("Error", color.FgRed), validatorError.getPath(), validatorError.String()})
+// 		}
+// 		message.Table(header, connectData)
+// 		message.Info(v.getWarningAndErrorCount())
+// 	}
+// }
 
 func (v Validator) printValidationTable2() {
 	differentPaths := v.getUniquePaths()
-	if v.hasWarnings() || v.hasErrors() {
+	if v.hasFindings() {
 		for _, path := range differentPaths {
 			header := []string{"Type", "Path", "Message"}
 			connectData := make(map[string][][]string)
 			item := path
-			for _, warning := range v.warnings {
-				if warning.filePath == path {
+			for _, finding := range v.findings {
+				if finding.filePath == path {
 					if item == "" {
 						item = "original"
 					}
 					connectData[item] = append(connectData[item],
-						[]string{utils.ColorWrap("Warning", color.FgYellow), warning.getPath2(), warning.String()})
+						[]string{utils.ColorWrap(finding.validationType.String(), color.FgYellow),
+							finding.getPath(), finding.String()})
 				}
 			}
-			for _, validatorError := range v.errors {
-				if validatorError.filePath == path {
-					if item == "" {
-						item = "original"
-					}
-					connectData[item] = append(connectData[item],
-						[]string{utils.ColorWrap("Error", color.FgRed), validatorError.getPath2(), validatorError.String()})
-				}
-			}
+			// for _, validatorError := range v.errors {
+			// 	if validatorError.filePath == path {
+			// 		if item == "" {
+			// 			item = "original"
+			// 		}
+			// 		connectData[item] = append(connectData[item],
+			// 			[]string{utils.ColorWrap("Error", color.FgRed), validatorError.getPath(), validatorError.String()})
+			// 	}
+			// }
 
 			message.Infof("Component at path: %s", item)
 			message.Table(header, connectData[item])
@@ -117,14 +133,9 @@ func contains(slice []string, item string) bool {
 
 func (v Validator) getUniquePaths() []string {
 	paths := []string{}
-	for _, warning := range v.warnings {
+	for _, warning := range v.findings {
 		if !contains(paths, warning.filePath) {
 			paths = append(paths, warning.filePath)
-		}
-	}
-	for _, validatorError := range v.errors {
-		if !contains(paths, validatorError.filePath) {
-			paths = append(paths, validatorError.filePath)
 		}
 	}
 	return paths
@@ -134,47 +145,32 @@ func (vm validatorMessage) getPath() string {
 	if vm.yqPath == "" {
 		return ""
 	}
-	if vm.filePath != "" {
-		return utils.ColorWrap(fmt.Sprintf("%s %s", vm.yqPath, vm.filePath), color.FgCyan)
-	}
 	return utils.ColorWrap(vm.yqPath, color.FgCyan)
 }
 
-func (vm validatorMessage) getPath2() string {
-	if vm.yqPath == "" {
-		return ""
-	}
-	// if vm.filePath != "" {
-	// 	return utils.ColorWrap(fmt.Sprintf("%s %s", vm.yqPath, vm.filePath), color.FgCyan)
-	// }
-	return utils.ColorWrap(vm.yqPath, color.FgCyan)
-}
+// func (v Validator) getWarningAndErrorCount() string {
+// 	wordWarning := "warnings"
+// 	if len(v.findings) == 1 {
+// 		wordWarning = "warning"
+// 	}
+// 	wordError := "errors"
+// 	if len(v.errors) == 1 {
+// 		wordError = "error"
+// 	}
+// 	return fmt.Sprintf("%d %s and %d %s in %q",
+// 		len(v.findings), wordWarning, len(v.errors), wordError, v.typedZarfPackage.Metadata.Name)
+// }
 
-func (v Validator) getWarningAndErrorCount() string {
-	wordWarning := "warnings"
-	if len(v.warnings) == 1 {
-		wordWarning = "warning"
-	}
-	wordError := "errors"
-	if len(v.errors) == 1 {
-		wordError = "error"
-	}
-	return fmt.Sprintf("%d %s and %d %s in %q",
-		len(v.warnings), wordWarning, len(v.errors), wordError, v.typedZarfPackage.Metadata.Name)
-}
-
-func (v Validator) hasWarnings() bool {
-	return len(v.warnings) > 0
-}
-
-func (v Validator) hasErrors() bool {
-	return len(v.errors) > 0
+func (v Validator) hasFindings() bool {
+	return len(v.findings) > 0
 }
 
 func (v *Validator) addWarning(vmessage validatorMessage) {
-	v.warnings = append(v.warnings, vmessage)
+	vmessage.validationType = validationWarning
+	v.findings = append(v.findings, vmessage)
 }
 
 func (v *Validator) addError(vMessage validatorMessage) {
-	v.errors = append(v.errors, vMessage)
+	vMessage.validationType = validationError
+	v.findings = append(v.findings, vMessage)
 }

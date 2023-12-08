@@ -133,9 +133,9 @@ func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCr
 			}
 			_, present := createOpts.SetVariables[key]
 			if !present && !validator.hasUnSetVarWarning {
-				validator.warnings = append([]validatorMessage{{
+				validator.findings = append([]validatorMessage{{
 					description: "There are variables that are unset and won't be evaluated during lint",
-				}}, validator.warnings...)
+				}}, validator.findings...)
 				validator.hasUnSetVarWarning = true
 			}
 		}
