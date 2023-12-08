@@ -27,7 +27,8 @@ type Node struct {
 	vars   []types.ZarfPackageVariable
 	consts []types.ZarfPackageConstant
 
-	relativeToHead string
+	relativeToHead      string
+	originalPackageName string
 
 	prev *Node
 	next *Node
@@ -36,6 +37,11 @@ type Node struct {
 // GetIndex returns the .components index location for this node's source `zarf.yaml`
 func (n *Node) GetIndex() int {
 	return n.index
+}
+
+// OriginalPackageName returns the .metadata.name of the zarf package the component originated from
+func (n *Node) GetOriginalPackageName() string {
+	return n.originalPackageName
 }
 
 // GetRelativeToHead gets the path from downstream zarf file to upstream imported zarf file
@@ -83,15 +89,17 @@ func (ic *ImportChain) Tail() *Node {
 	return ic.tail
 }
 
-func (ic *ImportChain) append(c types.ZarfComponent, index int, relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
+func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageName string,
+	relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
 	node := &Node{
-		ZarfComponent:  c,
-		index:          index,
-		relativeToHead: relativeToHead,
-		vars:           vars,
-		consts:         consts,
-		prev:           nil,
-		next:           nil,
+		ZarfComponent:       c,
+		index:               index,
+		originalPackageName: originalPackageName,
+		relativeToHead:      relativeToHead,
+		vars:                vars,
+		consts:              consts,
+		prev:                nil,
+		next:                nil,
 	}
 	if ic.head == nil {
 		ic.head = node
@@ -105,14 +113,14 @@ func (ic *ImportChain) append(c types.ZarfComponent, index int, relativeToHead s
 }
 
 // NewImportChain creates a new import chain from a component
-func NewImportChain(head types.ZarfComponent, index int, arch, flavor string) (*ImportChain, error) {
+func NewImportChain(head types.ZarfComponent, index int, originalPackageName, arch, flavor string) (*ImportChain, error) {
 	if arch == "" {
 		return nil, fmt.Errorf("cannot build import chain: architecture must be provided")
 	}
 
 	ic := &ImportChain{}
 
-	ic.append(head, index, ".", nil, nil)
+	ic.append(head, index, originalPackageName, ".", nil, nil)
 
 	history := []string{}
 
@@ -200,7 +208,7 @@ func NewImportChain(head types.ZarfComponent, index int, arch, flavor string) (*
 			}
 		}
 
-		ic.append(found[0], index[0], filepath.Join(history...), pkg.Variables, pkg.Constants)
+		ic.append(found[0], index[0], pkg.Metadata.Name, filepath.Join(history...), pkg.Variables, pkg.Constants)
 		node = node.next
 	}
 	return ic, nil

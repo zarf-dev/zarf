@@ -43,14 +43,14 @@ func TestNewImportChain(t *testing.T) {
 			expectedErrorMessage: "detected circular import chain",
 		},
 	}
-
+	testPackageName := "test-package"
 	for _, testCase := range testCases {
 		testCase := testCase
 
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := NewImportChain(testCase.head, 0, testCase.arch, testCase.flavor)
+			_, err := NewImportChain(testCase.head, 0, testPackageName, testCase.arch, testCase.flavor)
 			require.Contains(t, err.Error(), testCase.expectedErrorMessage)
 		})
 	}
@@ -441,17 +441,18 @@ func TestMerging(t *testing.T) {
 
 func createChainFromSlice(components []types.ZarfComponent) (ic *ImportChain) {
 	ic = &ImportChain{}
+	testPackageName := "test-package"
 
 	if len(components) == 0 {
 		return ic
 	}
 
-	ic.append(components[0], 0, ".", nil, nil)
+	ic.append(components[0], 0, testPackageName, ".", nil, nil)
 	history := []string{}
 
 	for idx := 1; idx < len(components); idx++ {
 		history = append(history, components[idx-1].Import.Path)
-		ic.append(components[idx], idx, filepath.Join(history...), nil, nil)
+		ic.append(components[idx], idx, testPackageName, filepath.Join(history...), nil, nil)
 	}
 
 	return ic

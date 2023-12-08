@@ -29,7 +29,7 @@ func (p *Packager) composeComponents() error {
 		component.Only.Flavor = ""
 
 		// build the import chain
-		chain, err := composer.NewImportChain(component, i, arch, p.cfg.CreateOpts.Flavor)
+		chain, err := composer.NewImportChain(component, i, p.cfg.Pkg.Metadata.Name, arch, p.cfg.CreateOpts.Flavor)
 		if err != nil {
 			return err
 		}
