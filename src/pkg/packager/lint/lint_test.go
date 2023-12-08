@@ -103,7 +103,7 @@ func TestValidateSchema(t *testing.T) {
 		component := types.ZarfComponent{Repos: []string{
 			unpinnedRepo,
 			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1"}}
-		checkForUnpinnedRepos(&validator, 0, component, "", "")
+		checkForUnpinnedRepos(&validator, 0, component, packageKey{})
 		require.Equal(t, unpinnedRepo, validator.findings[0].item)
 		require.Equal(t, len(validator.findings), 1)
 	})
@@ -116,7 +116,7 @@ func TestValidateSchema(t *testing.T) {
 			unpinnedImage,
 			"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
 			badImage}}
-		checkForUnpinnedImages(&validator, 0, component, "", "")
+		checkForUnpinnedImages(&validator, 0, component, packageKey{})
 		require.Equal(t, unpinnedImage, validator.findings[0].item)
 		require.Equal(t, badImage, validator.findings[1].item)
 		require.Equal(t, 2, len(validator.findings))
@@ -132,7 +132,7 @@ func TestValidateSchema(t *testing.T) {
 			},
 		}
 		component := types.ZarfComponent{Files: zarfFiles}
-		checkForUnpinnedFiles(&validator, 0, component, "", "")
+		checkForUnpinnedFiles(&validator, 0, component, packageKey{})
 		require.Equal(t, filename, validator.findings[0].item)
 		require.Equal(t, 1, len(validator.findings))
 	})

@@ -23,8 +23,8 @@ const (
 )
 
 type packageKey struct {
-	filePath string
-	name     string
+	path string
+	name string
 }
 
 type validatorMessage struct {
@@ -49,7 +49,7 @@ func (v validatorMessage) String() string {
 	if v.item != "" {
 		v.item = fmt.Sprintf(" - %s", v.item)
 	}
-	if v.packageKey.filePath == "" && v.yqPath == "" && v.item == "" {
+	if v.packageKey.path == "" && v.yqPath == "" && v.item == "" {
 		return v.description
 	}
 	return fmt.Sprintf("%s%s", v.description, v.item)
@@ -108,8 +108,8 @@ func (v Validator) printValidationTable() {
 		}
 		//We should probably move this println into info
 		pterm.Println()
-		if packageKey.filePath != "" {
-			message.Infof("Linting package %q at %s", packageKey.name, packageKey.filePath)
+		if packageKey.path != "" {
+			message.Infof("Linting package %q at %s", packageKey.name, packageKey.path)
 		} else {
 			message.Infof("Linting package %q", packageKey.name)
 		}

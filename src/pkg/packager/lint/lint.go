@@ -92,24 +92,25 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 			if path == "" {
 				path = node.GetRelativeToHead()
 			}
-			checkForVarInComponentImport(validator, node.GetIndex(), node.ZarfComponent, path, node.GetOriginalPackageName())
-			fillComponentTemplate(validator, node, createOpts)
-			lintComponent(validator, node.GetIndex(), node.ZarfComponent, path, node.GetOriginalPackageName())
+			pkgKey := packageKey{path: path, name: node.GetOriginalPackageName()}
+			checkForVarInComponentImport(validator, node.GetIndex(), node.ZarfComponent, pkgKey)
+			fillComponentTemplate(validator, node, createOpts, pkgKey)
+			lintComponent(validator, node.GetIndex(), node.ZarfComponent, pkgKey)
 			node = node.Next()
 		}
 	}
 }
 
-func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts types.ZarfCreateOptions) {
+func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts types.ZarfCreateOptions, pkgKey packageKey) {
 
 	err := packager.ReloadComponentTemplate(&node.ZarfComponent)
 	if err != nil {
 		validator.addWarning(validatorMessage{
 			description: fmt.Sprintf("unable to find components %s", err),
-			packageKey:  packageKey{filePath: node.GetRelativeToHead(), name: node.GetOriginalPackageName()},
+			packageKey:  packageKey{path: node.GetRelativeToHead(), name: node.GetOriginalPackageName()},
 		})
 	}
-	fillYamlTemplate(validator, node, createOpts, node.GetOriginalPackageName(), node.GetRelativeToHead())
+	fillYamlTemplate(validator, node, createOpts, pkgKey)
 }
 
 func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions) {
@@ -122,13 +123,12 @@ func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions
 		})
 	}
 
-	fillYamlTemplate(validator, &validator.typedZarfPackage, createOpts, validator.typedZarfPackage.Metadata.Name, "")
+	fillYamlTemplate(validator, &validator.typedZarfPackage,
+		createOpts, packageKey{name: validator.typedZarfPackage.Metadata.Name, path: ""})
 }
 
-func fillYamlTemplate(validator *Validator, yamlObj any,
-	createOpts types.ZarfCreateOptions, pkgName string, pkgPath string) {
+func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCreateOptions, pkgKey packageKey) {
 	templateMap := map[string]string{}
-	pkgKey := packageKey{name: pkgName, filePath: pkgPath}
 
 	setVarsAndWarn := func(templatePrefix string, deprecated bool) {
 		yamlTemplates, err := utils.FindYamlTemplates(yamlObj, templatePrefix, "###")
@@ -185,23 +185,23 @@ func isPinnedRepo(repo string) bool {
 
 func lintComponents(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
-		lintComponent(validator, i, component, "", validator.typedZarfPackage.Metadata.Name)
+		lintComponent(validator, i, component, packageKey{path: "", name: validator.typedZarfPackage.Metadata.Name})
 	}
 }
 
-func lintComponent(validator *Validator, index int, component types.ZarfComponent, path string, packageName string) {
-	checkForUnpinnedRepos(validator, index, component, path, packageName)
-	checkForUnpinnedImages(validator, index, component, path, packageName)
-	checkForUnpinnedFiles(validator, index, component, path, packageName)
+func lintComponent(validator *Validator, index int, component types.ZarfComponent, pkgKey packageKey) {
+	checkForUnpinnedRepos(validator, index, component, pkgKey)
+	checkForUnpinnedImages(validator, index, component, pkgKey)
+	checkForUnpinnedFiles(validator, index, component, pkgKey)
 }
 
-func checkForUnpinnedRepos(validator *Validator, index int, component types.ZarfComponent, path string, pkgName string) {
+func checkForUnpinnedRepos(validator *Validator, index int, component types.ZarfComponent, pkgKey packageKey) {
 	for j, repo := range component.Repos {
 		repoYqPath := fmt.Sprintf(".components.[%d].repos.[%d]", index, j)
 		if !isPinnedRepo(repo) {
 			validator.addWarning(validatorMessage{
 				yqPath:      repoYqPath,
-				packageKey:  packageKey{filePath: path, name: pkgName},
+				packageKey:  pkgKey,
 				description: "Unpinned repository",
 				item:        repo,
 			})
@@ -209,14 +209,14 @@ func checkForUnpinnedRepos(validator *Validator, index int, component types.Zarf
 	}
 }
 
-func checkForUnpinnedImages(validator *Validator, index int, component types.ZarfComponent, path string, pkgName string) {
+func checkForUnpinnedImages(validator *Validator, index int, component types.ZarfComponent, pkgKey packageKey) {
 	for j, image := range component.Images {
 		imageYqPath := fmt.Sprintf(".components.[%d].images.[%d]", index, j)
 		pinnedImage, err := isPinnedImage(image)
 		if err != nil {
 			validator.addError(validatorMessage{
 				yqPath:      imageYqPath,
-				packageKey:  packageKey{filePath: path, name: pkgName},
+				packageKey:  pkgKey,
 				description: "Invalid image format",
 				item:        image,
 			})
@@ -225,7 +225,7 @@ func checkForUnpinnedImages(validator *Validator, index int, component types.Zar
 		if !pinnedImage {
 			validator.addWarning(validatorMessage{
 				yqPath:      imageYqPath,
-				packageKey:  packageKey{filePath: path, name: pkgName},
+				packageKey:  pkgKey,
 				description: "Image not pinned with digest",
 				item:        image,
 			})
@@ -233,14 +233,13 @@ func checkForUnpinnedImages(validator *Validator, index int, component types.Zar
 	}
 }
 
-func checkForUnpinnedFiles(validator *Validator, index int,
-	component types.ZarfComponent, path string, pkgName string) {
+func checkForUnpinnedFiles(validator *Validator, index int, component types.ZarfComponent, pkgKey packageKey) {
 	for j, file := range component.Files {
 		fileYqPath := fmt.Sprintf(".components.[%d].files.[%d]", index, j)
 		if file.Shasum == "" && helpers.IsURL(file.Source) {
 			validator.addWarning(validatorMessage{
 				yqPath:      fileYqPath,
-				packageKey:  packageKey{filePath: path, name: pkgName},
+				packageKey:  pkgKey,
 				description: "No shasum for remote file",
 				item:        file.Source,
 			})
@@ -250,15 +249,15 @@ func checkForUnpinnedFiles(validator *Validator, index int,
 
 func lintUnEvaledVariables(validator *Validator) {
 	for i, component := range validator.typedZarfPackage.Components {
-		checkForVarInComponentImport(validator, i, component, "", validator.typedZarfPackage.Metadata.Name)
+		checkForVarInComponentImport(validator, i, component, packageKey{name: validator.typedZarfPackage.Metadata.Name, path: ""})
 	}
 }
 
-func checkForVarInComponentImport(validator *Validator, index int, component types.ZarfComponent, path string, pkgName string) {
+func checkForVarInComponentImport(validator *Validator, index int, component types.ZarfComponent, pkgKey packageKey) {
 	if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
 		validator.addWarning(validatorMessage{
 			yqPath:      fmt.Sprintf(".components.[%d].import.path", index),
-			packageKey:  packageKey{filePath: path, name: pkgName},
+			packageKey:  pkgKey,
 			description: "Zarf does not evaluate variables at component.x.import.path",
 			item:        component.Import.Path,
 		})
@@ -266,7 +265,7 @@ func checkForVarInComponentImport(validator *Validator, index int, component typ
 	if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
 		validator.addWarning(validatorMessage{
 			yqPath:      fmt.Sprintf(".components.[%d].import.url", index),
-			packageKey:  packageKey{filePath: path, name: pkgName},
+			packageKey:  pkgKey,
 			description: "Zarf does not evaluate variables at component.x.import.url",
 			item:        component.Import.URL,
 		})
