@@ -144,7 +144,7 @@ You can get the default 'init' package for your version of Zarf by visiting the 
 
 If you are online on the machine with cluster access you can also run `zarf init` without the `--confirm` flag to be given the option to download the matching version of the default 'init' package or you can use the `zarf tools download-init` command to download a copy to your machine.
 
-:::note
+:::tip
 
 You can build your own custom 'init' package too if you'd like. For this you should check out the [Creating a Custom 'init' Package Tutorial](../5-zarf-tutorials/8-custom-init-packages.md).
 
