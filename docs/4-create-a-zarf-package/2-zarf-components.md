@@ -116,7 +116,7 @@ Kustomizations are handled a bit differently than normal manifests in that Zarf 
 
 <Properties item="ZarfComponent" include={["images"]} />
 
-Images can either be discovered manually, or automatically by using [`zarf prepare find-images`](../2-the-zarf-cli/100-cli-commands/zarf_prepare_find-images.md).
+Images can either be discovered manually, or automatically by using [`zarf prepare find-images`](../3-the-zarf-cli/100-cli-commands/zarf_prepare_find-images.md).
 
 :::note
 

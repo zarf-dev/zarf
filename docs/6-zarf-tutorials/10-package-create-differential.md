@@ -13,7 +13,7 @@ In this tutorial, you will create a differential package using Zarf.  This is us
 
 For following along locally, please ensure the following prerequisites are met:
 
-- Zarf binary installed on your `$PATH`: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
+- Zarf binary installed on your `$PATH`: ([Installing Zarf](../2-getting-started/index.md#installing-zarf))
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 
 ## Youtube Tutorial

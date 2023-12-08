@@ -2,7 +2,7 @@
 
 The 'init' package is a special Zarf Package (denoted by `kind: ZarfInitConfig` in its `zarf.yaml`) that initializes a cluster with the requisite air gap services when running `zarf init`.  This allows future Zarf Packages to store any required resources (i.e. container images and git repositories) so that they can be retrieved later.
 
-The default 'init' package that Zarf ships is defined in the `zarf.yaml` that lives at the [root of the Zarf repository](https://github.com/defenseunicorns/zarf/blob/main/zarf.yaml), and is constructed from composed components that provide a foundation for customization.  If you would like to change the behavior of the 'init' package you can do so by modifying this `zarf.yaml` or any of the composed components that it references and running `zarf package create` at the root of the repository.  You can learn more about creating a custom init package in the [Creating a Custom 'init' Package Tutorial](../5-zarf-tutorials/8-custom-init-packages.md).
+The default 'init' package that Zarf ships is defined in the `zarf.yaml` that lives at the [root of the Zarf repository](https://github.com/defenseunicorns/zarf/blob/main/zarf.yaml), and is constructed from composed components that provide a foundation for customization.  If you would like to change the behavior of the 'init' package you can do so by modifying this `zarf.yaml` or any of the composed components that it references and running `zarf package create` at the root of the repository.  You can learn more about creating a custom init package in the [Creating a Custom 'init' Package Tutorial](../6-zarf-tutorials/8-custom-init-packages.md).
 
 Upon deployment, the init package creates a `zarf` namespace within your K8s cluster and deploys pods, services, and secrets to that namespace based on the components selected for deployment.
 
@@ -24,7 +24,7 @@ The `zarf-agent` will mutate any resources it sees that have not already been pa
 
 In addition to the required `zarf-agent` component, Zarf also offers components that provide additional functionality and can be enabled as needed based on your desired end-state.
 
-In most scenarios, Zarf will also deploy an internal registry using the three components described below. However, Zarf can be configured to use an already existing registry with the `--registry-*` flags when running `zarf init` (detailed information on all `zarf init` command flags can be found in the [zarf init CLI](../2-the-zarf-cli/100-cli-commands/zarf_init.md) section). This option skips the injector and seed process, and will not deploy a registry inside of the cluster. Instead, it uploads any images to the externally configured registry.
+In most scenarios, Zarf will also deploy an internal registry using the three components described below. However, Zarf can be configured to use an already existing registry with the `--registry-*` flags when running `zarf init` (detailed information on all `zarf init` command flags can be found in the [zarf init CLI](../3-the-zarf-cli/100-cli-commands/zarf_init.md) section). This option skips the injector and seed process, and will not deploy a registry inside of the cluster. Instead, it uploads any images to the externally configured registry.
 
 | Components              | Description                                                                                                                     |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -46,7 +46,7 @@ The Zarf Registry is initially injected as a series of config maps that bootstra
 
 :::tip
 
-You can further customize how the registry behaves by setting variables such as `REGISTRY_PVC_SIZE` with a [config file](../2-the-zarf-cli/index.md#using-a-config-file-to-make-cli-command-flags-declarative) or `--set` on `zarf init`.
+You can further customize how the registry behaves by setting variables such as `REGISTRY_PVC_SIZE` with a [config file](../3-the-zarf-cli/index.md#using-a-config-file-to-make-cli-command-flags-declarative) or `--set` on `zarf init`.
 
 To see a full list of `variables` you can view the [zarf.yaml that defines the registry](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-registry/zarf.yaml).
 
@@ -80,7 +80,7 @@ root@machine ~ # zarf init --components k3s --set K3S_ARGS="" --confirm
 
 :::tip
 
-You can further customize how the git-server behaves by setting variables such as `GIT_SERVER_PVC_SIZE` with a [config file](../2-the-zarf-cli/index.md#using-a-config-file-to-make-cli-command-flags-declarative) or `--set` on `zarf init`.
+You can further customize how the git-server behaves by setting variables such as `GIT_SERVER_PVC_SIZE` with a [config file](../3-the-zarf-cli/index.md#using-a-config-file-to-make-cli-command-flags-declarative) or `--set` on `zarf init`.
 
 To see a full list of `variables` you can view the [zarf.yaml that defines the git-server](https://github.com/defenseunicorns/zarf/blob/main/packages/gitea/zarf.yaml).
 
@@ -88,7 +88,7 @@ To see a full list of `variables` you can view the [zarf.yaml that defines the g
 
 ## What Makes the Init Package Special
 
-Deploying into air gapped environments is a [hard problem](../1-getting-started/0-understand-the-basics.md#what-is-the-air-gap), particularly when the K8s environment doesn't have a container registry for you to store images in already. This results in a dilemma where the container registry image must be introduced to the cluster, but there is no container registry to push it to as the image is not yet in the cluster - chicken, meet egg. To ensure that our approach is distro-agnostic, we developed a unique solution to seed the container registry into the cluster.
+Deploying into air gapped environments is a [hard problem](../2-getting-started/0-understand-the-basics.md#what-is-the-air-gap), particularly when the K8s environment doesn't have a container registry for you to store images in already. This results in a dilemma where the container registry image must be introduced to the cluster, but there is no container registry to push it to as the image is not yet in the cluster - chicken, meet egg. To ensure that our approach is distro-agnostic, we developed a unique solution to seed the container registry into the cluster.
 
 This is done with the `zarf-injector` [component](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-injector/zarf.yaml) which injects a single rust binary (statically compiled) and a series of configmap chunks of a `registry:2` image into an ephemeral pod that is based on an existing image in the cluster.  This gives us a running registry to bootstrap from and deploy the rest of the 'init' package and any other packages down the line.
 

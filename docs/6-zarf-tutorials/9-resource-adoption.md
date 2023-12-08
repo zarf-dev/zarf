@@ -12,7 +12,7 @@ In this tutorial, you will create a test workload prior to initializing Zarf.  A
 
 - Prior to this tutorial you'll want to have a working cluster.  But unlike our other tutorials you **don't want Zarf initialzed**.
 
-- Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
+- Zarf binary installed on your $PATH: ([Installing Zarf](../2-getting-started/index.md#installing-zarf))
 
 ## Youtube Tutorial
 [![Tutorial: Adopt Pre-Existing Resources to Manage with Zarf](../.images/tutorials/adoption_thumbnail.png)](https://youtu.be/r3TBpMXtuNY "Adopt Pre-Existing Resources to Manage with Zarf")

@@ -13,7 +13,7 @@ In this tutorial, we are going to run through how to publish a Zarf package to a
 
 For following along locally, please ensure the following prerequisites are met:
 
-- Zarf binary installed on your `$PATH`: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
+- Zarf binary installed on your `$PATH`: ([Installing Zarf](../2-getting-started/index.md#installing-zarf))
 - Access to a [Registry supporting the OCI Distribution Spec](https://oras.land/implementors/#registries-supporting-oci-artifacts), this tutorial will be using Docker Hub
 - Access to a cluster that has been [initialized with zarf](./1-initializing-a-k8s-cluster.md).
 
@@ -47,7 +47,7 @@ First, create a valid Zarf package definition (`zarf.yaml`), with the `metadata.
 
 Create the package locally:
 
-[CLI Reference](../2-the-zarf-cli/100-cli-commands/zarf_package_create.md)
+[CLI Reference](../3-the-zarf-cli/100-cli-commands/zarf_package_create.md)
 
 <iframe src="/docs/tutorials/publish_and_deploy_create.html" width="100%" height="600px"></iframe>
 
@@ -59,7 +59,7 @@ Your package tarball may be named differently based on your machine's architectu
 
 :::
 
-[CLI Reference](../2-the-zarf-cli/100-cli-commands/zarf_package_publish.md)
+[CLI Reference](../3-the-zarf-cli/100-cli-commands/zarf_package_publish.md)
 
 <iframe src="/docs/tutorials/publish_and_deploy_publish.html" width="100%" height="700px"></iframe>
 
@@ -81,7 +81,7 @@ If you specify a path to a directory containing a `zarf.yaml` (as you would on `
 
 ### Inspect Package
 
-[CLI Reference](../2-the-zarf-cli/100-cli-commands/zarf_package_inspect.md)
+[CLI Reference](../3-the-zarf-cli/100-cli-commands/zarf_package_inspect.md)
 
 Inspecting a Zarf package stored in an OCI registry is the same as inspecting a local package and has the same flags:
 
@@ -90,7 +90,7 @@ Inspecting a Zarf package stored in an OCI registry is the same as inspecting a 
 
 ### Deploy Package
 
-[CLI Reference](../2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md)
+[CLI Reference](../3-the-zarf-cli/100-cli-commands/zarf_package_deploy.md)
 
 Deploying a package stored in an OCI registry is nearly the same experience as deploying a local package:
 
@@ -98,7 +98,7 @@ Deploying a package stored in an OCI registry is nearly the same experience as d
 
 ### Pull Package
 
-[CLI Reference](../2-the-zarf-cli/100-cli-commands/zarf_package_pull.md)
+[CLI Reference](../3-the-zarf-cli/100-cli-commands/zarf_package_pull.md)
 
 Packages can be saved to the local disk in order to deploy a package multiple times without needing to fetch it every time.
 

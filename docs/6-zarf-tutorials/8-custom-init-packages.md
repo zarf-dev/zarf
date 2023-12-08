@@ -4,7 +4,7 @@
 
 In most cases the default Zarf 'init' Package will provide what you need to get started deploying packages into the air gap, however there are cases where you may want to tweak this package to tailor it for your target environment. This could include adding or removing components or including hardened versions of components specific to your use case.
 
-In this tutorial, we will demonstrate how to build a custom [Zarf 'init' Package](../3-create-a-zarf-package/3-zarf-init-package.md) with `zarf package create`.
+In this tutorial, we will demonstrate how to build a custom [Zarf 'init' Package](../4-create-a-zarf-package/3-zarf-init-package.md) with `zarf package create`.
 
 When creating a Zarf 'init' package, you must have a network connection so that Zarf can fetch all of the dependencies and resources necessary to build the package. If your version of the 'init' package is using images from a private registry or is referencing repositories in a private repository, you will need to have your credentials configured on your machine for Zarf to be able to fetch the resources.
 
@@ -17,8 +17,8 @@ When creating a Zarf 'init' package, you must have a network connection so that 
 Before beginning this tutorial you will need the following:
 
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
-- Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
-- (if building a local [`zarf-agent`](../8-faq.md#what-is-the-zarf-agent)) The [Docker CLI](https://docs.docker.com/desktop/) installed and the tools to [Build your own CLI](../2-the-zarf-cli/0-building-your-own-cli.md)
+- Zarf binary installed on your $PATH: ([Installing Zarf](../2-getting-started/index.md#installing-zarf))
+- (if building a local [`zarf-agent`](../8-faq.md#what-is-the-zarf-agent)) The [Docker CLI](https://docs.docker.com/desktop/) installed and the tools to [Build your own CLI](../3-the-zarf-cli/0-building-your-own-cli.md)
 
 ## Building the init-package
 
@@ -62,7 +62,7 @@ After you confirm package creation, Zarf will create the Zarf 'init' package in 
 
 The above will simply build the init package as it is defined for your version of Zarf. To build something custom you will need to make some modifications.
 
-The Zarf 'init' Package is a [composed Zarf Package](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) made up of many sub-Zarf Packages. The root `zarf.yaml` file is defined at the root of the Zarf git repository.
+The Zarf 'init' Package is a [composed Zarf Package](../4-create-a-zarf-package/2-zarf-components.md#composing-package-components) made up of many sub-Zarf Packages. The root `zarf.yaml` file is defined at the root of the Zarf git repository.
 
 ### Swapping Images
 
@@ -103,7 +103,7 @@ You can find all of the `--set` configurations by looking at the `zarf-config.to
 
 ### Removing Components
 
-You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the [Zarf Package is composed](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) all you need to do is remove the component that imports the component you wish to exclude.
+You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the [Zarf Package is composed](../4-create-a-zarf-package/2-zarf-components.md#composing-package-components) all you need to do is remove the component that imports the component you wish to exclude.
 
 ## Troubleshooting
 

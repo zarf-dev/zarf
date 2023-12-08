@@ -2,11 +2,11 @@
 
 Zarf Packages are designed to be easily deployable on a variety of systems, including air-gapped systems. All of the necessary dependencies are included within the package, eliminating the need for outbound internet connectivity. When deploying the package onto a cluster, the dependencies contained in each component are automatically pushed into a Docker registry and/or Git server created by or known to Zarf on the air-gapped system.
 
-Once the Zarf package has arrived in your target environment, run the `zarf package deploy` command to deploy the package onto your [Zarf initialized](../3-create-a-zarf-package/3-zarf-init-package.md) cluster. This command deploys the package's capabilities into the target environment, including all external resources required for the package. The `zarf.yaml` file included in the package will be used to orchestrate the deployment of the application according to the instructions provided.
+Once the Zarf package has arrived in your target environment, run the `zarf package deploy` command to deploy the package onto your [Zarf initialized](../4-create-a-zarf-package/3-zarf-init-package.md) cluster. This command deploys the package's capabilities into the target environment, including all external resources required for the package. The `zarf.yaml` file included in the package will be used to orchestrate the deployment of the application according to the instructions provided.
 
 :::tip
 
-For a comprehensive tutorial of deploying a Zarf Package, see the [Deploying Zarf Packages tutorial](../5-zarf-tutorials/2-deploying-zarf-packages.md).
+For a comprehensive tutorial of deploying a Zarf Package, see the [Deploying Zarf Packages tutorial](../6-zarf-tutorials/2-deploying-zarf-packages.md).
 
 :::
 
@@ -20,21 +20,21 @@ Zarf provides a few options that can provide control over how a deployment of a 
 
 ## Additional Deployment-modes
 
-Zarf normally expects to operate against a Kubernetes cluster that has been [Zarf initialized](../3-create-a-zarf-package/3-zarf-init-package.md), but there are additional modes that can be configured by package creators including:
+Zarf normally expects to operate against a Kubernetes cluster that has been [Zarf initialized](../4-create-a-zarf-package/3-zarf-init-package.md), but there are additional modes that can be configured by package creators including:
 
 - **YOLO Mode** - Yaml-OnLy Online mode allows for a faster deployment without requiring the `zarf init` command to be run beforehand. It can be useful for testing or for environments that manage their own registries and Git servers completely outside of Zarf.  Given this mode does not use the [Zarf Agent](../8-faq.md#what-is-the-zarf-agent) any resources specified will need to be manually modified for the environment.
 
-- **Cluster-less** - Zarf normally interacts with clusters and kubernetes resources, but it is possible to have Zarf perform actions before a cluster exists (including [deploying the cluster itself](../5-zarf-tutorials/5-creating-a-k8s-cluster-with-zarf.md)).  These packages generally have more dependencies on the host or environment that they run within.
+- **Cluster-less** - Zarf normally interacts with clusters and kubernetes resources, but it is possible to have Zarf perform actions before a cluster exists (including [deploying the cluster itself](../6-zarf-tutorials/5-creating-a-k8s-cluster-with-zarf.md)).  These packages generally have more dependencies on the host or environment that they run within.
 
 ## Additional Resources
 
 To learn more about deploying a Zarf package, you can check out the following resources:
 
-- [Getting Started with Zarf](../1-getting-started/index.md): A step-by-step guide to installing Zarf and a description of the problems it seeks to solve.
-- [Zarf CLI Documentation](../2-the-zarf-cli/index.md): A comprehensive guide to using the Zarf command-line interface.
+- [Getting Started with Zarf](../2-getting-started/index.md): A step-by-step guide to installing Zarf and a description of the problems it seeks to solve.
+- [Zarf CLI Documentation](../3-the-zarf-cli/index.md): A comprehensive guide to using the Zarf command-line interface.
 - [The Package Deploy Lifecycle](./1-package-deploy-lifecycle.md): An overview of the lifecycle of `zarf package deploy`.
-- [Deploying a Zarf Package Tutorial](../5-zarf-tutorials/3-deploy-a-retro-arcade.md): A tutorial covering how to deploy a package onto an initialized cluster.
-- [The Zarf Init Package](../3-create-a-zarf-package/3-zarf-init-package.md): Learn about the 'init' package that is used to store resources for zarf packages.
+- [Deploying a Zarf Package Tutorial](../6-zarf-tutorials/3-deploy-a-retro-arcade.md): A tutorial covering how to deploy a package onto an initialized cluster.
+- [The Zarf Init Package](../4-create-a-zarf-package/3-zarf-init-package.md): Learn about the 'init' package that is used to store resources for zarf packages.
 
 ## Typical Deployment Workflow:
 

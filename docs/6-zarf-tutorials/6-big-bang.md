@@ -83,7 +83,7 @@ Now navigate to the `examples/big-bang` folder within the Zarf repository you cl
 
 ### Configure Big Bang
 
-Within the `examples/big-bang` folder you will see a `zarf.yaml` that has the following [component](../3-create-a-zarf-package/2-zarf-components.md) defined:
+Within the `examples/big-bang` folder you will see a `zarf.yaml` that has the following [component](../4-create-a-zarf-package/2-zarf-components.md) defined:
 
 ```yaml
 components:

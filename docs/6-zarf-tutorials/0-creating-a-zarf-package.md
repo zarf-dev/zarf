@@ -14,8 +14,8 @@ When creating a Zarf package, you must have a network connection so that Zarf ca
 
 Before beginning this tutorial you will need the following:
 
--  Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
--  A text editor or development environment such as [VS Code](../3-create-a-zarf-package/8-vscode.md)
+-  Zarf binary installed on your $PATH: ([Installing Zarf](../2-getting-started/index.md#installing-zarf))
+-  A text editor or development environment such as [VS Code](../4-create-a-zarf-package/8-vscode.md)
 
 ## Putting Together a Zarf Package
 
@@ -23,7 +23,7 @@ In order to create a Zarf package you first need to have an idea of what applica
 
 ### Creating the Package Definition
 
-A `zarf.yaml` file follows the [Zarf Package Schema](../3-create-a-zarf-package/4-zarf-schema.md) and allows us to specify package metadata and a set of components for us to deploy. We start a package definition with the `kind` of package we are making and `metadata` that describes the package.  You can start our WordPress package by creating a new `zarf.yaml` with the following content:
+A `zarf.yaml` file follows the [Zarf Package Schema](../4-create-a-zarf-package/4-zarf-schema.md) and allows us to specify package metadata and a set of components for us to deploy. We start a package definition with the `kind` of package we are making and `metadata` that describes the package.  You can start our WordPress package by creating a new `zarf.yaml` with the following content:
 
 ```yaml
 kind: ZarfPackageConfig # ZarfPackageConfig is the package kind for most normal zarf packages
@@ -36,14 +36,14 @@ metadata:
 
 :::tip
 
-If you are using an Integrated Development Environment (such as [VS Code](../3-create-a-zarf-package/8-vscode.md)) to create and edit the `zarf.yaml` file, you can install or reference the [`zarf.schema.json`](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json) file to get error checking and autocomplete.
+If you are using an Integrated Development Environment (such as [VS Code](../4-create-a-zarf-package/8-vscode.md)) to create and edit the `zarf.yaml` file, you can install or reference the [`zarf.schema.json`](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json) file to get error checking and autocomplete.
 Additionally, you can run `zarf prepare lint <directory>` to validate aginst the [`zarf.schema.json`](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json)
 
 :::
 
 ### Adding the WordPress Component
 
-Components are the unit of Zarf Packages that define an application stack.  These are defined under the `components` key and allow many different resource types to be brought into a package.  You can learn more about components on the [Understanding Zarf Components](../3-create-a-zarf-package/2-zarf-components.md) page. To add our WordPress component, add the following to the bottom of our `zarf.yaml`:
+Components are the unit of Zarf Packages that define an application stack.  These are defined under the `components` key and allow many different resource types to be brought into a package.  You can learn more about components on the [Understanding Zarf Components](../4-create-a-zarf-package/2-zarf-components.md) page. To add our WordPress component, add the following to the bottom of our `zarf.yaml`:
 
 ```yaml
 components:
@@ -109,7 +109,7 @@ Due to the way some applications are deployed, Zarf might not be able to find al
 
 :::tip
 
-Zarf has more `prepare` commands you can learn about on the [prepare CLI docs page](../2-the-zarf-cli/100-cli-commands/zarf_prepare.md).
+Zarf has more `prepare` commands you can learn about on the [prepare CLI docs page](../3-the-zarf-cli/100-cli-commands/zarf_prepare.md).
 
 :::
 
@@ -251,11 +251,11 @@ This will create a zarf package in the current directory with a package name tha
 
 :::tip
 
-You can learn more about what is going on behind the scenes of this process on the [package create lifecycle page](../3-create-a-zarf-package/5-package-create-lifecycle.md), and can view other useful command flags like `--max-package-size`, `--differential` and `--registry-override` on the [package create command flags page](../2-the-zarf-cli/100-cli-commands/zarf_package_create.md).
+You can learn more about what is going on behind the scenes of this process on the [package create lifecycle page](../4-create-a-zarf-package/5-package-create-lifecycle.md), and can view other useful command flags like `--max-package-size`, `--differential` and `--registry-override` on the [package create command flags page](../3-the-zarf-cli/100-cli-commands/zarf_package_create.md).
 
 :::
 
-Congratulations! You've built the WordPress package. Now, you can learn how to [inspect the SBOMs](../4-deploy-a-zarf-package/4-view-sboms.md) or head straight to [deploying it](./2-deploying-zarf-packages.md)!
+Congratulations! You've built the WordPress package. Now, you can learn how to [inspect the SBOMs](../5-deploy-a-zarf-package/4-view-sboms.md) or head straight to [deploying it](./2-deploying-zarf-packages.md)!
 
 ## Troubleshooting
 

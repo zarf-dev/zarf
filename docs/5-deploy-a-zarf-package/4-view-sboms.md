@@ -4,7 +4,7 @@ A [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-
 
 ## SBOMs Built Into Packages
 
-Zarf treats security as a first-class concern and builds SBOM documents into packages by default! Unless explicitly skipped with the `--skip-sbom` flag, whenever a package is created, Zarf generates an SBOM for it and adds it to the package itself. This means that wherever you end up moving your package, you will always be able to take a peek inside to see what it contains. You can learn more about how Zarf does this on the [Package SBOMs page](../3-create-a-zarf-package/6-package-sboms.md).
+Zarf treats security as a first-class concern and builds SBOM documents into packages by default! Unless explicitly skipped with the `--skip-sbom` flag, whenever a package is created, Zarf generates an SBOM for it and adds it to the package itself. This means that wherever you end up moving your package, you will always be able to take a peek inside to see what it contains. You can learn more about how Zarf does this on the [Package SBOMs page](../4-create-a-zarf-package/6-package-sboms.md).
 
 You can quickly view these files in your browser by running `zarf package inspect` with the `-s` or `--sbom` flag. If there are any SBOMs included in the package, Zarf will open the SBOM viewer to the first SBOM in the list.
 

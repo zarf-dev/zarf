@@ -120,7 +120,7 @@ The `make build-cli` command builds a binary for each combination of OS and arch
 - `make build-cli-windows-amd`
 - `make build-cli-windows-arm`
 
-For additional information, see the [Building Your Own Zarf CLI](../2-the-zarf-cli/0-building-your-own-cli.md) page.
+For additional information, see the [Building Your Own Zarf CLI](../3-the-zarf-cli/0-building-your-own-cli.md) page.
 
 :::
 
@@ -136,9 +136,9 @@ vX.X.X  # X.X.X is replaced with the version number of your specific installatio
 
 If you are not seeing this then Zarf was not installed onto your `$PATH` correctly. [This $PATH guide](https://zwbetz.com/how-to-add-a-binary-to-your-path-on-macos-linux-windows/) should help with that.
 
-## Downloading the ['Init' Package](../3-create-a-zarf-package/3-zarf-init-package.md)
+## Downloading the ['Init' Package](../4-create-a-zarf-package/3-zarf-init-package.md)
 
-The ['init' package](../3-create-a-zarf-package/3-zarf-init-package.md) is a special Zarf package that initializes a cluster with services that are used to store resources while in the air gap and is required for most ([but not all](../../examples/yolo/README.md)) Zarf deployments.
+The ['init' package](../4-create-a-zarf-package/3-zarf-init-package.md) is a special Zarf package that initializes a cluster with services that are used to store resources while in the air gap and is required for most ([but not all](../../examples/yolo/README.md)) Zarf deployments.
 
 You can get it for your version of Zarf by visiting the [Zarf releases](https://github.com/defenseunicorns/zarf/releases) page and downloading it into your working directory or into `~/.zarf-cache/zarf-init-<amd64|arm64>-vX.X.X.tar.zst`)
 
@@ -146,7 +146,7 @@ If you are online on the machine with cluster access you can also run `zarf init
 
 :::note
 
-You can build your own custom 'init' package too if you'd like. For this you should check out the [Creating a Custom 'init' Package Tutorial](../5-zarf-tutorials/8-custom-init-packages.md).
+You can build your own custom 'init' package too if you'd like. For this you should check out the [Creating a Custom 'init' Package Tutorial](../6-zarf-tutorials/8-custom-init-packages.md).
 
 :::
 
@@ -154,10 +154,10 @@ You can build your own custom 'init' package too if you'd like. For this you sho
 
 Depending on how familiar you are with Kubernetes, DevOps, and Zarf, let's find what set of information would be most useful to you.
 
-- If you want to become more familiar with Zarf and it's features, see the [Tutorials](../5-zarf-tutorials/index.md) page.
+- If you want to become more familiar with Zarf and it's features, see the [Tutorials](../6-zarf-tutorials/index.md) page.
 
-- More information about the Zarf CLI is available on the [Zarf CLI](../2-the-zarf-cli/index.md) page, or by browsing through the help descriptions of all the commands available through `zarf --help`.
+- More information about the Zarf CLI is available on the [Zarf CLI](../3-the-zarf-cli/index.md) page, or by browsing through the help descriptions of all the commands available through `zarf --help`.
 
-- More information about the packages that Zarf creates and deploys is available in the [Understanding Zarf Packages](../3-create-a-zarf-package/1-zarf-packages.md) page.
+- More information about the packages that Zarf creates and deploys is available in the [Understanding Zarf Packages](../4-create-a-zarf-package/1-zarf-packages.md) page.
 
 - If you want to take a step back and better understand the problem Zarf is trying to solve, you can find more context on the [Understand the Basics](./0-understand-the-basics.md) and [Core Concepts](./1-core-concepts.md) pages.

@@ -21,7 +21,7 @@ It also simplifies the installation, update, and maintenance of supporting DevSe
 
 :::note
 
-Check out our [glossary](1-getting-started/0-understand-the-basics.md) for an explanation of common terms used in the project.
+Check out our [glossary](2-getting-started/0-understand-the-basics.md) for an explanation of common terms used in the project.
 
 :::
 
@@ -33,15 +33,15 @@ Zarf simplifies and standardizes the delivery of complex software deployments. T
 
 A typical Zarf deployment is made up of three parts:
 
-1. The [`zarf` binary](./2-the-zarf-cli/index.md):
+1. The [`zarf` binary](./3-the-zarf-cli/index.md):
    - Is a statically compiled Go binary that can be run on any machine, server, or operating system with or without connectivity.
    - Creates packages combining numerous types of software/updates into a single distributable package (while on a network capable of accessing them).
    - Declaratively deploys package contents "into place" for use on production systems (while on an isolated network).
-2. A [Zarf init package](./3-create-a-zarf-package/3-zarf-init-package.md):
+2. A [Zarf init package](./4-create-a-zarf-package/3-zarf-init-package.md):
    - A compressed tarball package that contains the configuration needed to instantiate an environment without connectivity.
    - Automatically seeds your cluster with a container registry or wires up a pre-existing one
    - Provides additional capabilities such as logging, git server support, and/or a K8s cluster.
-3. A [Zarf Package](./3-create-a-zarf-package/1-zarf-packages.md):
+3. A [Zarf Package](./4-create-a-zarf-package/1-zarf-packages.md):
    - A compressed tarball package that contains all of the files, manifests, source repositories, and images needed to deploy your infrastructure, application, and resources in a disconnected environment.
 
 :::note
@@ -64,7 +64,7 @@ The following types of software can be rolled into a Zarf Package:
 - Container images + artifacts: to serve images and OCI artifacts for clusters and other consumers to pull.
 - [Repositories](../examples/git-data/README.md): to serve as the git-based "source of truth" for GitOps application deployments.
 - Pre-compiled binaries: to provide the software necessary to start and support a cluster.
-- [Component actions](3-create-a-zarf-package/7-component-actions.md): to support scripts and commands that run at various stages of the Zarf [package create lifecycle](./3-create-a-zarf-package/5-package-create-lifecycle.md), and [package deploy lifecycle](./4-deploy-a-zarf-package/1-package-deploy-lifecycle.md).
+- [Component actions](4-create-a-zarf-package/7-component-actions.md): to support scripts and commands that run at various stages of the Zarf [package create lifecycle](./4-create-a-zarf-package/5-package-create-lifecycle.md), and [package deploy lifecycle](./5-deploy-a-zarf-package/1-package-deploy-lifecycle.md).
 - Helm charts, kustomizations, and other K8s manifests: to apply to a Kubernetes cluster.
 - [Data injections](../examples/kiwix/README.md): to declaratively inject data into running containers in a Kubernetes cluster.
 
@@ -84,11 +84,11 @@ Zarf can pull from various places like Docker Hub, Iron Bank, GitHub, private re
 
 This part of the process requires access to the internet (or a network that mirrors your resources). When the `zarf` binary is presented with a `zarf.yaml`, it then begins downloading, packing, and compressing the software that you requested. It then outputs a single, ready-to-move distributable called "a package".
 
-For additional information, see the [Creating a package](./5-zarf-tutorials/0-creating-a-zarf-package.md) section.
+For additional information, see the [Creating a package](./6-zarf-tutorials/0-creating-a-zarf-package.md) section.
 
 ### (2) Ship the Package to the System Location
 
-Zarf enables secure software delivery for various environments, such as remote, constrained, standalone, and air-gapped systems. Considering there are various target environments with their own appropriate transferring mechanisms, Zarf does not determine _how_ packages are moved so long as they can arrive in your downstream environment.  See [Package Sources](./4-deploy-a-zarf-package/2-package-sources.md) for more information on where Zarf packages can be stored / pulled from.
+Zarf enables secure software delivery for various environments, such as remote, constrained, standalone, and air-gapped systems. Considering there are various target environments with their own appropriate transferring mechanisms, Zarf does not determine _how_ packages are moved so long as they can arrive in your downstream environment.  See [Package Sources](./5-deploy-a-zarf-package/2-package-sources.md) for more information on where Zarf packages can be stored / pulled from.
 
 ### (3) Deploy the Package
 
@@ -139,133 +139,29 @@ In this use case, you configure Zarf to initialize a cluster that already exists
 ### 📦 Out of the Box Features
 
 - Automate Kubernetes deployments in disconnected environments
-- Automate [Software Bill of Materials (SBOM)](./3-create-a-zarf-package/6-package-sboms.md) generation
-- Build and [publish packages as OCI image artifacts](./5-zarf-tutorials/7-publish-and-deploy.md)
-- Provide a [web dashboard](./4-deploy-a-zarf-package/4-view-sboms.md) for viewing SBOM output
+- Automate [Software Bill of Materials (SBOM)](./4-create-a-zarf-package/6-package-sboms.md) generation
+- Build and [publish packages as OCI image artifacts](./6-zarf-tutorials/7-publish-and-deploy.md)
+- Provide a [web dashboard](./5-deploy-a-zarf-package/4-view-sboms.md) for viewing SBOM output
 - Create and verify package signatures with [cosign](https://github.com/sigstore/cosign)
-- [Publish](./2-the-zarf-cli/100-cli-commands/zarf_package_publish.md), [pull](./2-the-zarf-cli/100-cli-commands/zarf_package_pull.md), and [deploy](./2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md) packages from an [OCI registry](https://opencontainers.org/)
-- Powerful component lifecycle [actions](./3-create-a-zarf-package/7-component-actions.md)
+- [Publish](./3-the-zarf-cli/100-cli-commands/zarf_package_publish.md), [pull](./3-the-zarf-cli/100-cli-commands/zarf_package_pull.md), and [deploy](./3-the-zarf-cli/100-cli-commands/zarf_package_deploy.md) packages from an [OCI registry](https://opencontainers.org/)
+- Powerful component lifecycle [actions](./4-create-a-zarf-package/7-component-actions.md)
 - Deploy a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
 - Builtin logging stack with [Loki](https://grafana.com/oss/loki/)
 - Builtin Git server with [Gitea](https://gitea.com/)
 - Builtin Docker registry
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
 - [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
-- Builtin [command to find images](./2-the-zarf-cli/100-cli-commands/zarf_prepare_find-images.md) and resources from a Helm chart
-- Tunneling capability to [connect to Kuberenetes resources](./2-the-zarf-cli/100-cli-commands/zarf_connect.md) without network routing, DNS, TLS or Ingress configuration required
+- Builtin [command to find images](./3-the-zarf-cli/100-cli-commands/zarf_prepare_find-images.md) and resources from a Helm chart
+- Tunneling capability to [connect to Kuberenetes resources](./3-the-zarf-cli/100-cli-commands/zarf_connect.md) without network routing, DNS, TLS or Ingress configuration required
 
 ### 🛠️ Configurable Features
 
 - Customizable [variables and package templates](examples/variables/README.md) with defaults and user prompting
-- [Composable packages](./3-create-a-zarf-package/2-zarf-components.md#composing-package-components) to include multiple sub-packages/components
+- [Composable packages](./4-create-a-zarf-package/2-zarf-components.md#composing-package-components) to include multiple sub-packages/components
 - Component-level OS/architecture filtering
-
-## Quick Start
-
-1. 💻 Select your system's OS below.
-2. ❗ Ensure you have the pre-requisite applications running.
-3. `$` Enter the commands into your terminal.
-
-<Tabs>
-<TabItem value="Linux">
-
-:::info
-
-This quick start requires you to already have:
-
-- [Homebrew](https://brew.sh/) package manager installed on your machine.
-- [Docker](https://www.docker.com/) installed and running on your machine.
-
-For more install options please visit our [Getting Started page](./1-getting-started/index.md).
-
-:::
-
-## Linux Commands
-
-```bash
-# To install Zarf
-brew tap defenseunicorns/tap && brew install zarf
-
-# Next, you will need a Kubernetes cluster. This example uses KIND.
-brew install kind && kind delete cluster && kind create cluster
-
-
-# Then, you will need to deploy the Zarf Init Package
-zarf init
-
-
-# You are ready to deploy any Zarf Package, try out our Retro Arcade!!
-zarf package deploy oci://defenseunicorns/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub
-```
-
-:::note
-
-This example shows how to install Zarf with the official (📜) `defenseunicorns` Homebrew tap, however there are many other options to install Zarf on Linux such as:
-
-- 📜 **[official]** Downloading Zarf directly from [GitHub releases](https://github.com/defenseunicorns/zarf/releases)
-- 🧑‍🤝‍🧑 **[community]** `apk add` on [Alpine Linux Edge](https://pkgs.alpinelinux.org/package/edge/testing/x86_64/zarf)
-- 🧑‍🤝‍🧑 **[community]** `asdf install` with the [ASDF Version Manager](https://github.com/defenseunicorns/asdf-zarf)
-- 🧑‍🤝‍🧑 **[community]** `nix-shell`/`nix-env` with [Nix Packages](https://search.nixos.org/packages?channel=23.05&show=zarf&from=0&size=50&sort=relevance&type=packages&query=zarf)
-
-:::
 
 :::tip
 
-Zarf can deploy it's own `k3s` cluster on Linux if you have `root` access by selecting the `k3s` component on `zarf init`.
+To quickly try out Zarf for yourself see the [Zarf Quick Start](./1-quick-start.md)!
 
 :::
-
-</TabItem>
-<TabItem value="macOS">
-
-:::info
-
-This quick start requires you to already have:
-
-- [Homebrew](https://brew.sh/) package manager installed on your machine.
-- [Docker](https://www.docker.com/) installed and running on your machine.
-
-For more install options please visit our [Getting Started page](./1-getting-started/index.md).
-
-:::
-
-## MacOS Commands
-
-```bash
-# To install Zarf
-brew tap defenseunicorns/tap && brew install zarf
-
-# Next, you will need a Kubernetes cluster. This example uses KIND.
-brew install kind && kind delete cluster && kind create cluster
-
-
-# Then, you will need to deploy the Zarf Init Package
-zarf init
-
-
-# You are ready to deploy any Zarf Package, try out our Retro Arcade!!
-zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub
-```
-
-</TabItem>
-<TabItem value="Windows">
-
-## Windows Commands
-
-
-:::info
-
-There is currently no Zarf Quick Start for Windows, though you can learn how to install Zarf from our Github Releases by visiting the [Getting Started page](./1-getting-started/index.md#downloading-from-github-releases)
-
-:::
-
-```text
-
-Coming soon!
-
-```
-
-</TabItem>
-</Tabs>
-
-Zarf is being actively developed by the community. For more information, see our [release notes](https://github.com/defenseunicorns/zarf/releases).

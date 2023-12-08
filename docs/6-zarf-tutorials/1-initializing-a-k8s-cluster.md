@@ -2,14 +2,14 @@
 
 ## Introduction
 
-In this tutorial, we will demonstrate how to initialize Zarf onto a K8s cluster. This is done by running the [`zarf init`](../2-the-zarf-cli/100-cli-commands/zarf_init.md) command, which uses a specialized package called an 'init-package'. More information about this specific package can be found [here](../3-create-a-zarf-package/3-zarf-init-package.md).
+In this tutorial, we will demonstrate how to initialize Zarf onto a K8s cluster. This is done by running the [`zarf init`](../3-the-zarf-cli/100-cli-commands/zarf_init.md) command, which uses a specialized package called an 'init-package'. More information about this specific package can be found [here](../4-create-a-zarf-package/3-zarf-init-package.md).
 
 ## Prerequisites
 
 Before beginning this tutorial you will need the following:
 
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
-- Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
+- Zarf binary installed on your $PATH: ([Installing Zarf](../2-getting-started/index.md#installing-zarf))
 - An init-package downloaded: ([init-package Build Instructions](./0-creating-a-zarf-package.md)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
 - A Kubernetes cluster to work with: ([Local k8s Cluster Instructions](./#setting-up-a-local-kubernetes-cluster))
 
@@ -27,7 +27,7 @@ $ zarf init
 
 :::info
 
-More information about the init-package and its components can be found [here](../3-create-a-zarf-package/3-zarf-init-package.md)
+More information about the init-package and its components can be found [here](../4-create-a-zarf-package/3-zarf-init-package.md)
 
 :::
 
@@ -49,7 +49,7 @@ zarf tools monitor
 
 ## Cleaning Up
 
-The [`zarf destroy`](../2-the-zarf-cli/100-cli-commands/zarf_destroy.md) command will remove all of the resources that were created by the initialization command. This command will leave you with a clean cluster that you can either destroy or use for another tutorial.
+The [`zarf destroy`](../3-the-zarf-cli/100-cli-commands/zarf_destroy.md) command will remove all of the resources that were created by the initialization command. This command will leave you with a clean cluster that you can either destroy or use for another tutorial.
 
 ```sh
 zarf destroy --confirm

@@ -8,7 +8,7 @@ A local tarball is the default output of `zarf package create` and is a package 
 
 ### Split Tarball Path (`.part...`)
 
-A split tarball is a local tarball that has been split into multiple parts so that it can fit on smaller media when traveling to a disconnected environment (i.e. on DVDs).  These packages are created by specifying a maximum number of megabytes with [`--max-package-size`](../2-the-zarf-cli/100-cli-commands/zarf_package_create.md) on `zarf package create` and if the resulting tarball is larger than that size it will be split into chunks.
+A split tarball is a local tarball that has been split into multiple parts so that it can fit on smaller media when traveling to a disconnected environment (i.e. on DVDs).  These packages are created by specifying a maximum number of megabytes with [`--max-package-size`](../3-the-zarf-cli/100-cli-commands/zarf_package_create.md) on `zarf package create` and if the resulting tarball is larger than that size it will be split into chunks.
 
 ### Remote Tarball URL (`http://` and `https://` )
 
@@ -16,7 +16,7 @@ A remote tarball is a Zarf package tarball that is hosted on a web server that i
 
 ### Remote OCI Reference (`oci://`)
 
-An OCI package is one that has been published to an OCI compatible registry using `zarf package publish` or the `-o` option on `zarf package create`.  These packages live within a given registry and you can learn more about them in our [Publish & Deploy Packages w/OCI Tutorial](../5-zarf-tutorials/7-publish-and-deploy.md).
+An OCI package is one that has been published to an OCI compatible registry using `zarf package publish` or the `-o` option on `zarf package create`.  These packages live within a given registry and you can learn more about them in our [Publish & Deploy Packages w/OCI Tutorial](../6-zarf-tutorials/7-publish-and-deploy.md).
 
 ## Commands with Sources
 

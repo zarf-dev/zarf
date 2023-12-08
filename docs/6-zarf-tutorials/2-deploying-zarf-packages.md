@@ -12,7 +12,7 @@ In this tutorial, we are going to deploy the WordPress package onto your cluster
 
 Prior to this tutorial you'll want to have a built package and a working cluster with Zarf initialized.
 
-- Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
+- Zarf binary installed on your $PATH: ([Installing Zarf](../2-getting-started/index.md#installing-zarf))
 - [An initialized cluster](./1-initializing-a-k8s-cluster.md)
 - The [WordPress package created](./0-creating-a-zarf-package.md)
 
@@ -38,7 +38,7 @@ By hitting 'tab', you can use the arrow keys to select which package you want to
 
 :::tip
 
-To accept a default value for a given variable, simply press the `enter` key.  You can also set variables from the CLI with the `--set` flag, an environment variable, or a [config file](../2-the-zarf-cli/index.md#using-a-config-file-to-make-cli-command-flags-declarative).
+To accept a default value for a given variable, simply press the `enter` key.  You can also set variables from the CLI with the `--set` flag, an environment variable, or a [config file](../3-the-zarf-cli/index.md#using-a-config-file-to-make-cli-command-flags-declarative).
 
 :::
 
@@ -48,13 +48,13 @@ To accept a default value for a given variable, simply press the `enter` key.  Y
 
 ![Zarf Connect WordPress](../.images/tutorials/wordpress_connected.png)
 
-4. We can also explore the resources deployed by our package by running the `zarf tools monitor` command to start [`K9s`](../4-deploy-a-zarf-package/5-k9s-dashboard.md). Once you are done, hit `ctrl/control c` to exit.
+4. We can also explore the resources deployed by our package by running the `zarf tools monitor` command to start [`K9s`](../5-deploy-a-zarf-package/5-k9s-dashboard.md). Once you are done, hit `ctrl/control c` to exit.
 
 ![Zarf Tools Monitor](../.images/tutorials/zarf_tools_monitor.png)
 
 :::tip
 
-Deploying packages isn't the only way to interact with them in the air gap.  If you would like to quickly inspect a package and it's SBOMs you can use [`zarf package inspect`](../4-deploy-a-zarf-package/4-view-sboms.md) to view them, and if you would like to push resources inside of a Zarf package (i.e. the images in this Wordpress package) to services in the air gap without running a deployment, you can do so with [`zarf package mirror-resources`](../2-the-zarf-cli/100-cli-commands/zarf_package_mirror-resources.md).
+Deploying packages isn't the only way to interact with them in the air gap.  If you would like to quickly inspect a package and it's SBOMs you can use [`zarf package inspect`](../5-deploy-a-zarf-package/4-view-sboms.md) to view them, and if you would like to push resources inside of a Zarf package (i.e. the images in this Wordpress package) to services in the air gap without running a deployment, you can do so with [`zarf package mirror-resources`](../3-the-zarf-cli/100-cli-commands/zarf_package_mirror-resources.md).
 
 :::
 

@@ -98,17 +98,17 @@ Once a package is deployed into the cluster, the Web UI offers additional comman
 The web UI is packaged into a separate Go binary using Zarf as a library, so you don't have to worry about additional dependencies or needing to manually hook it into Zarf! The web UI is served through your machine's local browser, running on `localhost`, and utilizes the Go binary as the backend.
 
 Use the Zarf Deployment UI to execute the existing Zarf CLI commands:
-- [Zarf tools Kubectl top](../2-the-zarf-cli/100-cli-commands/zarf_tools_kubectl.md)
-- [Zarf Init](../2-the-zarf-cli/100-cli-commands/zarf_init.md)
-- [Zarf Package Deploy](../2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md)
-- [Zarf Package Remove](../2-the-zarf-cli/100-cli-commands/zarf_package_remove.md)
-- [Zarf Package List](../2-the-zarf-cli/100-cli-commands/zarf_package_list.md)
-- [Zarf Package Inspect](../2-the-zarf-cli/100-cli-commands/zarf_package_inspect.md)
-- [Zarf Tools Sbom](../2-the-zarf-cli/100-cli-commands/zarf_tools_sbom.md)
-- [Zarf Connect](../2-the-zarf-cli/100-cli-commands/zarf_connect.md)
+- [Zarf tools Kubectl top](../3-the-zarf-cli/100-cli-commands/zarf_tools_kubectl.md)
+- [Zarf Init](../3-the-zarf-cli/100-cli-commands/zarf_init.md)
+- [Zarf Package Deploy](../3-the-zarf-cli/100-cli-commands/zarf_package_deploy.md)
+- [Zarf Package Remove](../3-the-zarf-cli/100-cli-commands/zarf_package_remove.md)
+- [Zarf Package List](../3-the-zarf-cli/100-cli-commands/zarf_package_list.md)
+- [Zarf Package Inspect](../3-the-zarf-cli/100-cli-commands/zarf_package_inspect.md)
+- [Zarf Tools Sbom](../3-the-zarf-cli/100-cli-commands/zarf_tools_sbom.md)
+- [Zarf Connect](../3-the-zarf-cli/100-cli-commands/zarf_connect.md)
 
 :::info
 
-All other zarf [CLI commands](../2-the-zarf-cli/index.md) will require interfacing with the CLI directly.
+All other zarf [CLI commands](../3-the-zarf-cli/index.md) will require interfacing with the CLI directly.
 
 :::
