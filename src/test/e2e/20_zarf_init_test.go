@@ -11,6 +11,9 @@ import (
 
 	"encoding/json"
 
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
@@ -52,6 +55,8 @@ func TestZarfInit(t *testing.T) {
 	_, stdErr, err = e2e.Zarf("init", "--architecture", mismatchedArch, componentsFlag, "--confirm")
 	require.Error(t, err, stdErr)
 	require.Contains(t, stdErr, expectedErrorMessage)
+
+	initWithoutStorageClass(t, componentsFlag)
 
 	if !e2e.ApplianceMode {
 		// throw a pending pod into the cluster to ensure we can properly ignore them when selecting images
@@ -126,4 +131,50 @@ func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.Zar
 	require.NotContains(t, logText, zarfState.RegistryInfo.PushPassword)
 	require.NotContains(t, logText, zarfState.RegistryInfo.Secret)
 	require.NotContains(t, logText, zarfState.LoggingSecret)
+}
+
+// Verify `zarf init` produces an error when there is no storage class in cluster.
+func initWithoutStorageClass(t *testing.T, components string) {
+	c, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)
+	require.NoError(t, err)
+
+	distro, err := c.K8s.DetectDistro()
+	require.NoError(t, err)
+
+	var storageClassName string
+	switch distro {
+	case k8s.DistroIsK3s:
+		storageClassName = "local-path"
+	case k8s.DistroIsK3d:
+		storageClassName = "local-path"
+	case k8s.DistroIsKind:
+		storageClassName = "standard"
+	case k8s.DistroIsMinikube:
+		storageClassName = "standard"
+	case k8s.DistroIsEKS:
+		storageClassName = "gp2"
+	}
+
+	yaml, _, err := e2e.Kubectl("get", "storageclass", storageClassName, "-o=yaml")
+	require.NoError(t, err)
+
+	storageClassManifest := "storage-class.yaml"
+
+	err = utils.WriteFile(storageClassManifest, []byte(yaml))
+	require.NoError(t, err)
+	defer e2e.CleanFiles(storageClassManifest)
+
+	_, _, err = e2e.Kubectl("delete", "storageclass", storageClassName)
+	require.NoError(t, err)
+
+	expectedErrorMessage := "No storage class was found in the cluster"
+	_, stdErr, err := e2e.Zarf("init", components, "--confirm")
+	require.Error(t, err, stdErr)
+	require.Contains(t, stdErr, expectedErrorMessage)
+
+	_, _, err = e2e.Zarf("destroy", "--confirm")
+	require.NoError(t, err)
+
+	_, _, err = e2e.Kubectl("apply", "-f", storageClassManifest)
+	require.NoError(t, err)
 }

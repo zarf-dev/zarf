@@ -35,15 +35,17 @@ var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
 // GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run.
 func GetCLIName() string {
 	var binaryName string
-	if runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "linux":
 		binaryName = "zarf"
-	} else if runtime.GOOS == "darwin" {
-		if runtime.GOARCH == "arm64" {
+	case "darwin":
+		switch runtime.GOARCH {
+		case "arm64":
 			binaryName = "zarf-mac-apple"
-		} else {
+		default:
 			binaryName = "zarf-mac-intel"
 		}
-	} else if runtime.GOOS == "windows" {
+	case "windows":
 		if runtime.GOARCH == "amd64" {
 			binaryName = "zarf.exe"
 		}
