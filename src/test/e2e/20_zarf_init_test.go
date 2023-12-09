@@ -135,6 +135,16 @@ func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.Zar
 
 // Verify `zarf init` produces an error when there is no storage class in cluster.
 func initWithoutStorageClass(t *testing.T, components string) {
+	/*
+		Exit early if testing with Zarf-deployed k3s cluster.
+		This is a chicken-egg problem because we can't interact with a cluster that Zarf hasn't created yet.
+		Zarf deploys k3s with the Rancher local-path storage class out of the box,
+		so we don't expect any problems with no storage class in this case.
+	*/
+	if e2e.ApplianceMode {
+		return
+	}
+
 	c, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)
 	require.NoError(t, err)
 
@@ -143,8 +153,6 @@ func initWithoutStorageClass(t *testing.T, components string) {
 
 	var storageClassName string
 	switch distro {
-	case k8s.DistroIsK3s:
-		storageClassName = "local-path"
 	case k8s.DistroIsK3d:
 		storageClassName = "local-path"
 	case k8s.DistroIsKind:
