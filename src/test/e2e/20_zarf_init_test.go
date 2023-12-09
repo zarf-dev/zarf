@@ -11,8 +11,6 @@ import (
 
 	"encoding/json"
 
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
@@ -145,34 +143,21 @@ func initWithoutStorageClass(t *testing.T, components string) {
 		return
 	}
 
-	c, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)
+	jsonPathQuery := `{range .items[?(@.metadata.annotations.storageclass\.kubernetes\.io/is-default-class=="true")]}{.metadata.name}{end}`
+	defaultStorageClassName, _, err := e2e.Kubectl("get", "storageclass", "-o=jsonpath="+jsonPathQuery)
+	require.NoError(t, err)
+	require.NotEmpty(t, defaultStorageClassName)
+
+	storageClassYaml, _, err := e2e.Kubectl("get", "storageclass", defaultStorageClassName, "-o=yaml")
 	require.NoError(t, err)
 
-	distro, err := c.K8s.DetectDistro()
+	storageClassFileName := "storage-class.yaml"
+
+	err = utils.WriteFile(storageClassFileName, []byte(storageClassYaml))
 	require.NoError(t, err)
+	defer e2e.CleanFiles(storageClassFileName)
 
-	var storageClassName string
-	switch distro {
-	case k8s.DistroIsK3d:
-		storageClassName = "local-path"
-	case k8s.DistroIsKind:
-		storageClassName = "standard"
-	case k8s.DistroIsMinikube:
-		storageClassName = "standard"
-	case k8s.DistroIsEKS:
-		storageClassName = "gp2"
-	}
-
-	yaml, _, err := e2e.Kubectl("get", "storageclass", storageClassName, "-o=yaml")
-	require.NoError(t, err)
-
-	storageClassManifest := "storage-class.yaml"
-
-	err = utils.WriteFile(storageClassManifest, []byte(yaml))
-	require.NoError(t, err)
-	defer e2e.CleanFiles(storageClassManifest)
-
-	_, _, err = e2e.Kubectl("delete", "storageclass", storageClassName)
+	_, _, err = e2e.Kubectl("delete", "storageclass", defaultStorageClassName)
 	require.NoError(t, err)
 
 	expectedErrorMessage := "No storage class was found in the cluster"
@@ -183,6 +168,6 @@ func initWithoutStorageClass(t *testing.T, components string) {
 	_, _, err = e2e.Zarf("destroy", "--confirm")
 	require.NoError(t, err)
 
-	_, _, err = e2e.Kubectl("apply", "-f", storageClassManifest)
+	_, _, err = e2e.Kubectl("apply", "-f", storageClassFileName)
 	require.NoError(t, err)
 }
