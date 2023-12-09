@@ -41,7 +41,7 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	// cd back
+	// cd back for output
 	if err := os.Chdir(cwd); err != nil {
 		return err
 	}
