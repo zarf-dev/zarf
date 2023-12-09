@@ -2,7 +2,14 @@
 
 ## `dev` Commands
 
+
+Zarf contains many commands that are useful while developing a Zarf package to iterate on configuration, discover resources and more!  Below are explanations of some of these commands with the full list discoverable with `zarf dev --help`.
+
+:::caution
+
 The `dev` commands are meant to be used in **development** environments / workflows. They are **not** meant to be used in **production** environments / workflows.
+
+:::
 
 ### `dev deploy`
 
@@ -30,7 +37,7 @@ $ zarf dev deploy examples/dos-games --yolo=false
 
 Evaluates components in a `zarf.yaml` to identify images specified in their helm charts and manifests.
 
-Components that have repos that host helm charts can be processed by providing the `--repo-chart-path`.
+Components that have `git` repositories that host helm charts can be processed by providing the `--repo-chart-path`.
 
 ```bash
 $ zarf dev find-images examples/wordpress

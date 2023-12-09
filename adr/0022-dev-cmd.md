@@ -17,7 +17,7 @@ The current package development lifecycle is:
 3. Debug any create errors and resolve by editing `zarf.yaml` and repeating step 2
 4. Run `zarf init` to initialize the cluster
 5. Deploy the package with `zarf package deploy <tarball>`
-6. Debug any deploy errors and resolve by editing `zarf.yaml` and repeating step 5
+6. Debug any deploy errors and resolve by editing `zarf.yaml` and repeating step 2 or 5
 
 If there are deployment errors, the common pattern is to reset the cluster (ex: `k3d cluster delete && k3d cluster create`) and repeat steps 4-6. Re-initializing the cluster, recreating the package, and redeploying the package is tedious and time consuming; especially when the package is large or the change was small.
 
@@ -31,8 +31,8 @@ Introduce a `dev deploy` command that will combine the lifecycle of `package cre
 
 - Not result in a re-usable tarball / OCI artifact
 - Not have any interactive prompts
-- Not require `zarf init` to be run (by default, but _is required_ if `--yolo` is not set)
-- Be able to create+deploy a package in either YOLO mode (default) or prod mode (exposed via `--yolo` flag)
+- Not require `zarf init` to be run by default (override-able with a CLI flag)
+- Be able to create+deploy a package in either YOLO mode (default) or prod mode (exposed via a CLI flag)
 - Only build + deploy components that _will_ be deployed (contrasting with `package create` which builds _all_ components regardless of whether they will be deployed)
 
 ## Consequences
