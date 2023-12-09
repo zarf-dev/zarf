@@ -55,7 +55,7 @@ func TestDevDeploy(t *testing.T) {
 	}
 	e2e.SetupWithCluster(t)
 
-	stdOut, stdErr, err := e2e.Zarf("dev", "deploy", "examples/yolo")
+	stdOut, stdErr, err := e2e.Zarf("dev", "deploy", "examples/dos-games")
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "yolo", "--confirm")
