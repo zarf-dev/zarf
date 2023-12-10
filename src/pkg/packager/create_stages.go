@@ -212,9 +212,8 @@ func (p *Packager) assembleSkeleton() error {
 	return p.writeYaml()
 }
 
+// output assumes it is running from cwd, not the build directory
 func (p *Packager) output() error {
-	// output assumes it is running from cwd, not the build directory
-
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range p.cfg.Pkg.Components {

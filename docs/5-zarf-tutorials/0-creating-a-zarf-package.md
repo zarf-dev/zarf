@@ -109,7 +109,7 @@ Due to the way some applications are deployed, Zarf might not be able to find al
 
 :::tip
 
-Zarf has more `dev` commands you can learn about on the [dev CLI docs page](../2-the-zarf-cli/100-cli-commands/zarf_dev.md).
+Zarf has more `dev` commands you can learn about on the [dev CLI docs page](../3-create-a-zarf-package/10-dev.md).
 
 :::
 
