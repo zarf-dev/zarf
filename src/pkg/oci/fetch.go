@@ -19,13 +19,11 @@ import (
 
 // ResolveRoot returns the root descriptor for the remote repository
 func (o *OrasRemote) ResolveRoot() (ocispec.Descriptor, error) {
-	if o.targetPlatform != nil {
-		resolveOpts := oras.ResolveOptions{
-			TargetPlatform: o.targetPlatform,
-		}
-		return oras.Resolve(o.ctx, o.repo, o.repo.Reference.Reference, resolveOpts)
+	resolveOpts := oras.ResolveOptions{
+		TargetPlatform: o.targetPlatform,
 	}
-	return o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
+
+	return oras.Resolve(o.ctx, o.repo, o.repo.Reference.Reference, resolveOpts)
 }
 
 // FetchRoot fetches the root manifest from the remote repository.

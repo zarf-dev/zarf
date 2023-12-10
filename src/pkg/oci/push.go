@@ -163,10 +163,14 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 		return err
 	}
 
+	o.Transport.ProgressBar.Successf("Published %s [%s]", o.repo.Reference, root.MediaType)
+
+	var index ocispec.Index
+
 	_, err = o.ResolveRoot()
 	if err != nil {
 		if errors.Is(err, errdef.ErrNotFound) {
-			index := &ocispec.Index{
+			index = ocispec.Index{
 				Versioned: specs.Versioned{
 					SchemaVersion: 2,
 				},
@@ -193,34 +197,54 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 		} else {
 			return err
 		}
+	} else {
+		desc, rc, err := o.repo.FetchReference(ctx, o.repo.Reference.Reference)
+		if err != nil {
+			return err
+		}
+		defer rc.Close()
+
+		b, err := content.ReadAll(rc, desc)
+		if err != nil {
+			return err
+		}
+
+		if err := json.Unmarshal(b, &index); err != nil {
+			return err
+		}
+
+		found := false
+		for idx, m := range index.Manifests {
+			if m.Platform != nil && m.Platform.Architecture == pkg.Build.Architecture {
+				index.Manifests[idx].Digest = publishedDesc.Digest
+				index.Manifests[idx].Size = publishedDesc.Size
+				index.Manifests[idx].Platform = &ocispec.Platform{
+					Architecture: pkg.Build.Architecture,
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			index.Manifests = append(index.Manifests, ocispec.Descriptor{
+				MediaType: ocispec.MediaTypeImageManifest,
+				Digest:    publishedDesc.Digest,
+				Size:      publishedDesc.Size,
+				Platform: &ocispec.Platform{
+					Architecture: pkg.Build.Architecture,
+				},
+			})
+		}
 	}
 
-	// case ocispec.MediaTypeImageIndex:
-	// 	index, err := o.FetchManifestList(upstreamRoot)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	// first search through the included manifests to see if the manifest we just published is already included at a different tag
-	// 	// if it is, we will not add it again
-	// 	for _, manifest := range index.Manifests {
-	// 		if manifest.Digest == publishedDesc.Digest {
-	// 			return nil
-	// 		}
-	// 		if manifest.Platform != nil && manifest.Platform.Architecture == pkg.Build.Architecture {
-
-	// 		}
-
-	// 	}
-	// 	index.Manifests = append(index.Manifests, ocispec.Descriptor{
-	// 		MediaType: ocispec.MediaTypeImageManifest,
-	// 		Digest:    publishedDesc.Digest,
-	// 		Size:      publishedDesc.Size,
-	// 		Platform: &ocispec.Platform{
-	// 			Architecture: pkg.Build.Architecture,
-	// 		},
-	// 	})
-
-	o.Transport.ProgressBar.Successf("Published %s [%s]", o.repo.Reference, root.MediaType)
+	indexBytes, err := json.Marshal(index)
+	if err != nil {
+		return err
+	}
+	indexDesc := content.NewDescriptorFromBytes(ocispec.MediaTypeImageIndex, indexBytes)
+	if err := o.repo.Manifests().PushReference(ctx, indexDesc, bytes.NewReader(indexBytes), o.repo.Reference.Reference); err != nil {
+		return err
+	}
 
 	return nil
 }
