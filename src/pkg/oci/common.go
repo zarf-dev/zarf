@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
@@ -33,17 +34,20 @@ const (
 
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
 type OrasRemote struct {
-	repo      *remote.Repository
-	root      *ZarfOCIManifest
-	ctx       context.Context
-	Transport *utils.Transport
-	CopyOpts  oras.CopyOptions
+	repo           *remote.Repository
+	root           *ZarfOCIManifest
+	ctx            context.Context
+	Transport      *utils.Transport
+	CopyOpts       oras.CopyOptions
+	targetPlatform *ocispec.Platform
 }
+
+type Modifier func(*OrasRemote)
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
 // Registry auth is handled by the Docker CLI's credential store and checked before returning the client
-func NewOrasRemote(url string) (*OrasRemote, error) {
+func NewOrasRemote(url string, mods ...Modifier) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
@@ -59,8 +63,26 @@ func NewOrasRemote(url string) (*OrasRemote, error) {
 	copyOpts.PostCopy = o.printLayerCopied
 	o.CopyOpts = copyOpts
 
-	o.WithContext(context.TODO())
-	o.WithInsecureConnection(zarfconfig.CommonOptions.Insecure)
+	// right now --insecure is overloaded to mean both plain HTTP and insecure TLS
+	// putting this here as the "default" for the remote
+	// but can be overridden by a provided modifier
+	if zarfconfig.CommonOptions.Insecure {
+		insecureMod := WithInsecureSkipVerify(zarfconfig.CommonOptions.Insecure)
+		insecureMod(o)
+
+		httpMod := WithPlainHTTP(zarfconfig.CommonOptions.Insecure)
+		httpMod(o)
+	}
+
+	for _, mod := range mods {
+		mod(o)
+	}
+
+	// if no context is provided, use the default
+	if o.ctx == nil {
+		o.ctx = context.TODO()
+	}
+
 	return o, nil
 }
 
@@ -93,8 +115,10 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 }
 
 // WithContext sets the context for the remote
-func (o *OrasRemote) WithContext(ctx context.Context) {
-	o.ctx = ctx
+func WithContext(ctx context.Context) Modifier {
+	return func(o *OrasRemote) {
+		o.ctx = ctx
+	}
 }
 
 // createAuthClient returns an auth client for the given reference.
@@ -149,10 +173,25 @@ func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, err
 	return client, nil
 }
 
+// WithPlainHTTP sets the plain HTTP flag for the remote
+func WithPlainHTTP(plainHTTP bool) Modifier {
+	return func(o *OrasRemote) {
+		o.repo.PlainHTTP = plainHTTP
+	}
+}
+
 // WithInsecureConnection sets the insecure connection flag for the remote
-func (o *OrasRemote) WithInsecureConnection(insecure bool) {
-	o.repo.PlainHTTP = insecure
-	o.Transport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
+func WithInsecureSkipVerify(insecure bool) Modifier {
+	return func(o *OrasRemote) {
+		o.Transport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
+	}
+}
+
+// WithTargetPlatform sets the target platform for the remote
+func WithTargetPlatform(platform *ocispec.Platform) Modifier {
+	return func(o *OrasRemote) {
+		o.targetPlatform = platform
+	}
 }
 
 // Repo gives you access to the underlying remote repository

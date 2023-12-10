@@ -7,16 +7,19 @@ package oci
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
+	"oras.land/oras-go/v2/errdef"
 )
 
 // ConfigPartial is a partial OCI config that is used to create the manifest config.
@@ -83,12 +86,13 @@ func (o *OrasRemote) manifestAnnotationsFromMetadata(metadata *types.ZarfMetadat
 }
 
 func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descriptor, configDesc *ocispec.Descriptor, metadata *types.ZarfMetadata) (ocispec.Descriptor, error) {
-	packOpts := oras.PackOptions{}
-	packOpts.ConfigDescriptor = configDesc
-	packOpts.PackImageManifest = true
-	packOpts.ManifestAnnotations = o.manifestAnnotationsFromMetadata(metadata)
+	packOpts := oras.PackManifestOptions{
+		Layers:              descs,
+		ConfigDescriptor:    configDesc,
+		ManifestAnnotations: o.manifestAnnotationsFromMetadata(metadata),
+	}
 
-	root, err := oras.Pack(o.ctx, src, ocispec.MediaTypeImageManifest, descs, packOpts)
+	root, err := oras.PackManifest(o.ctx, src, oras.PackManifestVersion1_0, "", packOpts)
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
@@ -153,11 +157,68 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 
 	o.Transport.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", o.repo.Reference.Repository, o.repo.Reference.Reference))
 	defer o.Transport.ProgressBar.Stop()
-	// attempt to push the image manifest
-	_, err = oras.Copy(ctx, src, root.Digest.String(), o.repo, o.repo.Reference.Reference, copyOpts)
+
+	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), o.repo, "", copyOpts)
 	if err != nil {
 		return err
 	}
+
+	_, err = o.ResolveRoot()
+	if err != nil {
+		if errors.Is(err, errdef.ErrNotFound) {
+			index := &ocispec.Index{
+				Versioned: specs.Versioned{
+					SchemaVersion: 2,
+				},
+				Manifests: []ocispec.Descriptor{
+					{
+						MediaType: ocispec.MediaTypeImageManifest,
+						Digest:    publishedDesc.Digest,
+						Size:      publishedDesc.Size,
+						Platform: &ocispec.Platform{
+							Architecture: pkg.Build.Architecture,
+						},
+					},
+				},
+			}
+
+			indexBytes, err := json.Marshal(index)
+			if err != nil {
+				return err
+			}
+			indexDesc := content.NewDescriptorFromBytes(ocispec.MediaTypeImageIndex, indexBytes)
+			if err := o.repo.Manifests().PushReference(ctx, indexDesc, bytes.NewReader(indexBytes), o.repo.Reference.Reference); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	// case ocispec.MediaTypeImageIndex:
+	// 	index, err := o.FetchManifestList(upstreamRoot)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	// first search through the included manifests to see if the manifest we just published is already included at a different tag
+	// 	// if it is, we will not add it again
+	// 	for _, manifest := range index.Manifests {
+	// 		if manifest.Digest == publishedDesc.Digest {
+	// 			return nil
+	// 		}
+	// 		if manifest.Platform != nil && manifest.Platform.Architecture == pkg.Build.Architecture {
+
+	// 		}
+
+	// 	}
+	// 	index.Manifests = append(index.Manifests, ocispec.Descriptor{
+	// 		MediaType: ocispec.MediaTypeImageManifest,
+	// 		Digest:    publishedDesc.Digest,
+	// 		Size:      publishedDesc.Size,
+	// 		Platform: &ocispec.Platform{
+	// 			Architecture: pkg.Build.Architecture,
+	// 		},
+	// 	})
 
 	o.Transport.ProgressBar.Successf("Published %s [%s]", o.repo.Reference, root.MediaType)
 

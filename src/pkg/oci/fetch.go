@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -18,6 +19,12 @@ import (
 
 // ResolveRoot returns the root descriptor for the remote repository
 func (o *OrasRemote) ResolveRoot() (ocispec.Descriptor, error) {
+	if o.targetPlatform != nil {
+		resolveOpts := oras.ResolveOptions{
+			TargetPlatform: o.targetPlatform,
+		}
+		return oras.Resolve(o.ctx, o.repo, o.repo.Reference.Reference, resolveOpts)
+	}
 	return o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
 }
 
@@ -44,6 +51,11 @@ func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
 // FetchManifest fetches the manifest with the given descriptor from the remote repository.
 func (o *OrasRemote) FetchManifest(desc ocispec.Descriptor) (manifest *ZarfOCIManifest, err error) {
 	return FetchUnmarshal[*ZarfOCIManifest](o.FetchLayer, json.Unmarshal, desc)
+}
+
+// FetchManifestList fetches the manifest list from the remote repository.
+func (o *OrasRemote) FetchManifestList(desc ocispec.Descriptor) (manifestList *ocispec.Index, err error) {
+	return FetchUnmarshal[*ocispec.Index](o.FetchLayer, json.Unmarshal, desc)
 }
 
 // FetchLayer fetches the layer with the given descriptor from the remote repository.

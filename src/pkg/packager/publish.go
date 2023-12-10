@@ -30,7 +30,6 @@ func (p *Packager) Publish() (err error) {
 		// oci --> oci is a special case, where we will use oci.CopyPackage so that we can transfer the package
 		// w/o layers touching the filesystem
 		srcRemote := p.source.(*sources.OCISource).OrasRemote
-		srcRemote.WithContext(ctx)
 
 		parts := strings.Split(srcRemote.Repo().Reference.Repository, "/")
 		packageName := parts[len(parts)-1]
@@ -41,7 +40,6 @@ func (p *Packager) Publish() (err error) {
 		if err != nil {
 			return err
 		}
-		p.remote.WithContext(ctx)
 
 		if err := oci.CopyPackage(ctx, srcRemote, p.remote, nil, config.CommonOptions.OCIConcurrency); err != nil {
 			return err
@@ -65,9 +63,7 @@ func (p *Packager) Publish() (err error) {
 		return nil
 	}
 
-	var referenceSuffix string
 	if p.cfg.CreateOpts.IsSkeleton {
-		referenceSuffix = oci.SkeletonSuffix
 		cwd, err := os.Getwd()
 		if err != nil {
 			return err
@@ -88,12 +84,10 @@ func (p *Packager) Publish() (err error) {
 		if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 			return err
 		}
-
-		referenceSuffix = p.arch
 	}
 
 	// Get a reference to the registry for this package
-	ref, err := oci.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, referenceSuffix)
+	ref, err := oci.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, p.cfg.CreateOpts.IsSkeleton)
 	if err != nil {
 		return err
 	}

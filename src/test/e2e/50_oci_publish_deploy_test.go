@@ -119,22 +119,17 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	e2e.SetupDockerRegistry(t, dstRegistryPort)
 	defer e2e.TeardownRegistry(t, dstRegistryPort)
 
-	ctx := context.TODO()
-
-	src, err := oci.NewOrasRemote(ref)
+	src, err := oci.NewOrasRemote(ref, oci.WithPlainHTTP(true))
 	suite.NoError(err)
-	src.WithInsecureConnection(true)
-	src.WithContext(ctx)
 
-	dst, err := oci.NewOrasRemote(dstRef)
+	dst, err := oci.NewOrasRemote(dstRef, oci.WithPlainHTTP(true))
 	suite.NoError(err)
-	dst.WithInsecureConnection(true)
-	dst.WithContext(ctx)
 
 	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])
 	suite.NoError(err)
 	reg.PlainHTTP = true
 	attempt := 0
+	ctx := context.TODO()
 	for attempt <= 5 {
 		err = reg.Ping(ctx)
 		if err == nil {
