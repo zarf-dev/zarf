@@ -25,7 +25,7 @@ Commands useful for developing packages
 ## SEE ALSO
 
 * [zarf](zarf.md)	 - DevSecOps for Airgap
-* [zarf dev deploy](zarf_dev_deploy.md)	 - [beta] Builds and deploys a Zarf package from a given directory
+* [zarf dev deploy](zarf_dev_deploy.md)	 - [beta] Creates and deploys a Zarf package from a given directory
 * [zarf dev find-images](zarf_dev_find-images.md)	 - Evaluates components in a Zarf file to identify images specified in their helm charts and manifests
 * [zarf dev generate-config](zarf_dev_generate-config.md)	 - Generates a config file for Zarf
 * [zarf dev lint](zarf_dev_lint.md)	 - Verifies the package schema
