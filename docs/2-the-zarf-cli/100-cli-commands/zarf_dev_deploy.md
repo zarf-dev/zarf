@@ -10,11 +10,13 @@ zarf dev deploy [flags]
 ## Options
 
 ```
-      --components string           Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
-      --create-set stringToString   Specify package variables to set on the command line (KEY=value) (default [])
-      --deploy-set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
-  -h, --help                        help for deploy
-      --no-yolo                     Whether or not to build+deploy the package in YOLO mode
+      --components string                  Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
+      --create-set stringToString          Specify package variables to set on the command line (KEY=value) (default [])
+      --deploy-set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
+  -f, --flavor string                      The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
+  -h, --help                               help for deploy
+      --no-yolo                            Whether or not to build+deploy the package in YOLO mode
+      --registry-override stringToString   Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet) (default [])
 ```
 
 ## Options inherited from parent commands
