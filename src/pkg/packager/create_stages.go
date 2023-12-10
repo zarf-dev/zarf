@@ -105,8 +105,7 @@ func (p *Packager) assemble() error {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
-		isSkeleton := false
-		if err := p.addComponent(idx, component, isSkeleton); err != nil {
+		if err := p.addComponent(idx, component); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
@@ -196,8 +195,7 @@ func (p *Packager) assembleSkeleton() error {
 		message.Warn(warning)
 	}
 	for idx, component := range p.cfg.Pkg.Components {
-		isSkeleton := true
-		if err := p.addComponent(idx, component, isSkeleton); err != nil {
+		if err := p.addComponent(idx, component); err != nil {
 			return err
 		}
 
@@ -341,8 +339,10 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*layout.Compon
 	return componentSBOM, nil
 }
 
-func (p *Packager) addComponent(index int, component types.ZarfComponent, isSkeleton bool) error {
+func (p *Packager) addComponent(index int, component types.ZarfComponent) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
+
+	isSkeleton := p.cfg.CreateOpts.IsSkeleton
 
 	componentPaths, err := p.layout.Components.Create(component)
 	if err != nil {

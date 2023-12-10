@@ -329,12 +329,12 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPackageInvalidSource         = "Unable to identify source from %q: %s"
 
 	// zarf dev (prepare is an alias for dev)
-	CmdDevShort          = "Commands useful for developing packages"
+	CmdDevShort = "Commands useful for developing packages"
 
-	CmdDevDeployShort = "[beta] Creates and deploys a Zarf package from a given directory"
-	CmdDevDeployLong = "[beta] Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
-	CmdDevDeployFlagYolo = "Whether or not to build+deploy the package in YOLO mode"
-	CmdDevDeployErr      = "Failed to dev deploy: %s"
+	CmdDevDeployShort      = "[beta] Creates and deploys a Zarf package from a given directory"
+	CmdDevDeployLong       = "[beta] Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
+	CmdDevDeployFlagNoYolo = "Whether or not to build+deploy the package in YOLO mode"
+	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
 	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
