@@ -96,7 +96,7 @@ const (
 
 	// Dev deploy config keys
 
-	VDevDeployYolo = "dev.deploy.yolo"
+	VDevDeployNoYolo = "dev.deploy.no_yolo"
 )
 
 var (
@@ -187,7 +187,4 @@ func setDefaults() {
 
 	// Deploy opts that are non-zero values
 	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultHelmTimeout)
-
-	// Dev operations are default in YOLO mode
-	v.SetDefault(VDevDeployYolo, true)
 }

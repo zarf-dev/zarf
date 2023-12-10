@@ -17,7 +17,7 @@ import (
 // DevDeploy creates + deploys a package in one shot
 func (p *Packager) DevDeploy() error {
 	config.CommonOptions.Confirm = true
-	p.cfg.CreateOpts.SkipSBOM = !p.cfg.CreateOpts.IsYOLO
+	p.cfg.CreateOpts.SkipSBOM = !p.cfg.CreateOpts.NoYOLO
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -47,7 +47,7 @@ func (p *Packager) DevDeploy() error {
 	}
 
 	// If building in yolo mode, strip out all images and repos
-	if p.cfg.CreateOpts.IsYOLO {
+	if !p.cfg.CreateOpts.NoYOLO {
 		for idx := range p.cfg.Pkg.Components {
 			p.cfg.Pkg.Components[idx].Images = []string{}
 			p.cfg.Pkg.Components[idx].Repos = []string{}
@@ -67,7 +67,7 @@ func (p *Packager) DevDeploy() error {
 
 	p.connectStrings = make(types.ConnectStrings)
 
-	if p.cfg.CreateOpts.IsYOLO {
+	if !p.cfg.CreateOpts.NoYOLO {
 		p.cfg.Pkg.Metadata.YOLO = true
 	} else {
 		p.hpaModified = false

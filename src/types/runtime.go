@@ -112,7 +112,7 @@ type ZarfCreateOptions struct {
 	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
 	Flavor             string            `json:"flavor" jsonschema:"description=An optional variant that controls which components will be included in a package"`
 	IsSkeleton         bool              `json:"isSkeleton" jsonschema:"description=Whether to create a skeleton package"`
-	IsYOLO             bool              `json:"isYOLO" jsonschema:"description=Whether to create a YOLO package"`
+	NoYOLO             bool              `json:"noYOLO" jsonschema:"description=Whether to create a YOLO package"`
 }
 
 // ZarfSplitPackageData contains info about a split package.
