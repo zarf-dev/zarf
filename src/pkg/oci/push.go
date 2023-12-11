@@ -92,7 +92,7 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 		ManifestAnnotations: o.manifestAnnotationsFromMetadata(metadata),
 	}
 
-	root, err := oras.PackManifest(o.ctx, src, oras.PackManifestVersion1_0, "", packOpts)
+	root, err := oras.PackManifest(o.ctx, src, oras.PackManifestVersion1_1_RC4, "", packOpts)
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
