@@ -53,6 +53,9 @@ func (p *Packager) getSelectedComponents() []types.ZarfComponent {
 			var groupSelected *types.ZarfComponent
 
 			for _, component := range groupedComponents[groupKey] {
+				// Ensure we have a local version of the component to point to (otherwise the pointer might change on us)
+				component := component
+
 				selectState, matchedRequest := includedOrExcluded(component, requestedComponents)
 
 				if !component.Required {
@@ -60,7 +63,7 @@ func (p *Packager) getSelectedComponents() []types.ZarfComponent {
 						// If the component was explicitly excluded, record the match and continue
 						matchedRequests[matchedRequest] = true
 						continue
-					} else if selectState == unknown && component.Default {
+					} else if selectState == unknown && component.Default && groupDefault == nil {
 						// If the component is default but not included or excluded, remember the default
 						groupDefault = &component
 					}
