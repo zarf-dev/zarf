@@ -67,13 +67,11 @@ func NewOrasRemote(url string, mods ...Modifier) (*OrasRemote, error) {
 	// right now --insecure is overloaded to mean both plain HTTP and insecure TLS
 	// putting this here as the "default" for the remote
 	// but can be overridden by a provided modifier
-	if zarfconfig.CommonOptions.Insecure {
-		insecureMod := WithInsecureSkipVerify(zarfconfig.CommonOptions.Insecure)
-		insecureMod(o)
+	insecureMod := WithInsecureSkipVerify(zarfconfig.CommonOptions.Insecure)
+	insecureMod(o)
 
-		httpMod := WithPlainHTTP(zarfconfig.CommonOptions.Insecure)
-		httpMod(o)
-	}
+	httpMod := WithPlainHTTP(zarfconfig.CommonOptions.Insecure)
+	httpMod(o)
 
 	for _, mod := range mods {
 		mod(o)
