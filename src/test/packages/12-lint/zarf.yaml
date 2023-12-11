@@ -47,3 +47,7 @@ components:
   - name: oci-games-url
     import:
       path: linted-import
+
+  - name: import-big-bang
+    import:
+      url: oci://localhost:555/big-bang-min:2.10.0-skeleton

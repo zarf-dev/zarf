@@ -27,8 +27,8 @@ func ReloadComponentTemplate(component *types.ZarfComponent) error {
 	return nil
 }
 
-// FindComponentTemplatesAndReload appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
-func FindComponentTemplatesAndReload(zarfPackage *types.ZarfPackage) error {
+// ReloadComponentTemplatesInPackage appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
+func ReloadComponentTemplatesInPackage(zarfPackage *types.ZarfPackage) error {
 	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
 	for i := range zarfPackage.Components {
 		if err := ReloadComponentTemplate(&zarfPackage.Components[i]); err != nil {
@@ -78,7 +78,7 @@ func (p *Packager) fillActiveTemplate() error {
 	}
 
 	// update the component templates on the package
-	err := FindComponentTemplatesAndReload(&p.cfg.Pkg)
+	err := ReloadComponentTemplatesInPackage(&p.cfg.Pkg)
 	if err != nil {
 		return err
 	}

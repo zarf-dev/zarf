@@ -53,7 +53,7 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 
 	lintUnEvaledVariables(&validator)
 
-	fillActiveTemplate(&validator, createOpts)
+	fillPackageTemplate(&validator, createOpts)
 
 	lintComponents(&validator)
 
@@ -68,7 +68,7 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 	return &validator, nil
 }
 
-func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreateOptions) {
+func lintComposableComponents(validator *Validator, createOpts types.ZarfCreateOptions) {
 	for i, component := range validator.typedZarfPackage.Components {
 		arch := config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
 
