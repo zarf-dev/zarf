@@ -3,6 +3,10 @@
 
 [beta] Creates and deploys a Zarf package from a given directory
 
+## Synopsis
+
+[beta] Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration.
+
 ```
 zarf dev deploy [flags]
 ```
