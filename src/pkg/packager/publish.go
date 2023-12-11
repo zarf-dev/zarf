@@ -36,7 +36,13 @@ func (p *Packager) Publish() (err error) {
 
 		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
 
-		dstRemote, err := oci.NewOrasRemote(p.cfg.PublishOpts.PackageDestination)
+		arch := config.GetArch()
+		dstRemote, err := oci.NewOrasRemote(p.cfg.PublishOpts.PackageDestination, oci.WithArch(arch))
+		if err != nil {
+			return err
+		}
+
+		srcRoot, err := srcRemote.ResolveRoot()
 		if err != nil {
 			return err
 		}
@@ -55,11 +61,19 @@ func (p *Packager) Publish() (err error) {
 		}
 		expected := content.NewDescriptorFromBytes(ocispec.MediaTypeImageManifest, b)
 
-		// tag the manifest the same as the source
-		if err := dstRemote.Repo().Manifests().PushReference(ctx, expected, bytes.NewReader(b), srcRemote.Repo().Reference.Reference); err != nil {
+		srcRoot, err = srcRemote.ResolveRoot()
+		if err != nil {
 			return err
 		}
-		// TODO: implement the index logic here as well
+
+		if err := dstRemote.Repo().Manifests().PushReference(ctx, expected, bytes.NewReader(b), srcRoot.Digest.String()); err != nil {
+			return err
+		}
+
+		tag := srcRemote.Repo().Reference.Reference
+		if err := dstRemote.UpdateIndex(tag, arch, expected); err != nil {
+			return err
+		}
 		message.Infof("Published %s to %s", srcRemote.Repo().Reference, dstRemote.Repo().Reference)
 		return nil
 	}

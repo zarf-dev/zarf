@@ -165,9 +165,18 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 
 	o.Transport.ProgressBar.Successf("Published %s [%s]", o.repo.Reference, root.MediaType)
 
+	return o.UpdateIndex(o.repo.Reference.Reference, pkg.Build.Architecture, publishedDesc)
+}
+
+// UpdateIndex updates the index for the given package.
+func (o *OrasRemote) UpdateIndex(tag string, arch string, publishedDesc ocispec.Descriptor) error {
 	var index ocispec.Index
 
-	_, err = o.ResolveRoot()
+	o.repo.Reference.Reference = tag
+	// since ref has changed, need to reset root
+	o.root = nil
+
+	_, err := o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
 	if err != nil {
 		if errors.Is(err, errdef.ErrNotFound) {
 			index = ocispec.Index{
@@ -180,62 +189,63 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 						Digest:    publishedDesc.Digest,
 						Size:      publishedDesc.Size,
 						Platform: &ocispec.Platform{
-							Architecture: pkg.Build.Architecture,
+							Architecture: arch,
 						},
 					},
 				},
 			}
+			return o.pushIndex(&index, tag)
 		} else {
 			return err
 		}
-	} else {
-		desc, rc, err := o.repo.FetchReference(ctx, o.repo.Reference.Reference)
-		if err != nil {
-			return err
-		}
-		defer rc.Close()
-
-		b, err := content.ReadAll(rc, desc)
-		if err != nil {
-			return err
-		}
-
-		if err := json.Unmarshal(b, &index); err != nil {
-			return err
-		}
-
-		found := false
-		for idx, m := range index.Manifests {
-			if m.Platform != nil && m.Platform.Architecture == pkg.Build.Architecture {
-				index.Manifests[idx].Digest = publishedDesc.Digest
-				index.Manifests[idx].Size = publishedDesc.Size
-				index.Manifests[idx].Platform = &ocispec.Platform{
-					Architecture: pkg.Build.Architecture,
-				}
-				found = true
-				break
-			}
-		}
-		if !found {
-			index.Manifests = append(index.Manifests, ocispec.Descriptor{
-				MediaType: ocispec.MediaTypeImageManifest,
-				Digest:    publishedDesc.Digest,
-				Size:      publishedDesc.Size,
-				Platform: &ocispec.Platform{
-					Architecture: pkg.Build.Architecture,
-				},
-			})
-		}
 	}
 
+	desc, rc, err := o.repo.FetchReference(o.ctx, tag)
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+
+	b, err := content.ReadAll(rc, desc)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(b, &index); err != nil {
+		return err
+	}
+
+	found := false
+	for idx, m := range index.Manifests {
+		if m.Platform != nil && m.Platform.Architecture == arch {
+			index.Manifests[idx].Digest = publishedDesc.Digest
+			index.Manifests[idx].Size = publishedDesc.Size
+			index.Manifests[idx].Platform = &ocispec.Platform{
+				Architecture: arch,
+			}
+			found = true
+			break
+		}
+	}
+	if !found {
+		index.Manifests = append(index.Manifests, ocispec.Descriptor{
+			MediaType: ocispec.MediaTypeImageManifest,
+			Digest:    publishedDesc.Digest,
+			Size:      publishedDesc.Size,
+			Platform: &ocispec.Platform{
+				Architecture: arch,
+			},
+		})
+	}
+
+	return o.pushIndex(&index, tag)
+}
+
+func (o *OrasRemote) pushIndex(index *ocispec.Index, tag string) error {
 	indexBytes, err := json.Marshal(index)
 	if err != nil {
 		return err
 	}
 	indexDesc := content.NewDescriptorFromBytes(ocispec.MediaTypeImageIndex, indexBytes)
-	if err := o.repo.Manifests().PushReference(ctx, indexDesc, bytes.NewReader(indexBytes), o.repo.Reference.Reference); err != nil {
-		return err
-	}
-
-	return nil
+	return o.repo.Manifests().PushReference(o.ctx, indexDesc, bytes.NewReader(indexBytes), tag)
 }
