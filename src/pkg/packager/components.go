@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -78,7 +79,7 @@ func (p *Packager) getSelectedComponents() []types.ZarfComponent {
 
 					// Then check for already selected groups
 					if groupSelected != nil {
-						message.Fatalf(nil, "You cannot specify multiple components (%q, %q) within the same group (%q) when using the --components flag.", groupSelected.Name, component.Name, component.Group)
+						message.Fatalf(nil, lang.PkgDeployErrMultipleComponentsSameGroup, groupSelected.Name, component.Name, component.Group)
 					}
 
 					// Then append to the final list
@@ -96,14 +97,14 @@ func (p *Packager) getSelectedComponents() []types.ZarfComponent {
 				for _, component := range groupedComponents[groupKey] {
 					componentNames = append(componentNames, component.Name)
 				}
-				message.Fatalf(nil, "You must make a selection from %q with the --components flag as there is no default in their group.", strings.Join(componentNames, ","))
+				message.Fatalf(nil, lang.PkgDeployErrNoDefaultOrSelection, strings.Join(componentNames, ","))
 			}
 		}
 
 		// Check that we have matched against all requests
 		for _, requestedComponent := range requestedComponents {
 			if _, ok := matchedRequests[requestedComponent]; !ok {
-				message.Fatalf(nil, "No compatible components found that matched %q. Please check spelling and try again.", requestedComponent)
+				message.Fatalf(nil, lang.PkgDeployErrNoCompatibleComponentsForSelection, requestedComponent)
 			}
 		}
 	} else {

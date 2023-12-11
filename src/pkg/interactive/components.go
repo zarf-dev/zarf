@@ -10,6 +10,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -37,7 +38,7 @@ func SelectOptionalComponent(component types.ZarfComponent) (confirmComponent bo
 		Default: component.Default,
 	}
 	if err := survey.AskOne(prompt, &confirmComponent); err != nil {
-		message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
+		message.Fatalf(nil, lang.PkgDeployErrComponentSelectionCanceled, err.Error())
 	}
 
 	return confirmComponent
@@ -57,7 +58,7 @@ func SelectChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent
 			componentNames = append(componentNames, component.Name)
 		}
 		// If no default component was found, give up
-		message.Fatalf(nil, "You must make a selection from %q with the --components flag as there is no default in their group.", strings.Join(componentNames, ","))
+		message.Fatalf(nil, lang.PkgDeployErrNoDefaultOrSelection, strings.Join(componentNames, ","))
 	}
 
 	message.HorizontalRule()
@@ -78,7 +79,7 @@ func SelectChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent
 	pterm.Println()
 
 	if err := survey.AskOne(prompt, &chosen); err != nil {
-		message.Fatalf(nil, "Component selection canceled: %s", err.Error())
+		message.Fatalf(nil, lang.PkgDeployErrComponentSelectionCanceled, err.Error())
 	}
 
 	return componentGroup[chosen]

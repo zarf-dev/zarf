@@ -597,6 +597,14 @@ const (
 	PkgCreateErrDifferentialSameVersion = "unable to create a differential package with the same version as the package you are using as a reference; the package version must be incremented"
 )
 
+// src/internal/packager/deploy.
+const (
+	PkgDeployErrMultipleComponentsSameGroup        = "You cannot specify multiple components (%q, %q) within the same group (%q) when using the --components flag."
+	PkgDeployErrNoDefaultOrSelection               = "You must make a selection from %q with the --components flag as there is no default in their group."
+	PkgDeployErrNoCompatibleComponentsForSelection = "No compatible components found that matched %q. Please check spelling and try again."
+	PkgDeployErrComponentSelectionCanceled         = "Component selection canceled: %s"
+)
+
 // src/internal/packager/validate.
 const (
 	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###.  This will be removed in Zarf v1.0.0.  Please update to ###ZARF_PKG_TMPL_%s###."
