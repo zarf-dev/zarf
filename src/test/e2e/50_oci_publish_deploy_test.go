@@ -58,7 +58,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	suite.Contains(stdErr, "Published "+ref)
 
 	// Pull the package via OCI.
-	stdOut, stdErr, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1-"+e2e.Arch, "--insecure")
+	stdOut, stdErr, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Publish w/ package missing `metadata.version` field.
@@ -72,7 +72,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	suite.NoError(err, stdOut, stdErr)
 
 	// Inspect the published package.
-	stdOut, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/helm-charts:0.0.1-"+e2e.Arch, "--insecure")
+	stdOut, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/helm-charts:0.0.1", "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 }
 
@@ -81,7 +81,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_1_Deploy() {
 
 	// Build the fully qualified reference.
 	suite.Reference.Repository = "helm-charts"
-	suite.Reference.Reference = fmt.Sprintf("0.0.1-%s", e2e.Arch)
+	suite.Reference.Reference = "0.0.1"
 	ref := suite.Reference.String()
 
 	// Deploy the package via OCI.
