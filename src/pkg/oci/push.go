@@ -185,15 +185,6 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 					},
 				},
 			}
-
-			indexBytes, err := json.Marshal(index)
-			if err != nil {
-				return err
-			}
-			indexDesc := content.NewDescriptorFromBytes(ocispec.MediaTypeImageIndex, indexBytes)
-			if err := o.repo.Manifests().PushReference(ctx, indexDesc, bytes.NewReader(indexBytes), o.repo.Reference.Reference); err != nil {
-				return err
-			}
 		} else {
 			return err
 		}

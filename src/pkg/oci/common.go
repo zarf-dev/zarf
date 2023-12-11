@@ -194,6 +194,14 @@ func WithTargetPlatform(platform *ocispec.Platform) Modifier {
 	}
 }
 
+func WithSkeletonPlatform() Modifier {
+	return func(o *OrasRemote) {
+		o.targetPlatform = &ocispec.Platform{
+			Architecture: "skeleton",
+		}
+	}
+}
+
 // Repo gives you access to the underlying remote repository
 func (o *OrasRemote) Repo() *remote.Repository {
 	return o.repo

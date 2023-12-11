@@ -8,11 +8,9 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -93,9 +91,6 @@ func ImportDefinition(component *types.ZarfComponent) error {
 		ok := helpers.IsOCIURL(url)
 		if !ok {
 			return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name, "URL is not a valid OCI URL")
-		}
-		if !strings.HasSuffix(url, oci.SkeletonSuffix) {
-			return fmt.Errorf(lang.PkgValidateErrImportDefinition, component.Name, "OCI import URL must end with -skeleton")
 		}
 	}
 

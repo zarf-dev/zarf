@@ -36,12 +36,12 @@ func (p *Packager) Publish() (err error) {
 
 		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
 
-		err = p.setOCIRemote(p.cfg.PublishOpts.PackageDestination)
+		dstRemote, err := oci.NewOrasRemote(p.cfg.PublishOpts.PackageDestination)
 		if err != nil {
 			return err
 		}
 
-		if err := oci.CopyPackage(ctx, srcRemote, p.remote, nil, config.CommonOptions.OCIConcurrency); err != nil {
+		if err := oci.CopyPackage(ctx, srcRemote, dstRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
 			return err
 		}
 
@@ -56,10 +56,11 @@ func (p *Packager) Publish() (err error) {
 		expected := content.NewDescriptorFromBytes(ocispec.MediaTypeImageManifest, b)
 
 		// tag the manifest the same as the source
-		if err := p.remote.Repo().Manifests().PushReference(ctx, expected, bytes.NewReader(b), srcRemote.Repo().Reference.Reference); err != nil {
+		if err := dstRemote.Repo().Manifests().PushReference(ctx, expected, bytes.NewReader(b), srcRemote.Repo().Reference.Reference); err != nil {
 			return err
 		}
-		message.Infof("Published %s to %s", srcRemote.Repo().Reference, p.remote.Repo().Reference)
+		// TODO: implement the index logic here as well
+		message.Infof("Published %s to %s", srcRemote.Repo().Reference, dstRemote.Repo().Reference)
 		return nil
 	}
 
@@ -92,7 +93,7 @@ func (p *Packager) Publish() (err error) {
 		return err
 	}
 
-	err = p.setOCIRemote(ref)
+	remote, err := oci.NewOrasRemote(ref)
 	if err != nil {
 		return err
 	}
@@ -107,7 +108,7 @@ func (p *Packager) Publish() (err error) {
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
 
 	// Publish the package/skeleton to the registry
-	if err := p.remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
+	if err := remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
 		return err
 	}
 	if p.cfg.CreateOpts.IsSkeleton {
@@ -118,7 +119,7 @@ func (p *Packager) Publish() (err error) {
 				Name: fmt.Sprintf("import-%s", c.Name),
 				Import: types.ZarfComponentImport{
 					ComponentName: c.Name,
-					URL:           helpers.OCIURLPrefix + p.remote.Repo().Reference.String(),
+					URL:           helpers.OCIURLPrefix + remote.Repo().Reference.String(),
 				},
 			})
 		}

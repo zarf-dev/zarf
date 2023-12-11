@@ -28,7 +28,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -38,7 +37,6 @@ import (
 type Packager struct {
 	cfg            *types.PackagerConfig
 	cluster        *cluster.Cluster
-	remote         *oci.OrasRemote
 	layout         *layout.PackagePaths
 	arch           string
 	warnings       []string
@@ -382,16 +380,6 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 		}
 	}
 	spinner.Successf("Package saved to %q", destinationTarball)
-	return nil
-}
-
-// setOCIRemote sets the remote OCI client for the package.
-func (p *Packager) setOCIRemote(url string) error {
-	remote, err := oci.NewOrasRemote(url)
-	if err != nil {
-		return err
-	}
-	p.remote = remote
 	return nil
 }
 

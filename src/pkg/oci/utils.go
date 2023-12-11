@@ -21,8 +21,6 @@ import (
 // ReferenceFromMetadata returns a reference for the given metadata.
 //
 // prepending the provided prefix
-//
-// appending the provided suffix to the version
 func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata) (string, error) {
 	ver := metadata.Version
 	if len(ver) == 0 {
