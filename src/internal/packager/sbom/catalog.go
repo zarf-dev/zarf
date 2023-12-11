@@ -15,6 +15,9 @@ import (
 	"github.com/anchore/stereoscope/pkg/image"
 	"github.com/anchore/syft/syft"
 	"github.com/anchore/syft/syft/artifact"
+	syftFile "github.com/anchore/syft/syft/file"
+	"github.com/anchore/syft/syft/format"
+	"github.com/anchore/syft/syft/format/syftjson"
 	"github.com/anchore/syft/syft/linux"
 	"github.com/anchore/syft/syft/pkg"
 	"github.com/anchore/syft/syft/pkg/cataloger"
@@ -157,12 +160,12 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 		return nil, err
 	}
 
-	syftSource, err := source.NewFromImage(syftImage, "")
+	syftSource, err := source.NewFromStereoscopeImageObject(syftImage, "", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	catalog, relationships, distro, err := syft.CatalogPackages(&syftSource, cataloger.DefaultConfig())
+	catalog, relationships, distro, err := syft.CatalogPackages(syftSource, cataloger.DefaultConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +174,7 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 		Descriptor: sbom.Descriptor{
 			Name: "zarf",
 		},
-		Source: syftSource.Metadata,
+		Source: syftSource.Describe(),
 		Artifacts: sbom.Artifacts{
 			Packages:          catalog,
 			LinuxDistribution: distro,
@@ -179,7 +182,7 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 		Relationships: relationships,
 	}
 
-	jsonData, err := syft.Encode(artifact, syft.FormatByID(syft.JSONFormatID))
+	jsonData, err := format.Encode(artifact, syftjson.NewFormatEncoder())
 	if err != nil {
 		return nil, err
 	}
@@ -202,20 +205,22 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 
 // createPathSBOM uses syft to generate SBOM for a filepath.
 func (b *Builder) createFileSBOM(componentSBOM layout.ComponentSBOM, component string) ([]byte, error) {
-	catalog := pkg.NewCatalog()
+	catalog := pkg.NewCollection()
 	relationships := []artifact.Relationship{}
-	parentSource, err := source.NewFromDirectory(componentSBOM.Component.Base)
+	parentSource, err := source.NewFromDirectoryPath(componentSBOM.Component.Base)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, file := range componentSBOM.Files {
+	for _, sbomFile := range componentSBOM.Files {
 		// Create the sbom source
-		fileSource, clean := source.NewFromFile(file)
-		defer clean()
+		fileSource, err := source.NewFromFile(source.FileConfig{Path: sbomFile})
+		if err != nil {
+			return nil, err
+		}
 
 		// Dogsled distro since this is not a linux image we are scanning
-		cat, rel, _, err := syft.CatalogPackages(&fileSource, cataloger.DefaultConfig())
+		cat, rel, _, err := syft.CatalogPackages(fileSource, cataloger.DefaultConfig())
 		if err != nil {
 			return nil, err
 		}
@@ -225,14 +230,14 @@ func (b *Builder) createFileSBOM(componentSBOM layout.ComponentSBOM, component s
 
 			// See if the source locations for this package contain the file Zarf indexed
 			for _, location := range pkg.Locations.ToSlice() {
-				if location.RealPath == fileSource.Metadata.Path {
+				if location.RealPath == fileSource.Describe().Metadata.(source.FileSourceMetadata).Path {
 					containsSource = true
 				}
 			}
 
 			// If the locations do not contain the source file (i.e. the package was inside a tarball), add the file source
 			if !containsSource {
-				sourceLocation := source.NewLocation(fileSource.Metadata.Path)
+				sourceLocation := syftFile.NewLocation(fileSource.Describe().Metadata.(source.FileSourceMetadata).Path)
 				pkg.Locations.Add(sourceLocation)
 			}
 
@@ -241,7 +246,7 @@ func (b *Builder) createFileSBOM(componentSBOM layout.ComponentSBOM, component s
 
 		for _, r := range rel {
 			relationships = append(relationships, artifact.Relationship{
-				From: &parentSource,
+				From: parentSource,
 				To:   r.To,
 				Type: r.Type,
 				Data: r.Data,
@@ -253,7 +258,7 @@ func (b *Builder) createFileSBOM(componentSBOM layout.ComponentSBOM, component s
 		Descriptor: sbom.Descriptor{
 			Name: "zarf",
 		},
-		Source: parentSource.Metadata,
+		Source: parentSource.Describe(),
 		Artifacts: sbom.Artifacts{
 			Packages:          catalog,
 			LinuxDistribution: &linux.Release{},
@@ -261,7 +266,7 @@ func (b *Builder) createFileSBOM(componentSBOM layout.ComponentSBOM, component s
 		Relationships: relationships,
 	}
 
-	jsonData, err := syft.Encode(artifact, syft.FormatByID(syft.JSONFormatID))
+	jsonData, err := format.Encode(artifact, syftjson.NewFormatEncoder())
 	if err != nil {
 		return nil, err
 	}
