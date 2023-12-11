@@ -58,6 +58,6 @@ func TestDevDeploy(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf("dev", "deploy", "examples/dos-games")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "yolo", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
