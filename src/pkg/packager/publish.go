@@ -87,7 +87,7 @@ func (p *Packager) Publish() (err error) {
 	}
 
 	// Get a reference to the registry for this package
-	ref, err := oci.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, p.cfg.CreateOpts.IsSkeleton)
+	ref, err := oci.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (p *Packager) Publish() (err error) {
 	if err := p.remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
 		return err
 	}
-	if strings.HasSuffix(p.remote.Repo().Reference.String(), oci.SkeletonSuffix) {
+	if p.cfg.CreateOpts.IsSkeleton {
 		message.Title("How to import components from this skeleton:", "")
 		ex := []types.ZarfComponent{}
 		for _, c := range p.cfg.Pkg.Components {

@@ -23,7 +23,7 @@ import (
 // prepending the provided prefix
 //
 // appending the provided suffix to the version
-func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata, isSkeleton bool) (string, error) {
+func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata) (string, error) {
 	ver := metadata.Version
 	if len(ver) == 0 {
 		return "", errors.New("version is required for publishing")
@@ -36,10 +36,6 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 
 	format := "%s%s:%s"
 	raw := fmt.Sprintf(format, registryLocation, metadata.Name, ver)
-
-	if isSkeleton {
-		raw = raw + "-" + SkeletonSuffix
-	}
 
 	message.Debug("Raw OCI reference from metadata:", raw)
 

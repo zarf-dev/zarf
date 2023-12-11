@@ -90,6 +90,10 @@ func (p *Packager) writeYaml() error {
 	p.cfg.Pkg.Metadata.Architecture = p.arch
 	p.cfg.Pkg.Build.Architecture = p.arch
 
+	if p.cfg.CreateOpts.IsSkeleton {
+		p.cfg.Pkg.Build.Architecture = "skeleton"
+	}
+
 	// Record the time of package creation.
 	p.cfg.Pkg.Build.Timestamp = now.Format(time.RFC1123Z)
 
