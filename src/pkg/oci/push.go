@@ -195,9 +195,8 @@ func (o *OrasRemote) UpdateIndex(tag string, arch string, publishedDesc ocispec.
 				},
 			}
 			return o.pushIndex(&index, tag)
-		} else {
-			return err
 		}
+		return err
 	}
 
 	desc, rc, err := o.repo.FetchReference(o.ctx, tag)

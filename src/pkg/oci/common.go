@@ -42,6 +42,7 @@ type OrasRemote struct {
 	targetPlatform *ocispec.Platform
 }
 
+// Modifier is a function that modifies an OrasRemote
 type Modifier func(*OrasRemote)
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
@@ -114,13 +115,6 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 	return nil
 }
 
-// WithContext sets the context for the remote
-func WithContext(ctx context.Context) Modifier {
-	return func(o *OrasRemote) {
-		o.ctx = ctx
-	}
-}
-
 // createAuthClient returns an auth client for the given reference.
 //
 // The credentials are pulled using Docker's default credential store.
@@ -173,6 +167,13 @@ func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, err
 	return client, nil
 }
 
+// WithContext sets the context for the remote
+func WithContext(ctx context.Context) Modifier {
+	return func(o *OrasRemote) {
+		o.ctx = ctx
+	}
+}
+
 // WithPlainHTTP sets the plain HTTP flag for the remote
 func WithPlainHTTP(plainHTTP bool) Modifier {
 	return func(o *OrasRemote) {
@@ -180,7 +181,7 @@ func WithPlainHTTP(plainHTTP bool) Modifier {
 	}
 }
 
-// WithInsecureConnection sets the insecure connection flag for the remote
+// WithInsecureSkipVerify sets the insecure TLS flag for the remote
 func WithInsecureSkipVerify(insecure bool) Modifier {
 	return func(o *OrasRemote) {
 		o.Transport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
@@ -194,12 +195,14 @@ func WithTargetPlatform(platform *ocispec.Platform) Modifier {
 	}
 }
 
+// WithSkeletonArch sets the target architecture for the remote to skeleton
 func WithSkeletonArch() Modifier {
 	return WithTargetPlatform(&ocispec.Platform{
 		Architecture: "skeleton",
 	})
 }
 
+// WithArch sets the target architecture for the remote
 func WithArch(arch string) Modifier {
 	return WithTargetPlatform(&ocispec.Platform{
 		Architecture: arch,
