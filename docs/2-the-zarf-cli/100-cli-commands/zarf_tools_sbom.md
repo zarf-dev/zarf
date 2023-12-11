@@ -16,7 +16,7 @@ zarf tools sbom [flags]
 ```
       --base-path string         base directory for scanning, no links will be followed above this directory, and all paths will be reported relative to this directory
       --catalogers stringArray   enable one or more package catalogers
-  -c, --config string            zarf configuration file (default "hack/empty-config.toml")
+  -c, --config string            syft configuration file
       --exclude stringArray      exclude paths from being scanned using a glob expression
       --file string              file to write the default report output to (default is STDOUT) (DEPRECATED: use: output)
   -h, --help                     help for sbom

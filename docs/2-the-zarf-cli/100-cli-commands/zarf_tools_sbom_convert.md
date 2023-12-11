@@ -23,7 +23,7 @@ zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
 ## Options inherited from parent commands
 
 ```
-  -c, --config string   zarf configuration file (default "hack/empty-config.toml")
+  -c, --config string   syft configuration file
   -q, --quiet           suppress all logging output
   -v, --verbose count   increase verbosity (-v = info, -vv = debug)
 ```

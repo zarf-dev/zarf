@@ -11,13 +11,13 @@ zarf tools sbom version [flags]
 
 ```
   -h, --help            help for version
-  -o, --output string   the format to show the results (allowable: [text json]) (default "text")
+  -o, --output string   the format to show the results (allowable: [text json])
 ```
 
 ## Options inherited from parent commands
 
 ```
-  -c, --config string   zarf configuration file (default "hack/empty-config.toml")
+  -c, --config string   syft configuration file
   -q, --quiet           suppress all logging output
   -v, --verbose count   increase verbosity (-v = info, -vv = debug)
 ```

@@ -13,7 +13,7 @@ import (
 
 func init() {
 	syftCmd := syftCLI.Command(clio.Identification{
-		Name:    "zarf",
+		Name:    "syft",
 		Version: config.CLIVersion,
 	})
 	syftCmd.Use = "sbom"

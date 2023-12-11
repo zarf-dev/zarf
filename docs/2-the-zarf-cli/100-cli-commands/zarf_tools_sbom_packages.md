@@ -22,7 +22,7 @@ zarf tools sbom packages [SOURCE] [flags]
       --name string              set the name of the target being analyzed (DEPRECATED: use: source-name)
   -o, --output stringArray       report output format (<format>=<file> to output to a file), formats=[cyclonedx-json cyclonedx-xml github-json spdx-json spdx-tag-value syft-json syft-table syft-text template] (default [syft-table])
       --platform string          an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')
-  -s, --scope string             selection of layers to catalog, options=[squashed all-layers] (default "squashed")
+  -s, --scope string             selection of layers to catalog, options=[squashed all-layers]
       --source-name string       set the name of the target being analyzed
       --source-version string    set the version of the target being analyzed
   -t, --template string          specify the path to a Go template file
@@ -31,7 +31,7 @@ zarf tools sbom packages [SOURCE] [flags]
 ## Options inherited from parent commands
 
 ```
-  -c, --config string   zarf configuration file (default "hack/empty-config.toml")
+  -c, --config string   syft configuration file
   -q, --quiet           suppress all logging output
   -v, --verbose count   increase verbosity (-v = info, -vv = debug)
 ```
