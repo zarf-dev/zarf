@@ -19,6 +19,11 @@ import (
 
 // ResolveRoot returns the root descriptor for the remote repository
 func (o *OrasRemote) ResolveRoot() (ocispec.Descriptor, error) {
+	desc, err := o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
+	if err == nil && desc.MediaType != ocispec.MediaTypeImageIndex {
+		return desc, nil
+	}
+
 	resolveOpts := oras.ResolveOptions{
 		TargetPlatform: o.targetPlatform,
 	}
@@ -48,11 +53,6 @@ func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
 // FetchManifest fetches the manifest with the given descriptor from the remote repository.
 func (o *OrasRemote) FetchManifest(desc ocispec.Descriptor) (manifest *ZarfOCIManifest, err error) {
 	return FetchUnmarshal[*ZarfOCIManifest](o.FetchLayer, json.Unmarshal, desc)
-}
-
-// FetchManifestList fetches the manifest list from the remote repository.
-func (o *OrasRemote) FetchManifestList(desc ocispec.Descriptor) (manifestList *ocispec.Index, err error) {
-	return FetchUnmarshal[*ocispec.Index](o.FetchLayer, json.Unmarshal, desc)
 }
 
 // FetchLayer fetches the layer with the given descriptor from the remote repository.
