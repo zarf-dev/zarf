@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -16,7 +15,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 
 	"oras.land/oras-go/v2/registry"
 
@@ -35,18 +33,6 @@ var packageCmd = &cobra.Command{
 	Short:   lang.CmdPackageShort,
 }
 
-func setBaseDirectory(args []string, pkgConfig *types.PackagerConfig) {
-	if len(args) > 0 {
-		pkgConfig.CreateOpts.BaseDir = args[0]
-	} else {
-		var err error
-		pkgConfig.CreateOpts.BaseDir, err = os.Getwd()
-		if err != nil {
-			message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
-		}
-	}
-}
-
 var packageCreateCmd = &cobra.Command{
 	Use:     "create [ DIRECTORY ]",
 	Aliases: []string{"c"},
@@ -54,9 +40,7 @@ var packageCreateCmd = &cobra.Command{
 	Short:   lang.CmdPackageCreateShort,
 	Long:    lang.CmdPackageCreateLong,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		// If a directory was provided, use that as the base directory
-		setBaseDirectory(args, &pkgConfig)
+		common.SetBaseDirectory(args, &pkgConfig)
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 		if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {

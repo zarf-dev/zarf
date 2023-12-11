@@ -95,8 +95,7 @@ func (v Validator) printValidationTable() {
 	packageKeys := helpers.Unique(v.getUniquePackageKeys())
 	connectData := make(map[packageKey][][]string)
 
-	findings := helpers.Unique(v.findings)
-	for _, finding := range findings {
+	for _, finding := range v.findings {
 		connectData[finding.packageKey] = append(connectData[finding.packageKey],
 			[]string{finding.validationType.String(), finding.getPath(), finding.String()})
 	}
@@ -169,10 +168,10 @@ func (v Validator) hasFindings() bool {
 
 func (v *Validator) addWarning(vmessage validatorMessage) {
 	vmessage.validationType = validationWarning
-	v.findings = append(v.findings, vmessage)
+	v.findings = helpers.Unique(append(v.findings, vmessage))
 }
 
 func (v *Validator) addError(vMessage validatorMessage) {
 	vMessage.validationType = validationError
-	v.findings = append(v.findings, vMessage)
+	v.findings = helpers.Unique(append(v.findings, vMessage))
 }

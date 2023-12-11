@@ -1,12 +1,7 @@
-kind: ZarfInitConfig
+kind: ZarfPackageConfig
 metadata:
-  name: init
+  name: lint
   description1: Testing bad yaml
-
-
-variables:
-  - name: BUSYBOX_IMAGE
-    description: "whatever"
 
 components:
   - name: first-test-component
@@ -48,6 +43,12 @@ components:
     import:
       path: linted-import
 
+  # - name: import-big-bang
+  #   import:
+  #     url: oci://localhost:555/big-bang-min:2.10.0-skeleton
+
   - name: import-big-bang
-    import:
-      url: oci://localhost:555/big-bang-min:2.10.0-skeleton
+    only:
+      flavor: bad-flavor-that-were-not-picking-but-want-to-make-sure-doesnt-show-up-in-lint
+    images:
+      - image-in-flavor-component:unpinned

@@ -44,6 +44,8 @@ func TestLint(t *testing.T) {
 		require.Contains(t, strippedStderr, ".components.[1].images.[2] | Image not pinned with digest")
 		require.Contains(t, strippedStderr, ".components.[3].import.path | Zarf does not evaluate variables at component.x.import.path - ###ZARF_PKG_TMPL_PATH###")
 		require.Contains(t, strippedStderr, ".components.[0].images.[0] | Image not pinned with digest - defenseunicorns/zarf-game:multi-tile-dark")
+		// I need to see if we only want to not include flavors when they're downstream or not include them in general
+		// require.NotContains(t, strippedStderr, "image-in-flavor-component:unpinned")
 	})
 
 }
