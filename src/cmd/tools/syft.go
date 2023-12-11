@@ -5,16 +5,17 @@
 package tools
 
 import (
+	"github.com/anchore/clio"
 	syftCLI "github.com/anchore/syft/cmd/syft/cli"
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 func init() {
-	syftCmd, err := syftCLI.New()
-	if err != nil {
-		message.Fatal(err, lang.CmdToolsSbomErr)
-	}
+	syftCmd := syftCLI.Command(clio.Identification{
+		Name:    "syft",
+		Version: config.CLIVersion,
+	})
 	syftCmd.Use = "sbom"
 	syftCmd.Short = lang.CmdToolsSbomShort
 	syftCmd.Aliases = []string{"s", "syft"}
