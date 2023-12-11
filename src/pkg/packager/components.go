@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	Unknown  = 0
-	Included = 1
-	Excluded = 2
+	unknown  = 0
+	included = 1
+	excluded = 2
 )
 
 func (p *Packager) getSelectedComponents() []types.ZarfComponent {
@@ -56,20 +56,20 @@ func (p *Packager) getSelectedComponents() []types.ZarfComponent {
 				selectState, matchedRequest := includedOrExcluded(component, requestedComponents)
 
 				if !component.Required {
-					if selectState == Excluded {
+					if selectState == excluded {
 						// If the component was explicitly excluded, record the match and continue
 						matchedRequests[matchedRequest] = true
 						continue
-					} else if selectState == Unknown && component.Default {
+					} else if selectState == unknown && component.Default {
 						// If the component is default but not included or excluded, remember the default
 						groupDefault = &component
 					}
 				} else {
 					// Force the selectState to included for Required components
-					selectState = Included
+					selectState = included
 				}
 
-				if selectState == Included {
+				if selectState == included {
 					// If the component was explicitly included, record the match
 					matchedRequests[matchedRequest] = true
 
@@ -128,19 +128,19 @@ func (p *Packager) forIncludedComponents(onIncluded func(types.ZarfComponent) er
 	isPartial := len(requestedComponents) > 0 && requestedComponents[0] != ""
 
 	for _, component := range p.cfg.Pkg.Components {
-		selectState := Unknown
+		selectState := unknown
 
 		if isPartial {
 			selectState, _ = includedOrExcluded(component, requestedComponents)
 
-			if selectState == Excluded {
+			if selectState == excluded {
 				continue
 			}
 		} else {
-			selectState = Included
+			selectState = included
 		}
 
-		if selectState == Included {
+		if selectState == included {
 			if err := onIncluded(component); err != nil {
 				return err
 			}
@@ -158,19 +158,19 @@ func includedOrExcluded(component types.ZarfComponent, requestedComponentNames [
 			// If the component glob matches one of the requested components, then return true
 			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
 			if matched, _ := path.Match(strings.TrimSuffix(requestedComponent, "-"), component.Name); matched {
-				return Excluded, requestedComponent
+				return excluded, requestedComponent
 			}
 		} else {
 			// If the component glob matches one of the requested components, then return true
 			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
 			if matched, _ := path.Match(requestedComponent, component.Name); matched {
-				return Included, requestedComponent
+				return included, requestedComponent
 			}
 		}
 	}
 
 	// All other cases we don't know if we should include or exclude yet
-	return Unknown, ""
+	return unknown, ""
 }
 
 func requiresCluster(component types.ZarfComponent) bool {
