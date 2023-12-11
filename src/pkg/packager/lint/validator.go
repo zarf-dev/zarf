@@ -7,7 +7,6 @@ package lint
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -76,15 +75,6 @@ func (v Validator) IsSuccess() bool {
 		}
 	}
 	return true
-}
-
-func (v Validator) hasUnsetVarMessageForPkg(pk packageKey) bool {
-	for _, finding := range v.findings {
-		if finding.description == lang.UnsetVarLintWarning && finding.packageKey == pk {
-			return true
-		}
-	}
-	return false
 }
 
 func (v Validator) printValidationTable() {

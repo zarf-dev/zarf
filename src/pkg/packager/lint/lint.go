@@ -51,17 +51,11 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 
 	lintComposableComponents(&validator, createOpts)
 
-	lintUnEvaledVariables(&validator)
-
-	fillPackageTemplate(&validator, createOpts)
-
-	lintComponents(&validator)
-
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
 		return nil, err
 	}
-
-	if err = validateSchema(&validator); err != nil {
+	pkgKey := packageKey{name: validator.typedZarfPackage.Metadata.Name, path: createOpts.BaseDir}
+	if err = validateSchema(&validator, pkgKey); err != nil {
 		return nil, err
 	}
 
@@ -96,14 +90,17 @@ func lintComposableComponents(validator *Validator, createOpts types.ZarfCreateO
 			continue
 		}
 
-		// Skipping initial component since it will be linted the usual way
-		node := baseComponent.Next()
+		node := baseComponent
 		for node != nil {
 			var fileOrOciPath string
-			if node.Prev().Import.URL != "" {
-				fileOrOciPath = node.Prev().Import.URL
-			} else if node.GetRelativeToHead() != "" {
-				fileOrOciPath = node.GetRelativeToHead()
+			if node.Prev() != nil {
+				if node.Prev().Import.URL != "" {
+					fileOrOciPath = node.Prev().Import.URL
+				} else if node.GetRelativeToHead() != "" {
+					fileOrOciPath = filepath.Join(createOpts.BaseDir, node.GetRelativeToHead())
+				}
+			} else {
+				fileOrOciPath = filepath.Join(createOpts.BaseDir, node.GetRelativeToHead())
 			}
 			pkgKey := packageKey{path: fileOrOciPath, name: node.GetOriginalPackageName()}
 			checkForVarInComponentImport(validator, node.GetIndex(), node.ZarfComponent, pkgKey)
@@ -119,35 +116,17 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 	err := packager.ReloadComponentTemplate(&node.ZarfComponent)
 	if err != nil {
 		validator.addWarning(validatorMessage{
-			description: fmt.Sprintf("unable to find components %s", err),
-			packageKey:  packageKey{path: node.GetRelativeToHead(), name: node.GetOriginalPackageName()},
+			description: err.Error(),
+			packageKey:  pkgKey,
 		})
 	}
-	fillYamlTemplate(validator, node, createOpts, pkgKey)
-}
-
-func fillPackageTemplate(validator *Validator, createOpts types.ZarfCreateOptions) {
-
-	err := packager.ReloadComponentTemplatesInPackage(&validator.typedZarfPackage)
-	if err != nil {
-		validator.addWarning(validatorMessage{
-			description: fmt.Sprintf("unable to find components %s", err),
-			packageKey:  packageKey{name: validator.typedZarfPackage.Metadata.Name},
-		})
-	}
-
-	fillYamlTemplate(validator, &validator.typedZarfPackage,
-		createOpts, packageKey{name: validator.typedZarfPackage.Metadata.Name, path: ""})
-}
-
-func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCreateOptions, pkgKey packageKey) {
 	templateMap := map[string]string{}
 
 	setVarsAndWarn := func(templatePrefix string, deprecated bool) {
-		yamlTemplates, err := utils.FindYamlTemplates(yamlObj, templatePrefix, "###")
+		yamlTemplates, err := utils.FindYamlTemplates(node, templatePrefix, "###")
 		if err != nil {
 			validator.addWarning(validatorMessage{
-				description: fmt.Sprintf("unable to find variables %s", err),
+				description: err.Error(),
 				packageKey:  pkgKey,
 			})
 		}
@@ -160,12 +139,11 @@ func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCr
 				})
 			}
 			_, present := createOpts.SetVariables[key]
-			if !present && !validator.hasUnsetVarMessageForPkg(pkgKey) {
-				validator.findings = append([]validatorMessage{{
-					description:    lang.UnsetVarLintWarning,
-					packageKey:     pkgKey,
-					validationType: validationWarning,
-				}}, validator.findings...)
+			if !present {
+				validator.addWarning(validatorMessage{
+					description: lang.UnsetVarLintWarning,
+					packageKey:  pkgKey,
+				})
 			}
 		}
 		for key, value := range createOpts.SetVariables {
@@ -178,7 +156,7 @@ func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCr
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
 	setVarsAndWarn(types.ZarfPackageVariablePrefix, true)
 
-	utils.ReloadYamlTemplate(yamlObj, templateMap)
+	utils.ReloadYamlTemplate(node, templateMap)
 }
 
 func isPinnedImage(image string) (bool, error) {
@@ -195,12 +173,6 @@ func isPinnedImage(image string) (bool, error) {
 
 func isPinnedRepo(repo string) bool {
 	return (strings.Contains(repo, "@"))
-}
-
-func lintComponents(validator *Validator) {
-	for i, component := range validator.typedZarfPackage.Components {
-		lintComponent(validator, i, component, packageKey{path: "", name: validator.typedZarfPackage.Metadata.Name})
-	}
 }
 
 func lintComponent(validator *Validator, index int, component types.ZarfComponent, pkgKey packageKey) {
@@ -261,12 +233,6 @@ func checkForUnpinnedFiles(validator *Validator, index int, component types.Zarf
 	}
 }
 
-func lintUnEvaledVariables(validator *Validator) {
-	for i, component := range validator.typedZarfPackage.Components {
-		checkForVarInComponentImport(validator, i, component, packageKey{name: validator.typedZarfPackage.Metadata.Name, path: ""})
-	}
-}
-
 func checkForVarInComponentImport(validator *Validator, index int, component types.ZarfComponent, pkgKey packageKey) {
 	if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
 		validator.addWarning(validatorMessage{
@@ -299,7 +265,7 @@ func makeFieldPathYqCompat(field string) string {
 	return fmt.Sprintf(".%s", wrappedField)
 }
 
-func validateSchema(validator *Validator) error {
+func validateSchema(validator *Validator, pkgKey packageKey) error {
 	schemaLoader := gojsonschema.NewBytesLoader(validator.jsonSchema)
 	documentLoader := gojsonschema.NewGoLoader(validator.untypedZarfPackage)
 
@@ -313,7 +279,7 @@ func validateSchema(validator *Validator) error {
 			validator.addError(validatorMessage{
 				yqPath:      makeFieldPathYqCompat(desc.Field()),
 				description: desc.Description(),
-				packageKey:  packageKey{name: validator.typedZarfPackage.Metadata.Name},
+				packageKey:  pkgKey,
 			})
 		}
 	}

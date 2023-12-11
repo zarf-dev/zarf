@@ -82,7 +82,9 @@ func TestValidateSchema(t *testing.T) {
 	t.Run("Template in component import success", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, goodZarfPackage)
 		validator := Validator{typedZarfPackage: unmarshalledYaml}
-		lintComponents(&validator)
+		for i, component := range validator.typedZarfPackage.Components {
+			lintComponent(&validator, i, component, packageKey{path: "", name: validator.typedZarfPackage.Metadata.Name})
+		}
 		require.Empty(t, validator.findings)
 	})
 
