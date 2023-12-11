@@ -49,6 +49,8 @@ func Run(pkg types.ZarfPackage) error {
 	}
 
 	uniqueComponentNames := make(map[string]bool)
+	groupDefault := make(map[string]string)
+	groupedComponents := make(map[string][]string)
 
 	for _, component := range pkg.Components {
 		// ensure component name is unique
@@ -59,6 +61,23 @@ func Run(pkg types.ZarfPackage) error {
 
 		if err := validateComponent(pkg, component); err != nil {
 			return fmt.Errorf(lang.PkgValidateErrComponent, component.Name, err)
+		}
+
+		// ensure groups don't have multiple defaults or only one component
+		if component.Group != "" {
+			if component.Default {
+				if _, ok := groupDefault[component.Group]; ok {
+					return fmt.Errorf(lang.PkgValidateErrGroupMultipleDefaults, component.Group, groupDefault[component.Group], component.Name)
+				}
+				groupDefault[component.Group] = component.Name
+			}
+			groupedComponents[component.Group] = append(groupedComponents[component.Group], component.Name)
+		}
+	}
+
+	for groupKey, componentNames := range groupedComponents {
+		if len(componentNames) == 1 {
+			return fmt.Errorf(lang.PkgValidateErrGroupOneComponent, groupKey, componentNames[0])
 		}
 	}
 

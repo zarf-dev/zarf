@@ -618,6 +618,8 @@ const (
 	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"
 	PkgValidateErrComponentReqGrouped     = "component %q cannot be both required and grouped"
 	PkgValidateErrComponentYOLO           = "component %q incompatible with the online-only package flag (metadata.yolo): %w"
+	PkgValidateErrGroupMultipleDefaults   = "group %q has multiple defaults (%q, %q)"
+	PkgValidateErrGroupOneComponent       = "group %q only has one component (%q)"
 	PkgValidateErrConstant                = "invalid package constant: %w"
 	PkgValidateErrImportDefinition        = "invalid imported definition for %s: %s"
 	PkgValidateErrInitNoYOLO              = "sorry, you can't YOLO an init package"
