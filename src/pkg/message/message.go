@@ -322,6 +322,7 @@ func Truncate(text string, length int, invert bool) string {
 func Table(header []string, data [][]string) {
 	pterm.Println()
 
+  // To avoid side effects make copies of the header and data before adding padding
 	headerCopy := make([]string, len(header))
 	copy(headerCopy, header)
 	dataCopy := make([][]string, len(data))

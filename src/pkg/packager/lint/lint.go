@@ -49,7 +49,7 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 		return nil, fmt.Errorf("unable to access directory '%s': %w", createOpts.BaseDir, err)
 	}
 
-	lintComposableComponenets(&validator, createOpts)
+	lintComposableComponents(&validator, createOpts)
 
 	lintUnEvaledVariables(&validator)
 
@@ -126,9 +126,9 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 	fillYamlTemplate(validator, node, createOpts, pkgKey)
 }
 
-func fillActiveTemplate(validator *Validator, createOpts types.ZarfCreateOptions) {
+func fillPackageTemplate(validator *Validator, createOpts types.ZarfCreateOptions) {
 
-	err := packager.FindComponentTemplatesAndReload(&validator.typedZarfPackage)
+	err := packager.ReloadComponentTemplatesInPackage(&validator.typedZarfPackage)
 	if err != nil {
 		validator.addWarning(validatorMessage{
 			description: fmt.Sprintf("unable to find components %s", err),
