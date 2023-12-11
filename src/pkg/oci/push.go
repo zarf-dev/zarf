@@ -163,9 +163,12 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 		return err
 	}
 
+	if err := o.UpdateIndex(o.repo.Reference.Reference, pkg.Build.Architecture, publishedDesc); err != nil {
+		return err
+	}
 	o.Transport.ProgressBar.Successf("Published %s [%s]", o.repo.Reference, root.MediaType)
 
-	return o.UpdateIndex(o.repo.Reference.Reference, pkg.Build.Architecture, publishedDesc)
+	return nil
 }
 
 // UpdateIndex updates the index for the given package.
