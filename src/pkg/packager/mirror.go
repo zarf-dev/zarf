@@ -44,7 +44,7 @@ func (p *Packager) Mirror() (err error) {
 	p.filterComponents()
 
 	// Run mirror for each requested component
-	return p.forRequestedComponents(p.mirrorComponent)
+	return p.forIncludedComponents(p.mirrorComponent)
 }
 
 // mirrorComponent mirrors a Zarf Component.

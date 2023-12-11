@@ -6,6 +6,7 @@ package interactive
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -15,8 +16,8 @@ import (
 	"github.com/pterm/pterm"
 )
 
-// ConfirmOptionalComponent prompts to confirm optional components
-func ConfirmOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
+// SelectOptionalComponent prompts to confirm optional components
+func SelectOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
 	// Confirm flag passed, just use defaults
 	if config.CommonOptions.Confirm {
 		return component.Default
@@ -31,7 +32,6 @@ func ConfirmOptionalComponent(component types.ZarfComponent) (confirmComponent b
 		message.Question(component.Description)
 	}
 
-	// Since no requested components were provided, prompt the user
 	prompt := &survey.Confirm{
 		Message: fmt.Sprintf("Deploy the %s component?", component.Name),
 		Default: component.Default,
@@ -39,11 +39,12 @@ func ConfirmOptionalComponent(component types.ZarfComponent) (confirmComponent b
 	if err := survey.AskOne(prompt, &confirmComponent); err != nil {
 		message.Fatalf(nil, "Confirm selection canceled: %s", err.Error())
 	}
+
 	return confirmComponent
 }
 
-// ConfirmChoiceGroup prompts to select component groups
-func ConfirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
+// SelectChoiceGroup prompts to select component groups
+func SelectChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
 	// Confirm flag passed, just use defaults
 	if config.CommonOptions.Confirm {
 		var componentNames []string
@@ -56,7 +57,7 @@ func ConfirmChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponen
 			componentNames = append(componentNames, component.Name)
 		}
 		// If no default component was found, give up
-		message.Fatalf(nil, "You must specify at least one component from the group %#v when using the --confirm flag.", componentNames)
+		message.Fatalf(nil, "You must make a selection from %q with the --components flag as there is no default in their group.", strings.Join(componentNames, ","))
 	}
 
 	message.HorizontalRule()

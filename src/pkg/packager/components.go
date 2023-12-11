@@ -5,122 +5,142 @@
 package packager
 
 import (
-	"fmt"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func (p *Packager) getValidComponents() []types.ZarfComponent {
-	var validComponentsList []types.ZarfComponent
-	var orderedKeys []string
-	var choiceComponents []string
+const (
+	Unknown  = 0
+	Included = 1
+	Excluded = 2
+)
 
-	componentGroups := make(map[string][]types.ZarfComponent)
+func (p *Packager) getSelectedComponents() []types.ZarfComponent {
+	var selectedComponents []types.ZarfComponent
+	groupedComponents := map[string][]types.ZarfComponent{}
+	orderedComponentGroups := []string{}
 
-	// The component list is comma-delimited list
-	requestedComponents := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
-
-	// Break up components into choice groups
+	// Group the components by Name and Group while maintaining order
 	for _, component := range p.cfg.Pkg.Components {
-		matchFn := func(a, b string) bool { return a == b }
-		key := component.Group
-		// If not a choice group, then use the component name as the key
-		if key == "" {
-			key = component.Name
-		} else {
-			// Otherwise, add the component name to the choice group list for later validation
-			choiceComponents = helpers.MergeSlices(choiceComponents, []string{component.Name}, matchFn)
+		groupKey := component.Name
+		if component.Group != "" {
+			groupKey = component.Group
 		}
 
-		// Preserve component order
-		orderedKeys = helpers.MergeSlices(orderedKeys, []string{key}, matchFn)
+		if !slices.Contains(orderedComponentGroups, groupKey) {
+			orderedComponentGroups = append(orderedComponentGroups, groupKey)
+		}
 
-		// Append the component to the list of components in the group
-		componentGroups[key] = append(componentGroups[key], component)
+		groupedComponents[groupKey] = append(groupedComponents[groupKey], component)
 	}
 
-	// Loop through each component group in original order and handle required, requested or user confirmation
-	for _, key := range orderedKeys {
+	// Split the --components list as a comma-delimited list
+	requestedComponents := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
+	isPartial := len(requestedComponents) > 0 && requestedComponents[0] != ""
 
-		componentGroup := componentGroups[key]
+	if isPartial {
+		matchedRequests := map[string]bool{}
 
-		// Choice groups are handled differently for user confirmation
-		userChoicePrompt := len(componentGroup) > 1
+		// NOTE: This does not use forIncludedComponents as it takes group, default and required status into account.
+		for _, groupKey := range orderedComponentGroups {
+			var groupDefault *types.ZarfComponent
+			var groupSelected *types.ZarfComponent
 
-		// Loop through the components in the group
-		for _, component := range componentGroup {
-			included, excluded := false, false
+			for _, component := range groupedComponents[groupKey] {
+				selectState, matchedRequest := includedOrExcluded(component, requestedComponents)
 
-			// If the component is required, then it is always included
-			if component.Required {
-				included = true
+				if !component.Required {
+					if selectState == Excluded {
+						// If the component was explicitly excluded, record the match and continue
+						matchedRequests[matchedRequest] = true
+						continue
+					} else if selectState == Unknown && component.Default {
+						// If the component is default but not included or excluded, remember the default
+						groupDefault = &component
+					}
+				} else {
+					// Force the selectState to included for Required components
+					selectState = Included
+				}
+
+				if selectState == Included {
+					// If the component was explicitly included, record the match
+					matchedRequests[matchedRequest] = true
+
+					// Then check for already selected groups
+					if groupSelected != nil {
+						message.Fatalf(nil, "You cannot specify multiple components (%q, %q) within the same group (%q) when using the --components flag.", groupSelected.Name, component.Name, component.Group)
+					}
+
+					// Then append to the final list
+					selectedComponents = append(selectedComponents, component)
+					groupSelected = &component
+				}
+			}
+
+			// If nothing was selected from a group, handle the default
+			if groupSelected == nil && groupDefault != nil {
+				selectedComponents = append(selectedComponents, *groupDefault)
+			} else if len(groupedComponents[groupKey]) > 1 && groupSelected == nil && groupDefault == nil {
+				// If no default component was found, give up
+				componentNames := []string{}
+				for _, component := range groupedComponents[groupKey] {
+					componentNames = append(componentNames, component.Name)
+				}
+				message.Fatalf(nil, "You must make a selection from %q with the --components flag as there is no default in their group.", strings.Join(componentNames, ","))
+			}
+		}
+
+		// Check that we have matched against all requests
+		for _, requestedComponent := range requestedComponents {
+			if _, ok := matchedRequests[requestedComponent]; !ok {
+				message.Fatalf(nil, "No compatible components found that matched %q. Please check spelling and try again.", requestedComponent)
+			}
+		}
+	} else {
+		for _, groupKey := range orderedComponentGroups {
+			if len(groupedComponents[groupKey]) > 1 {
+				component := interactive.SelectChoiceGroup(groupedComponents[groupKey])
+				selectedComponents = append(selectedComponents, component)
 			} else {
-				// First check if the component is required or requested via CLI flag
-				included, excluded = includedOrExcluded(component, requestedComponents)
+				component := groupedComponents[groupKey][0]
 
-				if excluded {
-					continue
+				if component.Required {
+					selectedComponents = append(selectedComponents, component)
+				} else if selected := interactive.SelectOptionalComponent(component); selected {
+					selectedComponents = append(selectedComponents, component)
 				}
 			}
-
-			// If the user has not requested this component via CLI flag, then prompt them if not a choice group
-			if !included && !userChoicePrompt {
-				included = interactive.ConfirmOptionalComponent(component)
-			}
-
-			if included {
-				// Mark deployment as appliance mode if this is an init config and the k3s component is enabled
-				if component.Name == k8s.DistroIsK3s && p.isInitConfig() {
-					p.cfg.InitOpts.ApplianceMode = true
-				}
-				// Add the component to the list of valid components
-				validComponentsList = append(validComponentsList, component)
-				// Ensure that the component is not requested again if in a choice group
-				userChoicePrompt = false
-				// Exit the inner loop on a match since groups should only have one requested component
-				break
-			}
-		}
-
-		// If the user has requested a choice group, then prompt them
-		if userChoicePrompt {
-			selectedComponent := interactive.ConfirmChoiceGroup(componentGroup)
-			validComponentsList = append(validComponentsList, selectedComponent)
 		}
 	}
 
-	// Ensure all user requested components are valid
-	if err := validateRequests(validComponentsList, requestedComponents, choiceComponents); err != nil {
-		message.Fatalf(err, "Invalid component argument, %s", err)
-	}
-
-	return validComponentsList
+	return selectedComponents
 }
 
-func (p *Packager) forRequestedComponents(onIncluded func(types.ZarfComponent) error) error {
+func (p *Packager) forIncludedComponents(onIncluded func(types.ZarfComponent) error) error {
 	requestedComponents := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
 	isPartial := len(requestedComponents) > 0 && requestedComponents[0] != ""
 
 	for _, component := range p.cfg.Pkg.Components {
-		included, excluded := false, false
+		selectState := Unknown
 
 		if isPartial {
-			included, excluded = includedOrExcluded(component, requestedComponents)
+			selectState, _ = includedOrExcluded(component, requestedComponents)
 
-			if excluded {
+			if selectState == Excluded {
 				continue
 			}
 		} else {
-			included = true
+			selectState = Included
 		}
 
-		if included {
+		if selectState == Included {
 			if err := onIncluded(component); err != nil {
 				return err
 			}
@@ -130,62 +150,27 @@ func (p *Packager) forRequestedComponents(onIncluded func(types.ZarfComponent) e
 	return nil
 }
 
-// Match on the first requested component that is not in the list of valid components and return the component name.
-func validateRequests(validComponentsList []types.ZarfComponent, requestedComponentNames, choiceComponents []string) error {
-	// Loop through each requested component names
-	for _, requestedComponent := range requestedComponentNames {
-		if strings.HasSuffix(requestedComponent, "-") {
-			continue
-		}
-
-		found := false
-		// Match on the first requested component that is a valid component
-		for _, component := range validComponentsList {
-			// If the component glob matches one of the requested components, then return true
-			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
-			if matched, _ := path.Match(requestedComponent, component.Name); matched {
-				found = true
-				break
-			}
-		}
-
-		// If the requested component was not found, then return an error
-		if !found {
-			// If the requested component is in a choice group, then warn the user they must choose only one
-			for _, component := range choiceComponents {
-				if component == requestedComponent {
-					return fmt.Errorf("component %s is part of a group of components and only one may be chosen", requestedComponent)
-				}
-			}
-			// Otherwise, return an error a general error
-			return fmt.Errorf("unable to find component %s", requestedComponent)
-		}
-	}
-
-	return nil
-}
-
-func includedOrExcluded(component types.ZarfComponent, requestedComponentNames []string) (include bool, exclude bool) {
-	// Otherwise,check if this is one of the components that has been requested from the CLI
+func includedOrExcluded(component types.ZarfComponent, requestedComponentNames []string) (int, string) {
+	// Check if this is one of the components that has been specified from the CLI
 	for _, requestedComponent := range requestedComponentNames {
 		// Check if the component has a trailing dash indicating it should be excluded
 		if strings.HasSuffix(requestedComponent, "-") {
 			// If the component glob matches one of the requested components, then return true
 			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
 			if matched, _ := path.Match(strings.TrimSuffix(requestedComponent, "-"), component.Name); matched {
-				return false, true
+				return Excluded, requestedComponent
 			}
 		} else {
 			// If the component glob matches one of the requested components, then return true
 			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
 			if matched, _ := path.Match(requestedComponent, component.Name); matched {
-				return true, false
+				return Included, requestedComponent
 			}
 		}
 	}
 
 	// All other cases we don't know if we should include or exclude yet
-	return false, false
+	return Unknown, ""
 }
 
 func requiresCluster(component types.ZarfComponent) bool {

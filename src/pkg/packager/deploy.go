@@ -91,7 +91,7 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy := p.getValidComponents()
+	componentsToDeploy := p.getSelectedComponents()
 
 	// Generate a value template
 	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
@@ -212,7 +212,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	}
 
 	if isRegistry {
-		// If we are deploying the registry then mark the HPA as "modifed" to set it to Min later
+		// If we are deploying the registry then mark the HPA as "modified" to set it to Min later
 		p.hpaModified = true
 	}
 

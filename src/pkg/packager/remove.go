@@ -49,7 +49,7 @@ func (p *Packager) Remove() (err error) {
 	packageRequiresCluster := false
 
 	// If components were provided; just remove the things we were asked to remove
-	p.forRequestedComponents(func(component types.ZarfComponent) error {
+	p.forIncludedComponents(func(component types.ZarfComponent) error {
 		componentsToRemove = append(componentsToRemove, component.Name)
 
 		if requiresCluster(component) {
