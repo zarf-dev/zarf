@@ -10,16 +10,17 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/fatih/color"
 	"github.com/pterm/pterm"
 )
 
-type ValidationType int
+type validationType int
 
 const (
-	validationError   ValidationType = 1
-	validationWarning ValidationType = 2
+	validationError   validationType = 1
+	validationWarning validationType = 2
 )
 
 type packageKey struct {
@@ -32,27 +33,23 @@ type validatorMessage struct {
 	description    string
 	item           string
 	packageKey     packageKey
-	validationType ValidationType
+	validationType validationType
 }
 
-func (vt ValidationType) String() string {
+func (vt validationType) String() string {
 	if vt == validationError {
 		return utils.ColorWrap("Error", color.FgRed)
 	} else if vt == validationWarning {
 		return utils.ColorWrap("Warning", color.FgYellow)
-	} else {
-		return ""
 	}
+	return ""
 }
 
-func (v validatorMessage) String() string {
-	if v.item != "" {
-		v.item = fmt.Sprintf(" - %s", v.item)
+func (vm validatorMessage) String() string {
+	if vm.item != "" {
+		vm.item = fmt.Sprintf(" - %s", vm.item)
 	}
-	if v.packageKey.path == "" && v.yqPath == "" && v.item == "" {
-		return v.description
-	}
-	return fmt.Sprintf("%s%s", v.description, v.item)
+	return fmt.Sprintf("%s%s", vm.description, vm.item)
 }
 
 // Validator holds the warnings/errors and messaging that we get from validation
@@ -81,7 +78,7 @@ func (v Validator) IsSuccess() bool {
 	return true
 }
 
-func (v Validator) HasUnsetVarMessageForPkg(pk packageKey) bool {
+func (v Validator) hasUnsetVarMessageForPkg(pk packageKey) bool {
 	for _, finding := range v.findings {
 		if finding.description == lang.UnsetVarLintWarning && finding.packageKey == pk {
 			return true
@@ -95,17 +92,17 @@ func (v Validator) printValidationTable() {
 		return
 	}
 
-	packageKeys := v.getUniquePackageKeys()
+	packageKeys := helpers.Unique(v.getUniquePackageKeys())
 	connectData := make(map[packageKey][][]string)
-	for _, packageKey := range packageKeys {
-		header := []string{"Type", "Path", "Message"}
 
-		for _, finding := range v.findings {
-			if finding.packageKey == packageKey {
-				connectData[packageKey] = append(connectData[packageKey],
-					[]string{finding.validationType.String(), finding.getPath(), finding.String()})
-			}
-		}
+	findings := helpers.Unique(v.findings)
+	for _, finding := range findings {
+		connectData[finding.packageKey] = append(connectData[finding.packageKey],
+			[]string{finding.validationType.String(), finding.getPath(), finding.String()})
+	}
+
+	header := []string{"Type", "Path", "Message"}
+	for _, packageKey := range packageKeys {
 		//We should probably move this println into info
 		pterm.Println()
 		if packageKey.path != "" {
@@ -141,10 +138,10 @@ func (v Validator) getFormattedFindingCount(pk packageKey) string {
 			continue
 		}
 		if finding.validationType == validationWarning {
-			warningCount += 1
+			warningCount++
 		}
 		if finding.validationType == validationError {
-			errorCount += 1
+			errorCount++
 		}
 	}
 	wordWarning := "warnings"

@@ -174,9 +174,6 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 			if err != nil {
 				return ic, err
 			}
-			// When it's a bad file, the error gets tracked here
-			// Maybe we add something like couldn't fetch zarf yaml to this
-			// So it's clearer to the user the pull failed
 			pkg, err = remote.FetchZarfYAML()
 			if err != nil {
 				return ic, err

@@ -43,3 +43,7 @@ components:
     import:
       url: oci://🦄/dos-games:1.0.0-skeleton
       name: baseline
+
+  - name: oci-games-url
+    import:
+      path: linted-import

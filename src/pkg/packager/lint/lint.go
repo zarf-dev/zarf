@@ -78,32 +78,34 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 
 		chain, err := composer.NewImportChain(component, i, validator.typedZarfPackage.Metadata.Name, arch, createOpts.Flavor)
 		baseComponent := chain.Head()
-		var yqPath string
+		var badImportYqPath string
 		if baseComponent != nil {
 			if baseComponent.Import.URL != "" {
-				yqPath = fmt.Sprintf(".components.[%d].import.url", i)
+				badImportYqPath = fmt.Sprintf(".components.[%d].import.url", i)
 			}
 			if baseComponent.Import.Path != "" {
-				yqPath = fmt.Sprintf(".components.[%d].import.path", i)
+				badImportYqPath = fmt.Sprintf(".components.[%d].import.path", i)
 			}
 		}
 		if err != nil {
 			validator.addError(validatorMessage{
 				description: err.Error(),
 				packageKey:  packageKey{name: validator.typedZarfPackage.Metadata.Name},
-				yqPath:      yqPath,
+				yqPath:      badImportYqPath,
 			})
 			continue
 		}
 
-		path := baseComponent.Import.URL
 		// Skipping initial component since it will be linted the usual way
 		node := baseComponent.Next()
 		for node != nil {
-			if path == "" {
-				path = node.GetRelativeToHead()
+			var fileOrOciPath string
+			if node.Prev().Import.URL != "" {
+				fileOrOciPath = node.Prev().Import.URL
+			} else if node.GetRelativeToHead() != "" {
+				fileOrOciPath = node.GetRelativeToHead()
 			}
-			pkgKey := packageKey{path: path, name: node.GetOriginalPackageName()}
+			pkgKey := packageKey{path: fileOrOciPath, name: node.GetOriginalPackageName()}
 			checkForVarInComponentImport(validator, node.GetIndex(), node.ZarfComponent, pkgKey)
 			fillComponentTemplate(validator, node, createOpts, pkgKey)
 			lintComponent(validator, node.GetIndex(), node.ZarfComponent, pkgKey)
@@ -158,7 +160,7 @@ func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCr
 				})
 			}
 			_, present := createOpts.SetVariables[key]
-			if !present && !validator.HasUnsetVarMessageForPkg(pkgKey) {
+			if !present && !validator.hasUnsetVarMessageForPkg(pkgKey) {
 				validator.findings = append([]validatorMessage{{
 					description:    lang.UnsetVarLintWarning,
 					packageKey:     pkgKey,

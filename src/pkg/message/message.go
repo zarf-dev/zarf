@@ -322,15 +322,19 @@ func Truncate(text string, length int, invert bool) string {
 func Table(header []string, data [][]string) {
 	pterm.Println()
 
-	if len(header) > 0 {
-		header[0] = fmt.Sprintf("     %s", header[0])
+	headerCopy := make([]string, len(header))
+	copy(headerCopy, header)
+	dataCopy := make([][]string, len(data))
+	copy(dataCopy, data)
+	if len(headerCopy) > 0 {
+		headerCopy[0] = fmt.Sprintf("     %s", headerCopy[0])
 	}
 
 	table := pterm.TableData{
-		header,
+		headerCopy,
 	}
 
-	for _, row := range data {
+	for _, row := range dataCopy {
 		if len(row) > 0 {
 			row[0] = fmt.Sprintf("     %s", row[0])
 		}
