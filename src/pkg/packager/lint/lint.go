@@ -77,17 +77,28 @@ func lintComposableComponenets(validator *Validator, createOpts types.ZarfCreate
 		}
 
 		chain, err := composer.NewImportChain(component, i, validator.typedZarfPackage.Metadata.Name, arch, createOpts.Flavor)
+		baseComponent := chain.Head()
+		var yqPath string
+		if baseComponent != nil {
+			if baseComponent.Import.URL != "" {
+				yqPath = fmt.Sprintf(".components.[%d].import.url", i)
+			}
+			if baseComponent.Import.Path != "" {
+				yqPath = fmt.Sprintf(".components.[%d].import.path", i)
+			}
+		}
 		if err != nil {
 			validator.addError(validatorMessage{
 				description: err.Error(),
 				packageKey:  packageKey{name: validator.typedZarfPackage.Metadata.Name},
+				yqPath:      yqPath,
 			})
 			continue
 		}
 
-		path := chain.Head().Import.URL
+		path := baseComponent.Import.URL
 		// Skipping initial component since it will be linted the usual way
-		node := chain.Head().Next()
+		node := baseComponent.Next()
 		for node != nil {
 			if path == "" {
 				path = node.GetRelativeToHead()
@@ -149,8 +160,9 @@ func fillYamlTemplate(validator *Validator, yamlObj any, createOpts types.ZarfCr
 			_, present := createOpts.SetVariables[key]
 			if !present && !validator.HasUnsetVarMessageForPkg(pkgKey) {
 				validator.findings = append([]validatorMessage{{
-					description: lang.UnsetVarWarning,
-					packageKey:  pkgKey,
+					description:    lang.UnsetVarLintWarning,
+					packageKey:     pkgKey,
+					validationType: validationWarning,
 				}}, validator.findings...)
 			}
 		}

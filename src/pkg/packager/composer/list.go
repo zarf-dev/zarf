@@ -39,7 +39,7 @@ func (n *Node) GetIndex() int {
 	return n.index
 }
 
-// OriginalPackageName returns the .metadata.name of the zarf package the component originated from
+// GetOriginalPackageName returns the .metadata.name of the zarf package the component originated from
 func (n *Node) GetOriginalPackageName() string {
 	return n.originalPackageName
 }
@@ -113,12 +113,12 @@ func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageN
 }
 
 // NewImportChain creates a new import chain from a component
+// Returning the chain on error so we can have additional information to use during lint
 func NewImportChain(head types.ZarfComponent, index int, originalPackageName, arch, flavor string) (*ImportChain, error) {
-	if arch == "" {
-		return nil, fmt.Errorf("cannot build import chain: architecture must be provided")
-	}
-
 	ic := &ImportChain{}
+	if arch == "" {
+		return ic, fmt.Errorf("cannot build import chain: architecture must be provided")
+	}
 
 	ic.append(head, index, originalPackageName, ".", nil, nil)
 
@@ -137,16 +137,16 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 
 		// TODO: stuff like this should also happen in linting
 		if err := validate.ImportDefinition(&node.ZarfComponent); err != nil {
-			return nil, err
+			return ic, err
 		}
 
 		// ensure that remote components are not importing other remote components
 		if node.prev != nil && node.prev.Import.URL != "" && isRemote {
-			return nil, fmt.Errorf("detected malformed import chain, cannot import remote components from remote components")
+			return ic, fmt.Errorf("detected malformed import chain, cannot import remote components from remote components")
 		}
 		// ensure that remote components are not importing local components
 		if node.prev != nil && node.prev.Import.URL != "" && isLocal {
-			return nil, fmt.Errorf("detected malformed import chain, cannot import local components from remote components")
+			return ic, fmt.Errorf("detected malformed import chain, cannot import local components from remote components")
 		}
 
 		var pkg types.ZarfPackage
@@ -160,26 +160,26 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 			prev := node
 			for prev != nil {
 				if prev.relativeToHead == relativeToHead {
-					return nil, fmt.Errorf("detected circular import chain: %s", strings.Join(history, " -> "))
+					return ic, fmt.Errorf("detected circular import chain: %s", strings.Join(history, " -> "))
 				}
 				prev = prev.prev
 			}
 
 			// this assumes the composed package is following the zarf layout
 			if err := utils.ReadYaml(filepath.Join(relativeToHead, layout.ZarfYAML), &pkg); err != nil {
-				return nil, err
+				return ic, err
 			}
 		} else if isRemote {
 			remote, err := ic.getRemote(node.Import.URL)
 			if err != nil {
-				return nil, err
+				return ic, err
 			}
 			// When it's a bad file, the error gets tracked here
 			// Maybe we add something like couldn't fetch zarf yaml to this
 			// So it's clearer to the user the pull failed
 			pkg, err = remote.FetchZarfYAML()
 			if err != nil {
-				return nil, err
+				return ic, err
 			}
 		}
 
@@ -196,15 +196,15 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 
 		if len(found) == 0 {
 			if isLocal {
-				return nil, fmt.Errorf("component %q not found in %q", name, filepath.Join(history...))
+				return ic, fmt.Errorf("component %q not found in %q", name, filepath.Join(history...))
 			} else if isRemote {
-				return nil, fmt.Errorf("component %q not found in %q", name, node.Import.URL)
+				return ic, fmt.Errorf("component %q not found in %q", name, node.Import.URL)
 			}
 		} else if len(found) > 1 {
 			if isLocal {
-				return nil, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, filepath.Join(history...), arch)
+				return ic, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, filepath.Join(history...), arch)
 			} else if isRemote {
-				return nil, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, node.Import.URL, arch)
+				return ic, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, node.Import.URL, arch)
 			}
 		}
 

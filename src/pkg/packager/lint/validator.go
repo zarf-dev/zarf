@@ -83,7 +83,7 @@ func (v Validator) IsSuccess() bool {
 
 func (v Validator) HasUnsetVarMessageForPkg(pk packageKey) bool {
 	for _, finding := range v.findings {
-		if finding.description == lang.UnsetVarWarning && finding.packageKey == pk {
+		if finding.description == lang.UnsetVarLintWarning && finding.packageKey == pk {
 			return true
 		}
 	}

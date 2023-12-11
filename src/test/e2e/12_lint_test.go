@@ -33,7 +33,7 @@ func TestLint(t *testing.T) {
 		strippedStderr := e2e.StripMessageFormatting(stderr)
 		// It's a bit weird to have a period here and not in the other warnings
 		key := "WHATEVER_IMAGE"
-		require.Contains(t, strippedStderr, "There are variables that are unset and won't be evaluated during lint")
+		require.Contains(t, strippedStderr, lang.UnsetVarLintWarning)
 		// Multiple spaces in lang
 		require.Contains(t, strippedStderr, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
 		require.Contains(t, strippedStderr, ".components.[2].repos.[0] | Unpinned repository")
