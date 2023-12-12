@@ -34,7 +34,7 @@ const (
 
 // Lint messages
 const (
-	UnsetVarLintWarning = "There are templates that are unset and won't be evaluated during lint"
+	UnsetVarLintWarning = "There are templates that are not set and won't be evaluated during lint"
 )
 
 // Zarf CLI commands.

@@ -34,16 +34,18 @@ func TestLint(t *testing.T) {
 
 		key := "WHATEVER_IMAGE"
 		require.Contains(t, strippedStderr, lang.UnsetVarLintWarning)
-		// Multiple spaces in lang
 		require.Contains(t, strippedStderr, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
 		require.Contains(t, strippedStderr, ".components.[2].repos.[0] | Unpinned repository")
 		require.Contains(t, strippedStderr, ".metadata | Additional property description1 is not allowed")
 		require.Contains(t, strippedStderr, ".components.[0].import | Additional property not-path is not allowed")
-		require.Contains(t, strippedStderr, ".components.[2].images.[3] | Image not pinned with digest")
-		require.Contains(t, strippedStderr, ".components.[1].images.[0] | Image not pinned with digest")
-		require.Contains(t, strippedStderr, ".components.[1].images.[2] | Image not pinned with digest")
+		// This is testing the import / compose on lint is working
+		require.Contains(t, strippedStderr, ".components.[1].images.[0] | Image not pinned with digest - registry.com:9001/whatever/image:latest")
+		// This is testing import / compose + variables are working
+		require.Contains(t, strippedStderr, ".components.[2].images.[3]  | Image not pinned with digest - busybox:latest")
 		require.Contains(t, strippedStderr, ".components.[3].import.path | Zarf does not evaluate variables at component.x.import.path - ###ZARF_PKG_TMPL_PATH###")
+		// testing OCI imports get linted
 		require.Contains(t, strippedStderr, ".components.[0].images.[0] | Image not pinned with digest - defenseunicorns/zarf-game:multi-tile-dark")
+		// This is
 		require.Contains(t, strippedStderr, ".components.[3].import.path | open ###ZARF_PKG_TMPL_PATH###/zarf.yaml: no such file or directory")
 
 		// Check flavors
