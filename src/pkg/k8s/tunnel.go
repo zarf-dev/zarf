@@ -61,6 +61,27 @@ func (k *K8s) NewTunnel(namespace, resourceType, resourceName, urlSuffix string,
 	}, nil
 }
 
+// WrapWithTunnel takes a function that returns an error and wraps it to check for tunnel errors as well.
+func WrapWithTunnel(tunnel *Tunnel, function func() error) error {
+	var err error
+	funcErrChan := make(chan error)
+
+	go func() {
+		funcErrChan <- function()
+	}()
+
+	if tunnel != nil {
+		select {
+		case err = <-funcErrChan:
+			return err
+		case err = <-tunnel.ErrChan():
+			return err
+		}
+	}
+
+	return <-funcErrChan
+}
+
 // Connect will establish a tunnel to the specified target.
 func (tunnel *Tunnel) Connect() (string, error) {
 	url, err := tunnel.establish()

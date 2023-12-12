@@ -91,7 +91,7 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 
 			message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, refInfo.Reference, offlineNameCRC)
 
-			if err = pushImageReference(img, offlineNameCRC, tunnel, pushOptions); err != nil {
+			if err = k8s.WrapWithTunnel(tunnel, func() error { return crane.Push(img, offlineNameCRC, pushOptions...) }); err != nil {
 				return err
 			}
 		}
@@ -105,7 +105,7 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 
 		message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, refInfo.Reference, offlineName)
 
-		if err = pushImageReference(img, offlineName, tunnel, pushOptions); err != nil {
+		if err = k8s.WrapWithTunnel(tunnel, func() error { return crane.Push(img, offlineName, pushOptions...) }); err != nil {
 			return err
 		}
 	}
@@ -113,24 +113,6 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 	progressBar.Successf("Pushed %d images to the zarf registry", len(i.ImageList))
 
 	return nil
-}
-
-func pushImageReference(img v1.Image, name string, tunnel *k8s.Tunnel, pushOptions []crane.Option) error {
-	var err error
-	craneErrChan := make(chan error)
-	go func() {
-		craneErrChan <- crane.Push(img, name, pushOptions...)
-	}()
-	if tunnel != nil {
-		select {
-		case err = <-craneErrChan:
-			return err
-		case err = <-tunnel.ErrChan():
-			return err
-		}
-	}
-
-	return <-craneErrChan
 }
 
 func calcImgSize(img v1.Image) (int64, error) {
