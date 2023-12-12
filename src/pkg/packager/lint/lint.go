@@ -91,6 +91,7 @@ func lintComposableComponents(validator *Validator, createOpts *types.ZarfCreate
 
 		node := baseComponent
 		for node != nil {
+			// If it's the first node it will equal the baseDir
 			fileOrOciPath := createOpts.BaseDir
 			if node.Prev() != nil {
 				if node.Prev().Import.URL != "" {
