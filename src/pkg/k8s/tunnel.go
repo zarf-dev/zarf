@@ -40,6 +40,7 @@ type Tunnel struct {
 	attempt      int
 	stopChan     chan struct{}
 	readyChan    chan struct{}
+	errChan      chan error
 }
 
 // NewTunnel will create a new Tunnel struct.
@@ -88,6 +89,11 @@ func (tunnel *Tunnel) Connect() (string, error) {
 // Endpoint returns the tunnel ip address and port (i.e. for docker registries)
 func (tunnel *Tunnel) Endpoint() string {
 	return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, tunnel.localPort)
+}
+
+// ErrChan returns the tunnel's error channel
+func (tunnel *Tunnel) ErrChan() chan error {
+	return tunnel.errChan
 }
 
 // HTTPEndpoint returns the tunnel endpoint as a HTTP URL string.
@@ -188,6 +194,9 @@ func (tunnel *Tunnel) establish() (string, error) {
 		// Store for endpoint output
 		tunnel.localPort = localPort
 		url := tunnel.FullURL()
+
+		// Store the error channel to listen for errors
+		tunnel.errChan = errChan
 
 		tunnel.kube.Log("Creating port forwarding tunnel at %s", url)
 		return url, nil
