@@ -12,7 +12,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/fatih/color"
-	"github.com/pterm/pterm"
 )
 
 type validationType int
@@ -82,7 +81,7 @@ func (v Validator) printValidationTable() {
 		return
 	}
 
-	packageKeys := helpers.Unique(v.getUniquePackageKeys())
+	packageKeys := helpers.Unique(v.getAllPackages())
 	connectData := make(map[packageKey][][]string)
 
 	for _, finding := range v.findings {
@@ -92,12 +91,10 @@ func (v Validator) printValidationTable() {
 
 	header := []string{"Type", "Path", "Message"}
 	for _, packageKey := range packageKeys {
-		//We should probably move this println into info
-		pterm.Println()
 		if packageKey.path != "" {
-			message.Infof("Linting package %q at %s", packageKey.name, packageKey.path)
+			message.Notef("Linting package %q at %s", packageKey.name, packageKey.path)
 		} else {
-			message.Infof("Linting package %q", packageKey.name)
+			message.Notef("Linting package %q", packageKey.name)
 		}
 
 		message.Table(header, connectData[packageKey])
@@ -105,15 +102,11 @@ func (v Validator) printValidationTable() {
 	}
 }
 
-func (v Validator) getUniquePackageKeys() []packageKey {
-	uniqueKeys := make(map[packageKey]bool)
+func (v Validator) getAllPackages() []packageKey {
 	var pks []packageKey
 
 	for _, finding := range v.findings {
-		if _, exists := uniqueKeys[finding.packageKey]; !exists {
-			uniqueKeys[finding.packageKey] = true
-			pks = append(pks, finding.packageKey)
-		}
+		pks = append(pks, finding.packageKey)
 	}
 
 	return pks
