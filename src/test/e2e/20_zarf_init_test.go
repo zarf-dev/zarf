@@ -94,7 +94,7 @@ func TestZarfInit(t *testing.T) {
 		// make sure that we upgraded `k3s` correctly and are running the correct version - this should match that found in `packages/distros/k3s`
 		kubeletVersion, _, err := e2e.Kubectl("get", "nodes", "-o", "jsonpath={.items[0].status.nodeInfo.kubeletVersion}")
 		require.NoError(t, err)
-		require.Contains(t, kubeletVersion, "v1.28.2+k3s1")
+		require.Contains(t, kubeletVersion, "v1.28.4+k3s2")
 	}
 
 	// Check that the registry is running on the correct NodePort
