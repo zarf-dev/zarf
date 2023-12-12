@@ -11,6 +11,6 @@ find "." -type f -name 'zarf.yaml' | while read -r yaml_file; do
       continue
   fi
   echo "Running 'zarf prepare lint' in directory: $dir"
-  go run main.go prepare lint $dir
+  ./build/zarf prepare lint $dir
   echo "---"
 done
