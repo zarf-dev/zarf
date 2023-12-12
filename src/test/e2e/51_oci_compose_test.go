@@ -75,16 +75,16 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	_, _, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/import-everything:0.0.1-skeleton", "--insecure")
+	_, _, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/import-everything:0.0.1", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/import-everything:0.0.1-skeleton", "-o", "build", "--insecure")
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/import-everything:0.0.1", "-o", "build", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1-skeleton", "-o", "build", "--insecure")
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "-o", "build", "--insecure")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/big-bang-min:2.10.0-skeleton", "-o", "build", "--insecure")
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/big-bang-min:2.10.0", "-o", "build", "--insecure")
 	suite.NoError(err)
 }
 
