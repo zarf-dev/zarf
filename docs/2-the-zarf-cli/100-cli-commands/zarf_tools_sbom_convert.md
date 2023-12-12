@@ -14,23 +14,16 @@ zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
 ## Options
 
 ```
-      --catalogers stringArray   enable one or more package catalogers
-      --exclude stringArray      exclude paths from being scanned using a glob expression
-      --file string              file to write the default report output to (default is STDOUT)
-  -h, --help                     help for convert
-      --name string              set the name of the target being analyzed (DEPRECATED: use: source-name)
-  -o, --output stringArray       report output format, options=[syft-json cyclonedx-xml cyclonedx-json github-json spdx-tag-value spdx-json syft-table syft-text template] (default [syft-table])
-      --platform string          an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')
-  -s, --scope string             selection of layers to catalog, options=[Squashed AllLayers] (default "Squashed")
-      --source-name string       set the name of the target being analyzed
-      --source-version string    set the name of the target being analyzed
-  -t, --template string          specify the path to a Go template file
+      --file string          file to write the default report output to (default is STDOUT) (DEPRECATED: use: output)
+  -h, --help                 help for convert
+  -o, --output stringArray   report output format (<format>=<file> to output to a file), formats=[cyclonedx-json cyclonedx-xml github-json spdx-json spdx-tag-value syft-json syft-table syft-text template] (default [syft-table])
+  -t, --template string      specify the path to a Go template file
 ```
 
 ## Options inherited from parent commands
 
 ```
-  -c, --config string   application config file
+  -c, --config string   syft configuration file
   -q, --quiet           suppress all logging output
   -v, --verbose count   increase verbosity (-v = info, -vv = debug)
 ```
