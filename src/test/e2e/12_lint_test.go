@@ -28,7 +28,7 @@ func TestLint(t *testing.T) {
 		configPath := filepath.Join(path, "zarf-config.toml")
 		os.Setenv("ZARF_CONFIG", configPath)
 		// In this case I'm guessing we should also remove color from the table?
-		_, stderr, err := e2e.Zarf("prepare", "lint", path)
+		_, stderr, err := e2e.Zarf("prepare", "lint", path, "-f", "good-flavor")
 		require.Error(t, err, "Require an exit code since there was warnings / errors")
 		strippedStderr := e2e.StripMessageFormatting(stderr)
 		// It's a bit weird to have a period here and not in the other warnings
@@ -44,8 +44,9 @@ func TestLint(t *testing.T) {
 		require.Contains(t, strippedStderr, ".components.[1].images.[2] | Image not pinned with digest")
 		require.Contains(t, strippedStderr, ".components.[3].import.path | Zarf does not evaluate variables at component.x.import.path - ###ZARF_PKG_TMPL_PATH###")
 		require.Contains(t, strippedStderr, ".components.[0].images.[0] | Image not pinned with digest - defenseunicorns/zarf-game:multi-tile-dark")
-		// Check to ensure non selected flavor is included
-		require.NotContains(t, strippedStderr, "image-in-flavor-component:unpinned")
+		// Check flavors
+		require.NotContains(t, strippedStderr, "image-in-bad-flavor-component:unpinned")
+		require.Contains(t, strippedStderr, "image-in-good-flavor-component:unpinned")
 	})
 
 }

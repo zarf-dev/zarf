@@ -47,8 +47,14 @@ components:
   #   import:
   #     url: oci://localhost:555/big-bang-min:2.10.0-skeleton
 
-  - name: import-big-bang
+  - name: import-bad-flavor
     only:
-      flavor: bad-flavor-that-were-not-picking-but-want-to-make-sure-doesnt-show-up-in-lint
+      flavor: bad-flavor
     images:
-      - image-in-flavor-component:unpinned
+      - image-in-bad-flavor-component:unpinned
+
+  - name: import-good-flavor
+    only:
+      flavor: good-flavor
+    images:
+      - image-in-good-flavor-component:unpinned

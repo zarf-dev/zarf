@@ -91,15 +91,13 @@ func lintComposableComponents(validator *Validator, createOpts *types.ZarfCreate
 
 		node := baseComponent
 		for node != nil {
-			var fileOrOciPath string
+			fileOrOciPath := createOpts.BaseDir
 			if node.Prev() != nil {
 				if node.Prev().Import.URL != "" {
 					fileOrOciPath = node.Prev().Import.URL
 				} else if node.GetRelativeToHead() != "" {
 					fileOrOciPath = filepath.Join(createOpts.BaseDir, node.GetRelativeToHead())
 				}
-			} else {
-				fileOrOciPath = filepath.Join(createOpts.BaseDir, ".")
 			}
 			pkgKey := packageKey{path: fileOrOciPath, name: node.GetOriginalPackageName()}
 			checkForVarInComponentImport(validator, node.GetIndex(), node.ZarfComponent, pkgKey)
