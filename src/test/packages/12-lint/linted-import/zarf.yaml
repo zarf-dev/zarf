@@ -1,6 +1,6 @@
-kind: ZarfInitConfig
+kind: ZarfPackageConfig
 metadata:
-  name: init
+  name: linted-import
   description: Testing bad yaml imported
 
 variables:

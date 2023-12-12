@@ -31,7 +31,7 @@ func TestLint(t *testing.T) {
 		_, stderr, err := e2e.Zarf("prepare", "lint", path, "-f", "good-flavor")
 		require.Error(t, err, "Require an exit code since there was warnings / errors")
 		strippedStderr := e2e.StripMessageFormatting(stderr)
-		// It's a bit weird to have a period here and not in the other warnings
+
 		key := "WHATEVER_IMAGE"
 		require.Contains(t, strippedStderr, lang.UnsetVarLintWarning)
 		// Multiple spaces in lang
@@ -44,6 +44,8 @@ func TestLint(t *testing.T) {
 		require.Contains(t, strippedStderr, ".components.[1].images.[2] | Image not pinned with digest")
 		require.Contains(t, strippedStderr, ".components.[3].import.path | Zarf does not evaluate variables at component.x.import.path - ###ZARF_PKG_TMPL_PATH###")
 		require.Contains(t, strippedStderr, ".components.[0].images.[0] | Image not pinned with digest - defenseunicorns/zarf-game:multi-tile-dark")
+		require.Contains(t, strippedStderr, ".components.[3].import.path | open ###ZARF_PKG_TMPL_PATH###/zarf.yaml: no such file or directory")
+
 		// Check flavors
 		require.NotContains(t, strippedStderr, "image-in-bad-flavor-component:unpinned")
 		require.Contains(t, strippedStderr, "image-in-good-flavor-component:unpinned")
