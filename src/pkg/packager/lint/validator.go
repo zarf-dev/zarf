@@ -91,12 +91,7 @@ func (v Validator) printValidationTable() {
 
 	header := []string{"Type", "Path", "Message"}
 	for _, packageKey := range packageKeys {
-		if packageKey.path != "" {
-			message.Notef("Linting package %q at %s", packageKey.name, packageKey.path)
-		} else {
-			message.Notef("Linting package %q", packageKey.name)
-		}
-
+		message.Notef("Linting package %q at %s", packageKey.name, packageKey.path)
 		message.Table(header, connectData[packageKey])
 		message.Info(v.getFormattedFindingCount(packageKey))
 	}

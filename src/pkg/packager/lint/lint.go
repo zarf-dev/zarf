@@ -54,7 +54,8 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
 		return nil, err
 	}
-	pkgKey := packageKey{name: validator.typedZarfPackage.Metadata.Name, path: createOpts.BaseDir}
+
+	pkgKey := packageKey{name: validator.typedZarfPackage.Metadata.Name, path: filepath.Join(createOpts.BaseDir, ".")}
 	if err = validateSchema(&validator, pkgKey); err != nil {
 		return nil, err
 	}
@@ -72,8 +73,11 @@ func lintComposableComponents(validator *Validator, createOpts *types.ZarfCreate
 
 		chain, err := composer.NewImportChain(component, i, validator.typedZarfPackage.Metadata.Name, arch, createOpts.Flavor)
 		baseComponent := chain.Head()
+
 		var badImportYqPath string
+		var baseNodeFilePath string
 		if baseComponent != nil {
+			baseNodeFilePath = filepath.Join(createOpts.BaseDir, baseComponent.GetRelativeToHead())
 			if baseComponent.Import.URL != "" {
 				badImportYqPath = fmt.Sprintf(".components.[%d].import.url", i)
 			}
@@ -84,15 +88,15 @@ func lintComposableComponents(validator *Validator, createOpts *types.ZarfCreate
 		if err != nil {
 			validator.addError(validatorMessage{
 				description: err.Error(),
-				packageKey:  packageKey{name: validator.typedZarfPackage.Metadata.Name},
-				yqPath:      badImportYqPath,
+				packageKey: packageKey{name: validator.typedZarfPackage.Metadata.Name,
+					path: baseNodeFilePath},
+				yqPath: badImportYqPath,
 			})
 		}
 
 		node := baseComponent
 		for node != nil {
-			// If it's the first node it will equal the baseDir
-			fileOrOciPath := createOpts.BaseDir
+			fileOrOciPath := baseNodeFilePath
 			if node.Prev() != nil {
 				if node.Prev().Import.URL != "" {
 					fileOrOciPath = node.Prev().Import.URL

@@ -5,10 +5,6 @@
 package common
 
 import (
-	"os"
-
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -17,10 +13,6 @@ func SetBaseDirectory(args []string, pkgConfig *types.PackagerConfig) {
 	if len(args) > 0 {
 		pkgConfig.CreateOpts.BaseDir = args[0]
 	} else {
-		var err error
-		pkgConfig.CreateOpts.BaseDir, err = os.Getwd()
-		if err != nil {
-			message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
-		}
+		pkgConfig.CreateOpts.BaseDir = "."
 	}
 }

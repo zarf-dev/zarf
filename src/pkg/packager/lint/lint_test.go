@@ -174,11 +174,13 @@ func TestValidateSchema(t *testing.T) {
 			typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{pathComponent},
 				Metadata: types.ZarfMetadata{Name: "test-zarf-package"}}}
 
-		createOpts := types.ZarfCreateOptions{Flavor: ""}
+		createOpts := types.ZarfCreateOptions{Flavor: "", BaseDir: "."}
 		lintComposableComponents(&validator, &createOpts)
 		require.Equal(t, "open fake-path/zarf.yaml: no such file or directory", validator.findings[0].description)
 		require.Equal(t, ".components.[0].import.path", validator.findings[0].yqPath)
+		require.Equal(t, ".", validator.findings[0].packageKey.path)
 		require.Equal(t, unpinnedImage, validator.findings[1].item)
+		require.Equal(t, ".", validator.findings[1].packageKey.path)
 	})
 
 	t.Run("isImagePinned", func(t *testing.T) {
