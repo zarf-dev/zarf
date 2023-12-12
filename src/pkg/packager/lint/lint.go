@@ -31,9 +31,9 @@ func getSchemaFile() ([]byte, error) {
 	return ZarfSchema.ReadFile("zarf.schema.json")
 }
 
-// ValidateZarfSchema validates a zarf file against the zarf schema, returns *validator with warnings or errors if they exist
+// ValidateZarf validates a zarf file against the zarf schema, returns *validator with warnings or errors if they exist
 // along with an error if the validation itself failed
-func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) {
+func ValidateZarf(createOpts types.ZarfCreateOptions) (*Validator, error) {
 	validator := Validator{}
 	var err error
 

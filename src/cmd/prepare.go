@@ -217,7 +217,7 @@ var lintCmd = &cobra.Command{
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
-		validator, err := lint.ValidateZarfSchema(pkgConfig.CreateOpts)
+		validator, err := lint.ValidateZarf(pkgConfig.CreateOpts)
 		if err != nil {
 			message.Fatal(err, err.Error())
 		}
