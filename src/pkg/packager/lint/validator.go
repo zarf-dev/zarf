@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/fatih/color"
@@ -36,9 +35,9 @@ type validatorMessage struct {
 
 func (vt validationType) String() string {
 	if vt == validationError {
-		return utils.ColorWrap("Error", color.FgRed)
+		return message.ColorWrap("Error", color.FgRed)
 	} else if vt == validationWarning {
-		return utils.ColorWrap("Warning", color.FgYellow)
+		return message.ColorWrap("Warning", color.FgYellow)
 	}
 	return ""
 }
@@ -137,7 +136,7 @@ func (vm validatorMessage) getPath() string {
 	if vm.yqPath == "" {
 		return ""
 	}
-	return utils.ColorWrap(vm.yqPath, color.FgCyan)
+	return message.ColorWrap(vm.yqPath, color.FgCyan)
 }
 
 func (v Validator) hasFindings() bool {

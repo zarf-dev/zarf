@@ -158,7 +158,7 @@ func (c *Cluster) LoadZarfState() (state *types.ZarfState, err error) {
 	// Set up the API connection
 	secret, err := c.GetSecret(ZarfNamespaceName, ZarfStateSecretName)
 	if err != nil {
-		return nil, fmt.Errorf("%w. %s", err, utils.ColorWrap("Did you remember to zarf init?", color.Bold))
+		return nil, fmt.Errorf("%w. %s", err, message.ColorWrap("Did you remember to zarf init?", color.Bold))
 	}
 
 	err = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
