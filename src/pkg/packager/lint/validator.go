@@ -6,6 +6,7 @@ package lint
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -20,16 +21,12 @@ const (
 	validationWarning validationType = 2
 )
 
-type packageKey struct {
-	path string
-	name string
-}
-
 type validatorMessage struct {
 	yqPath         string
 	description    string
 	item           string
-	packageKey     packageKey
+	packageRelPath string
+	packageName    string
 	validationType validationType
 }
 
@@ -55,6 +52,7 @@ type Validator struct {
 	jsonSchema         []byte
 	typedZarfPackage   types.ZarfPackage
 	untypedZarfPackage interface{}
+	baseDir            string
 }
 
 // DisplayFormattedMessage message sent to user based on validator results
@@ -75,42 +73,41 @@ func (v Validator) IsSuccess() bool {
 	return true
 }
 
+func (v Validator) packageRelPathToUser(vm validatorMessage) string {
+	if helpers.IsOCIURL(vm.packageRelPath) {
+		return vm.packageRelPath
+	}
+	return filepath.Join(v.baseDir, vm.packageRelPath)
+}
+
 func (v Validator) printValidationTable() {
 	if !v.hasFindings() {
 		return
 	}
 
-	packageKeys := helpers.Unique(v.getAllPackages())
-	connectData := make(map[packageKey][][]string)
-
+	mapOfFindingsByPath := make(map[string][]validatorMessage)
 	for _, finding := range v.findings {
-		connectData[finding.packageKey] = append(connectData[finding.packageKey],
-			[]string{finding.validationType.String(), finding.getPath(), finding.String()})
+		mapOfFindingsByPath[finding.packageRelPath] = append(mapOfFindingsByPath[finding.packageRelPath], finding)
 	}
 
 	header := []string{"Type", "Path", "Message"}
-	for _, packageKey := range packageKeys {
-		message.Notef("Linting package %q at %s", packageKey.name, packageKey.path)
-		message.Table(header, connectData[packageKey])
-		message.Info(v.getFormattedFindingCount(packageKey))
+
+	for packageRelPath, findings := range mapOfFindingsByPath {
+		lintData := [][]string{}
+		for _, finding := range findings {
+			lintData = append(lintData, []string{finding.validationType.String(), finding.getPath(), finding.String()})
+		}
+		message.Notef("Linting package %q at %s", findings[0].packageName, v.packageRelPathToUser(findings[0]))
+		message.Table(header, lintData)
+		message.Info(v.getFormattedFindingCount(packageRelPath, findings[0].packageName))
 	}
 }
 
-func (v Validator) getAllPackages() []packageKey {
-	var pks []packageKey
-
-	for _, finding := range v.findings {
-		pks = append(pks, finding.packageKey)
-	}
-
-	return pks
-}
-
-func (v Validator) getFormattedFindingCount(pk packageKey) string {
+func (v Validator) getFormattedFindingCount(relPath string, packageName string) string {
 	warningCount := 0
 	errorCount := 0
 	for _, finding := range v.findings {
-		if finding.packageKey != pk {
+		if finding.packageRelPath != relPath {
 			continue
 		}
 		if finding.validationType == validationWarning {
@@ -129,7 +126,7 @@ func (v Validator) getFormattedFindingCount(pk packageKey) string {
 		wordError = "error"
 	}
 	return fmt.Sprintf("%d %s and %d %s in %q",
-		warningCount, wordWarning, errorCount, wordError, pk.name)
+		warningCount, wordWarning, errorCount, wordError, packageName)
 }
 
 func (vm validatorMessage) getPath() string {
