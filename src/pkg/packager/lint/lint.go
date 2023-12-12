@@ -49,7 +49,7 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 		return nil, fmt.Errorf("unable to access directory '%s': %w", createOpts.BaseDir, err)
 	}
 
-	lintComposableComponents(&validator, createOpts)
+	lintComposableComponents(&validator, &createOpts)
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func ValidateZarfSchema(createOpts types.ZarfCreateOptions) (*Validator, error) 
 	return &validator, nil
 }
 
-func lintComposableComponents(validator *Validator, createOpts types.ZarfCreateOptions) {
+func lintComposableComponents(validator *Validator, createOpts *types.ZarfCreateOptions) {
 	for i, component := range validator.typedZarfPackage.Components {
 		arch := config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
 
@@ -87,7 +87,6 @@ func lintComposableComponents(validator *Validator, createOpts types.ZarfCreateO
 				packageKey:  packageKey{name: validator.typedZarfPackage.Metadata.Name},
 				yqPath:      badImportYqPath,
 			})
-			continue
 		}
 
 		node := baseComponent
@@ -100,7 +99,7 @@ func lintComposableComponents(validator *Validator, createOpts types.ZarfCreateO
 					fileOrOciPath = filepath.Join(createOpts.BaseDir, node.GetRelativeToHead())
 				}
 			} else {
-				fileOrOciPath = filepath.Join(createOpts.BaseDir, node.GetRelativeToHead())
+				fileOrOciPath = filepath.Join(createOpts.BaseDir, ".")
 			}
 			pkgKey := packageKey{path: fileOrOciPath, name: node.GetOriginalPackageName()}
 			checkForVarInComponentImport(validator, node.GetIndex(), node.ZarfComponent, pkgKey)
@@ -111,7 +110,7 @@ func lintComposableComponents(validator *Validator, createOpts types.ZarfCreateO
 	}
 }
 
-func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts types.ZarfCreateOptions, pkgKey packageKey) {
+func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts *types.ZarfCreateOptions, pkgKey packageKey) {
 
 	err := packager.ReloadComponentTemplate(&node.ZarfComponent)
 	if err != nil {

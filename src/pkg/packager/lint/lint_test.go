@@ -6,7 +6,6 @@ package lint
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"testing"
 
@@ -64,7 +63,7 @@ func TestValidateSchema(t *testing.T) {
 	t.Run("validate schema success", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[interface{}](t, goodZarfPackage)
 		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
-		err := validateSchema(&validator)
+		err := validateSchema(&validator, packageKey{})
 		require.NoError(t, err)
 		require.Empty(t, validator.findings)
 	})
@@ -72,7 +71,7 @@ func TestValidateSchema(t *testing.T) {
 	t.Run("validate schema fail", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[interface{}](t, badZarfPackage)
 		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
-		err := validateSchema(&validator)
+		err := validateSchema(&validator, packageKey{})
 		require.NoError(t, err)
 		config.NoColor = true
 		require.Equal(t, "Additional property not-path is not allowed", validator.findings[0].String())
@@ -88,15 +87,20 @@ func TestValidateSchema(t *testing.T) {
 		require.Empty(t, validator.findings)
 	})
 
-	t.Run("Template in component import failure", func(t *testing.T) {
+	t.Run("Path template in component import failure", func(t *testing.T) {
 		pathVar := "###ZARF_PKG_TMPL_PATH###"
-		ociPathVar := fmt.Sprintf("oci://%s", pathVar)
 		pathComponent := types.ZarfComponent{Import: types.ZarfComponentImport{Path: pathVar}}
-		URLComponent := types.ZarfComponent{Import: types.ZarfComponentImport{URL: ociPathVar}}
-		validator := Validator{typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{pathComponent, URLComponent}}}
-		lintUnEvaledVariables(&validator)
+		validator := Validator{typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{pathComponent}}}
+		checkForVarInComponentImport(&validator, 0, validator.typedZarfPackage.Components[0], packageKey{})
 		require.Equal(t, pathVar, validator.findings[0].item)
-		require.Equal(t, ociPathVar, validator.findings[1].item)
+	})
+
+	t.Run("OCI template in component import failure", func(t *testing.T) {
+		ociPathVar := "oci://###ZARF_PKG_TMPL_PATH###"
+		URLComponent := types.ZarfComponent{Import: types.ZarfComponentImport{URL: ociPathVar}}
+		validator := Validator{typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{URLComponent}}}
+		checkForVarInComponentImport(&validator, 0, validator.typedZarfPackage.Components[0], packageKey{})
+		require.Equal(t, ociPathVar, validator.findings[0].item)
 	})
 
 	t.Run("Unpinnned repo warning", func(t *testing.T) {
@@ -150,6 +154,22 @@ func TestValidateSchema(t *testing.T) {
 		input := "(root)"
 		acutal := makeFieldPathYqCompat(input)
 		require.Equal(t, input, acutal)
+	})
+
+	t.Run("Test comoposable components", func(t *testing.T) {
+		pathVar := "fake-path"
+		unpinnedImage := "unpinned:latest"
+		pathComponent := types.ZarfComponent{
+			Import: types.ZarfComponentImport{Path: pathVar},
+			Images: []string{unpinnedImage}}
+		validator := Validator{
+			typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{pathComponent},
+				Metadata: types.ZarfMetadata{Name: "test-zarf-package"}}}
+
+		createOpts := types.ZarfCreateOptions{Flavor: ""}
+		lintComposableComponents(&validator, &createOpts)
+		require.Equal(t, "open fake-path/zarf.yaml: no such file or directory", validator.findings[0].description)
+		require.Equal(t, unpinnedImage, validator.findings[1].item)
 	})
 
 	t.Run("isImagePinned", func(t *testing.T) {
