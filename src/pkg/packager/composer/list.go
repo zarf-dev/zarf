@@ -59,20 +59,6 @@ func (n *Node) Prev() *Node {
 	return n.prev
 }
 
-func NewNode(c types.ZarfComponent, index int, originalPackageName string,
-	relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) Node {
-	return Node{
-		ZarfComponent:       c,
-		index:               index,
-		originalPackageName: originalPackageName,
-		relativeToHead:      relativeToHead,
-		vars:                vars,
-		consts:              consts,
-		prev:                nil,
-		next:                nil,
-	}
-}
-
 // ImportName returns the name of the component to import
 // If the component import has a ComponentName defined, that will be used
 // otherwise the name of the component will be used
@@ -104,15 +90,24 @@ func (ic *ImportChain) Tail() *Node {
 
 func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageName string,
 	relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
-	node := NewNode(c, index, originalPackageName, relativeToHead, vars, consts)
+	node := &Node{
+		ZarfComponent:       c,
+		index:               index,
+		originalPackageName: originalPackageName,
+		relativeToHead:      relativeToHead,
+		vars:                vars,
+		consts:              consts,
+		prev:                nil,
+		next:                nil,
+	}
 	if ic.head == nil {
-		ic.head = &node
-		ic.tail = &node
+		ic.head = node
+		ic.tail = node
 	} else {
 		p := ic.tail
 		node.prev = p
-		p.next = &node
-		ic.tail = &node
+		p.next = node
+		ic.tail = node
 	}
 }
 
