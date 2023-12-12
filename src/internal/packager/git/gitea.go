@@ -85,8 +85,8 @@ func (g *Git) CreateReadOnlyUser() error {
 	return err
 }
 
-// UpdateZarfGiteaValues updates the Zarf git server state
-func (g *Git) UpdateZarfGiteaValues(oldState *types.ZarfState) error {
+// UpdateZarfGiteaUsers updates Zarf gitea users
+func (g *Git) UpdateZarfGiteaUsers(oldState *types.ZarfState) error {
 
 	//Update git read only user password
 	err := g.UpdateGitUser(oldState.GitServer.PushPassword, g.Server.PullUsername, g.Server.PullPassword)
