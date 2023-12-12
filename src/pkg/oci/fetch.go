@@ -19,14 +19,22 @@ import (
 
 // ResolveRoot returns the root descriptor for the remote repository
 func (o *OrasRemote) ResolveRoot() (ocispec.Descriptor, error) {
+	// first try to resolve the reference directly
 	desc, err := o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
+	// if we succeeded and it's not an index, return it
+	// otherwise we will use oras.Resolve which will fetch the index, then resolve the manifest
+	// w/ the target platform
+	//
+	// this error is purposefully ignored, as we want to try oras.Resolve if the first attempt fails
 	if err == nil && desc.MediaType != ocispec.MediaTypeImageIndex {
 		return desc, nil
 	}
 
+	// if target platform is nil, oras.Resolve falls back to a o.repo.Resolve call
 	resolveOpts := oras.ResolveOptions{
 		TargetPlatform: o.targetPlatform,
 	}
+	// if the first attempt failed to resolve, or returned an index, try again with oras.Resolve
 	return oras.Resolve(o.ctx, o.repo, o.repo.Reference.Reference, resolveOpts)
 }
 
