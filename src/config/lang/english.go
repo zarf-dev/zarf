@@ -564,6 +564,7 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 	CmdToolsUpdateCredsUnableUpdateRegistry = "Unable to update Zarf Registry values: %s"
 	CmdToolsUpdateCredsUnableUpdateGit      = "Unable to update Zarf Git Server values: %s"
 	CmdToolsUpdateCredsUnableUpdateAgent    = "Unable to update Zarf Agent TLS secrets: %s"
+	CmdToolsUpdateCredsUnableUpdateCreds    = "Unable to update Zarf credentials"
 
 	// zarf version
 	CmdVersionShort = "Shows the version of the running Zarf binary"

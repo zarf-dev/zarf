@@ -132,23 +132,23 @@ func TestValidateSchema(t *testing.T) {
 
 	t.Run("Unpinnned file warning", func(t *testing.T) {
 		validator := Validator{}
-		fileUrl := "http://example.com/file.zip"
+		fileURL := "http://example.com/file.zip"
 		localFile := "local.txt"
 		zarfFiles := []types.ZarfFile{
 			{
-				Source: fileUrl,
+				Source: fileURL,
 			},
 			{
 				Source: localFile,
 			},
 			{
-				Source: fileUrl,
+				Source: fileURL,
 				Shasum: "fake-shasum",
 			},
 		}
 		component := types.ZarfComponent{Files: zarfFiles}
 		checkForUnpinnedFiles(&validator, &composer.Node{ZarfComponent: component})
-		require.Equal(t, fileUrl, validator.findings[0].item)
+		require.Equal(t, fileURL, validator.findings[0].item)
 		require.Equal(t, 1, len(validator.findings))
 	})
 
