@@ -497,9 +497,11 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 				}
 				defer tunnel.Close()
 				gitClient.Server.Address = tunnel.HTTPEndpoint()
+
+				return tunnel.Wrap(func() error { return gitClient.PushRepo(repoURL, reposPath) })
 			}
 
-			return k8s.WrapWithTunnel(tunnel, func() error { return gitClient.PushRepo(repoURL, reposPath) })
+			return gitClient.PushRepo(repoURL, reposPath)
 		}
 
 		// Try repo push up to 3 times

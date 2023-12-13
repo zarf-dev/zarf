@@ -78,6 +78,14 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 		defer tunnel.Close()
 	}
 
+	pushImage := func(img v1.Image, name string) error {
+		if tunnel != nil {
+			return tunnel.Wrap(func() error { return crane.Push(img, name, pushOptions...) })
+		} else {
+			return crane.Push(img, name, pushOptions...)
+		}
+	}
+
 	for refInfo, img := range refInfoToImage {
 		refTruncated := message.Truncate(refInfo.Reference, 55, true)
 		progressBar.UpdateTitle(fmt.Sprintf("Pushing %s", refTruncated))
@@ -91,7 +99,8 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 
 			message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, refInfo.Reference, offlineNameCRC)
 
-			if err = k8s.WrapWithTunnel(tunnel, func() error { return crane.Push(img, offlineNameCRC, pushOptions...) }); err != nil {
+			err = pushImage(img, offlineNameCRC)
+			if err != nil {
 				return err
 			}
 		}
@@ -105,7 +114,8 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 
 		message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, refInfo.Reference, offlineName)
 
-		if err = k8s.WrapWithTunnel(tunnel, func() error { return crane.Push(img, offlineName, pushOptions...) }); err != nil {
+		err = pushImage(img, offlineName)
+		if err != nil {
 			return err
 		}
 	}
