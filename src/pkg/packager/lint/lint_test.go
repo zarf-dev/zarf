@@ -176,7 +176,7 @@ func TestValidateSchema(t *testing.T) {
 				Metadata: types.ZarfMetadata{Name: "test-zarf-package"}}}
 
 		createOpts := types.ZarfCreateOptions{Flavor: "", BaseDir: "."}
-		lintComposableComponents(&validator, &createOpts)
+		lintComponents(&validator, &createOpts)
 		require.Equal(t, "open fake-path/zarf.yaml: no such file or directory", validator.findings[0].description)
 		require.Equal(t, ".components.[0].import.path", validator.findings[0].yqPath)
 		require.Equal(t, ".", validator.findings[0].packageRelPath)

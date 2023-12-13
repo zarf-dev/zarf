@@ -64,7 +64,7 @@ func Validate(createOpts types.ZarfCreateOptions) (*Validator, error) {
 	return &validator, nil
 }
 
-func lintComposableComponents(validator *Validator, createOpts *types.ZarfCreateOptions) {
+func lintComponents(validator *Validator, createOpts *types.ZarfCreateOptions) {
 	for i, component := range validator.typedZarfPackage.Components {
 		arch := config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
 
