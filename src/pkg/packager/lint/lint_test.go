@@ -6,7 +6,9 @@ package lint
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -177,7 +179,7 @@ func TestValidateSchema(t *testing.T) {
 
 		createOpts := types.ZarfCreateOptions{Flavor: "", BaseDir: "."}
 		lintComponents(&validator, &createOpts)
-		require.Equal(t, "open fake-path/zarf.yaml: no such file or directory", validator.findings[0].description)
+		require.Equal(t, fmt.Sprintf("open %s: no such file or directory", filepath.Join("fake-path", "zarf.yaml")), validator.findings[0].description)
 		require.Equal(t, ".components.[0].import.path", validator.findings[0].yqPath)
 		require.Equal(t, ".", validator.findings[0].packageRelPath)
 		require.Equal(t, unpinnedImage, validator.findings[1].item)
