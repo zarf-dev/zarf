@@ -179,7 +179,8 @@ func TestValidateSchema(t *testing.T) {
 
 		createOpts := types.ZarfCreateOptions{Flavor: "", BaseDir: "."}
 		lintComponents(&validator, &createOpts)
-		require.Equal(t, fmt.Sprintf("open %s: no such file or directory", filepath.Join("fake-path", "zarf.yaml")), validator.findings[0].description)
+		// Require.contains rather than equals since the error message changes from linux to windows
+		require.Contains(t, validator.findings[0].description, fmt.Sprintf("open %s", filepath.Join("fake-path", "zarf.yaml")))
 		require.Equal(t, ".components.[0].import.path", validator.findings[0].yqPath)
 		require.Equal(t, ".", validator.findings[0].packageRelPath)
 		require.Equal(t, unpinnedImage, validator.findings[1].item)
