@@ -33,7 +33,7 @@ func getSchemaFile() ([]byte, error) {
 
 // ValidateZarf validates a zarf file against the zarf schema, returns *validator with warnings or errors if they exist
 // along with an error if the validation itself failed
-func ValidateZarf(createOpts types.ZarfCreateOptions) (*Validator, error) {
+func Validate(createOpts types.ZarfCreateOptions) (*Validator, error) {
 	validator := Validator{}
 	var err error
 
@@ -51,7 +51,7 @@ func ValidateZarf(createOpts types.ZarfCreateOptions) (*Validator, error) {
 
 	validator.baseDir = createOpts.BaseDir
 
-	lintComposableComponents(&validator, &createOpts)
+	lintComponents(&validator, &createOpts)
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
 		return nil, err
@@ -201,7 +201,7 @@ func checkForUnpinnedImages(validator *Validator, node *composer.Node) {
 				yqPath:         imageYqPath,
 				packageRelPath: node.GetRelativeToHead(),
 				packageName:    node.GetOriginalPackageName(),
-				description:    "Invalid image format",
+				description:    "Invalid image reference",
 				item:           image,
 			})
 			continue

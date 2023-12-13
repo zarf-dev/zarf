@@ -165,7 +165,7 @@ func TestValidateSchema(t *testing.T) {
 		require.Equal(t, input, acutal)
 	})
 
-	t.Run("Test comoposable components", func(t *testing.T) {
+	t.Run("Test composable components", func(t *testing.T) {
 		pathVar := "fake-path"
 		unpinnedImage := "unpinned:latest"
 		pathComponent := types.ZarfComponent{

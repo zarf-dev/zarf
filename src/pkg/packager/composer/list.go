@@ -78,7 +78,7 @@ type ImportChain struct {
 	remote *oci.OrasRemote
 }
 
-// Head eturns the first node in the import chain
+// Head returns the first node in the import chain
 func (ic *ImportChain) Head() *Node {
 	return ic.head
 }
