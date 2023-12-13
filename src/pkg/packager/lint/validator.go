@@ -14,11 +14,11 @@ import (
 	"github.com/fatih/color"
 )
 
-type validationType int
+type category int
 
 const (
-	validationError   validationType = 1
-	validationWarning validationType = 2
+	categoryError   category = 1
+	categoryWarning category = 2
 )
 
 type validatorMessage struct {
@@ -27,13 +27,13 @@ type validatorMessage struct {
 	item           string
 	packageRelPath string
 	packageName    string
-	validationType validationType
+	category       category
 }
 
-func (vt validationType) String() string {
-	if vt == validationError {
+func (c category) String() string {
+	if c == categoryError {
 		return message.ColorWrap("Error", color.FgRed)
-	} else if vt == validationWarning {
+	} else if c == categoryWarning {
 		return message.ColorWrap("Warning", color.FgYellow)
 	}
 	return ""
@@ -66,7 +66,7 @@ func (v Validator) DisplayFormattedMessage() {
 // IsSuccess returns true if there are not any errors
 func (v Validator) IsSuccess() bool {
 	for _, finding := range v.findings {
-		if finding.validationType == validationError {
+		if finding.category == categoryError {
 			return false
 		}
 	}
@@ -95,7 +95,7 @@ func (v Validator) printValidationTable() {
 	for packageRelPath, findings := range mapOfFindingsByPath {
 		lintData := [][]string{}
 		for _, finding := range findings {
-			lintData = append(lintData, []string{finding.validationType.String(), finding.getPath(), finding.String()})
+			lintData = append(lintData, []string{finding.category.String(), finding.getPath(), finding.String()})
 		}
 		message.Notef("Linting package %q at %s", findings[0].packageName, v.packageRelPathToUser(findings[0]))
 		message.Table(header, lintData)
@@ -110,10 +110,10 @@ func (v Validator) getFormattedFindingCount(relPath string, packageName string) 
 		if finding.packageRelPath != relPath {
 			continue
 		}
-		if finding.validationType == validationWarning {
+		if finding.category == categoryWarning {
 			warningCount++
 		}
-		if finding.validationType == validationError {
+		if finding.category == categoryError {
 			errorCount++
 		}
 	}
@@ -141,11 +141,11 @@ func (v Validator) hasFindings() bool {
 }
 
 func (v *Validator) addWarning(vmessage validatorMessage) {
-	vmessage.validationType = validationWarning
+	vmessage.category = categoryWarning
 	v.findings = helpers.Unique(append(v.findings, vmessage))
 }
 
 func (v *Validator) addError(vMessage validatorMessage) {
-	vMessage.validationType = validationError
+	vMessage.category = categoryError
 	v.findings = helpers.Unique(append(v.findings, vMessage))
 }
