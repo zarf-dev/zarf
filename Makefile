@@ -8,8 +8,10 @@ KEY ?= ""
 
 # Figure out which Zarf binary we should use based on the operating system we are on
 ZARF_BIN := ./build/zarf
+BUILD_CLI_FOR_SYSTEM := build-cli-linux-amd
 ifeq ($(OS),Windows_NT)
 	ZARF_BIN := $(addsuffix .exe,$(ZARF_BIN))
+	BUILD_CLI_FOR_SYSTEM := build-cli-windows-amd
 else
 	UNAME_S := $(shell uname -s)
 	UNAME_P := $(shell uname -p)
@@ -19,9 +21,11 @@ else
 		endif
 		ifeq ($(UNAME_P),i386)
 			ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
+			BUILD_CLI_FOR_SYSTEM = build-cli-mac-intel
 		endif
 		ifeq ($(UNAME_P),arm)
 			ZARF_BIN := $(addsuffix -apple,$(ZARF_BIN))
+			BUILD_CLI_FOR_SYSTEM = build-cli-mac-apple
 		endif
 	endif
 endif
@@ -35,8 +39,8 @@ BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(
 .PHONY: help
 help: ## Display this help information
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-	  | sort | awk 'BEGIN {FS = ":.*?## "}; \
-	  {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	| sort | awk 'BEGIN {FS = ":.*?## "}; \
+	{printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 clean: ## Clean the build directory
 	rm -rf build
@@ -72,12 +76,15 @@ build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI f
 
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
+build-cli-for-system:
+	$(MAKE) $(BUILD_CLI_FOR_SYSTEM)
+
 docs-and-schema: ## Generate the Zarf Documentation and Schema
 	hack/gen-cli-docs.sh
 	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
-lint-packages-and-examples: build-cli ## Recurisvely lint all zarf.yaml files in the repo except for those dedicated to tests
-	hack/lint_all_zarf_packages.sh
+lint-packages-and-examples: build-cli-for-system ## Recurisvely lint all zarf.yaml files in the repo except for those dedicated to tests
+	hack/lint_all_zarf_packages.sh $(ZARF_BIN)
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
