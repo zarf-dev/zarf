@@ -24,10 +24,10 @@ func TestLint(t *testing.T) {
 	t.Run("zarf test lint fail", func(t *testing.T) {
 		t.Log("E2E: Test lint on schema fail")
 
-		path := filepath.Join("src", "test", "packages", "12-lint")
-		configPath := filepath.Join(path, "zarf-config.toml")
+		testPackagePath := filepath.Join("src", "test", "packages", "12-lint")
+		configPath := filepath.Join(testPackagePath, "zarf-config.toml")
 		os.Setenv("ZARF_CONFIG", configPath)
-		_, stderr, err := e2e.Zarf("prepare", "lint", path, "-f", "good-flavor")
+		_, stderr, err := e2e.Zarf("prepare", "lint", testPackagePath, "-f", "good-flavor")
 		require.Error(t, err, "Require an exit code since there was warnings / errors")
 		strippedStderr := e2e.StripMessageFormatting(stderr)
 
@@ -53,7 +53,7 @@ func TestLint(t *testing.T) {
 
 		// Check reported filepaths
 		require.Contains(t, strippedStderr, "Linting package \"dos-games\" at oci://🦄/dos-games:1.0.0-skeleton")
-		require.Contains(t, strippedStderr, "Linting package \"lint\" at src/test/packages/12-lint")
+		require.Contains(t, strippedStderr, fmt.Sprintf("Linting package \"lint\" at %s", testPackagePath))
 
 	})
 
