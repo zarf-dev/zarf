@@ -45,7 +45,7 @@ func TestLint(t *testing.T) {
 		// Testing OCI imports get linted
 		require.Contains(t, strippedStderr, ".components.[0].images.[0] | Image not pinned with digest - defenseunicorns/zarf-game:multi-tile-dark")
 		// Testing a bad path leads to a finding in lint
-		require.Contains(t, strippedStderr, ".components.[3].import.path | open ###ZARF_PKG_TMPL_PATH###/zarf.yaml: no such file or directory")
+		require.Contains(t, strippedStderr, fmt.Sprintf(".components.[3].import.path | open %s: no such file or directory", filepath.Join("###ZARF_PKG_TMPL_PATH###", "zarf.yaml")))
 
 		// Check flavors
 		require.NotContains(t, strippedStderr, "image-in-bad-flavor-component:unpinned")
