@@ -19,7 +19,7 @@ zarf dev deploy [flags]
       --deploy-set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
   -f, --flavor string                      The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                               help for deploy
-      --no-yolo                            Whether or not to build+deploy the package in YOLO mode
+      --no-yolo                            Disable the YOLO mode default override and create / deploy the package as-defined
       --registry-override stringToString   Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet) (default [])
 ```
 

@@ -277,7 +277,7 @@ func init() {
 	devCmd.AddCommand(devTransformGitLinksCmd)
 	devCmd.AddCommand(devSha256SumCmd)
 	devCmd.AddCommand(devFindImagesCmd)
-	devCmd.AddCommand(devGenConfigFile)
+	devCmd.AddCommand(devGenConfigFileCmd)
 	devCmd.AddCommand(devLintCmd)
 
 	bindDevDeployFlags(v)
