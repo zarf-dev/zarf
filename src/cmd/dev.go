@@ -40,7 +40,15 @@ var devDeployCmd = &cobra.Command{
 	Short: lang.CmdDevDeployShort,
 	Long: lang.CmdDevDeployLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.CreateOpts.BaseDir = args[0]
+		if len(args) > 0 {
+			pkgConfig.CreateOpts.BaseDir = args[0]
+		} else {
+			var err error
+			pkgConfig.CreateOpts.BaseDir, err = os.Getwd()
+			if err != nil {
+				message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
+			}
+		}
 
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
