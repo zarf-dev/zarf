@@ -74,6 +74,8 @@ jobs:
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
+        with:
+          suffix: -validate-without-cluster
 
   # Run the tests on k3d
   validate-k3d:
@@ -110,6 +112,8 @@ jobs:
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
+        with:
+          suffix: -validate-k3d
 
   # Run the tests on k3s
   validate-k3s:
@@ -146,6 +150,8 @@ jobs:
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
+        with:
+          suffix: -validate-k3s
 
   # Run the tests on kind
   validate-kind:
@@ -184,6 +190,8 @@ jobs:
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
+        with:
+          suffix: -validate-kind
 
   # Run the tests on minikube
   validate-minikube:
@@ -220,3 +228,5 @@ jobs:
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
+        with:
+          suffix: -validate-minikube

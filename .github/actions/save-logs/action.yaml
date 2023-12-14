@@ -1,6 +1,12 @@
 name: save-logs
 description: "Save debug logs"
 
+inputs:
+  suffix:
+    description: 'Suffix to append to the debug log'
+    required: false
+    default: ''
+
 runs:
   using: composite
   steps:
@@ -11,5 +17,5 @@ runs:
 
     - uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
       with:
-        name: debug-log-${{ github.jobs[github.job].name }}
+        name: debug-log${{ inputs.suffix }}
         path: /tmp/zarf-*.log
