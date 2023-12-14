@@ -11,5 +11,5 @@ runs:
 
     - uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
       with:
-        name: debug-log
+        name: debug-log-${{ github.jobs[github.job].name }}
         path: /tmp/zarf-*.log
