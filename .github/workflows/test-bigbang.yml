@@ -37,18 +37,18 @@ jobs:
 
       - name: Login to Iron Bank
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
-        if: ${{ env.IRONBANK_USERNAME != '' }}
+        if: ${{ env.IRON_BANK_ROBOT_USERNAME != '' }}
         env:
-          IRONBANK_USERNAME: ${{ secrets.IRONBANK_USERNAME }}
+          IRON_BANK_ROBOT_USERNAME: ${{ secrets.IRON_BANK_ROBOT_USERNAME }}
         with:
           registry: registry1.dso.mil
-          username: ${{ secrets.IRONBANK_USERNAME }}
-          password: ${{ secrets.IRONBANK_PASSWORD }}
+          username: ${{ secrets.IRON_BANK_ROBOT_USERNAME }}
+          password: ${{ secrets.IRON_BANK_ROBOT_PASSWORD }}
 
       - name: Build a registry1.dso.mil Zarf 'init' package
-        if: ${{ env.IRONBANK_USERNAME != '' }}
+        if: ${{ env.IRON_BANK_ROBOT_USERNAME != '' }}
         env:
-          IRONBANK_USERNAME: ${{ secrets.IRONBANK_USERNAME }}
+          IRON_BANK_ROBOT_USERNAME: ${{ secrets.IRON_BANK_ROBOT_USERNAME }}
         run: make ib-init-package
 
       # Upload the contents of the build directory for later stages to use
@@ -88,18 +88,18 @@ jobs:
 
       - name: Login to Iron Bank
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
-        if: ${{ env.IRONBANK_USERNAME != '' }}
+        if: ${{ env.IRON_BANK_ROBOT_USERNAME != '' }}
         env:
-          IRONBANK_USERNAME: ${{ secrets.IRONBANK_USERNAME }}
+          IRON_BANK_ROBOT_USERNAME: ${{ secrets.IRON_BANK_ROBOT_USERNAME }}
         with:
           registry: registry1.dso.mil
-          username: ${{ secrets.IRONBANK_USERNAME }}
-          password: ${{ secrets.IRONBANK_PASSWORD }}
+          username: ${{ secrets.IRON_BANK_ROBOT_USERNAME }}
+          password: ${{ secrets.IRON_BANK_ROBOT_PASSWORD }}
 
       - name: Run tests
-        if: ${{ env.IRONBANK_USERNAME != '' }}
+        if: ${{ env.IRON_BANK_ROBOT_USERNAME != '' }}
         env:
-          IRONBANK_USERNAME: ${{ secrets.IRONBANK_USERNAME }}
+          IRON_BANK_ROBOT_USERNAME: ${{ secrets.IRON_BANK_ROBOT_USERNAME }}
         run: |
           sudo mkdir /mnt/zarf-tmp
           sudo chown -R runner:runner /mnt/zarf-tmp
