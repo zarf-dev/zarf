@@ -212,7 +212,7 @@ var devFindImagesCmd = &cobra.Command{
 	},
 }
 
-var devGenConfigFile = &cobra.Command{
+var devGenConfigFileCmd = &cobra.Command{
 	Use:     "generate-config [ FILENAME ]",
 	Aliases: []string{"gc"},
 	Args:    cobra.MaximumNArgs(1),
