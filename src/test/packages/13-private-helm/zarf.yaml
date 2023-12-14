@@ -1,0 +1,18 @@
+kind: ZarfPackageConfig
+metadata:
+  name: helm-charts
+  description: Example showcasing mutiple ways to deploy helm charts
+  version: 0.0.1
+
+components:
+  - name: demo-helm-charts
+    required: true
+    charts:
+      - name: podinfo
+        namespace: default
+        # In this case `url` will load the helm chart located in the podinfo git repository
+        url: https://gitlab.com/api/v4/projects/53034634/packages/helm/stable
+        # # By default git will look in the root of the git repository but you can define a sub directory with `gitPath`
+        # gitPath: charts/podinfo
+        valuesFiles:
+          - values.yaml
