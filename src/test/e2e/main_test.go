@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/test"
 )
 
@@ -36,6 +37,9 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		fmt.Println(err) //nolint:forbidigo
 	}
+
+	// Set the log level to trace for when we call Zarf functions internally
+	message.SetLogLevel(message.TraceLevel)
 
 	os.Exit(retCode)
 }

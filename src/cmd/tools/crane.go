@@ -132,14 +132,15 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 			return err
 		}
 
-		if tunnel != nil {
-			message.Notef(lang.CmdToolsRegistryTunnel, registryEndpoint, zarfState.RegistryInfo.Address)
-			defer tunnel.Close()
-		}
-
 		// Add the correct authentication to the crane command options
 		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PullUsername, zarfState.RegistryInfo.PullPassword)
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
+
+		if tunnel != nil {
+			message.Notef(lang.CmdToolsRegistryTunnel, registryEndpoint, zarfState.RegistryInfo.Address)
+			defer tunnel.Close()
+			return tunnel.Wrap(func() error { return originalCatalogFn(cmd, []string{registryEndpoint}) })
+		}
 
 		return originalCatalogFn(cmd, []string{registryEndpoint})
 	}
