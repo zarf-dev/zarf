@@ -143,6 +143,13 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		chartURL  string
 		err       error
 	)
+	repoFile := repo.NewFile()
+	utils.ReadYaml("/home/austin/.config/helm/repositories.yaml", repoFile)
+	if err != nil {
+		message.Debug("no helm repo file found")
+	}
+	var username string
+	var password string
 
 	// Handle OCI registries
 	if registry.IsOCI(h.chart.URL) {
@@ -159,8 +166,23 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 			chartName = h.chart.RepoName
 		}
 
+		// TODO this looks to be roughly the code I need to change
+		// Do we want to provide a way to send in username and password on prepare images or create?
+		// Probably we shoudl change the message if 401 is unauthorized that they need to login the normal helm way
+		// Where is the boundary for
+		for _, repo := range repoFile.Repositories {
+			if repo.URL == h.chart.URL {
+				username = repo.Username
+				password = repo.Password
+			}
+		}
+
+		// One way I could do this is to pull the credentials directory from the users /home/austin/.config/helm/repositories.yaml
+		// Probably better if I can find the actual function in helm that calls that
 		// Perform simple chart download
-		chartURL, err = repo.FindChartInRepoURL(h.chart.URL, chartName, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+
+		chartURL, err = repo.FindChartInAuthRepoURL(h.chart.URL, username, password, chartName, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+		//chartURL, err = repo.FindChartInRepoURL(h.chart.URL, chartName, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				// Intentionally dogsled this error since this is just a nice to have helper
@@ -169,6 +191,11 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 			return fmt.Errorf("unable to pull the helm chart: %w", err)
 		}
 	}
+
+	// I can pull these from the settings package because they're set globally by helm
+	//
+	pull.Settings.RegistryConfig = "/home/austin/.config/helm/repositories.yaml"
+	pull.Settings.RepositoryCache = "/home/austin/.cache/helm/repository"
 
 	// Set up the chart chartDownloader
 	chartDownloader := downloader.ChartDownloader{
@@ -179,7 +206,11 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		Getters: getter.All(pull.Settings),
 		Options: []getter.Option{
 			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.Insecure),
+			getter.WithPassCredentialsAll(true),
+			getter.WithBasicAuth(username, password),
 		},
+		RepositoryConfig: "/home/austin/.config/helm/repositories.yaml",
+		RepositoryCache:  "/home/austin/.cache/helm/repository",
 	}
 
 	// Download the file into a temp directory since we don't control what name helm creates here
