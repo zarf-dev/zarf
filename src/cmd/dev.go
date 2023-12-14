@@ -36,7 +36,7 @@ var devCmd = &cobra.Command{
 
 var devDeployCmd = &cobra.Command{
 	Use:   "deploy",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	Short: lang.CmdDevDeployShort,
 	Long: lang.CmdDevDeployLong,
 	Run: func(cmd *cobra.Command, args []string) {
