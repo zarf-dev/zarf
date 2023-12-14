@@ -30,7 +30,7 @@ var extractPath string
 
 var devCmd = &cobra.Command{
 	Use:     "dev",
-	Aliases: []string{"prepare"},
+	Aliases: []string{"prepare", "prep"},
 	Short:   lang.CmdDevShort,
 }
 
