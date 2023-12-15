@@ -18,8 +18,8 @@ import (
 )
 
 var (
-	// IsLowercaseNumberHyphenNoEndHyphen is a regex for lowercase, numbers and hyphens.
-	// https://regex101.com/r/FLdG9G/1
+	// IsLowercaseNumberHyphenNoStartHyphen is a regex for lowercase, numbers and hyphens that cannot start with a hyphen.
+	// https://regex101.com/r/FLdG9G/2
 	IsLowercaseNumberHyphenNoStartHyphen = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*$`).MatchString
 	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
 	// https://regex101.com/r/tfsEuZ/1
