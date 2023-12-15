@@ -156,7 +156,7 @@ func (p *Packager) forIncludedComponents(onIncluded func(types.ZarfComponent) er
 	return nil
 }
 
-func includedOrExcluded(component types.ZarfComponent, requestedComponentNames []string) (int, string) {
+func includedOrExcluded(component types.ZarfComponent, requestedComponentNames []string) (selectState, string) {
 	// Check if this is one of the components that has been specified from the CLI
 	for _, requestedComponent := range requestedComponentNames {
 		// Check if the component has a trailing dash indicating it should be excluded
