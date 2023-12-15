@@ -434,44 +434,6 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	return imgInfoList, nil
 }
 
-// pullLocalImage returns a v1.Image and will try to return the local tarball, this allows us to isolate remote issues from local issues.
-func (i *ImageConfig) pullLocalImage(src string, spinner *message.Spinner) (img v1.Image, err error) {
-	// Parse the image reference to get the image name.
-	reference, err := name.ParseReference(src)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse image reference %s: %w", src, err)
-	}
-
-	// Attempt to connect to the local docker daemon.
-	ctx := context.TODO()
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		return nil, fmt.Errorf("docker not available: %w", err)
-	}
-	cli.NegotiateAPIVersion(ctx)
-
-	// Inspect the image to get the size.
-	rawImg, _, err := cli.ImageInspectWithRaw(ctx, src)
-	if err != nil {
-		return nil, fmt.Errorf("failed to inspect image %s via docker: %w", src, err)
-	}
-
-	// Warn the user if the image is large.
-	if rawImg.Size > 750*1000*1000 {
-		warn := pterm.DefaultParagraph.WithMaxWidth(message.TermWidth).Sprintf("%s is %s and may take a very long time to load via docker. "+
-			"See https://docs.zarf.dev/docs/faq for suggestions on how to improve large local image loading operations.",
-			src, utils.ByteFormat(float64(rawImg.Size), 2))
-		spinner.Warnf(warn)
-	}
-
-	// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
-	// This will also take for ever to load large images.
-	if img, err = daemon.Image(reference, daemon.WithUnbufferedOpener()); err != nil {
-		return nil, fmt.Errorf("failed to load image %s from docker daemon: %w", src, err)
-	}
-	return img, nil
-}
-
 // PullImage returns a v1.Image either by loading a local tarball or pulling from the wider internet.
 func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Image, hasImageLayers bool, err error) {
 	cacheImage := false
@@ -486,10 +448,39 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		// If crane is unable to pull the image, try to load it from the local docker daemon.
 		message.Debugf("crane unable to pull image %s: %s", src, err)
 		spinner.Updatef("Falling back to docker for %s. This may take some time.", src)
-		var localErr error
-		img, localErr = i.pullLocalImage(src, spinner)
-		if localErr != nil {
-			return nil, false, fmt.Errorf("remote repository: %w, local filesystem: %w", err, localErr)
+
+		// Parse the image reference to get the image name.
+		reference, err := name.ParseReference(src)
+		if err != nil {
+			return nil, false, fmt.Errorf("failed to parse image reference %s: %w", src, err)
+		}
+
+		// Attempt to connect to the local docker daemon.
+		ctx := context.TODO()
+		cli, err := client.NewClientWithOpts(client.FromEnv)
+		if err != nil {
+			return nil, false, fmt.Errorf("docker not available: %w", err)
+		}
+		cli.NegotiateAPIVersion(ctx)
+
+		// Inspect the image to get the size.
+		rawImg, _, err := cli.ImageInspectWithRaw(ctx, src)
+		if err != nil {
+			return nil, false, fmt.Errorf("failed to inspect image %s via docker: %w", src, err)
+		}
+
+		// Warn the user if the image is large.
+		if rawImg.Size > 750*1000*1000 {
+			warn := pterm.DefaultParagraph.WithMaxWidth(message.TermWidth).Sprintf("%s is %s and may take a very long time to load via docker. "+
+				"See https://docs.zarf.dev/docs/faq for suggestions on how to improve large local image loading operations.",
+				src, utils.ByteFormat(float64(rawImg.Size), 2))
+			spinner.Warnf(warn)
+		}
+
+		// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
+		// This will also take for ever to load large images.
+		if img, err = daemon.Image(reference, daemon.WithUnbufferedOpener()); err != nil {
+			return nil, false, fmt.Errorf("failed to load image %s from docker daemon: %w", src, err)
 		}
 	} else {
 		// Manifest was found, so use crane to pull the image.

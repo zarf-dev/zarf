@@ -119,6 +119,13 @@ func TestUseCLI(t *testing.T) {
 		require.Error(t, err, stdOut, stdErr)
 	})
 
+	t.Run("zarf package to test bad remote images", func(t *testing.T) {
+		_, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/00-remote-pull-fail", "--confirm")
+		// expecting zarf to have an error and output to stderr
+		require.Error(t, err)
+		require.Contains(t, stdErr, "requested access to the resource is denied")
+	})
+
 	t.Run("zarf package to test archive path", func(t *testing.T) {
 		t.Parallel()
 		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--confirm")
