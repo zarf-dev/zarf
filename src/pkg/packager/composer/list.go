@@ -27,7 +27,7 @@ type Node struct {
 	vars   []types.ZarfPackageVariable
 	consts []types.ZarfPackageConstant
 
-	relativeToHeadOrUrl string
+	relativeToHeadOrURL string
 	originalPackageName string
 
 	prev *Node
@@ -44,9 +44,9 @@ func (n *Node) GetOriginalPackageName() string {
 	return n.originalPackageName
 }
 
-// GetRelativeToHeadOrUrl gets the path from downstream zarf file to upstream imported zarf file
-func (n *Node) GetRelativeToHeadOrUrl() string {
-	return n.relativeToHeadOrUrl
+// GetRelativeToHeadOrURL gets the path from downstream zarf file to upstream imported zarf file
+func (n *Node) GetRelativeToHeadOrURL() string {
+	return n.relativeToHeadOrURL
 }
 
 // Next returns next node in the chain
@@ -89,12 +89,12 @@ func (ic *ImportChain) Tail() *Node {
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageName string,
-	relativeToHeadOrUrl string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
+	relativeToHeadOrURL string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
 	node := &Node{
 		ZarfComponent:       c,
 		index:               index,
 		originalPackageName: originalPackageName,
-		relativeToHeadOrUrl: relativeToHeadOrUrl,
+		relativeToHeadOrURL: relativeToHeadOrURL,
 		vars:                vars,
 		consts:              consts,
 		prev:                nil,
@@ -150,27 +150,27 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 
 		var pkg types.ZarfPackage
 
-		var relativeToHeadOrUrl string
+		var relativeToHeadOrURL string
 		if isLocal {
 			history = append(history, node.Import.Path)
-			relativeToHeadOrUrl = filepath.Join(history...)
+			relativeToHeadOrURL = filepath.Join(history...)
 
 			// prevent circular imports (including self-imports)
 			// this is O(n^2) but the import chain should be small
 			prev := node
 			for prev != nil {
-				if prev.relativeToHeadOrUrl == relativeToHeadOrUrl {
+				if prev.relativeToHeadOrURL == relativeToHeadOrURL {
 					return ic, fmt.Errorf("detected circular import chain: %s", strings.Join(history, " -> "))
 				}
 				prev = prev.prev
 			}
 
 			// this assumes the composed package is following the zarf layout
-			if err := utils.ReadYaml(filepath.Join(relativeToHeadOrUrl, layout.ZarfYAML), &pkg); err != nil {
+			if err := utils.ReadYaml(filepath.Join(relativeToHeadOrURL, layout.ZarfYAML), &pkg); err != nil {
 				return ic, err
 			}
 		} else if isRemote {
-			relativeToHeadOrUrl = node.Import.URL
+			relativeToHeadOrURL = node.Import.URL
 			remote, err := ic.getRemote(node.Import.URL)
 			if err != nil {
 				return ic, err
@@ -195,12 +195,12 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 		}
 
 		if len(found) == 0 {
-			return ic, fmt.Errorf("component %q not found in %q", name, relativeToHeadOrUrl)
+			return ic, fmt.Errorf("component %q not found in %q", name, relativeToHeadOrURL)
 		} else if len(found) > 1 {
-			return ic, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, relativeToHeadOrUrl, arch)
+			return ic, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, relativeToHeadOrURL, arch)
 		}
 
-		ic.append(found[0], index[0], pkg.Metadata.Name, relativeToHeadOrUrl, pkg.Variables, pkg.Constants)
+		ic.append(found[0], index[0], pkg.Metadata.Name, relativeToHeadOrURL, pkg.Variables, pkg.Constants)
 		node = node.next
 	}
 	return ic, nil
@@ -274,7 +274,7 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 	// start overriding with the tail node
 	node := ic.tail
 	for node != nil {
-		fixPaths(&node.ZarfComponent, node.relativeToHeadOrUrl)
+		fixPaths(&node.ZarfComponent, node.relativeToHeadOrURL)
 
 		// perform overrides here
 		err := overrideMetadata(composed, node.ZarfComponent)
@@ -286,7 +286,7 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 		overrideResources(composed, node.ZarfComponent)
 		overrideActions(composed, node.ZarfComponent)
 
-		composeExtensions(composed, node.ZarfComponent, node.relativeToHeadOrUrl)
+		composeExtensions(composed, node.ZarfComponent, node.relativeToHeadOrURL)
 
 		node = node.prev
 	}

@@ -39,8 +39,8 @@ BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(
 .PHONY: help
 help: ## Display this help information
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-	| sort | awk 'BEGIN {FS = ":.*?## "}; \
-	{printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+		| sort | awk 'BEGIN {FS = ":.*?## "}; \
+		{printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 clean: ## Clean the build directory
 	rm -rf build
