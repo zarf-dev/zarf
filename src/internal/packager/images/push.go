@@ -81,9 +81,9 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 	pushImage := func(img v1.Image, name string) error {
 		if tunnel != nil {
 			return tunnel.Wrap(func() error { return crane.Push(img, name, pushOptions...) })
-		} else {
-			return crane.Push(img, name, pushOptions...)
 		}
+
+		return crane.Push(img, name, pushOptions...)
 	}
 
 	for refInfo, img := range refInfoToImage {

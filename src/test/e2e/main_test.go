@@ -33,13 +33,13 @@ func TestMain(m *testing.M) {
 	// K3d use the intern package, which requires this to be set in go 1.19
 	os.Setenv("ASSUME_NO_MOVING_GC_UNSAFE_RISK_IT_WITH", "go1.19")
 
+	// Set the log level to trace for when we call Zarf functions internally
+	message.SetLogLevel(message.TraceLevel)
+
 	retCode, err := doAllTheThings(m)
 	if err != nil {
 		fmt.Println(err) //nolint:forbidigo
 	}
-
-	// Set the log level to trace for when we call Zarf functions internally
-	message.SetLogLevel(message.TraceLevel)
 
 	os.Exit(retCode)
 }
