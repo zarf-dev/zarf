@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/types"
 	craneCmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
@@ -187,6 +188,10 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 			return err
 		}
 
+		// Add the correct authentication to the crane command options
+		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PushUsername, zarfState.RegistryInfo.PushPassword)
+		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
+
 		if tunnel != nil {
 			message.Notef(lang.CmdToolsRegistryTunnel, tunnel.Endpoint(), zarfState.RegistryInfo.Address)
 
@@ -195,11 +200,8 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 			givenAddress := fmt.Sprintf("%s/", zarfState.RegistryInfo.Address)
 			tunnelAddress := fmt.Sprintf("%s/", tunnel.Endpoint())
 			args[imageNameArgumentIndex] = strings.Replace(args[imageNameArgumentIndex], givenAddress, tunnelAddress, 1)
+			return tunnel.Wrap(func() error { return originalListFn(cmd, args) })
 		}
-
-		// Add the correct authentication to the crane command options
-		authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PushUsername, zarfState.RegistryInfo.PushPassword)
-		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
 
 		return originalListFn(cmd, args)
 	}
@@ -235,8 +237,13 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 	if tunnel != nil {
 		message.Notef(lang.CmdToolsRegistryTunnel, registryEndpoint, zarfState.RegistryInfo.Address)
 		defer tunnel.Close()
+		return tunnel.Wrap(func() error { return doPruneImagesForPackages(zarfState, zarfPackages, registryEndpoint) })
 	}
 
+	return doPruneImagesForPackages(zarfState, zarfPackages, registryEndpoint)
+}
+
+func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.DeployedPackage, registryEndpoint string) error {
 	authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PushUsername, zarfState.RegistryInfo.PushPassword)
 
 	// Determine which image digests are currently used by Zarf packages
