@@ -16,10 +16,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+type selectState int
+
 const (
-	unknown  = 0
-	included = 1
-	excluded = 2
+	unknown selectState = iota
+	included
+	excluded
 )
 
 func (p *Packager) getSelectedComponents() []types.ZarfComponent {
