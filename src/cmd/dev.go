@@ -23,17 +23,52 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var extractPath string
 
-var prepareCmd = &cobra.Command{
-	Use:     "prepare",
-	Aliases: []string{"prep"},
-	Short:   lang.CmdPrepareShort,
+var devCmd = &cobra.Command{
+	Use:     "dev",
+	Aliases: []string{"prepare", "prep"},
+	Short:   lang.CmdDevShort,
 }
 
-var prepareTransformGitLinks = &cobra.Command{
+var devDeployCmd = &cobra.Command{
+	Use:   "deploy",
+	Args:  cobra.MaximumNArgs(1),
+	Short: lang.CmdDevDeployShort,
+	Long: lang.CmdDevDeployLong,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) > 0 {
+			pkgConfig.CreateOpts.BaseDir = args[0]
+		} else {
+			var err error
+			pkgConfig.CreateOpts.BaseDir, err = os.Getwd()
+			if err != nil {
+				message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
+			}
+		}
+
+		v := common.GetViper()
+		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+
+		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Create the package
+		if err := pkgClient.DevDeploy(); err != nil {
+			message.Fatalf(err, lang.CmdDevDeployErr, err.Error())
+		}
+	},
+}
+
+var devTransformGitLinksCmd = &cobra.Command{
 	Use:     "patch-git HOST FILE",
 	Aliases: []string{"p"},
 	Short:   lang.CmdPreparePatchGitShort,
@@ -76,7 +111,7 @@ var prepareTransformGitLinks = &cobra.Command{
 	},
 }
 
-var prepareComputeFileSha256sum = &cobra.Command{
+var devSha256SumCmd = &cobra.Command{
 	Use:     "sha256sum { FILE | URL }",
 	Aliases: []string{"s"},
 	Short:   lang.CmdPrepareSha256sumShort,
@@ -151,7 +186,7 @@ var prepareComputeFileSha256sum = &cobra.Command{
 	},
 }
 
-var prepareFindImages = &cobra.Command{
+var devFindImagesCmd = &cobra.Command{
 	Use:     "find-images [ PACKAGE ]",
 	Aliases: []string{"f"},
 	Args:    cobra.MaximumNArgs(1),
@@ -185,7 +220,7 @@ var prepareFindImages = &cobra.Command{
 	},
 }
 
-var prepareGenerateConfigFile = &cobra.Command{
+var devGenConfigFileCmd = &cobra.Command{
 	Use:     "generate-config [ FILENAME ]",
 	Aliases: []string{"gc"},
 	Args:    cobra.MaximumNArgs(1),
@@ -206,7 +241,7 @@ var prepareGenerateConfigFile = &cobra.Command{
 	},
 }
 
-var lintCmd = &cobra.Command{
+var devLintCmd = &cobra.Command{
 	Use:     "lint [ DIRECTORY ]",
 	Args:    cobra.MaximumNArgs(1),
 	Aliases: []string{"l"},
@@ -235,22 +270,39 @@ var lintCmd = &cobra.Command{
 }
 
 func init() {
-	v := common.InitViper()
+	v := common.GetViper()
+	rootCmd.AddCommand(devCmd)
 
-	rootCmd.AddCommand(prepareCmd)
-	prepareCmd.AddCommand(prepareTransformGitLinks)
-	prepareCmd.AddCommand(prepareComputeFileSha256sum)
-	prepareCmd.AddCommand(prepareFindImages)
-	prepareCmd.AddCommand(prepareGenerateConfigFile)
-	prepareCmd.AddCommand(lintCmd)
+	devCmd.AddCommand(devDeployCmd)
+	devCmd.AddCommand(devTransformGitLinksCmd)
+	devCmd.AddCommand(devSha256SumCmd)
+	devCmd.AddCommand(devFindImagesCmd)
+	devCmd.AddCommand(devGenConfigFileCmd)
+	devCmd.AddCommand(devLintCmd)
 
-	prepareComputeFileSha256sum.Flags().StringVarP(&extractPath, "extract-path", "e", "", lang.CmdPrepareFlagExtractPath)
+	bindDevDeployFlags(v)
 
-	prepareFindImages.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
+	devSha256SumCmd.Flags().StringVarP(&extractPath, "extract-path", "e", "", lang.CmdPrepareFlagExtractPath)
+
+	devFindImagesCmd.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdPrepareFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	prepareFindImages.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPrepareFlagSet)
+	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPrepareFlagSet)
 	// allow for the override of the default helm KubeVersion
-	prepareFindImages.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
+	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdPrepareFlagKubeVersion)
 
-	prepareTransformGitLinks.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdPrepareFlagGitAccount)
+	devTransformGitLinksCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdPrepareFlagGitAccount)
+}
+
+func bindDevDeployFlags(v *viper.Viper) {
+	devDeployFlags := devDeployCmd.Flags()
+
+	devDeployFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	devDeployFlags.StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(common.VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
+	devDeployFlags.StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+
+	devDeployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+
+	devDeployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
+
+	devDeployFlags.BoolVar(&pkgConfig.CreateOpts.NoYOLO, "no-yolo", v.GetBool(common.VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
 }

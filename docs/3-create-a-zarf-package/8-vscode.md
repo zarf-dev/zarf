@@ -15,6 +15,7 @@ Zarf uses the [Zarf package schema](https://github.com/defenseunicorns/zarf/blob
     "https://raw.githubusercontent.com/defenseunicorns/zarf/main/zarf.schema.json": "zarf.yaml"
   }
 ```
+
 :::note
 
 When successfully installed, the `yaml.schema` line will match the color of the other lines within the settings.
