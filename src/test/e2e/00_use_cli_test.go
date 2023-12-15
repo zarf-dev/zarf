@@ -108,7 +108,7 @@ func TestUseCLI(t *testing.T) {
 		t.Parallel()
 		_, _, err := e2e.Zarf("package", "create", "src/test/packages/00-no-components", "-o=build", "--confirm")
 		require.NoError(t, err)
-		// Test that excluding all components with a trailing dash results in a warning
+		// Test that excluding all components with a leading dash results in a warning
 		path := fmt.Sprintf("build/zarf-package-no-components-%s.tar.zst", e2e.Arch)
 		_, stdErr, err := e2e.Zarf("package", "deploy", path, "--components=-deselect-me", "--confirm")
 		require.NoError(t, err)
