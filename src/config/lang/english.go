@@ -231,7 +231,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 		"Kubernetes clusters are accessed via credentials in your current kubecontext defined in '~/.kube/config'"
 
 	CmdPackageMirrorShort = "Mirrors a Zarf package's internal resources to specified image registries and git repositories"
-	CmdPackageMirrorLong  = "Unpacks resources and dependencies from a Zarf package archive and mirrors them into the specified \n" +
+	CmdPackageMirrorLong  = "Unpacks resources and dependencies from a Zarf package archive and mirrors them into the specified\n" +
 		"image registries and git repositories within the target environment"
 	CmdPackageMirrorExample = `
 # Mirror resources to internal Zarf resources
@@ -280,7 +280,7 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageDeployFlagConfirm                        = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdPackageDeployFlagAdoptExistingResources         = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
 	CmdPackageDeployFlagSet                            = "Specify deployment variables to set on the command line (KEY=value)"
-	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a trailing '-' are also supported."
+	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
 	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
 	CmdPackageDeployFlagSkipWebhooks                   = "[alpha] Skip waiting for external webhooks to execute as each package component is deployed"
@@ -290,7 +290,7 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageDeployInvalidCLIVersionWarn              = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
 	CmdPackageDeployErr                                = "Failed to deploy package: %s"
 
-	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a trailing '-' are also supported."
+	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
 
 	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
@@ -299,7 +299,7 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 
 	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
-	CmdPackageRemoveFlagComponents = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a trailing '-' are also supported."
+	CmdPackageRemoveFlagComponents = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageRemoveTarballErr     = "Invalid tarball path provided"
 	CmdPackageRemoveExtractErr     = "Unable to extract the package contents"
 	CmdPackageRemoveErr            = "Unable to remove the package with an error of: %s"
@@ -625,7 +625,7 @@ const (
 	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
 	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
 	PkgValidateErrChartVersion            = "chart %q must include a chart version"
-	PkgValidateErrComponentName           = "component name %q must be all lowercase and contain no special characters except - and cannot end in a -"
+	PkgValidateErrComponentName           = "component name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
 	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
 	PkgValidateErrComponent               = "invalid component %q: %w"
 	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"
@@ -644,7 +644,7 @@ const (
 	PkgValidateErrName                    = "invalid package name: %w"
 	PkgValidateErrPkgConstantName         = "constant name %q must be all uppercase and contain no special characters except _"
 	PkgValidateErrPkgConstantPattern      = "provided value for constant %q does not match pattern %q"
-	PkgValidateErrPkgName                 = "package name %q must be all lowercase and contain no special characters except - and cannot end in a -"
+	PkgValidateErrPkgName                 = "package name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrYOLONoArch              = "cluster architecture not allowed"
 	PkgValidateErrYOLONoDistro            = "cluster distros not allowed"

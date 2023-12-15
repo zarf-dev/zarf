@@ -16,13 +16,13 @@ import (
 )
 
 var (
-	// veryify that ClusterSource implements PackageSource
+	// verify that ClusterSource implements PackageSource
 	_ PackageSource = (*ClusterSource)(nil)
 )
 
 // NewClusterSource creates a new cluster source.
 func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
-	if !validate.IsLowercaseNumberHyphenNoEndHyphen(pkgOpts.PackageSource) {
+	if !validate.IsLowercaseNumberHyphenNoStartHyphen(pkgOpts.PackageSource) {
 		return nil, fmt.Errorf("invalid package name %q", pkgOpts.PackageSource)
 	}
 	cluster, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)

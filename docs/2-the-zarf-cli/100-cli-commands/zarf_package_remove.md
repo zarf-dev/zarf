@@ -10,7 +10,7 @@ zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
 ## Options
 
 ```
-      --components string   Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a trailing '-' are also supported.
+      --components string   Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported.
       --confirm             REQUIRED. Confirm the removal action to prevent accidental deletions
   -h, --help                help for remove
 ```

@@ -5,7 +5,7 @@ Mirrors a Zarf package's internal resources to specified image registries and gi
 
 ## Synopsis
 
-Unpacks resources and dependencies from a Zarf package archive and mirrors them into the specified 
+Unpacks resources and dependencies from a Zarf package archive and mirrors them into the specified
 image registries and git repositories within the target environment
 
 ```
@@ -39,7 +39,7 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 ## Options
 
 ```
-      --components string               Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a trailing '-' are also supported.
+      --components string               Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported.
       --confirm                         Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
       --git-push-password string        Password for the push-user to access the git server
       --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push' (default "zarf-git-user")

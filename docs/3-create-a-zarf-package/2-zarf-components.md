@@ -214,11 +214,11 @@ You can deploy components in a package using globbing as well.  The following wo
 $ zarf package deploy ./path/to/package.tar.zst --components=*
 ```
 
-If you have any `default` components in a package definition you can also exclude those from the CLI with a trailing `-` (similar to removing a label from a resource with `kubectl`)
+If you have any `default` components in a package definition you can also exclude those from the CLI with a leading dash (`-`) (similar to how you can exclude search terms in a search engine).
 
 ```bash
 # deploy optional-component-1 but exclude default-component-1
-$ zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,default-component-1-
+$ zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,-default-component-1
 ```
 
 :::

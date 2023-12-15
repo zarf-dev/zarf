@@ -158,10 +158,10 @@ func includedOrExcluded(component types.ZarfComponent, requestedComponentNames [
 	// Check if this is one of the components that has been specified from the CLI
 	for _, requestedComponent := range requestedComponentNames {
 		// Check if the component has a trailing dash indicating it should be excluded
-		if strings.HasSuffix(requestedComponent, "-") {
+		if strings.HasPrefix(requestedComponent, "-") {
 			// If the component glob matches one of the requested components, then return true
 			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
-			if matched, _ := path.Match(strings.TrimSuffix(requestedComponent, "-"), component.Name); matched {
+			if matched, _ := path.Match(strings.TrimPrefix(requestedComponent, "-"), component.Name); matched {
 				return excluded, requestedComponent
 			}
 		} else {
