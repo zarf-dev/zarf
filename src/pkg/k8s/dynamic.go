@@ -16,6 +16,16 @@ import (
 
 // AddLabelsAndAnnotations adds the provided labels and annotations to the specified K8s resource
 func (k *K8s) AddLabelsAndAnnotations(resourceNamespace string, resourceName string, groupKind schema.GroupKind, labels map[string]string, annotations map[string]string) error {
+	return k.updateLabelsAndAnnotations(resourceNamespace, resourceName, groupKind, labels, annotations, false)
+}
+
+// RemoveLabelsAndAnnotations adds the provided labels and annotations to the specified K8s resource
+func (k *K8s) RemoveLabelsAndAnnotations(resourceNamespace string, resourceName string, groupKind schema.GroupKind, labels map[string]string, annotations map[string]string) error {
+	return k.updateLabelsAndAnnotations(resourceNamespace, resourceName, groupKind, labels, annotations, true)
+}
+
+// updateLabelsAndAnnotations updates the provided labels and annotations to the specified K8s resource
+func (k *K8s) updateLabelsAndAnnotations(resourceNamespace string, resourceName string, groupKind schema.GroupKind, labels map[string]string, annotations map[string]string, isRemove bool) error {
 	dynamicClient := dynamic.NewForConfigOrDie(k.RestConfig)
 
 	discoveryClient := discovery.NewDiscoveryClientForConfigOrDie(k.RestConfig)
@@ -43,7 +53,11 @@ func (k *K8s) AddLabelsAndAnnotations(resourceNamespace string, resourceName str
 		deployedLabels = make(map[string]string)
 	}
 	for key, value := range labels {
-		deployedLabels[key] = value
+		if isRemove {
+			delete(deployedLabels, key)
+		} else {
+			deployedLabels[key] = value
+		}
 	}
 
 	deployedResource.SetLabels(deployedLabels)
@@ -55,7 +69,11 @@ func (k *K8s) AddLabelsAndAnnotations(resourceNamespace string, resourceName str
 		deployedAnnotations = make(map[string]string)
 	}
 	for key, value := range annotations {
-		deployedAnnotations[key] = value
+		if isRemove {
+			delete(deployedAnnotations, key)
+		} else {
+			deployedAnnotations[key] = value
+		}
 	}
 
 	deployedResource.SetAnnotations(deployedAnnotations)
