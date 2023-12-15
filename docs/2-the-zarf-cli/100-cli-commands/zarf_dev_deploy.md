@@ -14,7 +14,7 @@ zarf dev deploy [flags]
 ## Options
 
 ```
-      --components string                  Comma-separated list of components to install.  Adding this flag will skip the init prompts for which components to install
+      --components string                  Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
       --create-set stringToString          Specify package variables to set on the command line (KEY=value) (default [])
       --deploy-set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
   -f, --flavor string                      The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
