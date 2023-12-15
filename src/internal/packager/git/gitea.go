@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	netHttp "net/http"
@@ -18,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // CreateTokenResponse is the response given from creating a token in Gitea
@@ -210,6 +212,31 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	}
 
 	return createTokenResponse, nil
+}
+
+func (g *Git) UpdateGiteaPVC() (string, error) {
+	create := "true"
+	c, err := cluster.NewCluster()
+	if err != nil {
+		return "false", err
+	}
+
+	pvcName := os.Getenv("ZARF_VAR_GIT_SERVER_EXISTING_PVC")
+	groupKind := schema.GroupKind{
+		Group: "",
+		Kind:  "PersistentVolumeClaim",
+	}
+	labels := map[string]string{"app.kubernetes.io/managed-by": "Helm"}
+	annotations := map[string]string{"meta.helm.sh/release-name": "zarf-gitea", "meta.helm.sh/release-namespace": "zarf"}
+
+	if pvcName == "data-zarf-gitea-0" {
+		c.K8s.AddLabelsAndAnnotations("zarf", pvcName, groupKind, labels, annotations)
+		return create, nil
+	} else {
+		c.K8s.AddLabelsAndAnnotations("zarf", pvcName, groupKind, labels, annotations)
+		create = "false"
+		return create, nil
+	}
 }
 
 // DoHTTPThings adds http request boilerplate and perform the request, checking for a successful response.

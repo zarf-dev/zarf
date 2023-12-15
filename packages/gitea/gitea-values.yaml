@@ -4,6 +4,7 @@ persistence:
   size: "###ZARF_VAR_GIT_SERVER_PVC_SIZE###"
   accessModes:
     - "###ZARF_VAR_GIT_SERVER_PVC_ACCESS_MODE###"
+  create: ###ZARF_VAR_GIT_SERVER_CREATE_PVC###
 
 replicaCount: ###ZARF_VAR_GIT_SERVER_REPLICA_COUNT###
 

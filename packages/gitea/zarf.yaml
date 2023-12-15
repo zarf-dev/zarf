@@ -7,6 +7,10 @@ variables:
     description: "Optional: Use an existing PVC for the git server instead of creating a new one. If this is set, the GIT_SERVER_PVC_SIZE variable will be ignored."
     default: "data-zarf-gitea-0"
 
+  - name: GIT_SERVER_CREATE_PVC
+    desciption: "create pvc"
+    default: true
+
   - name: GIT_SERVER_PVC_SIZE
     description: The size of the persistent volume claim for the git server
     default: 10Gi
@@ -68,9 +72,9 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: zarf tools kubectl label pvc -n zarf data-zarf-gitea-0 app.kubernetes.io/managed-by=Helm || true
-          - cmd: zarf tools kubectl annotate pvc -n zarf data-zarf-gitea-0 meta.helm.sh/release-name=zarf-gitea || true
-          - cmd: zarf tools kubectl annotate pvc -n zarf data-zarf-gitea-0 meta.helm.sh/release-namespace=zarf || true
+          - cmd: ./zarf internal update-gitea-pvc --no-progress
+            setVariables:
+              - name: GIT_SERVER_CREATE_PVC
         after:
           - cmd: ./zarf internal create-read-only-gitea-user --no-progress
             maxRetries: 3
@@ -86,3 +90,5 @@ components:
                 namespace: zarf
                 name: app=gitea
                 condition: Ready
+        # onFailure:
+        #   - cmd: ./zarf internal update-gitea-pvc --roll-back

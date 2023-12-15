@@ -196,6 +196,27 @@ var createPackageRegistryToken = &cobra.Command{
 	},
 }
 
+var updateGiteaPVC = &cobra.Command{
+	Use:   "update-gitea-pvc",
+	Short: lang.CmdInternalUpdateGiteaPVCShort,
+	Long:  lang.CmdInternalUpdateGiteaPVCLong,
+	Run: func(cmd *cobra.Command, args []string) {
+		c := cluster.NewClusterOrDie()
+		state, err := c.LoadZarfState()
+		if err != nil {
+			message.WarnErr(err, lang.ErrLoadState)
+		}
+
+		val, err := git.New(state.GitServer).UpdateGiteaPVC()
+
+		if err != nil {
+			message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
+		}
+
+		fmt.Print(val)
+	},
+}
+
 var isValidHostname = &cobra.Command{
 	Use:   "is-valid-hostname",
 	Short: lang.CmdInternalIsValidHostnameShort,
@@ -229,6 +250,7 @@ func init() {
 	internalCmd.AddCommand(genTypesSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
 	internalCmd.AddCommand(createPackageRegistryToken)
+	internalCmd.AddCommand(updateGiteaPVC)
 	internalCmd.AddCommand(isValidHostname)
 	internalCmd.AddCommand(computeCrc32)
 }
