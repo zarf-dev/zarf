@@ -148,7 +148,7 @@ In this use case, you configure Zarf to initialize a cluster that already exists
 - Builtin Docker registry
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
 - [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
-- Builtin [command to find images](./2-the-zarf-cli/100-cli-commands/zarf_prepare_find-images.md) and resources from a Helm chart
+- Builtin [command to find images](./2-the-zarf-cli/100-cli-commands/zarf_dev_find-images.md) and resources from a Helm chart
 - Tunneling capability to [connect to Kuberenetes resources](./2-the-zarf-cli/100-cli-commands/zarf_connect.md) without network routing, DNS, TLS or Ingress configuration required
 
 ### 🛠️ Configurable Features

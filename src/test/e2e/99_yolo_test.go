@@ -47,3 +47,17 @@ func TestYOLOMode(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "yolo", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
+
+func TestDevDeploy(t *testing.T) {
+	// Don't run this test in appliance mode
+	if e2e.ApplianceMode {
+		return
+	}
+	e2e.SetupWithCluster(t)
+
+	stdOut, stdErr, err := e2e.Zarf("dev", "deploy", "examples/dos-games")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
