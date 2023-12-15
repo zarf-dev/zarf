@@ -4,7 +4,9 @@
 // Package types contains all the types used by Zarf.
 package types
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	// RawVariableType is the default type for a Zarf package variable
@@ -109,6 +111,8 @@ type ZarfCreateOptions struct {
 	DifferentialData   DifferentialData  `json:"differential" jsonschema:"description=A package's differential images and git repositories from a referenced previously built package"`
 	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
 	Flavor             string            `json:"flavor" jsonschema:"description=An optional variant that controls which components will be included in a package"`
+	IsSkeleton         bool              `json:"isSkeleton" jsonschema:"description=Whether to create a skeleton package"`
+	NoYOLO             bool              `json:"noYOLO" jsonschema:"description=Whether to create a YOLO package"`
 }
 
 // ZarfSplitPackageData contains info about a split package.
