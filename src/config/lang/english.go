@@ -15,11 +15,11 @@ import "errors"
 // Debug messages will not be a part of the language strings since they are not intended to be user facing
 // Include sprintf formatting directives in the string if needed.
 const (
-	ErrLoadState           = "Failed to load the Zarf State from the Kubernetes cluster."
-	ErrSaveState           = "Failed to save the Zarf State to the Kubernetes cluster."
-	ErrLoadPackageSecret   = "Failed to load %s's secret from the Kubernetes cluster"
-	ErrNoClusterConnection = "Failed to connect to the Kubernetes cluster."
-	ErrTunnelFailed        = "Failed to create a tunnel to the Kubernetes cluster."
+	ErrLoadState           = "Failed to load the Zarf State from the cluster."
+	ErrSaveState           = "Failed to save the Zarf State to the cluster."
+	ErrLoadPackageSecret   = "Failed to load %s's secret from the cluster"
+	ErrNoClusterConnection = "Failed to connect to the cluster."
+	ErrTunnelFailed        = "Failed to create a tunnel to the cluster."
 	ErrUnmarshal           = "failed to unmarshal file: %w"
 	ErrWritingFile         = "failed to write file %s: %s"
 	ErrDownloading         = "failed to download %s: %s"
@@ -284,6 +284,7 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
 	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
 	CmdPackageDeployFlagSkipWebhooks                   = "[alpha] Skip waiting for external webhooks to execute as each package component is deployed"
+	CmdPackageDeployFlagTimeout                        = "Timeout for Helm operations such as installs and rollbacks"
 	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster only has the %s architecture(s). These architectures must be compatible when \"images\" are present"
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "The version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
 	CmdPackageDeployInvalidCLIVersionWarn              = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
@@ -327,8 +328,13 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPackageClusterSourceFallback = "%q does not satisfy any current sources, assuming it is a package deployed to a cluster"
 	CmdPackageInvalidSource         = "Unable to identify source from %q: %s"
 
-	// zarf prepare
-	CmdPrepareShort = "Tools to help prepare assets for packaging"
+	// zarf dev (prepare is an alias for dev)
+	CmdDevShort = "Commands useful for developing packages"
+
+	CmdDevDeployShort      = "[beta] Creates and deploys a Zarf package from a given directory"
+	CmdDevDeployLong       = "[beta] Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
+	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
+	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
 	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
@@ -341,8 +347,8 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPrepareSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
 	CmdPrepareSha256sumHashErr       = "Unable to compute the SHA256SUM hash: %s"
 
-	CmdPrepareFindImagesShort = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests"
-	CmdPrepareFindImagesLong  = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
+	CmdPrepareFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests"
+	CmdPrepareFindImagesLong  = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.\n\n" +
 		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
 	CmdPrepareFindImagesErr = "Unable to find images: %s"
 
@@ -358,6 +364,10 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."
 	CmdPrepareFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
+
+	CmdPrepareLintShort = "Verifies the package schema"
+	CmdPrepareLintLong  = "Verifies the package schema and warns the user if they have variables that won't be evaluated"
+	CmdPrepareLintErr   = "Unable to lint package: %s"
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"

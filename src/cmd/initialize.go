@@ -179,6 +179,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 
 	// Init package variable defaults that are non-zero values
+	// NOTE: these are not in common.setDefaults so that zarf tools update-creds does not erroneously update values back to the default
 	v.SetDefault(common.VInitGitPushUser, config.ZarfGitPushUser)
 	v.SetDefault(common.VInitRegistryPushUser, config.ZarfRegistryPushUser)
 
@@ -210,6 +211,14 @@ func init() {
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.Address, "artifact-url", v.GetString(common.VInitArtifactURL), lang.CmdInitFlagArtifactURL)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(common.VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
 	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(common.VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
+
+	// Flags that control how a deployment proceeds
+	// Always require adopt-existing-resources flag (no viper)
+	initCmd.Flags().BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+
+	initCmd.Flags().BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
+
+	initCmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	initCmd.Flags().SortFlags = true
 }

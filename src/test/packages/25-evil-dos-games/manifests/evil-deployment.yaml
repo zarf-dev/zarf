@@ -18,6 +18,10 @@ spec:
             - name: http
               containerPort: 8000
               protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /non-exist
+              port: 5000
           resources:
             requests:
               memory: "32Mi"

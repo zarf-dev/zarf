@@ -5,10 +5,12 @@
 package composer
 
 import (
+	"fmt"
+
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) {
+func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) error {
 	c.Name = override.Name
 	c.Default = override.Default
 	c.Required = override.Required
@@ -17,6 +19,16 @@ func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) {
 	if override.Description != "" {
 		c.Description = override.Description
 	}
+
+	if override.Only.LocalOS != "" {
+		if c.Only.LocalOS != "" {
+			return fmt.Errorf("component %q \"only.localOS\" %q cannot be redefined as %q during compose", c.Name, c.Only.LocalOS, override.Only.LocalOS)
+		}
+
+		c.Only.LocalOS = override.Only.LocalOS
+	}
+
+	return nil
 }
 
 func overrideDeprecated(c *types.ZarfComponent, override types.ZarfComponent) {

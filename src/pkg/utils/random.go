@@ -6,8 +6,10 @@ package utils
 
 import (
 	"crypto/rand"
+	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/fatih/color"
 )
 
 // Very limited special chars for git / basic auth
@@ -36,4 +38,10 @@ func First30last30(s string) string {
 	}
 
 	return s
+}
+
+// ColorWrap changes a string to an ansi color code and appends the default color to the end
+// preventing future characters from taking on the given color
+func ColorWrap(str string, attr color.Attribute) string {
+	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", attr, str)
 }

@@ -24,10 +24,9 @@ import (
 )
 
 var internalCmd = &cobra.Command{
-	Use:     "internal",
-	Aliases: []string{"dev"},
-	Hidden:  true,
-	Short:   lang.CmdInternalShort,
+	Use:    "internal",
+	Hidden: true,
+	Short:  lang.CmdInternalShort,
 }
 
 var agentCmd = &cobra.Command{
@@ -71,19 +70,19 @@ var genCLIDocs = &cobra.Command{
 					}
 
 					// Remove the default values from all of the helm commands during the CLI command doc generation
-					if toolCmd.Use == "helm" {
+					if toolCmd.Use == "helm" || toolCmd.Use == "sbom" {
 						toolCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
 							if flag.Value.Type() == "string" {
 								flag.DefValue = ""
 							}
 						})
-						for _, helmCmd := range toolCmd.Commands() {
-							helmCmd.Flags().VisitAll(func(flag *pflag.Flag) {
+						for _, subCmd := range toolCmd.Commands() {
+							subCmd.Flags().VisitAll(func(flag *pflag.Flag) {
 								if flag.Value.Type() == "string" {
 									flag.DefValue = ""
 								}
 							})
-							for _, helmSubCmd := range helmCmd.Commands() {
+							for _, helmSubCmd := range subCmd.Commands() {
 								helmSubCmd.Flags().VisitAll(func(flag *pflag.Flag) {
 									if flag.Value.Type() == "string" {
 										flag.DefValue = ""

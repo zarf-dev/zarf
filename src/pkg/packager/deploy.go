@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
@@ -26,9 +27,16 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/pterm/pterm"
 	corev1 "k8s.io/api/core/v1"
 )
+
+func (p *Packager) resetRegistryHPA() {
+	if p.isConnectedToCluster() && p.hpaModified {
+		if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
+			message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
+		}
+	}
+}
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
@@ -61,13 +69,7 @@ func (p *Packager) Deploy() (err error) {
 	p.hpaModified = false
 	p.connectStrings = make(types.ConnectStrings)
 	// Reset registry HPA scale down whether an error occurs or not
-	defer func() {
-		if p.isConnectedToCluster() && p.hpaModified {
-			if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
-				message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
-			}
-		}
-	}()
+	defer p.resetRegistryHPA()
 
 	// Filter out components that are not compatible with this system
 	p.filterComponents()
@@ -75,7 +77,7 @@ func (p *Packager) Deploy() (err error) {
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
 	if err != nil {
-		return fmt.Errorf("unable to deploy all components in this Zarf Package: %w", err)
+		return err
 	}
 	if len(deployedComponents) == 0 {
 		message.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
@@ -166,11 +168,11 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			deployedComponents[idx].Status = types.ComponentStatusFailed
 			if p.isConnectedToCluster() {
 				if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-					message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+					message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 				}
 			}
 
-			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, deployErr)
+			return deployedComponents, fmt.Errorf("unable to deploy component %q: %w", component.Name, deployErr)
 		}
 
 		// Update the package secret to indicate that we successfully deployed this component
@@ -178,7 +180,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 		if p.isConnectedToCluster() {
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
 
@@ -223,7 +225,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
 	if err != nil {
-		return charts, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
+		return charts, fmt.Errorf("unable to deploy component %q: %w", component.Name, err)
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
@@ -267,7 +269,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		// Setup the state in the config and get the valuesTemplate
 		p.valueTemplate, err = p.setupStateValuesTemplate()
 		if err != nil {
-			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
+			return charts, err
 		}
 
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
@@ -377,7 +379,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 			// Try to remove the filepath if it exists
 			_ = os.RemoveAll(link)
 			// Make sure the parent directory exists
-			_ = utils.CreateFilePath(link)
+			_ = utils.CreateParentDirectory(link)
 			// Create the symlink
 			err := os.Symlink(file.Target, link)
 			if err != nil {
@@ -403,7 +405,7 @@ func (p *Packager) setupStateValuesTemplate() (values *template.Values, err erro
 	state, err := p.cluster.LoadZarfState()
 	// Return on error if we are not in YOLO mode
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
-		return nil, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
+		return nil, fmt.Errorf("%s %w", lang.ErrLoadState, err)
 	} else if state == nil && p.cfg.Pkg.Metadata.YOLO {
 		state = &types.ZarfState{}
 		// YOLO mode, so minimal state needed
@@ -509,32 +511,36 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
-			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPath.Values, chart), idx)
+			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
 			if err := p.valueTemplate.Apply(component, chartValueName, false); err != nil {
 				return installedCharts, err
 			}
 		}
 
-		// Generate helm templates to pass to gitops engine
-		helmCfg := helm.Helm{
-			BasePath:  componentPath.Base,
-			Chart:     chart,
-			Component: component,
-			Cfg:       p.cfg,
-			Cluster:   p.cluster,
-		}
-
 		// TODO (@WSTARR): Currently this logic is library-only and is untested while it is in an experimental state - it may eventually get added as shorthand in Zarf Variables though
+		var valuesOverrides map[string]any
 		if componentChartValuesOverrides, ok := p.cfg.DeployOpts.ValuesOverridesMap[component.Name]; ok {
 			if chartValuesOverrides, ok := componentChartValuesOverrides[chart.Name]; ok {
-				helmCfg.ValuesOverrides = chartValuesOverrides
+				valuesOverrides = chartValuesOverrides
 			}
 		}
+
+		helmCfg := helm.New(
+			chart,
+			componentPaths.Charts,
+			componentPaths.Values,
+			helm.WithDeployInfo(
+				component,
+				p.cfg,
+				p.cluster,
+				valuesOverrides,
+				p.cfg.DeployOpts.Timeout),
+		)
 
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
 		if err != nil {
@@ -550,10 +556,10 @@ func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths
 
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
-			if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+			if utils.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
 				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
 				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
-				if utils.InvalidPath(filepath.Join(componentPath.Manifests, manifest.Files[idx])) {
+				if utils.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
 					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
 				}
 			}
@@ -569,16 +575,20 @@ func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths
 			manifest.Namespace = corev1.NamespaceDefault
 		}
 
-		// Iterate over any connectStrings and add to the main map
-		helmCfg := helm.Helm{
-			BasePath:  componentPath.Manifests,
-			Component: component,
-			Cfg:       p.cfg,
-			Cluster:   p.cluster,
-		}
-
-		// Generate the chart.
-		if err := helmCfg.GenerateChart(manifest); err != nil {
+		// Create a chart and helm cfg from a given Zarf Manifest.
+		helmCfg, err := helm.NewFromZarfManifest(
+			manifest,
+			componentPaths.Manifests,
+			p.cfg.Pkg.Metadata.Name,
+			component.Name,
+			helm.WithDeployInfo(
+				component,
+				p.cfg,
+				p.cluster,
+				nil,
+				p.cfg.DeployOpts.Timeout),
+		)
+		if err != nil {
 			return installedCharts, err
 		}
 
@@ -600,7 +610,6 @@ func (p *Packager) installChartAndManifests(componentPath *layout.ComponentPaths
 }
 
 func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) {
-	pterm.Println()
 
 	// If not init config, print the application connection table
 	if !p.isInitConfig() {
