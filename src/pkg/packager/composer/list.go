@@ -27,7 +27,8 @@ type Node struct {
 	vars   []types.ZarfPackageVariable
 	consts []types.ZarfPackageConstant
 
-	relativeToHeadOrURL string
+	relativeToHead      string
+	importURL           string
 	originalPackageName string
 
 	prev *Node
@@ -46,7 +47,10 @@ func (n *Node) GetOriginalPackageName() string {
 
 // GetRelativeToHeadOrURL gets the path from downstream zarf file to upstream imported zarf file
 func (n *Node) GetRelativeToHeadOrURL() string {
-	return n.relativeToHeadOrURL
+	if n.importURL != "" {
+		return n.importURL
+	}
+	return n.relativeToHead
 }
 
 // Next returns next node in the chain
@@ -89,12 +93,13 @@ func (ic *ImportChain) Tail() *Node {
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageName string,
-	relativeToHeadOrURL string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
+	relativeToHead string, importURL string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
 	node := &Node{
 		ZarfComponent:       c,
 		index:               index,
 		originalPackageName: originalPackageName,
-		relativeToHeadOrURL: relativeToHeadOrURL,
+		relativeToHead:      relativeToHead,
+		importURL:           importURL,
 		vars:                vars,
 		consts:              consts,
 		prev:                nil,
@@ -119,7 +124,7 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 		return ic, fmt.Errorf("cannot build import chain: architecture must be provided")
 	}
 
-	ic.append(head, index, originalPackageName, ".", nil, nil)
+	ic.append(head, index, originalPackageName, ".", "", nil, nil)
 
 	history := []string{}
 
@@ -150,27 +155,28 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 
 		var pkg types.ZarfPackage
 
-		var relativeToHeadOrURL string
+		var relativeToHead string
+		var importURL string
 		if isLocal {
 			history = append(history, node.Import.Path)
-			relativeToHeadOrURL = filepath.Join(history...)
+			relativeToHead = filepath.Join(history...)
 
 			// prevent circular imports (including self-imports)
 			// this is O(n^2) but the import chain should be small
 			prev := node
 			for prev != nil {
-				if prev.relativeToHeadOrURL == relativeToHeadOrURL {
+				if prev.relativeToHead == relativeToHead {
 					return ic, fmt.Errorf("detected circular import chain: %s", strings.Join(history, " -> "))
 				}
 				prev = prev.prev
 			}
 
 			// this assumes the composed package is following the zarf layout
-			if err := utils.ReadYaml(filepath.Join(relativeToHeadOrURL, layout.ZarfYAML), &pkg); err != nil {
+			if err := utils.ReadYaml(filepath.Join(relativeToHead, layout.ZarfYAML), &pkg); err != nil {
 				return ic, err
 			}
 		} else if isRemote {
-			relativeToHeadOrURL = node.Import.URL
+			importURL = node.Import.URL
 			remote, err := ic.getRemote(node.Import.URL)
 			if err != nil {
 				return ic, err
@@ -195,12 +201,22 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 		}
 
 		if len(found) == 0 {
-			return ic, fmt.Errorf("component %q not found in %q", name, relativeToHeadOrURL)
+			componentNotFound := "component %q not found in %q"
+			if isLocal {
+				return ic, fmt.Errorf(componentNotFound, name, relativeToHead)
+			} else if isRemote {
+				return ic, fmt.Errorf(componentNotFound, name, importURL)
+			}
 		} else if len(found) > 1 {
-			return ic, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, relativeToHeadOrURL, arch)
+			multipleComponentsFound := "multiple components named %q found in %q satisfying %q"
+			if isLocal {
+				return ic, fmt.Errorf(multipleComponentsFound, name, relativeToHead, arch)
+			} else if isRemote {
+				return ic, fmt.Errorf(multipleComponentsFound, name, importURL, arch)
+			}
 		}
 
-		ic.append(found[0], index[0], pkg.Metadata.Name, relativeToHeadOrURL, pkg.Variables, pkg.Constants)
+		ic.append(found[0], index[0], pkg.Metadata.Name, relativeToHead, importURL, pkg.Variables, pkg.Constants)
 		node = node.next
 	}
 	return ic, nil
@@ -274,7 +290,7 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 	// start overriding with the tail node
 	node := ic.tail
 	for node != nil {
-		fixPaths(&node.ZarfComponent, node.relativeToHeadOrURL)
+		fixPaths(&node.ZarfComponent, node.relativeToHead)
 
 		// perform overrides here
 		err := overrideMetadata(composed, node.ZarfComponent)
@@ -286,7 +302,7 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 		overrideResources(composed, node.ZarfComponent)
 		overrideActions(composed, node.ZarfComponent)
 
-		composeExtensions(composed, node.ZarfComponent, node.relativeToHeadOrURL)
+		composeExtensions(composed, node.ZarfComponent, node.relativeToHead)
 
 		node = node.prev
 	}

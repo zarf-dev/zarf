@@ -114,7 +114,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 	}
 	// the tail node is the only node whose relativeToHeadOrURL is based solely upon cwd<->cache
 	// contrary to the other nodes, which are based upon the previous node
-	ic.tail.relativeToHeadOrURL = rel
+	ic.tail.relativeToHead = rel
 
 	if oci.IsEmptyDescriptor(componentDesc) {
 		// nothing was fetched, nothing to extract

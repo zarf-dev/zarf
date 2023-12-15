@@ -229,8 +229,8 @@ var devLintCmd = &cobra.Command{
 	Use:     "lint [ DIRECTORY ]",
 	Args:    cobra.MaximumNArgs(1),
 	Aliases: []string{"l"},
-	Short:   lang.CmdPrepareLintShort,
-	Long:    lang.CmdPrepareLintLong,
+	Short:   lang.CmdDevLintShort,
+	Long:    lang.CmdDevLintLong,
 	Run: func(cmd *cobra.Command, args []string) {
 		common.SetBaseDirectory(args, &pkgConfig)
 		v := common.GetViper()
