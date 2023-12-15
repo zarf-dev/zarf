@@ -93,6 +93,10 @@ const (
 	// Package pull config keys
 
 	VPkgPullOutputDir = "package.pull.output_directory"
+
+	// Dev deploy config keys
+
+	VDevDeployNoYolo = "dev.deploy.no_yolo"
 )
 
 var (

@@ -215,6 +215,7 @@ var packagePublishCmd = &cobra.Command{
 
 		if utils.IsDir(pkgConfig.PkgOpts.PackageSource) {
 			pkgConfig.CreateOpts.BaseDir = pkgConfig.PkgOpts.PackageSource
+			pkgConfig.CreateOpts.IsSkeleton = true
 		}
 
 		pkgConfig.PublishOpts.PackageDestination = ref.String()
