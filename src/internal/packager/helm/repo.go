@@ -149,6 +149,7 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 	if err != nil {
 		message.Debug("no helm repo file found")
 	}
+
 	var username string
 	var password string
 
@@ -193,11 +194,8 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		Getters: getter.All(pull.Settings),
 		Options: []getter.Option{
 			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.Insecure),
-			getter.WithPassCredentialsAll(true),
 			getter.WithBasicAuth(username, password),
 		},
-		RepositoryConfig: "/home/austin/.config/helm/repositories.yaml",
-		RepositoryCache:  "/home/austin/.cache/helm/repository",
 	}
 
 	// Download the file into a temp directory since we don't control what name helm creates here
