@@ -30,17 +30,25 @@ var extractPath string
 
 var devCmd = &cobra.Command{
 	Use:     "dev",
-	Aliases: []string{"prepare"},
+	Aliases: []string{"prepare", "prep"},
 	Short:   lang.CmdDevShort,
 }
 
 var devDeployCmd = &cobra.Command{
 	Use:   "deploy",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	Short: lang.CmdDevDeployShort,
-	Long: lang.CmdDevDeployLong,
+	Long:  lang.CmdDevDeployLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.CreateOpts.BaseDir = args[0]
+		if len(args) > 0 {
+			pkgConfig.CreateOpts.BaseDir = args[0]
+		} else {
+			var err error
+			pkgConfig.CreateOpts.BaseDir, err = os.Getwd()
+			if err != nil {
+				message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
+			}
+		}
 
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
@@ -212,7 +220,7 @@ var devFindImagesCmd = &cobra.Command{
 	},
 }
 
-var devGenConfigFile = &cobra.Command{
+var devGenConfigFileCmd = &cobra.Command{
 	Use:     "generate-config [ FILENAME ]",
 	Aliases: []string{"gc"},
 	Args:    cobra.MaximumNArgs(1),
@@ -269,7 +277,7 @@ func init() {
 	devCmd.AddCommand(devTransformGitLinksCmd)
 	devCmd.AddCommand(devSha256SumCmd)
 	devCmd.AddCommand(devFindImagesCmd)
-	devCmd.AddCommand(devGenConfigFile)
+	devCmd.AddCommand(devGenConfigFileCmd)
 	devCmd.AddCommand(devLintCmd)
 
 	bindDevDeployFlags(v)

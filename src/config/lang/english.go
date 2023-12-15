@@ -333,7 +333,7 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 
 	CmdDevDeployShort      = "[beta] Creates and deploys a Zarf package from a given directory"
 	CmdDevDeployLong       = "[beta] Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
-	CmdDevDeployFlagNoYolo = "Whether or not to build+deploy the package in YOLO mode"
+	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
 	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
 	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
