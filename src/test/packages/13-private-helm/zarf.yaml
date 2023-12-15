@@ -25,5 +25,3 @@ components:
         repoName: podinfo
         # By default the release name will be the chart name, but you can override this with the `releaseName` key
         releaseName: cool-release-name
-        valuesFiles:
-          - "values.yaml"
