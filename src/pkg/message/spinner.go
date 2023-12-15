@@ -129,19 +129,9 @@ func (p *Spinner) Successf(format string, a ...any) {
 	p.Stop()
 }
 
-// Warnf prints a warning message with the spinner.
-func (p *Spinner) Warnf(format string, a ...any) {
-	text := pterm.Sprintf(format, a...)
-	if p.spinner != nil {
-		p.spinner.Warning(text)
-	} else {
-		Warn(text)
-	}
-}
-
 // Errorf prints an error message with the spinner.
 func (p *Spinner) Errorf(err error, format string, a ...any) {
-	p.Warnf(format, a...)
+	Warnf(format, a...)
 	debugPrinter(2, err)
 }
 
