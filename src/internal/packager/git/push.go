@@ -50,8 +50,7 @@ func (g *Git) PushRepo(srcURL, targetFolder string) error {
 	}
 
 	if err := g.push(repo, spinner); err != nil {
-		spinner.Warnf("Unable to push the git repo %s (%s). Retrying....", repoFolder, err.Error())
-		return err
+		return fmt.Errorf("failed to push the git repo %q: %w", repoFolder, err)
 	}
 
 	// Add the read-only user to this repo

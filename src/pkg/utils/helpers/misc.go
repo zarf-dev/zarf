@@ -19,7 +19,7 @@ func Retry(fn func() error, retries int, delay time.Duration, logger func(format
 			break
 		}
 
-		logger("Encountered an error, retrying (%d/%d): %s", r+1, retries, err.Error())
+		logger("Retrying (%d/%d): %s", r+1, retries, err.Error())
 
 		time.Sleep(delay)
 	}
