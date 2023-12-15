@@ -86,18 +86,18 @@ func TestUseCLI(t *testing.T) {
 		controllerImageWithTag := "quay.io/jetstack/cert-manager-controller:v1.11.1"
 		controlImageWithSignature := "quay.io/jetstack/cert-manager-controller:sha256-4f1782c8316f34aae6b9ab823c3e6b7e6e4d92ec5dac21de6a17c3da44c364f1.sig"
 
-		// Test `zarf prepare find-images` on a chart that has a `kubeVersion` declaration greater than the default (v1.20.0)
+		// Test `zarf prepare find-images` on a chart that has a `kubeVersion` declaration greater than the previous default (v1.20.0)
+		// We now default to the kubeVersion value from the kubernetes library so we should be up to date
 		stdOut, stdErr, err := e2e.Zarf("prepare", "find-images", "src/test/packages/00-kube-version-override")
-
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, controllerImageWithTag, "The chart image should be found by Zarf")
 		require.Contains(t, stdOut, controlImageWithSignature, "The image signature should be found by Zarf")
 
-		// Test `zarf prepare find-images` with `--kube-version` specified and greater than the declared minimum (v1.21.0)
-		stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "--kube-version=v1.22.0", "src/test/packages/00-kube-version-override")
-		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdOut, controllerImageWithTag, "The chart image should be found by Zarf")
-		require.Contains(t, stdOut, controlImageWithSignature, "The image signature should be found by Zarf")
+		// Test `zarf prepare find-images` with `--kube-version` specified and less than than the declared minimum (v1.21.0)
+		stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "--kube-version=v1.20.0", "src/test/packages/00-kube-version-override")
+		require.Error(t, err, stdOut, stdErr)
+		require.Contains(t, stdErr, "Problem rendering the helm template for https://charts.jetstack.io/", "The kubeVersion declaration should prevent this from templating")
+		require.Contains(t, stdErr, "following charts had errors: [https://charts.jetstack.io/]", "Zarf should print an ending error message")
 	})
 
 	t.Run("zarf deploy should fail when given a bad component input", func(t *testing.T) {
