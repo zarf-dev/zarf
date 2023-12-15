@@ -239,7 +239,7 @@ func (g *Git) UpdateGiteaPVC(shouldRollBack bool) (string, error) {
 			return "true", err
 		} else {
 			err = c.K8s.AddLabelsAndAnnotations("zarf", pvcName, groupKind, labels, annotations)
-			return "true", err
+			return "false", err
 		}
 	}
 
