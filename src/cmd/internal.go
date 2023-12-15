@@ -23,6 +23,10 @@ import (
 	"github.com/spf13/pflag"
 )
 
+var (
+	rollback bool
+)
+
 var internalCmd = &cobra.Command{
 	Use:    "internal",
 	Hidden: true,
@@ -207,13 +211,13 @@ var updateGiteaPVC = &cobra.Command{
 			message.WarnErr(err, lang.ErrLoadState)
 		}
 
-		val, err := git.New(state.GitServer).UpdateGiteaPVC()
+		helmShouldCreate, err := git.New(state.GitServer).UpdateGiteaPVC(rollback)
 
 		if err != nil {
 			message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
 		}
 
-		fmt.Print(val)
+		fmt.Print(helmShouldCreate)
 	},
 }
 
@@ -253,6 +257,8 @@ func init() {
 	internalCmd.AddCommand(updateGiteaPVC)
 	internalCmd.AddCommand(isValidHostname)
 	internalCmd.AddCommand(computeCrc32)
+
+	updateGiteaPVC.Flags().BoolVarP(&rollback, "roll-back", "r", false, lang.CmdInternalFlagUpdateGiteaPVCRollback)
 }
 
 func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {

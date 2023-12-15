@@ -214,7 +214,8 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInternalUpdateGiteaPVCShort = "Updates an existing Gitea persistent volume claim"
 	CmdInternalUpdateGiteaPVCLong  = "Updates an existing Gitea persistent volume claim by assessing if claim is a custom user provided claim or default." +
 		"This is called internally by the supported Gitea package component."
-	CmdInternalUpdateGiteaPVCErr = "Unable to update the existing Gitea persistent volume claim."
+	CmdInternalUpdateGiteaPVCErr          = "Unable to update the existing Gitea persistent volume claim."
+	CmdInternalFlagUpdateGiteaPVCRollback = "Roll back previous Gitea persistent volume claim updates."
 
 	CmdInternalIsValidHostnameShort = "Checks if the current machine's hostname is RFC1123 compliant"
 	CmdInternalIsValidHostnameErr   = "The hostname '%s' is not valid. Ensure the hostname meets RFC1123 requirements https://www.rfc-editor.org/rfc/rfc1123.html."

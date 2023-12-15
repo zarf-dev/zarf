@@ -8,8 +8,8 @@ variables:
     default: "data-zarf-gitea-0"
 
   - name: GIT_SERVER_CREATE_PVC
-    desciption: "create pvc"
-    default: true
+    description: "create pvc"
+    default: "true"
 
   - name: GIT_SERVER_PVC_SIZE
     description: The size of the persistent volume claim for the git server
@@ -72,9 +72,10 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: ./zarf internal update-gitea-pvc --no-progress
+          - cmd: ./zarf internal update-gitea-pvc --no-progress 
             setVariables:
               - name: GIT_SERVER_CREATE_PVC
+            mute: false
         after:
           - cmd: ./zarf internal create-read-only-gitea-user --no-progress
             maxRetries: 3
@@ -90,5 +91,5 @@ components:
                 namespace: zarf
                 name: app=gitea
                 condition: Ready
-        # onFailure:
-        #   - cmd: ./zarf internal update-gitea-pvc --roll-back
+        onFailure:
+          - cmd: ./zarf internal update-gitea-pvc --roll-back --no-progress

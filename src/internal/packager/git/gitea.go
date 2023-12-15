@@ -214,8 +214,7 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	return createTokenResponse, nil
 }
 
-func (g *Git) UpdateGiteaPVC() (string, error) {
-	create := "true"
+func (g *Git) UpdateGiteaPVC(shouldRollBack bool) (string, error) {
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return "false", err
@@ -229,14 +228,21 @@ func (g *Git) UpdateGiteaPVC() (string, error) {
 	labels := map[string]string{"app.kubernetes.io/managed-by": "Helm"}
 	annotations := map[string]string{"meta.helm.sh/release-name": "zarf-gitea", "meta.helm.sh/release-namespace": "zarf"}
 
-	if pvcName == "data-zarf-gitea-0" {
-		c.K8s.AddLabelsAndAnnotations("zarf", pvcName, groupKind, labels, annotations)
-		return create, nil
+	if shouldRollBack {
+		labels = map[string]string{"app.kubernetes.io/managed-by": "-"}
+		annotations = map[string]string{"meta.helm.sh/release-name": "-", "meta.helm.sh/release-namespace": "-"}
+		err = c.K8s.AddLabelsAndAnnotations("zarf", pvcName, groupKind, labels, annotations)
+		return "false", err
 	} else {
-		c.K8s.AddLabelsAndAnnotations("zarf", pvcName, groupKind, labels, annotations)
-		create = "false"
-		return create, nil
+		if pvcName == "data-zarf-gitea-0" {
+			err = c.K8s.AddLabelsAndAnnotations("zarf", pvcName, groupKind, labels, annotations)
+			return "true", err
+		} else {
+			err = c.K8s.AddLabelsAndAnnotations("zarf", pvcName, groupKind, labels, annotations)
+			return "true", err
+		}
 	}
+
 }
 
 // DoHTTPThings adds http request boilerplate and perform the request, checking for a successful response.
