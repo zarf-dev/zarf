@@ -157,21 +157,22 @@ func (p *Packager) forIncludedComponents(onIncluded func(types.ZarfComponent) er
 }
 
 func includedOrExcluded(component types.ZarfComponent, requestedComponentNames []string) (selectState, string) {
-	// Check if this is one of the components that has been specified from the CLI
+	// Check if the component has a leading dash indicating it should be excluded - this is done first so that exclusions precede inclusions
 	for _, requestedComponent := range requestedComponentNames {
-		// Check if the component has a leading dash indicating it should be excluded
 		if strings.HasPrefix(requestedComponent, "-") {
 			// If the component glob matches one of the requested components, then return true
 			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
 			if matched, _ := path.Match(strings.TrimPrefix(requestedComponent, "-"), component.Name); matched {
 				return excluded, requestedComponent
 			}
-		} else {
-			// If the component glob matches one of the requested components, then return true
-			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
-			if matched, _ := path.Match(requestedComponent, component.Name); matched {
-				return included, requestedComponent
-			}
+		}
+	}
+	// Check if the component matches a glob pattern and should be included
+	for _, requestedComponent := range requestedComponentNames {
+		// If the component glob matches one of the requested components, then return true
+		// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
+		if matched, _ := path.Match(requestedComponent, component.Name); matched {
+			return included, requestedComponent
 		}
 	}
 
