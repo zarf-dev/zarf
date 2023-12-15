@@ -328,8 +328,13 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPackageClusterSourceFallback = "%q does not satisfy any current sources, assuming it is a package deployed to a cluster"
 	CmdPackageInvalidSource         = "Unable to identify source from %q: %s"
 
-	// zarf prepare
-	CmdPrepareShort = "Tools to help prepare assets for packaging"
+	// zarf dev (prepare is an alias for dev)
+	CmdDevShort = "Commands useful for developing packages"
+
+	CmdDevDeployShort      = "[beta] Creates and deploys a Zarf package from a given directory"
+	CmdDevDeployLong       = "[beta] Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
+	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
+	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
 	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
@@ -342,8 +347,8 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPrepareSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
 	CmdPrepareSha256sumHashErr       = "Unable to compute the SHA256SUM hash: %s"
 
-	CmdPrepareFindImagesShort = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests"
-	CmdPrepareFindImagesLong  = "Evaluates components in a zarf file to identify images specified in their helm charts and manifests.\n\n" +
+	CmdPrepareFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests"
+	CmdPrepareFindImagesLong  = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.\n\n" +
 		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
 	CmdPrepareFindImagesErr = "Unable to find images: %s"
 

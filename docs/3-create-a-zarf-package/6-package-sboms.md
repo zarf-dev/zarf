@@ -29,6 +29,7 @@ Zarf uses the `file:` Syft SBOM scheme even if given a directory as the `files` 
 Given the Syft CLI is vendored into Zarf you can run these commands with the Zarf binary as well:
 
 ```bash
+# Syft is vendored as `zarf tools sbom`
 $ zarf tools sbom packages file:path/to/yourproject/file -o json > my-sbom.json
 ```
 

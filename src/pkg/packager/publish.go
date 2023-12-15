@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
@@ -67,10 +66,19 @@ func (p *Packager) Publish() (err error) {
 	}
 
 	var referenceSuffix string
-	if p.cfg.CreateOpts.BaseDir != "" {
+	if p.cfg.CreateOpts.IsSkeleton {
 		referenceSuffix = oci.SkeletonSuffix
-		err := p.loadSkeleton()
+		cwd, err := os.Getwd()
 		if err != nil {
+			return err
+		}
+		if err := p.cdToBaseDir(p.cfg.CreateOpts.BaseDir, cwd); err != nil {
+			return err
+		}
+		if err := p.load(); err != nil {
+			return err
+		}
+		if err := p.assembleSkeleton(); err != nil {
 			return err
 		}
 	} else {
@@ -123,50 +131,4 @@ func (p *Packager) Publish() (err error) {
 		utils.ColorPrintYAML(ex, nil, true)
 	}
 	return nil
-}
-
-func (p *Packager) loadSkeleton() (err error) {
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return err
-	}
-	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
-	}
-
-	if p.isInitConfig() {
-		p.cfg.Pkg.Metadata.Version = config.CLIVersion
-	}
-
-	err = p.composeComponents()
-	if err != nil {
-		return err
-	}
-
-	err = p.skeletonizeExtensions()
-	if err != nil {
-		return err
-	}
-
-	for _, warning := range p.warnings {
-		message.Warn(warning)
-	}
-
-	for idx, component := range p.cfg.Pkg.Components {
-		isSkeleton := true
-		if err := p.addComponent(idx, component, isSkeleton); err != nil {
-			return err
-		}
-
-		if err := p.layout.Components.Archive(component, false); err != nil {
-			return err
-		}
-	}
-
-	checksumChecksum, err := p.generatePackageChecksums()
-	if err != nil {
-		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
-	}
-	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
-
-	return p.writeYaml()
 }
