@@ -319,7 +319,15 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPackagePublishErr                    = "Failed to publish package: %s"
 
 	CmdPackagePullShort               = "Pulls a Zarf package from a remote registry and save to the local file system"
-	CmdPackagePullExample             = "$ zarf package pull oci://my-registry.com/my-namespace/my-package:0.0.1-arm64"
+	CmdPackagePullExample             = `
+# Pull a package matching the current architecture
+$ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0
+
+# Pull a package matching a specific architecture
+$ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a arm64
+
+# Pull a skeleton package
+$ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a skeleton`
 	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
 	CmdPackagePullErr                 = "Failed to pull package: %s"
 
