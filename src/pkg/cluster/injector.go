@@ -245,7 +245,15 @@ func (c *Cluster) injectorIsReady(seedImages []transform.Image, spinner *message
 
 	for _, seedImage := range seedImages {
 		seedRegistry := fmt.Sprintf("%s/v2/%s/manifests/%s", tunnel.HTTPEndpoint(), seedImage.Path, seedImage.Tag)
-		if resp, err := http.Get(seedRegistry); err != nil || resp.StatusCode != 200 {
+
+		var resp *http.Response
+		var err error
+		err = tunnel.Wrap(func() error {
+			resp, err = http.Get(seedRegistry)
+			return err
+		})
+
+		if err != nil || resp.StatusCode != 200 {
 			// Just debug log the output because failures just result in trying the next image
 			message.Debug(resp, err)
 			return false
