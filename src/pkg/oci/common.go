@@ -45,6 +45,55 @@ type OrasRemote struct {
 // Modifier is a function that modifies an OrasRemote
 type Modifier func(*OrasRemote)
 
+// WithContext sets the context for the remote
+func WithContext(ctx context.Context) Modifier {
+	return func(o *OrasRemote) {
+		o.ctx = ctx
+	}
+}
+
+// WithCopyOpts sets the copy options for the remote
+func WithCopyOpts(opts oras.CopyOptions) Modifier {
+	return func(o *OrasRemote) {
+		o.CopyOpts = opts
+	}
+}
+
+// WithPlainHTTP sets the plain HTTP flag for the remote
+func WithPlainHTTP(plainHTTP bool) Modifier {
+	return func(o *OrasRemote) {
+		o.repo.PlainHTTP = plainHTTP
+	}
+}
+
+// WithInsecureSkipVerify sets the insecure TLS flag for the remote
+func WithInsecureSkipVerify(insecure bool) Modifier {
+	return func(o *OrasRemote) {
+		o.Transport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
+	}
+}
+
+// WithTargetPlatform sets the target platform for the remote
+func WithTargetPlatform(platform *ocispec.Platform) Modifier {
+	return func(o *OrasRemote) {
+		o.targetPlatform = platform
+	}
+}
+
+// WithSkeletonArch sets the target architecture for the remote to skeleton
+func WithSkeletonArch() Modifier {
+	return WithTargetPlatform(&ocispec.Platform{
+		Architecture: "skeleton",
+	})
+}
+
+// WithArch sets the target architecture for the remote
+func WithArch(arch string) Modifier {
+	return WithTargetPlatform(&ocispec.Platform{
+		Architecture: arch,
+	})
+}
+
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
 // Registry auth is handled by the Docker CLI's credential store and checked before returning the client
@@ -83,6 +132,11 @@ func NewOrasRemote(url string, mods ...Modifier) (*OrasRemote, error) {
 	}
 
 	return o, nil
+}
+
+// Repo gives you access to the underlying remote repository
+func (o *OrasRemote) Repo() *remote.Repository {
+	return o.repo
 }
 
 // setRepository sets the repository for the remote as well as the auth client.
@@ -163,51 +217,4 @@ func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, err
 	client.Credential = auth.StaticCredential(ref.Registry, cred)
 
 	return client, nil
-}
-
-// WithContext sets the context for the remote
-func WithContext(ctx context.Context) Modifier {
-	return func(o *OrasRemote) {
-		o.ctx = ctx
-	}
-}
-
-// WithPlainHTTP sets the plain HTTP flag for the remote
-func WithPlainHTTP(plainHTTP bool) Modifier {
-	return func(o *OrasRemote) {
-		o.repo.PlainHTTP = plainHTTP
-	}
-}
-
-// WithInsecureSkipVerify sets the insecure TLS flag for the remote
-func WithInsecureSkipVerify(insecure bool) Modifier {
-	return func(o *OrasRemote) {
-		o.Transport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
-	}
-}
-
-// WithTargetPlatform sets the target platform for the remote
-func WithTargetPlatform(platform *ocispec.Platform) Modifier {
-	return func(o *OrasRemote) {
-		o.targetPlatform = platform
-	}
-}
-
-// WithSkeletonArch sets the target architecture for the remote to skeleton
-func WithSkeletonArch() Modifier {
-	return WithTargetPlatform(&ocispec.Platform{
-		Architecture: "skeleton",
-	})
-}
-
-// WithArch sets the target architecture for the remote
-func WithArch(arch string) Modifier {
-	return WithTargetPlatform(&ocispec.Platform{
-		Architecture: arch,
-	})
-}
-
-// Repo gives you access to the underlying remote repository
-func (o *OrasRemote) Repo() *remote.Repository {
-	return o.repo
 }

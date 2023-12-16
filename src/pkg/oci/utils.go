@@ -5,13 +5,11 @@
 package oci
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -43,29 +41,6 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 	}
 
 	return ref.String(), nil
-}
-
-// printLayerSkipped prints a debug message when a layer has been successfully skipped.
-func (o *OrasRemote) printLayerSkipped(_ context.Context, desc ocispec.Descriptor) error {
-	return o.printLayer(desc, "skipped")
-}
-
-// printLayerCopied prints a debug message when a layer has been successfully copied to/from a registry.
-func (o *OrasRemote) printLayerCopied(_ context.Context, desc ocispec.Descriptor) error {
-	return o.printLayer(desc, "copied")
-}
-
-// printLayer prints a debug message when a layer has been successfully published/pulled to/from a registry.
-func (o *OrasRemote) printLayer(desc ocispec.Descriptor, suffix string) error {
-	title := desc.Annotations[ocispec.AnnotationTitle]
-	var layerInfo string
-	if title != "" {
-		layerInfo = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], utils.First30last30(title))
-	} else {
-		layerInfo = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
-	}
-	message.Debugf("%s (%s)", layerInfo, suffix)
-	return nil
 }
 
 // IsEmptyDescriptor returns true if the given descriptor is empty.
