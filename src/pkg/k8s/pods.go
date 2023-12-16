@@ -109,63 +109,59 @@ func (k *K8s) WaitForPodsAndContainers(target PodLookup, include PodFilter) []co
 
 		var readyPods = []corev1.Pod{}
 
-		// Reverse sort by creation time
+		// Sort the pods from newest to oldest
 		sort.Slice(pods.Items, func(i, j int) bool {
 			return pods.Items[i].CreationTimestamp.After(pods.Items[j].CreationTimestamp.Time)
 		})
 
-		if len(pods.Items) > 0 {
-			for _, pod := range pods.Items {
-				k.Log("Testing pod %q", pod.Name)
+		for _, pod := range pods.Items {
+			k.Log("Testing pod %q", pod.Name)
 
-				// If an include function is provided, only keep pods that return true
-				if include != nil && !include(pod) {
+			// If an include function is provided, only keep pods that return true
+			if include != nil && !include(pod) {
+				continue
+			}
+
+			// Handle container targeting
+			if target.Container != "" {
+				k.Log("Testing pod %q for container %q", pod.Name, target.Container)
+				var matchesInitContainer bool
+
+				// Check the status of initContainers for a running match
+				for _, initContainer := range pod.Status.InitContainerStatuses {
+					isRunning := initContainer.State.Running != nil
+					if isRunning && initContainer.Name == target.Container {
+						// On running match in initContainer break this loop
+						matchesInitContainer = true
+						readyPods = append(readyPods, pod)
+						break
+					}
+				}
+
+				// Don't check any further if there's already a match
+				if matchesInitContainer {
 					continue
 				}
 
-				// Handle container targeting
-				if target.Container != "" {
-					k.Log("Testing pod %q for container %q", pod.Name, target.Container)
-					var matchesInitContainer bool
-
-					// Check the status of initContainers for a running match
-					for _, initContainer := range pod.Status.InitContainerStatuses {
-						isRunning := initContainer.State.Running != nil
-						if isRunning && initContainer.Name == target.Container {
-							// On running match in initContainer break this loop
-							matchesInitContainer = true
-							readyPods = append(readyPods, pod)
-							break
-						}
-					}
-
-					// Don't check any further if there's already a match
-					if matchesInitContainer {
-						continue
-					}
-
-					// Check the status of regular containers for a running match
-					for _, container := range pod.Status.ContainerStatuses {
-						isRunning := container.State.Running != nil
-						if isRunning && container.Name == target.Container {
-							readyPods = append(readyPods, pod)
-						}
-					}
-
-				} else {
-					status := pod.Status.Phase
-					k.Log("Testing pod %q phase, want (%q) got (%q)", pod.Name, corev1.PodRunning, status)
-					// Regular status checking without a container
-					if status == corev1.PodRunning {
+				// Check the status of regular containers for a running match
+				for _, container := range pod.Status.ContainerStatuses {
+					isRunning := container.State.Running != nil
+					if isRunning && container.Name == target.Container {
 						readyPods = append(readyPods, pod)
 					}
 				}
-
+			} else {
+				status := pod.Status.Phase
+				k.Log("Testing pod %q phase, want (%q) got (%q)", pod.Name, corev1.PodRunning, status)
+				// Regular status checking without a container
+				if status == corev1.PodRunning {
+					readyPods = append(readyPods, pod)
+				}
 			}
+		}
 
-			if len(readyPods) > 0 {
-				return readyPods
-			}
+		if len(readyPods) > 0 {
+			return readyPods
 		}
 
 		time.Sleep(3 * time.Second)
