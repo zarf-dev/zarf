@@ -49,10 +49,15 @@ func (g *Git) CreateReadOnlyUser() error {
 
 	tunnelURL := tunnel.HTTPEndpoint()
 
+	var out []byte
+
 	// Determine if the read only user already exists
 	getUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users", tunnelURL)
 	getUserRequest, _ := netHttp.NewRequest("GET", getUserEndpoint, nil)
-	out, err := g.DoHTTPThings(getUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+	err = tunnel.Wrap(func() error {
+		out, err = g.DoHTTPThings(getUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+		return err
+	})
 	message.Debugf("GET %s:\n%s", getUserEndpoint, string(out))
 	if err != nil {
 		return err
@@ -80,7 +85,10 @@ func (g *Git) CreateReadOnlyUser() error {
 		updateUserData, _ := json.Marshal(updateUserBody)
 		updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, g.Server.PullUsername)
 		updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
-		out, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+		err = tunnel.Wrap(func() error {
+			out, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+			return err
+		})
 		message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
 		return err
 	}
@@ -100,7 +108,10 @@ func (g *Git) CreateReadOnlyUser() error {
 	// Send API request to create the user
 	createUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users", tunnelURL)
 	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
-	out, err = g.DoHTTPThings(createUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+	err = tunnel.Wrap(func() error {
+		out, err = g.DoHTTPThings(createUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+		return err
+	})
 	message.Debugf("POST %s:\n%s", createUserEndpoint, string(out))
 	if err != nil {
 		return err
@@ -115,7 +126,10 @@ func (g *Git) CreateReadOnlyUser() error {
 	updateUserData, _ := json.Marshal(updateUserBody)
 	updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, g.Server.PullUsername)
 	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
-	out, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+	err = tunnel.Wrap(func() error {
+		out, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+		return err
+	})
 	message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
 	return err
 }
@@ -142,10 +156,15 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 
 	tunnelURL := tunnel.Endpoint()
 
+	var out []byte
+
 	// Determine if the package token already exists
 	getTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens", tunnelURL, g.Server.PushUsername)
 	getTokensRequest, _ := netHttp.NewRequest("GET", getTokensEndpoint, nil)
-	out, err := g.DoHTTPThings(getTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+	err = tunnel.Wrap(func() error {
+		out, err = g.DoHTTPThings(getTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+		return err
+	})
 	message.Debugf("GET %s:\n%s", getTokensEndpoint, string(out))
 	if err != nil {
 		return CreateTokenResponse{}, err
@@ -168,7 +187,10 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 		// Delete the existing token to be replaced
 		deleteTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens/%s", tunnelURL, g.Server.PushUsername, config.ZarfArtifactTokenName)
 		deleteTokensRequest, _ := netHttp.NewRequest("DELETE", deleteTokensEndpoint, nil)
-		out, err := g.DoHTTPThings(deleteTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+		err = tunnel.Wrap(func() error {
+			out, err = g.DoHTTPThings(deleteTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+			return err
+		})
 		message.Debugf("DELETE %s:\n%s", deleteTokensEndpoint, string(out))
 		if err != nil {
 			return CreateTokenResponse{}, err
@@ -181,7 +203,10 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	}
 	createTokensData, _ := json.Marshal(createTokensBody)
 	createTokensRequest, _ := netHttp.NewRequest("POST", createTokensEndpoint, bytes.NewBuffer(createTokensData))
-	out, err = g.DoHTTPThings(createTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+	err = tunnel.Wrap(func() error {
+		out, err = g.DoHTTPThings(createTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+		return err
+	})
 	message.Debugf("POST %s:\n%s", createTokensEndpoint, string(out))
 	if err != nil {
 		return CreateTokenResponse{}, err
