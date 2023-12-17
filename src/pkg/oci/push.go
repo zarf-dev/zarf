@@ -179,6 +179,11 @@ func (o *OrasRemote) UpdateIndex(tag string, arch string, publishedDesc ocispec.
 	// since ref has changed, need to reset root
 	o.root = nil
 
+	platform := &ocispec.Platform{
+		OS:           MultiOS,
+		Architecture: arch,
+	}
+
 	_, err := o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
 	if err != nil {
 		if errors.Is(err, errdef.ErrNotFound) {
@@ -191,9 +196,7 @@ func (o *OrasRemote) UpdateIndex(tag string, arch string, publishedDesc ocispec.
 						MediaType: ocispec.MediaTypeImageManifest,
 						Digest:    publishedDesc.Digest,
 						Size:      publishedDesc.Size,
-						Platform: &ocispec.Platform{
-							Architecture: arch,
-						},
+						Platform:  platform,
 					},
 				},
 			}
@@ -222,9 +225,7 @@ func (o *OrasRemote) UpdateIndex(tag string, arch string, publishedDesc ocispec.
 		if m.Platform != nil && m.Platform.Architecture == arch {
 			index.Manifests[idx].Digest = publishedDesc.Digest
 			index.Manifests[idx].Size = publishedDesc.Size
-			index.Manifests[idx].Platform = &ocispec.Platform{
-				Architecture: arch,
-			}
+			index.Manifests[idx].Platform = platform
 			found = true
 			break
 		}
@@ -234,9 +235,7 @@ func (o *OrasRemote) UpdateIndex(tag string, arch string, publishedDesc ocispec.
 			MediaType: ocispec.MediaTypeImageManifest,
 			Digest:    publishedDesc.Digest,
 			Size:      publishedDesc.Size,
-			Platform: &ocispec.Platform{
-				Architecture: arch,
-			},
+			Platform:  platform,
 		})
 	}
 

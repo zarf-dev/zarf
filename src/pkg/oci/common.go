@@ -28,8 +28,10 @@ const (
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 	// ZarfConfigMediaType is the media type for the manifest config
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
-	// SkeletonSuffix is the reference suffix used for skeleton packages
-	SkeletonSuffix = "skeleton"
+	// SkeletonArch is the architecture used for skeleton packages
+	SkeletonArch = "skeleton"
+	// MultiOS is the OS used for multi-platform packages
+	MultiOS = "multi"
 )
 
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
@@ -83,13 +85,15 @@ func WithTargetPlatform(platform *ocispec.Platform) Modifier {
 // WithSkeletonArch sets the target architecture for the remote to skeleton
 func WithSkeletonArch() Modifier {
 	return WithTargetPlatform(&ocispec.Platform{
-		Architecture: "skeleton",
+		OS:           MultiOS,
+		Architecture: SkeletonArch,
 	})
 }
 
 // WithArch sets the target architecture for the remote
 func WithArch(arch string) Modifier {
 	return WithTargetPlatform(&ocispec.Platform{
+		OS:           MultiOS,
 		Architecture: arch,
 	})
 }
