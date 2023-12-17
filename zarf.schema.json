@@ -135,6 +135,10 @@
         "lastNonBreakingVersion": {
           "type": "string",
           "description": "The minimum version of Zarf that does not have breaking package structure changes"
+        },
+        "flavor": {
+          "type": "string",
+          "description": "The flavor of Zarf used to build this package"
         }
       },
       "additionalProperties": false,

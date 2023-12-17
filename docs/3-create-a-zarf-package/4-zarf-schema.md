@@ -507,6 +507,22 @@ must respect the following conditions
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="build_flavor"></a>flavor</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The flavor of Zarf used to build this package
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
