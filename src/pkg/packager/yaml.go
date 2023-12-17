@@ -111,6 +111,9 @@ func (p *Packager) writeYaml() error {
 		deprecated.PluralizeSetVariable,
 	}
 
+	// Record the flavor of Zarf used to build this package (if any).
+	p.cfg.Pkg.Build.Flavor = p.cfg.CreateOpts.Flavor
+
 	p.cfg.Pkg.Build.RegistryOverrides = p.cfg.CreateOpts.RegistryOverrides
 
 	// Record the latest version of Zarf without breaking changes to the package structure.

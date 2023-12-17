@@ -17,9 +17,7 @@ import (
 )
 
 // ReferenceFromMetadata returns a reference for the given metadata.
-//
-// prepending the provided prefix
-func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata) (string, error) {
+func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata, build *types.ZarfBuildData) (string, error) {
 	ver := metadata.Version
 	if len(ver) == 0 {
 		return "", errors.New("version is required for publishing")
@@ -32,6 +30,10 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 
 	format := "%s%s:%s"
 	raw := fmt.Sprintf(format, registryLocation, metadata.Name, ver)
+
+	if build != nil && build.Flavor != "" {
+		raw = fmt.Sprintf("%s-%s", raw, build.Flavor)
+	}
 
 	message.Debug("Raw OCI reference from metadata:", raw)
 
