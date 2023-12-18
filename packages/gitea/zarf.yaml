@@ -42,8 +42,6 @@ variables:
 constants:
   - name: GITEA_IMAGE
     value: "###ZARF_PKG_TMPL_GITEA_IMAGE###"
-  - name: GITEA_SERVER_VERSION
-    value: "###ZARF_PKG_TMPL_GITEA_SERVER_VERSION###"
 
 components:
   - name: git-server
@@ -51,7 +49,7 @@ components:
       Deploys Gitea to provide git repositories for Kubernetes configurations.
       Required for GitOps deployments if no other git server is available.
     images:
-      - "###ZARF_PKG_TMPL_GITEA_IMAGE###:###ZARF_PKG_TMPL_GITEA_SERVER_VERSION###-rootless"
+      - "###ZARF_PKG_TMPL_GITEA_IMAGE###"
     manifests:
       - name: git-connect
         namespace: zarf
@@ -61,7 +59,7 @@ components:
       - name: gitea
         releaseName: zarf-gitea
         url: https://dl.gitea.io/charts
-        version: 9.5.1
+        version: 10.0.0
         namespace: zarf
         valuesFiles:
           - gitea-values.yaml

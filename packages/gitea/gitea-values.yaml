@@ -45,8 +45,7 @@ resources:
     memory: "###ZARF_VAR_GIT_SERVER_MEM_LIMIT###"
 
 image:
-  repository: "###ZARF_CONST_GITEA_IMAGE###"
-  tag: "###ZARF_CONST_GITEA_SERVER_VERSION###"
+  fullOverride: "###ZARF_CONST_GITEA_IMAGE###"
   rootless: true
 
 postgresql-ha:
