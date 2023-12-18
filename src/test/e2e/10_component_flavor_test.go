@@ -31,7 +31,7 @@ func (suite *FlavorSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
 	// Setup the example package path after e2e has been initialized
-	flavorExamplePath = filepath.Join("build", fmt.Sprintf("zarf-package-package-flavors-%s.tar.zst", e2e.Arch))
+	flavorExamplePath = filepath.Join("build", fmt.Sprintf("zarf-package-package-flavors-%s-1.0.0.tar.zst", e2e.Arch))
 }
 
 func (suite *FlavorSuite) TearDownSuite() {
