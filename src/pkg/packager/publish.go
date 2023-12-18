@@ -47,6 +47,16 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 
+		pkg, err := srcRemote.FetchZarfYAML()
+		if err != nil {
+			return err
+		}
+
+		// ensure cli arch matches package arch
+		if pkg.Build.Architecture != arch {
+			return fmt.Errorf("architecture mismatch (expected: %q, got %q)", arch, pkg.Build.Architecture)
+		}
+
 		if err := oci.CopyPackage(ctx, srcRemote, dstRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
 			return err
 		}
@@ -60,11 +70,6 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 		expected := content.NewDescriptorFromBytes(ocispec.MediaTypeImageManifest, b)
-
-		srcRoot, err = srcRemote.ResolveRoot()
-		if err != nil {
-			return err
-		}
 
 		if err := dstRemote.Repo().Manifests().PushReference(ctx, expected, bytes.NewReader(b), srcRoot.Digest.String()); err != nil {
 			return err
