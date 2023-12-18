@@ -55,11 +55,10 @@ func (h *Helm) newRenderer() (*renderer, error) {
 
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
-	tempDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	tempDir, err := utils.MakeTempDir(r.chartPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create tmpdir:  %w", err)
 	}
-	defer os.RemoveAll(tempDir)
 	path := filepath.Join(tempDir, "chart.yaml")
 
 	// Write the context to a file for processing
