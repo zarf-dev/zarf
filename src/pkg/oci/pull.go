@@ -217,6 +217,20 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 			if err != nil {
 				return nil, err
 			}
+			if desc.MediaType == ocispec.MediaTypeImageIndex {
+				manifestDescs := nodes
+				nodes = []ocispec.Descriptor{}
+				// expand the manifests
+				for _, node := range manifestDescs {
+					manifest, err := o.FetchManifest(node)
+					if err != nil {
+						return nil, err
+					}
+					nodes = append(nodes, manifest.Layers...)
+					nodes = append(nodes, manifest.Config)
+				}
+			}
+
 			var ret []ocispec.Descriptor
 			for _, node := range nodes {
 				if slices.Contains(shas, node.Digest.Encoded()) {

@@ -197,7 +197,8 @@ func (s *OCISource) Collect(dir string) (string, error) {
 
 	spinner.Success()
 
-	isSkeleton := strings.HasSuffix(s.Repo().Reference.Reference, oci.SkeletonSuffix)
+	// TODO (@Noxsios) remove the suffix check at v1.0.0
+	isSkeleton := pkg.Build.Architecture == "skeleton" || strings.HasSuffix(s.Repo().Reference.Reference, oci.SkeletonArch)
 	name := NameFromMetadata(&pkg, isSkeleton)
 
 	dstTarball := filepath.Join(dir, name)
