@@ -5,7 +5,6 @@
 package oci
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -18,11 +17,7 @@ import (
 )
 
 // ReferenceFromMetadata returns a reference for the given metadata.
-//
-// prepending the provided prefix
-//
-// appending the provided suffix to the version
-func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata, suffix string) (string, error) {
+func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata, build *types.ZarfBuildData) (string, error) {
 	ver := metadata.Version
 	if len(ver) == 0 {
 		return "", errors.New("version is required for publishing")
@@ -33,9 +28,12 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 	}
 	registryLocation = strings.TrimPrefix(registryLocation, helpers.OCIURLPrefix)
 
-	format := "%s%s:%s-%s"
+	format := "%s%s:%s"
+	raw := fmt.Sprintf(format, registryLocation, metadata.Name, ver)
 
-	raw := fmt.Sprintf(format, registryLocation, metadata.Name, ver, suffix)
+	if build != nil && build.Flavor != "" {
+		raw = fmt.Sprintf("%s-%s", raw, build.Flavor)
+	}
 
 	message.Debug("Raw OCI reference from metadata:", raw)
 
@@ -45,29 +43,6 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 	}
 
 	return ref.String(), nil
-}
-
-// printLayerSkipped prints a debug message when a layer has been successfully skipped.
-func (o *OrasRemote) printLayerSkipped(_ context.Context, desc ocispec.Descriptor) error {
-	return o.printLayer(desc, "skipped")
-}
-
-// printLayerCopied prints a debug message when a layer has been successfully copied to/from a registry.
-func (o *OrasRemote) printLayerCopied(_ context.Context, desc ocispec.Descriptor) error {
-	return o.printLayer(desc, "copied")
-}
-
-// printLayer prints a debug message when a layer has been successfully published/pulled to/from a registry.
-func (o *OrasRemote) printLayer(desc ocispec.Descriptor, suffix string) error {
-	title := desc.Annotations[ocispec.AnnotationTitle]
-	var layerInfo string
-	if title != "" {
-		layerInfo = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], message.First30last30(title))
-	} else {
-		layerInfo = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
-	}
-	message.Debugf("%s (%s)", layerInfo, suffix)
-	return nil
 }
 
 // IsEmptyDescriptor returns true if the given descriptor is empty.
@@ -101,7 +76,7 @@ func RemoveDuplicateDescriptors(descriptors []ocispec.Descriptor) []ocispec.Desc
 	return list
 }
 
-// GetInitPackageURL returns the URL for the init package for the given architecture and version.
-func GetInitPackageURL(arch, version string) string {
-	return fmt.Sprintf("ghcr.io/defenseunicorns/packages/init:%s-%s", version, arch)
+// GetInitPackageURL returns the URL for the init package for the given version.
+func GetInitPackageURL(version string) string {
+	return fmt.Sprintf("ghcr.io/defenseunicorns/packages/init:%s", version)
 }

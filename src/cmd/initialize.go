@@ -119,7 +119,7 @@ func downloadInitPackage(cacheDirectory string) (string, error) {
 	}
 
 	var confirmDownload bool
-	url := oci.GetInitPackageURL(config.GetArch(), config.CLIVersion)
+	url := oci.GetInitPackageURL(config.CLIVersion)
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
 	message.Question(fmt.Sprintf(lang.CmdInitPullAsk, url))
@@ -138,7 +138,7 @@ func downloadInitPackage(cacheDirectory string) (string, error) {
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		remote, err := oci.NewOrasRemote(url)
+		remote, err := oci.NewOrasRemote(url, oci.WithArch(config.GetArch()))
 		if err != nil {
 			return "", err
 		}
