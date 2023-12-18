@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -41,17 +40,7 @@ var packageCreateCmd = &cobra.Command{
 	Short:   lang.CmdPackageCreateShort,
 	Long:    lang.CmdPackageCreateLong,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		// If a directory was provided, use that as the base directory
-		if len(args) > 0 {
-			pkgConfig.CreateOpts.BaseDir = args[0]
-		} else {
-			var err error
-			pkgConfig.CreateOpts.BaseDir, err = os.Getwd()
-			if err != nil {
-				message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
-			}
-		}
+		common.SetBaseDirectory(args, &pkgConfig)
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 		if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {

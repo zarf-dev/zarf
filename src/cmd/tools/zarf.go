@@ -88,8 +88,10 @@ var updateCredsCmd = &cobra.Command{
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, lang.ErrLoadState)
 		}
-
-		newState := c.MergeZarfState(oldState, updateCredsInitOpts, args)
+		var newState *types.ZarfState
+		if newState, err = c.MergeZarfState(oldState, updateCredsInitOpts, args); err != nil {
+			message.Fatal(err, lang.CmdToolsUpdateCredsUnableUpdateCreds)
+		}
 
 		message.PrintCredentialUpdates(oldState, newState, args)
 
