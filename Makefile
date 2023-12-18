@@ -29,7 +29,6 @@ else
 		endif
 	endif
 endif
-.DEFAULT_GOAL := help
 
 CLI_VERSION ?= $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
 BUILD_ARGS := -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)
@@ -49,6 +48,8 @@ BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 BUILD_ARGS += -X k8s.io/component-base/version.gitCommit=$(GIT_SHA)
 BUILD_ARGS += -X k8s.io/component-base/version.buildDate=$(BUILD_DATE)
 
+.DEFAULT_GOAL := build
+
 .PHONY: help
 help: ## Display this help information
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -66,6 +67,9 @@ delete-packages: ## Delete all Zarf package tarballs in the project recursively
 	find . -type f -name 'zarf-package-*' -delete
 
 # Note: the path to the main.go file is not used due to https://github.com/golang/go/issues/51831#issuecomment-1074188363
+.PHONY: build
+build: ## Build the Zarf CLI for the machines OS and architecture
+	$(MAKE) $(BUILD_CLI_FOR_SYSTEM)
 
 build-cli-linux-amd: ## Build the Zarf CLI for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf .
@@ -88,9 +92,6 @@ build-cli-windows-arm: ## Build the Zarf CLI for Windows on ARM
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI for Linux on AMD64 and ARM
 
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
-
-build-cli-for-system:
-	$(MAKE) $(BUILD_CLI_FOR_SYSTEM)
 
 docs-and-schema: ## Generate the Zarf Documentation and Schema
 	hack/gen-cli-docs.sh
