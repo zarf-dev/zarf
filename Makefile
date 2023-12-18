@@ -96,7 +96,7 @@ docs-and-schema: ## Generate the Zarf Documentation and Schema
 	hack/gen-cli-docs.sh
 	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
-lint-packages-and-examples: build-cli-for-system ## Recurisvely lint all zarf.yaml files in the repo except for those dedicated to tests
+lint-packages-and-examples: build-cli-for-system ## Recursively lint all zarf.yaml files in the repo except for those dedicated to tests
 	hack/lint_all_zarf_packages.sh $(ZARF_BIN)
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
