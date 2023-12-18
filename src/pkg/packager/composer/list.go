@@ -46,7 +46,7 @@ func (n *Node) GetOriginalPackageName() string {
 }
 
 // GetRelativeToHeadOrURL gets the path from the base zarf file to the imported zarf file
-func (n *Node) GetRelativeToHeadOrURL() string {
+func (n *Node) ImportLocation() string {
 	if n.importURL != "" {
 		return n.importURL
 	}
