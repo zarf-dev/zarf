@@ -342,34 +342,34 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
 	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
-	CmdPreparePatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
+	CmdDevPatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
-	CmdPreparePatchGitOverwritePrompt = "Overwrite the file %s with these changes?"
-	CmdPreparePatchGitOverwriteErr    = "Confirm overwrite canceled: %s"
-	CmdPreparePatchGitFileReadErr     = "Unable to read the file %s"
-	CmdPreparePatchGitFileWriteErr    = "Unable to write the changes back to the file"
+	CmdDevPatchGitOverwritePrompt = "Overwrite the file %s with these changes?"
+	CmdDevPatchGitOverwriteErr    = "Confirm overwrite canceled: %s"
+	CmdDevPatchGitFileReadErr     = "Unable to read the file %s"
+	CmdDevPatchGitFileWriteErr    = "Unable to write the changes back to the file"
 
-	CmdPrepareSha256sumShort         = "Generates a SHA256SUM for the given file"
-	CmdPrepareSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
-	CmdPrepareSha256sumHashErr       = "Unable to compute the SHA256SUM hash: %s"
+	CmdDevSha256sumShort         = "Generates a SHA256SUM for the given file"
+	CmdDevSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
+	CmdDevSha256sumHashErr       = "Unable to compute the SHA256SUM hash: %s"
 
-	CmdPrepareFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests"
-	CmdPrepareFindImagesLong  = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.\n\n" +
+	CmdDevFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests"
+	CmdDevFindImagesLong  = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.\n\n" +
 		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
-	CmdPrepareFindImagesErr = "Unable to find images: %s"
+	CmdDevFindImagesErr = "Unable to find images: %s"
 
-	CmdPrepareGenerateConfigShort = "Generates a config file for Zarf"
-	CmdPrepareGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
+	CmdDevGenerateConfigShort = "Generates a config file for Zarf"
+	CmdDevGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
 		"The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc.\n" +
 		"Accepted extensions are json, toml, yaml.\n\n" +
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
-	CmdPrepareGenerateConfigErr = "Unable to write the config file %s, make sure the file doesn't already exist"
+	CmdDevGenerateConfigErr = "Unable to write the config file %s, make sure the file doesn't already exist"
 
-	CmdPrepareFlagExtractPath   = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
-	CmdPrepareFlagSet           = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
-	CmdPrepareFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
-	CmdPrepareFlagGitAccount    = "User or organization name for the git account that the repos are created under."
-	CmdPrepareFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
+	CmdDevFlagExtractPath   = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
+	CmdDevFlagSet           = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
+	CmdDevFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
+	CmdDevFlagGitAccount    = "User or organization name for the git account that the repos are created under."
+	CmdDevFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
 
 	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
 	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
