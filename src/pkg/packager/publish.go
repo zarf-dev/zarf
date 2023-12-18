@@ -54,7 +54,7 @@ func (p *Packager) Publish() (err error) {
 
 		// ensure cli arch matches package arch
 		if pkg.Build.Architecture != arch {
-			return fmt.Errorf("architecture mismatch (expected: %q, got %q)", arch, pkg.Build.Architecture)
+			return fmt.Errorf("architecture mismatch (specified: %q, found %q)", arch, pkg.Build.Architecture)
 		}
 
 		if err := oci.CopyPackage(ctx, srcRemote, dstRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
