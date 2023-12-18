@@ -205,14 +205,9 @@ var updateGiteaPVC = &cobra.Command{
 	Short: lang.CmdInternalUpdateGiteaPVCShort,
 	Long:  lang.CmdInternalUpdateGiteaPVCLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		c := cluster.NewClusterOrDie()
-		state, err := c.LoadZarfState()
-		if err != nil {
-			message.WarnErr(err, lang.ErrLoadState)
-		}
 
-		helmShouldCreate, err := git.New(state.GitServer).UpdateGiteaPVC(rollback)
-
+		// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
+		helmShouldCreate, err := git.UpdateGiteaPVC(rollback)
 		if err != nil {
 			message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
 		}
@@ -258,7 +253,7 @@ func init() {
 	internalCmd.AddCommand(isValidHostname)
 	internalCmd.AddCommand(computeCrc32)
 
-	updateGiteaPVC.Flags().BoolVarP(&rollback, "roll-back", "r", false, lang.CmdInternalFlagUpdateGiteaPVCRollback)
+	updateGiteaPVC.Flags().BoolVarP(&rollback, "rollback", "r", false, lang.CmdInternalFlagUpdateGiteaPVCRollback)
 }
 
 func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {

@@ -239,7 +239,7 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 }
 
 // UpdateGiteaPVC updates the existing Gitea persistent volume claim and tells Gitea whether to create or not.
-func (g *Git) UpdateGiteaPVC(shouldRollBack bool) (string, error) {
+func UpdateGiteaPVC(shouldRollBack bool) (string, error) {
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return "false", err
@@ -254,11 +254,11 @@ func (g *Git) UpdateGiteaPVC(shouldRollBack bool) (string, error) {
 	annotations := map[string]string{"meta.helm.sh/release-name": "zarf-gitea", "meta.helm.sh/release-namespace": "zarf"}
 
 	if shouldRollBack {
-		err = c.K8s.RemoveLabelsAndAnnotations("zarf", pvcName, groupKind, labels, annotations)
+		err = c.K8s.RemoveLabelsAndAnnotations(cluster.ZarfNamespaceName, pvcName, groupKind, labels, annotations)
 		return "false", err
 	} else {
 		if pvcName == "data-zarf-gitea-0" {
-			err = c.K8s.AddLabelsAndAnnotations("zarf", pvcName, groupKind, labels, annotations)
+			err = c.K8s.AddLabelsAndAnnotations(cluster.ZarfNamespaceName, pvcName, groupKind, labels, annotations)
 			return "true", err
 		} else {
 			return "false", err
