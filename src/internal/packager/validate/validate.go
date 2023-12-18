@@ -18,9 +18,9 @@ import (
 )
 
 var (
-	// IsLowercaseNumberHyphen is a regex for lowercase, numbers and hyphens.
-	// https://regex101.com/r/FLdG9G/1
-	IsLowercaseNumberHyphen = regexp.MustCompile(`^[a-z0-9\-]+$`).MatchString
+	// IsLowercaseNumberHyphenNoStartHyphen is a regex for lowercase, numbers and hyphens that cannot start with a hyphen.
+	// https://regex101.com/r/FLdG9G/2
+	IsLowercaseNumberHyphenNoStartHyphen = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*$`).MatchString
 	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
 	// https://regex101.com/r/tfsEuZ/1
 	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
@@ -49,6 +49,8 @@ func Run(pkg types.ZarfPackage) error {
 	}
 
 	uniqueComponentNames := make(map[string]bool)
+	groupDefault := make(map[string]string)
+	groupedComponents := make(map[string][]string)
 
 	for _, component := range pkg.Components {
 		// ensure component name is unique
@@ -59,6 +61,23 @@ func Run(pkg types.ZarfPackage) error {
 
 		if err := validateComponent(pkg, component); err != nil {
 			return fmt.Errorf(lang.PkgValidateErrComponent, component.Name, err)
+		}
+
+		// ensure groups don't have multiple defaults or only one component
+		if component.Group != "" {
+			if component.Default {
+				if _, ok := groupDefault[component.Group]; ok {
+					return fmt.Errorf(lang.PkgValidateErrGroupMultipleDefaults, component.Group, groupDefault[component.Group], component.Name)
+				}
+				groupDefault[component.Group] = component.Name
+			}
+			groupedComponents[component.Group] = append(groupedComponents[component.Group], component.Name)
+		}
+	}
+
+	for groupKey, componentNames := range groupedComponents {
+		if len(componentNames) == 1 {
+			return fmt.Errorf(lang.PkgValidateErrGroupOneComponent, groupKey, componentNames[0])
 		}
 	}
 
@@ -111,6 +130,10 @@ func oneIfNotEmpty(testString string) int {
 }
 
 func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) error {
+	if !IsLowercaseNumberHyphenNoStartHyphen(component.Name) {
+		return fmt.Errorf(lang.PkgValidateErrComponentName, component.Name)
+	}
+
 	if component.Required {
 		if component.Default {
 			return fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name)
@@ -254,7 +277,7 @@ func validateYOLO(component types.ZarfComponent) error {
 }
 
 func validatePackageName(subject string) error {
-	if !IsLowercaseNumberHyphen(subject) {
+	if !IsLowercaseNumberHyphenNoStartHyphen(subject) {
 		return fmt.Errorf(lang.PkgValidateErrPkgName, subject)
 	}
 

@@ -40,7 +40,7 @@ func (p *Packager) DevDeploy() error {
 	// the user's selection and the component's `required` field
 	// This is also different from regular package creation, where we still assemble and package up
 	// all components and their dependencies, regardless of whether they are required or not
-	p.cfg.Pkg.Components = p.getValidComponents()
+	p.cfg.Pkg.Components = p.getSelectedComponents()
 
 	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)

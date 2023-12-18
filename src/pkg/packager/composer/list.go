@@ -22,17 +22,49 @@ import (
 type Node struct {
 	types.ZarfComponent
 
+	index int
+
 	vars   []types.ZarfPackageVariable
 	consts []types.ZarfPackageConstant
 
-	relativeToHead string
+	relativeToHead      string
+	originalPackageName string
 
 	prev *Node
 	next *Node
 }
 
+// GetIndex returns the .components index location for this node's source `zarf.yaml`
+func (n *Node) GetIndex() int {
+	return n.index
+}
+
+// GetOriginalPackageName returns the .metadata.name of the zarf package the component originated from
+func (n *Node) GetOriginalPackageName() string {
+	return n.originalPackageName
+}
+
+// ImportLocation gets the path from the base zarf file to the imported zarf file
+func (n *Node) ImportLocation() string {
+	if n.prev != nil {
+		if n.prev.ZarfComponent.Import.URL != "" {
+			return n.prev.ZarfComponent.Import.URL
+		}
+	}
+	return n.relativeToHead
+}
+
+// Next returns next node in the chain
+func (n *Node) Next() *Node {
+	return n.next
+}
+
+// Prev returns previous node in the chain
+func (n *Node) Prev() *Node {
+	return n.prev
+}
+
 // ImportName returns the name of the component to import
-//
 // If the component import has a ComponentName defined, that will be used
 // otherwise the name of the component will be used
 func (n *Node) ImportName() string {
@@ -51,14 +83,27 @@ type ImportChain struct {
 	remote *oci.OrasRemote
 }
 
-func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
+// Head returns the first node in the import chain
+func (ic *ImportChain) Head() *Node {
+	return ic.head
+}
+
+// Tail returns the last node in the import chain
+func (ic *ImportChain) Tail() *Node {
+	return ic.tail
+}
+
+func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageName string,
+	relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
 	node := &Node{
-		ZarfComponent:  c,
-		relativeToHead: relativeToHead,
-		vars:           vars,
-		consts:         consts,
-		prev:           nil,
-		next:           nil,
+		ZarfComponent:       c,
+		index:               index,
+		originalPackageName: originalPackageName,
+		relativeToHead:      relativeToHead,
+		vars:                vars,
+		consts:              consts,
+		prev:                nil,
+		next:                nil,
 	}
 	if ic.head == nil {
 		ic.head = node
@@ -72,14 +117,14 @@ func (ic *ImportChain) append(c types.ZarfComponent, relativeToHead string, vars
 }
 
 // NewImportChain creates a new import chain from a component
-func NewImportChain(head types.ZarfComponent, arch, flavor string) (*ImportChain, error) {
+// Returning the chain on error so we can have additional information to use during lint
+func NewImportChain(head types.ZarfComponent, index int, originalPackageName, arch, flavor string) (*ImportChain, error) {
+	ic := &ImportChain{}
 	if arch == "" {
-		return nil, fmt.Errorf("cannot build import chain: architecture must be provided")
+		return ic, fmt.Errorf("cannot build import chain: architecture must be provided")
 	}
 
-	ic := &ImportChain{}
-
-	ic.append(head, ".", nil, nil)
+	ic.append(head, index, originalPackageName, ".", nil, nil)
 
 	history := []string{}
 
@@ -110,9 +155,11 @@ func NewImportChain(head types.ZarfComponent, arch, flavor string) (*ImportChain
 
 		var pkg types.ZarfPackage
 
+		var relativeToHead string
+		var importURL string
 		if isLocal {
 			history = append(history, node.Import.Path)
-			relativeToHead := filepath.Join(history...)
+			relativeToHead = filepath.Join(history...)
 
 			// prevent circular imports (including self-imports)
 			// this is O(n^2) but the import chain should be small
@@ -129,6 +176,7 @@ func NewImportChain(head types.ZarfComponent, arch, flavor string) (*ImportChain
 				return ic, err
 			}
 		} else if isRemote {
+			importURL = node.Import.URL
 			remote, err := ic.getRemote(node.Import.URL)
 			if err != nil {
 				return ic, err
@@ -141,26 +189,34 @@ func NewImportChain(head types.ZarfComponent, arch, flavor string) (*ImportChain
 
 		name := node.ImportName()
 
-		found := helpers.Filter(pkg.Components, func(c types.ZarfComponent) bool {
-			matchesName := c.Name == name
-			return matchesName && CompatibleComponent(c, arch, flavor)
-		})
-
-		if len(found) == 0 {
-			if isLocal {
-				return ic, fmt.Errorf("component %q not found in %q", name, filepath.Join(history...))
-			} else if isRemote {
-				return ic, fmt.Errorf("component %q not found in %q", name, node.Import.URL)
-			}
-		} else if len(found) > 1 {
-			if isLocal {
-				return ic, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, filepath.Join(history...), arch)
-			} else if isRemote {
-				return ic, fmt.Errorf("multiple components named %q found in %q satisfying %q", name, node.Import.URL, arch)
+		// 'found' and 'index' are parallel slices. Each element in found[x] corresponds to pkg[index[x]]
+		// found[0] and pkg[index[0]] would be the same componenet for example
+		found := []types.ZarfComponent{}
+		index := []int{}
+		for i, component := range pkg.Components {
+			if component.Name == name && CompatibleComponent(component, arch, flavor) {
+				found = append(found, component)
+				index = append(index, i)
 			}
 		}
 
-		ic.append(found[0], filepath.Join(history...), pkg.Variables, pkg.Constants)
+		if len(found) == 0 {
+			componentNotFound := "component %q not found in %q"
+			if isLocal {
+				return ic, fmt.Errorf(componentNotFound, name, relativeToHead)
+			} else if isRemote {
+				return ic, fmt.Errorf(componentNotFound, name, importURL)
+			}
+		} else if len(found) > 1 {
+			multipleComponentsFound := "multiple components named %q found in %q satisfying %q"
+			if isLocal {
+				return ic, fmt.Errorf(multipleComponentsFound, name, relativeToHead, arch)
+			} else if isRemote {
+				return ic, fmt.Errorf(multipleComponentsFound, name, importURL, arch)
+			}
+		}
+
+		ic.append(found[0], index[0], pkg.Metadata.Name, relativeToHead, pkg.Variables, pkg.Constants)
 		node = node.next
 	}
 	return ic, nil

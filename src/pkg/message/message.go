@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/fatih/color"
 	"github.com/pterm/pterm"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -322,15 +324,20 @@ func Truncate(text string, length int, invert bool) string {
 func Table(header []string, data [][]string) {
 	pterm.Println()
 
-	if len(header) > 0 {
-		header[0] = fmt.Sprintf("     %s", header[0])
+	// To avoid side effects make copies of the header and data before adding padding
+	headerCopy := make([]string, len(header))
+	copy(headerCopy, header)
+	dataCopy := make([][]string, len(data))
+	copy(dataCopy, data)
+	if len(headerCopy) > 0 {
+		headerCopy[0] = fmt.Sprintf("     %s", headerCopy[0])
 	}
 
 	table := pterm.TableData{
-		header,
+		headerCopy,
 	}
 
-	for _, row := range data {
+	for _, row := range dataCopy {
 		if len(row) > 0 {
 			row[0] = fmt.Sprintf("     %s", row[0])
 		}
@@ -338,6 +345,25 @@ func Table(header []string, data [][]string) {
 	}
 
 	pterm.DefaultTable.WithHasHeader().WithData(table).Render()
+}
+
+// ColorWrap changes a string to an ansi color code and appends the default color to the end
+// preventing future characters from taking on the given color
+// returns string as normal if color is disabled
+func ColorWrap(str string, attr color.Attribute) string {
+	if config.NoColor {
+		return str
+	}
+	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", attr, str)
+}
+
+// First30last30 returns the source string that has been trimmed to 30 characters at the beginning and end.
+func First30last30(s string) string {
+	if len(s) > 60 {
+		return s[0:27] + "..." + s[len(s)-26:]
+	}
+
+	return s
 }
 
 func debugPrinter(offset int, a ...any) {
