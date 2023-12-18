@@ -109,7 +109,7 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 	if err != nil {
 		validator.addWarning(validatorMessage{
 			description:    err.Error(),
-			packageRelPath: node.GetRelativeToHeadOrURL(),
+			packageRelPath: node.ImportLocation(),
 			packageName:    node.GetOriginalPackageName(),
 		})
 	}
@@ -120,7 +120,7 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 		if err != nil {
 			validator.addWarning(validatorMessage{
 				description:    err.Error(),
-				packageRelPath: node.GetRelativeToHeadOrURL(),
+				packageRelPath: node.ImportLocation(),
 				packageName:    node.GetOriginalPackageName(),
 			})
 		}
@@ -129,7 +129,7 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 			if deprecated {
 				validator.addWarning(validatorMessage{
 					description:    fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key),
-					packageRelPath: node.GetRelativeToHeadOrURL(),
+					packageRelPath: node.ImportLocation(),
 					packageName:    node.GetOriginalPackageName(),
 				})
 			}
@@ -137,7 +137,7 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 			if !present {
 				validator.addWarning(validatorMessage{
 					description:    lang.UnsetVarLintWarning,
-					packageRelPath: node.GetRelativeToHeadOrURL(),
+					packageRelPath: node.ImportLocation(),
 					packageName:    node.GetOriginalPackageName(),
 				})
 			}
@@ -183,7 +183,7 @@ func checkForUnpinnedRepos(validator *Validator, node *composer.Node) {
 		if !isPinnedRepo(repo) {
 			validator.addWarning(validatorMessage{
 				yqPath:         repoYqPath,
-				packageRelPath: node.GetRelativeToHeadOrURL(),
+				packageRelPath: node.ImportLocation(),
 				packageName:    node.GetOriginalPackageName(),
 				description:    "Unpinned repository",
 				item:           repo,
@@ -199,7 +199,7 @@ func checkForUnpinnedImages(validator *Validator, node *composer.Node) {
 		if err != nil {
 			validator.addError(validatorMessage{
 				yqPath:         imageYqPath,
-				packageRelPath: node.GetRelativeToHeadOrURL(),
+				packageRelPath: node.ImportLocation(),
 				packageName:    node.GetOriginalPackageName(),
 				description:    "Invalid image reference",
 				item:           image,
@@ -209,7 +209,7 @@ func checkForUnpinnedImages(validator *Validator, node *composer.Node) {
 		if !pinnedImage {
 			validator.addWarning(validatorMessage{
 				yqPath:         imageYqPath,
-				packageRelPath: node.GetRelativeToHeadOrURL(),
+				packageRelPath: node.ImportLocation(),
 				packageName:    node.GetOriginalPackageName(),
 				description:    "Image not pinned with digest",
 				item:           image,
@@ -224,7 +224,7 @@ func checkForUnpinnedFiles(validator *Validator, node *composer.Node) {
 		if file.Shasum == "" && helpers.IsURL(file.Source) {
 			validator.addWarning(validatorMessage{
 				yqPath:         fileYqPath,
-				packageRelPath: node.GetRelativeToHeadOrURL(),
+				packageRelPath: node.ImportLocation(),
 				packageName:    node.GetOriginalPackageName(),
 				description:    "No shasum for remote file",
 				item:           file.Source,
@@ -237,7 +237,7 @@ func checkForVarInComponentImport(validator *Validator, node *composer.Node) {
 	if strings.Contains(node.Import.Path, types.ZarfPackageTemplatePrefix) {
 		validator.addWarning(validatorMessage{
 			yqPath:         fmt.Sprintf(".components.[%d].import.path", node.GetIndex()),
-			packageRelPath: node.GetRelativeToHeadOrURL(),
+			packageRelPath: node.ImportLocation(),
 			packageName:    node.GetOriginalPackageName(),
 			description:    "Zarf does not evaluate variables at component.x.import.path",
 			item:           node.Import.Path,
@@ -246,7 +246,7 @@ func checkForVarInComponentImport(validator *Validator, node *composer.Node) {
 	if strings.Contains(node.Import.URL, types.ZarfPackageTemplatePrefix) {
 		validator.addWarning(validatorMessage{
 			yqPath:         fmt.Sprintf(".components.[%d].import.url", node.GetIndex()),
-			packageRelPath: node.GetRelativeToHeadOrURL(),
+			packageRelPath: node.ImportLocation(),
 			packageName:    node.GetOriginalPackageName(),
 			description:    "Zarf does not evaluate variables at component.x.import.url",
 			item:           node.Import.URL,
