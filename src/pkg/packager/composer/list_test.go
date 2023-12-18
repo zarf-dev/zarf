@@ -447,12 +447,12 @@ func createChainFromSlice(components []types.ZarfComponent) (ic *ImportChain) {
 		return ic
 	}
 
-	ic.append(components[0], 0, testPackageName, ".", "", nil, nil)
+	ic.append(components[0], 0, testPackageName, ".", nil, nil)
 	history := []string{}
 
 	for idx := 1; idx < len(components); idx++ {
 		history = append(history, components[idx-1].Import.Path)
-		ic.append(components[idx], idx, testPackageName, filepath.Join(history...), "", nil, nil)
+		ic.append(components[idx], idx, testPackageName, filepath.Join(history...), nil, nil)
 	}
 
 	return ic

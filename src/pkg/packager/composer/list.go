@@ -28,7 +28,6 @@ type Node struct {
 	consts []types.ZarfPackageConstant
 
 	relativeToHead      string
-	importURL           string
 	originalPackageName string
 
 	prev *Node
@@ -47,8 +46,10 @@ func (n *Node) GetOriginalPackageName() string {
 
 // ImportLocation gets the path from the base zarf file to the imported zarf file
 func (n *Node) ImportLocation() string {
-	if n.importURL != "" {
-		return n.importURL
+	if n.prev != nil {
+		if n.prev.ZarfComponent.Import.URL != "" {
+			return n.prev.ZarfComponent.Import.URL
+		}
 	}
 	return n.relativeToHead
 }
@@ -93,13 +94,12 @@ func (ic *ImportChain) Tail() *Node {
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageName string,
-	relativeToHead string, importURL string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
+	relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
 	node := &Node{
 		ZarfComponent:       c,
 		index:               index,
 		originalPackageName: originalPackageName,
 		relativeToHead:      relativeToHead,
-		importURL:           importURL,
 		vars:                vars,
 		consts:              consts,
 		prev:                nil,
@@ -124,7 +124,7 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 		return ic, fmt.Errorf("cannot build import chain: architecture must be provided")
 	}
 
-	ic.append(head, index, originalPackageName, ".", "", nil, nil)
+	ic.append(head, index, originalPackageName, ".", nil, nil)
 
 	history := []string{}
 
@@ -216,7 +216,7 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 			}
 		}
 
-		ic.append(found[0], index[0], pkg.Metadata.Name, relativeToHead, importURL, pkg.Variables, pkg.Constants)
+		ic.append(found[0], index[0], pkg.Metadata.Name, relativeToHead, pkg.Variables, pkg.Constants)
 		node = node.next
 	}
 	return ic, nil
