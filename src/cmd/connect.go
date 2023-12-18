@@ -74,9 +74,13 @@ var (
 			signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
 			exec.SuppressGlobalInterrupt = true
 
-			// Wait for the interrupt signal.
-			<-interruptChan
-			spinner.Successf(lang.CmdConnectTunnelClosed, url)
+			// Wait for the interrupt signal or an error.
+			select {
+			case err = <-tunnel.ErrChan():
+				spinner.Fatalf(err, lang.CmdConnectErrService, err.Error())
+			case <-interruptChan:
+				spinner.Successf(lang.CmdConnectTunnelClosed, url)
+			}
 			os.Exit(0)
 		},
 	}
