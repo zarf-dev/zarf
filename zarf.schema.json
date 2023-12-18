@@ -207,7 +207,7 @@
       ],
       "properties": {
         "name": {
-          "pattern": "^[a-z0-9\\-]+$",
+          "pattern": "^[a-z0-9\\-]*[a-z0-9]$",
           "type": "string",
           "description": "The name of the component"
         },
@@ -832,7 +832,7 @@
       ],
       "properties": {
         "name": {
-          "pattern": "^[a-z0-9\\-]+$",
+          "pattern": "^[a-z0-9\\-]*[a-z0-9]$",
           "type": "string",
           "description": "Name to identify this Zarf package"
         },
