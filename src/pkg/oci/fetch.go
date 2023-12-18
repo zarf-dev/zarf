@@ -19,7 +19,7 @@ import (
 
 // ResolveRoot returns the root descriptor for the remote repository
 func (o *OrasRemote) ResolveRoot() (ocispec.Descriptor, error) {
-	// first try to resolve the reference directly
+	// first try to resolve the reference into an OCI descriptor directly
 	desc, err := o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
 	// if we succeeded and it's not an index, return it
 	// otherwise we will use oras.Resolve which will fetch the index, then resolve the manifest
