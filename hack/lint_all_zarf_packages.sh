@@ -12,6 +12,6 @@ find "." -type f -name 'zarf.yaml' | while read -r yaml_file; do
       continue
   fi
   echo "Running 'zarf prepare lint' in directory: $dir"
-  $ZARF_BIN prepare lint $dir
+  $ZARF_BIN prepare lint "$dir"
   echo "---"
 done
