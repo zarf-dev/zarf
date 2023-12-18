@@ -71,6 +71,15 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	stdOut, stdErr, err = e2e.Zarf("package", "create", dir, "-o", "oci://"+ref, "--insecure", "--oci-concurrency=5", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
+	// Inline publish flavor.
+	dir = filepath.Join("examples", "package-flavors")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", dir, "-o", "oci://"+ref, "--flavor", "oracle-cookie-crunch", "--insecure", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+
+	// Inspect published flavor.
+	stdOut, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/package-flavors:1.0.0-oracle-cookie-crunch", "--insecure")
+	suite.NoError(err, stdOut, stdErr)
+
 	// Inspect the published package.
 	stdOut, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/helm-charts:0.0.1", "--insecure")
 	suite.NoError(err, stdOut, stdErr)
