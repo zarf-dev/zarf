@@ -7,12 +7,19 @@ package lint
 import (
 	"embed"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -24,22 +31,29 @@ func getSchemaFile() ([]byte, error) {
 	return ZarfSchema.ReadFile("zarf.schema.json")
 }
 
-// ValidateZarfSchema validates a zarf file against the zarf schema, returns *validator with warnings or errors if they exist
+// Validate validates a zarf file against the zarf schema, returns *validator with warnings or errors if they exist
 // along with an error if the validation itself failed
-func ValidateZarfSchema(path string) (*Validator, error) {
+func Validate(createOpts types.ZarfCreateOptions) (*Validator, error) {
 	validator := Validator{}
 	var err error
-	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &validator.typedZarfPackage); err != nil {
+
+	if err := utils.ReadYaml(filepath.Join(createOpts.BaseDir, layout.ZarfYAML), &validator.typedZarfPackage); err != nil {
 		return nil, err
 	}
 
-	checkForVarInComponentImport(&validator)
+	if err := utils.ReadYaml(filepath.Join(createOpts.BaseDir, layout.ZarfYAML), &validator.untypedZarfPackage); err != nil {
+		return nil, err
+	}
+
+	if err := os.Chdir(createOpts.BaseDir); err != nil {
+		return nil, fmt.Errorf("unable to access directory '%s': %w", createOpts.BaseDir, err)
+	}
+
+	validator.baseDir = createOpts.BaseDir
+
+	lintComponents(&validator, &createOpts)
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
-		return nil, err
-	}
-
-	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &validator.untypedZarfPackage); err != nil {
 		return nil, err
 	}
 
@@ -50,16 +64,194 @@ func ValidateZarfSchema(path string) (*Validator, error) {
 	return &validator, nil
 }
 
-func checkForVarInComponentImport(validator *Validator) {
+func lintComponents(validator *Validator, createOpts *types.ZarfCreateOptions) {
 	for i, component := range validator.typedZarfPackage.Components {
-		if strings.Contains(component.Import.Path, types.ZarfPackageTemplatePrefix) {
-			validator.addWarning(fmt.Sprintf(".components.[%d].import.path: Will not resolve ZARF_PKG_TMPL_* variables", i))
+		arch := config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
+
+		if !composer.CompatibleComponent(component, arch, createOpts.Flavor) {
+			continue
 		}
-		if strings.Contains(component.Import.URL, types.ZarfPackageTemplatePrefix) {
-			validator.addWarning(fmt.Sprintf(".components.[%d].import.url: Will not resolve ZARF_PKG_TMPL_* variables", i))
+
+		chain, err := composer.NewImportChain(component, i, validator.typedZarfPackage.Metadata.Name, arch, createOpts.Flavor)
+		baseComponent := chain.Head()
+
+		var badImportYqPath string
+		if baseComponent != nil {
+			if baseComponent.Import.URL != "" {
+				badImportYqPath = fmt.Sprintf(".components.[%d].import.url", i)
+			}
+			if baseComponent.Import.Path != "" {
+				badImportYqPath = fmt.Sprintf(".components.[%d].import.path", i)
+			}
+		}
+		if err != nil {
+			validator.addError(validatorMessage{
+				description:    err.Error(),
+				packageRelPath: ".",
+				packageName:    validator.typedZarfPackage.Metadata.Name,
+				yqPath:         badImportYqPath,
+			})
+		}
+
+		node := baseComponent
+		for node != nil {
+			checkForVarInComponentImport(validator, node)
+			fillComponentTemplate(validator, node, createOpts)
+			lintComponent(validator, node)
+			node = node.Next()
+		}
+	}
+}
+
+func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts *types.ZarfCreateOptions) {
+
+	err := packager.ReloadComponentTemplate(&node.ZarfComponent)
+	if err != nil {
+		validator.addWarning(validatorMessage{
+			description:    err.Error(),
+			packageRelPath: node.ImportLocation(),
+			packageName:    node.GetOriginalPackageName(),
+		})
+	}
+	templateMap := map[string]string{}
+
+	setVarsAndWarn := func(templatePrefix string, deprecated bool) {
+		yamlTemplates, err := utils.FindYamlTemplates(node, templatePrefix, "###")
+		if err != nil {
+			validator.addWarning(validatorMessage{
+				description:    err.Error(),
+				packageRelPath: node.ImportLocation(),
+				packageName:    node.GetOriginalPackageName(),
+			})
+		}
+
+		for key := range yamlTemplates {
+			if deprecated {
+				validator.addWarning(validatorMessage{
+					description:    fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key),
+					packageRelPath: node.ImportLocation(),
+					packageName:    node.GetOriginalPackageName(),
+				})
+			}
+			_, present := createOpts.SetVariables[key]
+			if !present {
+				validator.addWarning(validatorMessage{
+					description:    lang.UnsetVarLintWarning,
+					packageRelPath: node.ImportLocation(),
+					packageName:    node.GetOriginalPackageName(),
+				})
+			}
+		}
+		for key, value := range createOpts.SetVariables {
+			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
 		}
 	}
 
+	setVarsAndWarn(types.ZarfPackageTemplatePrefix, false)
+
+	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
+	setVarsAndWarn(types.ZarfPackageVariablePrefix, true)
+
+	utils.ReloadYamlTemplate(node, templateMap)
+}
+
+func isPinnedImage(image string) (bool, error) {
+	transformedImage, err := transform.ParseImageRef(image)
+	if err != nil {
+		if strings.Contains(image, types.ZarfPackageTemplatePrefix) ||
+			strings.Contains(image, types.ZarfPackageVariablePrefix) {
+			return true, nil
+		}
+		return false, err
+	}
+	return (transformedImage.Digest != ""), err
+}
+
+func isPinnedRepo(repo string) bool {
+	return (strings.Contains(repo, "@"))
+}
+
+func lintComponent(validator *Validator, node *composer.Node) {
+	checkForUnpinnedRepos(validator, node)
+	checkForUnpinnedImages(validator, node)
+	checkForUnpinnedFiles(validator, node)
+}
+
+func checkForUnpinnedRepos(validator *Validator, node *composer.Node) {
+	for j, repo := range node.Repos {
+		repoYqPath := fmt.Sprintf(".components.[%d].repos.[%d]", node.GetIndex(), j)
+		if !isPinnedRepo(repo) {
+			validator.addWarning(validatorMessage{
+				yqPath:         repoYqPath,
+				packageRelPath: node.ImportLocation(),
+				packageName:    node.GetOriginalPackageName(),
+				description:    "Unpinned repository",
+				item:           repo,
+			})
+		}
+	}
+}
+
+func checkForUnpinnedImages(validator *Validator, node *composer.Node) {
+	for j, image := range node.Images {
+		imageYqPath := fmt.Sprintf(".components.[%d].images.[%d]", node.GetIndex(), j)
+		pinnedImage, err := isPinnedImage(image)
+		if err != nil {
+			validator.addError(validatorMessage{
+				yqPath:         imageYqPath,
+				packageRelPath: node.ImportLocation(),
+				packageName:    node.GetOriginalPackageName(),
+				description:    "Invalid image reference",
+				item:           image,
+			})
+			continue
+		}
+		if !pinnedImage {
+			validator.addWarning(validatorMessage{
+				yqPath:         imageYqPath,
+				packageRelPath: node.ImportLocation(),
+				packageName:    node.GetOriginalPackageName(),
+				description:    "Image not pinned with digest",
+				item:           image,
+			})
+		}
+	}
+}
+
+func checkForUnpinnedFiles(validator *Validator, node *composer.Node) {
+	for j, file := range node.Files {
+		fileYqPath := fmt.Sprintf(".components.[%d].files.[%d]", node.GetIndex(), j)
+		if file.Shasum == "" && helpers.IsURL(file.Source) {
+			validator.addWarning(validatorMessage{
+				yqPath:         fileYqPath,
+				packageRelPath: node.ImportLocation(),
+				packageName:    node.GetOriginalPackageName(),
+				description:    "No shasum for remote file",
+				item:           file.Source,
+			})
+		}
+	}
+}
+
+func checkForVarInComponentImport(validator *Validator, node *composer.Node) {
+	if strings.Contains(node.Import.Path, types.ZarfPackageTemplatePrefix) {
+		validator.addWarning(validatorMessage{
+			yqPath:         fmt.Sprintf(".components.[%d].import.path", node.GetIndex()),
+			packageRelPath: node.ImportLocation(),
+			packageName:    node.GetOriginalPackageName(),
+			description:    "Zarf does not evaluate variables at component.x.import.path",
+			item:           node.Import.Path,
+		})
+	}
+	if strings.Contains(node.Import.URL, types.ZarfPackageTemplatePrefix) {
+		validator.addWarning(validatorMessage{
+			yqPath:         fmt.Sprintf(".components.[%d].import.url", node.GetIndex()),
+			packageRelPath: node.ImportLocation(),
+			packageName:    node.GetOriginalPackageName(),
+			description:    "Zarf does not evaluate variables at component.x.import.url",
+			item:           node.Import.URL,
+		})
+	}
 }
 
 func makeFieldPathYqCompat(field string) string {
@@ -86,9 +278,12 @@ func validateSchema(validator *Validator) error {
 
 	if !result.Valid() {
 		for _, desc := range result.Errors() {
-			err := fmt.Errorf(
-				"%s: %s", makeFieldPathYqCompat(desc.Field()), desc.Description())
-			validator.addError(err)
+			validator.addError(validatorMessage{
+				yqPath:         makeFieldPathYqCompat(desc.Field()),
+				description:    desc.Description(),
+				packageRelPath: ".",
+				packageName:    validator.typedZarfPackage.Metadata.Name,
+			})
 		}
 	}
 

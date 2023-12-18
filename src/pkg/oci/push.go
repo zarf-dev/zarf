@@ -12,7 +12,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -120,7 +119,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 	// Get all of the layers in the package
 	var descs []ocispec.Descriptor
 	for name, path := range paths.Files() {
-		spinner.Updatef("Preparing layer %s", utils.First30last30(name))
+		spinner.Updatef("Preparing layer %s", message.First30last30(name))
 
 		mediaType := ZarfLayerMediaTypeBlob
 
