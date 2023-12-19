@@ -162,8 +162,7 @@ func initWithoutStorageClass(t *testing.T, components string) {
 
 	_, stdErr, err := e2e.Zarf("init", components, "--confirm")
 	require.Error(t, err, stdErr)
-	require.Contains(t, stdErr, "unable to deploy component")
-	require.Contains(t, stdErr, "Check that the cluster has a storage class")
+	require.Contains(t, stdErr, "unable to run component before action: command \"Check that the cluster has the specified storage class\"")
 
 	_, _, err = e2e.Zarf("destroy", "--confirm")
 	require.NoError(t, err)

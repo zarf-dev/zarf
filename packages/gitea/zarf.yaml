@@ -68,7 +68,7 @@ components:
     actions:
       onDeploy:
         before:
-          - description: Check that the cluster has a storage class
+          - description: Check that the cluster has the specified storage class
             maxTotalSeconds: 3
             wait:
               cluster:

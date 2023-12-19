@@ -114,12 +114,12 @@ components:
     actions:
       onDeploy:
         before:
-          - description: Check that the cluster has a storage class
+          - description: Check that the cluster has the specified storage class
             maxTotalSeconds: 3
             wait:
               cluster:
                 kind: storageclass
-                name: "${ZARF_STORAGE_CLASS}" # TODO@lucasrod16: figure out why this doesn't work
+                name: "${ZARF_STORAGE_CLASS}"
 
   - name: zarf-registry
     description: |

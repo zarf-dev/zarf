@@ -255,16 +255,6 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	onDeploy := component.Actions.OnDeploy
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
-		return charts, fmt.Errorf("unable to run component before action: %w", err)
-	}
-
-	if hasFiles {
-		if err := p.processComponentFiles(component, componentPath.Files); err != nil {
-			return charts, fmt.Errorf("unable to process the component files: %w", err)
-		}
-	}
-
 	if !p.valueTemplate.Ready() && requiresCluster(component) {
 		// Setup the state in the config and get the valuesTemplate
 		p.valueTemplate, err = p.setupStateValuesTemplate()
@@ -279,6 +269,16 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 			} else {
 				p.hpaModified = true
 			}
+		}
+	}
+
+	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
+		return charts, fmt.Errorf("unable to run component before action: %w", err)
+	}
+
+	if hasFiles {
+		if err := p.processComponentFiles(component, componentPath.Files); err != nil {
+			return charts, fmt.Errorf("unable to process the component files: %w", err)
 		}
 	}
 
