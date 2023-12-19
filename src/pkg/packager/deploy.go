@@ -620,12 +620,14 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 	if !p.isInitConfig() {
 		message.PrintConnectStringTable(p.connectStrings)
 	} else {
-		// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds
-		freshState, err := p.cluster.LoadZarfState()
-		if err != nil {
-			freshState = p.cfg.State
+		if p.cluster != nil {
+			// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds
+			freshState, err := p.cluster.LoadZarfState()
+			if err != nil {
+				freshState = p.cfg.State
+			}
+			// otherwise, print the init config connection and passwords
+			message.PrintCredentialTable(freshState, componentsToDeploy)
 		}
-		// otherwise, print the init config connection and passwords
-		message.PrintCredentialTable(freshState, componentsToDeploy)
 	}
 }
