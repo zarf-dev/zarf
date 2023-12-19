@@ -54,7 +54,7 @@ func TestCreateSBOM(t *testing.T) {
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-docker.io_defenseunicorns_zarf-game_multi-tile-dark.html"))
 	require.NoError(t, err)
 	// Test that the init package generates the SBOMs we expect (images + component files)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-docker.io_gitea_gitea_1.21.0-rootless.html"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-docker.io_gitea_gitea_1.21.2-rootless.html"))
 	require.NoError(t, err)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "docker.io_gitea_gitea_1.21.2-rootless.json"))
 	require.NoError(t, err)
