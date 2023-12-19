@@ -82,7 +82,8 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 
 	// Make sure the only permissions are pull (read)
 	var bodyMap map[string]interface{}
-	json.Unmarshal(getRepoResponseBody, &bodyMap)
+	err = json.Unmarshal(getRepoResponseBody, &bodyMap)
+	require.NoError(t, err)
 	permissionsMap := bodyMap["permissions"].(map[string]interface{})
 	require.False(t, permissionsMap["admin"].(bool))
 	require.False(t, permissionsMap["push"].(bool))
@@ -105,7 +106,8 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 
 	// Make sure the pushed tag exists
 	var tagMap map[string]interface{}
-	json.Unmarshal(getRepoTagsResponseBody, &tagMap)
+	err = json.Unmarshal(getRepoTagsResponseBody, &tagMap)
+	require.NoError(t, err)
 	require.Equal(t, repoTag, tagMap["name"])
 
 	// Get the Zarf repo commit
