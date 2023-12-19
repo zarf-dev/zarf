@@ -71,6 +71,12 @@ components:
               - name: GIT_SERVER_CREATE_PVC
             mute: true
         after:
+          - wait:
+              cluster:
+                kind: pod
+                namespace: zarf
+                name: app=gitea
+                condition: Ready
           - cmd: ./zarf internal create-read-only-gitea-user --no-progress
             maxRetries: 3
             maxTotalSeconds: 60
@@ -79,11 +85,6 @@ components:
             maxRetries: 3
             maxTotalSeconds: 60
             description: Create an artifact registry token
-          - wait:
-              cluster:
-                kind: pod
-                namespace: zarf
-                name: app=gitea
-                condition: Ready
+          
         onFailure:
           - cmd: ./zarf internal update-gitea-pvc --rollback --no-progress

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	netHttp "net/http"
@@ -75,7 +76,11 @@ func (g *Git) CreateReadOnlyUser() error {
 	})
 	message.Debugf("POST %s:\n%s", createUserEndpoint, string(out))
 	if err != nil {
-		return err
+		if strings.Contains(err.Error(), "422") {
+			message.Debugf("Read-only git user already exists.  Skipping...")
+		} else {
+			return err
+		}
 	}
 
 	// Make sure the user can't create their own repos or orgs
