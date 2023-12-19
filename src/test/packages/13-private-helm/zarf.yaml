@@ -3,25 +3,13 @@ metadata:
   name: helm-charts
   description: Example showcasing mutiple ways to deploy helm charts
   version: 0.0.1
-
 components:
-  - name: demo-helm-charts
-    required: true
-    charts:
-      # - name: podinfo
-      #   namespace: default
-      #   # In this case `url` will load the helm chart located in the podinfo git repository
-      #   url: https://gitlab.com/api/v4/projects/53034634/packages/helm/stable
-      #   # # By default git will look in the root of the git repository but you can define a sub directory with `gitPath`
-      #   # gitPath: charts/podinfo
-      #   valuesFiles:
-      #     - values.yaml
-      - name: podinfo-repo
-        version: 6.5.3
-        namespace: podinfo-from-repo
-        # In this case `url` will load the helm chart located in the podinfo helm repository
-        url: https://gitlab.com/api/v4/projects/53034634/packages/helm/stable
-        # By default the chart `name` will be what is used to search a repository but since Zarf chart names must be unique per-component you can override this with `repoName`
-        repoName: podinfo
-        # By default the release name will be the chart name, but you can override this with the `releaseName` key
-        releaseName: cool-release-name
+- name: demo-helm-charts
+  required: true
+  charts:
+  - name: podinfo-repo
+    version: 6.5.3
+    url: http://this-is-a-fake-url-the-test-edits-this-line-dynamically
+    repoName: podinfo
+    namespace: podinfo-from-repo
+    releaseName: cool-release-name
