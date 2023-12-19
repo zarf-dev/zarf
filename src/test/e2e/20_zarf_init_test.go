@@ -32,7 +32,7 @@ func TestZarfInit(t *testing.T) {
 	var (
 		mismatchedArch        = e2e.GetMismatchedArch()
 		mismatchedInitPackage = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
-		expectedErrorMessage  = fmt.Sprintf("this package architecture is %s", mismatchedArch)
+		expectedErrorMessage  = "unable to run component before action: command \"Check that the host architecture matches the package architecture\""
 	)
 	t.Cleanup(func() {
 		e2e.CleanFiles(mismatchedInitPackage)
