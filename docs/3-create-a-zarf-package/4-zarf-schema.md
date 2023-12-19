@@ -63,9 +63,9 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                   |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^[a-z0-9\-]+$``` [Test](https://regex101.com/?regex=%5E%5Ba-z0-9%5C-%5D%2B%24) |
+| Restrictions                      |                                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[a-z0-9\-]*[a-z0-9]$``` [Test](https://regex101.com/?regex=%5E%5Ba-z0-9%5C-%5D%2A%5Ba-z0-9%5D%24) |
 
 </blockquote>
 </details>
@@ -507,6 +507,22 @@ must respect the following conditions
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="build_flavor"></a>flavor</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The flavor of Zarf used to build this package
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -554,9 +570,9 @@ must respect the following conditions
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                   |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^[a-z0-9\-]+$``` [Test](https://regex101.com/?regex=%5E%5Ba-z0-9%5C-%5D%2B%24) |
+| Restrictions                      |                                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[a-z0-9\-]*[a-z0-9]$``` [Test](https://regex101.com/?regex=%5E%5Ba-z0-9%5C-%5D%2A%5Ba-z0-9%5D%24) |
 
 </blockquote>
 </details>

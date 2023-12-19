@@ -245,16 +245,16 @@ func (p *Packager) output() error {
 	// Create a remote ref + client for the package (if output is OCI)
 	// then publish the package to the remote.
 	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
-		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, p.arch)
+		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
 		if err != nil {
 			return err
 		}
-		err = p.setOCIRemote(ref)
+		remote, err := oci.NewOrasRemote(ref)
 		if err != nil {
 			return err
 		}
 
-		err = p.remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency)
+		err = remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
@@ -264,9 +264,9 @@ func (p *Packager) output() error {
 			flags = "--insecure"
 		}
 		message.Title("To inspect/deploy/pull:", "")
-		message.ZarfCommand("package inspect %s %s", helpers.OCIURLPrefix+p.remote.Repo().Reference.String(), flags)
-		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+p.remote.Repo().Reference.String(), flags)
-		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+p.remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package inspect %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
 	} else {
 		// Use the output path if the user specified it.
 		packageName := filepath.Join(p.cfg.CreateOpts.Output, p.GetPackageName())
@@ -651,11 +651,11 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if helpers.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		err := p.setOCIRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
+		remote, err := oci.NewOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
 		if err != nil {
 			return err
 		}
-		pkg, err := p.remote.FetchZarfYAML()
+		pkg, err := remote.FetchZarfYAML()
 		if err != nil {
 			return err
 		}
