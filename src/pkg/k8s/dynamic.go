@@ -19,7 +19,7 @@ func (k *K8s) AddLabelsAndAnnotations(resourceNamespace string, resourceName str
 	return k.updateLabelsAndAnnotations(resourceNamespace, resourceName, groupKind, labels, annotations, false)
 }
 
-// RemoveLabelsAndAnnotations adds the provided labels and annotations to the specified K8s resource
+// RemoveLabelsAndAnnotations removes the provided labels and annotations to the specified K8s resource
 func (k *K8s) RemoveLabelsAndAnnotations(resourceNamespace string, resourceName string, groupKind schema.GroupKind, labels map[string]string, annotations map[string]string) error {
 	return k.updateLabelsAndAnnotations(resourceNamespace, resourceName, groupKind, labels, annotations, true)
 }
