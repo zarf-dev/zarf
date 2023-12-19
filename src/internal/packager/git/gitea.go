@@ -79,9 +79,9 @@ func (g *Git) CreateReadOnlyUser() error {
 		if statusCode == 422 {
 			message.Debugf("Read-only git user already exists.  Skipping...")
 			return nil
-		} else {
-			return err
 		}
+
+		return err
 	}
 
 	// Make sure the user can't create their own repos or orgs
