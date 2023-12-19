@@ -17,7 +17,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"helm.sh/helm/v3/pkg/repo"
@@ -98,63 +97,72 @@ func (suite *ExtOutClusterTestSuite) TearDownSuite() {
 	suite.NoError(err, "unable to teardown the docker test network")
 }
 
-// func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
-// 	// Use Zarf to mirror a package to the services (do this as test 0 so that the registry is unpolluted)
-// 	mirrorArgs := []string{"package", "mirror-resources", "../../../build/zarf-package-argocd-amd64.tar.zst", "--confirm"}
-// 	mirrorArgs = append(mirrorArgs, outClusterCredentialArgs...)
-// 	err := exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
-// 	suite.NoError(err, "unable to mirror the package with zarf")
+func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
+	// Use Zarf to mirror a package to the services (do this as test 0 so that the registry is unpolluted)
+	mirrorArgs := []string{"package", "mirror-resources", "../../../build/zarf-package-argocd-amd64.tar.zst", "--confirm"}
+	mirrorArgs = append(mirrorArgs, outClusterCredentialArgs...)
+	err := exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
+	suite.NoError(err, "unable to mirror the package with zarf")
 
-// 	// Check that the registry contains the images we want
-// 	regCatalogURL := fmt.Sprintf("http://push-user:superSecurePassword@k3d-%s:5000/v2/_catalog", registryHost)
-// 	respReg, err := http.Get(regCatalogURL)
-// 	suite.NoError(err)
-// 	regBody, err := io.ReadAll(respReg.Body)
-// 	suite.NoError(err)
-// 	fmt.Println(string(regBody))
-// 	suite.Equal(200, respReg.StatusCode)
-// 	suite.Contains(string(regBody), "stefanprodan/podinfo", "registry did not contain the expected image")
+	// Check that the registry contains the images we want
+	regCatalogURL := fmt.Sprintf("http://push-user:superSecurePassword@k3d-%s:5000/v2/_catalog", registryHost)
+	respReg, err := http.Get(regCatalogURL)
+	suite.NoError(err)
+	regBody, err := io.ReadAll(respReg.Body)
+	suite.NoError(err)
+	fmt.Println(string(regBody))
+	suite.Equal(200, respReg.StatusCode)
+	suite.Contains(string(regBody), "stefanprodan/podinfo", "registry did not contain the expected image")
 
-// 	// Check that the git server contains the repos we want
-// 	gitRepoURL := fmt.Sprintf("http://git-user:superSecurePassword@%s:3000/api/v1/repos/search", giteaHost)
-// 	respGit, err := http.Get(gitRepoURL)
-// 	suite.NoError(err)
-// 	gitBody, err := io.ReadAll(respGit.Body)
-// 	suite.NoError(err)
-// 	fmt.Println(string(gitBody))
-// 	suite.Equal(200, respGit.StatusCode)
-// 	suite.Contains(string(gitBody), "podinfo", "git server did not contain the expected repo")
-// }
+	// Check that the git server contains the repos we want
+	gitRepoURL := fmt.Sprintf("http://git-user:superSecurePassword@%s:3000/api/v1/repos/search", giteaHost)
+	respGit, err := http.Get(gitRepoURL)
+	suite.NoError(err)
+	gitBody, err := io.ReadAll(respGit.Body)
+	suite.NoError(err)
+	fmt.Println(string(gitBody))
+	suite.Equal(200, respGit.StatusCode)
+	suite.Contains(string(gitBody), "podinfo", "git server did not contain the expected repo")
+}
 
-// func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
-// 	// Use Zarf to initialize the cluster
-// 	initArgs := []string{"init", "--confirm"}
-// 	initArgs = append(initArgs, outClusterCredentialArgs...)
-// 	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
-// 	suite.NoError(err, "unable to initialize the k8s server with zarf")
+func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
+	// Use Zarf to initialize the cluster
+	initArgs := []string{"init", "--confirm"}
+	initArgs = append(initArgs, outClusterCredentialArgs...)
+	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
+	suite.NoError(err, "unable to initialize the k8s server with zarf")
 
-// 	// Deploy the flux example package
-// 	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-podinfo-flux-amd64.tar.zst", "--confirm"}
-// 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
-// 	suite.NoError(err, "unable to deploy flux example package")
+	// Deploy the flux example package
+	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-podinfo-flux-amd64.tar.zst", "--confirm"}
+	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
+	suite.NoError(err, "unable to deploy flux example package")
 
-// 	// Verify flux was able to pull from the 'external' repository
-// 	podinfoArgs := []string{"wait", "deployment", "-n=podinfo", "podinfo", "--for", "condition=Available=True", "--timeout=3s"}
-// 	errorStr := "unable to verify flux deployed the podinfo example"
-// 	success := verifyKubectlWaitSuccess(suite.T(), 2, podinfoArgs, errorStr)
-// 	suite.True(success, errorStr)
-// }
+	// Verify flux was able to pull from the 'external' repository
+	podinfoArgs := []string{"wait", "deployment", "-n=podinfo", "podinfo", "--for", "condition=Available=True", "--timeout=3s"}
+	errorStr := "unable to verify flux deployed the podinfo example"
+	success := verifyKubectlWaitSuccess(suite.T(), 2, podinfoArgs, errorStr)
+	suite.True(success, errorStr)
+}
 
 func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
-
-	dirPath := filepath.Join("..", "packages", "13-private-helm")
-	zarfPackagePath := filepath.Join(dirPath, "zarf.yaml")
-
+	baseURL := fmt.Sprintf("http://%s", "gitea.localhost:3000")
 	username := "git-user"
 	password := "superSecurePassword"
 
+	createHelmChartInGitea(suite, baseURL, username, password)
+	makeUserPrivate(suite, baseURL, username, password)
+
+	tempDir := suite.T().TempDir()
+	repoPath := filepath.Join(tempDir, "repositories.yaml")
+	os.Setenv("HELM_REPOSITORY_CONFIG", repoPath)
+
+	packagePath := filepath.Join("..", "packages", "13-private-helm")
+	findImageArgs := []string{"dev", "find-images", packagePath}
+	err := exec.CmdWithPrint(zarfBinPath, findImageArgs...)
+	suite.Contains(err.Error(), "401", "Auth has not happened yet")
+
 	repoFile := repo.NewFile()
-	baseURL := fmt.Sprintf("http://%s", "gitea.localhost:3000")
+
 	chartURL := fmt.Sprintf("%s/api/packages/%s/helm", baseURL, username)
 	Entry := repo.Entry{
 		Name:     "temp_entry",
@@ -163,36 +171,18 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 		URL:      chartURL,
 	}
 	repoFile.Add(&Entry)
-
-	tempDir := suite.T().TempDir()
-	repoPath := filepath.Join(tempDir, "repositories.yaml")
-	os.Setenv("HELM_REPOSITORY_CONFIG", repoPath)
 	utils.WriteYaml(repoPath, repoFile, 0600)
 
-	createHelmChartInGitea(suite, baseURL, username, password)
-	makeUserPrivate(suite, baseURL, username, password)
-
-	var zarfPackage types.ZarfPackage
-	utils.ReadYaml(zarfPackagePath, &zarfPackage)
-	zarfPackage.Components[0].Charts[0].URL = chartURL
-	newPackagePath := filepath.Join(tempDir, "zarf.yaml")
-	utils.WriteYaml(newPackagePath, zarfPackage, 0600)
-
-	findImageArgs := []string{"dev", "find-images", tempDir}
-	err := exec.CmdWithPrint(zarfBinPath, findImageArgs...)
+	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
-	packageCreateArgs := []string{"package", "create", tempDir, "--confirm"}
+	packageCreateArgs := []string{"package", "create", packagePath, "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, packageCreateArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
-	// helm repo add  --username {username} --password {password} gitea-temp-repo http://127.0.0.1:41861/api/packages/zarf-git-user/helm
-	// helm repo add   gitea-temp-repo http://127.0.0.1:41861/api/packages/zarf-git-user/helm
-	// helm cm-push ./{chart_file}.tgz {repo}
-	// I want to also test that
 }
 
 func createHelmChartInGitea(suite *ExtOutClusterTestSuite, baseURL string, username string, password string) {
-	// chartFilePath := filepath.Join("src", "test", "external", "podinfo-6.5.3.tgz")
+	// TODO have this package be downloaded before the test
 	chartFilePath := "podinfo-6.5.3.tgz"
 	url := fmt.Sprintf("%s/api/packages/%s/helm/api/charts", baseURL, username)
 
