@@ -160,10 +160,10 @@ func initWithoutStorageClass(t *testing.T, components string) {
 	_, _, err = e2e.Kubectl("delete", "storageclass", defaultStorageClassName)
 	require.NoError(t, err)
 
-	expectedErrorMessage := "No storage class was found in the cluster"
 	_, stdErr, err := e2e.Zarf("init", components, "--confirm")
 	require.Error(t, err, stdErr)
-	require.Contains(t, stdErr, expectedErrorMessage)
+	require.Contains(t, stdErr, "unable to deploy component")
+	require.Contains(t, stdErr, "Check that the cluster has a storage class")
 
 	_, _, err = e2e.Zarf("destroy", "--confirm")
 	require.NoError(t, err)

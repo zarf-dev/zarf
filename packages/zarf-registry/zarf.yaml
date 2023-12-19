@@ -115,15 +115,11 @@ components:
       onDeploy:
         before:
           - description: Check that the cluster has a storage class
-            shell:
-              windows: pwsh
-            cmd: |
-              STORAGE_CLASSES=$(./zarf tools kubectl get StorageClass -o jsonpath='{.items[*].metadata.name}')
-              if [ -z "${STORAGE_CLASSES}" ]; then
-                echo "No storage class was found in the cluster."
-                echo "The Zarf registry requires a storage class in the cluster to function correctly."
-                exit 1
-              fi
+            maxTotalSeconds: 3
+            wait:
+              cluster:
+                kind: storageclass
+                name: "###ZARF_STORAGE_CLASS###" # TODO@lucasrod16: figure out why this doesn't work
 
   - name: zarf-registry
     description: |
