@@ -119,7 +119,7 @@ components:
             wait:
               cluster:
                 kind: storageclass
-                name: "###ZARF_STORAGE_CLASS###" # TODO@lucasrod16: figure out why this doesn't work
+                name: "${ZARF_STORAGE_CLASS}" # TODO@lucasrod16: figure out why this doesn't work
 
   - name: zarf-registry
     description: |
