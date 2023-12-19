@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	netHttp "net/http"
@@ -66,18 +65,20 @@ func (g *Git) CreateReadOnlyUser() error {
 	}
 
 	var out []byte
+	var statusCode int
 
 	// Send API request to create the user
 	createUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users", tunnelURL)
 	createUserRequest, _ := netHttp.NewRequest("POST", createUserEndpoint, bytes.NewBuffer(createUserData))
 	err = tunnel.Wrap(func() error {
-		out, err = g.DoHTTPThings(createUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+		out, statusCode, err = g.DoHTTPThings(createUserRequest, g.Server.PushUsername, g.Server.PushPassword)
 		return err
 	})
 	message.Debugf("POST %s:\n%s", createUserEndpoint, string(out))
 	if err != nil {
-		if strings.Contains(err.Error(), "422") {
+		if statusCode == 422 {
 			message.Debugf("Read-only git user already exists.  Skipping...")
+			return nil
 		} else {
 			return err
 		}
@@ -93,7 +94,7 @@ func (g *Git) CreateReadOnlyUser() error {
 	updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, g.Server.PullUsername)
 	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
 	err = tunnel.Wrap(func() error {
-		out, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
+		out, _, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, g.Server.PushPassword)
 		return err
 	})
 	message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
@@ -148,7 +149,7 @@ func (g *Git) UpdateGitUser(oldAdminPass string, username string, userpass strin
 	updateUserEndpoint := fmt.Sprintf("%s/api/v1/admin/users/%s", tunnelURL, username)
 	updateUserRequest, _ := netHttp.NewRequest("PATCH", updateUserEndpoint, bytes.NewBuffer(updateUserData))
 	err = tunnel.Wrap(func() error {
-		out, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, oldAdminPass)
+		out, _, err = g.DoHTTPThings(updateUserRequest, g.Server.PushUsername, oldAdminPass)
 		return err
 	})
 	message.Debugf("PATCH %s:\n%s", updateUserEndpoint, string(out))
@@ -183,7 +184,7 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	getTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens", tunnelURL, g.Server.PushUsername)
 	getTokensRequest, _ := netHttp.NewRequest("GET", getTokensEndpoint, nil)
 	err = tunnel.Wrap(func() error {
-		out, err = g.DoHTTPThings(getTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+		out, _, err = g.DoHTTPThings(getTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
 		return err
 	})
 	message.Debugf("GET %s:\n%s", getTokensEndpoint, string(out))
@@ -209,7 +210,7 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 		deleteTokensEndpoint := fmt.Sprintf("http://%s/api/v1/users/%s/tokens/%s", tunnelURL, g.Server.PushUsername, config.ZarfArtifactTokenName)
 		deleteTokensRequest, _ := netHttp.NewRequest("DELETE", deleteTokensEndpoint, nil)
 		err = tunnel.Wrap(func() error {
-			out, err = g.DoHTTPThings(deleteTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+			out, _, err = g.DoHTTPThings(deleteTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
 			return err
 		})
 		message.Debugf("DELETE %s:\n%s", deleteTokensEndpoint, string(out))
@@ -226,7 +227,7 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	createTokensData, _ := json.Marshal(createTokensBody)
 	createTokensRequest, _ := netHttp.NewRequest("POST", createTokensEndpoint, bytes.NewBuffer(createTokensData))
 	err = tunnel.Wrap(func() error {
-		out, err = g.DoHTTPThings(createTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
+		out, _, err = g.DoHTTPThings(createTokensRequest, g.Server.PushUsername, g.Server.PushPassword)
 		return err
 	})
 	message.Debugf("POST %s:\n%s", createTokensEndpoint, string(out))
@@ -272,7 +273,7 @@ func UpdateGiteaPVC(shouldRollBack bool) (string, error) {
 }
 
 // DoHTTPThings adds http request boilerplate and perform the request, checking for a successful response.
-func (g *Git) DoHTTPThings(request *netHttp.Request, username, secret string) ([]byte, error) {
+func (g *Git) DoHTTPThings(request *netHttp.Request, username, secret string) ([]byte, int, error) {
 	message.Debugf("git.DoHttpThings()")
 
 	// Prep the request with boilerplate
@@ -284,17 +285,17 @@ func (g *Git) DoHTTPThings(request *netHttp.Request, username, secret string) ([
 	// Perform the request and get the response
 	response, err := client.Do(request)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, 0, err
 	}
 	responseBody, _ := io.ReadAll(response.Body)
 
 	// If we get a 'bad' status code we will have no error, create a useful one to return
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		err = fmt.Errorf("got status code of %d during http request with body of: %s", response.StatusCode, string(responseBody))
-		return []byte{}, err
+		return []byte{}, response.StatusCode, err
 	}
 
-	return responseBody, nil
+	return responseBody, response.StatusCode, nil
 }
 
 func (g *Git) addReadOnlyUserToRepo(tunnelURL, repo string) error {
@@ -312,7 +313,7 @@ func (g *Git) addReadOnlyUserToRepo(tunnelURL, repo string) error {
 	// Send API request to add a user as a read-only collaborator to a repo
 	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelURL, g.Server.PushUsername, repo, g.Server.PullUsername)
 	addColabRequest, _ := netHttp.NewRequest("PUT", addColabEndpoint, bytes.NewBuffer(addColabData))
-	out, err := g.DoHTTPThings(addColabRequest, g.Server.PushUsername, g.Server.PushPassword)
+	out, _, err := g.DoHTTPThings(addColabRequest, g.Server.PushUsername, g.Server.PushPassword)
 	message.Debugf("PUT %s:\n%s", addColabEndpoint, string(out))
 	return err
 }
