@@ -93,7 +93,7 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy := p.getValidComponents()
+	componentsToDeploy := p.getSelectedComponents()
 
 	// Generate a value template
 	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
@@ -115,7 +115,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		}
 
 		// If this component requires a cluster, connect to one
-		if p.requiresCluster(component) {
+		if requiresCluster(component) {
 			timeout := cluster.DefaultTimeout
 			if p.isInitConfig() {
 				timeout = 5 * time.Minute
@@ -201,7 +201,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	isAgent := component.Name == "zarf-agent"
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if p.requiresCluster(component) && p.cfg.State == nil {
+	if requiresCluster(component) && p.cfg.State == nil {
 		err = p.cluster.InitZarfState(p.cfg.InitOpts)
 		if err != nil {
 			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -214,7 +214,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	}
 
 	if isRegistry {
-		// If we are deploying the registry then mark the HPA as "modifed" to set it to Min later
+		// If we are deploying the registry then mark the HPA as "modified" to set it to Min later
 		p.hpaModified = true
 	}
 
@@ -265,7 +265,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
+	if !p.valueTemplate.Ready() && requiresCluster(component) {
 		// Setup the state in the config and get the valuesTemplate
 		p.valueTemplate, err = p.setupStateValuesTemplate()
 		if err != nil {
@@ -476,6 +476,9 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 			gitClient := git.New(p.cfg.State.GitServer)
 			svcInfo, _ := k8s.ServiceInfoFromServiceURL(gitClient.Server.Address)
 
+			var err error
+			var tunnel *k8s.Tunnel
+
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
 			if svcInfo != nil {
 				if !p.isConnectedToCluster() {
@@ -485,7 +488,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 					}
 				}
 
-				tunnel, err := p.cluster.NewTunnel(svcInfo.Namespace, k8s.SvcResource, svcInfo.Name, "", 0, svcInfo.Port)
+				tunnel, err = p.cluster.NewTunnel(svcInfo.Namespace, k8s.SvcResource, svcInfo.Name, "", 0, svcInfo.Port)
 				if err != nil {
 					return err
 				}
@@ -496,6 +499,8 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 				}
 				defer tunnel.Close()
 				gitClient.Server.Address = tunnel.HTTPEndpoint()
+
+				return tunnel.Wrap(func() error { return gitClient.PushRepo(repoURL, reposPath) })
 			}
 
 			return gitClient.PushRepo(repoURL, reposPath)

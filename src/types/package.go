@@ -26,7 +26,7 @@ type ZarfPackage struct {
 
 // ZarfMetadata lists information about the current ZarfPackage.
 type ZarfMetadata struct {
-	Name              string `json:"name" jsonschema:"description=Name to identify this Zarf package,pattern=^[a-z0-9\\-]+$"`
+	Name              string `json:"name" jsonschema:"description=Name to identify this Zarf package,pattern=^[a-z0-9\\-]*[a-z0-9]$"`
 	Description       string `json:"description,omitempty" jsonschema:"description=Additional information about this package"`
 	Version           string `json:"version,omitempty" jsonschema:"description=Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with)"`
 	URL               string `json:"url,omitempty" jsonschema:"description=Link to package information when online"`
@@ -53,6 +53,7 @@ type ZarfBuildData struct {
 	RegistryOverrides      map[string]string `json:"registryOverrides,omitempty" jsonschema:"description=Any registry domains that were overridden on package create when pulling images"`
 	DifferentialMissing    []string          `json:"differentialMissing,omitempty" jsonschema:"description=List of components that were not included in this package due to differential packaging"`
 	LastNonBreakingVersion string            `json:"lastNonBreakingVersion,omitempty" jsonschema:"description=The minimum version of Zarf that does not have breaking package structure changes"`
+	Flavor                 string            `json:"flavor,omitempty" jsonschema:"description=The flavor of Zarf used to build this package"`
 }
 
 // ZarfPackageVariable are variables that can be used to dynamically template K8s resources.

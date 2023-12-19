@@ -86,8 +86,8 @@ func TestUseCLI(t *testing.T) {
 		controllerImageWithTag := "quay.io/jetstack/cert-manager-controller:v1.11.1"
 		controlImageWithSignature := "quay.io/jetstack/cert-manager-controller:sha256-4f1782c8316f34aae6b9ab823c3e6b7e6e4d92ec5dac21de6a17c3da44c364f1.sig"
 
-		// Test `zarf prepare find-images` on a chart that has a `kubeVersion` declaration greater than the previous default (v1.20.0)
-		// We now default to the kubeVersion value from the kubernetes library so we should be up to date
+		// Test `zarf prepare find-images` on a chart that has a `kubeVersion` declaration greater than the Helm default (v1.20.0)
+		// This should pass because we build Zarf specifying the kubeVersion value from the kubernetes client-go library instead
 		stdOut, stdErr, err := e2e.Zarf("prepare", "find-images", "src/test/packages/00-kube-version-override")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, controllerImageWithTag, "The chart image should be found by Zarf")
@@ -106,6 +106,23 @@ func TestUseCLI(t *testing.T) {
 		path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.Arch)
 		_, _, err := e2e.Zarf("package", "deploy", path, "--components=on-create,foo,logging", "--confirm")
 		require.Error(t, err)
+	})
+
+	t.Run("zarf deploy should return a warning when no components are deployed", func(t *testing.T) {
+		t.Parallel()
+		_, _, err := e2e.Zarf("package", "create", "src/test/packages/00-no-components", "-o=build", "--confirm")
+		require.NoError(t, err)
+		path := fmt.Sprintf("build/zarf-package-no-components-%s.tar.zst", e2e.Arch)
+
+		// Test that excluding all components with a leading dash results in a warning
+		_, stdErr, err := e2e.Zarf("package", "deploy", path, "--components=-deselect-me", "--confirm")
+		require.NoError(t, err)
+		require.Contains(t, stdErr, "No components were selected for deployment")
+
+		// Test that excluding still works even if a wildcard is given
+		_, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=*,-deselect-me", "--confirm")
+		require.NoError(t, err)
+		require.NotContains(t, stdErr, "DESELECT-ME COMPONENT")
 	})
 
 	t.Run("changing log level", func(t *testing.T) {

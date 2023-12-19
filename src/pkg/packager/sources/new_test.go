@@ -25,7 +25,7 @@ type source struct {
 }
 
 var sources = []source{
-	{pkgSrc: "oci://ghcr.io/defenseunicorns/packages/init:1.0.0-amd64", srcType: "oci", source: ociS},
+	{pkgSrc: "oci://ghcr.io/defenseunicorns/packages/init:1.0.0", srcType: "oci", source: ociS},
 	{pkgSrc: "sget://github.com/defenseunicorns/zarf-hello-world:x86", srcType: "sget", source: urlS},
 	{pkgSrc: "sget://defenseunicorns/zarf-hello-world:x86_64", srcType: "sget", source: urlS},
 	{pkgSrc: "https://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "https", source: urlS},

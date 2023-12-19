@@ -2,6 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: package-flavors
   description: Simple example to show how to use the `only.flavor` key to build package variants.
+  version: 1.0.0
 
 components:
   - name: image

@@ -15,6 +15,30 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// ReloadComponentTemplate appends ###ZARF_COMPONENT_NAME### for the component, assigns value, and reloads
+// Any instance of ###ZARF_COMPONENT_NAME### within a component will be replaced with that components name
+func ReloadComponentTemplate(component *types.ZarfComponent) error {
+	mappings := map[string]string{}
+	mappings[types.ZarfComponentName] = component.Name
+	err := utils.ReloadYamlTemplate(component, mappings)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ReloadComponentTemplatesInPackage appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
+func ReloadComponentTemplatesInPackage(zarfPackage *types.ZarfPackage) error {
+	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
+	for i := range zarfPackage.Components {
+		if err := ReloadComponentTemplate(&zarfPackage.Components[i]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // fillActiveTemplate handles setting the active variables and reloading the base template.
 func (p *Packager) fillActiveTemplate() error {
 	templateMap := map[string]string{}
@@ -54,7 +78,7 @@ func (p *Packager) fillActiveTemplate() error {
 	}
 
 	// update the component templates on the package
-	err := p.findComponentTemplatesAndReload()
+	err := ReloadComponentTemplatesInPackage(&p.cfg.Pkg)
 	if err != nil {
 		return err
 	}
@@ -124,21 +148,6 @@ func (p *Packager) setVariableInConfig(name, value string, sensitive bool, autoI
 		AutoIndent: autoIndent,
 		Type:       varType,
 	}
-}
-
-// findComponentTemplatesAndReload appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
-func (p *Packager) findComponentTemplatesAndReload() error {
-	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
-	for i, component := range p.cfg.Pkg.Components {
-		mappings := map[string]string{}
-		mappings[types.ZarfComponentName] = component.Name
-		err := utils.ReloadYamlTemplate(&p.cfg.Pkg.Components[i], mappings)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // checkVariablePattern checks to see if a current variable is set to a value that matches its pattern
