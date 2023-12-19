@@ -91,11 +91,10 @@ $ zarf package create . \
 --set REGISTRY_IMAGE_TAG=2.8.3 \
 --set REGISTRY_IMAGE="opensource/registry" \
 --set REGISTRY_IMAGE_DOMAIN="custom.enterprise.corp" \
---set GITEA_IMAGE="custom.enterprise.corp/opensource/gitea" \
---set GITEA_SERVER_VERSION="v1.19.3"
+--set GITEA_IMAGE="custom.enterprise.corp/opensource/gitea:v1.21.0-rootless"
 ```
 
-⚠️ - The Gitea image and version are different than the Agent and Registry in that Zarf will always prefer the `rootless` version of a given server image. This means that the above reference would template out to be `custom.enterprise.corp/opensource/gitea:v1.19.3-rootless`. If you need to change this, edit the `packages/gitea` package.
+⚠️ - The Gitea image is different from the Agent and Registry in that Zarf will always prefer the `rootless` version of a given server image. The image no longer must be tagged with `-rootless`, but it still needs to implement the [Gitea configuration of a rootless image](https://github.com/go-gitea/gitea/blob/main/Dockerfile.rootless). If you need to change this, edit the `packages/gitea` package.
 
 You can find all of the `--set` configurations by looking at the `zarf-config.toml` in the root of the repository.
 

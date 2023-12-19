@@ -23,6 +23,10 @@ import (
 	"github.com/spf13/pflag"
 )
 
+var (
+	rollback bool
+)
+
 var internalCmd = &cobra.Command{
 	Use:    "internal",
 	Hidden: true,
@@ -196,6 +200,22 @@ var createPackageRegistryToken = &cobra.Command{
 	},
 }
 
+var updateGiteaPVC = &cobra.Command{
+	Use:   "update-gitea-pvc",
+	Short: lang.CmdInternalUpdateGiteaPVCShort,
+	Long:  lang.CmdInternalUpdateGiteaPVCLong,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
+		helmShouldCreate, err := git.UpdateGiteaPVC(rollback)
+		if err != nil {
+			message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
+		}
+
+		fmt.Print(helmShouldCreate)
+	},
+}
+
 var isValidHostname = &cobra.Command{
 	Use:   "is-valid-hostname",
 	Short: lang.CmdInternalIsValidHostnameShort,
@@ -229,8 +249,11 @@ func init() {
 	internalCmd.AddCommand(genTypesSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
 	internalCmd.AddCommand(createPackageRegistryToken)
+	internalCmd.AddCommand(updateGiteaPVC)
 	internalCmd.AddCommand(isValidHostname)
 	internalCmd.AddCommand(computeCrc32)
+
+	updateGiteaPVC.Flags().BoolVarP(&rollback, "rollback", "r", false, lang.CmdInternalFlagUpdateGiteaPVCRollback)
 }
 
 func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
