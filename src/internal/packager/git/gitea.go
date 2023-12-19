@@ -261,15 +261,14 @@ func UpdateGiteaPVC(shouldRollBack bool) (string, error) {
 	if shouldRollBack {
 		err = c.K8s.RemoveLabelsAndAnnotations(cluster.ZarfNamespaceName, pvcName, groupKind, labels, annotations)
 		return "false", err
-	} else {
-		if pvcName == "data-zarf-gitea-0" {
-			err = c.K8s.AddLabelsAndAnnotations(cluster.ZarfNamespaceName, pvcName, groupKind, labels, annotations)
-			return "true", err
-		} else {
-			return "false", err
-		}
 	}
 
+	if pvcName == "data-zarf-gitea-0" {
+		err = c.K8s.AddLabelsAndAnnotations(cluster.ZarfNamespaceName, pvcName, groupKind, labels, annotations)
+		return "true", err
+	}
+
+	return "false", err
 }
 
 // DoHTTPThings adds http request boilerplate and perform the request, checking for a successful response.
