@@ -138,7 +138,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 	case k8s.DistroIsK3s, k8s.DistroIsK3d:
 		state.StorageClass = "local-path"
 
-	case k8s.DistroIsKind, k8s.DistroIsGKE, k8s.DistroIsMinikube:
+	case k8s.DistroIsKind, k8s.DistroIsGKE:
 		state.StorageClass = "standard"
 
 	case k8s.DistroIsDockerDesktop:
