@@ -26,6 +26,7 @@ const (
 	DistroIsAKS           = "aks"
 	DistroIsRKE2          = "rke2"
 	DistroIsTKG           = "tkg"
+	DistroIsMinikube      = "minikube"
 )
 
 // DetectDistro returns the matching distro or unknown if not found.
@@ -86,6 +87,9 @@ func (k *K8s) DetectDistro() (string, error) {
 
 	if node.GetName() == "docker-desktop" {
 		return DistroIsDockerDesktop, nil
+	}
+	if node.GetName() == "minikube" {
+		return DistroIsMinikube, nil
 	}
 
 	for _, images := range node.Status.Images {
