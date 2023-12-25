@@ -268,8 +268,26 @@ func (p *Packager) output() error {
 		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
 		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
 	} else {
-		// Use the output path if the user specified it.
-		packageName := filepath.Join(p.cfg.CreateOpts.Output, p.GetPackageName())
+		var packageName string
+
+		if p.isInitConfig() {
+			packageName = GetInitPackageName(p.arch)
+		} else {
+			packageName = p.cfg.Pkg.Metadata.Name
+			suffix := "tar.zst"
+			if p.cfg.Pkg.Metadata.Uncompressed {
+				suffix = "tar"
+			}
+			packageFileName := fmt.Sprintf("%s%s-%s", config.ZarfPackagePrefix, packageName, p.arch)
+			if p.cfg.Pkg.Build.Differential {
+				packageFileName = fmt.Sprintf("%s-%s-differential-%s", packageFileName, p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion, p.cfg.Pkg.Metadata.Version)
+			} else if p.cfg.Pkg.Metadata.Version != "" {
+				packageFileName = fmt.Sprintf("%s-%s", packageFileName, p.cfg.Pkg.Metadata.Version)
+			}
+
+			packageName = fmt.Sprintf("%s.%s", packageFileName, suffix)
+			packageName = filepath.Join(p.cfg.CreateOpts.Output, packageName)
+		}
 
 		// Try to remove the package if it already exists.
 		_ = os.Remove(packageName)

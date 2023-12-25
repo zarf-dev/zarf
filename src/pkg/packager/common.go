@@ -171,28 +171,6 @@ func GetInitPackageName(arch string) string {
 	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, config.CLIVersion)
 }
 
-// GetPackageName returns the formatted name of the package.
-func (p *Packager) GetPackageName() string {
-	if p.isInitConfig() {
-		return GetInitPackageName(p.arch)
-	}
-
-	packageName := p.cfg.Pkg.Metadata.Name
-	suffix := "tar.zst"
-	if p.cfg.Pkg.Metadata.Uncompressed {
-		suffix = "tar"
-	}
-
-	packageFileName := fmt.Sprintf("%s%s-%s", config.ZarfPackagePrefix, packageName, p.arch)
-	if p.cfg.Pkg.Build.Differential {
-		packageFileName = fmt.Sprintf("%s-%s-differential-%s", packageFileName, p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion, p.cfg.Pkg.Metadata.Version)
-	} else if p.cfg.Pkg.Metadata.Version != "" {
-		packageFileName = fmt.Sprintf("%s-%s", packageFileName, p.cfg.Pkg.Metadata.Version)
-	}
-
-	return fmt.Sprintf("%s.%s", packageFileName, suffix)
-}
-
 // ClearTempPaths removes the temp directory and any files within it.
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
@@ -332,7 +310,7 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 	}
 	spinner.Updatef("Wrote %s to %s", p.layout.Base, destinationTarball)
 
-	f, err := os.Stat(destinationTarball)
+	info, err := os.Stat(destinationTarball)
 	if err != nil {
 		return fmt.Errorf("unable to read the package archive: %w", err)
 	}
@@ -341,7 +319,7 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 	chunkSize := p.cfg.CreateOpts.MaxPackageSizeMB * 1000 * 1000
 
 	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
-	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && f.Size() > int64(chunkSize) {
+	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && info.Size() > int64(chunkSize) {
 		spinner.Updatef("Package is larger than %dMB, splitting into multiple files", p.cfg.CreateOpts.MaxPackageSizeMB)
 		chunks, sha256sum, err := utils.SplitFile(destinationTarball, chunkSize)
 		if err != nil {
@@ -359,7 +337,7 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 		// Marshal the data into a json file.
 		jsonData, err := json.Marshal(types.ZarfSplitPackageData{
 			Count:     len(chunks),
-			Bytes:     f.Size(),
+			Bytes:     info.Size(),
 			Sha256Sum: sha256sum,
 		})
 		if err != nil {
