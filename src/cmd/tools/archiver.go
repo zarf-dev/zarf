@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
@@ -53,7 +54,11 @@ var archiverDecompressCmd = &cobra.Command{
 		if unarchiveAll {
 			err := filepath.Walk(destinationPath, func(path string, info os.FileInfo, err error) error {
 				if strings.HasSuffix(path, ".tar") {
-					dst := strings.TrimSuffix(path, ".tar")
+					dst := filepath.Join(strings.TrimSuffix(path, ".tar"), "..")
+					// Unpack sboms.tar differently since it has a different folder structure than components
+					if info.Name() == layout.SBOMTar {
+						dst = strings.TrimSuffix(path, ".tar")
+					}
 					err := archiver.Unarchive(path, dst)
 					if err != nil {
 						return fmt.Errorf(lang.ErrUnarchive, path, err.Error())

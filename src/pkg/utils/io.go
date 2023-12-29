@@ -23,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 )
 
@@ -459,11 +460,11 @@ func CreateReproducibleTarballFromDir(dirPath, tarballPath string) error {
 		header.Gname = ""
 
 		// Ensure the header's name is correctly set relative to the base directory
-		relPath, err := filepath.Rel(dirPath, filePath)
+		name, err := archiver.NameInArchive(info, dirPath, filePath)
 		if err != nil {
-			return fmt.Errorf("error getting relative path: %w", err)
+			return fmt.Errorf("error getting name in archive: %w", err)
 		}
-		header.Name = relPath
+		header.Name = name
 
 		// Write the header to the tarball
 		if err := tarWriter.WriteHeader(header); err != nil {
