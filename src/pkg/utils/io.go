@@ -427,18 +427,17 @@ func SHAsMatch(path, expected string) error {
 
 // CreateReproducibleTarballFromDir creates a tarball from a directory with stripped headers
 func CreateReproducibleTarballFromDir(dirPath, dirInArchive, tarballPath string) error {
-	// Create a new tarball for the output
-	outFile, err := os.Create(tarballPath)
+	tb, err := os.Create(tarballPath)
 	if err != nil {
 		return fmt.Errorf("error creating tarball: %w", err)
 	}
-	defer outFile.Close()
+	defer tb.Close()
 
-	tarWriter := tar.NewWriter(outFile)
-	defer tarWriter.Close()
+	tw := tar.NewWriter(tb)
+	defer tw.Close()
 
 	// Walk through the directory and process each file
-	err = filepath.Walk(dirPath, func(filePath string, info os.FileInfo, err error) error {
+	return filepath.Walk(dirPath, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -466,7 +465,7 @@ func CreateReproducibleTarballFromDir(dirPath, dirInArchive, tarballPath string)
 		header.Name = filepath.Join(dirInArchive, name)
 
 		// Write the header to the tarball
-		if err := tarWriter.WriteHeader(header); err != nil {
+		if err := tw.WriteHeader(header); err != nil {
 			return fmt.Errorf("error writing header: %w", err)
 		}
 
@@ -478,17 +477,11 @@ func CreateReproducibleTarballFromDir(dirPath, dirInArchive, tarballPath string)
 			}
 			defer file.Close()
 
-			if _, err := io.Copy(tarWriter, file); err != nil {
+			if _, err := io.Copy(tw, file); err != nil {
 				return fmt.Errorf("error writing file to tarball: %w", err)
 			}
 		}
 
 		return nil
 	})
-
-	if err != nil {
-		return fmt.Errorf("error walking through directory: %w", err)
-	}
-
-	return nil
 }
