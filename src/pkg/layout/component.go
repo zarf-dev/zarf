@@ -65,7 +65,7 @@ func (c *Components) Archive(component types.ZarfComponent, cleanupTemp bool) (e
 	if size > 0 {
 		tb := fmt.Sprintf("%s.tar", base)
 		message.Debugf("Archiving %q", name)
-		if err := archiver.Archive([]string{base}, tb); err != nil {
+		if err := utils.CreateReproducibleTarballFromDir(base, tb); err != nil {
 			return err
 		}
 		if c.Tarballs == nil {
