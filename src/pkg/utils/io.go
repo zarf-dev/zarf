@@ -23,7 +23,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/mholt/archiver/v3"
 	"github.com/otiai10/copy"
 )
 
@@ -427,7 +426,7 @@ func SHAsMatch(path, expected string) error {
 }
 
 // CreateReproducibleTarballFromDir creates a tarball from a directory with stripped headers
-func CreateReproducibleTarballFromDir(dirPath, tarballPath string) error {
+func CreateReproducibleTarballFromDir(dirPath, dirInArchive, tarballPath string) error {
 	// Create a new tarball for the output
 	outFile, err := os.Create(tarballPath)
 	if err != nil {
@@ -460,11 +459,11 @@ func CreateReproducibleTarballFromDir(dirPath, tarballPath string) error {
 		header.Gname = ""
 
 		// Ensure the header's name is correctly set relative to the base directory
-		name, err := archiver.NameInArchive(info, dirPath, filePath)
+		name, err := filepath.Rel(dirPath, filePath)
 		if err != nil {
-			return fmt.Errorf("error getting name in archive: %w", err)
+			return fmt.Errorf("error getting relative path: %w", err)
 		}
-		header.Name = name
+		header.Name = filepath.Join(dirInArchive, name)
 
 		// Write the header to the tarball
 		if err := tarWriter.WriteHeader(header); err != nil {

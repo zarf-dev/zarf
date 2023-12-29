@@ -60,7 +60,7 @@ func (s *SBOMs) Archive() (err error) {
 	dir := s.Path
 	tb := filepath.Join(filepath.Dir(dir), SBOMTar)
 
-	if err := utils.CreateReproducibleTarballFromDir(dir, tb); err != nil {
+	if err := utils.CreateReproducibleTarballFromDir(dir, "", tb); err != nil {
 		return err
 	}
 	s.Path = tb
