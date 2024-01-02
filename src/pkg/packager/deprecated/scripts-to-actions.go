@@ -20,7 +20,7 @@ func (m migrateScriptsToActions) name() string {
 }
 
 // If the component has already been migrated, clear the deprecated scripts.
-func (m migrateScriptsToActions) postbuild() types.ZarfComponent {
+func (m migrateScriptsToActions) clear() types.ZarfComponent {
 	mc := m.component
 	mc.DeprecatedScripts = types.DeprecatedZarfComponentScripts{}
 	return mc
@@ -34,53 +34,53 @@ func (m migrateScriptsToActions) postbuild() types.ZarfComponent {
 // - Actions.*.OnFailure
 // - Actions.*.*.Env
 func (m migrateScriptsToActions) migrate() (types.ZarfComponent, string) {
-	mc := m.component
+	c := m.component
 	var hasScripts bool
 
 	// Convert a script configs to action defaults.
 	defaults := types.ZarfComponentActionDefaults{
 		// ShowOutput (default false) -> Mute (default false)
-		Mute: !mc.DeprecatedScripts.ShowOutput,
+		Mute: !c.DeprecatedScripts.ShowOutput,
 		// TimeoutSeconds -> MaxSeconds
-		MaxTotalSeconds: mc.DeprecatedScripts.TimeoutSeconds,
+		MaxTotalSeconds: c.DeprecatedScripts.TimeoutSeconds,
 	}
 
 	// Retry is now an integer vs a boolean (implicit infinite retries), so set to an absurdly high number
-	if mc.DeprecatedScripts.Retry {
+	if c.DeprecatedScripts.Retry {
 		defaults.MaxRetries = math.MaxInt
 	}
 
 	// Scripts.Prepare -> Actions.Create.Before
-	if len(mc.DeprecatedScripts.Prepare) > 0 {
+	if len(c.DeprecatedScripts.Prepare) > 0 {
 		hasScripts = true
-		mc.Actions.OnCreate.Defaults = defaults
-		for _, s := range mc.DeprecatedScripts.Prepare {
-			mc.Actions.OnCreate.Before = append(mc.Actions.OnCreate.Before, types.ZarfComponentAction{Cmd: s})
+		c.Actions.OnCreate.Defaults = defaults
+		for _, s := range c.DeprecatedScripts.Prepare {
+			c.Actions.OnCreate.Before = append(c.Actions.OnCreate.Before, types.ZarfComponentAction{Cmd: s})
 		}
 	}
 
 	// Scripts.Before -> Actions.Deploy.Before
-	if len(mc.DeprecatedScripts.Before) > 0 {
+	if len(c.DeprecatedScripts.Before) > 0 {
 		hasScripts = true
-		mc.Actions.OnDeploy.Defaults = defaults
-		for _, s := range mc.DeprecatedScripts.Before {
-			mc.Actions.OnDeploy.Before = append(mc.Actions.OnDeploy.Before, types.ZarfComponentAction{Cmd: s})
+		c.Actions.OnDeploy.Defaults = defaults
+		for _, s := range c.DeprecatedScripts.Before {
+			c.Actions.OnDeploy.Before = append(c.Actions.OnDeploy.Before, types.ZarfComponentAction{Cmd: s})
 		}
 	}
 
 	// Scripts.After -> Actions.Deploy.After
-	if len(mc.DeprecatedScripts.After) > 0 {
+	if len(c.DeprecatedScripts.After) > 0 {
 		hasScripts = true
-		mc.Actions.OnDeploy.Defaults = defaults
-		for _, s := range mc.DeprecatedScripts.After {
-			mc.Actions.OnDeploy.After = append(mc.Actions.OnDeploy.After, types.ZarfComponentAction{Cmd: s})
+		c.Actions.OnDeploy.Defaults = defaults
+		for _, s := range c.DeprecatedScripts.After {
+			c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{Cmd: s})
 		}
 	}
 
 	// Leave deprecated scripts in place, but warn users
 	if hasScripts {
-		return mc, fmt.Sprintf("Component '%s' is using scripts which will be removed in Zarf v1.0.0. Please migrate to actions.", mc.Name)
+		return c, fmt.Sprintf("Component '%s' is using scripts which will be removed in Zarf v1.0.0. Please migrate to actions.", c.Name)
 	}
 
-	return mc, ""
+	return c, ""
 }

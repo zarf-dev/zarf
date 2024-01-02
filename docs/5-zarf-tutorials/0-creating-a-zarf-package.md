@@ -50,7 +50,7 @@ components:
   - name: wordpress  # specifies the name of our component and should be unique and unchanging through updates
     description: |   # (optional) a human-readable description of the component you are defining
       "Deploys the Bitnami-packaged WordPress chart into the cluster"
-    optional: true   # (optional) sets the component as 'required' so that it is always deployed
+    optional: false   # (optional) sets the component as 'required' so that it is always deployed
     charts:
       - name: wordpress
         url: oci://registry-1.docker.io/bitnamicharts/wordpress

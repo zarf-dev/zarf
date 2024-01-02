@@ -19,8 +19,8 @@ func (m migrateSetVariableToSetVariables) name() string {
 }
 
 // If the component has already been migrated, clear the deprecated setVariable.
-func (m migrateSetVariableToSetVariables) postbuild() types.ZarfComponent {
-	c := m.component
+func (m migrateSetVariableToSetVariables) clear() types.ZarfComponent {
+	mc := m.component
 	clear := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
 		for i := range actions {
 			actions[i].DeprecatedSetVariable = ""
@@ -30,24 +30,24 @@ func (m migrateSetVariableToSetVariables) postbuild() types.ZarfComponent {
 	}
 
 	// Clear OnCreate SetVariables
-	c.Actions.OnCreate.After = clear(c.Actions.OnCreate.After)
-	c.Actions.OnCreate.Before = clear(c.Actions.OnCreate.Before)
-	c.Actions.OnCreate.OnSuccess = clear(c.Actions.OnCreate.OnSuccess)
-	c.Actions.OnCreate.OnFailure = clear(c.Actions.OnCreate.OnFailure)
+	mc.Actions.OnCreate.After = clear(mc.Actions.OnCreate.After)
+	mc.Actions.OnCreate.Before = clear(mc.Actions.OnCreate.Before)
+	mc.Actions.OnCreate.OnSuccess = clear(mc.Actions.OnCreate.OnSuccess)
+	mc.Actions.OnCreate.OnFailure = clear(mc.Actions.OnCreate.OnFailure)
 
 	// Clear OnDeploy SetVariables
-	c.Actions.OnDeploy.After = clear(c.Actions.OnDeploy.After)
-	c.Actions.OnDeploy.Before = clear(c.Actions.OnDeploy.Before)
-	c.Actions.OnDeploy.OnSuccess = clear(c.Actions.OnDeploy.OnSuccess)
-	c.Actions.OnDeploy.OnFailure = clear(c.Actions.OnDeploy.OnFailure)
+	mc.Actions.OnDeploy.After = clear(mc.Actions.OnDeploy.After)
+	mc.Actions.OnDeploy.Before = clear(mc.Actions.OnDeploy.Before)
+	mc.Actions.OnDeploy.OnSuccess = clear(mc.Actions.OnDeploy.OnSuccess)
+	mc.Actions.OnDeploy.OnFailure = clear(mc.Actions.OnDeploy.OnFailure)
 
 	// Clear OnRemove SetVariables
-	c.Actions.OnRemove.After = clear(c.Actions.OnRemove.After)
-	c.Actions.OnRemove.Before = clear(c.Actions.OnRemove.Before)
-	c.Actions.OnRemove.OnSuccess = clear(c.Actions.OnRemove.OnSuccess)
-	c.Actions.OnRemove.OnFailure = clear(c.Actions.OnRemove.OnFailure)
+	mc.Actions.OnRemove.After = clear(mc.Actions.OnRemove.After)
+	mc.Actions.OnRemove.Before = clear(mc.Actions.OnRemove.Before)
+	mc.Actions.OnRemove.OnSuccess = clear(mc.Actions.OnRemove.OnSuccess)
+	mc.Actions.OnRemove.OnFailure = clear(mc.Actions.OnRemove.OnFailure)
 
-	return c
+	return mc
 }
 
 func (m migrateSetVariableToSetVariables) migrate() (types.ZarfComponent, string) {

@@ -44,7 +44,7 @@ var breakingChanges = []BreakingChange{
 
 type migration interface {
 	name() string
-	postbuild() types.ZarfComponent
+	clear() types.ZarfComponent
 	migrate() (types.ZarfComponent, string)
 }
 
@@ -63,7 +63,7 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 	for _, m := range migrations {
 		// If the component has already been migrated, run the postbuild function.
 		if slices.Contains(build.Migrations, m.name()) {
-			migratedComponent = m.postbuild()
+			migratedComponent = m.clear()
 		} else {
 			// Otherwise, run the migration.
 			var warning string
