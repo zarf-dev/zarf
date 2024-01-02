@@ -10,17 +10,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-type migrateSetVariableToSetVariables struct {
-	component types.ZarfComponent
-}
+type migrateSetVariableToSetVariables struct{}
 
 func (m migrateSetVariableToSetVariables) name() string {
 	return PluralizeSetVariable
 }
 
 // If the component has already been migrated, clear the deprecated setVariable.
-func (m migrateSetVariableToSetVariables) clear() types.ZarfComponent {
-	mc := m.component
+func (m migrateSetVariableToSetVariables) clear(mc types.ZarfComponent) types.ZarfComponent {
 	clear := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
 		for i := range actions {
 			actions[i].DeprecatedSetVariable = ""
@@ -50,8 +47,7 @@ func (m migrateSetVariableToSetVariables) clear() types.ZarfComponent {
 	return mc
 }
 
-func (m migrateSetVariableToSetVariables) migrate() (types.ZarfComponent, string) {
-	c := m.component
+func (m migrateSetVariableToSetVariables) run(c types.ZarfComponent) (types.ZarfComponent, string) {
 	hasSetVariable := false
 
 	migrate := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {

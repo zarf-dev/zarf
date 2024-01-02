@@ -264,7 +264,7 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 		node = node.next
 	}
 	if len(warnings) > 0 {
-		final := fmt.Sprintf("migrations were performed on the import chain of: %q", ic.head.Name)
+		final := fmt.Sprintf("Migrations were performed on the import chain of: %q", ic.head.Name)
 		warnings = append(warnings, final)
 	}
 	return warnings

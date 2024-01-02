@@ -11,25 +11,20 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-type migrateRequiredToOptional struct {
-	component types.ZarfComponent
-}
+type migrateRequiredToOptional struct{}
 
 func (m migrateRequiredToOptional) name() string {
 	return RequiredToOptional
 }
 
 // If the component has already been migrated, clear the deprecated required.
-func (m migrateRequiredToOptional) clear() types.ZarfComponent {
-	mc := m.component
+func (m migrateRequiredToOptional) clear(mc types.ZarfComponent) types.ZarfComponent {
 	mc.DeprecatedRequired = nil
 	return mc
 }
 
-// migrate converts the deprecated required to the new optional
-func (m migrateRequiredToOptional) migrate() (types.ZarfComponent, string) {
-	c := m.component
-
+// run converts the deprecated required to the new optional
+func (m migrateRequiredToOptional) run(c types.ZarfComponent) (types.ZarfComponent, string) {
 	if c.DeprecatedRequired == nil {
 		return c, ""
 	}

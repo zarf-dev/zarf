@@ -6,6 +6,7 @@ metadata:
 components:
   # Test that prepare scripts become onCreate actions
   - name: 1-test-deprecated-prepare-scripts
+    optional: true
     scripts:
       prepare:
         # on Windows, touch is replaced with New-Item
@@ -13,6 +14,7 @@ components:
 
   # Test that deploy scripts become onCreate actions
   - name: 2-test-deprecated-deploy-scripts
+    optional: true
     scripts:
       before:
         - touch test-deprecated-deploy-before-hook.txt
@@ -21,6 +23,7 @@ components:
 
   # Test that script timeouts still get set
   - name: 3-test-deprecated-timeout-scripts
+    optional: true
     scripts:
       timeoutSeconds: 1
       before:

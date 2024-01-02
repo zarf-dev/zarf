@@ -44,8 +44,8 @@ var breakingChanges = []BreakingChange{
 
 type migration interface {
 	name() string
-	clear() types.ZarfComponent
-	migrate() (types.ZarfComponent, string)
+	clear(mc types.ZarfComponent) types.ZarfComponent
+	run(c types.ZarfComponent) (types.ZarfComponent, string)
 }
 
 // MigrateComponent runs all migrations on a component.
@@ -54,20 +54,19 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 	migratedComponent = component
 
 	migrations := []migration{
-		migrateScriptsToActions{migratedComponent},
-		migrateSetVariableToSetVariables{migratedComponent},
-		migrateRequiredToOptional{migratedComponent},
+		migrateScriptsToActions{},
+		migrateSetVariableToSetVariables{},
+		migrateRequiredToOptional{},
 	}
 
 	// Run all migrations
 	for _, m := range migrations {
-		// If the component has already been migrated, run the postbuild function.
 		if slices.Contains(build.Migrations, m.name()) {
-			migratedComponent = m.clear()
+			migratedComponent = m.clear(migratedComponent)
 		} else {
 			// Otherwise, run the migration.
 			var warning string
-			if migratedComponent, warning = m.migrate(); warning != "" {
+			if migratedComponent, warning = m.run(migratedComponent); warning != "" {
 				warnings = append(warnings, warning)
 			}
 		}
