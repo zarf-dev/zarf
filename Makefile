@@ -199,6 +199,7 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 .PHONY: test-unit
 test-unit: ## Run unit tests
 	cd src/pkg && go test ./... -failfast -v -timeout 30m
+	cd src/types && go test ./... -failfast -v -timeout 30m
 	cd src/internal && go test ./... -failfast -v timeout 30m
 	cd src/extensions/bigbang && go test ./. -failfast -v timeout 30m
 

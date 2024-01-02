@@ -73,12 +73,11 @@ func (c ZarfComponent) IsRequired() bool {
 	required := requiredExists && *c.DeprecatedRequired
 	optional := optionalExists && *c.Optional
 
-	if requiredExists && optionalExists {
-		return required && !optional
+	// optional "wins" when defined
+	if optionalExists {
+		return !optional
 	} else if requiredExists {
 		return required
-	} else if optionalExists {
-		return !optional
 	}
 
 	// If neither required nor optional are set, then the component is required
