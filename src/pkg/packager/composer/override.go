@@ -13,7 +13,12 @@ import (
 func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) error {
 	c.Name = override.Name
 	c.Default = override.Default
-	c.Required = override.Required
+	if override.DeprecatedRequired != nil {
+		c.DeprecatedRequired = override.DeprecatedRequired
+	}
+	if override.Optional != nil {
+		c.Optional = override.Optional
+	}
 
 	// Override description if it was provided.
 	if override.Description != "" {

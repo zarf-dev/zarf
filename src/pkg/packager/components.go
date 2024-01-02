@@ -61,7 +61,7 @@ func (p *Packager) getSelectedComponents() []types.ZarfComponent {
 
 				selectState, matchedRequest := includedOrExcluded(component, requestedComponents)
 
-				if !component.Required {
+				if !component.IsRequired() {
 					if selectState == excluded {
 						// If the component was explicitly excluded, record the match and continue
 						matchedRequests[matchedRequest] = true
@@ -117,7 +117,7 @@ func (p *Packager) getSelectedComponents() []types.ZarfComponent {
 			} else {
 				component := groupedComponents[groupKey][0]
 
-				if component.Required {
+				if component.IsRequired() {
 					selectedComponents = append(selectedComponents, component)
 				} else if selected := interactive.SelectOptionalComponent(component); selected {
 					selectedComponents = append(selectedComponents, component)

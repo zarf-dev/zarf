@@ -102,7 +102,7 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	}
 	for _, component := range pkg.Components {
 		// If we requested this component, or it is required, we need to pull its images and tarball
-		if slices.Contains(requestedComponents, component.Name) || component.Required {
+		if slices.Contains(requestedComponents, component.Name) || component.IsRequired() {
 			for _, image := range component.Images {
 				images[image] = true
 			}

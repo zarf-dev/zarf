@@ -21,8 +21,10 @@ type ZarfComponent struct {
 	// Default changes the default option when deploying this component
 	Default bool `json:"default,omitempty" jsonschema:"description=Determines the default Y/N state for installing this component on package deploy"`
 
-	// Required makes this component mandatory for package deployment
-	Required bool `json:"required,omitempty" jsonschema:"description=Do not prompt user to install this component, always install on package deploy"`
+	// DeprecatedRequired makes this component mandatory for package deployment
+	DeprecatedRequired *bool `json:"required,omitempty" jsonschema:"description=[Deprecated] Do not prompt user to install this component, always install on package deploy. This will be removed in Zarf v1.0.0.,deprecated=true"`
+
+	Optional *bool `json:"optional,omitempty" jsonschema:"description=Prompt user to install this component on package deploy, defaults to false"`
 
 	// Only include compatible components during package deployment
 	Only ZarfComponentOnlyTarget `json:"only,omitempty" jsonschema:"description=Filter when this component is included in package creation or deployment"`
@@ -63,6 +65,24 @@ type ZarfComponent struct {
 
 	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
 	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
+}
+
+func (c ZarfComponent) IsRequired() bool {
+	requiredExists := c.DeprecatedRequired != nil
+	optionalExists := c.Optional != nil
+	required := requiredExists && *c.DeprecatedRequired
+	optional := optionalExists && *c.Optional
+
+	if requiredExists && optionalExists {
+		return required && !optional
+	} else if requiredExists {
+		return required
+	} else if optionalExists {
+		return !optional
+	}
+
+	// If neither required nor optional are set, then the component is required
+	return true
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
