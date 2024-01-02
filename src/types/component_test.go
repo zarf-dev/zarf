@@ -4,7 +4,11 @@
 // Package types contains all the types used by Zarf.
 package types
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+)
 
 func TestZarfComponent_IsRequired(t *testing.T) {
 	tests := []struct {
@@ -15,7 +19,7 @@ func TestZarfComponent_IsRequired(t *testing.T) {
 		{
 			name: "Test when DeprecatedRequired is true and Optional is nil",
 			component: ZarfComponent{
-				DeprecatedRequired: BoolPtr(true),
+				DeprecatedRequired: helpers.BoolPtr(true),
 				Optional:           nil,
 			},
 			want: true,
@@ -23,16 +27,16 @@ func TestZarfComponent_IsRequired(t *testing.T) {
 		{
 			name: "Test when DeprecatedRequired is true and Optional is false",
 			component: ZarfComponent{
-				DeprecatedRequired: BoolPtr(true),
-				Optional:           BoolPtr(false),
+				DeprecatedRequired: helpers.BoolPtr(true),
+				Optional:           helpers.BoolPtr(false),
 			},
 			want: true,
 		},
 		{
 			name: "Test when DeprecatedRequired is true and Optional is true",
 			component: ZarfComponent{
-				DeprecatedRequired: BoolPtr(true),
-				Optional:           BoolPtr(true),
+				DeprecatedRequired: helpers.BoolPtr(true),
+				Optional:           helpers.BoolPtr(true),
 			},
 			// optional "wins" when defined
 			want: false,
@@ -40,7 +44,7 @@ func TestZarfComponent_IsRequired(t *testing.T) {
 		{
 			name: "Test when DeprecatedRequired is false and Optional is nil",
 			component: ZarfComponent{
-				DeprecatedRequired: BoolPtr(false),
+				DeprecatedRequired: helpers.BoolPtr(false),
 				Optional:           nil,
 			},
 			want: false,
@@ -48,8 +52,8 @@ func TestZarfComponent_IsRequired(t *testing.T) {
 		{
 			name: "Test when DeprecatedRequired is false and Optional is false",
 			component: ZarfComponent{
-				DeprecatedRequired: BoolPtr(false),
-				Optional:           BoolPtr(false),
+				DeprecatedRequired: helpers.BoolPtr(false),
+				Optional:           helpers.BoolPtr(false),
 			},
 			// optional "wins" when defined
 			want: true,
@@ -57,8 +61,8 @@ func TestZarfComponent_IsRequired(t *testing.T) {
 		{
 			name: "Test when DeprecatedRequired is false and Optional is true",
 			component: ZarfComponent{
-				DeprecatedRequired: BoolPtr(false),
-				Optional:           BoolPtr(true),
+				DeprecatedRequired: helpers.BoolPtr(false),
+				Optional:           helpers.BoolPtr(true),
 			},
 			// optional "wins" when defined
 			want: false,
@@ -76,7 +80,7 @@ func TestZarfComponent_IsRequired(t *testing.T) {
 			name: "Test when DeprecatedRequired is nil and Optional is false",
 			component: ZarfComponent{
 				DeprecatedRequired: nil,
-				Optional:           BoolPtr(false),
+				Optional:           helpers.BoolPtr(false),
 			},
 			// optional "wins" when defined
 			want: true,
@@ -85,7 +89,7 @@ func TestZarfComponent_IsRequired(t *testing.T) {
 			name: "Test when DeprecatedRequired is nil and Optional is true",
 			component: ZarfComponent{
 				DeprecatedRequired: nil,
-				Optional:           BoolPtr(true),
+				Optional:           helpers.BoolPtr(true),
 			},
 			// optional "wins" when defined
 			want: false,
@@ -99,9 +103,4 @@ func TestZarfComponent_IsRequired(t *testing.T) {
 			}
 		})
 	}
-}
-
-// BoolPtr is a helper function for creating a pointer to a bool.
-func BoolPtr(b bool) *bool {
-	return &b
 }

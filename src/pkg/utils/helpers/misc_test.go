@@ -187,6 +187,16 @@ func (suite *TestMiscSuite) Test_6_MergeNonZero() {
 	suite.Equal("world", result.field3)
 }
 
+func (suite *TestMiscSuite) TestBoolPtr() {
+	suite.Equal(true, *BoolPtr(true))
+	suite.Equal(false, *BoolPtr(false))
+	a := BoolPtr(true)
+	b := BoolPtr(true)
+	// This is a pointer comparison, not a value comparison
+	suite.False(a == b)
+	suite.True(*a == *b)
+}
+
 func TestMisc(t *testing.T) {
 	suite.Run(t, new(TestMiscSuite))
 }
