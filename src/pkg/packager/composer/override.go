@@ -7,20 +7,13 @@ package composer
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) error {
 	c.Name = override.Name
 	c.Default = override.Default
-	// Only override "optional" with the value from the override
-	// if "required" is neither nil, nor false.
-	if override.DeprecatedRequired != nil && override.DeprecatedRequired == helpers.BoolPtr(true) {
-		c.Optional = helpers.BoolPtr(false)
-	} else if override.Optional != nil {
-		c.Optional = override.Optional
-	}
+	c.Optional = override.Optional
 
 	// Override description if it was provided.
 	if override.Description != "" {

@@ -107,7 +107,7 @@ func (p *Packager) writeYaml() error {
 
 	// Record the migrations that will be run on the package.
 	p.cfg.Pkg.Build.Migrations = []string{
-		deprecated.ScriptsToActionsMigrated,
+		deprecated.ScriptsToActions,
 		deprecated.PluralizeSetVariable,
 	}
 

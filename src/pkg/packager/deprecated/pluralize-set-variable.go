@@ -10,7 +10,48 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func migrateSetVariableToSetVariables(c types.ZarfComponent) (types.ZarfComponent, string) {
+type migrateSetVariableToSetVariables struct {
+	component types.ZarfComponent
+}
+
+func (m migrateSetVariableToSetVariables) name() string {
+	return PluralizeSetVariable
+}
+
+// If the component has already been migrated, clear the deprecated setVariable.
+func (m migrateSetVariableToSetVariables) postbuild() types.ZarfComponent {
+	c := m.component
+	clear := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
+		for i := range actions {
+			actions[i].DeprecatedSetVariable = ""
+		}
+
+		return actions
+	}
+
+	// Clear OnCreate SetVariables
+	c.Actions.OnCreate.After = clear(c.Actions.OnCreate.After)
+	c.Actions.OnCreate.Before = clear(c.Actions.OnCreate.Before)
+	c.Actions.OnCreate.OnSuccess = clear(c.Actions.OnCreate.OnSuccess)
+	c.Actions.OnCreate.OnFailure = clear(c.Actions.OnCreate.OnFailure)
+
+	// Clear OnDeploy SetVariables
+	c.Actions.OnDeploy.After = clear(c.Actions.OnDeploy.After)
+	c.Actions.OnDeploy.Before = clear(c.Actions.OnDeploy.Before)
+	c.Actions.OnDeploy.OnSuccess = clear(c.Actions.OnDeploy.OnSuccess)
+	c.Actions.OnDeploy.OnFailure = clear(c.Actions.OnDeploy.OnFailure)
+
+	// Clear OnRemove SetVariables
+	c.Actions.OnRemove.After = clear(c.Actions.OnRemove.After)
+	c.Actions.OnRemove.Before = clear(c.Actions.OnRemove.Before)
+	c.Actions.OnRemove.OnSuccess = clear(c.Actions.OnRemove.OnSuccess)
+	c.Actions.OnRemove.OnFailure = clear(c.Actions.OnRemove.OnFailure)
+
+	return c
+}
+
+func (m migrateSetVariableToSetVariables) migrate() (types.ZarfComponent, string) {
+	c := m.component
 	hasSetVariable := false
 
 	migrate := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
@@ -53,34 +94,4 @@ func migrateSetVariableToSetVariables(c types.ZarfComponent) (types.ZarfComponen
 	}
 
 	return c, ""
-}
-
-func clearSetVariables(c types.ZarfComponent) types.ZarfComponent {
-	clear := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
-		for i := range actions {
-			actions[i].DeprecatedSetVariable = ""
-		}
-
-		return actions
-	}
-
-	// Clear OnCreate SetVariables
-	c.Actions.OnCreate.After = clear(c.Actions.OnCreate.After)
-	c.Actions.OnCreate.Before = clear(c.Actions.OnCreate.Before)
-	c.Actions.OnCreate.OnSuccess = clear(c.Actions.OnCreate.OnSuccess)
-	c.Actions.OnCreate.OnFailure = clear(c.Actions.OnCreate.OnFailure)
-
-	// Clear OnDeploy SetVariables
-	c.Actions.OnDeploy.After = clear(c.Actions.OnDeploy.After)
-	c.Actions.OnDeploy.Before = clear(c.Actions.OnDeploy.Before)
-	c.Actions.OnDeploy.OnSuccess = clear(c.Actions.OnDeploy.OnSuccess)
-	c.Actions.OnDeploy.OnFailure = clear(c.Actions.OnDeploy.OnFailure)
-
-	// Clear OnRemove SetVariables
-	c.Actions.OnRemove.After = clear(c.Actions.OnRemove.After)
-	c.Actions.OnRemove.Before = clear(c.Actions.OnRemove.Before)
-	c.Actions.OnRemove.OnSuccess = clear(c.Actions.OnRemove.OnSuccess)
-	c.Actions.OnRemove.OnFailure = clear(c.Actions.OnRemove.OnFailure)
-
-	return c
 }

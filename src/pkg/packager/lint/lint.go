@@ -110,7 +110,7 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 		validator.addWarning(validatorMessage{
 			description:    err.Error(),
 			packageRelPath: node.ImportLocation(),
-			packageName:    node.GetOriginalPackageName(),
+			packageName:    node.OriginalPackageName(),
 		})
 	}
 	templateMap := map[string]string{}
@@ -121,7 +121,7 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 			validator.addWarning(validatorMessage{
 				description:    err.Error(),
 				packageRelPath: node.ImportLocation(),
-				packageName:    node.GetOriginalPackageName(),
+				packageName:    node.OriginalPackageName(),
 			})
 		}
 
@@ -130,7 +130,7 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 				validator.addWarning(validatorMessage{
 					description:    fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key),
 					packageRelPath: node.ImportLocation(),
-					packageName:    node.GetOriginalPackageName(),
+					packageName:    node.OriginalPackageName(),
 				})
 			}
 			_, present := createOpts.SetVariables[key]
@@ -138,7 +138,7 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 				validator.addWarning(validatorMessage{
 					description:    lang.UnsetVarLintWarning,
 					packageRelPath: node.ImportLocation(),
-					packageName:    node.GetOriginalPackageName(),
+					packageName:    node.OriginalPackageName(),
 				})
 			}
 		}
@@ -179,12 +179,12 @@ func lintComponent(validator *Validator, node *composer.Node) {
 
 func checkForUnpinnedRepos(validator *Validator, node *composer.Node) {
 	for j, repo := range node.Repos {
-		repoYqPath := fmt.Sprintf(".components.[%d].repos.[%d]", node.GetIndex(), j)
+		repoYqPath := fmt.Sprintf(".components.[%d].repos.[%d]", node.Index(), j)
 		if !isPinnedRepo(repo) {
 			validator.addWarning(validatorMessage{
 				yqPath:         repoYqPath,
 				packageRelPath: node.ImportLocation(),
-				packageName:    node.GetOriginalPackageName(),
+				packageName:    node.OriginalPackageName(),
 				description:    "Unpinned repository",
 				item:           repo,
 			})
@@ -194,13 +194,13 @@ func checkForUnpinnedRepos(validator *Validator, node *composer.Node) {
 
 func checkForUnpinnedImages(validator *Validator, node *composer.Node) {
 	for j, image := range node.Images {
-		imageYqPath := fmt.Sprintf(".components.[%d].images.[%d]", node.GetIndex(), j)
+		imageYqPath := fmt.Sprintf(".components.[%d].images.[%d]", node.Index(), j)
 		pinnedImage, err := isPinnedImage(image)
 		if err != nil {
 			validator.addError(validatorMessage{
 				yqPath:         imageYqPath,
 				packageRelPath: node.ImportLocation(),
-				packageName:    node.GetOriginalPackageName(),
+				packageName:    node.OriginalPackageName(),
 				description:    "Invalid image reference",
 				item:           image,
 			})
@@ -210,7 +210,7 @@ func checkForUnpinnedImages(validator *Validator, node *composer.Node) {
 			validator.addWarning(validatorMessage{
 				yqPath:         imageYqPath,
 				packageRelPath: node.ImportLocation(),
-				packageName:    node.GetOriginalPackageName(),
+				packageName:    node.OriginalPackageName(),
 				description:    "Image not pinned with digest",
 				item:           image,
 			})
@@ -220,12 +220,12 @@ func checkForUnpinnedImages(validator *Validator, node *composer.Node) {
 
 func checkForUnpinnedFiles(validator *Validator, node *composer.Node) {
 	for j, file := range node.Files {
-		fileYqPath := fmt.Sprintf(".components.[%d].files.[%d]", node.GetIndex(), j)
+		fileYqPath := fmt.Sprintf(".components.[%d].files.[%d]", node.Index(), j)
 		if file.Shasum == "" && helpers.IsURL(file.Source) {
 			validator.addWarning(validatorMessage{
 				yqPath:         fileYqPath,
 				packageRelPath: node.ImportLocation(),
-				packageName:    node.GetOriginalPackageName(),
+				packageName:    node.OriginalPackageName(),
 				description:    "No shasum for remote file",
 				item:           file.Source,
 			})
@@ -236,18 +236,18 @@ func checkForUnpinnedFiles(validator *Validator, node *composer.Node) {
 func checkForVarInComponentImport(validator *Validator, node *composer.Node) {
 	if strings.Contains(node.Import.Path, types.ZarfPackageTemplatePrefix) {
 		validator.addWarning(validatorMessage{
-			yqPath:         fmt.Sprintf(".components.[%d].import.path", node.GetIndex()),
+			yqPath:         fmt.Sprintf(".components.[%d].import.path", node.Index()),
 			packageRelPath: node.ImportLocation(),
-			packageName:    node.GetOriginalPackageName(),
+			packageName:    node.OriginalPackageName(),
 			description:    "Zarf does not evaluate variables at component.x.import.path",
 			item:           node.Import.Path,
 		})
 	}
 	if strings.Contains(node.Import.URL, types.ZarfPackageTemplatePrefix) {
 		validator.addWarning(validatorMessage{
-			yqPath:         fmt.Sprintf(".components.[%d].import.url", node.GetIndex()),
+			yqPath:         fmt.Sprintf(".components.[%d].import.url", node.Index()),
 			packageRelPath: node.ImportLocation(),
-			packageName:    node.GetOriginalPackageName(),
+			packageName:    node.OriginalPackageName(),
 			description:    "Zarf does not evaluate variables at component.x.import.url",
 			item:           node.Import.URL,
 		})

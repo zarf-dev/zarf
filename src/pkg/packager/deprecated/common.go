@@ -27,9 +27,10 @@ type BreakingChange struct {
 // List of migrations tracked in the zarf.yaml build data.
 const (
 	// This should be updated when a breaking change is introduced to the Zarf package structure.  See: https://github.com/defenseunicorns/zarf/releases/tag/v0.27.0
-	LastNonBreakingVersion   = "v0.27.0"
-	ScriptsToActionsMigrated = "scripts-to-actions"
-	PluralizeSetVariable     = "pluralize-set-variable"
+	LastNonBreakingVersion = "v0.27.0"
+	ScriptsToActions       = "scripts-to-actions"
+	PluralizeSetVariable   = "pluralize-set-variable"
+	RequiredToOptional     = "required-to-optional"
 )
 
 // List of breaking changes to warn the user of.
@@ -41,30 +42,34 @@ var breakingChanges = []BreakingChange{
 	},
 }
 
+type migration interface {
+	name() string
+	postbuild() types.ZarfComponent
+	migrate() (types.ZarfComponent, string)
+}
+
 // MigrateComponent runs all migrations on a component.
 // Build should be empty on package create, but include just in case someone copied a zarf.yaml from a zarf package.
 func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) (migratedComponent types.ZarfComponent, warnings []string) {
 	migratedComponent = component
 
-	// If the component has already been migrated, clear the deprecated scripts.
-	if slices.Contains(build.Migrations, ScriptsToActionsMigrated) {
-		migratedComponent.DeprecatedScripts = types.DeprecatedZarfComponentScripts{}
-	} else {
-		// Otherwise, run the migration.
-		var warning string
-		if migratedComponent, warning = migrateScriptsToActions(migratedComponent); warning != "" {
-			warnings = append(warnings, warning)
-		}
+	migrations := []migration{
+		migrateScriptsToActions{migratedComponent},
+		migrateSetVariableToSetVariables{migratedComponent},
+		migrateRequiredToOptional{migratedComponent},
 	}
 
-	// If the component has already been migrated, clear the setVariable definitions.
-	if slices.Contains(build.Migrations, PluralizeSetVariable) {
-		migratedComponent = clearSetVariables(migratedComponent)
-	} else {
-		// Otherwise, run the migration.
-		var warning string
-		if migratedComponent, warning = migrateSetVariableToSetVariables(migratedComponent); warning != "" {
-			warnings = append(warnings, warning)
+	// Run all migrations
+	for _, m := range migrations {
+		// If the component has already been migrated, run the postbuild function.
+		if slices.Contains(build.Migrations, m.name()) {
+			migratedComponent = m.postbuild()
+		} else {
+			// Otherwise, run the migration.
+			var warning string
+			if migratedComponent, warning = m.migrate(); warning != "" {
+				warnings = append(warnings, warning)
+			}
 		}
 	}
 
