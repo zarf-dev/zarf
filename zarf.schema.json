@@ -225,7 +225,11 @@
         },
         "required": {
           "type": "boolean",
-          "description": "Do not prompt user to install this component"
+          "description": "[Deprecated] Do not prompt user to install this component"
+        },
+        "optional": {
+          "type": "boolean",
+          "description": "Prompt user to install this component on package deploy"
         },
         "only": {
           "$schema": "http://json-schema.org/draft-04/schema#",
