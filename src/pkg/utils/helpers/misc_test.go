@@ -46,7 +46,7 @@ func (suite *TestMiscSuite) SetupSuite() {
 	}
 }
 
-func (suite *TestMiscSuite) Test_0_Retry() {
+func (suite *TestMiscSuite) TestRetry() {
 	var count int
 	countFn := func() error {
 		count++
@@ -75,7 +75,7 @@ func (suite *TestMiscSuite) Test_0_Retry() {
 	suite.Equal(3, logCount)
 }
 
-func (suite *TestMiscSuite) Test_1_MergeMap() {
+func (suite *TestMiscSuite) TestMergeMap() {
 	expected := map[string]interface{}{
 		"different": "value",
 		"hello":     "it's me",
@@ -90,7 +90,7 @@ func (suite *TestMiscSuite) Test_1_MergeMap() {
 	suite.Equal(expected, result)
 }
 
-func (suite *TestMiscSuite) Test_2_TransformMapKeys() {
+func (suite *TestMiscSuite) TestTransformMapKeys() {
 	expected := map[string]interface{}{
 		"HELLO":  "world",
 		"UNIQUE": "value",
@@ -104,7 +104,7 @@ func (suite *TestMiscSuite) Test_2_TransformMapKeys() {
 	suite.Equal(expected, result)
 }
 
-func (suite *TestMiscSuite) Test_3_TransformAndMergeMap() {
+func (suite *TestMiscSuite) TestTransformAndMergeMap() {
 	expected := map[string]interface{}{
 		"DIFFERENT": "value",
 		"HELLO":     "it's me",
@@ -119,7 +119,7 @@ func (suite *TestMiscSuite) Test_3_TransformAndMergeMap() {
 	suite.Equal(expected, result)
 }
 
-func (suite *TestMiscSuite) Test_4_MergeMapRecursive() {
+func (suite *TestMiscSuite) TestMergeMapRecursive() {
 	expected := map[string]interface{}{
 		"different": "value",
 		"hello":     "it's me",
@@ -135,7 +135,7 @@ func (suite *TestMiscSuite) Test_4_MergeMapRecursive() {
 	suite.Equal(expected, result)
 }
 
-func (suite *TestMiscSuite) Test_5_IsNotZeroAndNotEqual() {
+func (suite *TestMiscSuite) TestIsNotZeroAndNotEqual() {
 	original := TestMiscStruct{
 		Field1: "hello",
 		Field2: 100,
@@ -159,7 +159,7 @@ func (suite *TestMiscSuite) Test_5_IsNotZeroAndNotEqual() {
 	suite.Equal(true, result)
 }
 
-func (suite *TestMiscSuite) Test_6_MergeNonZero() {
+func (suite *TestMiscSuite) TestMergeNonZero() {
 	original := TestMiscStruct{
 		Field1: "hello",
 		Field2: 100,
