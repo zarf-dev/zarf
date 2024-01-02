@@ -6,7 +6,6 @@ metadata:
 
 components:
   - name: versioned-assets
-    required: true
     images:
       - ghcr.io/stefanprodan/podinfo:6.0.0
       - ghcr.io/defenseunicorns/zarf/agent:###ZARF_PKG_TMPL_PACKAGE_VERSION###
@@ -15,7 +14,6 @@ components:
       - https://github.com/defenseunicorns/zarf.git@refs/tags/###ZARF_PKG_TMPL_PACKAGE_VERSION###
 
   - name: generalized-assets
-    required: true
     images:
       - ghcr.io/stefanprodan/podinfo:latest
     repos:

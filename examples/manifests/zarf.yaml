@@ -5,7 +5,6 @@ metadata:
 
 components:
   - name: httpd-local
-    required: true
     manifests:
       - name: simple-httpd-deployment
         namespace: httpd
@@ -28,7 +27,6 @@ components:
     images:
       - httpd:alpine3.18
   - name: nginx-remote
-    required: true
     manifests:
       - name: simple-nginx-deployment
         namespace: nginx
@@ -54,7 +52,6 @@ components:
     images:
       - nginx:1.14.2
   - name: podinfo-kustomize
-    required: true
     manifests:
       - name: simple-podinfo-deployment
         namespace: podinfo

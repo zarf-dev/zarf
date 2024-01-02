@@ -28,7 +28,6 @@ variables:
 
 components:
   - name: load-eksctl
-    required: true
     files:
       - source: eks.yaml
         target: eks.yaml
@@ -49,6 +48,7 @@ components:
         extractPath: eksctl
 
   - name: deploy-eks-cluster
+    optional: true
     description: Create an EKS cluster!
     actions:
       onDeploy:
@@ -59,6 +59,7 @@ components:
           - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) utils write-kubeconfig -c ${ZARF_VAR_EKS_CLUSTER_NAME}
 
   - name: teardown-eks-cluster
+    optional: true
     description: Delete the EKS cluster that this package was used to create.
     actions:
       onDeploy:

@@ -6,7 +6,6 @@ metadata:
 
 components:
   - name: demo-helm-local-chart
-    required: false
     charts:
       - name: podinfo
         version: 6.4.0

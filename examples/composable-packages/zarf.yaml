@@ -5,8 +5,8 @@ metadata:
 
 components:
   - name: local-games-path
-    # The component logic keys ('required', 'group', and 'default') always override those of the imported package
-    required: true
+    # The component logic keys ('optional', 'group', and 'default') always override those of the imported package
+    optional: false
     # group: ""         # the initial value overrides the child component
     # default: false    # the initial value overrides the child component
     description: "Example of a local composed package with a unique description for this component"
@@ -25,8 +25,8 @@ components:
           - quake-service.yaml
 
   - name: oci-games-url
-    # The component logic keys ('required', 'group', and 'default') always override those of the imported package
-    # required: false   # the initial value overrides the child component
+    # The component logic keys ('optional', 'group', and 'default') always override those of the imported package
+    # optional: false   # the initial value overrides the child component
     # group: ""         # the initial value overrides the child component
     # default: false    # the initial value overrides the child component
     import:

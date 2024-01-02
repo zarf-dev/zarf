@@ -14,7 +14,6 @@ variables:
 
 components:
   - name: bigbang
-    required: true
     extensions:
       bigbang:
         repo: https://github.com/DoD-Platform-One/big-bang.git

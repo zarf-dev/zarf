@@ -6,7 +6,6 @@ metadata:
 components:
   - name: test-compose-package
     description: A contrived example for podinfo using many Zarf primitives for compose testing
-    required: true
     import:
       path: sub-package
       name: test-compose-sub-package

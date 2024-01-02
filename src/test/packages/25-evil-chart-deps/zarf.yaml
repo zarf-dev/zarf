@@ -5,7 +5,6 @@ metadata:
 
 components:
   - name: good
-    required: true
     charts:
       - name: dogs
         localPath: good-chart
@@ -13,7 +12,6 @@ components:
         namespace: good
 
   - name: bad
-    required: true
     charts:
       - name: cats
         localPath: bad-chart

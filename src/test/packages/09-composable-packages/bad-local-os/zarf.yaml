@@ -8,7 +8,6 @@ components:
     description: A contrived example for localOS compose testing
     only:
       localOS: windows
-    required: true
     import:
       path: ../sub-package
       name: test-compose-sub-package

@@ -16,7 +16,6 @@ components:
       images and git repository references in Kubernetes manifests. This prevents
       the need to manually update URLs from their original sources to the Zarf-managed
       docker registry and git server.
-    required: true
     images:
       - "###ZARF_PKG_TMPL_AGENT_IMAGE_DOMAIN######ZARF_PKG_TMPL_AGENT_IMAGE###:###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###"
     manifests:

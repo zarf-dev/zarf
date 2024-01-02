@@ -22,14 +22,12 @@ variables:
 
 components:
   - name: flux-private-registry
-    required: true
     manifests:
       - name: private-registry
         namespace: flux-system
         files:
           - private-registry.yaml
   - name: bigbang
-    required: true
     extensions:
       bigbang:
         # renovate: datasource=gitlab-releases depName=big-bang/bigbang versioning=semver registryUrl=https://repo1.dso.mil/

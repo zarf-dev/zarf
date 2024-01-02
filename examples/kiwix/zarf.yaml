@@ -8,7 +8,6 @@ metadata:
 
 components:
   - name: kiwix-serve
-    required: true
     manifests:
       - name: kiwix-serve
         namespace: kiwix

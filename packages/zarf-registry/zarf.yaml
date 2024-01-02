@@ -70,7 +70,6 @@ components:
     description: |
       Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
       Removed and destroyed after the Zarf Registry is self-hosting the registry image.
-    required: true
     only:
       cluster:
         architecture: amd64
@@ -85,7 +84,6 @@ components:
     description: |
       Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
       Removed and destroyed after the Zarf Registry is self-hosting the registry image.
-    required: true
     only:
       cluster:
         architecture: arm64
@@ -97,6 +95,7 @@ components:
         executable: true
 
   - name: zarf-seed-registry
+    optional: true
     description: |
       Deploys the Zarf Registry using the registry image provided by the Zarf Injector.
     charts:

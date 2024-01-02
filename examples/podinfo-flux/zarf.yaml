@@ -6,7 +6,6 @@ metadata:
 components:
   - name: flux
     description: Installs the flux CRDs / controllers to use flux-based deployments in the cluster
-    required: true
     manifests:
       - name: flux-crds
         namespace: flux
@@ -18,7 +17,6 @@ components:
 
   - name: podinfo-via-flux
     description: Example deployment via flux using the famous podinfo example
-    required: true
     manifests:
       - name: podinfo-via-flux
         namespace: podinfo

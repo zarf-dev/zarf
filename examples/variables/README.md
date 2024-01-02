@@ -133,7 +133,6 @@ constants:
 
 components:
   - name: zarf-prompt-image
-    required: true
     images:
       - '###ZARF_PKG_TMPL_PROMPT_ON_CREATE###'
 ```

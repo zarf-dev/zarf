@@ -5,7 +5,6 @@ metadata:
 
 components:
   - name: on-deploy
-    required: true
     actions:
       # runs during "zarf package remove"
       onDeploy:

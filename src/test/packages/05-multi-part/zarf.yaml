@@ -5,7 +5,6 @@ metadata:
 
 components:
   - name: big-ol-file
-    required: true
     description: Single 5 MB file needed to demonstrate a multi-part package
     files:
       - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/examples/multi-part-demo.dat

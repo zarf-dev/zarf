@@ -87,7 +87,6 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 	suite.Contains(stdErr, `
 - name: test-compose-package
   description: A contrived example for podinfo using many Zarf primitives for compose testing
-  required: true
   only:
     localOS: linux
 `)

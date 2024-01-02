@@ -14,7 +14,6 @@ variables:
 
 components:
   - name: bigbang
-    required: true
     extensions:
       bigbang:
         version: "###ZARF_PKG_TMPL_BB_VERSION###"

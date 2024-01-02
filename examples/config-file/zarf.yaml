@@ -12,7 +12,6 @@ variables:
 components:
   - name: lion
     description: By default, only this component will be deployed when using the config file
-    required: true
     manifests:
       - name: config-example-configmap
         files:

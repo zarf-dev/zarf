@@ -6,7 +6,6 @@ metadata:
 
 components:
   - name: full-repo
-    required: true
     repos:
       # Do a full Git Repo Mirror
       - https://github.com/defenseunicorns/zarf-public-test.git
@@ -16,7 +15,6 @@ components:
       - https://github.com/defenseunicorns/golang-tekton-hello-world.git
 
   - name: specific-tag
-    required: true
     repos:
       # The following performs a tag Git Repo Mirror with `go-git` (internal to Zarf)
       - https://github.com/defenseunicorns/zarf-public-test.git@v0.0.1
@@ -33,7 +31,6 @@ components:
             maxRetries: 3
 
   - name: specific-branch
-    required: true
     repos:
       # The following performs a branch Git Repo Mirror with `go-git` (internal to Zarf)
       - https://github.com/defenseunicorns/zarf-public-test.git@refs/heads/dragons
@@ -48,7 +45,6 @@ components:
             maxRetries: 3
 
   - name: specific-hash
-    required: true
     repos:
       # The following performs a SHA Git Repo Mirror with `go-git` (internal to Zarf)
       - https://github.com/defenseunicorns/zarf-public-test.git@01a23218923f24194133b5eb11268cf8d73ff1bb

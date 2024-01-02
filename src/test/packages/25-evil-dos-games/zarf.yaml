@@ -5,7 +5,6 @@ metadata:
 
 components:
   - name: baseline
-    required: true
     manifests:
       - name: multi-games
         namespace: dos-games

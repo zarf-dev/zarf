@@ -9,7 +9,6 @@ variables:
 
 components:
   - name: folders
-    required: true
     files:
       - source: include-files
         target: temp/include-files
@@ -20,7 +19,6 @@ components:
           - cmd: cat temp/include-files/something.yaml
           - cmd: rm -r temp
   - name: files
-    required: true
     files:
       - source: requirements.txt
         target: temp/requirements.txt
