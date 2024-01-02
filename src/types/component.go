@@ -67,6 +67,17 @@ type ZarfComponent struct {
 	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
 }
 
+// IsRequired returns if the component is required or not.
+//
+// The logic is as follows:
+//
+// 1. If "optional" is set, then the component follows the inverse of that value
+//
+// 2. If "required" is set, then the component follows that value
+//
+// 3. If neither "optional" nor "required" are set, then the component is required
+//
+// Note: "required" is deprecated and will be removed in Zarf v1.0.0
 func (c ZarfComponent) IsRequired() bool {
 	requiredExists := c.DeprecatedRequired != nil
 	optionalExists := c.Optional != nil
