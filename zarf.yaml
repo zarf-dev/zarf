@@ -16,6 +16,7 @@ components:
 
   # Creates the temporary seed-registry
   - name: zarf-seed-registry
+    optional: false
     import:
       path: packages/zarf-registry
 
