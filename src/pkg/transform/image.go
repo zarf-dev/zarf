@@ -26,7 +26,7 @@ type Image struct {
 
 // MutateOCIURLsInText changes the oci url hostname to use the targetBaseURL.
 func MutateOCIURLsInText(logger Log, targetBaseURL, text string) string {
-	// For further explanation: https://regex101.com/r/UU7Gan/5
+	// For further explanation: https://regex101.com/r/UU7Gan/6
 	fuzzyOCIURLRegex := regexp.MustCompile(`oci:\/\/[^\s]+`)
 
 	// Use ReplaceAllStringFunc to replace matching URLs while preserving the path
@@ -46,7 +46,7 @@ func MutateOCIURLsInText(logger Log, targetBaseURL, text string) string {
 		}
 
 		// If the original reference did not contain a tag, return the transformed output without one too
-		if !strings.Contains(ref, ":") && !strings.Contains(ref, "@") {
+		if !(strings.Contains(ref, ":") || strings.Contains(ref, "@")) {
 			return helpers.OCIURLPrefix + outputRef.Name
 		}
 

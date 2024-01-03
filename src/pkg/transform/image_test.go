@@ -86,6 +86,7 @@ func TestMutateOCIUrlsInText(t *testing.T) {
 	stuff oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0-amd64 andthings
 	# And ones without tags or domains
 	oci://defenseunicorns/packages/dos-games
+	oci://localhost:555/defenseunicorns/packages/dos-games
 	# And ones with SHA digests
 	oci://localhost:555/defenseunicorns/packages/dos-games@sha256:f78e442f0f3eb3e9459b5ae6b1a8fda62f8dfe818112e7d130a4e8ae72b3cbff
 	# But not regular URLs
@@ -98,6 +99,7 @@ func TestMutateOCIUrlsInText(t *testing.T) {
 	# Even URLs with things on either side
 	stuff oci://new-replace-url.com/defenseunicorns/packages/dos-games:1.0.0-amd64-zarf-1025351377 andthings
 	# And ones without tags or domains
+	oci://new-replace-url.com/defenseunicorns/packages/dos-games
 	oci://new-replace-url.com/defenseunicorns/packages/dos-games
 	# And ones with SHA digests
 	oci://new-replace-url.com/defenseunicorns/packages/dos-games@sha256:f78e442f0f3eb3e9459b5ae6b1a8fda62f8dfe818112e7d130a4e8ae72b3cbff
