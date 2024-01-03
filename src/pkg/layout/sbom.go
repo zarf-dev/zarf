@@ -60,13 +60,8 @@ func (s *SBOMs) Archive() (err error) {
 	dir := s.Path
 	tb := filepath.Join(filepath.Dir(dir), SBOMTar)
 
-	allSBOMFiles, err := filepath.Glob(filepath.Join(dir, "*"))
-	if err != nil {
+	if err := utils.CreateReproducibleTarballFromDir(dir, "", tb); err != nil {
 		return err
-	}
-
-	if err = archiver.Archive(allSBOMFiles, tb); err != nil {
-		return
 	}
 	s.Path = tb
 	return os.RemoveAll(dir)
