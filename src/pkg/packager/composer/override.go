@@ -14,7 +14,7 @@ func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) erro
 	c.Name = override.Name
 	c.Default = override.Default
 	if override.DeprecatedRequired != nil {
-		return fmt.Errorf("component %q \"required\" is deprecated, please migrate to \"optional\"", c.Name)
+		return fmt.Errorf("component %q: \"required\" is deprecated, please migrate to \"optional\"", c.Name)
 	}
 	c.Optional = override.Optional
 
@@ -25,7 +25,7 @@ func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) erro
 
 	if override.Only.LocalOS != "" {
 		if c.Only.LocalOS != "" {
-			return fmt.Errorf("component %q \"only.localOS\" %q cannot be redefined as %q during compose", c.Name, c.Only.LocalOS, override.Only.LocalOS)
+			return fmt.Errorf("component %q: \"only.localOS\" %q cannot be redefined as %q during compose", c.Name, c.Only.LocalOS, override.Only.LocalOS)
 		}
 
 		c.Only.LocalOS = override.Only.LocalOS
