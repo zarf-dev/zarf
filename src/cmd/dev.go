@@ -122,7 +122,7 @@ var deprecatedDevTransformGitLinksCmd = &cobra.Command{
 	Short:   lang.CmdDevPatchGitShort,
 	Args:    cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		message.Warn(lang.CmdDevPatchGitDeprecated)
+		message.Warn(lang.CmdDevPatchGitDeprecation)
 		devPatchCmd.Run(devPatchCmd, append([]string{"git"}, args...))
 	},
 }

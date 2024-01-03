@@ -29,5 +29,5 @@ Commands useful for developing packages
 * [zarf dev find-images](zarf_dev_find-images.md)	 - Evaluates components in a Zarf file to identify images specified in their helm charts and manifests
 * [zarf dev generate-config](zarf_dev_generate-config.md)	 - Generates a config file for Zarf
 * [zarf dev lint](zarf_dev_lint.md)	 - Lints the given package for valid schema and recommended practices
-* [zarf dev patch](zarf_dev_patch.md)	 - Patches files to match Zarf's mutated airgap resource references
+* [zarf dev patch](zarf_dev_patch.md)	 - Manually patches files to match Zarf's mutated airgap resource references (not needed when using the Zarf agent)
 * [zarf dev sha256sum](zarf_dev_sha256sum.md)	 - Generates a SHA256SUM for the given file

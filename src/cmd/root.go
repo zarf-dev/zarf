@@ -49,10 +49,10 @@ var rootCmd = &cobra.Command{
 
 		if len(args) > 0 {
 			if strings.Contains(args[0], config.ZarfPackagePrefix) || strings.Contains(args[0], "zarf-init") {
-				message.Warnf(lang.RootCmdDeprecatedDeploy, args[0])
+				message.Warnf(lang.RootCmdDeployDeprecation, args[0])
 			}
 			if args[0] == layout.ZarfYAML {
-				message.Warn(lang.RootCmdDeprecatedCreate)
+				message.Warn(lang.RootCmdCreateDeprecation)
 			}
 		}
 	},

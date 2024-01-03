@@ -57,8 +57,8 @@ const (
 	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
 	RootCmdFlagInsecure    = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
-	RootCmdDeprecatedDeploy = "Deprecated: Please use \"zarf package deploy %s\" to deploy this package.  This warning will be removed in Zarf v1.0.0."
-	RootCmdDeprecatedCreate = "Deprecated: Please use \"zarf package create\" to create this package.  This warning will be removed in Zarf v1.0.0."
+	RootCmdDeployDeprecation = "Deprecated: Please use \"zarf package deploy %s\" to deploy this package.  This warning will be removed in Zarf v1.0.0."
+	RootCmdCreateDeprecation = "Deprecated: Please use \"zarf package create\" to create this package.  This warning will be removed in Zarf v1.0.0."
 
 	RootCmdErrInvalidLogLevel = "Invalid log level. Valid options are: warn, info, debug, trace."
 
@@ -357,8 +357,8 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
 	CmdDevPatchCredsMsg = "Zarf will not automatically add credentials to a manifest, please update the secret references manually as appropriate (i.e. 'private-registry' or 'private-git-server')."
-	CmdDevPatchShort    = "Patches files to match Zarf's mutated airgap resource references"
-	CmdDevPatchLong     = "Patches files to match Zarf's mutated airgap resource references. Useful when not using the Zarf Agent or needing to see how a given resource will be mutated."
+	CmdDevPatchShort    = "Manually patches files to match Zarf's mutated airgap resource references (not needed when using the Zarf agent)"
+	CmdDevPatchLong     = "Manually patches files to match Zarf's mutated airgap resource references. Useful when not using the Zarf Agent in your cluster or when you need to see how a given resource will be mutated in the airgap."
 	CmdDevPatchGitShort = "[Deprecated] Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
 	CmdDevPatchOverwritePrompt = "Overwrite the file %s with these changes?"
@@ -377,7 +377,7 @@ $ zarf prepare patch git http://zarf-gitea-http.zarf.svc.cluster.local:3000 ./ma
 $ zarf prepare patch oci 127.0.0.1:31999 ./manifest.yaml
 `
 
-	CmdDevPatchGitDeprecated = "Deprecated: This command has been replaced by 'zarf prepare patch git' and will be removed in Zarf v1.0.0."
+	CmdDevPatchGitDeprecation = "Deprecated: This command has been replaced by 'zarf prepare patch git' and will be removed in Zarf v1.0.0."
 
 	CmdDevSha256sumShort         = "Generates a SHA256SUM for the given file"
 	CmdDevSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
