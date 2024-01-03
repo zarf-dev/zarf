@@ -332,7 +332,7 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 	}
 	spinner.Updatef("Wrote %s to %s", p.layout.Base, destinationTarball)
 
-	f, err := os.Stat(destinationTarball)
+	fi, err := os.Stat(destinationTarball)
 	if err != nil {
 		return fmt.Errorf("unable to read the package archive: %w", err)
 	}
@@ -341,7 +341,7 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 	chunkSize := p.cfg.CreateOpts.MaxPackageSizeMB * 1000 * 1000
 
 	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
-	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && f.Size() > int64(chunkSize) {
+	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && fi.Size() > int64(chunkSize) {
 		spinner.Updatef("Package is larger than %dMB, splitting into multiple files", p.cfg.CreateOpts.MaxPackageSizeMB)
 		chunks, sha256sum, err := utils.SplitFile(destinationTarball, chunkSize)
 		if err != nil {
@@ -359,7 +359,7 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 		// Marshal the data into a json file.
 		jsonData, err := json.Marshal(types.ZarfSplitPackageData{
 			Count:     len(chunks),
-			Bytes:     f.Size(),
+			Bytes:     fi.Size(),
 			Sha256Sum: sha256sum,
 		})
 		if err != nil {
