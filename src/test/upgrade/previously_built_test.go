@@ -6,9 +6,11 @@ package upgrade
 
 import (
 	"context"
+	"fmt"
 	"path"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	test "github.com/defenseunicorns/zarf/src/test"
 	"github.com/stretchr/testify/require"
@@ -45,7 +47,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	require.Equal(t, zarfGitServerSecret, podinfoGitServerSecret, "the zarf git server secret and podinfo-upgrade git server secret did not match")
 
 	// We also expect a 6.3.4 package to have been previously built
-	previouslyBuiltPackage := "../../../zarf-package-test-upgrade-package-amd64-6.3.4.tar.zst"
+	previouslyBuiltPackage := fmt.Sprintf("../../../zarf-package-test-upgrade-package-%s-6.3.4.tar.zst", config.GetArch())
 
 	// Deploy the package.
 	zarfDeployArgs := []string{"package", "deploy", previouslyBuiltPackage, "--confirm"}
@@ -65,7 +67,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	// We also want to build a new package.
 	stdOut, stdErr, err = zarf("package", "create", "../../../src/test/upgrade", "--set", "PODINFO_VERSION=6.3.5", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	newlyBuiltPackage := "zarf-package-test-upgrade-package-amd64-6.3.5.tar.zst"
+	newlyBuiltPackage := fmt.Sprintf("zarf-package-test-upgrade-package-%s-6.3.5.tar.zst", config.GetArch())
 
 	// Deploy the package.
 	stdOut, stdErr, err = zarf("package", "deploy", newlyBuiltPackage, "--confirm")

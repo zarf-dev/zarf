@@ -69,7 +69,7 @@ jobs:
 
       - name: Initialize the cluster with the release version
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
-        #       in a previous step. This test run will the current release to create a K3s cluster.
+        #       in a previous step. This test run will use the current release to create a K3s cluster.
         run: |
           sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server,logging --nodeport 31337 --confirm
 
@@ -79,7 +79,7 @@ jobs:
 
       - name: Create and deploy the upgrade test packages
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
-        #       in a previous step. This test run will the current release to create a K3s cluster.
+        #       in a previous step. This test run will use the current release to create a K3s cluster.
         run: |
           zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.3 --confirm
           sudo env "PATH=$PATH" CI=true zarf package deploy zarf-package-test-upgrade-package-amd64-6.3.3.tar.zst --confirm
@@ -105,11 +105,9 @@ jobs:
 
       - name: Run the upgrade tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
-        #       in a previous step. This test run will the current release to create a K3s cluster.
+        #       in a previous step. This test run will use the current release to create a K3s cluster.
         run: |
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe nodes
-
-          zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.4 --confirm
 
           sudo env "PATH=$PATH" CI=true make test-upgrade ARCH=amd64
 
