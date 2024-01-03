@@ -106,11 +106,8 @@ func (p *Packager) writeYaml() error {
 	}
 
 	// Record the migrations that will be run on the package.
-	// TODO: (@razzle) Think about a better way to keep track of migrations.
-	p.cfg.Pkg.Build.Migrations = []string{
-		deprecated.ScriptsToActions,
-		deprecated.PluralizeSetVariable,
-		deprecated.RequiredToOptional,
+	for _, m := range deprecated.Migrations() {
+		p.cfg.Pkg.Build.Migrations = append(p.cfg.Pkg.Build.Migrations, m.ID())
 	}
 
 	// Record the flavor of Zarf used to build this package (if any).

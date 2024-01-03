@@ -24,14 +24,10 @@ type BreakingChange struct {
 	mitigation string
 }
 
-// List of migrations tracked in the zarf.yaml build data.
-const (
-	// This should be updated when a breaking change is introduced to the Zarf package structure.  See: https://github.com/defenseunicorns/zarf/releases/tag/v0.27.0
-	LastNonBreakingVersion = "v0.27.0"
-	ScriptsToActions       = "scripts-to-actions"
-	PluralizeSetVariable   = "pluralize-set-variable"
-	RequiredToOptional     = "required-to-optional"
-)
+// LastNonBreakingVersion is the last version that did not have any breaking changes
+//
+// This should be updated when a breaking change is introduced to the Zarf package structure.  See: https://github.com/defenseunicorns/zarf/releases/tag/v0.27.0
+const LastNonBreakingVersion = "v0.27.0"
 
 // List of breaking changes to warn the user of.
 var breakingChanges = []BreakingChange{
@@ -42,10 +38,25 @@ var breakingChanges = []BreakingChange{
 	},
 }
 
-type migration interface {
-	name() string
-	clear(mc types.ZarfComponent) types.ZarfComponent
-	run(c types.ZarfComponent) (types.ZarfComponent, string)
+// Migration represents a migration that can be run on a component.
+type Migration interface {
+	// ID returns the ID of the migration
+	ID() string
+	// Clear clears the deprecated configuration from the component
+	Clear(mc types.ZarfComponent) types.ZarfComponent
+	// Run runs the migration on the component
+	Run(c types.ZarfComponent) (types.ZarfComponent, string)
+}
+
+// Migrations returns a list of all current migrations.
+//
+// This function operates as the source of truth for consuming migrations.
+func Migrations() []Migration {
+	return []Migration{
+		ScriptsToActions{},
+		SetVariableToSetVariables{},
+		RequiredToOptional{},
+	}
 }
 
 // MigrateComponent runs all migrations on a component.
@@ -53,20 +64,14 @@ type migration interface {
 func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) (migratedComponent types.ZarfComponent, warnings []string) {
 	migratedComponent = component
 
-	migrations := []migration{
-		migrateScriptsToActions{},
-		migrateSetVariableToSetVariables{},
-		migrateRequiredToOptional{},
-	}
-
 	// Run all migrations
-	for _, m := range migrations {
-		if slices.Contains(build.Migrations, m.name()) {
-			migratedComponent = m.clear(migratedComponent)
+	for _, m := range Migrations() {
+		if slices.Contains(build.Migrations, m.ID()) {
+			migratedComponent = m.Clear(migratedComponent)
 		} else {
 			// Otherwise, run the migration.
 			var warning string
-			if migratedComponent, warning = m.run(migratedComponent); warning != "" {
+			if migratedComponent, warning = m.Run(migratedComponent); warning != "" {
 				warnings = append(warnings, warning)
 			}
 		}
