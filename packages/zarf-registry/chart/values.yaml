@@ -4,7 +4,7 @@ podLabels: {}
 
 image:
   repository: registry
-  tag: 2.8.2
+  tag: 2.8.3
 
 service:
   name: registry
@@ -53,6 +53,23 @@ autoscaling:
   minReplicas: 1
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
+
+caBundle: ""
+## One or more concatenated certificates
+## Will be mounted to /etc/ssl/certs/ca-certificates.crt
+# caBundle: |
+#   # Root CA 1
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----
+#   # Intermediate CA 1
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----
+#   # Root CA 2
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----
 
 extraEnvVars: []
 ## Additional ENV variables to set

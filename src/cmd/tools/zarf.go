@@ -14,9 +14,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
@@ -88,8 +88,10 @@ var updateCredsCmd = &cobra.Command{
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, lang.ErrLoadState)
 		}
-
-		newState := c.MergeZarfState(oldState, updateCredsInitOpts, args)
+		var newState *types.ZarfState
+		if newState, err = c.MergeZarfState(oldState, updateCredsInitOpts, args); err != nil {
+			message.Fatal(err, lang.CmdToolsUpdateCredsUnableUpdateCreds)
+		}
 
 		message.PrintCredentialUpdates(oldState, newState, args)
 
@@ -134,12 +136,7 @@ var updateCredsCmd = &cobra.Command{
 			}
 
 			// Update Zarf 'init' component Helm releases if present
-			h := helm.Helm{
-				Cluster: c,
-				Cfg: &types.PackagerConfig{
-					State: newState,
-				},
-			}
+			h := helm.NewClusterOnly(&types.PackagerConfig{State: newState}, c)
 
 			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
 				err = h.UpdateZarfRegistryValues()
@@ -149,7 +146,8 @@ var updateCredsCmd = &cobra.Command{
 				}
 			}
 			if slices.Contains(args, message.GitKey) && newState.GitServer.InternalServer {
-				err = h.UpdateZarfGiteaValues()
+				g := git.New(newState.GitServer)
+				err = g.UpdateZarfGiteaUsers(oldState)
 				if err != nil {
 					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())
@@ -183,9 +181,9 @@ var downloadInitCmd = &cobra.Command{
 	Use:   "download-init",
 	Short: lang.CmdToolsDownloadInitShort,
 	Run: func(cmd *cobra.Command, args []string) {
-		url := oci.GetInitPackageURL(config.GetArch(), config.CLIVersion)
+		url := oci.GetInitPackageURL(config.CLIVersion)
 
-		remote, err := oci.NewOrasRemote(url)
+		remote, err := oci.NewOrasRemote(url, oci.WithArch(config.GetArch()))
 		if err != nil {
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 		}

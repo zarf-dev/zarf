@@ -24,16 +24,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup golang
         uses: ./.github/actions/golang
 
-      - name: Setup NodeJS
-        uses: ./.github/actions/node
-
       - name: Build binary and zarf packages
         uses: ./.github/actions/packages
+        with:
+          init-package: "false"
+          build-examples: "false"
 
       - name: Setup k3d
         uses: ./.github/actions/k3d

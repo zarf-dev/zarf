@@ -30,7 +30,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/stream"
 	"github.com/moby/moby/client"
-	"github.com/pterm/pterm"
 )
 
 // ImgInfo wraps references/information about an image
@@ -102,7 +101,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 			img, hasImageLayers, err := i.PullImage(actualSrc, spinner)
 			if err != nil {
-				metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to pull image %s: %w", actualSrc, err)
+				metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to pull %s: %w", actualSrc, err)
 				return
 			}
 
@@ -121,7 +120,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	}
 
 	onMetadataError := func(err error) error {
-		return fmt.Errorf("failed to load metadata for all images. This may be due to a network error or an invalid image reference: %w", err)
+		return err
 	}
 
 	if err := metadataImageConcurrency.WaitWithProgress(onMetadataProgress, onMetadataError); err != nil {
@@ -185,10 +184,11 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 	// Create a thread to update a progress bar as we save the image files to disk
 	doneSaving := make(chan int)
+	errorSaving := make(chan int)
 	var progressBarWaitGroup sync.WaitGroup
 	progressBarWaitGroup.Add(1)
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
-	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &progressBarWaitGroup, doneSaving, updateText, updateText)
+	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &progressBarWaitGroup, doneSaving, errorSaving, updateText, updateText)
 
 	// Spawn a goroutine for each layer to write it to disk using crane
 
@@ -324,7 +324,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 	onLayerWritingError := func(err error) error {
 		// Send a signal to the progress bar that we're done and wait for the thread to finish
-		doneSaving <- 1
+		errorSaving <- 1
 		progressBarWaitGroup.Wait()
 		message.WarnErr(err, "Failed to write image layers, trying again up to 3 times...")
 		if strings.HasPrefix(err.Error(), "expected blob size") {
@@ -391,7 +391,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 	onImageSavingError := func(err error) error {
 		// Send a signal to the progress bar that we're done and wait for the thread to finish
-		doneSaving <- 1
+		errorSaving <- 1
 		progressBarWaitGroup.Wait()
 		message.WarnErr(err, "Failed to write image config or manifest, trying again up to 3 times...")
 		return err
@@ -445,13 +445,12 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		}
 	} else if _, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
 		// If crane is unable to pull the image, try to load it from the local docker daemon.
-		message.Debugf("crane unable to pull image %s: %s", src, err)
-		spinner.Updatef("Falling back to docker for %s. This may take some time.", src)
+		message.Notef("Falling back to local 'docker' images, failed to find the manifest on a remote: %s", err.Error())
 
 		// Parse the image reference to get the image name.
 		reference, err := name.ParseReference(src)
 		if err != nil {
-			return nil, false, fmt.Errorf("failed to parse image reference %s: %w", src, err)
+			return nil, false, fmt.Errorf("failed to parse image reference: %w", err)
 		}
 
 		// Attempt to connect to the local docker daemon.
@@ -465,33 +464,32 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		// Inspect the image to get the size.
 		rawImg, _, err := cli.ImageInspectWithRaw(ctx, src)
 		if err != nil {
-			return nil, false, fmt.Errorf("failed to inspect image %s via docker: %w", src, err)
+			return nil, false, fmt.Errorf("failed to inspect image via docker: %w", err)
 		}
 
 		// Warn the user if the image is large.
 		if rawImg.Size > 750*1000*1000 {
-			warn := pterm.DefaultParagraph.WithMaxWidth(message.TermWidth).Sprintf("%s is %s and may take a very long time to load via docker. "+
+			message.Warnf("%s is %s and may take a very long time to load via docker. "+
 				"See https://docs.zarf.dev/docs/faq for suggestions on how to improve large local image loading operations.",
 				src, utils.ByteFormat(float64(rawImg.Size), 2))
-			spinner.Warnf(warn)
 		}
 
 		// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
 		// This will also take for ever to load large images.
 		if img, err = daemon.Image(reference, daemon.WithUnbufferedOpener()); err != nil {
-			return nil, false, fmt.Errorf("failed to load image %s from docker daemon: %w", src, err)
+			return nil, false, fmt.Errorf("failed to load image from docker daemon: %w", err)
 		}
 	} else {
 		// Manifest was found, so use crane to pull the image.
 		if img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
-			return nil, false, fmt.Errorf("failed to pull image %s: %w", src, err)
+			return nil, false, fmt.Errorf("failed to pull image: %w", err)
 		}
 		cacheImage = true
 	}
 
 	hasImageLayers, err = utils.HasImageLayers(img)
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to check image %s layer mediatype: %w", src, err)
+		return nil, false, fmt.Errorf("failed to check image layer mediatype: %w", err)
 	}
 
 	if hasImageLayers && cacheImage {

@@ -6,7 +6,6 @@ metadata:
 
 components:
   - name: full-repo
-    required: true
     repos:
       # The following performs a full Git Repo Mirror with `go-git` (internal to Zarf)
       - https://github.com/defenseunicorns/zarf-public-test.git
@@ -14,7 +13,6 @@ components:
       - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test
 
   - name: specific-tag
-    required: true
     repos:
       # The following performs a tag Git Repo Mirror with `go-git` (internal to Zarf)
       - https://github.com/defenseunicorns/zarf-public-test.git@v0.0.1
@@ -24,7 +22,6 @@ components:
       - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1
 
   - name: specific-branch
-    required: true
     repos:
       # The following performs a branch Git Repo Mirror with `go-git` (internal to Zarf)
       - https://github.com/defenseunicorns/zarf-public-test.git@refs/heads/dragons
@@ -32,7 +29,6 @@ components:
       - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@refs/heads/dragons
 
   - name: specific-hash
-    required: true
     repos:
       # The following performs a SHA Git Repo Mirror with `go-git` (internal to Zarf)
       - https://github.com/defenseunicorns/zarf-public-test.git@01a23218923f24194133b5eb11268cf8d73ff1bb

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In most cases the default Zarf 'init' Package will provide what you need to get started deploying packages into the air gap, however there are cases where you may want to tweak this package to tailor it for your target environment.  This could include adding or removing components or including hardened versions of components specific to your use case.
+In most cases the default Zarf 'init' Package will provide what you need to get started deploying packages into the air gap, however there are cases where you may want to tweak this package to tailor it for your target environment. This could include adding or removing components or including hardened versions of components specific to your use case.
 
 In this tutorial, we will demonstrate how to build a custom [Zarf 'init' Package](../3-create-a-zarf-package/3-zarf-init-package.md) with `zarf package create`.
 
@@ -22,7 +22,7 @@ Before beginning this tutorial you will need the following:
 
 ## Building the init-package
 
-Creating the zarf 'init' package is as simple as creating any other package.  All you need to do is run the `zarf package create` command within the Zarf git repository.
+Creating the zarf 'init' package is as simple as creating any other package. All you need to do is run the `zarf package create` command within the Zarf git repository.
 
 ```bash
 $ cd zarf # Enter the zarf repository that you have cloned down
@@ -56,21 +56,17 @@ You can skip this confirmation by adding the `--confirm` flag when running the c
 
 :::
 
-After you confirm package creation, you have the option to specify a maximum file size for the package. To disable this feature, enter `0`.
-
-<iframe src="/docs/tutorials/package_create_size.html" height="100px" width="100%"></iframe>
-
-Once you enter your response for the package size, Zarf will create the Zarf 'init' package in the current directory. In this case, the package name should look something like `zarf-init-amd64-vX.X.X.tar.zst`, although it might differ slightly depending on your system architecture.
+After you confirm package creation, Zarf will create the Zarf 'init' package in the current directory. In this case, the package name should look something like `zarf-init-amd64-vX.X.X.tar.zst`, although it might differ slightly depending on your system architecture.
 
 ## Customizing the 'init' Package
 
-The above will simply build the init package as it is defined for your version of Zarf.  To build something custom you will need to make some modifications.
+The above will simply build the init package as it is defined for your version of Zarf. To build something custom you will need to make some modifications.
 
-The Zarf 'init' Package is a [composed Zarf Package](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) made up of many sub-Zarf Packages.  The root `zarf.yaml` file is defined at the root of the Zarf git repository.
+The Zarf 'init' Package is a [composed Zarf Package](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) made up of many sub-Zarf Packages. The root `zarf.yaml` file is defined at the root of the Zarf git repository.
 
 ### Swapping Images
 
-As of v0.26.0 you can swap the `registry` and `agent` images by specifying different values in the `zarf-config.toml` file at the root of the project or by overriding them as we did above with `--set` on the command line.  This allows you to swap these images for hardened or enterprise-vetted versions like those from [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
+As of v0.26.0 you can swap the `registry` and `agent` images by specifying different values in the `zarf-config.toml` file at the root of the project or by overriding them as we did above with `--set` on the command line. This allows you to swap these images for hardened or enterprise-vetted versions like those from [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
 
 For other components, or older versions of Zarf, you can modify the manifests of the components you want to change in their individual packages under the `packages` folder of the Zarf repo.
 
@@ -78,18 +74,35 @@ For other components, or older versions of Zarf, you can modify the manifests of
 
 If your enterprise uses pull-through mirrors to host vetted images you can run the following command to create a Zarf 'init' package from those mirrors (where `<registry>.enterprise.corp` are your enterprise mirror(s)):
 
-```
+```bash
 $ zarf package create . --set AGENT_IMAGE_TAG=vX.X.X \
   --registry-override docker.io=dockerio.enterprise.corp \
   --registry-override ghcr.io=ghcr.enterprise.corp \
   --registry-override quay.io=quay.enterprise.corp
 ```
 
+And if you need even more control over the exact Agent, Registry, and Gitea images you can specify that with additional `--set` flags:
+
+```bash
+$ zarf package create . \
+--set AGENT_IMAGE_TAG=$(zarf version) \
+--set AGENT_IMAGE="opensource/zarf" \
+--set AGENT_IMAGE_DOMAIN="custom.enterprise.corp" \
+--set REGISTRY_IMAGE_TAG=2.8.3 \
+--set REGISTRY_IMAGE="opensource/registry" \
+--set REGISTRY_IMAGE_DOMAIN="custom.enterprise.corp" \
+--set GITEA_IMAGE="custom.enterprise.corp/opensource/gitea:v1.21.0-rootless"
+```
+
+⚠️ - The Gitea image is different from the Agent and Registry in that Zarf will always prefer the `rootless` version of a given server image. The image no longer must be tagged with `-rootless`, but it still needs to implement the [Gitea configuration of a rootless image](https://github.com/go-gitea/gitea/blob/main/Dockerfile.rootless). If you need to change this, edit the `packages/gitea` package.
+
+You can find all of the `--set` configurations by looking at the `zarf-config.toml` in the root of the repository.
+
 :::
 
 ### Removing Components
 
-You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them.  Because the [Zarf Package is composed](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) all you need to do is remove the component that imports the component you wish to exclude.
+You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the [Zarf Package is composed](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) all you need to do is remove the component that imports the component you wish to exclude.
 
 ## Troubleshooting
 

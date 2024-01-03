@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In this tutorial, we will demonstrate the process to create a Zarf package for an application from defining a `zarf.yaml`, finding resources with `zarf prepare` commands and finally building the package with `zarf package create`.
+In this tutorial, we will demonstrate the process to create a Zarf package for an application from defining a `zarf.yaml`, finding resources with `zarf dev` commands and finally building the package with `zarf package create`.
 
 When creating a Zarf package, you must have a network connection so that Zarf can fetch all of the dependencies and resources necessary to build the package. If your package is using images from a private registry or is referencing repositories in a private repository, you will need to have your credentials configured on your machine for Zarf to be able to fetch the resources.
 
@@ -37,6 +37,7 @@ metadata:
 :::tip
 
 If you are using an Integrated Development Environment (such as [VS Code](../3-create-a-zarf-package/8-vscode.md)) to create and edit the `zarf.yaml` file, you can install or reference the [`zarf.schema.json`](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json) file to get error checking and autocomplete.
+Additionally, you can run `zarf dev lint <directory>` to validate aginst the [`zarf.schema.json`](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json)
 
 :::
 
@@ -82,7 +83,7 @@ service:
 
 :::note
 
-We create any `values.yaml` file(s) at this stage because the `zarf prepare find-images` command we will use next will template out this chart to look only for the images we need.
+We create any `values.yaml` file(s) at this stage because the `zarf dev find-images` command we will use next will template out this chart to look only for the images we need.
 
 :::
 
@@ -94,7 +95,7 @@ Note that we are explicitly defining the `wordpress` namespace for this deployme
 
 ### Finding the Images
 
-Once you have the above defined we can now work on setting the images that we will need to bring with us into the air gap.  For this, Zarf has a helper command you can run with `zarf prepare find-images`.  Running this command in the directory of your zarf.yaml will result in the following output:
+Once you have the above defined we can now work on setting the images that we will need to bring with us into the air gap.  For this, Zarf has a helper command you can run with `zarf dev find-images`.  Running this command in the directory of your zarf.yaml will result in the following output:
 
 <iframe src="/docs/tutorials/prepare_find_images.html" height="220px" width="100%"></iframe>
 
@@ -108,7 +109,7 @@ Due to the way some applications are deployed, Zarf might not be able to find al
 
 :::tip
 
-Zarf has more `prepare` commands you can learn about on the [prepare CLI docs page](../2-the-zarf-cli/100-cli-commands/zarf_prepare.md).
+Zarf has more `dev` commands you can learn about on the [dev CLI docs page](../3-create-a-zarf-package/10-dev.md).
 
 :::
 
@@ -230,7 +231,7 @@ To add this to our `zarf.yaml` we can simply specify it under our `wordpress` co
 
 Once you have followed the above you should now have a `zarf.yaml` file that matches the one found on the [WordPress example page](../../examples/wordpress/README.md).
 
-Creating this package is as simple as running the `zarf package create` command with the directory containing our `zarf.yaml`.  Zarf will show us the `zarf.yaml` one last time asking if we would like to build the package, and will ask us for a maximum package size (useful if you need to split a package across multiple [Compact Discs](https://en.wikipedia.org/wiki/Compact_disc)).  Upon confirmation Zarf will pull down all of the resources and bundle them into a package tarball.
+Creating this package is as simple as running the `zarf package create` command with the directory containing our `zarf.yaml`.  Zarf will show us the `zarf.yaml` one last time asking if we would like to build the package, and upon confirmation Zarf will pull down all of the resources and bundle them into a package tarball.
 
 ```bash
 zarf package create .
@@ -246,15 +247,11 @@ You can skip this confirmation by adding the `--confirm` flag when running the c
 
 :::
 
-After you confirm package creation, you have the option to specify a maximum file size for the package. To disable this feature, enter `0`.
-
-<iframe src="/docs/tutorials/package_create_size.html" height="100px" width="100%"></iframe>
-
 This will create a zarf package in the current directory with a package name that looks something like `zarf-package-wordpress-amd64-16.0.4.tar.zst`, although it might be slightly different depending on your system architecture.
 
 :::tip
 
-You can learn more about what is going on behind the scenes of this process on the [package create lifecycle page](../3-create-a-zarf-package/5-package-create-lifecycle.md), and can view other useful command flags like `--differential` and `--registry-override` on the [package create command flags page](../2-the-zarf-cli/100-cli-commands/zarf_package_create.md).
+You can learn more about what is going on behind the scenes of this process on the [package create lifecycle page](../3-create-a-zarf-package/5-package-create-lifecycle.md), and can view other useful command flags like `--max-package-size`, `--differential` and `--registry-override` on the [package create command flags page](../2-the-zarf-cli/100-cli-commands/zarf_package_create.md).
 
 :::
 

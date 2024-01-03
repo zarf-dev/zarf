@@ -8,8 +8,10 @@ KEY ?= ""
 
 # Figure out which Zarf binary we should use based on the operating system we are on
 ZARF_BIN := ./build/zarf
+BUILD_CLI_FOR_SYSTEM := build-cli-linux-amd
 ifeq ($(OS),Windows_NT)
 	ZARF_BIN := $(addsuffix .exe,$(ZARF_BIN))
+	BUILD_CLI_FOR_SYSTEM := build-cli-windows-amd
 else
 	UNAME_S := $(shell uname -s)
 	UNAME_P := $(shell uname -p)
@@ -19,24 +21,40 @@ else
 		endif
 		ifeq ($(UNAME_P),i386)
 			ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
+			BUILD_CLI_FOR_SYSTEM = build-cli-mac-intel
 		endif
 		ifeq ($(UNAME_P),arm)
 			ZARF_BIN := $(addsuffix -apple,$(ZARF_BIN))
+			BUILD_CLI_FOR_SYSTEM = build-cli-mac-apple
 		endif
 	endif
 endif
 
 CLI_VERSION ?= $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
+BUILD_ARGS := -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)
+K8S_MODULES_VER=$(subst ., ,$(subst v,,$(shell go list -f '{{.Version}}' -m k8s.io/client-go)))
+K8S_MODULES_MAJOR_VER=$(shell echo $$(($(firstword $(K8S_MODULES_VER)) + 1)))
+K8S_MODULES_MINOR_VER=$(word 2,$(K8S_MODULES_VER))
+K8S_MODULES_PATCH_VER=$(word 3,$(K8S_MODULES_VER))
+
+BUILD_ARGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
+BUILD_ARGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
+BUILD_ARGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
+BUILD_ARGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
+BUILD_ARGS += -X k8s.io/component-base/version.gitVersion=v$(K8S_MODULES_MAJOR_VER).$(K8S_MODULES_MINOR_VER).$(K8S_MODULES_PATCH_VER)
+
 GIT_SHA := $(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"")
 BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
-BUILD_ARGS := -s -w -X 'github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)' -X 'k8s.io/component-base/version.gitVersion=v0.0.0+zarf$(CLI_VERSION)' -X 'k8s.io/component-base/version.gitCommit=$(GIT_SHA)' -X 'k8s.io/component-base/version.buildDate=$(BUILD_DATE)'
-.DEFAULT_GOAL := help
+BUILD_ARGS += -X k8s.io/component-base/version.gitCommit=$(GIT_SHA)
+BUILD_ARGS += -X k8s.io/component-base/version.buildDate=$(BUILD_DATE)
+
+.DEFAULT_GOAL := build
 
 .PHONY: help
 help: ## Display this help information
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-	  | sort | awk 'BEGIN {FS = ":.*?## "}; \
-	  {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+		| sort | awk 'BEGIN {FS = ":.*?## "}; \
+		{printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 clean: ## Clean the build directory
 	rm -rf build
@@ -48,58 +66,39 @@ destroy: ## Run `zarf destroy` on the current cluster
 delete-packages: ## Delete all Zarf package tarballs in the project recursively
 	find . -type f -name 'zarf-package-*' -delete
 
-# INTERNAL: used to ensure the ui directory exists
-ensure-ui-build-dir:
-	mkdir -p build/ui
-	touch build/ui/index.html
-
-# INTERNAL: used to build the UI only if necessary
-check-ui:
-	@ if [ ! -z "$(shell command -v shasum)" ]; then\
-		if test "$(shell ./hack/print-ui-diff.sh | shasum)" != "$(shell cat build/ui/git-info.txt | shasum)" ; then\
-			$(MAKE) build-ui;\
-			./hack/print-ui-diff.sh > build/ui/git-info.txt;\
-		fi;\
-	else\
-		$(MAKE) build-ui;\
-	fi
-
-build-ui: ## Build the Zarf UI
-	npm --prefix src/ui ci
-	npm --prefix src/ui run build
-
 # Note: the path to the main.go file is not used due to https://github.com/golang/go/issues/51831#issuecomment-1074188363
+.PHONY: build
+build: ## Build the Zarf CLI for the machines OS and architecture
+	$(MAKE) $(BUILD_CLI_FOR_SYSTEM)
 
-build-cli-linux-amd: check-ui ## Build the Zarf CLI for Linux on AMD64
+build-cli-linux-amd: ## Build the Zarf CLI for Linux on AMD64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf .
 
-build-cli-linux-arm: check-ui ## Build the Zarf CLI for Linux on ARM
+build-cli-linux-arm: ## Build the Zarf CLI for Linux on ARM
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm .
 
-build-cli-mac-intel: check-ui ## Build the Zarf CLI for macOS on AMD64
+build-cli-mac-intel: ## Build the Zarf CLI for macOS on AMD64
 	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel .
 
-build-cli-mac-apple: check-ui ## Build the Zarf CLI for macOS on ARM
+build-cli-mac-apple: ## Build the Zarf CLI for macOS on ARM
 	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple .
 
-build-cli-windows-amd: check-ui ## Build the Zarf CLI for Windows on AMD64
+build-cli-windows-amd: ## Build the Zarf CLI for Windows on AMD64
 	GOOS=windows GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf.exe . ## Build the Zarf CLI for Windows on AMD64
 
-build-cli-windows-arm: check-ui ## Build the Zarf CLI for Windows on ARM
+build-cli-windows-arm: ## Build the Zarf CLI for Windows on ARM
 	GOOS=windows GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm.exe . ## Build the Zarf CLI for Windows on ARM
 
 build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI for Linux on AMD64 and ARM
 
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
-docs-and-schema: ensure-ui-build-dir ## Generate the Zarf Documentation and Schema
+docs-and-schema: ## Generate the Zarf Documentation and Schema
 	hack/gen-cli-docs.sh
 	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
-dev: ensure-ui-build-dir ## Start a Dev Server for the Zarf UI
-	go mod download
-	npm --prefix src/ui ci
-	npm --prefix src/ui run dev
+lint-packages-and-examples: build-cli-for-system ## Recursively lint all zarf.yaml files in the repo except for those dedicated to tests
+	hack/lint_all_zarf_packages.sh $(ZARF_BIN)
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
@@ -128,7 +127,7 @@ ib-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm . \
 		--set REGISTRY_IMAGE_DOMAIN="registry1.dso.mil/" \
 		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
-		--set REGISTRY_IMAGE_TAG="2.8.2"
+		--set REGISTRY_IMAGE_TAG="2.8.3"
 
 # INTERNAL: used to publish the init package
 publish-init-package:
@@ -167,9 +166,17 @@ build-injector-linux: ## Build the Zarf injector for AMD64 and ARM64
 
 ## NOTE: Requires an existing cluster or the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
-test-e2e: build-examples ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
+test-e2e: test-e2e-without-cluster test-e2e-with-cluster  ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
+
+.PHONY: test-e2e-with-cluster
+test-e2e-with-cluster: build-examples ## Run all of the core Zarf CLI E2E tests that DO require a cluster (builds any deps that aren't present)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
-	cd src/test/e2e && go test -failfast -v -timeout 35m
+	cd src/test/e2e && go test ./main_test.go ./[2-9]*.go -failfast -v -timeout 35m
+
+.PHONY: test-e2e-without-cluster
+test-e2e-without-cluster: build-examples ## Run all of the core Zarf CLI E2E tests  that DO NOT require a cluster (builds any deps that aren't present)
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
+	cd src/test/e2e && go test ./main_test.go ./[01]* -failfast -v -timeout 35m
 
 ## NOTE: Requires an existing cluster
 .PHONY: test-external
@@ -190,31 +197,10 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	cd src/test/upgrade && go test -failfast -v -timeout 30m
 
 .PHONY: test-unit
-test-unit: ensure-ui-build-dir ## Run unit tests
+test-unit: ## Run unit tests
 	cd src/pkg && go test ./... -failfast -v -timeout 30m
 	cd src/internal && go test ./... -failfast -v timeout 30m
 	cd src/extensions/bigbang && go test ./. -failfast -v timeout 30m
-
-.PHONY: test-ui
-test-ui: ## Run the Zarf UI E2E tests (requires `make build-ui` first) (run with env CI=true to use build/zarf)
-	export NODE_PATH=$(CURDIR)/src/ui/node_modules && \
-	npm --prefix src/ui run test:pre-init && \
-	npm --prefix src/ui run test:init && \
-	npm --prefix src/ui run test:post-init && \
-	npm --prefix src/ui run test:connect
-
-.PHONY: test-ui-dev-server
-# INTERNAL: used to start a dev version of the API server for the Zarf Web UI tests (locally)
-test-ui-dev-server:
-	API_DEV_PORT=5173 \
-		API_PORT=3333 \
-		API_TOKEN=insecure \
-		go run -ldflags="$(BUILD_ARGS)" main.go dev ui -l=trace
-
-.PHONY: test-ui-build-server
-# INTERNAL: used to start the built version of the API server for the Zarf Web UI (in CI)
-test-ui-build-server:
-	API_PORT=3333 API_TOKEN=insecure $(ZARF_BIN) dev ui
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR
 test-docs-and-schema:
@@ -222,10 +208,10 @@ test-docs-and-schema:
 	hack/check-zarf-docs-and-schema.sh
 
 # INTERNAL: used to test for new CVEs that may have been introduced
-test-cves: ensure-ui-build-dir
+test-cves:
 	go run main.go tools sbom packages . -o json --exclude './docs-website' --exclude './examples' | grype --fail-on low
 
-cve-report: ensure-ui-build-dir ## Create a CVE report for the current project (must `brew install grype` first)
+cve-report: ## Create a CVE report for the current project (must `brew install grype` first)
 	go run main.go tools sbom packages . -o json --exclude './docs-website' --exclude './examples' | grype -o template -t hack/.templates/grype.tmpl > build/zarf-known-cves.csv
 
 lint-go: ## Run revive to lint the go code (must `brew install revive` first)

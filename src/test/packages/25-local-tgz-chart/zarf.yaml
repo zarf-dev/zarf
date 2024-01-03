@@ -1,0 +1,28 @@
+kind: ZarfPackageConfig
+metadata:
+  name: helm-charts-local-tgz
+  description: Example showcasing mutiple ways to deploy helm charts
+  version: 0.0.1
+
+components:
+  - name: demo-helm-local-chart
+    required: false
+    charts:
+      - name: podinfo
+        version: 6.4.0
+        namespace: podinfo-from-local-chart
+        localPath: podinfo-6.4.0.tgz
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+    actions:
+      onCreate:
+        before:
+          - cmd: helm package ../../../../examples/helm-charts/chart/
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: podinfo
+                namespace: podinfo-from-local-chart
+                condition: available

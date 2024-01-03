@@ -12,8 +12,8 @@ import (
 	"slices"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -24,16 +24,12 @@ import (
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func (p *Packager) Remove() (err error) {
-	_, requiresCluster := p.source.(*sources.ClusterSource)
-	if requiresCluster {
+	_, isClusterSource := p.source.(*sources.ClusterSource)
+	if isClusterSource {
 		p.cluster = p.source.(*sources.ClusterSource).Cluster
 	}
 	spinner := message.NewProgressSpinner("Removing Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
-
-	// If components were provided; just remove the things we were asked to remove
-	requestedComponents := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
-	partialRemove := len(requestedComponents) > 0 && requestedComponents[0] != ""
 
 	var packageName string
 
@@ -48,31 +44,28 @@ func (p *Packager) Remove() (err error) {
 	p.filterComponents()
 	packageName = p.cfg.Pkg.Metadata.Name
 
-	// If we have package components check them for images, charts, manifests, etc
-	for _, component := range p.cfg.Pkg.Components {
-		// Flip requested based on if this is a partial removal
-		requested := !partialRemove
+	// Build a list of components to remove and determine if we need a cluster connection
+	componentsToRemove := []string{}
+	packageRequiresCluster := false
 
-		if slices.Contains(requestedComponents, component.Name) {
-			requested = true
+	// If components were provided; just remove the things we were asked to remove
+	p.forIncludedComponents(func(component types.ZarfComponent) error {
+		componentsToRemove = append(componentsToRemove, component.Name)
+
+		if requiresCluster(component) {
+			packageRequiresCluster = true
 		}
 
-		if requested {
-			if p.requiresCluster(component) {
-				requiresCluster = true
-			}
-		}
-	}
+		return nil
+	})
 
-	// Get the secret for the deployed package
+	// Get or build the secret for the deployed package
 	deployedPackage := &types.DeployedPackage{}
 
-	if requiresCluster {
-		if p.cluster == nil {
-			p.cluster, err = cluster.NewClusterWithWait(cluster.DefaultTimeout)
-			if err != nil {
-				return err
-			}
+	if packageRequiresCluster {
+		err = p.connectToCluster(cluster.DefaultTimeout)
+		if err != nil {
+			return err
 		}
 		deployedPackage, err = p.cluster.GetDeployedPackage(packageName)
 		if err != nil {
@@ -82,25 +75,19 @@ func (p *Packager) Remove() (err error) {
 		// If we do not need the cluster, create a deployed components object based on the info we have
 		deployedPackage.Name = packageName
 		deployedPackage.Data = p.cfg.Pkg
-		if partialRemove {
-			for _, r := range requestedComponents {
-				deployedPackage.DeployedComponents = append(deployedPackage.DeployedComponents, types.DeployedComponent{Name: r})
-			}
-		} else {
-			for _, c := range p.cfg.Pkg.Components {
-				deployedPackage.DeployedComponents = append(deployedPackage.DeployedComponents, types.DeployedComponent{Name: c.Name})
-			}
+		for _, r := range componentsToRemove {
+			deployedPackage.DeployedComponents = append(deployedPackage.DeployedComponents, types.DeployedComponent{Name: r})
 		}
 	}
 
-	for _, c := range helpers.Reverse(deployedPackage.DeployedComponents) {
+	for _, dc := range helpers.Reverse(deployedPackage.DeployedComponents) {
 		// Only remove the component if it was requested or if we are removing the whole package
-		if partialRemove && !slices.Contains(requestedComponents, c.Name) {
+		if !slices.Contains(componentsToRemove, dc.Name) {
 			continue
 		}
 
-		if deployedPackage, err = p.removeComponent(deployedPackage, c, spinner); err != nil {
-			return fmt.Errorf("unable to remove the component '%s': %w", c.Name, err)
+		if deployedPackage, err = p.removeComponent(deployedPackage, dc, spinner); err != nil {
+			return fmt.Errorf("unable to remove the component '%s': %w", dc.Name, err)
 		}
 	}
 
@@ -150,7 +137,7 @@ func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deplo
 	for _, chart := range helpers.Reverse(deployedComponent.InstalledCharts) {
 		spinner.Updatef("Uninstalling chart '%s' from the '%s' component", chart.ChartName, deployedComponent.Name)
 
-		helmCfg := helm.Helm{}
+		helmCfg := helm.NewClusterOnly(p.cfg, p.cluster)
 		if err := helmCfg.RemoveChart(chart.Namespace, chart.ChartName, spinner); err != nil {
 			if !errors.Is(err, driver.ErrReleaseNotFound) {
 				onFailure()

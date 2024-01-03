@@ -29,11 +29,16 @@ make test-e2e ARCH="[amd64|arm64]"
 APPLIANCE_MODE=true make test-e2e ARCH="[amd64|arm64]"
 
 # If you already have everything build, you can run this inside this folder. This lets you customize the test run.
-go test ./src/test/... -v -failfast
+go test ./src/test/... -v -failfast -count=1
 
 # Let's say you only want to run one test. You would run:
-go test ./src/test/... -v -failfast -run TestFooBarBaz
+go test ./src/test/... -v -failfast -run TestFooBarBaz -count=1
 ```
+
+:::note
+The `-count=1` flag is the idiomatic way to disable
+test caching explicitly.
+:::
 
 :::note
 The Zarf binary and built packages are required to be stored in the ./build directory. However, if you intend to run tests locally using 'go test ./...', the zarf-init package must also be present in this directory.
@@ -102,28 +107,3 @@ When adding new unit tests, please ensure that the following requirements are me
 If all these requirements are met, then a unit test would be appropriate. If not, please consider writing an end-to-end test instead or modify your approach to meet these requirements.
 
 To create a unit test, search for or create a file that ends with `_test.go` in the package of the file that requires testing, such as `auth.go` -> `auth_test.go`. Import the testing library and create test functions as necessary. In case you need to mock something out, determine the most suitable approach and if the mock can be used in multiple tests, consider placing it in  `./src/test/mocks/`. This will help enhance the efficiency and organization of the unit tests.
-
-## UI End-to-End Tests
-
-The end-to-end tests for the UI are executed through [Playwright](https://playwright.dev/), which is a NodeJS library designed for running end-to-end tests against a browser. These tests are run against the Zarf UI and can be located in the `./src/test/ui` directory. By utilizing Playwright, developers can verify the functionality of the UI in a realistic and reliable manner, ensuring that it meets the intended requirements and user experience. The location of the UI tests in the directory also allows for easy access and maintenance of the tests.
-
-### Running UI End-to-End Tests
-
-There are several ways to run tests depending on your specific situation, such as:
-
-```shell
-# dont forget to install dependencies
-npm --prefix src/ui ci
-
-# allow playwright to find the node modules
-export NODE_PATH=$(pwd)/src/ui/node_modules
-
-# run tests with @pre-init tag
-npm --prefix src/ui run test:pre-init
-
-# run tests with @init tag
-npm --prefix src/ui run test:init
-
-# run tests with @post-init tag
-npm --prefix src/ui run test:post-init
-```

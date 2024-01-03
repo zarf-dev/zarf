@@ -15,6 +15,30 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// ReloadComponentTemplate appends ###ZARF_COMPONENT_NAME### for the component, assigns value, and reloads
+// Any instance of ###ZARF_COMPONENT_NAME### within a component will be replaced with that components name
+func ReloadComponentTemplate(component *types.ZarfComponent) error {
+	mappings := map[string]string{}
+	mappings[types.ZarfComponentName] = component.Name
+	err := utils.ReloadYamlTemplate(component, mappings)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ReloadComponentTemplatesInPackage appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
+func ReloadComponentTemplatesInPackage(zarfPackage *types.ZarfPackage) error {
+	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
+	for i := range zarfPackage.Components {
+		if err := ReloadComponentTemplate(&zarfPackage.Components[i]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // fillActiveTemplate handles setting the active variables and reloading the base template.
 func (p *Packager) fillActiveTemplate() error {
 	templateMap := map[string]string{}
@@ -54,21 +78,21 @@ func (p *Packager) fillActiveTemplate() error {
 	}
 
 	// update the component templates on the package
-	err := p.findComponentTemplatesAndReload()
+	err := ReloadComponentTemplatesInPackage(&p.cfg.Pkg)
 	if err != nil {
 		return err
 	}
 
-	if err := promptAndSetTemplate("###ZARF_PKG_TMPL_", false); err != nil {
+	if err := promptAndSetTemplate(types.ZarfPackageTemplatePrefix, false); err != nil {
 		return err
 	}
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
-	if err := promptAndSetTemplate("###ZARF_PKG_VAR_", true); err != nil {
+	if err := promptAndSetTemplate(types.ZarfPackageVariablePrefix, true); err != nil {
 		return err
 	}
 
 	// Add special variable for the current package architecture
-	templateMap["###ZARF_PKG_ARCH###"] = p.arch
+	templateMap[types.ZarfPackageArch] = p.arch
 
 	return utils.ReloadYamlTemplate(&p.cfg.Pkg, templateMap)
 }
@@ -124,49 +148,6 @@ func (p *Packager) setVariableInConfig(name, value string, sensitive bool, autoI
 		AutoIndent: autoIndent,
 		Type:       varType,
 	}
-}
-
-// injectImportedVariable determines if an imported package variable exists in the active config and adds it if not.
-func (p *Packager) injectImportedVariable(importedVariable types.ZarfPackageVariable) {
-	presentInActive := false
-	for _, configVariable := range p.cfg.Pkg.Variables {
-		if configVariable.Name == importedVariable.Name {
-			presentInActive = true
-		}
-	}
-
-	if !presentInActive {
-		p.cfg.Pkg.Variables = append(p.cfg.Pkg.Variables, importedVariable)
-	}
-}
-
-// injectImportedConstant determines if an imported package constant exists in the active config and adds it if not.
-func (p *Packager) injectImportedConstant(importedConstant types.ZarfPackageConstant) {
-	presentInActive := false
-	for _, configVariable := range p.cfg.Pkg.Constants {
-		if configVariable.Name == importedConstant.Name {
-			presentInActive = true
-		}
-	}
-
-	if !presentInActive {
-		p.cfg.Pkg.Constants = append(p.cfg.Pkg.Constants, importedConstant)
-	}
-}
-
-// findComponentTemplatesAndReload appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
-func (p *Packager) findComponentTemplatesAndReload() error {
-	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
-	for i, component := range p.cfg.Pkg.Components {
-		mappings := map[string]string{}
-		mappings["###ZARF_COMPONENT_NAME###"] = component.Name
-		err := utils.ReloadYamlTemplate(&p.cfg.Pkg.Components[i], mappings)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // checkVariablePattern checks to see if a current variable is set to a value that matches its pattern

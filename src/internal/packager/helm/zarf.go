@@ -7,8 +7,7 @@ package helm
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
@@ -19,12 +18,12 @@ import (
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
 func (h *Helm) UpdateZarfRegistryValues() error {
-	pushUser, err := utils.GetHtpasswdString(h.Cfg.State.RegistryInfo.PushUsername, h.Cfg.State.RegistryInfo.PushPassword)
+	pushUser, err := utils.GetHtpasswdString(h.cfg.State.RegistryInfo.PushUsername, h.cfg.State.RegistryInfo.PushPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
 	}
 
-	pullUser, err := utils.GetHtpasswdString(h.Cfg.State.RegistryInfo.PullUsername, h.Cfg.State.RegistryInfo.PullPassword)
+	pullUser, err := utils.GetHtpasswdString(h.cfg.State.RegistryInfo.PullUsername, h.cfg.State.RegistryInfo.PullPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
 	}
@@ -35,44 +34,14 @@ func (h *Helm) UpdateZarfRegistryValues() error {
 		},
 	}
 
-	h.Chart = types.ZarfChart{
-		Namespace: "zarf",
+	h.chart = types.ZarfChart{
+		Namespace:   "zarf",
+		ReleaseName: "zarf-docker-registry",
 	}
-	h.ReleaseName = "zarf-docker-registry"
 
 	err = h.UpdateReleaseValues(registryValues)
 	if err != nil {
 		return fmt.Errorf("error updating the release values: %w", err)
-	}
-
-	return nil
-}
-
-// UpdateZarfGiteaValues updates the Zarf git server deployment with the new state values
-func (h *Helm) UpdateZarfGiteaValues() error {
-	giteaValues := map[string]interface{}{
-		"gitea": map[string]interface{}{
-			"admin": map[string]interface{}{
-				"username": h.Cfg.State.GitServer.PushUsername,
-				"password": h.Cfg.State.GitServer.PushPassword,
-			},
-		},
-	}
-
-	h.Chart = types.ZarfChart{
-		Namespace: "zarf",
-	}
-	h.ReleaseName = "zarf-gitea"
-
-	err := h.UpdateReleaseValues(giteaValues)
-	if err != nil {
-		return fmt.Errorf("error updating the release values: %w", err)
-	}
-
-	g := git.New(h.Cfg.State.GitServer)
-	err = g.CreateReadOnlyUser()
-	if err != nil {
-		return fmt.Errorf("unable to create the new Gitea read only user: %w", err)
 	}
 
 	return nil
@@ -89,7 +58,7 @@ func (h *Helm) UpdateZarfAgentValues() error {
 	}
 
 	// Get the current agent image from one of its pods.
-	pods := h.Cluster.WaitForPodsAndContainers(k8s.PodLookup{
+	pods := h.cluster.WaitForPodsAndContainers(k8s.PodLookup{
 		Namespace: cluster.ZarfNamespaceName,
 		Selector:  "app=agent-hook",
 	}, nil)
@@ -114,17 +83,17 @@ func (h *Helm) UpdateZarfAgentValues() error {
 
 	spinner.Success()
 
-	for _, lsRelease := range releases {
+	for _, release := range releases {
 		// Update the Zarf Agent release with the new values
-		if lsRelease.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
-			h.Chart = types.ZarfChart{
-				Namespace: "zarf",
+		if release.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
+			h.chart = types.ZarfChart{
+				Namespace:   "zarf",
+				ReleaseName: release.Name,
 			}
-			h.ReleaseName = lsRelease.Name
-			h.Component = types.ZarfComponent{
+			h.component = types.ZarfComponent{
 				Name: "zarf-agent",
 			}
-			h.Cfg.Pkg.Constants = []types.ZarfPackageConstant{
+			h.cfg.Pkg.Constants = []types.ZarfPackageConstant{
 				{
 					Name:  "AGENT_IMAGE",
 					Value: currentAgentImage.Path,
@@ -146,7 +115,7 @@ func (h *Helm) UpdateZarfAgentValues() error {
 	defer spinner.Stop()
 
 	// Force pods to be recreated to get the updated secret.
-	err = h.Cluster.DeletePods(k8s.PodLookup{
+	err = h.cluster.DeletePods(k8s.PodLookup{
 		Namespace: cluster.ZarfNamespaceName,
 		Selector:  "app=agent-hook",
 	})

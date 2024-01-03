@@ -16,6 +16,7 @@ var imageRefs = []string{
 	"nginx:1.23.3",
 	"defenseunicorns/zarf-agent:v0.22.1",
 	"defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
+	"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
 	"ghcr.io/stefanprodan/podinfo:6.3.3",
 	"registry1.dso.mil/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0",
 	"gitlab.com/project/gitea/gitea:1.19.3-rootless-zarf-3431384023",
@@ -34,6 +35,7 @@ func TestImageTransformHost(t *testing.T) {
 		"gitlab.com/project/library/nginx:1.23.3-zarf-3793515731",
 		"gitlab.com/project/defenseunicorns/zarf-agent:v0.22.1-zarf-4283503412",
 		"gitlab.com/project/defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
+		"gitlab.com/project/library/busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3-zarf-2985051089",
 		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0-zarf-2003217571",
 		"gitlab.com/project/gitea/gitea:1.19.3-rootless-zarf-3431384023",
@@ -57,6 +59,7 @@ func TestImageTransformHostWithoutChecksum(t *testing.T) {
 		"gitlab.com/project/library/nginx:1.23.3",
 		"gitlab.com/project/defenseunicorns/zarf-agent:v0.22.1",
 		"gitlab.com/project/defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
+		"gitlab.com/project/library/busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3",
 		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0",
 		"gitlab.com/project/gitea/gitea:1.19.3-rootless-zarf-3431384023",
@@ -112,6 +115,7 @@ func TestParseImageRef(t *testing.T) {
 		{"docker.io/", "library/nginx", "1.23.3", ""},
 		{"docker.io/", "defenseunicorns/zarf-agent", "v0.22.1", ""},
 		{"docker.io/", "defenseunicorns/zarf-agent", "", "sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de"},
+		{"docker.io/", "library/busybox", "latest", "sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79"},
 		{"ghcr.io/", "stefanprodan/podinfo", "6.3.3", ""},
 		{"registry1.dso.mil/", "ironbank/opensource/defenseunicorns/zarf/zarf-agent", "v0.25.0", ""},
 		{"gitlab.com/", "project/gitea/gitea", "1.19.3-rootless-zarf-3431384023", ""},
@@ -122,13 +126,19 @@ func TestParseImageRef(t *testing.T) {
 		require.NoError(t, err)
 		tag := expectedResult[idx][2]
 		digest := expectedResult[idx][3]
-		tagOrDigest := ":" + tag
-		if tag == "" {
+		var tagOrDigest string
+		var tagAndDigest string
+		if tag != "" {
+			tagOrDigest = ":" + tag
+			tagAndDigest = ":" + tag
+		}
+		if digest != "" {
 			tagOrDigest = "@" + digest
+			tagAndDigest += "@" + digest
 		}
 		path := expectedResult[idx][1]
 		name := expectedResult[idx][0] + path
-		reference := name + tagOrDigest
+		reference := name + tagAndDigest
 
 		require.Equal(t, reference, img.Reference)
 		require.Equal(t, name, img.Name)

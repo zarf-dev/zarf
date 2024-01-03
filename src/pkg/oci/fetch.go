@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -18,7 +19,26 @@ import (
 
 // ResolveRoot returns the root descriptor for the remote repository
 func (o *OrasRemote) ResolveRoot() (ocispec.Descriptor, error) {
-	return o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
+	// first try to resolve the reference into an OCI descriptor directly
+	desc, err := o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
+	// if we succeeded and it's not an index, return it
+	// otherwise we will use oras.Resolve which will fetch the index, then resolve the manifest
+	// w/ the target platform
+	//
+	// this error is purposefully ignored, as we want to try oras.Resolve if the first attempt fails
+	if err == nil && desc.MediaType != ocispec.MediaTypeImageIndex {
+		return desc, nil
+	}
+
+	if o.targetPlatform == nil && desc.MediaType == ocispec.MediaTypeImageIndex {
+		return ocispec.Descriptor{}, fmt.Errorf("%q resolved to an image index, but no target platform was specified", o.repo.Reference.Reference)
+	}
+
+	resolveOpts := oras.ResolveOptions{
+		TargetPlatform: o.targetPlatform,
+	}
+	// if the first attempt failed to resolve, or returned an index, try again with oras.Resolve
+	return oras.Resolve(o.ctx, o.repo, o.repo.Reference.Reference, resolveOpts)
 }
 
 // FetchRoot fetches the root manifest from the remote repository.
@@ -52,12 +72,20 @@ func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err erro
 }
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.
-func (o *OrasRemote) FetchZarfYAML(manifest *ZarfOCIManifest) (pkg types.ZarfPackage, err error) {
+func (o *OrasRemote) FetchZarfYAML() (pkg types.ZarfPackage, err error) {
+	manifest, err := o.FetchRoot()
+	if err != nil {
+		return pkg, err
+	}
 	return FetchYAMLFile[types.ZarfPackage](o.FetchLayer, manifest, layout.ZarfYAML)
 }
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.
-func (o *OrasRemote) FetchImagesIndex(manifest *ZarfOCIManifest) (index *ocispec.Index, err error) {
+func (o *OrasRemote) FetchImagesIndex() (index *ocispec.Index, err error) {
+	manifest, err := o.FetchRoot()
+	if err != nil {
+		return index, err
+	}
 	return FetchJSONFile[*ocispec.Index](o.FetchLayer, manifest, ZarfPackageIndexPath)
 }
 

@@ -8,24 +8,13 @@ import (
 	"fmt"
 	"strings"
 
-	"slices"
-
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
 func (p *Packager) Mirror() (err error) {
-	// Attempt to connect to a Kubernetes cluster.
-	// Not all packages require Kubernetes, so we only want to log a debug message rather than return the error when we can't connect to a cluster.
-	p.cluster, err = cluster.NewCluster()
-	if err != nil {
-		message.Debug(err)
-	}
-
 	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
@@ -53,17 +42,9 @@ func (p *Packager) Mirror() (err error) {
 
 	// Filter out components that are not compatible with this system if we have loaded from a tarball
 	p.filterComponents()
-	requestedComponentNames := helpers.StringToSlice(p.cfg.PkgOpts.OptionalComponents)
 
-	for _, component := range p.cfg.Pkg.Components {
-		if len(requestedComponentNames) == 0 || slices.Contains(requestedComponentNames, component.Name) {
-			if err := p.mirrorComponent(component); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+	// Run mirror for each requested component
+	return p.forIncludedComponents(p.mirrorComponent)
 }
 
 // mirrorComponent mirrors a Zarf Component.

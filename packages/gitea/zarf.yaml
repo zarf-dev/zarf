@@ -5,7 +5,7 @@ metadata:
 variables:
   - name: GIT_SERVER_EXISTING_PVC
     description: "Optional: Use an existing PVC for the git server instead of creating a new one. If this is set, the GIT_SERVER_PVC_SIZE variable will be ignored."
-    default: ""
+    default: "data-zarf-gitea-0"
 
   - name: GIT_SERVER_PVC_SIZE
     description: The size of the persistent volume claim for the git server
@@ -35,13 +35,21 @@ variables:
     description: The number of git server replicas to deploy
     default: "1"
 
+  - name: GIT_SERVER_DISABLE_REGISTRATION
+    description: Disables the ability to register new users
+    default: "true"
+
+constants:
+  - name: GITEA_IMAGE
+    value: "###ZARF_PKG_TMPL_GITEA_IMAGE###"
+
 components:
   - name: git-server
     description: |
       Deploys Gitea to provide git repositories for Kubernetes configurations.
       Required for GitOps deployments if no other git server is available.
     images:
-      - gitea/gitea:1.19.3-rootless
+      - "###ZARF_PKG_TMPL_GITEA_IMAGE###"
     manifests:
       - name: git-connect
         namespace: zarf
@@ -51,13 +59,24 @@ components:
       - name: gitea
         releaseName: zarf-gitea
         url: https://dl.gitea.io/charts
-        version: 8.3.0
+        version: 10.0.0
         namespace: zarf
         valuesFiles:
           - gitea-values.yaml
     actions:
       onDeploy:
+        before:
+          - cmd: ./zarf internal update-gitea-pvc --no-progress 
+            setVariables:
+              - name: GIT_SERVER_CREATE_PVC
+            mute: true
         after:
+          - wait:
+              cluster:
+                kind: pod
+                namespace: zarf
+                name: app=gitea
+                condition: Ready
           - cmd: ./zarf internal create-read-only-gitea-user --no-progress
             maxRetries: 3
             maxTotalSeconds: 60
@@ -66,9 +85,6 @@ components:
             maxRetries: 3
             maxTotalSeconds: 60
             description: Create an artifact registry token
-          - wait:
-              cluster:
-                kind: pod
-                namespace: zarf
-                name: app=gitea
-                condition: Ready
+          
+        onFailure:
+          - cmd: ./zarf internal update-gitea-pvc --rollback --no-progress

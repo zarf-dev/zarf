@@ -132,18 +132,13 @@
           "type": "array",
           "description": "List of components that were not included in this package due to differential packaging"
         },
-        "OCIImportedComponents": {
-          "patternProperties": {
-            ".*": {
-              "type": "string"
-            }
-          },
-          "type": "object",
-          "description": "Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names"
-        },
         "lastNonBreakingVersion": {
           "type": "string",
           "description": "The minimum version of Zarf that does not have breaking package structure changes"
+        },
+        "flavor": {
+          "type": "string",
+          "description": "The flavor of Zarf used to build this package"
         }
       },
       "additionalProperties": false,
@@ -157,11 +152,11 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo"
+          "description": "The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo"
         },
-        "releaseName": {
+        "version": {
           "type": "string",
-          "description": "The name of the release to create; defaults to the name of the chart"
+          "description": "The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos')"
         },
         "url": {
           "type": "string",
@@ -169,56 +164,46 @@
           "examples": [
             "OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo",
             "helm chart repo: https://stefanprodan.github.io/podinfo",
-            "git repo: https://github.com/stefanprodan/podinfo"
+            "git repo: https://github.com/stefanprodan/podinfo (note the '@' syntax for 'repos' is supported here too)"
           ]
         },
-        "version": {
+        "repoName": {
           "type": "string",
-          "description": "The version of the chart to deploy; for git-based charts this is also the tag of the git repo"
-        },
-        "namespace": {
-          "type": "string",
-          "description": "The namespace to deploy the chart to"
-        },
-        "valuesFiles": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "List of local values file paths or remote URLs to include in the package; these will be merged together"
+          "description": "The name of a chart within a Helm repository (defaults to the Zarf name of the chart)"
         },
         "gitPath": {
           "type": "string",
-          "description": "The path to the chart in the repo if using a git repo instead of a helm repo",
+          "description": "(git repo only) The sub directory to the chart within a git repo",
           "examples": [
             "charts/your-chart"
           ]
         },
         "localPath": {
           "type": "string",
-          "description": "The path to the chart folder"
+          "description": "The path to a local chart's folder or .tgz archive"
+        },
+        "namespace": {
+          "type": "string",
+          "description": "The namespace to deploy the chart to"
+        },
+        "releaseName": {
+          "type": "string",
+          "description": "The name of the Helm release to create (defaults to the Zarf name of the chart)"
         },
         "noWait": {
           "type": "boolean",
           "description": "Whether to not wait for chart resources to be ready before continuing"
+        },
+        "valuesFiles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "List of local values file paths or remote URLs to include in the package; these will be merged together when deployed"
         }
       },
       "additionalProperties": false,
-      "type": "object",
-      "oneOf": [
-        {
-          "required": [
-            "url"
-          ],
-          "title": "url"
-        },
-        {
-          "required": [
-            "localPath"
-          ],
-          "title": "localPath"
-        }
-      ]
+      "type": "object"
     },
     "ZarfComponent": {
       "required": [
@@ -226,7 +211,7 @@
       ],
       "properties": {
         "name": {
-          "pattern": "^[a-z0-9\\-]+$",
+          "pattern": "^[a-z0-9\\-]*[a-z0-9]$",
           "type": "string",
           "description": "The name of the component"
         },
@@ -249,7 +234,7 @@
         },
         "group": {
           "type": "string",
-          "description": "[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0."
+          "description": "[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead."
         },
         "cosignKeyPath": {
           "type": "string",
@@ -658,12 +643,11 @@
           "description": "The name of the component to import from the referenced zarf.yaml"
         },
         "path": {
-          "pattern": "^(?!.*###ZARF_PKG_TMPL_).*$",
           "type": "string",
           "description": "The relative path to a directory containing a zarf.yaml to import from"
         },
         "url": {
-          "pattern": "^oci://(?!.*###ZARF_PKG_TMPL_).*$",
+          "pattern": "^oci://.*$",
           "type": "string",
           "description": "[beta] The URL to a Zarf package to import via OCI"
         }
@@ -707,6 +691,10 @@
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentOnlyCluster",
           "description": "Only deploy component to specified clusters"
+        },
+        "flavor": {
+          "type": "string",
+          "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'"
         }
       },
       "additionalProperties": false,
@@ -848,7 +836,7 @@
       ],
       "properties": {
         "name": {
-          "pattern": "^[a-z0-9\\-]+$",
+          "pattern": "^[a-z0-9\\-]*[a-z0-9]$",
           "type": "string",
           "description": "Name to identify this Zarf package"
         },

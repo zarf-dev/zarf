@@ -29,10 +29,6 @@ func (p *Packager) readZarfYAML(path string) error {
 		p.warnings = append(p.warnings, warning)
 	}
 
-	if p.cfg.Pkg.Build.OCIImportedComponents == nil {
-		p.cfg.Pkg.Build.OCIImportedComponents = make(map[string]string)
-	}
-
 	if len(p.cfg.Pkg.Build.Migrations) > 0 {
 		for idx, component := range p.cfg.Pkg.Components {
 			// Handle component configuration deprecations
@@ -94,6 +90,10 @@ func (p *Packager) writeYaml() error {
 	p.cfg.Pkg.Metadata.Architecture = p.arch
 	p.cfg.Pkg.Build.Architecture = p.arch
 
+	if p.cfg.CreateOpts.IsSkeleton {
+		p.cfg.Pkg.Build.Architecture = "skeleton"
+	}
+
 	// Record the time of package creation.
 	p.cfg.Pkg.Build.Timestamp = now.Format(time.RFC1123Z)
 
@@ -110,6 +110,9 @@ func (p *Packager) writeYaml() error {
 		deprecated.ScriptsToActionsMigrated,
 		deprecated.PluralizeSetVariable,
 	}
+
+	// Record the flavor of Zarf used to build this package (if any).
+	p.cfg.Pkg.Build.Flavor = p.cfg.CreateOpts.Flavor
 
 	p.cfg.Pkg.Build.RegistryOverrides = p.cfg.CreateOpts.RegistryOverrides
 

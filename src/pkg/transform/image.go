@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
-	"github.com/distribution/distribution/reference"
+	"github.com/distribution/reference"
 )
 
 // Image represents a config for an OCI image.

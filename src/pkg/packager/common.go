@@ -6,17 +6,21 @@ package packager
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
+
+	"slices"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 
@@ -24,7 +28,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
@@ -33,7 +37,6 @@ import (
 type Packager struct {
 	cfg            *types.PackagerConfig
 	cluster        *cluster.Cluster
-	remote         *oci.OrasRemote
 	layout         *layout.PackagePaths
 	arch           string
 	warnings       []string
@@ -92,10 +95,6 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 
 	if cfg.SetVariableMap == nil {
 		cfg.SetVariableMap = make(map[string]*types.ZarfSetVariable)
-	}
-
-	if cfg.Pkg.Build.OCIImportedComponents == nil {
-		cfg.Pkg.Build.OCIImportedComponents = make(map[string]string)
 	}
 
 	var (
@@ -174,7 +173,7 @@ func GetInitPackageName(arch string) string {
 
 // GetPackageName returns the formatted name of the package.
 func (p *Packager) GetPackageName() string {
-	if p.cfg.Pkg.Kind == types.ZarfInitConfig {
+	if p.isInitConfig() {
 		return GetInitPackageName(p.arch)
 	}
 
@@ -201,21 +200,88 @@ func (p *Packager) ClearTempPaths() {
 	_ = os.RemoveAll(layout.SBOMDir)
 }
 
-// validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
-func (p *Packager) validatePackageArchitecture() error {
-	// Ignore this check if the architecture is explicitly "multi" or we don't have a cluster connection
-	if p.arch == "multi" || p.cluster == nil {
+// connectToCluster attempts to connect to a cluster if a connection is not already established
+func (p *Packager) connectToCluster(timeout time.Duration) (err error) {
+	if p.isConnectedToCluster() {
 		return nil
 	}
 
-	clusterArch, err := p.cluster.GetArchitecture()
+	p.cluster, err = cluster.NewClusterWithWait(timeout)
+	if err != nil {
+		return err
+	}
+
+	return p.attemptClusterChecks()
+}
+
+// isConnectedToCluster returns whether the current packager instance is connected to a cluster
+func (p *Packager) isConnectedToCluster() bool {
+	return p.cluster != nil
+}
+
+// isInitConfig returns whether the current packager instance is deploying an init config
+func (p *Packager) isInitConfig() bool {
+	return p.cfg.Pkg.Kind == types.ZarfInitConfig
+}
+
+// hasImages returns whether the current package contains images
+func (p *Packager) hasImages() bool {
+	for _, component := range p.cfg.Pkg.Components {
+		if len(component.Images) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
+// NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
+func (p *Packager) attemptClusterChecks() (err error) {
+
+	spinner := message.NewProgressSpinner("Gathering additional cluster information (if available)")
+	defer spinner.Stop()
+
+	// Check if the package has already been deployed and get its generation
+	if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
+		// If this package has been deployed before, increment the package generation within the secret
+		p.generation = existingDeployedPackage.Generation + 1
+	}
+
+	// Check the clusters architecture matches the package spec
+	if err := p.validatePackageArchitecture(); err != nil {
+		if errors.Is(err, lang.ErrUnableToCheckArch) {
+			message.Warnf("Unable to validate package architecture: %s", err.Error())
+		} else {
+			return err
+		}
+	}
+
+	// Check for any breaking changes between the initialized Zarf version and this CLI
+	if existingInitPackage, _ := p.cluster.GetDeployedPackage("init"); existingInitPackage != nil {
+		// Use the build version instead of the metadata since this will support older Zarf versions
+		deprecated.PrintBreakingChanges(existingInitPackage.Data.Build.Version)
+	}
+
+	spinner.Success()
+
+	return nil
+}
+
+// validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
+func (p *Packager) validatePackageArchitecture() error {
+	// Ignore this check if the architecture is explicitly "multi", we don't have a cluster connection, or the package contains no images
+	if p.arch == "multi" || !p.isConnectedToCluster() || !p.hasImages() {
+		return nil
+	}
+
+	clusterArchitectures, err := p.cluster.GetArchitectures()
 	if err != nil {
 		return lang.ErrUnableToCheckArch
 	}
 
 	// Check if the package architecture and the cluster architecture are the same.
-	if p.arch != clusterArch {
-		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, clusterArch)
+	if !slices.Contains(clusterArchitectures, p.arch) {
+		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, strings.Join(clusterArchitectures, ", "))
 	}
 
 	return nil
@@ -314,16 +380,6 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 		}
 	}
 	spinner.Successf("Package saved to %q", destinationTarball)
-	return nil
-}
-
-// setOCIRemote sets the remote OCI client for the package.
-func (p *Packager) setOCIRemote(url string) error {
-	remote, err := oci.NewOrasRemote(url)
-	if err != nil {
-		return err
-	}
-	p.remote = remote
 	return nil
 }
 
