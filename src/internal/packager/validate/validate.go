@@ -129,6 +129,10 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		return fmt.Errorf(lang.PkgValidateErrComponentName, component.Name)
 	}
 
+	if component.DeprecatedRequired != nil {
+		return fmt.Errorf(lang.PkgValidateErrComponentRequired, component.Name)
+	}
+
 	if component.IsRequired() {
 		if component.Default {
 			return fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name)

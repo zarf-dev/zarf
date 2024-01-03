@@ -17,8 +17,8 @@ import (
 	"github.com/pterm/pterm"
 )
 
-// BreakingChange represents a breaking change that happened on a specified Zarf version
-type BreakingChange struct {
+// breakingChange represents a breaking change that happened on a specified Zarf version
+type breakingChange struct {
 	version    *semver.Version
 	title      string
 	mitigation string
@@ -30,7 +30,7 @@ type BreakingChange struct {
 const LastNonBreakingVersion = "v0.27.0"
 
 // List of breaking changes to warn the user of.
-var breakingChanges = []BreakingChange{
+var breakingChanges = []breakingChange{
 	{
 		version:    semver.New(0, 26, 0, "", ""),
 		title:      "Zarf container images are now mutated based on tag instead of repository name.",
@@ -94,7 +94,7 @@ func PrintBreakingChanges(deployedZarfVersion string) {
 		return
 	}
 
-	applicableBreakingChanges := []BreakingChange{}
+	applicableBreakingChanges := []breakingChange{}
 
 	// Calculate the applicable breaking changes
 	for _, breakingChange := range breakingChanges {
