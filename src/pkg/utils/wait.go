@@ -101,7 +101,11 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 				continue
 			}
 
-			if strings.Contains(stderr, "No resources found") {
+			// If there was no identifier provided and no resources of the given kind were found,
+			// return an error. We don't want to return an error if an identifier
+			// was provided because the resource may be in the process of being created.
+			resourceNotFound := strings.Contains(stderr, "No resources found") && identifier == ""
+			if resourceNotFound {
 				return fmt.Errorf("unable to find resource of kind %q in the cluster", kind)
 			}
 
