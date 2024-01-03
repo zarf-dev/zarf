@@ -41,5 +41,5 @@ func (m RequiredToOptional) Run(c types.ZarfComponent) (types.ZarfComponent, str
 		c.Optional = helpers.BoolPtr(true)
 	}
 
-	return c, fmt.Sprintf("Component %q is using \"required\" which will be removed in Zarf v1.0.0. Please migrate to \"optional\". Please migrate to \"optional\".", c.Name)
+	return c, fmt.Sprintf("Component %q is using \"required\" which will be removed in Zarf v1.0.0. Please migrate to \"optional\".", c.Name)
 }

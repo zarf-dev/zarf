@@ -13,9 +13,6 @@ import (
 func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) error {
 	c.Name = override.Name
 	c.Default = override.Default
-	if override.DeprecatedRequired != nil {
-		return fmt.Errorf("component %q: \"required\" is deprecated, please migrate to \"optional\"", c.Name)
-	}
 	c.Optional = override.Optional
 
 	// Override description if it was provided.
