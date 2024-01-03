@@ -357,7 +357,7 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
 	CmdDevPatchCredsMsg = "Zarf will not automatically add credentials to a manifest, please update the secret references manually as appropriate (i.e. 'private-registry' or 'private-git-server')."
-	CmdDevPatchShort    = "Manually patches files to match Zarf's mutated airgap resource references (not needed when using the Zarf agent)"
+	CmdDevPatchShort    = "Manually patches files to match Zarf's mutated airgap resource references (not needed when using the Zarf Agent)"
 	CmdDevPatchLong     = "Manually patches files to match Zarf's mutated airgap resource references. Useful when not using the Zarf Agent in your cluster or when you need to see how a given resource will be mutated in the airgap."
 	CmdDevPatchGitShort = "[Deprecated] Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
