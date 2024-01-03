@@ -369,10 +369,10 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevPatchFlagGitUsername    = "User or organization name for the git account that the repos are created under"
 	CmdDevPatchInvalidFileTypeErr = "Invalid filetype '%s' - valid filetypes are: oci and git"
 	CmdDevPatchExample            = `
-# Print all Zarf patch commands:
+# Print all Zarf patch options:
 $ zarf prepare patch
 
-# Patch specific file types with a host:
+# Patch specific resource types with a host:
 $ zarf prepare patch git http://zarf-gitea-http.zarf.svc.cluster.local:3000 ./manifest.yaml
 $ zarf prepare patch oci 127.0.0.1:31999 ./manifest.yaml
 `
