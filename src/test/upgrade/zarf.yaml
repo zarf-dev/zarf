@@ -6,6 +6,7 @@ metadata:
 
 components:
   - name: test-upgrade-package
+    required: true
     description: A semi-contrived example that deploys podinfo using many Zarf primitives and lets us upgrade it a few times.
     charts:
       - name: podinfo-upgrade
