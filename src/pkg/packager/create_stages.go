@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -616,9 +617,8 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 // Each file within the basePath represents a layer within the Zarf package.
 // generateChecksum returns a SHA256 checksum of the checksums.txt file.
 func (p *Packager) generatePackageChecksums() (string, error) {
-	var checksumsData string
-
 	// Loop over the "loaded" files
+	var checksumsData = []string{}
 	for rel, abs := range p.layout.Files() {
 		if rel == layout.ZarfYAML || rel == layout.Checksums {
 			continue
@@ -628,12 +628,13 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		checksumsData += fmt.Sprintf("%s %s\n", sum, rel)
+		checksumsData = append(checksumsData, fmt.Sprintf("%s %s", sum, rel))
 	}
+	slices.Sort(checksumsData)
 
 	// Create the checksums file
 	checksumsFilePath := p.layout.Checksums
-	if err := utils.WriteFile(checksumsFilePath, []byte(checksumsData)); err != nil {
+	if err := utils.WriteFile(checksumsFilePath, []byte(strings.Join(checksumsData, "\n")+"\n")); err != nil {
 		return "", err
 	}
 
