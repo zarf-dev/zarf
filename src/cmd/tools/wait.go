@@ -39,7 +39,7 @@ var waitForCmd = &cobra.Command{
 
 		// identifier is optional to allow for commands like `zarf tools wait-for storageclass` without specifying a name.
 		identifier := ""
-		if len(args) == 2 {
+		if len(args) > 1 {
 			identifier = args[1]
 		}
 
