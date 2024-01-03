@@ -26,30 +26,27 @@ type Image struct {
 
 // MutateOCIURLsInText changes the oci url hostname to use the targetBaseURL.
 func MutateOCIURLsInText(logger Log, targetBaseURL, text string) string {
-	// For further explanation: https://regex101.com/r/UU7Gan/4
-	fuzzyOCIURLRegex := regexp.MustCompile(`oci:\/\/(?P<ref>[^\s]+\/[^@:\s]+(?P<sha>@[\w]+:[\w]+)?(?P<tag>:[^\/\s]+)?)`)
+	// For further explanation: https://regex101.com/r/UU7Gan/5
+	fuzzyOCIURLRegex := regexp.MustCompile(`oci:\/\/[^\s]+`)
 
 	// Use ReplaceAllStringFunc to replace matching URLs while preserving the path
 	result := fuzzyOCIURLRegex.ReplaceAllStringFunc(text, func(match string) string {
-		get, err := helpers.MatchRegex(fuzzyOCIURLRegex, match)
-		if err != nil {
-			logger("unable to parse the matched url, using the original url we have: %s", match)
-			return match
-		}
+		ref := strings.TrimPrefix(match, "oci://")
 
-		output, err := ImageTransformHost(targetBaseURL, get("ref"))
+		output, err := ImageTransformHost(targetBaseURL, ref)
 		if err != nil {
-			logger("Unable to transform the OCI url, using the original url we have: %s: %s", match)
+			logger("Unable to transform the OCI url, using the original url %q: %s", match, err.Error())
 			return match
 		}
 
 		outputRef, err := ParseImageRef(output)
 		if err != nil {
-			logger("Unable to parse the transformed url, using the original url we have: %s", match)
+			logger("Unable to parse the transformed url, using the original url %q: %s", match, err.Error())
 			return match
 		}
 
-		if get("sha") == "" && get("tag") == "" {
+		// If the original reference did not contain a tag, return the transformed output without one too
+		if !strings.Contains(ref, ":") && !strings.Contains(ref, "@") {
 			return helpers.OCIURLPrefix + outputRef.Name
 		}
 
