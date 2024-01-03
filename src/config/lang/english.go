@@ -398,7 +398,7 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdToolsArchiverDecompressShort = "Decompresses an archive or Zarf package based off of the source file extension."
 	CmdToolsArchiverDecompressErr   = "Unable to perform decompression: %s"
 
-	CmdToolsArchiverUnarchiveAllErr = "Unable to unarchive all nested tarballs"
+	CmdToolsArchiverUnarchiveAllErr = "Unable to unarchive all nested tarballs: %s"
 
 	CmdToolsRegistryShort     = "Tools for working with container registries using go-containertools"
 	CmdToolsRegistryZarfState = "Retrieving registry information from Zarf state"
