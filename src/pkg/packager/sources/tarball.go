@@ -45,7 +45,6 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool)
 
 	pathsExtracted := []string{}
 
-	// Walk the package so that was can dynamically load a .tar or a .tar.zst without caring about filenames.
 	err = archiver.Walk(s.PackageSource, func(f archiver.File) error {
 		if f.IsDir() {
 			return nil
