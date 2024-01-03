@@ -426,7 +426,7 @@ func SHAsMatch(path, expected string) error {
 }
 
 // CreateReproducibleTarballFromDir creates a tarball from a directory with stripped headers
-func CreateReproducibleTarballFromDir(dirPath, dirInArchive, tarballPath string) error {
+func CreateReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string) error {
 	tb, err := os.Create(tarballPath)
 	if err != nil {
 		return fmt.Errorf("error creating tarball: %w", err)
@@ -462,7 +462,7 @@ func CreateReproducibleTarballFromDir(dirPath, dirInArchive, tarballPath string)
 		if err != nil {
 			return fmt.Errorf("error getting relative path: %w", err)
 		}
-		header.Name = filepath.Join(dirInArchive, name)
+		header.Name = filepath.Join(dirPrefix, name)
 
 		// Write the header to the tarball
 		if err := tw.WriteHeader(header); err != nil {
