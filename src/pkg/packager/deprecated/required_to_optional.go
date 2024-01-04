@@ -34,12 +34,23 @@ func (m RequiredToOptional) Run(c types.ZarfComponent) (types.ZarfComponent, str
 		return c, ""
 	}
 
-	switch *c.DeprecatedRequired {
-	case true:
-		c.Optional = nil
-	case false:
-		c.Optional = helpers.BoolPtr(true)
-	}
+	warning := fmt.Sprintf("Component %q is using \"required\" which will be removed in Zarf v1.0.0. Please migrate to \"optional\".", c.Name)
 
-	return c, fmt.Sprintf("Component %q is using \"required\" which will be removed in Zarf v1.0.0. Please migrate to \"optional\".", c.Name)
+	if *c.DeprecatedRequired {
+		if *c.Optional {
+			// ensure that optional wins over required
+			c.DeprecatedRequired = helpers.BoolPtr(false)
+			return c, warning
+		} else {
+			c.Optional = nil
+			return c, warning
+		}
+	} else {
+		if *c.Optional {
+			return c, warning
+		} else {
+			c.DeprecatedRequired = helpers.BoolPtr(true)
+			return c, warning
+		}
+	}
 }

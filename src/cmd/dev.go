@@ -11,16 +11,21 @@ import (
 	"path/filepath"
 	"strings"
 
+	goyaml "github.com/goccy/go-yaml"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -57,6 +62,49 @@ var devDeployCmd = &cobra.Command{
 		if err := pkgClient.DevDeploy(); err != nil {
 			message.Fatalf(err, lang.CmdDevDeployErr, err.Error())
 		}
+	},
+}
+
+var devMigrateCmd = &cobra.Command{
+	Use: "migrate",
+	// Short:   lang.CmdDevMigrateShort,
+	// Long:    lang.CmdDevMigrateLong,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dir := args[0]
+		var pkg types.ZarfPackage
+		cm := goyaml.CommentMap{}
+
+		fi, err := os.Stat(filepath.Join(dir, layout.ZarfYAML))
+		if err != nil {
+			return err
+		}
+
+		b, err := os.ReadFile(filepath.Join(dir, layout.ZarfYAML))
+		if err != nil {
+			return err
+		}
+
+		if err := goyaml.UnmarshalWithOptions(b, &pkg, goyaml.CommentToMap(cm)); err != nil {
+			return err
+		}
+
+		// Migrate the package definition
+		for idx, component := range pkg.Components {
+			for _, migration := range deprecated.Migrations() {
+				c, _ := migration.Run(component)
+				c = migration.Clear(c)
+				pkg.Components[idx] = c
+			}
+		}
+
+		// Write the package definition back to disk
+		b, err = goyaml.MarshalWithOptions(pkg, goyaml.WithComment(cm), goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
+		if err != nil {
+			return err
+		}
+
+		return os.WriteFile(filepath.Join(dir, layout.ZarfYAML), b, fi.Mode())
 	},
 }
 
@@ -252,6 +300,7 @@ func init() {
 	rootCmd.AddCommand(devCmd)
 
 	devCmd.AddCommand(devDeployCmd)
+	devCmd.AddCommand(devMigrateCmd)
 	devCmd.AddCommand(devTransformGitLinksCmd)
 	devCmd.AddCommand(devSha256SumCmd)
 	devCmd.AddCommand(devFindImagesCmd)
