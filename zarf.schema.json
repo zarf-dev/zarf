@@ -249,11 +249,6 @@
           "$ref": "#/definitions/ZarfComponentImport",
           "description": "Import a component from another Zarf package"
         },
-        "scripts": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/DeprecatedZarfComponentScripts",
-          "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0."
-        },
         "files": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
@@ -262,14 +257,6 @@
           "type": "array",
           "description": "Files or folders to place on disk during package deployment"
         },
-        "charts": {
-          "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfChart"
-          },
-          "type": "array",
-          "description": "Helm charts to install during package deploy"
-        },
         "manifests": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
@@ -277,6 +264,14 @@
           },
           "type": "array",
           "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy"
+        },
+        "charts": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfChart"
+          },
+          "type": "array",
+          "description": "Helm charts to install during package deploy"
         },
         "images": {
           "items": {
@@ -304,6 +299,11 @@
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentExtensions",
           "description": "Extend component functionality with additional features"
+        },
+        "scripts": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/DeprecatedZarfComponentScripts",
+          "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0."
         },
         "actions": {
           "$schema": "http://json-schema.org/draft-04/schema#",
@@ -457,18 +457,6 @@
           "type": "string",
           "description": "The name to be used for the variable"
         },
-        "sensitive": {
-          "type": "boolean",
-          "description": "Whether to mark this variable as sensitive to not print it in the Zarf log"
-        },
-        "autoIndent": {
-          "type": "boolean",
-          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
-        },
-        "pattern": {
-          "type": "string",
-          "description": "An optional regex pattern that a variable value must match before a package deployment can continue."
-        },
         "type": {
           "enum": [
             "raw",
@@ -476,6 +464,18 @@
           ],
           "type": "string",
           "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "An optional regex pattern that a variable value must match before a package deployment can continue."
+        },
+        "sensitive": {
+          "type": "boolean",
+          "description": "Whether to mark this variable as sensitive to not print it in the Zarf log"
+        },
+        "autoIndent": {
+          "type": "boolean",
+          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
         }
       },
       "additionalProperties": false,
@@ -706,22 +706,22 @@
     },
     "ZarfContainerTarget": {
       "required": [
-        "namespace",
         "selector",
+        "namespace",
         "container",
         "path"
       ],
       "properties": {
-        "namespace": {
-          "type": "string",
-          "description": "The namespace to target for data injection"
-        },
         "selector": {
           "type": "string",
           "description": "The K8s selector to target for data injection",
           "examples": [
             "app\u0026#61;data-injection"
           ]
+        },
+        "namespace": {
+          "type": "string",
+          "description": "The namespace to target for data injection"
         },
         "container": {
           "type": "string",
