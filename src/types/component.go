@@ -39,17 +39,14 @@ type ZarfComponent struct {
 	// Import refers to another zarf.yaml package component.
 	Import ZarfComponentImport `json:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
 
-	// (Deprecated) DeprecatedScripts are custom commands that run before or after package deployment
-	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0.,deprecated=true"`
-
 	// Files are files to place on disk during deploy
 	Files []ZarfFile `json:"files,omitempty" jsonschema:"description=Files or folders to place on disk during package deployment"`
 
-	// Charts are helm charts to install during package deploy
-	Charts []ZarfChart `json:"charts,omitempty" jsonschema:"description=Helm charts to install during package deploy"`
-
 	// Manifests are raw manifests that get converted into zarf-generated helm charts during deploy
 	Manifests []ZarfManifest `json:"manifests,omitempty" jsonschema:"description=Kubernetes manifests to be included in a generated Helm chart on package deploy"`
+
+	// Charts are helm charts to install during package deploy
+	Charts []ZarfChart `json:"charts,omitempty" jsonschema:"description=Helm charts to install during package deploy"`
 
 	// Images are the online images needed to be included in the zarf package
 	Images []string `json:"images,omitempty" jsonschema:"description=List of OCI images to include in the package"`
@@ -62,6 +59,9 @@ type ZarfComponent struct {
 
 	// Extensions provide additional functionality to a component
 	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
+
+	// (Deprecated) DeprecatedScripts are custom commands that run before or after package deployment
+	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0.,deprecated=true"`
 
 	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
 	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
@@ -92,6 +92,33 @@ func (c ZarfComponent) IsRequired() bool {
 	}
 
 	// If neither required nor optional are set, then the component is required
+	return true
+}
+
+// IsEmpty returns if the components fields (other than the fields we were told to ignore) are empty or set to the types zero-value
+func (c ZarfComponent) IsEmpty(fieldsToIgnore []string) bool {
+	// Make a map for the fields we are going to ignore
+	ignoredFieldsMap := make(map[string]bool)
+	for _, field := range fieldsToIgnore {
+		ignoredFieldsMap[field] = true
+	}
+
+	// Get a value representation of the component
+	componentReflectValue := reflect.Indirect(reflect.ValueOf(c))
+
+	// Loop through all of the Components struct fields
+	for i := 0; i < componentReflectValue.NumField(); i++ {
+		// If we were told to ignore this field, continue on..
+		if ignoredFieldsMap[componentReflectValue.Type().Field(i).Name] {
+			continue
+		}
+
+		// Check if this field is empty/zero
+		if !componentReflectValue.Field(i).IsZero() {
+			return false
+		}
+	}
+
 	return true
 }
 
@@ -203,10 +230,10 @@ type ZarfComponentAction struct {
 // ZarfComponentActionSetVariable represents a variable that is to be set via an action
 type ZarfComponentActionSetVariable struct {
 	Name       string       `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
+	Type       VariableType `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB),enum=raw,enum=file"`
+	Pattern    string       `json:"pattern,omitempty" jsonschema:"description=An optional regex pattern that a variable value must match before a package deployment can continue."`
 	Sensitive  bool         `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
 	AutoIndent bool         `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
-	Pattern    string       `json:"pattern,omitempty" jsonschema:"description=An optional regex pattern that a variable value must match before a package deployment can continue."`
-	Type       VariableType `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB),enum=raw,enum=file"`
 }
 
 // ZarfComponentActionWait specifies a condition to wait for before continuing
@@ -232,8 +259,8 @@ type ZarfComponentActionWaitNetwork struct {
 
 // ZarfContainerTarget defines the destination info for a ZarfData target
 type ZarfContainerTarget struct {
-	Namespace string `json:"namespace" jsonschema:"description=The namespace to target for data injection"`
 	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection,example=app&#61;data-injection"`
+	Namespace string `json:"namespace" jsonschema:"description=The namespace to target for data injection"`
 	Container string `json:"container" jsonschema:"description=The container name to target for data injection"`
 	Path      string `json:"path" jsonschema:"description=The path within the container to copy the data into"`
 }
@@ -252,31 +279,4 @@ type ZarfComponentImport struct {
 	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from"`
 	// For further explanation see https://regex101.com/r/nxX8vx/1
 	URL string `json:"url,omitempty" jsonschema:"description=[beta] The URL to a Zarf package to import via OCI,pattern=^oci://.*$"`
-}
-
-// IsEmpty returns if the components fields (other than the fields we were told to ignore) are empty or set to the types zero-value
-func (c *ZarfComponent) IsEmpty(fieldsToIgnore []string) bool {
-	// Make a map for the fields we are going to ignore
-	ignoredFieldsMap := make(map[string]bool)
-	for _, field := range fieldsToIgnore {
-		ignoredFieldsMap[field] = true
-	}
-
-	// Get a value representation of the component
-	componentReflectValue := reflect.Indirect(reflect.ValueOf(c))
-
-	// Loop through all of the Components struct fields
-	for i := 0; i < componentReflectValue.NumField(); i++ {
-		// If we were told to ignore this field, continue on..
-		if ignoredFieldsMap[componentReflectValue.Type().Field(i).Name] {
-			continue
-		}
-
-		// Check if this field is empty/zero
-		if !componentReflectValue.Field(i).IsZero() {
-			return false
-		}
-	}
-
-	return true
 }
