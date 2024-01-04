@@ -29,11 +29,12 @@ type ZarfComponent struct {
 	// Only include compatible components during package deployment
 	Only ZarfComponentOnlyTarget `json:"only,omitempty" jsonschema:"description=Filter when this component is included in package creation or deployment"`
 
-	// Key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
+	// DeprecatedGroup is a key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
+	//
 	// Note: ignores default and required flags
-	Group string `json:"group,omitempty" jsonschema:"description=[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.,deprecated=true"`
+	DeprecatedGroup string `json:"group,omitempty" jsonschema:"description=[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.,deprecated=true"`
 
-	// (Deprecated) Path to cosign public key for signed online resources
+	// DeprecatedCosignKeyPath to cosign public key for signed online resources
 	DeprecatedCosignKeyPath string `json:"cosignKeyPath,omitempty" jsonschema:"description=[Deprecated] Specify a path to a public key to validate signed online resources. This will be removed in Zarf v1.0.0.,deprecated=true"`
 
 	// Import refers to another zarf.yaml package component.
@@ -60,7 +61,7 @@ type ZarfComponent struct {
 	// Extensions provide additional functionality to a component
 	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
 
-	// (Deprecated) DeprecatedScripts are custom commands that run before or after package deployment
+	// DeprecatedScripts are custom commands that run before or after package deployment
 	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0.,deprecated=true"`
 
 	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle

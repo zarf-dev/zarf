@@ -32,8 +32,8 @@ func (p *Packager) getSelectedComponents() []types.ZarfComponent {
 	// Group the components by Name and Group while maintaining order
 	for _, component := range p.cfg.Pkg.Components {
 		groupKey := component.Name
-		if component.Group != "" {
-			groupKey = component.Group
+		if component.DeprecatedGroup != "" {
+			groupKey = component.DeprecatedGroup
 		}
 
 		if !slices.Contains(orderedComponentGroups, groupKey) {
@@ -81,7 +81,7 @@ func (p *Packager) getSelectedComponents() []types.ZarfComponent {
 
 					// Then check for already selected groups
 					if groupSelected != nil {
-						message.Fatalf(nil, lang.PkgDeployErrMultipleComponentsSameGroup, groupSelected.Name, component.Name, component.Group)
+						message.Fatalf(nil, lang.PkgDeployErrMultipleComponentsSameGroup, groupSelected.Name, component.Name, component.DeprecatedGroup)
 					}
 
 					// Then append to the final list

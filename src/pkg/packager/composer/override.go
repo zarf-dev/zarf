@@ -14,6 +14,7 @@ func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) erro
 	c.Name = override.Name
 	c.Default = override.Default
 	c.Optional = override.Optional
+	c.DeprecatedRequired = override.DeprecatedRequired
 
 	// Override description if it was provided.
 	if override.Description != "" {
@@ -37,7 +38,7 @@ func overrideDeprecated(c *types.ZarfComponent, override types.ZarfComponent) {
 		c.DeprecatedCosignKeyPath = override.DeprecatedCosignKeyPath
 	}
 
-	c.Group = override.Group
+	c.DeprecatedGroup = override.DeprecatedGroup
 
 	// Merge deprecated scripts for backwards compatibility with older zarf binaries.
 	c.DeprecatedScripts.Before = append(c.DeprecatedScripts.Before, override.DeprecatedScripts.Before...)
