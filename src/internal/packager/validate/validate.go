@@ -133,7 +133,7 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		return fmt.Errorf(lang.PkgValidateErrComponentRequired, component.Name)
 	}
 
-	if component.IsRequired() {
+	if component.Optional == nil || !*component.Optional {
 		if component.Default {
 			return fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name)
 		}

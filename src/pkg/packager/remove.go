@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -49,7 +50,7 @@ func (p *Packager) Remove() (err error) {
 	packageRequiresCluster := false
 
 	// If components were provided; just remove the things we were asked to remove
-	p.forIncludedComponents(func(component types.ZarfComponent) error {
+	interactive.ForIncludedComponents(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components, (func(component types.ZarfComponent) error {
 		componentsToRemove = append(componentsToRemove, component.Name)
 
 		if requiresCluster(component) {
@@ -57,7 +58,7 @@ func (p *Packager) Remove() (err error) {
 		}
 
 		return nil
-	})
+	}))
 
 	// Get or build the secret for the deployed package
 	deployedPackage := &types.DeployedPackage{}

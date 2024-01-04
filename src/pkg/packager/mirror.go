@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -44,7 +45,7 @@ func (p *Packager) Mirror() (err error) {
 	p.filterComponents()
 
 	// Run mirror for each requested component
-	return p.forIncludedComponents(p.mirrorComponent)
+	return interactive.ForIncludedComponents(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components, p.mirrorComponent)
 }
 
 // mirrorComponent mirrors a Zarf Component.

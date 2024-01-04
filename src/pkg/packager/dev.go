@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -40,7 +41,7 @@ func (p *Packager) DevDeploy() error {
 	// the user's selection and the component's `required` field
 	// This is also different from regular package creation, where we still assemble and package up
 	// all components and their dependencies, regardless of whether they are required or not
-	p.cfg.Pkg.Components = p.getSelectedComponents()
+	p.cfg.Pkg.Components = interactive.GetSelectedComponents(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components)
 
 	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)

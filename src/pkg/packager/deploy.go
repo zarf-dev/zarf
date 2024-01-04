@@ -20,6 +20,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -93,7 +94,7 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy := p.getSelectedComponents()
+	componentsToDeploy := interactive.GetSelectedComponents(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components)
 
 	// Generate a value template
 	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
