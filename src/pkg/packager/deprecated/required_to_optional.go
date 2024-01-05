@@ -24,7 +24,7 @@ func (m RequiredToOptional) ID() string {
 // Clear the deprecated required.
 func (m RequiredToOptional) Clear(mc types.ZarfComponent) types.ZarfComponent {
 	mc.DeprecatedRequired = nil
-	if mc.Optional != nil && *mc.Optional {
+	if mc.Optional != nil && !*mc.Optional {
 		mc.Optional = nil
 	}
 	return mc
