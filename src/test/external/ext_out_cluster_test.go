@@ -157,7 +157,7 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	os.Setenv("HELM_REPOSITORY_CONFIG", repoPath)
 	defer os.Unsetenv("HELM_REPOSITORY_CONFIG")
 
-	packagePath := filepath.Join("..", "packages", "13-private-helm")
+	packagePath := filepath.Join("..", "packages", "external")
 	findImageArgs := []string{"dev", "find-images", packagePath}
 	err := exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.Error(err, "Since auth has not been setup, this should fail")
@@ -175,19 +175,20 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	utils.WriteYaml(repoPath, repoFile, 0600)
 
 	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
-	suite.NoError(err, "unable to deploy flux example package")
+	suite.NoError(err, "Unable to find images")
 
 	packageCreateArgs := []string{"package", "create", packagePath, "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, packageCreateArgs...)
-	suite.NoError(err, "unable to deploy flux example package")
+	suite.NoError(err, "Unable to create package")
 }
 
 func createHelmChartInGitea(suite *ExtOutClusterTestSuite, baseURL string, username string, password string) {
 	// TODO have this package be downloaded before the test
 	tempDir := suite.T().TempDir()
-	chartFilePath := filepath.Join(tempDir, "podinfo-6.5.4.tgz")
+	podInfoVersion := "6.5.4"
+	chartFilePath := filepath.Join(tempDir, fmt.Sprintf("podinfo-%s.tgz", podInfoVersion))
 
-	curlCommandArgs := []string{"-o", chartFilePath, "https://stefanprodan.github.io/podinfo/podinfo-6.5.4.tgz"}
+	curlCommandArgs := []string{"-o", chartFilePath, fmt.Sprintf("https://stefanprodan.github.io/podinfo/podinfo-%s.tgz", podInfoVersion)}
 	err := exec.CmdWithPrint("curl", curlCommandArgs...)
 	suite.NoError(err, "unable to download podinfo chart")
 	url := fmt.Sprintf("%s/api/packages/%s/helm/api/charts", baseURL, username)

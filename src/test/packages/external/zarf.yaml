@@ -7,7 +7,7 @@ components:
 - name: demo-helm-charts
   required: true
   charts:
-  - name: podinfo-repo
+  - name: podinfo
     version: 6.5.3
     url: http://gitea.localhost:3000/api/packages/git-user/helm
     repoName: podinfo

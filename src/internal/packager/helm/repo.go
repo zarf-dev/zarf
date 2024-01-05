@@ -143,8 +143,7 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		chartURL  string
 		err       error
 	)
-	repoFile := repo.NewFile()
-	err = utils.ReadYaml(pull.Settings.RepositoryConfig, &repoFile)
+	repoFile, err := repo.LoadFile(pull.Settings.RepositoryConfig)
 
 	if err != nil {
 		message.Debug("Unable to load the repo file at %q: %s", pull.Settings.RepositoryConfig, err.Error())
