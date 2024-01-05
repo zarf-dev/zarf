@@ -68,6 +68,12 @@ Charts using the `url` key can be:
 - A remote URL (oci://) to an OCI registry
 - A remote URL (http/https) to a Helm repository
 
+:::note
+
+To use a private helm repoistory the repo must be added to helm. You can add a repo to helm with the [helm repo add](https://helm.sh/docs/helm/helm_repo_add/) command.
+
+:::
+
 #### Chart Examples
 
 <ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-charts" />

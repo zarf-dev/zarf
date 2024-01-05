@@ -184,7 +184,12 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 
 func createHelmChartInGitea(suite *ExtOutClusterTestSuite, baseURL string, username string, password string) {
 	// TODO have this package be downloaded before the test
-	chartFilePath := "podinfo-6.5.3.tgz"
+	tempDir := suite.T().TempDir()
+	chartFilePath := filepath.Join(tempDir, "podinfo-6.5.4.tgz")
+
+	curlCommandArgs := []string{"-o", chartFilePath, "https://stefanprodan.github.io/podinfo/podinfo-6.5.4.tgz"}
+	err := exec.CmdWithPrint("curl", curlCommandArgs...)
+	suite.NoError(err, "unable to download podinfo chart")
 	url := fmt.Sprintf("%s/api/packages/%s/helm/api/charts", baseURL, username)
 
 	file, err := os.Open(chartFilePath)
