@@ -5,12 +5,13 @@
 package interactive
 
 import (
+	"fmt"
 	"path"
 	"slices"
 	"strings"
 
+	"github.com/agnivade/levenshtein"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -23,7 +24,8 @@ const (
 	excluded
 )
 
-func GetSelectedComponents(optionalComponents string, allComponents []types.ZarfComponent) []types.ZarfComponent {
+// GetSelectedComponents prompts to select components based upon multiple conditions
+func GetSelectedComponents(optionalComponents string, allComponents []types.ZarfComponent) ([]types.ZarfComponent, error) {
 	var selectedComponents []types.ZarfComponent
 	groupedComponents := map[string][]types.ZarfComponent{}
 	orderedComponentGroups := []string{}
@@ -80,7 +82,7 @@ func GetSelectedComponents(optionalComponents string, allComponents []types.Zarf
 
 					// Then check for already selected groups
 					if groupSelected != nil {
-						message.Fatalf(nil, lang.PkgDeployErrMultipleComponentsSameGroup, groupSelected.Name, component.Name, component.DeprecatedGroup)
+						return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrMultipleComponentsSameGroup, groupSelected.Name, component.Name, component.DeprecatedGroup)
 					}
 
 					// Then append to the final list
@@ -98,14 +100,23 @@ func GetSelectedComponents(optionalComponents string, allComponents []types.Zarf
 				for _, component := range groupedComponents[groupKey] {
 					componentNames = append(componentNames, component.Name)
 				}
-				message.Fatalf(nil, lang.PkgDeployErrNoDefaultOrSelection, strings.Join(componentNames, ","))
+				return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrNoDefaultOrSelection, strings.Join(componentNames, ", "))
 			}
 		}
 
 		// Check that we have matched against all requests
 		for _, requestedComponent := range requestedComponents {
 			if _, ok := matchedRequests[requestedComponent]; !ok {
-				message.Fatalf(nil, lang.PkgDeployErrNoCompatibleComponentsForSelection, requestedComponent)
+				names := []string{}
+				for _, c := range allComponents {
+					d := levenshtein.ComputeDistance(c.Name, requestedComponent)
+					if d <= 5 {
+						return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrNoCompatibleComponentsForSelection, requestedComponent, c.Name)
+					}
+					names = append(names, c.Name)
+				}
+
+				return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrNoCompatibleComponentsForSelection, requestedComponent, strings.Join(names, ", "))
 			}
 		}
 	} else {
@@ -125,9 +136,10 @@ func GetSelectedComponents(optionalComponents string, allComponents []types.Zarf
 		}
 	}
 
-	return selectedComponents
+	return selectedComponents, nil
 }
 
+// ForIncludedComponents iterates over components and calls onIncluded for each component that should be included
 func ForIncludedComponents(optionalComponents string, components []types.ZarfComponent, onIncluded func(types.ZarfComponent) error) error {
 	requestedComponents := helpers.StringToSlice(optionalComponents)
 	isPartial := len(requestedComponents) > 0 && requestedComponents[0] != ""

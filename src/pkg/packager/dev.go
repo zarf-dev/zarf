@@ -38,10 +38,13 @@ func (p *Packager) DevDeploy() error {
 
 	// Also filter out components that are not required, nor requested via --components
 	// This is different from the above filter, as it is not based on the system, but rather
-	// the user's selection and the component's `required` field
+	// the user's selection and the component's `required`/`optional` field
 	// This is also different from regular package creation, where we still assemble and package up
 	// all components and their dependencies, regardless of whether they are required or not
-	p.cfg.Pkg.Components = interactive.GetSelectedComponents(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components)
+	p.cfg.Pkg.Components, err = interactive.GetSelectedComponents(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components)
+	if err != nil {
+		return err
+	}
 
 	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)

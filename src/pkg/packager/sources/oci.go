@@ -46,7 +46,10 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 		if err != nil {
 			return err
 		}
-		requested := interactive.GetSelectedComponents(s.OptionalComponents, pkg.Components)
+		requested, err := interactive.GetSelectedComponents(s.OptionalComponents, pkg.Components)
+		if err != nil {
+			return err
+		}
 		layersToPull, err = s.LayersFromRequestedComponents(requested)
 		if err != nil {
 			return fmt.Errorf("unable to get published component image layers: %s", err.Error())

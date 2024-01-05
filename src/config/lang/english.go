@@ -625,9 +625,9 @@ const (
 
 // src/internal/packager/deploy.
 const (
-	PkgDeployErrMultipleComponentsSameGroup        = "You cannot specify multiple components (%q, %q) within the same group (%q) when using the --components flag."
-	PkgDeployErrNoDefaultOrSelection               = "You must make a selection from %q with the --components flag as there is no default in their group."
-	PkgDeployErrNoCompatibleComponentsForSelection = "No compatible components found that matched %q. Please check spelling and try again."
+	PkgDeployErrMultipleComponentsSameGroup        = "cannot specify multiple components (%q, %q) within the same group (%q) when using the --components flag"
+	PkgDeployErrNoDefaultOrSelection               = "no selection made from %q with the --components flag and there is no default in the group"
+	PkgDeployErrNoCompatibleComponentsForSelection = "no compatible components found that matched %q, suggestion(s): %s"
 	PkgDeployErrComponentSelectionCanceled         = "Component selection canceled: %s"
 )
 

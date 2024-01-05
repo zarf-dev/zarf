@@ -94,7 +94,10 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy := interactive.GetSelectedComponents(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components)
+	componentsToDeploy, err := interactive.GetSelectedComponents(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components)
+	if err != nil {
+		return deployedComponents, fmt.Errorf("unable to get selected components: %w", err)
+	}
 
 	// Generate a value template
 	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
