@@ -249,14 +249,6 @@
           "$ref": "#/definitions/ZarfComponentImport",
           "description": "Import a component from another Zarf package"
         },
-        "files": {
-          "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfFile"
-          },
-          "type": "array",
-          "description": "Files or folders to place on disk during package deployment"
-        },
         "manifests": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
@@ -273,6 +265,22 @@
           "type": "array",
           "description": "Helm charts to install during package deploy"
         },
+        "dataInjections": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfDataInjection"
+          },
+          "type": "array",
+          "description": "Datasets to inject into a container in the target cluster"
+        },
+        "files": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfFile"
+          },
+          "type": "array",
+          "description": "Files or folders to place on disk during package deployment"
+        },
         "images": {
           "items": {
             "type": "string"
@@ -286,14 +294,6 @@
           },
           "type": "array",
           "description": "List of git repos to include in the package"
-        },
-        "dataInjections": {
-          "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfDataInjection"
-          },
-          "type": "array",
-          "description": "Datasets to inject into a container in the target cluster"
         },
         "extensions": {
           "$schema": "http://json-schema.org/draft-04/schema#",
@@ -706,22 +706,22 @@
     },
     "ZarfContainerTarget": {
       "required": [
-        "selector",
         "namespace",
+        "selector",
         "container",
         "path"
       ],
       "properties": {
+        "namespace": {
+          "type": "string",
+          "description": "The namespace to target for data injection"
+        },
         "selector": {
           "type": "string",
           "description": "The K8s selector to target for data injection",
           "examples": [
             "app\u0026#61;data-injection"
           ]
-        },
-        "namespace": {
-          "type": "string",
-          "description": "The namespace to target for data injection"
         },
         "container": {
           "type": "string",

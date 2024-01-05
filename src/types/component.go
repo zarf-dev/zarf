@@ -40,23 +40,23 @@ type ZarfComponent struct {
 	// Import refers to another zarf.yaml package component.
 	Import ZarfComponentImport `json:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
 
-	// Files are files to place on disk during deploy
-	Files []ZarfFile `json:"files,omitempty" jsonschema:"description=Files or folders to place on disk during package deployment"`
-
 	// Manifests are raw manifests that get converted into zarf-generated helm charts during deploy
 	Manifests []ZarfManifest `json:"manifests,omitempty" jsonschema:"description=Kubernetes manifests to be included in a generated Helm chart on package deploy"`
 
 	// Charts are helm charts to install during package deploy
 	Charts []ZarfChart `json:"charts,omitempty" jsonschema:"description=Helm charts to install during package deploy"`
 
+	// Data packages to push into a running cluster
+	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a container in the target cluster"`
+
+	// Files are files to place on disk during deploy
+	Files []ZarfFile `json:"files,omitempty" jsonschema:"description=Files or folders to place on disk during package deployment"`
+
 	// Images are the online images needed to be included in the zarf package
 	Images []string `json:"images,omitempty" jsonschema:"description=List of OCI images to include in the package"`
 
 	// Repos are any git repos that need to be pushed into the git server
 	Repos []string `json:"repos,omitempty" jsonschema:"description=List of git repos to include in the package"`
-
-	// Data packages to push into a running cluster
-	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a container in the target cluster"`
 
 	// Extensions provide additional functionality to a component
 	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
@@ -260,8 +260,8 @@ type ZarfComponentActionWaitNetwork struct {
 
 // ZarfContainerTarget defines the destination info for a ZarfData target
 type ZarfContainerTarget struct {
-	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection,example=app&#61;data-injection"`
 	Namespace string `json:"namespace" jsonschema:"description=The namespace to target for data injection"`
+	Selector  string `json:"selector" jsonschema:"description=The K8s selector to target for data injection,example=app&#61;data-injection"`
 	Container string `json:"container" jsonschema:"description=The container name to target for data injection"`
 	Path      string `json:"path" jsonschema:"description=The path within the container to copy the data into"`
 }
