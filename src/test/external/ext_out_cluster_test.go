@@ -31,11 +31,12 @@ const (
 	giteaHost     = "gitea.localhost"
 	registryHost  = "registry.localhost"
 	clusterName   = "zarf-external-test"
+	giteaUser     = "git-user"
 	giteaPassword = "superSecurePassword"
 )
 
 var outClusterCredentialArgs = []string{
-	"--git-push-username=git-user",
+	"--git-push-username=" + giteaUser,
 	"--git-push-password=" + giteaPassword,
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=push-user",
@@ -116,7 +117,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	suite.Contains(string(regBody), "stefanprodan/podinfo", "registry did not contain the expected image")
 
 	// Check that the git server contains the repos we want
-	gitRepoURL := fmt.Sprintf("http://git-user:%s@%s:3000/api/v1/repos/search", giteaPassword, giteaHost)
+	gitRepoURL := fmt.Sprintf("http://%s:%s@%s:3000/api/v1/repos/search", giteaUser, giteaPassword, giteaHost)
 	respGit, err := http.Get(gitRepoURL)
 	suite.NoError(err)
 	gitBody, err := io.ReadAll(respGit.Body)
@@ -147,10 +148,9 @@ func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
 
 func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	baseURL := fmt.Sprintf("http://%s", "gitea.localhost:3000")
-	username := "git-user"
 
-	createHelmChartInGitea(suite, baseURL, username, giteaPassword)
-	makeUserPrivate(suite, baseURL, username, giteaPassword)
+	createHelmChartInGitea(suite, baseURL, giteaUser, giteaPassword)
+	makeUserPrivate(suite, baseURL, giteaUser, giteaPassword)
 
 	tempDir := suite.T().TempDir()
 	repoPath := filepath.Join(tempDir, "repositories.yaml")
@@ -164,10 +164,10 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 
 	repoFile := repo.NewFile()
 
-	chartURL := fmt.Sprintf("%s/api/packages/%s/helm", baseURL, username)
+	chartURL := fmt.Sprintf("%s/api/packages/%s/helm", baseURL, giteaUser)
 	Entry := repo.Entry{
 		Name:     "temp_entry",
-		Username: username,
+		Username: giteaUser,
 		Password: giteaPassword,
 		URL:      chartURL,
 	}
@@ -177,13 +177,12 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.NoError(err, "Unable to find images")
 
-	packageCreateArgs := []string{"package", "create", packagePath, "--confirm"}
+	packageCreateArgs := []string{"package", "create", packagePath, fmt.Sprintf("--tmpdir=%s", tempDir), "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, packageCreateArgs...)
 	suite.NoError(err, "Unable to create package")
 }
 
 func createHelmChartInGitea(suite *ExtOutClusterTestSuite, baseURL string, username string, password string) {
-	// TODO have this package be downloaded before the test
 	tempDir := suite.T().TempDir()
 	podInfoVersion := "6.5.4"
 	chartFilePath := filepath.Join(tempDir, fmt.Sprintf("podinfo-%s.tgz", podInfoVersion))
