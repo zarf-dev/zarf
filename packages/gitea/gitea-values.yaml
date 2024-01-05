@@ -1,11 +1,12 @@
 persistence:
   storageClass: "###ZARF_STORAGE_CLASS###"
-  existingClaim: "###ZARF_VAR_GIT_SERVER_EXISTING_PVC###"
+  claimName: "###ZARF_VAR_GIT_SERVER_EXISTING_PVC###"
   size: "###ZARF_VAR_GIT_SERVER_PVC_SIZE###"
   accessModes:
     - "###ZARF_VAR_GIT_SERVER_PVC_ACCESS_MODE###"
+  create: ###ZARF_VAR_GIT_SERVER_CREATE_PVC###
 
-replicaCount: "###ZARF_VAR_GIT_SERVER_REPLICA_COUNT###"
+replicaCount: ###ZARF_VAR_GIT_SERVER_REPLICA_COUNT###
 
 gitea:
   admin:
@@ -29,6 +30,12 @@ gitea:
     repository:
       ENABLE_PUSH_CREATE_USER: true
       FORCE_PRIVATE: true
+    session:
+      PROVIDER: memory
+    cache:
+      ADAPTER: memory
+    queue:
+      TYPE: level
 resources:
   requests:
     cpu: "###ZARF_VAR_GIT_SERVER_CPU_REQ###"
@@ -37,13 +44,12 @@ resources:
     cpu: "###ZARF_VAR_GIT_SERVER_CPU_LIMIT###"
     memory: "###ZARF_VAR_GIT_SERVER_MEM_LIMIT###"
 
-memcached:
-  enabled: false
-
-postgresql:
-  enabled: false
-
 image:
-  repository: "###ZARF_CONST_GITEA_IMAGE###"
-  tag: "###ZARF_CONST_GITEA_SERVER_VERSION###"
+  fullOverride: "###ZARF_CONST_GITEA_IMAGE###"
   rootless: true
+
+postgresql-ha:
+  enabled: false
+
+redis-cluster:
+  enabled: false

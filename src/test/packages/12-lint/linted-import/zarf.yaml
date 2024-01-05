@@ -19,5 +19,5 @@ components:
 
   - name: oci-games-url
     import:
-      url: oci://🦄/dos-games:1.0.0-skeleton
+      url: oci://🦄/dos-games:1.0.0
       name: baseline

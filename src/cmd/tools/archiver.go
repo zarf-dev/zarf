@@ -53,6 +53,9 @@ var archiverDecompressCmd = &cobra.Command{
 
 		if unarchiveAll {
 			err := filepath.Walk(destinationPath, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
 				if strings.HasSuffix(path, ".tar") {
 					dst := filepath.Join(strings.TrimSuffix(path, ".tar"), "..")
 					// Unpack sboms.tar differently since it has a different folder structure than components
@@ -71,7 +74,7 @@ var archiverDecompressCmd = &cobra.Command{
 				return nil
 			})
 			if err != nil {
-				message.Fatalf(err, lang.CmdToolsArchiverUnarchiveAllErr)
+				message.Fatalf(err, lang.CmdToolsArchiverUnarchiveAllErr, err.Error())
 			}
 		}
 	},

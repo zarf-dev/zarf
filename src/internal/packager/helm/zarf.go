@@ -7,7 +7,6 @@ package helm
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -43,36 +42,6 @@ func (h *Helm) UpdateZarfRegistryValues() error {
 	err = h.UpdateReleaseValues(registryValues)
 	if err != nil {
 		return fmt.Errorf("error updating the release values: %w", err)
-	}
-
-	return nil
-}
-
-// UpdateZarfGiteaValues updates the Zarf git server deployment with the new state values
-func (h *Helm) UpdateZarfGiteaValues() error {
-	giteaValues := map[string]interface{}{
-		"gitea": map[string]interface{}{
-			"admin": map[string]interface{}{
-				"username": h.cfg.State.GitServer.PushUsername,
-				"password": h.cfg.State.GitServer.PushPassword,
-			},
-		},
-	}
-
-	h.chart = types.ZarfChart{
-		Namespace:   "zarf",
-		ReleaseName: "zarf-gitea",
-	}
-
-	err := h.UpdateReleaseValues(giteaValues)
-	if err != nil {
-		return fmt.Errorf("error updating the release values: %w", err)
-	}
-
-	g := git.New(h.cfg.State.GitServer)
-	err = g.CreateReadOnlyUser()
-	if err != nil {
-		return fmt.Errorf("unable to create the new Gitea read only user: %w", err)
 	}
 
 	return nil

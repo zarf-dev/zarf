@@ -30,7 +30,10 @@ func (o *OrasRemote) ResolveRoot() (ocispec.Descriptor, error) {
 		return desc, nil
 	}
 
-	// if target platform is nil, oras.Resolve falls back to a o.repo.Resolve call
+	if o.targetPlatform == nil && desc.MediaType == ocispec.MediaTypeImageIndex {
+		return ocispec.Descriptor{}, fmt.Errorf("%q resolved to an image index, but no target platform was specified", o.repo.Reference.Reference)
+	}
+
 	resolveOpts := oras.ResolveOptions{
 		TargetPlatform: o.targetPlatform,
 	}

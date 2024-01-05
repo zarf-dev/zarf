@@ -77,7 +77,7 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 	// Get the repo as the readonly user
 	repoName := "zarf-public-test-2469062884"
 	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, state.GitServer.PushUsername, repoName), nil)
-	getRepoResponseBody, err := gitCfg.DoHTTPThings(getRepoRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
+	getRepoResponseBody, _, err := gitCfg.DoHTTPThings(getRepoRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
 
 	// Make sure the only permissions are pull (read)
@@ -100,7 +100,7 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	// Get the Zarf repo tag
 	repoTag := "v0.0.1"
 	getRepoTagsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/tags/%s", gitURL, config.ZarfGitPushUser, repoName, repoTag), nil)
-	getRepoTagsResponseBody, err := gitCfg.DoHTTPThings(getRepoTagsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
+	getRepoTagsResponseBody, _, err := gitCfg.DoHTTPThings(getRepoTagsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
 
 	// Make sure the pushed tag exists
@@ -111,7 +111,7 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 	// Get the Zarf repo commit
 	repoHash := "01a23218923f24194133b5eb11268cf8d73ff1bb"
 	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/git/commits/%s", gitURL, config.ZarfGitPushUser, repoName, repoHash), nil)
-	getRepoCommitsResponseBody, err := gitCfg.DoHTTPThings(getRepoCommitsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
+	getRepoCommitsResponseBody, _, err := gitCfg.DoHTTPThings(getRepoCommitsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
 	require.Contains(t, string(getRepoCommitsResponseBody), repoHash)
 }
