@@ -105,19 +105,26 @@ func GetSelectedComponents(optionalComponents string, allComponents []types.Zarf
 		}
 
 		// Check that we have matched against all requests
+		var err error
 		for _, requestedComponent := range requestedComponents {
 			if _, ok := matchedRequests[requestedComponent]; !ok {
-				names := []string{}
+				closeEnough := []string{}
 				for _, c := range allComponents {
 					d := levenshtein.ComputeDistance(c.Name, requestedComponent)
 					if d <= 5 {
-						return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrNoCompatibleComponentsForSelection, requestedComponent, c.Name)
+						closeEnough = append(closeEnough, c.Name)
 					}
-					names = append(names, c.Name)
 				}
-
-				return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrNoCompatibleComponentsForSelection, requestedComponent, strings.Join(names, ", "))
+				failure := fmt.Errorf(lang.PkgDeployErrNoCompatibleComponentsForSelection, requestedComponent, strings.Join(closeEnough, ", "))
+				if err != nil {
+					err = fmt.Errorf("%w, %w", err, failure)
+				} else {
+					err = failure
+				}
 			}
+		}
+		if err != nil {
+			return []types.ZarfComponent{}, err
 		}
 	} else {
 		for _, groupKey := range orderedComponentGroups {
