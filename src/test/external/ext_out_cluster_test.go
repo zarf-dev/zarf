@@ -155,6 +155,7 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	tempDir := suite.T().TempDir()
 	repoPath := filepath.Join(tempDir, "repositories.yaml")
 	os.Setenv("HELM_REPOSITORY_CONFIG", repoPath)
+	defer os.Unsetenv("HELM_REPOSITORY_CONFIG")
 
 	packagePath := filepath.Join("..", "packages", "13-private-helm")
 	findImageArgs := []string{"dev", "find-images", packagePath}

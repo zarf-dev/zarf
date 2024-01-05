@@ -144,10 +144,10 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		err       error
 	)
 	repoFile := repo.NewFile()
-	utils.ReadYaml(pull.Settings.RepositoryConfig, &repoFile)
-	// TODO what is the best way to handle this error?
+	err = utils.ReadYaml(pull.Settings.RepositoryConfig, &repoFile)
+
 	if err != nil {
-		message.Debug("no helm repo file found")
+		message.Debug("Unable to load the repo file at %q: %s", pull.Settings.RepositoryConfig, err.Error())
 	}
 
 	var username string
