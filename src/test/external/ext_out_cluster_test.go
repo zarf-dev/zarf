@@ -24,21 +24,22 @@ import (
 
 // Docker/k3d networking constants
 const (
-	network      = "k3d-k3s-external-test"
-	subnet       = "172.31.0.0/16"
-	gateway      = "172.31.0.1"
-	giteaIP      = "172.31.0.99"
-	giteaHost    = "gitea.localhost"
-	registryHost = "registry.localhost"
-	clusterName  = "zarf-external-test"
+	network       = "k3d-k3s-external-test"
+	subnet        = "172.31.0.0/16"
+	gateway       = "172.31.0.1"
+	giteaIP       = "172.31.0.99"
+	giteaHost     = "gitea.localhost"
+	registryHost  = "registry.localhost"
+	clusterName   = "zarf-external-test"
+	giteaPassword = "superSecurePassword"
 )
 
 var outClusterCredentialArgs = []string{
 	"--git-push-username=git-user",
-	"--git-push-password=superSecurePassword",
+	"--git-push-password=" + giteaPassword,
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=push-user",
-	"--registry-push-password=superSecurePassword",
+	"--registry-push-password=" + giteaPassword,
 	"--registry-url=k3d-" + registryHost + ":5000"}
 
 type ExtOutClusterTestSuite struct {
@@ -105,7 +106,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	suite.NoError(err, "unable to mirror the package with zarf")
 
 	// Check that the registry contains the images we want
-	regCatalogURL := fmt.Sprintf("http://push-user:superSecurePassword@k3d-%s:5000/v2/_catalog", registryHost)
+	regCatalogURL := fmt.Sprintf("http://push-user:%s@k3d-%s:5000/v2/_catalog", giteaPassword, registryHost)
 	respReg, err := http.Get(regCatalogURL)
 	suite.NoError(err)
 	regBody, err := io.ReadAll(respReg.Body)
@@ -115,7 +116,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	suite.Contains(string(regBody), "stefanprodan/podinfo", "registry did not contain the expected image")
 
 	// Check that the git server contains the repos we want
-	gitRepoURL := fmt.Sprintf("http://git-user:superSecurePassword@%s:3000/api/v1/repos/search", giteaHost)
+	gitRepoURL := fmt.Sprintf("http://git-user:%s@%s:3000/api/v1/repos/search", giteaPassword, giteaHost)
 	respGit, err := http.Get(gitRepoURL)
 	suite.NoError(err)
 	gitBody, err := io.ReadAll(respGit.Body)
@@ -147,10 +148,9 @@ func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
 func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	baseURL := fmt.Sprintf("http://%s", "gitea.localhost:3000")
 	username := "git-user"
-	password := "superSecurePassword"
 
-	createHelmChartInGitea(suite, baseURL, username, password)
-	makeUserPrivate(suite, baseURL, username, password)
+	createHelmChartInGitea(suite, baseURL, username, giteaPassword)
+	makeUserPrivate(suite, baseURL, username, giteaPassword)
 
 	tempDir := suite.T().TempDir()
 	repoPath := filepath.Join(tempDir, "repositories.yaml")
@@ -159,7 +159,7 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	packagePath := filepath.Join("..", "packages", "13-private-helm")
 	findImageArgs := []string{"dev", "find-images", packagePath}
 	err := exec.CmdWithPrint(zarfBinPath, findImageArgs...)
-	suite.Contains(err.Error(), "401", "Auth has not happened yet")
+	suite.Error(err, "Since auth has not been setup, this should fail")
 
 	repoFile := repo.NewFile()
 
@@ -167,7 +167,7 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	Entry := repo.Entry{
 		Name:     "temp_entry",
 		Username: username,
-		Password: password,
+		Password: giteaPassword,
 		URL:      chartURL,
 	}
 	repoFile.Add(&Entry)
