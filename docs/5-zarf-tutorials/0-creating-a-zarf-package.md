@@ -14,23 +14,23 @@ When creating a Zarf package, you must have a network connection so that Zarf ca
 
 Before beginning this tutorial you will need the following:
 
--  Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
--  A text editor or development environment such as [VS Code](../3-create-a-zarf-package/8-vscode.md)
+- Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
+- A text editor or development environment such as [VS Code](../3-create-a-zarf-package/8-vscode.md)
 
 ## Putting Together a Zarf Package
 
-In order to create a Zarf package you first need to have an idea of what application(s) you want to package.  In this example we will be using the [WordPress chart from Bitnami](https://artifacthub.io/packages/helm/bitnami/wordpress) but the steps and tools used below are very similar for other applications.
+In order to create a Zarf package you first need to have an idea of what application(s) you want to package. In this example we will be using the [WordPress chart from Bitnami](https://artifacthub.io/packages/helm/bitnami/wordpress) but the steps and tools used below are very similar for other applications.
 
 ### Creating the Package Definition
 
-A `zarf.yaml` file follows the [Zarf Package Schema](../3-create-a-zarf-package/4-zarf-schema.md) and allows us to specify package metadata and a set of components for us to deploy. We start a package definition with the `kind` of package we are making and `metadata` that describes the package.  You can start our WordPress package by creating a new `zarf.yaml` with the following content:
+A `zarf.yaml` file follows the [Zarf Package Schema](../3-create-a-zarf-package/4-zarf-schema.md) and allows us to specify package metadata and a set of components for us to deploy. We start a package definition with the `kind` of package we are making and `metadata` that describes the package. You can start our WordPress package by creating a new `zarf.yaml` with the following content:
 
 ```yaml
 kind: ZarfPackageConfig # ZarfPackageConfig is the package kind for most normal zarf packages
 metadata:
-  name: wordpress       # specifies the name of our package and should be unique and unchanging through updates
-  version: 16.0.4       # (optional) a version we can track as we release updates or publish to a registry
-  description: |        # (optional) a human-readable description of the package that you are creating
+  name: wordpress # specifies the name of our package and should be unique and unchanging through updates
+  version: 16.0.4 # (optional) a version we can track as we release updates or publish to a registry
+  description: | # (optional) a human-readable description of the package that you are creating
     "A Zarf Package that deploys the WordPress blogging and content management platform"
 ```
 
@@ -43,14 +43,13 @@ Additionally, you can run `zarf dev lint <directory>` to validate aginst the [`z
 
 ### Adding the WordPress Component
 
-Components are the unit of Zarf Packages that define an application stack.  These are defined under the `components` key and allow many different resource types to be brought into a package.  You can learn more about components on the [Understanding Zarf Components](../3-create-a-zarf-package/2-zarf-components.md) page. To add our WordPress component, add the following to the bottom of our `zarf.yaml`:
+Components are the unit of Zarf Packages that define an application stack. These are defined under the `components` key and allow many different resource types to be brought into a package. You can learn more about components on the [Understanding Zarf Components](../3-create-a-zarf-package/2-zarf-components.md) page. To add our WordPress component, add the following to the bottom of our `zarf.yaml`:
 
 ```yaml
 components:
-  - name: wordpress  # specifies the name of our component and should be unique and unchanging through updates
-    description: |   # (optional) a human-readable description of the component you are defining
+  - name: wordpress # specifies the name of our component and should be unique and unchanging through updates
+    description: | # (optional) a human-readable description of the component you are defining
       "Deploys the Bitnami-packaged WordPress chart into the cluster"
-    optional: false   # (optional) sets the component as 'required' so that it is always deployed
     charts:
       - name: wordpress
         url: oci://registry-1.docker.io/bitnamicharts/wordpress
@@ -60,7 +59,7 @@ components:
           - wordpress-values.yaml
 ```
 
-In addition to this component definition, we also need to create the `valuesFiles` we have specified.  In this case we need to create a file named `wordpress-values.yaml` in the same directory as our `zarf.yaml` with the following contents:
+In addition to this component definition, we also need to create the `valuesFiles` we have specified. In this case we need to create a file named `wordpress-values.yaml` in the same directory as our `zarf.yaml` with the following contents:
 
 ```yaml
 # We are hard-coding these for now but will make them dynamic in Setting up Variables.
@@ -89,13 +88,13 @@ We create any `values.yaml` file(s) at this stage because the `zarf dev find-ima
 
 :::caution
 
-Note that we are explicitly defining the `wordpress` namespace for this deployment, this is strongly recommended to separate out the applications you deploy and to avoid issues with the Zarf Agent not being able to mutate your resources as it intentionally ignores resources in the `default` or `kube-system` namespaces.  See [what happens to resources that exist before Zarf init](../8-faq.md#what-happens-to-resources-that-exist-in-the-cluster-before-zarf-init) for more information.
+Note that we are explicitly defining the `wordpress` namespace for this deployment, this is strongly recommended to separate out the applications you deploy and to avoid issues with the Zarf Agent not being able to mutate your resources as it intentionally ignores resources in the `default` or `kube-system` namespaces. See [what happens to resources that exist before Zarf init](../8-faq.md#what-happens-to-resources-that-exist-in-the-cluster-before-zarf-init) for more information.
 
 :::
 
 ### Finding the Images
 
-Once you have the above defined we can now work on setting the images that we will need to bring with us into the air gap.  For this, Zarf has a helper command you can run with `zarf dev find-images`.  Running this command in the directory of your zarf.yaml will result in the following output:
+Once you have the above defined we can now work on setting the images that we will need to bring with us into the air gap. For this, Zarf has a helper command you can run with `zarf dev find-images`. Running this command in the directory of your zarf.yaml will result in the following output:
 
 <iframe src="/docs/tutorials/prepare_find_images.html" height="220px" width="100%"></iframe>
 
@@ -103,7 +102,7 @@ From here you can copy the `images` key and array of images into the `wordpress`
 
 :::note
 
-Due to the way some applications are deployed, Zarf might not be able to find all of the images in this way (particularly with operators).  For this you can look at the upstream charts or manifests and find them manually.
+Due to the way some applications are deployed, Zarf might not be able to find all of the images in this way (particularly with operators). For this you can look at the upstream charts or manifests and find them manually.
 
 :::
 
@@ -115,13 +114,13 @@ Zarf has more `dev` commands you can learn about on the [dev CLI docs page](../3
 
 ### Setting up Variables
 
-We now have a deployable package definition, but it is currently not very configurable and might not fit every environment we want to deploy it to.  If we deployed it as-is we would always have a Zarf Blog and a `zarf` user with an autogenerated password.
+We now have a deployable package definition, but it is currently not very configurable and might not fit every environment we want to deploy it to. If we deployed it as-is we would always have a Zarf Blog and a `zarf` user with an autogenerated password.
 
-To resolve this, we can add configuration options with [Zarf Deploy-Time Variables](../../examples/variables/README.md#deploy-time-variables-and-constants).  For this package we will add a `variables` section to our `zarf.yaml` above `components` that will allow us to setup the user and the blog.
+To resolve this, we can add configuration options with [Zarf Deploy-Time Variables](../../examples/variables/README.md#deploy-time-variables-and-constants). For this package we will add a `variables` section to our `zarf.yaml` above `components` that will allow us to setup the user and the blog.
 
 ```yaml
 variables:
-    # The unique name of the variable corresponding to the ###ZARF_VAR_### template
+  # The unique name of the variable corresponding to the ###ZARF_VAR_### template
   - name: WORDPRESS_USERNAME
     # A human-readable description of the variable shown during prompting
     description: The username that is used to login to the WordPress admin account
@@ -152,7 +151,7 @@ variables:
     prompt: true
 ```
 
-To use these variables in our chart we must add their corresponding templates to our `wordpress-values.yaml` file.  Zarf can template chart values, manifests, included text files and more.
+To use these variables in our chart we must add their corresponding templates to our `wordpress-values.yaml` file. Zarf can template chart values, manifests, included text files and more.
 
 ```yaml
 wordpressUsername: ###ZARF_VAR_WORDPRESS_USERNAME###
@@ -165,15 +164,15 @@ wordpressBlogName: ###ZARF_VAR_WORDPRESS_BLOG_NAME###
 
 :::caution
 
-When dealing with `sensitive` values in Zarf it is strongly recommended to not include them directly inside of a Zarf Package and to only define them at deploy-time.  You should also be aware of where you are using these values as they may be printed in `actions` you create or `files` that you place on disk.
+When dealing with `sensitive` values in Zarf it is strongly recommended to not include them directly inside of a Zarf Package and to only define them at deploy-time. You should also be aware of where you are using these values as they may be printed in `actions` you create or `files` that you place on disk.
 
 :::
 
 ### Setting up a Zarf Connect Service
 
-As-is, our package could be configured to interface with an ingress provider to provide access to our blog, but this may not be desired for every service, particularly those that provide a backend for other frontend services.  To help with debugging, Zarf allows you to specify Zarf Connect Services that will be displayed after package deployment to quickly connect into our deployed application.
+As-is, our package could be configured to interface with an ingress provider to provide access to our blog, but this may not be desired for every service, particularly those that provide a backend for other frontend services. To help with debugging, Zarf allows you to specify Zarf Connect Services that will be displayed after package deployment to quickly connect into our deployed application.
 
-For this package we will define two services, one for the blog and the other for the admin panel.  These are normal Kubernetes services with special labels and annotations that Zarf watches out for, and to defined them create a `connect-services.yaml` with the following contents:
+For this package we will define two services, one for the blog and the other for the admin panel. These are normal Kubernetes services with special labels and annotations that Zarf watches out for, and to defined them create a `connect-services.yaml` with the following contents:
 
 ```yaml
 apiVersion: v1
@@ -220,18 +219,18 @@ spec:
 To add this to our `zarf.yaml` we can simply specify it under our `wordpress` component using the `manifests` key:
 
 ```yaml
-    manifests:
-      - name: connect-services
-        namespace: wordpress
-        files:
-          - connect-services.yaml
+manifests:
+  - name: connect-services
+    namespace: wordpress
+    files:
+      - connect-services.yaml
 ```
 
 ### Creating the Package
 
 Once you have followed the above you should now have a `zarf.yaml` file that matches the one found on the [WordPress example page](../../examples/wordpress/README.md).
 
-Creating this package is as simple as running the `zarf package create` command with the directory containing our `zarf.yaml`.  Zarf will show us the `zarf.yaml` one last time asking if we would like to build the package, and upon confirmation Zarf will pull down all of the resources and bundle them into a package tarball.
+Creating this package is as simple as running the `zarf package create` command with the directory containing our `zarf.yaml`. Zarf will show us the `zarf.yaml` one last time asking if we would like to build the package, and upon confirmation Zarf will pull down all of the resources and bundle them into a package tarball.
 
 ```bash
 zarf package create .
