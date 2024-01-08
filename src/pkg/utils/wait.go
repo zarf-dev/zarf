@@ -75,7 +75,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 
 	// Setup the spinner messages.
 	conditionMsg := fmt.Sprintf("Waiting for %s%s%s to be %s.", kind, identifierMsg, namespaceMsg, condition)
-	existMsg := fmt.Sprintf("Waiting for %s%s to exist.", filepath.ToSlash(filepath.Join(kind, identifierMsg)), namespaceMsg)
+	existMsg := fmt.Sprintf("Waiting for %s%s to exist.", path.Join(kind, identifierMsg), namespaceMsg)
 	spinner := message.NewProgressSpinner(existMsg)
 
 	// Get the OS shell to execute commands in
