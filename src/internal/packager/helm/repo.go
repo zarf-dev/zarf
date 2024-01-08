@@ -145,8 +145,9 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 	)
 	repoFile, err := repo.LoadFile(pull.Settings.RepositoryConfig)
 
+	// Not returning the error here since the repo file is only needed if we are pulling from a repo that requires authentication
 	if err != nil {
-		message.Debug("Unable to load the repo file at %q: %s", pull.Settings.RepositoryConfig, err.Error())
+		message.Debugf("Unable to load the repo file at %q: %s", pull.Settings.RepositoryConfig, err.Error())
 	}
 
 	var username string

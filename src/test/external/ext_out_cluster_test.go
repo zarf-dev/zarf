@@ -24,23 +24,23 @@ import (
 
 // Docker/k3d networking constants
 const (
-	network       = "k3d-k3s-external-test"
-	subnet        = "172.31.0.0/16"
-	gateway       = "172.31.0.1"
-	giteaIP       = "172.31.0.99"
-	giteaHost     = "gitea.localhost"
-	registryHost  = "registry.localhost"
-	clusterName   = "zarf-external-test"
-	giteaUser     = "git-user"
+	network        = "k3d-k3s-external-test"
+	subnet         = "172.31.0.0/16"
+	gateway        = "172.31.0.1"
+	giteaIP        = "172.31.0.99"
+	giteaHost      = "gitea.localhost"
+	registryHost   = "registry.localhost"
+	clusterName    = "zarf-external-test"
+	giteaUser      = "git-user"
 	commonPassword = "superSecurePassword"
 )
 
 var outClusterCredentialArgs = []string{
 	"--git-push-username=" + giteaUser,
-	"--git-push-password=" + giteaPassword,
+	"--git-push-password=" + commonPassword,
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=push-user",
-	"--registry-push-password=" + giteaPassword,
+	"--registry-push-password=" + commonPassword,
 	"--registry-url=k3d-" + registryHost + ":5000"}
 
 type ExtOutClusterTestSuite struct {
@@ -107,7 +107,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	suite.NoError(err, "unable to mirror the package with zarf")
 
 	// Check that the registry contains the images we want
-	regCatalogURL := fmt.Sprintf("http://push-user:%s@k3d-%s:5000/v2/_catalog", giteaPassword, registryHost)
+	regCatalogURL := fmt.Sprintf("http://push-user:%s@k3d-%s:5000/v2/_catalog", commonPassword, registryHost)
 	respReg, err := http.Get(regCatalogURL)
 	suite.NoError(err)
 	regBody, err := io.ReadAll(respReg.Body)
@@ -117,7 +117,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	suite.Contains(string(regBody), "stefanprodan/podinfo", "registry did not contain the expected image")
 
 	// Check that the git server contains the repos we want
-	gitRepoURL := fmt.Sprintf("http://%s:%s@%s:3000/api/v1/repos/search", giteaUser, giteaPassword, giteaHost)
+	gitRepoURL := fmt.Sprintf("http://%s:%s@%s:3000/api/v1/repos/search", giteaUser, commonPassword, giteaHost)
 	respGit, err := http.Get(gitRepoURL)
 	suite.NoError(err)
 	gitBody, err := io.ReadAll(respGit.Body)
@@ -147,10 +147,10 @@ func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
 }
 
 func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
-	baseURL := fmt.Sprintf("http://%s", "gitea.localhost:3000")
+	baseURL := fmt.Sprintf("http://%s:3000", giteaHost)
 
-	createHelmChartInGitea(suite, baseURL, giteaUser, giteaPassword)
-	makeUserPrivate(suite, baseURL, giteaUser, giteaPassword)
+	suite.createHelmChartInGitea(baseURL, giteaUser, commonPassword)
+	suite.makeGiteaUserPrivate(baseURL, giteaUser, commonPassword)
 
 	tempDir := suite.T().TempDir()
 	repoPath := filepath.Join(tempDir, "repositories.yaml")
@@ -168,7 +168,7 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	entry := &repo.Entry{
 		Name:     "temp_entry",
 		Username: giteaUser,
-		Password: giteaPassword,
+		Password: commonPassword,
 		URL:      chartURL,
 	}
 	repoFile.Add(entry)
@@ -182,14 +182,11 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	suite.NoError(err, "Unable to create package")
 }
 
-func createHelmChartInGitea(suite *ExtOutClusterTestSuite, baseURL string, username string, password string) {
+func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, username string, password string) {
 	tempDir := suite.T().TempDir()
-	podInfoVersion := "6.5.4"
+	podInfoVersion := "6.4.0"
 	chartFilePath := filepath.Join(tempDir, fmt.Sprintf("podinfo-%s.tgz", podInfoVersion))
-
-	curlCommandArgs := []string{"-o", chartFilePath, fmt.Sprintf("https://stefanprodan.github.io/podinfo/podinfo-%s.tgz", podInfoVersion)}
-	err := exec.CmdWithPrint("curl", curlCommandArgs...)
-	suite.NoError(err, "unable to download podinfo chart")
+	utils.DownloadToFile(fmt.Sprintf("https://stefanprodan.github.io/podinfo/podinfo-%s.tgz", podInfoVersion), chartFilePath, "")
 	url := fmt.Sprintf("%s/api/packages/%s/helm/api/charts", baseURL, username)
 
 	file, err := os.Open(chartFilePath)
@@ -217,7 +214,7 @@ func createHelmChartInGitea(suite *ExtOutClusterTestSuite, baseURL string, usern
 	defer resp.Body.Close()
 }
 
-func makeUserPrivate(suite *ExtOutClusterTestSuite, baseURL string, username string, password string) {
+func (suite *ExtOutClusterTestSuite) makeGiteaUserPrivate(baseURL string, username string, password string) {
 	url := fmt.Sprintf("%s/api/v1/admin/users/%s", baseURL, username)
 
 	userOption := map[string]interface{}{

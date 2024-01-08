@@ -8,7 +8,7 @@ components:
   required: true
   charts:
   - name: podinfo
-    version: 6.5.4
+    version: 6.4.0
     url: http://gitea.localhost:3000/api/packages/git-user/helm
     repoName: podinfo
     namespace: podinfo-from-repo
