@@ -70,7 +70,7 @@ Charts using the `url` key can be:
 
 :::note
 
-To use a private helm repoistory the repo must be added to helm. You can add a repo to helm with the [helm repo add](https://helm.sh/docs/helm/helm_repo_add/) command.
+To use a private Helm repository the repo must be added to Helm. You can add a repo to Helm with the [`helm repo add`](https://helm.sh/docs/helm/helm_repo_add/) command.
 
 :::
 

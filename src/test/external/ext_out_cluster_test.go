@@ -32,7 +32,7 @@ const (
 	registryHost  = "registry.localhost"
 	clusterName   = "zarf-external-test"
 	giteaUser     = "git-user"
-	giteaPassword = "superSecurePassword"
+	commonPassword = "superSecurePassword"
 )
 
 var outClusterCredentialArgs = []string{
@@ -165,13 +165,13 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	repoFile := repo.NewFile()
 
 	chartURL := fmt.Sprintf("%s/api/packages/%s/helm", baseURL, giteaUser)
-	Entry := repo.Entry{
+	entry := &repo.Entry{
 		Name:     "temp_entry",
 		Username: giteaUser,
 		Password: giteaPassword,
 		URL:      chartURL,
 	}
-	repoFile.Add(&Entry)
+	repoFile.Add(entry)
 	utils.WriteYaml(repoPath, repoFile, 0600)
 
 	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
