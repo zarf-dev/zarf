@@ -267,7 +267,36 @@ func makeFieldPathYqCompat(field string) string {
 	return fmt.Sprintf(".%s", wrappedField)
 }
 
+// removeYamlExtensionFields removes any field in a yaml object that starts with x-
+// this allows these fields to be ignored by schema validation.
+// More info on yaml extension: https://docs.docker.com/compose/compose-file/11-extension/
+func removeYamlExtensionFields(yamlObj map[string]interface{}) {
+	prefix := "x-"
+	for key, value := range yamlObj {
+		if strings.HasPrefix(key, prefix) {
+			delete(yamlObj, key)
+			continue
+		}
+
+		if nestedMap, ok := value.(map[string]interface{}); ok {
+			removeYamlExtensionFields(nestedMap)
+		}
+
+		if slice, ok := value.([]interface{}); ok {
+			for _, item := range slice {
+				if nestedMap, ok := item.(map[string]interface{}); ok {
+					removeYamlExtensionFields(nestedMap)
+				}
+			}
+		}
+	}
+}
+
 func validateSchema(validator *Validator) error {
+	if nestedMap, ok := validator.untypedZarfPackage.(map[string]interface{}); ok {
+		removeYamlExtensionFields(nestedMap)
+	}
+
 	schemaLoader := gojsonschema.NewBytesLoader(validator.jsonSchema)
 	documentLoader := gojsonschema.NewGoLoader(validator.untypedZarfPackage)
 
