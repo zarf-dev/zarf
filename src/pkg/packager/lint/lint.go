@@ -268,12 +268,11 @@ func makeFieldPathYqCompat(field string) string {
 }
 
 // removeYamlExtensionFields removes any field in a yaml object that starts with x-
-// this allows these fields to be ignored by schema validation.
-// More info on yaml extension: https://docs.docker.com/compose/compose-file/11-extension/
+// This is consistent with how docker compose ignores yaml extension fields
+// https://docs.docker.com/compose/compose-file/11-extension/
 func removeYamlExtensionFields(yamlObj map[string]interface{}) {
-	prefix := "x-"
 	for key, value := range yamlObj {
-		if strings.HasPrefix(key, prefix) {
+		if strings.HasPrefix(key, "x-") {
 			delete(yamlObj, key)
 			continue
 		}
