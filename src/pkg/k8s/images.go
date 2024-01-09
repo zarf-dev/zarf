@@ -9,6 +9,7 @@ import (
 	"sort"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -66,6 +67,14 @@ findImages:
 		nodeDetails, err := k.GetNode(nodeName)
 		if err != nil {
 			return nil, fmt.Errorf("unable to get the node %s", pod.Spec.NodeName)
+		}
+
+		requiredCPULimit := resource.MustParse(".5")
+		requiredMemoryLimit := resource.MustParse("64MiB")
+
+		if nodeDetails.Status.Allocatable.Cpu().Cmp(requiredCPULimit) >= 0 &&
+		   nodeDetails.Status.Allocatable.Memory().Cmp(requiredMemoryLimit) >= 0 {
+			continue findImages
 		}
 
 		for _, taint := range nodeDetails.Spec.Taints {
