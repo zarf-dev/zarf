@@ -235,7 +235,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
 	if err != nil {
-		return charts, fmt.Errorf("unable to deploy component %q: %w", component.Name, err)
+		return charts, err
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
@@ -265,16 +265,6 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	onDeploy := component.Actions.OnDeploy
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
-		return charts, fmt.Errorf("unable to run component before action: %w", err)
-	}
-
-	if hasFiles {
-		if err := p.processComponentFiles(component, componentPath.Files); err != nil {
-			return charts, fmt.Errorf("unable to process the component files: %w", err)
-		}
-	}
-
 	if !p.valueTemplate.Ready() && component.RequiresCluster() {
 		// Setup the state in the config and get the valuesTemplate
 		p.valueTemplate, err = p.setupStateValuesTemplate()
@@ -289,6 +279,16 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 			} else {
 				p.hpaModified = true
 			}
+		}
+	}
+
+	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
+		return charts, fmt.Errorf("unable to run component before action: %w", err)
+	}
+
+	if hasFiles {
+		if err := p.processComponentFiles(component, componentPath.Files); err != nil {
+			return charts, fmt.Errorf("unable to process the component files: %w", err)
 		}
 	}
 
@@ -630,12 +630,14 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 	if !p.isInitConfig() {
 		message.PrintConnectStringTable(p.connectStrings)
 	} else {
-		// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds
-		freshState, err := p.cluster.LoadZarfState()
-		if err != nil {
-			freshState = p.cfg.State
+		if p.cluster != nil {
+			// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds
+			freshState, err := p.cluster.LoadZarfState()
+			if err != nil {
+				freshState = p.cfg.State
+			}
+			// otherwise, print the init config connection and passwords
+			message.PrintCredentialTable(freshState, componentsToDeploy)
 		}
-		// otherwise, print the init config connection and passwords
-		message.PrintCredentialTable(freshState, componentsToDeploy)
 	}
 }
