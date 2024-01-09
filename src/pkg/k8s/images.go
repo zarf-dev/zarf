@@ -69,11 +69,10 @@ findImages:
 			return nil, fmt.Errorf("unable to get the node %s", pod.Spec.NodeName)
 		}
 
-		requiredCPULimit := resource.MustParse(".5")
-		requiredMemoryLimit := resource.MustParse("64MiB")
-
-		if nodeDetails.Status.Allocatable.Cpu().Cmp(requiredCPULimit) >= 0 &&
-		   nodeDetails.Status.Allocatable.Memory().Cmp(requiredMemoryLimit) >= 0 {
+		requestedCPU := resource.MustParse(".5")
+		requestedMemory := resource.MustParse("64MiB")
+		if nodeDetails.Status.Allocatable.Cpu().Cmp(requestedCPU) >= 0 &&
+		   nodeDetails.Status.Allocatable.Memory().Cmp(requestedMemory) >= 0 {
 			continue findImages
 		}
 
