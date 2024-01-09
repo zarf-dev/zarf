@@ -1,5 +1,5 @@
 {% for sub_property in schema.iterate_properties %}
-  {%- if sub_property.is_additional_properties and not sub_property.is_additional_properties_schema -%}
+  {%- if sub_property.is_additional_properties and not sub_property.is_additional_properties_schema or sub_property.is_pattern_property -%}
     {% continue %}
   {% endif %}
 
