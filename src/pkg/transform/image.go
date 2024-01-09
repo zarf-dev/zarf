@@ -31,26 +31,30 @@ func MutateOCIURLsInText(logger Log, targetBaseURL, text string) string {
 
 	// Use ReplaceAllStringFunc to replace matching URLs while preserving the path
 	result := fuzzyOCIURLRegex.ReplaceAllStringFunc(text, func(match string) string {
-		ref := strings.TrimPrefix(match, "oci://")
+		rawSrc, err := parseImageRefRaw(match)
+		if err != nil {
+			logger("Unable to parse the found url, using the original url %q: %s", match, err.Error())
+			return match
+		}
 
-		output, err := ImageTransformHost(targetBaseURL, ref)
+		output, err := ImageTransformHost(targetBaseURL, match)
 		if err != nil {
 			logger("Unable to transform the OCI url, using the original url %q: %s", match, err.Error())
 			return match
 		}
 
-		outputRef, err := ParseImageRef(output)
-		if err != nil {
-			logger("Unable to parse the transformed url, using the original url %q: %s", match, err.Error())
-			return match
-		}
-
 		// If the original reference did not contain a tag, return the transformed output without one too
-		if !(strings.Contains(ref, ":") || strings.Contains(ref, "@")) {
+		if rawSrc.TagOrDigest == "" {
+			outputRef, err := ParseImageRef(output)
+			if err != nil {
+				logger("Unable to parse the transformed url, using the original url %q: %s", match, err.Error())
+				return match
+			}
+
 			return helpers.OCIURLPrefix + outputRef.Name
 		}
 
-		return helpers.OCIURLPrefix + outputRef.Reference
+		return helpers.OCIURLPrefix + output
 	})
 
 	return result
@@ -96,6 +100,26 @@ func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string,
 
 // ParseImageRef parses a source reference into an Image struct
 func ParseImageRef(srcReference string) (out Image, err error) {
+	out, err = parseImageRefRaw(srcReference)
+	if err != nil {
+		return out, err
+	}
+
+	// If no tag or digest was provided use the default tag (latest)
+	if out.TagOrDigest == "" {
+		out.Tag = "latest"
+		out.TagOrDigest = ":latest"
+		out.Reference += ":latest"
+	}
+
+	return out, nil
+}
+
+// parseImageRefRaw parses an image ref as provided without overrides like tag fallbacks
+func parseImageRefRaw(srcReference string) (out Image, err error) {
+	// if the srcReference starts with the oci:// scheme prefix, strip that off for processing
+	srcReference = strings.TrimPrefix(srcReference, helpers.OCIURLPrefix)
+
 	ref, err := reference.ParseAnyReference(srcReference)
 	if err != nil {
 		return out, err
@@ -121,13 +145,6 @@ func ParseImageRef(srcReference string) (out Image, err error) {
 	if digested, ok := ref.(reference.Digested); ok {
 		out.Digest = digested.Digest().String()
 		out.TagOrDigest = fmt.Sprintf("@%s", digested.Digest().String())
-	}
-
-	// If no tag or digest was provided use the default tag (latest)
-	if out.TagOrDigest == "" {
-		out.Tag = "latest"
-		out.TagOrDigest = ":latest"
-		out.Reference += ":latest"
 	}
 
 	return out, nil

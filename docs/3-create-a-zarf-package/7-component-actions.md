@@ -174,7 +174,7 @@ The below example includes the `eksctl` binary and `eks.yaml` file in one compon
 
 The below example shows using a `wait` command to wait for a GitOps deployment to happen after Zarf configures the initial `GitRepository` manifest.  By default Zarf will only track the resources it directly deploys, but adding a `wait` action allows you to control the lifecycle more directly.
 
-<ExampleYAML src={require('../../examples/podinfo-flux/zarf.yaml')} component="podinfo-via-flux" />
+<ExampleYAML src={require('../../examples/podinfo-flux/zarf.yaml')} component="podinfo-via-flux-git" />
 
 </TabItem>
 

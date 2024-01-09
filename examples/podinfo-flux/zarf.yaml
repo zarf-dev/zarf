@@ -16,19 +16,18 @@ components:
       - ghcr.io/fluxcd/kustomize-controller:v0.27.1
       - ghcr.io/fluxcd/source-controller:v0.28.0
 
-  - name: podinfo-via-flux
-    description: Example deployment via flux using the famous podinfo example
-    required: true
+  - name: podinfo-via-flux-git
+    description: Example deployment via flux (git) using the famous podinfo example
     manifests:
-      - name: podinfo-via-flux
-        namespace: podinfo
+      - name: podinfo
+        namespace: podinfo-git
         files:
-          - podinfo-source.yaml
-          - podinfo-kustomization.yaml
+          - git/podinfo-source.yaml
+          - git/podinfo-kustomization.yaml
     repos:
       - https://github.com/stefanprodan/podinfo.git
     images:
-      - ghcr.io/stefanprodan/podinfo:6.3.3
+      - ghcr.io/stefanprodan/podinfo:6.4.0
     actions:
       onDeploy:
         after:
@@ -38,5 +37,52 @@ components:
               cluster:
                 kind: pod
                 name: app=podinfo
-                namespace: podinfo
+                namespace: podinfo-git
+                condition: ready
+
+  - name: podinfo-via-flux-helm
+    description: Example deployment via flux (helm oci) using the famous podinfo example
+    manifests:
+      - name: podinfo
+        namespace: podinfo-helm
+        files:
+          - helm/podinfo-source.yaml
+          - helm/podinfo-helmrelease.yaml
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+      # NOTE: Zarf only supports `oci://` urls within Flux HelmRepository definitions
+      - oci://ghcr.io/stefanprodan/charts/podinfo:6.4.0
+    actions:
+      onDeploy:
+        after:
+          # This will use a wait action to wait for the podinfo pod to be ready
+          - description: Podinfo pods to be ready via wait action
+            wait:
+              cluster:
+                kind: pod
+                name: app=podinfo
+                namespace: podinfo-helm
+                condition: ready
+
+  - name: podinfo-via-flux-oci
+    description: Example deployment via flux (native oci) using the famous podinfo example
+    manifests:
+      - name: podinfo
+        namespace: podinfo-oci
+        files:
+          - oci/podinfo-source.yaml
+          - oci/podinfo-kustomization.yaml
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+      - oci://ghcr.io/stefanprodan/manifests/podinfo:6.4.0
+    actions:
+      onDeploy:
+        after:
+          # This will use a wait action to wait for the podinfo pod to be ready
+          - description: Podinfo pods to be ready via wait action
+            wait:
+              cluster:
+                kind: pod
+                name: app=podinfo
+                namespace: podinfo-oci
                 condition: ready

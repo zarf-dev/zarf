@@ -9,6 +9,6 @@ spec:
   path: ./kustomize
   prune: true
   sourceRef:
-    kind: GitRepository
+    kind: OCIRepository
     name: podinfo
-  targetNamespace: podinfo
+  targetNamespace: podinfo-oci

@@ -7,6 +7,6 @@ metadata:
 spec:
   interval: 30s
   ref:
-    tag: 6.3.3
+    tag: 6.4.0
   # Currently the Zarf Agent can only mutate urls that are proper URIs (i.e. scheme://host/repo)
   url: https://github.com/stefanprodan/podinfo.git
