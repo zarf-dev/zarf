@@ -53,6 +53,7 @@ type Validator struct {
 	typedZarfPackage   types.ZarfPackage
 	untypedZarfPackage interface{}
 	baseDir            string
+	unusedVariables    []string
 }
 
 // DisplayFormattedMessage message sent to user based on validator results

@@ -206,6 +206,8 @@ func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string,
 }
 
 // Perform some basic string mutations to make commands more useful.
+// I will also have to edit to include / edit this to make sure we check for variables here as well
+// Maybe? Or maybe this is something else entirely
 func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (string, error) {
 	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {

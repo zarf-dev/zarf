@@ -75,6 +75,7 @@ func (values *Values) GetRegistry() string {
 func (values *Values) GetVariables(component types.ZarfComponent) (templateMap map[string]*utils.TextTemplate, deprecations map[string]string) {
 	templateMap = make(map[string]*utils.TextTemplate)
 
+	// TODO potentially also want to make a get deprecations function
 	depMarkerOld := "DATA_INJECTON_MARKER"
 	depMarkerNew := "DATA_INJECTION_MARKER"
 	deprecations = map[string]string{
@@ -141,6 +142,20 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 		}
 	}
 
+	customTemplateMap := values.GetCustomVariables()
+	for key, value := range customTemplateMap {
+		templateMap[key] = value
+	}
+
+	debugPrintTemplateMap(templateMap)
+	message.Debugf("deprecations = %#v", deprecations)
+
+	return templateMap, deprecations
+}
+
+// GetCustomVariables returns any user defined variables
+func (values *Values) GetCustomVariables() map[string]*utils.TextTemplate {
+	templateMap := make(map[string]*utils.TextTemplate)
 	for key, variable := range values.config.SetVariableMap {
 		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
 		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = &utils.TextTemplate{
@@ -158,14 +173,11 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 			AutoIndent: constant.AutoIndent,
 		}
 	}
-
-	debugPrintTemplateMap(templateMap)
-	message.Debugf("deprecations = %#v", deprecations)
-
-	return templateMap, deprecations
+	return templateMap
 }
 
 // Apply renders the template and writes the result to the given path.
+// This is the function we are copying
 func (values *Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
 	// If Apply() is called before all values are loaded, fail unless ignoreReady is true
 	if !values.Ready() && !ignoreReady {
