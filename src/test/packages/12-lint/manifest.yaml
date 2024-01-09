@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  selector:
+    app: ###ZARF_VAR_USED_VARIABLE###
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
