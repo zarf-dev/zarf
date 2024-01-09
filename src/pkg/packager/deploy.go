@@ -43,7 +43,7 @@ func (p *Packager) resetRegistryHPA() {
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
 	if ociSource, ok := p.source.(*sources.OCISource); ok {
-		ociSource.ComponentSelectionFilter = interactive.GetSelectedComponents
+		ociSource.ComponentSelectionFilter = interactive.GetComponentsForDeployment
 		p.source = ociSource
 	}
 
@@ -100,7 +100,7 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy, err := interactive.GetSelectedComponents(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components)
+	componentsToDeploy, err := interactive.GetComponentsForDeployment(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components)
 	if err != nil {
 		return deployedComponents, fmt.Errorf("unable to get selected components: %w", err)
 	}

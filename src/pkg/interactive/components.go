@@ -24,8 +24,8 @@ const (
 	excluded
 )
 
-// GetSelectedComponents prompts to select components based upon multiple conditions
-func GetSelectedComponents(optionalComponents string, allComponents []types.ZarfComponent) ([]types.ZarfComponent, error) {
+// GetComponentsForDeployment prompts to select components based upon multiple conditions
+func GetComponentsForDeployment(optionalComponents string, allComponents []types.ZarfComponent) ([]types.ZarfComponent, error) {
 	var selectedComponents []types.ZarfComponent
 	groupedComponents := map[string][]types.ZarfComponent{}
 	orderedComponentGroups := []string{}

@@ -41,7 +41,7 @@ func (p *Packager) DevDeploy() error {
 	// the user's selection and the component's `required`/`optional` field
 	// This is also different from regular package creation, where we still assemble and package up
 	// all components and their dependencies, regardless of whether they are required or not
-	p.cfg.Pkg.Components, err = interactive.GetSelectedComponents(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components)
+	p.cfg.Pkg.Components, err = interactive.GetComponentsForDeployment(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components)
 	if err != nil {
 		return err
 	}
