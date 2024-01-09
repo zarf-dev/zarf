@@ -68,10 +68,10 @@ var devDeployCmd = &cobra.Command{
 }
 
 var devMigrateCmd = &cobra.Command{
-	Use: "migrate",
-	// Short:   lang.CmdDevMigrateShort,
-	// Long:    lang.CmdDevMigrateLong,
-	Args: cobra.ExactArgs(1),
+	Use:   "migrate",
+	Short: lang.CmdDevMigrateShort,
+	Long:  lang.CmdDevMigrateLong,
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := args[0]
 		var pkg types.ZarfPackage
