@@ -53,7 +53,7 @@ func (p *Packager) Remove() (err error) {
 	interactive.ForIncludedComponents(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components, (func(component types.ZarfComponent) error {
 		componentsToRemove = append(componentsToRemove, component.Name)
 
-		if requiresCluster(component) {
+		if component.RequiresCluster() {
 			packageRequiresCluster = true
 		}
 
