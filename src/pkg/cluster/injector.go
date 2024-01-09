@@ -28,6 +28,13 @@ import (
 // The chunk size for the tarball chunks.
 var payloadChunkSize = 1024 * 768
 
+var (
+	requestedCPU    = resource.MustParse(".5")
+	requestedMemory = resource.MustParse("64Mi")
+	limitCPU        = resource.MustParse("1")
+	limitMemory     = resource.MustParse("256Mi")
+)
+
 // StartInjectionMadness initializes a Zarf injection into the cluster.
 func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injectorSeedSrcs []string) {
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
@@ -54,7 +61,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 	// Get all the images from the cluster
 	timeout := 5 * time.Minute
 	spinner.Updatef("Getting the list of existing cluster images (%s timeout)", timeout.String())
-	if images, err = c.GetAllImages(timeout); err != nil {
+	if images, err = c.GetAllImages(timeout, requestedCPU, requestedMemory); err != nil {
 		spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
 	}
 
@@ -362,12 +369,12 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 			// Keep resources as light as possible as we aren't actually running the container's other binaries
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse(".5"),
-					corev1.ResourceMemory: resource.MustParse("64Mi"),
+					corev1.ResourceCPU:    requestedCPU,
+					corev1.ResourceMemory: requestedMemory,
 				},
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("1"),
-					corev1.ResourceMemory: resource.MustParse("256Mi"),
+					corev1.ResourceCPU:	   limitCPU,
+					corev1.ResourceMemory: limitMemory,
 				},
 			},
 		},

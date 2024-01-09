@@ -20,7 +20,7 @@ type ImageMap map[string]bool
 type ImageNodeMap map[string][]string
 
 // GetAllImages returns a list of images and their nodes found in pods in the cluster.
-func (k *K8s) GetAllImages(timeoutDuration time.Duration) (ImageNodeMap, error) {
+func (k *K8s) GetAllImages(timeoutDuration time.Duration, requestedCPU resource.Quantity, requestedMemory resource.Quantity) (ImageNodeMap, error) {
 	timeout := time.After(timeoutDuration)
 
 	for {
@@ -35,7 +35,7 @@ func (k *K8s) GetAllImages(timeoutDuration time.Duration) (ImageNodeMap, error) 
 		// After delay, try running.
 		default:
 			// If no images or an error, log and loop.
-			if images, err := k.GetImagesWithNodes(corev1.NamespaceAll); len(images) < 1 || err != nil {
+			if images, err := k.GetImagesWithNodes(corev1.NamespaceAll, requestedCPU, requestedMemory); len(images) < 1 || err != nil {
 				k.Log("no images found: %w", err)
 			} else {
 				// Otherwise, return the image list.
@@ -47,7 +47,7 @@ func (k *K8s) GetAllImages(timeoutDuration time.Duration) (ImageNodeMap, error) 
 
 // GetImagesWithNodes checks for images on schedulable nodes and returns
 // a map of these images and their nodes in a given namespace.
-func (k *K8s) GetImagesWithNodes(namespace string) (ImageNodeMap, error) {
+func (k *K8s) GetImagesWithNodes(namespace string, requestedCPU resource.Quantity, requestedMemory resource.Quantity) (ImageNodeMap, error) {
 	result := make(ImageNodeMap)
 
 	pods, err := k.GetPods(namespace)
@@ -69,10 +69,8 @@ findImages:
 			return nil, fmt.Errorf("unable to get the node %s", pod.Spec.NodeName)
 		}
 
-		requestedCPU := resource.MustParse(".5")
-		requestedMemory := resource.MustParse("64MiB")
-		if nodeDetails.Status.Allocatable.Cpu().Cmp(requestedCPU) >= 0 &&
-		   nodeDetails.Status.Allocatable.Memory().Cmp(requestedMemory) >= 0 {
+		if nodeDetails.Status.Allocatable.Cpu().Cmp(requestedCPU) < 0 ||
+		   nodeDetails.Status.Allocatable.Memory().Cmp(requestedMemory) < 0 {
 			continue findImages
 		}
 
