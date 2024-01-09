@@ -1,3 +1,6 @@
 [package.create.set]
 BUSYBOX_IMAGE = "latest"
 PATH = "linted-import"
+
+[package.create.deploy]
+# Also add used variable and unused variable here
