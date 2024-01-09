@@ -292,8 +292,8 @@ func removeYamlExtensionFields(yamlObj map[string]interface{}) {
 }
 
 func validateSchema(validator *Validator) error {
-	if nestedMap, ok := validator.untypedZarfPackage.(map[string]interface{}); ok {
-		removeYamlExtensionFields(nestedMap)
+	if zarfPackageMap, ok := validator.untypedZarfPackage.(map[string]interface{}); ok {
+		removeYamlExtensionFields(zarfPackageMap)
 	}
 
 	schemaLoader := gojsonschema.NewBytesLoader(validator.jsonSchema)
