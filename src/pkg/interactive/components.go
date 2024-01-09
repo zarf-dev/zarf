@@ -146,10 +146,12 @@ func GetSelectedComponents(optionalComponents string, allComponents []types.Zarf
 	return selectedComponents, nil
 }
 
-// ForIncludedComponents iterates over components and calls onIncluded for each component that should be included
-func ForIncludedComponents(optionalComponents string, components []types.ZarfComponent, onIncluded func(types.ZarfComponent) error) error {
+// GetOnlyIncludedComponents returns only the components that are included
+func GetOnlyIncludedComponents(optionalComponents string, components []types.ZarfComponent) ([]types.ZarfComponent, error) {
 	requestedComponents := helpers.StringToSlice(optionalComponents)
 	isPartial := len(requestedComponents) > 0 && requestedComponents[0] != ""
+
+	result := []types.ZarfComponent{}
 
 	for _, component := range components {
 		selectState := unknown
@@ -165,9 +167,23 @@ func ForIncludedComponents(optionalComponents string, components []types.ZarfCom
 		}
 
 		if selectState == included {
-			if err := onIncluded(component); err != nil {
-				return err
-			}
+			result = append(result, component)
+		}
+	}
+
+	return result, nil
+}
+
+// ForIncludedComponents runs a function for each included component
+func ForIncludedComponents(optionalComponents string, components []types.ZarfComponent, fn func(types.ZarfComponent) error) error {
+	included, err := GetOnlyIncludedComponents(optionalComponents, components)
+	if err != nil {
+		return err
+	}
+
+	for _, component := range included {
+		if err := fn(component); err != nil {
+			return err
 		}
 	}
 

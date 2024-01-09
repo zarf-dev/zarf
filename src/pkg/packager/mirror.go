@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -18,6 +19,11 @@ import (
 func (p *Packager) Mirror() (err error) {
 	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
+
+	if ociSource, ok := p.source.(*sources.OCISource); ok {
+		ociSource.ComponentSelectionFilter = interactive.GetOnlyIncludedComponents
+		p.source = ociSource
+	}
 
 	if err = p.source.LoadPackage(p.layout, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)

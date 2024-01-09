@@ -24,6 +24,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -41,6 +42,11 @@ func (p *Packager) resetRegistryHPA() {
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
+	if ociSource, ok := p.source.(*sources.OCISource); ok {
+		ociSource.ComponentSelectionFilter = interactive.GetSelectedComponents
+		p.source = ociSource
+	}
+
 	if err = p.source.LoadPackage(p.layout, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}

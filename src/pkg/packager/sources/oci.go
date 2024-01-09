@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
@@ -31,6 +30,7 @@ var (
 type OCISource struct {
 	*types.ZarfPackageOptions
 	*oci.OrasRemote
+	ComponentSelectionFilter func(optionalComponents string, allComponents []types.ZarfComponent) ([]types.ZarfComponent, error)
 }
 
 // LoadPackage loads a package from an OCI registry.
@@ -46,9 +46,14 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 		if err != nil {
 			return err
 		}
-		requested, err := interactive.GetSelectedComponents(s.OptionalComponents, pkg.Components)
-		if err != nil {
-			return err
+		var requested []types.ZarfComponent
+		if s.ComponentSelectionFilter != nil {
+			requested, err = s.ComponentSelectionFilter(s.OptionalComponents, pkg.Components)
+			if err != nil {
+				return err
+			}
+		} else {
+			requested = pkg.Components
 		}
 		layersToPull, err = s.LayersFromRequestedComponents(requested)
 		if err != nil {
