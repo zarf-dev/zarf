@@ -21,6 +21,7 @@ const (
 	categoryWarning category = 2
 )
 
+// TODO separate this out into it's own file
 type validatorMessage struct {
 	yqPath         string
 	description    string
@@ -149,4 +150,15 @@ func (v *Validator) addWarning(vmessage validatorMessage) {
 func (v *Validator) addError(vMessage validatorMessage) {
 	vMessage.category = categoryError
 	v.findings = helpers.Unique(append(v.findings, vMessage))
+}
+
+func (v *Validator) addUnusedVariableErrors() {
+	for _, unusedVariable := range v.unusedVariables {
+		// TODO gotta check which package it comes from
+		v.addError(validatorMessage{
+			description:    fmt.Sprintf("Unused variable %q", unusedVariable),
+			packageRelPath: v.baseDir,
+			packageName:    v.typedZarfPackage.Metadata.Name,
+		})
+	}
 }

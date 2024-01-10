@@ -60,7 +60,10 @@ components:
     images:
       - image-in-good-flavor-component:unpinned
 
-  - name: manifest-to-test-deploy-var-use
+  - name: manifest-to-test-deploy-var-used
+    files:
+      - source: manifest.json
+        target: manifest.json
     manifests:
       - name: my-service
         files:

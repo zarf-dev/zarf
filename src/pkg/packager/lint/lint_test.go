@@ -167,6 +167,13 @@ func TestValidateSchema(t *testing.T) {
 		require.Equal(t, input, acutal)
 	})
 
+	t.Run("remove var from validator", func(t *testing.T) {
+		validator := Validator{unusedVariables: []string{"FAKE_VAR"}}
+		line := "Hello my name is ###ZARF_VAR_FAKE_VAR###"
+		removeVarFromValidator(&validator, line)
+		require.Empty(t, validator.unusedVariables)
+	})
+
 	t.Run("Test composable components", func(t *testing.T) {
 		pathVar := "fake-path"
 		unpinnedImage := "unpinned:latest"
@@ -178,7 +185,8 @@ func TestValidateSchema(t *testing.T) {
 				Metadata: types.ZarfMetadata{Name: "test-zarf-package"}}}
 
 		createOpts := types.ZarfCreateOptions{Flavor: "", BaseDir: "."}
-		lintComponents(&validator, &createOpts)
+		cfg := types.PackagerConfig{CreateOpts: createOpts}
+		lintComponents(&validator, &cfg)
 		// Require.contains rather than equals since the error message changes from linux to windows
 		require.Contains(t, validator.findings[0].description, fmt.Sprintf("open %s", filepath.Join("fake-path", "zarf.yaml")))
 		require.Equal(t, ".components.[0].import.path", validator.findings[0].yqPath)
