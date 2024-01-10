@@ -22,6 +22,7 @@ components:
 
   - name: podinfo-via-flux-git
     description: Example deployment via flux (git) using the famous podinfo example
+    required: true
     manifests:
       - name: podinfo
         namespace: podinfo-git
@@ -46,6 +47,7 @@ components:
 
   - name: podinfo-via-flux-helm
     description: Example deployment via flux (helm oci) using the famous podinfo example
+    required: true
     manifests:
       - name: podinfo
         namespace: podinfo-helm
@@ -70,6 +72,7 @@ components:
 
   - name: podinfo-via-flux-oci
     description: Example deployment via flux (native oci) using the famous podinfo example
+    required: true
     manifests:
       - name: podinfo
         namespace: podinfo-oci
