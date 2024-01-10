@@ -7,7 +7,6 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -23,7 +22,8 @@ import (
 
 // Ref contains the tag used to reference am image.
 type Ref struct {
-	Tag string `json:"tag,omitempty"`
+	Tag    string `json:"tag,omitempty"`
+	Digest string `json:"digest,omitempty"`
 }
 
 // OCIRepo contains the URL of a git repo and the secret that corresponds to it for use with Flux.
@@ -67,8 +67,10 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	if err != nil {
 		return nil, fmt.Errorf(lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
 	}
+
 	registryServiceInfo, err := c.ServiceInfoFromNodePortURL(zarfState.RegistryInfo.Address)
 	if err != nil {
+		// TODO: (@WSTARR) This warning is maybe useful for debug but should likely not be a warning
 		message.Warnf(lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
 	} else {
 		registryAddress = fmt.Sprintf("%s.%s.svc.cluster.local:%d", registryServiceInfo.Name, registryServiceInfo.Namespace, registryServiceInfo.Port)
@@ -82,7 +84,8 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 	patchedURL := src.Spec.URL
-	patchedTag := src.Spec.Ref.Tag
+	// TODO: (@WSTARR) Handle or explicitly ignore a semver
+	patchedRef := src.Spec.Ref
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
@@ -96,8 +99,14 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	// Mutate the OCIRepo URL if necessary
 	if isCreate || (isUpdate && !isPatched) {
-		trimmedSrc := strings.TrimPrefix(src.Spec.URL, helpers.OCIURLPrefix)
-		patchedSrc, err := transform.ImageTransformHost(registryAddress, trimmedSrc)
+		ref := src.Spec.URL
+		if src.Spec.Ref.Digest != "" {
+			ref = fmt.Sprintf("%s@%s", ref, src.Spec.Ref.Digest)
+		} else {
+			ref = fmt.Sprintf("%s:%s", ref, src.Spec.Ref.Tag)
+		}
+
+		patchedSrc, err := transform.ImageTransformHost(registryAddress, ref)
 		if err != nil {
 			message.Warnf(lang.WarnUnableToTransform, "OCIRepo", patchedSrc)
 		}
@@ -106,15 +115,21 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		if err != nil {
 			message.Warnf(lang.WarnUnableToTransform, "OCIRepo", patchedSrc)
 		}
+
 		patchedURL = helpers.OCIURLPrefix + patchedRefInfo.Name
-		patchedTag = patchedRefInfo.TagOrDigest
+
+		if patchedRefInfo.Digest != "" {
+			patchedRef.Digest = patchedRefInfo.Digest
+		} else {
+			patchedRef.Tag = patchedRefInfo.Tag
+		}
 
 		message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 	}
 
 	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
 	// repoURL := cluster.FetchInternalRegistryKubeDNSName()
-	patches = populateOCIRepoPatchOperations(patchedURL, patchedTag, src.Spec.SecretRef.Name)
+	patches = populateOCIRepoPatchOperations(patchedURL, src.Spec.SecretRef.Name, patchedRef)
 	return &operations.Result{
 		Allowed:  true,
 		PatchOps: patches,
@@ -122,7 +137,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 }
 
 // Patch updates of the repo spec.
-func populateOCIRepoPatchOperations(repoURL, repoTag, secretName string) []operations.PatchOperation {
+func populateOCIRepoPatchOperations(repoURL, secretName string, ref Ref) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
@@ -134,8 +149,13 @@ func populateOCIRepoPatchOperations(repoURL, repoTag, secretName string) []opera
 		patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfImagePullSecretName}))
 	}
 
-	if repoTag != "" {
-		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/tag", repoTag))
+	if ref.Tag != "" {
+		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/tag", ref.Tag))
+	} else if ref.Digest != "" {
+		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/digest", ref.Digest))
+	} else {
+		// Otherwise, add the new ref
+		patches = append(patches, operations.AddPatchOperation("/spec/ref", ref))
 	}
 
 	return patches

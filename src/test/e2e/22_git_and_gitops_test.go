@@ -128,6 +128,27 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", config.ZarfInClusterGitServiceURL, config.ZarfGitPushUser)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
 
+	// Tests the URL mutation for HelmRepository CRD for Flux.
+	// TODO: (@WSTARR) This is going to be borked due to all of the layers
+	stdOut, stdErr, err = e2e.Kubectl("get", "helmrepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
+	require.NoError(t, err, stdOut, stdErr)
+	expectedMutatedRepoURL = "oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts"
+	require.Equal(t, expectedMutatedRepoURL, stdOut)
+	stdOut, stdErr, err = e2e.Kubectl("get", "helmrelease", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.chart.spec.version}")
+	require.NoError(t, err, stdOut, stdErr)
+	expectedMutatedRepoTag := "6.4.0-zarf-1339621772"
+	require.Equal(t, expectedMutatedRepoTag, stdOut)
+
+	// Tests the URL mutation for OCIRepository CRD for Flux.
+	stdOut, stdErr, err = e2e.Kubectl("get", "ocirepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
+	require.NoError(t, err, stdOut, stdErr)
+	expectedMutatedRepoURL = "oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/manifests/podinfo"
+	require.Equal(t, expectedMutatedRepoURL, stdOut)
+	stdOut, stdErr, err = e2e.Kubectl("get", "ocirepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.ref.tag}")
+	require.NoError(t, err, stdOut, stdErr)
+	expectedMutatedRepoTag = "6.4.0-zarf-2823281104"
+	require.Equal(t, expectedMutatedRepoTag, stdOut)
+
 	// Remove the flux example when deployment completes
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "podinfo-flux", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
