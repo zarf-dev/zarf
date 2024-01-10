@@ -70,7 +70,7 @@ Using Zarf in GitHub workflows? Check out the [setup-zarf](https://github.com/de
 
 ## 🫶 Our Community
 
-Join our community and developers on the [#Zarf slack](https://zarf.dev/slack) hosted on K8s slack. Our active community of developers, users, and contributors are available to answer questions, share examples, and fine new ways use Zarf together!
+Join our community and developers on the [#Zarf slack](https://zarf.dev/slack) hosted on K8s slack. Our active community of developers, users, and contributors are available to answer questions, share examples, and find new ways use Zarf together!
 
 We are so grateful to our Zarf community for contributing bug fixes and collaborating on new features:
 
