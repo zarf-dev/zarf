@@ -47,7 +47,7 @@ func (k *K8s) GetAllImages(timeoutDuration time.Duration, requestedCPU resource.
 
 // GetImagesWithNodes checks for images on schedulable nodes and returns
 // a map of these images and their nodes in a given namespace.
-func (k *K8s) GetImagesWithNodes(namespace string, requestedCPU resource.Quantity, requestedMemory resource.Quantity) (ImageNodeMap, error) {
+func (k *K8s) GetImagesWithNodes(namespace string, minNodeCPU resource.Quantity, minNodeMemory resource.Quantity) (ImageNodeMap, error) {
 	result := make(ImageNodeMap)
 
 	pods, err := k.GetPods(namespace)
