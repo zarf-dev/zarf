@@ -20,7 +20,7 @@ type ImageMap map[string]bool
 type ImageNodeMap map[string][]string
 
 // GetAllImages returns a list of images and their nodes found in pods in the cluster.
-func (k *K8s) GetAllImages(timeoutDuration time.Duration, requestedCPU resource.Quantity, requestedMemory resource.Quantity) (ImageNodeMap, error) {
+func (k *K8s) GetAllImages(timeoutDuration time.Duration, minNodeCPU resource.Quantity, minNodeMemory resource.Quantity) (ImageNodeMap, error) {
 	timeout := time.After(timeoutDuration)
 
 	for {
@@ -35,7 +35,7 @@ func (k *K8s) GetAllImages(timeoutDuration time.Duration, requestedCPU resource.
 		// After delay, try running.
 		default:
 			// If no images or an error, log and loop.
-			if images, err := k.GetImagesWithNodes(corev1.NamespaceAll, requestedCPU, requestedMemory); len(images) < 1 || err != nil {
+			if images, err := k.GetImagesWithNodes(corev1.NamespaceAll, minNodeCPU, minNodeMemory); len(images) < 1 || err != nil {
 				k.Log("no images found: %w", err)
 			} else {
 				// Otherwise, return the image list.
