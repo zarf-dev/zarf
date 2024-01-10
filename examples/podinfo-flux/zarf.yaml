@@ -64,7 +64,7 @@ components:
             wait:
               cluster:
                 kind: pod
-                name: app=podinfo
+                name: app.kubernetes.io/name=podinfo
                 namespace: podinfo-helm
                 condition: ready
 

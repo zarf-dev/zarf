@@ -70,7 +70,7 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 
 	if strings.ToLower(src.Spec.Type) != "oci" {
 		message.Warnf(lang.AgentWarnNotOCIType, src.Spec.Type)
-		return nil, nil
+		return &operations.Result{Allowed: true}, nil
 	}
 	patchedURL := src.Spec.URL
 

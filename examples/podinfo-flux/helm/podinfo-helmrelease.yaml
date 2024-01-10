@@ -5,6 +5,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m0s
+  releaseName: podinfo
   chart:
     spec:
       chart: podinfo
