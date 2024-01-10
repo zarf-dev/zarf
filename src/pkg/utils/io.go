@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"archive/tar"
 	"bufio"
 	"crypto/sha256"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -421,4 +423,65 @@ func SHAsMatch(path, expected string) error {
 		return fmt.Errorf("expected sha256 of %s to be %s, found %s", path, expected, sha)
 	}
 	return nil
+}
+
+// CreateReproducibleTarballFromDir creates a tarball from a directory with stripped headers
+func CreateReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string) error {
+	tb, err := os.Create(tarballPath)
+	if err != nil {
+		return fmt.Errorf("error creating tarball: %w", err)
+	}
+	defer tb.Close()
+
+	tw := tar.NewWriter(tb)
+	defer tw.Close()
+
+	// Walk through the directory and process each file
+	return filepath.Walk(dirPath, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Create a new header
+		header, err := tar.FileInfoHeader(info, "")
+		if err != nil {
+			return fmt.Errorf("error creating tar header: %w", err)
+		}
+
+		// Strip non-deterministic header data
+		header.ModTime = time.Time{}
+		header.AccessTime = time.Time{}
+		header.ChangeTime = time.Time{}
+		header.Uid = 0
+		header.Gid = 0
+		header.Uname = ""
+		header.Gname = ""
+
+		// Ensure the header's name is correctly set relative to the base directory
+		name, err := filepath.Rel(dirPath, filePath)
+		if err != nil {
+			return fmt.Errorf("error getting relative path: %w", err)
+		}
+		header.Name = filepath.Join(dirPrefix, name)
+
+		// Write the header to the tarball
+		if err := tw.WriteHeader(header); err != nil {
+			return fmt.Errorf("error writing header: %w", err)
+		}
+
+		// If it's a file, write its content
+		if !info.IsDir() {
+			file, err := os.Open(filePath)
+			if err != nil {
+				return fmt.Errorf("error opening file: %w", err)
+			}
+			defer file.Close()
+
+			if _, err := io.Copy(tw, file); err != nil {
+				return fmt.Errorf("error writing file to tarball: %w", err)
+			}
+		}
+
+		return nil
+	})
 }

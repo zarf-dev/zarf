@@ -92,6 +92,10 @@ func RenameFromMetadata(path string) (string, error) {
 		return "", err
 	}
 
+	if pkg.Metadata.Name == "" {
+		return "", fmt.Errorf("%q does not contain a zarf.yaml", path)
+	}
+
 	name := NameFromMetadata(&pkg, false)
 
 	name = fmt.Sprintf("%s%s", name, ext)
