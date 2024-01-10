@@ -27,9 +27,13 @@ func (ic *ImportChain) getRemote(url string) (*oci.OrasRemote, error) {
 		return ic.remote, nil
 	}
 	var err error
-	ic.remote, err = oci.NewOrasRemote(url)
+	ic.remote, err = oci.NewOrasRemote(url, oci.WithSkeletonArch())
 	if err != nil {
 		return nil, err
+	}
+	_, err = ic.remote.ResolveRoot()
+	if err != nil {
+		return nil, fmt.Errorf("published skeleton package for %q does not exist: %w", url, err)
 	}
 	return ic.remote, nil
 }

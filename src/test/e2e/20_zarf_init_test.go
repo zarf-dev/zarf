@@ -7,10 +7,12 @@ package test
 import (
 	"encoding/base64"
 	"fmt"
+	"runtime"
 	"testing"
 
 	"encoding/json"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
@@ -30,32 +32,29 @@ func TestZarfInit(t *testing.T) {
 	var (
 		mismatchedArch        = e2e.GetMismatchedArch()
 		mismatchedInitPackage = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
-		expectedErrorMessage  = fmt.Sprintf("this package architecture is %s", mismatchedArch)
+		expectedErrorMessage  = "unable to run component before action: command \"Check that the host architecture matches the package architecture\""
 	)
 	t.Cleanup(func() {
 		e2e.CleanFiles(mismatchedInitPackage)
 	})
 
-	// Build init package with different arch than the cluster arch.
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/20-mismatched-arch-init", "--architecture", mismatchedArch, "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
+	if runtime.GOOS == "linux" {
+		// Build init package with different arch than the cluster arch.
+		stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/20-mismatched-arch-init", "--architecture", mismatchedArch, "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
 
-	componentsFlag := ""
-	if e2e.ApplianceMode {
-		// make sure init fails in appliance mode when we try to initialize a k3s cluster
-		// with behavior from the k3s component's actions
-		componentsFlag = "--components=k3s"
+		// Check that `zarf init` returns an error because of the mismatched architectures.
+		// We need to use the --architecture flag here to force zarf to find the package.
+		_, stdErr, err = e2e.Zarf("init", "--architecture", mismatchedArch, "--components=k3s", "--confirm")
+		require.Error(t, err, stdErr)
+		require.Contains(t, stdErr, expectedErrorMessage)
 	}
 
-	// Check that `zarf init` returns an error because of the mismatched architectures.
-	// We need to use the --architecture flag here to force zarf to find the package.
-	_, stdErr, err = e2e.Zarf("init", "--architecture", mismatchedArch, componentsFlag, "--confirm")
-	require.Error(t, err, stdErr)
-	require.Contains(t, stdErr, expectedErrorMessage)
+	initWithoutStorageClass(t)
 
 	if !e2e.ApplianceMode {
 		// throw a pending pod into the cluster to ensure we can properly ignore them when selecting images
-		_, _, err = e2e.Kubectl("apply", "-f", "https://raw.githubusercontent.com/kubernetes/website/main/content/en/examples/pods/pod-with-node-affinity.yaml")
+		_, _, err := e2e.Kubectl("apply", "-f", "https://raw.githubusercontent.com/kubernetes/website/main/content/en/examples/pods/pod-with-node-affinity.yaml")
 		require.NoError(t, err)
 	}
 
@@ -65,7 +64,8 @@ func TestZarfInit(t *testing.T) {
 	if err == nil {
 		oldStateJSON, err := base64.StdEncoding.DecodeString(base64State)
 		require.NoError(t, err)
-		json.Unmarshal(oldStateJSON, &oldState)
+		err = json.Unmarshal(oldStateJSON, &oldState)
+		require.NoError(t, err)
 	}
 
 	// run `zarf init`
@@ -94,11 +94,11 @@ func TestZarfInit(t *testing.T) {
 		// make sure that we upgraded `k3s` correctly and are running the correct version - this should match that found in `packages/distros/k3s`
 		kubeletVersion, _, err := e2e.Kubectl("get", "nodes", "-o", "jsonpath={.items[0].status.nodeInfo.kubeletVersion}")
 		require.NoError(t, err)
-		require.Contains(t, kubeletVersion, "v1.28.2+k3s1")
+		require.Contains(t, kubeletVersion, "v1.28.4+k3s2")
 	}
 
 	// Check that the registry is running on the correct NodePort
-	stdOut, _, err = e2e.Kubectl("get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
+	stdOut, _, err := e2e.Kubectl("get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "31337")
 
@@ -126,4 +126,44 @@ func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.Zar
 	require.NotContains(t, logText, zarfState.RegistryInfo.PushPassword)
 	require.NotContains(t, logText, zarfState.RegistryInfo.Secret)
 	require.NotContains(t, logText, zarfState.LoggingSecret)
+}
+
+// Verify `zarf init` produces an error when there is no storage class in cluster.
+func initWithoutStorageClass(t *testing.T) {
+	/*
+		Exit early if testing with Zarf-deployed k3s cluster.
+		This is a chicken-egg problem because we can't interact with a cluster that Zarf hasn't created yet.
+		Zarf deploys k3s with the Rancher local-path storage class out of the box,
+		so we don't expect any problems with no storage class in this case.
+	*/
+	if e2e.ApplianceMode {
+		return
+	}
+
+	jsonPathQuery := `{range .items[?(@.metadata.annotations.storageclass\.kubernetes\.io/is-default-class=="true")]}{.metadata.name}{end}`
+	defaultStorageClassName, _, err := e2e.Kubectl("get", "storageclass", "-o=jsonpath="+jsonPathQuery)
+	require.NoError(t, err)
+	require.NotEmpty(t, defaultStorageClassName)
+
+	storageClassYaml, _, err := e2e.Kubectl("get", "storageclass", defaultStorageClassName, "-o=yaml")
+	require.NoError(t, err)
+
+	storageClassFileName := "storage-class.yaml"
+
+	err = utils.WriteFile(storageClassFileName, []byte(storageClassYaml))
+	require.NoError(t, err)
+	defer e2e.CleanFiles(storageClassFileName)
+
+	_, _, err = e2e.Kubectl("delete", "storageclass", defaultStorageClassName)
+	require.NoError(t, err)
+
+	_, stdErr, err := e2e.Zarf("init", "--confirm")
+	require.Error(t, err, stdErr)
+	require.Contains(t, stdErr, "unable to run component before action: command \"Check that the cluster has the specified storage class\"")
+
+	_, _, err = e2e.Zarf("destroy", "--confirm")
+	require.NoError(t, err)
+
+	_, _, err = e2e.Kubectl("apply", "-f", storageClassFileName)
+	require.NoError(t, err)
 }

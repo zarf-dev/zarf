@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In this tutorial, we will demonstrate the process to create a Zarf package for an application from defining a `zarf.yaml`, finding resources with `zarf prepare` commands and finally building the package with `zarf package create`.
+In this tutorial, we will demonstrate the process to create a Zarf package for an application from defining a `zarf.yaml`, finding resources with `zarf dev` commands and finally building the package with `zarf package create`.
 
 When creating a Zarf package, you must have a network connection so that Zarf can fetch all of the dependencies and resources necessary to build the package. If your package is using images from a private registry or is referencing repositories in a private repository, you will need to have your credentials configured on your machine for Zarf to be able to fetch the resources.
 
@@ -37,7 +37,7 @@ metadata:
 :::tip
 
 If you are using an Integrated Development Environment (such as [VS Code](../3-create-a-zarf-package/8-vscode.md)) to create and edit the `zarf.yaml` file, you can install or reference the [`zarf.schema.json`](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json) file to get error checking and autocomplete.
-Additionally, you can run `zarf prepare lint <directory>` to validate aginst the [`zarf.schema.json`](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json)
+Additionally, you can run `zarf dev lint <directory>` to validate aginst the [`zarf.schema.json`](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json)
 
 :::
 
@@ -83,7 +83,7 @@ service:
 
 :::note
 
-We create any `values.yaml` file(s) at this stage because the `zarf prepare find-images` command we will use next will template out this chart to look only for the images we need.
+We create any `values.yaml` file(s) at this stage because the `zarf dev find-images` command we will use next will template out this chart to look only for the images we need.
 
 :::
 
@@ -95,7 +95,7 @@ Note that we are explicitly defining the `wordpress` namespace for this deployme
 
 ### Finding the Images
 
-Once you have the above defined we can now work on setting the images that we will need to bring with us into the air gap.  For this, Zarf has a helper command you can run with `zarf prepare find-images`.  Running this command in the directory of your zarf.yaml will result in the following output:
+Once you have the above defined we can now work on setting the images that we will need to bring with us into the air gap.  For this, Zarf has a helper command you can run with `zarf dev find-images`.  Running this command in the directory of your zarf.yaml will result in the following output:
 
 <iframe src="/docs/tutorials/prepare_find_images.html" height="220px" width="100%"></iframe>
 
@@ -109,7 +109,7 @@ Due to the way some applications are deployed, Zarf might not be able to find al
 
 :::tip
 
-Zarf has more `prepare` commands you can learn about on the [prepare CLI docs page](../2-the-zarf-cli/100-cli-commands/zarf_prepare.md).
+Zarf has more `dev` commands you can learn about on the [dev CLI docs page](../3-create-a-zarf-package/10-dev.md).
 
 :::
 

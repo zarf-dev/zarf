@@ -72,7 +72,7 @@ There are two ways to deploy these optional components. First, you can provide a
 
 The `k3s` component included in Zarf differs from the default `k3s` install in that it disables the installation of `traefik` out of the box.  This was done so that people could more intentionally choose if they wanted `traefik` or another ingress provider (or no ingress at all) depending on their needs.  If you would like to return `k3s` to its defaults, you can set the `K3S_ARGS` zarf variable to an empty string:
 
-```
+```text
 root@machine ~ # zarf init --components k3s --set K3S_ARGS="" --confirm
 ```
 
@@ -88,7 +88,7 @@ To see a full list of `variables` you can view the [zarf.yaml that defines the g
 
 ## What Makes the Init Package Special
 
-Deploying into air gapped environments is a [hard problem](../1-getting-started/0-understand-the-basics.md#what-is-the-air-gap), particularly when the K8s environment doesn't have a container registry for you to store images in already. This results in a dilemma where the container registry image must be introduced to the cluster, but there is no container registry to push it to as the image is not yet in the cluster - chicken, meet egg. To ensure that our approach is distro-agnostic, we developed a unique solution to seed the container registry into the cluster.
+Deploying into air gapped environments is a [hard problem](../1-getting-started/1-understand-the-basics.md#what-is-the-air-gap), particularly when the K8s environment doesn't have a container registry for you to store images in already. This results in a dilemma where the container registry image must be introduced to the cluster, but there is no container registry to push it to as the image is not yet in the cluster - chicken, meet egg. To ensure that our approach is distro-agnostic, we developed a unique solution to seed the container registry into the cluster.
 
 This is done with the `zarf-injector` [component](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-injector/zarf.yaml) which injects a single rust binary (statically compiled) and a series of configmap chunks of a `registry:2` image into an ephemeral pod that is based on an existing image in the cluster.  This gives us a running registry to bootstrap from and deploy the rest of the 'init' package and any other packages down the line.
 

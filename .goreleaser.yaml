@@ -15,7 +15,14 @@ builds:
       - darwin
       - windows
     ldflags:
-      - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Tag}} -X k8s.io/component-base/version.gitVersion=v0.0.0+zarf{{.Tag}} -X k8s.io/component-base/version.gitCommit={{.FullCommit}} -X k8s.io/component-base/version.buildDate={{.Date}}
+      - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Tag}}
+      - -X k8s.io/component-base/version.gitVersion=v{{.Env.K8S_MODULES_MAJOR_VER}}.{{.Env.K8S_MODULES_MINOR_VER}}.{{.Env.K8S_MODULES_PATCH_VER}}
+      - -X k8s.io/component-base/version.gitCommit={{.FullCommit}}
+      - -X k8s.io/component-base/version.buildDate={{.Date}}
+      - -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor={{.Env.K8S_MODULES_MAJOR_VER}}
+      - -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMinor={{.Env.K8S_MODULES_MINOR_VER}}
+      - -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor={{.Env.K8S_MODULES_MAJOR_VER}}
+      - -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor={{.Env.K8S_MODULES_MINOR_VER}}
     goarch:
       - amd64
       - arm64

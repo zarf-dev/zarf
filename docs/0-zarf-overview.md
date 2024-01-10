@@ -2,9 +2,6 @@
 sidebar_position: 0
 ---
 
-import TabItem from "@theme/TabItem";
-import Tabs from "@theme/Tabs";
-
 # Overview
 
 ![Zarf Underwater](.images/Zarf%20Left%20Underwater%20-%20Behind%20rock.svg)
@@ -21,7 +18,7 @@ It also simplifies the installation, update, and maintenance of supporting DevSe
 
 :::note
 
-Check out our [glossary](1-getting-started/0-understand-the-basics.md) for an explanation of common terms used in the project.
+Check out our [glossary](1-getting-started/1-understand-the-basics.md) for an explanation of common terms used in the project.
 
 :::
 
@@ -151,7 +148,7 @@ In this use case, you configure Zarf to initialize a cluster that already exists
 - Builtin Docker registry
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
 - [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
-- Builtin [command to find images](./2-the-zarf-cli/100-cli-commands/zarf_prepare_find-images.md) and resources from a Helm chart
+- Builtin [command to find images](./2-the-zarf-cli/100-cli-commands/zarf_dev_find-images.md) and resources from a Helm chart
 - Tunneling capability to [connect to Kuberenetes resources](./2-the-zarf-cli/100-cli-commands/zarf_connect.md) without network routing, DNS, TLS or Ingress configuration required
 
 ### 🛠️ Configurable Features
@@ -160,112 +157,8 @@ In this use case, you configure Zarf to initialize a cluster that already exists
 - [Composable packages](./3-create-a-zarf-package/2-zarf-components.md#composing-package-components) to include multiple sub-packages/components
 - Component-level OS/architecture filtering
 
-## Quick Start
-
-1. 💻 Select your system's OS below.
-2. ❗ Ensure you have the pre-requisite applications running.
-3. `$` Enter the commands into your terminal.
-
-<Tabs>
-<TabItem value="Linux">
-
-:::info
-
-This quick start requires you to already have:
-
-- [Homebrew](https://brew.sh/) package manager installed on your machine.
-- [Docker](https://www.docker.com/) installed and running on your machine.
-
-For more install options please visit our [Getting Started page](./1-getting-started/index.md).
-
-:::
-
-## Linux Commands
-
-```bash
-# To install Zarf
-brew tap defenseunicorns/tap && brew install zarf
-
-# Next, you will need a Kubernetes cluster. This example uses KIND.
-brew install kind && kind delete cluster && kind create cluster
-
-
-# Then, you will need to deploy the Zarf Init Package
-zarf init
-
-
-# You are ready to deploy any Zarf Package, try out our Retro Arcade!!
-zarf package deploy oci://defenseunicorns/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub
-```
-
-:::note
-
-This example shows how to install Zarf with the official (📜) `defenseunicorns` Homebrew tap, however there are many other options to install Zarf on Linux such as:
-
-- 📜 **[official]** Downloading Zarf directly from [GitHub releases](https://github.com/defenseunicorns/zarf/releases)
-- 🧑‍🤝‍🧑 **[community]** `apk add` on [Alpine Linux Edge](https://pkgs.alpinelinux.org/package/edge/testing/x86_64/zarf)
-- 🧑‍🤝‍🧑 **[community]** `asdf install` with the [ASDF Version Manager](https://github.com/defenseunicorns/asdf-zarf)
-- 🧑‍🤝‍🧑 **[community]** `nix-shell`/`nix-env` with [Nix Packages](https://search.nixos.org/packages?channel=23.05&show=zarf&from=0&size=50&sort=relevance&type=packages&query=zarf)
-
-:::
-
 :::tip
 
-Zarf can deploy it's own `k3s` cluster on Linux if you have `root` access by selecting the `k3s` component on `zarf init`.
+To quickly try out Zarf for yourself see the [Zarf Quick Start](./1-getting-started/index.md#quick-start)!
 
 :::
-
-</TabItem>
-<TabItem value="macOS">
-
-:::info
-
-This quick start requires you to already have:
-
-- [Homebrew](https://brew.sh/) package manager installed on your machine.
-- [Docker](https://www.docker.com/) installed and running on your machine.
-
-For more install options please visit our [Getting Started page](./1-getting-started/index.md).
-
-:::
-
-## MacOS Commands
-
-```bash
-# To install Zarf
-brew tap defenseunicorns/tap && brew install zarf
-
-# Next, you will need a Kubernetes cluster. This example uses KIND.
-brew install kind && kind delete cluster && kind create cluster
-
-
-# Then, you will need to deploy the Zarf Init Package
-zarf init
-
-
-# You are ready to deploy any Zarf Package, try out our Retro Arcade!!
-zarf package deploy oci://🦄/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub
-```
-
-</TabItem>
-<TabItem value="Windows">
-
-## Windows Commands
-
-
-:::info
-
-There is currently no Zarf Quick Start for Windows, though you can learn how to install Zarf from our Github Releases by visiting the [Getting Started page](./1-getting-started/index.md#downloading-from-github-releases)
-
-:::
-
-```text
-
-Coming soon!
-
-```
-
-</TabItem>
-</Tabs>
-
-Zarf is being actively developed by the community. For more information, see our [release notes](https://github.com/defenseunicorns/zarf/releases).
