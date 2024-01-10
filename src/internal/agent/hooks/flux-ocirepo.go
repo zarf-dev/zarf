@@ -12,7 +12,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/internal/agent/state"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -60,20 +59,10 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
 
-	// Mutate the oci URL so that the hostname matches the hostname in the Zarf state
-	// Must be valid DNS https://fluxcd.io/flux/components/source/ocirepositories/#writing-an-ocirepository-spec
-	registryAddress := zarfState.RegistryInfo.Address
-	c, err := cluster.NewCluster()
+	// Get the registry service info if this is a NodePort service to use the internal kube-dns
+	registryAddress, err := state.GetServiceInfoFromRegistryAddress(zarfState.RegistryInfo.Address)
 	if err != nil {
-		return nil, fmt.Errorf(lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
-	}
-
-	registryServiceInfo, err := c.ServiceInfoFromNodePortURL(zarfState.RegistryInfo.Address)
-	if err != nil {
-		// TODO: (@WSTARR) This warning is maybe useful for debug but should likely not be a warning
-		message.Warnf(lang.WarnUnableToGetServiceInfo, "registry", zarfState.RegistryInfo.Address)
-	} else {
-		registryAddress = fmt.Sprintf("%s.%s.svc.cluster.local:%d", registryServiceInfo.Name, registryServiceInfo.Namespace, registryServiceInfo.Port)
+		return nil, err
 	}
 
 	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", registryAddress)
@@ -108,12 +97,14 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 		patchedSrc, err := transform.ImageTransformHost(registryAddress, ref)
 		if err != nil {
-			message.Warnf(lang.WarnUnableToTransform, "OCIRepo", patchedSrc)
+			message.Warnf("Unable to transform the OCIRepo URL, using the original url we have: %s", src.Spec.URL)
+			return &operations.Result{Allowed: true}, nil
 		}
 
 		patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
 		if err != nil {
-			message.Warnf(lang.WarnUnableToTransform, "OCIRepo", patchedSrc)
+			message.Warnf("Unable to parse the transformed OCIRepo URL, using the original url we have: %s", src.Spec.URL)
+			return &operations.Result{Allowed: true}, nil
 		}
 
 		patchedURL = helpers.OCIURLPrefix + patchedRefInfo.Name

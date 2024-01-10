@@ -616,7 +616,7 @@ const (
 	AgentInfoWebhookAllowed = "Webhook [%s - %s] - Allowed: %t"
 	AgentInfoShutdown       = "Shutdown gracefully..."
 	AgentInfoPort           = "Server running in port: %s"
-	AgentWarningNotOCIType  = "Skipping HelmRepo mutation because the type is not OCI: %s"
+	AgentWarnNotOCIType     = "Skipping HelmRepo mutation because the type is not OCI: %s"
 
 	AgentErrBadRequest             = "could not read request body: %s"
 	AgentErrBindHandler            = "Unable to bind the webhook handler"
@@ -700,7 +700,5 @@ var (
 
 // Collection of reusable warn messages.
 var (
-	WarnSGetDeprecation        = "Using sget to download resources is being deprecated and will removed in the v1.0.0 release of Zarf. Please publish the packages as OCI artifacts instead."
-	WarnUnableToGetServiceInfo = "Unable to get the service information for the %s, using the default %s"
-	WarnUnableToTransform      = "Unable to transform the %s URL, using the original url: %s"
+	WarnSGetDeprecation = "Using sget to download resources is being deprecated and will removed in the v1.0.0 release of Zarf. Please publish the packages as OCI artifacts instead."
 )
