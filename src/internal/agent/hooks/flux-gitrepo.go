@@ -60,7 +60,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	message.Debugf("Using the url of (%s) to mutate the flux GitRepository", zarfState.GitServer.Address)
 
-	// parse to simple struct to read the GitRepo URL
+	// Parse into a simple struct to read the GitRepo URL
 	src := &GenericGitRepo{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)

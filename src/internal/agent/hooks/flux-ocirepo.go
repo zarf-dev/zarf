@@ -23,6 +23,7 @@ import (
 type Ref struct {
 	Tag    string `json:"tag,omitempty"`
 	Digest string `json:"digest,omitempty"`
+	Semver string `json:"semver,omitempty"`
 }
 
 // OCIRepo contains the URL of a git repo and the secret that corresponds to it for use with Flux.
@@ -67,13 +68,19 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", registryAddress)
 
-	// parse to simple struct to read the OCIRepo url
+	// Parse into a simple struct to read the OCIRepo url
 	src := &OCIRepo{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
+
+	// If we have a semver we want to continue since we wil still have the upstream tag
+	// but should warn that we can't guarantee there won't be collisions
+	if src.Spec.Ref.Semver != "" {
+		message.Warnf(lang.AgentWarnSemVerRef, src.Spec.Ref.Semver)
+	}
+
 	patchedURL := src.Spec.URL
-	// TODO: (@WSTARR) Handle or explicitly ignore a semver
 	patchedRef := src.Spec.Ref
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState

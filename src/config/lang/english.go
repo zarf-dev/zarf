@@ -617,6 +617,7 @@ const (
 	AgentInfoShutdown       = "Shutdown gracefully..."
 	AgentInfoPort           = "Server running in port: %s"
 	AgentWarnNotOCIType     = "Skipping HelmRepo mutation because the type is not OCI: %s"
+	AgentWarnSemVerRef      = "Detected a semver OCI ref (%s) - continuing but will be unable to guarantee against collisions"
 
 	AgentErrBadRequest             = "could not read request body: %s"
 	AgentErrBindHandler            = "Unable to bind the webhook handler"

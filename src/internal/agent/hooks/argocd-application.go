@@ -63,7 +63,7 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 
 	message.Debugf("Using the url of (%s) to mutate the ArgoCD Application", zarfState.GitServer.Address)
 
-	// parse to simple struct to read the git url
+	// Parse into a simple struct to read the git url
 	src := &ArgoApplication{}
 
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {

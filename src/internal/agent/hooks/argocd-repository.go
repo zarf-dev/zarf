@@ -55,7 +55,7 @@ func mutateRepository(r *v1.AdmissionRequest) (result *operations.Result, err er
 
 	message.Debugf("Using the url of (%s) to mutate the ArgoCD Repository Secret", zarfState.GitServer.Address)
 
-	// parse to simple struct to read the git url
+	// Parse into a simple struct to read the git url
 	src := &ArgoRepository{}
 
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {

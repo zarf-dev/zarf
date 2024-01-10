@@ -62,16 +62,19 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 
 	message.Debugf("Using the url of (%s) to mutate the flux HelmRepository", registryAddress)
 
-	// parse to simple struct to read the HelmRepo url
+	// Parse into a simple struct to read the HelmRepo url
 	src := &HelmRepo{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
+	// If we see a type of helm repo other than OCI we should flag a warning and return
 	if strings.ToLower(src.Spec.Type) != "oci" {
 		message.Warnf(lang.AgentWarnNotOCIType, src.Spec.Type)
 		return &operations.Result{Allowed: true}, nil
 	}
+
+	// Note: for HelmRepositories we only patch the URL because the tag and Chart version are coupled together.
 	patchedURL := src.Spec.URL
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
