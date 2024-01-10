@@ -127,10 +127,22 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
-	// Verify flux was able to pull from the 'external' repository
-	podinfoWaitCmd := []string{"wait", "deployment", "-n=podinfo", "podinfo", "--for", "condition=Available=True", "--timeout=3s"}
-	errorStr := "unable to verify flux deployed the podinfo example"
+	// Verify flux was able to pull from the 'external' git repository
+	podinfoWaitCmd := []string{"wait", "deployment", "-n=podinfo-git", "podinfo", "--for", "condition=Available=True", "--timeout=3s"}
+	errorStr := "unable to verify flux (git) deployed the podinfo example"
 	success := verifyKubectlWaitSuccess(suite.T(), 2, podinfoWaitCmd, errorStr)
+	suite.True(success, errorStr)
+
+	// Verify flux was able to pull from the 'external' helm repository
+	podinfoWaitCmd = []string{"wait", "deployment", "-n=podinfo-helm", "podinfo", "--for", "condition=Available=True", "--timeout=3s"}
+	errorStr = "unable to verify flux (helm) deployed the podinfo example"
+	success = verifyKubectlWaitSuccess(suite.T(), 2, podinfoWaitCmd, errorStr)
+	suite.True(success, errorStr)
+
+	// Verify flux was able to pull from the 'external' oci repository
+	podinfoWaitCmd = []string{"wait", "deployment", "-n=podinfo-oci", "podinfo", "--for", "condition=Available=True", "--timeout=3s"}
+	errorStr = "unable to verify flux (oci) deployed the podinfo example"
+	success = verifyKubectlWaitSuccess(suite.T(), 2, podinfoWaitCmd, errorStr)
 	suite.True(success, errorStr)
 
 	_, _, err = exec.CmdWithContext(context.TODO(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
