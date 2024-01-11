@@ -318,15 +318,14 @@ func checkIfFileUsesVar(validator *Validator, filepath string) error {
 
 		// No template left on this line so move on
 
-		removeVarFromValidator(validator, line)
+		declareVarIsUsed(validator, line)
 
 		// TODO add a line here that adds existing variables to list
 	}
 	return nil
 }
 
-// TODO needs better name
-func removeVarFromValidator(validator *Validator, line string) {
+func declareVarIsUsed(validator *Validator, line string) {
 	deprecations := template.GetTemplateDeprecations()
 	matches := regexTemplateLine.FindStringSubmatch(line)
 
@@ -338,7 +337,6 @@ func removeVarFromValidator(validator *Validator, line string) {
 
 	_, present := deprecations[templateKey]
 	if present {
-		// TODO de duplicate error message
 		depWarning := fmt.Sprintf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.", templateKey, deprecations[templateKey])
 		validator.addWarning(validatorMessage{description: depWarning})
 	}

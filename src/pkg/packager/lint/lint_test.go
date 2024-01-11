@@ -170,7 +170,7 @@ func TestValidateSchema(t *testing.T) {
 	t.Run("remove var from validator", func(t *testing.T) {
 		validator := Validator{unusedVariables: []string{"FAKE_VAR"}}
 		line := "Hello my name is ###ZARF_VAR_FAKE_VAR###"
-		removeVarFromValidator(&validator, line)
+		declareVarIsUsed(&validator, line)
 		require.Empty(t, validator.unusedVariables)
 	})
 
