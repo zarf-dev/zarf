@@ -48,6 +48,8 @@ func (p *Packager) Deploy() (err error) {
 		return err
 	}
 
+	p.runMigrations()
+
 	if err := p.validateLastNonBreakingVersion(); err != nil {
 		return err
 	}
