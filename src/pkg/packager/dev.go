@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -24,7 +25,9 @@ func (p *Packager) DevDeploy() error {
 		return err
 	}
 
-	if err := p.cdToBaseDir(p.cfg.CreateOpts.BaseDir, cwd); err != nil {
+	c := creator.New(&p.cfg.CreateOpts)
+
+	if err := c.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 		return err
 	}
 
