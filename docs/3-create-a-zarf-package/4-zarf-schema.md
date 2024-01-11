@@ -441,26 +441,6 @@ Must be one of:
 | **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 
-<details>
-<summary>
-<strong> <a name="build_registryOverrides_pattern1"></a>Pattern Property .*</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-:::note
-All properties whose name matches the regular expression
-```.*``` ([Test](https://regex101.com/?regex=.%2A))
-must respect the following conditions
-:::
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
 </blockquote>
 </details>
 
