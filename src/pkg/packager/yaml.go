@@ -21,14 +21,7 @@ func (p *Packager) readZarfYAML(path string) error {
 	if err := utils.ReadYaml(path, &p.cfg.Pkg); err != nil {
 		return err
 	}
-
-	if p.layout.IsLegacyLayout() {
-		warning := "Detected deprecated package layout, migrating to new layout - support for this package will be dropped in v1.0.0"
-		p.warnings = append(p.warnings, warning)
-	}
-
 	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
-
 	return nil
 }
 
