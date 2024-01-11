@@ -1,11 +1,17 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package creator contains functions for creating Zarf packages.
 package creator
 
 import "github.com/defenseunicorns/zarf/src/types"
 
+// Creator is an interface for creating Zarf packages.
 type Creator interface {
 	CdToBaseDir(createOpts *types.ZarfCreateOptions, cwd string) error
 }
 
+// New returns a new Creator based on the provided create options.
 func New(createOpts *types.ZarfCreateOptions) Creator {
 	if createOpts.IsSkeleton {
 		return &SkeletonCreator{}
