@@ -47,9 +47,10 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
+	if err = utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
+	p.setArch()
 
 	if err := p.composeComponents(); err != nil {
 		return nil, err

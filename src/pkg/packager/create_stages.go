@@ -33,12 +33,13 @@ import (
 )
 
 func (p *Packager) load() error {
-	if err := p.readZarfYAML(layout.ZarfYAML); err != nil {
+	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 	if p.isInitConfig() {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 	}
+	p.setArch()
 
 	// Compose components into a single zarf.yaml file
 	if err := p.composeComponents(); err != nil {

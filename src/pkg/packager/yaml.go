@@ -16,15 +16,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// readZarfYAML reads a Zarf YAML file.
-func (p *Packager) readZarfYAML(path string) error {
-	if err := utils.ReadYaml(path, &p.cfg.Pkg); err != nil {
-		return err
-	}
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
-	return nil
-}
-
 // filterComponents removes components not matching the current OS if filterByOS is set.
 func (p *Packager) filterComponents() {
 	// Filter each component to only compatible platforms.

@@ -44,10 +44,10 @@ func (p *Packager) Deploy() (err error) {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
+	if err = utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return err
 	}
-
+	p.setArch()
 	p.runMigrations()
 
 	if err := p.validateLastNonBreakingVersion(); err != nil {
