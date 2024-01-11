@@ -55,6 +55,8 @@ func Validate(cfg *types.PackagerConfig) (*Validator, error) {
 		return nil, fmt.Errorf("unable to access directory '%s': %w", cfg.CreateOpts.BaseDir, err)
 	}
 
+	cfg.Pkg = validator.typedZarfPackage
+
 	if err := variable.SetVariableMapInConfig(*cfg); err != nil {
 		return nil, fmt.Errorf("unable to set the active variables: %w", err)
 	}
@@ -339,9 +341,7 @@ func removeVarFromValidator(validator *Validator, line string) {
 	}
 
 	validator.unusedVariables = helpers.RemoveMatches(validator.unusedVariables, func(s string) bool {
-		varInLine := strings.TrimPrefix(templateKey, "###ZARF_VAR_")
-		varInLine = strings.TrimSuffix(varInLine, "###")
-		return s == varInLine
+		return s == templateKey
 	})
 }
 

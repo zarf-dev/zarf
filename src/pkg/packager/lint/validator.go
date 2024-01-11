@@ -7,6 +7,7 @@ package lint
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -152,12 +153,17 @@ func (v *Validator) addError(vMessage validatorMessage) {
 	v.findings = helpers.Unique(append(v.findings, vMessage))
 }
 
+func getVariableNameFromZarfVar(zarfVar string) string {
+	zarfVar = strings.TrimPrefix(zarfVar, "###ZARF_VAR_")
+	return strings.TrimSuffix(zarfVar, "###")
+}
+
 func (v *Validator) addUnusedVariableErrors() {
 	for _, unusedVariable := range v.unusedVariables {
-		// TODO gotta check which package it comes from
+		// TODO aabro gotta check which package it comes from
 		v.addError(validatorMessage{
-			description:    fmt.Sprintf("Unused variable %q", unusedVariable),
-			packageRelPath: v.baseDir,
+			description:    fmt.Sprintf("Unused variable %q", getVariableNameFromZarfVar(unusedVariable)),
+			packageRelPath: ".",
 			packageName:    v.typedZarfPackage.Metadata.Name,
 		})
 	}
