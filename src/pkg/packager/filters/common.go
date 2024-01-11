@@ -6,6 +6,7 @@ package filters
 
 import "github.com/defenseunicorns/zarf/src/types"
 
+// ComponentFilterStrategy is a strategy interface for filtering components.
 type ComponentFilterStrategy interface {
 	Apply([]types.ZarfComponent) ([]types.ZarfComponent, error)
 }

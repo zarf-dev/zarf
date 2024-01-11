@@ -20,6 +20,7 @@ var (
 	_ ComponentFilterStrategy = &DeploymentFilter{}
 )
 
+// NewDeploymentFilter creates a new deployment filter.
 func NewDeploymentFilter(optionalComponents string) *DeploymentFilter {
 	requested := helpers.StringToSlice(optionalComponents)
 
@@ -28,10 +29,12 @@ func NewDeploymentFilter(optionalComponents string) *DeploymentFilter {
 	}
 }
 
+// DeploymentFilter is the default filter for deployments.
 type DeploymentFilter struct {
 	requestedComponents []string
 }
 
+// Apply applies the filter.
 func (f *DeploymentFilter) Apply(allComponents []types.ZarfComponent) ([]types.ZarfComponent, error) {
 	var selectedComponents []types.ZarfComponent
 	groupedComponents := map[string][]types.ZarfComponent{}

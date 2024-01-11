@@ -13,6 +13,7 @@ var (
 	_ ComponentFilterStrategy = &ArchAndOSFilter{}
 )
 
+// NewArchAndOSFilter creates an architecture and OS filter.
 func NewArchAndOSFilter(arch string, os string) *ArchAndOSFilter {
 	return &ArchAndOSFilter{
 		arch: arch,
@@ -20,11 +21,13 @@ func NewArchAndOSFilter(arch string, os string) *ArchAndOSFilter {
 	}
 }
 
+// ArchAndOSFilter filters components based on OS/architecture.
 type ArchAndOSFilter struct {
 	arch string
 	os   string
 }
 
+// Apply applies the filter.
 func (f *ArchAndOSFilter) Apply(components []types.ZarfComponent) (filtered []types.ZarfComponent, _ error) {
 	// Filter each component to only compatible platforms.
 	for _, component := range components {

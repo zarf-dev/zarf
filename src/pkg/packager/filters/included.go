@@ -13,6 +13,7 @@ var (
 	_ ComponentFilterStrategy = &IncludedFilter{}
 )
 
+// NewIncludedFilter creates a new simple included filter.
 func NewIncludedFilter(optionalComponents string) *IncludedFilter {
 	requested := helpers.StringToSlice(optionalComponents)
 
@@ -21,10 +22,12 @@ func NewIncludedFilter(optionalComponents string) *IncludedFilter {
 	}
 }
 
+// IncludedFilter sorts based purely on the internal included state of the component.
 type IncludedFilter struct {
 	requestedComponents []string
 }
 
+// Apply applies the filter.
 func (f *IncludedFilter) Apply(allComponents []types.ZarfComponent) ([]types.ZarfComponent, error) {
 	isPartial := len(f.requestedComponents) > 0 && f.requestedComponents[0] != ""
 

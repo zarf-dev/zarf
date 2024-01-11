@@ -10,8 +10,10 @@ var (
 	_ ComponentFilterStrategy = &EmptyFilter{}
 )
 
+// EmptyFilter is a filter that does nothing.
 type EmptyFilter struct{}
 
+// Apply returns the components unchanged.
 func (f *EmptyFilter) Apply(components []types.ZarfComponent) ([]types.ZarfComponent, error) {
 	return components, nil
 }
