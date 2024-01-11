@@ -18,8 +18,6 @@ import (
 
 // readZarfYAML reads a Zarf YAML file.
 func (p *Packager) readZarfYAML(path string) error {
-	var warnings []string
-
 	if err := utils.ReadYaml(path, &p.cfg.Pkg); err != nil {
 		return err
 	}
@@ -27,14 +25,6 @@ func (p *Packager) readZarfYAML(path string) error {
 	if p.layout.IsLegacyLayout() {
 		warning := "Detected deprecated package layout, migrating to new layout - support for this package will be dropped in v1.0.0"
 		p.warnings = append(p.warnings, warning)
-	}
-
-	if len(p.cfg.Pkg.Build.Migrations) > 0 {
-		for idx, component := range p.cfg.Pkg.Components {
-			// Handle component configuration deprecations
-			p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
-			p.warnings = append(p.warnings, warnings...)
-		}
 	}
 
 	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
