@@ -34,7 +34,6 @@ func SetVariableMapInConfig(cfg types.PackagerConfig) error {
 		cfg.SetVariableMap.SetVariableInConfig(variable.Name, variable.Default, variable.Sensitive, variable.AutoIndent, variable.Type)
 
 		// Variable is set to prompt the user
-		// TODO make sure the user isn't prompted during lint
 		if variable.Prompt && !config.CommonOptions.Confirm {
 			// Prompt the user for the variable
 			val, err := interactive.PromptVariable(variable)

@@ -61,10 +61,9 @@ func Validate(cfg *types.PackagerConfig) (*Validator, error) {
 		return nil, fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
-	values, err := template.Generate(cfg)
-	// If this breaks what do we want to do
-	if err != nil {
-		panic("fix this")
+	var values *template.Values
+	if values, err = template.Generate(cfg); err != nil {
+		return nil, fmt.Errorf("unable to generate the value template: %w", err)
 	}
 	// Make list of custom variables
 	templateMap := values.GetCustomVariables()
@@ -75,7 +74,9 @@ func Validate(cfg *types.PackagerConfig) (*Validator, error) {
 
 	validator.baseDir = cfg.CreateOpts.BaseDir
 
-	lintComponents(&validator, cfg)
+	if err := lintComponents(&validator, cfg); err != nil {
+		return nil, err
+	}
 
 	validator.addUnusedVariableErrors()
 
@@ -90,7 +91,7 @@ func Validate(cfg *types.PackagerConfig) (*Validator, error) {
 	return &validator, nil
 }
 
-func lintComponents(validator *Validator, cfg *types.PackagerConfig) {
+func lintComponents(validator *Validator, cfg *types.PackagerConfig) error {
 	for i, component := range validator.typedZarfPackage.Components {
 		arch := config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
 
@@ -124,10 +125,13 @@ func lintComponents(validator *Validator, cfg *types.PackagerConfig) {
 			checkForVarInComponentImport(validator, node)
 			fillComponentTemplate(validator, node, &cfg.CreateOpts)
 			lintComponent(validator, node)
-			checkForUnusedVariables(validator, cfg, node)
+			if err := checkForUnusedVariables(validator, cfg, node); err != nil {
+				return err
+			}
 			node = node.Next()
 		}
 	}
+	return nil
 }
 
 func reloadComponentTemplate(component *types.ZarfComponent) error {
@@ -293,7 +297,6 @@ func checkForVarInComponentImport(validator *Validator, node *composer.Node) {
 
 func checkIfFileUsesVar(validator *Validator, filepath string) error {
 	textFile, err := os.Open(filepath)
-	// TODO what is the behavior if we get to a file we can't open? Debug this message? error out?
 	if err != nil {
 		return err
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/variable"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -61,7 +62,7 @@ func (p *Packager) DevDeploy() error {
 	message.HeaderInfof("📦 PACKAGE DEPLOY %s", p.cfg.Pkg.Metadata.Name)
 
 	// Set variables and prompt if --confirm is not set
-	if err := p.setVariableMapInConfig(); err != nil {
+	if err := variable.SetVariableMapInConfig(*p.cfg); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
