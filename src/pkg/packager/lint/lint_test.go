@@ -34,13 +34,18 @@ components:
 `
 
 const goodZarfPackage = `
+x-name: &name good-zarf-package
+
 kind: ZarfPackageConfig
 metadata:
-  name: good-zarf-package
+  name: *name
+  x-description: Testing good yaml with yaml extension
 
 components:
   - name: baseline
     required: true
+    x-foo: bar
+
 `
 
 func readAndUnmarshalYaml[T interface{}](t *testing.T, yamlString string) T {
