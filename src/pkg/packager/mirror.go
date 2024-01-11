@@ -9,9 +9,8 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -20,12 +19,9 @@ func (p *Packager) Mirror() (err error) {
 	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
-	if ociSource, ok := p.source.(*sources.OCISource); ok {
-		ociSource.ComponentSelectionFilter = interactive.GetOnlyIncludedComponents
-		p.source = ociSource
-	}
+	filter := filters.NewIncludedFilter(p.cfg.PkgOpts.OptionalComponents)
 
-	if err = p.source.LoadPackage(p.layout, true); err != nil {
+	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
@@ -51,7 +47,17 @@ func (p *Packager) Mirror() (err error) {
 	p.filterComponents()
 
 	// Run mirror for each requested component
-	return interactive.ForIncludedComponents(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components, p.mirrorComponent)
+	included, err := filter.Apply(p.cfg.Pkg.Components)
+	if err != nil {
+		return err
+	}
+
+	for _, component := range included {
+		if err := p.mirrorComponent(component); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // mirrorComponent mirrors a Zarf Component.

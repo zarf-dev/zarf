@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
@@ -30,11 +31,10 @@ var (
 type OCISource struct {
 	*types.ZarfPackageOptions
 	*oci.OrasRemote
-	ComponentSelectionFilter func(optionalComponents string, allComponents []types.ZarfComponent) ([]types.ZarfComponent, error)
 }
 
 // LoadPackage loads a package from an OCI registry.
-func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
+func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (err error) {
 	var pkg types.ZarfPackage
 	layersToPull := []ocispec.Descriptor{}
 
@@ -47,8 +47,8 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 			return err
 		}
 		var requested []types.ZarfComponent
-		if s.ComponentSelectionFilter != nil {
-			requested, err = s.ComponentSelectionFilter(s.OptionalComponents, pkg.Components)
+		if filter != nil {
+			requested, err = filter.Apply(pkg.Components)
 			if err != nil {
 				return err
 			}

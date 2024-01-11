@@ -20,11 +20,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -42,12 +41,9 @@ func (p *Packager) resetRegistryHPA() {
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
-	if ociSource, ok := p.source.(*sources.OCISource); ok {
-		ociSource.ComponentSelectionFilter = interactive.GetComponentsForDeployment
-		p.source = ociSource
-	}
+	filter := filters.NewDeploymentFilter(p.cfg.PkgOpts.OptionalComponents)
 
-	if err = p.source.LoadPackage(p.layout, true); err != nil {
+	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
@@ -100,7 +96,8 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy, err := interactive.GetComponentsForDeployment(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components)
+	filter := filters.NewDeploymentFilter(p.cfg.PkgOpts.OptionalComponents)
+	componentsToDeploy, err := filter.Apply(p.cfg.Pkg.Components)
 	if err != nil {
 		return deployedComponents, fmt.Errorf("unable to get selected components: %w", err)
 	}

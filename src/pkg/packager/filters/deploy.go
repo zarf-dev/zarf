@@ -1,31 +1,34 @@
-// SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
-
-// Package interactive contains functions for interacting with the user via STDIN.
-package interactive
+package filters
 
 import (
 	"fmt"
-	"path"
 	"slices"
 	"strings"
 
 	"github.com/agnivade/levenshtein"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-type selectState int
-
-const (
-	unknown selectState = iota
-	included
-	excluded
+var (
+	_ ComponentFilterStrategy = &DeploymentFilter{}
 )
 
-// GetComponentsForDeployment prompts to select components based upon multiple conditions
-func GetComponentsForDeployment(optionalComponents string, allComponents []types.ZarfComponent) ([]types.ZarfComponent, error) {
+func NewDeploymentFilter(optionalComponents string) *DeploymentFilter {
+	requested := helpers.StringToSlice(optionalComponents)
+
+	return &DeploymentFilter{
+		requested,
+	}
+}
+
+type DeploymentFilter struct {
+	requestedComponents []string
+}
+
+func (f *DeploymentFilter) Apply(allComponents []types.ZarfComponent) ([]types.ZarfComponent, error) {
 	var selectedComponents []types.ZarfComponent
 	groupedComponents := map[string][]types.ZarfComponent{}
 	orderedComponentGroups := []string{}
@@ -44,9 +47,7 @@ func GetComponentsForDeployment(optionalComponents string, allComponents []types
 		groupedComponents[groupKey] = append(groupedComponents[groupKey], component)
 	}
 
-	// Split the --components list as a comma-delimited list
-	requestedComponents := helpers.StringToSlice(optionalComponents)
-	isPartial := len(requestedComponents) > 0 && requestedComponents[0] != ""
+	isPartial := len(f.requestedComponents) > 0 && f.requestedComponents[0] != ""
 
 	if isPartial {
 		matchedRequests := map[string]bool{}
@@ -60,7 +61,7 @@ func GetComponentsForDeployment(optionalComponents string, allComponents []types
 				// Ensure we have a local version of the component to point to (otherwise the pointer might change on us)
 				component := component
 
-				selectState, matchedRequest := includedOrExcluded(component, requestedComponents)
+				selectState, matchedRequest := includedOrExcluded(component.Name, f.requestedComponents)
 
 				if !component.IsRequired() {
 					if selectState == excluded {
@@ -106,7 +107,7 @@ func GetComponentsForDeployment(optionalComponents string, allComponents []types
 
 		// Check that we have matched against all requests
 		var err error
-		for _, requestedComponent := range requestedComponents {
+		for _, requestedComponent := range f.requestedComponents {
 			if _, ok := matchedRequests[requestedComponent]; !ok {
 				closeEnough := []string{}
 				for _, c := range allComponents {
@@ -129,14 +130,14 @@ func GetComponentsForDeployment(optionalComponents string, allComponents []types
 	} else {
 		for _, groupKey := range orderedComponentGroups {
 			if len(groupedComponents[groupKey]) > 1 {
-				component := SelectChoiceGroup(groupedComponents[groupKey])
+				component := interactive.SelectChoiceGroup(groupedComponents[groupKey])
 				selectedComponents = append(selectedComponents, component)
 			} else {
 				component := groupedComponents[groupKey][0]
 
 				if component.IsRequired() {
 					selectedComponents = append(selectedComponents, component)
-				} else if selected := SelectOptionalComponent(component); selected {
+				} else if selected := interactive.SelectOptionalComponent(component); selected {
 					selectedComponents = append(selectedComponents, component)
 				}
 			}
@@ -144,72 +145,4 @@ func GetComponentsForDeployment(optionalComponents string, allComponents []types
 	}
 
 	return selectedComponents, nil
-}
-
-// GetOnlyIncludedComponents returns only the components that are included
-func GetOnlyIncludedComponents(optionalComponents string, components []types.ZarfComponent) ([]types.ZarfComponent, error) {
-	requestedComponents := helpers.StringToSlice(optionalComponents)
-	isPartial := len(requestedComponents) > 0 && requestedComponents[0] != ""
-
-	result := []types.ZarfComponent{}
-
-	for _, component := range components {
-		selectState := unknown
-
-		if isPartial {
-			selectState, _ = includedOrExcluded(component, requestedComponents)
-
-			if selectState == excluded {
-				continue
-			}
-		} else {
-			selectState = included
-		}
-
-		if selectState == included {
-			result = append(result, component)
-		}
-	}
-
-	return result, nil
-}
-
-// ForIncludedComponents runs a function for each included component
-func ForIncludedComponents(optionalComponents string, components []types.ZarfComponent, fn func(types.ZarfComponent) error) error {
-	included, err := GetOnlyIncludedComponents(optionalComponents, components)
-	if err != nil {
-		return err
-	}
-
-	for _, component := range included {
-		if err := fn(component); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func includedOrExcluded(component types.ZarfComponent, requestedComponentNames []string) (selectState, string) {
-	// Check if the component has a leading dash indicating it should be excluded - this is done first so that exclusions precede inclusions
-	for _, requestedComponent := range requestedComponentNames {
-		if strings.HasPrefix(requestedComponent, "-") {
-			// If the component glob matches one of the requested components, then return true
-			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
-			if matched, _ := path.Match(strings.TrimPrefix(requestedComponent, "-"), component.Name); matched {
-				return excluded, requestedComponent
-			}
-		}
-	}
-	// Check if the component matches a glob pattern and should be included
-	for _, requestedComponent := range requestedComponentNames {
-		// If the component glob matches one of the requested components, then return true
-		// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
-		if matched, _ := path.Match(requestedComponent, component.Name); matched {
-			return included, requestedComponent
-		}
-	}
-
-	// All other cases we don't know if we should include or exclude yet
-	return unknown, ""
 }

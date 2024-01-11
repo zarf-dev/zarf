@@ -10,8 +10,8 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
-	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -41,7 +41,8 @@ func (p *Packager) DevDeploy() error {
 	// the user's selection and the component's `required`/`optional` field
 	// This is also different from regular package creation, where we still assemble and package up
 	// all components and their dependencies, regardless of whether they are required or not
-	p.cfg.Pkg.Components, err = interactive.GetComponentsForDeployment(p.cfg.PkgOpts.OptionalComponents, p.cfg.Pkg.Components)
+	filter := filters.NewDeploymentFilter(p.cfg.PkgOpts.OptionalComponents)
+	p.cfg.Pkg.Components, err = filter.Apply(p.cfg.Pkg.Components)
 	if err != nil {
 		return err
 	}

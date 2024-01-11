@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -98,7 +99,8 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 	} else {
-		if err = p.source.LoadPackage(p.layout, false); err != nil {
+		filter := &filters.EmptyFilter{}
+		if err = p.source.LoadPackage(p.layout, filter, false); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 		if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
