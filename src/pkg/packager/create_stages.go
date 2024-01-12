@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -31,59 +30,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/mholt/archiver/v3"
 )
-
-func (p *Packager) load() error {
-	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
-		return err
-	}
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
-
-	if p.isInitConfig() {
-		p.cfg.Pkg.Metadata.Version = config.CLIVersion
-	}
-
-	// Compose components into a single zarf.yaml file
-	if err := p.composeComponents(); err != nil {
-		return err
-	}
-
-	if p.cfg.CreateOpts.IsSkeleton {
-		return nil
-	}
-
-	// After components are composed, template the active package.
-	if err := p.fillActiveTemplate(); err != nil {
-		return fmt.Errorf("unable to fill values in template: %s", err.Error())
-	}
-
-	// After templates are filled process any create extensions
-	if err := p.processExtensions(); err != nil {
-		return err
-	}
-
-	// After we have a full zarf.yaml remove unnecessary repos and images if we are building a differential package
-	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
-		// Load the images and repos from the 'reference' package
-		if err := p.loadDifferentialData(); err != nil {
-			return err
-		}
-		// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
-		// If the package versions are the same return an error
-		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == p.cfg.Pkg.Metadata.Version {
-			return errors.New(lang.PkgCreateErrDifferentialSameVersion)
-		}
-		if p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == "" || p.cfg.Pkg.Metadata.Version == "" {
-			return fmt.Errorf("unable to build differential package when either the differential package version or the referenced package version is not set")
-		}
-
-		// Handle any potential differential images/repos before going forward
-		if err := p.removeCopiesFromDifferentialPackage(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
 
 func (p *Packager) assemble() error {
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
