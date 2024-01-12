@@ -24,12 +24,11 @@ func (p *Packager) DevDeploy() error {
 		return err
 	}
 
-	if err := cdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
-		return err
-	}
-
 	c := NewCreator(&p.cfg.CreateOpts)
 
+	if err := c.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
+		return err
+	}
 	if err := c.LoadPackageDefinition(p); err != nil {
 		return err
 	}

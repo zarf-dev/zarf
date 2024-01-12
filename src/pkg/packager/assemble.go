@@ -17,53 +17,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
-var (
-	// verify that SkeletonAssembler implements Assembler
-	_ Assembler = (*SkeletonAssembler)(nil)
-
-	// verify that PackageAssembler implements Assembler
-	_ Assembler = (*PackageAssembler)(nil)
-)
-
-// Assembler is an interface for assembling package assets (components, images, SBOMSs, etc) during package create.
-type Assembler interface {
-	Assemble(*Packager) error
-}
-
-// SkeletonAssembler is used to assemble assets for skeleton Zarf packages during package create.
-type SkeletonAssembler struct{}
-
-// Assemble assembles assets for skeleton Zarf packages during package create.
-func (*SkeletonAssembler) Assemble(p *Packager) error {
-	if err := p.skeletonizeExtensions(); err != nil {
-		return err
-	}
-	for _, warning := range p.warnings {
-		message.Warn(warning)
-	}
-	for idx, component := range p.cfg.Pkg.Components {
-		if err := p.addComponent(idx, component); err != nil {
-			return err
-		}
-
-		if err := p.layout.Components.Archive(component, false); err != nil {
-			return err
-		}
-	}
-	checksumChecksum, err := p.generatePackageChecksums()
-	if err != nil {
-		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
-	}
-	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
-
-	return p.writeYaml()
-}
-
-// PackageAssembler is used to assemble assets for normal (not skeleton) Zarf packages during package create.
-type PackageAssembler struct{}
-
 // Assemble assembles assets for normal (not skeleton) Zarf packages during package create.
-func (*PackageAssembler) Assemble(p *Packager) error {
+func (*PackageCreator) Assemble(p *Packager) error {
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
 	var imageList []transform.Image
 	for idx, component := range p.cfg.Pkg.Components {
@@ -153,4 +108,30 @@ func (*PackageAssembler) Assemble(p *Packager) error {
 	}
 
 	return nil
+}
+
+// Assemble assembles assets for skeleton Zarf packages during package create.
+func (*SkeletonCreator) Assemble(p *Packager) error {
+	if err := p.skeletonizeExtensions(); err != nil {
+		return err
+	}
+	for _, warning := range p.warnings {
+		message.Warn(warning)
+	}
+	for idx, component := range p.cfg.Pkg.Components {
+		if err := p.addComponent(idx, component); err != nil {
+			return err
+		}
+
+		if err := p.layout.Components.Archive(component, false); err != nil {
+			return err
+		}
+	}
+	checksumChecksum, err := p.generatePackageChecksums()
+	if err != nil {
+		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
+	}
+	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
+
+	return p.writeYaml()
 }

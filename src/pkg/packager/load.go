@@ -14,43 +14,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-var (
-	// verify that SkeletonLoader implements Loader
-	_ Loader = (*SkeletonLoader)(nil)
-
-	// verify that PackageLoader implements Loader
-	_ Loader = (*PackageLoader)(nil)
-)
-
-// Loader is an interface for loading and configuring package definitions during package create.
-type Loader interface {
-	LoadPackageDefinition(*Packager) error
-}
-
-// SkeletonLoader is used to load and configure skeleton Zarf packages during package create.
-type SkeletonLoader struct{}
-
-// LoadPackageDefinition loads and configures skeleton Zarf packages during package create.
-func (*SkeletonLoader) LoadPackageDefinition(p *Packager) error {
-	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
-		return err
-	}
-
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
-
-	if p.isInitConfig() {
-		p.cfg.Pkg.Metadata.Version = config.CLIVersion
-	}
-
-	// Compose components into a single zarf.yaml file
-	return p.composeComponents()
-}
-
-// PackageLoader is used to load and configure normal (not skeleton) Zarf packages during package create.
-type PackageLoader struct{}
-
 // LoadPackageDefinition loads and configures normal (not skeleton) Zarf packages during package create.
-func (*PackageLoader) LoadPackageDefinition(p *Packager) error {
+func (*PackageCreator) LoadPackageDefinition(p *Packager) error {
 	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return err
 	}
@@ -92,4 +57,20 @@ func (*PackageLoader) LoadPackageDefinition(p *Packager) error {
 	}
 
 	return nil
+}
+
+// LoadPackageDefinition loads and configures skeleton Zarf packages during package create.
+func (*SkeletonCreator) LoadPackageDefinition(p *Packager) error {
+	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+		return err
+	}
+
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
+
+	if p.isInitConfig() {
+		p.cfg.Pkg.Metadata.Version = config.CLIVersion
+	}
+
+	// Compose components into a single zarf.yaml file
+	return p.composeComponents()
 }
