@@ -23,7 +23,7 @@ var (
 	_ Loader = (*PackageLoader)(nil)
 )
 
-// Loader is an interface for loading and configuring package definitions when creating Zarf packages.
+// Loader is an interface for loading and configuring package definitions during package create.
 type Loader interface {
 	LoadPackageDefinition(*Packager) error
 }
@@ -36,8 +36,10 @@ func NewLoader(createOpts *types.ZarfCreateOptions) Loader {
 	return &PackageLoader{}
 }
 
+// SkeletonLoader is used to load and configure skeleton Zarf packages during package create.
 type SkeletonLoader struct{}
 
+// LoadPackageDefinition loads and configures skeleton Zarf packages during package create.
 func (sl *SkeletonLoader) LoadPackageDefinition(pkgr *Packager) error {
 	if err := utils.ReadYaml(layout.ZarfYAML, &pkgr.cfg.Pkg); err != nil {
 		return err
@@ -57,8 +59,10 @@ func (sl *SkeletonLoader) LoadPackageDefinition(pkgr *Packager) error {
 	return nil
 }
 
+// PackageLoader is used to load and configure normal (not skeleton) Zarf packages during package create.
 type PackageLoader struct{}
 
+// LoadPackageDefinition loads and configures normal (not skeleton) Zarf packages during package create.
 func (pl *PackageLoader) LoadPackageDefinition(pkgr *Packager) error {
 	if err := utils.ReadYaml(layout.ZarfYAML, &pkgr.cfg.Pkg); err != nil {
 		return err
