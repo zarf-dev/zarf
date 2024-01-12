@@ -29,7 +29,7 @@ func NewCreator(createOpts *types.ZarfCreateOptions) Creator {
 	return &PackageCreator{}
 }
 
-// SkeletonAssembler is used to create skeleton Zarf packages.
+// SkeletonCreator is used to create skeleton Zarf packages.
 type SkeletonCreator struct {
 	*SkeletonLoader
 	*SkeletonAssembler
