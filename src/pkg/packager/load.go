@@ -64,7 +64,6 @@ func (*SkeletonCreator) LoadPackageDefinition(p *Packager) error {
 	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return err
 	}
-
 	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
 	if p.isInitConfig() {

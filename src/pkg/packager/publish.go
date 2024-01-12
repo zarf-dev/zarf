@@ -105,7 +105,6 @@ func (p *Packager) Publish() (err error) {
 		if err := utils.ReadYaml(p.layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 			return err
 		}
-		p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 	}
 
 	// Get a reference to the registry for this package

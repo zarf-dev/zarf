@@ -25,8 +25,6 @@ func (p *Packager) Mirror() (err error) {
 	if err := utils.ReadYaml(p.layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return err
 	}
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
-
 	if err := p.stageSBOMViewFiles(); err != nil {
 		return err
 	}

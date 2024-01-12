@@ -42,7 +42,6 @@ func (p *Packager) Remove() (err error) {
 	if err := utils.ReadYaml(p.layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return err
 	}
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
 	p.filterComponents()
 	packageName = p.cfg.Pkg.Metadata.Name
