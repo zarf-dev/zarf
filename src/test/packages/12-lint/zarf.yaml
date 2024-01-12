@@ -4,8 +4,10 @@ metadata:
   description1: Testing bad yaml
 
 variables:
-  - name: VARIABLE_NOT_IN_USED
-  - name: VARIABLE_IN_USE
+  - name: VARIABLE_NOT_USED
+    pattern: ".+"
+
+  - name: VARIABLE_USED
     default: my-service
 
 components:

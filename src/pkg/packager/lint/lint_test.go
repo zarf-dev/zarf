@@ -168,10 +168,26 @@ func TestValidateSchema(t *testing.T) {
 	})
 
 	t.Run("remove var from validator", func(t *testing.T) {
-		validator := Validator{unusedVariables: []string{"FAKE_VAR"}}
-		line := "Hello my name is ###ZARF_VAR_FAKE_VAR###"
-		declareVarIsUsed(&validator, line)
-		require.Empty(t, validator.unusedVariables)
+		fakeVar := validatorVar{name: "NAME", relativePath: ".", declaredByUser: true, usedByPackage: false}
+		validator := Validator{pkgVars: []validatorVar{fakeVar}}
+		line := "Hello my name is ###ZARF_VAR_NAME### and my favorite color is ###ZARF_VAR_COLOR###"
+		findVarsInLine(&validator, line, ".")
+		nameVar := validatorVar{name: "NAME", relativePath: ".", declaredByUser: true, usedByPackage: true}
+		colorVar := validatorVar{name: "COLOR", relativePath: ".", declaredByUser: false, usedByPackage: true}
+		require.Len(t, validator.pkgVars, 2)
+		require.Contains(t, validator.pkgVars, nameVar)
+		require.Contains(t, validator.pkgVars, colorVar)
+	})
+
+	t.Run("Do not add the same variable from a different package", func(t *testing.T) {
+		validator := Validator{}
+		originalVar := validatorVar{name: "FAKE_VAR", relativePath: ".", declaredByUser: true, usedByPackage: false}
+		validator.addValidatorVar(originalVar)
+		importedVar := validatorVar{name: "FAKE_VAR", relativePath: "fake-path", declaredByUser: false, usedByPackage: false}
+		validator.addValidatorVar(importedVar)
+		newVarVal := validatorVar{name: "FAKE_VAR", relativePath: ".", declaredByUser: true, usedByPackage: false}
+		require.Len(t, validator.pkgVars, 1)
+		require.Contains(t, validator.pkgVars, newVarVal)
 	})
 
 	t.Run("Test composable components", func(t *testing.T) {

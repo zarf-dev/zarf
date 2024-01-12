@@ -1,3 +1,4 @@
 {
-  "name": "###ZARF_VAR_VARIABLE_IN_USE###"
+  "name": "###ZARF_VAR_VARIABLE_USED###",
+  "undeclared": "###ZARF_VAR_NOT_DECLARED###"
 }

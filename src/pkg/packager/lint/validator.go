@@ -22,6 +22,14 @@ const (
 	categoryWarning category = 2
 )
 
+type validatorVar struct {
+	// The format of the name will be VAR_NAME not ###ZARF_VAR_VAR_NAME###
+	name           string
+	relativePath   string
+	declaredByUser bool
+	usedByPackage  bool
+}
+
 // TODO separate this out into it's own file
 type validatorMessage struct {
 	yqPath         string
@@ -55,7 +63,7 @@ type Validator struct {
 	typedZarfPackage   types.ZarfPackage
 	untypedZarfPackage interface{}
 	baseDir            string
-	unusedVariables    []string
+	pkgVars            []validatorVar
 }
 
 // DisplayFormattedMessage message sent to user based on validator results
@@ -159,12 +167,20 @@ func getVariableNameFromZarfVar(zarfVar string) string {
 }
 
 func (v *Validator) addUnusedVariableErrors() {
-	for _, unusedVariable := range v.unusedVariables {
-		// TODO aabro gotta check which package it comes from
-		v.addError(validatorMessage{
-			description:    fmt.Sprintf("Unused variable %q", getVariableNameFromZarfVar(unusedVariable)),
-			packageRelPath: ".",
-			packageName:    v.typedZarfPackage.Metadata.Name,
-		})
+	for _, unusedVariable := range v.pkgVars {
+		if !unusedVariable.declaredByUser {
+			v.addError(validatorMessage{
+				description:    fmt.Sprintf("Variable not declared %q", getVariableNameFromZarfVar(unusedVariable.name)),
+				packageRelPath: unusedVariable.relativePath,
+				packageName:    v.typedZarfPackage.Metadata.Name,
+			})
+		}
+		if !unusedVariable.usedByPackage {
+			v.addError(validatorMessage{
+				description:    fmt.Sprintf("Unused variable %q", getVariableNameFromZarfVar(unusedVariable.name)),
+				packageRelPath: unusedVariable.relativePath,
+				packageName:    v.typedZarfPackage.Metadata.Name,
+			})
+		}
 	}
 }

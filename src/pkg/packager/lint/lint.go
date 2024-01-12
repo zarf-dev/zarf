@@ -5,7 +5,6 @@
 package lint
 
 import (
-	"bufio"
 	"embed"
 	"fmt"
 	"os"
@@ -15,9 +14,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/variable"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
@@ -28,7 +25,7 @@ import (
 )
 
 // This regex takes a line and parses the text before and after a discovered template: https://regex101.com/r/ilUxAz/1
-var regexTemplateLine = regexp.MustCompile("(?P<preTemplate>.*?)(?P<template>###ZARF_[A-Z0-9_]+###)(?P<postTemplate>.*)")
+var regexTemplateLine = regexp.MustCompile("###ZARF_[A-Z0-9_]+###")
 
 // ZarfSchema is exported so main.go can embed the schema file
 var ZarfSchema embed.FS
@@ -55,21 +52,24 @@ func Validate(cfg *types.PackagerConfig) (*Validator, error) {
 		return nil, fmt.Errorf("unable to access directory '%s': %w", cfg.CreateOpts.BaseDir, err)
 	}
 
-	cfg.Pkg = validator.typedZarfPackage
-
 	if err := variable.SetVariableMapInConfig(*cfg); err != nil {
 		return nil, fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
-	var values *template.Values
-	if values, err = template.Generate(cfg); err != nil {
-		return nil, fmt.Errorf("unable to generate the value template: %w", err)
+	for _, pkgVar := range validator.typedZarfPackage.Variables {
+		validator.addValidatorVar(validatorVar{
+			name:           pkgVar.Name,
+			relativePath:   ".",
+			declaredByUser: true,
+		})
 	}
-	// Make list of custom variables
-	templateMap := values.GetCustomVariables()
 
-	for key := range templateMap {
-		validator.unusedVariables = append(validator.unusedVariables, key)
+	for key := range cfg.PkgOpts.SetVariables {
+		validator.addValidatorVar(validatorVar{
+			name:           key,
+			relativePath:   ".",
+			declaredByUser: true,
+		})
 	}
 
 	validator.baseDir = cfg.CreateOpts.BaseDir
@@ -293,102 +293,6 @@ func checkForVarInComponentImport(validator *Validator, node *composer.Node) {
 			item:           node.Import.URL,
 		})
 	}
-}
-
-func checkIfFileUsesVar(validator *Validator, filepath string) error {
-	textFile, err := os.Open(filepath)
-	if err != nil {
-		return err
-	}
-	defer textFile.Close()
-
-	fileScanner := bufio.NewScanner(textFile)
-
-	// Set the buffer to 1 MiB to handle long lines (i.e. base64 text in a secret)
-	// 1 MiB is around the documented maximum size for secrets and configmaps
-	const maxCapacity = 1024 * 1024
-	buf := make([]byte, maxCapacity)
-	fileScanner.Buffer(buf, maxCapacity)
-
-	// Set the scanner to split on new lines
-	fileScanner.Split(bufio.ScanLines)
-
-	for fileScanner.Scan() {
-		line := fileScanner.Text()
-
-		// No template left on this line so move on
-
-		declareVarIsUsed(validator, line)
-
-		// TODO add a line here that adds existing variables to list
-	}
-	return nil
-}
-
-func declareVarIsUsed(validator *Validator, line string) {
-	deprecations := template.GetTemplateDeprecations()
-	matches := regexTemplateLine.FindStringSubmatch(line)
-
-	if len(matches) == 0 {
-		return
-	}
-
-	templateKey := matches[regexTemplateLine.SubexpIndex("template")]
-
-	_, present := deprecations[templateKey]
-	if present {
-		depWarning := fmt.Sprintf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.", templateKey, deprecations[templateKey])
-		validator.addWarning(validatorMessage{description: depWarning})
-	}
-
-	validator.unusedVariables = helpers.RemoveMatches(validator.unusedVariables, func(s string) bool {
-		return s == templateKey
-	})
-}
-
-// Potentially it is time to move the main function into packager
-// this can have the package and get things with it
-// Or I can keep moving things out of packager and make them more generic functions
-func checkForUnusedVariables(validator *Validator, cfg *types.PackagerConfig, node *composer.Node) error {
-	// There are at least three different scenarios I need to cover
-	// 1. The variables are in the actions of the zarf chart
-	// 2. The variables are in a helm chart in the component
-	// 3. The variables are in a file brough in by zarf
-	// Initial idea is to go through each of these and as a variable is found, take it out of the list
-	// At the end we warn that whatever is still in the list is unused.
-	// We will also want to do this with both zarf const and zarf var
-	// Where / how are constant variables set?
-
-	// What are my requirements in terms of finding / reading files
-
-	for _, file := range node.ZarfComponent.Files {
-
-		fileLocation := filepath.Join("~/code/zarf", validator.baseDir, file.Source)
-		fileLocation = config.GetAbsHomePath(fileLocation)
-
-		fileList := []string{}
-		if utils.IsDir(fileLocation) {
-			files, _ := utils.RecursiveFileList(fileLocation, nil, false)
-			fileList = append(fileList, files...)
-		} else {
-			fileList = append(fileList, fileLocation)
-		}
-
-		for _, subFile := range fileList {
-			// Check if the file looks like a text file
-			isText, err := utils.IsTextFile(subFile)
-			if err != nil {
-				message.Debugf("unable to determine if file %s is a text file: %s", subFile, err)
-			}
-
-			if isText {
-				if err := checkIfFileUsesVar(validator, fileLocation); err != nil {
-					return fmt.Errorf("unable to template file %s: %w", subFile, err)
-				}
-			}
-		}
-	}
-	return nil
 }
 
 func makeFieldPathYqCompat(field string) string {

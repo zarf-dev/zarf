@@ -234,12 +234,11 @@ var devLintCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		common.SetBaseDirectory(args, &pkgConfig)
 		v := common.GetViper()
-		// TODO aabro need to make sure I always get deploy set as well
+
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
-		// TODO aabro do I really need this?
-		pkgClient := packager.NewOrDie(&pkgConfig)
-		defer pkgClient.ClearTempPaths()
+		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 		validator, err := lint.Validate(&pkgConfig)
 		if err != nil {
 			message.Fatal(err, err.Error())
@@ -272,7 +271,8 @@ func init() {
 	// allow for the override of the default helm KubeVersion
 	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
-	devLintCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	devLintCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	devLintCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	devLintCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
 	devTransformGitLinksCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdDevFlagGitAccount)

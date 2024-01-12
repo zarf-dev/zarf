@@ -145,6 +145,8 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 		templateMap[key] = value
 	}
 
+	deprecations = GetTemplateDeprecations()
+
 	debugPrintTemplateMap(templateMap)
 	message.Debugf("deprecations = %#v", deprecations)
 

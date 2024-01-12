@@ -21,3 +21,12 @@ components:
     import:
       url: oci://🦄/dos-games:1.0.0
       name: baseline
+
+  - name: manifest-to-test-imported-deploy-var-used
+    files:
+      - source: manifest.json
+        target: manifest.json
+    manifests:
+      - name: my-service
+        files:
+          - manifest.yaml

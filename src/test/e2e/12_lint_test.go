@@ -56,8 +56,8 @@ func TestLint(t *testing.T) {
 		require.Contains(t, strippedStderr, fmt.Sprintf("Linting package \"lint\" at %s", testPackagePath))
 
 		// Check that linting unused variabels works
-		require.Contains(t, strippedStderr, "VARIABLE_NOT_IN_USE")
-		require.NotContains(t, strippedStderr, "VARIABLE_IN_USE")
+		require.Contains(t, strippedStderr, "VARIABLE_NOT_USED")
+		require.NotContains(t, strippedStderr, "VARIABLE_USED")
 	})
 
 }

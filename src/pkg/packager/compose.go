@@ -47,6 +47,7 @@ func (p *Packager) composeComponents() error {
 		components = append(components, *composed)
 
 		// merge variables and constants
+		// TODO aabro this is something I need to use
 		pkgVars = chain.MergeVariables(pkgVars)
 		pkgConsts = chain.MergeConstants(pkgConsts)
 	}
