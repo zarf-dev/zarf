@@ -23,8 +23,8 @@ func TestCreateDifferential(t *testing.T) {
 	cachePath := filepath.Join(tmpdir, ".cache-location")
 
 	packagePath := "src/test/packages/08-differential-package"
-	packageName := "zarf-package-differential-package-amd64-v0.25.0.tar.zst"
-	differentialPackageName := "zarf-package-differential-package-amd64-v0.25.0-differential-v0.26.0.tar.zst"
+	packageName := fmt.Sprintf("zarf-package-differential-package-%s-v0.25.0.tar.zst", e2e.Arch)
+	differentialPackageName := fmt.Sprintf("zarf-package-differential-package-%s-v0.25.0-differential-v0.26.0.tar.zst", e2e.Arch)
 	differentialFlag := fmt.Sprintf("--differential=%s", packageName)
 
 	// Build the package a first time
