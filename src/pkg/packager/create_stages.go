@@ -33,9 +33,11 @@ import (
 )
 
 func (p *Packager) load() error {
-	if err := p.readZarfYAML(layout.ZarfYAML); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
+	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+		return err
 	}
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
+
 	if p.isInitConfig() {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 	}
