@@ -17,7 +17,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // This regex takes a line and parses the text before and after a discovered template: https://regex101.com/r/ilUxAz/1
@@ -38,7 +37,7 @@ func (validator *Validator) addVarIfNotExists(vv validatorVar) {
 // Potentially it is time to move the main function into packager
 // this can have the package and get things with it
 // Or I can keep moving things out of packager and make them more generic functions
-func checkForUnusedVariables(validator *Validator, cfg *types.PackagerConfig, node *composer.Node) error {
+func checkForUnusedVariables(validator *Validator, node *composer.Node) error {
 	// There are at least three different scenarios I need to cover
 	// 1. The variables are in the actions of the zarf chart
 	// 2. The variables are in a helm chart in the component
