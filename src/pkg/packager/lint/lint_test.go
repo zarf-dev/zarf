@@ -167,15 +167,28 @@ func TestValidateSchema(t *testing.T) {
 		require.Equal(t, input, acutal)
 	})
 
-	t.Run("remove var from validator", func(t *testing.T) {
+	t.Run("variable is found and marked usedinPackage", func(t *testing.T) {
 		fakeVar := validatorVar{name: "NAME", relativePath: ".", declaredByUser: true, usedByPackage: false}
 		validator := Validator{pkgVars: []validatorVar{fakeVar}}
-		line := "Hello my name is ###ZARF_VAR_NAME### and my favorite color is ###ZARF_VAR_COLOR###"
+		line := "Hello my name is ###ZARF_VAR_NAME###"
 		findVarsInLine(&validator, line, ".")
 		nameVar := validatorVar{name: "NAME", relativePath: ".", declaredByUser: true, usedByPackage: true}
-		colorVar := validatorVar{name: "COLOR", relativePath: ".", declaredByUser: false, usedByPackage: true}
-		require.Len(t, validator.pkgVars, 2)
+		require.Len(t, validator.pkgVars, 1)
 		require.Contains(t, validator.pkgVars, nameVar)
+	})
+
+	t.Run("variable is used and package and added to list", func(t *testing.T) {
+		validator := Validator{}
+		line := "deprecated ###ZARF_DATA_INJECTON_MARKER###"
+		findVarsInLine(&validator, line, ".")
+		require.Len(t, validator.findings, 1)
+	})
+
+	t.Run("deprecated variable adds warning", func(t *testing.T) {
+		validator := Validator{}
+		line := "my favorite color is ###ZARF_VAR_COLOR###"
+		findVarsInLine(&validator, line, ".")
+		colorVar := validatorVar{name: "COLOR", relativePath: ".", declaredByUser: false, usedByPackage: true}
 		require.Contains(t, validator.pkgVars, colorVar)
 	})
 

@@ -24,9 +24,6 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
-// This regex takes a line and parses the text before and after a discovered template: https://regex101.com/r/ilUxAz/1
-var regexTemplateLine = regexp.MustCompile("###ZARF_[A-Z0-9_]+###")
-
 // ZarfSchema is exported so main.go can embed the schema file
 var ZarfSchema embed.FS
 

@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -17,6 +19,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
+
+// This regex takes a line and parses the text before and after a discovered template: https://regex101.com/r/ilUxAz/1
+var regexTemplateLine = regexp.MustCompile("###ZARF_[A-Z0-9_]+###")
+
+const depWarning = "This Zarf Package uses a deprecated variable: '%s' changed to '%s'."
 
 func (validator *Validator) addVarIfNotExists(vv validatorVar) {
 	vv.name = getVariableNameFromZarfVar(vv.name)
@@ -104,20 +111,19 @@ func findVarsInLine(validator *Validator, line, pkgRelPath string) {
 	matches := regexTemplateLine.FindAllString(line, -1)
 
 	for _, templateKey := range matches {
-
 		_, present := deprecations[templateKey]
 		if present {
-			depWarning := fmt.Sprintf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.", templateKey, deprecations[templateKey])
-			validator.addWarning(validatorMessage{description: depWarning})
+			depWarning := fmt.Sprintf(depWarning, templateKey, deprecations[templateKey])
+			validator.addWarning(validatorMessage{description: depWarning, packageRelPath: pkgRelPath})
 		}
+		if strings.HasPrefix(templateKey, "###ZARF_CONST_") || strings.HasPrefix(templateKey, "###ZARF_VAR_") {
+			varName := getVariableNameFromZarfVar(templateKey)
+			validator.addVarIfNotExists(validatorVar{name: varName, relativePath: pkgRelPath, usedByPackage: true})
 
-		varName := getVariableNameFromZarfVar(templateKey)
-
-		validator.addVarIfNotExists(validatorVar{name: varName, relativePath: pkgRelPath, usedByPackage: true})
-
-		for i := range validator.pkgVars {
-			if validator.pkgVars[i].name == varName {
-				validator.pkgVars[i].usedByPackage = true
+			for i := range validator.pkgVars {
+				if validator.pkgVars[i].name == varName {
+					validator.pkgVars[i].usedByPackage = true
+				}
 			}
 		}
 	}
