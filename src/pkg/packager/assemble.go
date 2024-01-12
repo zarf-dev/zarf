@@ -34,7 +34,7 @@ type Assembler interface {
 type SkeletonAssembler struct{}
 
 // Assemble assembles assets for skeleton Zarf packages during package create.
-func (sa *SkeletonAssembler) Assemble(p *Packager) error {
+func (*SkeletonAssembler) Assemble(p *Packager) error {
 	if err := p.skeletonizeExtensions(); err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (sa *SkeletonAssembler) Assemble(p *Packager) error {
 type PackageAssembler struct{}
 
 // Assemble assembles assets for normal (not skeleton) Zarf packages during package create.
-func (pa *PackageAssembler) Assemble(p *Packager) error {
+func (*PackageAssembler) Assemble(p *Packager) error {
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
 	var imageList []transform.Image
 	for idx, component := range p.cfg.Pkg.Components {

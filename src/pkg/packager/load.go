@@ -31,64 +31,64 @@ type Loader interface {
 type SkeletonLoader struct{}
 
 // LoadPackageDefinition loads and configures skeleton Zarf packages during package create.
-func (sl *SkeletonLoader) LoadPackageDefinition(pkgr *Packager) error {
-	if err := utils.ReadYaml(layout.ZarfYAML, &pkgr.cfg.Pkg); err != nil {
+func (*SkeletonLoader) LoadPackageDefinition(p *Packager) error {
+	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return err
 	}
 
-	pkgr.arch = config.GetArch(pkgr.cfg.Pkg.Metadata.Architecture, pkgr.cfg.Pkg.Build.Architecture)
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
-	if pkgr.isInitConfig() {
-		pkgr.cfg.Pkg.Metadata.Version = config.CLIVersion
+	if p.isInitConfig() {
+		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 	}
 
 	// Compose components into a single zarf.yaml file
-	return pkgr.composeComponents()
+	return p.composeComponents()
 }
 
 // PackageLoader is used to load and configure normal (not skeleton) Zarf packages during package create.
 type PackageLoader struct{}
 
 // LoadPackageDefinition loads and configures normal (not skeleton) Zarf packages during package create.
-func (pl *PackageLoader) LoadPackageDefinition(pkgr *Packager) error {
-	if err := utils.ReadYaml(layout.ZarfYAML, &pkgr.cfg.Pkg); err != nil {
+func (*PackageLoader) LoadPackageDefinition(p *Packager) error {
+	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return err
 	}
-	pkgr.arch = config.GetArch(pkgr.cfg.Pkg.Metadata.Architecture, pkgr.cfg.Pkg.Build.Architecture)
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
-	if pkgr.isInitConfig() {
-		pkgr.cfg.Pkg.Metadata.Version = config.CLIVersion
+	if p.isInitConfig() {
+		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 	}
 
 	// Compose components into a single zarf.yaml file
-	if err := pkgr.composeComponents(); err != nil {
+	if err := p.composeComponents(); err != nil {
 		return err
 	}
 
 	// After components are composed, template the active package.
-	if err := pkgr.fillActiveTemplate(); err != nil {
+	if err := p.fillActiveTemplate(); err != nil {
 		return fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
 	// After templates are filled process any create extensions
-	if err := pkgr.processExtensions(); err != nil {
+	if err := p.processExtensions(); err != nil {
 		return err
 	}
 
 	// If we are building a differential package, remove duplicate repos and images.
-	if pkgr.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
-		if err := pkgr.loadDifferentialData(); err != nil {
+	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
+		if err := p.loadDifferentialData(); err != nil {
 			return err
 		}
-		versionsMatch := pkgr.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == pkgr.cfg.Pkg.Metadata.Version
+		versionsMatch := p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == p.cfg.Pkg.Metadata.Version
 		if versionsMatch {
 			return errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
-		noVersionSet := pkgr.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == "" || pkgr.cfg.Pkg.Metadata.Version == ""
+		noVersionSet := p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == "" || p.cfg.Pkg.Metadata.Version == ""
 		if noVersionSet {
 			return errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
-		return pkgr.removeCopiesFromDifferentialPackage()
+		return p.removeCopiesFromDifferentialPackage()
 	}
 
 	return nil
