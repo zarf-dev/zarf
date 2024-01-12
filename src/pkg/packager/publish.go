@@ -103,10 +103,9 @@ func (p *Packager) Publish() (err error) {
 		if err = p.source.LoadPackage(p.layout, false); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
-		if err := utils.ReadYaml(p.layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+		if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 			return err
 		}
-		p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 	}
 
 	// Get a reference to the registry for this package
