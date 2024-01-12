@@ -75,25 +75,20 @@ func (pl *PackageLoader) LoadPackageDefinition(pkgr *Packager) error {
 		return err
 	}
 
-	// After we have a full zarf.yaml remove unnecessary repos and images if we are building a differential package
+	// If we are building a differential package, remove duplicate repos and images.
 	if pkgr.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
-		// Load the images and repos from the 'reference' package
 		if err := pkgr.loadDifferentialData(); err != nil {
 			return err
 		}
-		// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
-		// If the package versions are the same return an error
-		if pkgr.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == pkgr.cfg.Pkg.Metadata.Version {
+		versionsMatch := pkgr.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == pkgr.cfg.Pkg.Metadata.Version
+		if versionsMatch {
 			return errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
-		if pkgr.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == "" || pkgr.cfg.Pkg.Metadata.Version == "" {
-			return fmt.Errorf("unable to build differential package when either the differential package version or the referenced package version is not set")
+		noVersionSet := pkgr.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == "" || pkgr.cfg.Pkg.Metadata.Version == ""
+		if noVersionSet {
+			return errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
-
-		// Handle any potential differential images/repos before going forward
-		if err := pkgr.removeCopiesFromDifferentialPackage(); err != nil {
-			return err
-		}
+		return pkgr.removeCopiesFromDifferentialPackage()
 	}
 
 	return nil
