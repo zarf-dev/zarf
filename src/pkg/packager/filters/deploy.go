@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/agnivade/levenshtein"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
@@ -18,6 +19,7 @@ import (
 
 var (
 	_ ComponentFilterStrategy = &DeploymentFilter{}
+	_ VersionBehavior         = &DeploymentFilter{}
 )
 
 // NewDeploymentFilter creates a new deployment filter.
@@ -25,13 +27,22 @@ func NewDeploymentFilter(optionalComponents string) *DeploymentFilter {
 	requested := helpers.StringToSlice(optionalComponents)
 
 	return &DeploymentFilter{
+		false,
 		requested,
 	}
 }
 
 // DeploymentFilter is the default filter for deployments.
 type DeploymentFilter struct {
+	useRequiredLogic    bool
 	requestedComponents []string
+}
+
+// UseVersionBehavior sets the version behavior for the filter.
+func (f *DeploymentFilter) UseVersionBehavior(buildVersion *semver.Version) {
+	if buildVersion.LessThan(semver.MustParse("v0.32.1")) {
+		f.useRequiredLogic = true
+	}
 }
 
 // Apply applies the filter.

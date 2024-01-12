@@ -20,8 +20,9 @@ func (p *Packager) Mirror() (err error) {
 	defer spinner.Stop()
 
 	filter := filters.NewIncludedFilter(p.cfg.PkgOpts.OptionalComponents)
+	fm := filters.NewFilterManager(filter)
 
-	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
+	if err = p.source.LoadPackage(p.layout, fm, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {

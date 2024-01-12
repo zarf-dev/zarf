@@ -42,8 +42,9 @@ func (p *Packager) resetRegistryHPA() {
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
 	filter := filters.NewDeploymentFilter(p.cfg.PkgOpts.OptionalComponents)
+	fm := filters.NewFilterManager(filter)
 
-	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
+	if err = p.source.LoadPackage(p.layout, fm, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
