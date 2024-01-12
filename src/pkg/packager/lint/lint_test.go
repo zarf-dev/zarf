@@ -182,9 +182,9 @@ func TestValidateSchema(t *testing.T) {
 	t.Run("Do not add the same variable from a different package", func(t *testing.T) {
 		validator := Validator{}
 		originalVar := validatorVar{name: "FAKE_VAR", relativePath: ".", declaredByUser: true, usedByPackage: false}
-		validator.addValidatorVar(originalVar)
+		validator.addVarIfNotExists(originalVar)
 		importedVar := validatorVar{name: "FAKE_VAR", relativePath: "fake-path", declaredByUser: false, usedByPackage: false}
-		validator.addValidatorVar(importedVar)
+		validator.addVarIfNotExists(importedVar)
 		newVarVal := validatorVar{name: "FAKE_VAR", relativePath: ".", declaredByUser: true, usedByPackage: false}
 		require.Len(t, validator.pkgVars, 1)
 		require.Contains(t, validator.pkgVars, newVarVal)

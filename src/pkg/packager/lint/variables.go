@@ -18,7 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func (validator *Validator) addValidatorVar(vv validatorVar) {
+func (validator *Validator) addVarIfNotExists(vv validatorVar) {
 	vv.name = getVariableNameFromZarfVar(vv.name)
 	varExists := slices.ContainsFunc(validator.pkgVars, func(v validatorVar) bool {
 		return v.name == vv.name
@@ -113,7 +113,7 @@ func findVarsInLine(validator *Validator, line, pkgRelPath string) {
 
 		varName := getVariableNameFromZarfVar(templateKey)
 
-		validator.addValidatorVar(validatorVar{name: varName, relativePath: pkgRelPath, usedByPackage: true})
+		validator.addVarIfNotExists(validatorVar{name: varName, relativePath: pkgRelPath, usedByPackage: true})
 
 		for i := range validator.pkgVars {
 			if validator.pkgVars[i].name == varName {

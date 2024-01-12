@@ -57,7 +57,7 @@ func Validate(cfg *types.PackagerConfig) (*Validator, error) {
 	}
 
 	for _, pkgVar := range validator.typedZarfPackage.Variables {
-		validator.addValidatorVar(validatorVar{
+		validator.addVarIfNotExists(validatorVar{
 			name:           pkgVar.Name,
 			relativePath:   ".",
 			declaredByUser: true,
@@ -65,7 +65,7 @@ func Validate(cfg *types.PackagerConfig) (*Validator, error) {
 	}
 
 	for key := range cfg.PkgOpts.SetVariables {
-		validator.addValidatorVar(validatorVar{
+		validator.addVarIfNotExists(validatorVar{
 			name:           key,
 			relativePath:   ".",
 			declaredByUser: true,
@@ -100,6 +100,15 @@ func lintComponents(validator *Validator, cfg *types.PackagerConfig) error {
 		}
 
 		chain, err := composer.NewImportChain(component, i, validator.typedZarfPackage.Metadata.Name, arch, cfg.CreateOpts.Flavor)
+
+		importedVars := chain.MergeVariables([]types.ZarfPackageVariable{})
+		for _, importedVar := range importedVars {
+			validator.addVarIfNotExists(validatorVar{
+				name:             importedVar.Name,
+				declaredByImport: true,
+			})
+		}
+
 		baseComponent := chain.Head()
 
 		var badImportYqPath string

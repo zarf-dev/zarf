@@ -24,10 +24,11 @@ const (
 
 type validatorVar struct {
 	// The format of the name will be VAR_NAME not ###ZARF_VAR_VAR_NAME###
-	name           string
-	relativePath   string
-	declaredByUser bool
-	usedByPackage  bool
+	name             string
+	relativePath     string
+	declaredByUser   bool
+	usedByPackage    bool
+	declaredByImport bool
 }
 
 // TODO separate this out into it's own file
@@ -168,6 +169,9 @@ func getVariableNameFromZarfVar(zarfVar string) string {
 
 func (v *Validator) addUnusedVariableErrors() {
 	for _, unusedVariable := range v.pkgVars {
+		if unusedVariable.declaredByImport {
+			continue
+		}
 		if !unusedVariable.declaredByUser {
 			v.addError(validatorMessage{
 				description:    fmt.Sprintf("Variable not declared %q", getVariableNameFromZarfVar(unusedVariable.name)),
