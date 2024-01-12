@@ -83,34 +83,6 @@ func (c ZarfComponent) RequiresCluster() bool {
 	return false
 }
 
-// IsRequired returns if the component is required or not.
-//
-// The logic is as follows:
-//
-// 1. If "optional" is set, then the component follows the inverse of that value
-//
-// 2. If "required" is set, then the component follows that value
-//
-// 3. If neither "optional" nor "required" are set, then the component is required
-//
-// Note: "required" is deprecated and will be removed in Zarf v1.0.0
-func (c ZarfComponent) IsRequired() bool {
-	requiredExists := c.DeprecatedRequired != nil
-	optionalExists := c.Optional != nil
-	required := requiredExists && *c.DeprecatedRequired
-	optional := optionalExists && *c.Optional
-
-	// optional "wins" when defined
-	if optionalExists {
-		return !optional
-	} else if requiredExists {
-		return required
-	}
-
-	// If neither required nor optional are set, then the component is required
-	return true
-}
-
 // IsEmpty returns if the components fields (other than the fields we were told to ignore) are empty or set to the types zero-value
 func (c ZarfComponent) IsEmpty(fieldsToIgnore []string) bool {
 	// Make a map for the fields we are going to ignore

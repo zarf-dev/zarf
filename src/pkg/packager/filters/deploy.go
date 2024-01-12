@@ -81,7 +81,7 @@ func (f *DeploymentFilter) Apply(allComponents []types.ZarfComponent) ([]types.Z
 
 				selectState, matchedRequest := includedOrExcluded(component.Name, f.requestedComponents)
 
-				if !component.IsRequired() {
+				if !isRequired(component, f.useRequiredLogic) {
 					if selectState == excluded {
 						// If the component was explicitly excluded, record the match and continue
 						matchedRequests[matchedRequest] = true
@@ -153,7 +153,7 @@ func (f *DeploymentFilter) Apply(allComponents []types.ZarfComponent) ([]types.Z
 			} else {
 				component := groupedComponents[groupKey][0]
 
-				if component.IsRequired() {
+				if isRequired(component, f.useRequiredLogic) {
 					selectedComponents = append(selectedComponents, component)
 				} else if selected := interactive.SelectOptionalComponent(component); selected {
 					selectedComponents = append(selectedComponents, component)
