@@ -16,7 +16,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -47,9 +46,10 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
-		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
+	if err := utils.ReadYaml(p.layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+		return nil, err
 	}
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
 	if err := p.composeComponents(); err != nil {
 		return nil, err
