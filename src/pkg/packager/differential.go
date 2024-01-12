@@ -22,7 +22,9 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
-// loadDifferentialData extracts the zarf config of a designated 'reference' package that we are building a differential over and creates a list of all images and repos that are in the reference package
+// loadDifferentialData extracts the Zarf config of a designated 'reference' package used for building a differential package.
+//
+// It creates a list of all images and repositories that are in the reference package.
 func (p *Packager) loadDifferentialData() error {
 	// Save the fact that this is a differential build into the build data of the package
 	p.cfg.Pkg.Build.Differential = true
@@ -74,7 +76,11 @@ func (p *Packager) loadDifferentialData() error {
 	return nil
 }
 
-// removeCopiesFromDifferentialPackage will remove any images and repos that are already included in the reference package from the new package
+// removeCopiesFromDifferentialPackage removes any images and repositories that are already in the reference package from the new package.
+//
+// For each component in the new package, it checks if any images or repositories are duplicates from the reference package.
+//
+// Duplicate images and repositories are excluded, and the component lists are updated accordingly.
 func (p *Packager) removeCopiesFromDifferentialPackage() error {
 	// If a differential build was not requested, continue on as normal
 	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath == "" {
