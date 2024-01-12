@@ -131,7 +131,7 @@ func lintComponents(validator *Validator, cfg *types.PackagerConfig) error {
 			checkForVarInComponentImport(validator, node)
 			fillComponentTemplate(validator, node, &cfg.CreateOpts)
 			lintComponent(validator, node)
-			if err := checkForUnusedVariables(validator, cfg, node); err != nil {
+			if err := checkForUnusedVariables(validator, node); err != nil {
 				return err
 			}
 			node = node.Next()
