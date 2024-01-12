@@ -12,7 +12,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 )
 
 var (
@@ -26,14 +25,6 @@ var (
 // Loader is an interface for loading and configuring package definitions during package create.
 type Loader interface {
 	LoadPackageDefinition(*Packager) error
-}
-
-// NewLoader returns a new Loader based on the provided create options.
-func NewLoader(createOpts *types.ZarfCreateOptions) Loader {
-	if createOpts.IsSkeleton {
-		return &SkeletonLoader{}
-	}
-	return &PackageLoader{}
 }
 
 // SkeletonLoader is used to load and configure skeleton Zarf packages during package create.

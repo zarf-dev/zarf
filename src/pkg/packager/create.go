@@ -7,11 +7,37 @@ package packager
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/types"
 )
+
+// Creator is an interface for creating Zarf packages.
+type Creator interface {
+	Loader
+	Assembler
+}
+
+// New returns a new Creator based on the provided create options.
+func NewCreator(createOpts *types.ZarfCreateOptions) Creator {
+	if createOpts.IsSkeleton {
+		return &SkeletonCreator{}
+	}
+	return &PackageCreator{}
+}
+
+type SkeletonCreator struct {
+	*SkeletonLoader
+	*SkeletonAssembler
+}
+
+type PackageCreator struct {
+	*PackageLoader
+	*PackageAssembler
+}
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create() (err error) {
@@ -21,14 +47,13 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	c := creator.New(&p.cfg.CreateOpts)
-
-	if err := c.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
+	if err := cdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 		return err
 	}
 
-	loader := NewLoader(&p.cfg.CreateOpts)
-	if err := loader.LoadPackageDefinition(p); err != nil {
+	c := NewCreator(&p.cfg.CreateOpts)
+
+	if err := c.LoadPackageDefinition(p); err != nil {
 		return err
 	}
 
@@ -41,7 +66,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	if err := p.assemble(); err != nil {
+	if err := c.Assemble(p); err != nil {
 		return err
 	}
 
@@ -51,4 +76,18 @@ func (p *Packager) Create() (err error) {
 	}
 
 	return p.output()
+}
+
+// cdToBaseDir changes the current working directory to the specified base directory.
+func cdToBaseDir(createOpts *types.ZarfCreateOptions, cwd string) error {
+	if err := os.Chdir(createOpts.BaseDir); err != nil {
+		return fmt.Errorf("unable to access directory %q: %w", createOpts.BaseDir, err)
+	}
+	message.Note(fmt.Sprintf("Using build directory %s", createOpts.BaseDir))
+
+	// differentials are relative to the current working directory
+	if createOpts.DifferentialData.DifferentialPackagePath != "" {
+		createOpts.DifferentialData.DifferentialPackagePath = filepath.Join(cwd, createOpts.DifferentialData.DifferentialPackagePath)
+	}
+	return nil
 }

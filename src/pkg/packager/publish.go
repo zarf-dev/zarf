@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -89,15 +88,14 @@ func (p *Packager) Publish() (err error) {
 		if err != nil {
 			return err
 		}
-		c := creator.New(&p.cfg.CreateOpts)
-		if err := c.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
+		if err := cdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 			return err
 		}
-		loader := NewLoader(&p.cfg.CreateOpts)
-		if err := loader.LoadPackageDefinition(p); err != nil {
+		c := NewCreator(&p.cfg.CreateOpts)
+		if err := c.LoadPackageDefinition(p); err != nil {
 			return err
 		}
-		if err := p.assembleSkeleton(); err != nil {
+		if err := c.Assemble(p); err != nil {
 			return err
 		}
 	} else {

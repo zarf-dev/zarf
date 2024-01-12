@@ -11,7 +11,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -25,14 +24,13 @@ func (p *Packager) DevDeploy() error {
 		return err
 	}
 
-	c := creator.New(&p.cfg.CreateOpts)
-
-	if err := c.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
+	if err := cdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 		return err
 	}
 
-	loader := NewLoader(&p.cfg.CreateOpts)
-	if err := loader.LoadPackageDefinition(p); err != nil {
+	c := NewCreator(&p.cfg.CreateOpts)
+
+	if err := c.LoadPackageDefinition(p); err != nil {
 		return err
 	}
 
@@ -58,7 +56,7 @@ func (p *Packager) DevDeploy() error {
 		}
 	}
 
-	if err := p.assemble(); err != nil {
+	if err := c.Assemble(p); err != nil {
 		return err
 	}
 
