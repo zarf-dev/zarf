@@ -43,11 +43,7 @@ func (sl *SkeletonLoader) LoadPackageDefinition(pkgr *Packager) error {
 	}
 
 	// Compose components into a single zarf.yaml file
-	if err := pkgr.composeComponents(); err != nil {
-		return err
-	}
-
-	return nil
+	return pkgr.composeComponents()
 }
 
 // PackageLoader is used to load and configure normal (not skeleton) Zarf packages during package create.
