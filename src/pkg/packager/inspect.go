@@ -6,7 +6,6 @@ package packager
 
 import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
@@ -18,10 +17,9 @@ func (p *Packager) Inspect() (err error) {
 		return err
 	}
 
-	if err = utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
-	p.setArch()
 
 	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 

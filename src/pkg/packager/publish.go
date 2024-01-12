@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
@@ -104,7 +103,7 @@ func (p *Packager) Publish() (err error) {
 		if err = p.source.LoadPackage(p.layout, false); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
-		if err = utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+		if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 			return err
 		}
 	}

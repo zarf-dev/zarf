@@ -151,6 +151,17 @@ func NewOrDie(config *types.PackagerConfig, mods ...Modifier) *Packager {
 	return pkgr
 }
 
+// setTempDirectory sets the temp directory for the packager.
+func (p *Packager) setTempDirectory(path string) error {
+	dir, err := utils.MakeTempDir(path)
+	if err != nil {
+		return fmt.Errorf("unable to create package temp paths: %w", err)
+	}
+
+	p.layout = layout.New(dir)
+	return nil
+}
+
 // GetInitPackageName returns the formatted name of the init package.
 func GetInitPackageName(arch string) string {
 	if arch == "" {
@@ -187,21 +198,6 @@ func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
 	_ = os.RemoveAll(p.layout.Base)
 	_ = os.RemoveAll(layout.SBOMDir)
-}
-
-// setTempDirectory sets the temp directory for the packager.
-func (p *Packager) setTempDirectory(path string) error {
-	dir, err := utils.MakeTempDir(path)
-	if err != nil {
-		return fmt.Errorf("unable to create package temp paths: %w", err)
-	}
-
-	p.layout = layout.New(dir)
-	return nil
-}
-
-func (p *Packager) setArch() {
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 }
 
 // connectToCluster attempts to connect to a cluster if a connection is not already established
