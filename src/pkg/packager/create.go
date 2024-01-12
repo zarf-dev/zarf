@@ -21,7 +21,7 @@ type Creator interface {
 	Assembler
 }
 
-// New returns a new Creator based on the provided create options.
+// NewCreator returns a new Creator based on the provided create options.
 func NewCreator(createOpts *types.ZarfCreateOptions) Creator {
 	if createOpts.IsSkeleton {
 		return &SkeletonCreator{}
@@ -78,7 +78,6 @@ func (p *Packager) Create() (err error) {
 	return p.output()
 }
 
-// cdToBaseDir changes the current working directory to the specified base directory.
 func cdToBaseDir(createOpts *types.ZarfCreateOptions, cwd string) error {
 	if err := os.Chdir(createOpts.BaseDir); err != nil {
 		return fmt.Errorf("unable to access directory %q: %w", createOpts.BaseDir, err)

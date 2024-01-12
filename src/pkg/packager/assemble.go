@@ -25,12 +25,15 @@ var (
 	_ Assembler = (*PackageAssembler)(nil)
 )
 
+// Assembler is an interface for assembling package assets (components, images, SBOMSs, etc) during package create.
 type Assembler interface {
 	Assemble(*Packager) error
 }
 
+// SkeletonAssembler is used to assemble assets for skeleton Zarf packages during package create.
 type SkeletonAssembler struct{}
 
+// Assemble assembles assets for skeleton Zarf packages during package create.
 func (sa *SkeletonAssembler) Assemble(p *Packager) error {
 	if err := p.skeletonizeExtensions(); err != nil {
 		return err
@@ -56,8 +59,10 @@ func (sa *SkeletonAssembler) Assemble(p *Packager) error {
 	return p.writeYaml()
 }
 
+// PackageAssembler is used to assemble assets for normal (not skeleton) Zarf packages during package create.
 type PackageAssembler struct{}
 
+// Assemble assembles assets for normal (not skeleton) Zarf packages during package create.
 func (pa *PackageAssembler) Assemble(p *Packager) error {
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
 	var imageList []transform.Image
