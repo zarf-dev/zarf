@@ -28,12 +28,12 @@ type IncludedFilter struct {
 }
 
 // Apply applies the filter.
-func (f *IncludedFilter) Apply(allComponents []types.ZarfComponent) ([]types.ZarfComponent, error) {
+func (f *IncludedFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
 	isPartial := len(f.requestedComponents) > 0 && f.requestedComponents[0] != ""
 
 	result := []types.ZarfComponent{}
 
-	for _, component := range allComponents {
+	for _, component := range pkg.Components {
 		selectState := unknown
 
 		if isPartial {

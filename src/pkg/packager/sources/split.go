@@ -104,7 +104,7 @@ func (s *SplitTarballSource) Collect(dir string) (string, error) {
 }
 
 // LoadPackage loads a package from a split tarball.
-func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths, fm *filters.FilterManager, unarchiveAll bool) (err error) {
+func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (err error) {
 	tb, err := s.Collect(filepath.Dir(s.PackageSource))
 	if err != nil {
 		return err
@@ -118,7 +118,7 @@ func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths, fm *filters.F
 	ts := &TarballSource{
 		s.ZarfPackageOptions,
 	}
-	return ts.LoadPackage(dst, fm, unarchiveAll)
+	return ts.LoadPackage(dst, filter, unarchiveAll)
 }
 
 // LoadPackageMetadata loads a package's metadata from a split tarball.

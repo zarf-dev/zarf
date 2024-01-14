@@ -32,7 +32,7 @@ type TarballSource struct {
 }
 
 // LoadPackage loads a package from a tarball.
-func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, _ *filters.FilterManager, unarchiveAll bool) (err error) {
+func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, _ filters.ComponentFilterStrategy, unarchiveAll bool) (err error) {
 	var pkg types.ZarfPackage
 
 	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)

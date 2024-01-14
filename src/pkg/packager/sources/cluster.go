@@ -42,7 +42,7 @@ type ClusterSource struct {
 // LoadPackage loads a package from a cluster.
 //
 // This is not implemented.
-func (s *ClusterSource) LoadPackage(_ *layout.PackagePaths, _ *filters.FilterManager, _ bool) error {
+func (s *ClusterSource) LoadPackage(_ *layout.PackagePaths, _ filters.ComponentFilterStrategy, _ bool) error {
 	return fmt.Errorf("not implemented")
 }
 

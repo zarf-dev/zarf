@@ -100,8 +100,7 @@ func (p *Packager) Publish() (err error) {
 		}
 	} else {
 		filter := &filters.EmptyFilter{}
-		fm := filters.NewFilterManager(filter)
-		if err = p.source.LoadPackage(p.layout, fm, false); err != nil {
+		if err = p.source.LoadPackage(p.layout, filter, false); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 		if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {

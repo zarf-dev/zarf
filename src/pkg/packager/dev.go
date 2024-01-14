@@ -42,7 +42,7 @@ func (p *Packager) DevDeploy() error {
 	// This is also different from regular package creation, where we still assemble and package up
 	// all components and their dependencies, regardless of whether they are required or not
 	filter := filters.NewDeploymentFilter(p.cfg.PkgOpts.OptionalComponents)
-	p.cfg.Pkg.Components, err = filter.Apply(p.cfg.Pkg.Components)
+	p.cfg.Pkg.Components, err = filter.Apply(p.cfg.Pkg)
 	if err != nil {
 		return err
 	}

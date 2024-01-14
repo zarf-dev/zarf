@@ -28,9 +28,10 @@ type ArchAndOSFilter struct {
 }
 
 // Apply applies the filter.
-func (f *ArchAndOSFilter) Apply(components []types.ZarfComponent) (filtered []types.ZarfComponent, _ error) {
+func (f *ArchAndOSFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
+	filtered := []types.ZarfComponent{}
 	// Filter each component to only compatible platforms.
-	for _, component := range components {
+	for _, component := range pkg.Components {
 		// Ignore only filters that are empty
 		var validArch, validOS bool
 

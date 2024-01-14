@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
@@ -43,9 +42,8 @@ func (p *Packager) resetRegistryHPA() {
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
 	filter := filters.NewDeploymentFilter(p.cfg.PkgOpts.OptionalComponents)
-	fm := filters.NewFilterManager(filter)
 
-	if err = p.source.LoadPackage(p.layout, fm, true); err != nil {
+	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
@@ -99,8 +97,7 @@ func (p *Packager) Deploy() (err error) {
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
 	filter := filters.NewDeploymentFilter(p.cfg.PkgOpts.OptionalComponents)
-	filter.UseVersionBehavior(semver.MustParse(p.cfg.Pkg.Build.Version))
-	componentsToDeploy, err := filter.Apply(p.cfg.Pkg.Components)
+	componentsToDeploy, err := filter.Apply(p.cfg.Pkg)
 	if err != nil {
 		return deployedComponents, fmt.Errorf("unable to get selected components: %w", err)
 	}

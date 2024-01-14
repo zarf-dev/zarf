@@ -19,7 +19,6 @@ import (
 
 var (
 	_ ComponentFilterStrategy = &DeploymentFilter{}
-	_ VersionBehavior         = &DeploymentFilter{}
 )
 
 // NewDeploymentFilter creates a new deployment filter.
@@ -27,32 +26,29 @@ func NewDeploymentFilter(optionalComponents string) *DeploymentFilter {
 	requested := helpers.StringToSlice(optionalComponents)
 
 	return &DeploymentFilter{
-		false,
 		requested,
 	}
 }
 
 // DeploymentFilter is the default filter for deployments.
 type DeploymentFilter struct {
-	useRequiredLogic    bool
 	requestedComponents []string
 }
 
-// UseVersionBehavior sets the version behavior for the filter.
-func (f *DeploymentFilter) UseVersionBehavior(buildVersion *semver.Version) {
-	if buildVersion.LessThan(semver.MustParse("v0.33.0")) {
-		f.useRequiredLogic = true
-	}
-}
-
 // Apply applies the filter.
-func (f *DeploymentFilter) Apply(allComponents []types.ZarfComponent) ([]types.ZarfComponent, error) {
+func (f *DeploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
+	useRequiredLogic := false
+	buildVersion := semver.MustParse(pkg.Build.Version)
+	if buildVersion.LessThan(semver.MustParse("v0.33.0")) {
+		useRequiredLogic = true
+	}
+
 	var selectedComponents []types.ZarfComponent
 	groupedComponents := map[string][]types.ZarfComponent{}
 	orderedComponentGroups := []string{}
 
 	// Group the components by Name and Group while maintaining order
-	for _, component := range allComponents {
+	for _, component := range pkg.Components {
 		groupKey := component.Name
 		if component.DeprecatedGroup != "" {
 			groupKey = component.DeprecatedGroup
@@ -81,7 +77,7 @@ func (f *DeploymentFilter) Apply(allComponents []types.ZarfComponent) ([]types.Z
 
 				selectState, matchedRequest := includedOrExcluded(component.Name, f.requestedComponents)
 
-				if !isRequired(component, f.useRequiredLogic) {
+				if !isRequired(component, useRequiredLogic) {
 					if selectState == excluded {
 						// If the component was explicitly excluded, record the match and continue
 						matchedRequests[matchedRequest] = true
@@ -128,7 +124,7 @@ func (f *DeploymentFilter) Apply(allComponents []types.ZarfComponent) ([]types.Z
 		for _, requestedComponent := range f.requestedComponents {
 			if _, ok := matchedRequests[requestedComponent]; !ok {
 				closeEnough := []string{}
-				for _, c := range allComponents {
+				for _, c := range pkg.Components {
 					d := levenshtein.ComputeDistance(c.Name, requestedComponent)
 					if d <= 5 {
 						closeEnough = append(closeEnough, c.Name)
@@ -153,7 +149,7 @@ func (f *DeploymentFilter) Apply(allComponents []types.ZarfComponent) ([]types.Z
 			} else {
 				component := groupedComponents[groupKey][0]
 
-				if isRequired(component, f.useRequiredLogic) {
+				if isRequired(component, useRequiredLogic) {
 					selectedComponents = append(selectedComponents, component)
 				} else if selected := interactive.SelectOptionalComponent(component); selected {
 					selectedComponents = append(selectedComponents, component)

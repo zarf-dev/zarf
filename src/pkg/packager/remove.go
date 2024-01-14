@@ -51,7 +51,7 @@ func (p *Packager) Remove() (err error) {
 
 	// If components were provided; just remove the things we were asked to remove
 	filter := filters.NewIncludedFilter(p.cfg.PkgOpts.OptionalComponents)
-	included, err := filter.Apply(p.cfg.Pkg.Components)
+	included, err := filter.Apply(p.cfg.Pkg)
 	if err != nil {
 		return err
 	}

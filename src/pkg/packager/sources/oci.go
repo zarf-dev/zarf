@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -35,7 +34,7 @@ type OCISource struct {
 }
 
 // LoadPackage loads a package from an OCI registry.
-func (s *OCISource) LoadPackage(dst *layout.PackagePaths, fm *filters.FilterManager, unarchiveAll bool) (err error) {
+func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (err error) {
 	var pkg types.ZarfPackage
 	layersToPull := []ocispec.Descriptor{}
 
@@ -48,9 +47,8 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, fm *filters.FilterMana
 			return err
 		}
 		var requested []types.ZarfComponent
-		if fm != nil {
-			fm.SetVersionBehavior(semver.MustParse(pkg.Build.Version))
-			requested, err = fm.Execute(pkg.Components)
+		if filter != nil {
+			requested, err = filter.Apply(pkg)
 			if err != nil {
 				return err
 			}
