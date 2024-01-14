@@ -40,7 +40,7 @@ type DeploymentFilter struct {
 
 // UseVersionBehavior sets the version behavior for the filter.
 func (f *DeploymentFilter) UseVersionBehavior(buildVersion *semver.Version) {
-	if buildVersion.LessThan(semver.MustParse("v0.32.1")) {
+	if buildVersion.LessThan(semver.MustParse("v0.33.0")) {
 		f.useRequiredLogic = true
 	}
 }
