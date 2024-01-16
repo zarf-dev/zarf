@@ -16,7 +16,8 @@ zarf dev migrate [flags]
 ## Options
 
 ```
-  -h, --help   help for migrate
+  -h, --help              help for migrate
+      --run stringArray   migrations to run (default: all, available: scripts-to-actions, pluralize-set-variable, required-to-optional)
 ```
 
 ## Options inherited from parent commands
