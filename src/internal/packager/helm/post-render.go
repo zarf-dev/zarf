@@ -53,6 +53,7 @@ func (h *Helm) newRenderer() (*renderer, error) {
 	}, nil
 }
 
+// My goal at the moment is to be in the state of this function
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
 	tempDir, err := utils.MakeTempDir(r.chartPath)

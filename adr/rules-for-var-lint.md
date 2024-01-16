@@ -8,3 +8,7 @@ The following are the rules we follow for zarf lint on files
     - If a variable is declared by an imported component we will skip it if it is not used by the components we import as we don't know if it's actually being used or not.
   - If a variable is used by a package and not declared anywhere by a user then the user should get an error in lint: variable not declared
     - If a variable is declared by the imported package, the user should not recieve an error
+
+
+- Are there any files in the helm chart I should ignore? Or should I simply check of all them?
+- It feels like I should be using addComponent or at least a lot of the logic in it since it already

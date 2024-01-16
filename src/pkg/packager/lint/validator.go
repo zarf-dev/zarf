@@ -164,6 +164,7 @@ func (v *Validator) addError(vMessage validatorMessage) {
 
 func getVariableNameFromZarfVar(zarfVar string) string {
 	zarfVar = strings.TrimPrefix(zarfVar, "###ZARF_VAR_")
+	zarfVar = strings.TrimPrefix(zarfVar, "###ZARF_CONST_")
 	return strings.TrimSuffix(zarfVar, "###")
 }
 

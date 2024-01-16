@@ -106,6 +106,14 @@ func lintComponents(validator *Validator, cfg *types.PackagerConfig) error {
 			})
 		}
 
+		importedConstants := chain.MergeConstants([]types.ZarfPackageConstant{})
+		for _, importedConst := range importedConstants {
+			validator.addVarIfNotExists(validatorVar{
+				name:             importedConst.Name,
+				declaredByImport: true,
+			})
+		}
+
 		baseComponent := chain.Head()
 
 		var badImportYqPath string

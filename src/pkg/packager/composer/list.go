@@ -290,7 +290,7 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 	// start overriding with the tail node
 	node := ic.tail
 	for node != nil {
-		fixPaths(&node.ZarfComponent, node.relativeToHead)
+		FixPaths(&node.ZarfComponent, node.relativeToHead)
 
 		// perform overrides here
 		err := overrideMetadata(composed, node.ZarfComponent)

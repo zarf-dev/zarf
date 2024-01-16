@@ -5,10 +5,13 @@ metadata:
 
 variables:
   - name: VARIABLE_NOT_USED
-    pattern: ".+"
 
   - name: VARIABLE_USED
     default: my-service
+
+  - name: HELM_USED
+
+  - name: HELM_NOT_USED
 
 components:
   - name: first-test-component
@@ -66,6 +69,13 @@ components:
     files:
       - source: manifest.json
         target: manifest.json
+    charts:
+      - name: podinfo
+        localPath: chart
+        version: 6.4.0
+        namespace: foo
+        valuesFiles:
+          - "values.yaml"
     manifests:
       - name: my-service
         files:

@@ -84,6 +84,8 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 		if repoHelmChartPath != "" {
 			// Also process git repos that have helm charts
+
+			// Should I care if there are gitrepos that have helm charts? Do these get templated --aabro?
 			for _, repo := range component.Repos {
 				matches := strings.Split(repo, "@")
 				if len(matches) < 2 {

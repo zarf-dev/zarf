@@ -20,7 +20,7 @@ func makePathRelativeTo(path, relativeTo string) string {
 	return filepath.Join(relativeTo, path)
 }
 
-func fixPaths(child *types.ZarfComponent, relativeToHead string) {
+func FixPaths(child *types.ZarfComponent, relativeToHead string) {
 	for fileIdx, file := range child.Files {
 		composed := makePathRelativeTo(file.Source, relativeToHead)
 		child.Files[fileIdx].Source = composed

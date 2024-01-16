@@ -13,7 +13,10 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -72,12 +75,62 @@ func checkForUnusedVariables(validator *Validator, node *composer.Node) error {
 			}
 
 			if isText {
-				if err := checkFileForVar(validator, fileLocation, node.ImportLocation()); err != nil {
+				if err := checkFileForVar(validator, subFile, node.ImportLocation()); err != nil {
 					return fmt.Errorf("unable to template file %s: %w", subFile, err)
 				}
 			}
 		}
 	}
+	// The data I need here are the helm files. This includes basically every file that is packaged with hel
+
+	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmp)
+
+	loaded := layout.New(tmp)
+
+	componentPaths, err := loaded.Components.Create(node.ZarfComponent)
+	if err != nil {
+		return err
+	}
+
+	composer.FixPaths(&node.ZarfComponent, node.ImportLocation())
+
+	for _, chart := range node.ZarfComponent.Charts {
+		helmCfg := helm.New(
+			chart,
+			componentPaths.Charts,
+			componentPaths.Values,
+		)
+
+		err := helmCfg.PackageChart(node.ZarfComponent.DeprecatedCosignKeyPath)
+		if err != nil {
+			return fmt.Errorf("in lint: unable to package the chart %s: %s", chart.URL, err.Error())
+		}
+
+		// Generate helm templates for this chart
+		template, _, err := helmCfg.TemplateChart()
+		// TODO aabro, when a chart breaks at templating should I skip the error?
+		if err != nil {
+			validator.addWarning(validatorMessage{
+				description:    fmt.Sprintf("unable to template chart %q: %s", chart.URL, err.Error()),
+				packageRelPath: node.ImportLocation()})
+			continue
+		}
+		chartPath := filepath.Join(tmp + "chart.yaml")
+		utils.WriteFile(chartPath, []byte(template))
+		if err := checkFileForVar(validator, chartPath, node.ImportLocation()); err != nil {
+			return fmt.Errorf("unable to template file %s: %w", chartPath, err)
+		}
+
+	}
+
+	// Ultimately the only thing we need is a way to scan each yaml file in the helm chart.
+	// If I was to do it the exact same way as we do it during deploy I would need to package it into a single chart file
+	// Ultimately I need to figure out how we get the skeleton down. For now, I should just pull from a local chart
+
 	return nil
 }
 
