@@ -50,7 +50,7 @@ var devDeployCmd = &cobra.Command{
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithCreator())
 		defer pkgClient.ClearTempPaths()
 
 		// Create the package

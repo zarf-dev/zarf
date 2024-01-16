@@ -46,6 +46,7 @@ type Packager struct {
 	sbomViewFiles  []string
 	source         sources.PackageSource
 	generation     int
+	creator        Creator
 }
 
 // Zarf Packager Variables.
@@ -80,6 +81,15 @@ func WithCluster(cluster *cluster.Cluster) Modifier {
 func WithTemp(base string) Modifier {
 	return func(p *Packager) {
 		p.layout = layout.New(base)
+	}
+}
+
+// WithCreator sets the creator for the packager.
+//
+// Creator is an interface that provides methods for creating Zarf packages.
+func WithCreator() Modifier {
+	return func(p *Packager) {
+		p.creator = NewCreator(&p.cfg.CreateOpts)
 	}
 }
 

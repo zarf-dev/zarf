@@ -24,12 +24,10 @@ func (p *Packager) DevDeploy() error {
 		return err
 	}
 
-	c := NewCreator(&p.cfg.CreateOpts)
-
-	if err := c.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
+	if err := p.creator.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 		return err
 	}
-	if err := c.LoadPackageDefinition(p); err != nil {
+	if err := p.creator.LoadPackageDefinition(p); err != nil {
 		return err
 	}
 
@@ -55,7 +53,7 @@ func (p *Packager) DevDeploy() error {
 		}
 	}
 
-	if err := c.Assemble(p); err != nil {
+	if err := p.creator.Assemble(p); err != nil {
 		return err
 	}
 

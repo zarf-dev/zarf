@@ -54,7 +54,7 @@ var packageCreateCmd = &cobra.Command{
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithCreator())
 		defer pkgClient.ClearTempPaths()
 
 		// Create the package
@@ -221,7 +221,7 @@ var packagePublishCmd = &cobra.Command{
 		pkgConfig.PublishOpts.PackageDestination = ref.String()
 
 		// Configure the packager
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithCreator())
 		defer pkgClient.ClearTempPaths()
 
 		// Publish the package
