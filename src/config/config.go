@@ -64,12 +64,14 @@ const (
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 
 	ZarfLoggingUser = "zarf-admin"
+
+	UnsetCLIVersion = "unset"
 )
 
 // Zarf Global Configuration Variables.
 var (
 	// CLIVersion track the version of the CLI
-	CLIVersion = "unset"
+	CLIVersion = UnsetCLIVersion
 
 	// ActionsUseSystemZarf sets whether to use Zarf from the system path if Zarf is being used as a library
 	ActionsUseSystemZarf = false

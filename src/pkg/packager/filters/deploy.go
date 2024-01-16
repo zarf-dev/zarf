@@ -11,6 +11,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/agnivade/levenshtein"
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -38,9 +39,14 @@ type DeploymentFilter struct {
 // Apply applies the filter.
 func (f *DeploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
 	useRequiredLogic := false
-	buildVersion := semver.MustParse(pkg.Build.Version)
-	if buildVersion.LessThan(semver.MustParse("v0.33.0")) {
-		useRequiredLogic = true
+	if pkg.Build.Version != config.UnsetCLIVersion {
+		buildVersion, err := semver.NewVersion(pkg.Build.Version)
+		if err != nil {
+			return []types.ZarfComponent{}, fmt.Errorf("unable to parse package version: %w", err)
+		}
+		if buildVersion.LessThan(semver.MustParse("v0.33.0")) {
+			useRequiredLogic = true
+		}
 	}
 
 	var selectedComponents []types.ZarfComponent
