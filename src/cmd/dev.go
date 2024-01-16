@@ -105,7 +105,7 @@ var devMigrateCmd = &cobra.Command{
 		for _, migrationToRun := range migrationsToRun {
 			for _, migration := range all {
 				if migration.ID() == migrationToRun {
-					migrations = []deprecated.Migration{migration}
+					migrations = append(migrations, migration)
 				}
 			}
 		}
