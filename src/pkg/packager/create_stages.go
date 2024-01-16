@@ -32,19 +32,6 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
-func (p *Packager) cdToBaseDir(base string, cwd string) error {
-	if err := os.Chdir(base); err != nil {
-		return fmt.Errorf("unable to access directory %q: %w", base, err)
-	}
-	message.Note(fmt.Sprintf("Using build directory %s", base))
-
-	// differentials are relative to the current working directory
-	if p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath != "" {
-		p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath = filepath.Join(cwd, p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
-	}
-	return nil
-}
-
 func (p *Packager) load() error {
 	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())

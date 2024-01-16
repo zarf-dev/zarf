@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
@@ -20,7 +21,7 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	if err := p.cdToBaseDir(p.cfg.CreateOpts.BaseDir, cwd); err != nil {
+	if err := creator.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 		return err
 	}
 
