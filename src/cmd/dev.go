@@ -71,7 +71,7 @@ var devMigrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: lang.CmdDevMigrateShort,
 	Long:  lang.CmdDevMigrateLong,
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := args[0]
 		var pkg types.ZarfPackage

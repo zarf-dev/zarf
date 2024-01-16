@@ -18,7 +18,7 @@ A few ways to handle this:
 
 1. Simply force the `required` key to be a non-optional, so that package authors would be forced to specify it for each component, thereby removing any ambiguity--but also force one more key for every single component ever created 🫠
 
-2. Deprecate `required` and introduce an optional `optional` key, which would default to _false_. I do think this still feels strange if you did something like `optional: false`, (to be fair `required: false` has the same awkwardness).
+2. Deprecate `required` and introduce an optional `optional` key, which would default to _false_.
 
 3. Do something more significant like combine various condition-based things such as `only`, `optional` (instead of `required`), or `default`.
 
@@ -26,6 +26,14 @@ A few ways to handle this:
 
 > The change that we're proposing or have agreed to implement.
 
+Option 2: deprecate `required` and introduce an optional `optional` key, which defaults to _false_.
+
+Components are now **required** by default, instead of **optional**.
+
 ## Consequences
 
-> What becomes easier or more difficult to do and any risks introduced by the change that will need to be mitigated.
+`zarf package create` will fail if any usage of `required` is detected in the `zarf.yaml`, resulting in some thrash for package creators.
+
+Packages created w/ Zarf v0.33.0+ will have their implicit _required_ logic flipped from previous versions (implicit `required: false` --> implicit `optional: false`).
+
+A `required-to-optional` migration.
