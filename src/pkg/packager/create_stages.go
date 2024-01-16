@@ -46,9 +46,11 @@ func (p *Packager) cdToBaseDir(base string, cwd string) error {
 }
 
 func (p *Packager) load() error {
-	if err := p.readZarfYAML(layout.ZarfYAML); err != nil {
+	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
+
 	if p.isInitConfig() {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
 	}
