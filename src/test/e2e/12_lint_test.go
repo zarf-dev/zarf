@@ -61,6 +61,8 @@ func TestLint(t *testing.T) {
 
 		require.Contains(t, strippedStderr, "HELM_NOT_USED")
 		require.NotContains(t, strippedStderr, "HELM_USED")
+		require.Contains(t, strippedStderr, "HELM_NOT_DECLARED")
+
 	})
 
 }
