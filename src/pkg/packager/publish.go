@@ -88,17 +88,17 @@ func (p *Packager) Publish() (err error) {
 		if err != nil {
 			return err
 		}
-		if err := p.creator.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
+		if err := p.cdToBaseDir(p.cfg.CreateOpts.BaseDir, cwd); err != nil {
 			return err
 		}
-		if err := p.creator.LoadPackageDefinition(p); err != nil {
+		if err := p.load(); err != nil {
 			return err
 		}
-		if err := p.creator.Assemble(p); err != nil {
+		if err := p.assembleSkeleton(); err != nil {
 			return err
 		}
 	} else {
-		if err = p.source.LoadPackage(p.layout, false); err != nil {
+		if err := p.source.LoadPackage(p.layout, false); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 		if err := utils.ReadYaml(p.layout.ZarfYAML, &p.cfg.Pkg); err != nil {
