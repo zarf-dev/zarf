@@ -34,6 +34,7 @@ import (
 )
 
 var extractPath string
+var migrationsToRun []string
 
 var devCmd = &cobra.Command{
 	Use:     "dev",
@@ -71,9 +72,14 @@ var devMigrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: lang.CmdDevMigrateShort,
 	Long:  lang.CmdDevMigrateLong,
-	Args:  cobra.RangeArgs(1, 2),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		dir := args[0]
+		var dir string
+		if len(args) == 0 {
+			dir = "."
+		} else {
+			dir = args[0]
+		}
 		var pkg types.ZarfPackage
 		cm := goyaml.CommentMap{}
 
@@ -91,12 +97,35 @@ var devMigrateCmd = &cobra.Command{
 			return err
 		}
 
+		all := deprecated.Migrations()
+
+		migrations := []deprecated.Migration{}
+
+		// Only run the specified migrations
+		for _, migrationToRun := range migrationsToRun {
+			for _, migration := range all {
+				if migration.ID() == migrationToRun {
+					migrations = []deprecated.Migration{migration}
+				}
+			}
+		}
+
+		if len(migrations) == 0 {
+			// Run all migrations
+			migrations = all
+		}
+
 		// Migrate the package definition
 		for idx, component := range pkg.Components {
-			for _, migration := range deprecated.Migrations() {
+			ran := []string{}
+			for _, migration := range migrations {
+				ran = append(ran, migration.ID())
 				c, _ := migration.Run(component)
 				c = migration.Clear(c)
 				pkg.Components[idx] = c
+			}
+			if len(ran) > 0 {
+				message.Successf("Ran %s on %q", strings.Join(ran, ", "), component.Name)
 			}
 		}
 
@@ -345,6 +374,15 @@ func init() {
 	devCmd.AddCommand(devLintCmd)
 
 	bindDevDeployFlags(v)
+
+	allMigrations := []string{}
+	for _, migration := range deprecated.Migrations() {
+		allMigrations = append(allMigrations, migration.ID())
+	}
+	devMigrateCmd.Flags().StringArrayVar(&migrationsToRun, "run", []string{}, fmt.Sprintf("migrations to run (default: all, available: %s)", strings.Join(allMigrations, ", ")))
+	devMigrateCmd.RegisterFlagCompletionFunc("run", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return allMigrations, cobra.ShellCompDirectiveNoFileComp
+	})
 
 	devSha256SumCmd.Flags().StringVarP(&extractPath, "extract-path", "e", "", lang.CmdDevFlagExtractPath)
 
