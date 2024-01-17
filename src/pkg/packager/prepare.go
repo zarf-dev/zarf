@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -52,17 +53,22 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
-	if err := p.composeComponents(); err != nil {
+	c, err := creator.New(&p.cfg.CreateOpts)
+	if err != nil {
 		return nil, err
+	}
+
+	if p.warnings, err = c.ComposeComponents(); err != nil {
+		return nil, err
+	}
+
+	// After components are composed, template the active package
+	if p.warnings, err = c.FillActiveTemplate(); err != nil {
+		return nil, fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
 	for _, warning := range p.warnings {
 		message.Warn(warning)
-	}
-
-	// After components are composed, template the active package
-	if err := p.fillActiveTemplate(); err != nil {
-		return nil, fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
 	for _, component := range p.cfg.Pkg.Components {

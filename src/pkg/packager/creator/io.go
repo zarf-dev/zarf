@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for creating Zarf packages.
+// Package creator contains functions for creating Zarf packages.
 package creator
 
 import (

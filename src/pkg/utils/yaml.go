@@ -123,7 +123,7 @@ func AddRootHint(hints map[string]string, rootKey string, hintText string) map[s
 }
 
 // ReadYaml reads a yaml file and unmarshals it into a given config.
-func ReadYaml(path string, destConfig any) error {
+func ReadYaml(path string, destConfig interface{}) error {
 	message.Debugf("Reading YAML at %s", path)
 	file, err := os.ReadFile(path)
 
@@ -131,7 +131,7 @@ func ReadYaml(path string, destConfig any) error {
 		return err
 	}
 
-	return goyaml.Unmarshal(file, destConfig)
+	return goyaml.Unmarshal(file, &destConfig)
 }
 
 // WriteYaml writes a given config to a yaml file on disk.
@@ -146,7 +146,7 @@ func WriteYaml(path string, srcConfig any, perm fs.FileMode) error {
 }
 
 // ReloadYamlTemplate marshals a given config, replaces strings and unmarshals it back.
-func ReloadYamlTemplate(config any, mappings map[string]string) error {
+func ReloadYamlTemplate(config interface{}, mappings map[string]string) error {
 	text, err := goyaml.Marshal(config)
 
 	if err != nil {
@@ -164,7 +164,7 @@ func ReloadYamlTemplate(config any, mappings map[string]string) error {
 		text = []byte(strings.ReplaceAll(string(text), template, value))
 	}
 
-	return goyaml.Unmarshal(text, config)
+	return goyaml.Unmarshal(text, &config)
 }
 
 // FindYamlTemplates finds strings with a given prefix in a config.

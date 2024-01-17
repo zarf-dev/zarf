@@ -15,7 +15,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -104,8 +103,10 @@ func lintComponents(validator *Validator, createOpts *types.ZarfCreateOptions) {
 }
 
 func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts *types.ZarfCreateOptions) {
+	componentMap := map[string]string{}
+	componentMap[types.ZarfComponentName] = node.ZarfComponent.Name
 
-	err := packager.ReloadComponentTemplate(&node.ZarfComponent)
+	err := utils.ReloadYamlTemplate(&node.ZarfComponent, componentMap)
 	if err != nil {
 		validator.addWarning(validatorMessage{
 			description:    err.Error(),

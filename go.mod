@@ -26,6 +26,7 @@ require (
 	github.com/gofrs/flock v0.8.1
 	github.com/google/go-containerregistry v0.17.0
 	github.com/gosuri/uitable v0.0.4
+	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/moby/moby v24.0.7+incompatible
 	github.com/opencontainers/image-spec v1.1.0-rc5
@@ -378,6 +379,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
+	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect

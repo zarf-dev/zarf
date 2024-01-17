@@ -25,7 +25,12 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	if err := p.load(); err != nil {
+	c, err := creator.New(&p.cfg.CreateOpts)
+	if err != nil {
+		return err
+	}
+
+	if err := c.LoadPackageDefinition(); err != nil {
 		return err
 	}
 

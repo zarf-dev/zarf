@@ -120,7 +120,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// If this component requires a cluster, connect to one
 		if requiresCluster(component) {
 			timeout := cluster.DefaultTimeout
-			if p.isInitConfig() {
+			if utils.IsInitConfig(p.cfg.Pkg) {
 				timeout = 5 * time.Minute
 			}
 
@@ -150,7 +150,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Deploy the component
 		var charts []types.InstalledChart
 		var deployErr error
-		if p.isInitConfig() {
+		if utils.IsInitConfig(p.cfg.Pkg) {
 			charts, deployErr = p.deployInitComponent(component)
 		} else {
 			charts, deployErr = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
@@ -620,7 +620,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) {
 
 	// If not init config, print the application connection table
-	if !p.isInitConfig() {
+	if !utils.IsInitConfig(p.cfg.Pkg) {
 		message.PrintConnectStringTable(p.connectStrings)
 	} else {
 		if p.cluster != nil {

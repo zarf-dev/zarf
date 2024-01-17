@@ -92,7 +92,11 @@ func (p *Packager) Publish() (err error) {
 		if err := creator.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 			return err
 		}
-		if err := p.load(); err != nil {
+		c, err := creator.New(&p.cfg.CreateOpts)
+		if err != nil {
+			return err
+		}
+		if err := c.LoadPackageDefinition(); err != nil {
 			return err
 		}
 		if err := p.assembleSkeleton(); err != nil {
