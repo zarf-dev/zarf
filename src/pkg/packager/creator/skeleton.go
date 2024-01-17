@@ -26,7 +26,7 @@ var (
 
 // SkeletonCreator provides methods for creating skeleton Zarf packages.
 type SkeletonCreator struct {
-	pkg        *types.ZarfPackage
+	pkg        types.ZarfPackage
 	createOpts types.ZarfCreateOptions
 	layout     *layout.PackagePaths
 	arch       string
@@ -34,13 +34,13 @@ type SkeletonCreator struct {
 }
 
 // LoadPackageDefinition loads and configure a zarf.yaml file during package create.
-func (sc *SkeletonCreator) LoadPackageDefinition() (err error) {
+func (sc *SkeletonCreator) LoadPackageDefinition() (pkg *types.ZarfPackage, err error) {
 	if err := utils.ReadYaml(layout.ZarfYAML, &sc.pkg); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
+		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 	sc.arch = config.GetArch(sc.pkg.Metadata.Architecture, sc.pkg.Build.Architecture)
 
-	if utils.IsInitConfig(*sc.pkg) {
+	if utils.IsInitConfig(sc.pkg) {
 		sc.pkg.Metadata.Version = config.CLIVersion
 	}
 
@@ -51,15 +51,15 @@ func (sc *SkeletonCreator) LoadPackageDefinition() (err error) {
 	// Compose components into a single zarf.yaml file
 	sc.warnings, err = sc.ComposeComponents()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &sc.pkg, nil
 }
 
 // ComposeComponents builds the composed components list for the current config.
 func (sc *SkeletonCreator) ComposeComponents() (warnings []string, err error) {
-	return composeComponents(sc.pkg, sc.createOpts)
+	return composeComponents(&sc.pkg, sc.createOpts)
 }
 
 // FillActiveTemplate handles setting the active variables and reloading the base template.

@@ -124,7 +124,7 @@ func (p *Packager) assemble() error {
 }
 
 func (p *Packager) assembleSkeleton() error {
-	c, err := creator.New(&p.cfg.CreateOpts)
+	c, err := creator.New(p.cfg.CreateOpts)
 	if err != nil {
 		return err
 	}

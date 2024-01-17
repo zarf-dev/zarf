@@ -25,17 +25,20 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	c, err := creator.New(&p.cfg.CreateOpts)
+	c, err := creator.New(p.cfg.CreateOpts)
 	if err != nil {
 		return err
 	}
 
-	if err := c.LoadPackageDefinition(); err != nil {
+	pkg, err := c.LoadPackageDefinition()
+	if err != nil {
 		return err
 	}
 
+	p.cfg.Pkg = *pkg
+
 	// Perform early package validation.
-	if err := validate.Run(p.cfg.Pkg); err != nil {
+	if err := validate.Run(*pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 

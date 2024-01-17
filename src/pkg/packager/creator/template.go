@@ -67,7 +67,7 @@ func fillActiveTemplate(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptio
 	// Add special variable for the current package architecture
 	templateMap[types.ZarfPackageArch] = pkg.Build.Architecture
 
-	if err := utils.ReloadYamlTemplate(&pkg, templateMap); err != nil {
+	if err := utils.ReloadYamlTemplate(pkg, templateMap); err != nil {
 		return nil, err
 	}
 

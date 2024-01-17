@@ -43,9 +43,9 @@ type PackageCreator struct {
 }
 
 // LoadPackageDefinition loads and configure a zarf.yaml file during package create.
-func (pc *PackageCreator) LoadPackageDefinition() (err error) {
-	if err := utils.ReadYaml(layout.ZarfYAML, pc.pkg); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
+func (pc *PackageCreator) LoadPackageDefinition() (pkg *types.ZarfPackage, err error) {
+	if err := utils.ReadYaml(layout.ZarfYAML, &pc.pkg); err != nil {
+		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
 	}
 	pc.arch = config.GetArch()
 
@@ -59,41 +59,41 @@ func (pc *PackageCreator) LoadPackageDefinition() (err error) {
 
 	// Compose components into a single zarf.yaml file
 	if pc.warnings, err = pc.ComposeComponents(); err != nil {
-		return err
+		return nil, err
 	}
 
 	// After components are composed, template the active package.
 	if pc.warnings, err = pc.FillActiveTemplate(); err != nil {
-		return fmt.Errorf("unable to fill values in template: %s", err.Error())
+		return nil, fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
 	// After templates are filled process any create extensions
 	if err := pc.ProcessExtensions(); err != nil {
-		return err
+		return nil, err
 	}
 
 	// After we have a full zarf.yaml remove unnecessary repos and images if we are building a differential package
 	if pc.createOpts.DifferentialData.DifferentialPackagePath != "" {
 		// Load the images and repos from the 'reference' package
 		if err := pc.LoadDifferentialData(); err != nil {
-			return err
+			return nil, err
 		}
 		// Verify the package version of the package we're using as a 'reference' for the differential build is different than the package we're building
 		// If the package versions are the same return an error
 		if pc.createOpts.DifferentialData.DifferentialPackageVersion == pc.pkg.Metadata.Version {
-			return errors.New(lang.PkgCreateErrDifferentialSameVersion)
+			return nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
 		if pc.createOpts.DifferentialData.DifferentialPackageVersion == "" || pc.pkg.Metadata.Version == "" {
-			return fmt.Errorf("unable to build differential package when either the differential package version or the referenced package version is not set")
+			return nil, fmt.Errorf("unable to build differential package when either the differential package version or the referenced package version is not set")
 		}
 
 		// Handle any potential differential images/repos before going forward
 		if err := pc.RemoveCopiesFromDifferentialPackage(); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return &pc.pkg, nil
 }
 
 // ComposeComponents builds the composed components list for the current config.

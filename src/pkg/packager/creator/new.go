@@ -13,7 +13,7 @@ import (
 
 // Creator is an interface for creating Zarf packages.
 type Creator interface {
-	LoadPackageDefinition() error
+	LoadPackageDefinition() (pkg *types.ZarfPackage, err error)
 	ComposeComponents() (warnings []string, err error)
 	FillActiveTemplate() (warnings []string, err error)
 	ProcessExtensions() error
@@ -22,7 +22,7 @@ type Creator interface {
 }
 
 // New returns a new Creator based on the provided create options.
-func New(createOpts *types.ZarfCreateOptions) (Creator, error) {
+func New(createOpts types.ZarfCreateOptions) (Creator, error) {
 	sc := &SkeletonCreator{}
 	pc := &PackageCreator{}
 

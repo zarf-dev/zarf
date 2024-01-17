@@ -123,7 +123,7 @@ func AddRootHint(hints map[string]string, rootKey string, hintText string) map[s
 }
 
 // ReadYaml reads a yaml file and unmarshals it into a given config.
-func ReadYaml(path string, destConfig interface{}) error {
+func ReadYaml(path string, destConfig any) error {
 	message.Debugf("Reading YAML at %s", path)
 	file, err := os.ReadFile(path)
 
@@ -131,7 +131,7 @@ func ReadYaml(path string, destConfig interface{}) error {
 		return err
 	}
 
-	return goyaml.Unmarshal(file, &destConfig)
+	return goyaml.Unmarshal(file, destConfig)
 }
 
 // WriteYaml writes a given config to a yaml file on disk.

@@ -29,14 +29,17 @@ func (p *Packager) DevDeploy() error {
 		return err
 	}
 
-	c, err := creator.New(&p.cfg.CreateOpts)
+	c, err := creator.New(p.cfg.CreateOpts)
 	if err != nil {
 		return err
 	}
 
-	if err := c.LoadPackageDefinition(); err != nil {
+	pkg, err := c.LoadPackageDefinition()
+	if err != nil {
 		return err
 	}
+
+	p.cfg.Pkg = *pkg
 
 	// Filter out components that are not compatible with this system
 	p.filterComponents()
