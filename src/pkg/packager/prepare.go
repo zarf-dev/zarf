@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
+	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -75,6 +76,10 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	componentDefinition := "\ncomponents:\n"
 
+	if err := p.setVariableMapInConfig(); err != nil {
+		return nil, fmt.Errorf("unable to set the active variables: %w", err)
+	}
+
 	for _, component := range p.cfg.Pkg.Components {
 
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
@@ -115,8 +120,24 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		if err != nil {
 			return nil, err
 		}
-
+		values, err := template.Generate(p.cfg)
 		for _, chart := range component.Charts {
+
+			if err != nil {
+				return nil, fmt.Errorf("unable to generate template values")
+			}
+
+			for _, val := range chart.ValuesFiles {
+				// We need true here because values never equals ready
+				// When it's called without an active cluster
+
+				// This currently changes the actual file, we need it to not
+				// Does this still work with skeletons?
+				if err := values.Apply(component, val, true); err != nil {
+					return nil, err
+				}
+			}
+
 			helmCfg := helm.New(
 				chart,
 				componentPaths.Charts,
@@ -124,13 +145,17 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				helm.WithKubeVersion(kubeVersionOverride),
 			)
 
-			err := helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
+			err = helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
 			if err != nil {
 				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.URL, err.Error())
 			}
 
+			// This won't do anything right now because the chart is already tared.
+			// We would have to untar the chart and re-tar it. Or do it
+			// using helm functionality as we do in deploy
+			template.ProcessYamlFilesInPath(componentPaths.Charts, component, *values)
 			// Generate helm templates for this chart
-			template, values, err := helmCfg.TemplateChart()
+			chartTemplate, chartValues, err := helmCfg.TemplateChart()
 
 			if err != nil {
 				message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
@@ -139,12 +164,12 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			}
 
 			// Break the template into separate resources
-			yamls, _ := utils.SplitYAML([]byte(template))
+			yamls, _ := utils.SplitYAML([]byte(chartTemplate))
 			resources = append(resources, yamls...)
 
 			chartTarball := helm.StandardName(componentPaths.Charts, chart) + ".tgz"
 
-			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
+			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, chartValues)
 			if err != nil {
 				message.WarnErrf(err, "Problem looking for image annotations for %s: %s", chart.URL, err.Error())
 				erroredCharts = append(erroredCharts, chart.URL)
@@ -155,6 +180,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			}
 		}
 
+		template.ProcessYamlFilesInPath(componentPaths.Manifests, component, *values)
 		for _, manifest := range component.Manifests {
 			for idx, k := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package

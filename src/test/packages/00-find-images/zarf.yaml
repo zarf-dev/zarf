@@ -1,0 +1,20 @@
+kind: ZarfPackageConfig
+metadata:
+  name: find-image-with-variables
+  description: Simple zarf package with variables
+
+constants:
+  - name: AGENT_IMAGE
+    value: "defenseunicorns/zarf/agent"
+  - name: AGENT_IMAGE_TAG
+    value: "local"
+
+components:
+- name: simple-var
+  description: Helm chart for the Istio Control Plane
+  required: true
+  manifests:
+    - name: simple-deployment
+      namespace: zarf
+      files:
+        - deployment.yaml

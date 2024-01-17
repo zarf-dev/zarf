@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-hook
+  namespace: zarf
+  labels:
+    app: agent-hook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-hook
+  template:
+    metadata:
+      labels:
+        app: agent-hook
+    spec:
+      containers:
+        - name: server
+          image: "###ZARF_REGISTRY###/###ZARF_CONST_AGENT_IMAGE###:###ZARF_CONST_AGENT_IMAGE_TAG###"

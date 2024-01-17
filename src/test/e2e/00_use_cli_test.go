@@ -79,6 +79,10 @@ func TestUseCLI(t *testing.T) {
 		stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "src/test/packages/00-helm-annotations")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "registry1.dso.mil/ironbank/opensource/istio/pilot:1.17.2", "The pilot image should be found by Zarf")
+
+		stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "src/test/packages/00-helm-annotations")
+		require.NoError(t, err, stdOut, stdErr)
+		require.Contains(t, stdOut, "registry1.dso.mil/ironbank/opensource/istio/pilot:1.17.2", "The pilot image should be found by Zarf")
 	})
 
 	t.Run("zarf prepare find-images --kube-version", func(t *testing.T) {
@@ -99,6 +103,8 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdErr, "Problem rendering the helm template for https://charts.jetstack.io/", "The kubeVersion declaration should prevent this from templating")
 		require.Contains(t, stdErr, "following charts had errors: [https://charts.jetstack.io/]", "Zarf should print an ending error message")
 	})
+
+
 
 	t.Run("zarf deploy should fail when given a bad component input", func(t *testing.T) {
 		t.Parallel()
