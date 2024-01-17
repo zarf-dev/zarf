@@ -7,13 +7,14 @@ package tools
 import (
 	"os"
 
-	"github.com/defenseunicorns/zarf/src/cmd/tools/helm"
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/cli"
+	helmcmd "helm.sh/helm/v3/pkg/cmd"
 )
 
 func init() {
 	actionConfig := new(action.Configuration)
+	settings := cli.New()
 
 	// Since helm needs args passed into it, check if we are processing things on a command with fewer args
 	if len(os.Args) < 3 {
@@ -21,9 +22,9 @@ func init() {
 	}
 
 	// The inclusion of Helm in this manner should be reconsidered once https://github.com/helm/helm/issues/12122 is resolved
-	helmCmd, _ := helm.NewRootCmd(actionConfig, os.Stdout, os.Args[3:])
-	helmCmd.Short = lang.CmdToolsHelmShort
-	helmCmd.Long = lang.CmdToolsHelmLong
+	cmd, _ := helmcmd.NewRootCmd(actionConfig, settings, os.Stdout, os.Args[3:])
+	// cmd.Short = lang.CmdToolsHelmShort
+	// cmd.Long = lang.CmdToolsHelmLong
 
-	toolsCmd.AddCommand(helmCmd)
+	toolsCmd.AddCommand(cmd)
 }
