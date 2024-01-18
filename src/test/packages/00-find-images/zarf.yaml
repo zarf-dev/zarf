@@ -3,6 +3,11 @@ metadata:
   name: find-image-with-variables
   description: Simple zarf package with variables
 
+variables:
+  - name: GIT_SERVER_REPLICA_COUNT
+    description: The number of git server replicas to deploy
+    default: "1"
+
 constants:
   - name: AGENT_IMAGE
     value: "defenseunicorns/zarf/agent"
@@ -11,10 +16,19 @@ constants:
 
 components:
 - name: simple-var
-  description: Helm chart for the Istio Control Plane
   required: true
   manifests:
     - name: simple-deployment
       namespace: zarf
       files:
         - deployment.yaml
+- name: chart-with-var
+  required: true
+  charts:
+    - name: gitea
+      releaseName: zarf-gitea
+      url: https://dl.gitea.io/charts
+      version: 10.0.0
+      namespace: zarf
+      valuesFiles:
+        - gitea-values.yaml

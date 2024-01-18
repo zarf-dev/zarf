@@ -127,13 +127,27 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				return nil, fmt.Errorf("unable to generate template values")
 			}
 
-			for _, val := range chart.ValuesFiles {
+			for idx, path := range chart.ValuesFiles {
+				var dst string
+				if helpers.IsURL(path) {
+					dst = fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
+
+					if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
+						return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
+					}
+					chart.ValuesFiles[idx] = dst
+				} else {
+					dst = filepath.Join(componentPaths.Values, path)
+					utils.CreatePathAndCopy(path, dst)
+					chart.ValuesFiles[idx] = dst
+				}
 				// We need true here because values never equals ready
 				// When it's called without an active cluster
 
 				// This currently changes the actual file, we need it to not
 				// Does this still work with skeletons?
-				if err := values.Apply(component, val, true); err != nil {
+				// Can value files be remote?
+				if err := values.Apply(component, dst, true); err != nil {
 					return nil, err
 				}
 			}
@@ -180,7 +194,6 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			}
 		}
 
-		template.ProcessYamlFilesInPath(componentPaths.Manifests, component, *values)
 		for _, manifest := range component.Manifests {
 			for idx, k := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package
@@ -200,8 +213,15 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
 					f = destination
+				} else {
+					newDestination := filepath.Join(componentPaths.Manifests, f)
+					utils.CreatePathAndCopy(f, newDestination)
+					f = newDestination
 				}
 
+				if err := values.Apply(component, f, true); err != nil {
+					return nil, err
+				}
 				// Read the contents of each file
 				contents, err := os.ReadFile(f)
 				if err != nil {

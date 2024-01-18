@@ -85,6 +85,8 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, "registry1.dso.mil/ironbank/opensource/istio/pilot:1.17.2", "The pilot image should be found by Zarf")
 	})
 
+
+
 	t.Run("zarf prepare find-images --kube-version", func(t *testing.T) {
 		t.Parallel()
 		controllerImageWithTag := "quay.io/jetstack/cert-manager-controller:v1.11.1"
@@ -247,5 +249,17 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, tlsCert)
 
 		require.FileExists(t, tlsKey)
+	})
+}
+
+func TestUseCLI2(t *testing.T) {
+	t.Run("zarf prepare find-images with helm or manifest vars", func(t *testing.T) {
+		t.Parallel()
+		// Test `zarf prepare find-images` for a package with zarf variables in the chart, values file, and manifests
+		path := filepath.Join("src", "test", "packages", "00-find-images")
+		stdOut, stdErr, err := e2e.Zarf("prepare", "find-images", path)
+		require.NoError(t, err, stdOut, stdErr)
+		require.Contains(t, stdOut, "defenseunicorns/zarf/agent:local", "The chart image should be found by Zarf")
+		//require.Contains(t, stdOut, "defenseunicorns/zarf/agent:local", "The chart image should be found by Zarf")
 	})
 }
