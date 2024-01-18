@@ -164,10 +164,6 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.URL, err.Error())
 			}
 
-			// This won't do anything right now because the chart is already tared.
-			// We would have to untar the chart and re-tar it. Or do it
-			// using helm functionality as we do in deploy
-			template.ProcessYamlFilesInPath(componentPaths.Charts, component, *values)
 			// Generate helm templates for this chart
 			chartTemplate, chartValues, err := helmCfg.TemplateChart()
 

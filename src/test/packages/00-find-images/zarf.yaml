@@ -13,6 +13,8 @@ constants:
     value: "defenseunicorns/zarf/agent"
   - name: AGENT_IMAGE_TAG
     value: "local"
+  - name: HELM_IMAGE
+    value: "nginx"
 
 components:
 - name: simple-var
@@ -25,10 +27,10 @@ components:
 - name: chart-with-var
   required: true
   charts:
-    - name: gitea
-      releaseName: zarf-gitea
-      url: https://dl.gitea.io/charts
-      version: 10.0.0
-      namespace: zarf
+    - name: simple
+      releaseName: simple
+      localPath: simple-helm
+      namespace: zarf-simple
+      version: 0.1.0
       valuesFiles:
         - gitea-values.yaml
