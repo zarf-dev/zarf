@@ -257,9 +257,9 @@ func TestUseCLI2(t *testing.T) {
 		t.Parallel()
 		// Test `zarf prepare find-images` for a package with zarf variables in the chart, values file, and manifests
 		path := filepath.Join("src", "test", "packages", "00-find-images")
-		stdOut, stdErr, err := e2e.Zarf("prepare", "find-images", path)
-		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdOut, "defenseunicorns/zarf/agent:local", "The chart image should be found by Zarf")
-		//require.Contains(t, stdOut, "defenseunicorns/zarf/agent:local", "The chart image should be found by Zarf")
+		stdOut, _, err := e2e.Zarf("prepare", "find-images", path)
+		require.NoError(t, err)
+		require.Contains(t, stdOut, "defenseunicorns/zarf/agent:local", "If this isn't found manifests aren't interpreting vars")
+		require.Contains(t, stdOut, "nginx:stable-perl", "If this isn't found helm or values files aren't interpreting vars")
 	})
 }

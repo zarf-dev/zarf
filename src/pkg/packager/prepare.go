@@ -141,12 +141,10 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 					utils.CreatePathAndCopy(path, dst)
 					chart.ValuesFiles[idx] = dst
 				}
-				// We need true here because values never equals ready
-				// When it's called without an active cluster
+				// We need true here because values never gets set to ready
+				// when called without an active cluster
 
-				// This currently changes the actual file, we need it to not
 				// Does this still work with skeletons?
-				// Can value files be remote?
 				if err := values.Apply(component, dst, true); err != nil {
 					return nil, err
 				}
