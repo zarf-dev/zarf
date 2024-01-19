@@ -146,7 +146,7 @@ func WriteYaml(path string, srcConfig any, perm fs.FileMode) error {
 }
 
 // ReloadYamlTemplate marshals a given config, replaces strings and unmarshals it back.
-func ReloadYamlTemplate(config interface{}, mappings map[string]string) error {
+func ReloadYamlTemplate(config any, mappings map[string]string) error {
 	text, err := goyaml.Marshal(config)
 	if err != nil {
 		return err
@@ -163,7 +163,7 @@ func ReloadYamlTemplate(config interface{}, mappings map[string]string) error {
 		text = []byte(strings.ReplaceAll(string(text), template, value))
 	}
 
-	return goyaml.Unmarshal(text, &config)
+	return goyaml.Unmarshal(text, config)
 }
 
 // FindYamlTemplates finds strings with a given prefix in a config.
