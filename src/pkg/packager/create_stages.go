@@ -124,7 +124,7 @@ func (p *Packager) assemble() error {
 }
 
 func (p *Packager) assembleSkeleton() error {
-	pkg, err := creator.ProcessExtensions(&p.cfg.Pkg, p.cfg.CreateOpts, p.layout)
+	pkg, err := creator.ProcessExtensions(&p.cfg.Pkg, &p.cfg.CreateOpts, p.layout)
 	if err != nil {
 		return nil
 	}

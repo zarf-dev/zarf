@@ -100,7 +100,7 @@ func (p *Packager) Publish() (err error) {
 		if err != nil {
 			return err
 		}
-		pkg, warnings, err := c.LoadPackageDefinition(&p.cfg.Pkg)
+		pkg, warnings, err := c.LoadPackageDefinition(&p.cfg.Pkg, &p.cfg.CreateOpts, p.layout)
 		if err != nil {
 			return err
 		}

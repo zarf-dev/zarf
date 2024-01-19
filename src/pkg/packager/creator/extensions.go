@@ -12,7 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func ProcessExtensions(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptions, layout *layout.PackagePaths) (*types.ZarfPackage, error) {
+func ProcessExtensions(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions, layout *layout.PackagePaths) (*types.ZarfPackage, error) {
 	components := []types.ZarfComponent{}
 
 	// Create component paths and process extensions for each component.

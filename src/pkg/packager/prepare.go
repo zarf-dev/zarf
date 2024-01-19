@@ -53,7 +53,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
-	pkg, composeWarnings, err := creator.ComposeComponents(&p.cfg.Pkg, p.cfg.CreateOpts)
+	pkg, composeWarnings, err := creator.ComposeComponents(&p.cfg.Pkg, &p.cfg.CreateOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	p.warnings = append(p.warnings, composeWarnings...)
 
 	// After components are composed, template the active package
-	templateWarnings, err := creator.FillActiveTemplate(pkg, p.cfg.CreateOpts)
+	templateWarnings, err := creator.FillActiveTemplate(pkg, &p.cfg.CreateOpts)
 	if err != nil {
 		return nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}

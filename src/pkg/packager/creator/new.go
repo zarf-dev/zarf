@@ -5,12 +5,13 @@
 package creator
 
 import (
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Creator is an interface for creating Zarf packages.
 type Creator interface {
-	LoadPackageDefinition(pkg *types.ZarfPackage) (loadedPkg *types.ZarfPackage, warnings []string, err error)
+	LoadPackageDefinition(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions, layout *layout.PackagePaths) (loadedPkg *types.ZarfPackage, warnings []string, err error)
 }
 
 // New returns a new Creator based on the provided create options.

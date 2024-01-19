@@ -16,7 +16,7 @@ import (
 )
 
 // setPackageMetadata sets various package metadata.
-func setPackageMetadata(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptions) (*types.ZarfPackage, error) {
+func setPackageMetadata(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions) (*types.ZarfPackage, error) {
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue.
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.

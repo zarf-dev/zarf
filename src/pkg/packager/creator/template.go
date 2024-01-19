@@ -14,7 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func FillActiveTemplate(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptions) (warnings []string, err error) {
+func FillActiveTemplate(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions) (warnings []string, err error) {
 	templateMap := map[string]string{}
 
 	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {

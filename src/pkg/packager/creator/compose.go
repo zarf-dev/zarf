@@ -10,7 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func ComposeComponents(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptions) (composedPkg *types.ZarfPackage, warnings []string, err error) {
+func ComposeComponents(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions) (composedPkg *types.ZarfPackage, warnings []string, err error) {
 	components := []types.ZarfComponent{}
 
 	pkgVars := pkg.Variables
