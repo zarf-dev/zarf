@@ -16,4 +16,4 @@ spec:
     spec:
       containers:
         - name: server
-          image: "###ZARF_CONST_AGENT_IMAGE###:###ZARF_CONST_AGENT_IMAGE_TAG###"
+          image: "###ZARF_REGISTRY###/###ZARF_CONST_AGENT_IMAGE###:###ZARF_CONST_AGENT_IMAGE_TAG###"

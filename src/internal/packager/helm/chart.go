@@ -183,6 +183,11 @@ func (h *Helm) TemplateChart() (string, chartutil.Values, error) {
 		return "", nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
 
+	client.PostRenderer, err = h.newDevRenderer()
+	if err != nil {
+		return "", nil, fmt.Errorf("unable to get dev renderer: %w", err)
+	}
+
 	// Perform the loadedChart installation.
 	templatedChart, err := client.Run(loadedChart, chartValues)
 	if err != nil {

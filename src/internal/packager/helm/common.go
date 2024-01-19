@@ -148,6 +148,12 @@ func WithKubeVersion(kubeVersion string) Modifier {
 	}
 }
 
+func WithPackageConfig(cfg *types.PackagerConfig) Modifier {
+	return func(h *Helm) {
+		h.cfg = cfg
+	}
+}
+
 // StandardName generates a predictable full path for a helm chart for Zarf.
 func StandardName(destination string, chart types.ZarfChart) string {
 	return filepath.Join(destination, chart.Name+"-"+chart.Version)

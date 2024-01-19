@@ -121,6 +121,8 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			return nil, err
 		}
 		values, err := template.Generate(p.cfg)
+		values.SetState(&types.ZarfState{})
+		values.SetRegistry("ZARF_REGISTRY")
 		for _, chart := range component.Charts {
 
 			if err != nil {
@@ -141,11 +143,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 					utils.CreatePathAndCopy(path, dst)
 					chart.ValuesFiles[idx] = dst
 				}
-				// We need true here because values never gets set to ready
-				// when called without an active cluster
-
-				// Does this still work with skeletons?
-				if err := values.Apply(component, dst, true); err != nil {
+				if err := values.Apply(component, dst, false); err != nil {
 					return nil, err
 				}
 			}
@@ -155,6 +153,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				componentPaths.Charts,
 				componentPaths.Values,
 				helm.WithKubeVersion(kubeVersionOverride),
+				helm.WithPackageConfig(p.cfg),
 			)
 
 			err = helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
