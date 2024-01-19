@@ -10,7 +10,9 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
@@ -24,18 +26,20 @@ func (p *Packager) Create() (err error) {
 	if err := creator.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 		return err
 	}
+	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
+	}
 
 	c, err := creator.New(p.cfg.CreateOpts)
 	if err != nil {
 		return err
 	}
 
-	pkg, err := c.LoadPackageDefinition()
+	pkg, warnings, err := c.LoadPackageDefinition(&p.cfg.Pkg)
 	if err != nil {
 		return err
 	}
-
-	p.cfg.Pkg = *pkg
+	p.warnings = append(p.warnings, warnings...)
 
 	// Perform early package validation.
 	if err := validate.Run(*pkg); err != nil {
@@ -54,6 +58,8 @@ func (p *Packager) Create() (err error) {
 	if err := os.Chdir(cwd); err != nil {
 		return err
 	}
+
+	p.cfg.Pkg = *pkg
 
 	return p.output()
 }

@@ -124,18 +124,14 @@ func (p *Packager) assemble() error {
 }
 
 func (p *Packager) assembleSkeleton() error {
-	c, err := creator.New(p.cfg.CreateOpts)
+	pkg, err := creator.ProcessExtensions(&p.cfg.Pkg, p.cfg.CreateOpts, p.layout)
 	if err != nil {
-		return err
-	}
-
-	if err := c.ProcessExtensions(); err != nil {
-		return err
+		return nil
 	}
 	for _, warning := range p.warnings {
 		message.Warn(warning)
 	}
-	for idx, component := range p.cfg.Pkg.Components {
+	for idx, component := range pkg.Components {
 		if err := p.addComponent(idx, component); err != nil {
 			return err
 		}

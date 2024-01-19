@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
@@ -92,14 +93,18 @@ func (p *Packager) Publish() (err error) {
 		if err := creator.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 			return err
 		}
+		if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+			return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
+		}
 		c, err := creator.New(p.cfg.CreateOpts)
 		if err != nil {
 			return err
 		}
-		pkg, err := c.LoadPackageDefinition()
+		pkg, warnings, err := c.LoadPackageDefinition(&p.cfg.Pkg)
 		if err != nil {
 			return err
 		}
+		p.warnings = append(p.warnings, warnings...)
 		p.cfg.Pkg = *pkg
 		if err := p.assembleSkeleton(); err != nil {
 			return err

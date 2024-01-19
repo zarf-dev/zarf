@@ -14,7 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func fillActiveTemplate(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptions) (warnings []string, err error) {
+func FillActiveTemplate(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptions) (warnings []string, err error) {
 	templateMap := map[string]string{}
 
 	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
@@ -33,14 +33,13 @@ func fillActiveTemplate(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptio
 				setVal, err := interactive.PromptVariable(types.ZarfPackageVariable{
 					Name: key,
 				})
-
-				if err == nil {
-					createOpts.SetVariables[key] = setVal
-				} else {
+				if err != nil {
 					return err
 				}
+				createOpts.SetVariables[key] = setVal
 			} else if !present {
-				return fmt.Errorf("template '%s' must be '--set' when using the '--confirm' flag", key)
+				// erroring out here
+				return fmt.Errorf("template %q must be '--set' when using the '--confirm' flag", key)
 			}
 		}
 
@@ -75,9 +74,8 @@ func fillActiveTemplate(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptio
 }
 
 // reloadComponentTemplatesInPackage appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
-func reloadComponentTemplatesInPackage(zarfPackage *types.ZarfPackage) error {
-	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
-	for _, component := range zarfPackage.Components {
+func reloadComponentTemplatesInPackage(pkg *types.ZarfPackage) error {
+	for _, component := range pkg.Components {
 		mappings := map[string]string{}
 		mappings[types.ZarfComponentName] = component.Name
 
