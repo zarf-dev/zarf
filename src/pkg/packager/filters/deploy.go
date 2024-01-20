@@ -42,7 +42,7 @@ func (f *DeploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 	if pkg.Build.Version != config.UnsetCLIVersion {
 		buildVersion, err := semver.NewVersion(pkg.Build.Version)
 		if err != nil {
-			return []types.ZarfComponent{}, fmt.Errorf("unable to parse package version: %w", err)
+			return []types.ZarfComponent{}, fmt.Errorf("unable to parse package version %q: %w", pkg.Build.Version, err)
 		}
 		if buildVersion.LessThan(semver.MustParse("v0.33.0")) {
 			useRequiredLogic = true

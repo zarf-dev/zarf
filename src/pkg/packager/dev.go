@@ -33,6 +33,9 @@ func (p *Packager) DevDeploy() error {
 		return err
 	}
 
+	// Set the package version to the CLI version
+	p.cfg.Pkg.Build.Version = config.CLIVersion
+
 	// Filter out components that are not compatible with this system
 	p.filterComponents()
 
