@@ -1,0 +1,11 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-upgrade-package
+  description: Deploy podinfo using a Helm OCI chart
+  version: "###ZARF_PKG_VAR_PODINFO_VERSION###"
+
+components:
+  - name: test-upgrade-package
+    required: true
+    import:
+      path: ..
