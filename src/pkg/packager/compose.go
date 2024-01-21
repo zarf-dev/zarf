@@ -8,6 +8,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/types"
+	"strings"
 )
 
 // composeComponents builds the composed components list for the current config.
@@ -16,6 +17,18 @@ func (p *Packager) composeComponents() error {
 
 	pkgVars := p.cfg.Pkg.Variables
 	pkgConsts := p.cfg.Pkg.Constants
+
+	exclusionList := strings.Split(p.cfg.CreateOpts.ExcludedComponents, ",")
+	for _, exclusionListItem := range exclusionList {
+		for i, component := range p.cfg.Pkg.Components {
+			if component.Name == exclusionListItem && !component.Required {
+				p.cfg.Pkg.Components = append(p.cfg.Pkg.Components[:i], p.cfg.Pkg.Components[i+1:]...)
+				message.Debugf("Excluding the %s component.", exclusionListItem)
+			} else if component.Name == exclusionListItem && component.Required {
+				message.Debugf("You cannot exclude the %s component, because it's required.", exclusionListItem)
+			}
+		}
+	}
 
 	for i, component := range p.cfg.Pkg.Components {
 		arch := p.arch
