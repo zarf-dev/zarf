@@ -8,7 +8,6 @@ import (
 	"runtime"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -41,9 +40,4 @@ func (p *Packager) filterComponents() {
 	}
 	// Update the active package with the filtered components.
 	p.cfg.Pkg.Components = filteredComponents
-}
-
-// writeYaml adds build information and writes the config to the temp directory.
-func (p *Packager) writeYaml() error {
-	return utils.WriteYaml(p.layout.ZarfYAML, p.cfg.Pkg, 0400)
 }

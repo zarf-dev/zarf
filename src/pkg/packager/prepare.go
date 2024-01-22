@@ -51,7 +51,8 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return nil, err
 	}
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
+
+	p.cfg.Pkg.Metadata.Architecture = config.GetArch(p.cfg.Pkg.Metadata.Architecture)
 
 	pkg, composeWarnings, err := creator.ComposeComponents(&p.cfg.Pkg, &p.cfg.CreateOpts)
 	if err != nil {

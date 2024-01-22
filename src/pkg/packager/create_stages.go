@@ -146,7 +146,7 @@ func (p *Packager) assembleSkeleton() error {
 	}
 	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
 
-	return p.writeYaml()
+	return utils.WriteYaml(p.layout.ZarfYAML, pkg, 0400)
 }
 
 // output assumes it is running from cwd, not the build directory
@@ -168,7 +168,7 @@ func (p *Packager) output() error {
 	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
 
 	// Save the transformed config.
-	if err := p.writeYaml(); err != nil {
+	if err := utils.WriteYaml(p.layout.ZarfYAML, p.cfg.Pkg, 0400); err != nil {
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
 	}
 

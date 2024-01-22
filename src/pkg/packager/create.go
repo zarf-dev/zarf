@@ -17,12 +17,10 @@ import (
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create() (err error) {
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-
 	if err := creator.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 		return err
 	}
@@ -58,8 +56,6 @@ func (p *Packager) Create() (err error) {
 	if err := os.Chdir(cwd); err != nil {
 		return err
 	}
-
-	p.cfg.Pkg = *pkg
 
 	return p.output()
 }

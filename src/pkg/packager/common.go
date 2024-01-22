@@ -183,7 +183,7 @@ func (p *Packager) GetPackageName() string {
 		suffix = "tar"
 	}
 
-	packageFileName := fmt.Sprintf("%s%s-%s", config.ZarfPackagePrefix, packageName, p.arch)
+	packageFileName := fmt.Sprintf("%s%s-%s", config.ZarfPackagePrefix, packageName, p.cfg.Pkg.Metadata.Architecture)
 	if p.cfg.Pkg.Build.Differential {
 		packageFileName = fmt.Sprintf("%s-%s-differential-%s", packageFileName, p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion, p.cfg.Pkg.Metadata.Version)
 	} else if p.cfg.Pkg.Metadata.Version != "" {
