@@ -56,8 +56,8 @@ func (pc *PackageCreator) LoadPackageDefinition() (pkg *types.ZarfPackage, warni
 	}
 
 	// If we are creating a differential package, remove duplicate images and repos.
-	if pkg.Build.Differential {
-		diffData, err := LoadDifferentialData(&pc.createOpts.DifferentialData)
+	if pc.pkg.Build.Differential {
+		diffData, err := loadDifferentialData(&pc.createOpts.DifferentialData)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -69,11 +69,12 @@ func (pc *PackageCreator) LoadPackageDefinition() (pkg *types.ZarfPackage, warni
 			return nil, nil, fmt.Errorf("unable to build differential package when either the differential package version or the referenced package version is not set")
 		}
 
-		pkg, err = RemoveCopiesFromDifferentialPackage(extendedPkg, diffData)
+		diffPkg, err := removeCopiesFromDifferentialPackage(extendedPkg, diffData)
 		if err != nil {
 			return nil, nil, err
 		}
+		return diffPkg, nil, nil
 	}
 
-	return pkg, warnings, nil
+	return extendedPkg, warnings, nil
 }

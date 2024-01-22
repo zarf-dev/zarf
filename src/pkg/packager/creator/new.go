@@ -5,6 +5,7 @@
 package creator
 
 import (
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -14,9 +15,17 @@ type Creator interface {
 }
 
 // New returns a new Creator based on the provided create options.
-func New(createOpts types.ZarfCreateOptions) Creator {
-	if createOpts.IsSkeleton {
-		return &SkeletonCreator{}
+func New(pkgCfg *types.PackagerConfig) Creator {
+	if pkgCfg.CreateOpts.IsSkeleton {
+		return &SkeletonCreator{
+			&pkgCfg.Pkg,
+			&pkgCfg.CreateOpts,
+		}
 	}
-	return &PackageCreator{}
+
+	return &PackageCreator{
+		&pkgCfg.Pkg,
+		&pkgCfg.CreateOpts,
+		layout.New(pkgCfg.CreateOpts.BaseDir),
+	}
 }

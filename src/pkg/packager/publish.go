@@ -96,7 +96,7 @@ func (p *Packager) Publish() (err error) {
 		if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 		}
-		c := creator.New(p.cfg.CreateOpts)
+		c := creator.New(p.cfg)
 		_, warnings, err := c.LoadPackageDefinition()
 		if err != nil {
 			return err

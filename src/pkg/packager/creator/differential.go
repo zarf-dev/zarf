@@ -22,9 +22,9 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
-// LoadDifferentialData extracts the Zarf config of a designated 'reference' package,
+// loadDifferentialData extracts the Zarf config of a designated 'reference' package,
 // and creates a list of all images and repos that are in the reference package.
-func LoadDifferentialData(diffData *types.DifferentialData) (*types.DifferentialData, error) {
+func loadDifferentialData(diffData *types.DifferentialData) (*types.DifferentialData, error) {
 	tmpDir, _ := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	defer os.RemoveAll(tmpDir)
 
@@ -72,8 +72,8 @@ func LoadDifferentialData(diffData *types.DifferentialData) (*types.Differential
 	return diffData, nil
 }
 
-// RemoveCopiesFromDifferentialPackage removes any images and repos already present in the reference package.
-func RemoveCopiesFromDifferentialPackage(pkg *types.ZarfPackage, diffData *types.DifferentialData) (*types.ZarfPackage, error) {
+// removeCopiesFromDifferentialPackage removes any images and repos already present in the reference package.
+func removeCopiesFromDifferentialPackage(pkg *types.ZarfPackage, diffData *types.DifferentialData) (*types.ZarfPackage, error) {
 	// Loop through all of the components to determine if any of them are using already included images or repos
 	componentMap := make(map[int]types.ZarfComponent)
 	for idx, component := range pkg.Components {
