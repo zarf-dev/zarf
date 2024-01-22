@@ -10,7 +10,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
-	github.com/anchore/clio v0.0.0-20240105134038-89e2fe85ce25
+	github.com/anchore/clio v0.0.0-20240118133543-a5e93b68d716
 	github.com/anchore/stereoscope v0.0.0-20231220161148-590920dabc54
 	github.com/anchore/syft v0.99.0
 	github.com/derailed/k9s v0.29.1
