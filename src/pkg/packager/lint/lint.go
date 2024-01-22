@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -106,7 +107,7 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 	componentMap := map[string]string{}
 	componentMap[types.ZarfComponentName] = node.ZarfComponent.Name
 
-	err := utils.ReloadYamlTemplate(&node.ZarfComponent, componentMap)
+	err := creator.ReloadComponentTemplate(&node.ZarfComponent)
 	if err != nil {
 		validator.addWarning(validatorMessage{
 			description:    err.Error(),

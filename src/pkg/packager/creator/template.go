@@ -51,7 +51,7 @@ func FillActiveTemplate(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOpti
 	}
 
 	// update the component templates on the package
-	if err := reloadComponentTemplatesInPackage(pkg); err != nil {
+	if err := ReloadComponentTemplatesInPackage(pkg); err != nil {
 		return nil, err
 	}
 
@@ -73,15 +73,26 @@ func FillActiveTemplate(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOpti
 	return warnings, nil
 }
 
-// reloadComponentTemplatesInPackage appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
-func reloadComponentTemplatesInPackage(pkg *types.ZarfPackage) error {
-	for _, component := range pkg.Components {
-		mappings := map[string]string{}
-		mappings[types.ZarfComponentName] = component.Name
+// ReloadComponentTemplate appends ###ZARF_COMPONENT_NAME### for the component, assigns value, and reloads
+// Any instance of ###ZARF_COMPONENT_NAME### within a component will be replaced with that components name
+func ReloadComponentTemplate(component *types.ZarfComponent) error {
+	mappings := map[string]string{}
+	mappings[types.ZarfComponentName] = component.Name
+	err := utils.ReloadYamlTemplate(component, mappings)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
-		if err := utils.ReloadYamlTemplate(&component, mappings); err != nil {
+// ReloadComponentTemplatesInPackage appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
+func ReloadComponentTemplatesInPackage(zarfPackage *types.ZarfPackage) error {
+	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
+	for i := range zarfPackage.Components {
+		if err := ReloadComponentTemplate(&zarfPackage.Components[i]); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
