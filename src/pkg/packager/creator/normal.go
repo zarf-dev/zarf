@@ -62,10 +62,10 @@ func (pc *PackageCreator) LoadPackageDefinition() (pkg *types.ZarfPackage, warni
 			return nil, nil, err
 		}
 
-		if pc.createOpts.DifferentialData.DifferentialPackageVersion == pkg.Metadata.Version {
+		if pc.createOpts.DifferentialData.DifferentialPackageVersion == pc.pkg.Metadata.Version {
 			return nil, nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
-		if pc.createOpts.DifferentialData.DifferentialPackageVersion == "" || pkg.Metadata.Version == "" {
+		if pc.createOpts.DifferentialData.DifferentialPackageVersion == "" || pc.pkg.Metadata.Version == "" {
 			return nil, nil, fmt.Errorf("unable to build differential package when either the differential package version or the referenced package version is not set")
 		}
 
