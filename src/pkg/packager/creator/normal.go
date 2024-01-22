@@ -23,8 +23,10 @@ var (
 type PackageCreator struct{}
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
-func (pc *PackageCreator) LoadPackageDefinition(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions, layout *layout.PackagePaths) (loadedPkg *types.ZarfPackage, warnings []string, err error) {
-	pkg, err = setPackageMetadata(pkg, createOpts)
+func (pc *PackageCreator) LoadPackageDefinition(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions, layout *layout.PackagePaths) (*types.ZarfPackage, []string, error) {
+	var warnings []string
+
+	pkg, err := setPackageMetadata(pkg, createOpts)
 	if err != nil {
 		message.Warn(err.Error())
 	}
