@@ -24,6 +24,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -166,6 +167,12 @@ func (p *Packager) output() error {
 		return fmt.Errorf("unable to generate checksums for the package: %w", err)
 	}
 	p.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
+
+	// Record the migrations that will be ran on the package.
+	p.cfg.Pkg.Build.Migrations = []string{
+		deprecated.ScriptsToActionsMigrated,
+		deprecated.PluralizeSetVariable,
+	}
 
 	// Save the transformed config.
 	if err := utils.WriteYaml(p.layout.ZarfYAML, p.cfg.Pkg, 0400); err != nil {

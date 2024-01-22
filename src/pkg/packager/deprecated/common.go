@@ -54,7 +54,6 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 		var warning string
 		if migratedComponent, warning = migrateScriptsToActions(migratedComponent); warning != "" {
 			warnings = append(warnings, warning)
-			build.Migrations = append(build.Migrations, ScriptsToActionsMigrated)
 		}
 	}
 
@@ -66,7 +65,6 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 		var warning string
 		if migratedComponent, warning = migrateSetVariableToSetVariables(migratedComponent); warning != "" {
 			warnings = append(warnings, warning)
-			build.Migrations = append(build.Migrations, PluralizeSetVariable)
 		}
 	}
 
