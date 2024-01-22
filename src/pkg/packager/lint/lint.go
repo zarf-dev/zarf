@@ -104,9 +104,6 @@ func lintComponents(validator *Validator, createOpts *types.ZarfCreateOptions) {
 }
 
 func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts *types.ZarfCreateOptions) {
-	componentMap := map[string]string{}
-	componentMap[types.ZarfComponentName] = node.ZarfComponent.Name
-
 	err := creator.ReloadComponentTemplate(&node.ZarfComponent)
 	if err != nil {
 		validator.addWarning(validatorMessage{
