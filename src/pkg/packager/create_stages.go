@@ -30,6 +30,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/mholt/archiver/v3"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 func (p *Packager) cdToBaseDir(base string, cwd string) error {
@@ -250,7 +251,7 @@ func (p *Packager) output() error {
 		if err != nil {
 			return err
 		}
-		remote, err := oci.NewOrasRemote(ref)
+		remote, err := oci.NewOrasRemote(ref, ocispec.Platform{})
 		if err != nil {
 			return err
 		}
@@ -652,7 +653,7 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if helpers.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		remote, err := oci.NewOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
+		remote, err := oci.NewOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, ocispec.Platform{})
 		if err != nil {
 			return err
 		}
