@@ -97,12 +97,11 @@ func (p *Packager) Publish() (err error) {
 			return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 		}
 		c := creator.New(p.cfg.CreateOpts)
-		pkg, warnings, err := c.LoadPackageDefinition(&p.cfg.Pkg, &p.cfg.CreateOpts, p.layout)
+		_, warnings, err := c.LoadPackageDefinition()
 		if err != nil {
 			return err
 		}
 		p.warnings = append(p.warnings, warnings...)
-		p.cfg.Pkg = *pkg
 		if err := p.assembleSkeleton(); err != nil {
 			return err
 		}

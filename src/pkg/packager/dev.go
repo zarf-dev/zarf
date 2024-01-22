@@ -36,13 +36,11 @@ func (p *Packager) DevDeploy() error {
 
 	c := creator.New(p.cfg.CreateOpts)
 
-	pkg, warnings, err := c.LoadPackageDefinition(&p.cfg.Pkg, &p.cfg.CreateOpts, p.layout)
+	pkg, warnings, err := c.LoadPackageDefinition()
 	if err != nil {
 		return err
 	}
 	p.warnings = append(p.warnings, warnings...)
-
-	p.cfg.Pkg = *pkg
 
 	// Filter out components that are not compatible with this system
 	p.filterComponents()
@@ -52,9 +50,9 @@ func (p *Packager) DevDeploy() error {
 	// the user's selection and the component's `required` field
 	// This is also different from regular package creation, where we still assemble and package up
 	// all components and their dependencies, regardless of whether they are required or not
-	p.cfg.Pkg.Components = p.getSelectedComponents()
+	pkg.Components = p.getSelectedComponents()
 
-	if err := validate.Run(p.cfg.Pkg); err != nil {
+	if err := validate.Run(*pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 

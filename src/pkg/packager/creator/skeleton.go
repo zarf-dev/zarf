@@ -5,7 +5,6 @@
 package creator
 
 import (
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -16,19 +15,21 @@ var (
 )
 
 // SkeletonCreator provides methods for creating skeleton Zarf packages.
-type SkeletonCreator struct{}
+type SkeletonCreator struct {
+	pkg        *types.ZarfPackage
+	createOpts *types.ZarfCreateOptions
+	// layout     *layout.PackagePaths
+}
 
 // LoadPackageDefinition loads and configure a zarf.yaml file during package create.
-func (sc *SkeletonCreator) LoadPackageDefinition(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions, layout *layout.PackagePaths) (*types.ZarfPackage, []string, error) {
-	var warnings []string
-
-	pkg, err := setPackageMetadata(pkg, createOpts)
+func (sc *SkeletonCreator) LoadPackageDefinition() (pkg *types.ZarfPackage, warnings []string, err error) {
+	configuredPkg, err := setPackageMetadata(sc.pkg, sc.createOpts)
 	if err != nil {
 		message.Warn(err.Error())
 	}
 
 	// Compose components into a single zarf.yaml file
-	pkg, composeWarnings, err := ComposeComponents(pkg, createOpts)
+	pkg, composeWarnings, err := ComposeComponents(configuredPkg, sc.createOpts)
 	if err != nil {
 		return nil, nil, err
 	}

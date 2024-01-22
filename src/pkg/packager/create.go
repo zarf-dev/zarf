@@ -30,7 +30,7 @@ func (p *Packager) Create() (err error) {
 
 	c := creator.New(p.cfg.CreateOpts)
 
-	pkg, warnings, err := c.LoadPackageDefinition(&p.cfg.Pkg, &p.cfg.CreateOpts, p.layout)
+	pkg, warnings, err := c.LoadPackageDefinition()
 	if err != nil {
 		return err
 	}

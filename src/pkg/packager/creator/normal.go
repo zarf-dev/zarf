@@ -20,19 +20,21 @@ var (
 )
 
 // PackageCreator provides methods for creating normal (not skeleton) Zarf packages.
-type PackageCreator struct{}
+type PackageCreator struct {
+	pkg        *types.ZarfPackage
+	createOpts *types.ZarfCreateOptions
+	layout     *layout.PackagePaths
+}
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
-func (pc *PackageCreator) LoadPackageDefinition(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions, layout *layout.PackagePaths) (*types.ZarfPackage, []string, error) {
-	var warnings []string
-
-	pkg, err := setPackageMetadata(pkg, createOpts)
+func (pc *PackageCreator) LoadPackageDefinition() (pkg *types.ZarfPackage, warnings []string, err error) {
+	configuredPkg, err := setPackageMetadata(pc.pkg, pc.createOpts)
 	if err != nil {
 		message.Warn(err.Error())
 	}
 
 	// Compose components into a single zarf.yaml file
-	pkg, composeWarnings, err := ComposeComponents(pkg, createOpts)
+	composedPkg, composeWarnings, err := ComposeComponents(configuredPkg, pc.createOpts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -40,7 +42,7 @@ func (pc *PackageCreator) LoadPackageDefinition(pkg *types.ZarfPackage, createOp
 	warnings = append(warnings, composeWarnings...)
 
 	// After components are composed, template the active package.
-	templateWarnings, err := FillActiveTemplate(pkg, createOpts)
+	templateWarnings, err := FillActiveTemplate(composedPkg, pc.createOpts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}
@@ -48,26 +50,26 @@ func (pc *PackageCreator) LoadPackageDefinition(pkg *types.ZarfPackage, createOp
 	warnings = append(warnings, templateWarnings...)
 
 	// After templates are filled process any create extensions
-	pkg, err = ProcessExtensions(pkg, createOpts, layout)
+	extendedPkg, err := ProcessExtensions(composedPkg, pc.createOpts, pc.layout)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// If we are creating a differential package, remove duplicate images and repos.
 	if pkg.Build.Differential {
-		diffData, err := LoadDifferentialData(&createOpts.DifferentialData)
+		diffData, err := LoadDifferentialData(&pc.createOpts.DifferentialData)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		if createOpts.DifferentialData.DifferentialPackageVersion == pkg.Metadata.Version {
+		if pc.createOpts.DifferentialData.DifferentialPackageVersion == pkg.Metadata.Version {
 			return nil, nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
-		if createOpts.DifferentialData.DifferentialPackageVersion == "" || pkg.Metadata.Version == "" {
+		if pc.createOpts.DifferentialData.DifferentialPackageVersion == "" || pkg.Metadata.Version == "" {
 			return nil, nil, fmt.Errorf("unable to build differential package when either the differential package version or the referenced package version is not set")
 		}
 
-		pkg, err = RemoveCopiesFromDifferentialPackage(pkg, diffData)
+		pkg, err = RemoveCopiesFromDifferentialPackage(extendedPkg, diffData)
 		if err != nil {
 			return nil, nil, err
 		}
