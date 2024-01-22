@@ -65,7 +65,7 @@ const (
 
 	ZarfLoggingUser = "zarf-admin"
 
-	UnsetCLIVersion = "unset"
+	UnsetCLIVersion = "unset-development-only"
 )
 
 // Zarf Global Configuration Variables.
