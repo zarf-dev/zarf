@@ -16,7 +16,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
-	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
@@ -27,7 +26,6 @@ import (
 
 type renderer struct {
 	*Helm
-	actionConfig   *action.Configuration
 	connectStrings types.ConnectStrings
 	namespaces     map[string]*corev1.Namespace
 	values         template.Values
@@ -48,8 +46,7 @@ func (h *Helm) newRenderer() (*renderer, error) {
 			// Add the passed-in namespace to the list
 			h.chart.Namespace: h.cluster.NewZarfManagedNamespace(h.chart.Namespace),
 		},
-		values:       *valueTemplate,
-		actionConfig: h.actionConfig,
+		values: *valueTemplate,
 	}, nil
 }
 

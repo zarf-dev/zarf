@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
+	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -75,6 +76,10 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	componentDefinition := "\ncomponents:\n"
 
+	if err := p.setVariableMapInConfig(); err != nil {
+		return nil, fmt.Errorf("unable to set the active variables: %w", err)
+	}
+
 	for _, component := range p.cfg.Pkg.Components {
 
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
@@ -115,36 +120,44 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		if err != nil {
 			return nil, err
 		}
-
+		values, err := template.Generate(p.cfg)
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate template values")
+		}
+		values.SetState(&types.ZarfState{})
+		values.SetRegistry(p.cfg.FindImagesOpts.RegistryOverride)
 		for _, chart := range component.Charts {
+
 			helmCfg := helm.New(
 				chart,
 				componentPaths.Charts,
 				componentPaths.Values,
 				helm.WithKubeVersion(kubeVersionOverride),
+				helm.WithPackageConfig(p.cfg),
 			)
 
-			err := helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
+			err = helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
 			if err != nil {
-				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.URL, err.Error())
+				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.Name, err.Error())
 			}
 
+			template.ProcessYamlFilesInPath(componentPaths.Values, component, *values)
+
 			// Generate helm templates for this chart
-			template, values, err := helmCfg.TemplateChart()
+			chartTemplate, chartValues, err := helmCfg.TemplateChart()
 
 			if err != nil {
-				message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
-				erroredCharts = append(erroredCharts, chart.URL)
+				erroredCharts = append(erroredCharts, chart.Name)
 				continue
 			}
 
 			// Break the template into separate resources
-			yamls, _ := utils.SplitYAML([]byte(template))
+			yamls, _ := utils.SplitYAML([]byte(chartTemplate))
 			resources = append(resources, yamls...)
 
 			chartTarball := helm.StandardName(componentPaths.Charts, chart) + ".tgz"
 
-			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
+			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, chartValues)
 			if err != nil {
 				message.WarnErrf(err, "Problem looking for image annotations for %s: %s", chart.URL, err.Error())
 				erroredCharts = append(erroredCharts, chart.URL)
@@ -174,8 +187,15 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
 					f = destination
+				} else {
+					newDestination := filepath.Join(componentPaths.Manifests, f)
+					utils.CreatePathAndCopy(f, newDestination)
+					f = newDestination
 				}
 
+				if err := values.Apply(component, f, true); err != nil {
+					return nil, err
+				}
 				// Read the contents of each file
 				contents, err := os.ReadFile(f)
 				if err != nil {

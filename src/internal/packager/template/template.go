@@ -71,6 +71,16 @@ func (values *Values) GetRegistry() string {
 	return values.registry
 }
 
+// SetRegistry sets the registry
+func (values *Values) SetRegistry(registry string) {
+	values.registry = registry
+}
+
+// SetState sets the state
+func (values *Values) SetState(state *types.ZarfState) {
+	values.config.State = state
+}
+
 // GetVariables returns the variables to be used in the template.
 func (values *Values) GetVariables(component types.ZarfComponent) (templateMap map[string]*utils.TextTemplate, deprecations map[string]string) {
 	templateMap = make(map[string]*utils.TextTemplate)

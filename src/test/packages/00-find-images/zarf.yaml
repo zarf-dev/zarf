@@ -1,0 +1,36 @@
+kind: ZarfPackageConfig
+metadata:
+  name: find-image-with-variables
+  description: Simple zarf package with variables
+
+variables:
+  - name: GIT_SERVER_REPLICA_COUNT
+    description: The number of git server replicas to deploy
+    default: "1"
+
+constants:
+  - name: AGENT_IMAGE
+    value: "defenseunicorns/zarf/agent"
+  - name: AGENT_IMAGE_TAG
+    value: "local"
+  - name: HELM_IMAGE
+    value: "nginx"
+
+components:
+- name: simple-var
+  required: true
+  manifests:
+    - name: simple-deployment
+      namespace: zarf
+      files:
+        - deployment.yaml
+- name: chart-with-var
+  required: true
+  charts:
+    - name: simple
+      releaseName: simple
+      localPath: simple-helm
+      namespace: zarf-simple
+      version: 0.1.0
+      valuesFiles:
+        - gitea-values.yaml

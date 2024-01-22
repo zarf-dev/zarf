@@ -521,7 +521,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
-			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
+			chartValueName := helm.StandardValuesName(componentPaths.Values, chart, idx)
 			if err := p.valueTemplate.Apply(component, chartValueName, false); err != nil {
 				return installedCharts, err
 			}

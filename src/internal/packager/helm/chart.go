@@ -139,12 +139,18 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 }
 
 // TemplateChart generates a helm template from a given chart.
-func (h *Helm) TemplateChart() (string, chartutil.Values, error) {
+func (h *Helm) TemplateChart() (manifest string, chartValues chartutil.Values, err error) {
 	message.Debugf("helm.TemplateChart()")
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
-	defer spinner.Stop()
+	defer func() {
+		if err != nil {
+			spinner.Errorf(err, "Problem rendering the helm template for %s: %s", h.chart.Name, err.Error())
+		} else {
+			spinner.Stop()
+		}
+	}()
 
-	err := h.createActionConfig(h.chart.Namespace, spinner)
+	err = h.createActionConfig(h.chart.Namespace, spinner)
 
 	// Setup K8s connection.
 	if err != nil {
@@ -183,13 +189,18 @@ func (h *Helm) TemplateChart() (string, chartutil.Values, error) {
 		return "", nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
 
+	client.PostRenderer, err = h.newDevRenderer()
+	if err != nil {
+		return "", nil, fmt.Errorf("unable to get dev renderer: %w", err)
+	}
+
 	// Perform the loadedChart installation.
 	templatedChart, err := client.Run(loadedChart, chartValues)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating helm chart template: %w", err)
 	}
 
-	manifest := templatedChart.Manifest
+	manifest = templatedChart.Manifest
 
 	for _, hook := range templatedChart.Hooks {
 		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)

@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -148,7 +148,17 @@ func WithKubeVersion(kubeVersion string) Modifier {
 	}
 }
 
+func WithPackageConfig(cfg *types.PackagerConfig) Modifier {
+	return func(h *Helm) {
+		h.cfg = cfg
+	}
+}
+
 // StandardName generates a predictable full path for a helm chart for Zarf.
 func StandardName(destination string, chart types.ZarfChart) string {
 	return filepath.Join(destination, chart.Name+"-"+chart.Version)
+}
+
+func StandardValuesName(destination string, chart types.ZarfChart, idx int) string {
+	return fmt.Sprintf("%s-%d.yaml", StandardName(destination, chart), idx)
 }

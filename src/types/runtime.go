@@ -55,6 +55,7 @@ type ZarfInspectOptions struct {
 type ZarfFindImagesOptions struct {
 	RepoHelmChartPath   string `json:"repoHelmChartPath" jsonschema:"description=Path to the helm chart directory"`
 	KubeVersionOverride string `json:"kubeVersionOverride" jsonschema:"description=Kubernetes version to use for the helm chart"`
+	RegistryOverride    string `json:"registryOverride" jsonschema:"description=Manual override for ###ZARF_REGISTRY###`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.
