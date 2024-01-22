@@ -15,9 +15,9 @@ type Creator interface {
 }
 
 // New returns a new Creator based on the provided create options.
-func New(createOpts types.ZarfCreateOptions) (Creator, error) {
+func New(createOpts types.ZarfCreateOptions) Creator {
 	if createOpts.IsSkeleton {
-		return &SkeletonCreator{}, nil
+		return &SkeletonCreator{}
 	}
-	return &PackageCreator{}, nil
+	return &PackageCreator{}
 }
