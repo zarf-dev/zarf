@@ -19,7 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/mholt/archiver"
+	"github.com/mholt/archiver/v3"
 )
 
 // LoadDifferentialData extracts the Zarf config of a designated 'reference' package,
