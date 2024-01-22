@@ -78,9 +78,7 @@ func (values *Values) SetRegistry(registry string) {
 
 // SetState sets the state
 func (values *Values) SetState(state *types.ZarfState) {
-	if values.config.State == nil{
-		values.config.State = state
-	}
+	values.config.State = state
 }
 
 // GetVariables returns the variables to be used in the template.

@@ -131,7 +131,12 @@ func (p *Spinner) Successf(format string, a ...any) {
 
 // Errorf prints an error message with the spinner.
 func (p *Spinner) Errorf(err error, format string, a ...any) {
-	Warnf(format, a...)
+	if p.spinner != nil {
+		p.spinner.Fail(format)
+		p.spinner.RemoveWhenDone = true
+		_ = p.spinner.Stop()
+		activeSpinner = nil
+	}
 	debugPrinter(2, err)
 }
 

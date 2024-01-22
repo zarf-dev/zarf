@@ -27,7 +27,6 @@ func (h *Helm) newDevRenderer() (*devRenderer, error) {
 		return nil, err
 	}
 	values.SetState(&types.ZarfState{})
-	values.SetRegistry("ZARF_REGISTRY")
 
 	return &devRenderer{
 		Helm:   h,

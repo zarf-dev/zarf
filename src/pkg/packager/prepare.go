@@ -5,7 +5,10 @@
 package packager
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -28,6 +31,73 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+// Untar takes a destination path and a reader; a tar reader loops over the tarfile
+// creating the file structure at 'dst' along the way, and writing any files
+func Untar(dst string, r io.Reader) error {
+
+	gzr, err := gzip.NewReader(r)
+	if err != nil {
+		return err
+	}
+	defer gzr.Close()
+
+	tr := tar.NewReader(gzr)
+
+	for {
+		header, err := tr.Next()
+
+		switch {
+
+		// if no more files are found return
+		case err == io.EOF:
+			return nil
+
+		// return any other error
+		case err != nil:
+			return err
+
+		// if the header is nil, just skip it (not sure how this happens)
+		case header == nil:
+			continue
+		}
+
+		// the target location where the dir/file should be created
+		target := filepath.Join(dst, header.Name)
+
+		// the following switch could also be done using fi.Mode(), not sure if there
+		// a benefit of using one vs. the other.
+		// fi := header.FileInfo()
+
+		// check the file type
+		switch header.Typeflag {
+
+		// if its a dir and it doesn't exist create it
+		case tar.TypeDir:
+			if _, err := os.Stat(target); err != nil {
+				if err := os.MkdirAll(target, 0755); err != nil {
+					return err
+				}
+			}
+
+		// if it's a file create it
+		case tar.TypeReg:
+			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			if err != nil {
+				return err
+			}
+
+			// copy over contents
+			if _, err := io.Copy(f, tr); err != nil {
+				return err
+			}
+
+			// manually close here after each file operation; defering would cause each file close
+			// to wait until all operations have completed.
+			f.Close()
+		}
+	}
+}
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
@@ -122,30 +192,11 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		}
 		values, err := template.Generate(p.cfg)
 		values.SetState(&types.ZarfState{})
-		values.SetRegistry("ZARF_REGISTRY")
+		values.SetRegistry(p.cfg.FindImagesOpts.RegistryOverride)
 		for _, chart := range component.Charts {
 
 			if err != nil {
 				return nil, fmt.Errorf("unable to generate template values")
-			}
-
-			for idx, path := range chart.ValuesFiles {
-				var dst string
-				if helpers.IsURL(path) {
-					dst = fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
-
-					if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
-						return nil, fmt.Errorf(lang.ErrDownloading, path, err.Error())
-					}
-					chart.ValuesFiles[idx] = dst
-				} else {
-					dst = filepath.Join(componentPaths.Values, path)
-					utils.CreatePathAndCopy(path, dst)
-					chart.ValuesFiles[idx] = dst
-				}
-				if err := values.Apply(component, dst, false); err != nil {
-					return nil, err
-				}
 			}
 
 			helmCfg := helm.New(
@@ -158,15 +209,15 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 			err = helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
 			if err != nil {
-				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.URL, err.Error())
+				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.Name, err.Error())
 			}
+
 
 			// Generate helm templates for this chart
 			chartTemplate, chartValues, err := helmCfg.TemplateChart()
 
 			if err != nil {
-				message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
-				erroredCharts = append(erroredCharts, chart.URL)
+				erroredCharts = append(erroredCharts, chart.Name)
 				continue
 			}
 
@@ -175,7 +226,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			resources = append(resources, yamls...)
 
 			chartTarball := helm.StandardName(componentPaths.Charts, chart) + ".tgz"
-
+			
 			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, chartValues)
 			if err != nil {
 				message.WarnErrf(err, "Problem looking for image annotations for %s: %s", chart.URL, err.Error())
