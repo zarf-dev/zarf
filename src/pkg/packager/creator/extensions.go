@@ -28,9 +28,10 @@ func ProcessExtensions(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptio
 				if c, err = bigbang.Skeletonize(componentPaths, c); err != nil {
 					return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
 				}
-			}
-			if c, err = bigbang.Run(pkg.Metadata.YOLO, componentPaths, c); err != nil {
-				return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
+			} else {
+				if c, err = bigbang.Run(pkg.Metadata.YOLO, componentPaths, c); err != nil {
+					return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
+				}
 			}
 		}
 
