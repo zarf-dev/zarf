@@ -37,6 +37,7 @@ func (p *Packager) Create() (err error) {
 	if err != nil {
 		return err
 	}
+
 	p.warnings = append(p.warnings, warnings...)
 
 	// Perform early package validation.

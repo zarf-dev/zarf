@@ -59,12 +59,6 @@ func setPackageMetadata(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOpti
 		pkg.Build.Differential = true
 	}
 
-	// Record the migrations that will be run on the package.
-	pkg.Build.Migrations = []string{
-		deprecated.ScriptsToActionsMigrated,
-		deprecated.PluralizeSetVariable,
-	}
-
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = createOpts.Flavor
 
