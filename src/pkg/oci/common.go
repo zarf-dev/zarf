@@ -36,6 +36,7 @@ const (
 type log func(string, ...any)
 
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
+// Do we want to start exporting fields in this struct? For example log may come in handy?
 type OrasRemote struct {
 	repo           *remote.Repository
 	root           *OCIManifest

@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -142,7 +143,7 @@ func downloadInitPackage(cacheDirectory string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		source := sources.OCISource{OrasRemote: remote}
+		source := &sources.OCISource{ZarfOrasRemote: &ocizarf.ZarfOrasRemote{OrasRemote: remote}}
 		return source.Collect(cacheDirectory)
 	}
 	// Otherwise, exit and tell the user to manually download the init-package

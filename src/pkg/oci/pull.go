@@ -13,7 +13,6 @@ import (
 
 	"slices"
 
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -29,11 +28,6 @@ var (
 	ZarfPackageLayoutPath = filepath.Join("images", "oci-layout")
 	// ZarfPackageImagesBlobsDir is the path to the directory containing the image blobs in the OCI package.
 	ZarfPackageImagesBlobsDir = filepath.Join("images", "blobs", "sha256")
-)
-
-var (
-	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
-	PackageAlwaysPull = []string{layout.ZarfYAML, layout.Checksums, layout.Signature}
 )
 
 // FileDescriptorExists returns true if the given file exists in the given directory with the expected SHA.
@@ -69,29 +63,8 @@ func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDi
 //
 // layersToPull is an optional parameter that allows the caller to specify which layers to pull.
 //
-// The following layers will ALWAYS be pulled if they exist:
-//   - zarf.yaml
-//   - checksums.txt
-//   - zarf.yaml.sig
+// ?! Now that we are going to 100% going to call this function with parameters do we still want layerstopull to be optional?
 func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-	isPartialPull := len(layersToPull) > 0
-	o.log("Pulling", o.repo.Reference)
-
-	manifest, err := o.FetchRoot()
-	if err != nil {
-		return nil, err
-	}
-
-	if isPartialPull {
-		for _, path := range PackageAlwaysPull {
-			desc := manifest.Locate(path)
-			layersToPull = append(layersToPull, desc)
-		}
-	} else {
-		layersToPull = append(layersToPull, manifest.Layers...)
-	}
-	layersToPull = append(layersToPull, manifest.Config)
-
 	// de-duplicate layers
 	layersToPull = RemoveDuplicateDescriptors(layersToPull)
 
@@ -205,14 +178,4 @@ func (o *OrasRemote) PullPackagePaths(paths []string, destinationDir string) ([]
 		}
 	}
 	return layersPulled, nil
-}
-
-// PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
-func (o *OrasRemote) PullPackageMetadata(destinationDir string) ([]ocispec.Descriptor, error) {
-	return o.PullPackagePaths(PackageAlwaysPull, destinationDir)
-}
-
-// PullPackageSBOM pulls the package's sboms.tar from the remote repository and saves it to `destinationDir`.
-func (o *OrasRemote) PullPackageSBOM(destinationDir string) ([]ocispec.Descriptor, error) {
-	return o.PullPackagePaths([]string{layout.SBOMTar}, destinationDir)
 }

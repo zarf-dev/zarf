@@ -14,7 +14,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
@@ -142,7 +142,7 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 		}
 	}
 
-	toExtract := oci.PackageAlwaysPull
+	toExtract := ocizarf.PackageAlwaysPull
 	if wantSBOM {
 		toExtract = append(toExtract, layout.SBOMTar)
 	}

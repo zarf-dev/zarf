@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -71,7 +72,7 @@ func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 		if err != nil {
 			return nil, err
 		}
-		source = &OCISource{pkgOpts, remote}
+		source = &OCISource{pkgOpts, &ocizarf.ZarfOrasRemote{remote}}
 	case "tarball":
 		source = &TarballSource{pkgOpts}
 	case "http", "https", "sget":

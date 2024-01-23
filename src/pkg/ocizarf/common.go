@@ -17,7 +17,7 @@ const (
 )
 
 type ZarfOrasRemote struct {
-	oci.OrasRemote
+	*oci.OrasRemote
 }
 
 // log is a function that logs a message.

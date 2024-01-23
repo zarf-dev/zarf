@@ -10,12 +10,48 @@ import (
 	"slices"
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
+
+var (
+	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
+	PackageAlwaysPull = []string{layout.ZarfYAML, layout.Checksums, layout.Signature}
+)
+
+// PullPackage pulls the package from the remote repository and saves it to the given path.
+//
+// layersToPull is an optional parameter that allows the caller to specify which layers to pull.
+//
+// The following layers will ALWAYS be pulled if they exist:
+//   - zarf.yaml
+//   - checksums.txt
+//   - zarf.yaml.sig
+func (o *ZarfOrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+	isPartialPull := len(layersToPull) > 0
+	message.Infof("Pulling", o.Repo())
+
+	manifest, err := o.FetchRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	if isPartialPull {
+		for _, path := range PackageAlwaysPull {
+			desc := manifest.Locate(path)
+			layersToPull = append(layersToPull, desc)
+		}
+	} else {
+		layersToPull = append(layersToPull, manifest.Layers...)
+	}
+	layersToPull = append(layersToPull, manifest.Config)
+
+	return o.OrasRemote.PullPackage(destinationDir, concurrency, layersToPull...)
+}
 
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.
 // It also retrieves the descriptors for all image layers that are required by the components.
@@ -97,4 +133,14 @@ func LayersFromRequestedComponents(o *oci.OrasRemote, requestedComponents []stri
 		}
 	}
 	return layers, nil
+}
+
+// PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
+func (o *ZarfOrasRemote) PullPackageMetadata(destinationDir string) ([]ocispec.Descriptor, error) {
+	return o.PullPackagePaths(PackageAlwaysPull, destinationDir)
+}
+
+// PullPackageSBOM pulls the package's sboms.tar from the remote repository and saves it to `destinationDir`.
+func (o *ZarfOrasRemote) PullPackageSBOM(destinationDir string) ([]ocispec.Descriptor, error) {
+	return o.PullPackagePaths([]string{layout.SBOMTar}, destinationDir)
 }

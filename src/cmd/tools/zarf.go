@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -188,7 +189,7 @@ var downloadInitCmd = &cobra.Command{
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 		}
 
-		source := &sources.OCISource{OrasRemote: remote}
+		source := &sources.OCISource{ZarfOrasRemote: &ocizarf.ZarfOrasRemote{OrasRemote: remote}}
 
 		_, err = source.Collect(outputDirectory)
 		if err != nil {

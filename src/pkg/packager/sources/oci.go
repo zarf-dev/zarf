@@ -31,7 +31,7 @@ var (
 // OCISource is a package source for OCI registries.
 type OCISource struct {
 	*types.ZarfPackageOptions
-	*oci.OrasRemote
+	*ocizarf.ZarfOrasRemote
 }
 
 // LoadPackage loads a package from an OCI registry.
@@ -118,7 +118,7 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (err error) {
 	var pkg types.ZarfPackage
 
-	toPull := oci.PackageAlwaysPull
+	toPull := ocizarf.PackageAlwaysPull
 	if wantSBOM {
 		toPull = append(toPull, layout.SBOMTar)
 	}
