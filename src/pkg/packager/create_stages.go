@@ -23,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
@@ -38,7 +39,7 @@ func (p *Packager) assemble() error {
 	for idx, component := range p.cfg.Pkg.Components {
 		onCreate := component.Actions.OnCreate
 		onFailure := func() {
-			if err := p.runActions(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
+			if err := actions.Run(p.cfg, onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -47,7 +48,7 @@ func (p *Packager) assemble() error {
 			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
 
-		if err := p.runActions(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
+		if err := actions.Run(p.cfg, onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -318,7 +319,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 
 	onCreate := component.Actions.OnCreate
 	if !isSkeleton {
-		if err := p.runActions(onCreate.Defaults, onCreate.Before, nil); err != nil {
+		if err := actions.Run(p.cfg, onCreate.Defaults, onCreate.Before, nil); err != nil {
 			return fmt.Errorf("unable to run component before action: %w", err)
 		}
 	}
@@ -548,7 +549,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 	}
 
 	if !isSkeleton {
-		if err := p.runActions(onCreate.Defaults, onCreate.After, nil); err != nil {
+		if err := actions.Run(p.cfg, onCreate.Defaults, onCreate.After, nil); err != nil {
 			return fmt.Errorf("unable to run component after action: %w", err)
 		}
 	}

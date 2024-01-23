@@ -23,6 +23,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -65,7 +67,7 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	// Set variables and prompt if --confirm is not set
-	if err := p.setVariableMapInConfig(); err != nil {
+	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
@@ -159,7 +161,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, p.valueTemplate); err != nil {
+			if err := actions.Run(p.cfg, onDeploy.Defaults, onDeploy.OnFailure, p.valueTemplate); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -187,7 +189,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			}
 		}
 
-		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
+		if err := actions.Run(p.cfg, onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
 			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -275,7 +277,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
+	if err = actions.Run(p.cfg, onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -313,7 +315,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.After, p.valueTemplate); err != nil {
+	if err = actions.Run(p.cfg, onDeploy.Defaults, onDeploy.After, p.valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
