@@ -54,7 +54,7 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo
 			},
 		}
 	} else {
-		kubeDNSRegistryURL := fmt.Sprintf("%s.%s.svc.cluster.local:%d", registryServiceInfo.Name, registryServiceInfo.Namespace, registryServiceInfo.Port)
+		kubeDNSRegistryURL := fmt.Sprintf("%s:%d", registryServiceInfo.ClusterIP, registryServiceInfo.Port)
 		dockerConfigJSON = DockerConfig{
 			Auths: DockerConfigEntry{
 				// nodePort for zarf-docker-registry

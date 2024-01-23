@@ -83,9 +83,7 @@ webhooks:
         apiGroups:
           - "source.toolkit.fluxcd.io"
         apiVersions:
-          - "v1beta1"
           - "v1beta2"
-          - "v1"
         resources:
           - "ocirepositories"
     admissionReviewVersions:
@@ -127,9 +125,10 @@ webhooks:
         apiGroups:
           - "source.toolkit.fluxcd.io"
         apiVersions:
+          # We only accept v1beta1 so that we can show a warning in the logs
+          # - it doesn't have `type: oci` so we will refuse to mutate
           - "v1beta1"
           - "v1beta2"
-          - "v1"
         resources:
           - "helmrepositories"
     admissionReviewVersions:

@@ -24,6 +24,7 @@ type ServiceInfo struct {
 	Namespace string
 	Name      string
 	Port      int
+	ClusterIP string
 }
 
 // ReplaceService deletes and re-creates a service.
@@ -143,6 +144,7 @@ func (k *K8s) ServiceInfoFromNodePortURL(nodePortURL string) (*ServiceInfo, erro
 						Namespace: svc.Namespace,
 						Name:      svc.Name,
 						Port:      int(port.Port),
+						ClusterIP: svc.Spec.ClusterIP,
 					}, nil
 				}
 			}

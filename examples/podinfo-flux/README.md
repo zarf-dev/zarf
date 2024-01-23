@@ -10,7 +10,9 @@ If you want to learn more about how Zarf handles `git` repositories, see the [gi
 
 :::caution
 
-Only `type: oci` HelmRepositories are currently supported by the Zarf agent.
+Only `type: oci` HelmRepositories are currently supported by the Zarf Agent, and to use them you also must have a version of Flux new enough to include the `type: oci` key.
+
+Zarf will also inly automatically add the `insecure` key for registries on NodePort services so if you are hosting an http registry outside of the cluster you will need to manually add this key.
 
 :::
 

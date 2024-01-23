@@ -41,7 +41,7 @@ func GetServiceInfoFromRegistryAddress(stateRegistryAddress string) (string, err
 	if err != nil {
 		message.Debugf("registry appears to not be a nodeport service, using original address %q", stateRegistryAddress)
 	} else {
-		registryAddress = fmt.Sprintf("%s.%s.svc.cluster.local:%d", registryServiceInfo.Name, registryServiceInfo.Namespace, registryServiceInfo.Port)
+		registryAddress = fmt.Sprintf("%s:%d", registryServiceInfo.ClusterIP, registryServiceInfo.Port)
 	}
 
 	return registryAddress, nil
