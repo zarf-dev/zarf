@@ -168,10 +168,14 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 			chartName = h.chart.RepoName
 		}
 
-		for _, repo := range repoFile.Repositories {
-			if repo.URL == h.chart.URL {
-				username = repo.Username
-				password = repo.Password
+		if repoFile != nil {
+			// TODO: @AustinAbro321 Currently this selects the last repo with the same url
+			// We should introduce a new field in zarf to allow users to specify the local repo they want
+			for _, repo := range repoFile.Repositories {
+				if repo.URL == h.chart.URL {
+					username = repo.Username
+					password = repo.Password
+				}
 			}
 		}
 
