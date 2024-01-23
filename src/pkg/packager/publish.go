@@ -112,7 +112,7 @@ func (p *Packager) Publish() (err error) {
 		return err
 	}
 
-	remote, err := oci.NewOrasRemote(ref, ocispec.Platform{})
+	remote, err := oci.NewOrasRemote(ref, oci.PlatformForArch(config.GetArch()))
 	if err != nil {
 		return err
 	}
