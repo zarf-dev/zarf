@@ -157,7 +157,7 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	os.Setenv("HELM_REPOSITORY_CONFIG", repoPath)
 	defer os.Unsetenv("HELM_REPOSITORY_CONFIG")
 
-	packagePath := filepath.Join("..", "packages", "external")
+	packagePath := filepath.Join("..", "packages", "external-helm-auth")
 	findImageArgs := []string{"dev", "find-images", packagePath}
 	err := exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.Error(err, "Since auth has not been setup, this should fail")
@@ -175,11 +175,11 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 	utils.WriteYaml(repoPath, repoFile, 0600)
 
 	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
-	suite.NoError(err, "Unable to find images")
+	suite.NoError(err, "Unable to find images, helm auth likely failed")
 
 	packageCreateArgs := []string{"package", "create", packagePath, fmt.Sprintf("--tmpdir=%s", tempDir), "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, packageCreateArgs...)
-	suite.NoError(err, "Unable to create package")
+	suite.NoError(err, "Unable to create package, helm auth likely failed")
 }
 
 func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, username string, password string) {

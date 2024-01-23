@@ -1,10 +1,9 @@
 kind: ZarfPackageConfig
 metadata:
-  name: helm-charts
-  description: Example showcasing mutiple ways to deploy helm charts
+  name: helm-auth
   version: 0.0.1
 components:
-- name: demo-helm-charts
+- name: private-chart
   required: true
   charts:
   - name: podinfo
