@@ -1,4 +1,4 @@
-# 22. Kubernetes Multi-tenancy with `zarf init`
+# 22. Multi-Node Kubernetes with `zarf init`
 
 Date: 2024-01-23
 
@@ -12,9 +12,8 @@ Currently today, when allowing `zarf init` to handle cluster creation, Zarf does
 
 References:
 
-* https://github.com/defenseunicorns/zarf/issues/1041
-* https://github.com/defenseunicorns/zarf/issues/1040
-* https://github.com/defenseunicorns/zarf/blob/cf9acb50e5a2240e6bd2af994e5904cd0f73fd55/src/pkg/cluster/state.go#L29
+* https://github.com/defenseunicorns/zarf-package-bare-metal
+* https://github.com/defenseunicorns/zarf/issues/1002
 
 ## Decision
 
