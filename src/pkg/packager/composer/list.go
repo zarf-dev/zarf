@@ -11,7 +11,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -80,7 +80,7 @@ type ImportChain struct {
 	head *Node
 	tail *Node
 
-	remote *oci.OrasRemote
+	remote *ocizarf.ZarfOrasRemote
 }
 
 // Head returns the first node in the import chain

@@ -17,8 +17,8 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-// CopyPackage copies a package from one OCI registry to another
-func CopyPackage(ctx context.Context, src *OrasRemote, dst *OrasRemote,
+// Copy copies an artifact from one OCI registry to another
+func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 	include func(d ocispec.Descriptor) bool, concurrency int) error {
 	// create a new semaphore to limit concurrency
 	sem := semaphore.NewWeighted(int64(concurrency))

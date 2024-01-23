@@ -24,6 +24,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -250,7 +251,7 @@ func (p *Packager) output() error {
 		if err != nil {
 			return err
 		}
-		remote, err := oci.NewOrasRemote(ref, message.Infof, oci.WithInsecure(config.CommonOptions.Insecure))
+		remote, err := ocizarf.NewZarfOrasRemote(ref, oci.WithInsecure(config.CommonOptions.Insecure))
 		if err != nil {
 			return err
 		}
@@ -652,7 +653,7 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if helpers.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		remote, err := oci.NewOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, message.Infof, oci.WithInsecure(config.CommonOptions.Insecure))
+		remote, err := ocizarf.NewZarfOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, oci.WithInsecure(config.CommonOptions.Insecure))
 		if err != nil {
 			return err
 		}

@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
@@ -129,10 +129,10 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	e2e.SetupDockerRegistry(t, dstRegistryPort)
 	defer e2e.TeardownRegistry(t, dstRegistryPort)
 
-	src, err := oci.NewOrasRemote(ref, message.Infof, oci.WithArch(e2e.Arch), oci.WithInsecure(true))
+	src, err := ocizarf.NewZarfOrasRemote(ref, oci.WithArch(e2e.Arch), oci.WithInsecure(true))
 	suite.NoError(err)
 
-	dst, err := oci.NewOrasRemote(dstRef, message.Infof, oci.WithArch(e2e.Arch), oci.WithInsecure(true))
+	dst, err := ocizarf.NewZarfOrasRemote(dstRef, oci.WithArch(e2e.Arch), oci.WithInsecure(true))
 	suite.NoError(err)
 
 	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])
@@ -150,7 +150,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	}
 	require.Less(t, attempt, 5, "failed to ping registry")
 
-	err = oci.CopyPackage(ctx, src, dst, nil, 5)
+	err = oci.Copy(ctx, src.OrasRemote, dst.OrasRemote, nil, 5)
 	suite.NoError(err)
 
 	srcRoot, err := src.FetchRoot()

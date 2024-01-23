@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -22,12 +23,12 @@ import (
 	ocistore "oras.land/oras-go/v2/content/oci"
 )
 
-func (ic *ImportChain) getRemote(url string) (*oci.OrasRemote, error) {
+func (ic *ImportChain) getRemote(url string) (*ocizarf.ZarfOrasRemote, error) {
 	if ic.remote != nil {
 		return ic.remote, nil
 	}
 	var err error
-	ic.remote, err = oci.NewOrasRemote(url, message.Infof, oci.WithSkeletonArch(), oci.WithInsecure(config.CommonOptions.Insecure))
+	ic.remote, err = ocizarf.NewZarfOrasRemote(url, ocizarf.WithSkeletonArch(), oci.WithInsecure(config.CommonOptions.Insecure))
 	if err != nil {
 		return nil, err
 	}

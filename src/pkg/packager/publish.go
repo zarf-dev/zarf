@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -37,7 +38,7 @@ func (p *Packager) Publish() (err error) {
 		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
 
 		arch := config.GetArch()
-		dstRemote, err := oci.NewOrasRemote(p.cfg.PublishOpts.PackageDestination, message.Infof, oci.WithArch(arch), oci.WithInsecure(config.CommonOptions.Insecure))
+		dstRemote, err := ocizarf.NewZarfOrasRemote(p.cfg.PublishOpts.PackageDestination, oci.WithArch(arch), oci.WithInsecure(config.CommonOptions.Insecure))
 		if err != nil {
 			return err
 		}
@@ -57,7 +58,7 @@ func (p *Packager) Publish() (err error) {
 			return fmt.Errorf("architecture mismatch (specified: %q, found %q)", arch, pkg.Build.Architecture)
 		}
 
-		if err := oci.CopyPackage(ctx, srcRemote, dstRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
+		if err := oci.Copy(ctx, srcRemote, dstRemote.OrasRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
 			return err
 		}
 
@@ -112,7 +113,7 @@ func (p *Packager) Publish() (err error) {
 		return err
 	}
 
-	remote, err := oci.NewOrasRemote(ref, message.Infof, oci.WithInsecure(config.CommonOptions.Insecure))
+	remote, err := ocizarf.NewZarfOrasRemote(ref, oci.WithInsecure(config.CommonOptions.Insecure))
 	if err != nil {
 		return err
 	}

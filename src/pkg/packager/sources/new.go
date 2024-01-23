@@ -68,11 +68,11 @@ func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 			pkgSrc = fmt.Sprintf("%s@sha256:%s", pkgSrc, pkgOpts.Shasum)
 		}
 		arch := config.GetArch()
-		remote, err := oci.NewOrasRemote(pkgSrc, message.Infof, oci.WithArch(arch), oci.WithInsecure(config.CommonOptions.Insecure))
+		remote, err := ocizarf.NewZarfOrasRemote(pkgSrc, oci.WithArch(arch), oci.WithInsecure(config.CommonOptions.Insecure))
 		if err != nil {
 			return nil, err
 		}
-		source = &OCISource{pkgOpts, &ocizarf.ZarfOrasRemote{remote}}
+		source = &OCISource{pkgOpts, remote}
 	case "tarball":
 		source = &TarballSource{pkgOpts}
 	case "http", "https", "sget":
