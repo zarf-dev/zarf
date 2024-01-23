@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -44,7 +45,8 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 
 	// pull only needed layers if --confirm is set
 	if config.CommonOptions.Confirm {
-		layersToPull, err = s.LayersFromRequestedComponents(optionalComponents)
+
+		layersToPull, err = ocizarf.LayersFromRequestedComponents(s.OrasRemote, optionalComponents)
 		if err != nil {
 			return fmt.Errorf("unable to get published component image layers: %s", err.Error())
 		}

@@ -6,6 +6,7 @@ package oci
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"time"
@@ -50,7 +51,11 @@ func CopyPackage(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 	start := time.Now()
 
 	for idx, layer := range layers {
-		src.log("Copying layer:", message.JSONValue(layer))
+		bytes, err := json.MarshalIndent(layer, "", "  ")
+		if err != nil {
+			src.log("ERROR marshalling json: %s", err.Error())
+		}
+		src.log("Copying layer:", string(bytes))
 		if err := sem.Acquire(ctx, 1); err != nil {
 			return err
 		}

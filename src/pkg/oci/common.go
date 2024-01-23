@@ -94,7 +94,6 @@ func WithTargetPlatform(platform *ocispec.Platform) Modifier {
 	}
 }
 
-// WithSkeletonArch sets the target architecture for the remote to skeleton
 func WithSkeletonArch() Modifier {
 	return WithTargetPlatform(&ocispec.Platform{
 		OS:           MultiOS,
