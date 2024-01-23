@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"strings"
 
-	zarfconfig "github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/docker/cli/cli/config"
@@ -34,14 +32,19 @@ const (
 	MultiOS = "multi"
 )
 
+// log is a function that logs a message.
+type log func(string, ...any)
+
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
 type OrasRemote struct {
 	repo           *remote.Repository
-	root           *ZarfOCIManifest
+	root           *OCIManifest
 	ctx            context.Context
 	Transport      *utils.Transport
 	CopyOpts       oras.CopyOptions
 	targetPlatform *ocispec.Platform
+	userAgent      string
+	log            log
 }
 
 // Modifier is a function that modifies an OrasRemote
@@ -51,6 +54,15 @@ type Modifier func(*OrasRemote)
 func WithContext(ctx context.Context) Modifier {
 	return func(o *OrasRemote) {
 		o.ctx = ctx
+	}
+}
+
+func WithInsecure(insecure bool) Modifier {
+	return func(o *OrasRemote) {
+		plainHTTPMod := WithPlainHTTP(insecure)
+		plainHTTPMod(o)
+		insecureTLSMod := WithInsecureSkipVerify(insecure)
+		insecureTLSMod(o)
 	}
 }
 
@@ -98,15 +110,23 @@ func WithArch(arch string) Modifier {
 	})
 }
 
+// WithArch sets the target architecture for the remote
+func WithUserAgent(userAgent string) Modifier {
+	return func(o *OrasRemote) {
+		o.userAgent = userAgent
+	}
+}
+
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
 // Registry auth is handled by the Docker CLI's credential store and checked before returning the client
-func NewOrasRemote(url string, mods ...Modifier) (*OrasRemote, error) {
+func NewOrasRemote(url string, logger log, mods ...Modifier) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
 	}
 	o := &OrasRemote{}
+	o.log = logger
 
 	if err := o.setRepository(ref); err != nil {
 		return nil, err
@@ -116,15 +136,6 @@ func NewOrasRemote(url string, mods ...Modifier) (*OrasRemote, error) {
 	copyOpts.OnCopySkipped = o.printLayerSkipped
 	copyOpts.PostCopy = o.printLayerCopied
 	o.CopyOpts = copyOpts
-
-	// right now --insecure is overloaded to mean both plain HTTP and insecure TLS
-	// putting this here as the "default" for the remote
-	// but can be overridden by a provided modifier
-	insecureMod := WithInsecureSkipVerify(zarfconfig.CommonOptions.Insecure)
-	insecureMod(o)
-
-	httpMod := WithPlainHTTP(zarfconfig.CommonOptions.Insecure)
-	httpMod(o)
 
 	for _, mod := range mods {
 		mod(o)
@@ -186,15 +197,17 @@ func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, err
 			Transport: o.Transport,
 		},
 	}
-	client.SetUserAgent("zarf/" + zarfconfig.CLIVersion)
+	if o.userAgent != "" {
+		client.SetUserAgent(o.userAgent)
+	}
 
-	message.Debugf("Loading docker config file from default config location: %s for %s", config.Dir(), ref)
+	o.log("Loading docker config file from default config location: %s for %s", config.Dir(), ref)
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
 		return nil, err
 	}
 	if !cfg.ContainsAuth() {
-		message.Debug("no docker config file found, run 'zarf tools registry login --help'")
+		o.log("no docker config file found, run 'zarf tools registry login --help'")
 		return client, nil
 	}
 

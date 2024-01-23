@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -128,10 +129,10 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	e2e.SetupDockerRegistry(t, dstRegistryPort)
 	defer e2e.TeardownRegistry(t, dstRegistryPort)
 
-	src, err := oci.NewOrasRemote(ref, oci.WithPlainHTTP(true), oci.WithArch(e2e.Arch))
+	src, err := oci.NewOrasRemote(ref, message.Infof, oci.WithArch(e2e.Arch), oci.WithInsecure(true))
 	suite.NoError(err)
 
-	dst, err := oci.NewOrasRemote(dstRef, oci.WithPlainHTTP(true), oci.WithArch(e2e.Arch))
+	dst, err := oci.NewOrasRemote(dstRef, message.Infof, oci.WithArch(e2e.Arch), oci.WithInsecure(true))
 	suite.NoError(err)
 
 	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])

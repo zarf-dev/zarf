@@ -138,7 +138,7 @@ func downloadInitPackage(cacheDirectory string) (string, error) {
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		remote, err := oci.NewOrasRemote(url, oci.WithArch(config.GetArch()))
+		remote, err := oci.NewOrasRemote(url, message.Infof, oci.WithArch(config.GetArch()), oci.WithInsecure(config.CommonOptions.Insecure))
 		if err != nil {
 			return "", err
 		}

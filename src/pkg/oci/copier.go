@@ -17,7 +17,8 @@ import (
 )
 
 // CopyPackage copies a package from one OCI registry to another
-func CopyPackage(ctx context.Context, src *OrasRemote, dst *OrasRemote, include func(d ocispec.Descriptor) bool, concurrency int) error {
+func CopyPackage(ctx context.Context, src *OrasRemote, dst *OrasRemote,
+	include func(d ocispec.Descriptor) bool, concurrency int) error {
 	// create a new semaphore to limit concurrency
 	sem := semaphore.NewWeighted(int64(concurrency))
 
@@ -49,7 +50,7 @@ func CopyPackage(ctx context.Context, src *OrasRemote, dst *OrasRemote, include 
 	start := time.Now()
 
 	for idx, layer := range layers {
-		message.Debug("Copying layer:", message.JSONValue(layer))
+		src.log("Copying layer:", message.JSONValue(layer))
 		if err := sem.Acquire(ctx, 1); err != nil {
 			return err
 		}
@@ -60,7 +61,7 @@ func CopyPackage(ctx context.Context, src *OrasRemote, dst *OrasRemote, include 
 			return err
 		}
 		if exists {
-			message.Debug("Layer already exists in destination, skipping")
+			src.log("Layer already exists in destination, skipping")
 			progressBar.UpdateTitle(fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
 			progressBar.Add(int(layer.Size))
 			sem.Release(1)
@@ -112,7 +113,7 @@ func CopyPackage(ctx context.Context, src *OrasRemote, dst *OrasRemote, include 
 	}
 
 	duration := time.Since(start)
-	message.Debug("Copied", src.repo.Reference, "to", dst.repo.Reference, "with a concurrency of", concurrency, "and took", duration)
+	src.log("Copied", src.repo.Reference, "to", dst.repo.Reference, "with a concurrency of", concurrency, "and took", duration)
 
 	return nil
 }

@@ -42,7 +42,7 @@ func (o *OrasRemote) ResolveRoot() (ocispec.Descriptor, error) {
 }
 
 // FetchRoot fetches the root manifest from the remote repository.
-func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
+func (o *OrasRemote) FetchRoot() (*OCIManifest, error) {
 	if o.root != nil {
 		return o.root, nil
 	}
@@ -62,8 +62,8 @@ func (o *OrasRemote) FetchRoot() (*ZarfOCIManifest, error) {
 }
 
 // FetchManifest fetches the manifest with the given descriptor from the remote repository.
-func (o *OrasRemote) FetchManifest(desc ocispec.Descriptor) (manifest *ZarfOCIManifest, err error) {
-	return FetchUnmarshal[*ZarfOCIManifest](o.FetchLayer, json.Unmarshal, desc)
+func (o *OrasRemote) FetchManifest(desc ocispec.Descriptor) (manifest *OCIManifest, err error) {
+	return FetchUnmarshal[*OCIManifest](o.FetchLayer, json.Unmarshal, desc)
 }
 
 // FetchLayer fetches the layer with the given descriptor from the remote repository.
@@ -90,7 +90,7 @@ func (o *OrasRemote) FetchImagesIndex() (index *ocispec.Index, err error) {
 }
 
 // FetchJSONFile fetches the given JSON file from the remote repository.
-func FetchJSONFile[T any](fetcher func(desc ocispec.Descriptor) (bytes []byte, err error), manifest *ZarfOCIManifest, path string) (result T, err error) {
+func FetchJSONFile[T any](fetcher func(desc ocispec.Descriptor) (bytes []byte, err error), manifest *OCIManifest, path string) (result T, err error) {
 	descriptor := manifest.Locate(path)
 	if IsEmptyDescriptor(descriptor) {
 		return result, fmt.Errorf("unable to find %s in the manifest", path)
@@ -99,7 +99,7 @@ func FetchJSONFile[T any](fetcher func(desc ocispec.Descriptor) (bytes []byte, e
 }
 
 // FetchYAMLFile fetches the given YAML file from the remote repository.
-func FetchYAMLFile[T any](fetcher func(desc ocispec.Descriptor) (bytes []byte, err error), manifest *ZarfOCIManifest, path string) (result T, err error) {
+func FetchYAMLFile[T any](fetcher func(desc ocispec.Descriptor) (bytes []byte, err error), manifest *OCIManifest, path string) (result T, err error) {
 	descriptor := manifest.Locate(path)
 	if IsEmptyDescriptor(descriptor) {
 		return result, fmt.Errorf("unable to find %s in the manifest", path)

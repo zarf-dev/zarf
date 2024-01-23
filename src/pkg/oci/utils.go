@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -35,7 +34,7 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 		raw = fmt.Sprintf("%s-%s", raw, build.Flavor)
 	}
 
-	message.Debug("Raw OCI reference from metadata:", raw)
+	//o.log("Raw OCI reference from metadata:", raw)
 
 	ref, err := registry.ParseReference(raw)
 	if err != nil {

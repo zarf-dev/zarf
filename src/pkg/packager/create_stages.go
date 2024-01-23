@@ -250,7 +250,7 @@ func (p *Packager) output() error {
 		if err != nil {
 			return err
 		}
-		remote, err := oci.NewOrasRemote(ref)
+		remote, err := oci.NewOrasRemote(ref, message.Infof, oci.WithInsecure(config.CommonOptions.Insecure))
 		if err != nil {
 			return err
 		}
@@ -652,7 +652,7 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if helpers.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		remote, err := oci.NewOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath)
+		remote, err := oci.NewOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, message.Infof, oci.WithInsecure(config.CommonOptions.Insecure))
 		if err != nil {
 			return err
 		}

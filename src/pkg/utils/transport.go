@@ -9,19 +9,25 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
+
+type progressBar interface {
+	Add(int)
+	Write([]byte) (n int, err error)
+	Stop()
+	Successf(format string, args ...interface{})
+}
 
 // Transport is an http.RoundTripper that keeps track of the in-flight
 // request and add hooks to report upload progress.
 type Transport struct {
 	Base        http.RoundTripper
-	ProgressBar *message.ProgressBar
+	ProgressBar progressBar
 }
 
 // NewTransport returns a custom transport that tracks an http.RoundTripper and a message.ProgressBar.
-func NewTransport(base http.RoundTripper, bar *message.ProgressBar) *Transport {
+func NewTransport(base http.RoundTripper, bar progressBar) *Transport {
 	return &Transport{
 		Base:        base,
 		ProgressBar: bar,

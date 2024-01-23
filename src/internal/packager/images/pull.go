@@ -74,6 +74,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	spinner.Updatef("Fetching image metadata (0 of %d)", len(i.ImageList))
 
 	// Spawn a goroutine for each image to load its metadata
+	// I would like to understand this code better
 	for _, refInfo := range i.ImageList {
 		// Create a closure so that we can pass the src into the goroutine
 		refInfo := refInfo

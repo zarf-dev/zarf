@@ -183,7 +183,7 @@ var downloadInitCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		url := oci.GetInitPackageURL(config.CLIVersion)
 
-		remote, err := oci.NewOrasRemote(url, oci.WithArch(config.GetArch()))
+		remote, err := oci.NewOrasRemote(url, message.Infof, oci.WithArch(config.GetArch()), oci.WithInsecure(config.CommonOptions.Insecure))
 		if err != nil {
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 		}
