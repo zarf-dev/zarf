@@ -1,4 +1,4 @@
-# 22. Kubernetes Multitenancy with `zarf init`
+# 22. Kubernetes Multi-tenancy with `zarf init`
 
 Date: 2024-01-23
 
