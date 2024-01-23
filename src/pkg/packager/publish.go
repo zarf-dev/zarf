@@ -37,7 +37,7 @@ func (p *Packager) Publish() (err error) {
 		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
 
 		arch := config.GetArch()
-		dstRemote, err := oci.NewOrasRemote(p.cfg.PublishOpts.PackageDestination, oci.WithArch(arch))
+		dstRemote, err := oci.NewOrasRemote(p.cfg.PublishOpts.PackageDestination, oci.PlatformForArch(arch))
 		if err != nil {
 			return err
 		}

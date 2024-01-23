@@ -75,16 +75,16 @@ func WithInsecureSkipVerify(insecure bool) Modifier {
 	}
 }
 
-// WithSkeletonArch sets the target architecture for the remote to skeleton
-func WithSkeletonArch() ocispec.Platform {
+// PlatformForSkeleton sets the target architecture for the remote to skeleton
+func PlatformForSkeleton() ocispec.Platform {
 	return ocispec.Platform{
 		OS:           MultiOS,
 		Architecture: SkeletonArch,
 	}
 }
 
-// WithArch sets the target architecture for the remote
-func WithArch(arch string) ocispec.Platform {
+// PlatformForArch sets the target architecture for the remote
+func PlatformForArch(arch string) ocispec.Platform {
 	return ocispec.Platform{
 		OS:           MultiOS,
 		Architecture: arch,
@@ -100,9 +100,7 @@ func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*Or
 		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
 	}
 	o := &OrasRemote{}
-	if platform.OS != "" || platform.Architecture != "" || platform.OSVersion != "" || len(platform.OSFeatures) != 0 || platform.Variant != "" {
-		o.targetPlatform = &platform
-	}
+	o.targetPlatform = &platform
 
 	if err := o.setRepository(ref); err != nil {
 		return nil, err
