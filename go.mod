@@ -11,7 +11,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/anchore/clio v0.0.0-20240118133543-a5e93b68d716
-	github.com/anchore/stereoscope v0.0.0-20231220161148-590920dabc54
+	github.com/anchore/stereoscope v0.0.0-20240118133533-eb656fc71793
 	github.com/anchore/syft v0.99.0
 	github.com/derailed/k9s v0.29.1
 	github.com/distribution/reference v0.5.0
