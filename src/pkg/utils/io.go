@@ -470,7 +470,7 @@ func CreateReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string) er
 		}
 
 		// If it's a file, write its content
-		if !info.IsDir() && info.Mode()&os.ModeSymlink != os.ModeSymlink {
+		if info.Mode().IsRegular() {
 			file, err := os.Open(filePath)
 			if err != nil {
 				return fmt.Errorf("error opening file: %w", err)
