@@ -419,7 +419,7 @@ func (pc *PackageCreator) Output() error {
 		if err != nil {
 			return err
 		}
-		remote, err := oci.NewOrasRemote(ref)
+		remote, err := oci.NewOrasRemote(ref, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
 			return err
 		}

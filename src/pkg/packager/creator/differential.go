@@ -33,7 +33,7 @@ func loadDifferentialData(diffData *types.DifferentialData) (*types.Differential
 
 	// Load the reference package.
 	if helpers.IsOCIURL(diffData.DifferentialPackagePath) {
-		remote, err := oci.NewOrasRemote(diffData.DifferentialPackagePath)
+		remote, err := oci.NewOrasRemote(diffData.DifferentialPackagePath, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
 			return nil, err
 		}
