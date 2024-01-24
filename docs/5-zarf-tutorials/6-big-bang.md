@@ -145,7 +145,7 @@ zarf init
 # ? Deploy the git-server component? Yes
 
 # (Optional) Inspect the results
-zarf tools k9s
+zarf tools monitor
 ```
 
 :::note
@@ -172,7 +172,7 @@ zarf package deploy
 Once the install completes you can inspect the results and watch the Big Bang components deploy using the following:
 
 ```bash
-zarf tools k9s
+zarf tools monitor
 
 # To view different k8s objects you can use the following:
 
