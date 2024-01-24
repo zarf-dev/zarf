@@ -143,6 +143,10 @@ func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent
 	for filesIdx, file := range component.Files {
 		message.Debugf("Loading %#v", file)
 
+		if helpers.IsURL(file.Source) {
+			continue
+		}
+
 		rel := filepath.Join(layout.FilesDir, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(componentPaths.Base, rel)
 		destinationDir := filepath.Dir(dst)
