@@ -129,11 +129,10 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	e2e.SetupDockerRegistry(t, dstRegistryPort)
 	defer e2e.TeardownRegistry(t, dstRegistryPort)
 
-	src, err := ocizarf.NewZarfOrasRemote(ref, oci.WithArch(e2e.Arch), oci.WithInsecure(true))
+	src, err := ocizarf.NewZarfOrasRemote(ref, oci.PlatformForArch(e2e.Arch), oci.WithInsecure(true))
 	suite.NoError(err)
 
-	dst, err := ocizarf.NewZarfOrasRemote(dstRef, oci.WithArch(e2e.Arch), oci.WithInsecure(true))
-	suite.NoError(err)
+	dst, err := ocizarf.NewZarfOrasRemote(dstRef, oci.PlatformForArch(e2e.Arch), oci.WithInsecure(true))
 
 	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])
 	suite.NoError(err)

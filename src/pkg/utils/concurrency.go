@@ -7,7 +7,6 @@ package utils
 
 import (
 	"context"
-	"sync"
 )
 
 // ConcurrencyTools is a struct that contains channels and a context for use in concurrent routines
@@ -16,7 +15,6 @@ type ConcurrencyTools[P any, E any] struct {
 	ErrorChan    chan E
 	context      context.Context
 	Cancel       context.CancelFunc
-	waitGroup    *sync.WaitGroup
 	routineCount int
 }
 
@@ -30,16 +28,11 @@ func NewConcurrencyTools[P any, E any](length int) *ConcurrencyTools[P, E] {
 
 	errorChan := make(chan E, length)
 
-	waitGroup := sync.WaitGroup{}
-
-	waitGroup.Add(length)
-
 	concurrencyTools := ConcurrencyTools[P, E]{
 		ProgressChan: progressChan,
 		ErrorChan:    errorChan,
 		context:      ctx,
 		Cancel:       cancel,
-		waitGroup:    &waitGroup,
 		routineCount: length,
 	}
 
@@ -55,11 +48,6 @@ func (ct *ConcurrencyTools[P, E]) IsDone() bool {
 	default:
 		return false
 	}
-}
-
-// WaitGroupDone decrements the internal WaitGroup counter by one.
-func (ct *ConcurrencyTools[P, E]) WaitGroupDone() {
-	ct.waitGroup.Done()
 }
 
 // WaitWithProgress waits for all routines to finish
@@ -78,7 +66,6 @@ func (ct *ConcurrencyTools[P, E]) WaitWithProgress(onProgress func(P, int), onEr
 			onProgress(progress, i)
 		}
 	}
-	ct.waitGroup.Wait()
 	return nil
 }
 
@@ -95,6 +82,5 @@ func (ct *ConcurrencyTools[P, E]) WaitWithoutProgress(onError func(E) error) err
 		case <-ct.ProgressChan:
 		}
 	}
-	ct.waitGroup.Wait()
 	return nil
 }

@@ -88,19 +88,20 @@ func WithInsecureSkipVerify(insecure bool) Modifier {
 	}
 }
 
-// WithTargetPlatform sets the target platform for the remote
-func WithTargetPlatform(platform *ocispec.Platform) Modifier {
-	return func(o *OrasRemote) {
-		o.targetPlatform = platform
+// PlatformForSkeleton sets the target architecture for the remote to skeleton
+func PlatformForSkeleton() ocispec.Platform {
+	return ocispec.Platform{
+		OS:           MultiOS,
+		Architecture: SkeletonArch,
 	}
 }
 
-// WithArch sets the target architecture for the remote
-func WithArch(arch string) Modifier {
-	return WithTargetPlatform(&ocispec.Platform{
+// PlatformForArch sets the target architecture for the remote
+func PlatformForArch(arch string) ocispec.Platform {
+	return ocispec.Platform{
 		OS:           MultiOS,
 		Architecture: arch,
-	})
+	}
 }
 
 // WithArch sets the target architecture for the remote
@@ -113,13 +114,15 @@ func WithUserAgent(userAgent string) Modifier {
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
 // Registry auth is handled by the Docker CLI's credential store and checked before returning the client
-func NewOrasRemote(url string, logger log, mods ...Modifier) (*OrasRemote, error) {
+// Should I keep platform in this function or only have it in NewZarfOrasRemote?
+func NewOrasRemote(url string, logger log, platform ocispec.Platform, mods ...Modifier) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
 	}
 	o := &OrasRemote{}
 	o.log = logger
+	o.targetPlatform = &platform
 
 	if err := o.setRepository(ref); err != nil {
 		return nil, err
