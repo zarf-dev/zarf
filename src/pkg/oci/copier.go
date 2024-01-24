@@ -22,9 +22,11 @@ type ProgressTracker interface {
 	Current() int64
 	Write([]byte) (int, error)
 	Finish(format string, a ...any)
+	Add(n int)
 }
 
 // Copy copies an artifact from one OCI registry to another
+// ?! We should probably add in nil checks for progressTracker I assume
 func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 	include func(d ocispec.Descriptor) bool, concurrency int, progressTracker ProgressTracker) error {
 	// create a new semaphore to limit concurrency
@@ -52,10 +54,11 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 		size += layer.Size
 	}
 
-	title := fmt.Sprintf("[0/%d] layers copied", len(layers))
-
-	progressTracker.Start(size, title)
-	defer progressTracker.Finish("Copied %s", src.repo.Reference)
+	if progressTracker != nil {
+		title := fmt.Sprintf("[0/%d] layers copied", len(layers))
+		progressTracker.Start(size, title)
+		defer progressTracker.Finish("Copied %s", src.repo.Reference)
+	}
 
 	start := time.Now()
 
@@ -76,28 +79,52 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 		}
 		if exists {
 			src.log("Layer already exists in destination, skipping")
-			progressTracker.Update(layer.Size, fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
+			if progressTracker != nil {
+				progressTracker.Update(layer.Size, fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
+			}
 			sem.Release(1)
 			continue
 		}
 
-		// create a new pipe so we can write to both the progressbar and the destination at the same time
-		pr, pw := io.Pipe()
-
 		eg, ectx := errgroup.WithContext(ctx)
 		eg.SetLimit(2)
+
+		var tr io.Reader
+		var pw *io.PipeWriter
 
 		// fetch the layer from the source
 		rc, err := src.repo.Fetch(ectx, layer)
 		if err != nil {
 			return err
 		}
-		// TeeReader gets the data from the fetching layer and writes it to the PipeWriter
-		tr := io.TeeReader(rc, pw)
+
+		// ?! Does changing the order of this affect anything
+		if progressTracker != nil {
+			// create a new pipe so we can write to both the progressbar and the destination at the same time
+			pr, pwTemp := io.Pipe()
+			pw = pwTemp
+
+			// TeeReader gets the data from the fetching layer and writes it to the PipeWriter
+			tr = io.TeeReader(rc, pw)
+			// this goroutine is responsible for updating the progressbar
+			eg.Go(func() error {
+				// read from the PipeReader to the progressbar
+				if _, err := io.Copy(progressTracker, pr); err != nil {
+					return fmt.Errorf("failed to update progress on layer %s: %w", layer.Digest, err)
+				}
+				return nil
+			})
+		} else {
+			tr = rc
+		}
 
 		// this goroutine is responsible for pushing the layer to the destination
 		eg.Go(func() error {
-			defer pw.Close()
+			defer func() {
+				if pw != nil {
+					pw.Close()
+				}
+			}()
 
 			// get data from the TeeReader and push it to the destination
 			// push the layer to the destination
@@ -108,21 +135,14 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 			return nil
 		})
 
-		// this goroutine is responsible for updating the progressbar
-		eg.Go(func() error {
-			// read from the PipeReader to the progressbar
-			if _, err := io.Copy(progressTracker, pr); err != nil {
-				return fmt.Errorf("failed to update progress on layer %s: %w", layer.Digest, err)
-			}
-			return nil
-		})
-
 		// wait for the goroutines to finish
 		if err := eg.Wait(); err != nil {
 			return err
 		}
 		sem.Release(1)
-		progressTracker.Update(progressTracker.Current(), fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
+		if progressTracker != nil {
+			progressTracker.Update(progressTracker.Current(), fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
+		}
 	}
 
 	duration := time.Since(start)

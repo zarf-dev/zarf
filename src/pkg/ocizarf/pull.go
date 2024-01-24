@@ -33,7 +33,7 @@ var (
 //   - zarf.yaml.sig
 func (o *ZarfOrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 	isPartialPull := len(layersToPull) > 0
-	message.Infof("Pulling", o.Repo())
+	message.Debugf("Pulling %s", o.Repo().Reference)
 
 	manifest, err := o.FetchRoot()
 	if err != nil {
