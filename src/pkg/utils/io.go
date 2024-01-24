@@ -249,7 +249,11 @@ func CreatePathAndCopy(source string, destination string) error {
 	}
 
 	// Copy all the source data into the destination location
-	if err := copy.Copy(source, destination); err != nil {
+	if err := copy.Copy(source, destination, copy.Options{
+		OnSymlink: func(_ string) copy.SymlinkAction {
+			return copy.Deep
+		},
+	}); err != nil {
 		return err
 	}
 
