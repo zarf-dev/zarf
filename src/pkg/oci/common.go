@@ -113,8 +113,9 @@ func WithUserAgent(userAgent string) Modifier {
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
-// Registry auth is handled by the Docker CLI's credential store and checked before returning the client
-// Should I keep platform in this function or only have it in NewZarfOrasRemote?
+// # Registry auth is handled by the Docker CLI's credential store and checked before returning the client
+//
+// ?! Should I keep platform in this function or only have it in NewZarfOrasRemote?
 func NewOrasRemote(url string, logger log, platform ocispec.Platform, mods ...Modifier) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {

@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -67,7 +68,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	metadataImageConcurrency := utils.NewConcurrencyTools[ImgInfo, error](len(i.ImageList))
+	metadataImageConcurrency := helpers.NewConcurrencyTools[ImgInfo, error](len(i.ImageList))
 
 	defer metadataImageConcurrency.Cancel()
 
@@ -191,7 +192,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 	// Spawn a goroutine for each layer to write it to disk using crane
 
-	layerWritingConcurrency := utils.NewConcurrencyTools[bool, error](len(processedLayers))
+	layerWritingConcurrency := helpers.NewConcurrencyTools[bool, error](len(processedLayers))
 
 	defer layerWritingConcurrency.Cancel()
 
@@ -335,7 +336,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 		return nil, err
 	}
 
-	imageSavingConcurrency := utils.NewConcurrencyTools[digestInfo, error](len(refInfoToImage))
+	imageSavingConcurrency := helpers.NewConcurrencyTools[digestInfo, error](len(refInfoToImage))
 
 	defer imageSavingConcurrency.Cancel()
 

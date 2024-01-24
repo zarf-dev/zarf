@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 // forked from https://www.socketloop.com/tutorials/golang-byte-format-example
 
-// Package utils provides generic helper functions.
-package utils
+// Package helpers provides generic helper functions with no external imports
+package helpers
 
 import (
 	"context"
