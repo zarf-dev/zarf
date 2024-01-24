@@ -11,15 +11,22 @@ import (
 	"io"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
 
+type ProgressTracker interface {
+	Start(total int64, text string)
+	Update(complete int64, text string)
+	Current() int64
+	Write([]byte) (int, error)
+	Finish(format string, a ...any)
+}
+
 // Copy copies an artifact from one OCI registry to another
 func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
-	include func(d ocispec.Descriptor) bool, concurrency int) error {
+	include func(d ocispec.Descriptor) bool, concurrency int, progressTracker ProgressTracker) error {
 	// create a new semaphore to limit concurrency
 	sem := semaphore.NewWeighted(int64(concurrency))
 
@@ -46,8 +53,10 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 	}
 
 	title := fmt.Sprintf("[0/%d] layers copied", len(layers))
-	progressBar := message.NewProgressBar(size, title)
-	defer progressBar.Successf("Copied %s", src.repo.Reference)
+
+	progressTracker.Start(size, title)
+	defer progressTracker.Finish("Copied %s", src.repo.Reference)
+
 	start := time.Now()
 
 	for idx, layer := range layers {
@@ -67,8 +76,7 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 		}
 		if exists {
 			src.log("Layer already exists in destination, skipping")
-			progressBar.UpdateTitle(fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
-			progressBar.Add(int(layer.Size))
+			progressTracker.Update(layer.Size, fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
 			sem.Release(1)
 			continue
 		}
@@ -103,7 +111,7 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 		// this goroutine is responsible for updating the progressbar
 		eg.Go(func() error {
 			// read from the PipeReader to the progressbar
-			if _, err := io.Copy(progressBar, pr); err != nil {
+			if _, err := io.Copy(progressTracker, pr); err != nil {
 				return fmt.Errorf("failed to update progress on layer %s: %w", layer.Digest, err)
 			}
 			return nil
@@ -114,7 +122,7 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 			return err
 		}
 		sem.Release(1)
-		progressBar.UpdateTitle(fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
+		progressTracker.Update(progressTracker.Current(), fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
 	}
 
 	duration := time.Since(start)

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/stretchr/testify/require"
@@ -133,6 +134,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	suite.NoError(err)
 
 	dst, err := ocizarf.NewZarfOrasRemote(dstRef, oci.PlatformForArch(e2e.Arch), oci.WithInsecure(true))
+	suite.NoError(err)
 
 	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])
 	suite.NoError(err)
@@ -149,7 +151,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	}
 	require.Less(t, attempt, 5, "failed to ping registry")
 
-	err = oci.Copy(ctx, src.OrasRemote, dst.OrasRemote, nil, 5)
+	err = oci.Copy(ctx, src.OrasRemote, dst.OrasRemote, nil, 5, &message.ProgressBar{})
 	suite.NoError(err)
 
 	srcRoot, err := src.FetchRoot()

@@ -37,6 +37,21 @@ func NewProgressBar(total int64, text string) *ProgressBar {
 	}
 }
 
+func (p *ProgressBar) Start(total int64, text string) {
+	p.startText = text
+	if NoProgress {
+		Info(p.startText)
+	} else {
+		p.progress, _ = pterm.DefaultProgressbar.
+			WithTotal(int(total)).
+			WithShowCount(false).
+			WithTitle(padding + text).
+			WithRemoveWhenDone(true).
+			WithMaxWidth(TermWidth).
+			Start()
+	}
+}
+
 // Update updates the ProgressBar with completed progress and new text.
 func (p *ProgressBar) Update(complete int64, text string) {
 	if NoProgress {
@@ -46,6 +61,10 @@ func (p *ProgressBar) Update(complete int64, text string) {
 	p.progress.UpdateTitle(padding + text)
 	chunk := int(complete) - p.progress.Current
 	p.Add(chunk)
+}
+
+func (p *ProgressBar) Current() int64 {
+	return int64(p.progress.Current)
 }
 
 // UpdateTitle updates the ProgressBar with new text.
@@ -76,6 +95,10 @@ func (p *ProgressBar) Write(data []byte) (int, error) {
 		p.Add(n)
 	}
 	return n, nil
+}
+
+func (p *ProgressBar) Finish(format string, a ...any) {
+	p.Successf(format, a...)
 }
 
 // Successf marks the ProgressBar as successful in the CLI.
