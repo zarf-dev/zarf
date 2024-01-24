@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/stretchr/testify/require"
@@ -151,7 +150,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	}
 	require.Less(t, attempt, 5, "failed to ping registry")
 
-	err = oci.Copy(ctx, src.OrasRemote, dst.OrasRemote, nil, 5, &message.ProgressBar{})
+	err = ocizarf.CopyPackage(ctx, src.OrasRemote, dst.OrasRemote, nil, 5)
 	suite.NoError(err)
 
 	srcRoot, err := src.FetchRoot()

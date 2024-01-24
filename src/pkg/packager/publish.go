@@ -58,7 +58,7 @@ func (p *Packager) Publish() (err error) {
 			return fmt.Errorf("architecture mismatch (specified: %q, found %q)", arch, pkg.Build.Architecture)
 		}
 
-		if err := oci.Copy(ctx, srcRemote, dstRemote.OrasRemote, nil, config.CommonOptions.OCIConcurrency, &message.ProgressBar{}); err != nil {
+		if err := ocizarf.CopyPackage(ctx, srcRemote, dstRemote.OrasRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
 			return err
 		}
 
