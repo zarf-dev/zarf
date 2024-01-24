@@ -66,7 +66,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg *
 	warnings = append(warnings, templateWarnings...)
 
 	// After templates are filled process any create extensions
-	extendedPkg, err := ProcessExtensions(composedPkg, &pc.cfg.CreateOpts, dst)
+	extendedPkg, err := processExtensions(composedPkg, &pc.cfg.CreateOpts, dst)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -51,7 +51,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(_ *layout.PackagePaths) (pkg *t
 
 // TODO: print warnings somewhere else in the skeleton create flow.
 func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths) error {
-	pkg, err := ProcessExtensions(&sc.cfg.Pkg, &sc.cfg.CreateOpts, dst)
+	pkg, err := processExtensions(&sc.cfg.Pkg, &sc.cfg.CreateOpts, dst)
 	if err != nil {
 		return nil
 	}

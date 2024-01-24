@@ -12,8 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// TODO: @lucasrod16: make this function private once assemble() logic is moved to the creator package.
-func ProcessExtensions(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions, layout *layout.PackagePaths) (*types.ZarfPackage, error) {
+func processExtensions(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions, layout *layout.PackagePaths) (*types.ZarfPackage, error) {
 	components := []types.ZarfComponent{}
 
 	// Create component paths and process extensions for each component.
