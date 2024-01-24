@@ -1,0 +1,14 @@
+kind: ZarfPackageConfig
+metadata:
+  name: manifest-with-symlink
+  description: Example with a symbolic link embedded in it
+  version: 0.0.1
+
+components:
+  - name: manifest-with-symlink
+    required: true
+    manifests:
+      - name: manifest-with-symlink
+        namespace: manifest-symlink
+        files:
+          - manifests
