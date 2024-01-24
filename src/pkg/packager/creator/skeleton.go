@@ -29,12 +29,11 @@ var (
 
 // SkeletonCreator provides methods for creating skeleton Zarf packages.
 type SkeletonCreator struct {
-	cfg    *types.PackagerConfig
-	layout *layout.PackagePaths
+	cfg *types.PackagerConfig
 }
 
 // LoadPackageDefinition loads and configure a zarf.yaml file during package create.
-func (sc *SkeletonCreator) LoadPackageDefinition() (pkg *types.ZarfPackage, warnings []string, err error) {
+func (sc *SkeletonCreator) LoadPackageDefinition(_ *layout.PackagePaths) (pkg *types.ZarfPackage, warnings []string, err error) {
 	configuredPkg, err := setPackageMetadata(&sc.cfg.Pkg, &sc.cfg.CreateOpts)
 	if err != nil {
 		message.Warn(err.Error())
@@ -51,23 +50,23 @@ func (sc *SkeletonCreator) LoadPackageDefinition() (pkg *types.ZarfPackage, warn
 }
 
 // TODO: print warnings somewhere else in the skeleton create flow.
-func (sc *SkeletonCreator) Assemble() error {
-	pkg, err := ProcessExtensions(&sc.cfg.Pkg, &sc.cfg.CreateOpts, sc.layout)
+func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths) error {
+	pkg, err := ProcessExtensions(&sc.cfg.Pkg, &sc.cfg.CreateOpts, dst)
 	if err != nil {
 		return nil
 	}
 
 	for idx, component := range pkg.Components {
-		if err := sc.addComponent(idx, component); err != nil {
+		if err := sc.addComponent(idx, component, dst); err != nil {
 			return err
 		}
 
-		if err := sc.layout.Components.Archive(component, false); err != nil {
+		if err := dst.Components.Archive(component, false); err != nil {
 			return err
 		}
 	}
 
-	checksumChecksum, err := sc.generatePackageChecksums()
+	checksumChecksum, err := generateChecksums(dst)
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
 	}
@@ -76,14 +75,14 @@ func (sc *SkeletonCreator) Assemble() error {
 	return nil
 }
 
-func (sc *SkeletonCreator) Output() error {
-	return utils.WriteYaml(sc.layout.ZarfYAML, sc.cfg.Pkg, 0400)
+func (sc *SkeletonCreator) Output(dst *layout.PackagePaths) error {
+	return utils.WriteYaml(dst.ZarfYAML, sc.cfg.Pkg, 0400)
 }
 
-func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent) error {
+func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent, dst *layout.PackagePaths) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
-	componentPaths, err := sc.layout.Components.Create(component)
+	componentPaths, err := dst.Components.Create(component)
 	if err != nil {
 		return err
 	}
@@ -256,8 +255,4 @@ func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent
 	}
 
 	return nil
-}
-
-func (sc *SkeletonCreator) generatePackageChecksums() (string, error) {
-	return generateChecksums(sc.layout)
 }

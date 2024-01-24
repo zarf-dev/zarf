@@ -39,12 +39,11 @@ var (
 
 // PackageCreator provides methods for creating normal (not skeleton) Zarf packages.
 type PackageCreator struct {
-	cfg    *types.PackagerConfig
-	layout *layout.PackagePaths
+	cfg *types.PackagerConfig
 }
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
-func (pc *PackageCreator) LoadPackageDefinition() (pkg *types.ZarfPackage, warnings []string, err error) {
+func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg *types.ZarfPackage, warnings []string, err error) {
 	configuredPkg, err := setPackageMetadata(&pc.cfg.Pkg, &pc.cfg.CreateOpts)
 	if err != nil {
 		message.Warn(err.Error())
@@ -67,7 +66,7 @@ func (pc *PackageCreator) LoadPackageDefinition() (pkg *types.ZarfPackage, warni
 	warnings = append(warnings, templateWarnings...)
 
 	// After templates are filled process any create extensions
-	extendedPkg, err := ProcessExtensions(composedPkg, &pc.cfg.CreateOpts, pc.layout)
+	extendedPkg, err := ProcessExtensions(composedPkg, &pc.cfg.CreateOpts, dst)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -99,7 +98,7 @@ func (pc *PackageCreator) LoadPackageDefinition() (pkg *types.ZarfPackage, warni
 	return extendedPkg, warnings, nil
 }
 
-func (pc *PackageCreator) Assemble() error {
+func (pc *PackageCreator) Assemble(dst *layout.PackagePaths) error {
 	var imageList []transform.Image
 
 	skipSBOMFlagUsed := pc.cfg.CreateOpts.SkipSBOM
@@ -114,7 +113,7 @@ func (pc *PackageCreator) Assemble() error {
 			}
 		}
 
-		if err := pc.addComponent(idx, component); err != nil {
+		if err := pc.addComponent(idx, component, dst); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
@@ -125,7 +124,7 @@ func (pc *PackageCreator) Assemble() error {
 		}
 
 		if !skipSBOMFlagUsed {
-			componentSBOM, err := pc.getFilesToSBOM(component)
+			componentSBOM, err := pc.getFilesToSBOM(component, dst)
 			if err != nil {
 				return fmt.Errorf("unable to create component SBOM: %w", err)
 			}
@@ -151,14 +150,14 @@ func (pc *PackageCreator) Assemble() error {
 	if len(imageList) > 0 {
 		message.HeaderInfof("📦 PACKAGE IMAGES")
 
-		pc.layout = pc.layout.AddImages()
+		dst.AddImages()
 
 		var pulled []images.ImgInfo
 		var err error
 
 		doPull := func() error {
 			imgConfig := images.ImageConfig{
-				ImagesPath:        pc.layout.Images.Base,
+				ImagesPath:        dst.Images.Base,
 				ImageList:         imageList,
 				Insecure:          config.CommonOptions.Insecure,
 				Architectures:     []string{pc.cfg.Pkg.Metadata.Architecture, pc.cfg.Pkg.Build.Architecture},
@@ -174,7 +173,7 @@ func (pc *PackageCreator) Assemble() error {
 		}
 
 		for _, imgInfo := range pulled {
-			if err := pc.layout.Images.AddV1Image(imgInfo.Img); err != nil {
+			if err := dst.Images.AddV1Image(imgInfo.Img); err != nil {
 				return err
 			}
 			if imgInfo.HasImageLayers {
@@ -187,8 +186,8 @@ func (pc *PackageCreator) Assemble() error {
 	if skipSBOMFlagUsed {
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
-		pc.layout = pc.layout.AddSBOMs()
-		if err := sbom.Catalog(componentSBOMs, sbomImageList, pc.layout); err != nil {
+		dst.AddSBOMs()
+		if err := sbom.Catalog(componentSBOMs, sbomImageList, dst); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
@@ -196,10 +195,10 @@ func (pc *PackageCreator) Assemble() error {
 	return nil
 }
 
-func (pc *PackageCreator) addComponent(index int, component types.ZarfComponent) error {
+func (pc *PackageCreator) addComponent(index int, component types.ZarfComponent, dst *layout.PackagePaths) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
-	componentPaths, err := pc.layout.Components.Create(component)
+	componentPaths, err := dst.Components.Create(component)
 	if err != nil {
 		return err
 	}
@@ -377,18 +376,18 @@ func (pc *PackageCreator) addComponent(index int, component types.ZarfComponent)
 }
 
 // Output assumes it is running from cwd, not the build directory
-func (pc *PackageCreator) Output() error {
+func (pc *PackageCreator) Output(dst *layout.PackagePaths) error {
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range pc.cfg.Pkg.Components {
 		// Make the component a tar archive
-		if err := pc.layout.Components.Archive(component, true); err != nil {
+		if err := dst.Components.Archive(component, true); err != nil {
 			return fmt.Errorf("unable to archive component: %s", err.Error())
 		}
 	}
 
 	// Calculate all the checksums
-	checksumChecksum, err := pc.generatePackageChecksums()
+	checksumChecksum, err := generateChecksums(dst)
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for the package: %w", err)
 	}
@@ -401,13 +400,13 @@ func (pc *PackageCreator) Output() error {
 	}
 
 	// Save the transformed config.
-	if err := utils.WriteYaml(pc.layout.ZarfYAML, pc.cfg.Pkg, 0400); err != nil {
+	if err := utils.WriteYaml(dst.ZarfYAML, pc.cfg.Pkg, 0400); err != nil {
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
 	}
 
 	// Sign the config file if a key was provided
 	if pc.cfg.CreateOpts.SigningKeyPath != "" {
-		if err := pc.layout.SignPackage(pc.cfg.CreateOpts.SigningKeyPath, pc.cfg.CreateOpts.SigningKeyPassword); err != nil {
+		if err := dst.SignPackage(pc.cfg.CreateOpts.SigningKeyPath, pc.cfg.CreateOpts.SigningKeyPassword); err != nil {
 			return err
 		}
 	}
@@ -424,7 +423,7 @@ func (pc *PackageCreator) Output() error {
 			return err
 		}
 
-		err = remote.PublishPackage(&pc.cfg.Pkg, pc.layout, config.CommonOptions.OCIConcurrency)
+		err = remote.PublishPackage(&pc.cfg.Pkg, dst, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
@@ -445,7 +444,7 @@ func (pc *PackageCreator) Output() error {
 		_ = os.Remove(packageName)
 
 		// Create the package tarball.
-		if err := pc.layout.ArchivePackage(packageName, pc.cfg.CreateOpts.MaxPackageSizeMB); err != nil {
+		if err := dst.ArchivePackage(packageName, pc.cfg.CreateOpts.MaxPackageSizeMB); err != nil {
 			return fmt.Errorf("unable to archive package: %w", err)
 		}
 	}
@@ -454,10 +453,10 @@ func (pc *PackageCreator) Output() error {
 	if pc.cfg.CreateOpts.ViewSBOM || pc.cfg.CreateOpts.SBOMOutputDir != "" {
 		outputSBOM := pc.cfg.CreateOpts.SBOMOutputDir
 		var sbomDir string
-		if err := pc.layout.SBOMs.Unarchive(); err != nil {
+		if err := dst.SBOMs.Unarchive(); err != nil {
 			return fmt.Errorf("unable to unarchive SBOMs: %w", err)
 		}
-		sbomDir = pc.layout.SBOMs.Path
+		sbomDir = dst.SBOMs.Path
 
 		if outputSBOM != "" {
 			out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, pc.cfg.Pkg.Metadata.Name)
@@ -474,8 +473,8 @@ func (pc *PackageCreator) Output() error {
 	return nil
 }
 
-func (pc *PackageCreator) getFilesToSBOM(component types.ZarfComponent) (*layout.ComponentSBOM, error) {
-	componentPaths, err := pc.layout.Components.Create(component)
+func (pc *PackageCreator) getFilesToSBOM(component types.ZarfComponent, dst *layout.PackagePaths) (*layout.ComponentSBOM, error) {
+	componentPaths, err := dst.Components.Create(component)
 	if err != nil {
 		return nil, err
 	}
@@ -506,8 +505,4 @@ func (pc *PackageCreator) getFilesToSBOM(component types.ZarfComponent) (*layout
 	}
 
 	return componentSBOM, nil
-}
-
-func (pc *PackageCreator) generatePackageChecksums() (string, error) {
-	return generateChecksums(pc.layout)
 }

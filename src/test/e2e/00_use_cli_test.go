@@ -163,7 +163,7 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, "binaries/eksctl_Darwin_arm64")
 		require.FileExists(t, "binaries/eksctl_Linux_x86_64")
 
-		e2e.CleanFiles("binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path)
+		e2e.CleanFiles("binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", "eks.yaml", path)
 	})
 
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {

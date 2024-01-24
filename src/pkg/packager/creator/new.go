@@ -11,15 +11,15 @@ import (
 
 // Creator is an interface for creating Zarf packages.
 type Creator interface {
-	LoadPackageDefinition() (*types.ZarfPackage, []string, error)
-	Assemble() error
-	Output() error
+	LoadPackageDefinition(dst *layout.PackagePaths) (*types.ZarfPackage, []string, error)
+	Assemble(dst *layout.PackagePaths) error
+	Output(dst *layout.PackagePaths) error
 }
 
 // New returns a new Creator based on the provided create options.
-func New(cfg *types.PackagerConfig, layout *layout.PackagePaths) Creator {
+func New(cfg *types.PackagerConfig) Creator {
 	if cfg.CreateOpts.IsSkeleton {
-		return &SkeletonCreator{cfg, layout}
+		return &SkeletonCreator{cfg}
 	}
-	return &PackageCreator{cfg, layout}
+	return &PackageCreator{cfg}
 }

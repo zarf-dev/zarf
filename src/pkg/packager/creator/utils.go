@@ -77,10 +77,10 @@ func setPackageMetadata(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOpti
 // generateChecksums walks through all of the files starting at the base path and generates a checksum file.
 // Each file within the basePath represents a layer within the Zarf package.
 // generateChecksums returns a SHA256 checksum of the checksums.txt file.
-func generateChecksums(layout *layout.PackagePaths) (string, error) {
+func generateChecksums(dst *layout.PackagePaths) (string, error) {
 	// Loop over the "loaded" files
 	var checksumsData = []string{}
-	for rel, abs := range layout.Files() {
+	for rel, abs := range dst.Files() {
 		if rel == layout.ZarfYAML || rel == layout.Checksums {
 			continue
 		}
@@ -94,7 +94,7 @@ func generateChecksums(layout *layout.PackagePaths) (string, error) {
 	slices.Sort(checksumsData)
 
 	// Create the checksums file
-	checksumsFilePath := layout.Checksums
+	checksumsFilePath := dst.Checksums
 	if err := utils.WriteFile(checksumsFilePath, []byte(strings.Join(checksumsData, "\n")+"\n")); err != nil {
 		return "", err
 	}
