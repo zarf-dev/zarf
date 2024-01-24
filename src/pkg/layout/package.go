@@ -160,7 +160,7 @@ func (pp *PackagePaths) SignPackage(signingKeyPath, signingKeyPassword string) e
 		}
 		return interactive.PromptSigPassword()
 	}
-	_, err := utils.CosignSignBlob(ZarfYAML, Signature, signingKeyPath, passwordFunc)
+	_, err := utils.CosignSignBlob(pp.ZarfYAML, pp.Signature, signingKeyPath, passwordFunc)
 	if err != nil {
 		return fmt.Errorf("unable to sign the package: %w", err)
 	}
