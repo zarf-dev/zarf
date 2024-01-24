@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -104,7 +103,7 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 }
 
 // PublishPackage publishes the package to the remote repository.
-func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
+func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int, progressBar ProgressBar) (err error) {
 	ctx := o.ctx
 	// source file store
 	src, err := file.New(paths.Base)
@@ -155,8 +154,8 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 	}
 	total += root.Size + manifestConfigDesc.Size
 
-	o.Transport.ProgressBar = message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", o.repo.Reference.Repository, o.repo.Reference.Reference))
-	defer o.Transport.ProgressBar.Stop()
+	o.Transport.ProgressBar = progressBar
+	defer o.Transport.ProgressBar.Finish(err, "Published %s [%s]", o.repo.Reference, root.MediaType)
 
 	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), o.repo, "", copyOpts)
 	if err != nil {
@@ -166,7 +165,6 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 	if err := o.UpdateIndex(o.repo.Reference.Reference, pkg.Build.Architecture, publishedDesc); err != nil {
 		return err
 	}
-	o.Transport.ProgressBar.Successf("Published %s [%s]", o.repo.Reference, root.MediaType)
 
 	return nil
 }

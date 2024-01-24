@@ -13,10 +13,12 @@ import (
 )
 
 type progressBar interface {
-	Add(int)
-	Write([]byte) (n int, err error)
-	Stop()
-	Successf(format string, args ...interface{})
+	Start(total int64, text string)
+	Update(complete int64, text string)
+	Current() int64
+	Write([]byte) (int, error)
+	Finish(err error, format string, a ...any)
+	Add(n int)
 }
 
 // Transport is an http.RoundTripper that keeps track of the in-flight

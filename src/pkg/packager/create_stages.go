@@ -256,7 +256,7 @@ func (p *Packager) output() error {
 			return err
 		}
 
-		err = remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency)
+		err = remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency, &message.ProgressBar{})
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}

@@ -16,19 +16,19 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-type ProgressTracker interface {
+type ProgressBar interface {
 	Start(total int64, text string)
 	Update(complete int64, text string)
 	Current() int64
 	Write([]byte) (int, error)
-	Finish(format string, a ...any)
+	Finish(err error, format string, a ...any)
 	Add(n int)
 }
 
 // Copy copies an artifact from one OCI registry to another
 // ?! We should probably add in nil checks for progressTracker I assume
 func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
-	include func(d ocispec.Descriptor) bool, concurrency int, progressTracker ProgressTracker) error {
+	include func(d ocispec.Descriptor) bool, concurrency int, progressTracker ProgressBar) (err error) {
 	// create a new semaphore to limit concurrency
 	sem := semaphore.NewWeighted(int64(concurrency))
 
@@ -57,7 +57,7 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 	if progressTracker != nil {
 		title := fmt.Sprintf("[0/%d] layers copied", len(layers))
 		progressTracker.Start(size, title)
-		defer progressTracker.Finish("Copied %s", src.repo.Reference)
+		defer progressTracker.Finish(err, "Copied %s", src.repo.Reference)
 	}
 
 	start := time.Now()

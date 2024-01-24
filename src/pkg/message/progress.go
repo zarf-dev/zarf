@@ -97,16 +97,12 @@ func (p *ProgressBar) Write(data []byte) (int, error) {
 	return n, nil
 }
 
-// ?! Should we accept any? Should we accept any without calling the function Finishf?
-func (p *ProgressBar) Finish(format string, a ...any) {
-	p.Successf(format, a...)
-
-	// Maybe I will do something like this later
-	// if err != nil {
-	// 	spinner.Errorf(err, "Problem rendering the helm template for %s: %s", h.chart.Name, err.Error())
-	// } else {
-	// 	spinner.Stop()
-	// }
+func (p *ProgressBar) Finish(err error, format string, a ...any) {
+	if err != nil {
+		p.Errorf(err, format, a...)
+	} else {
+		p.Successf(format, a...)
+	}
 }
 
 // Successf marks the ProgressBar as successful in the CLI.
