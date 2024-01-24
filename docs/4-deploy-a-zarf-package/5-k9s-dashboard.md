@@ -12,7 +12,7 @@ All you need to use the k9s dashboard is to:
 Using the k9s Dashboard is as simple as using a single command!
 
 ```bash
-zarf tools k9s
+zarf tools monitor
 ```
 
 **Example k9s Dashboard**
