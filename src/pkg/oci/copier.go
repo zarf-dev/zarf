@@ -89,48 +89,40 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 		eg, ectx := errgroup.WithContext(ctx)
 		eg.SetLimit(2)
 
-		var tr io.Reader
-		var pw *io.PipeWriter
-
 		// fetch the layer from the source
 		rc, err := src.repo.Fetch(ectx, layer)
 		if err != nil {
 			return err
 		}
 
-		// ?! Does changing the order of this affect anything
-		if progressTracker != nil {
-			// create a new pipe so we can write to both the progressbar and the destination at the same time
-			pr, pwTemp := io.Pipe()
-			pw = pwTemp
+		// create a new pipe so we can write to both the progressbar and the destination at the same time
+		pr, pw := io.Pipe()
 
-			// TeeReader gets the data from the fetching layer and writes it to the PipeWriter
-			tr = io.TeeReader(rc, pw)
-			// this goroutine is responsible for updating the progressbar
-			eg.Go(func() error {
-				// read from the PipeReader to the progressbar
-				if _, err := io.Copy(progressTracker, pr); err != nil {
-					return fmt.Errorf("failed to update progress on layer %s: %w", layer.Digest, err)
-				}
-				return nil
-			})
-		} else {
-			tr = rc
-		}
+		// TeeReader gets the data from the fetching layer and writes it to the PipeWriter
+		tr := io.TeeReader(rc, pw)
 
 		// this goroutine is responsible for pushing the layer to the destination
 		eg.Go(func() error {
-			defer func() {
-				if pw != nil {
-					pw.Close()
-				}
-			}()
+			defer pw.Close()
 
 			// get data from the TeeReader and push it to the destination
 			// push the layer to the destination
 			err = dst.repo.Push(ectx, layer, tr)
 			if err != nil {
 				return fmt.Errorf("failed to push layer %s to %s: %w", layer.Digest, dst.repo.Reference, err)
+			}
+			return nil
+		})
+
+		// this goroutine is responsible for updating the progressbar
+		eg.Go(func() error {
+			writer := io.Discard
+			if progressTracker != nil {
+				writer = progressTracker
+			}
+			// read from the PipeReader to the progressbar
+			if _, err := io.Copy(writer, pr); err != nil {
+				return fmt.Errorf("failed to update progress on layer %s: %w", layer.Digest, err)
 			}
 			return nil
 		})
