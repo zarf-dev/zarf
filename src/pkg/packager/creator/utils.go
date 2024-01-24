@@ -5,11 +5,15 @@
 package creator
 
 import (
+	"fmt"
 	"os"
 	"runtime"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -68,4 +72,33 @@ func setPackageMetadata(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOpti
 	pkg.Build.LastNonBreakingVersion = deprecated.LastNonBreakingVersion
 
 	return pkg, nil
+}
+
+// generateChecksums walks through all of the files starting at the base path and generates a checksum file.
+// Each file within the basePath represents a layer within the Zarf package.
+// generateChecksums returns a SHA256 checksum of the checksums.txt file.
+func generateChecksums(layout *layout.PackagePaths) (string, error) {
+	// Loop over the "loaded" files
+	var checksumsData = []string{}
+	for rel, abs := range layout.Files() {
+		if rel == layout.ZarfYAML || rel == layout.Checksums {
+			continue
+		}
+
+		sum, err := utils.GetSHA256OfFile(abs)
+		if err != nil {
+			return "", err
+		}
+		checksumsData = append(checksumsData, fmt.Sprintf("%s %s", sum, rel))
+	}
+	slices.Sort(checksumsData)
+
+	// Create the checksums file
+	checksumsFilePath := layout.Checksums
+	if err := utils.WriteFile(checksumsFilePath, []byte(strings.Join(checksumsData, "\n")+"\n")); err != nil {
+		return "", err
+	}
+
+	// Calculate the checksum of the checksum file
+	return utils.GetSHA256OfFile(checksumsFilePath)
 }

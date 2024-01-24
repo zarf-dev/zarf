@@ -22,13 +22,16 @@ import (
 	"github.com/mholt/archiver/v3"
 )
 
-// loadDifferentialData extracts the Zarf config of a designated 'reference' package,
-// and creates a list of all images and repos that are in the reference package.
+// loadDifferentialData sets any images and repos from the existing reference package in the DifferentialData and returns it.
 func loadDifferentialData(diffData *types.DifferentialData) (*types.DifferentialData, error) {
-	tmpDir, _ := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+
 	defer os.RemoveAll(tmpDir)
 
-	// Load the package spec of the package we're using as a 'reference' for the differential build
+	// Load the reference package.
 	if helpers.IsOCIURL(diffData.DifferentialPackagePath) {
 		remote, err := oci.NewOrasRemote(diffData.DifferentialPackagePath)
 		if err != nil {
@@ -50,12 +53,12 @@ func loadDifferentialData(diffData *types.DifferentialData) (*types.Differential
 
 	var differentialZarfConfig types.ZarfPackage
 	if err := utils.ReadYaml(filepath.Join(tmpDir, layout.ZarfYAML), &differentialZarfConfig); err != nil {
-		return nil, fmt.Errorf("unable to load the differential zarf package spec: %s", err.Error())
+		return nil, fmt.Errorf("unable to load the differential zarf package spec: %w", err)
 	}
 
-	// Generate a map of all the images and repos that are included in the provided package
 	allIncludedImagesMap := map[string]bool{}
 	allIncludedReposMap := map[string]bool{}
+
 	for _, component := range differentialZarfConfig.Components {
 		for _, image := range component.Images {
 			allIncludedImagesMap[image] = true

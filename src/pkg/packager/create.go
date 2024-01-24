@@ -28,7 +28,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
-	c := creator.New(p.cfg)
+	c := creator.New(p.cfg, p.layout)
 
 	pkg, warnings, err := c.LoadPackageDefinition()
 	if err != nil {
@@ -46,7 +46,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	if err := p.assemble(); err != nil {
+	if err := c.Assemble(); err != nil {
 		return err
 	}
 
@@ -55,5 +55,5 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	return p.output()
+	return c.Output()
 }

@@ -35,7 +35,7 @@ func (p *Packager) DevDeploy() error {
 		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
-	c := creator.New(p.cfg)
+	c := creator.New(p.cfg, p.layout)
 
 	pkg, warnings, err := c.LoadPackageDefinition()
 	if err != nil {
@@ -65,7 +65,7 @@ func (p *Packager) DevDeploy() error {
 		}
 	}
 
-	if err := p.assemble(); err != nil {
+	if err := c.Assemble(); err != nil {
 		return err
 	}
 

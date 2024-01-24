@@ -96,13 +96,16 @@ func (p *Packager) Publish() (err error) {
 		if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 			return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 		}
-		c := creator.New(p.cfg)
+		c := creator.New(p.cfg, p.layout)
 		_, warnings, err := c.LoadPackageDefinition()
 		if err != nil {
 			return err
 		}
 		p.warnings = append(p.warnings, warnings...)
-		if err := p.assembleSkeleton(); err != nil {
+		if err := c.Assemble(); err != nil {
+			return err
+		}
+		if err := c.Output(); err != nil {
 			return err
 		}
 	} else {
@@ -127,7 +130,7 @@ func (p *Packager) Publish() (err error) {
 
 	// Sign the package if a key has been provided
 	if p.cfg.PublishOpts.SigningKeyPath != "" {
-		if err := p.signPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword); err != nil {
+		if err := p.layout.SignPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword); err != nil {
 			return err
 		}
 	}

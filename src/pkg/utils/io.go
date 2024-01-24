@@ -46,9 +46,15 @@ func MakeTempDir(basePath string) (string, error) {
 			return "", err
 		}
 	}
+
 	tmp, err := os.MkdirTemp(basePath, tmpPathPrefix)
+	if err != nil {
+		return "", err
+	}
+
 	message.Debug("Using temporary directory:", tmp)
-	return tmp, err
+
+	return tmp, nil
 }
 
 // VerifyBinary returns true if binary is available.
