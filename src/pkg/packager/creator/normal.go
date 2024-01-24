@@ -104,7 +104,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths) error {
 	skipSBOMFlagUsed := pc.cfg.CreateOpts.SkipSBOM
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
 
-	for idx, component := range pc.cfg.Pkg.Components {
+	for _, component := range pc.cfg.Pkg.Components {
 		onCreate := component.Actions.OnCreate
 
 		onFailure := func() {
@@ -113,7 +113,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths) error {
 			}
 		}
 
-		if err := pc.addComponent(idx, component, dst); err != nil {
+		if err := pc.addComponent(component, dst); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
@@ -195,7 +195,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths) error {
 	return nil
 }
 
-func (pc *PackageCreator) addComponent(index int, component types.ZarfComponent, dst *layout.PackagePaths) error {
+func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	componentPaths, err := dst.Components.Create(component)
