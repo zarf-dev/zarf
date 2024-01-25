@@ -75,38 +75,32 @@ func WithInsecureSkipVerify(insecure bool) Modifier {
 	}
 }
 
-// WithTargetPlatform sets the target platform for the remote
-func WithTargetPlatform(platform *ocispec.Platform) Modifier {
-	return func(o *OrasRemote) {
-		o.targetPlatform = platform
+// PlatformForSkeleton sets the target architecture for the remote to skeleton
+func PlatformForSkeleton() ocispec.Platform {
+	return ocispec.Platform{
+		OS:           MultiOS,
+		Architecture: SkeletonArch,
 	}
 }
 
-// WithSkeletonArch sets the target architecture for the remote to skeleton
-func WithSkeletonArch() Modifier {
-	return WithTargetPlatform(&ocispec.Platform{
-		OS:           MultiOS,
-		Architecture: SkeletonArch,
-	})
-}
-
-// WithArch sets the target architecture for the remote
-func WithArch(arch string) Modifier {
-	return WithTargetPlatform(&ocispec.Platform{
+// PlatformForArch sets the target architecture for the remote
+func PlatformForArch(arch string) ocispec.Platform {
+	return ocispec.Platform{
 		OS:           MultiOS,
 		Architecture: arch,
-	})
+	}
 }
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
 // Registry auth is handled by the Docker CLI's credential store and checked before returning the client
-func NewOrasRemote(url string, mods ...Modifier) (*OrasRemote, error) {
+func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
 	}
 	o := &OrasRemote{}
+	o.targetPlatform = &platform
 
 	if err := o.setRepository(ref); err != nil {
 		return nil, err
