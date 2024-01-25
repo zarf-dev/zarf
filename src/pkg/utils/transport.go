@@ -12,24 +12,20 @@ import (
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
-type progressBar interface {
-	Start(total int64, text string)
-	Update(complete int64, text string)
-	Current() int64
-	Write([]byte) (int, error)
-	Finish(err error, format string, a ...any)
-	Add(n int)
+type progressWriter interface {
+	UpdateTitle(string)
+	io.Writer
 }
 
 // Transport is an http.RoundTripper that keeps track of the in-flight
 // request and add hooks to report upload progress.
 type Transport struct {
 	Base        http.RoundTripper
-	ProgressBar progressBar
+	ProgressBar progressWriter
 }
 
 // NewTransport returns a custom transport that tracks an http.RoundTripper and a message.ProgressBar.
-func NewTransport(base http.RoundTripper, bar progressBar) *Transport {
+func NewTransport(base http.RoundTripper, bar progressWriter) *Transport {
 	return &Transport{
 		Base:        base,
 		ProgressBar: bar,
@@ -98,7 +94,7 @@ func (t *Transport) roundTrip(req *http.Request) (resp *http.Response, err error
 
 	if resp != nil && req.Method == http.MethodHead && err == nil && t.ProgressBar != nil {
 		if resp.ContentLength > 0 {
-			t.ProgressBar.Add(int(resp.ContentLength))
+			// t.ProgressBar.Add(int(resp.ContentLength))
 		}
 	}
 	return resp, err

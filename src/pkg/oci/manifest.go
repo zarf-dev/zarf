@@ -46,3 +46,16 @@ func (m *OCIManifest) SumLayersSize() int64 {
 func (m *OCIManifest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m.Manifest)
 }
+
+func (m *OCIManifest) GetLayers(include func(d ocispec.Descriptor) bool) []ocispec.Descriptor {
+	var layers []ocispec.Descriptor
+	for _, layer := range m.Layers {
+		if include != nil && include(layer) {
+			layers = append(layers, layer)
+		} else if include == nil {
+			layers = append(layers, layer)
+		}
+	}
+	layers = append(layers, m.Config)
+	return layers
+}

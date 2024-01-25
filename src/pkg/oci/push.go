@@ -103,7 +103,8 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 }
 
 // PublishPackage publishes the package to the remote repository.
-func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int, progressBar ProgressBar) (err error) {
+// TODO it's a go semantic to have ctx as the first arguement of all these functions
+func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int, progressBar ProgressWriter) (err error) {
 	ctx := o.ctx
 	// source file store
 	src, err := file.New(paths.Base)
@@ -155,7 +156,7 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 	total += root.Size + manifestConfigDesc.Size
 
 	o.Transport.ProgressBar = progressBar
-	defer o.Transport.ProgressBar.Finish(err, "Published %s [%s]", o.repo.Reference, root.MediaType)
+	//defer o.Transport.ProgressBar.Finish(err, "Published %s [%s]", o.repo.Reference, root.MediaType)
 
 	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), o.repo, "", copyOpts)
 	if err != nil {

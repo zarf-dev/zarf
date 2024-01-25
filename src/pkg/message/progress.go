@@ -37,21 +37,6 @@ func NewProgressBar(total int64, text string) *ProgressBar {
 	}
 }
 
-func (p *ProgressBar) Start(total int64, text string) {
-	p.startText = text
-	if NoProgress {
-		Info(p.startText)
-	} else {
-		p.progress, _ = pterm.DefaultProgressbar.
-			WithTotal(int(total)).
-			WithShowCount(false).
-			WithTitle(padding + text).
-			WithRemoveWhenDone(true).
-			WithMaxWidth(TermWidth).
-			Start()
-	}
-}
-
 // Update updates the ProgressBar with completed progress and new text.
 func (p *ProgressBar) Update(complete int64, text string) {
 	if NoProgress {

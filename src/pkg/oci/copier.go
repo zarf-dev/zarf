@@ -6,6 +6,7 @@ package oci
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,19 +17,25 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-type ProgressBar interface {
-	Start(total int64, text string)
-	Update(complete int64, text string)
-	Current() int64
-	Write([]byte) (int, error)
-	Finish(err error, format string, a ...any)
-	Add(n int)
+func (DiscardProgressWriter) Write(p []byte) (int, error) {
+	return len(p), nil
+}
+
+func (DiscardProgressWriter) UpdateTitle(s string) {}
+
+type DiscardProgressWriter struct{}
+
+type ProgressWriter interface {
+	UpdateTitle(string)
+	io.Writer
 }
 
 // Copy copies an artifact from one OCI registry to another
-// ?! We should probably add in nil checks for progressTracker I assume
 func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
-	include func(d ocispec.Descriptor) bool, concurrency int, progressTracker ProgressBar) (err error) {
+	include func(d ocispec.Descriptor) bool, concurrency int, progressBar ProgressWriter) (err error) {
+	if progressBar == nil {
+		progressBar = DiscardProgressWriter{}
+	}
 	// create a new semaphore to limit concurrency
 	sem := semaphore.NewWeighted(int64(concurrency))
 
@@ -38,27 +45,7 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 		return err
 	}
 
-	var layers []ocispec.Descriptor
-	for _, layer := range srcRoot.Layers {
-		if include != nil && include(layer) {
-			layers = append(layers, layer)
-		} else if include == nil {
-			layers = append(layers, layer)
-		}
-	}
-
-	layers = append(layers, srcRoot.Config)
-
-	size := int64(0)
-	for _, layer := range layers {
-		size += layer.Size
-	}
-
-	if progressTracker != nil {
-		title := fmt.Sprintf("[0/%d] layers copied", len(layers))
-		progressTracker.Start(size, title)
-		defer progressTracker.Finish(err, "Copied %s", src.repo.Reference)
-	}
+	layers := srcRoot.GetLayers(include)
 
 	start := time.Now()
 
@@ -79,9 +66,10 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 		}
 		if exists {
 			src.log("Layer already exists in destination, skipping")
-			if progressTracker != nil {
-				progressTracker.Update(layer.Size, fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
-			}
+			b := make([]byte, 8)
+			binary.LittleEndian.PutUint64(b, uint64(b[layer.Size]))
+			progressBar.Write(b)
+			progressBar.UpdateTitle(fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
 			sem.Release(1)
 			continue
 		}
@@ -116,12 +104,8 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 
 		// this goroutine is responsible for updating the progressbar
 		eg.Go(func() error {
-			writer := io.Discard
-			if progressTracker != nil {
-				writer = progressTracker
-			}
 			// read from the PipeReader to the progressbar
-			if _, err := io.Copy(writer, pr); err != nil {
+			if _, err := io.Copy(progressBar, pr); err != nil {
 				return fmt.Errorf("failed to update progress on layer %s: %w", layer.Digest, err)
 			}
 			return nil
@@ -132,9 +116,7 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 			return err
 		}
 		sem.Release(1)
-		if progressTracker != nil {
-			progressTracker.Update(progressTracker.Current(), fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
-		}
+		progressBar.UpdateTitle(fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
 	}
 
 	duration := time.Since(start)
