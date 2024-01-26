@@ -83,6 +83,9 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 	checkedMap[loaded.Signature] = true
 
 	err = lineByLine(checksumPath, func(line string) error {
+		if line == "" {
+			return nil
+		}
 		split := strings.Split(line, " ")
 		sha := split[0]
 		rel := split[1]
