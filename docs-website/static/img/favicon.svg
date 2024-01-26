@@ -6,7 +6,7 @@
    fill="none"
    version="1.1"
    id="svg97"
-   sodipodi:docname="Zarf - Verticle.svg"
+   sodipodi:docname="favicon.svg"
    inkscape:version="1.3.2 (091e20ef0f, 2023-11-25)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -22,9 +22,9 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="3.6295181"
-     inkscape:cx="151.39751"
-     inkscape:cy="114.75353"
+     inkscape:zoom="2.5664569"
+     inkscape:cx="72.863099"
+     inkscape:cy="125.65962"
      inkscape:window-width="2560"
      inkscape:window-height="1371"
      inkscape:window-x="0"
@@ -261,7 +261,8 @@
      clip-rule="evenodd"
      d="m 127.356,64.147601 c 1.8,1.4125 3.287,3.8059 4.227,7.1671 0.652,2.3279 1.017,5.0221 1.043,7.9256 0.026,2.7857 -0.248,5.7807 -0.874,8.8542 -0.626,3.0735 -1.526,5.9246 -2.635,8.4749 -1.161,2.655003 -2.53,4.982989 -4.043,6.853189 -2.166,2.6944 -4.462,4.3024 -6.666,4.8524 -1.07,0.274 -2.113,0.301 -3.118,0.091 -1.004,-0.209 -1.956,-0.667 -2.83,-1.347 -1.801,-1.4123 -3.288,-3.8056 -4.24,-7.166796 -0.652,-2.327993 -1.017,-5.022193 -1.043,-7.925693 -0.026,-2.7857 0.247,-5.7807 0.874,-8.8542 0.626,-3.0735 1.526,-5.9246 2.635,-8.4749 1.16,-2.655 2.53,-4.983 4.043,-6.8532 2.166,-2.6942 4.461,-4.3029 6.666,-4.8522 1.07,-0.2746 2.113,-0.3008 3.118,-0.0915 1.004,0.2092 1.956,0.667 2.83,1.3471 z"
      fill="#552f82"
-     id="path52" />
+     id="path52"
+     style="display:inline" />
   <mask
      id="mask0_1523_69279"
      maskUnits="userSpaceOnUse"
@@ -274,36 +275,13 @@
        fill="#ffffff"
        id="path53" />
   </mask>
-  <g
-     mask="url(#mask0_1523_69279)"
-     id="g55"
-     transform="translate(2.9,6)">
-    <mask
-       id="mask1_1523_69279"
-       maskUnits="userSpaceOnUse"
-       x="105"
-       y="55"
-       width="24"
-       height="49">
-      <path
-         d="m 128.888,55.1917 h -23.754 v 48.7833 h 23.754 z"
-         fill="#ffffff"
-         id="path54" />
-    </mask>
-    <g
-       mask="url(#mask1_1523_69279)"
-       id="g54">
-      <rect
-         width="26.885"
-         height="51.477402"
-         transform="matrix(1,0,0,-1,103.696,105.675)"
-         fill="url(#paint5_linear_1523_69279)"
-         id="rect54"
-         x="0"
-         y="0"
-         style="fill:url(#paint5_linear_1523_69279)" />
-    </g>
-  </g>
+  <path
+     fill-rule="evenodd"
+     clip-rule="evenodd"
+     d="m 126.95588,65.41253 c 1.61579,1.35558 2.93674,3.635571 3.75084,6.825041 0.5647,2.208974 0.86508,4.761307 0.8558,7.507931 -0.008,2.635203 -0.29029,5.46512 -0.89259,8.365469 -0.6023,2.900346 -1.45049,5.58736 -2.48473,7.987585 -1.08257,2.498697 -2.35,4.685814 -3.74279,6.438374 -1.99409,2.52506 -4.09375,4.0211 -6.09802,4.51741 -0.97311,0.24756 -1.91895,0.26179 -2.82767,0.0524 -0.9078,-0.20857 -1.76566,-0.65213 -2.55027,-1.3048 -1.6167,-1.35542 -2.93767,-3.63528 -3.76265,-6.824887 -0.5647,-2.209069 -0.86508,-4.761405 -0.85579,-7.508027 0.008,-2.635204 0.28939,-5.465132 0.89258,-8.365468 0.60232,-2.900349 1.45049,-5.58736 2.48473,-7.987586 1.08167,-2.498706 2.35001,-4.685831 3.74279,-6.438383 1.99409,-2.524868 4.09285,-4.021588 6.09803,-4.517225 0.97312,-0.248128 1.91894,-0.261589 2.82767,-0.05272 0.9078,0.208773 1.76565,0.652124 2.55027,1.304897 z"
+     fill="#552f82"
+     id="path52-3"
+     style="fill:url(#linearGradient2);stroke-width:0.926071" />
   <path
      fill-rule="evenodd"
      clip-rule="evenodd"
@@ -346,35 +324,13 @@
        fill="#ffffff"
        id="path60" />
   </mask>
-  <g
-     mask="url(#mask2_1523_69279)"
-     id="g62"
-     transform="translate(2.9,6)">
-    <mask
-       id="mask3_1523_69279"
-       maskUnits="userSpaceOnUse"
-       x="173"
-       y="60"
-       width="20"
-       height="41">
-      <path
-         d="m 192.539,60.6978 h -18.88 v 39.9552 h 18.88 z"
-         fill="#ffffff"
-         id="path61" />
-    </mask>
-    <g
-       mask="url(#mask3_1523_69279)"
-       id="g61">
-      <rect
-         width="21.9245"
-         height="42.688499"
-         transform="matrix(1,0,0,-1,172.111,102.484)"
-         fill="url(#pattern0)"
-         id="rect61"
-         x="0"
-         y="0" />
-    </g>
-  </g>
+  <path
+     fill-rule="evenodd"
+     clip-rule="evenodd"
+     d="m 186.07133,69.083853 c 1.58797,0.627672 3.19082,2.052767 4.64263,4.319741 1.00615,1.56984 1.89949,3.476814 2.60658,5.616898 0.67907,2.053028 1.19906,4.330145 1.49267,6.746712 0.29362,2.416568 0.34375,4.732132 0.17705,6.873707 -0.17814,2.230982 -0.57847,4.268382 -1.18772,6.000719 -0.86819,2.49258 -2.08464,4.21224 -3.48809,5.1286 -0.67969,0.45002 -1.39921,0.71125 -2.14848,0.78864 -0.74837,0.0778 -1.51965,-0.0407 -2.28928,-0.34099 -1.58859,-0.62731 -3.19147,-2.05231 -4.65162,-4.316504 -1.0062,-1.569917 -1.89951,-3.476886 -2.60658,-5.616977 -0.67909,-2.053032 -1.19977,-4.329921 -1.4927,-6.746712 -0.2936,-2.416572 -0.34373,-4.73213 -0.17715,-6.873702 0.17733,-2.230766 0.57848,-4.268399 1.18773,-6.000729 0.86823,-2.492439 2.08381,-4.212381 3.48815,-5.128453 0.67955,-0.450484 1.39926,-0.71111 2.14839,-0.788894 0.74841,-0.07763 1.51964,0.04054 2.28931,0.341075 z"
+     fill="#552f82"
+     id="path52-3-5"
+     style="fill:url(#linearGradient3);stroke-width:0.754539" />
   <path
      fill-rule="evenodd"
      clip-rule="evenodd"
@@ -419,6 +375,18 @@
      id="path68" />
   <defs
      id="defs97">
+    <linearGradient
+       id="linearGradient1"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#6772c1;stop-opacity:1;"
+         offset="0"
+         id="stop1" />
+      <stop
+         style="stop-color:#ffffff;stop-opacity:1;"
+         offset="1"
+         id="stop2" />
+    </linearGradient>
     <pattern
        id="pattern0"
        patternContentUnits="objectBoundingBox"
@@ -601,5 +569,25 @@
        width="37"
        height="69"
        xlink:href="data:image/png;base64,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" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient1"
+       id="linearGradient2"
+       x1="146.56743"
+       y1="68.70816"
+       x2="134.47832"
+       y2="96.422211"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.90655202,0.01085222,-0.01132293,0.94587336,-8.5211656,1.5932566)" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient1"
+       id="linearGradient3"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.69599412,-0.23131884,0.23728712,0.73914487,65.887995,55.245837)"
+       x1="146.56743"
+       y1="68.70816"
+       x2="134.47832"
+       y2="96.422211" />
   </defs>
 </svg>
