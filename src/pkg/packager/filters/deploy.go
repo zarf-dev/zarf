@@ -23,17 +23,19 @@ var (
 )
 
 // NewDeploymentFilter creates a new deployment filter.
-func NewDeploymentFilter(optionalComponents string) *DeploymentFilter {
+func NewDeploymentFilter(optionalComponents string, isInteractive bool) *DeploymentFilter {
 	requested := helpers.StringToSlice(optionalComponents)
 
 	return &DeploymentFilter{
 		requested,
+		isInteractive,
 	}
 }
 
 // DeploymentFilter is the default filter for deployments.
 type DeploymentFilter struct {
 	requestedComponents []string
+	isInteractive       bool
 }
 
 // Apply applies the filter.
@@ -150,15 +152,23 @@ func (f *DeploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 	} else {
 		for _, groupKey := range orderedComponentGroups {
 			if len(groupedComponents[groupKey]) > 1 {
-				component := interactive.SelectChoiceGroup(groupedComponents[groupKey])
-				selectedComponents = append(selectedComponents, component)
+				if f.isInteractive {
+					component := interactive.SelectChoiceGroup(groupedComponents[groupKey])
+					selectedComponents = append(selectedComponents, component)
+				} else {
+					return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrMultipleComponentsSameGroup, groupedComponents[groupKey][0].Name, groupedComponents[groupKey][1].Name, groupedComponents[groupKey][0].DeprecatedGroup)
+				}
 			} else {
 				component := groupedComponents[groupKey][0]
 
 				if isRequired(component, useRequiredLogic) {
 					selectedComponents = append(selectedComponents, component)
-				} else if selected := interactive.SelectOptionalComponent(component); selected {
+				} else if component.Default && config.CommonOptions.Confirm {
 					selectedComponents = append(selectedComponents, component)
+				} else if f.isInteractive {
+					if selected := interactive.SelectOptionalComponent(component); selected {
+						selectedComponents = append(selectedComponents, component)
+					}
 				}
 			}
 		}
