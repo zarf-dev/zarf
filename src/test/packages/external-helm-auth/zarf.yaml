@@ -4,7 +4,6 @@ metadata:
   version: 0.0.1
 components:
 - name: private-chart
-  required: true
   charts:
   - name: podinfo
     version: 6.4.0
