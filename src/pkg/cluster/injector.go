@@ -199,7 +199,7 @@ func (c *Cluster) createPayloadConfigmaps(seedImagesDir, tarPath string, spinner
 		return configMaps, "", err
 	}
 
-	chunks, sha256sum, err := utils.SplitFile(tarPath, payloadChunkSize)
+	chunks, sha256sum, err := utils.ReadFileByChunks(tarPath, payloadChunkSize)
 	if err != nil {
 		return configMaps, "", err
 	}
@@ -373,7 +373,7 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 					corev1.ResourceMemory: injectorRequestedMemory,
 				},
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:	   injectorLimitCPU,
+					corev1.ResourceCPU:    injectorLimitCPU,
 					corev1.ResourceMemory: injectorLimitMemory,
 				},
 			},
