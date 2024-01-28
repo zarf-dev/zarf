@@ -11,8 +11,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/agnivade/levenshtein v1.1.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
-	github.com/anchore/clio v0.0.0-20240105134038-89e2fe85ce25
-	github.com/anchore/stereoscope v0.0.0-20231220161148-590920dabc54
+	github.com/anchore/clio v0.0.0-20240118133543-a5e93b68d716
+	github.com/anchore/stereoscope v0.0.0-20240118133533-eb656fc71793
 	github.com/anchore/syft v0.99.0
 	github.com/derailed/k9s v0.29.1
 	github.com/distribution/reference v0.5.0
@@ -173,7 +173,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.9.1 // indirect
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589 // indirect
 	github.com/clbanning/mxj/v2 v2.7.0 // indirect
-	github.com/cloudflare/circl v1.3.5 // indirect
+	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
