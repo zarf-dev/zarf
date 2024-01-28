@@ -41,7 +41,7 @@ func (p *Packager) resetRegistryHPA() {
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
-	filter := filters.NewDeploymentFilter(p.cfg.PkgOpts.OptionalComponents, config.CommonOptions.Confirm)
+	filter := filters.NewDeploymentFilter(p.cfg.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm)
 
 	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
@@ -96,7 +96,7 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	filter := filters.NewDeploymentFilter(p.cfg.PkgOpts.OptionalComponents, false)
+	filter := filters.NewDeploymentFilter(p.cfg.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm)
 	componentsToDeploy, err := filter.Apply(p.cfg.Pkg)
 	if err != nil {
 		return deployedComponents, fmt.Errorf("unable to get selected components: %w", err)

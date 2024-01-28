@@ -151,21 +151,37 @@ func (f *DeploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 		}
 	} else {
 		for _, groupKey := range orderedComponentGroups {
-			if len(groupedComponents[groupKey]) > 1 {
+			group := groupedComponents[groupKey]
+			if len(group) > 1 {
 				if f.isInteractive {
-					component := interactive.SelectChoiceGroup(groupedComponents[groupKey])
+					component := interactive.SelectChoiceGroup(group)
 					selectedComponents = append(selectedComponents, component)
 				} else {
-					return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrMultipleComponentsSameGroup, groupedComponents[groupKey][0].Name, groupedComponents[groupKey][1].Name, groupedComponents[groupKey][0].DeprecatedGroup)
+					foundDefault := false
+					componentNames := []string{}
+					for _, component := range group {
+						// If the component is default, then use it
+						if component.Default {
+							selectedComponents = append(selectedComponents, component)
+							foundDefault = true
+							break
+						}
+						// Add each component name to the list
+						componentNames = append(componentNames, component.Name)
+					}
+					if !foundDefault {
+						// If no default component was found, give up
+						return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrNoDefaultOrSelection, strings.Join(componentNames, ", "))
+					}
 				}
 			} else {
 				component := groupedComponents[groupKey][0]
 
 				if isRequired(component, useRequiredLogic) {
 					selectedComponents = append(selectedComponents, component)
-				} else if component.Default && config.CommonOptions.Confirm {
+				} else if component.Default && !f.isInteractive {
 					selectedComponents = append(selectedComponents, component)
-				} else if f.isInteractive {
+				} else {
 					if selected := interactive.SelectOptionalComponent(component); selected {
 						selectedComponents = append(selectedComponents, component)
 					}
