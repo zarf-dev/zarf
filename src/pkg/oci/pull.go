@@ -59,12 +59,10 @@ func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDi
 	return actual == desc.Digest.Encoded()
 }
 
-// PullPackage pulls the package from the remote repository and saves it to the given path.
+// PullLayers pulls the package from the remote repository and saves it to the given path.
 //
 // layersToPull is an optional parameter that allows the caller to specify which layers to pull.
-//
-// ?! Now that we are going to 100% going to call this function with parameters do we still want layerstopull to be optional?
-func (o *OrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+func (o *OrasRemote) PullLayers(destinationDir string, concurrency int, layersToPull []ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 	// de-duplicate layers
 	layersToPull = RemoveDuplicateDescriptors(layersToPull)
 

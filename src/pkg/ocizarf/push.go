@@ -50,18 +50,10 @@ func (o *ZarfOrasRemote) PublishZarfPackage(ctx context.Context, pkg *types.Zarf
 	for _, desc := range descs {
 		total += desc.Size
 	}
-	// manifestConfigDesc, err := o.pushManifestConfigFromMetadata(&pkg.Metadata, &pkg.Build)
-	// if err != nil {
-	// 	return err
-	// }
-	// root, err := o.generatePackManifest(src, descs, &manifestConfigDesc, &pkg.Metadata)
-	// if err != nil {
-	// 	return err
-	// }
-	// total += root.Size + manifestConfigDesc.Size
 
 	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", o.Repo().Reference.Repository, o.Repo().Reference.Reference))
-	err = o.PublishPackage(ctx, src, pkg, descs, config.CommonOptions.OCIConcurrency, progressBar)
+	annotations := zarfPackageOciAnnotations(&pkg.Metadata)
+	err = o.PublishPackage(ctx, src, annotations, descs, config.CommonOptions.OCIConcurrency, progressBar)
 	if err != nil {
 		progressBar.Stop()
 		return fmt.Errorf("unable to publish package: %w", err)
@@ -70,4 +62,31 @@ func (o *ZarfOrasRemote) PublishZarfPackage(ctx context.Context, pkg *types.Zarf
 	// ?! Do I know the media type 100% at this point
 	progressBar.Successf("Published %s [%s]", o.Repo().Reference, oci.ZarfLayerMediaTypeBlob)
 	return nil
+}
+
+func zarfPackageOciAnnotations(metadata *types.ZarfMetadata) map[string]string {
+
+	annotations := map[string]string{
+		ocispec.AnnotationTitle:       metadata.Name,
+		ocispec.AnnotationDescription: metadata.Description,
+		ocispec.MediaTypeImageConfig:  oci.ZarfConfigMediaType,
+	}
+
+	if url := metadata.URL; url != "" {
+		annotations[ocispec.AnnotationURL] = url
+	}
+	if authors := metadata.Authors; authors != "" {
+		annotations[ocispec.AnnotationAuthors] = authors
+	}
+	if documentation := metadata.Documentation; documentation != "" {
+		annotations[ocispec.AnnotationDocumentation] = documentation
+	}
+	if source := metadata.Source; source != "" {
+		annotations[ocispec.AnnotationSource] = source
+	}
+	if vendor := metadata.Vendor; vendor != "" {
+		annotations[ocispec.AnnotationVendor] = vendor
+	}
+
+	return annotations
 }

@@ -46,12 +46,6 @@ type ProgressWriter interface {
 	io.Writer
 }
 
-type metadata struct {
-	title        string
-	description  string
-	architecture string
-}
-
 // log is a function that logs a message.
 type log func(string, ...any)
 

@@ -50,7 +50,7 @@ func (o *ZarfOrasRemote) PullPackage(destinationDir string, concurrency int, lay
 	}
 	layersToPull = append(layersToPull, manifest.Config)
 
-	return o.OrasRemote.PullPackage(destinationDir, concurrency, layersToPull...)
+	return o.PullLayers(destinationDir, concurrency, layersToPull)
 }
 
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.

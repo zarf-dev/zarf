@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
@@ -40,14 +39,9 @@ func (o *OrasRemote) PushLayer(b []byte, mediaType string) (ocispec.Descriptor, 
 }
 
 // pushManifestConfigFromMetadata pushes the manifest config with metadata to the remote repository.
-func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata, build *types.ZarfBuildData) (ocispec.Descriptor, error) {
-	annotations := map[string]string{
-		ocispec.AnnotationTitle:       metadata.Name,
-		ocispec.AnnotationDescription: metadata.Description,
-	}
+func (o *OrasRemote) pushManifestConfigFromMetadata(annotations map[string]string) (ocispec.Descriptor, error) {
 	manifestConfig := ConfigPartial{
-		// ?! Is there any reason we use build arch over o.platform.arch?
-		Architecture: build.Architecture,
+		Architecture: o.targetPlatform.Architecture,
 		OCIVersion:   "1.0.1",
 		Annotations:  annotations,
 	}
@@ -55,39 +49,16 @@ func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
-	return o.PushLayer(manifestConfigBytes, ZarfConfigMediaType)
+	// If Media type is not set it will be set to the default
+	// ?! Is this the image config media type or the
+	return o.PushLayer(manifestConfigBytes, annotations[ocispec.MediaTypeImageConfig])
 }
 
-// manifestAnnotationsFromMetadata returns the annotations for the manifest from the given metadata.
-func (o *OrasRemote) manifestAnnotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {
-	annotations := map[string]string{
-		ocispec.AnnotationDescription: metadata.Description,
-	}
-
-	if url := metadata.URL; url != "" {
-		annotations[ocispec.AnnotationURL] = url
-	}
-	if authors := metadata.Authors; authors != "" {
-		annotations[ocispec.AnnotationAuthors] = authors
-	}
-	if documentation := metadata.Documentation; documentation != "" {
-		annotations[ocispec.AnnotationDocumentation] = documentation
-	}
-	if source := metadata.Source; source != "" {
-		annotations[ocispec.AnnotationSource] = source
-	}
-	if vendor := metadata.Vendor; vendor != "" {
-		annotations[ocispec.AnnotationVendor] = vendor
-	}
-
-	return annotations
-}
-
-func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descriptor, configDesc *ocispec.Descriptor, metadata *types.ZarfMetadata) (ocispec.Descriptor, error) {
+func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descriptor, configDesc *ocispec.Descriptor, annotations map[string]string) (ocispec.Descriptor, error) {
 	packOpts := oras.PackManifestOptions{
 		Layers:              descs,
 		ConfigDescriptor:    configDesc,
-		ManifestAnnotations: o.manifestAnnotationsFromMetadata(metadata),
+		ManifestAnnotations: annotations,
 	}
 
 	root, err := oras.PackManifest(o.ctx, src, oras.PackManifestVersion1_1_RC4, "", packOpts)
@@ -102,8 +73,11 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 }
 
 // PublishPackage publishes the package to the remote repository.
-// TODO it's a go semantic to have ctx as the first arguement of all these functions
-func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, pkg *types.ZarfPackage, desc []ocispec.Descriptor, concurrency int, progressBar ProgressWriter) (err error) {
+// TODO: We need documentation to Library that they need to use the ocispec package for map keys
+func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, annotations map[string]string, desc []ocispec.Descriptor, concurrency int, progressBar ProgressWriter) (err error) {
+	if annotations[ocispec.AnnotationTitle] == "" {
+		return errors.New("invalid annotations: please include ocispec.AnnotationTitle")
+	}
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 	// assumes referrers API is not supported since OCI artifact
@@ -113,30 +87,27 @@ func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, pkg *t
 	// push the manifest config
 	// since this config is so tiny, and the content is not used again
 	// it is not logged to the progress, but will error if it fails
+	manifestConfigDesc, err := o.pushManifestConfigFromMetadata(annotations)
+	if err != nil {
+		return err
+	}
+	root, err := o.generatePackManifest(src, desc, &manifestConfigDesc, annotations)
+	if err != nil {
+		return err
+	}
 
-	// ?! Would it make sense to have a metadata OCI object?
-	manifestConfigDesc, err := o.pushManifestConfigFromMetadata(&pkg.Metadata, &pkg.Build)
-	if err != nil {
-		return err
-	}
-	root, err := o.generatePackManifest(src, desc, &manifestConfigDesc, &pkg.Metadata)
-	if err != nil {
-		return err
-	}
-	// ?! Why do we add the size of the root when we already have the descripters?
+	// ?! Do we care about the size of these?
+	// Maybe we should add a total function or simliar to set the byte amount in the progress bar
 	// total += root.Size + manifestConfigDesc.Size
 
 	o.Transport.ProgressBar = progressBar
-
-	// ?! I considered adding a function like finish. I'm leaning towards leaving it out and leaving this up to the implementer
-	// defer o.Transport.ProgressBar.Finish(err, "Published %s [%s]", o.repo.Reference, root.MediaType)
 
 	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), o.repo, "", copyOpts)
 	if err != nil {
 		return err
 	}
 
-	if err := o.UpdateIndex(o.repo.Reference.Reference, pkg.Build.Architecture, publishedDesc); err != nil {
+	if err := o.UpdateIndex(o.repo.Reference.Reference, o.targetPlatform.Architecture, publishedDesc); err != nil {
 		return err
 	}
 
