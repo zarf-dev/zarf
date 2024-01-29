@@ -6,12 +6,10 @@ package oci
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -48,6 +46,7 @@ func (o *OrasRemote) pushManifestConfigFromMetadata(metadata *types.ZarfMetadata
 		ocispec.AnnotationDescription: metadata.Description,
 	}
 	manifestConfig := ConfigPartial{
+		// ?! Is there any reason we use build arch over o.platform.arch?
 		Architecture: build.Architecture,
 		OCIVersion:   "1.0.1",
 		Annotations:  annotations,
@@ -104,40 +103,9 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 
 // PublishPackage publishes the package to the remote repository.
 // TODO it's a go semantic to have ctx as the first arguement of all these functions
-func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int, progressBar ProgressWriter) (err error) {
-	ctx := o.ctx
-	// source file store
-	src, err := file.New(paths.Base)
-	if err != nil {
-		return err
-	}
-	defer src.Close()
-
-	message.Infof("Publishing package to %s", o.repo.Reference)
-	spinner := message.NewProgressSpinner("")
-	defer spinner.Stop()
-
-	// Get all of the layers in the package
-	var descs []ocispec.Descriptor
-	for name, path := range paths.Files() {
-		spinner.Updatef("Preparing layer %s", helpers.First30last30(name))
-
-		mediaType := ZarfLayerMediaTypeBlob
-
-		desc, err := src.Add(ctx, name, mediaType, path)
-		if err != nil {
-			return err
-		}
-		descs = append(descs, desc)
-	}
-	spinner.Successf("Prepared all layers")
-
+func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, pkg *types.ZarfPackage, desc []ocispec.Descriptor, concurrency int, progressBar ProgressWriter) (err error) {
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
-	var total int64
-	for _, desc := range descs {
-		total += desc.Size
-	}
 	// assumes referrers API is not supported since OCI artifact
 	// media type is not supported
 	o.repo.SetReferrersCapability(false)
@@ -145,18 +113,23 @@ func (o *OrasRemote) PublishPackage(pkg *types.ZarfPackage, paths *layout.Packag
 	// push the manifest config
 	// since this config is so tiny, and the content is not used again
 	// it is not logged to the progress, but will error if it fails
+
+	// ?! Would it make sense to have a metadata OCI object?
 	manifestConfigDesc, err := o.pushManifestConfigFromMetadata(&pkg.Metadata, &pkg.Build)
 	if err != nil {
 		return err
 	}
-	root, err := o.generatePackManifest(src, descs, &manifestConfigDesc, &pkg.Metadata)
+	root, err := o.generatePackManifest(src, desc, &manifestConfigDesc, &pkg.Metadata)
 	if err != nil {
 		return err
 	}
-	total += root.Size + manifestConfigDesc.Size
+	// ?! Why do we add the size of the root when we already have the descripters?
+	// total += root.Size + manifestConfigDesc.Size
 
 	o.Transport.ProgressBar = progressBar
-	//defer o.Transport.ProgressBar.Finish(err, "Published %s [%s]", o.repo.Reference, root.MediaType)
+
+	// ?! I considered adding a function like finish. I'm leaning towards leaving it out and leaving this up to the implementer
+	// defer o.Transport.ProgressBar.Finish(err, "Published %s [%s]", o.repo.Reference, root.MediaType)
 
 	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), o.repo, "", copyOpts)
 	if err != nil {

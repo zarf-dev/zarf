@@ -17,19 +17,6 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-func (DiscardProgressWriter) Write(p []byte) (int, error) {
-	return len(p), nil
-}
-
-func (DiscardProgressWriter) UpdateTitle(s string) {}
-
-type DiscardProgressWriter struct{}
-
-type ProgressWriter interface {
-	UpdateTitle(string)
-	io.Writer
-}
-
 // Copy copies an artifact from one OCI registry to another
 func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 	include func(d ocispec.Descriptor) bool, concurrency int, progressBar ProgressWriter) (err error) {

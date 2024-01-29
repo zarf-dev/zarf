@@ -7,6 +7,7 @@ package oci
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -31,6 +32,25 @@ const (
 	// MultiOS is the OS used for multi-platform packages
 	MultiOS = "multi"
 )
+
+func (DiscardProgressWriter) Write(p []byte) (int, error) {
+	return len(p), nil
+}
+
+func (DiscardProgressWriter) UpdateTitle(s string) {}
+
+type DiscardProgressWriter struct{}
+
+type ProgressWriter interface {
+	UpdateTitle(string)
+	io.Writer
+}
+
+type metadata struct {
+	title        string
+	description  string
+	architecture string
+}
 
 // log is a function that logs a message.
 type log func(string, ...any)
@@ -104,7 +124,7 @@ func PlatformForArch(arch string) ocispec.Platform {
 	}
 }
 
-// WithArch sets the target architecture for the remote
+// WithUserAgent sets the target architecture for the remote
 func WithUserAgent(userAgent string) Modifier {
 	return func(o *OrasRemote) {
 		o.userAgent = userAgent

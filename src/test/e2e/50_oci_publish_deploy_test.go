@@ -56,7 +56,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	ref := suite.Reference.String()
 	stdOut, stdErr, err := e2e.Zarf("package", "publish", example, "oci://"+ref, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
-	//suite.Contains(stdErr, "Published "+ref)
+	suite.Contains(stdErr, "Published "+ref)
 
 	// Pull the package via OCI.
 	stdOut, stdErr, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "--insecure")

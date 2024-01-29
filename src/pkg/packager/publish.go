@@ -128,7 +128,8 @@ func (p *Packager) Publish() (err error) {
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
 
 	// Publish the package/skeleton to the registry
-	if err := remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency, &message.ProgressBar{}); err != nil {
+	ctx := context.TODO()
+	if err := remote.PublishZarfPackage(ctx, &p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
 		return err
 	}
 	if p.cfg.CreateOpts.IsSkeleton {
