@@ -6,15 +6,11 @@ package k8s
 
 import (
 	"fmt"
-	"sort"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/resource"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
-
-// ImageMap is a map of image/boolean pairs.
-type ImageMap map[string]bool
 
 // ImageNodeMap is a map of image/node pairs.
 type ImageNodeMap map[string][]string
@@ -70,7 +66,7 @@ findImages:
 		}
 
 		if nodeDetails.Status.Allocatable.Cpu().Cmp(minNodeCPU) < 0 ||
-		   nodeDetails.Status.Allocatable.Memory().Cmp(minNodeMemory) < 0 {
+			nodeDetails.Status.Allocatable.Memory().Cmp(minNodeMemory) < 0 {
 			continue findImages
 		}
 
@@ -91,31 +87,4 @@ findImages:
 	}
 
 	return result, nil
-}
-
-// BuildImageMap looks for init container, ephemeral and regular container images.
-func BuildImageMap(images ImageMap, pod corev1.PodSpec) ImageMap {
-	for _, container := range pod.InitContainers {
-		images[container.Image] = true
-	}
-	for _, container := range pod.Containers {
-		images[container.Image] = true
-	}
-	for _, container := range pod.EphemeralContainers {
-		images[container.Image] = true
-	}
-	return images
-}
-
-// SortImages returns a sorted list of images.
-func SortImages(images, compareWith ImageMap) []string {
-	sortedImages := sort.StringSlice{}
-	for image := range images {
-		if !compareWith[image] || compareWith == nil {
-			// Check compareWith, if it exists only add if not in that list.
-			sortedImages = append(sortedImages, image)
-		}
-	}
-	sort.Sort(sortedImages)
-	return sortedImages
 }
