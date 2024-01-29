@@ -16,7 +16,7 @@ components:
         localPath: chart
         valuesFiles:
           - values.yaml
-  
+
       - name: podinfo-oci
         version: 6.4.0
         namespace: podinfo-from-oci
