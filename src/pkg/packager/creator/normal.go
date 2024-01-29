@@ -58,7 +58,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg *
 	warnings = append(warnings, composeWarnings...)
 
 	// After components are composed, template the active package.
-	templateWarnings, err := FillActiveTemplate(composedPkg, &pc.cfg.CreateOpts)
+	templatedPkg, templateWarnings, err := FillActiveTemplate(composedPkg, &pc.cfg.CreateOpts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}
@@ -66,24 +66,24 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg *
 	warnings = append(warnings, templateWarnings...)
 
 	// After templates are filled process any create extensions
-	extendedPkg, err := processExtensions(composedPkg, &pc.cfg.CreateOpts, dst)
+	extendedPkg, err := processExtensions(templatedPkg, &pc.cfg.CreateOpts, dst)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// If we are creating a differential package, remove duplicate images and repos.
-	if pc.cfg.Pkg.Build.Differential {
+	if extendedPkg.Build.Differential {
 		diffData, err := loadDifferentialData(&pc.cfg.CreateOpts.DifferentialData)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		versionsMatch := pc.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == pc.cfg.Pkg.Metadata.Version
+		versionsMatch := diffData.DifferentialPackageVersion == extendedPkg.Metadata.Version
 		if versionsMatch {
 			return nil, nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
 
-		noVersionSet := pc.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion == "" || pc.cfg.Pkg.Metadata.Version == ""
+		noVersionSet := diffData.DifferentialPackageVersion == "" || extendedPkg.Metadata.Version == ""
 		if noVersionSet {
 			return nil, nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}

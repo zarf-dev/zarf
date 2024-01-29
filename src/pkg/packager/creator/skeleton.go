@@ -33,30 +33,30 @@ type SkeletonCreator struct {
 }
 
 // LoadPackageDefinition loads and configure a zarf.yaml file during package create.
-func (sc *SkeletonCreator) LoadPackageDefinition(_ *layout.PackagePaths) (pkg *types.ZarfPackage, warnings []string, err error) {
+func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg *types.ZarfPackage, warnings []string, err error) {
 	configuredPkg, err := setPackageMetadata(&sc.cfg.Pkg, &sc.cfg.CreateOpts)
 	if err != nil {
 		message.Warn(err.Error())
 	}
 
 	// Compose components into a single zarf.yaml file
-	pkg, composeWarnings, err := ComposeComponents(configuredPkg, &sc.cfg.CreateOpts)
+	composedPkg, composeWarnings, err := ComposeComponents(configuredPkg, &sc.cfg.CreateOpts)
 	if err != nil {
 		return nil, nil, err
 	}
 	warnings = append(warnings, composeWarnings...)
+
+	pkg, err = processExtensions(composedPkg, &sc.cfg.CreateOpts, dst)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return pkg, warnings, nil
 }
 
 // TODO: print warnings somewhere else in the skeleton create flow.
 func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths) error {
-	pkg, err := processExtensions(&sc.cfg.Pkg, &sc.cfg.CreateOpts, dst)
-	if err != nil {
-		return nil
-	}
-
-	for idx, component := range pkg.Components {
+	for idx, component := range sc.cfg.Pkg.Components {
 		if err := sc.addComponent(idx, component, dst); err != nil {
 			return err
 		}
