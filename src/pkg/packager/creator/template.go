@@ -70,6 +70,8 @@ func FillActiveTemplate(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOpti
 		return nil, nil, err
 	}
 
+	templatedPkg = pkg
+
 	return templatedPkg, warnings, nil
 }
 
