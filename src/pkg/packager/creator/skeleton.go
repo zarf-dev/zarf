@@ -60,7 +60,12 @@ func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths) error {
 		if err := sc.addComponent(idx, component, dst); err != nil {
 			return err
 		}
+	}
+	return nil
+}
 
+func (sc *SkeletonCreator) Output(dst *layout.PackagePaths) error {
+	for _, component := range sc.cfg.Pkg.Components {
 		if err := dst.Components.Archive(component, false); err != nil {
 			return err
 		}
@@ -72,10 +77,6 @@ func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths) error {
 	}
 	sc.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
 
-	return nil
-}
-
-func (sc *SkeletonCreator) Output(dst *layout.PackagePaths) error {
 	return utils.WriteYaml(dst.ZarfYAML, sc.cfg.Pkg, 0400)
 }
 

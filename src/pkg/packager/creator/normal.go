@@ -195,6 +195,104 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths) error {
 	return nil
 }
 
+// Output assumes it is running from cwd, not the build directory
+func (pc *PackageCreator) Output(dst *layout.PackagePaths) error {
+	// Process the component directories into compressed tarballs
+	// NOTE: This is purposefully being done after the SBOM cataloging
+	for _, component := range pc.cfg.Pkg.Components {
+		// Make the component a tar archive
+		if err := dst.Components.Archive(component, true); err != nil {
+			return fmt.Errorf("unable to archive component: %s", err.Error())
+		}
+	}
+
+	// Calculate all the checksums
+	checksumChecksum, err := generateChecksums(dst)
+	if err != nil {
+		return fmt.Errorf("unable to generate checksums for the package: %w", err)
+	}
+	pc.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
+
+	// Record the migrations that will be ran on the package.
+	pc.cfg.Pkg.Build.Migrations = []string{
+		deprecated.ScriptsToActionsMigrated,
+		deprecated.PluralizeSetVariable,
+	}
+
+	// Save the transformed config.
+	if err := utils.WriteYaml(dst.ZarfYAML, pc.cfg.Pkg, 0400); err != nil {
+		return fmt.Errorf("unable to write zarf.yaml: %w", err)
+	}
+
+	// Sign the config file if a key was provided
+	if pc.cfg.CreateOpts.SigningKeyPath != "" {
+		if err := dst.SignPackage(pc.cfg.CreateOpts.SigningKeyPath, pc.cfg.CreateOpts.SigningKeyPassword); err != nil {
+			return err
+		}
+	}
+
+	// Create a remote ref + client for the package (if output is OCI)
+	// then publish the package to the remote.
+	if helpers.IsOCIURL(pc.cfg.CreateOpts.Output) {
+		ref, err := oci.ReferenceFromMetadata(pc.cfg.CreateOpts.Output, &pc.cfg.Pkg.Metadata, &pc.cfg.Pkg.Build)
+		if err != nil {
+			return err
+		}
+		remote, err := oci.NewOrasRemote(ref, oci.PlatformForArch(config.GetArch()))
+		if err != nil {
+			return err
+		}
+
+		err = remote.PublishPackage(&pc.cfg.Pkg, dst, config.CommonOptions.OCIConcurrency)
+		if err != nil {
+			return fmt.Errorf("unable to publish package: %w", err)
+		}
+		message.HorizontalRule()
+		flags := ""
+		if config.CommonOptions.Insecure {
+			flags = "--insecure"
+		}
+		message.Title("To inspect/deploy/pull:", "")
+		message.ZarfCommand("package inspect %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
+	} else {
+		// Use the output path if the user specified it.
+		packageName := filepath.Join(pc.cfg.CreateOpts.Output, utils.GetPackageName(pc.cfg.Pkg, pc.cfg.CreateOpts.DifferentialData))
+
+		// Try to remove the package if it already exists.
+		_ = os.Remove(packageName)
+
+		// Create the package tarball.
+		if err := dst.ArchivePackage(packageName, pc.cfg.CreateOpts.MaxPackageSizeMB); err != nil {
+			return fmt.Errorf("unable to archive package: %w", err)
+		}
+	}
+
+	// Output the SBOM files into a directory if specified.
+	if pc.cfg.CreateOpts.ViewSBOM || pc.cfg.CreateOpts.SBOMOutputDir != "" {
+		outputSBOM := pc.cfg.CreateOpts.SBOMOutputDir
+		var sbomDir string
+		if err := dst.SBOMs.Unarchive(); err != nil {
+			return fmt.Errorf("unable to unarchive SBOMs: %w", err)
+		}
+		sbomDir = dst.SBOMs.Path
+
+		if outputSBOM != "" {
+			out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, pc.cfg.Pkg.Metadata.Name)
+			if err != nil {
+				return err
+			}
+			sbomDir = out
+		}
+
+		if pc.cfg.CreateOpts.ViewSBOM {
+			sbom.ViewSBOMFiles(sbomDir)
+		}
+	}
+	return nil
+}
+
 func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
@@ -372,104 +470,6 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 
-	return nil
-}
-
-// Output assumes it is running from cwd, not the build directory
-func (pc *PackageCreator) Output(dst *layout.PackagePaths) error {
-	// Process the component directories into compressed tarballs
-	// NOTE: This is purposefully being done after the SBOM cataloging
-	for _, component := range pc.cfg.Pkg.Components {
-		// Make the component a tar archive
-		if err := dst.Components.Archive(component, true); err != nil {
-			return fmt.Errorf("unable to archive component: %s", err.Error())
-		}
-	}
-
-	// Calculate all the checksums
-	checksumChecksum, err := generateChecksums(dst)
-	if err != nil {
-		return fmt.Errorf("unable to generate checksums for the package: %w", err)
-	}
-	pc.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
-
-	// Record the migrations that will be ran on the package.
-	pc.cfg.Pkg.Build.Migrations = []string{
-		deprecated.ScriptsToActionsMigrated,
-		deprecated.PluralizeSetVariable,
-	}
-
-	// Save the transformed config.
-	if err := utils.WriteYaml(dst.ZarfYAML, pc.cfg.Pkg, 0400); err != nil {
-		return fmt.Errorf("unable to write zarf.yaml: %w", err)
-	}
-
-	// Sign the config file if a key was provided
-	if pc.cfg.CreateOpts.SigningKeyPath != "" {
-		if err := dst.SignPackage(pc.cfg.CreateOpts.SigningKeyPath, pc.cfg.CreateOpts.SigningKeyPassword); err != nil {
-			return err
-		}
-	}
-
-	// Create a remote ref + client for the package (if output is OCI)
-	// then publish the package to the remote.
-	if helpers.IsOCIURL(pc.cfg.CreateOpts.Output) {
-		ref, err := oci.ReferenceFromMetadata(pc.cfg.CreateOpts.Output, &pc.cfg.Pkg.Metadata, &pc.cfg.Pkg.Build)
-		if err != nil {
-			return err
-		}
-		remote, err := oci.NewOrasRemote(ref, oci.PlatformForArch(config.GetArch()))
-		if err != nil {
-			return err
-		}
-
-		err = remote.PublishPackage(&pc.cfg.Pkg, dst, config.CommonOptions.OCIConcurrency)
-		if err != nil {
-			return fmt.Errorf("unable to publish package: %w", err)
-		}
-		message.HorizontalRule()
-		flags := ""
-		if config.CommonOptions.Insecure {
-			flags = "--insecure"
-		}
-		message.Title("To inspect/deploy/pull:", "")
-		message.ZarfCommand("package inspect %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
-		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
-		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
-	} else {
-		// Use the output path if the user specified it.
-		packageName := filepath.Join(pc.cfg.CreateOpts.Output, utils.GetPackageName(pc.cfg.Pkg, pc.cfg.CreateOpts.DifferentialData))
-
-		// Try to remove the package if it already exists.
-		_ = os.Remove(packageName)
-
-		// Create the package tarball.
-		if err := dst.ArchivePackage(packageName, pc.cfg.CreateOpts.MaxPackageSizeMB); err != nil {
-			return fmt.Errorf("unable to archive package: %w", err)
-		}
-	}
-
-	// Output the SBOM files into a directory if specified.
-	if pc.cfg.CreateOpts.ViewSBOM || pc.cfg.CreateOpts.SBOMOutputDir != "" {
-		outputSBOM := pc.cfg.CreateOpts.SBOMOutputDir
-		var sbomDir string
-		if err := dst.SBOMs.Unarchive(); err != nil {
-			return fmt.Errorf("unable to unarchive SBOMs: %w", err)
-		}
-		sbomDir = dst.SBOMs.Path
-
-		if outputSBOM != "" {
-			out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, pc.cfg.Pkg.Metadata.Name)
-			if err != nil {
-				return err
-			}
-			sbomDir = out
-		}
-
-		if pc.cfg.CreateOpts.ViewSBOM {
-			sbom.ViewSBOMFiles(sbomDir)
-		}
-	}
 	return nil
 }
 
