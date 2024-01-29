@@ -36,14 +36,14 @@ func TestPackageFiles(t *testing.T) {
 
 	require.Equal(t, expected, files)
 
-	pp = pp.AddSignature("")
+	pp = pp.addSignature("")
 
 	files = pp.Files()
 
-	// AddSignature will only add the signature if it is not empty
+	// addSignature will only add the signature if it is not empty
 	require.Equal(t, expected, files)
 
-	pp = pp.AddSignature("key.priv")
+	pp = pp.addSignature("key.priv")
 
 	files = pp.Files()
 

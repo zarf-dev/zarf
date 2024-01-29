@@ -143,16 +143,8 @@ func (pp *PackagePaths) IsLegacyLayout() bool {
 	return pp.isLegacyLayout
 }
 
-// AddSignature sets the signature path if the keyPath is not empty.
-func (pp *PackagePaths) AddSignature(keyPath string) *PackagePaths {
-	if keyPath != "" {
-		pp.Signature = filepath.Join(pp.Base, Signature)
-	}
-	return pp
-}
-
 func (pp *PackagePaths) SignPackage(signingKeyPath, signingKeyPassword string) error {
-	pp.AddSignature(signingKeyPath)
+	pp.addSignature(signingKeyPath)
 
 	passwordFunc := func(_ bool) ([]byte, error) {
 		if signingKeyPassword != "" {
@@ -166,6 +158,14 @@ func (pp *PackagePaths) SignPackage(signingKeyPath, signingKeyPassword string) e
 	}
 
 	return nil
+}
+
+// addSignature sets the signature path if the keyPath is not empty.
+func (pp *PackagePaths) addSignature(keyPath string) *PackagePaths {
+	if keyPath != "" {
+		pp.Signature = filepath.Join(pp.Base, Signature)
+	}
+	return pp
 }
 
 func (pp *PackagePaths) ArchivePackage(destinationTarball string, maxPackageSizeMB int) error {
