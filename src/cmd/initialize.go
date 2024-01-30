@@ -120,7 +120,7 @@ func downloadInitPackage(cacheDirectory string) (string, error) {
 	}
 
 	var confirmDownload bool
-	url := oci.GetInitPackageURL(config.CLIVersion)
+	url := ocizarf.GetInitPackageURL(config.CLIVersion)
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
 	message.Question(fmt.Sprintf(lang.CmdInitPullAsk, url))

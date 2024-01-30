@@ -21,6 +21,12 @@ import (
 var (
 	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
 	PackageAlwaysPull = []string{layout.ZarfYAML, layout.Checksums, layout.Signature}
+	// ZarfPackageIndexPath is the path to the index.json file in the OCI package.
+	ZarfPackageIndexPath = filepath.Join("images", "index.json")
+	// ZarfPackageImagesBlobsDir is the path to the directory containing the image blobs in the OCI package.
+	ZarfPackageImagesBlobsDir = filepath.Join("images", "blobs", "sha256")
+	// ZarfPackageLayoutPath is the path to the oci-layout file in the OCI package.
+	ZarfPackageLayoutPath = filepath.Join("images", "oci-layout")
 )
 
 // PullPackage pulls the package from the remote repository and saves it to the given path.

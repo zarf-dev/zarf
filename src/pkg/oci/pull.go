@@ -21,15 +21,6 @@ import (
 	"oras.land/oras-go/v2/content/file"
 )
 
-var (
-	// ZarfPackageIndexPath is the path to the index.json file in the OCI package.
-	ZarfPackageIndexPath = filepath.Join("images", "index.json")
-	// ZarfPackageLayoutPath is the path to the oci-layout file in the OCI package.
-	ZarfPackageLayoutPath = filepath.Join("images", "oci-layout")
-	// ZarfPackageImagesBlobsDir is the path to the directory containing the image blobs in the OCI package.
-	ZarfPackageImagesBlobsDir = filepath.Join("images", "blobs", "sha256")
-)
-
 // FileDescriptorExists returns true if the given file exists in the given directory with the expected SHA.
 func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDir string) bool {
 	rel := desc.Annotations[ocispec.AnnotationTitle]

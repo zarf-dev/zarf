@@ -108,7 +108,7 @@ func (p *Packager) Publish() (err error) {
 	}
 
 	// Get a reference to the registry for this package
-	ref, err := oci.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
+	ref, err := ocizarf.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
 	if err != nil {
 		return err
 	}
