@@ -23,10 +23,12 @@ import (
 )
 
 // loadDifferentialData sets any images and repos from the existing reference package in the DifferentialData and returns it.
-func loadDifferentialData(diffData *types.DifferentialData) (*types.DifferentialData, error) {
+func loadDifferentialData(diffData types.DifferentialData) (loadedDiffData types.DifferentialData, err error) {
+	loadedDiffData = diffData
+
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return nil, err
+		return diffData, err
 	}
 
 	defer os.RemoveAll(tmpDir)
@@ -35,25 +37,25 @@ func loadDifferentialData(diffData *types.DifferentialData) (*types.Differential
 	if helpers.IsOCIURL(diffData.DifferentialPackagePath) {
 		remote, err := oci.NewOrasRemote(diffData.DifferentialPackagePath, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
-			return nil, err
+			return diffData, err
 		}
 		pkg, err := remote.FetchZarfYAML()
 		if err != nil {
-			return nil, err
+			return diffData, err
 		}
 		err = utils.WriteYaml(filepath.Join(tmpDir, layout.ZarfYAML), pkg, 0600)
 		if err != nil {
-			return nil, err
+			return diffData, err
 		}
 	} else {
 		if err := archiver.Extract(diffData.DifferentialPackagePath, layout.ZarfYAML, tmpDir); err != nil {
-			return nil, fmt.Errorf("unable to extract the differential zarf package spec: %s", err.Error())
+			return diffData, fmt.Errorf("unable to extract the differential zarf package spec: %s", err.Error())
 		}
 	}
 
 	var differentialZarfConfig types.ZarfPackage
 	if err := utils.ReadYaml(filepath.Join(tmpDir, layout.ZarfYAML), &differentialZarfConfig); err != nil {
-		return nil, fmt.Errorf("unable to load the differential zarf package spec: %w", err)
+		return diffData, fmt.Errorf("unable to load the differential zarf package spec: %w", err)
 	}
 
 	allIncludedImagesMap := map[string]bool{}
@@ -68,18 +70,20 @@ func loadDifferentialData(diffData *types.DifferentialData) (*types.Differential
 		}
 	}
 
-	diffData.DifferentialImages = allIncludedImagesMap
-	diffData.DifferentialRepos = allIncludedReposMap
-	diffData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
+	loadedDiffData.DifferentialImages = allIncludedImagesMap
+	loadedDiffData.DifferentialRepos = allIncludedReposMap
+	loadedDiffData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
 
-	return diffData, nil
+	return loadedDiffData, nil
 }
 
 // removeCopiesFromDifferentialPackage removes any images and repos already present in the reference package.
-func removeCopiesFromDifferentialPackage(pkg *types.ZarfPackage, diffData *types.DifferentialData) (*types.ZarfPackage, error) {
+func removeCopiesFromDifferentialPackage(pkg types.ZarfPackage, diffData types.DifferentialData) (diffPkg types.ZarfPackage, err error) {
+	diffPkg = pkg
+
 	// Loop through all of the components to determine if any of them are using already included images or repos
 	componentMap := make(map[int]types.ZarfComponent)
-	for idx, component := range pkg.Components {
+	for idx, component := range diffPkg.Components {
 		newImageList := []string{}
 		newRepoList := []string{}
 		// Generate a list of all unique images for this component
@@ -87,7 +91,7 @@ func removeCopiesFromDifferentialPackage(pkg *types.ZarfPackage, diffData *types
 			// If a image doesn't have a ref (or is a commonly reused ref), we will include this image in the differential package
 			imgRef, err := transform.ParseImageRef(img)
 			if err != nil {
-				return nil, fmt.Errorf("unable to parse image ref %s: %s", img, err.Error())
+				return pkg, fmt.Errorf("unable to parse image ref %s: %s", img, err.Error())
 			}
 
 			// Only include new images or images that have a commonly overwritten tag
@@ -105,7 +109,7 @@ func removeCopiesFromDifferentialPackage(pkg *types.ZarfPackage, diffData *types
 			// Split the remote url and the zarf reference
 			_, refPlain, err := transform.GitURLSplitRef(repoURL)
 			if err != nil {
-				return nil, err
+				return pkg, err
 			}
 
 			var ref plumbing.ReferenceName
@@ -131,8 +135,8 @@ func removeCopiesFromDifferentialPackage(pkg *types.ZarfPackage, diffData *types
 
 	// Update the package with the new component list
 	for idx, component := range componentMap {
-		pkg.Components[idx] = component
+		diffPkg.Components[idx] = component
 	}
 
-	return pkg, nil
+	return diffPkg, nil
 }

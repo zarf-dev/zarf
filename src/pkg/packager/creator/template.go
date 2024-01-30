@@ -14,11 +14,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func FillActiveTemplate(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions) (templatedPkg *types.ZarfPackage, warnings []string, err error) {
+func FillActiveTemplate(pkg types.ZarfPackage, createOpts types.ZarfCreateOptions) (templatedPkg types.ZarfPackage, warnings []string, err error) {
+	templatedPkg = pkg
 	templateMap := map[string]string{}
 
 	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
-		yamlTemplates, err := utils.FindYamlTemplates(pkg, templatePrefix, "###")
+		yamlTemplates, err := utils.FindYamlTemplates(templatedPkg, templatePrefix, "###")
 		if err != nil {
 			return err
 		}
@@ -51,26 +52,24 @@ func FillActiveTemplate(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOpti
 	}
 
 	// update the component templates on the package
-	if err := ReloadComponentTemplatesInPackage(pkg); err != nil {
-		return nil, nil, err
+	if err := ReloadComponentTemplatesInPackage(&templatedPkg); err != nil {
+		return pkg, nil, err
 	}
 
 	if err := promptAndSetTemplate(types.ZarfPackageTemplatePrefix, false); err != nil {
-		return nil, nil, err
+		return pkg, nil, err
 	}
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
 	if err := promptAndSetTemplate(types.ZarfPackageVariablePrefix, true); err != nil {
-		return nil, nil, err
+		return pkg, nil, err
 	}
 
 	// Add special variable for the current package architecture
-	templateMap[types.ZarfPackageArch] = pkg.Build.Architecture
+	templateMap[types.ZarfPackageArch] = templatedPkg.Build.Architecture
 
-	if err := utils.ReloadYamlTemplate(pkg, templateMap); err != nil {
-		return nil, nil, err
+	if err := utils.ReloadYamlTemplate(&templatedPkg, templateMap); err != nil {
+		return pkg, nil, err
 	}
-
-	templatedPkg = pkg
 
 	return templatedPkg, warnings, nil
 }

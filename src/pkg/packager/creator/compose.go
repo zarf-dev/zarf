@@ -10,11 +10,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func ComposeComponents(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions) (composedPkg *types.ZarfPackage, warnings []string, err error) {
-	components := []types.ZarfComponent{}
+func ComposeComponents(pkg types.ZarfPackage, createOpts types.ZarfCreateOptions) (composedPkg types.ZarfPackage, warnings []string, err error) {
+	composedPkg = pkg
 
-	pkgVars := pkg.Variables
-	pkgConsts := pkg.Constants
+	components := []types.ZarfComponent{}
+	pkgVars := []types.ZarfPackageVariable{}
+	pkgConsts := []types.ZarfPackageConstant{}
 
 	for i, component := range pkg.Components {
 		arch := pkg.Metadata.Architecture
@@ -30,7 +31,7 @@ func ComposeComponents(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptio
 		// build the import chain
 		chain, err := composer.NewImportChain(component, i, pkg.Metadata.Name, arch, createOpts.Flavor)
 		if err != nil {
-			return nil, nil, err
+			return pkg, nil, err
 		}
 		message.Debugf("%s", chain)
 
@@ -41,7 +42,7 @@ func ComposeComponents(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptio
 		// get the composed component
 		composed, err := chain.Compose()
 		if err != nil {
-			return nil, nil, err
+			return pkg, nil, err
 		}
 		components = append(components, *composed)
 
@@ -51,12 +52,10 @@ func ComposeComponents(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptio
 	}
 
 	// set the filtered + composed components
-	pkg.Components = components
+	composedPkg.Components = components
 
-	pkg.Variables = pkgVars
-	pkg.Constants = pkgConsts
-
-	composedPkg = pkg
+	composedPkg.Variables = pkgVars
+	composedPkg.Constants = pkgConsts
 
 	return composedPkg, warnings, nil
 }
