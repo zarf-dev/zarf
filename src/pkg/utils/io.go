@@ -353,6 +353,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (fileNames []string, sha256su
 
 	// open file
 	file, err := os.Open(srcFile)
+	defer file.Close()
 	if err != nil {
 		return fileNames, "", err
 	}
