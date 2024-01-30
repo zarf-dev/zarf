@@ -16,11 +16,11 @@ func TestCustomInit(t *testing.T) {
 	t.Log("E2E: Custom Init Package")
 	e2e.SetupWithCluster(t)
 	buildPath := filepath.Join("src", "test", "packages", "35-custom-init-package")
-	pkgName := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", e2e.Arch, e2e.GetZarfVersion(t))
+	pkgName := fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, e2e.GetZarfVersion(t))
 	privateKeyFlag := "--signing-key=src/test/packages/zarf-test.prv-key"
 	publicKeyFlag := "--key=src/test/packages/zarf-test.pub"
 
-	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, privateKeyFlag, "--confirm", "-o=build")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, privateKeyFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(pkgName)
 
