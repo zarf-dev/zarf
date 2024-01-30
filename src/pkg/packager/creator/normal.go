@@ -92,7 +92,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg *
 		if err != nil {
 			return nil, nil, err
 		}
-		return diffPkg, nil, nil
+		return diffPkg, warnings, nil
 	}
 
 	return extendedPkg, warnings, nil
