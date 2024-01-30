@@ -92,8 +92,8 @@ const config = {
       navbar: {
         logo: {
           alt: "Zarf",
-          src: "img/zarf-logo-light.svg",
-          srcDark: "img/zarf-logo-dark.svg",
+          src: "img/zarf-logo-header.svg",
+          srcDark: "img/zarf-logo-header.svg",
           href: "https://zarf.dev/",
           target: "_self",
         },
@@ -128,8 +128,8 @@ const config = {
         style: "dark",
         logo: {
           alt: "Zarf",
-          src: "img/zarf-logo-light.svg",
-          srcDark: "img/zarf-logo-dark.svg",
+          src: "img/zarf-logo-header.svg",
+          srcDark: "img/zarf-logo-header.svg",
           href: "https://zarf.dev/",
         },
         copyright: `<p class="p-copy">Copyright © ${new Date().getFullYear()} Zarf Project, All rights reserved.</p>`,
