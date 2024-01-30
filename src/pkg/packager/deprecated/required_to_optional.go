@@ -7,6 +7,7 @@ package deprecated
 import (
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -37,6 +38,16 @@ func (m RequiredToOptional) Run(c types.ZarfComponent) (types.ZarfComponent, str
 	}
 
 	warning := fmt.Sprintf("Component %q is using \"required\" which will be removed in Zarf v1.0.0. Please migrate to \"optional\".", c.Name)
+
+	// Make optional agree with required if not set
+	if c.Optional == nil && c.DeprecatedRequired != nil {
+		switch *c.DeprecatedRequired {
+		case true:
+			c.Optional = helpers.BoolPtr(false)
+		case false:
+			c.Optional = helpers.BoolPtr(true)
+		}
+	}
 
 	return c, warning
 }
