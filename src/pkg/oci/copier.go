@@ -6,7 +6,6 @@ package oci
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -53,9 +52,9 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 		}
 		if exists {
 			src.log("Layer already exists in destination, skipping")
-			b := make([]byte, 8)
-			binary.LittleEndian.PutUint64(b, uint64(b[layer.Size]))
-			progressBar.Write(b)
+			contentLength := layer.Size
+			data := make([]byte, contentLength)
+			progressBar.Write(data)
 			progressBar.UpdateTitle(fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
 			sem.Release(1)
 			continue

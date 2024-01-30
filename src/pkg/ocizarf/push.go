@@ -51,6 +51,7 @@ func (o *ZarfOrasRemote) PublishZarfPackage(ctx context.Context, pkg *types.Zarf
 		total += desc.Size
 	}
 
+	message.Infof("total is %d", total)
 	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", o.Repo().Reference.Repository, o.Repo().Reference.Reference))
 	annotations := zarfPackageOciAnnotations(&pkg.Metadata)
 	err = o.PublishPackage(ctx, src, annotations, pkg.Build.Architecture, descs, config.CommonOptions.OCIConcurrency, progressBar)

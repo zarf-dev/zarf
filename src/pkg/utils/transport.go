@@ -94,7 +94,9 @@ func (t *Transport) roundTrip(req *http.Request) (resp *http.Response, err error
 
 	if resp != nil && req.Method == http.MethodHead && err == nil && t.ProgressBar != nil {
 		if resp.ContentLength > 0 {
-			// t.ProgressBar.Add(int(resp.ContentLength))
+			contentLength := int(resp.ContentLength)
+			data := make([]byte, contentLength)
+			t.ProgressBar.Write(data)
 		}
 	}
 	return resp, err
