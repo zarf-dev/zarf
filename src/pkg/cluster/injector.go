@@ -36,7 +36,7 @@ var (
 )
 
 // ImageNodeMap is a map of image/node pairs.
-type ImageNodeMap map[string][]string
+type imageNodeMap map[string][]string
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
 func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injectorSeedSrcs []string) {
