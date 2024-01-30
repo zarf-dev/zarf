@@ -376,9 +376,8 @@ func SplitFile(srcFile string, chunkSizeBytes int) (fileNames []string, sha256su
 			if err == io.EOF {
 				// At end of file, break out of loop
 				break
-			} else {
-				return fileNames, "", err
 			}
+			return fileNames, "", err
 		}
 
 		// Pass data to hash
