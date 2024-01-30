@@ -431,7 +431,7 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 }
 
 // GetImagesFromAvailableNodes checks for images on schedulable nodes within a cluster and returns
-func (c *Cluster) GetImagesFromAvailableNodes(timeoutDuration time.Duration) (ImageNodeMap, error) {
+func (c *Cluster) getImagesAndNodesForInjection(timeoutDuration time.Duration) (imageNodeMap, error) {
 	timeout := time.After(timeoutDuration)
 	result := make(ImageNodeMap)
 
