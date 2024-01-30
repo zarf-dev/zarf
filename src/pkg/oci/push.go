@@ -43,7 +43,8 @@ func (o *OrasRemote) pushManifestConfigFromMetadata(annotations map[string]strin
 	manifestConfig := ConfigPartial{
 		Architecture: o.targetPlatform.Architecture,
 		OCIVersion:   "1.0.1",
-		Annotations:  annotations,
+		// ?! Should this be all the users annotations or just title and description ?
+		Annotations: annotations,
 	}
 	manifestConfigBytes, err := json.Marshal(manifestConfig)
 	if err != nil {
@@ -74,7 +75,8 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 
 // PublishPackage publishes the package to the remote repository.
 // TODO: We need documentation to Library that they need to use the ocispec package for map keys
-func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, annotations map[string]string, desc []ocispec.Descriptor, concurrency int, progressBar ProgressWriter) (err error) {
+// TODO: ?! We need the package.build architecutre rather than the o.targetPlatform.Arch. How do we make this clear to users?
+func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, annotations map[string]string, arch string, desc []ocispec.Descriptor, concurrency int, progressBar ProgressWriter) (err error) {
 	if annotations[ocispec.AnnotationTitle] == "" {
 		return errors.New("invalid annotations: please include ocispec.AnnotationTitle")
 	}
@@ -107,7 +109,7 @@ func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, annota
 		return err
 	}
 
-	if err := o.UpdateIndex(o.repo.Reference.Reference, o.targetPlatform.Architecture, publishedDesc); err != nil {
+	if err := o.UpdateIndex(o.repo.Reference.Reference, arch, publishedDesc); err != nil {
 		return err
 	}
 
