@@ -5,6 +5,9 @@ go 1.21.5
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema (https://github.com/gojsonschema/gojsonschema/pull/5)
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
 
+// TODO: remove when upgrading to next minor version of Syft
+replace github.com/anchore/syft => github.com/anchore/syft v0.99.0
+
 require (
 	cuelang.org/go v0.7.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
