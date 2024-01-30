@@ -56,7 +56,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 	}
 
 	var err error
-	var images ImageNodeMap
+	var images imageNodeMap
 	var payloadConfigmaps []string
 	var sha256sum string
 	var seedImages []transform.Image
