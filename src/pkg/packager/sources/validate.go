@@ -83,7 +83,17 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 	checkedMap[loaded.Signature] = true
 
 	err = lineByLine(checksumPath, func(line string) error {
+		// If the line is empty (i.e. there is no checksum) simply skip it - this can result from a package with no images/components
+		if line == "" {
+			return nil
+		}
+
 		split := strings.Split(line, " ")
+		// If the line is not splitable into two pieces the file is likely corrupted
+		if len(split) != 2 {
+			return fmt.Errorf("invalid checksum line: %s", line)
+		}
+
 		sha := split[0]
 		rel := split[1]
 
