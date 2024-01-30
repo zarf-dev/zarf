@@ -68,7 +68,6 @@ func zarfPackageOciAnnotations(metadata *types.ZarfMetadata) map[string]string {
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,
-		ocispec.MediaTypeImageConfig:  oci.ZarfConfigMediaType,
 	}
 
 	if url := metadata.URL; url != "" {

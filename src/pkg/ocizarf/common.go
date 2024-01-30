@@ -13,7 +13,7 @@ type ZarfOrasRemote struct {
 type Modifier func(*oci.OrasRemote)
 
 func NewZarfOrasRemote(url string, platform ocispec.Platform, mod ...oci.Modifier) (*ZarfOrasRemote, error) {
-	modifiers := append(mod, oci.WithMediaType(""))
+	modifiers := append(mod, oci.WithMediaType(oci.ZarfConfigMediaType))
 	remote, err := oci.NewOrasRemote(url, message.Infof, platform, modifiers...)
 	if err != nil {
 		return nil, err
