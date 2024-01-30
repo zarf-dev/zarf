@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -33,26 +34,27 @@ type ConfigPartial struct {
 }
 
 // PushLayer pushes the given layer (bytes) to the remote repository.
-func (o *OrasRemote) PushLayer(b []byte, mediaType string) (ocispec.Descriptor, error) {
+func (o *OrasRemote) PushLayer(b []byte, mediaType string) (*ocispec.Descriptor, error) {
 	desc := content.NewDescriptorFromBytes(mediaType, b)
-	return desc, o.repo.Push(o.ctx, desc, bytes.NewReader(b))
+	return &desc, o.repo.Push(o.ctx, desc, bytes.NewReader(b))
 }
 
 // pushManifestConfigFromMetadata pushes the manifest config with metadata to the remote repository.
-func (o *OrasRemote) pushManifestConfigFromMetadata(annotations map[string]string) (ocispec.Descriptor, error) {
+func (o *OrasRemote) pushManifestConfigFromMetadata(annotations map[string]string) (*ocispec.Descriptor, error) {
+	if annotations[ocispec.AnnotationTitle] == "" {
+		return nil, fmt.Errorf("invalid annotations: please include value for %q", ocispec.AnnotationTitle)
+	}
 	manifestConfig := ConfigPartial{
 		Architecture: o.targetPlatform.Architecture,
 		OCIVersion:   "1.0.1",
-		// ?! Should this be all the users annotations or just title and description ?
-		Annotations: annotations,
+		Annotations:  annotations,
 	}
 	manifestConfigBytes, err := json.Marshal(manifestConfig)
 	if err != nil {
-		return ocispec.Descriptor{}, err
+		return nil, err
 	}
 	// If Media type is not set it will be set to the default
-	// ?! Is this the image config media type or the
-	return o.PushLayer(manifestConfigBytes, annotations[ocispec.MediaTypeImageConfig])
+	return o.PushLayer(manifestConfigBytes, o.mediaType)
 }
 
 func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descriptor, configDesc *ocispec.Descriptor, annotations map[string]string) (ocispec.Descriptor, error) {
@@ -77,9 +79,6 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 // TODO: We need documentation to Library that they need to use the ocispec package for map keys
 // TODO: ?! We need the package.build architecutre rather than the o.targetPlatform.Arch. How do we make this clear to users?
 func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, annotations map[string]string, arch string, desc []ocispec.Descriptor, concurrency int, progressBar ProgressWriter) (err error) {
-	if annotations[ocispec.AnnotationTitle] == "" {
-		return errors.New("invalid annotations: please include ocispec.AnnotationTitle")
-	}
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 	// assumes referrers API is not supported since OCI artifact
@@ -93,14 +92,10 @@ func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, annota
 	if err != nil {
 		return err
 	}
-	root, err := o.generatePackManifest(src, desc, &manifestConfigDesc, annotations)
+	root, err := o.generatePackManifest(src, desc, manifestConfigDesc, annotations)
 	if err != nil {
 		return err
 	}
-
-	// ?! Do we care about the size of these?
-	// Maybe we should add a total function or simliar to set the byte amount in the progress bar
-	// total += root.Size + manifestConfigDesc.Size
 
 	o.Transport.ProgressBar = progressBar
 
@@ -109,7 +104,7 @@ func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, annota
 		return err
 	}
 
-	if err := o.UpdateIndex(o.repo.Reference.Reference, arch, publishedDesc); err != nil {
+	if err := o.UpdateIndex(o.repo.Reference.Reference, publishedDesc); err != nil {
 		return err
 	}
 
@@ -117,17 +112,12 @@ func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, annota
 }
 
 // UpdateIndex updates the index for the given package.
-func (o *OrasRemote) UpdateIndex(tag string, arch string, publishedDesc ocispec.Descriptor) error {
+func (o *OrasRemote) UpdateIndex(tag string, publishedDesc ocispec.Descriptor) error {
 	var index ocispec.Index
 
 	o.repo.Reference.Reference = tag
 	// since ref has changed, need to reset root
 	o.root = nil
-
-	platform := &ocispec.Platform{
-		OS:           MultiOS,
-		Architecture: arch,
-	}
 
 	_, err := o.repo.Resolve(o.ctx, o.repo.Reference.Reference)
 	if err != nil {
@@ -141,7 +131,7 @@ func (o *OrasRemote) UpdateIndex(tag string, arch string, publishedDesc ocispec.
 						MediaType: ocispec.MediaTypeImageManifest,
 						Digest:    publishedDesc.Digest,
 						Size:      publishedDesc.Size,
-						Platform:  platform,
+						Platform:  o.targetPlatform,
 					},
 				},
 			}
@@ -167,10 +157,10 @@ func (o *OrasRemote) UpdateIndex(tag string, arch string, publishedDesc ocispec.
 
 	found := false
 	for idx, m := range index.Manifests {
-		if m.Platform != nil && m.Platform.Architecture == arch {
+		if m.Platform != nil && m.Platform.Architecture == o.targetPlatform.Architecture {
 			index.Manifests[idx].Digest = publishedDesc.Digest
 			index.Manifests[idx].Size = publishedDesc.Size
-			index.Manifests[idx].Platform = platform
+			index.Manifests[idx].Platform = o.targetPlatform
 			found = true
 			break
 		}
@@ -180,7 +170,7 @@ func (o *OrasRemote) UpdateIndex(tag string, arch string, publishedDesc ocispec.
 			MediaType: ocispec.MediaTypeImageManifest,
 			Digest:    publishedDesc.Digest,
 			Size:      publishedDesc.Size,
-			Platform:  platform,
+			Platform:  o.targetPlatform,
 		})
 	}
 

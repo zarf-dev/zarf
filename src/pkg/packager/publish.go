@@ -77,7 +77,7 @@ func (p *Packager) Publish() (err error) {
 		}
 
 		tag := srcRemote.Repo().Reference.Reference
-		if err := dstRemote.UpdateIndex(tag, arch, expected); err != nil {
+		if err := dstRemote.UpdateIndex(tag, expected); err != nil {
 			return err
 		}
 		message.Infof("Published %s to %s", srcRemote.Repo().Reference, dstRemote.Repo().Reference)
@@ -112,8 +112,13 @@ func (p *Packager) Publish() (err error) {
 	if err != nil {
 		return err
 	}
-
-	remote, err := ocizarf.NewZarfOrasRemote(ref, oci.PlatformForArch(config.GetArch()), oci.WithInsecure(config.CommonOptions.Insecure))
+	var platform ocispec.Platform
+	if p.cfg.CreateOpts.IsSkeleton {
+		platform = oci.PlatformForSkeleton()
+	} else {
+		platform = oci.PlatformForArch(config.GetArch())
+	}
+	remote, err := ocizarf.NewZarfOrasRemote(ref, platform, oci.WithInsecure(config.CommonOptions.Insecure))
 	if err != nil {
 		return err
 	}

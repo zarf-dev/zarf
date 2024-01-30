@@ -37,7 +37,7 @@ func (DiscardProgressWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (DiscardProgressWriter) UpdateTitle(s string) {}
+func (DiscardProgressWriter) UpdateTitle(_ string) {}
 
 type DiscardProgressWriter struct{}
 
@@ -60,6 +60,7 @@ type OrasRemote struct {
 	targetPlatform *ocispec.Platform
 	userAgent      string
 	log            log
+	mediaType      string
 }
 
 // Modifier is a function that modifies an OrasRemote
@@ -102,11 +103,18 @@ func WithInsecureSkipVerify(insecure bool) Modifier {
 	}
 }
 
-// PlatformForSkeleton sets the target architecture for the remote to skeleton
+// PlatformForSkeleton returns a skeleton oci
 func PlatformForSkeleton() ocispec.Platform {
 	return ocispec.Platform{
 		OS:           MultiOS,
 		Architecture: SkeletonArch,
+	}
+}
+
+// WithMediaType sets the mediatype for the remote
+func WithMediaType(mediaType string) Modifier {
+	return func(o *OrasRemote) {
+		o.mediaType = mediaType
 	}
 }
 

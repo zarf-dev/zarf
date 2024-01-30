@@ -51,7 +51,6 @@ func (o *ZarfOrasRemote) PublishZarfPackage(ctx context.Context, pkg *types.Zarf
 		total += desc.Size
 	}
 
-	message.Infof("total is %d", total)
 	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", o.Repo().Reference.Repository, o.Repo().Reference.Reference))
 	annotations := zarfPackageOciAnnotations(&pkg.Metadata)
 	err = o.PublishPackage(ctx, src, annotations, pkg.Build.Architecture, descs, config.CommonOptions.OCIConcurrency, progressBar)
@@ -60,7 +59,6 @@ func (o *ZarfOrasRemote) PublishZarfPackage(ctx context.Context, pkg *types.Zarf
 		return fmt.Errorf("unable to publish package: %w", err)
 	}
 
-	// ?! Do I know the media type 100% at this point
 	progressBar.Successf("Published %s [%s]", o.Repo().Reference, oci.ZarfLayerMediaTypeBlob)
 	return nil
 }
