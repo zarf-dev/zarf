@@ -46,7 +46,7 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 	// pull only needed layers if --confirm is set
 	if config.CommonOptions.Confirm {
 
-		layersToPull, err = ocizarf.LayersFromRequestedComponents(s.OrasRemote, optionalComponents)
+		layersToPull, err = ocizarf.LayersFromRequestedComponents(s.ZarfOrasRemote, optionalComponents)
 		if err != nil {
 			return fmt.Errorf("unable to get published component image layers: %s", err.Error())
 		}

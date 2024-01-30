@@ -13,7 +13,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-func CopyPackage(ctx context.Context, src *oci.OrasRemote, dst *oci.OrasRemote,
+func CopyPackage(ctx context.Context, src *ZarfOrasRemote, dst *ZarfOrasRemote,
 	include func(d ocispec.Descriptor) bool, concurrency int) error {
 
 	srcRoot, err := src.FetchRoot()
@@ -27,7 +27,7 @@ func CopyPackage(ctx context.Context, src *oci.OrasRemote, dst *oci.OrasRemote,
 	progressBar := message.NewProgressBar(size, title)
 	defer progressBar.Finish(err, "Copied %s", src.Repo().Reference)
 
-	if err = oci.Copy(ctx, src, dst, include, concurrency, progressBar); err != nil {
+	if err = oci.Copy(ctx, src.OrasRemote, dst.OrasRemote, include, concurrency, progressBar); err != nil {
 		return err
 	}
 	return nil

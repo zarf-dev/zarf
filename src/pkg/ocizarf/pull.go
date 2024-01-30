@@ -57,7 +57,7 @@ func (o *ZarfOrasRemote) PullPackage(destinationDir string, concurrency int, lay
 // It also retrieves the descriptors for all image layers that are required by the components.
 //
 // It also respects the `required` flag on components, and will retrieve all necessary layers for required components.
-func LayersFromRequestedComponents(o *oci.OrasRemote, requestedComponents []string) (layers []ocispec.Descriptor, err error) {
+func LayersFromRequestedComponents(o *ZarfOrasRemote, requestedComponents []string) (layers []ocispec.Descriptor, err error) {
 	root, err := o.FetchRoot()
 	if err != nil {
 		return nil, err

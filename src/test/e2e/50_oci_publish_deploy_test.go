@@ -150,7 +150,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	}
 	require.Less(t, attempt, 5, "failed to ping registry")
 
-	err = ocizarf.CopyPackage(ctx, src.OrasRemote, dst.OrasRemote, nil, 5)
+	err = ocizarf.CopyPackage(ctx, src, dst, nil, 5)
 	suite.NoError(err)
 
 	srcRoot, err := src.FetchRoot()

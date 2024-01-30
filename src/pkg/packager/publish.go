@@ -30,7 +30,7 @@ func (p *Packager) Publish() (err error) {
 		ctx := context.TODO()
 		// oci --> oci is a special case, where we will use oci.CopyPackage so that we can transfer the package
 		// w/o layers touching the filesystem
-		srcRemote := p.source.(*sources.OCISource).OrasRemote
+		srcRemote := p.source.(*sources.OCISource).ZarfOrasRemote
 
 		parts := strings.Split(srcRemote.Repo().Reference.Repository, "/")
 		packageName := parts[len(parts)-1]
@@ -58,7 +58,7 @@ func (p *Packager) Publish() (err error) {
 			return fmt.Errorf("architecture mismatch (specified: %q, found %q)", arch, pkg.Build.Architecture)
 		}
 
-		if err := ocizarf.CopyPackage(ctx, srcRemote, dstRemote.OrasRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
+		if err := ocizarf.CopyPackage(ctx, srcRemote, dstRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
 			return err
 		}
 
