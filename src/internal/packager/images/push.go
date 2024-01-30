@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -52,7 +53,7 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 	httpTransport.TLSClientConfig.InsecureSkipVerify = i.Insecure
 	progressBar := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images to the zarf registry", len(i.ImageList)))
 	defer progressBar.Stop()
-	craneTransport := utils.NewTransport(httpTransport, progressBar)
+	craneTransport := helpers.NewTransport(httpTransport, progressBar)
 
 	pushOptions := config.GetCraneOptions(i.Insecure, i.Architectures...)
 	pushOptions = append(pushOptions, config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword))

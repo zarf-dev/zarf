@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
@@ -25,8 +24,7 @@ import (
 const (
 	// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
-	// ZarfConfigMediaType is the media type for the manifest config
-	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
+
 	// SkeletonArch is the architecture used for skeleton packages
 	SkeletonArch = "skeleton"
 	// MultiOS is the OS used for multi-platform packages
@@ -55,7 +53,7 @@ type OrasRemote struct {
 	repo           *remote.Repository
 	root           *OCIManifest
 	ctx            context.Context
-	Transport      *utils.Transport
+	Transport      *helpers.Transport
 	CopyOpts       oras.CopyOptions
 	targetPlatform *ocispec.Platform
 	userAgent      string
@@ -136,8 +134,6 @@ func WithUserAgent(userAgent string) Modifier {
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
 // # Registry auth is handled by the Docker CLI's credential store and checked before returning the client
-//
-// ?! Should I keep platform in this function or only have it in NewZarfOrasRemote?
 func NewOrasRemote(url string, logger log, platform ocispec.Platform, mods ...Modifier) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {
@@ -208,7 +204,7 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 // TODO: instead of using Docker's cred store, should use the new one from ORAS to remove that dep
 func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	o.Transport = utils.NewTransport(transport, nil)
+	o.Transport = helpers.NewTransport(transport, nil)
 
 	client := &auth.Client{
 		Cache: auth.DefaultCache,
