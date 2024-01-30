@@ -69,15 +69,6 @@ func (o *OrasRemote) FetchLayer(desc ocispec.Descriptor) (bytes []byte, err erro
 	return content.FetchAll(o.ctx, o.repo, desc)
 }
 
-// FetchImagesIndex fetches the images/index.json file from the remote repository.
-func (o *OrasRemote) FetchImagesIndex() (index *ocispec.Index, err error) {
-	manifest, err := o.FetchRoot()
-	if err != nil {
-		return index, err
-	}
-	return FetchJSONFile[*ocispec.Index](o.FetchLayer, manifest, ZarfPackageIndexPath)
-}
-
 // FetchJSONFile fetches the given JSON file from the remote repository.
 func FetchJSONFile[T any](fetcher func(desc ocispec.Descriptor) (bytes []byte, err error), manifest *OCIManifest, path string) (result T, err error) {
 	descriptor := manifest.Locate(path)

@@ -141,6 +141,8 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 
 // PullLayer pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
 func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) error {
+	// ?! Would this not fail in a different way if this error wasn't here
+	// Is this simply for better error messaging?
 	if desc.MediaType != ZarfLayerMediaTypeBlob {
 		return fmt.Errorf("invalid media type for file layer: %s", desc.MediaType)
 	}
