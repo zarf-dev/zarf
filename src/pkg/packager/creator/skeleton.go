@@ -33,32 +33,30 @@ type SkeletonCreator struct {
 }
 
 // LoadPackageDefinition loads and configure a zarf.yaml file during package create.
-func (sc *SkeletonCreator) LoadPackageDefinition(pkg types.ZarfPackage, dst *layout.PackagePaths) (loadedPkg types.ZarfPackage, warnings []string, err error) {
-	configuredPkg, err := setPackageMetadata(pkg, sc.cfg.CreateOpts)
+func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg *types.ZarfPackage, warnings []string, err error) {
+	configuredPkg, err := setPackageMetadata(&sc.cfg.Pkg, &sc.cfg.CreateOpts)
 	if err != nil {
 		message.Warn(err.Error())
 	}
 
 	// Compose components into a single zarf.yaml file
-	composedPkg, composeWarnings, err := ComposeComponents(configuredPkg, sc.cfg.CreateOpts)
+	composedPkg, composeWarnings, err := ComposeComponents(configuredPkg, &sc.cfg.CreateOpts)
 	if err != nil {
-		return pkg, nil, err
+		return nil, nil, err
 	}
 	warnings = append(warnings, composeWarnings...)
 
-	extendedPkg, err := processExtensions(composedPkg, sc.cfg.CreateOpts, dst)
+	pkg, err = processExtensions(composedPkg, &sc.cfg.CreateOpts, dst)
 	if err != nil {
-		return pkg, nil, err
+		return nil, nil, err
 	}
 
-	loadedPkg = extendedPkg
-
-	return loadedPkg, warnings, nil
+	return pkg, warnings, nil
 }
 
 // TODO: print warnings somewhere else in the skeleton create flow.
-func (sc *SkeletonCreator) Assemble(pkg types.ZarfPackage, dst *layout.PackagePaths) error {
-	for idx, component := range pkg.Components {
+func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths) error {
+	for idx, component := range sc.cfg.Pkg.Components {
 		if err := sc.addComponent(idx, component, dst); err != nil {
 			return err
 		}
@@ -66,8 +64,8 @@ func (sc *SkeletonCreator) Assemble(pkg types.ZarfPackage, dst *layout.PackagePa
 	return nil
 }
 
-func (sc *SkeletonCreator) Output(pkg types.ZarfPackage, dst *layout.PackagePaths) error {
-	for _, component := range pkg.Components {
+func (sc *SkeletonCreator) Output(dst *layout.PackagePaths) error {
+	for _, component := range sc.cfg.Pkg.Components {
 		if err := dst.Components.Archive(component, false); err != nil {
 			return err
 		}
@@ -77,9 +75,9 @@ func (sc *SkeletonCreator) Output(pkg types.ZarfPackage, dst *layout.PackagePath
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
 	}
-	pkg.Metadata.AggregateChecksum = checksumChecksum
+	sc.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
 
-	return utils.WriteYaml(dst.ZarfYAML, pkg, 0400)
+	return utils.WriteYaml(dst.ZarfYAML, sc.cfg.Pkg, 0400)
 }
 
 func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent, dst *layout.PackagePaths) error {

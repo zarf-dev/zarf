@@ -37,11 +37,10 @@ func (p *Packager) DevDeploy() error {
 
 	c := creator.New(p.cfg)
 
-	loadedPkg, warnings, err := c.LoadPackageDefinition(p.cfg.Pkg, p.layout)
+	pkg, warnings, err := c.LoadPackageDefinition(p.layout)
 	if err != nil {
 		return err
 	}
-
 	p.warnings = append(p.warnings, warnings...)
 
 	// Filter out components that are not compatible with this system
@@ -52,25 +51,25 @@ func (p *Packager) DevDeploy() error {
 	// the user's selection and the component's `required` field
 	// This is also different from regular package creation, where we still assemble and package up
 	// all components and their dependencies, regardless of whether they are required or not
-	loadedPkg.Components = p.getSelectedComponents()
+	pkg.Components = p.getSelectedComponents()
 
-	if err := validate.Run(loadedPkg); err != nil {
+	if err := validate.Run(*pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
 	// If building in yolo mode, strip out all images and repos
 	if !p.cfg.CreateOpts.NoYOLO {
 		for idx := range p.cfg.Pkg.Components {
-			loadedPkg.Components[idx].Images = []string{}
-			loadedPkg.Components[idx].Repos = []string{}
+			p.cfg.Pkg.Components[idx].Images = []string{}
+			p.cfg.Pkg.Components[idx].Repos = []string{}
 		}
 	}
 
-	if err := c.Assemble(loadedPkg, p.layout); err != nil {
+	if err := c.Assemble(p.layout); err != nil {
 		return err
 	}
 
-	message.HeaderInfof("📦 PACKAGE DEPLOY %s", loadedPkg.Metadata.Name)
+	message.HeaderInfof("📦 PACKAGE DEPLOY %s", p.cfg.Pkg.Metadata.Name)
 
 	// Set variables and prompt if --confirm is not set
 	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
@@ -80,7 +79,7 @@ func (p *Packager) DevDeploy() error {
 	p.connectStrings = make(types.ConnectStrings)
 
 	if !p.cfg.CreateOpts.NoYOLO {
-		loadedPkg.Metadata.YOLO = true
+		p.cfg.Pkg.Metadata.YOLO = true
 	} else {
 		p.hpaModified = false
 		// Reset registry HPA scale down whether an error occurs or not
@@ -102,7 +101,7 @@ func (p *Packager) DevDeploy() error {
 	message.HorizontalRule()
 	message.Title("Next steps:", "")
 
-	message.ZarfCommand("package inspect %s", loadedPkg.Metadata.Name)
+	message.ZarfCommand("package inspect %s", p.cfg.Pkg.Metadata.Name)
 
 	// cd back
 	return os.Chdir(cwd)

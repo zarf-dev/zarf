@@ -12,26 +12,25 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func processExtensions(pkg types.ZarfPackage, createOpts types.ZarfCreateOptions, layout *layout.PackagePaths) (extendedPkg types.ZarfPackage, err error) {
-	extendedPkg = pkg
+func processExtensions(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions, layout *layout.PackagePaths) (*types.ZarfPackage, error) {
 	components := []types.ZarfComponent{}
 
 	// Create component paths and process extensions for each component.
 	for _, c := range pkg.Components {
 		componentPaths, err := layout.Components.Create(c)
 		if err != nil {
-			return pkg, err
+			return nil, err
 		}
 
 		// Big Bang
 		if c.Extensions.BigBang != nil {
 			if createOpts.IsSkeleton {
 				if c, err = bigbang.Skeletonize(componentPaths, c); err != nil {
-					return pkg, fmt.Errorf("unable to process bigbang extension: %w", err)
+					return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
 				}
 			} else {
 				if c, err = bigbang.Run(pkg.Metadata.YOLO, componentPaths, c); err != nil {
-					return pkg, fmt.Errorf("unable to process bigbang extension: %w", err)
+					return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
 				}
 			}
 		}
@@ -39,9 +38,9 @@ func processExtensions(pkg types.ZarfPackage, createOpts types.ZarfCreateOptions
 		components = append(components, c)
 	}
 
-	// Update the package config with the expanded sub components.
+	// Update the parent package config with the expanded sub components.
 	// This is important when the deploy package is created.
-	extendedPkg.Components = components
+	pkg.Components = components
 
-	return extendedPkg, nil
+	return pkg, nil
 }

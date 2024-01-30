@@ -21,7 +21,6 @@ func (p *Packager) Create() (err error) {
 	if err != nil {
 		return err
 	}
-
 	if err := creator.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 		return err
 	}
@@ -31,7 +30,7 @@ func (p *Packager) Create() (err error) {
 
 	c := creator.New(p.cfg)
 
-	loadedPkg, warnings, err := c.LoadPackageDefinition(p.cfg.Pkg, p.layout)
+	pkg, warnings, err := c.LoadPackageDefinition(p.layout)
 	if err != nil {
 		return err
 	}
@@ -39,7 +38,7 @@ func (p *Packager) Create() (err error) {
 	p.warnings = append(p.warnings, warnings...)
 
 	// Perform early package validation.
-	if err := validate.Run(loadedPkg); err != nil {
+	if err := validate.Run(*pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
@@ -47,7 +46,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	if err := c.Assemble(loadedPkg, p.layout); err != nil {
+	if err := c.Assemble(p.layout); err != nil {
 		return err
 	}
 
@@ -56,5 +55,5 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	return c.Output(loadedPkg, p.layout)
+	return c.Output(p.layout)
 }
