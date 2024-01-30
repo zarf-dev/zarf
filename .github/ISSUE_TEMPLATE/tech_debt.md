@@ -2,7 +2,7 @@
 name: Tech debt
 about: Record something that should be investigated or refactored in the future.
 title: ''
-labels: 'tech-debt'
+labels: 'tech-debt 💳'
 assignees: ''
 ---
 
