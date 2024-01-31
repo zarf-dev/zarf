@@ -34,11 +34,11 @@ func TestApplianceRemove(t *testing.T) {
 	require.Error(t, err)
 
 	// TODO (@WSTARR) - This needs to be refactored to use the remove logic instead of reaching into a magic directory
-	// Re-init the cluster so that we can test that the destroy scripts run
+	// Re-init the cluster so that we can test if the destroy scripts run
 	stdOut, stdErr, err = e2e.Zarf("init", "--components=k3s", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Re-init the cluster so that we can test that the destroy scripts run
+	// Destroy the cluster to test Zarf cleaning up after itself
 	stdOut, stdErr, err = e2e.Zarf("destroy", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
