@@ -21,7 +21,7 @@ func CopyPackage(ctx context.Context, src *ZarfOrasRemote, dst *ZarfOrasRemote,
 		return err
 	}
 	layers := srcRoot.GetLayers(include)
-	size := srcRoot.SumLayersSize()
+	size := oci.SumLayersSize(srcRoot.Layers)
 
 	title := fmt.Sprintf("[0/%d] layers copied", len(layers))
 	progressBar := message.NewProgressBar(size, title)

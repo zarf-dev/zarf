@@ -136,8 +136,8 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 	return helpers.WriteFile(filepath.Join(destinationDir, rel), b)
 }
 
-// PullPackagePaths pulls multiple files from the remote repository and saves them to `destinationDir`.
-func (o *OrasRemote) PullPackagePaths(paths []string, destinationDir string) ([]ocispec.Descriptor, error) {
+// PullFilesAtPaths pulls multiple files from the remote repository and saves them to `destinationDir`.
+func (o *OrasRemote) PullFilesAtPaths(paths []string, destinationDir string) ([]ocispec.Descriptor, error) {
 	paths = helpers.Unique(paths)
 	root, err := o.FetchRoot()
 	if err != nil {

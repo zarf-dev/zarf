@@ -156,10 +156,10 @@ func LayersFromRequestedComponents(o *ZarfOrasRemote, requestedComponents []stri
 
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
 func (o *ZarfOrasRemote) PullPackageMetadata(destinationDir string) ([]ocispec.Descriptor, error) {
-	return o.PullPackagePaths(PackageAlwaysPull, destinationDir)
+	return o.PullFilesAtPaths(PackageAlwaysPull, destinationDir)
 }
 
 // PullPackageSBOM pulls the package's sboms.tar from the remote repository and saves it to `destinationDir`.
 func (o *ZarfOrasRemote) PullPackageSBOM(destinationDir string) ([]ocispec.Descriptor, error) {
-	return o.PullPackagePaths([]string{layout.SBOMTar}, destinationDir)
+	return o.PullFilesAtPaths([]string{layout.SBOMTar}, destinationDir)
 }

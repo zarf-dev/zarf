@@ -33,15 +33,6 @@ func (m *OCIManifest) Locate(pathOrDigest string) ocispec.Descriptor {
 	})
 }
 
-// SumLayersSize returns the sum of the size of all the layers in the manifest.
-func (m *OCIManifest) SumLayersSize() int64 {
-	var sum int64
-	for _, layer := range m.Layers {
-		sum += layer.Size
-	}
-	return sum
-}
-
 // MarshalJSON returns the JSON encoding of the manifest.
 func (m *OCIManifest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m.Manifest)
