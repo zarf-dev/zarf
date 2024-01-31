@@ -64,7 +64,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 	// Get all the images from the cluster
 	timeout := 5 * time.Minute
 	spinner.Updatef("Getting the list of existing cluster images (%s timeout)", timeout.String())
-	if images, err = c.GetImagesFromAvailableNodes(timeout); err != nil {
+	if images, err = c.getImagesAndNodesForInjection(timeout); err != nil {
 		spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
 	}
 
