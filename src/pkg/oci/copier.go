@@ -38,9 +38,9 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 	for idx, layer := range layers {
 		bytes, err := json.MarshalIndent(layer, "", "  ")
 		if err != nil {
-			src.log("ERROR marshalling json: %s", err.Error())
+			src.log.Debug("ERROR marshalling json: %s", err.Error())
 		}
-		src.log("Copying layer:", string(bytes))
+		src.log.Debug("Copying layer:", string(bytes))
 		if err := sem.Acquire(ctx, 1); err != nil {
 			return err
 		}
@@ -51,7 +51,7 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 			return err
 		}
 		if exists {
-			src.log("Layer already exists in destination, skipping")
+			src.log.Debug("Layer already exists in destination, skipping")
 			contentLength := layer.Size
 			data := make([]byte, contentLength)
 			progressBar.Write(data)
@@ -106,7 +106,7 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 	}
 
 	duration := time.Since(start)
-	src.log("Copied", src.repo.Reference, "to", dst.repo.Reference, "with a concurrency of", concurrency, "and took", duration)
+	src.log.Debug("Copied", src.repo.Reference, "to", dst.repo.Reference, "with a concurrency of", concurrency, "and took", duration)
 
 	return nil
 }

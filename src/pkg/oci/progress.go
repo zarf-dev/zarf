@@ -31,6 +31,6 @@ func (o *OrasRemote) printLayer(desc ocispec.Descriptor, suffix string) error {
 	} else {
 		layerInfo = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 	}
-	o.log("%s (%s)", layerInfo, suffix)
+	o.log.Debug("%s (%s)", layerInfo, suffix)
 	return nil
 }

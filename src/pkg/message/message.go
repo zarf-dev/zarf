@@ -38,6 +38,21 @@ const (
 	TermWidth = 100
 )
 
+type Logger struct{}
+
+func (l *Logger) Debug(msg string, args ...any) {
+	Debugf(msg, args)
+}
+func (l *Logger) Info(msg string, args ...any) {
+	Infof(msg, args)
+}
+func (l *Logger) Warn(msg string, args ...any) {
+	Warnf(msg, args)
+}
+func (l *Logger) Error(msg string, args ...any) {
+	Warnf(msg, args)
+}
+
 // NoProgress tracks whether spinner/progress bars show updates.
 var NoProgress bool
 
@@ -144,6 +159,7 @@ func Debug(payload ...any) {
 func Debugf(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
 	debugPrinter(2, message)
+
 }
 
 // ErrorWebf prints an error message and returns a web response.

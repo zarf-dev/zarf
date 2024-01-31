@@ -26,6 +26,14 @@ const (
 	MultiOS = "multi"
 )
 
+// Logger is an interface built to
+type Logger interface {
+	Debug(msg string, args ...any)
+	Info(msg string, args ...any)
+	Warn(msg string, args ...any)
+	Error(msg string, args ...any)
+}
+
 func (DiscardProgressWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
@@ -39,9 +47,6 @@ type ProgressWriter interface {
 	io.Writer
 }
 
-// log is a function that logs a message.
-type log func(string, ...any)
-
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
 // Do we want to start exporting fields in this struct? For example log may come in handy?
 type OrasRemote struct {
@@ -52,7 +57,7 @@ type OrasRemote struct {
 	CopyOpts       oras.CopyOptions
 	targetPlatform *ocispec.Platform
 	userAgent      string
-	log            log
+	log            Logger
 	mediaType      string
 }
 
@@ -121,7 +126,7 @@ func WithUserAgent(userAgent string) Modifier {
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
 // # Registry auth is handled by the Docker CLI's credential store and checked before returning the client
-func NewOrasRemote(url string, logger log, platform ocispec.Platform, mods ...Modifier) (*OrasRemote, error) {
+func NewOrasRemote(url string, logger Logger, platform ocispec.Platform, mods ...Modifier) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
@@ -203,13 +208,13 @@ func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, err
 		client.SetUserAgent(o.userAgent)
 	}
 
-	o.log("Loading docker config file from default config location: %s for %s", config.Dir(), ref)
+	o.log.Debug("Loading docker config file from default config location: %s for %s", config.Dir(), ref)
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
 		return nil, err
 	}
 	if !cfg.ContainsAuth() {
-		o.log("no docker config file found")
+		o.log.Debug("no docker config file found")
 		return client, nil
 	}
 
