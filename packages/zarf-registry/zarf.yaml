@@ -116,10 +116,11 @@ components:
         before:
           - description: Check that the cluster has the specified storage class
             maxTotalSeconds: 3
+            # if: ${{ .Zarf.Var.REGISTRY_PVC_ENABLED }}
             wait:
-              cluster:
-                kind: storageclass
-                name: "\"${ZARF_STORAGE_CLASS}\""
+             cluster:
+               kind: storageclass
+               name: "\"${ZARF_STORAGE_CLASS}\""
 
   - name: zarf-registry
     description: |
