@@ -114,7 +114,7 @@ func (p *Packager) Publish() (err error) {
 	}
 	var platform ocispec.Platform
 	if p.cfg.CreateOpts.IsSkeleton {
-		platform = oci.PlatformForSkeleton()
+		platform = ocizarf.PlatformForSkeleton()
 	} else {
 		platform = oci.PlatformForArch(config.GetArch())
 	}

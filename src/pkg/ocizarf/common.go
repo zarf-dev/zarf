@@ -9,6 +9,10 @@ import (
 var (
 	// ZarfConfigMediaType is the media type for the manifest config
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
+	// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
+	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
+	// SkeletonArch is the architecture used for skeleton packages
+	SkeletonArch = "skeleton"
 )
 
 type ZarfOrasRemote struct {
@@ -24,4 +28,12 @@ func NewZarfOrasRemote(url string, platform ocispec.Platform, mod ...oci.Modifie
 		return nil, err
 	}
 	return &ZarfOrasRemote{remote}, nil
+}
+
+// PlatformForSkeleton returns a skeleton oci
+func PlatformForSkeleton() ocispec.Platform {
+	return ocispec.Platform{
+		OS:           oci.MultiOS,
+		Architecture: SkeletonArch,
+	}
 }

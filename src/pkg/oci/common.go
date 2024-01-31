@@ -22,11 +22,6 @@ import (
 )
 
 const (
-	// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
-	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
-
-	// SkeletonArch is the architecture used for skeleton packages
-	SkeletonArch = "skeleton"
 	// MultiOS is the OS used for multi-platform packages
 	MultiOS = "multi"
 )
@@ -98,14 +93,6 @@ func WithPlainHTTP(plainHTTP bool) Modifier {
 func WithInsecureSkipVerify(insecure bool) Modifier {
 	return func(o *OrasRemote) {
 		o.Transport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
-	}
-}
-
-// PlatformForSkeleton returns a skeleton oci
-func PlatformForSkeleton() ocispec.Platform {
-	return ocispec.Platform{
-		OS:           MultiOS,
-		Architecture: SkeletonArch,
 	}
 }
 
@@ -222,7 +209,7 @@ func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, err
 		return nil, err
 	}
 	if !cfg.ContainsAuth() {
-		o.log("no docker config file found, run 'zarf tools registry login --help'")
+		o.log("no docker config file found")
 		return client, nil
 	}
 

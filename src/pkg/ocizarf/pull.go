@@ -134,7 +134,7 @@ func LayersFromRequestedComponents(o *ZarfOrasRemote, requestedComponents []stri
 			})
 
 			// even though these are technically image manifests, we store them as Zarf blobs
-			manifestDescriptor.MediaType = oci.ZarfLayerMediaTypeBlob
+			manifestDescriptor.MediaType = ZarfLayerMediaTypeBlob
 
 			manifest, err := o.FetchManifest(manifestDescriptor)
 			if err != nil {

@@ -11,7 +11,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -34,7 +33,7 @@ func (o *ZarfOrasRemote) PublishZarfPackage(ctx context.Context, pkg *types.Zarf
 	for name, path := range paths.Files() {
 		spinner.Updatef("Preparing layer %s", helpers.First30last30(name))
 
-		mediaType := oci.ZarfLayerMediaTypeBlob
+		mediaType := ZarfLayerMediaTypeBlob
 
 		desc, err := src.Add(ctx, name, mediaType, path)
 		if err != nil {
@@ -59,7 +58,7 @@ func (o *ZarfOrasRemote) PublishZarfPackage(ctx context.Context, pkg *types.Zarf
 		return fmt.Errorf("unable to publish package: %w", err)
 	}
 
-	progressBar.Successf("Published %s [%s]", o.Repo().Reference, oci.ZarfLayerMediaTypeBlob)
+	progressBar.Successf("Published %s [%s]", o.Repo().Reference, ZarfLayerMediaTypeBlob)
 	return nil
 }
 

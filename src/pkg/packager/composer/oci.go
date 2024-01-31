@@ -30,7 +30,7 @@ func (ic *ImportChain) getRemote(url string) (*ocizarf.ZarfOrasRemote, error) {
 		return ic.remote, nil
 	}
 	var err error
-	ic.remote, err = ocizarf.NewZarfOrasRemote(url, oci.PlatformForSkeleton(), oci.WithInsecure(config.CommonOptions.Insecure))
+	ic.remote, err = ocizarf.NewZarfOrasRemote(url, ocizarf.PlatformForSkeleton(), oci.WithInsecure(config.CommonOptions.Insecure))
 	if err != nil {
 		return nil, err
 	}
