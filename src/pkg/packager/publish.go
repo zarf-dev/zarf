@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
@@ -90,24 +89,28 @@ func (p *Packager) Publish() (err error) {
 		if err != nil {
 			return err
 		}
+
 		if err := creator.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 			return err
 		}
-		if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
-			return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
-		}
-		c := creator.New(p.cfg)
-		_, warnings, err := c.LoadPackageDefinition(p.layout)
+
+		c := creator.New(p.cfg.CreateOpts)
+
+		loadedPkg, warnings, err := c.LoadPackageDefinition(p.layout)
 		if err != nil {
 			return err
 		}
 		p.warnings = append(p.warnings, warnings...)
-		if err := c.Assemble(p.layout); err != nil {
+
+		if err := c.Assemble(loadedPkg, p.layout); err != nil {
 			return err
 		}
-		if err := c.Output(p.layout); err != nil {
+
+		if err := c.Output(loadedPkg, p.layout); err != nil {
 			return err
 		}
+
+		p.cfg.Pkg = *loadedPkg
 	} else {
 		if err := p.source.LoadPackage(p.layout, false); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)

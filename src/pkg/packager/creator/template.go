@@ -14,7 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func FillActiveTemplate(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions) (templatedPkg *types.ZarfPackage, warnings []string, err error) {
+func FillActiveTemplate(pkg *types.ZarfPackage, setVariables map[string]string) (templatedPkg *types.ZarfPackage, warnings []string, err error) {
 	templateMap := map[string]string{}
 
 	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
@@ -28,7 +28,7 @@ func FillActiveTemplate(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOpti
 				warnings = append(warnings, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
 			}
 
-			_, present := createOpts.SetVariables[key]
+			_, present := setVariables[key]
 			if !present && !config.CommonOptions.Confirm {
 				setVal, err := interactive.PromptVariable(types.ZarfPackageVariable{
 					Name: key,
@@ -36,14 +36,14 @@ func FillActiveTemplate(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOpti
 				if err != nil {
 					return err
 				}
-				createOpts.SetVariables[key] = setVal
+				setVariables[key] = setVal
 			} else if !present {
 				// erroring out here
 				return fmt.Errorf("template %q must be '--set' when using the '--confirm' flag", key)
 			}
 		}
 
-		for key, value := range createOpts.SetVariables {
+		for key, value := range setVariables {
 			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
 		}
 

@@ -10,7 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func ComposeComponents(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptions) (composedPkg *types.ZarfPackage, warnings []string, err error) {
+func ComposeComponents(pkg *types.ZarfPackage, flavor string) (composedPkg *types.ZarfPackage, warnings []string, err error) {
 	components := []types.ZarfComponent{}
 
 	pkgVars := pkg.Variables
@@ -19,7 +19,7 @@ func ComposeComponents(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptio
 	for i, component := range pkg.Components {
 		arch := pkg.Metadata.Architecture
 		// filter by architecture
-		if !composer.CompatibleComponent(component, arch, createOpts.Flavor) {
+		if !composer.CompatibleComponent(component, arch, flavor) {
 			continue
 		}
 
@@ -28,7 +28,7 @@ func ComposeComponents(pkg *types.ZarfPackage, createOpts *types.ZarfCreateOptio
 		component.Only.Flavor = ""
 
 		// build the import chain
-		chain, err := composer.NewImportChain(component, i, pkg.Metadata.Name, arch, createOpts.Flavor)
+		chain, err := composer.NewImportChain(component, i, pkg.Metadata.Name, arch, flavor)
 		if err != nil {
 			return nil, nil, err
 		}

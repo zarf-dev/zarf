@@ -15,6 +15,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
@@ -39,18 +40,25 @@ var (
 
 // PackageCreator provides methods for creating normal (not skeleton) Zarf packages.
 type PackageCreator struct {
-	cfg *types.PackagerConfig
+	createOpts types.ZarfCreateOptions
+	cfg        *types.PackagerConfig
 }
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
-func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg *types.ZarfPackage, warnings []string, err error) {
-	configuredPkg, err := setPackageMetadata(&pc.cfg.Pkg, &pc.cfg.CreateOpts)
+func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loadedPkg *types.ZarfPackage, warnings []string, err error) {
+	var pkg types.ZarfPackage
+
+	if err := utils.ReadYaml(layout.ZarfYAML, &pkg); err != nil {
+		return nil, nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
+	}
+
+	configuredPkg, err := setPackageMetadata(pkg, pc.createOpts)
 	if err != nil {
 		message.Warn(err.Error())
 	}
 
 	// Compose components into a single zarf.yaml file
-	composedPkg, composeWarnings, err := ComposeComponents(configuredPkg, &pc.cfg.CreateOpts)
+	composedPkg, composeWarnings, err := ComposeComponents(configuredPkg, pc.createOpts.Flavor)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -58,7 +66,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg *
 	warnings = append(warnings, composeWarnings...)
 
 	// After components are composed, template the active package.
-	templatedPkg, templateWarnings, err := FillActiveTemplate(composedPkg, &pc.cfg.CreateOpts)
+	templatedPkg, templateWarnings, err := FillActiveTemplate(composedPkg, pc.createOpts.SetVariables)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}
@@ -66,14 +74,14 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg *
 	warnings = append(warnings, templateWarnings...)
 
 	// After templates are filled process any create extensions
-	extendedPkg, err := processExtensions(templatedPkg, &pc.cfg.CreateOpts, dst)
+	extendedPkg, err := pc.processExtensions(templatedPkg, dst)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// If we are creating a differential package, remove duplicate images and repos.
 	if extendedPkg.Build.Differential {
-		diffData, err := loadDifferentialData(&pc.cfg.CreateOpts.DifferentialData)
+		diffData, err := loadDifferentialData(&pc.createOpts.DifferentialData)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -98,13 +106,13 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg *
 	return extendedPkg, warnings, nil
 }
 
-func (pc *PackageCreator) Assemble(dst *layout.PackagePaths) error {
+func (pc *PackageCreator) Assemble(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
 	var imageList []transform.Image
 
-	skipSBOMFlagUsed := pc.cfg.CreateOpts.SkipSBOM
+	skipSBOMFlagUsed := pc.createOpts.SkipSBOM
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
 
-	for _, component := range pc.cfg.Pkg.Components {
+	for _, component := range loadedPkg.Components {
 		onCreate := component.Actions.OnCreate
 
 		onFailure := func() {
@@ -160,8 +168,8 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths) error {
 				ImagesPath:        dst.Images.Base,
 				ImageList:         imageList,
 				Insecure:          config.CommonOptions.Insecure,
-				Architectures:     []string{pc.cfg.Pkg.Metadata.Architecture, pc.cfg.Pkg.Build.Architecture},
-				RegistryOverrides: pc.cfg.CreateOpts.RegistryOverrides,
+				Architectures:     []string{loadedPkg.Metadata.Architecture, loadedPkg.Build.Architecture},
+				RegistryOverrides: pc.createOpts.RegistryOverrides,
 			}
 
 			pulled, err = imgConfig.PullAll()
@@ -196,10 +204,10 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths) error {
 }
 
 // Output assumes it is running from cwd, not the build directory
-func (pc *PackageCreator) Output(dst *layout.PackagePaths) error {
+func (pc *PackageCreator) Output(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
-	for _, component := range pc.cfg.Pkg.Components {
+	for _, component := range loadedPkg.Components {
 		// Make the component a tar archive
 		if err := dst.Components.Archive(component, true); err != nil {
 			return fmt.Errorf("unable to archive component: %s", err.Error())
@@ -211,30 +219,30 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths) error {
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for the package: %w", err)
 	}
-	pc.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
+	loadedPkg.Metadata.AggregateChecksum = checksumChecksum
 
 	// Record the migrations that will be ran on the package.
-	pc.cfg.Pkg.Build.Migrations = []string{
+	loadedPkg.Build.Migrations = []string{
 		deprecated.ScriptsToActionsMigrated,
 		deprecated.PluralizeSetVariable,
 	}
 
 	// Save the transformed config.
-	if err := utils.WriteYaml(dst.ZarfYAML, pc.cfg.Pkg, 0400); err != nil {
+	if err := utils.WriteYaml(dst.ZarfYAML, loadedPkg, 0400); err != nil {
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
 	}
 
 	// Sign the config file if a key was provided
-	if pc.cfg.CreateOpts.SigningKeyPath != "" {
-		if err := dst.SignPackage(pc.cfg.CreateOpts.SigningKeyPath, pc.cfg.CreateOpts.SigningKeyPassword); err != nil {
+	if pc.createOpts.SigningKeyPath != "" {
+		if err := dst.SignPackage(pc.createOpts.SigningKeyPath, pc.createOpts.SigningKeyPassword); err != nil {
 			return err
 		}
 	}
 
 	// Create a remote ref + client for the package (if output is OCI)
 	// then publish the package to the remote.
-	if helpers.IsOCIURL(pc.cfg.CreateOpts.Output) {
-		ref, err := oci.ReferenceFromMetadata(pc.cfg.CreateOpts.Output, &pc.cfg.Pkg.Metadata, &pc.cfg.Pkg.Build)
+	if helpers.IsOCIURL(pc.createOpts.Output) {
+		ref, err := oci.ReferenceFromMetadata(pc.createOpts.Output, &loadedPkg.Metadata, &loadedPkg.Build)
 		if err != nil {
 			return err
 		}
@@ -243,7 +251,7 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths) error {
 			return err
 		}
 
-		err = remote.PublishPackage(&pc.cfg.Pkg, dst, config.CommonOptions.OCIConcurrency)
+		err = remote.PublishPackage(loadedPkg, dst, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
@@ -258,20 +266,20 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths) error {
 		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
 	} else {
 		// Use the output path if the user specified it.
-		packageName := filepath.Join(pc.cfg.CreateOpts.Output, utils.GetPackageName(pc.cfg.Pkg, pc.cfg.CreateOpts.DifferentialData))
+		packageName := filepath.Join(pc.createOpts.Output, utils.GetPackageName(*loadedPkg, pc.createOpts.DifferentialData))
 
 		// Try to remove the package if it already exists.
 		_ = os.Remove(packageName)
 
 		// Create the package tarball.
-		if err := dst.ArchivePackage(packageName, pc.cfg.CreateOpts.MaxPackageSizeMB); err != nil {
+		if err := dst.ArchivePackage(packageName, pc.createOpts.MaxPackageSizeMB); err != nil {
 			return fmt.Errorf("unable to archive package: %w", err)
 		}
 	}
 
 	// Output the SBOM files into a directory if specified.
-	if pc.cfg.CreateOpts.ViewSBOM || pc.cfg.CreateOpts.SBOMOutputDir != "" {
-		outputSBOM := pc.cfg.CreateOpts.SBOMOutputDir
+	if pc.createOpts.ViewSBOM || pc.createOpts.SBOMOutputDir != "" {
+		outputSBOM := pc.createOpts.SBOMOutputDir
 		var sbomDir string
 		if err := dst.SBOMs.Unarchive(); err != nil {
 			return fmt.Errorf("unable to unarchive SBOMs: %w", err)
@@ -279,18 +287,47 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths) error {
 		sbomDir = dst.SBOMs.Path
 
 		if outputSBOM != "" {
-			out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, pc.cfg.Pkg.Metadata.Name)
+			out, err := sbom.OutputSBOMFiles(sbomDir, outputSBOM, loadedPkg.Metadata.Name)
 			if err != nil {
 				return err
 			}
 			sbomDir = out
 		}
 
-		if pc.cfg.CreateOpts.ViewSBOM {
+		if pc.createOpts.ViewSBOM {
 			sbom.ViewSBOMFiles(sbomDir)
 		}
 	}
 	return nil
+}
+
+func (pc *PackageCreator) processExtensions(pkg *types.ZarfPackage, layout *layout.PackagePaths) (extendedPkg *types.ZarfPackage, err error) {
+	components := []types.ZarfComponent{}
+
+	// Create component paths and process extensions for each component.
+	for _, c := range pkg.Components {
+		componentPaths, err := layout.Components.Create(c)
+		if err != nil {
+			return nil, err
+		}
+
+		// Big Bang
+		if c.Extensions.BigBang != nil {
+			if c, err = bigbang.Run(pkg.Metadata.YOLO, componentPaths, c); err != nil {
+				return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
+			}
+		}
+
+		components = append(components, c)
+	}
+
+	// Update the parent package config with the expanded sub components.
+	// This is important when the deploy package is created.
+	pkg.Components = components
+
+	extendedPkg = pkg
+
+	return extendedPkg, nil
 }
 
 func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) error {

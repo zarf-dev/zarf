@@ -10,11 +10,9 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -31,13 +29,10 @@ func (p *Packager) DevDeploy() error {
 	if err := creator.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
 		return err
 	}
-	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml file: %w", err)
-	}
 
-	c := creator.New(p.cfg)
+	c := creator.New(p.cfg.CreateOpts)
 
-	pkg, warnings, err := c.LoadPackageDefinition(p.layout)
+	loadedPkg, warnings, err := c.LoadPackageDefinition(p.layout)
 	if err != nil {
 		return err
 	}
@@ -51,9 +46,9 @@ func (p *Packager) DevDeploy() error {
 	// the user's selection and the component's `required` field
 	// This is also different from regular package creation, where we still assemble and package up
 	// all components and their dependencies, regardless of whether they are required or not
-	pkg.Components = p.getSelectedComponents()
+	loadedPkg.Components = p.getSelectedComponents()
 
-	if err := validate.Run(*pkg); err != nil {
+	if err := validate.Run(*loadedPkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
@@ -65,7 +60,7 @@ func (p *Packager) DevDeploy() error {
 		}
 	}
 
-	if err := c.Assemble(p.layout); err != nil {
+	if err := c.Assemble(loadedPkg, p.layout); err != nil {
 		return err
 	}
 

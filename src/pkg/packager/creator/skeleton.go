@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
@@ -29,43 +30,58 @@ var (
 
 // SkeletonCreator provides methods for creating skeleton Zarf packages.
 type SkeletonCreator struct {
-	cfg *types.PackagerConfig
+	createOpts types.ZarfCreateOptions
 }
 
 // LoadPackageDefinition loads and configure a zarf.yaml file during package create.
-func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg *types.ZarfPackage, warnings []string, err error) {
-	configuredPkg, err := setPackageMetadata(&sc.cfg.Pkg, &sc.cfg.CreateOpts)
+func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loadedPkg *types.ZarfPackage, warnings []string, err error) {
+	var pkg types.ZarfPackage
+
+	if err := utils.ReadYaml(layout.ZarfYAML, &pkg); err != nil {
+		return nil, nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
+	}
+
+	configuredPkg, err := setPackageMetadata(pkg, sc.createOpts)
 	if err != nil {
 		message.Warn(err.Error())
 	}
 
 	// Compose components into a single zarf.yaml file
-	composedPkg, composeWarnings, err := ComposeComponents(configuredPkg, &sc.cfg.CreateOpts)
+	composedPkg, composeWarnings, err := ComposeComponents(configuredPkg, sc.createOpts.Flavor)
 	if err != nil {
 		return nil, nil, err
 	}
 	warnings = append(warnings, composeWarnings...)
 
-	pkg, err = processExtensions(composedPkg, &sc.cfg.CreateOpts, dst)
+	extendedPkg, err := sc.processExtensions(composedPkg, dst)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return pkg, warnings, nil
+	loadedPkg = extendedPkg
+
+	return loadedPkg, warnings, nil
 }
 
 // TODO: print warnings somewhere else in the skeleton create flow.
-func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths) error {
-	for idx, component := range sc.cfg.Pkg.Components {
-		if err := sc.addComponent(idx, component, dst); err != nil {
+func (sc *SkeletonCreator) Assemble(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
+	var updatedComponents []types.ZarfComponent
+
+	for _, component := range loadedPkg.Components {
+		c, err := sc.addComponent(component, dst)
+		if err != nil {
 			return err
 		}
+		updatedComponents = append(updatedComponents, *c)
 	}
+
+	loadedPkg.Components = updatedComponents
+
 	return nil
 }
 
-func (sc *SkeletonCreator) Output(dst *layout.PackagePaths) error {
-	for _, component := range sc.cfg.Pkg.Components {
+func (sc *SkeletonCreator) Output(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
+	for _, component := range loadedPkg.Components {
 		if err := dst.Components.Archive(component, false); err != nil {
 			return err
 		}
@@ -75,30 +91,61 @@ func (sc *SkeletonCreator) Output(dst *layout.PackagePaths) error {
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
 	}
-	sc.cfg.Pkg.Metadata.AggregateChecksum = checksumChecksum
+	loadedPkg.Metadata.AggregateChecksum = checksumChecksum
 
-	return utils.WriteYaml(dst.ZarfYAML, sc.cfg.Pkg, 0400)
+	return utils.WriteYaml(dst.ZarfYAML, loadedPkg, 0400)
 }
 
-func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent, dst *layout.PackagePaths) error {
+func (sc *SkeletonCreator) processExtensions(pkg *types.ZarfPackage, layout *layout.PackagePaths) (extendedPkg *types.ZarfPackage, err error) {
+	components := []types.ZarfComponent{}
+
+	// Create component paths and process extensions for each component.
+	for _, c := range pkg.Components {
+		componentPaths, err := layout.Components.Create(c)
+		if err != nil {
+			return nil, err
+		}
+
+		// Big Bang
+		if c.Extensions.BigBang != nil {
+			if c, err = bigbang.Skeletonize(componentPaths, c); err != nil {
+				return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
+			}
+		}
+
+		components = append(components, c)
+	}
+
+	// Update the parent package config with the expanded sub components.
+	// This is important when the deploy package is created.
+	pkg.Components = components
+
+	extendedPkg = pkg
+
+	return extendedPkg, nil
+}
+
+func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) (updatedComponent *types.ZarfComponent, err error) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
+
+	updatedComponent = &component
 
 	componentPaths, err := dst.Components.Create(component)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if component.DeprecatedCosignKeyPath != "" {
 		dst := filepath.Join(componentPaths.Base, "cosign.pub")
 		err := utils.CreatePathAndCopy(component.DeprecatedCosignKeyPath, dst)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		sc.cfg.Pkg.Components[index].DeprecatedCosignKeyPath = "cosign.pub"
+		updatedComponent.DeprecatedCosignKeyPath = "cosign.pub"
 	}
 
 	// TODO: (@WSTARR) Shim the skeleton component's create action dirs to be empty. This prevents actions from failing by cd'ing into directories that will be flattened.
-	component.Actions.OnCreate.Defaults.Dir = ""
+	updatedComponent.Actions.OnCreate.Defaults.Dir = ""
 
 	resetActions := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
 		for idx := range actions {
@@ -107,10 +154,10 @@ func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent
 		return actions
 	}
 
-	component.Actions.OnCreate.Before = resetActions(component.Actions.OnCreate.Before)
-	component.Actions.OnCreate.After = resetActions(component.Actions.OnCreate.After)
-	component.Actions.OnCreate.OnSuccess = resetActions(component.Actions.OnCreate.OnSuccess)
-	component.Actions.OnCreate.OnFailure = resetActions(component.Actions.OnCreate.OnFailure)
+	updatedComponent.Actions.OnCreate.Before = resetActions(component.Actions.OnCreate.Before)
+	updatedComponent.Actions.OnCreate.After = resetActions(component.Actions.OnCreate.After)
+	updatedComponent.Actions.OnCreate.OnSuccess = resetActions(component.Actions.OnCreate.OnSuccess)
+	updatedComponent.Actions.OnCreate.OnFailure = resetActions(component.Actions.OnCreate.OnFailure)
 
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
@@ -121,10 +168,10 @@ func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent
 
 			err := utils.CreatePathAndCopy(chart.LocalPath, dst)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
-			sc.cfg.Pkg.Components[index].Charts[chartIdx].LocalPath = rel
+			updatedComponent.Charts[chartIdx].LocalPath = rel
 		}
 
 		for valuesIdx, path := range chart.ValuesFiles {
@@ -133,10 +180,10 @@ func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent
 			}
 
 			rel := fmt.Sprintf("%s-%d", helm.StandardName(layout.ValuesDir, chart), valuesIdx)
-			sc.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
+			updatedComponent.Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
 			if err := utils.CreatePathAndCopy(path, filepath.Join(componentPaths.Base, rel)); err != nil {
-				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+				return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}
 	}
@@ -154,32 +201,32 @@ func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent
 
 		if file.ExtractPath != "" {
 			if err := archiver.Extract(file.Source, file.ExtractPath, destinationDir); err != nil {
-				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
+				return nil, fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
 			}
 
 			// Make sure dst reflects the actual file or directory.
 			updatedExtractedFileOrDir := filepath.Join(destinationDir, file.ExtractPath)
 			if updatedExtractedFileOrDir != dst {
 				if err := os.Rename(updatedExtractedFileOrDir, dst); err != nil {
-					return fmt.Errorf(lang.ErrWritingFile, dst, err)
+					return nil, fmt.Errorf(lang.ErrWritingFile, dst, err)
 				}
 			}
 		} else {
 			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
-				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+				return nil, fmt.Errorf("unable to copy file %s: %w", file.Source, err)
 			}
 		}
 
 		// Change the source to the new relative source directory (any remote files will have been skipped above)
-		sc.cfg.Pkg.Components[index].Files[filesIdx].Source = rel
+		updatedComponent.Files[filesIdx].Source = rel
 
 		// Remove the extractPath from a skeleton since it will already extract it
-		sc.cfg.Pkg.Components[index].Files[filesIdx].ExtractPath = ""
+		updatedComponent.Files[filesIdx].ExtractPath = ""
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
 			if err := utils.SHAsMatch(dst, file.Shasum); err != nil {
-				return err
+				return nil, err
 			}
 		}
 
@@ -201,10 +248,10 @@ func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent
 			dst := filepath.Join(componentPaths.Base, rel)
 
 			if err := utils.CreatePathAndCopy(data.Source, dst); err != nil {
-				return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
+				return nil, fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
 			}
 
-			sc.cfg.Pkg.Components[index].DataInjections[dataIdx].Source = rel
+			updatedComponent.DataInjections[dataIdx].Source = rel
 		}
 
 		spinner.Success()
@@ -232,10 +279,10 @@ func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent
 				spinner.Updatef("Copying manifest %s", path)
 
 				if err := utils.CreatePathAndCopy(path, dst); err != nil {
-					return fmt.Errorf("unable to copy manifest %s: %w", path, err)
+					return nil, fmt.Errorf("unable to copy manifest %s: %w", path, err)
 				}
 
-				sc.cfg.Pkg.Components[index].Manifests[manifestIdx].Files[fileIdx] = rel
+				updatedComponent.Manifests[manifestIdx].Files[fileIdx] = rel
 			}
 
 			for kustomizeIdx, path := range manifest.Kustomizations {
@@ -247,17 +294,17 @@ func (sc *SkeletonCreator) addComponent(index int, component types.ZarfComponent
 				dst := filepath.Join(componentPaths.Base, rel)
 
 				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
-					return fmt.Errorf("unable to build kustomization %s: %w", path, err)
+					return nil, fmt.Errorf("unable to build kustomization %s: %w", path, err)
 				}
 
-				sc.cfg.Pkg.Components[index].Manifests[manifestIdx].Files = append(sc.cfg.Pkg.Components[index].Manifests[manifestIdx].Files, rel)
+				updatedComponent.Manifests[manifestIdx].Files = append(updatedComponent.Manifests[manifestIdx].Files, rel)
 			}
 			// remove kustomizations
-			sc.cfg.Pkg.Components[index].Manifests[manifestIdx].Kustomizations = nil
+			updatedComponent.Manifests[manifestIdx].Kustomizations = nil
 		}
 
 		spinner.Success()
 	}
 
-	return nil
+	return updatedComponent, nil
 }
