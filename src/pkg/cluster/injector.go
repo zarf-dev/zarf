@@ -35,7 +35,7 @@ var (
 	injectorLimitMemory     = resource.MustParse("256Mi")
 )
 
-// ImageNodeMap is a map of image/node pairs.
+// imageNodeMap is a map of image/node pairs.
 type imageNodeMap map[string][]string
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
@@ -433,7 +433,7 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 // GetImagesFromAvailableNodes checks for images on schedulable nodes within a cluster and returns
 func (c *Cluster) getImagesAndNodesForInjection(timeoutDuration time.Duration) (imageNodeMap, error) {
 	timeout := time.After(timeoutDuration)
-	result := make(ImageNodeMap)
+	result := make(imageNodeMap)
 
 	for {
 		// Delay check 2 seconds
