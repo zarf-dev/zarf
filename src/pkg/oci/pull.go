@@ -49,8 +49,8 @@ func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDi
 }
 
 // PullLayers pulls the package from the remote repository and saves it to the given path.
-//
-// layersToPull is an optional parameter that allows the caller to specify which layers to pull.
+// If you don't have nil paramaters for doneSaving, encounteredErr, and wg
+// you must use the channels in a go routine and call wg.done after they are used
 func (o *OrasRemote) PullLayers(destinationDir string, concurrency int,
 	layersToPull []ocispec.Descriptor, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) ([]ocispec.Descriptor, error) {
 	// de-duplicate layers
@@ -112,13 +112,20 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 
 	_, err := oras.Copy(o.ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), copyOpts)
 	if err != nil {
-		encounteredErr <- 1
+		if encounteredErr != nil {
+			encounteredErr <- 1
+		}
 		return err
 	}
 
 	// Send a signal to the progress bar that we're done and wait for it to finish
-	doneSaving <- 1
-	wg.Wait()
+	if doneSaving != nil {
+		doneSaving <- 1
+	}
+
+	if wg != nil {
+		wg.Wait()
+	}
 
 	return nil
 }

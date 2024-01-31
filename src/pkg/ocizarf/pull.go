@@ -59,7 +59,6 @@ func (o *ZarfOrasRemote) PullPackage(destinationDir string, concurrency int, lay
 	layersToPull = append(layersToPull, manifest.Config)
 
 	// Create a thread to update a progress bar as we save the package to disk
-	// Maybe the length should be len()
 	doneSaving := make(chan int)
 	encounteredErr := make(chan int)
 	var wg sync.WaitGroup

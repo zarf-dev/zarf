@@ -41,16 +41,16 @@ const (
 type Logger struct{}
 
 func (l *Logger) Debug(msg string, args ...any) {
-	Debugf(msg, args)
+	Debugf(msg, args...)
 }
 func (l *Logger) Info(msg string, args ...any) {
-	Infof(msg, args)
+	Infof(msg, args...)
 }
 func (l *Logger) Warn(msg string, args ...any) {
-	Warnf(msg, args)
+	Warnf(msg, args...)
 }
 func (l *Logger) Error(msg string, args ...any) {
-	Warnf(msg, args)
+	Warnf(msg, args...)
 }
 
 // NoProgress tracks whether spinner/progress bars show updates.
