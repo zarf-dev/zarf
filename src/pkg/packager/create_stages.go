@@ -637,7 +637,7 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 
 	// Create the checksums file
 	checksumsFilePath := p.layout.Checksums
-	if err := utils.WriteFile(checksumsFilePath, []byte(strings.Join(checksumsData, "\n")+"\n")); err != nil {
+	if err := helpers.WriteFile(checksumsFilePath, []byte(strings.Join(checksumsData, "\n")+"\n")); err != nil {
 		return "", err
 	}
 

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
@@ -17,7 +18,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/mholt/archiver/v3"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
 	ocistore "oras.land/oras-go/v2/content/oci"
 )
@@ -98,10 +101,16 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 			copyOpts := remote.CopyOpts
 			// TODO (@WSTARR): This overrides the FindSuccessors function to no longer filter nodes when pulling which is necessary when caching - once we implement caching more thoroughly we will need to reevaluate this.
 			copyOpts.FindSuccessors = content.Successors
-			return err
-			// if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, copyOpts, cache); err != nil {
-			// 	return err
-			// }
+			doneSaving := make(chan int)
+			encounteredErr := make(chan int)
+			var wg sync.WaitGroup
+			wg.Add(1)
+			successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+remote.Repo().Reference.String())
+			layerSize := oci.SumLayersSize([]ocispec.Descriptor{componentDesc})
+			go utils.RenderProgressBarForLocalDirWrite(cache, layerSize, &wg, doneSaving, encounteredErr, "Pulling", successText)
+			if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, copyOpts, cache, doneSaving, encounteredErr, &wg); err != nil {
+				return err
+			}
 		}
 	}
 

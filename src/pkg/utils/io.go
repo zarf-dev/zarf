@@ -100,27 +100,6 @@ func ListDirectories(directory string) ([]string, error) {
 	return directories, nil
 }
 
-// WriteFile writes the given data to the given path.
-func WriteFile(path string, data []byte) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("unable to create the file at %s to write the contents: %w", path, err)
-	}
-
-	_, err = f.Write(data)
-	if err != nil {
-		_ = f.Close()
-		return fmt.Errorf("unable to write the file at %s contents:%w", path, err)
-	}
-
-	err = f.Close()
-	if err != nil {
-		return fmt.Errorf("error saving file %s: %w", path, err)
-	}
-
-	return nil
-}
-
 // ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
 func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, deprecations map[string]string, templateRegex string) error {
 	textFile, err := os.Open(path)

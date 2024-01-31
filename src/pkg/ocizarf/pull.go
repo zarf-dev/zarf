@@ -60,15 +60,16 @@ func (o *ZarfOrasRemote) PullPackage(destinationDir string, concurrency int, lay
 
 	// Create a thread to update a progress bar as we save the package to disk
 	// Maybe the length should be len()
-	ct := helpers.NewConcurrencyTools[int, int](len(layersToPull))
+	doneSaving := make(chan int)
+	encounteredErr := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+o.Repo().Reference.String())
 
 	layerSize := oci.SumLayersSize(layersToPull)
-	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, &wg, ct.ProgressChan, ct.ErrorChan, "Pulling", successText)
+	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, &wg, doneSaving, encounteredErr, "Pulling", successText)
 
-	return o.PullLayers(destinationDir, concurrency, layersToPull, ct, &wg)
+	return o.PullLayers(destinationDir, concurrency, layersToPull, doneSaving, encounteredErr, &wg)
 }
 
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.

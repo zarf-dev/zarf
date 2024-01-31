@@ -76,8 +76,6 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 }
 
 // PublishPackage publishes the package to the remote repository.
-// TODO: We need documentation to Library that they need to use the ocispec package for map keys
-// TODO: ?! We need the package.build architecutre rather than the o.targetPlatform.Arch. How do we make this clear to users?
 func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, annotations map[string]string, arch string, desc []ocispec.Descriptor, concurrency int, progressBar ProgressWriter) (err error) {
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency

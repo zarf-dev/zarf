@@ -6,14 +6,12 @@ package oci
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"slices"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
@@ -54,7 +52,7 @@ func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDi
 //
 // layersToPull is an optional parameter that allows the caller to specify which layers to pull.
 func (o *OrasRemote) PullLayers(destinationDir string, concurrency int,
-	layersToPull []ocispec.Descriptor, ct *helpers.ConcurrencyTools[int, int], wg *sync.WaitGroup) ([]ocispec.Descriptor, error) {
+	layersToPull []ocispec.Descriptor, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) ([]ocispec.Descriptor, error) {
 	// de-duplicate layers
 	layersToPull = RemoveDuplicateDescriptors(layersToPull)
 
@@ -67,12 +65,12 @@ func (o *OrasRemote) PullLayers(destinationDir string, concurrency int,
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 
-	return layersToPull, o.CopyWithProgress(layersToPull, dst, copyOpts, destinationDir, ct, wg)
+	return layersToPull, o.CopyWithProgress(layersToPull, dst, copyOpts, destinationDir, doneSaving, encounteredErr, wg)
 }
 
 // CopyWithProgress copies the given layers from the remote repository to the given store.
 func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Target,
-	copyOpts oras.CopyOptions, destinationDir string, ct *helpers.ConcurrencyTools[int, int], wg *sync.WaitGroup) error {
+	copyOpts oras.CopyOptions, destinationDir string, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) error {
 	estimatedBytes := int64(0)
 	shas := []string{}
 	for _, layer := range layers {
@@ -114,12 +112,12 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 
 	_, err := oras.Copy(o.ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), copyOpts)
 	if err != nil {
-		ct.ErrorChan <- 1
+		encounteredErr <- 1
 		return err
 	}
 
 	// Send a signal to the progress bar that we're done and wait for it to finish
-	ct.ProgressChan <- 1
+	doneSaving <- 1
 	wg.Wait()
 
 	return nil
@@ -128,11 +126,6 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 // PullLayer pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
 // ?! Why do we pull a single layer with o.fetchLayer, but multiple layers with oras.copy
 func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) error {
-	// ?! Would this not fail in a different way if this error wasn't here
-	// Is this simply for better error messaging?
-	if desc.MediaType != ZarfLayerMediaTypeBlob {
-		return fmt.Errorf("invalid media type for file layer: %s", desc.MediaType)
-	}
 	b, err := o.FetchLayer(desc)
 	if err != nil {
 		return err
@@ -140,7 +133,7 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 
 	rel := desc.Annotations[ocispec.AnnotationTitle]
 
-	return utils.WriteFile(filepath.Join(destinationDir, rel), b)
+	return helpers.WriteFile(filepath.Join(destinationDir, rel), b)
 }
 
 // PullPackagePaths pulls multiple files from the remote repository and saves them to `destinationDir`.

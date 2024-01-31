@@ -12,7 +12,7 @@ import (
 
 	"encoding/json"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
@@ -150,7 +150,7 @@ func initWithoutStorageClass(t *testing.T) {
 
 	storageClassFileName := "storage-class.yaml"
 
-	err = utils.WriteFile(storageClassFileName, []byte(storageClassYaml))
+	err = helpers.WriteFile(storageClassFileName, []byte(storageClassYaml))
 	require.NoError(t, err)
 	defer e2e.CleanFiles(storageClassFileName)
 
