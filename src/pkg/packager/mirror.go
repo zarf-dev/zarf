@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -30,7 +31,7 @@ func (p *Packager) Mirror() (err error) {
 	}
 
 	// Confirm the overall package mirror
-	if !p.confirmAction(config.ZarfMirrorStage) {
+	if !utils.ConfirmAction(config.ZarfCreateStage, layout.SBOMDir, p.sbomViewFiles, p.warnings, p.cfg.Pkg, p.cfg.PkgOpts) {
 		return fmt.Errorf("mirror cancelled")
 	}
 

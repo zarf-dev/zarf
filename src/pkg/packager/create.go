@@ -10,7 +10,9 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
@@ -37,7 +39,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
-	if !p.confirmAction(config.ZarfCreateStage) {
+	if !utils.ConfirmAction(config.ZarfCreateStage, layout.SBOMDir, p.sbomViewFiles, p.warnings, *loadedPkg, p.cfg.PkgOpts) {
 		return fmt.Errorf("package creation canceled")
 	}
 
