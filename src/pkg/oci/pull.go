@@ -54,7 +54,7 @@ func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDi
 //
 // layersToPull is an optional parameter that allows the caller to specify which layers to pull.
 func (o *OrasRemote) PullLayers(destinationDir string, concurrency int,
-	layersToPull []ocispec.Descriptor, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) ([]ocispec.Descriptor, error) {
+	layersToPull []ocispec.Descriptor, ct *helpers.ConcurrencyTools[int, int], wg *sync.WaitGroup) ([]ocispec.Descriptor, error) {
 	// de-duplicate layers
 	layersToPull = RemoveDuplicateDescriptors(layersToPull)
 
@@ -67,12 +67,12 @@ func (o *OrasRemote) PullLayers(destinationDir string, concurrency int,
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 
-	return layersToPull, o.CopyWithProgress(layersToPull, dst, copyOpts, destinationDir, doneSaving, encounteredErr, wg)
+	return layersToPull, o.CopyWithProgress(layersToPull, dst, copyOpts, destinationDir, ct, wg)
 }
 
 // CopyWithProgress copies the given layers from the remote repository to the given store.
 func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Target,
-	copyOpts oras.CopyOptions, destinationDir string, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) error {
+	copyOpts oras.CopyOptions, destinationDir string, ct *helpers.ConcurrencyTools[int, int], wg *sync.WaitGroup) error {
 	estimatedBytes := int64(0)
 	shas := []string{}
 	for _, layer := range layers {
@@ -114,12 +114,12 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 
 	_, err := oras.Copy(o.ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), copyOpts)
 	if err != nil {
-		encounteredErr <- 1
+		ct.ErrorChan <- 1
 		return err
 	}
 
 	// Send a signal to the progress bar that we're done and wait for it to finish
-	doneSaving <- 1
+	ct.ProgressChan <- 1
 	wg.Wait()
 
 	return nil
