@@ -53,7 +53,8 @@ func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDi
 // PullLayers pulls the package from the remote repository and saves it to the given path.
 //
 // layersToPull is an optional parameter that allows the caller to specify which layers to pull.
-func (o *OrasRemote) PullLayers(destinationDir string, concurrency int, layersToPull []ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+func (o *OrasRemote) PullLayers(destinationDir string, concurrency int,
+	layersToPull []ocispec.Descriptor, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) ([]ocispec.Descriptor, error) {
 	// de-duplicate layers
 	layersToPull = RemoveDuplicateDescriptors(layersToPull)
 
@@ -66,11 +67,12 @@ func (o *OrasRemote) PullLayers(destinationDir string, concurrency int, layersTo
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 
-	return layersToPull, o.CopyWithProgress(layersToPull, dst, copyOpts, destinationDir)
+	return layersToPull, o.CopyWithProgress(layersToPull, dst, copyOpts, destinationDir, doneSaving, encounteredErr, wg)
 }
 
 // CopyWithProgress copies the given layers from the remote repository to the given store.
-func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Target, copyOpts oras.CopyOptions, destinationDir string) error {
+func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Target,
+	copyOpts oras.CopyOptions, destinationDir string, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) error {
 	estimatedBytes := int64(0)
 	shas := []string{}
 	for _, layer := range layers {
@@ -110,13 +112,6 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 		}
 	}
 
-	// Create a thread to update a progress bar as we save the package to disk
-	doneSaving := make(chan int)
-	encounteredErr := make(chan int)
-	var wg sync.WaitGroup
-	wg.Add(1)
-	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+o.repo.Reference.String())
-	go utils.RenderProgressBarForLocalDirWrite(destinationDir, estimatedBytes, &wg, doneSaving, encounteredErr, "Pulling", successText)
 	_, err := oras.Copy(o.ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), copyOpts)
 	if err != nil {
 		encounteredErr <- 1
@@ -131,6 +126,7 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 }
 
 // PullLayer pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
+// ?! Why do we pull a single layer with o.fetchLayer, but multiple layers with oras.copy
 func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) error {
 	// ?! Would this not fail in a different way if this error wasn't here
 	// Is this simply for better error messaging?

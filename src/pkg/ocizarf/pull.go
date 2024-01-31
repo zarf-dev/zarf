@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"sync"
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -56,7 +58,17 @@ func (o *ZarfOrasRemote) PullPackage(destinationDir string, concurrency int, lay
 	}
 	layersToPull = append(layersToPull, manifest.Config)
 
-	return o.PullLayers(destinationDir, concurrency, layersToPull)
+	// Create a thread to update a progress bar as we save the package to disk
+	doneSaving := make(chan int)
+	encounteredErr := make(chan int)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+o.Repo().Reference.String())
+
+	layerSize := oci.SumLayersSize(layersToPull)
+	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, &wg, doneSaving, encounteredErr, "Pulling", successText)
+
+	return o.PullLayers(destinationDir, concurrency, layersToPull, doneSaving, encounteredErr, &wg)
 }
 
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.

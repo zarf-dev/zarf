@@ -43,3 +43,11 @@ func RemoveDuplicateDescriptors(descriptors []ocispec.Descriptor) []ocispec.Desc
 	}
 	return list
 }
+
+func SumLayersSize(layers []ocispec.Descriptor) int64 {
+	var sum int64
+	for _, layer := range layers {
+		sum += layer.Size
+	}
+	return sum
+}
