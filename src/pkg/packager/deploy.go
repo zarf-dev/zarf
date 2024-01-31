@@ -207,6 +207,11 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
 	isAgent := component.Name == "zarf-agent"
+	isK3s := component.Name == "k3s"
+
+	if isK3s {
+		p.cfg.InitOpts.ApplianceMode = true
+	}
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if requiresCluster(component) && p.cfg.State == nil {
