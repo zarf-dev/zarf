@@ -34,24 +34,29 @@ type Logger interface {
 	Error(msg string, args ...any)
 }
 
+// Write doesn't do anything but satify implementation
 func (DiscardProgressWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// UpdateTitle doesn't do anything but satify implementation
 func (DiscardProgressWriter) UpdateTitle(_ string) {}
 
+// DiscardProgressWriter is a ProgressWriter in which all calls succeed without doing anything
+// Use this or nil or if you don't care about writing progress
 type DiscardProgressWriter struct{}
 
+// ProgressWriter wraps io.Writer, but also includes an updateTitle function to give the user
+// additional context on what's going on. Useful in OCI for tracking layers
 type ProgressWriter interface {
 	UpdateTitle(string)
 	io.Writer
 }
 
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
-// Do we want to start exporting fields in this struct? For example log may come in handy?
 type OrasRemote struct {
 	repo           *remote.Repository
-	root           *OCIManifest
+	root           *Manifest
 	ctx            context.Context
 	Transport      *helpers.Transport
 	CopyOpts       oras.CopyOptions
@@ -71,6 +76,7 @@ func WithContext(ctx context.Context) Modifier {
 	}
 }
 
+// WithInsecure sets plainHTTP and insecure tls for the remote
 func WithInsecure(insecure bool) Modifier {
 	return func(o *OrasRemote) {
 		plainHTTPMod := WithPlainHTTP(insecure)

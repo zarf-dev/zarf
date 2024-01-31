@@ -12,21 +12,21 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// OCIManifest is a wrapper around the OCI manifest
+// Manifest is a wrapper around the OCI manifest
 //
 // it includes the path to the index.json, oci-layout, and image blobs.
 // as well as a few helper functions for locating layers and calculating the size of the layers.
-type OCIManifest struct {
+type Manifest struct {
 	ocispec.Manifest
 }
 
 // New returns a new OCIManifest
-func New(manifest *ocispec.Manifest) *OCIManifest {
-	return &OCIManifest{*manifest}
+func New(manifest *ocispec.Manifest) *Manifest {
+	return &Manifest{*manifest}
 }
 
 // Locate returns the descriptor for the first layer with the given path or digest.
-func (m *OCIManifest) Locate(pathOrDigest string) ocispec.Descriptor {
+func (m *Manifest) Locate(pathOrDigest string) ocispec.Descriptor {
 	return helpers.Find(m.Layers, func(layer ocispec.Descriptor) bool {
 		// Convert from the OS path separator to the standard '/' for Windows support
 		return layer.Annotations[ocispec.AnnotationTitle] == filepath.ToSlash(pathOrDigest) || layer.Digest.Encoded() == pathOrDigest
@@ -34,11 +34,12 @@ func (m *OCIManifest) Locate(pathOrDigest string) ocispec.Descriptor {
 }
 
 // MarshalJSON returns the JSON encoding of the manifest.
-func (m *OCIManifest) MarshalJSON() ([]byte, error) {
+func (m *Manifest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m.Manifest)
 }
 
-func (m *OCIManifest) GetLayers(include func(d ocispec.Descriptor) bool) []ocispec.Descriptor {
+// GetLayers returns all the layers in the manifest
+func (m *Manifest) GetLayers(include func(d ocispec.Descriptor) bool) []ocispec.Descriptor {
 	var layers []ocispec.Descriptor
 	for _, layer := range m.Layers {
 		if include != nil && include(layer) {

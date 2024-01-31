@@ -65,12 +65,12 @@ func (o *OrasRemote) PullLayers(destinationDir string, concurrency int,
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 
-	return layersToPull, o.CopyWithProgress(layersToPull, dst, copyOpts, destinationDir, doneSaving, encounteredErr, wg)
+	return layersToPull, o.CopyWithProgress(layersToPull, dst, copyOpts, doneSaving, encounteredErr, wg)
 }
 
 // CopyWithProgress copies the given layers from the remote repository to the given store.
 func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Target,
-	copyOpts oras.CopyOptions, destinationDir string, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) error {
+	copyOpts oras.CopyOptions, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) error {
 	estimatedBytes := int64(0)
 	shas := []string{}
 	for _, layer := range layers {

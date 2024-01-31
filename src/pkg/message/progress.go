@@ -48,10 +48,6 @@ func (p *ProgressBar) Update(complete int64, text string) {
 	p.Add(chunk)
 }
 
-func (p *ProgressBar) Current() int64 {
-	return int64(p.progress.Current)
-}
-
 // UpdateTitle updates the ProgressBar with new text.
 func (p *ProgressBar) UpdateTitle(text string) {
 	if NoProgress {
@@ -82,6 +78,7 @@ func (p *ProgressBar) Write(data []byte) (int, error) {
 	return n, nil
 }
 
+// Finish stops the progressbar and logs the approiate message based on if there was an error
 func (p *ProgressBar) Finish(err error, format string, a ...any) {
 	if err != nil {
 		p.Errorf(err, format, a...)

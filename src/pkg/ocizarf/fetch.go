@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package ocizarf contains functions for interacting with Zarf packages stored in OCI registries.
 package ocizarf
 
 import (

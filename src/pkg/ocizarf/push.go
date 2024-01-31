@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package oci contains functions for interacting with Zarf packages stored in OCI registries.
+// Package ocizarf contains functions for interacting with Zarf packages stored in OCI registries.
 package ocizarf
 
 import (
@@ -17,6 +17,7 @@ import (
 	"oras.land/oras-go/v2/content/file"
 )
 
+// PublishZarfPackage publishes the zarf package to the remote repository.
 func (o *ZarfOrasRemote) PublishZarfPackage(ctx context.Context, pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
 	src, err := file.New(paths.Base)
 	if err != nil {
@@ -52,7 +53,7 @@ func (o *ZarfOrasRemote) PublishZarfPackage(ctx context.Context, pkg *types.Zarf
 
 	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", o.Repo().Reference.Repository, o.Repo().Reference.Reference))
 	annotations := zarfPackageOciAnnotations(&pkg.Metadata)
-	err = o.PublishPackage(ctx, src, annotations, pkg.Build.Architecture, descs, config.CommonOptions.OCIConcurrency, progressBar)
+	err = o.PublishPackage(ctx, src, annotations, descs, config.CommonOptions.OCIConcurrency, progressBar)
 	if err != nil {
 		progressBar.Stop()
 		return fmt.Errorf("unable to publish package: %w", err)

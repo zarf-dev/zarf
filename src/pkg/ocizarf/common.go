@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package ocizarf contains functions for interacting with Zarf packages stored in OCI registries.
 package ocizarf
 
 import (
@@ -15,12 +19,13 @@ var (
 	SkeletonArch = "skeleton"
 )
 
+// ZarfOrasRemote is a wrapper around the Oras remote repository with zarf specific functions
 type ZarfOrasRemote struct {
 	*oci.OrasRemote
 }
 
-type Modifier func(*oci.OrasRemote)
-
+// NewZarfOrasRemote returns an oras remote repository client and context for the given url
+// with zarf opination embedded
 func NewZarfOrasRemote(url string, platform ocispec.Platform, mod ...oci.Modifier) (*ZarfOrasRemote, error) {
 	modifiers := append(mod, oci.WithMediaType(ZarfConfigMediaType))
 	remote, err := oci.NewOrasRemote(url, &message.Logger{}, platform, modifiers...)

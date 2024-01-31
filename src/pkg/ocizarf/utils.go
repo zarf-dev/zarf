@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package ocizarf contains functions for interacting with Zarf packages stored in OCI registries.
 package ocizarf
 
 import (
@@ -5,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"oras.land/oras-go/v2/registry"
@@ -29,7 +34,7 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 		raw = fmt.Sprintf("%s-%s", raw, build.Flavor)
 	}
 
-	//o.log("Raw OCI reference from metadata:", raw)
+	message.Debug("Raw OCI reference from metadata:", raw)
 
 	ref, err := registry.ParseReference(raw)
 	if err != nil {

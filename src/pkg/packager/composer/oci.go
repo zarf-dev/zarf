@@ -106,9 +106,9 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 			var wg sync.WaitGroup
 			wg.Add(1)
 			successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+remote.Repo().Reference.String())
-			layerSize := oci.SumLayersSize([]ocispec.Descriptor{componentDesc})
+			layerSize := oci.SumDescsSize([]ocispec.Descriptor{componentDesc})
 			go utils.RenderProgressBarForLocalDirWrite(cache, layerSize, &wg, doneSaving, encounteredErr, "Pulling", successText)
-			if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, copyOpts, cache, doneSaving, encounteredErr, &wg); err != nil {
+			if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, copyOpts, doneSaving, encounteredErr, &wg); err != nil {
 				return err
 			}
 		}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package oci contains functions for interacting with Zarf packages stored in OCI registries.
+// Package ocizarf contains functions for interacting with Zarf packages stored in OCI registries.
 package ocizarf
 
 import (
@@ -65,7 +65,7 @@ func (o *ZarfOrasRemote) PullPackage(destinationDir string, concurrency int, lay
 	wg.Add(1)
 	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+o.Repo().Reference.String())
 
-	layerSize := oci.SumLayersSize(layersToPull)
+	layerSize := oci.SumDescsSize(layersToPull)
 	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, &wg, doneSaving, encounteredErr, "Pulling", successText)
 
 	return o.PullLayers(destinationDir, concurrency, layersToPull, doneSaving, encounteredErr, &wg)

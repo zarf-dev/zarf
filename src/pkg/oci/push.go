@@ -76,7 +76,8 @@ func (o *OrasRemote) generatePackManifest(src *file.Store, descs []ocispec.Descr
 }
 
 // PublishPackage publishes the package to the remote repository.
-func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, annotations map[string]string, arch string, desc []ocispec.Descriptor, concurrency int, progressBar ProgressWriter) (err error) {
+func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, annotations map[string]string,
+	desc []ocispec.Descriptor, concurrency int, progressBar ProgressWriter) (err error) {
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 	// assumes referrers API is not supported since OCI artifact
@@ -102,11 +103,7 @@ func (o *OrasRemote) PublishPackage(ctx context.Context, src *file.Store, annota
 		return err
 	}
 
-	if err := o.UpdateIndex(o.repo.Reference.Reference, publishedDesc); err != nil {
-		return err
-	}
-
-	return nil
+	return o.UpdateIndex(o.repo.Reference.Reference, publishedDesc)
 }
 
 // UpdateIndex updates the index for the given package.

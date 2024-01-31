@@ -38,17 +38,25 @@ const (
 	TermWidth = 100
 )
 
+// Logger is an object with access to the main printing functions in message
 type Logger struct{}
 
+// Debug prints a debug message.
 func (l *Logger) Debug(msg string, args ...any) {
 	Debugf(msg, args...)
 }
+
+// Info prints an Info message.
 func (l *Logger) Info(msg string, args ...any) {
 	Infof(msg, args...)
 }
+
+// Warn prints a warning message
 func (l *Logger) Warn(msg string, args ...any) {
 	Warnf(msg, args...)
 }
+
+// Error prints a warning message
 func (l *Logger) Error(msg string, args ...any) {
 	Warnf(msg, args...)
 }
