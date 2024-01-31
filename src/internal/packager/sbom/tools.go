@@ -6,12 +6,10 @@ package sbom
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 )
 
@@ -38,19 +36,4 @@ func ViewSBOMFiles(directory string) {
 	} else {
 		message.Note("There were no images with software bill-of-materials (SBOM) included.")
 	}
-}
-
-// OutputSBOMFiles outputs the sbom files into a specified directory.
-func OutputSBOMFiles(sourceDir, outputDir, packageName string) (string, error) {
-	packagePath := filepath.Join(outputDir, packageName)
-
-	if err := os.RemoveAll(packagePath); err != nil {
-		return "", err
-	}
-
-	if err := utils.CreateDirectory(packagePath, 0700); err != nil {
-		return "", err
-	}
-
-	return packagePath, utils.CreatePathAndCopy(sourceDir, packagePath)
 }

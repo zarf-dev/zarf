@@ -39,7 +39,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
-	if !utils.ConfirmAction(config.ZarfCreateStage, layout.SBOMDir, p.sbomViewFiles, p.warnings, *loadedPkg, p.cfg.PkgOpts) {
+	if !utils.ConfirmAction(config.ZarfCreateStage, layout.SBOMDir, []string{}, p.warnings, *loadedPkg, p.cfg.PkgOpts) {
 		return fmt.Errorf("package creation canceled")
 	}
 

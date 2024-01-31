@@ -26,7 +26,7 @@ func (p *Packager) Inspect() (err error) {
 	sbomDir := p.layout.SBOMs.Path
 
 	if p.cfg.InspectOpts.SBOMOutputDir != "" {
-		out, err := sbom.OutputSBOMFiles(sbomDir, p.cfg.InspectOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name)
+		out, err := utils.OutputSBOMFiles(sbomDir, p.cfg.InspectOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name)
 		if err != nil {
 			return err
 		}

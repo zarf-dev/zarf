@@ -5,6 +5,7 @@
 package layout
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -67,12 +68,26 @@ func (s *SBOMs) Archive() (err error) {
 	return os.RemoveAll(dir)
 }
 
-// IsDir returns true if the SBOMs are a directory.
-func (s SBOMs) IsDir() bool {
-	return utils.IsDir(s.Path)
-}
+func (s *SBOMs) StageSBOMViewFiles() (sbomViewFiles, warnings []string, err error) {
+	isTarball := !utils.IsDir(s.Path) && filepath.Ext(s.Path) == ".tar"
+	if isTarball {
+		return nil, nil, fmt.Errorf("unable to process the SBOM files for this package: %s is a tarball", s.Path)
+	}
 
-// IsTarball returns true if the SBOMs are a tarball.
-func (s SBOMs) IsTarball() bool {
-	return !s.IsDir() && filepath.Ext(s.Path) == ".tar"
+	// If SBOMs were loaded, temporarily place them in the deploy directory
+	if !utils.InvalidPath(s.Path) {
+		sbomViewFiles, err = filepath.Glob(filepath.Join(s.Path, "sbom-viewer-*"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		_, err := utils.OutputSBOMFiles(s.Path, SBOMDir, "")
+		if err != nil {
+			// Don't stop the deployment, let the user decide if they want to continue the deployment
+			warning := fmt.Sprintf("Unable to process the SBOM files for this package: %s", err.Error())
+			warnings = append(warnings, warning)
+		}
+	}
+
+	return sbomViewFiles, warnings, nil
 }

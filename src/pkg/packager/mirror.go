@@ -23,15 +23,20 @@ func (p *Packager) Mirror() (err error) {
 	if err = p.source.LoadPackage(p.layout, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
+
 	if err := utils.ReadYaml(p.layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 		return err
 	}
-	if err := p.stageSBOMViewFiles(); err != nil {
+
+	sbomViewFiles, sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
+	if err != nil {
 		return err
 	}
 
+	p.warnings = append(p.warnings, sbomWarnings...)
+
 	// Confirm the overall package mirror
-	if !utils.ConfirmAction(config.ZarfCreateStage, layout.SBOMDir, p.sbomViewFiles, p.warnings, p.cfg.Pkg, p.cfg.PkgOpts) {
+	if !utils.ConfirmAction(config.ZarfMirrorStage, layout.SBOMDir, sbomViewFiles, p.warnings, p.cfg.Pkg, p.cfg.PkgOpts) {
 		return fmt.Errorf("mirror cancelled")
 	}
 

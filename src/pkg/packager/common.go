@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -17,7 +16,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -40,7 +38,6 @@ type Packager struct {
 	valueTemplate  *template.Values
 	hpaModified    bool
 	connectStrings types.ConnectStrings
-	sbomViewFiles  []string
 	source         sources.PackageSource
 	generation     int
 }
@@ -279,23 +276,5 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 		p.warnings = append(p.warnings, warning)
 	}
 
-	return nil
-}
-
-func (p *Packager) stageSBOMViewFiles() error {
-	if p.layout.SBOMs.IsTarball() {
-		return fmt.Errorf("unable to process the SBOM files for this package: %s is a tarball", p.layout.SBOMs.Path)
-	}
-	// If SBOMs were loaded, temporarily place them in the deploy directory
-	sbomDir := p.layout.SBOMs.Path
-	if !utils.InvalidPath(sbomDir) {
-		p.sbomViewFiles, _ = filepath.Glob(filepath.Join(sbomDir, "sbom-viewer-*"))
-		_, err := sbom.OutputSBOMFiles(sbomDir, layout.SBOMDir, "")
-		if err != nil {
-			// Don't stop the deployment, let the user decide if they want to continue the deployment
-			warning := fmt.Sprintf("Unable to process the SBOM files for this package: %s", err.Error())
-			p.warnings = append(p.warnings, warning)
-		}
-	}
 	return nil
 }
