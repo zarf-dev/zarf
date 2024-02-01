@@ -18,16 +18,16 @@ import (
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create() (err error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
 
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
 
 	c := creator.New(p.cfg.CreateOpts, cwd)
 

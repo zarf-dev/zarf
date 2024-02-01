@@ -89,17 +89,13 @@ func (p *Packager) Publish() (err error) {
 			return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 		}
 
-		cwd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-
-		c := creator.New(p.cfg.CreateOpts, cwd)
+		c := creator.New(p.cfg.CreateOpts, "")
 
 		loadedPkg, warnings, err := c.LoadPackageDefinition(p.layout)
 		if err != nil {
 			return err
 		}
+
 		p.warnings = append(p.warnings, warnings...)
 
 		if err := c.Assemble(loadedPkg, p.layout); err != nil {

@@ -21,13 +21,13 @@ func (p *Packager) DevDeploy() error {
 	config.CommonOptions.Confirm = true
 	p.cfg.CreateOpts.SkipSBOM = !p.cfg.CreateOpts.NoYOLO
 
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
-	}
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
+	}
+
+	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
 
 	c := creator.New(p.cfg.CreateOpts, cwd)
@@ -36,6 +36,7 @@ func (p *Packager) DevDeploy() error {
 	if err != nil {
 		return err
 	}
+
 	p.warnings = append(p.warnings, warnings...)
 
 	p.cfg.Pkg = *loadedPkg
