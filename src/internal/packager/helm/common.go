@@ -30,10 +30,9 @@ type Helm struct {
 	chartPath  string
 	valuesPath string
 
-	cfg       *types.PackagerConfig
-	component types.ZarfComponent
-	cluster   *cluster.Cluster
-	timeout   time.Duration
+	cfg     *types.PackagerConfig
+	cluster *cluster.Cluster
+	timeout time.Duration
 
 	kubeVersion string
 
@@ -136,9 +135,8 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 }
 
 // WithDeployInfo adds the necessary information to deploy a given chart
-func WithDeployInfo(component types.ZarfComponent, cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration) Modifier {
+func WithDeployInfo(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration) Modifier {
 	return func(h *Helm) {
-		h.component = component
 		h.cfg = cfg
 		h.variableConfig = variableConfig
 		h.state = state

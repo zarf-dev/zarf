@@ -538,6 +538,10 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
 func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
+		// Do not wait for the chart to be ready if data injections are present.
+		if len(component.DataInjections) > 0 {
+			chart.NoWait = true
+		}
 
 		// Zarf templating for the value file
 		for idx := range chart.ValuesFiles {
@@ -560,7 +564,6 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 			componentPaths.Charts,
 			componentPaths.Values,
 			helm.WithDeployInfo(
-				component,
 				p.cfg,
 				p.variableConfig,
 				p.state,
@@ -609,7 +612,6 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 			p.cfg.Pkg.Metadata.Name,
 			component.Name,
 			helm.WithDeployInfo(
-				component,
 				p.cfg,
 				p.variableConfig,
 				p.state,

@@ -92,9 +92,6 @@ func (h *Helm) UpdateZarfAgentValues() error {
 				Namespace:   "zarf",
 				ReleaseName: release.Name,
 			}
-			h.component = types.ZarfComponent{
-				Name: "zarf-agent",
-			}
 			h.variableConfig.Constants = []variables.Constant{
 				{
 					Name:  "AGENT_IMAGE",
