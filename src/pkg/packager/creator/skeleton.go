@@ -87,7 +87,7 @@ func (sc *SkeletonCreator) Output(loadedPkg *types.ZarfPackage, dst *layout.Pack
 		}
 	}
 
-	checksumChecksum, err := generateChecksums(dst)
+	checksumChecksum, err := dst.GenerateChecksums()
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
 	}

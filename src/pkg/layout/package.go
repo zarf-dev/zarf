@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -166,6 +167,36 @@ func (pp *PackagePaths) addSignature(keyPath string) *PackagePaths {
 		pp.Signature = filepath.Join(pp.Base, Signature)
 	}
 	return pp
+}
+
+// GenerateChecksums walks through all of the files starting at the base path and generates a checksum file.
+//
+// Each file within the basePath represents a layer within the Zarf package.
+//
+// Returns a SHA256 checksum of the checksums.txt file.
+func (pp *PackagePaths) GenerateChecksums() (string, error) {
+	var checksumsData = []string{}
+
+	for rel, abs := range pp.Files() {
+		if rel == ZarfYAML || rel == Checksums {
+			continue
+		}
+
+		sum, err := utils.GetSHA256OfFile(abs)
+		if err != nil {
+			return "", err
+		}
+		checksumsData = append(checksumsData, fmt.Sprintf("%s %s", sum, rel))
+	}
+	slices.Sort(checksumsData)
+
+	// Create the checksums file
+	if err := utils.WriteFile(pp.Checksums, []byte(strings.Join(checksumsData, "\n")+"\n")); err != nil {
+		return "", err
+	}
+
+	// Calculate the checksum of the checksum file
+	return utils.GetSHA256OfFile(pp.Checksums)
 }
 
 func (pp *PackagePaths) ArchivePackage(destinationTarball string, maxPackageSizeMB int) error {

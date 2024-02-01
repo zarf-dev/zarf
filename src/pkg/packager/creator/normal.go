@@ -215,7 +215,7 @@ func (pc *PackageCreator) Output(loadedPkg *types.ZarfPackage, dst *layout.Packa
 	}
 
 	// Calculate all the checksums
-	checksumChecksum, err := generateChecksums(dst)
+	checksumChecksum, err := dst.GenerateChecksums()
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for the package: %w", err)
 	}
