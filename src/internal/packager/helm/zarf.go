@@ -7,6 +7,7 @@ package helm
 import (
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -103,6 +104,10 @@ func (h *Helm) UpdateZarfAgentValues() error {
 					Name:  "AGENT_IMAGE_TAG",
 					Value: currentAgentImage.Tag,
 				},
+			}
+			h.variableConfig.ApplicationTemplates, err = template.GetZarfTemplates("zarf-agent", h.state)
+			if err != nil {
+				return fmt.Errorf("error setting up the templates: %w", err)
 			}
 
 			err := h.UpdateReleaseValues(map[string]interface{}{})

@@ -103,6 +103,8 @@ func (g *Git) CreateReadOnlyUser() error {
 
 // UpdateZarfGiteaUsers updates Zarf gitea users
 func (g *Git) UpdateZarfGiteaUsers(oldState *types.ZarfState) error {
+	spinner := message.NewProgressSpinner("Updating Gitea user information")
+	defer spinner.Stop()
 
 	//Update git read only user password
 	err := g.UpdateGitUser(oldState.GitServer.PushPassword, g.Server.PullUsername, g.Server.PullPassword)
@@ -115,6 +117,9 @@ func (g *Git) UpdateZarfGiteaUsers(oldState *types.ZarfState) error {
 	if err != nil {
 		return fmt.Errorf("unable to update gitea admin user password: %w", err)
 	}
+
+	spinner.Success()
+
 	return nil
 }
 
