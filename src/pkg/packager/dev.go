@@ -38,6 +38,8 @@ func (p *Packager) DevDeploy() error {
 	}
 	p.warnings = append(p.warnings, warnings...)
 
+	p.cfg.Pkg = *loadedPkg
+
 	// Filter out components that are not compatible with this system
 	p.filterComponents()
 
@@ -46,7 +48,7 @@ func (p *Packager) DevDeploy() error {
 	// the user's selection and the component's `required` field
 	// This is also different from regular package creation, where we still assemble and package up
 	// all components and their dependencies, regardless of whether they are required or not
-	loadedPkg.Components = p.getSelectedComponents()
+	p.getSelectedComponents()
 
 	if err := validate.Run(*loadedPkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
@@ -60,7 +62,7 @@ func (p *Packager) DevDeploy() error {
 		}
 	}
 
-	if err := c.Assemble(loadedPkg, p.layout); err != nil {
+	if err := c.Assemble(&p.cfg.Pkg, p.layout); err != nil {
 		return err
 	}
 
