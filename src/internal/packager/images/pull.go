@@ -78,8 +78,6 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 		// Create a closure so that we can pass the src into the goroutine
 		refInfo := refInfo
 		go func() {
-			// Make sure to call Done() on the WaitGroup when the goroutine finishes
-			defer metadataImageConcurrency.WaitGroupDone()
 
 			if metadataImageConcurrency.IsDone() {
 				return
@@ -202,7 +200,6 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 		// and https://github.com/google/go-containerregistry/blob/v0.15.2/pkg/v1/layout/write.go#L198-L262
 		// with modifications. This allows us to dedupe layers for all images and write them concurrently.
 		go func() {
-			defer layerWritingConcurrency.WaitGroupDone()
 			digest, err := layer.Digest()
 			if errors.Is(err, stream.ErrNotComputed) {
 				// Allow digest errors, since streams may not have calculated the hash
@@ -347,9 +344,6 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 		// Create a closure so that we can pass the refInfo and img into the goroutine
 		refInfo, img := refInfo, img
 		go func() {
-			// Make sure to call Done() on the WaitGroup when the goroutine finishes
-			defer imageSavingConcurrency.WaitGroupDone()
-
 			// Save the image via crane
 			err := cranePath.WriteImage(img)
 

@@ -128,10 +128,10 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	e2e.SetupDockerRegistry(t, dstRegistryPort)
 	defer e2e.TeardownRegistry(t, dstRegistryPort)
 
-	src, err := oci.NewOrasRemote(ref, oci.WithPlainHTTP(true), oci.WithArch(e2e.Arch))
+	src, err := oci.NewOrasRemote(ref, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
 	suite.NoError(err)
 
-	dst, err := oci.NewOrasRemote(dstRef, oci.WithPlainHTTP(true), oci.WithArch(e2e.Arch))
+	dst, err := oci.NewOrasRemote(dstRef, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
 	suite.NoError(err)
 
 	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])
