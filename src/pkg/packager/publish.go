@@ -14,10 +14,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
@@ -38,7 +38,7 @@ func (p *Packager) Publish() (err error) {
 		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
 
 		arch := config.GetArch()
-		dstRemote, err := ocizarf.NewZarfOrasRemote(p.cfg.PublishOpts.PackageDestination, oci.MultiOSPlatformForArch(arch))
+		dstRemote, err := zoci.NewZarfOrasRemote(p.cfg.PublishOpts.PackageDestination, oci.MultiOSPlatformForArch(arch))
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ func (p *Packager) Publish() (err error) {
 			return fmt.Errorf("architecture mismatch (specified: %q, found %q)", arch, pkg.Build.Architecture)
 		}
 
-		if err := ocizarf.CopyPackage(ctx, srcRemote, dstRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
+		if err := zoci.CopyPackage(ctx, srcRemote, dstRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
 			return err
 		}
 
@@ -108,17 +108,17 @@ func (p *Packager) Publish() (err error) {
 	}
 
 	// Get a reference to the registry for this package
-	ref, err := ocizarf.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
+	ref, err := zoci.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
 	if err != nil {
 		return err
 	}
 	var platform ocispec.Platform
 	if p.cfg.CreateOpts.IsSkeleton {
-		platform = ocizarf.PlatformForSkeleton()
+		platform = zoci.PlatformForSkeleton()
 	} else {
 		platform = oci.MultiOSPlatformForArch(config.GetArch())
 	}
-	remote, err := ocizarf.NewZarfOrasRemote(ref, platform)
+	remote, err := zoci.NewZarfOrasRemote(ref, platform)
 	if err != nil {
 		return err
 	}

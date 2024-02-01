@@ -13,8 +13,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -68,7 +68,7 @@ func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 			pkgSrc = fmt.Sprintf("%s@sha256:%s", pkgSrc, pkgOpts.Shasum)
 		}
 		arch := config.GetArch()
-		remote, err := ocizarf.NewZarfOrasRemote(pkgSrc, oci.MultiOSPlatformForArch(arch))
+		remote, err := zoci.NewZarfOrasRemote(pkgSrc, oci.MultiOSPlatformForArch(arch))
 		if err != nil {
 			return nil, err
 		}

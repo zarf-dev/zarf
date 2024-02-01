@@ -19,9 +19,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/spf13/cobra"
@@ -182,9 +182,9 @@ var downloadInitCmd = &cobra.Command{
 	Use:   "download-init",
 	Short: lang.CmdToolsDownloadInitShort,
 	Run: func(cmd *cobra.Command, args []string) {
-		url := ocizarf.GetInitPackageURL(config.CLIVersion)
+		url := zoci.GetInitPackageURL(config.CLIVersion)
 
-		remote, err := ocizarf.NewZarfOrasRemote(url, oci.MultiOSPlatformForArch(config.GetArch()))
+		remote, err := zoci.NewZarfOrasRemote(url, oci.MultiOSPlatformForArch(config.GetArch()))
 		if err != nil {
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 		}

@@ -15,21 +15,21 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
 	ocistore "oras.land/oras-go/v2/content/oci"
 )
 
-func (ic *ImportChain) getRemote(url string) (*ocizarf.ZarfOrasRemote, error) {
+func (ic *ImportChain) getRemote(url string) (*zoci.ZarfOrasRemote, error) {
 	if ic.remote != nil {
 		return ic.remote, nil
 	}
 	var err error
-	ic.remote, err = ocizarf.NewZarfOrasRemote(url, ocizarf.PlatformForSkeleton())
+	ic.remote, err = zoci.NewZarfOrasRemote(url, zoci.PlatformForSkeleton())
 	if err != nil {
 		return nil, err
 	}

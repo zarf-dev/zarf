@@ -25,10 +25,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/mholt/archiver/v3"
@@ -248,11 +248,11 @@ func (p *Packager) output() error {
 	// Create a remote ref + client for the package (if output is OCI)
 	// then publish the package to the remote.
 	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
-		ref, err := ocizarf.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
+		ref, err := zoci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
 		if err != nil {
 			return err
 		}
-		remote, err := ocizarf.NewZarfOrasRemote(ref, oci.MultiOSPlatformForArch(config.GetArch()))
+		remote, err := zoci.NewZarfOrasRemote(ref, oci.MultiOSPlatformForArch(config.GetArch()))
 		if err != nil {
 			return err
 		}
@@ -655,7 +655,7 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if helpers.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		remote, err := ocizarf.NewZarfOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, oci.MultiOSPlatformForArch(config.GetArch()))
+		remote, err := zoci.NewZarfOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, oci.MultiOSPlatformForArch(config.GetArch()))
 		if err != nil {
 			return err
 		}

@@ -14,7 +14,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"oras.land/oras-go/v2/registry"
@@ -131,10 +131,10 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	defer e2e.TeardownRegistry(t, dstRegistryPort)
 
 	config.CommonOptions.Insecure = true
-	src, err := ocizarf.NewZarfOrasRemote(ref, oci.MultiOSPlatformForArch(e2e.Arch))
+	src, err := zoci.NewZarfOrasRemote(ref, oci.MultiOSPlatformForArch(e2e.Arch))
 	suite.NoError(err)
 
-	dst, err := ocizarf.NewZarfOrasRemote(dstRef, oci.MultiOSPlatformForArch(e2e.Arch))
+	dst, err := zoci.NewZarfOrasRemote(dstRef, oci.MultiOSPlatformForArch(e2e.Arch))
 	suite.NoError(err)
 
 	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])
@@ -152,7 +152,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	}
 	require.Less(t, attempt, 5, "failed to ping registry")
 
-	err = ocizarf.CopyPackage(ctx, src, dst, nil, 5)
+	err = zoci.CopyPackage(ctx, src, dst, nil, 5)
 	suite.NoError(err)
 
 	srcRoot, err := src.FetchRoot(ctx)

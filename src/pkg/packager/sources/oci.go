@@ -15,9 +15,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -31,7 +31,7 @@ var (
 // OCISource is a package source for OCI registries.
 type OCISource struct {
 	*types.ZarfPackageOptions
-	*ocizarf.ZarfOrasRemote
+	*zoci.ZarfOrasRemote
 }
 
 // LoadPackage loads a package from an OCI registry.
@@ -119,7 +119,7 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (err error) {
 	var pkg types.ZarfPackage
 
-	toPull := ocizarf.PackageAlwaysPull
+	toPull := zoci.PackageAlwaysPull
 	if wantSBOM {
 		toPull = append(toPull, layout.SBOMTar)
 	}
@@ -201,7 +201,7 @@ func (s *OCISource) Collect(dir string) (string, error) {
 	spinner.Success()
 
 	// TODO (@Noxsios) remove the suffix check at v1.0.0
-	isSkeleton := pkg.Build.Architecture == "skeleton" || strings.HasSuffix(s.Repo().Reference.Reference, ocizarf.SkeletonArch)
+	isSkeleton := pkg.Build.Architecture == "skeleton" || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)
 	name := NameFromMetadata(&pkg, isSkeleton)
 
 	dstTarball := filepath.Join(dir, name)

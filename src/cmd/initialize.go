@@ -18,11 +18,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/ocizarf"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 
 	"github.com/spf13/cobra"
 )
@@ -120,7 +120,7 @@ func downloadInitPackage(cacheDirectory string) (string, error) {
 	}
 
 	var confirmDownload bool
-	url := ocizarf.GetInitPackageURL(config.CLIVersion)
+	url := zoci.GetInitPackageURL(config.CLIVersion)
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
 	message.Question(fmt.Sprintf(lang.CmdInitPullAsk, url))
@@ -139,7 +139,7 @@ func downloadInitPackage(cacheDirectory string) (string, error) {
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		remote, err := ocizarf.NewZarfOrasRemote(url, oci.MultiOSPlatformForArch(config.GetArch()))
+		remote, err := zoci.NewZarfOrasRemote(url, oci.MultiOSPlatformForArch(config.GetArch()))
 		if err != nil {
 			return "", err
 		}
