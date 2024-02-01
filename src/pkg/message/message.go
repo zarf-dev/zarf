@@ -167,7 +167,6 @@ func Debug(payload ...any) {
 func Debugf(format string, a ...any) {
 	message := fmt.Sprintf(format, a...)
 	debugPrinter(2, message)
-
 }
 
 // ErrorWebf prints an error message and returns a web response.

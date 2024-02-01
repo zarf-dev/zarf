@@ -106,8 +106,6 @@ func WithMediaType(mediaType string) Modifier {
 }
 
 // MultiOSPlatformForArch sets the target architecture for the remote
-// ?! Do we want to expose this function or put it in the zarf specific land ?
-// Same question for the MultiOS variable
 func MultiOSPlatformForArch(arch string) ocispec.Platform {
 	return ocispec.Platform{
 		OS:           MultiOS,
@@ -124,7 +122,7 @@ func WithUserAgent(userAgent string) Modifier {
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
-// # Registry auth is handled by the Docker CLI's credential store and checked before returning the client
+// Registry auth is handled by the Docker CLI's credential store and checked before returning the client
 func NewOrasRemote(url string, logger Logger, platform ocispec.Platform, mods ...Modifier) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {

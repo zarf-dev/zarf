@@ -28,7 +28,7 @@ type ZarfOrasRemote struct {
 // NewZarfOrasRemote returns an oras remote repository client and context for the given url
 // with zarf opination embedded
 func NewZarfOrasRemote(url string, platform ocispec.Platform, mod ...oci.Modifier) (*ZarfOrasRemote, error) {
-	modifiers := append(mod, oci.WithMediaType(ZarfConfigMediaType), oci.WithInsecure(config.CommonOptions.Insecure))
+	modifiers := append([]oci.Modifier{oci.WithMediaType(ZarfConfigMediaType), oci.WithInsecure(config.CommonOptions.Insecure)}, mod...)
 	remote, err := oci.NewOrasRemote(url, &message.Logger{}, platform, modifiers...)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func NewZarfOrasRemote(url string, platform ocispec.Platform, mod ...oci.Modifie
 	return &ZarfOrasRemote{remote}, nil
 }
 
-// PlatformForSkeleton returns a skeleton oci
+// PlatformForSkeleton sets the target architecture for the remote to skeleton
 func PlatformForSkeleton() ocispec.Platform {
 	return ocispec.Platform{
 		OS:           oci.MultiOS,

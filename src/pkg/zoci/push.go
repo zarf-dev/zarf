@@ -53,7 +53,7 @@ func (o *ZarfOrasRemote) PublishZarfPackage(ctx context.Context, pkg *types.Zarf
 
 	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", o.Repo().Reference.Repository, o.Repo().Reference.Reference))
 	annotations := zarfPackageOciAnnotations(&pkg.Metadata)
-	err = o.PublishPackage(ctx, src, annotations, descs, config.CommonOptions.OCIConcurrency, progressBar)
+	err = o.PublishArtifact(ctx, src, annotations, descs, config.CommonOptions.OCIConcurrency, progressBar)
 	if err != nil {
 		progressBar.Stop()
 		return fmt.Errorf("unable to publish package: %w", err)

@@ -20,7 +20,7 @@ type Manifest struct {
 	ocispec.Manifest
 }
 
-// New returns a new OCIManifest
+// New returns a new Manifest
 func New(manifest *ocispec.Manifest) *Manifest {
 	return &Manifest{*manifest}
 }
