@@ -24,9 +24,6 @@ type ZarfOrasRemote struct {
 	*oci.OrasRemote
 }
 
-//TODO: take away ctx from ORAS remote
-//TODO: Look in ocizarf to see if there's any functions that should be moved outside of oci completely
-
 // NewZarfOrasRemote returns an oras remote repository client and context for the given url
 // with zarf opination embedded
 func NewZarfOrasRemote(url string, platform ocispec.Platform, mod ...oci.Modifier) (*ZarfOrasRemote, error) {
