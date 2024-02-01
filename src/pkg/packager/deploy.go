@@ -202,7 +202,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	}
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if requiresCluster(component) && p.cfg.State == nil {
+	if requiresCluster(component) && p.state == nil {
 		err = p.cluster.InitZarfState(p.cfg.InitOpts)
 		if err != nil {
 			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -258,7 +258,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	if requiresCluster(component) {
 		// Setup the state in the config
-		if p.cfg.State == nil {
+		if p.state == nil {
 			err = p.setupState()
 			if err != nil {
 				return charts, err
@@ -266,7 +266,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
-		if hasImages && !p.hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
+		if hasImages && !p.hpaModified && p.state.RegistryInfo.InternalRegistry {
 			if err := p.cluster.DisableRegHPAScaleDown(); err != nil {
 				message.Debugf("unable to disable the registry HPA scale down: %s", err.Error())
 			} else {
@@ -368,7 +368,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 			// If the file is a text file, template it
 			if isText {
 				spinner.Updatef("Templating %s", file.Target)
-				if err := p.cfg.VariableConfig.ReplaceTextTemplate(subFile); err != nil {
+				if err := p.variableConfig.ReplaceTextTemplate(subFile); err != nil {
 					return fmt.Errorf("unable to template file %s: %w", subFile, err)
 				}
 			}
@@ -433,7 +433,7 @@ func (p *Packager) setupState() (err error) {
 			"the pod or namespace label `zarf.dev/agent: ignore'.")
 	}
 
-	p.cfg.State = state
+	p.state = state
 
 	spinner.Success()
 	return nil
@@ -441,7 +441,7 @@ func (p *Packager) setupState() (err error) {
 
 func (p *Packager) populateComponentAndStateTemplates(componentName string) error {
 	var err error
-	p.cfg.VariableConfig.ApplicationTemplates, err = template.GetZarfTemplates(componentName, p.cfg.State)
+	p.variableConfig.ApplicationTemplates, err = template.GetZarfTemplates(componentName, p.state)
 	return err
 }
 
@@ -451,9 +451,9 @@ func (p *Packager) populatePackageVariables() error {
 		promptFunc = func(variable variables.Variable) (value string, err error) { return variable.Default, nil }
 	}
 
-	p.cfg.VariableConfig.Constants = p.cfg.Pkg.Constants
+	p.variableConfig.Constants = p.cfg.Pkg.Constants
 
-	return p.cfg.VariableConfig.SetVariableMap.PopulateSetVariableMap(
+	return p.variableConfig.SetVariableMap.PopulateSetVariableMap(
 		p.cfg.Pkg.Variables, p.cfg.PkgOpts.SetVariables, promptFunc)
 }
 
@@ -478,7 +478,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		ImagesPath:    p.layout.Images.Base,
 		ImageList:     imageList,
 		NoChecksum:    noImgChecksum,
-		RegInfo:       p.cfg.State.RegistryInfo,
+		RegInfo:       p.state.RegistryInfo,
 		Insecure:      config.CommonOptions.Insecure,
 		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
 	}
@@ -493,7 +493,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 	for _, repoURL := range repos {
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
-			gitClient := git.New(p.cfg.State.GitServer)
+			gitClient := git.New(p.state.GitServer)
 			svcInfo, _ := k8s.ServiceInfoFromServiceURL(gitClient.Server.Address)
 
 			var err error
@@ -542,7 +542,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 		// Zarf templating for the value file
 		for idx := range chart.ValuesFiles {
 			valueFilePath := fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
-			if err := p.cfg.VariableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
+			if err := p.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 				return installedCharts, err
 			}
 		}
@@ -562,6 +562,8 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 			helm.WithDeployInfo(
 				component,
 				p.cfg,
+				p.variableConfig,
+				p.state,
 				p.cluster,
 				valuesOverrides,
 				p.cfg.DeployOpts.Timeout),
@@ -609,6 +611,8 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 			helm.WithDeployInfo(
 				component,
 				p.cfg,
+				p.variableConfig,
+				p.state,
 				p.cluster,
 				nil,
 				p.cfg.DeployOpts.Timeout),
@@ -644,7 +648,7 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 			// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds
 			freshState, err := p.cluster.LoadZarfState()
 			if err != nil {
-				freshState = p.cfg.State
+				freshState = p.state
 			}
 			// otherwise, print the init config connection and passwords
 			message.PrintCredentialTable(freshState, componentsToDeploy)

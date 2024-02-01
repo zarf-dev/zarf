@@ -39,7 +39,9 @@ import (
 // Packager is the main struct for managing packages.
 type Packager struct {
 	cfg            *types.PackagerConfig
-	actionCfg      *actions.ActionConfig
+	actionRunner   *actions.ActionRunner
+	variableConfig *variables.VariableConfig
+	state          *types.ZarfState
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
 	arch           string
@@ -96,21 +98,14 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 		return nil, fmt.Errorf("no config provided")
 	}
 
-	if cfg.VariableConfig == nil {
-		cfg.VariableConfig = variables.New(
-			"zarf",
-			template.DeprecatedKeys,
-			make(variables.SetVariableMap),
-			make([]variables.Constant, 0),
-			message.Warnf)
-	}
-
 	var (
 		err  error
 		pkgr = &Packager{
 			cfg: cfg,
 		}
 	)
+
+	pkgr.variableConfig = template.GetZarfVariableConfig()
 
 	if config.CommonOptions.TempDirectory != "" {
 		// If the cache directory is within the temp directory, warn the user
@@ -143,7 +138,7 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	if err != nil {
 		return nil, err
 	}
-	pkgr.actionCfg = actions.New("zarf", zarfCommand, "zarf tools wait-for", message.Debug)
+	pkgr.actionRunner = actions.New("zarf", zarfCommand, "zarf tools wait-for", message.Debug)
 
 	return pkgr, nil
 }

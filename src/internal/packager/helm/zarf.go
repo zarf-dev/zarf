@@ -19,12 +19,12 @@ import (
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
 func (h *Helm) UpdateZarfRegistryValues() error {
-	pushUser, err := utils.GetHtpasswdString(h.cfg.State.RegistryInfo.PushUsername, h.cfg.State.RegistryInfo.PushPassword)
+	pushUser, err := utils.GetHtpasswdString(h.state.RegistryInfo.PushUsername, h.state.RegistryInfo.PushPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
 	}
 
-	pullUser, err := utils.GetHtpasswdString(h.cfg.State.RegistryInfo.PullUsername, h.cfg.State.RegistryInfo.PullPassword)
+	pullUser, err := utils.GetHtpasswdString(h.state.RegistryInfo.PullUsername, h.state.RegistryInfo.PullPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
 	}
@@ -94,7 +94,7 @@ func (h *Helm) UpdateZarfAgentValues() error {
 			h.component = types.ZarfComponent{
 				Name: "zarf-agent",
 			}
-			h.cfg.Pkg.Constants = []variables.Constant{
+			h.variableConfig.Constants = []variables.Constant{
 				{
 					Name:  "AGENT_IMAGE",
 					Value: currentAgentImage.Path,

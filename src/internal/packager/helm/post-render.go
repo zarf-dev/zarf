@@ -15,9 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
-	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
@@ -28,10 +26,8 @@ import (
 
 type renderer struct {
 	*Helm
-	actionConfig   *action.Configuration
 	connectStrings types.ConnectStrings
 	namespaces     map[string]*corev1.Namespace
-	variableConfig *variables.VariableConfig
 }
 
 func (h *Helm) newRenderer() (*renderer, error) {
@@ -44,8 +40,6 @@ func (h *Helm) newRenderer() (*renderer, error) {
 			// Add the passed-in namespace to the list
 			h.chart.Namespace: h.cluster.NewZarfManagedNamespace(h.chart.Namespace),
 		},
-		variableConfig: h.cfg.VariableConfig,
-		actionConfig:   h.actionConfig,
 	}, nil
 }
 
@@ -193,12 +187,12 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 
 		// If the package is marked as YOLO and the state is empty, skip the secret creation for this namespace
-		if r.cfg.Pkg.Metadata.YOLO && r.cfg.State.Distro == "YOLO" {
+		if r.cfg.Pkg.Metadata.YOLO && r.state.Distro == "YOLO" {
 			continue
 		}
 
 		// Create the secret
-		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.cfg.State.RegistryInfo)
+		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
 
 		// Try to get a valid existing secret
 		currentRegistrySecret, _ := c.GetSecret(name, config.ZarfImagePullSecretName)
@@ -209,7 +203,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 			}
 
 			// Generate the git server secret
-			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.cfg.State.GitServer)
+			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
 
 			// Create or update the zarf git server secret
 			if _, err := c.CreateOrUpdateSecret(gitServerSecret); err != nil {

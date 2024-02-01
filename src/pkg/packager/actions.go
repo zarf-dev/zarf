@@ -25,7 +25,7 @@ func (p *Packager) runActions(defaultCfg actions.ActionDefaults, actions []actio
 					fiveMin := 300
 					a.MaxTotalSeconds = &fiveMin
 				}
-				cmd, err = p.actionCfg.ConvertWaitToCmd(*a.Wait, a.MaxTotalSeconds)
+				cmd, err = p.actionRunner.ConvertWaitToCmd(*a.Wait, a.MaxTotalSeconds)
 				if err != nil {
 					return err
 				}
@@ -37,7 +37,7 @@ func (p *Packager) runActions(defaultCfg actions.ActionDefaults, actions []actio
 		// Persist the spinner output so it doesn't get overwritten by the command output.
 		spinner.EnablePreserveWrites()
 
-		if err := p.actionCfg.RunAction(defaultCfg, a, p.cfg.VariableConfig, spinner); err != nil {
+		if err := p.actionRunner.RunAction(defaultCfg, a, p.variableConfig, spinner); err != nil {
 			return err
 		}
 	}

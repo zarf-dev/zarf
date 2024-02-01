@@ -23,9 +23,13 @@ const (
 	depMarkerNew = "DATA_INJECTION_MARKER"
 )
 
-// DeprecatedKeys holds a map of template keys that are deprecated
-var DeprecatedKeys = map[string]string{
-	fmt.Sprintf("###ZARF_%s###", depMarkerOld): fmt.Sprintf("###ZARF_%s###", depMarkerNew),
+func GetZarfVariableConfig() *variables.VariableConfig {
+	return variables.New(
+		"zarf",
+		deprecatedKeys(),
+		make(variables.SetVariableMap),
+		make([]variables.Constant, 0),
+		message.Warnf)
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.
@@ -96,6 +100,13 @@ func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap
 	debugPrintTemplateMap(templateMap)
 
 	return templateMap, nil
+}
+
+// deprecatedKeys returns a map of template keys that are deprecated
+func deprecatedKeys() map[string]string {
+	return map[string]string{
+		fmt.Sprintf("###ZARF_%s###", depMarkerOld): fmt.Sprintf("###ZARF_%s###", depMarkerNew),
+	}
 }
 
 // generateHtpasswd returns an htpasswd string for the current state's RegistryInfo.

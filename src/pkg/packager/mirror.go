@@ -38,7 +38,7 @@ func (p *Packager) Mirror() (err error) {
 		RegistryInfo: p.cfg.InitOpts.RegistryInfo,
 		GitServer:    p.cfg.InitOpts.GitServer,
 	}
-	p.cfg.State = state
+	p.state = state
 
 	// Filter out components that are not compatible with this system if we have loaded from a tarball
 	p.filterComponents()

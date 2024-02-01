@@ -26,8 +26,8 @@ type Spinner interface {
 	Write(p []byte) (n int, err error)
 }
 
-// ActionConfig contains the configuration for running actions
-type ActionConfig struct {
+// ActionRunner contains the configuration for running actions
+type ActionRunner struct {
 	commandName string
 	commandPath string
 	waitCommand string
@@ -35,8 +35,8 @@ type ActionConfig struct {
 }
 
 // New creates a new ActionConfig
-func New(commandName string, commandPath string, waitCommand string, logger func(payload ...any)) *ActionConfig {
-	return &ActionConfig{
+func New(commandName string, commandPath string, waitCommand string, logger func(payload ...any)) *ActionRunner {
+	return &ActionRunner{
 		commandName,
 		commandPath,
 		waitCommand,
@@ -45,7 +45,7 @@ func New(commandName string, commandPath string, waitCommand string, logger func
 }
 
 // RunAction runs an action per the ActionConfig.
-func (ac *ActionConfig) RunAction(defaultCfg ActionDefaults, action Action, variableConfig *variables.VariableConfig, spinner Spinner) error {
+func (ac *ActionRunner) RunAction(defaultCfg ActionDefaults, action Action, variableConfig *variables.VariableConfig, spinner Spinner) error {
 	var (
 		ctx        context.Context
 		cancel     context.CancelFunc
@@ -173,7 +173,7 @@ retryCmd:
 }
 
 // ConvertWaitToCmd will return the wait command if it exists, otherwise it will return the original command.
-func (ac *ActionConfig) ConvertWaitToCmd(wait ActionWait, timeout *int) (string, error) {
+func (ac *ActionRunner) ConvertWaitToCmd(wait ActionWait, timeout *int) (string, error) {
 	// Build the timeout string.
 	timeoutString := fmt.Sprintf("--timeout %ds", *timeout)
 
@@ -209,7 +209,7 @@ func (ac *ActionConfig) ConvertWaitToCmd(wait ActionWait, timeout *int) (string,
 }
 
 // actionCmdMutation performs some basic string mutations to make commands more useful.
-func (ac *ActionConfig) actionCmdMutation(cmd string, shellPref exec.ExecShell) (string, error) {
+func (ac *ActionRunner) actionCmdMutation(cmd string, shellPref exec.ExecShell) (string, error) {
 	// Try to patch the zarf binary path in case the name isn't exactly "./zarf".
 	cmd = strings.ReplaceAll(cmd, fmt.Sprintf("./%s ", ac.commandName), ac.commandPath+" ")
 
@@ -235,7 +235,7 @@ func (ac *ActionConfig) actionCmdMutation(cmd string, shellPref exec.ExecShell) 
 }
 
 // actionMergeDefaults merges the ActionSet defaults with the specified action.
-func (ac *ActionConfig) actionMergeDefaults(def ActionDefaults, a Action, vars map[string]*variables.TextTemplate) ActionDefaults {
+func (ac *ActionRunner) actionMergeDefaults(def ActionDefaults, a Action, vars map[string]*variables.TextTemplate) ActionDefaults {
 	if a.Mute != nil {
 		def.Mute = *a.Mute
 	}
@@ -275,7 +275,7 @@ func (ac *ActionConfig) actionMergeDefaults(def ActionDefaults, a Action, vars m
 }
 
 // execAction executes the built command in a shell
-func (ac *ActionConfig) execAction(ctx context.Context, cfg ActionDefaults, cmd string, shellPref exec.ExecShell, spinner Spinner) (string, error) {
+func (ac *ActionRunner) execAction(ctx context.Context, cfg ActionDefaults, cmd string, shellPref exec.ExecShell, spinner Spinner) (string, error) {
 	shell, shellArgs := exec.GetOSShell(shellPref)
 
 	ac.logger(fmt.Sprintf("Running command in %s: %s", shell, cmd))
