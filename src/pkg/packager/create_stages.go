@@ -252,7 +252,7 @@ func (p *Packager) output() error {
 		if err != nil {
 			return err
 		}
-		remote, err := ocizarf.NewZarfOrasRemote(ref, oci.PlatformForArch(config.GetArch()))
+		remote, err := ocizarf.NewZarfOrasRemote(ref, oci.MultiOSPlatformForArch(config.GetArch()))
 		if err != nil {
 			return err
 		}
@@ -655,7 +655,7 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if helpers.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		remote, err := ocizarf.NewZarfOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, oci.PlatformForArch(config.GetArch()))
+		remote, err := ocizarf.NewZarfOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, oci.MultiOSPlatformForArch(config.GetArch()))
 		if err != nil {
 			return err
 		}

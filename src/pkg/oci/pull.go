@@ -48,8 +48,8 @@ func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDi
 }
 
 // PullLayers pulls the package from the remote repository and saves it to the given path.
-// If you don't have nil paramaters for doneSaving, encounteredErr, and wg
-// you must use the channels in a go routine and call wg.done after they are used
+// If you don't set doneSaving to nil you must have a goroutine running that acts on an input
+// to doneSaving and provides an input to doneSaving after it's done
 func (o *OrasRemote) PullLayers(ctx context.Context, destinationDir string, concurrency int,
 	layersToPull []ocispec.Descriptor, doneSaving chan error) ([]ocispec.Descriptor, error) {
 	// de-duplicate layers
@@ -68,6 +68,8 @@ func (o *OrasRemote) PullLayers(ctx context.Context, destinationDir string, conc
 }
 
 // CopyWithProgress copies the given layers from the remote repository to the given store.
+// If you don't set doneSaving to nil you must have a goroutine running that acts on an input
+// to doneSaving and provides an input to doneSaving after it's done
 func (o *OrasRemote) CopyWithProgress(ctx context.Context, layers []ocispec.Descriptor, store oras.Target,
 	copyOpts oras.CopyOptions, doneSaving chan error) error {
 	estimatedBytes := int64(0)
@@ -128,7 +130,6 @@ func (o *OrasRemote) CopyWithProgress(ctx context.Context, layers []ocispec.Desc
 }
 
 // PullLayer pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
-// ?! Why do we pull a single layer with o.fetchLayer, but multiple layers with oras.copy
 func (o *OrasRemote) PullLayer(ctx context.Context, desc ocispec.Descriptor, destinationDir string) error {
 	b, err := o.FetchLayer(ctx, desc)
 	if err != nil {

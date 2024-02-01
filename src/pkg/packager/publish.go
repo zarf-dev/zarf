@@ -38,7 +38,7 @@ func (p *Packager) Publish() (err error) {
 		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
 
 		arch := config.GetArch()
-		dstRemote, err := ocizarf.NewZarfOrasRemote(p.cfg.PublishOpts.PackageDestination, oci.PlatformForArch(arch))
+		dstRemote, err := ocizarf.NewZarfOrasRemote(p.cfg.PublishOpts.PackageDestination, oci.MultiOSPlatformForArch(arch))
 		if err != nil {
 			return err
 		}
@@ -116,7 +116,7 @@ func (p *Packager) Publish() (err error) {
 	if p.cfg.CreateOpts.IsSkeleton {
 		platform = ocizarf.PlatformForSkeleton()
 	} else {
-		platform = oci.PlatformForArch(config.GetArch())
+		platform = oci.MultiOSPlatformForArch(config.GetArch())
 	}
 	remote, err := ocizarf.NewZarfOrasRemote(ref, platform)
 	if err != nil {

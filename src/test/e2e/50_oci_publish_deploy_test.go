@@ -131,10 +131,10 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	defer e2e.TeardownRegistry(t, dstRegistryPort)
 
 	config.CommonOptions.Insecure = true
-	src, err := ocizarf.NewZarfOrasRemote(ref, oci.PlatformForArch(e2e.Arch))
+	src, err := ocizarf.NewZarfOrasRemote(ref, oci.MultiOSPlatformForArch(e2e.Arch))
 	suite.NoError(err)
 
-	dst, err := ocizarf.NewZarfOrasRemote(dstRef, oci.PlatformForArch(e2e.Arch))
+	dst, err := ocizarf.NewZarfOrasRemote(dstRef, oci.MultiOSPlatformForArch(e2e.Arch))
 	suite.NoError(err)
 
 	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])

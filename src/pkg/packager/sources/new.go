@@ -68,7 +68,7 @@ func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 			pkgSrc = fmt.Sprintf("%s@sha256:%s", pkgSrc, pkgOpts.Shasum)
 		}
 		arch := config.GetArch()
-		remote, err := ocizarf.NewZarfOrasRemote(pkgSrc, oci.PlatformForArch(arch))
+		remote, err := ocizarf.NewZarfOrasRemote(pkgSrc, oci.MultiOSPlatformForArch(arch))
 		if err != nil {
 			return nil, err
 		}

@@ -105,8 +105,10 @@ func WithMediaType(mediaType string) Modifier {
 	}
 }
 
-// PlatformForArch sets the target architecture for the remote
-func PlatformForArch(arch string) ocispec.Platform {
+// MultiOSPlatformForArch sets the target architecture for the remote
+// ?! Do we want to expose this function or put it in the zarf specific land ?
+// Same question for the MultiOS variable
+func MultiOSPlatformForArch(arch string) ocispec.Platform {
 	return ocispec.Platform{
 		OS:           MultiOS,
 		Architecture: arch,
