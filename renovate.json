@@ -46,7 +46,8 @@
       "matchStringsStrategy": "recursive",
       "matchStrings": [
         "charts:(.|\n)*?(^\\s{4}[\\w:]+|\n$|^\\s{2}-)",
-        "- name: (?<depName>.+)(.|\n)*?url: (?<registryUrl>.+)(.|\n)*?version: (?<currentValue>.+)"
+        "- name: (?<depName>.+)(.|\n)*?url: (?<registryUrl>.+)(.|\n)*?version: (?<currentValue>.+)",
+        "- name: (?<depName>.+)(.|\n)*?version: (?<currentValue>.+)(.|\n)*?url: (?<registryUrl>.+)"
       ],
       "datasourceTemplate": "helm"
     },
