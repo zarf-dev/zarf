@@ -17,7 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/variables"
 )
 
-// FakeSpinner
+// Spinner includes various messaging functions that are used in actions
 // TODO: Make this a real interface for progress
 type Spinner interface {
 	Errorf(err error, format string, a ...any)

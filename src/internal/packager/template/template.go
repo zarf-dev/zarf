@@ -23,11 +23,12 @@ const (
 	depMarkerNew = "DATA_INJECTION_MARKER"
 )
 
+// DeprecatedKeys holds a map of template keys that are deprecated
 var DeprecatedKeys = map[string]string{
 	fmt.Sprintf("###ZARF_%s###", depMarkerOld): fmt.Sprintf("###ZARF_%s###", depMarkerNew),
 }
 
-// GetTemplates returns the template keys and values to be used for templating.
+// GetZarfTemplates returns the template keys and values to be used for templating.
 func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap map[string]*variables.TextTemplate, err error) {
 	templateMap = make(map[string]*variables.TextTemplate)
 

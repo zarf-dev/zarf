@@ -16,6 +16,7 @@ type VariableConfig struct {
 	logger func(format string, a ...any)
 }
 
+// New creates a new VariableConfig
 func New(templatePrefix string, deprecatedKeys map[string]string, setVariableMap SetVariableMap, constants []Constant, logger func(format string, a ...any)) *VariableConfig {
 	return &VariableConfig{
 		templatePrefix:       templatePrefix,

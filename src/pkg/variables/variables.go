@@ -9,12 +9,13 @@ import (
 	"regexp"
 )
 
+// SetVariableMap represents a map of variable names to their set values
 type SetVariableMap map[string]*SetVariable
 
-// setVariableMapInConfig handles setting the active variables used to template component files.
+// PopulateSetVariableMap handles setting the active variables within a SetVariableMap
 func (sv SetVariableMap) PopulateSetVariableMap(variables []Variable, presetVariables map[string]string, prompt func(variable Variable) (value string, err error)) error {
 	for name, value := range presetVariables {
-		sv.SetVariableInConfig(name, value, false, false, "")
+		sv.SetVariableInMap(name, value, false, false, "")
 	}
 
 	for _, variable := range variables {
@@ -32,7 +33,7 @@ func (sv SetVariableMap) PopulateSetVariableMap(variables []Variable, presetVari
 		}
 
 		// First set default (may be overridden by prompt)
-		sv.SetVariableInConfig(variable.Name, variable.Default, variable.Sensitive, variable.AutoIndent, variable.Type)
+		sv.SetVariableInMap(variable.Name, variable.Default, variable.Sensitive, variable.AutoIndent, variable.Type)
 
 		// Variable is set to prompt the user
 		if variable.Prompt {
@@ -43,7 +44,7 @@ func (sv SetVariableMap) PopulateSetVariableMap(variables []Variable, presetVari
 				return err
 			}
 
-			sv.SetVariableInConfig(variable.Name, val, variable.Sensitive, variable.AutoIndent, variable.Type)
+			sv.SetVariableInMap(variable.Name, val, variable.Sensitive, variable.AutoIndent, variable.Type)
 		}
 
 		if err := sv.CheckVariablePattern(variable.Name, variable.Pattern); err != nil {
@@ -54,7 +55,8 @@ func (sv SetVariableMap) PopulateSetVariableMap(variables []Variable, presetVari
 	return nil
 }
 
-func (sv SetVariableMap) SetVariableInConfig(name, value string, sensitive bool, autoIndent bool, varType VariableType) {
+// SetVariableInMap sets a variable in the SetVariableMap
+func (sv SetVariableMap) SetVariableInMap(name, value string, sensitive bool, autoIndent bool, varType VariableType) {
 	sv[name] = &SetVariable{
 		Name:       name,
 		Value:      value,
@@ -64,7 +66,7 @@ func (sv SetVariableMap) SetVariableInConfig(name, value string, sensitive bool,
 	}
 }
 
-// checkVariablePattern checks to see if a current variable is set to a value that matches its pattern
+// CheckVariablePattern checks to see if a current variable is set to a value that matches its pattern
 func (sv SetVariableMap) CheckVariablePattern(name, pattern string) error {
 	if regexp.MustCompile(pattern).MatchString(sv[name].Value) {
 		return nil

@@ -22,6 +22,7 @@ type TextTemplate struct {
 	Value      string
 }
 
+// GetAllTemplates gets all of the current templates stored in the VariableConfig
 func (vc *VariableConfig) GetAllTemplates() map[string]*TextTemplate {
 	templateMap := vc.ApplicationTemplates
 
