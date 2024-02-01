@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
@@ -183,12 +182,9 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	spinner.Success()
 
 	// Create a thread to update a progress bar as we save the image files to disk
-	doneSaving := make(chan int)
-	errorSaving := make(chan int)
-	var progressBarWaitGroup sync.WaitGroup
-	progressBarWaitGroup.Add(1)
+	doneSaving := make(chan error)
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
-	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &progressBarWaitGroup, doneSaving, errorSaving, updateText, updateText)
+	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, doneSaving, updateText, updateText)
 
 	// Spawn a goroutine for each layer to write it to disk using crane
 
@@ -323,8 +319,8 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 	onLayerWritingError := func(err error) error {
 		// Send a signal to the progress bar that we're done and wait for the thread to finish
-		errorSaving <- 1
-		progressBarWaitGroup.Wait()
+		doneSaving <- err
+		<-doneSaving
 		message.WarnErr(err, "Failed to write image layers, trying again up to 3 times...")
 		if strings.HasPrefix(err.Error(), "expected blob size") {
 			message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
@@ -387,8 +383,8 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 	onImageSavingError := func(err error) error {
 		// Send a signal to the progress bar that we're done and wait for the thread to finish
-		errorSaving <- 1
-		progressBarWaitGroup.Wait()
+		doneSaving <- err
+		<-doneSaving
 		message.WarnErr(err, "Failed to write image config or manifest, trying again up to 3 times...")
 		return err
 	}
@@ -423,8 +419,8 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	}
 
 	// Send a signal to the progress bar that we're done and wait for the thread to finish
-	doneSaving <- 1
-	progressBarWaitGroup.Wait()
+	doneSaving <- nil
+	<-doneSaving
 
 	return imgInfoList, nil
 }

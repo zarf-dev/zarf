@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
@@ -102,14 +101,11 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 			copyOpts := remote.CopyOpts
 			// TODO (@WSTARR): This overrides the FindSuccessors function to no longer filter nodes when pulling which is necessary when caching - once we implement caching more thoroughly we will need to reevaluate this.
 			copyOpts.FindSuccessors = content.Successors
-			doneSaving := make(chan int)
-			encounteredErr := make(chan int)
-			var wg sync.WaitGroup
-			wg.Add(1)
+			doneSaving := make(chan error)
 			successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+remote.Repo().Reference.String())
 			layerSize := oci.SumDescsSize([]ocispec.Descriptor{componentDesc})
-			go utils.RenderProgressBarForLocalDirWrite(cache, layerSize, &wg, doneSaving, encounteredErr, "Pulling", successText)
-			if err := remote.CopyWithProgress(ctx, []ocispec.Descriptor{componentDesc}, store, copyOpts, doneSaving, encounteredErr, &wg); err != nil {
+			go utils.RenderProgressBarForLocalDirWrite(cache, layerSize, doneSaving, "Pulling", successText)
+			if err := remote.CopyWithProgress(ctx, []ocispec.Descriptor{componentDesc}, store, copyOpts, doneSaving); err != nil {
 				return err
 			}
 		}

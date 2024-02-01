@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
-	"sync"
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -60,16 +59,13 @@ func (o *ZarfOrasRemote) PullPackage(ctx context.Context, destinationDir string,
 	layersToPull = append(layersToPull, manifest.Config)
 
 	// Create a thread to update a progress bar as we save the package to disk
-	doneSaving := make(chan int)
-	encounteredErr := make(chan int)
-	var wg sync.WaitGroup
-	wg.Add(1)
+	doneSaving := make(chan error)
 	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+o.Repo().Reference.String())
 
 	layerSize := oci.SumDescsSize(layersToPull)
-	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, &wg, doneSaving, encounteredErr, "Pulling", successText)
+	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, doneSaving, "Pulling", successText)
 
-	return o.PullLayers(ctx, destinationDir, concurrency, layersToPull, doneSaving, encounteredErr, &wg)
+	return o.PullLayers(ctx, destinationDir, concurrency, layersToPull, doneSaving)
 }
 
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.

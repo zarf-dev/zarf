@@ -8,7 +8,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"slices"
 
@@ -52,7 +51,7 @@ func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDi
 // If you don't have nil paramaters for doneSaving, encounteredErr, and wg
 // you must use the channels in a go routine and call wg.done after they are used
 func (o *OrasRemote) PullLayers(ctx context.Context, destinationDir string, concurrency int,
-	layersToPull []ocispec.Descriptor, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) ([]ocispec.Descriptor, error) {
+	layersToPull []ocispec.Descriptor, doneSaving chan error) ([]ocispec.Descriptor, error) {
 	// de-duplicate layers
 	layersToPull = RemoveDuplicateDescriptors(layersToPull)
 
@@ -65,12 +64,12 @@ func (o *OrasRemote) PullLayers(ctx context.Context, destinationDir string, conc
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 
-	return layersToPull, o.CopyWithProgress(ctx, layersToPull, dst, copyOpts, doneSaving, encounteredErr, wg)
+	return layersToPull, o.CopyWithProgress(ctx, layersToPull, dst, copyOpts, doneSaving)
 }
 
 // CopyWithProgress copies the given layers from the remote repository to the given store.
 func (o *OrasRemote) CopyWithProgress(ctx context.Context, layers []ocispec.Descriptor, store oras.Target,
-	copyOpts oras.CopyOptions, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) error {
+	copyOpts oras.CopyOptions, doneSaving chan error) error {
 	estimatedBytes := int64(0)
 	shas := []string{}
 	for _, layer := range layers {
@@ -112,19 +111,17 @@ func (o *OrasRemote) CopyWithProgress(ctx context.Context, layers []ocispec.Desc
 
 	_, err := oras.Copy(ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), copyOpts)
 	if err != nil {
-		if encounteredErr != nil {
-			encounteredErr <- 1
+		if doneSaving != nil {
+			doneSaving <- err
+			<-doneSaving
 		}
 		return err
 	}
 
 	// Send a signal to the progress bar that we're done and wait for it to finish
 	if doneSaving != nil {
-		doneSaving <- 1
-	}
-
-	if wg != nil {
-		wg.Wait()
+		doneSaving <- nil
+		<-doneSaving
 	}
 
 	return nil
