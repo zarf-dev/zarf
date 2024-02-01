@@ -451,6 +451,8 @@ func (p *Packager) populatePackageVariables() error {
 		promptFunc = func(variable variables.Variable) (value string, err error) { return variable.Default, nil }
 	}
 
+	p.cfg.VariableConfig.Constants = p.cfg.Pkg.Constants
+
 	return p.cfg.VariableConfig.SetVariableMap.PopulateSetVariableMap(
 		p.cfg.Pkg.Variables, p.cfg.PkgOpts.SetVariables, promptFunc)
 }

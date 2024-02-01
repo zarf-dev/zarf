@@ -20,6 +20,11 @@ func (p *Packager) runActions(defaultCfg actions.ActionDefaults, actions []actio
 		} else {
 			cmd := a.Cmd
 			if a.Wait != nil {
+				// TODO (@WSTARR) dessicate this code...
+				if a.MaxTotalSeconds == nil {
+					fiveMin := 300
+					a.MaxTotalSeconds = &fiveMin
+				}
 				cmd, err = p.actionCfg.ConvertWaitToCmd(*a.Wait, a.MaxTotalSeconds)
 				if err != nil {
 					return err
