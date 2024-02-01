@@ -85,16 +85,16 @@ func (p *Packager) Publish() (err error) {
 	}
 
 	if p.cfg.CreateOpts.IsSkeleton {
+		if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+			return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
+		}
+
 		cwd, err := os.Getwd()
 		if err != nil {
 			return err
 		}
 
-		if err := creator.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
-			return err
-		}
-
-		c := creator.New(p.cfg.CreateOpts)
+		c := creator.New(p.cfg.CreateOpts, cwd)
 
 		loadedPkg, warnings, err := c.LoadPackageDefinition(p.layout)
 		if err != nil {

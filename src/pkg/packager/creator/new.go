@@ -5,6 +5,8 @@
 package creator
 
 import (
+	"path/filepath"
+
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -17,9 +19,15 @@ type Creator interface {
 }
 
 // New returns a new Creator based on the provided create options.
-func New(createOpts types.ZarfCreateOptions) Creator {
+func New(createOpts types.ZarfCreateOptions, cwd string) Creator {
 	if createOpts.IsSkeleton {
 		return &SkeletonCreator{createOpts: createOpts}
 	}
+
+	// differentials are relative to the current working directory
+	if createOpts.DifferentialData.DifferentialPackagePath != "" {
+		createOpts.DifferentialData.DifferentialPackagePath = filepath.Join(cwd, createOpts.DifferentialData.DifferentialPackagePath)
+	}
+
 	return &PackageCreator{createOpts: createOpts}
 }

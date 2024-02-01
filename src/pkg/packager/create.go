@@ -11,21 +11,25 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create() (err error) {
+	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
+	}
+
+	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	if err := creator.CdToBaseDir(&p.cfg.CreateOpts, cwd); err != nil {
-		return err
-	}
 
-	c := creator.New(p.cfg.CreateOpts)
+	c := creator.New(p.cfg.CreateOpts, cwd)
 
 	loadedPkg, warnings, err := c.LoadPackageDefinition(p.layout)
 	if err != nil {
