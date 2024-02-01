@@ -112,7 +112,7 @@ retryCmd:
 
 			// If an output variable is defined, set it.
 			for _, v := range action.SetVariables {
-				variableConfig.SetVariableMap.SetVariableInConfig(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
+				variableConfig.SetVariableMap.SetVariableInMap(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
 				if err := variableConfig.SetVariableMap.CheckVariablePattern(v.Name, v.Pattern); err != nil {
 					// message.WarnErr(err, err.Error())
 					return err
