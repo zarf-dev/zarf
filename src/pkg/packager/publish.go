@@ -38,7 +38,7 @@ func (p *Packager) Publish() (err error) {
 		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
 
 		arch := config.GetArch()
-		dstRemote, err := ocizarf.NewZarfOrasRemote(p.cfg.PublishOpts.PackageDestination, oci.PlatformForArch(arch), oci.WithInsecure(config.CommonOptions.Insecure))
+		dstRemote, err := ocizarf.NewZarfOrasRemote(p.cfg.PublishOpts.PackageDestination, oci.PlatformForArch(arch))
 		if err != nil {
 			return err
 		}
@@ -118,7 +118,7 @@ func (p *Packager) Publish() (err error) {
 	} else {
 		platform = oci.PlatformForArch(config.GetArch())
 	}
-	remote, err := ocizarf.NewZarfOrasRemote(ref, platform, oci.WithInsecure(config.CommonOptions.Insecure))
+	remote, err := ocizarf.NewZarfOrasRemote(ref, platform)
 	if err != nil {
 		return err
 	}

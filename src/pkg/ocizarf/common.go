@@ -5,6 +5,7 @@
 package ocizarf
 
 import (
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -27,7 +28,7 @@ type ZarfOrasRemote struct {
 // NewZarfOrasRemote returns an oras remote repository client and context for the given url
 // with zarf opination embedded
 func NewZarfOrasRemote(url string, platform ocispec.Platform, mod ...oci.Modifier) (*ZarfOrasRemote, error) {
-	modifiers := append(mod, oci.WithMediaType(ZarfConfigMediaType))
+	modifiers := append(mod, oci.WithMediaType(ZarfConfigMediaType), oci.WithInsecure(config.CommonOptions.Insecure))
 	remote, err := oci.NewOrasRemote(url, &message.Logger{}, platform, modifiers...)
 	if err != nil {
 		return nil, err

@@ -139,7 +139,7 @@ func downloadInitPackage(cacheDirectory string) (string, error) {
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		remote, err := ocizarf.NewZarfOrasRemote(url, oci.PlatformForArch(config.GetArch()), oci.WithInsecure(config.CommonOptions.Insecure))
+		remote, err := ocizarf.NewZarfOrasRemote(url, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
 			return "", err
 		}

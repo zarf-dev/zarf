@@ -65,6 +65,7 @@ func RenderProgressBarForLocalDirWrite(filepath string, expectedTotal int64, wg 
 	progressBar := message.NewProgressBar(expectedTotal, title)
 
 	for {
+		// Could play around with only one
 		select {
 		case <-completeChan:
 			// Send success message
