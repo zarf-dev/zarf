@@ -12,9 +12,10 @@ import (
 	"reflect"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -30,16 +31,11 @@ type renderer struct {
 	actionConfig   *action.Configuration
 	connectStrings types.ConnectStrings
 	namespaces     map[string]*corev1.Namespace
-	values         template.Values
+	variableConfig *variables.VariableConfig
 }
 
 func (h *Helm) newRenderer() (*renderer, error) {
 	message.Debugf("helm.NewRenderer()")
-
-	valueTemplate, err := template.Generate(h.cfg)
-	if err != nil {
-		return nil, err
-	}
 
 	return &renderer{
 		Helm:           h,
@@ -48,8 +44,8 @@ func (h *Helm) newRenderer() (*renderer, error) {
 			// Add the passed-in namespace to the list
 			h.chart.Namespace: h.cluster.NewZarfManagedNamespace(h.chart.Namespace),
 		},
-		values:       *valueTemplate,
-		actionConfig: h.actionConfig,
+		variableConfig: h.cfg.VariableConfig,
+		actionConfig:   h.actionConfig,
 	}, nil
 }
 
@@ -62,12 +58,12 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	path := filepath.Join(tempDir, "chart.yaml")
 
 	// Write the context to a file for processing
-	if err := utils.WriteFile(path, renderedManifests.Bytes()); err != nil {
+	if err := helpers.WriteFile(path, renderedManifests.Bytes()); err != nil {
 		return nil, fmt.Errorf("unable to write the post-render file for the helm chart")
 	}
 
 	// Run the template engine against the chart output
-	if _, err := template.ProcessYamlFilesInPath(tempDir, r.component, r.values); err != nil {
+	if _, err := r.variableConfig.ProcessYamlFilesInPath(tempDir); err != nil {
 		return nil, fmt.Errorf("error templating the helm chart: %w", err)
 	}
 

@@ -15,7 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
@@ -64,7 +64,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", name)))
 
 	cache := filepath.Join(config.GetAbsCachePath(), "oci")
-	if err := utils.CreateDirectory(cache, 0700); err != nil {
+	if err := helpers.CreateDirectory(cache, 0700); err != nil {
 		return err
 	}
 
@@ -104,7 +104,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 		}
 	}
 
-	if err := utils.CreateDirectory(dir, 0700); err != nil {
+	if err := helpers.CreateDirectory(dir, 0700); err != nil {
 		return err
 	}
 

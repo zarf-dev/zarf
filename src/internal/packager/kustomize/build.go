@@ -7,7 +7,7 @@ package kustomize
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"sigs.k8s.io/kustomize/api/krusty"
 	krustytypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
@@ -39,5 +39,5 @@ func Build(path string, destination string, kustomizeAllowAnyDirectory bool) err
 		return fmt.Errorf("problem converting kustomization to yaml: %w", err)
 	}
 
-	return utils.WriteFile(destination, yaml)
+	return helpers.WriteFile(destination, yaml)
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 )
@@ -38,7 +39,7 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool)
 	defer spinner.Stop()
 
 	if s.Shasum != "" {
-		if err := utils.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
+		if err := helpers.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
 			return err
 		}
 	}
@@ -137,7 +138,7 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 	var pkg types.ZarfPackage
 
 	if s.Shasum != "" {
-		if err := utils.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
+		if err := helpers.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
 			return err
 		}
 	}
@@ -153,7 +154,7 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 			return err
 		}
 		// archiver.Extract will not return an error if the file does not exist, so we must manually check
-		if !utils.InvalidPath(filepath.Join(dst.Base, rel)) {
+		if !helpers.InvalidPath(filepath.Join(dst.Base, rel)) {
 			pathsExtracted = append(pathsExtracted, rel)
 		}
 	}

@@ -2024,6 +2024,22 @@ Must be one of:
 
 <details>
 <summary>
+<strong> <a name="components_items_actions_onCreate_before_items_if"></a>if</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** A go expression controlling whether this action will execute
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
 <strong> <a name="components_items_actions_onCreate_before_items_cmd"></a>cmd</strong>
 </summary>
 &nbsp;

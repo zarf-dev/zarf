@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 
 	"oras.land/oras-go/v2/registry"
 
@@ -213,7 +212,7 @@ var packagePublishCmd = &cobra.Command{
 			message.Fatalf(nil, "%s", err.Error())
 		}
 
-		if utils.IsDir(pkgConfig.PkgOpts.PackageSource) {
+		if helpers.IsDir(pkgConfig.PkgOpts.PackageSource) {
 			pkgConfig.CreateOpts.BaseDir = pkgConfig.PkgOpts.PackageSource
 			pkgConfig.CreateOpts.IsSkeleton = true
 		}

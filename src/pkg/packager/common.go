@@ -20,7 +20,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/pkg/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 
@@ -36,11 +39,11 @@ import (
 // Packager is the main struct for managing packages.
 type Packager struct {
 	cfg            *types.PackagerConfig
+	actionCfg      *actions.ActionConfig
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
 	arch           string
 	warnings       []string
-	valueTemplate  *template.Values
 	hpaModified    bool
 	connectStrings types.ConnectStrings
 	sbomViewFiles  []string
@@ -93,8 +96,13 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 		return nil, fmt.Errorf("no config provided")
 	}
 
-	if cfg.SetVariableMap == nil {
-		cfg.SetVariableMap = make(map[string]*types.ZarfSetVariable)
+	if cfg.VariableConfig == nil {
+		cfg.VariableConfig = variables.New(
+			"zarf",
+			template.DeprecatedKeys,
+			make(variables.SetVariableMap),
+			make([]variables.Constant, 0),
+			message.Warnf)
 	}
 
 	var (
@@ -129,6 +137,13 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 		}
 	}
+
+	// Setup the action config for packager
+	zarfCommand, err := utils.GetFinalExecutableCommand()
+	if err != nil {
+		return nil, err
+	}
+	pkgr.actionCfg = actions.New("zarf", zarfCommand, "zarf tools wait-for", message.Debug)
 
 	return pkgr, nil
 }
@@ -343,7 +358,7 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
 	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && fi.Size() > int64(chunkSize) {
 		spinner.Updatef("Package is larger than %dMB, splitting into multiple files", p.cfg.CreateOpts.MaxPackageSizeMB)
-		chunks, sha256sum, err := utils.SplitFile(destinationTarball, chunkSize)
+		chunks, sha256sum, err := helpers.SplitFile(destinationTarball, chunkSize)
 		if err != nil {
 			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
 		}
@@ -404,7 +419,7 @@ func (p *Packager) stageSBOMViewFiles() error {
 	}
 	// If SBOMs were loaded, temporarily place them in the deploy directory
 	sbomDir := p.layout.SBOMs.Path
-	if !utils.InvalidPath(sbomDir) {
+	if !helpers.InvalidPath(sbomDir) {
 		p.sbomViewFiles, _ = filepath.Glob(filepath.Join(sbomDir, "sbom-viewer-*"))
 		_, err := sbom.OutputSBOMFiles(sbomDir, layout.SBOMDir, "")
 		if err != nil {

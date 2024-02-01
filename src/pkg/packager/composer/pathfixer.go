@@ -7,7 +7,7 @@ package composer
 import (
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -46,7 +46,7 @@ func fixPaths(child *types.ZarfComponent, relativeToHead string) {
 			composed := makePathRelativeTo(kustomization, relativeToHead)
 			// kustomizations can use non-standard urls, so we need to check if the composed path exists on the local filesystem
 			abs, _ := filepath.Abs(composed)
-			invalid := utils.InvalidPath(abs)
+			invalid := helpers.InvalidPath(abs)
 			if !invalid {
 				child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = composed
 			}
@@ -72,7 +72,7 @@ func fixPaths(child *types.ZarfComponent, relativeToHead string) {
 }
 
 // fixActionPaths takes a slice of actions and mutates the Dir to be relative to the head node
-func fixActionPaths(actions []types.ZarfComponentAction, defaultDir, relativeToHead string) []types.ZarfComponentAction {
+func fixActionPaths(actions []actions.Action, defaultDir, relativeToHead string) []actions.Action {
 	for actionIdx, action := range actions {
 		var composed string
 		if action.Dir != nil {

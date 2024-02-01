@@ -11,8 +11,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -49,11 +49,11 @@ func OutputSBOMFiles(sourceDir, outputDir, packageName string) (string, error) {
 		return "", err
 	}
 
-	if err := utils.CreateDirectory(packagePath, 0700); err != nil {
+	if err := helpers.CreateDirectory(packagePath, 0700); err != nil {
 		return "", err
 	}
 
-	return packagePath, utils.CreatePathAndCopy(sourceDir, packagePath)
+	return packagePath, helpers.CreatePathAndCopy(sourceDir, packagePath)
 }
 
 // IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections)

@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/pterm/pterm"
 )
 
@@ -93,9 +94,9 @@ func (p *Packager) getPackageYAMLHints(stage string) map[string]string {
 		for _, variable := range p.cfg.Pkg.Variables {
 			value, present := p.cfg.PkgOpts.SetVariables[variable.Name]
 			if !present {
-				value = fmt.Sprintf("'%s' (default)", message.Truncate(variable.Default, 20, false))
+				value = fmt.Sprintf("'%s' (default)", helpers.Truncate(variable.Default, 20, false))
 			} else {
-				value = fmt.Sprintf("'%s'", message.Truncate(value, 20, false))
+				value = fmt.Sprintf("'%s'", helpers.Truncate(value, 20, false))
 			}
 			if variable.Sensitive {
 				value = "'**sanitized**'"

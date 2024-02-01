@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -48,7 +49,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 		InjectorPayloadTarGz: filepath.Join(tmpDir, "payload.tar.gz"),
 	}
 
-	if err := utils.CreateDirectory(tmp.SeedImagesDir, 0700); err != nil {
+	if err := helpers.CreateDirectory(tmp.SeedImagesDir, 0700); err != nil {
 		spinner.Fatalf(err, "Unable to create the seed images directory")
 	}
 
@@ -199,7 +200,7 @@ func (c *Cluster) createPayloadConfigmaps(seedImagesDir, tarPath string, spinner
 		return configMaps, "", err
 	}
 
-	chunks, sha256sum, err := utils.SplitFile(tarPath, payloadChunkSize)
+	chunks, sha256sum, err := helpers.SplitFile(tarPath, payloadChunkSize)
 	if err != nil {
 		return configMaps, "", err
 	}
@@ -373,7 +374,7 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 					corev1.ResourceMemory: injectorRequestedMemory,
 				},
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:	   injectorLimitCPU,
+					corev1.ResourceCPU:    injectorLimitCPU,
 					corev1.ResourceMemory: injectorLimitMemory,
 				},
 			},

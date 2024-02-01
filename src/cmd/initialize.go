@@ -75,7 +75,7 @@ var initCmd = &cobra.Command{
 
 func findInitPackage(initPackageName string) (string, error) {
 	// First, look for the init package in the current working directory
-	if !utils.InvalidPath(initPackageName) {
+	if !helpers.InvalidPath(initPackageName) {
 		return initPackageName, nil
 	}
 
@@ -85,19 +85,19 @@ func findInitPackage(initPackageName string) (string, error) {
 		return "", err
 	}
 	executableDir := path.Dir(binaryPath)
-	if !utils.InvalidPath(filepath.Join(executableDir, initPackageName)) {
+	if !helpers.InvalidPath(filepath.Join(executableDir, initPackageName)) {
 		return filepath.Join(executableDir, initPackageName), nil
 	}
 
 	// Create the cache directory if it doesn't exist
-	if utils.InvalidPath(config.GetAbsCachePath()) {
-		if err := utils.CreateDirectory(config.GetAbsCachePath(), 0755); err != nil {
+	if helpers.InvalidPath(config.GetAbsCachePath()) {
+		if err := helpers.CreateDirectory(config.GetAbsCachePath(), 0755); err != nil {
 			message.Fatalf(err, lang.CmdInitErrUnableCreateCache, config.GetAbsCachePath())
 		}
 	}
 
 	// Next, look in the cache directory
-	if !utils.InvalidPath(filepath.Join(config.GetAbsCachePath(), initPackageName)) {
+	if !helpers.InvalidPath(filepath.Join(config.GetAbsCachePath(), initPackageName)) {
 		return filepath.Join(config.GetAbsCachePath(), initPackageName), nil
 	}
 

@@ -93,7 +93,7 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 		saved, err = client.Run(h.chart.LocalPath, nil)
 	} else {
 		saved = filepath.Join(temp, filepath.Base(h.chart.LocalPath))
-		err = utils.CreatePathAndCopy(h.chart.LocalPath, saved)
+		err = helpers.CreatePathAndCopy(h.chart.LocalPath, saved)
 	}
 	defer os.RemoveAll(temp)
 
@@ -204,7 +204,7 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 
 	// Download the file into a temp directory since we don't control what name helm creates here
 	temp := filepath.Join(h.chartPath, "temp")
-	if err = utils.CreateDirectory(temp, 0700); err != nil {
+	if err = helpers.CreateDirectory(temp, 0700); err != nil {
 		return fmt.Errorf("unable to create helm chart temp directory: %w", err)
 	}
 	defer os.RemoveAll(temp)
@@ -269,7 +269,7 @@ func (h *Helm) packageValues(cosignKeyPath string) error {
 				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 			}
 		} else {
-			if err := utils.CreatePathAndCopy(path, dst); err != nil {
+			if err := helpers.CreatePathAndCopy(path, dst); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}
@@ -376,7 +376,7 @@ func (h *Helm) listAvailableChartsAndVersions(pull *action.Pull) error {
 			versions += entry.Version + separator
 		}
 
-		versions = message.Truncate(versions, 75, false)
+		versions = helpers.Truncate(versions, 75, false)
 		chartData = append(chartData, []string{name, versions})
 	}
 

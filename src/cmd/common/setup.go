@@ -10,7 +10,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 )
 
 // LogLevelCLI holds the log level as input from a command
@@ -18,7 +17,7 @@ var LogLevelCLI string
 
 // SetupCLI sets up the CLI logging, interrupt functions, and more
 func SetupCLI() {
-	exec.ExitOnInterrupt()
+	ExitOnInterrupt()
 
 	match := map[string]message.LogLevel{
 		"warn":  message.WarnLevel,

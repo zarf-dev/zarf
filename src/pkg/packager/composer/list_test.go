@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/actions"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	"github.com/stretchr/testify/require"
@@ -144,80 +146,80 @@ func TestCompose(t *testing.T) {
 					{Source: fmt.Sprintf("%s%sworld", firstDirectory, string(os.PathSeparator))},
 					{Source: "hello"},
 				},
-				Actions: types.ZarfComponentActions{
+				Actions: actions.Actions{
 					// OnCreate actions should be appended with corrected directories that properly handle default directories
-					OnCreate: types.ZarfComponentActionSet{
-						Defaults: types.ZarfComponentActionDefaults{
+					OnCreate: actions.ActionSet{
+						Defaults: actions.ActionDefaults{
 							Dir: "hello-dc",
 						},
-						Before: []types.ZarfComponentAction{
+						Before: []actions.Action{
 							{Cmd: "today-bc", Dir: &finalDirectoryActionDefault},
 							{Cmd: "world-bc", Dir: &secondDirectoryActionDefault},
 							{Cmd: "hello-bc", Dir: &firstDirectoryActionDefault},
 						},
-						After: []types.ZarfComponentAction{
+						After: []actions.Action{
 							{Cmd: "today-ac", Dir: &finalDirectoryActionDefault},
 							{Cmd: "world-ac", Dir: &secondDirectoryActionDefault},
 							{Cmd: "hello-ac", Dir: &firstDirectoryActionDefault},
 						},
-						OnSuccess: []types.ZarfComponentAction{
+						OnSuccess: []actions.Action{
 							{Cmd: "today-sc", Dir: &finalDirectoryActionDefault},
 							{Cmd: "world-sc", Dir: &secondDirectoryActionDefault},
 							{Cmd: "hello-sc", Dir: &firstDirectoryActionDefault},
 						},
-						OnFailure: []types.ZarfComponentAction{
+						OnFailure: []actions.Action{
 							{Cmd: "today-fc", Dir: &finalDirectoryActionDefault},
 							{Cmd: "world-fc", Dir: &secondDirectoryActionDefault},
 							{Cmd: "hello-fc", Dir: &firstDirectoryActionDefault},
 						},
 					},
 					// OnDeploy actions should be appended without corrected directories
-					OnDeploy: types.ZarfComponentActionSet{
-						Defaults: types.ZarfComponentActionDefaults{
+					OnDeploy: actions.ActionSet{
+						Defaults: actions.ActionDefaults{
 							Dir: "hello-dd",
 						},
-						Before: []types.ZarfComponentAction{
+						Before: []actions.Action{
 							{Cmd: "today-bd"},
 							{Cmd: "world-bd"},
 							{Cmd: "hello-bd"},
 						},
-						After: []types.ZarfComponentAction{
+						After: []actions.Action{
 							{Cmd: "today-ad"},
 							{Cmd: "world-ad"},
 							{Cmd: "hello-ad"},
 						},
-						OnSuccess: []types.ZarfComponentAction{
+						OnSuccess: []actions.Action{
 							{Cmd: "today-sd"},
 							{Cmd: "world-sd"},
 							{Cmd: "hello-sd"},
 						},
-						OnFailure: []types.ZarfComponentAction{
+						OnFailure: []actions.Action{
 							{Cmd: "today-fd"},
 							{Cmd: "world-fd"},
 							{Cmd: "hello-fd"},
 						},
 					},
 					// OnRemove actions should be appended without corrected directories
-					OnRemove: types.ZarfComponentActionSet{
-						Defaults: types.ZarfComponentActionDefaults{
+					OnRemove: actions.ActionSet{
+						Defaults: actions.ActionDefaults{
 							Dir: "hello-dr",
 						},
-						Before: []types.ZarfComponentAction{
+						Before: []actions.Action{
 							{Cmd: "today-br"},
 							{Cmd: "world-br"},
 							{Cmd: "hello-br"},
 						},
-						After: []types.ZarfComponentAction{
+						After: []actions.Action{
 							{Cmd: "today-ar"},
 							{Cmd: "world-ar"},
 							{Cmd: "hello-ar"},
 						},
-						OnSuccess: []types.ZarfComponentAction{
+						OnSuccess: []actions.Action{
 							{Cmd: "today-sr"},
 							{Cmd: "world-sr"},
 							{Cmd: "hello-sr"},
 						},
-						OnFailure: []types.ZarfComponentAction{
+						OnFailure: []actions.Action{
 							{Cmd: "today-fr"},
 							{Cmd: "world-fr"},
 							{Cmd: "hello-fr"},
@@ -265,14 +267,14 @@ func TestMerging(t *testing.T) {
 	type testCase struct {
 		name           string
 		ic             *ImportChain
-		existingVars   []types.ZarfPackageVariable
-		existingConsts []types.ZarfPackageConstant
-		expectedVars   []types.ZarfPackageVariable
-		expectedConsts []types.ZarfPackageConstant
+		existingVars   []variables.Variable
+		existingConsts []variables.Constant
+		expectedVars   []variables.Variable
+		expectedConsts []variables.Constant
 	}
 
 	head := Node{
-		vars: []types.ZarfPackageVariable{
+		vars: []variables.Variable{
 			{
 				Name:    "TEST",
 				Default: "head",
@@ -281,7 +283,7 @@ func TestMerging(t *testing.T) {
 				Name: "HEAD",
 			},
 		},
-		consts: []types.ZarfPackageConstant{
+		consts: []variables.Constant{
 			{
 				Name:  "TEST",
 				Value: "head",
@@ -292,7 +294,7 @@ func TestMerging(t *testing.T) {
 		},
 	}
 	tail := Node{
-		vars: []types.ZarfPackageVariable{
+		vars: []variables.Variable{
 			{
 				Name:    "TEST",
 				Default: "tail",
@@ -301,7 +303,7 @@ func TestMerging(t *testing.T) {
 				Name: "TAIL",
 			},
 		},
-		consts: []types.ZarfPackageConstant{
+		consts: []variables.Constant{
 			{
 				Name:  "TEST",
 				Value: "tail",
@@ -319,22 +321,22 @@ func TestMerging(t *testing.T) {
 		{
 			name: "empty-ic",
 			ic:   &ImportChain{},
-			existingVars: []types.ZarfPackageVariable{
+			existingVars: []variables.Variable{
 				{
 					Name: "TEST",
 				},
 			},
-			existingConsts: []types.ZarfPackageConstant{
+			existingConsts: []variables.Constant{
 				{
 					Name: "TEST",
 				},
 			},
-			expectedVars: []types.ZarfPackageVariable{
+			expectedVars: []variables.Variable{
 				{
 					Name: "TEST",
 				},
 			},
-			expectedConsts: []types.ZarfPackageConstant{
+			expectedConsts: []variables.Constant{
 				{
 					Name: "TEST",
 				},
@@ -343,9 +345,9 @@ func TestMerging(t *testing.T) {
 		{
 			name:           "no-existing",
 			ic:             testIC,
-			existingVars:   []types.ZarfPackageVariable{},
-			existingConsts: []types.ZarfPackageConstant{},
-			expectedVars: []types.ZarfPackageVariable{
+			existingVars:   []variables.Variable{},
+			existingConsts: []variables.Constant{},
+			expectedVars: []variables.Variable{
 				{
 					Name:    "TEST",
 					Default: "head",
@@ -357,7 +359,7 @@ func TestMerging(t *testing.T) {
 					Name: "TAIL",
 				},
 			},
-			expectedConsts: []types.ZarfPackageConstant{
+			expectedConsts: []variables.Constant{
 				{
 					Name:  "TEST",
 					Value: "head",
@@ -373,7 +375,7 @@ func TestMerging(t *testing.T) {
 		{
 			name: "with-existing",
 			ic:   testIC,
-			existingVars: []types.ZarfPackageVariable{
+			existingVars: []variables.Variable{
 				{
 					Name:    "TEST",
 					Default: "existing",
@@ -382,7 +384,7 @@ func TestMerging(t *testing.T) {
 					Name: "EXISTING",
 				},
 			},
-			existingConsts: []types.ZarfPackageConstant{
+			existingConsts: []variables.Constant{
 				{
 					Name:  "TEST",
 					Value: "existing",
@@ -391,7 +393,7 @@ func TestMerging(t *testing.T) {
 					Name: "EXISTING",
 				},
 			},
-			expectedVars: []types.ZarfPackageVariable{
+			expectedVars: []variables.Variable{
 				{
 					Name:    "TEST",
 					Default: "existing",
@@ -406,7 +408,7 @@ func TestMerging(t *testing.T) {
 					Name: "TAIL",
 				},
 			},
-			expectedConsts: []types.ZarfPackageConstant{
+			expectedConsts: []variables.Constant{
 				{
 					Name:  "TEST",
 					Value: "existing",
@@ -491,55 +493,55 @@ func createDummyComponent(name, importDir, subName string) types.ZarfComponent {
 				Source: name,
 			},
 		},
-		Actions: types.ZarfComponentActions{
-			OnCreate: types.ZarfComponentActionSet{
-				Defaults: types.ZarfComponentActionDefaults{
+		Actions: actions.Actions{
+			OnCreate: actions.ActionSet{
+				Defaults: actions.ActionDefaults{
 					Dir: name + "-dc",
 				},
-				Before: []types.ZarfComponentAction{
+				Before: []actions.Action{
 					{Cmd: name + "-bc"},
 				},
-				After: []types.ZarfComponentAction{
+				After: []actions.Action{
 					{Cmd: name + "-ac"},
 				},
-				OnSuccess: []types.ZarfComponentAction{
+				OnSuccess: []actions.Action{
 					{Cmd: name + "-sc"},
 				},
-				OnFailure: []types.ZarfComponentAction{
+				OnFailure: []actions.Action{
 					{Cmd: name + "-fc"},
 				},
 			},
-			OnDeploy: types.ZarfComponentActionSet{
-				Defaults: types.ZarfComponentActionDefaults{
+			OnDeploy: actions.ActionSet{
+				Defaults: actions.ActionDefaults{
 					Dir: name + "-dd",
 				},
-				Before: []types.ZarfComponentAction{
+				Before: []actions.Action{
 					{Cmd: name + "-bd"},
 				},
-				After: []types.ZarfComponentAction{
+				After: []actions.Action{
 					{Cmd: name + "-ad"},
 				},
-				OnSuccess: []types.ZarfComponentAction{
+				OnSuccess: []actions.Action{
 					{Cmd: name + "-sd"},
 				},
-				OnFailure: []types.ZarfComponentAction{
+				OnFailure: []actions.Action{
 					{Cmd: name + "-fd"},
 				},
 			},
-			OnRemove: types.ZarfComponentActionSet{
-				Defaults: types.ZarfComponentActionDefaults{
+			OnRemove: actions.ActionSet{
+				Defaults: actions.ActionDefaults{
 					Dir: name + "-dr",
 				},
-				Before: []types.ZarfComponentAction{
+				Before: []actions.Action{
 					{Cmd: name + "-br"},
 				},
-				After: []types.ZarfComponentAction{
+				After: []actions.Action{
 					{Cmd: name + "-ar"},
 				},
-				OnSuccess: []types.ZarfComponentAction{
+				OnSuccess: []actions.Action{
 					{Cmd: name + "-sr"},
 				},
-				OnFailure: []types.ZarfComponentAction{
+				OnFailure: []actions.Action{
 					{Cmd: name + "-fr"},
 				},
 			},

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
 // RoundUp rounds a float64 to the given number of decimal places.
@@ -79,7 +80,7 @@ func RenderProgressBarForLocalDirWrite(filepath string, expectedTotal int64, wg 
 
 		default:
 			// Read the directory size
-			currentBytes, dirErr := GetDirSize(filepath)
+			currentBytes, dirErr := helpers.GetDirSize(filepath)
 			if dirErr != nil {
 				message.Debugf("unable to get updated progress: %s", dirErr.Error())
 				time.Sleep(200 * time.Millisecond)

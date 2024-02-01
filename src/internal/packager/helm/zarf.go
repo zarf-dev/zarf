@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 )
@@ -93,7 +94,7 @@ func (h *Helm) UpdateZarfAgentValues() error {
 			h.component = types.ZarfComponent{
 				Name: "zarf-agent",
 			}
-			h.cfg.Pkg.Constants = []types.ZarfPackageConstant{
+			h.cfg.Pkg.Constants = []variables.Constant{
 				{
 					Name:  "AGENT_IMAGE",
 					Value: currentAgentImage.Path,

@@ -14,6 +14,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -146,11 +147,11 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
 	for _, hrNamespacedName := range namespacedHelmReleaseNames {
 		hr := hrDependencies[hrNamespacedName]
-		action := types.ZarfComponentAction{
+		action := actions.Action{
 			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hrNamespacedName),
 			MaxTotalSeconds: &maxTotalSeconds,
-			Wait: &types.ZarfComponentActionWait{
-				Cluster: &types.ZarfComponentActionWaitCluster{
+			Wait: &actions.ActionWait{
+				Cluster: &actions.ActionWaitCluster{
 					Kind:       "HelmRelease",
 					Identifier: hr.Metadata.Name,
 					Namespace:  hr.Metadata.Namespace,
@@ -165,7 +166,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
 		if hr.Metadata.Name == "metrics-server" {
 			action.Description = "K8s metric server to exist or be deployed by Big Bang"
-			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
+			action.Wait.Cluster = &actions.ActionWaitCluster{
 				Kind: "APIService",
 				// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
 				Identifier: "v1beta1.metrics.k8s.io",
@@ -192,13 +193,13 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 
 	// Add onFailure actions with additional troubleshooting information.
 	for _, cmd := range failureGeneral {
-		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, types.ZarfComponentAction{
+		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, actions.Action{
 			Cmd: fmt.Sprintf("./zarf tools kubectl %s", cmd),
 		})
 	}
 
 	for _, cmd := range failureDebug {
-		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, types.ZarfComponentAction{
+		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, actions.Action{
 			Mute:        &t,
 			Description: "Storing debug information to the log for troubleshooting.",
 			Cmd:         fmt.Sprintf("./zarf tools kubectl %s", cmd),
@@ -206,7 +207,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 	}
 
 	// Add a pre-remove action to suspend the Big Bang HelmReleases to prevent reconciliation during removal.
-	c.Actions.OnRemove.Before = append(c.Actions.OnRemove.Before, types.ZarfComponentAction{
+	c.Actions.OnRemove.Before = append(c.Actions.OnRemove.Before, actions.Action{
 		Description: "Suspend Big Bang HelmReleases to prevent reconciliation during removal.",
 		Cmd:         `./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'`,
 	})
@@ -261,7 +262,7 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 		rel := filepath.Join(layout.TempDir, skelName)
 		dst := filepath.Join(tmpPaths.Base, rel)
 
-		if err := utils.CreatePathAndCopy(valuesFile, dst); err != nil {
+		if err := helpers.CreatePathAndCopy(valuesFile, dst); err != nil {
 			return c, err
 		}
 
@@ -281,7 +282,7 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 		rel := filepath.Join(layout.TempDir, skelName)
 		dst := filepath.Join(tmpPaths.Base, rel)
 
-		if err := utils.CreatePathAndCopy(fluxPatchFile, dst); err != nil {
+		if err := helpers.CreatePathAndCopy(fluxPatchFile, dst); err != nil {
 			return c, err
 		}
 
@@ -465,7 +466,7 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 			return err
 		}
 
-		if err := utils.WriteFile(path, out); err != nil {
+		if err := helpers.WriteFile(path, out); err != nil {
 			return err
 		}
 

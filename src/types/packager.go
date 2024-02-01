@@ -4,6 +4,8 @@
 // Package types contains all the types used by Zarf.
 package types
 
+import "github.com/defenseunicorns/zarf/src/pkg/variables"
+
 // PackagerConfig is the main struct that the packager uses to hold high-level options.
 type PackagerConfig struct {
 	// CreateOpts tracks the user-defined options used to create the package
@@ -40,5 +42,5 @@ type PackagerConfig struct {
 	State *ZarfState
 
 	// Variables set by the user
-	SetVariableMap map[string]*ZarfSetVariable
+	VariableConfig *variables.VariableConfig
 }

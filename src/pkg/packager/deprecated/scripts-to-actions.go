@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/defenseunicorns/zarf/src/pkg/actions"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -22,7 +23,7 @@ func migrateScriptsToActions(c types.ZarfComponent) (types.ZarfComponent, string
 	var hasScripts bool
 
 	// Convert a script configs to action defaults.
-	defaults := types.ZarfComponentActionDefaults{
+	defaults := actions.ActionDefaults{
 		// ShowOutput (default false) -> Mute (default false)
 		Mute: !c.DeprecatedScripts.ShowOutput,
 		// TimeoutSeconds -> MaxSeconds
@@ -39,7 +40,7 @@ func migrateScriptsToActions(c types.ZarfComponent) (types.ZarfComponent, string
 		hasScripts = true
 		c.Actions.OnCreate.Defaults = defaults
 		for _, s := range c.DeprecatedScripts.Prepare {
-			c.Actions.OnCreate.Before = append(c.Actions.OnCreate.Before, types.ZarfComponentAction{Cmd: s})
+			c.Actions.OnCreate.Before = append(c.Actions.OnCreate.Before, actions.Action{Cmd: s})
 		}
 	}
 
@@ -48,7 +49,7 @@ func migrateScriptsToActions(c types.ZarfComponent) (types.ZarfComponent, string
 		hasScripts = true
 		c.Actions.OnDeploy.Defaults = defaults
 		for _, s := range c.DeprecatedScripts.Before {
-			c.Actions.OnDeploy.Before = append(c.Actions.OnDeploy.Before, types.ZarfComponentAction{Cmd: s})
+			c.Actions.OnDeploy.Before = append(c.Actions.OnDeploy.Before, actions.Action{Cmd: s})
 		}
 	}
 
@@ -57,7 +58,7 @@ func migrateScriptsToActions(c types.ZarfComponent) (types.ZarfComponent, string
 		hasScripts = true
 		c.Actions.OnDeploy.Defaults = defaults
 		for _, s := range c.DeprecatedScripts.After {
-			c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, types.ZarfComponentAction{Cmd: s})
+			c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, actions.Action{Cmd: s})
 		}
 	}
 

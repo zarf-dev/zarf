@@ -350,6 +350,10 @@
           "type": "array",
           "description": "Additional environment variables to set for the command"
         },
+        "if": {
+          "type": "string",
+          "description": "A go expression controlling whether this action will execute"
+        },
         "cmd": {
           "type": "string",
           "description": "The command to run. Must specify either cmd or wait for the action to do anything."
