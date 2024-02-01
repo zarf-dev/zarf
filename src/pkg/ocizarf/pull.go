@@ -5,6 +5,7 @@
 package ocizarf
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -39,11 +40,11 @@ var (
 //   - zarf.yaml
 //   - checksums.txt
 //   - zarf.yaml.sig
-func (o *ZarfOrasRemote) PullPackage(destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+func (o *ZarfOrasRemote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 	isPartialPull := len(layersToPull) > 0
 	message.Debugf("Pulling %s", o.Repo().Reference)
 
-	manifest, err := o.FetchRoot()
+	manifest, err := o.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -68,20 +69,20 @@ func (o *ZarfOrasRemote) PullPackage(destinationDir string, concurrency int, lay
 	layerSize := oci.SumDescsSize(layersToPull)
 	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, &wg, doneSaving, encounteredErr, "Pulling", successText)
 
-	return o.PullLayers(destinationDir, concurrency, layersToPull, doneSaving, encounteredErr, &wg)
+	return o.PullLayers(ctx, destinationDir, concurrency, layersToPull, doneSaving, encounteredErr, &wg)
 }
 
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.
 // It also retrieves the descriptors for all image layers that are required by the components.
 //
 // It also respects the `required` flag on components, and will retrieve all necessary layers for required components.
-func LayersFromRequestedComponents(o *ZarfOrasRemote, requestedComponents []string) (layers []ocispec.Descriptor, err error) {
-	root, err := o.FetchRoot()
+func (o *ZarfOrasRemote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []string) (layers []ocispec.Descriptor, err error) {
+	root, err := o.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	pkg, err := o.FetchZarfYAML()
+	pkg, err := o.FetchZarfYAML(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +115,7 @@ func LayersFromRequestedComponents(o *ZarfOrasRemote, requestedComponents []stri
 	if len(images) > 0 {
 		// Add the image index and the oci-layout layers
 		layers = append(layers, root.Locate(ZarfPackageIndexPath), root.Locate(ZarfPackageLayoutPath))
-		index, err := o.FetchImagesIndex()
+		index, err := o.FetchImagesIndex(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +136,7 @@ func LayersFromRequestedComponents(o *ZarfOrasRemote, requestedComponents []stri
 			// even though these are technically image manifests, we store them as Zarf blobs
 			manifestDescriptor.MediaType = ZarfLayerMediaTypeBlob
 
-			manifest, err := o.FetchManifest(manifestDescriptor)
+			manifest, err := o.FetchManifest(ctx, manifestDescriptor)
 			if err != nil {
 				return nil, err
 			}
@@ -154,11 +155,11 @@ func LayersFromRequestedComponents(o *ZarfOrasRemote, requestedComponents []stri
 }
 
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
-func (o *ZarfOrasRemote) PullPackageMetadata(destinationDir string) ([]ocispec.Descriptor, error) {
-	return o.PullFilesAtPaths(PackageAlwaysPull, destinationDir)
+func (o *ZarfOrasRemote) PullPackageMetadata(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
+	return o.PullFilesAtPaths(ctx, PackageAlwaysPull, destinationDir)
 }
 
 // PullPackageSBOM pulls the package's sboms.tar from the remote repository and saves it to `destinationDir`.
-func (o *ZarfOrasRemote) PullPackageSBOM(destinationDir string) ([]ocispec.Descriptor, error) {
-	return o.PullFilesAtPaths([]string{layout.SBOMTar}, destinationDir)
+func (o *ZarfOrasRemote) PullPackageSBOM(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
+	return o.PullFilesAtPaths(ctx, []string{layout.SBOMTar}, destinationDir)
 }

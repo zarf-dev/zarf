@@ -153,7 +153,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	err = ocizarf.CopyPackage(ctx, src, dst, nil, 5)
 	suite.NoError(err)
 
-	srcRoot, err := src.FetchRoot()
+	srcRoot, err := src.FetchRoot(ctx)
 	suite.NoError(err)
 
 	for _, layer := range srcRoot.Layers {

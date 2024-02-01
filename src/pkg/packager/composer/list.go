@@ -5,6 +5,7 @@
 package composer
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -181,7 +182,7 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 			if err != nil {
 				return ic, err
 			}
-			pkg, err = remote.FetchZarfYAML()
+			pkg, err = remote.FetchZarfYAML(context.TODO())
 			if err != nil {
 				return ic, err
 			}

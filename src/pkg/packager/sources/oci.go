@@ -5,6 +5,7 @@
 package sources
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -35,6 +36,7 @@ type OCISource struct {
 
 // LoadPackage loads a package from an OCI registry.
 func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
+	ctx := context.TODO()
 	var pkg types.ZarfPackage
 	layersToPull := []ocispec.Descriptor{}
 
@@ -45,14 +47,14 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 	// pull only needed layers if --confirm is set
 	if config.CommonOptions.Confirm {
 
-		layersToPull, err = ocizarf.LayersFromRequestedComponents(s.ZarfOrasRemote, optionalComponents)
+		layersToPull, err = s.LayersFromRequestedComponents(ctx, optionalComponents)
 		if err != nil {
 			return fmt.Errorf("unable to get published component image layers: %s", err.Error())
 		}
 	}
 
 	isPartial := true
-	root, err := s.FetchRoot()
+	root, err := s.FetchRoot(ctx)
 	if err != nil {
 		return err
 	}
@@ -60,7 +62,7 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 		isPartial = false
 	}
 
-	layersFetched, err := s.PullPackage(dst.Base, config.CommonOptions.OCIConcurrency, layersToPull...)
+	layersFetched, err := s.PullPackage(ctx, dst.Base, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
 		return fmt.Errorf("unable to pull the package: %w", err)
 	}
@@ -121,8 +123,8 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 	if wantSBOM {
 		toPull = append(toPull, layout.SBOMTar)
 	}
-
-	layersFetched, err := s.PullFilesAtPaths(toPull, dst.Base)
+	ctx := context.TODO()
+	layersFetched, err := s.PullFilesAtPaths(ctx, toPull, dst.Base)
 	if err != nil {
 		return err
 	}
@@ -174,8 +176,8 @@ func (s *OCISource) Collect(dir string) (string, error) {
 		return "", err
 	}
 	defer os.RemoveAll(tmp)
-
-	fetched, err := s.PullPackage(tmp, config.CommonOptions.OCIConcurrency)
+	ctx := context.TODO()
+	fetched, err := s.PullPackage(ctx, tmp, config.CommonOptions.OCIConcurrency)
 	if err != nil {
 		return "", err
 	}

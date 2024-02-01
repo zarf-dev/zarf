@@ -34,7 +34,7 @@ func (ic *ImportChain) getRemote(url string) (*ocizarf.ZarfOrasRemote, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = ic.remote.ResolveRoot()
+	_, err = ic.remote.ResolveRoot(context.TODO())
 	if err != nil {
 		return nil, fmt.Errorf("published skeleton package for %q does not exist: %w", url, err)
 	}
@@ -57,7 +57,8 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 		return err
 	}
 
-	manifest, err := remote.FetchRoot()
+	ctx := context.TODO()
+	manifest, err := remote.FetchRoot(ctx)
 	if err != nil {
 		return err
 	}
@@ -108,7 +109,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 			successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+remote.Repo().Reference.String())
 			layerSize := oci.SumDescsSize([]ocispec.Descriptor{componentDesc})
 			go utils.RenderProgressBarForLocalDirWrite(cache, layerSize, &wg, doneSaving, encounteredErr, "Pulling", successText)
-			if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, copyOpts, doneSaving, encounteredErr, &wg); err != nil {
+			if err := remote.CopyWithProgress(ctx, []ocispec.Descriptor{componentDesc}, store, copyOpts, doneSaving, encounteredErr, &wg); err != nil {
 				return err
 			}
 		}

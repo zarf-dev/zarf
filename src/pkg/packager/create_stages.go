@@ -659,7 +659,7 @@ func (p *Packager) loadDifferentialData() error {
 		if err != nil {
 			return err
 		}
-		pkg, err := remote.FetchZarfYAML()
+		pkg, err := remote.FetchZarfYAML(context.TODO())
 		if err != nil {
 			return err
 		}

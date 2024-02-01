@@ -51,7 +51,7 @@ func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDi
 // PullLayers pulls the package from the remote repository and saves it to the given path.
 // If you don't have nil paramaters for doneSaving, encounteredErr, and wg
 // you must use the channels in a go routine and call wg.done after they are used
-func (o *OrasRemote) PullLayers(destinationDir string, concurrency int,
+func (o *OrasRemote) PullLayers(ctx context.Context, destinationDir string, concurrency int,
 	layersToPull []ocispec.Descriptor, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) ([]ocispec.Descriptor, error) {
 	// de-duplicate layers
 	layersToPull = RemoveDuplicateDescriptors(layersToPull)
@@ -65,11 +65,11 @@ func (o *OrasRemote) PullLayers(destinationDir string, concurrency int,
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 
-	return layersToPull, o.CopyWithProgress(layersToPull, dst, copyOpts, doneSaving, encounteredErr, wg)
+	return layersToPull, o.CopyWithProgress(ctx, layersToPull, dst, copyOpts, doneSaving, encounteredErr, wg)
 }
 
 // CopyWithProgress copies the given layers from the remote repository to the given store.
-func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Target,
+func (o *OrasRemote) CopyWithProgress(ctx context.Context, layers []ocispec.Descriptor, store oras.Target,
 	copyOpts oras.CopyOptions, doneSaving chan int, encounteredErr chan int, wg *sync.WaitGroup) error {
 	estimatedBytes := int64(0)
 	shas := []string{}
@@ -91,7 +91,7 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 				nodes = []ocispec.Descriptor{}
 				// expand the manifests
 				for _, node := range manifestDescs {
-					manifest, err := o.FetchManifest(node)
+					manifest, err := o.FetchManifest(ctx, node)
 					if err != nil {
 						return nil, err
 					}
@@ -110,7 +110,7 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 		}
 	}
 
-	_, err := oras.Copy(o.ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), copyOpts)
+	_, err := oras.Copy(ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), copyOpts)
 	if err != nil {
 		if encounteredErr != nil {
 			encounteredErr <- 1
@@ -132,8 +132,8 @@ func (o *OrasRemote) CopyWithProgress(layers []ocispec.Descriptor, store oras.Ta
 
 // PullLayer pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
 // ?! Why do we pull a single layer with o.fetchLayer, but multiple layers with oras.copy
-func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) error {
-	b, err := o.FetchLayer(desc)
+func (o *OrasRemote) PullLayer(ctx context.Context, desc ocispec.Descriptor, destinationDir string) error {
+	b, err := o.FetchLayer(ctx, desc)
 	if err != nil {
 		return err
 	}
@@ -144,9 +144,9 @@ func (o *OrasRemote) PullLayer(desc ocispec.Descriptor, destinationDir string) e
 }
 
 // PullFilesAtPaths pulls multiple files from the remote repository and saves them to `destinationDir`.
-func (o *OrasRemote) PullFilesAtPaths(paths []string, destinationDir string) ([]ocispec.Descriptor, error) {
+func (o *OrasRemote) PullFilesAtPaths(ctx context.Context, paths []string, destinationDir string) ([]ocispec.Descriptor, error) {
 	paths = helpers.Unique(paths)
-	root, err := o.FetchRoot()
+	root, err := o.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +158,7 @@ func (o *OrasRemote) PullFilesAtPaths(paths []string, destinationDir string) ([]
 			if o.FileDescriptorExists(desc, destinationDir) {
 				continue
 			}
-			err = o.PullLayer(desc, destinationDir)
+			err = o.PullLayer(ctx, desc, destinationDir)
 			if err != nil {
 				return nil, err
 			}

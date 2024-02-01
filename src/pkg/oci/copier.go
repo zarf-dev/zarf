@@ -26,7 +26,7 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 	sem := semaphore.NewWeighted(int64(concurrency))
 
 	// fetch the source root manifest
-	srcRoot, err := src.FetchRoot()
+	srcRoot, err := src.FetchRoot(ctx)
 	if err != nil {
 		return err
 	}

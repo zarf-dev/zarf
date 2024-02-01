@@ -5,6 +5,8 @@
 package ocizarf
 
 import (
+	"context"
+
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -12,19 +14,19 @@ import (
 )
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.
-func (o *ZarfOrasRemote) FetchZarfYAML() (pkg types.ZarfPackage, err error) {
-	manifest, err := o.FetchRoot()
+func (o *ZarfOrasRemote) FetchZarfYAML(ctx context.Context) (pkg types.ZarfPackage, err error) {
+	manifest, err := o.FetchRoot(ctx)
 	if err != nil {
 		return pkg, err
 	}
-	return oci.FetchYAMLFile[types.ZarfPackage](o.FetchLayer, manifest, layout.ZarfYAML)
+	return oci.FetchYAMLFile[types.ZarfPackage](ctx, o.FetchLayer, manifest, layout.ZarfYAML)
 }
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.
-func (o *ZarfOrasRemote) FetchImagesIndex() (index *ocispec.Index, err error) {
-	manifest, err := o.FetchRoot()
+func (o *ZarfOrasRemote) FetchImagesIndex(ctx context.Context) (index *ocispec.Index, err error) {
+	manifest, err := o.FetchRoot(ctx)
 	if err != nil {
 		return index, err
 	}
-	return oci.FetchJSONFile[*ocispec.Index](o.FetchLayer, manifest, ZarfPackageIndexPath)
+	return oci.FetchJSONFile[*ocispec.Index](ctx, o.FetchLayer, manifest, ZarfPackageIndexPath)
 }

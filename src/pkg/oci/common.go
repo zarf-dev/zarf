@@ -5,7 +5,6 @@
 package oci
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -57,7 +56,6 @@ type ProgressWriter interface {
 type OrasRemote struct {
 	repo           *remote.Repository
 	root           *Manifest
-	ctx            context.Context
 	Transport      *helpers.Transport
 	CopyOpts       oras.CopyOptions
 	targetPlatform *ocispec.Platform
@@ -68,13 +66,6 @@ type OrasRemote struct {
 
 // Modifier is a function that modifies an OrasRemote
 type Modifier func(*OrasRemote)
-
-// WithContext sets the context for the remote
-func WithContext(ctx context.Context) Modifier {
-	return func(o *OrasRemote) {
-		o.ctx = ctx
-	}
-}
 
 // WithInsecure sets plainHTTP and insecure tls for the remote
 func WithInsecure(insecure bool) Modifier {
@@ -152,11 +143,6 @@ func NewOrasRemote(url string, logger Logger, platform ocispec.Platform, mods ..
 
 	for _, mod := range mods {
 		mod(o)
-	}
-
-	// if no context is provided, use the default
-	if o.ctx == nil {
-		o.ctx = context.TODO()
 	}
 
 	return o, nil

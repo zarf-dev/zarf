@@ -43,12 +43,12 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 
-		srcRoot, err := srcRemote.ResolveRoot()
+		srcRoot, err := srcRemote.ResolveRoot(ctx)
 		if err != nil {
 			return err
 		}
 
-		pkg, err := srcRemote.FetchZarfYAML()
+		pkg, err := srcRemote.FetchZarfYAML(ctx)
 		if err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 
-		srcManifest, err := srcRemote.FetchRoot()
+		srcManifest, err := srcRemote.FetchRoot(ctx)
 		if err != nil {
 			return err
 		}
@@ -77,7 +77,7 @@ func (p *Packager) Publish() (err error) {
 		}
 
 		tag := srcRemote.Repo().Reference.Reference
-		if err := dstRemote.UpdateIndex(tag, expected); err != nil {
+		if err := dstRemote.UpdateIndex(ctx, tag, expected); err != nil {
 			return err
 		}
 		message.Infof("Published %s to %s", srcRemote.Repo().Reference, dstRemote.Repo().Reference)
