@@ -29,7 +29,6 @@ type Remote struct {
 // with zarf opination embedded
 func NewRemote(url string, platform ocispec.Platform, mod ...oci.Modifier) (*Remote, error) {
 	modifiers := append([]oci.Modifier{
-		oci.WithMediaType(ZarfConfigMediaType),
 		oci.WithPlainHTTP(config.CommonOptions.Insecure),
 		oci.WithInsecureSkipVerify(config.CommonOptions.Insecure),
 		oci.WithLogger(&message.Logger{}),

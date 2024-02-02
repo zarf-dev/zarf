@@ -39,8 +39,8 @@ func (o *OrasRemote) PushLayer(ctx context.Context, b []byte, mediaType string) 
 	return &desc, o.repo.Push(ctx, desc, bytes.NewReader(b))
 }
 
-// pushManifestConfigFromMetadata pushes the manifest config with metadata to the remote repository.
-func (o *OrasRemote) pushManifestConfigFromMetadata(ctx context.Context, annotations map[string]string) (*ocispec.Descriptor, error) {
+// PushManifestConfigFromMetadata pushes the manifest config with metadata to the remote repository.
+func (o *OrasRemote) PushManifestConfigFromMetadata(ctx context.Context, annotations map[string]string, configMediaType string) (*ocispec.Descriptor, error) {
 	if annotations[ocispec.AnnotationTitle] == "" {
 		return nil, fmt.Errorf("invalid annotations: please include value for %q", ocispec.AnnotationTitle)
 	}
@@ -54,10 +54,11 @@ func (o *OrasRemote) pushManifestConfigFromMetadata(ctx context.Context, annotat
 		return nil, err
 	}
 	// If Media type is not set it will be set to the default
-	return o.PushLayer(ctx, manifestConfigBytes, o.mediaType)
+	return o.PushLayer(ctx, manifestConfigBytes, configMediaType)
 }
 
-func (o *OrasRemote) generatePackManifest(ctx context.Context, src *file.Store, descs []ocispec.Descriptor,
+// GeneratePackManifest generates an OCI Image Manifest based on the given parameters
+func (o *OrasRemote) GeneratePackManifest(ctx context.Context, src *file.Store, descs []ocispec.Descriptor,
 	configDesc *ocispec.Descriptor, annotations map[string]string) (ocispec.Descriptor, error) {
 	packOpts := oras.PackManifestOptions{
 		Layers:              descs,
@@ -74,37 +75,6 @@ func (o *OrasRemote) generatePackManifest(ctx context.Context, src *file.Store, 
 	}
 
 	return root, nil
-}
-
-// Publish publishes the artifact to the remote repository.
-func (o *OrasRemote) Publish(ctx context.Context, src *file.Store, annotations map[string]string,
-	desc []ocispec.Descriptor, concurrency int, progressBar ProgressWriter) (err error) {
-	copyOpts := o.CopyOpts
-	copyOpts.Concurrency = concurrency
-	// assumes referrers API is not supported since OCI artifact
-	// media type is not supported
-	o.repo.SetReferrersCapability(false)
-
-	// push the manifest config
-	// since this config is so tiny, and the content is not used again
-	// it is not logged to the progress, but will error if it fails
-	manifestConfigDesc, err := o.pushManifestConfigFromMetadata(ctx, annotations)
-	if err != nil {
-		return err
-	}
-	root, err := o.generatePackManifest(ctx, src, desc, manifestConfigDesc, annotations)
-	if err != nil {
-		return err
-	}
-
-	o.Transport.ProgressBar = progressBar
-
-	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), o.repo, "", copyOpts)
-	if err != nil {
-		return err
-	}
-
-	return o.UpdateIndex(ctx, o.repo.Reference.Reference, publishedDesc)
 }
 
 // UpdateIndex updates the index for the given package.

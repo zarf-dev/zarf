@@ -77,7 +77,6 @@ type OrasRemote struct {
 	targetPlatform *ocispec.Platform
 	userAgent      string
 	log            Logger
-	mediaType      string
 }
 
 // Modifier is a function that modifies an OrasRemote
@@ -101,13 +100,6 @@ func WithPlainHTTP(plainHTTP bool) Modifier {
 func WithInsecureSkipVerify(insecure bool) Modifier {
 	return func(o *OrasRemote) {
 		o.Transport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
-	}
-}
-
-// WithMediaType sets the mediatype for the remote
-func WithMediaType(mediaType string) Modifier {
-	return func(o *OrasRemote) {
-		o.mediaType = mediaType
 	}
 }
 
