@@ -124,7 +124,7 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 		toPull = append(toPull, layout.SBOMTar)
 	}
 	ctx := context.TODO()
-	layersFetched, err := s.PullFilesAtPaths(ctx, toPull, dst.Base)
+	layersFetched, err := s.PullFilesTodirectory(ctx, toPull, dst.Base)
 	if err != nil {
 		return err
 	}

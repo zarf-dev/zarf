@@ -11,7 +11,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-var (
+const (
 	// ZarfConfigMediaType is the media type for the manifest config
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
 	// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
