@@ -9,10 +9,10 @@ import (
 )
 
 // SetBaseDirectory sets base directory on package config when given in args
-func SetBaseDirectory(args []string, pkgConfig *types.PackagerConfig) {
+func SetBaseDirectory(args []string, createOpts *types.ZarfCreateOptions) {
 	if len(args) > 0 {
-		pkgConfig.CreateOpts.BaseDir = args[0]
+		createOpts.BaseDir = args[0]
 	} else {
-		pkgConfig.CreateOpts.BaseDir = "."
+		createOpts.BaseDir = "."
 	}
 }
