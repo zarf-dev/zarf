@@ -72,16 +72,16 @@ func (o *OrasRemote) PullLayers(ctx context.Context, destinationDir string, conc
 // to doneSaving and provides an input to doneSaving after it's done
 func (o *OrasRemote) CopyWithProgress(ctx context.Context, layers []ocispec.Descriptor, store oras.Target,
 	copyOpts oras.CopyOptions, doneSaving chan error) error {
-	estimatedBytes := int64(0)
 	shas := []string{}
 	for _, layer := range layers {
-		estimatedBytes += layer.Size
 		if len(layer.Digest.String()) > 0 {
 			shas = append(shas, layer.Digest.Encoded())
 		}
 	}
 
 	if copyOpts.FindSuccessors == nil {
+		// ?! We are providing a default find successor? Is this generally applicable?
+		// Or should we stick with the ORAS default
 		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 			nodes, err := content.Successors(ctx, fetcher, desc)
 			if err != nil {
