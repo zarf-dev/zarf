@@ -144,6 +144,7 @@ func (pp *PackagePaths) IsLegacyLayout() bool {
 	return pp.isLegacyLayout
 }
 
+// SignPackage signs the zarf.yaml in a Zarf package.
 func (pp *PackagePaths) SignPackage(signingKeyPath, signingKeyPassword string) error {
 	pp.addSignature(signingKeyPath)
 
@@ -199,6 +200,7 @@ func (pp *PackagePaths) GenerateChecksums() (string, error) {
 	return utils.GetSHA256OfFile(pp.Checksums)
 }
 
+// ArchivePackage creates an archive for a Zarf package.
 func (pp *PackagePaths) ArchivePackage(destinationTarball string, maxPackageSizeMB int) error {
 	spinner := message.NewProgressSpinner("Writing %s to %s", pp.Base, destinationTarball)
 	defer spinner.Stop()
