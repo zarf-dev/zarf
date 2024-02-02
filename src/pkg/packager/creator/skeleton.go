@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -30,10 +29,11 @@ var (
 
 // SkeletonCreator provides methods for creating skeleton Zarf packages.
 type SkeletonCreator struct {
-	createOpts types.ZarfCreateOptions
+	createOpts  types.ZarfCreateOptions
+	publishOpts types.ZarfPublishOptions
 }
 
-// LoadPackageDefinition loads and configure a zarf.yaml file during package create.
+// LoadPackageDefinition loads and configure a zarf.yaml file when creating and publishing a skeleton package.
 func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loadedPkg *types.ZarfPackage, warnings []string, err error) {
 	var pkg types.ZarfPackage
 
@@ -58,12 +58,18 @@ func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (load
 		return nil, nil, err
 	}
 
+	for _, warning := range warnings {
+		message.Warn(warning)
+	}
+
 	loadedPkg = extendedPkg
 
 	return loadedPkg, warnings, nil
 }
 
-// TODO: print warnings somewhere else in the skeleton create flow.
+// Assemble updates all components of the loaded Zarf package with necessary modifications for package assembly.
+//
+// It processes each component to ensure correct structure and resource locations.
 func (sc *SkeletonCreator) Assemble(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
 	var updatedComponents []types.ZarfComponent
 
@@ -80,6 +86,15 @@ func (sc *SkeletonCreator) Assemble(loadedPkg *types.ZarfPackage, dst *layout.Pa
 	return nil
 }
 
+// Output does the following:
+//
+// - archives components
+//
+// - generates checksums for all package files
+//
+// - writes the loaded zarf.yaml to disk
+//
+// - signs the package
 func (sc *SkeletonCreator) Output(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
 	for _, component := range loadedPkg.Components {
 		if err := dst.Components.Archive(component, false); err != nil {
@@ -93,7 +108,18 @@ func (sc *SkeletonCreator) Output(loadedPkg *types.ZarfPackage, dst *layout.Pack
 	}
 	loadedPkg.Metadata.AggregateChecksum = checksumChecksum
 
-	return utils.WriteYaml(dst.ZarfYAML, loadedPkg, 0400)
+	if err := utils.WriteYaml(dst.ZarfYAML, loadedPkg, 0400); err != nil {
+		return err
+	}
+
+	// Sign the package if a key has been provided
+	if sc.publishOpts.SigningKeyPath != "" {
+		if err := dst.SignPackage(sc.publishOpts.SigningKeyPath, sc.publishOpts.SigningKeyPassword); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (sc *SkeletonCreator) processExtensions(pkg *types.ZarfPackage, layout *layout.PackagePaths) (extendedPkg *types.ZarfPackage, err error) {
@@ -285,20 +311,6 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 				updatedComponent.Manifests[manifestIdx].Files[fileIdx] = rel
 			}
 
-			for kustomizeIdx, path := range manifest.Kustomizations {
-				// Generate manifests from kustomizations and place in the package.
-				spinner.Updatef("Building kustomization for %s", path)
-
-				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
-				rel := filepath.Join(layout.ManifestsDir, kname)
-				dst := filepath.Join(componentPaths.Base, rel)
-
-				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
-					return nil, fmt.Errorf("unable to build kustomization %s: %w", path, err)
-				}
-
-				updatedComponent.Manifests[manifestIdx].Files = append(updatedComponent.Manifests[manifestIdx].Files, rel)
-			}
 			// remove kustomizations
 			updatedComponent.Manifests[manifestIdx].Kustomizations = nil
 		}

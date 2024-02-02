@@ -204,8 +204,18 @@ func (pc *PackageCreator) Assemble(loadedPkg *types.ZarfPackage, dst *layout.Pac
 	return nil
 }
 
-// Output writes the Zarf package as a tarball to a local directory,
-// or an OCI registry based on the --output flag.
+// Output does the following:
+//
+// - archives components
+//
+// - generates checksums for all package files
+//
+// - writes the loaded zarf.yaml to disk
+//
+// - signs the package
+//
+// - writes the Zarf package as a tarball to a local directory,
+// or an OCI registry based on the --output flag
 func (pc *PackageCreator) Output(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
@@ -234,7 +244,7 @@ func (pc *PackageCreator) Output(loadedPkg *types.ZarfPackage, dst *layout.Packa
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
 	}
 
-	// Sign the config file if a key was provided
+	// Sign the package if a key has been provided
 	if pc.createOpts.SigningKeyPath != "" {
 		if err := dst.SignPackage(pc.createOpts.SigningKeyPath, pc.createOpts.SigningKeyPassword); err != nil {
 			return err

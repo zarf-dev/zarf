@@ -114,6 +114,13 @@ func (p *Packager) Publish() (err error) {
 		if err := utils.ReadYaml(p.layout.ZarfYAML, &p.cfg.Pkg); err != nil {
 			return err
 		}
+
+		// Sign the package if a key has been provided
+		if p.cfg.PublishOpts.SigningKeyPath != "" {
+			if err := p.layout.SignPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword); err != nil {
+				return err
+			}
+		}
 	}
 
 	// Get a reference to the registry for this package
@@ -125,13 +132,6 @@ func (p *Packager) Publish() (err error) {
 	remote, err := oci.NewOrasRemote(ref, oci.PlatformForArch(config.GetArch()))
 	if err != nil {
 		return err
-	}
-
-	// Sign the package if a key has been provided
-	if p.cfg.PublishOpts.SigningKeyPath != "" {
-		if err := p.layout.SignPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword); err != nil {
-			return err
-		}
 	}
 
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
