@@ -141,7 +141,12 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.Name, err.Error())
 			}
 
-			template.ProcessYamlFilesInPath(componentPaths.Values, component, *values)
+			manifests, _ := utils.RecursiveFileList(componentPaths.Values, nil, false)
+			for _, manifest := range manifests {
+				if err := values.Apply(component, manifest, false); err != nil {
+					return nil, err
+				}
+			}
 
 			// Generate helm templates for this chart
 			chartTemplate, chartValues, err := helmCfg.TemplateChart()

@@ -254,7 +254,7 @@ func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
 		// Namespace must be specified.
 		client.Namespace = h.chart.Namespace
 
-		// Post-processing our manifests for reasons....
+		// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 		client.PostRenderer = postRender
 
 		// Set reuse values to only override the values we are explicitly given
@@ -296,7 +296,7 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 	// Namespace must be specified.
 	client.Namespace = h.chart.Namespace
 
-	// Post-processing our manifests for reasons....
+	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
 	loadedChart, chartValues, err := h.loadChartData()
@@ -333,7 +333,7 @@ func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) 
 	// Namespace must be specified.
 	client.Namespace = h.chart.Namespace
 
-	// Post-processing our manifests for reasons....
+	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
 	loadedChart, chartValues, err := h.loadChartData()

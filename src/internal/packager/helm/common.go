@@ -160,5 +160,5 @@ func StandardName(destination string, chart types.ZarfChart) string {
 }
 
 func StandardValuesName(destination string, chart types.ZarfChart, idx int) string {
-	return fmt.Sprintf("%s-%d.yaml", StandardName(destination, chart), idx)
+	return fmt.Sprintf("%s-%d", StandardName(destination, chart), idx)
 }
