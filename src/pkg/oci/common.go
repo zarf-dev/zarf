@@ -37,6 +37,8 @@ func (l *DiscardLogger) Warn(_ string, _ ...any) {}
 // Error does nothing
 func (l *DiscardLogger) Error(_ string, _ ...any) {}
 
+// DiscardLogger is the default if the WithLogger modifier is not used
+// It discards all logs
 type DiscardLogger struct{}
 
 // Logger is an interface built to
@@ -124,7 +126,7 @@ func WithUserAgent(userAgent string) Modifier {
 	}
 }
 
-// WithUserAgent sets the logger for the remote
+// WithLogger sets the logger for the remote
 func WithLogger(logger Logger) Modifier {
 	return func(o *OrasRemote) {
 		o.log = logger
