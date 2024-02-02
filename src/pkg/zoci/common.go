@@ -30,7 +30,8 @@ type Remote struct {
 func NewRemote(url string, platform ocispec.Platform, mod ...oci.Modifier) (*Remote, error) {
 	modifiers := append([]oci.Modifier{
 		oci.WithMediaType(ZarfConfigMediaType),
-		oci.WithInsecure(config.CommonOptions.Insecure),
+		oci.WithPlainHTTP(config.CommonOptions.Insecure),
+		oci.WithInsecureSkipVerify(config.CommonOptions.Insecure),
 		oci.WithLogger(&message.Logger{}),
 	}, mod...)
 	remote, err := oci.NewOrasRemote(url, platform, modifiers...)

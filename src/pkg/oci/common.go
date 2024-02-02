@@ -81,16 +81,6 @@ type OrasRemote struct {
 // Modifier is a function that modifies an OrasRemote
 type Modifier func(*OrasRemote)
 
-// WithInsecure sets plainHTTP and insecure tls for the remote
-func WithInsecure(insecure bool) Modifier {
-	return func(o *OrasRemote) {
-		plainHTTPMod := WithPlainHTTP(insecure)
-		plainHTTPMod(o)
-		insecureTLSMod := WithInsecureSkipVerify(insecure)
-		insecureTLSMod(o)
-	}
-}
-
 // WithCopyOpts sets the copy options for the remote
 func WithCopyOpts(opts oras.CopyOptions) Modifier {
 	return func(o *OrasRemote) {
