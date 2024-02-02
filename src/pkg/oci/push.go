@@ -76,8 +76,8 @@ func (o *OrasRemote) generatePackManifest(ctx context.Context, src *file.Store, 
 	return root, nil
 }
 
-// PublishArtifact publishes the artifact to the remote repository.
-func (o *OrasRemote) PublishArtifact(ctx context.Context, src *file.Store, annotations map[string]string,
+// Publish publishes the artifact to the remote repository.
+func (o *OrasRemote) Publish(ctx context.Context, src *file.Store, annotations map[string]string,
 	desc []ocispec.Descriptor, concurrency int, progressBar ProgressWriter) (err error) {
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
