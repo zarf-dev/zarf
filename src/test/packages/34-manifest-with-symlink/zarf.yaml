@@ -7,8 +7,6 @@ metadata:
 components:
   - name: manifest-with-symlink
     required: true
-    manifests:
-      - name: manifest-with-symlink
-        namespace: manifest-symlink
-        files:
-          - manifests
+    files:
+      - source: manifests
+        target: temp/manifests

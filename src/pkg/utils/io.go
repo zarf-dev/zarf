@@ -249,11 +249,7 @@ func CreatePathAndCopy(source string, destination string) error {
 	}
 
 	// Copy all the source data into the destination location
-	if err := copy.Copy(source, destination, copy.Options{
-		OnSymlink: func(_ string) copy.SymlinkAction {
-			return copy.Deep
-		},
-	}); err != nil {
+	if err := copy.Copy(source, destination); err != nil {
 		return err
 	}
 
@@ -446,8 +442,16 @@ func CreateReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string) er
 			return err
 		}
 
+		link := ""
+		if info.Mode().Type() == os.ModeSymlink {
+			link, err = os.Readlink(filePath)
+			if err != nil {
+				return fmt.Errorf("error reading symlink: %w", err)
+			}
+		}
+
 		// Create a new header
-		header, err := tar.FileInfoHeader(info, "")
+		header, err := tar.FileInfoHeader(info, link)
 		if err != nil {
 			return fmt.Errorf("error creating tar header: %w", err)
 		}
