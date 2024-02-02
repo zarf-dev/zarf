@@ -80,8 +80,6 @@ func (o *OrasRemote) CopyWithProgress(ctx context.Context, layers []ocispec.Desc
 	}
 
 	if copyOpts.FindSuccessors == nil {
-		// ?! We are providing a default find successor? Is this generally applicable?
-		// Or should we stick with the ORAS default
 		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 			nodes, err := content.Successors(ctx, fetcher, desc)
 			if err != nil {
