@@ -24,12 +24,12 @@ import (
 	ocistore "oras.land/oras-go/v2/content/oci"
 )
 
-func (ic *ImportChain) getRemote(url string) (*zoci.ZarfOrasRemote, error) {
+func (ic *ImportChain) getRemote(url string) (*zoci.Remote, error) {
 	if ic.remote != nil {
 		return ic.remote, nil
 	}
 	var err error
-	ic.remote, err = zoci.NewZarfOrasRemote(url, zoci.PlatformForSkeleton())
+	ic.remote, err = zoci.NewRemote(url, zoci.PlatformForSkeleton())
 	if err != nil {
 		return nil, err
 	}

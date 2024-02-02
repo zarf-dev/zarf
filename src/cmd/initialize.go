@@ -139,11 +139,11 @@ func downloadInitPackage(cacheDirectory string) (string, error) {
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		remote, err := zoci.NewZarfOrasRemote(url, oci.MultiOSPlatformForArch(config.GetArch()))
+		remote, err := zoci.NewRemote(url, oci.MultiOSPlatformForArch(config.GetArch()))
 		if err != nil {
 			return "", err
 		}
-		source := &sources.OCISource{ZarfOrasRemote: remote}
+		source := &sources.OCISource{Remote: remote}
 		return source.Collect(cacheDirectory)
 	}
 	// Otherwise, exit and tell the user to manually download the init-package

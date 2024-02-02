@@ -39,7 +39,7 @@ var (
 //   - zarf.yaml
 //   - checksums.txt
 //   - zarf.yaml.sig
-func (o *ZarfOrasRemote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+func (o *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 	isPartialPull := len(layersToPull) > 0
 	message.Debugf("Pulling %s", o.Repo().Reference)
 
@@ -72,7 +72,7 @@ func (o *ZarfOrasRemote) PullPackage(ctx context.Context, destinationDir string,
 // It also retrieves the descriptors for all image layers that are required by the components.
 //
 // It also respects the `required` flag on components, and will retrieve all necessary layers for required components.
-func (o *ZarfOrasRemote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []string) (layers []ocispec.Descriptor, err error) {
+func (o *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []string) (layers []ocispec.Descriptor, err error) {
 	root, err := o.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
@@ -151,11 +151,11 @@ func (o *ZarfOrasRemote) LayersFromRequestedComponents(ctx context.Context, requ
 }
 
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
-func (o *ZarfOrasRemote) PullPackageMetadata(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
+func (o *Remote) PullPackageMetadata(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
 	return o.PullFilesAtPaths(ctx, PackageAlwaysPull, destinationDir)
 }
 
 // PullPackageSBOM pulls the package's sboms.tar from the remote repository and saves it to `destinationDir`.
-func (o *ZarfOrasRemote) PullPackageSBOM(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
+func (o *Remote) PullPackageSBOM(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
 	return o.PullFilesAtPaths(ctx, []string{layout.SBOMTar}, destinationDir)
 }

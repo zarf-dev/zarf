@@ -184,12 +184,12 @@ var downloadInitCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		url := zoci.GetInitPackageURL(config.CLIVersion)
 
-		remote, err := zoci.NewZarfOrasRemote(url, oci.MultiOSPlatformForArch(config.GetArch()))
+		remote, err := zoci.NewRemote(url, oci.MultiOSPlatformForArch(config.GetArch()))
 		if err != nil {
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 		}
 
-		source := &sources.OCISource{ZarfOrasRemote: remote}
+		source := &sources.OCISource{Remote: remote}
 
 		_, err = source.Collect(outputDirectory)
 		if err != nil {

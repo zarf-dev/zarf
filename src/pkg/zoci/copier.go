@@ -14,7 +14,7 @@ import (
 )
 
 // CopyPackage copies a zarf package from one OCI registry to another
-func CopyPackage(ctx context.Context, src *ZarfOrasRemote, dst *ZarfOrasRemote, include func(d ocispec.Descriptor) bool, concurrency int) error {
+func CopyPackage(ctx context.Context, src *Remote, dst *Remote, include func(d ocispec.Descriptor) bool, concurrency int) error {
 
 	srcRoot, err := src.FetchRoot(ctx)
 	if err != nil {

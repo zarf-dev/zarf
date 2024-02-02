@@ -81,7 +81,7 @@ type ImportChain struct {
 	head *Node
 	tail *Node
 
-	remote *zoci.ZarfOrasRemote
+	remote *zoci.Remote
 }
 
 // Head returns the first node in the import chain

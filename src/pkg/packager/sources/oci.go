@@ -31,7 +31,7 @@ var (
 // OCISource is a package source for OCI registries.
 type OCISource struct {
 	*types.ZarfPackageOptions
-	*zoci.ZarfOrasRemote
+	*zoci.Remote
 }
 
 // LoadPackage loads a package from an OCI registry.

@@ -18,7 +18,7 @@ import (
 )
 
 // PublishZarfPackage publishes the zarf package to the remote repository.
-func (o *ZarfOrasRemote) PublishZarfPackage(ctx context.Context, pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
+func (o *Remote) PublishZarfPackage(ctx context.Context, pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
 	src, err := file.New(paths.Base)
 	if err != nil {
 		return err

@@ -14,7 +14,7 @@ import (
 )
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.
-func (o *ZarfOrasRemote) FetchZarfYAML(ctx context.Context) (pkg types.ZarfPackage, err error) {
+func (o *Remote) FetchZarfYAML(ctx context.Context) (pkg types.ZarfPackage, err error) {
 	manifest, err := o.FetchRoot(ctx)
 	if err != nil {
 		return pkg, err
@@ -23,7 +23,7 @@ func (o *ZarfOrasRemote) FetchZarfYAML(ctx context.Context) (pkg types.ZarfPacka
 }
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.
-func (o *ZarfOrasRemote) FetchImagesIndex(ctx context.Context) (index *ocispec.Index, err error) {
+func (o *Remote) FetchImagesIndex(ctx context.Context) (index *ocispec.Index, err error) {
 	manifest, err := o.FetchRoot(ctx)
 	if err != nil {
 		return index, err

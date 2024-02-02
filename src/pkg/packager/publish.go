@@ -30,7 +30,7 @@ func (p *Packager) Publish() (err error) {
 		ctx := context.TODO()
 		// oci --> oci is a special case, where we will use oci.CopyPackage so that we can transfer the package
 		// w/o layers touching the filesystem
-		srcRemote := p.source.(*sources.OCISource).ZarfOrasRemote
+		srcRemote := p.source.(*sources.OCISource).Remote
 
 		parts := strings.Split(srcRemote.Repo().Reference.Repository, "/")
 		packageName := parts[len(parts)-1]
@@ -38,7 +38,7 @@ func (p *Packager) Publish() (err error) {
 		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
 
 		arch := config.GetArch()
-		dstRemote, err := zoci.NewZarfOrasRemote(p.cfg.PublishOpts.PackageDestination, oci.MultiOSPlatformForArch(arch))
+		dstRemote, err := zoci.NewRemote(p.cfg.PublishOpts.PackageDestination, oci.MultiOSPlatformForArch(arch))
 		if err != nil {
 			return err
 		}
@@ -118,7 +118,7 @@ func (p *Packager) Publish() (err error) {
 	} else {
 		platform = oci.MultiOSPlatformForArch(config.GetArch())
 	}
-	remote, err := zoci.NewZarfOrasRemote(ref, platform)
+	remote, err := zoci.NewRemote(ref, platform)
 	if err != nil {
 		return err
 	}

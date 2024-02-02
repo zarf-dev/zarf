@@ -20,20 +20,20 @@ var (
 	SkeletonArch = "skeleton"
 )
 
-// ZarfOrasRemote is a wrapper around the Oras remote repository with zarf specific functions
-type ZarfOrasRemote struct {
+// Remote is a wrapper around the Oras remote repository with zarf specific functions
+type Remote struct {
 	*oci.OrasRemote
 }
 
-// NewZarfOrasRemote returns an oras remote repository client and context for the given url
+// NewRemote returns an oras remote repository client and context for the given url
 // with zarf opination embedded
-func NewZarfOrasRemote(url string, platform ocispec.Platform, mod ...oci.Modifier) (*ZarfOrasRemote, error) {
+func NewRemote(url string, platform ocispec.Platform, mod ...oci.Modifier) (*Remote, error) {
 	modifiers := append([]oci.Modifier{oci.WithMediaType(ZarfConfigMediaType), oci.WithInsecure(config.CommonOptions.Insecure)}, mod...)
 	remote, err := oci.NewOrasRemote(url, &message.Logger{}, platform, modifiers...)
 	if err != nil {
 		return nil, err
 	}
-	return &ZarfOrasRemote{remote}, nil
+	return &Remote{remote}, nil
 }
 
 // PlatformForSkeleton sets the target architecture for the remote to skeleton
