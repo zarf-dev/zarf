@@ -25,6 +25,20 @@ const (
 	MultiOS = "multi"
 )
 
+// Debug does nothing
+func (l *DiscardLogger) Debug(_ string, _ ...any) {}
+
+// Info does nothing
+func (l *DiscardLogger) Info(_ string, _ ...any) {}
+
+// Warn does nothing
+func (l *DiscardLogger) Warn(_ string, _ ...any) {}
+
+// Error does nothing
+func (l *DiscardLogger) Error(_ string, _ ...any) {}
+
+type DiscardLogger struct{}
+
 // Logger is an interface built to
 type Logger interface {
 	Debug(msg string, args ...any)
@@ -105,8 +119,8 @@ func WithMediaType(mediaType string) Modifier {
 	}
 }
 
-// MultiOSPlatformForArch sets the target architecture for the remote
-func MultiOSPlatformForArch(arch string) ocispec.Platform {
+// PlatformForArch sets the target architecture for the remote
+func PlatformForArch(arch string) ocispec.Platform {
 	return ocispec.Platform{
 		OS:           MultiOS,
 		Architecture: arch,
@@ -120,17 +134,34 @@ func WithUserAgent(userAgent string) Modifier {
 	}
 }
 
+// WithUserAgent sets the logger for the remote
+func WithLogger(logger Logger) Modifier {
+	return func(o *OrasRemote) {
+		o.log = logger
+	}
+}
+
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
 // Registry auth is handled by the Docker CLI's credential store and checked before returning the client
-func NewOrasRemote(url string, logger Logger, platform ocispec.Platform, mods ...Modifier) (*OrasRemote, error) {
+func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
 	}
-	o := &OrasRemote{}
-	o.log = logger
-	o.targetPlatform = &platform
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	o := &OrasRemote{
+		repo:           &remote.Repository{},
+		Transport:      helpers.NewTransport(transport, nil),
+		targetPlatform: &platform}
+
+	for _, mod := range mods {
+		mod(o)
+	}
+
+	if o.log == nil {
+		o.log = &DiscardLogger{}
+	}
 
 	if err := o.setRepository(ref); err != nil {
 		return nil, err
@@ -140,10 +171,6 @@ func NewOrasRemote(url string, logger Logger, platform ocispec.Platform, mods ..
 	copyOpts.OnCopySkipped = o.printLayerSkipped
 	copyOpts.PostCopy = o.printLayerCopied
 	o.CopyOpts = copyOpts
-
-	for _, mod := range mods {
-		mod(o)
-	}
 
 	return o, nil
 }
@@ -175,8 +202,9 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 	if err != nil {
 		return err
 	}
-	repo.Client = client
-	o.repo = repo
+
+	o.repo.Reference = repo.Reference
+	o.repo.Client = client
 
 	return nil
 }
@@ -187,8 +215,6 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 //
 // TODO: instead of using Docker's cred store, should use the new one from ORAS to remove that dep
 func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, error) {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	o.Transport = helpers.NewTransport(transport, nil)
 
 	client := &auth.Client{
 		Cache: auth.DefaultCache,

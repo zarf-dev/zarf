@@ -38,7 +38,7 @@ func (p *Packager) Publish() (err error) {
 		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
 
 		arch := config.GetArch()
-		dstRemote, err := zoci.NewRemote(p.cfg.PublishOpts.PackageDestination, oci.MultiOSPlatformForArch(arch))
+		dstRemote, err := zoci.NewRemote(p.cfg.PublishOpts.PackageDestination, oci.PlatformForArch(arch))
 		if err != nil {
 			return err
 		}
@@ -116,7 +116,7 @@ func (p *Packager) Publish() (err error) {
 	if p.cfg.CreateOpts.IsSkeleton {
 		platform = zoci.PlatformForSkeleton()
 	} else {
-		platform = oci.MultiOSPlatformForArch(config.GetArch())
+		platform = oci.PlatformForArch(config.GetArch())
 	}
 	remote, err := zoci.NewRemote(ref, platform)
 	if err != nil {
