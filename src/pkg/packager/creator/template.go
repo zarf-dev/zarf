@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// FillActiveTemplate merges user-specified variables into the configuration templates of a zarf.yaml.
 func FillActiveTemplate(pkg *types.ZarfPackage, setVariables map[string]string) (templatedPkg *types.ZarfPackage, warnings []string, err error) {
 	templateMap := map[string]string{}
 
