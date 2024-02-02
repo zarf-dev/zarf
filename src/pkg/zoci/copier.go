@@ -20,7 +20,7 @@ func CopyPackage(ctx context.Context, src *ZarfOrasRemote, dst *ZarfOrasRemote, 
 	if err != nil {
 		return err
 	}
-	layers := srcRoot.GetLayers(include)
+	layers := srcRoot.Filter(include)
 	size := oci.SumDescsSize(srcRoot.Layers)
 
 	title := fmt.Sprintf("[0/%d] layers copied", len(layers))

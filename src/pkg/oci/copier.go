@@ -31,7 +31,7 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 		return err
 	}
 
-	layers := srcRoot.GetLayers(include)
+	layers := srcRoot.Filter(include)
 
 	start := time.Now()
 
