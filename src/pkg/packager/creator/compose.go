@@ -10,6 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// ComposeComponents composes components and their dependencies into a single zarf.yaml using an import chain.
 func ComposeComponents(pkg *types.ZarfPackage, flavor string) (composedPkg *types.ZarfPackage, warnings []string, err error) {
 	components := []types.ZarfComponent{}
 
