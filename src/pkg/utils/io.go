@@ -359,7 +359,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (fileNames []string, sha256su
 	}
 
 	// create file path starting from part 001
-	path := fmt.Sprintf("%s.part%03d", srcFile, len(fileNames)+1)
+	path := fmt.Sprintf("%s.part001", srcFile)
 	chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fileNames, "", err
