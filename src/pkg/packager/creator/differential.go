@@ -23,7 +23,7 @@ import (
 )
 
 // loadDifferentialData sets any images and repos from the existing reference package in the DifferentialData and returns it.
-func loadDifferentialData(diffData *types.DifferentialData) (*types.DifferentialData, error) {
+func loadDifferentialData(diffData *types.DifferentialData) (loadedDiffData *types.DifferentialData, err error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -72,11 +72,13 @@ func loadDifferentialData(diffData *types.DifferentialData) (*types.Differential
 	diffData.DifferentialRepos = allIncludedReposMap
 	diffData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
 
-	return diffData, nil
+	loadedDiffData = diffData
+
+	return loadedDiffData, nil
 }
 
 // removeCopiesFromDifferentialPackage removes any images and repos already present in the reference package.
-func removeCopiesFromDifferentialPackage(pkg *types.ZarfPackage, diffData *types.DifferentialData) (*types.ZarfPackage, error) {
+func removeCopiesFromDifferentialPackage(pkg *types.ZarfPackage, loadedDiffData *types.DifferentialData) (diffPkg *types.ZarfPackage, err error) {
 	// Loop through all of the components to determine if any of them are using already included images or repos
 	componentMap := make(map[int]types.ZarfComponent)
 	for idx, component := range pkg.Components {
@@ -93,7 +95,7 @@ func removeCopiesFromDifferentialPackage(pkg *types.ZarfPackage, diffData *types
 			// Only include new images or images that have a commonly overwritten tag
 			imgTag := imgRef.TagOrDigest
 			useImgAnyways := imgTag == ":latest" || imgTag == ":stable" || imgTag == ":nightly"
-			if useImgAnyways || !diffData.DifferentialImages[img] {
+			if useImgAnyways || !loadedDiffData.DifferentialImages[img] {
 				newImageList = append(newImageList, img)
 			} else {
 				message.Debugf("Image %s is already included in the differential package", img)
@@ -116,7 +118,7 @@ func removeCopiesFromDifferentialPackage(pkg *types.ZarfPackage, diffData *types
 
 			// Only include new repos or repos that were not referenced by a specific commit sha or tag
 			useRepoAnyways := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
-			if useRepoAnyways || !diffData.DifferentialRepos[repoURL] {
+			if useRepoAnyways || !loadedDiffData.DifferentialRepos[repoURL] {
 				newRepoList = append(newRepoList, repoURL)
 			} else {
 				message.Debugf("Repo %s is already included in the differential package", repoURL)
@@ -134,5 +136,7 @@ func removeCopiesFromDifferentialPackage(pkg *types.ZarfPackage, diffData *types
 		pkg.Components[idx] = component
 	}
 
-	return pkg, nil
+	diffPkg = pkg
+
+	return diffPkg, nil
 }

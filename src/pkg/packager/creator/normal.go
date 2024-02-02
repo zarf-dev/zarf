@@ -81,22 +81,22 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loade
 
 	// If we are creating a differential package, remove duplicate images and repos.
 	if extendedPkg.Build.Differential {
-		diffData, err := loadDifferentialData(&pc.createOpts.DifferentialData)
+		loadedDiffData, err := loadDifferentialData(&pc.createOpts.DifferentialData)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		versionsMatch := diffData.DifferentialPackageVersion == extendedPkg.Metadata.Version
+		versionsMatch := loadedDiffData.DifferentialPackageVersion == extendedPkg.Metadata.Version
 		if versionsMatch {
 			return nil, nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
 
-		noVersionSet := diffData.DifferentialPackageVersion == "" || extendedPkg.Metadata.Version == ""
+		noVersionSet := loadedDiffData.DifferentialPackageVersion == "" || extendedPkg.Metadata.Version == ""
 		if noVersionSet {
 			return nil, nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
 
-		diffPkg, err := removeCopiesFromDifferentialPackage(extendedPkg, diffData)
+		diffPkg, err := removeCopiesFromDifferentialPackage(extendedPkg, loadedDiffData)
 		if err != nil {
 			return nil, nil, err
 		}
