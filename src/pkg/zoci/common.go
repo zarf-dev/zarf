@@ -32,6 +32,7 @@ func NewRemote(url string, platform ocispec.Platform, mod ...oci.Modifier) (*Rem
 		oci.WithPlainHTTP(config.CommonOptions.Insecure),
 		oci.WithInsecureSkipVerify(config.CommonOptions.Insecure),
 		oci.WithLogger(&message.Logger{}),
+		oci.WithUserAgent("zarf/" + config.CLIVersion),
 	}, mod...)
 	remote, err := oci.NewOrasRemote(url, platform, modifiers...)
 	if err != nil {

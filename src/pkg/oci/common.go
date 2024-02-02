@@ -75,7 +75,6 @@ type OrasRemote struct {
 	Transport      *helpers.Transport
 	CopyOpts       oras.CopyOptions
 	targetPlatform *ocispec.Platform
-	userAgent      string
 	log            Logger
 }
 
@@ -114,7 +113,7 @@ func PlatformForArch(arch string) ocispec.Platform {
 // WithUserAgent sets the target architecture for the remote
 func WithUserAgent(userAgent string) Modifier {
 	return func(o *OrasRemote) {
-		o.userAgent = userAgent
+		o.repo.Client.(*auth.Client).SetUserAgent(userAgent)
 	}
 }
 
@@ -134,8 +133,10 @@ func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*Or
 		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
 	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
+	client := auth.DefaultClient
+	client.Client.Transport = transport
 	o := &OrasRemote{
-		repo:           &remote.Repository{},
+		repo:           &remote.Repository{Client: client},
 		Transport:      helpers.NewTransport(transport, nil),
 		targetPlatform: &platform}
 
@@ -200,16 +201,7 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 // TODO: instead of using Docker's cred store, should use the new one from ORAS to remove that dep
 func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, error) {
 
-	client := &auth.Client{
-		Cache: auth.DefaultCache,
-		Client: &http.Client{
-			Transport: o.Transport,
-		},
-	}
-	if o.userAgent != "" {
-		client.SetUserAgent(o.userAgent)
-	}
-
+	client := o.repo.Client.(*auth.Client)
 	o.log.Debug("Loading docker config file from default config location: %s for %s", config.Dir(), ref)
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
