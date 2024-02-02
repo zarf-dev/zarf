@@ -9,12 +9,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"slices"
-
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
 )
 
@@ -79,34 +76,13 @@ func (o *OrasRemote) CopyWithProgress(ctx context.Context, layers []ocispec.Desc
 		}
 	}
 
-	if copyOpts.FindSuccessors == nil {
-		copyOpts.FindSuccessors = func(ctx context.Context, fetcher content.Fetcher, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-			nodes, err := content.Successors(ctx, fetcher, desc)
-			if err != nil {
-				return nil, err
+	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
+		for _, sha := range shas {
+			if sha == desc.Digest.Encoded() {
+				return nil
 			}
-			if desc.MediaType == ocispec.MediaTypeImageIndex {
-				manifestDescs := nodes
-				nodes = []ocispec.Descriptor{}
-				// expand the manifests
-				for _, node := range manifestDescs {
-					manifest, err := o.FetchManifest(ctx, node)
-					if err != nil {
-						return nil, err
-					}
-					nodes = append(nodes, manifest.Layers...)
-					nodes = append(nodes, manifest.Config)
-				}
-			}
-
-			var ret []ocispec.Descriptor
-			for _, node := range nodes {
-				if slices.Contains(shas, node.Digest.Encoded()) {
-					ret = append(ret, node)
-				}
-			}
-			return ret, nil
 		}
+		return oras.SkipNode
 	}
 
 	_, err := oras.Copy(ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), copyOpts)
