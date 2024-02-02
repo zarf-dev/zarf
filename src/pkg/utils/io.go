@@ -218,7 +218,13 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp, skipHidden bool) (fil
 			return err
 		}
 
-		if !d.IsDir() {
+		info, err := d.Info()
+
+		if err != nil {
+			return err
+		}
+
+		if info.Mode().IsRegular() {
 			if pattern != nil {
 				if len(pattern.FindStringIndex(path)) > 0 {
 					files = append(files, path)
