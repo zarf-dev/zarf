@@ -17,8 +17,8 @@ import (
 	"oras.land/oras-go/v2/content/file"
 )
 
-// PublishZarfPackage publishes the zarf package to the remote repository.
-func (o *Remote) PublishZarfPackage(ctx context.Context, pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
+// PublishPackage publishes the zarf package to the remote repository.
+func (o *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
 	src, err := file.New(paths.Base)
 	if err != nil {
 		return err

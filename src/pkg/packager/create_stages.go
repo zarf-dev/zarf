@@ -258,7 +258,7 @@ func (p *Packager) output() error {
 		}
 
 		ctx := context.TODO()
-		err = remote.PublishZarfPackage(ctx, &p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency)
+		err = remote.PublishPackage(ctx, &p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}

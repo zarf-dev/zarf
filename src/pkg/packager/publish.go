@@ -134,7 +134,7 @@ func (p *Packager) Publish() (err error) {
 
 	// Publish the package/skeleton to the registry
 	ctx := context.TODO()
-	if err := remote.PublishZarfPackage(ctx, &p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
+	if err := remote.PublishPackage(ctx, &p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
 		return err
 	}
 	if p.cfg.CreateOpts.IsSkeleton {
