@@ -103,8 +103,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 			copyOpts.FindSuccessors = content.Successors
 			doneSaving := make(chan error)
 			successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+remote.Repo().Reference.String())
-			layerSize := oci.SumDescsSize([]ocispec.Descriptor{componentDesc})
-			go utils.RenderProgressBarForLocalDirWrite(cache, layerSize, doneSaving, "Pulling", successText)
+			go utils.RenderProgressBarForLocalDirWrite(cache, componentDesc.Size, doneSaving, "Pulling", successText)
 			if err := remote.CopyWithProgress(ctx, []ocispec.Descriptor{componentDesc}, store, copyOpts, doneSaving); err != nil {
 				return err
 			}

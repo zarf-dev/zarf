@@ -63,7 +63,7 @@ func (o *ZarfOrasRemote) PublishZarfPackage(ctx context.Context, pkg *types.Zarf
 	return nil
 }
 
-func zarfPackageOciAnnotations(metadata *types.ZarfMetadata) map[string]string {
+func annotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {
 
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,

@@ -38,8 +38,8 @@ func (m *Manifest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m.Manifest)
 }
 
-// GetLayers returns all the layers in the manifest
-func (m *Manifest) GetLayers(include func(d ocispec.Descriptor) bool) []ocispec.Descriptor {
+// Filter returns all the layers in the manifest satisfying `include`
+func (m *Manifest) Filter(include func(d ocispec.Descriptor) bool) []ocispec.Descriptor {
 	var layers []ocispec.Descriptor
 	for _, layer := range m.Layers {
 		if include != nil && include(layer) {

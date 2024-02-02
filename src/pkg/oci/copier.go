@@ -52,8 +52,7 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 		}
 		if exists {
 			src.log.Debug("Layer already exists in destination, skipping")
-			contentLength := layer.Size
-			data := make([]byte, contentLength)
+			data := make([]byte, layer.Size)
 			progressBar.Write(data)
 			progressBar.UpdateTitle(fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
 			sem.Release(1)
