@@ -106,6 +106,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loade
 	return extendedPkg, warnings, nil
 }
 
+// Assemble assembles all of the package assets into Zarf's tmp directory layout.
 func (pc *PackageCreator) Assemble(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
 	var imageList []transform.Image
 
@@ -203,7 +204,8 @@ func (pc *PackageCreator) Assemble(loadedPkg *types.ZarfPackage, dst *layout.Pac
 	return nil
 }
 
-// Output assumes it is running from cwd, not the build directory
+// Output writes the Zarf package as a tarball to a local directory,
+// or an OCI registry based on the --output flag.
 func (pc *PackageCreator) Output(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
