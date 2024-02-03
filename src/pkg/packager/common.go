@@ -335,22 +335,22 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 	if err != nil {
 		return fmt.Errorf("unable to read the package archive: %w", err)
 	}
+	spinner.Successf("Package saved to %q", destinationTarball)
 
 	// Convert Megabytes to bytes.
 	chunkSize := p.cfg.CreateOpts.MaxPackageSizeMB * 1000 * 1000
 
 	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
 	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && fi.Size() > int64(chunkSize) {
-		if fi.Size() / int64(chunkSize) > 999 {
+		if fi.Size()/int64(chunkSize) > 999 {
 			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
 		}
-		spinner.Updatef("Package is larger than %dMB, splitting into multiple files", p.cfg.CreateOpts.MaxPackageSizeMB)
-		_, _, err := utils.SplitFile(destinationTarball, chunkSize)
+		message.Notef("Package is larger than %dMB, splitting into multiple files", p.cfg.CreateOpts.MaxPackageSizeMB)
+		err := utils.SplitFile(destinationTarball, chunkSize)
 		if err != nil {
 			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
 		}
 	}
-	spinner.Successf("Package saved to %q", destinationTarball)
 	return nil
 }
 

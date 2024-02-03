@@ -333,7 +333,9 @@ func ReadFileByChunks(path string, chunkSizeBytes int) (chunks [][]byte, sha256s
 // - fileNames: list of file paths srcFile was split across
 // - sha256sum: sha256sum of the srcFile before splitting
 // - err: any errors encountered
-func SplitFile(srcFile string, chunkSizeBytes int) (fileNames []string, sha256sum string, err error) {
+func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
+	var fileNames []string
+	var sha256sum string
 	hash := sha256.New()
 
 	// Set buffer size to some multiple of 4096 KiB for modern file system cluster sizes
@@ -347,22 +349,27 @@ func SplitFile(srcFile string, chunkSizeBytes int) (fileNames []string, sha256su
 	// get file size
 	fi, err := os.Stat(srcFile)
 	if err != nil {
-		return fileNames, "", err
+		return err
 	}
 	fileSize := fi.Size()
+
+	// start progress bar
+	title := fmt.Sprintf("[0/%d] MB bytes written", fileSize/1000/1000)
+	progressBar := message.NewProgressBar(fileSize, title)
+	defer progressBar.Stop()
 
 	// open file
 	file, err := os.Open(srcFile)
 	defer file.Close()
 	if err != nil {
-		return fileNames, "", err
+		return err
 	}
 
 	// create file path starting from part 001
 	path := fmt.Sprintf("%s.part001", srcFile)
 	chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return fileNames, "", err
+		return err
 	}
 	fileNames = append(fileNames, path)
 	defer chunkFile.Close()
@@ -378,7 +385,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (fileNames []string, sha256su
 				// At end of file, break out of loop
 				break
 			}
-			return fileNames, "", err
+			return err
 		}
 
 		// Pass data to hash
@@ -389,14 +396,14 @@ func SplitFile(srcFile string, chunkSizeBytes int) (fileNames []string, sha256su
 			// write the remaining chunk size to file
 			_, err := chunkFile.Write(buf[0:chunkBytesRemaining])
 			if err != nil {
-				return fileNames, "", err
+				return err
 			}
 
 			// create new file
 			path = fmt.Sprintf("%s.part%03d", srcFile, len(fileNames)+1)
 			chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				return fileNames, "", err
+				return err
 			}
 			fileNames = append(fileNames, path)
 			defer chunkFile.Close()
@@ -404,7 +411,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (fileNames []string, sha256su
 			// write to new file where we left off
 			_, err = chunkFile.Write(buf[chunkBytesRemaining:bytesRead])
 			if err != nil {
-				return fileNames, "", err
+				return err
 			}
 
 			// set chunkBytesRemaining considering how many bytes are already written to new file
@@ -412,11 +419,17 @@ func SplitFile(srcFile string, chunkSizeBytes int) (fileNames []string, sha256su
 		} else {
 			_, err := chunkFile.Write(buf[0:bytesRead])
 			if err != nil {
-				return fileNames, "", err
+				return err
 			}
 			chunkBytesRemaining = chunkBytesRemaining - bytesRead
 		}
+
+		// update progress bar
+		progressBar.Add(bufferSize)
+		title := fmt.Sprintf("[%d/%d] MB bytes written", progressBar.GetCurrent()/1000/1000, fileSize/1000/1000)
+		progressBar.UpdateTitle(title)
 	}
+	progressBar.Successf("Package split across %d files", len(fileNames))
 	file.Close()
 	_ = os.RemoveAll(srcFile)
 
@@ -430,17 +443,17 @@ func SplitFile(srcFile string, chunkSizeBytes int) (fileNames []string, sha256su
 		Sha256Sum: sha256sum,
 	})
 	if err != nil {
-		return fileNames, "", fmt.Errorf("unable to marshal the split package data: %w", err)
+		return fmt.Errorf("unable to marshal the split package data: %w", err)
 	}
 
 	// write header file
 	path = fmt.Sprintf("%s.part000", srcFile)
 	if err := os.WriteFile(path, jsonData, 0644); err != nil {
-		return fileNames, sha256sum, fmt.Errorf("unable to write the file %s: %w", path, err)
+		return fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
 	fileNames = append(fileNames, path)
 
-	return fileNames, sha256sum, nil
+	return nil
 }
 
 // IsTextFile returns true if the given file is a text file.
