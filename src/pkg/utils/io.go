@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -462,8 +463,8 @@ func CreateReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string) er
 		if err != nil {
 			return fmt.Errorf("error getting relative path: %w", err)
 		}
-		name = filepath.Join(dirPrefix, name)
-		name = filepath.ToSlash(name)
+		name = path.Join(dirPrefix, name)
+		// name = filepath.ToSlash(name)
 		header.Name = name
 
 		// Write the header to the tarball

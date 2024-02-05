@@ -68,11 +68,9 @@ func isRequired(c types.ZarfComponent, useRequiredLogic bool) bool {
 		return false
 	}
 
-	// optional "wins" when defined
+	// follow inverse of optional when defined
 	if optionalExists {
 		return !optional
-	} else if requiredExists {
-		return required
 	}
 	// If neither required nor optional are set, then the component is required
 	return true

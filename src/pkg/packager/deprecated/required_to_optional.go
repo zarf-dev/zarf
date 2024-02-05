@@ -31,7 +31,7 @@ func (m RequiredToOptional) Clear(mc types.ZarfComponent) types.ZarfComponent {
 	return mc
 }
 
-// Run is a no-op for this migration.
+// Run migrates required to optional.
 func (m RequiredToOptional) Run(c types.ZarfComponent) (types.ZarfComponent, string) {
 	if c.DeprecatedRequired == nil {
 		return c, ""

@@ -50,7 +50,7 @@ func Test_isRequired(t *testing.T) {
 				DeprecatedRequired: helpers.BoolPtr(false),
 				Optional:           nil,
 			},
-			want: false,
+			want: true,
 		},
 		{
 			name: "Test when DeprecatedRequired is false and Optional is false",

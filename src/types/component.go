@@ -83,7 +83,7 @@ func (c ZarfComponent) RequiresCluster() bool {
 	return false
 }
 
-// IsEmpty returns if the components fields (other than the fields we were told to ignore) are empty or set to the types zero-value
+// IsEmpty returns true if the components fields (other than the fields we were told to ignore) are empty or set to the types zero-value
 func (c ZarfComponent) IsEmpty(fieldsToIgnore []string) bool {
 	// Make a map for the fields we are going to ignore
 	ignoredFieldsMap := make(map[string]bool)
