@@ -16,25 +16,25 @@ import (
 	"helm.sh/helm/v3/pkg/releaseutil"
 )
 
-type devRenderer struct {
+type variableRenderer struct {
 	*Helm
 	values template.Values
 }
 
-func (h *Helm) newDevRenderer() (*devRenderer, error) {
+func (h *Helm) newVariableRenderer() (*variableRenderer, error) {
 	values, err := template.Generate(h.cfg)
 	if err != nil {
 		return nil, err
 	}
 	values.SetState(&types.ZarfState{})
 
-	return &devRenderer{
+	return &variableRenderer{
 		Helm:   h,
 		values: *values,
 	}, nil
 }
 
-func (r *devRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
+func (r *variableRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
 	tempDir, err := utils.MakeTempDir(r.chartPath)
 	if err != nil {

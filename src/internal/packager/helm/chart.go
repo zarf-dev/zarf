@@ -191,7 +191,7 @@ func (h *Helm) TemplateChart() (manifest string, chartValues chartutil.Values, e
 		return "", nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
 
-	client.PostRenderer, err = h.newDevRenderer()
+	client.PostRenderer, err = h.newVariableRenderer()
 	if err != nil {
 		return "", nil, fmt.Errorf("unable to get dev renderer: %w", err)
 	}
