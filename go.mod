@@ -11,7 +11,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/anchore/clio v0.0.0-20240131202212-9eba61247448
-	github.com/anchore/stereoscope v0.0.0-20240118133533-eb656fc71793
+	github.com/anchore/stereoscope v0.0.1
 	github.com/anchore/syft v0.99.0
 	github.com/derailed/k9s v0.29.1
 	github.com/distribution/reference v0.5.0
@@ -27,7 +27,7 @@ require (
 	github.com/google/go-containerregistry v0.17.0
 	github.com/gosuri/uitable v0.0.4
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/moby/moby v24.0.7+incompatible
+	github.com/moby/moby v24.0.9+incompatible
 	github.com/opencontainers/image-spec v1.1.0-rc6
 	github.com/otiai10/copy v1.14.0
 	github.com/pkg/errors v0.9.1
