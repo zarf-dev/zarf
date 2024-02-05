@@ -5,8 +5,6 @@
 package cmd
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -134,43 +132,12 @@ var devMigrateCmd = &cobra.Command{
 			return err
 		}
 
-		scanner := bufio.NewScanner(bytes.NewReader(b))
-
-		var updated []byte
-		var commentLines []string
-
-		// Some opinionated formatting for the zarf.yaml
-		for scanner.Scan() {
-			line := scanner.Text()
-
-			if strings.HasPrefix(line, "components:") || strings.HasPrefix(line, "  - name: ") || strings.HasPrefix(line, "    name: ") {
-				if len(commentLines) > 0 {
-					commentText := strings.Join(commentLines, "\n")
-					updated = append(updated, []byte("\n"+commentText+"\n")...)
-				} else {
-					updated = append(updated, []byte("\n")...)
-				}
-				updated = append(updated, []byte(line+"\n")...) // Add "components:" line
-				commentLines = nil
-			} else {
-				if strings.HasPrefix(line, "#") || strings.HasPrefix(line, "  - #") {
-					commentLines = append(commentLines, line)
-				} else {
-					if len(commentLines) > 0 {
-						commentText := strings.Join(commentLines, "\n")
-						updated = append(updated, []byte("\n"+commentText+"\n")...)
-						commentLines = nil
-					}
-					updated = append(updated, []byte(line+"\n")...)
-				}
-			}
-		}
-
-		if err := scanner.Err(); err != nil {
+		formatted, err := utils.FormatZarfYAML(b)
+		if err != nil {
 			return err
 		}
 
-		return os.WriteFile(filepath.Join(dir, layout.ZarfYAML), updated, fi.Mode())
+		return os.WriteFile(filepath.Join(dir, layout.ZarfYAML), formatted, fi.Mode())
 	},
 }
 

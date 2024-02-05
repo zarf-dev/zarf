@@ -7,6 +7,7 @@ package utils
 // fork from https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -232,4 +233,40 @@ func SplitYAMLToString(yamlData []byte) ([]string, error) {
 		objs = append(objs, string(ext.Raw))
 	}
 	return objs, nil
+}
+
+// FormatZarfYAML formats a zarf.yaml file w/ some opinionated formatting.
+func FormatZarfYAML(b []byte) (formatted []byte, err error) {
+	scanner := bufio.NewScanner(bytes.NewReader(b))
+
+	var commentLines []string
+
+	// Some opinionated formatting for the zarf.yaml
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if strings.HasPrefix(line, "components:") || strings.HasPrefix(line, "  - name: ") || strings.HasPrefix(line, "    name: ") {
+			if len(commentLines) > 0 {
+				commentText := strings.Join(commentLines, "\n")
+				formatted = append(formatted, []byte("\n"+commentText+"\n")...)
+			} else {
+				formatted = append(formatted, []byte("\n")...)
+			}
+			formatted = append(formatted, []byte(line+"\n")...) // Add "components:" line
+			commentLines = nil
+		} else {
+			if strings.HasPrefix(line, "#") || strings.HasPrefix(line, "  - #") {
+				commentLines = append(commentLines, line)
+			} else {
+				if len(commentLines) > 0 {
+					commentText := strings.Join(commentLines, "\n")
+					formatted = append(formatted, []byte("\n"+commentText+"\n")...)
+					commentLines = nil
+				}
+				formatted = append(formatted, []byte(line+"\n")...)
+			}
+		}
+	}
+
+	return formatted, scanner.Err()
 }
