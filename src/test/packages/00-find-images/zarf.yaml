@@ -6,7 +6,7 @@ metadata:
 variables:
   - name: REPLICA_COUNT
     default: "1"
-  - name: OTHER_CONTAINER
+  - name: VALUES_IMAGE
     default: "busybox:latest"
 
 constants:
