@@ -27,7 +27,7 @@ func (ic *ImportChain) getRemote(url string) (*oci.OrasRemote, error) {
 		return ic.remote, nil
 	}
 	var err error
-	ic.remote, err = oci.NewOrasRemote(url, oci.WithSkeletonArch())
+	ic.remote, err = oci.NewOrasRemote(url, oci.PlatformForSkeleton())
 	if err != nil {
 		return nil, err
 	}

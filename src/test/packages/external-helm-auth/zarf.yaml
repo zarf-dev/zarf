@@ -1,0 +1,14 @@
+kind: ZarfPackageConfig
+metadata:
+  name: helm-auth
+  version: 0.0.1
+components:
+- name: private-chart
+  required: true
+  charts:
+  - name: podinfo
+    version: 6.4.0
+    url: http://gitea.localhost:3000/api/packages/git-user/helm
+    repoName: podinfo
+    namespace: podinfo-from-repo
+    releaseName: cool-release-name

@@ -143,6 +143,15 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		chartURL  string
 		err       error
 	)
+	repoFile, err := repo.LoadFile(pull.Settings.RepositoryConfig)
+
+	// Not returning the error here since the repo file is only needed if we are pulling from a repo that requires authentication
+	if err != nil {
+		message.Debugf("Unable to load the repo file at %q: %s", pull.Settings.RepositoryConfig, err.Error())
+	}
+
+	var username string
+	var password string
 
 	// Handle OCI registries
 	if registry.IsOCI(h.chart.URL) {
@@ -159,8 +168,18 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 			chartName = h.chart.RepoName
 		}
 
-		// Perform simple chart download
-		chartURL, err = repo.FindChartInRepoURL(h.chart.URL, chartName, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+		if repoFile != nil {
+			// TODO: @AustinAbro321 Currently this selects the last repo with the same url
+			// We should introduce a new field in zarf to allow users to specify the local repo they want
+			for _, repo := range repoFile.Repositories {
+				if repo.URL == h.chart.URL {
+					username = repo.Username
+					password = repo.Password
+				}
+			}
+		}
+
+		chartURL, err = repo.FindChartInAuthRepoURL(h.chart.URL, username, password, chartName, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				// Intentionally dogsled this error since this is just a nice to have helper
@@ -179,6 +198,7 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		Getters: getter.All(pull.Settings),
 		Options: []getter.Option{
 			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.Insecure),
+			getter.WithBasicAuth(username, password),
 		},
 	}
 
