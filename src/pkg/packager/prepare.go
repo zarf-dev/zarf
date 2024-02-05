@@ -77,7 +77,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	componentDefinition := "\ncomponents:\n"
 
 	if err := p.setVariableMapInConfig(); err != nil {
-		return nil, fmt.Errorf("unable to set the active variables: %w", err)
+		return nil, fmt.Errorf(lang.PkgErrsetVariableMap, err)
 	}
 
 	for _, component := range p.cfg.Pkg.Components {

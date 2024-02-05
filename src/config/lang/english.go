@@ -619,6 +619,11 @@ const (
 	AgentErrUnableTransform        = "unable to transform the provided request; see zarf http proxy logs for more details"
 )
 
+// src/internal/packager
+const (
+	PkgErrsetVariableMap = "unable to set the active variables: %w"
+)
+
 // src/internal/packager/create
 const (
 	PkgCreateErrDifferentialSameVersion = "unable to create a differential package with the same version as the package you are using as a reference; the package version must be incremented"
