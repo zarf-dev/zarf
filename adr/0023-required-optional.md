@@ -4,7 +4,7 @@ Date: 2024-01-02
 
 ## Status
 
-Pending
+Accepted
 
 ## Context
 
@@ -24,8 +24,6 @@ A few ways to handle this:
 
 ## Decision
 
-> The change that we're proposing or have agreed to implement.
-
 Option 2: deprecate `required` and introduce an optional `optional` key, which defaults to _false_.
 
 Components are now **required** by default, instead of **optional**.
@@ -36,4 +34,4 @@ Components are now **required** by default, instead of **optional**.
 
 Packages created w/ Zarf v0.33.0+ will have their implicit _required_ logic flipped from previous versions (implicit `required: false` --> implicit `optional: false`).
 
-A `required-to-optional` migration.
+A `required-to-optional` migration (both accomplished behind the scenes on a `zarf package create`, or available via **new** CLI migration: `zarf dev migrate <dir> --run required-to-optional`).
