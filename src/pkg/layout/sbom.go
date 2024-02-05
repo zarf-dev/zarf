@@ -68,7 +68,7 @@ func (s *SBOMs) Archive() (err error) {
 	return os.RemoveAll(dir)
 }
 
-// StageSBOMViewFiles writes SBOM viewer HTML files to disk.
+// StageSBOMViewFiles copies SBOM viewer HTML files to the Zarf SBOM directory.
 func (s *SBOMs) StageSBOMViewFiles() (sbomViewFiles, warnings []string, err error) {
 	isTarball := !utils.IsDir(s.Path) && filepath.Ext(s.Path) == ".tar"
 	if isTarball {
