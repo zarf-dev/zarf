@@ -104,7 +104,7 @@ func (o *OrasRemote) CopyWithProgress(ctx context.Context, layers []ocispec.Desc
 }
 
 // PullLayer pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
-func (o *OrasRemote) PullLayer(ctx context.Context, desc ocispec.Descriptor, destinationDir string) error {
+func (o *OrasRemote) PullLayer(ctx context.Context, destinationDir string, desc ocispec.Descriptor) error {
 	b, err := o.FetchLayer(ctx, desc)
 	if err != nil {
 		return err
@@ -115,8 +115,8 @@ func (o *OrasRemote) PullLayer(ctx context.Context, desc ocispec.Descriptor, des
 	return helpers.WriteFile(filepath.Join(destinationDir, rel), b)
 }
 
-// PullFilesTodirectory pulls multiple files from the remote repository and saves them to `destinationDir`.
-func (o *OrasRemote) PullFilesTodirectory(ctx context.Context, paths []string, destinationDir string) ([]ocispec.Descriptor, error) {
+// PullPaths pulls multiple files from the remote repository and saves them to `destinationDir`.
+func (o *OrasRemote) PullPaths(ctx context.Context, destinationDir string, paths []string) ([]ocispec.Descriptor, error) {
 	paths = helpers.Unique(paths)
 	root, err := o.FetchRoot(ctx)
 	if err != nil {
@@ -130,7 +130,7 @@ func (o *OrasRemote) PullFilesTodirectory(ctx context.Context, paths []string, d
 			if o.FileDescriptorExists(desc, destinationDir) {
 				continue
 			}
-			err = o.PullLayer(ctx, desc, destinationDir)
+			err = o.PullLayer(ctx, destinationDir, desc)
 			if err != nil {
 				return nil, err
 			}

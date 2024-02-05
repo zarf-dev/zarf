@@ -152,10 +152,10 @@ func (o *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
 func (o *Remote) PullPackageMetadata(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
-	return o.PullFilesTodirectory(ctx, PackageAlwaysPull, destinationDir)
+	return o.PullPaths(ctx, destinationDir, PackageAlwaysPull)
 }
 
 // PullPackageSBOM pulls the package's sboms.tar from the remote repository and saves it to `destinationDir`.
 func (o *Remote) PullPackageSBOM(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
-	return o.PullFilesTodirectory(ctx, []string{layout.SBOMTar}, destinationDir)
+	return o.PullPaths(ctx, destinationDir, []string{layout.SBOMTar})
 }
