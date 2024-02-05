@@ -95,7 +95,6 @@ components:
         executable: true
 
   - name: zarf-seed-registry
-    optional: true
     description: |
       Deploys the Zarf Registry using the registry image provided by the Zarf Injector.
     charts:
