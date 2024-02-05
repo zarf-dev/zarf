@@ -246,16 +246,16 @@ func TestUseCLI(t *testing.T) {
 
 		require.FileExists(t, tlsKey)
 	})
-}
 
-func TestUseCLI2(t *testing.T) {
-	t.Run("zarf prepare find-images with helm or manifest vars", func(t *testing.T) {
+	t.Run("zarf dev find-images with helm or manifest vars", func(t *testing.T) {
 		t.Parallel()
 		// Test `zarf prepare find-images` for a package with zarf variables in the chart, values file, and manifests
 		path := filepath.Join("src", "test", "packages", "00-find-images")
-		stdOut, _, err := e2e.Zarf("prepare", "find-images", path)
+		registry := "coolregistry.gov"
+		stdOut, _, err := e2e.Zarf("prepare", "find-images", path, "--registry", registry)
 		require.NoError(t, err)
-		require.Contains(t, stdOut, "defenseunicorns/zarf/agent:local", "Manifests aren't interpreting vars")
+		manifestImage := fmt.Sprintf("%s/%s", registry, "defenseunicorns/zarf/agent:local")
+		require.Contains(t, stdOut, manifestImage, "Manifests aren't interpreting vars")
 		require.Contains(t, stdOut, "busybox:latest", "Values files aren't interpreting vars")
 		require.Contains(t, stdOut, "nginx:stable-perl", "Helm isn't interpreting vars")
 	})
