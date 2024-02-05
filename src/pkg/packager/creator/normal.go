@@ -107,7 +107,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loade
 }
 
 // Assemble assembles all of the package assets into Zarf's tmp directory layout.
-func (pc *PackageCreator) Assemble(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
+func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
 	var imageList []transform.Image
 
 	skipSBOMFlagUsed := pc.createOpts.SkipSBOM
@@ -216,7 +216,7 @@ func (pc *PackageCreator) Assemble(loadedPkg *types.ZarfPackage, dst *layout.Pac
 //
 // - writes the Zarf package as a tarball to a local directory,
 // or an OCI registry based on the --output flag
-func (pc *PackageCreator) Output(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
+func (pc *PackageCreator) Output(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range loadedPkg.Components {

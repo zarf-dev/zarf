@@ -63,7 +63,7 @@ func (p *Packager) DevDeploy() error {
 		}
 	}
 
-	if err := c.Assemble(&p.cfg.Pkg, p.layout); err != nil {
+	if err := c.Assemble(p.layout, &p.cfg.Pkg); err != nil {
 		return err
 	}
 

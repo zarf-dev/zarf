@@ -98,11 +98,11 @@ func (p *Packager) Publish() (err error) {
 
 		p.warnings = append(p.warnings, warnings...)
 
-		if err := c.Assemble(loadedPkg, p.layout); err != nil {
+		if err := c.Assemble(p.layout, loadedPkg); err != nil {
 			return err
 		}
 
-		if err := c.Output(loadedPkg, p.layout); err != nil {
+		if err := c.Output(p.layout, loadedPkg); err != nil {
 			return err
 		}
 

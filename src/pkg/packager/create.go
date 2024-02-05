@@ -47,7 +47,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	if err := c.Assemble(loadedPkg, p.layout); err != nil {
+	if err := c.Assemble(p.layout, loadedPkg); err != nil {
 		return err
 	}
 
@@ -56,5 +56,5 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	return c.Output(loadedPkg, p.layout)
+	return c.Output(p.layout, loadedPkg)
 }

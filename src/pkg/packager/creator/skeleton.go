@@ -70,7 +70,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (load
 // Assemble updates all components of the loaded Zarf package with necessary modifications for package assembly.
 //
 // It processes each component to ensure correct structure and resource locations.
-func (sc *SkeletonCreator) Assemble(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
+func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
 	var updatedComponents []types.ZarfComponent
 
 	for _, component := range loadedPkg.Components {
@@ -95,7 +95,7 @@ func (sc *SkeletonCreator) Assemble(loadedPkg *types.ZarfPackage, dst *layout.Pa
 // - writes the loaded zarf.yaml to disk
 //
 // - signs the package
-func (sc *SkeletonCreator) Output(loadedPkg *types.ZarfPackage, dst *layout.PackagePaths) error {
+func (sc *SkeletonCreator) Output(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
 	for _, component := range loadedPkg.Components {
 		if err := dst.Components.Archive(component, false); err != nil {
 			return err
