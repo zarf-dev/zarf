@@ -4,9 +4,10 @@ metadata:
   description: Simple zarf package with variables
 
 variables:
-  - name: GIT_SERVER_REPLICA_COUNT
-    description: The number of git server replicas to deploy
+  - name: REPLICA_COUNT
     default: "1"
+  - name: OTHER_CONTAINER
+    default: "busybox:latest"
 
 constants:
   - name: AGENT_IMAGE
@@ -33,4 +34,4 @@ components:
       namespace: zarf-simple
       version: 0.1.0
       valuesFiles:
-        - gitea-values.yaml
+        - values.yaml

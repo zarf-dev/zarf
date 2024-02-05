@@ -19,3 +19,5 @@ spec:
       containers:
         - name: server
           image: "###ZARF_CONST_HELM_IMAGE###:stable-perl"
+        - name: another-container
+          image: {{.Values.otherContainer}}

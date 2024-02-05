@@ -100,8 +100,8 @@ func TestUseCLI(t *testing.T) {
 		// Test `zarf prepare find-images` with `--kube-version` specified and less than than the declared minimum (v1.21.0)
 		stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "--kube-version=v1.20.0", "src/test/packages/00-kube-version-override")
 		require.Error(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "Problem rendering the helm template for https://charts.jetstack.io/", "The kubeVersion declaration should prevent this from templating")
-		require.Contains(t, stdErr, "following charts had errors: [https://charts.jetstack.io/]", "Zarf should print an ending error message")
+		require.Contains(t, stdErr, "Problem rendering the helm template for cert-manager", "The kubeVersion declaration should prevent this from templating")
+		require.Contains(t, stdErr, "following charts had errors: [cert-manager]", "Zarf should print an ending error message")
 	})
 
 	t.Run("zarf deploy should fail when given a bad component input", func(t *testing.T) {
@@ -255,7 +255,8 @@ func TestUseCLI2(t *testing.T) {
 		path := filepath.Join("src", "test", "packages", "00-find-images")
 		stdOut, _, err := e2e.Zarf("prepare", "find-images", path)
 		require.NoError(t, err)
-		require.Contains(t, stdOut, "defenseunicorns/zarf/agent:local", "If this isn't found manifests aren't interpreting vars")
-		require.Contains(t, stdOut, "nginx:stable-perl", "If this isn't found helm or values files aren't interpreting vars")
+		require.Contains(t, stdOut, "defenseunicorns/zarf/agent:local", "Manifests aren't interpreting vars")
+		require.Contains(t, stdOut, "busybox:latest", "Values files aren't interpreting vars")
+		require.Contains(t, stdOut, "nginx:stable-perl", "Helm isn't interpreting vars")
 	})
 }
