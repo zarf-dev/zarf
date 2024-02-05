@@ -621,7 +621,7 @@ const (
 
 // src/internal/packager
 const (
-	PkgErrsetVariableMap = "unable to set the active variables: %w"
+	PkgErrSetVariableMap = "unable to set the active variables: %w"
 )
 
 // src/internal/packager/create

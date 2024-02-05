@@ -276,7 +276,7 @@ func init() {
 	// allow for the override of the default helm KubeVersion
 	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
-	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.RegistryOverride, "registry", "127.0.0.1:31999", lang.CmdDevFlagRegistry)
+	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.RegistryOverride, "registry-url", "127.0.0.1:31999", lang.CmdDevFlagRegistry)
 
 	devLintCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 	devLintCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
