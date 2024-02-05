@@ -14,6 +14,8 @@ import (
 )
 
 // CopyPackage copies a zarf package from one OCI registry to another
+// TODO (@AustinAbro321) we should see if we should also copy the manifests for a complete copy in this function
+// Either through ORAS or additional logic found in callers of this function
 func CopyPackage(ctx context.Context, src *Remote, dst *Remote, include func(d ocispec.Descriptor) bool, concurrency int) error {
 
 	srcRoot, err := src.FetchRoot(ctx)
