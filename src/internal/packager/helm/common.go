@@ -148,6 +148,7 @@ func WithKubeVersion(kubeVersion string) Modifier {
 	}
 }
 
+// WithPackageConfig sets the packager config for the chart
 func WithPackageConfig(cfg *types.PackagerConfig) Modifier {
 	return func(h *Helm) {
 		h.cfg = cfg
@@ -159,6 +160,7 @@ func StandardName(destination string, chart types.ZarfChart) string {
 	return filepath.Join(destination, chart.Name+"-"+chart.Version)
 }
 
+// StandardValuesName generates a predictable full path for the values file for a helm chart for zarf
 func StandardValuesName(destination string, chart types.ZarfChart, idx int) string {
 	return fmt.Sprintf("%s-%d", StandardName(destination, chart), idx)
 }
