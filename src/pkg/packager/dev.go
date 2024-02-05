@@ -63,7 +63,7 @@ func (p *Packager) DevDeploy() error {
 
 	// Set variables and prompt if --confirm is not set
 	if err := p.setVariableMapInConfig(); err != nil {
-		return fmt.Errorf(lang.PkgErrsetVariableMap, err)
+		return fmt.Errorf(lang.PkgErrSetVariableMap, err)
 	}
 
 	p.connectStrings = make(types.ConnectStrings)

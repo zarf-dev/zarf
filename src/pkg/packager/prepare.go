@@ -77,7 +77,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	componentDefinition := "\ncomponents:\n"
 
 	if err := p.setVariableMapInConfig(); err != nil {
-		return nil, fmt.Errorf(lang.PkgErrsetVariableMap, err)
+		return nil, fmt.Errorf(lang.PkgErrSetVariableMap, err)
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
@@ -125,7 +125,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			return nil, fmt.Errorf("unable to generate template values")
 		}
 		values.SetState(&types.ZarfState{})
-		values.SetRegistry(p.cfg.FindImagesOpts.RegistryOverride)
+		values.SetRegistry(p.cfg.FindImagesOpts.RegistryURL)
 		for _, chart := range component.Charts {
 
 			helmCfg := helm.New(

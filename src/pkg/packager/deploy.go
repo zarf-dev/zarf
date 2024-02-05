@@ -63,7 +63,7 @@ func (p *Packager) Deploy() (err error) {
 
 	// Set variables and prompt if --confirm is not set
 	if err := p.setVariableMapInConfig(); err != nil {
-		return fmt.Errorf(lang.PkgErrsetVariableMap, err)
+		return fmt.Errorf(lang.PkgErrSetVariableMap, err)
 	}
 
 	p.hpaModified = false

@@ -248,7 +248,7 @@ func TestUseCLI(t *testing.T) {
 		// Test `zarf prepare find-images` for a package with zarf variables in the chart, values file, and manifests
 		path := filepath.Join("src", "test", "packages", "00-find-images")
 		registry := "coolregistry.gov"
-		stdOut, _, err := e2e.Zarf("prepare", "find-images", path, "--registry", registry)
+		stdOut, _, err := e2e.Zarf("prepare", "find-images", path, "--registry-url", registry)
 		require.NoError(t, err)
 		manifestImage := fmt.Sprintf("%s/%s", registry, "defenseunicorns/zarf/agent:local")
 		require.Contains(t, stdOut, manifestImage, "Manifests aren't interpreting vars")
