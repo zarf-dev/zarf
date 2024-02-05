@@ -41,10 +41,10 @@ func (p *Packager) readZarfYAML(path string) error {
 	return nil
 }
 
-// filterComponents removes components not matching the current OS and architecture.
-func (p *Packager) filterComponents() {
-	// Currently the arch and os filter will never return an error.
-	p.cfg.Pkg.Components, _ = filters.NewArchAndOSFilter(p.arch, runtime.GOOS).Apply(p.cfg.Pkg)
+// filterComponentsByOSAndArch removes components not matching the current OS and architecture.
+func (p *Packager) filterComponentsByOSAndArch() (err error) {
+	p.cfg.Pkg.Components, err = filters.NewArchAndOSFilter(p.arch, runtime.GOOS).Apply(p.cfg.Pkg)
+	return err
 }
 
 // writeYaml adds build information and writes the config to the temp directory.

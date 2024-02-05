@@ -44,7 +44,9 @@ func (p *Packager) Mirror() (err error) {
 	p.cfg.State = state
 
 	// Filter out components that are not compatible with this system if we have loaded from a tarball
-	p.filterComponents()
+	if err := p.filterComponentsByOSAndArch(); err != nil {
+		return err
+	}
 
 	// Run mirror for each requested component
 	included, err := filter.Apply(p.cfg.Pkg)

@@ -42,7 +42,9 @@ func (p *Packager) Remove() (err error) {
 	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
-	p.filterComponents()
+	if err := p.filterComponentsByOSAndArch(); err != nil {
+		return err
+	}
 	packageName = p.cfg.Pkg.Metadata.Name
 
 	// Build a list of components to remove and determine if we need a cluster connection

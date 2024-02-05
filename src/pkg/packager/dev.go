@@ -37,7 +37,9 @@ func (p *Packager) DevDeploy() error {
 	p.cfg.Pkg.Build.Version = config.CLIVersion
 
 	// Filter out components that are not compatible with this system
-	p.filterComponents()
+	if err := p.filterComponentsByOSAndArch(); err != nil {
+		return err
+	}
 
 	// Also filter out components that are not required, nor requested via --components
 	// This is different from the above filter, as it is not based on the system, but rather
