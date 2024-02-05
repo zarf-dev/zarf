@@ -141,9 +141,12 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.Name, err.Error())
 			}
 
-			manifests, _ := utils.RecursiveFileList(componentPaths.Values, nil, false)
-			for _, manifest := range manifests {
-				if err := values.Apply(component, manifest, false); err != nil {
+			valuesFilePaths, err := utils.RecursiveFileList(componentPaths.Values, nil, false)
+			if err != nil {
+				return nil, fmt.Errorf("unable to get values file for chart %s: %s", chart.Name, err.Error())
+			}
+			for _, path := range valuesFilePaths {
+				if err := values.Apply(component, path, false); err != nil {
 					return nil, err
 				}
 			}
