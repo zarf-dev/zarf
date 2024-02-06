@@ -38,7 +38,7 @@ var (
 	_ Creator = (*packageCreator)(nil)
 )
 
-// PackageCreator provides methods for creating normal (not skeleton) Zarf packages.
+// packageCreator provides methods for creating normal (not skeleton) Zarf packages.
 type packageCreator struct {
 	createOpts types.ZarfCreateOptions
 
