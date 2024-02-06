@@ -142,15 +142,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 func (h *Helm) TemplateChart() (manifest string, chartValues chartutil.Values, err error) {
 	message.Debugf("helm.TemplateChart()")
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
-	defer func() {
-		if err != nil {
-			spinner.Stop()
-			spinner.Errorf(err, "Problem rendering the helm template for %s: %s", h.chart.Name, err.Error())
-		} else {
-			spinner.Success()
-		}
-
-	}()
+	defer spinner.Stop()
 
 	err = h.createActionConfig(h.chart.Namespace, spinner)
 
@@ -207,6 +199,8 @@ func (h *Helm) TemplateChart() (manifest string, chartValues chartutil.Values, e
 	for _, hook := range templatedChart.Hooks {
 		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)
 	}
+
+	spinner.Success()
 
 	return manifest, chartValues, nil
 }

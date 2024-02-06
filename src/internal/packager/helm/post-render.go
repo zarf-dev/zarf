@@ -43,7 +43,6 @@ func (h *Helm) newRenderer() (*renderer, error) {
 		Helm:           h,
 		connectStrings: make(types.ConnectStrings),
 		namespaces: map[string]*corev1.Namespace{
-			// Add the passed-in namespace to the list
 			h.chart.Namespace: h.cluster.NewZarfManagedNamespace(h.chart.Namespace),
 		},
 		values: *valueTemplate,

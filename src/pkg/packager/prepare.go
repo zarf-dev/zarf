@@ -141,10 +141,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.Name, err.Error())
 			}
 
-			valuesFilePaths, err := utils.RecursiveFileList(componentPaths.Values, nil, false)
-			if err != nil {
-				return nil, fmt.Errorf("unable to get values file for chart %s: %s", chart.Name, err.Error())
-			}
+			valuesFilePaths, _ := utils.RecursiveFileList(componentPaths.Values, nil, false)
 			for _, path := range valuesFilePaths {
 				if err := values.Apply(component, path, false); err != nil {
 					return nil, err
@@ -153,8 +150,8 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 			// Generate helm templates for this chart
 			chartTemplate, chartValues, err := helmCfg.TemplateChart()
-
 			if err != nil {
+				message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.Name, err.Error())
 				erroredCharts = append(erroredCharts, chart.Name)
 				continue
 			}
