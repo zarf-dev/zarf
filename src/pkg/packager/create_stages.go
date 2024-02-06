@@ -319,24 +319,41 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*layout.Compon
 		Component: componentPaths,
 	}
 
-	appendSBOMFiles := func(path string) {
+	appendSBOMFiles := func(path string) error {
 		if utils.IsDir(path) {
-			files, _ := utils.RecursiveFileList(path, nil, false)
+			files, err := utils.RecursiveFileList(path, nil, false)
+			if err != nil {
+				return err
+			}
 			componentSBOM.Files = append(componentSBOM.Files, files...)
 		} else {
-			componentSBOM.Files = append(componentSBOM.Files, path)
+			info, err := os.Lstat(path)
+			if err != nil {
+				return err
+			}
+			if info.Mode().IsRegular() {
+				componentSBOM.Files = append(componentSBOM.Files, path)
+			}
 		}
+
+		return nil
 	}
 
 	for filesIdx, file := range component.Files {
 		path := filepath.Join(componentPaths.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
-		appendSBOMFiles(path)
+		err := appendSBOMFiles(path)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for dataIdx, data := range component.DataInjections {
 		path := filepath.Join(componentPaths.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 
-		appendSBOMFiles(path)
+		err := appendSBOMFiles(path)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return componentSBOM, nil

@@ -197,7 +197,13 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp, skipHidden bool) (fil
 			return err
 		}
 
-		if !d.IsDir() {
+		info, err := d.Info()
+
+		if err != nil {
+			return err
+		}
+
+		if info.Mode().IsRegular() {
 			if pattern != nil {
 				if len(pattern.FindStringIndex(path)) > 0 {
 					files = append(files, path)
@@ -421,8 +427,16 @@ func CreateReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string) er
 			return err
 		}
 
+		link := ""
+		if info.Mode().Type() == os.ModeSymlink {
+			link, err = os.Readlink(filePath)
+			if err != nil {
+				return fmt.Errorf("error reading symlink: %w", err)
+			}
+		}
+
 		// Create a new header
-		header, err := tar.FileInfoHeader(info, "")
+		header, err := tar.FileInfoHeader(info, link)
 		if err != nil {
 			return fmt.Errorf("error creating tar header: %w", err)
 		}
@@ -449,7 +463,7 @@ func CreateReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string) er
 		}
 
 		// If it's a file, write its content
-		if !info.IsDir() {
+		if info.Mode().IsRegular() {
 			file, err := os.Open(filePath)
 			if err != nil {
 				return fmt.Errorf("error opening file: %w", err)
