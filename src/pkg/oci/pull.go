@@ -45,10 +45,8 @@ func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDi
 }
 
 // PullLayers pulls the package from the remote repository and saves it to the given path.
-// If you don't set doneSaving to nil you must have a goroutine running that acts on an input
-// to doneSaving and provides an input to doneSaving after it's done
 func (o *OrasRemote) PullLayers(ctx context.Context, destinationDir string, concurrency int,
-	layersToPull []ocispec.Descriptor, doneSaving chan error) ([]ocispec.Descriptor, error) {
+	layersToPull []ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 	// de-duplicate layers
 	layersToPull = RemoveDuplicateDescriptors(layersToPull)
 
@@ -61,14 +59,11 @@ func (o *OrasRemote) PullLayers(ctx context.Context, destinationDir string, conc
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
 
-	return layersToPull, o.CopyWithProgress(ctx, layersToPull, dst, copyOpts, doneSaving)
+	return layersToPull, o.CopyToStore(ctx, layersToPull, dst, copyOpts)
 }
 
-// CopyWithProgress copies the given layers from the remote repository to the given store.
-// If you don't set doneSaving to nil you must have a goroutine running that acts on an input
-// to doneSaving and provides an input to doneSaving after it's done
-func (o *OrasRemote) CopyWithProgress(ctx context.Context, layers []ocispec.Descriptor, store oras.Target,
-	copyOpts oras.CopyOptions, doneSaving chan error) error {
+// CopyToStore copies the given layers from the remote repository to the given store.
+func (o *OrasRemote) CopyToStore(ctx context.Context, layers []ocispec.Descriptor, store oras.Target, copyOpts oras.CopyOptions) error {
 	shas := []string{}
 	for _, layer := range layers {
 		if len(layer.Digest.String()) > 0 {
@@ -87,17 +82,7 @@ func (o *OrasRemote) CopyWithProgress(ctx context.Context, layers []ocispec.Desc
 
 	_, err := oras.Copy(ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), copyOpts)
 	if err != nil {
-		if doneSaving != nil {
-			doneSaving <- err
-			<-doneSaving
-		}
 		return err
-	}
-
-	// Send a signal to the progress bar that we're done and wait for it to finish
-	if doneSaving != nil {
-		doneSaving <- nil
-		<-doneSaving
 	}
 
 	return nil

@@ -65,7 +65,10 @@ func (o *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	layerSize := oci.SumDescsSize(layersToPull)
 	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, doneSaving, "Pulling", successText)
 
-	return o.PullLayers(ctx, destinationDir, concurrency, layersToPull, doneSaving)
+	layers, err := o.PullLayers(ctx, destinationDir, concurrency, layersToPull)
+	doneSaving <- err
+	<-doneSaving
+	return layers, err
 }
 
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.
