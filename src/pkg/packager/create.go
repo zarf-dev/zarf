@@ -34,6 +34,7 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
+	p.cfg.Pkg = *loadedPkg
 	p.warnings = append(p.warnings, warnings...)
 
 	// Perform early package validation.
