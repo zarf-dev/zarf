@@ -39,13 +39,16 @@ func (h *Helm) newRenderer() (*renderer, error) {
 		return nil, err
 	}
 
+	namespaces := make(map[string]*corev1.Namespace)
+	if h.cluster != nil {
+		namespaces[h.chart.Namespace] = h.cluster.NewZarfManagedNamespace(h.chart.Namespace)
+	}
+
 	return &renderer{
 		Helm:           h,
 		connectStrings: make(types.ConnectStrings),
-		namespaces: map[string]*corev1.Namespace{
-			h.chart.Namespace: h.cluster.NewZarfManagedNamespace(h.chart.Namespace),
-		},
-		values: *valueTemplate,
+		namespaces:     namespaces,
+		values:         *valueTemplate,
 	}, nil
 }
 
@@ -86,12 +89,88 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	finalManifestsOutput := bytes.NewBuffer(nil)
 
 	// Otherwise, loop over the resources,
-	for _, resource := range resources {
+	if r.cluster != nil {
+		if err := r.editResourceForHelm(resources, finalManifestsOutput); err != nil {
+			return nil, err
+		}
 
+		if err := r.adoptAndUpdateNamespaces(); err != nil {
+			return nil, err
+		}
+	} else {
+		for _, resource := range resources {
+			fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
+		}
+	}
+
+	// Send the bytes back to helm
+	return finalManifestsOutput, nil
+}
+
+func (r *renderer) adoptAndUpdateNamespaces() error {
+	c := r.cluster
+	existingNamespaces, _ := c.GetNamespaces()
+	for name, namespace := range r.namespaces {
+
+		// Check to see if this namespace already exists
+		var existingNamespace bool
+		for _, serverNamespace := range existingNamespaces.Items {
+			if serverNamespace.Name == name {
+				existingNamespace = true
+			}
+		}
+
+		if !existingNamespace {
+			// This is a new namespace, add it
+			if _, err := c.CreateNamespace(namespace); err != nil {
+				return fmt.Errorf("unable to create the missing namespace %s", name)
+			}
+		} else if r.cfg.DeployOpts.AdoptExistingResources {
+			if r.cluster.IsInitialNamespace(name) {
+				// If this is a K8s initial namespace, refuse to adopt it
+				message.Warnf("Refusing to adopt the initial namespace: %s", name)
+			} else {
+				// This is an existing namespace to adopt
+				if _, err := c.UpdateNamespace(namespace); err != nil {
+					return fmt.Errorf("unable to adopt the existing namespace %s", name)
+				}
+			}
+		}
+
+		// If the package is marked as YOLO and the state is empty, skip the secret creation for this namespace
+		if r.cfg.Pkg.Metadata.YOLO && r.cfg.State.Distro == "YOLO" {
+			continue
+		}
+
+		// Create the secret
+		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.cfg.State.RegistryInfo)
+
+		// Try to get a valid existing secret
+		currentRegistrySecret, _ := c.GetSecret(name, config.ZarfImagePullSecretName)
+		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentRegistrySecret.Data, validRegistrySecret.Data) {
+			// Create or update the zarf registry secret
+			if _, err := c.CreateOrUpdateSecret(validRegistrySecret); err != nil {
+				message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
+			}
+
+			// Generate the git server secret
+			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.cfg.State.GitServer)
+
+			// Create or update the zarf git server secret
+			if _, err := c.CreateOrUpdateSecret(gitServerSecret); err != nil {
+				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
+			}
+		}
+	}
+	return nil
+}
+
+func (r *renderer) editResourceForHelm(resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
+	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
 		rawData := &unstructured.Unstructured{}
 		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal manifest: %#v", err)
+			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
 		}
 
 		switch rawData.GetKind() {
@@ -114,7 +193,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				r.namespaces[namespace.Name] = &namespace
 			}
 			// skip so we can strip namespaces from helm's brain
-			continue
+			return nil
 
 		case "Service":
 			// Check service resources for the zarf-connect label
@@ -157,67 +236,8 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 				message.Debugf("Unable to adopt resource %s: %s", rawData.GetName(), err.Error())
 			}
 		}
-
 		// Finally place this back onto the output buffer
 		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
 	}
-
-	c := r.cluster
-	existingNamespaces, _ := c.GetNamespaces()
-
-	for name, namespace := range r.namespaces {
-
-		// Check to see if this namespace already exists
-		var existingNamespace bool
-		for _, serverNamespace := range existingNamespaces.Items {
-			if serverNamespace.Name == name {
-				existingNamespace = true
-			}
-		}
-
-		if !existingNamespace {
-			// This is a new namespace, add it
-			if _, err := c.CreateNamespace(namespace); err != nil {
-				return nil, fmt.Errorf("unable to create the missing namespace %s", name)
-			}
-		} else if r.cfg.DeployOpts.AdoptExistingResources {
-			if r.cluster.IsInitialNamespace(name) {
-				// If this is a K8s initial namespace, refuse to adopt it
-				message.Warnf("Refusing to adopt the initial namespace: %s", name)
-			} else {
-				// This is an existing namespace to adopt
-				if _, err := c.UpdateNamespace(namespace); err != nil {
-					return nil, fmt.Errorf("unable to adopt the existing namespace %s", name)
-				}
-			}
-		}
-
-		// If the package is marked as YOLO and the state is empty, skip the secret creation for this namespace
-		if r.cfg.Pkg.Metadata.YOLO && r.cfg.State.Distro == "YOLO" {
-			continue
-		}
-
-		// Create the secret
-		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.cfg.State.RegistryInfo)
-
-		// Try to get a valid existing secret
-		currentRegistrySecret, _ := c.GetSecret(name, config.ZarfImagePullSecretName)
-		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentRegistrySecret.Data, validRegistrySecret.Data) {
-			// Create or update the zarf registry secret
-			if _, err := c.CreateOrUpdateSecret(validRegistrySecret); err != nil {
-				message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
-			}
-
-			// Generate the git server secret
-			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.cfg.State.GitServer)
-
-			// Create or update the zarf git server secret
-			if _, err := c.CreateOrUpdateSecret(gitServerSecret); err != nil {
-				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
-			}
-		}
-	}
-
-	// Send the bytes back to helm
-	return finalManifestsOutput, nil
+	return nil
 }
