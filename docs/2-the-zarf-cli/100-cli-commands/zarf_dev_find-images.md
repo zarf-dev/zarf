@@ -20,7 +20,7 @@ zarf dev find-images [ PACKAGE ] [flags]
       --deploy-set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
   -h, --help                        help for find-images
       --kube-version string         Override the default helm template KubeVersion when performing a package chart template
-      --registry string             Override the ###ZARF_REGISTRY### value for checks on images using the zarf registry (default "127.0.0.1:31999")
+      --registry-url string         Override the ###ZARF_REGISTRY### value (default "127.0.0.1:31999")
   -p, --repo-chart-path string      If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"
 ```
 
