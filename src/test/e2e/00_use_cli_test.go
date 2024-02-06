@@ -246,7 +246,7 @@ func TestUseCLI(t *testing.T) {
 	t.Run("zarf dev find-images with helm or manifest vars", func(t *testing.T) {
 		t.Parallel()
 		// Test `zarf prepare find-images` for a package with zarf variables in the chart, values file, and manifests
-		path := filepath.Join("src", "test", "packages", "00-find-images")
+		path := filepath.Join("src", "test", "packages", "00-find-images-with-vars")
 		registry := "coolregistry.gov"
 		stdOut, _, err := e2e.Zarf("prepare", "find-images", path, "--registry-url", registry)
 		require.NoError(t, err)
