@@ -14,8 +14,8 @@ components:
         architecture: amd64
     files:
       # Include the actual K3s binary
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.28.6+k3s1/k3s
-        shasum: 8d1372fad6680d858608981df945e13b6781d57fb5cdb8d686bee3785080f567
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.28.4+k3s2/k3s
+        shasum: 9014535a4cd20c788282d60398a06279983562093455b53ab76701539ce67acf
         target: /usr/sbin/k3s
         executable: true
         # K3s magic provides these tools when symlinking
@@ -24,8 +24,8 @@ components:
           - /usr/sbin/ctr
           - /usr/sbin/crictl
       # Transfer the K3s images for containerd to pick them up
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.28.6+k3s1/k3s-airgap-images-amd64.tar.zst
-        shasum: 4900544b64f7dc9d971cd215757476de0cdfe8a75c881d3e4222f89eb4db0d82
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.28.4+k3s2/k3s-airgap-images-amd64.tar.zst
+        shasum: bc4d05bad56a583c80ff443d60e8277a136cc4357dc8527702d38b5cca28880d
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
     actions:
       onDeploy:
@@ -44,8 +44,8 @@ components:
         architecture: arm64
     files:
       # Include the actual K3s binary
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.28.6+k3s1/k3s-arm64
-        shasum: ed16458ea7e746eea6a91608848c6ada006d14138f0ee16db91f86fd4a3ea4f3
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.28.4+k3s2/k3s-arm64
+        shasum: 1ae72ca06d3302f3e86ef92e6e8f84e14a084da69564e87d6e2e75f62e72388d
         target: /usr/sbin/k3s
         executable: true
         # K3s magic provides these tools when symlinking
@@ -54,8 +54,8 @@ components:
           - /usr/sbin/ctr
           - /usr/sbin/crictl
       # Transfer the K3s images for containerd to pick them up
-      - source: https://github.com/k3s-io/k3s/releases/download/v1.28.6+k3s1/k3s-airgap-images-arm64.tar.zst
-        shasum: 62ed669a6d00a4edef96e785bd29f5da027c67b618512983604670db2a4dcc70
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.28.4+k3s2/k3s-airgap-images-arm64.tar.zst
+        shasum: 50621ae1391aec7fc66ca66a46a0e9fd48ce373a58073000efdc278233adc64b
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
     actions:
       onDeploy:
