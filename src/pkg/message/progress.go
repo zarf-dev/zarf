@@ -78,15 +78,6 @@ func (p *ProgressBar) Write(data []byte) (int, error) {
 	return n, nil
 }
 
-// Finish stops the progressbar and logs the approiate message based on if there was an error
-func (p *ProgressBar) Finish(err error, format string, a ...any) {
-	if err != nil {
-		p.Errorf(err, format, a...)
-	} else {
-		p.Successf(format, a...)
-	}
-}
-
 // Successf marks the ProgressBar as successful in the CLI.
 func (p *ProgressBar) Successf(format string, a ...any) {
 	p.Stop()
