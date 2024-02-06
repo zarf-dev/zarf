@@ -333,10 +333,7 @@ func (pc *PackageCreator) processExtensions(pkg *types.ZarfPackage, layout *layo
 		components = append(components, c)
 	}
 
-	// Update the parent package config with the expanded sub components.
-	// This is important when the deploy package is created.
 	pkg.Components = components
-
 	extendedPkg = pkg
 
 	return extendedPkg, nil
