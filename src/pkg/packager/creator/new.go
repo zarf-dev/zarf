@@ -21,7 +21,7 @@ type Creator interface {
 // New returns a new Creator based on the provided create options.
 func New(createOpts types.ZarfCreateOptions, cwd string) Creator {
 	if createOpts.IsSkeleton {
-		return &SkeletonCreator{createOpts: createOpts}
+		return &skeletonCreator{createOpts: createOpts}
 	}
 
 	// differentials are relative to the current working directory
@@ -29,5 +29,5 @@ func New(createOpts types.ZarfCreateOptions, cwd string) Creator {
 		createOpts.DifferentialData.DifferentialPackagePath = filepath.Join(cwd, createOpts.DifferentialData.DifferentialPackagePath)
 	}
 
-	return &PackageCreator{createOpts: createOpts}
+	return &packageCreator{createOpts: createOpts}
 }
