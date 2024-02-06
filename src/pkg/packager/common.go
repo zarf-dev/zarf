@@ -38,6 +38,7 @@ type Packager struct {
 	valueTemplate  *template.Values
 	hpaModified    bool
 	connectStrings types.ConnectStrings
+	sbomViewFiles  []string
 	source         sources.PackageSource
 	generation     int
 }

@@ -69,26 +69,24 @@ func (s *SBOMs) Archive() (err error) {
 }
 
 // StageSBOMViewFiles copies SBOM viewer HTML files to the Zarf SBOM directory.
-func (s *SBOMs) StageSBOMViewFiles() (sbomViewFiles, warnings []string, err error) {
+func (s *SBOMs) StageSBOMViewFiles() (warnings []string, err error) {
 	isTarball := !utils.IsDir(s.Path) && filepath.Ext(s.Path) == ".tar"
 	if isTarball {
-		return nil, nil, fmt.Errorf("unable to process the SBOM files for this package: %s is a tarball", s.Path)
+		return nil, fmt.Errorf("unable to process the SBOM files for this package: %s is a tarball", s.Path)
 	}
 
 	// If SBOMs were loaded, temporarily place them in the deploy directory
 	if !utils.InvalidPath(s.Path) {
-		sbomViewFiles, err = filepath.Glob(filepath.Join(s.Path, "sbom-viewer-*"))
-		if err != nil {
-			return nil, nil, err
+		if _, err := filepath.Glob(filepath.Join(s.Path, "sbom-viewer-*")); err != nil {
+			return nil, err
 		}
 
-		_, err := utils.OutputSBOMFiles(s.Path, SBOMDir, "")
-		if err != nil {
+		if _, err := utils.OutputSBOMFiles(s.Path, SBOMDir, ""); err != nil {
 			// Don't stop the deployment, let the user decide if they want to continue the deployment
 			warning := fmt.Sprintf("Unable to process the SBOM files for this package: %s", err.Error())
 			warnings = append(warnings, warning)
 		}
 	}
 
-	return sbomViewFiles, warnings, nil
+	return warnings, nil
 }

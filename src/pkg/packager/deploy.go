@@ -57,7 +57,7 @@ func (p *Packager) Deploy() (err error) {
 		return err
 	}
 
-	sbomViewFiles, sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
+	sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (p *Packager) Deploy() (err error) {
 	p.warnings = append(p.warnings, sbomWarnings...)
 
 	// Confirm the overall package deployment
-	if !utils.ConfirmAction(config.ZarfDeployStage, layout.SBOMDir, sbomViewFiles, p.warnings, p.cfg.Pkg, p.cfg.PkgOpts) {
+	if !p.confirmAction(config.ZarfDeployStage) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
