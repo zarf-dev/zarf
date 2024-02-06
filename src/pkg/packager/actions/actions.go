@@ -21,6 +21,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// Run runs all provided actions.
 func Run(cfg *types.PackagerConfig, defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
 	for _, a := range actions {
 		if err := runAction(cfg, defaultCfg, a, valueTemplate); err != nil {
