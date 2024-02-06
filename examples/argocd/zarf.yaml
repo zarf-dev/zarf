@@ -8,7 +8,7 @@ components:
     required: true
     charts:
       - name: argo-cd
-        version: 5.46.5
+        version: 5.54.0
         namespace: argocd
         url: https://argoproj.github.io/argo-helm
         releaseName: argocd-baseline
@@ -21,7 +21,7 @@ components:
     required: true
     charts:
       - name: argocd-apps
-        version: 1.4.1
+        version: 1.6.1
         namespace: podinfo
         url: https://argoproj.github.io/argo-helm
         releaseName: argocd-apps

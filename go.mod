@@ -1,6 +1,6 @@
 module github.com/defenseunicorns/zarf
 
-go 1.21.5
+go 1.21.6
 
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema (https://github.com/gojsonschema/gojsonschema/pull/5)
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
@@ -11,50 +11,50 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
 	github.com/anchore/clio v0.0.0-20240131202212-9eba61247448
-	github.com/anchore/stereoscope v0.0.0-20240118133533-eb656fc71793
-	github.com/anchore/syft v0.99.0
-	github.com/derailed/k9s v0.29.1
+	github.com/anchore/stereoscope v0.0.1
+	github.com/anchore/syft v0.103.1
+	github.com/derailed/k9s v0.31.7
 	github.com/distribution/reference v0.5.0
-	github.com/docker/cli v24.0.7+incompatible
+	github.com/docker/cli v24.0.9+incompatible
 	github.com/fairwindsops/pluto/v5 v5.18.4
 	github.com/fatih/color v1.16.0
-	github.com/fluxcd/helm-controller/api v0.36.2
-	github.com/fluxcd/source-controller/api v1.2.1
+	github.com/fluxcd/helm-controller/api v0.37.4
+	github.com/fluxcd/source-controller/api v1.2.4
 	github.com/go-git/go-git/v5 v5.11.0
-	github.com/go-logr/logr v1.3.0
-	github.com/goccy/go-yaml v1.11.2
+	github.com/go-logr/logr v1.4.1
+	github.com/goccy/go-yaml v1.11.3
 	github.com/gofrs/flock v0.8.1
-	github.com/google/go-containerregistry v0.17.0
+	github.com/google/go-containerregistry v0.19.0
 	github.com/gosuri/uitable v0.0.4
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/moby/moby v24.0.7+incompatible
-	github.com/opencontainers/image-spec v1.1.0-rc5
+	github.com/opencontainers/image-spec v1.1.0-rc6
 	github.com/otiai10/copy v1.14.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.17.0
-	github.com/pterm/pterm v0.12.71
+	github.com/prometheus/client_golang v1.18.0
+	github.com/pterm/pterm v0.12.78
 	github.com/sergi/go-diff v1.3.1
-	github.com/sigstore/cosign/v2 v2.2.2
-	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.6
-	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.6
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.6
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.6
+	github.com/sigstore/cosign/v2 v2.2.3
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.1
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.1
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.1
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.1
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.18.1
+	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 	github.com/xeipuuv/gojsonschema v1.2.0
-	golang.org/x/crypto v0.17.0
-	golang.org/x/sync v0.5.0
+	golang.org/x/crypto v0.18.0
+	golang.org/x/sync v0.6.0
 	golang.org/x/term v0.16.0
-	helm.sh/helm/v3 v3.13.2
-	k8s.io/api v0.28.4
-	k8s.io/apimachinery v0.28.4
-	k8s.io/client-go v0.28.4
-	k8s.io/component-base v0.28.4
-	k8s.io/klog/v2 v2.110.1
-	k8s.io/kubectl v0.28.4
-	oras.land/oras-go/v2 v2.3.1
+	helm.sh/helm/v3 v3.14.0
+	k8s.io/api v0.29.1
+	k8s.io/apimachinery v0.29.1
+	k8s.io/client-go v0.29.1
+	k8s.io/component-base v0.29.1
+	k8s.io/klog/v2 v2.120.1
+	k8s.io/kubectl v0.29.1
+	oras.land/oras-go/v2 v2.4.0
 	sigs.k8s.io/kustomize/api v0.16.0
 	sigs.k8s.io/kustomize/kyaml v0.16.0
 	sigs.k8s.io/yaml v1.4.0

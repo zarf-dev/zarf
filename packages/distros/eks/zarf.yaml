@@ -32,17 +32,17 @@ components:
     files:
       - source: eks.yaml
         target: eks.yaml
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.165.0/eksctl_Darwin_amd64.tar.gz
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.170.0/eksctl_Darwin_amd64.tar.gz
         target: binaries/eksctl_Darwin_x86_64
         executable: true
         shasum: eef89e5e460477dfa7d6efb02fcdef2f465f5ef7acca07d2514366d72634ede3
         extractPath: eksctl
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.165.0/eksctl_Darwin_arm64.tar.gz
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.170.0/eksctl_Darwin_arm64.tar.gz
         target: binaries/eksctl_Darwin_arm64
         executable: true
         shasum: f8363b8677c52e5732ae1b3f2f3b2fe9ad07dc855af198cf1074df22943b3116
         extractPath: eksctl
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.165.0/eksctl_Linux_amd64.tar.gz
+      - source: https://github.com/weaveworks/eksctl/releases/download/v0.170.0/eksctl_Linux_amd64.tar.gz
         target: binaries/eksctl_Linux_x86_64
         executable: true
         shasum: 080027518ddff8d85e5686e5efd29d41345a46a2e45e3401028d4ef528cfe267

@@ -22,7 +22,7 @@ components:
       - name: loki-stack
         releaseName: zarf-loki-stack
         url: https://grafana.github.io/helm-charts
-        version: 2.9.11
+        version: 2.10.1
         namespace: zarf
         valuesFiles:
           - pgl-values.yaml
