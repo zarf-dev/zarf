@@ -146,7 +146,9 @@ func (pp *PackagePaths) IsLegacyLayout() bool {
 
 // SignPackage signs the zarf.yaml in a Zarf package.
 func (pp *PackagePaths) SignPackage(signingKeyPath, signingKeyPassword string) error {
-	pp.addSignature(signingKeyPath)
+	if signingKeyPath != "" {
+		pp.Signature = filepath.Join(pp.Base, Signature)
+	}
 
 	passwordFunc := func(_ bool) ([]byte, error) {
 		if signingKeyPassword != "" {
@@ -160,14 +162,6 @@ func (pp *PackagePaths) SignPackage(signingKeyPath, signingKeyPassword string) e
 	}
 
 	return nil
-}
-
-// addSignature sets the signature path if the keyPath is not empty.
-func (pp *PackagePaths) addSignature(keyPath string) *PackagePaths {
-	if keyPath != "" {
-		pp.Signature = filepath.Join(pp.Base, Signature)
-	}
-	return pp
 }
 
 // GenerateChecksums walks through all of the files starting at the base path and generates a checksum file.
