@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -46,10 +47,7 @@ func (o *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 
 	copyOpts := o.CopyOpts
 	copyOpts.Concurrency = concurrency
-	var total int64
-	for _, desc := range descs {
-		total += desc.Size
-	}
+	total := oci.SumDescsSize(descs)
 
 	annotations := annotationsFromMetadata(&pkg.Metadata)
 
