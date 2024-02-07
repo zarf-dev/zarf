@@ -46,7 +46,7 @@ func (o *OrasRemote) PushManifestConfigFromMetadata(ctx context.Context, annotat
 	}
 	manifestConfig := ConfigPartial{
 		Architecture: o.targetPlatform.Architecture,
-		OCIVersion:   "1.0.1",
+		OCIVersion:   specs.Version,
 		Annotations:  annotations,
 	}
 	manifestConfigBytes, err := json.Marshal(manifestConfig)
