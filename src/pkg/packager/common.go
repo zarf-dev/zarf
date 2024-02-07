@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -336,50 +335,22 @@ func (p *Packager) archivePackage(destinationTarball string) error {
 	if err != nil {
 		return fmt.Errorf("unable to read the package archive: %w", err)
 	}
+	spinner.Successf("Package saved to %q", destinationTarball)
 
 	// Convert Megabytes to bytes.
 	chunkSize := p.cfg.CreateOpts.MaxPackageSizeMB * 1000 * 1000
 
 	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
 	if p.cfg.CreateOpts.MaxPackageSizeMB > 0 && fi.Size() > int64(chunkSize) {
-		spinner.Updatef("Package is larger than %dMB, splitting into multiple files", p.cfg.CreateOpts.MaxPackageSizeMB)
-		chunks, sha256sum, err := utils.SplitFile(destinationTarball, chunkSize)
+		if fi.Size()/int64(chunkSize) > 999 {
+			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
+		}
+		message.Notef("Package is larger than %dMB, splitting into multiple files", p.cfg.CreateOpts.MaxPackageSizeMB)
+		err := utils.SplitFile(destinationTarball, chunkSize)
 		if err != nil {
 			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
 		}
-		if len(chunks) > 999 {
-			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
-		}
-
-		status := fmt.Sprintf("Package split into %d files, original sha256sum is %s", len(chunks)+1, sha256sum)
-		spinner.Updatef(status)
-		message.Debug(status)
-		_ = os.RemoveAll(destinationTarball)
-
-		// Marshal the data into a json file.
-		jsonData, err := json.Marshal(types.ZarfSplitPackageData{
-			Count:     len(chunks),
-			Bytes:     fi.Size(),
-			Sha256Sum: sha256sum,
-		})
-		if err != nil {
-			return fmt.Errorf("unable to marshal the split package data: %w", err)
-		}
-
-		// Prepend the json data to the first chunk.
-		chunks = append([][]byte{jsonData}, chunks...)
-
-		for idx, chunk := range chunks {
-			path := fmt.Sprintf("%s.part%03d", destinationTarball, idx)
-			status := fmt.Sprintf("Writing %s", path)
-			spinner.Updatef(status)
-			message.Debug(status)
-			if err := os.WriteFile(path, chunk, 0644); err != nil {
-				return fmt.Errorf("unable to write the file %s: %w", path, err)
-			}
-		}
 	}
-	spinner.Successf("Package saved to %q", destinationTarball)
 	return nil
 }
 
