@@ -14,7 +14,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -113,8 +112,8 @@ retryCmd:
 
 			// If an output variable is defined, set it.
 			for _, v := range action.SetVariables {
-				variables.SetVariableInConfig(cfg, v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
-				if err := variables.CheckVariablePattern(cfg, v.Name, v.Pattern); err != nil {
+				cfg.SetVariable(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
+				if err := cfg.CheckVariablePattern(v.Name, v.Pattern); err != nil {
 					message.WarnErr(err, err.Error())
 					return err
 				}
