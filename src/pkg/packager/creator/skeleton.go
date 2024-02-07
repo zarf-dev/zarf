@@ -58,7 +58,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (load
 	}
 	warnings = append(warnings, composeWarnings...)
 
-	loadedPkg, err = sc.processExtensions(loadedPkg, dst)
+	loadedPkg.Components, err = sc.processExtensions(loadedPkg.Components, dst)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -125,11 +125,9 @@ func (sc *SkeletonCreator) Output(dst *layout.PackagePaths, loadedPkg *types.Zar
 	return nil
 }
 
-func (sc *SkeletonCreator) processExtensions(pkg *types.ZarfPackage, layout *layout.PackagePaths) (extendedPkg *types.ZarfPackage, err error) {
-	components := []types.ZarfComponent{}
-
+func (pc *SkeletonCreator) processExtensions(components []types.ZarfComponent, layout *layout.PackagePaths) (processedComponents []types.ZarfComponent, err error) {
 	// Create component paths and process extensions for each component.
-	for _, c := range pkg.Components {
+	for _, c := range components {
 		componentPaths, err := layout.Components.Create(c)
 		if err != nil {
 			return nil, err
@@ -142,13 +140,10 @@ func (sc *SkeletonCreator) processExtensions(pkg *types.ZarfPackage, layout *lay
 			}
 		}
 
-		components = append(components, c)
+		processedComponents = append(processedComponents, c)
 	}
 
-	pkg.Components = components
-	extendedPkg = pkg
-
-	return extendedPkg, nil
+	return processedComponents, nil
 }
 
 func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) (updatedComponent *types.ZarfComponent, err error) {

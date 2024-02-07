@@ -86,7 +86,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loade
 	warnings = append(warnings, templateWarnings...)
 
 	// After templates are filled process any create extensions
-	loadedPkg, err = pc.processExtensions(loadedPkg, dst)
+	loadedPkg.Components, err = pc.processExtensions(loadedPkg.Components, dst, loadedPkg.Metadata.YOLO)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -324,11 +324,9 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, loadedPkg *types.Zarf
 	return nil
 }
 
-func (pc *PackageCreator) processExtensions(pkg *types.ZarfPackage, layout *layout.PackagePaths) (extendedPkg *types.ZarfPackage, err error) {
-	components := []types.ZarfComponent{}
-
+func (pc *PackageCreator) processExtensions(components []types.ZarfComponent, layout *layout.PackagePaths, isYOLO bool) (processedComponents []types.ZarfComponent, err error) {
 	// Create component paths and process extensions for each component.
-	for _, c := range pkg.Components {
+	for _, c := range components {
 		componentPaths, err := layout.Components.Create(c)
 		if err != nil {
 			return nil, err
@@ -336,18 +334,15 @@ func (pc *PackageCreator) processExtensions(pkg *types.ZarfPackage, layout *layo
 
 		// Big Bang
 		if c.Extensions.BigBang != nil {
-			if c, err = bigbang.Run(pkg.Metadata.YOLO, componentPaths, c); err != nil {
+			if c, err = bigbang.Run(isYOLO, componentPaths, c); err != nil {
 				return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
 			}
 		}
 
-		components = append(components, c)
+		processedComponents = append(processedComponents, c)
 	}
 
-	pkg.Components = components
-	extendedPkg = pkg
-
-	return extendedPkg, nil
+	return processedComponents, nil
 }
 
 func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) error {
