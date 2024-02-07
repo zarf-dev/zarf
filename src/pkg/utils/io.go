@@ -435,7 +435,6 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 		title := fmt.Sprintf("[%d/%d] MB bytes written", progressBar.GetCurrent()/1000/1000, fileSize/1000/1000)
 		progressBar.UpdateTitle(title)
 	}
-	progressBar.Successf("Package split across %d files", len(fileNames))
 	file.Close()
 	_ = os.RemoveAll(srcFile)
 
@@ -458,6 +457,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 		return fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
 	fileNames = append(fileNames, path)
+	progressBar.Successf("Package split across %d files", len(fileNames))
 
 	return nil
 }
