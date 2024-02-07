@@ -39,5 +39,5 @@ func Build(path string, destination string, kustomizeAllowAnyDirectory bool) err
 		return fmt.Errorf("problem converting kustomization to yaml: %w", err)
 	}
 
-	return os.WriteFile(destination, yaml, 0644)
+	return os.WriteFile(destination, yaml, 0600)
 }

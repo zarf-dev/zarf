@@ -28,7 +28,7 @@ func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInj
 	defer wg.Done()
 
 	injectionCompletionMarker := filepath.Join(componentPath.DataInjections, config.GetDataInjectionMarker())
-	if err := os.WriteFile(injectionCompletionMarker, []byte("🦄"), 0644); err != nil {
+	if err := os.WriteFile(injectionCompletionMarker, []byte("🦄"), 0600); err != nil {
 		message.WarnErrf(err, "Unable to create the data injection completion marker")
 		return
 	}

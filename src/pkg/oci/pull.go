@@ -88,7 +88,7 @@ func (o *OrasRemote) PullPath(ctx context.Context, destinationDir string, desc o
 		return errors.New("failed to pull layer: layer is not a file")
 	}
 
-	return os.WriteFile(filepath.Join(destinationDir, rel), b, 0644)
+	return os.WriteFile(filepath.Join(destinationDir, rel), b, 0600)
 }
 
 // PullPaths pulls multiple files from the remote repository and saves them to `destinationDir`.

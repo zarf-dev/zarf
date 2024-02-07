@@ -654,7 +654,7 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 
 	// Create the checksums file
 	checksumsFilePath := p.layout.Checksums
-	if err := os.WriteFile(checksumsFilePath, []byte(strings.Join(checksumsData, "\n")+"\n"), 0644); err != nil {
+	if err := os.WriteFile(checksumsFilePath, []byte(strings.Join(checksumsData, "\n")+"\n"), 0600); err != nil {
 		return "", err
 	}
 
