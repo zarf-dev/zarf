@@ -13,7 +13,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content/file"
 )
 
 // FileDescriptorExists returns true if the given file exists in the given directory with the expected SHA.
@@ -43,24 +42,6 @@ func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDi
 		return false
 	}
 	return actual == desc.Digest.Encoded()
-}
-
-// PullLayers pulls the package from the remote repository and saves it to the given path.
-func (o *OrasRemote) PullLayers(ctx context.Context, destinationDir string, concurrency int,
-	layersToPull []ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-	// de-duplicate layers
-	layersToPull = RemoveDuplicateDescriptors(layersToPull)
-
-	dst, err := file.New(destinationDir)
-	if err != nil {
-		return nil, err
-	}
-	defer dst.Close()
-
-	copyOpts := o.CopyOpts
-	copyOpts.Concurrency = concurrency
-
-	return layersToPull, o.CopyToStore(ctx, layersToPull, dst, copyOpts)
 }
 
 // CopyToStore copies the given layers from the remote repository to the given store.

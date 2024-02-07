@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/content/file"
 )
 
 var (
@@ -65,10 +66,19 @@ func (o *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	layerSize := oci.SumDescsSize(layersToPull)
 	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, doneSaving, "Pulling", successText)
 
-	layers, err := o.PullLayers(ctx, destinationDir, concurrency, layersToPull)
+	dst, err := file.New(destinationDir)
+	if err != nil {
+		return nil, err
+	}
+	defer dst.Close()
+
+	copyOpts := o.CopyOpts
+	copyOpts.Concurrency = concurrency
+
+	err = o.CopyToStore(ctx, layersToPull, dst, copyOpts)
 	doneSaving <- err
 	<-doneSaving
-	return layers, err
+	return layersToPull, err
 }
 
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.
