@@ -23,7 +23,7 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, include func(d o
 		return err
 	}
 	layers := srcRoot.Filter(include)
-	size := oci.SumDescsSize(srcRoot.Layers)
+	size := oci.SumDescsSize(layers)
 
 	title := fmt.Sprintf("[0/%d] layers copied", len(layers))
 	progressBar := message.NewProgressBar(size, title)
