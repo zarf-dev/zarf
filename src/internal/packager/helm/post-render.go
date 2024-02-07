@@ -193,7 +193,7 @@ func (r *renderer) editResourceForHelm(resources []releaseutil.Manifest, finalMa
 				r.namespaces[namespace.Name] = &namespace
 			}
 			// skip so we can strip namespaces from helm's brain
-			return nil
+			continue
 
 		case "Service":
 			// Check service resources for the zarf-connect label
