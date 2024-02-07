@@ -71,7 +71,13 @@ func (o *OrasRemote) CopyToStore(ctx context.Context, layers []ocispec.Descripto
 		}
 	}
 
+	preCopy := copyOpts.PreCopy
 	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
+		if preCopy != nil {
+			if err := preCopy(ctx, desc); err != nil {
+				return err
+			}
+		}
 		for _, sha := range shas {
 			if sha == desc.Digest.Encoded() {
 				return nil

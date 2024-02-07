@@ -49,12 +49,12 @@ type Logger interface {
 	Error(msg string, args ...any)
 }
 
-// Write doesn't do anything but satify implementation
+// Write doesn't do anything but satisfy implementation
 func (DiscardProgressWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// UpdateTitle doesn't do anything but satify implementation
+// UpdateTitle doesn't do anything but satisfy implementation
 func (DiscardProgressWriter) UpdateTitle(_ string) {}
 
 // DiscardProgressWriter is a ProgressWriter in which all calls succeed without doing anything
