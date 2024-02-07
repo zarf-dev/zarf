@@ -98,7 +98,7 @@ func (p *Packager) Publish() (err error) {
 
 		p.warnings = append(p.warnings, warnings...)
 
-		if err := sc.Assemble(p.layout, loadedPkg); err != nil {
+		if err := sc.Assemble(p.layout, loadedPkg.Components, ""); err != nil {
 			return err
 		}
 

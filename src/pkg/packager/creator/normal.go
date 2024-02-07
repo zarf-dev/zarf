@@ -118,13 +118,13 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loade
 }
 
 // Assemble assembles all of the package assets into Zarf's tmp directory layout.
-func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
+func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.ZarfComponent, arch string) error {
 	var imageList []transform.Image
 
 	skipSBOMFlagUsed := pc.createOpts.SkipSBOM
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
 
-	for _, component := range loadedPkg.Components {
+	for _, component := range components {
 		onCreate := component.Actions.OnCreate
 
 		onFailure := func() {
@@ -180,7 +180,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, loadedPkg *types.Za
 				ImagesPath:        dst.Images.Base,
 				ImageList:         imageList,
 				Insecure:          config.CommonOptions.Insecure,
-				Architectures:     []string{loadedPkg.Metadata.Architecture, loadedPkg.Build.Architecture},
+				Architectures:     []string{arch},
 				RegistryOverrides: pc.createOpts.RegistryOverrides,
 			}
 

@@ -46,7 +46,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	if err := pc.Assemble(p.layout, loadedPkg); err != nil {
+	if err := pc.Assemble(p.layout, loadedPkg.Components, loadedPkg.Metadata.Architecture); err != nil {
 		return err
 	}
 
