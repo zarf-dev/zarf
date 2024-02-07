@@ -37,5 +37,5 @@ zarf tools sbom [flags]
 * [zarf tools sbom attest](zarf_tools_sbom_attest.md)	 - Generate an SBOM as an attestation for the given [SOURCE] container image
 * [zarf tools sbom convert](zarf_tools_sbom_convert.md)	 - Convert between SBOM formats
 * [zarf tools sbom login](zarf_tools_sbom_login.md)	 - Log in to a registry
-* [zarf tools sbom packages](zarf_tools_sbom_packages.md)	 - Generate a package SBOM
+* [zarf tools sbom scan](zarf_tools_sbom_scan.md)	 - Generate an SBOM
 * [zarf tools sbom version](zarf_tools_sbom_version.md)	 - show version information
