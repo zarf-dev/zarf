@@ -53,3 +53,6 @@ postgresql-ha:
 
 redis-cluster:
   enabled: false
+
+strategy:
+  type: "Recreate"
