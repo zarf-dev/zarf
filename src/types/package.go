@@ -24,6 +24,21 @@ type ZarfPackage struct {
 	Variables  []ZarfPackageVariable `json:"variables,omitempty" jsonschema:"description=Variable template values applied on deploy for K8s resources"`
 }
 
+// IsInitConfig returns whether a Zarf package is an init config.
+func (pkg ZarfPackage) IsInitConfig() bool {
+	return pkg.Kind == ZarfInitConfig
+}
+
+// IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections).
+func (pkg ZarfPackage) IsSBOMAble() bool {
+	for _, c := range pkg.Components {
+		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.DataInjections) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // ZarfMetadata lists information about the current ZarfPackage.
 type ZarfMetadata struct {
 	Name              string `json:"name" jsonschema:"description=Name to identify this Zarf package,pattern=^[a-z0-9\\-]*[a-z0-9]$"`

@@ -11,7 +11,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -34,7 +33,7 @@ func setPackageMetadata(pkg types.ZarfPackage, createOpts types.ZarfCreateOption
 		return nil, err
 	}
 
-	if utils.IsInitConfig(pkg) {
+	if pkg.IsInitConfig() {
 		configuredPkg.Metadata.Version = config.CLIVersion
 	}
 

@@ -11,11 +11,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// IsInitConfig returns whether the provided Zarf package is an init config.
-func IsInitConfig(pkg types.ZarfPackage) bool {
-	return pkg.Kind == types.ZarfInitConfig
-}
-
 // GetInitPackageName returns the formatted name of the init package.
 func GetInitPackageName(arch string) string {
 	if arch == "" {
@@ -27,7 +22,7 @@ func GetInitPackageName(arch string) string {
 
 // GetPackageName returns the formatted name of the package.
 func GetPackageName(pkg types.ZarfPackage, diffData types.DifferentialData) string {
-	if IsInitConfig(pkg) {
+	if pkg.IsInitConfig() {
 		return GetInitPackageName(pkg.Metadata.Architecture)
 	}
 
@@ -45,15 +40,4 @@ func GetPackageName(pkg types.ZarfPackage, diffData types.DifferentialData) stri
 	}
 
 	return fmt.Sprintf("%s.%s", packageFileName, suffix)
-}
-
-// IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections)
-func IsSBOMAble(pkg types.ZarfPackage) bool {
-	for _, c := range pkg.Components {
-		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.DataInjections) > 0 {
-			return true
-		}
-	}
-
-	return false
 }
