@@ -39,6 +39,11 @@ func (h *Helm) newRenderer() (*renderer, error) {
 		return nil, err
 	}
 
+	// TODO (austinabro321) this should be cleaned up after https://github.com/defenseunicorns/zarf/pull/2276 gets merged
+	if h.cfg.State == nil {
+		valueTemplate.SetState(&types.ZarfState{})
+	}
+
 	namespaces := make(map[string]*corev1.Namespace)
 	if h.cluster != nil {
 		namespaces[h.chart.Namespace] = h.cluster.NewZarfManagedNamespace(h.chart.Namespace)
