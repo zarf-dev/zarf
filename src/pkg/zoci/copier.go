@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -22,7 +23,8 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, include func(d o
 	if err != nil {
 		return err
 	}
-	layers := srcRoot.Filter(include)
+	layers := helpers.Filter(srcRoot.Layers, include)
+	layers = append(layers, srcRoot.Config)
 	size := oci.SumDescsSize(layers)
 
 	title := fmt.Sprintf("[0/%d] layers copied", len(layers))

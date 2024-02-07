@@ -20,11 +20,6 @@ type Manifest struct {
 	ocispec.Manifest
 }
 
-// NewManifest returns a new Manifest
-func NewManifest(manifest *ocispec.Manifest) *Manifest {
-	return &Manifest{*manifest}
-}
-
 // Locate returns the descriptor for the first layer with the given path or digest.
 func (m *Manifest) Locate(pathOrDigest string) ocispec.Descriptor {
 	return helpers.Find(m.Layers, func(layer ocispec.Descriptor) bool {
@@ -36,18 +31,4 @@ func (m *Manifest) Locate(pathOrDigest string) ocispec.Descriptor {
 // MarshalJSON returns the JSON encoding of the manifest.
 func (m *Manifest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m.Manifest)
-}
-
-// Filter returns all the layers in the manifest satisfying `include`
-func (m *Manifest) Filter(include func(d ocispec.Descriptor) bool) []ocispec.Descriptor {
-	if include == nil {
-		return append(m.Layers, m.Config)
-	}
-	var layers []ocispec.Descriptor
-	for _, layer := range m.Layers {
-		if include(layer) {
-			layers = append(layers, layer)
-		}
-	}
-	return append(layers, m.Config)
 }

@@ -11,6 +11,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
@@ -31,7 +32,8 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 		return err
 	}
 
-	layers := srcRoot.Filter(include)
+	layers := helpers.Filter(srcRoot.Layers, include)
+	layers = append(layers, srcRoot.Config)
 
 	start := time.Now()
 

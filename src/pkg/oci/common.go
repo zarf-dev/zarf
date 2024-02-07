@@ -183,12 +183,7 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 		return err
 	}
 
-	repo, err := remote.NewRepository(ref.String())
-	if err != nil {
-		return err
-	}
-
-	o.repo.Reference = repo.Reference
+	o.repo.Reference = ref
 	o.repo.Client = client
 
 	return nil

@@ -6,6 +6,7 @@ package oci
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -94,14 +95,17 @@ func (o *OrasRemote) CopyToStore(ctx context.Context, layers []ocispec.Descripto
 	return nil
 }
 
-// PullLayer pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
-func (o *OrasRemote) PullLayer(ctx context.Context, destinationDir string, desc ocispec.Descriptor) error {
+// PullPath pulls a layer from the remote repository and saves it to `destinationDir/annotationTitle`.
+func (o *OrasRemote) PullPath(ctx context.Context, destinationDir string, desc ocispec.Descriptor) error {
 	b, err := o.FetchLayer(ctx, desc)
 	if err != nil {
 		return err
 	}
 
 	rel := desc.Annotations[ocispec.AnnotationTitle]
+	if rel == "" {
+		return errors.New("failed to pull layer: layer is not a file")
+	}
 
 	return os.WriteFile(filepath.Join(destinationDir, rel), b, 0644)
 }
@@ -121,7 +125,7 @@ func (o *OrasRemote) PullPaths(ctx context.Context, destinationDir string, paths
 			if o.FileDescriptorExists(desc, destinationDir) {
 				continue
 			}
-			err = o.PullLayer(ctx, destinationDir, desc)
+			err = o.PullPath(ctx, destinationDir, desc)
 			if err != nil {
 				return nil, err
 			}
