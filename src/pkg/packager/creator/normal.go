@@ -301,7 +301,7 @@ func (pc *packageCreator) Output(dst *layout.PackagePaths, loadedPkg *types.Zarf
 		sbomDir = dst.SBOMs.Path
 
 		if outputSBOM != "" {
-			out, err := utils.OutputSBOMFiles(sbomDir, outputSBOM, loadedPkg.Metadata.Name)
+			out, err := dst.SBOMs.OutputSBOMFiles(outputSBOM, loadedPkg.Metadata.Name)
 			if err != nil {
 				return err
 			}

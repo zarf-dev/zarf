@@ -81,7 +81,7 @@ func (s *SBOMs) StageSBOMViewFiles() (warnings []string, err error) {
 			return nil, err
 		}
 
-		if _, err := utils.OutputSBOMFiles(s.Path, SBOMDir, ""); err != nil {
+		if _, err := s.OutputSBOMFiles(SBOMDir, ""); err != nil {
 			// Don't stop the deployment, let the user decide if they want to continue the deployment
 			warning := fmt.Sprintf("Unable to process the SBOM files for this package: %s", err.Error())
 			warnings = append(warnings, warning)
@@ -89,4 +89,19 @@ func (s *SBOMs) StageSBOMViewFiles() (warnings []string, err error) {
 	}
 
 	return warnings, nil
+}
+
+// OutputSBOMFiles outputs SBOM files into outputDir.
+func (s *SBOMs) OutputSBOMFiles(outputDir, packageName string) (string, error) {
+	packagePath := filepath.Join(outputDir, packageName)
+
+	if err := os.RemoveAll(packagePath); err != nil {
+		return "", err
+	}
+
+	if err := utils.CreateDirectory(packagePath, 0700); err != nil {
+		return "", err
+	}
+
+	return packagePath, utils.CreatePathAndCopy(s.Path, packagePath)
 }
