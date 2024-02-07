@@ -150,7 +150,7 @@ func initWithoutStorageClass(t *testing.T) {
 
 	storageClassFileName := "storage-class.yaml"
 
-	err = os.WriteFile(storageClassFileName, []byte(storageClassYaml), 0666)
+	err = os.WriteFile(storageClassFileName, []byte(storageClassYaml), 0600)
 	require.NoError(t, err)
 	defer e2e.CleanFiles(storageClassFileName)
 

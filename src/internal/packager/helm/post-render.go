@@ -61,7 +61,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 	path := filepath.Join(tempDir, "chart.yaml")
 
-	if err := os.WriteFile(path, renderedManifests.Bytes(), 0666); err != nil {
+	if err := os.WriteFile(path, renderedManifests.Bytes(), 0644); err != nil {
 		return nil, fmt.Errorf("unable to write the post-render file for the helm chart")
 	}
 
