@@ -40,14 +40,14 @@ func (m *Manifest) MarshalJSON() ([]byte, error) {
 
 // Filter returns all the layers in the manifest satisfying `include`
 func (m *Manifest) Filter(include func(d ocispec.Descriptor) bool) []ocispec.Descriptor {
+	if include == nil {
+		return append(m.Layers, m.Config)
+	}
 	var layers []ocispec.Descriptor
 	for _, layer := range m.Layers {
-		if include != nil && include(layer) {
-			layers = append(layers, layer)
-		} else if include == nil {
+		if include(layer) {
 			layers = append(layers, layer)
 		}
 	}
-	layers = append(layers, m.Config)
-	return layers
+	return append(layers, m.Config)
 }
