@@ -46,19 +46,19 @@ func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (load
 		return nil, nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
-	configuredPkg, err := setPackageMetadata(pkg, sc.createOpts)
+	loadedPkg, err = setPackageMetadata(pkg, sc.createOpts)
 	if err != nil {
 		message.Warn(err.Error())
 	}
 
 	// Compose components into a single zarf.yaml file
-	composedPkg, composeWarnings, err := ComposeComponents(configuredPkg, sc.createOpts.Flavor)
+	loadedPkg, composeWarnings, err := ComposeComponents(loadedPkg, sc.createOpts.Flavor)
 	if err != nil {
 		return nil, nil, err
 	}
 	warnings = append(warnings, composeWarnings...)
 
-	extendedPkg, err := sc.processExtensions(composedPkg, dst)
+	loadedPkg, err = sc.processExtensions(loadedPkg, dst)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -66,8 +66,6 @@ func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (load
 	for _, warning := range warnings {
 		message.Warn(warning)
 	}
-
-	loadedPkg = extendedPkg
 
 	return loadedPkg, warnings, nil
 }

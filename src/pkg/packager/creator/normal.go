@@ -64,13 +64,13 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loade
 		return nil, nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
-	configuredPkg, err := setPackageMetadata(pkg, pc.createOpts)
+	loadedPkg, err = setPackageMetadata(pkg, pc.createOpts)
 	if err != nil {
 		message.Warn(err.Error())
 	}
 
 	// Compose components into a single zarf.yaml file
-	composedPkg, composeWarnings, err := ComposeComponents(configuredPkg, pc.createOpts.Flavor)
+	loadedPkg, composeWarnings, err := ComposeComponents(loadedPkg, pc.createOpts.Flavor)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -78,7 +78,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loade
 	warnings = append(warnings, composeWarnings...)
 
 	// After components are composed, template the active package.
-	templatedPkg, templateWarnings, err := FillActiveTemplate(composedPkg, pc.createOpts.SetVariables)
+	loadedPkg, templateWarnings, err := FillActiveTemplate(loadedPkg, pc.createOpts.SetVariables)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}
@@ -86,36 +86,35 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loade
 	warnings = append(warnings, templateWarnings...)
 
 	// After templates are filled process any create extensions
-	extendedPkg, err := pc.processExtensions(templatedPkg, dst)
+	loadedPkg, err = pc.processExtensions(loadedPkg, dst)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// If we are creating a differential package, remove duplicate images and repos.
-	if extendedPkg.Build.Differential {
+	if loadedPkg.Build.Differential {
 		loadedDiffData, err := loadDifferentialData(&pc.createOpts.DifferentialData)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		versionsMatch := loadedDiffData.DifferentialPackageVersion == extendedPkg.Metadata.Version
+		versionsMatch := loadedDiffData.DifferentialPackageVersion == loadedPkg.Metadata.Version
 		if versionsMatch {
 			return nil, nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
 
-		noVersionSet := loadedDiffData.DifferentialPackageVersion == "" || extendedPkg.Metadata.Version == ""
+		noVersionSet := loadedDiffData.DifferentialPackageVersion == "" || loadedPkg.Metadata.Version == ""
 		if noVersionSet {
 			return nil, nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
 
-		diffPkg, err := removeCopiesFromDifferentialPackage(extendedPkg, loadedDiffData)
+		loadedPkg, err = removeCopiesFromDifferentialPackage(loadedPkg, loadedDiffData)
 		if err != nil {
 			return nil, nil, err
 		}
-		return diffPkg, warnings, nil
 	}
 
-	return extendedPkg, warnings, nil
+	return loadedPkg, warnings, nil
 }
 
 // Assemble assembles all of the package assets into Zarf's tmp directory layout.
