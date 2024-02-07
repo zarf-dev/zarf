@@ -436,8 +436,6 @@ func (c *Cluster) getImagesAndNodesForInjection(timeoutDuration time.Duration) (
 	result := make(imageNodeMap)
 
 	for {
-		// Delay check 2 seconds
-		time.Sleep(2 * time.Second)
 		select {
 
 		// On timeout abort
@@ -493,6 +491,7 @@ func (c *Cluster) getImagesAndNodesForInjection(timeoutDuration time.Duration) (
 
 		if len(result) < 1 {
 			c.Log("no images found: %w")
+			time.Sleep(2 * time.Second)
 		} else {
 			return result, nil
 		}
