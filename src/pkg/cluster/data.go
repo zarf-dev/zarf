@@ -18,7 +18,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -29,7 +28,7 @@ func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInj
 	defer wg.Done()
 
 	injectionCompletionMarker := filepath.Join(componentPath.DataInjections, config.GetDataInjectionMarker())
-	if err := helpers.WriteFile(injectionCompletionMarker, []byte("🦄")); err != nil {
+	if err := os.WriteFile(injectionCompletionMarker, []byte("🦄"), 0666); err != nil {
 		message.WarnErrf(err, "Unable to create the data injection completion marker")
 		return
 	}

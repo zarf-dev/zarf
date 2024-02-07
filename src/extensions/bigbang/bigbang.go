@@ -465,7 +465,7 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 			return err
 		}
 
-		if err := helpers.WriteFile(path, out); err != nil {
+		if err := os.WriteFile(path, out, 0666); err != nil {
 			return err
 		}
 

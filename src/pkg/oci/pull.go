@@ -103,7 +103,7 @@ func (o *OrasRemote) PullLayer(ctx context.Context, destinationDir string, desc 
 
 	rel := desc.Annotations[ocispec.AnnotationTitle]
 
-	return helpers.WriteFile(filepath.Join(destinationDir, rel), b)
+	return os.WriteFile(filepath.Join(destinationDir, rel), b, 0666)
 }
 
 // PullPaths pulls multiple files from the remote repository and saves them to `destinationDir`.
