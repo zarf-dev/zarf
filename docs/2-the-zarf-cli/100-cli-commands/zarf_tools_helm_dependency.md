@@ -74,6 +74,7 @@ for this case.
       --kube-token string               bearer token used for authentication
       --kubeconfig string               path to the kubeconfig file
   -n, --namespace string                namespace scope for this request
+      --qps float32                     queries per second used when communicating with the Kubernetes API, not including bursting
       --registry-config string          path to the registry config file
       --repository-cache string         path to the file containing cached repository indexes
       --repository-config string        path to the file containing repository names and URLs
