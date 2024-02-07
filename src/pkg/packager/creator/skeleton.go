@@ -23,18 +23,23 @@ import (
 )
 
 var (
-	// veryify that skeletonCreator implements Creator
-	_ Creator = (*skeletonCreator)(nil)
+	// veryify that SkeletonCreator implements Creator
+	_ Creator = (*SkeletonCreator)(nil)
 )
 
-// skeletonCreator provides methods for creating skeleton Zarf packages.
-type skeletonCreator struct {
+// SkeletonCreator provides methods for creating skeleton Zarf packages.
+type SkeletonCreator struct {
 	createOpts  types.ZarfCreateOptions
 	publishOpts types.ZarfPublishOptions
 }
 
+// NewSkeletonCreator returns a new SkeletonCreator.
+func NewSkeletonCreator(createOpts types.ZarfCreateOptions, publishOpts types.ZarfPublishOptions) *SkeletonCreator {
+	return &SkeletonCreator{createOpts: createOpts, publishOpts: publishOpts}
+}
+
 // LoadPackageDefinition loads and configure a zarf.yaml file when creating and publishing a skeleton package.
-func (sc *skeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loadedPkg *types.ZarfPackage, warnings []string, err error) {
+func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loadedPkg *types.ZarfPackage, warnings []string, err error) {
 	var pkg types.ZarfPackage
 
 	if err := utils.ReadYaml(layout.ZarfYAML, &pkg); err != nil {
@@ -70,7 +75,7 @@ func (sc *skeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (load
 // Assemble updates all components of the loaded Zarf package with necessary modifications for package assembly.
 //
 // It processes each component to ensure correct structure and resource locations.
-func (sc *skeletonCreator) Assemble(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
+func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
 	var updatedComponents []types.ZarfComponent
 
 	for _, component := range loadedPkg.Components {
@@ -95,7 +100,7 @@ func (sc *skeletonCreator) Assemble(dst *layout.PackagePaths, loadedPkg *types.Z
 // - writes the loaded zarf.yaml to disk
 //
 // - signs the package
-func (sc *skeletonCreator) Output(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
+func (sc *SkeletonCreator) Output(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
 	for _, component := range loadedPkg.Components {
 		if err := dst.Components.Archive(component, false); err != nil {
 			return err
@@ -122,7 +127,7 @@ func (sc *skeletonCreator) Output(dst *layout.PackagePaths, loadedPkg *types.Zar
 	return nil
 }
 
-func (sc *skeletonCreator) processExtensions(pkg *types.ZarfPackage, layout *layout.PackagePaths) (extendedPkg *types.ZarfPackage, err error) {
+func (sc *SkeletonCreator) processExtensions(pkg *types.ZarfPackage, layout *layout.PackagePaths) (extendedPkg *types.ZarfPackage, err error) {
 	components := []types.ZarfComponent{}
 
 	// Create component paths and process extensions for each component.
@@ -148,7 +153,7 @@ func (sc *skeletonCreator) processExtensions(pkg *types.ZarfPackage, layout *lay
 	return extendedPkg, nil
 }
 
-func (sc *skeletonCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) (updatedComponent *types.ZarfComponent, err error) {
+func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) (updatedComponent *types.ZarfComponent, err error) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	updatedComponent = &component

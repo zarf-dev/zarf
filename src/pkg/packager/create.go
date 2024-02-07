@@ -27,9 +27,9 @@ func (p *Packager) Create() (err error) {
 
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	c := creator.New(p.cfg.CreateOpts, cwd)
+	pc := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
 
-	loadedPkg, warnings, err := c.LoadPackageDefinition(p.layout)
+	loadedPkg, warnings, err := pc.LoadPackageDefinition(p.layout)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	if err := c.Assemble(p.layout, loadedPkg); err != nil {
+	if err := pc.Assemble(p.layout, loadedPkg); err != nil {
 		return err
 	}
 
@@ -55,5 +55,5 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	return c.Output(p.layout, loadedPkg)
+	return pc.Output(p.layout, loadedPkg)
 }

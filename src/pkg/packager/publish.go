@@ -89,20 +89,20 @@ func (p *Packager) Publish() (err error) {
 			return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 		}
 
-		c := creator.New(p.cfg.CreateOpts, "")
+		sc := creator.NewSkeletonCreator(p.cfg.CreateOpts, p.cfg.PublishOpts)
 
-		loadedPkg, warnings, err := c.LoadPackageDefinition(p.layout)
+		loadedPkg, warnings, err := sc.LoadPackageDefinition(p.layout)
 		if err != nil {
 			return err
 		}
 
 		p.warnings = append(p.warnings, warnings...)
 
-		if err := c.Assemble(p.layout, loadedPkg); err != nil {
+		if err := sc.Assemble(p.layout, loadedPkg); err != nil {
 			return err
 		}
 
-		if err := c.Output(p.layout, loadedPkg); err != nil {
+		if err := sc.Output(p.layout, loadedPkg); err != nil {
 			return err
 		}
 

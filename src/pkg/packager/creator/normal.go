@@ -34,20 +34,30 @@ import (
 )
 
 var (
-	// veryify that packageCreator implements Creator
-	_ Creator = (*packageCreator)(nil)
+	// veryify that PackageCreator implements Creator
+	_ Creator = (*PackageCreator)(nil)
 )
 
-// packageCreator provides methods for creating normal (not skeleton) Zarf packages.
-type packageCreator struct {
+// PackageCreator provides methods for creating normal (not skeleton) Zarf packages.
+type PackageCreator struct {
 	createOpts types.ZarfCreateOptions
 
 	// TODO: (@lucasrod16) remove PackagerConfig once actions do not depend on it: https://github.com/defenseunicorns/zarf/pull/2276
 	cfg *types.PackagerConfig
 }
 
+// NewPackageCreator returns a new PackageCreator.
+func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerConfig, cwd string) *PackageCreator {
+	// differentials are relative to the current working directory
+	if createOpts.DifferentialData.DifferentialPackagePath != "" {
+		createOpts.DifferentialData.DifferentialPackagePath = filepath.Join(cwd, createOpts.DifferentialData.DifferentialPackagePath)
+	}
+
+	return &PackageCreator{createOpts: createOpts, cfg: cfg}
+}
+
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
-func (pc *packageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loadedPkg *types.ZarfPackage, warnings []string, err error) {
+func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loadedPkg *types.ZarfPackage, warnings []string, err error) {
 	var pkg types.ZarfPackage
 
 	if err := utils.ReadYaml(layout.ZarfYAML, &pkg); err != nil {
@@ -109,7 +119,7 @@ func (pc *packageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loade
 }
 
 // Assemble assembles all of the package assets into Zarf's tmp directory layout.
-func (pc *packageCreator) Assemble(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
+func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
 	var imageList []transform.Image
 
 	skipSBOMFlagUsed := pc.createOpts.SkipSBOM
@@ -218,7 +228,7 @@ func (pc *packageCreator) Assemble(dst *layout.PackagePaths, loadedPkg *types.Za
 //
 // - writes the Zarf package as a tarball to a local directory,
 // or an OCI registry based on the --output flag
-func (pc *packageCreator) Output(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
+func (pc *PackageCreator) Output(dst *layout.PackagePaths, loadedPkg *types.ZarfPackage) error {
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range loadedPkg.Components {
@@ -315,7 +325,7 @@ func (pc *packageCreator) Output(dst *layout.PackagePaths, loadedPkg *types.Zarf
 	return nil
 }
 
-func (pc *packageCreator) processExtensions(pkg *types.ZarfPackage, layout *layout.PackagePaths) (extendedPkg *types.ZarfPackage, err error) {
+func (pc *PackageCreator) processExtensions(pkg *types.ZarfPackage, layout *layout.PackagePaths) (extendedPkg *types.ZarfPackage, err error) {
 	components := []types.ZarfComponent{}
 
 	// Create component paths and process extensions for each component.
@@ -341,7 +351,7 @@ func (pc *packageCreator) processExtensions(pkg *types.ZarfPackage, layout *layo
 	return extendedPkg, nil
 }
 
-func (pc *packageCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) error {
+func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	componentPaths, err := dst.Components.Create(component)
@@ -521,7 +531,7 @@ func (pc *packageCreator) addComponent(component types.ZarfComponent, dst *layou
 	return nil
 }
 
-func (pc *packageCreator) getFilesToSBOM(component types.ZarfComponent, dst *layout.PackagePaths) (*layout.ComponentSBOM, error) {
+func (pc *PackageCreator) getFilesToSBOM(component types.ZarfComponent, dst *layout.PackagePaths) (*layout.ComponentSBOM, error) {
 	componentPaths, err := dst.Components.Create(component)
 	if err != nil {
 		return nil, err
