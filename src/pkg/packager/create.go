@@ -27,7 +27,7 @@ func (p *Packager) Create() (err error) {
 
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	pc := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+	pc := creator.NewPackageCreator(p.cfg.CreateOpts, &p.cfg.PkgOpts, p.cfg, cwd)
 
 	loadedPkg, warnings, err := pc.LoadPackageDefinition(p.layout)
 	if err != nil {

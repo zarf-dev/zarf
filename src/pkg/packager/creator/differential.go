@@ -6,60 +6,42 @@ package creator
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/mholt/archiver/v3"
 )
 
 // loadDifferentialData sets any images and repos from the existing reference package in the DifferentialData and returns it.
-func loadDifferentialData(diffData *types.DifferentialData) (loadedDiffData *types.DifferentialData, err error) {
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+func (pc *PackageCreator) loadDifferentialData(dst *layout.PackagePaths) (diffData *types.DifferentialData, err error) {
+	diffPkgPath := pc.createOpts.DifferentialData.DifferentialPackagePath
+	if diffPkgPath != "" {
+		pc.pkgOpts.PackageSource = diffPkgPath
+	}
+
+	src, err := sources.New(pc.pkgOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	defer os.RemoveAll(tmpDir)
-
-	// Load the reference package.
-	if helpers.IsOCIURL(diffData.DifferentialPackagePath) {
-		remote, err := oci.NewOrasRemote(diffData.DifferentialPackagePath, oci.PlatformForArch(config.GetArch()))
-		if err != nil {
-			return nil, err
-		}
-		pkg, err := remote.FetchZarfYAML()
-		if err != nil {
-			return nil, err
-		}
-		err = utils.WriteYaml(filepath.Join(tmpDir, layout.ZarfYAML), pkg, 0600)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		if err := archiver.Extract(diffData.DifferentialPackagePath, layout.ZarfYAML, tmpDir); err != nil {
-			return nil, fmt.Errorf("unable to extract the differential zarf package spec: %s", err.Error())
-		}
+	if err := src.LoadPackage(dst, true); err != nil {
+		return nil, err
 	}
 
-	var differentialZarfConfig types.ZarfPackage
-	if err := utils.ReadYaml(filepath.Join(tmpDir, layout.ZarfYAML), &differentialZarfConfig); err != nil {
-		return nil, fmt.Errorf("unable to load the differential zarf package spec: %w", err)
+	var diffPkg types.ZarfPackage
+	if err := utils.ReadYaml(dst.ZarfYAML, &diffPkg); err != nil {
+		return nil, fmt.Errorf("error reading the differential Zarf package: %w", err)
 	}
 
 	allIncludedImagesMap := map[string]bool{}
 	allIncludedReposMap := map[string]bool{}
 
-	for _, component := range differentialZarfConfig.Components {
+	for _, component := range diffPkg.Components {
 		for _, image := range component.Images {
 			allIncludedImagesMap[image] = true
 		}
@@ -68,17 +50,17 @@ func loadDifferentialData(diffData *types.DifferentialData) (loadedDiffData *typ
 		}
 	}
 
-	diffData.DifferentialImages = allIncludedImagesMap
-	diffData.DifferentialRepos = allIncludedReposMap
-	diffData.DifferentialPackageVersion = differentialZarfConfig.Metadata.Version
+	pc.createOpts.DifferentialData.DifferentialImages = allIncludedImagesMap
+	pc.createOpts.DifferentialData.DifferentialRepos = allIncludedReposMap
+	pc.createOpts.DifferentialData.DifferentialPackageVersion = diffPkg.Metadata.Version
 
-	loadedDiffData = diffData
+	diffData = &pc.createOpts.DifferentialData
 
-	return loadedDiffData, nil
+	return diffData, nil
 }
 
-// removeCopiesFromDifferentialPackage removes any images and repos already present in the reference package components.
-func removeCopiesFromDifferentialPackage(components []types.ZarfComponent, loadedDiffData *types.DifferentialData) (diffComponents []types.ZarfComponent, err error) {
+// removeCopiesFromComponents removes any images and repos already present in the reference package components.
+func removeCopiesFromComponents(components []types.ZarfComponent, loadedDiffData *types.DifferentialData) (diffComponents []types.ZarfComponent, err error) {
 	for _, component := range components {
 		newImageList := []string{}
 		newRepoList := []string{}

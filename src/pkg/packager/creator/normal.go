@@ -41,19 +41,20 @@ var (
 // PackageCreator provides methods for creating normal (not skeleton) Zarf packages.
 type PackageCreator struct {
 	createOpts types.ZarfCreateOptions
+	pkgOpts    *types.ZarfPackageOptions
 
 	// TODO: (@lucasrod16) remove PackagerConfig once actions do not depend on it: https://github.com/defenseunicorns/zarf/pull/2276
 	cfg *types.PackagerConfig
 }
 
 // NewPackageCreator returns a new PackageCreator.
-func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerConfig, cwd string) *PackageCreator {
+func NewPackageCreator(createOpts types.ZarfCreateOptions, pkgOpts *types.ZarfPackageOptions, cfg *types.PackagerConfig, cwd string) *PackageCreator {
 	// differentials are relative to the current working directory
 	if createOpts.DifferentialData.DifferentialPackagePath != "" {
 		createOpts.DifferentialData.DifferentialPackagePath = filepath.Join(cwd, createOpts.DifferentialData.DifferentialPackagePath)
 	}
 
-	return &PackageCreator{createOpts: createOpts, cfg: cfg}
+	return &PackageCreator{createOpts: createOpts, pkgOpts: pkgOpts, cfg: cfg}
 }
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
@@ -93,22 +94,22 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loade
 
 	// If we are creating a differential package, remove duplicate images and repos.
 	if loadedPkg.Build.Differential {
-		loadedDiffData, err := loadDifferentialData(&pc.createOpts.DifferentialData)
+		diffData, err := pc.loadDifferentialData(dst)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		versionsMatch := loadedDiffData.DifferentialPackageVersion == loadedPkg.Metadata.Version
+		versionsMatch := diffData.DifferentialPackageVersion == loadedPkg.Metadata.Version
 		if versionsMatch {
 			return nil, nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
 
-		noVersionSet := loadedDiffData.DifferentialPackageVersion == "" || loadedPkg.Metadata.Version == ""
+		noVersionSet := diffData.DifferentialPackageVersion == "" || loadedPkg.Metadata.Version == ""
 		if noVersionSet {
 			return nil, nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
 
-		loadedPkg.Components, err = removeCopiesFromDifferentialPackage(loadedPkg.Components, loadedDiffData)
+		loadedPkg.Components, err = removeCopiesFromComponents(loadedPkg.Components, diffData)
 		if err != nil {
 			return nil, nil, err
 		}

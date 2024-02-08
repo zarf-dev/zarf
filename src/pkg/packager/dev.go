@@ -30,7 +30,7 @@ func (p *Packager) DevDeploy() error {
 		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
 
-	pc := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+	pc := creator.NewPackageCreator(p.cfg.CreateOpts, &p.cfg.PkgOpts, p.cfg, cwd)
 
 	loadedPkg, warnings, err := pc.LoadPackageDefinition(p.layout)
 	if err != nil {
