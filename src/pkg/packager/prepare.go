@@ -9,13 +9,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
@@ -25,9 +25,14 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+// imageMap is a map of image/boolean pairs.
+type imageMap map[string]bool
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
@@ -114,8 +119,8 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		}
 
 		// matchedImages holds the collection of images, reset per-component
-		matchedImages := make(k8s.ImageMap)
-		maybeImages := make(k8s.ImageMap)
+		matchedImages := make(imageMap)
+		maybeImages := make(imageMap)
 
 		// resources are a slice of generic structs that represent parsed K8s resources
 		var resources []*unstructured.Unstructured
@@ -209,7 +214,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			}
 		}
 
-		if sortedImages := k8s.SortImages(matchedImages, nil); len(sortedImages) > 0 {
+		if sortedImages := sortImages(matchedImages, nil); len(sortedImages) > 0 {
 			// Log the header comment
 			componentDefinition += fmt.Sprintf("\n  - name: %s\n    images:\n", component.Name)
 			for _, image := range sortedImages {
@@ -220,7 +225,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		}
 
 		// Handle the "maybes"
-		if sortedImages := k8s.SortImages(maybeImages, matchedImages); len(sortedImages) > 0 {
+		if sortedImages := sortImages(maybeImages, matchedImages); len(sortedImages) > 0 {
 			var validImages []string
 			for _, image := range sortedImages {
 				if descriptor, err := crane.Head(image, config.GetCraneOptions(config.CommonOptions.Insecure)...); err != nil {
@@ -296,7 +301,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	return imagesMap, nil
 }
 
-func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured, matchedImages, maybeImages k8s.ImageMap) (k8s.ImageMap, k8s.ImageMap, error) {
+func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured, matchedImages, maybeImages imageMap) (imageMap, imageMap, error) {
 	var imageSanityCheck = regexp.MustCompile(`(?mi)"image":"([^"]+)"`)
 	var imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-.\/:]+:[\w.\-]*[a-z\.\-][\w.\-]*)"`)
 	var json string
@@ -311,35 +316,35 @@ func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &deployment); err != nil {
 			return matchedImages, maybeImages, fmt.Errorf("could not parse deployment: %w", err)
 		}
-		matchedImages = k8s.BuildImageMap(matchedImages, deployment.Spec.Template.Spec)
+		matchedImages = buildImageMap(matchedImages, deployment.Spec.Template.Spec)
 
 	case "DaemonSet":
 		var daemonSet v1.DaemonSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &daemonSet); err != nil {
 			return matchedImages, maybeImages, fmt.Errorf("could not parse daemonset: %w", err)
 		}
-		matchedImages = k8s.BuildImageMap(matchedImages, daemonSet.Spec.Template.Spec)
+		matchedImages = buildImageMap(matchedImages, daemonSet.Spec.Template.Spec)
 
 	case "StatefulSet":
 		var statefulSet v1.StatefulSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &statefulSet); err != nil {
 			return matchedImages, maybeImages, fmt.Errorf("could not parse statefulset: %w", err)
 		}
-		matchedImages = k8s.BuildImageMap(matchedImages, statefulSet.Spec.Template.Spec)
+		matchedImages = buildImageMap(matchedImages, statefulSet.Spec.Template.Spec)
 
 	case "ReplicaSet":
 		var replicaSet v1.ReplicaSet
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &replicaSet); err != nil {
 			return matchedImages, maybeImages, fmt.Errorf("could not parse replicaset: %w", err)
 		}
-		matchedImages = k8s.BuildImageMap(matchedImages, replicaSet.Spec.Template.Spec)
+		matchedImages = buildImageMap(matchedImages, replicaSet.Spec.Template.Spec)
 
 	case "Job":
 		var job batchv1.Job
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &job); err != nil {
 			return matchedImages, maybeImages, fmt.Errorf("could not parse job: %w", err)
 		}
-		matchedImages = k8s.BuildImageMap(matchedImages, job.Spec.Template.Spec)
+		matchedImages = buildImageMap(matchedImages, job.Spec.Template.Spec)
 
 	default:
 		// Capture any custom images
@@ -358,4 +363,31 @@ func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured
 	}
 
 	return matchedImages, maybeImages, nil
+}
+
+// BuildImageMap looks for init container, ephemeral and regular container images.
+func buildImageMap(images imageMap, pod corev1.PodSpec) imageMap {
+	for _, container := range pod.InitContainers {
+		images[container.Image] = true
+	}
+	for _, container := range pod.Containers {
+		images[container.Image] = true
+	}
+	for _, container := range pod.EphemeralContainers {
+		images[container.Image] = true
+	}
+	return images
+}
+
+// SortImages returns a sorted list of images.
+func sortImages(images, compareWith imageMap) []string {
+	sortedImages := sort.StringSlice{}
+	for image := range images {
+		if !compareWith[image] || compareWith == nil {
+			// Check compareWith, if it exists only add if not in that list.
+			sortedImages = append(sortedImages, image)
+		}
+	}
+	sort.Sort(sortedImages)
+	return sortedImages
 }
