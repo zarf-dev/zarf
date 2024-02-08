@@ -94,7 +94,8 @@ func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*Or
 	o := &OrasRemote{
 		repo:           &remote.Repository{Client: client},
 		Transport:      helpers.NewTransport(transport, nil),
-		targetPlatform: &platform}
+		targetPlatform: &platform,
+	}
 
 	for _, mod := range mods {
 		mod(o)
