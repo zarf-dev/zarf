@@ -45,7 +45,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 	}
 	spinner.Successf("Prepared all layers")
 
-	copyOpts := r.CopyOpts
+	copyOpts := r.GetCopyOpts()
 	copyOpts.Concurrency = concurrency
 	total := oci.SumDescsSize(descs)
 

@@ -13,7 +13,6 @@ import (
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -29,20 +28,12 @@ type OrasRemote struct {
 	repo           *remote.Repository
 	root           *Manifest
 	Transport      *helpers.Transport
-	CopyOpts       oras.CopyOptions
 	targetPlatform *ocispec.Platform
 	log            helpers.Logger
 }
 
 // Modifier is a function that modifies an OrasRemote
 type Modifier func(*OrasRemote)
-
-// WithCopyOpts sets the copy options for the remote
-func WithCopyOpts(opts oras.CopyOptions) Modifier {
-	return func(o *OrasRemote) {
-		o.CopyOpts = opts
-	}
-}
 
 // WithPlainHTTP sets the plain HTTP flag for the remote
 func WithPlainHTTP(plainHTTP bool) Modifier {
@@ -108,11 +99,6 @@ func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*Or
 	if err := o.setRepository(ref); err != nil {
 		return nil, err
 	}
-
-	copyOpts := oras.DefaultCopyOptions
-	copyOpts.OnCopySkipped = o.printLayerSkipped
-	copyOpts.PostCopy = o.printLayerCopied
-	o.CopyOpts = copyOpts
 
 	return o, nil
 }

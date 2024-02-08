@@ -97,11 +97,10 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 		if err != nil {
 			return err
 		} else if !exists {
-			copyOpts := remote.CopyOpts
 			doneSaving := make(chan error)
 			successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+remote.Repo().Reference.String())
 			go utils.RenderProgressBarForLocalDirWrite(cache, componentDesc.Size, doneSaving, "Pulling", successText)
-			err = remote.CopyToStore(ctx, []ocispec.Descriptor{componentDesc}, store, copyOpts)
+			err = remote.CopyToStore(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetCopyOpts())
 			doneSaving <- err
 			<-doneSaving
 			if err != nil {

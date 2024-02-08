@@ -72,7 +72,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	}
 	defer dst.Close()
 
-	copyOpts := r.CopyOpts
+	copyOpts := r.GetCopyOpts()
 	copyOpts.Concurrency = concurrency
 
 	err = r.CopyToStore(ctx, layersToPull, dst, copyOpts)
