@@ -94,7 +94,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loade
 
 	// If we are creating a differential package, remove duplicate images and repos.
 	if loadedPkg.Build.Differential {
-		diffData, err := pc.loadDifferentialData(dst)
+		diffData, err := pc.loadDifferentialData()
 		if err != nil {
 			return nil, nil, err
 		}

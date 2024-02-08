@@ -20,7 +20,7 @@ import (
 )
 
 // loadDifferentialData sets any images and repos from the existing reference package in the DifferentialData and returns it.
-func (pc *PackageCreator) loadDifferentialData(dst *layout.PackagePaths) (diffData *types.DifferentialData, err error) {
+func (pc *PackageCreator) loadDifferentialData() (diffData *types.DifferentialData, err error) {
 	diffPkgPath := pc.createOpts.DifferentialData.DifferentialPackagePath
 	if diffPkgPath != "" {
 		pc.pkgOpts.PackageSource = diffPkgPath
