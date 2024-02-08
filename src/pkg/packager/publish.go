@@ -5,7 +5,6 @@
 package packager
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -20,7 +19,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2/content"
 )
 
 // Publish publishes the package to a registry
@@ -32,55 +30,21 @@ func (p *Packager) Publish() (err error) {
 		// w/o layers touching the filesystem
 		srcRemote := p.source.(*sources.OCISource).Remote
 
-		parts := strings.Split(srcRemote.Repo().Reference.Repository, "/")
-		packageName := parts[len(parts)-1]
-
-		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
-
 		arch := config.GetArch()
+
 		dstRemote, err := zoci.NewRemote(p.cfg.PublishOpts.PackageDestination, oci.PlatformForArch(arch))
 		if err != nil {
 			return err
 		}
 
-		srcRoot, err := srcRemote.ResolveRoot(ctx)
-		if err != nil {
-			return err
-		}
+		parts := strings.Split(srcRemote.Repo().Reference.Repository, "/")
+		packageName := parts[len(parts)-1]
 
-		pkg, err := srcRemote.FetchZarfYAML(ctx)
-		if err != nil {
-			return err
-		}
-
-		// ensure cli arch matches package arch
-		if pkg.Build.Architecture != arch {
-			return fmt.Errorf("architecture mismatch (specified: %q, found %q)", arch, pkg.Build.Architecture)
-		}
+		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
 
 		if err := zoci.CopyPackage(ctx, srcRemote, dstRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
 			return err
 		}
-
-		srcManifest, err := srcRemote.FetchRoot(ctx)
-		if err != nil {
-			return err
-		}
-		b, err := srcManifest.MarshalJSON()
-		if err != nil {
-			return err
-		}
-		expected := content.NewDescriptorFromBytes(ocispec.MediaTypeImageManifest, b)
-
-		if err := dstRemote.Repo().Manifests().PushReference(ctx, expected, bytes.NewReader(b), srcRoot.Digest.String()); err != nil {
-			return err
-		}
-
-		tag := srcRemote.Repo().Reference.Reference
-		if err := dstRemote.UpdateIndex(ctx, tag, expected); err != nil {
-			return err
-		}
-		message.Infof("Published %s to %s", srcRemote.Repo().Reference, dstRemote.Repo().Reference)
 		return nil
 	}
 

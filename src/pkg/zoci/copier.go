@@ -5,26 +5,38 @@
 package zoci
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/content"
 )
 
 // CopyPackage copies a zarf package from one OCI registry to another
-// TODO (@AustinAbro321) we should see if we should also copy the manifests for a complete copy in this function
-// Either through ORAS or additional logic found in callers of this function
 func CopyPackage(ctx context.Context, src *Remote, dst *Remote, include func(d ocispec.Descriptor) bool, concurrency int) error {
 
-	srcRoot, err := src.FetchRoot(ctx)
+	arch := config.GetArch()
+	pkg, err := src.FetchZarfYAML(ctx)
 	if err != nil {
 		return err
 	}
-	layers := helpers.Filter(srcRoot.Layers, include)
-	layers = append(layers, srcRoot.Config)
+
+	// ensure cli arch matches package arch
+	if pkg.Build.Architecture != arch {
+		return fmt.Errorf("architecture mismatch (specified: %q, found %q)", arch, pkg.Build.Architecture)
+	}
+
+	srcManifest, err := src.FetchRoot(ctx)
+	if err != nil {
+		return err
+	}
+	layers := helpers.Filter(srcManifest.Layers, include)
+	layers = append(layers, srcManifest.Config)
 	size := oci.SumDescsSize(layers)
 
 	title := fmt.Sprintf("[0/%d] layers copied", len(layers))
@@ -35,5 +47,27 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, include func(d o
 		return err
 	}
 	progressBar.Successf("Copied %s", src.Repo().Reference)
+
+	srcRoot, err := src.ResolveRoot(ctx)
+	if err != nil {
+		return err
+	}
+
+	b, err := srcManifest.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	expected := content.NewDescriptorFromBytes(ocispec.MediaTypeImageManifest, b)
+
+	if err := dst.Repo().Manifests().PushReference(ctx, expected, bytes.NewReader(b), srcRoot.Digest.String()); err != nil {
+		return err
+	}
+
+	tag := src.Repo().Reference.Reference
+	if err := dst.UpdateIndex(ctx, tag, expected); err != nil {
+		return err
+	}
+
+	message.Infof("Published %s to %s", src.Repo().Reference, dst.Repo().Reference)
 	return nil
 }
