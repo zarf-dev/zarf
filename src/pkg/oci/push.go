@@ -53,7 +53,7 @@ func (o *OrasRemote) PushManifestConfigFromMetadata(ctx context.Context, annotat
 	if err != nil {
 		return nil, err
 	}
-	// If Media type is not set it will be set to the default
+	// If media type is not set it will be set to the default
 	return o.PushLayer(ctx, manifestConfigBytes, configMediaType)
 }
 
