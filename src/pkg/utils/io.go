@@ -8,6 +8,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -297,8 +298,8 @@ func GetFinalExecutableCommand() (string, error) {
 	return zarfCommand, err
 }
 
-// SplitFile splits a file into multiple parts by the given size.
-func SplitFile(path string, chunkSizeBytes int) (chunks [][]byte, sha256sum string, err error) {
+// ReadFileByChunks reads a file into multiple chunks by the given size.
+func ReadFileByChunks(path string, chunkSizeBytes int) (chunks [][]byte, sha256sum string, err error) {
 	var file []byte
 
 	// Open the created archive for io.Copy
@@ -325,6 +326,140 @@ func SplitFile(path string, chunkSizeBytes int) (chunks [][]byte, sha256sum stri
 	}
 
 	return chunks, sha256sum, nil
+}
+
+// SplitFile will take a srcFile path and split it into files based on chunkSizeBytes
+// the first file will be a metadata file containing:
+// - sha256sum of the original file
+// - number of bytes in the original file
+// - number of files the srcFile was split into
+// SplitFile will delete the original file
+//
+// Returns:
+// - fileNames: list of file paths srcFile was split across
+// - sha256sum: sha256sum of the srcFile before splitting
+// - err: any errors encountered
+func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
+	var fileNames []string
+	var sha256sum string
+	hash := sha256.New()
+
+	// Set buffer size to some multiple of 4096 KiB for modern file system cluster sizes
+	bufferSize := 16 * 1024 * 1024 // 16 MiB
+	// if chunkSizeBytes is less than bufferSize, use chunkSizeBytes as bufferSize for simplicity
+	if chunkSizeBytes < bufferSize {
+		bufferSize = chunkSizeBytes
+	}
+	buf := make([]byte, bufferSize)
+
+	// get file size
+	fi, err := os.Stat(srcFile)
+	if err != nil {
+		return err
+	}
+	fileSize := fi.Size()
+
+	// start progress bar
+	title := fmt.Sprintf("[0/%d] MB bytes written", fileSize/1000/1000)
+	progressBar := message.NewProgressBar(fileSize, title)
+	defer progressBar.Stop()
+
+	// open file
+	file, err := os.Open(srcFile)
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+
+	// create file path starting from part 001
+	path := fmt.Sprintf("%s.part001", srcFile)
+	chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	fileNames = append(fileNames, path)
+	defer chunkFile.Close()
+
+	// setup counter for tracking how many bytes are left to write to file
+	chunkBytesRemaining := chunkSizeBytes
+	// Loop over the tarball hashing as we go and breaking it into chunks based on the chunkSizeBytes
+	for {
+		bytesRead, err := file.Read(buf)
+
+		if err != nil {
+			if err == io.EOF {
+				// At end of file, break out of loop
+				break
+			}
+			return err
+		}
+
+		// Pass data to hash
+		hash.Write(buf[0:bytesRead])
+
+		// handle if we should split the data between two chunks
+		if chunkBytesRemaining < bytesRead {
+			// write the remaining chunk size to file
+			_, err := chunkFile.Write(buf[0:chunkBytesRemaining])
+			if err != nil {
+				return err
+			}
+
+			// create new file
+			path = fmt.Sprintf("%s.part%03d", srcFile, len(fileNames)+1)
+			chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				return err
+			}
+			fileNames = append(fileNames, path)
+			defer chunkFile.Close()
+
+			// write to new file where we left off
+			_, err = chunkFile.Write(buf[chunkBytesRemaining:bytesRead])
+			if err != nil {
+				return err
+			}
+
+			// set chunkBytesRemaining considering how many bytes are already written to new file
+			chunkBytesRemaining = chunkSizeBytes - (bufferSize - chunkBytesRemaining)
+		} else {
+			_, err := chunkFile.Write(buf[0:bytesRead])
+			if err != nil {
+				return err
+			}
+			chunkBytesRemaining = chunkBytesRemaining - bytesRead
+		}
+
+		// update progress bar
+		progressBar.Add(bufferSize)
+		title := fmt.Sprintf("[%d/%d] MB bytes written", progressBar.GetCurrent()/1000/1000, fileSize/1000/1000)
+		progressBar.UpdateTitle(title)
+	}
+	file.Close()
+	_ = os.RemoveAll(srcFile)
+
+	// calculate sha256 sum
+	sha256sum = fmt.Sprintf("%x", hash.Sum(nil))
+
+	// Marshal the data into a json file.
+	jsonData, err := json.Marshal(types.ZarfSplitPackageData{
+		Count:     len(fileNames),
+		Bytes:     fileSize,
+		Sha256Sum: sha256sum,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to marshal the split package data: %w", err)
+	}
+
+	// write header file
+	path = fmt.Sprintf("%s.part000", srcFile)
+	if err := os.WriteFile(path, jsonData, 0644); err != nil {
+		return fmt.Errorf("unable to write the file %s: %w", path, err)
+	}
+	fileNames = append(fileNames, path)
+	progressBar.Successf("Package split across %d files", len(fileNames))
+
+	return nil
 }
 
 // IsTextFile returns true if the given file is a text file.
@@ -476,7 +611,9 @@ func CreateReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string) er
 		if err != nil {
 			return fmt.Errorf("error getting relative path: %w", err)
 		}
-		header.Name = filepath.Join(dirPrefix, name)
+		name = filepath.Join(dirPrefix, name)
+		name = filepath.ToSlash(name)
+		header.Name = name
 
 		// Write the header to the tarball
 		if err := tw.WriteHeader(header); err != nil {

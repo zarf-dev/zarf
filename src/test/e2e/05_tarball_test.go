@@ -32,10 +32,10 @@ func TestMultiPartPackage(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf("package", "create", createPath, "--max-package-size=1", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	list, err := filepath.Glob("zarf-package-multi-part-*")
+	parts, err := filepath.Glob("zarf-package-multi-part-*")
 	require.NoError(t, err)
 	// Length is 7 because there are 6 parts and 1 manifest
-	require.Len(t, list, 7)
+	require.Len(t, parts, 7)
 
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", deployPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -43,7 +43,10 @@ func TestMultiPartPackage(t *testing.T) {
 	// Verify the package was deployed
 	require.FileExists(t, outputFile)
 
-	e2e.CleanFiles(deployPath, outputFile)
+	// deploying package combines parts back into single archive, check dir again to find all files
+	parts, err = filepath.Glob("zarf-package-multi-part-*")
+	e2e.CleanFiles(parts...)
+	e2e.CleanFiles(outputFile)
 }
 
 func TestReproducibleTarballs(t *testing.T) {
