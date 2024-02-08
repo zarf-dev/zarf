@@ -6,7 +6,9 @@ package creator
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -24,17 +26,25 @@ func (pc *PackageCreator) loadDifferentialData(dst *layout.PackagePaths) (diffDa
 		pc.pkgOpts.PackageSource = diffPkgPath
 	}
 
+	tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+
+	diffLayout := layout.New(tmpdir)
+	defer os.RemoveAll(diffLayout.Base)
+
 	src, err := sources.New(pc.pkgOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := src.LoadPackage(dst, true); err != nil {
+	if err := src.LoadPackageMetadata(diffLayout, false, false); err != nil {
 		return nil, err
 	}
 
 	var diffPkg types.ZarfPackage
-	if err := utils.ReadYaml(dst.ZarfYAML, &diffPkg); err != nil {
+	if err := utils.ReadYaml(diffLayout.ZarfYAML, &diffPkg); err != nil {
 		return nil, fmt.Errorf("error reading the differential Zarf package: %w", err)
 	}
 
