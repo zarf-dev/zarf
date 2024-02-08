@@ -185,7 +185,7 @@ func (h *Helm) TemplateChart() (manifest string, chartValues chartutil.Values, e
 
 	client.PostRenderer, err = h.newRenderer()
 	if err != nil {
-		return "", nil, fmt.Errorf("unable to get dev renderer: %w", err)
+		return "", nil, fmt.Errorf("unable to create helm renderer: %w", err)
 	}
 
 	// Perform the loadedChart installation.
