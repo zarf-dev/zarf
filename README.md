@@ -11,13 +11,14 @@
 [![Zarf Website](https://img.shields.io/badge/web-zarf.dev-6d87c3)](https://zarf.dev/)
 [![Zarf Documentation](https://img.shields.io/badge/docs-docs.zarf.dev-775ba1)](https://docs.zarf.dev/)
 [![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-40a3dd)](https://kubernetes.slack.com/archives/C03B6BJAUJ3)
+[![Community Meetups](https://img.shields.io/badge/community-meetups-22aebb)](https://github.com/defenseunicorns/zarf/issues/2202)
 
 Zarf eliminates the [complexity of air gap software delivery](https://www.itopstimes.com/contain/air-gap-kubernetes-considerations-for-running-cloud-native-applications-without-the-cloud/) for Kubernetes clusters and cloud-native workloads using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
 
-## Why Use Zarf 
+## Why Use Zarf
 
 - 💸 **Free and Open-Source.** Zarf will always be free to use and maintained by the open-source community.
-- ⭐️ **Zero Dependencies.** As a statically compiled binary, the Zarf CLI has zero dependencies to run on any machine. 
+- ⭐️ **Zero Dependencies.** As a statically compiled binary, the Zarf CLI has zero dependencies to run on any machine.
 - 🔓 **No Vendor Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you can still use your Helm charts to deploy your software manually.
 - 💻 **OS Agnostic.** Zarf supports numerous operating systems. A full matrix of supported OSes, architectures, and feature sets is coming soon.
 - 📦 **Highly Distributable.** Integrate and deploy software from multiple secure development environments, including edge, embedded systems, secure cloud, data centers, and even local environments.
@@ -41,7 +42,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 - Built-in Docker registry
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
 - [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
-- Builtin [command to find images](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_prepare_find-images) and resources from a Helm chart
+- Builtin [command to find images](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_dev_find-images) and resources from a Helm chart
 - Tunneling capability to [connect to Kubernetes resources](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS or Ingress configuration required
 
 ## 🛠️ Configurable Features
@@ -58,7 +59,7 @@ _<https://www.youtube.com/watch?v=WnOYlFVVKDE>_
 
 ## ✅ Getting Started
 
-To try Zarf out for yourself, visit the ["Try It Now"](https://zarf.dev/install) section on our website. 
+To try Zarf out for yourself, visit the ["Try It Now"](https://zarf.dev/install) section on our website.
 
 To learn more about Zarf and its use cases, visit [docs.zarf.dev](https://docs.zarf.dev/docs/zarf-overview). From the docs, you can learn more about:
 - [installation](https://docs.zarf.dev/docs/getting-started/#installing-zarf)
@@ -70,7 +71,7 @@ Using Zarf in GitHub workflows? Check out the [setup-zarf](https://github.com/de
 
 ## 🫶 Our Community
 
-Join our community and developers on the [#Zarf slack](https://zarf.dev/slack) hosted on K8s slack. Our active community of developers, users, and contributors are available to answer questions, share examples, and fine new ways use Zarf together!
+Join our community and developers on the [#Zarf slack](https://zarf.dev/slack) hosted on K8s slack. Our active community of developers, users, and contributors are available to answer questions, share examples, and find new ways use Zarf together!
 
 We are so grateful to our Zarf community for contributing bug fixes and collaborating on new features:
 
@@ -82,9 +83,9 @@ Made with [contrib.rocks](https://contrib.rocks).
 
 ## 💻 Contributing
 
-Want to contribute to Zarf? 
-Check out our [Contributor Guide](https://docs.zarf.dev/docs/contribute-to-zarf/contributor-guide) to learn more about how to set up your development environment and begin contributing. 
-We also recommend checking out our architectural diagram. 
+Want to contribute to Zarf?
+Check out our [Contributor Guide](https://docs.zarf.dev/docs/contribute-to-zarf/contributor-guide) to learn more about how to set up your development environment and begin contributing.
+We also recommend checking out our architectural diagram.
 
 To dive deeper into the tech, you can read the [Nerd Notes](https://docs.zarf.dev/docs/contribute-to-zarf/nerd-notes) in our Docs.
 

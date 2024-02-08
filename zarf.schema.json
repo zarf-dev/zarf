@@ -35,7 +35,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "DeprecatedZarfComponentScripts": {
       "properties": {
@@ -74,7 +77,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfBuildData": {
       "required": [
@@ -135,10 +141,17 @@
         "lastNonBreakingVersion": {
           "type": "string",
           "description": "The minimum version of Zarf that does not have breaking package structure changes"
+        },
+        "flavor": {
+          "type": "string",
+          "description": "The flavor of Zarf used to build this package"
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfChart": {
       "required": [
@@ -148,11 +161,11 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo"
+          "description": "The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo"
         },
-        "releaseName": {
+        "version": {
           "type": "string",
-          "description": "The name of the release to create; defaults to the name of the chart"
+          "description": "The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos')"
         },
         "url": {
           "type": "string",
@@ -160,42 +173,49 @@
           "examples": [
             "OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo",
             "helm chart repo: https://stefanprodan.github.io/podinfo",
-            "git repo: https://github.com/stefanprodan/podinfo"
+            "git repo: https://github.com/stefanprodan/podinfo (note the '@' syntax for 'repos' is supported here too)"
           ]
         },
-        "version": {
+        "repoName": {
           "type": "string",
-          "description": "The version of the chart to deploy; for git-based charts this is also the tag of the git repo"
-        },
-        "namespace": {
-          "type": "string",
-          "description": "The namespace to deploy the chart to"
-        },
-        "valuesFiles": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "List of local values file paths or remote URLs to include in the package; these will be merged together"
+          "description": "The name of a chart within a Helm repository (defaults to the Zarf name of the chart)"
         },
         "gitPath": {
           "type": "string",
-          "description": "The path to the chart in the repo if using a git repo instead of a helm repo",
+          "description": "(git repo only) The sub directory to the chart within a git repo",
           "examples": [
             "charts/your-chart"
           ]
         },
         "localPath": {
           "type": "string",
-          "description": "The path to the local chart's folder or .tgz archive"
+          "description": "The path to a local chart's folder or .tgz archive"
+        },
+        "namespace": {
+          "type": "string",
+          "description": "The namespace to deploy the chart to"
+        },
+        "releaseName": {
+          "type": "string",
+          "description": "The name of the Helm release to create (defaults to the Zarf name of the chart)"
         },
         "noWait": {
           "type": "boolean",
           "description": "Whether to not wait for chart resources to be ready before continuing"
+        },
+        "valuesFiles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "List of local values file paths or remote URLs to include in the package; these will be merged together when deployed"
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponent": {
       "required": [
@@ -203,7 +223,7 @@
       ],
       "properties": {
         "name": {
-          "pattern": "^[a-z0-9\\-]+$",
+          "pattern": "^[a-z0-9\\-]*[a-z0-9]$",
           "type": "string",
           "description": "The name of the component"
         },
@@ -300,7 +320,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentAction": {
       "properties": {
@@ -359,7 +382,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionDefaults": {
       "properties": {
@@ -393,7 +419,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionSet": {
       "properties": {
@@ -433,7 +462,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionSetVariable": {
       "required": [
@@ -467,13 +499,16 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionShell": {
       "properties": {
         "windows": {
           "type": "string",
-          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
           "examples": [
             "powershell",
             "cmd",
@@ -507,7 +542,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionWait": {
       "properties": {
@@ -523,7 +561,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionWaitCluster": {
       "required": [
@@ -544,7 +585,7 @@
           "description": "The name of the resource or selector to wait for",
           "examples": [
             "podinfo",
-            "app\u0026#61;podinfo"
+            "app&#61;podinfo"
           ]
         },
         "namespace": {
@@ -561,7 +602,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionWaitNetwork": {
       "required": [
@@ -596,7 +640,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActions": {
       "properties": {
@@ -615,7 +662,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentExtensions": {
       "properties": {
@@ -626,7 +676,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentImport": {
       "properties": {
@@ -645,7 +698,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentOnlyCluster": {
       "properties": {
@@ -666,7 +722,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentOnlyTarget": {
       "properties": {
@@ -690,7 +749,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfContainerTarget": {
       "required": [
@@ -708,7 +770,7 @@
           "type": "string",
           "description": "The K8s selector to target for data injection",
           "examples": [
-            "app\u0026#61;data-injection"
+            "app&#61;data-injection"
           ]
         },
         "container": {
@@ -721,7 +783,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfDataInjection": {
       "required": [
@@ -744,7 +809,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfFile": {
       "required": [
@@ -781,7 +849,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfManifest": {
       "required": [
@@ -820,7 +891,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfMetadata": {
       "required": [
@@ -828,7 +902,7 @@
       ],
       "properties": {
         "name": {
-          "pattern": "^[a-z0-9\\-]+$",
+          "pattern": "^[a-z0-9\\-]*[a-z0-9]$",
           "type": "string",
           "description": "Name to identify this Zarf package"
         },
@@ -868,7 +942,7 @@
           "type": "string",
           "description": "Comma-separated list of package authors (including contact info)",
           "examples": [
-            "Doug \u0026#60;hello@defenseunicorns.com\u0026#62;\u0026#44; Pepr \u0026#60;hello@defenseunicorns.com\u0026#62;"
+            "Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"
           ]
         },
         "documentation": {
@@ -889,7 +963,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfPackage": {
       "required": [
@@ -942,7 +1019,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfPackageConstant": {
       "required": [
@@ -973,7 +1053,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfPackageVariable": {
       "required": [
@@ -1019,7 +1102,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     }
   }
 }

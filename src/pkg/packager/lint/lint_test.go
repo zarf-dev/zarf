@@ -5,9 +5,14 @@
 package lint
 
 import (
+	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
@@ -26,24 +31,21 @@ components:
 - name: import-test
   import:
     path: 123123
-
-- name: import-test
-  import:
-    path: "###ZARF_PKG_TMPL_ZEBRA###"
-
-- name: import-url
-  import:
-    url: "oci://###ZARF_PKG_TMPL_ZEBRA###"
 `
 
 const goodZarfPackage = `
+x-name: &name good-zarf-package
+
 kind: ZarfPackageConfig
 metadata:
-  name: good-zarf-package
+  name: *name
+  x-description: Testing good yaml with yaml extension
 
 components:
   - name: baseline
     required: true
+    x-foo: bar
+
 `
 
 func readAndUnmarshalYaml[T interface{}](t *testing.T, yamlString string) T {
@@ -71,7 +73,7 @@ func TestValidateSchema(t *testing.T) {
 		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
 		err := validateSchema(&validator)
 		require.NoError(t, err)
-		require.Empty(t, validator.errors)
+		require.Empty(t, validator.findings)
 	})
 
 	t.Run("validate schema fail", func(t *testing.T) {
@@ -79,23 +81,82 @@ func TestValidateSchema(t *testing.T) {
 		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
 		err := validateSchema(&validator)
 		require.NoError(t, err)
-		require.EqualError(t, validator.errors[0], ".components.[0].import: Additional property not-path is not allowed")
-		require.EqualError(t, validator.errors[1], ".components.[1].import.path: Invalid type. Expected: string, given: integer")
+		config.NoColor = true
+		require.Equal(t, "Additional property not-path is not allowed", validator.findings[0].String())
+		require.Equal(t, "Invalid type. Expected: string, given: integer", validator.findings[1].String())
 	})
 
 	t.Run("Template in component import success", func(t *testing.T) {
 		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, goodZarfPackage)
 		validator := Validator{typedZarfPackage: unmarshalledYaml}
-		checkForVarInComponentImport(&validator)
-		require.Empty(t, validator.warnings)
+		for _, component := range validator.typedZarfPackage.Components {
+			lintComponent(&validator, &composer.Node{ZarfComponent: component})
+		}
+		require.Empty(t, validator.findings)
 	})
 
-	t.Run("Template in component import failure", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, badZarfPackage)
-		validator := Validator{typedZarfPackage: unmarshalledYaml}
-		checkForVarInComponentImport(&validator)
-		require.Equal(t, validator.warnings[0], ".components.[2].import.path: Will not resolve ZARF_PKG_TMPL_* variables")
-		require.Equal(t, validator.warnings[1], ".components.[3].import.url: Will not resolve ZARF_PKG_TMPL_* variables")
+	t.Run("Path template in component import failure", func(t *testing.T) {
+		pathVar := "###ZARF_PKG_TMPL_PATH###"
+		pathComponent := types.ZarfComponent{Import: types.ZarfComponentImport{Path: pathVar}}
+		validator := Validator{typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{pathComponent}}}
+		checkForVarInComponentImport(&validator, &composer.Node{ZarfComponent: pathComponent})
+		require.Equal(t, pathVar, validator.findings[0].item)
+	})
+
+	t.Run("OCI template in component import failure", func(t *testing.T) {
+		ociPathVar := "oci://###ZARF_PKG_TMPL_PATH###"
+		URLComponent := types.ZarfComponent{Import: types.ZarfComponentImport{URL: ociPathVar}}
+		validator := Validator{typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{URLComponent}}}
+		checkForVarInComponentImport(&validator, &composer.Node{ZarfComponent: URLComponent})
+		require.Equal(t, ociPathVar, validator.findings[0].item)
+	})
+
+	t.Run("Unpinnned repo warning", func(t *testing.T) {
+		validator := Validator{}
+		unpinnedRepo := "https://github.com/defenseunicorns/zarf-public-test.git"
+		component := types.ZarfComponent{Repos: []string{
+			unpinnedRepo,
+			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1"}}
+		checkForUnpinnedRepos(&validator, &composer.Node{ZarfComponent: component})
+		require.Equal(t, unpinnedRepo, validator.findings[0].item)
+		require.Equal(t, len(validator.findings), 1)
+	})
+
+	t.Run("Unpinnned image warning", func(t *testing.T) {
+		validator := Validator{}
+		unpinnedImage := "registry.com:9001/whatever/image:1.0.0"
+		badImage := "badimage:badimage@@sha256:3fbc632167424a6d997e74f5"
+		component := types.ZarfComponent{Images: []string{
+			unpinnedImage,
+			"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
+			badImage}}
+		checkForUnpinnedImages(&validator, &composer.Node{ZarfComponent: component})
+		require.Equal(t, unpinnedImage, validator.findings[0].item)
+		require.Equal(t, badImage, validator.findings[1].item)
+		require.Equal(t, 2, len(validator.findings))
+
+	})
+
+	t.Run("Unpinnned file warning", func(t *testing.T) {
+		validator := Validator{}
+		fileURL := "http://example.com/file.zip"
+		localFile := "local.txt"
+		zarfFiles := []types.ZarfFile{
+			{
+				Source: fileURL,
+			},
+			{
+				Source: localFile,
+			},
+			{
+				Source: fileURL,
+				Shasum: "fake-shasum",
+			},
+		}
+		component := types.ZarfComponent{Files: zarfFiles}
+		checkForUnpinnedFiles(&validator, &composer.Node{ZarfComponent: component})
+		require.Equal(t, fileURL, validator.findings[0].item)
+		require.Equal(t, 1, len(validator.findings))
 	})
 
 	t.Run("Wrap standalone numbers in bracket", func(t *testing.T) {
@@ -109,5 +170,69 @@ func TestValidateSchema(t *testing.T) {
 		input := "(root)"
 		acutal := makeFieldPathYqCompat(input)
 		require.Equal(t, input, acutal)
+	})
+
+	t.Run("Test composable components", func(t *testing.T) {
+		pathVar := "fake-path"
+		unpinnedImage := "unpinned:latest"
+		pathComponent := types.ZarfComponent{
+			Import: types.ZarfComponentImport{Path: pathVar},
+			Images: []string{unpinnedImage}}
+		validator := Validator{
+			typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{pathComponent},
+				Metadata: types.ZarfMetadata{Name: "test-zarf-package"}}}
+
+		createOpts := types.ZarfCreateOptions{Flavor: "", BaseDir: "."}
+		lintComponents(&validator, &createOpts)
+		// Require.contains rather than equals since the error message changes from linux to windows
+		require.Contains(t, validator.findings[0].description, fmt.Sprintf("open %s", filepath.Join("fake-path", "zarf.yaml")))
+		require.Equal(t, ".components.[0].import.path", validator.findings[0].yqPath)
+		require.Equal(t, ".", validator.findings[0].packageRelPath)
+		require.Equal(t, unpinnedImage, validator.findings[1].item)
+		require.Equal(t, ".", validator.findings[1].packageRelPath)
+	})
+
+	t.Run("isImagePinned", func(t *testing.T) {
+		t.Parallel()
+		tests := []struct {
+			input    string
+			expected bool
+			err      error
+		}{
+			{
+				input:    "registry.com:8080/defenseunicorns/whatever",
+				expected: false,
+				err:      nil,
+			},
+			{
+				input:    "ghcr.io/defenseunicorns/pepr/controller:v0.15.0",
+				expected: false,
+				err:      nil,
+			},
+			{
+				input:    "busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
+				expected: true,
+				err:      nil,
+			},
+			{
+				input:    "busybox:bad/image",
+				expected: false,
+				err:      errors.New("invalid reference format"),
+			},
+			{
+				input:    "busybox:###ZARF_PKG_TMPL_BUSYBOX_IMAGE###",
+				expected: true,
+				err:      nil,
+			},
+		}
+		for _, tc := range tests {
+			t.Run(tc.input, func(t *testing.T) {
+				acutal, err := isPinnedImage(tc.input)
+				if err != nil {
+					require.EqualError(t, err, tc.err.Error())
+				}
+				require.Equal(t, tc.expected, acutal)
+			})
+		}
 	})
 }

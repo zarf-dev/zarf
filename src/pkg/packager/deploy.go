@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
@@ -28,6 +29,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 )
+
+func (p *Packager) resetRegistryHPA() {
+	if p.isConnectedToCluster() && p.hpaModified {
+		if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
+			message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
+		}
+	}
+}
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
@@ -60,13 +69,7 @@ func (p *Packager) Deploy() (err error) {
 	p.hpaModified = false
 	p.connectStrings = make(types.ConnectStrings)
 	// Reset registry HPA scale down whether an error occurs or not
-	defer func() {
-		if p.isConnectedToCluster() && p.hpaModified {
-			if err := p.cluster.EnableRegHPAScaleDown(); err != nil {
-				message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
-			}
-		}
-	}()
+	defer p.resetRegistryHPA()
 
 	// Filter out components that are not compatible with this system
 	p.filterComponents()
@@ -74,7 +77,7 @@ func (p *Packager) Deploy() (err error) {
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
 	if err != nil {
-		return fmt.Errorf("unable to deploy all components in this Zarf Package: %w", err)
+		return err
 	}
 	if len(deployedComponents) == 0 {
 		message.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
@@ -90,7 +93,7 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy := p.getValidComponents()
+	componentsToDeploy := p.getSelectedComponents()
 
 	// Generate a value template
 	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
@@ -112,7 +115,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		}
 
 		// If this component requires a cluster, connect to one
-		if p.requiresCluster(component) {
+		if requiresCluster(component) {
 			timeout := cluster.DefaultTimeout
 			if p.isInitConfig() {
 				timeout = 5 * time.Minute
@@ -165,11 +168,11 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			deployedComponents[idx].Status = types.ComponentStatusFailed
 			if p.isConnectedToCluster() {
 				if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-					message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+					message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 				}
 			}
 
-			return deployedComponents, fmt.Errorf("unable to deploy component %s: %w", component.Name, deployErr)
+			return deployedComponents, fmt.Errorf("unable to deploy component %q: %w", component.Name, deployErr)
 		}
 
 		// Update the package secret to indicate that we successfully deployed this component
@@ -177,7 +180,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 		if p.isConnectedToCluster() {
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
 
@@ -196,9 +199,14 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
 	isAgent := component.Name == "zarf-agent"
+	isK3s := component.Name == "k3s"
+
+	if isK3s {
+		p.cfg.InitOpts.ApplianceMode = true
+	}
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if p.requiresCluster(component) && p.cfg.State == nil {
+	if requiresCluster(component) && p.cfg.State == nil {
 		err = p.cluster.InitZarfState(p.cfg.InitOpts)
 		if err != nil {
 			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -211,7 +219,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	}
 
 	if isRegistry {
-		// If we are deploying the registry then mark the HPA as "modifed" to set it to Min later
+		// If we are deploying the registry then mark the HPA as "modified" to set it to Min later
 		p.hpaModified = true
 	}
 
@@ -222,7 +230,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 
 	charts, err = p.deployComponent(component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
 	if err != nil {
-		return charts, fmt.Errorf("unable to deploy component %s: %w", component.Name, err)
+		return charts, err
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
@@ -252,21 +260,11 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	onDeploy := component.Actions.OnDeploy
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
-		return charts, fmt.Errorf("unable to run component before action: %w", err)
-	}
-
-	if hasFiles {
-		if err := p.processComponentFiles(component, componentPath.Files); err != nil {
-			return charts, fmt.Errorf("unable to process the component files: %w", err)
-		}
-	}
-
-	if !p.valueTemplate.Ready() && p.requiresCluster(component) {
+	if !p.valueTemplate.Ready() && requiresCluster(component) {
 		// Setup the state in the config and get the valuesTemplate
 		p.valueTemplate, err = p.setupStateValuesTemplate()
 		if err != nil {
-			return charts, fmt.Errorf("unable to get the updated value template: %w", err)
+			return charts, err
 		}
 
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
@@ -276,6 +274,16 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 			} else {
 				p.hpaModified = true
 			}
+		}
+	}
+
+	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
+		return charts, fmt.Errorf("unable to run component before action: %w", err)
+	}
+
+	if hasFiles {
+		if err := p.processComponentFiles(component, componentPath.Files); err != nil {
+			return charts, fmt.Errorf("unable to process the component files: %w", err)
 		}
 	}
 
@@ -376,7 +384,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 			// Try to remove the filepath if it exists
 			_ = os.RemoveAll(link)
 			// Make sure the parent directory exists
-			_ = utils.CreateFilePath(link)
+			_ = utils.CreateParentDirectory(link)
 			// Create the symlink
 			err := os.Symlink(file.Target, link)
 			if err != nil {
@@ -402,7 +410,7 @@ func (p *Packager) setupStateValuesTemplate() (values *template.Values, err erro
 	state, err := p.cluster.LoadZarfState()
 	// Return on error if we are not in YOLO mode
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
-		return nil, fmt.Errorf("unable to load the Zarf State from the Kubernetes cluster: %w", err)
+		return nil, fmt.Errorf("%s %w", lang.ErrLoadState, err)
 	} else if state == nil && p.cfg.Pkg.Metadata.YOLO {
 		state = &types.ZarfState{}
 		// YOLO mode, so minimal state needed
@@ -473,6 +481,9 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 			gitClient := git.New(p.cfg.State.GitServer)
 			svcInfo, _ := k8s.ServiceInfoFromServiceURL(gitClient.Server.Address)
 
+			var err error
+			var tunnel *k8s.Tunnel
+
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
 			if svcInfo != nil {
 				if !p.isConnectedToCluster() {
@@ -482,7 +493,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 					}
 				}
 
-				tunnel, err := p.cluster.NewTunnel(svcInfo.Namespace, k8s.SvcResource, svcInfo.Name, "", 0, svcInfo.Port)
+				tunnel, err = p.cluster.NewTunnel(svcInfo.Namespace, k8s.SvcResource, svcInfo.Name, "", 0, svcInfo.Port)
 				if err != nil {
 					return err
 				}
@@ -493,6 +504,8 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 				}
 				defer tunnel.Close()
 				gitClient.Server.Address = tunnel.HTTPEndpoint()
+
+				return tunnel.Wrap(func() error { return gitClient.PushRepo(repoURL, reposPath) })
 			}
 
 			return gitClient.PushRepo(repoURL, reposPath)
@@ -612,12 +625,14 @@ func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedC
 	if !p.isInitConfig() {
 		message.PrintConnectStringTable(p.connectStrings)
 	} else {
-		// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds
-		freshState, err := p.cluster.LoadZarfState()
-		if err != nil {
-			freshState = p.cfg.State
+		if p.cluster != nil {
+			// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds
+			freshState, err := p.cluster.LoadZarfState()
+			if err != nil {
+				freshState = p.cfg.State
+			}
+			// otherwise, print the init config connection and passwords
+			message.PrintCredentialTable(freshState, componentsToDeploy)
 		}
-		// otherwise, print the init config connection and passwords
-		message.PrintCredentialTable(freshState, componentsToDeploy)
 	}
 }

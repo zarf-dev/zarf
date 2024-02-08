@@ -9,5 +9,5 @@ components:
     description: "import-component-oci == ###ZARF_COMPONENT_NAME###"
     required: false
     import:
-      name: demo-helm-local-chart
-      url: oci://localhost:555/helm-charts:0.0.1-skeleton
+      name: demo-helm-charts
+      url: oci://localhost:555/helm-charts:0.0.1

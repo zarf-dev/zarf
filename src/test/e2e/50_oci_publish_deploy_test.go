@@ -58,7 +58,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	suite.Contains(stdErr, "Published "+ref)
 
 	// Pull the package via OCI.
-	stdOut, stdErr, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1-"+e2e.Arch, "--insecure")
+	stdOut, stdErr, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Publish w/ package missing `metadata.version` field.
@@ -71,8 +71,17 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	stdOut, stdErr, err = e2e.Zarf("package", "create", dir, "-o", "oci://"+ref, "--insecure", "--oci-concurrency=5", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
+	// Inline publish flavor.
+	dir = filepath.Join("examples", "package-flavors")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", dir, "-o", "oci://"+ref, "--flavor", "oracle-cookie-crunch", "--insecure", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+
+	// Inspect published flavor.
+	stdOut, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/package-flavors:1.0.0-oracle-cookie-crunch", "--insecure")
+	suite.NoError(err, stdOut, stdErr)
+
 	// Inspect the published package.
-	stdOut, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/helm-charts:0.0.1-"+e2e.Arch, "--insecure")
+	stdOut, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/helm-charts:0.0.1", "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 }
 
@@ -81,11 +90,11 @@ func (suite *PublishDeploySuiteTestSuite) Test_1_Deploy() {
 
 	// Build the fully qualified reference.
 	suite.Reference.Repository = "helm-charts"
-	suite.Reference.Reference = fmt.Sprintf("0.0.1-%s", e2e.Arch)
+	suite.Reference.Reference = "0.0.1"
 	ref := suite.Reference.String()
 
 	// Deploy the package via OCI.
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", "oci://"+ref, "--components=demo-helm-oci-chart", "--insecure", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "deploy", "oci://"+ref, "--insecure", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Remove the package via OCI.
@@ -119,22 +128,17 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	e2e.SetupDockerRegistry(t, dstRegistryPort)
 	defer e2e.TeardownRegistry(t, dstRegistryPort)
 
-	ctx := context.TODO()
-
-	src, err := oci.NewOrasRemote(ref)
+	src, err := oci.NewOrasRemote(ref, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
 	suite.NoError(err)
-	src.WithInsecureConnection(true)
-	src.WithContext(ctx)
 
-	dst, err := oci.NewOrasRemote(dstRef)
+	dst, err := oci.NewOrasRemote(dstRef, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
 	suite.NoError(err)
-	dst.WithInsecureConnection(true)
-	dst.WithContext(ctx)
 
 	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])
 	suite.NoError(err)
 	reg.PlainHTTP = true
 	attempt := 0
+	ctx := context.TODO()
 	for attempt <= 5 {
 		err = reg.Ping(ctx)
 		if err == nil {

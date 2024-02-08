@@ -35,7 +35,7 @@ func TestMismatchedArchitectures(t *testing.T) {
 	// Ensure zarf package deploy returns an error because of the mismatched architectures.
 	_, stdErr, err = e2e.Zarf("package", "deploy", mismatchedGamesPackage, "--confirm")
 	require.Error(t, err, stdErr)
-	require.Contains(t, stdErr, expectedErrorMessage)
+	require.Contains(t, e2e.StripMessageFormatting(stdErr), expectedErrorMessage)
 }
 
 // TestMismatchedVersions ensures that zarf produces a warning

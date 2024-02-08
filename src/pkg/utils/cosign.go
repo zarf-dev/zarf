@@ -140,7 +140,7 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 
 	for _, sig := range sp {
 		if cert, err := sig.Cert(); err == nil && cert != nil {
-			message.Debugf("Certificate subject: %s", sigs.CertSubject(cert))
+			message.Debugf("Certificate subject: %s", cert.Subject)
 
 			ce := cosign.CertExtensions{Cert: cert}
 			if issuerURL := ce.GetIssuer(); issuerURL != "" {

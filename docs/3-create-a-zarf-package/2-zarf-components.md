@@ -66,20 +66,17 @@ Charts using the `url` key can be:
 
 - A remote URL (http/https) to a Git repository
 - A remote URL (oci://) to an OCI registry
+- A remote URL (http/https) to a Helm repository
+
+:::note
+
+To use a private Helm repository the repo must be added to Helm. You can add a repo to Helm with the [`helm repo add`](https://helm.sh/docs/helm/helm_repo_add/) command or the internal [`zarf tools helm repo add`](../2-the-zarf-cli/100-cli-commands/zarf_tools_helm_repo_add.md) command.
+
+:::
 
 #### Chart Examples
 
-<Tabs queryString="chart-examples">
-<TabItem value="localPath">
-<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-local-chart" />
-</TabItem>
-<TabItem value="URL (git)">
-<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-git-chart" />
-</TabItem>
-<TabItem value="URL (oci)">
-<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-oci-chart" />
-</TabItem>
-</Tabs>
+<ExampleYAML src={require('../../examples/helm-charts/zarf.yaml')} component="demo-helm-charts" />
 
 ### Kubernetes Manifests
 
@@ -125,11 +122,11 @@ Kustomizations are handled a bit differently than normal manifests in that Zarf 
 
 <Properties item="ZarfComponent" include={["images"]} />
 
-Images can either be discovered manually, or automatically by using [`zarf prepare find-images`](../2-the-zarf-cli/100-cli-commands/zarf_prepare_find-images.md).
+Images can either be discovered manually, or automatically by using [`zarf dev find-images`](../2-the-zarf-cli/100-cli-commands/zarf_dev_find-images.md).
 
 :::note
 
-`zarf prepare find-images` will find images for most standard manifests, kustomizations, and helm charts, however some images cannot be discovered this way as some upstream resources (like operators) may bury image definitions inside.  For these images, `zarf prepare find-images` also offers support for the draft [Helm Improvement Proposal 15](https://github.com/helm/community/blob/main/hips/hip-0015.md) which allows chart creators to annotate any hidden images in their charts along with the [values conditions](https://github.com/helm/community/issues/277) that will cause those images to be used.
+`zarf dev find-images` will find images for most standard manifests, kustomizations, and helm charts, however some images cannot be discovered this way as some upstream resources (like operators) may bury image definitions inside.  For these images, `zarf dev find-images` also offers support for the draft [Helm Improvement Proposal 15](https://github.com/helm/community/blob/main/hips/hip-0015.md) which allows chart creators to annotate any hidden images in their charts along with the [values conditions](https://github.com/helm/community/issues/277) that will cause those images to be used.
 
 :::
 
@@ -213,3 +210,21 @@ $ zarf package deploy ./path/to/package.tar.zst --confirm
 # deploy optional-component-1 and optional-component-2 components whether they are required or not
 $ zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,optional-component-2
 ```
+
+:::tip
+
+You can deploy components in a package using globbing as well.  The following would deploy all components regardless of optional status:
+
+```bash
+# deploy optional-component-1 and optional-component-2 components whether they are required or not
+$ zarf package deploy ./path/to/package.tar.zst --components=*
+```
+
+If you have any `default` components in a package definition you can also exclude those from the CLI with a leading dash (`-`) (similar to how you can exclude search terms in a search engine).
+
+```bash
+# deploy optional-component-1 but exclude default-component-1
+$ zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,-default-component-1
+```
+
+:::

@@ -79,7 +79,8 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 	}
 
 	// Handle the chart directory or tarball
-	var path string
+	var saved string
+	temp := filepath.Join(h.chartPath, "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
 		err = h.buildChartDependencies(spinner)
 		if err != nil {
@@ -88,20 +89,22 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 
 		client := action.NewPackage()
 
-		client.Destination = h.chartPath
-		path, err = client.Run(h.chart.LocalPath, nil)
+		client.Destination = temp
+		saved, err = client.Run(h.chart.LocalPath, nil)
 	} else {
-		path = filepath.Join(h.chartPath, filepath.Base(h.chart.LocalPath))
-		err = utils.CreatePathAndCopy(h.chart.LocalPath, path)
+		saved = filepath.Join(temp, filepath.Base(h.chart.LocalPath))
+		err = utils.CreatePathAndCopy(h.chart.LocalPath, saved)
 	}
+	defer os.RemoveAll(temp)
 
 	if err != nil {
-		return fmt.Errorf("unable to save the archive and create the package %s: %w", path, err)
+		return fmt.Errorf("unable to save the archive and create the package %s: %w", saved, err)
 	}
 
-	err = h.packageValues(cosignKeyPath)
+	// Finalize the chart
+	err = h.finalizeChartPackage(saved, cosignKeyPath)
 	if err != nil {
-		return fmt.Errorf("unable to process the values for the package: %w", err)
+		return err
 	}
 
 	spinner.Success()
@@ -140,6 +143,15 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		chartURL  string
 		err       error
 	)
+	repoFile, err := repo.LoadFile(pull.Settings.RepositoryConfig)
+
+	// Not returning the error here since the repo file is only needed if we are pulling from a repo that requires authentication
+	if err != nil {
+		message.Debugf("Unable to load the repo file at %q: %s", pull.Settings.RepositoryConfig, err.Error())
+	}
+
+	var username string
+	var password string
 
 	// Handle OCI registries
 	if registry.IsOCI(h.chart.URL) {
@@ -151,8 +163,23 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		// Explicitly set the pull version for OCI
 		pull.Version = h.chart.Version
 	} else {
-		// Perform simple chart download
-		chartURL, err = repo.FindChartInRepoURL(h.chart.URL, h.chart.Name, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+		chartName := h.chart.Name
+		if h.chart.RepoName != "" {
+			chartName = h.chart.RepoName
+		}
+
+		if repoFile != nil {
+			// TODO: @AustinAbro321 Currently this selects the last repo with the same url
+			// We should introduce a new field in zarf to allow users to specify the local repo they want
+			for _, repo := range repoFile.Repositories {
+				if repo.URL == h.chart.URL {
+					username = repo.Username
+					password = repo.Password
+				}
+			}
+		}
+
+		chartURL, err = repo.FindChartInAuthRepoURL(h.chart.URL, username, password, chartName, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				// Intentionally dogsled this error since this is just a nice to have helper
@@ -171,11 +198,18 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		Getters: getter.All(pull.Settings),
 		Options: []getter.Option{
 			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.Insecure),
+			getter.WithBasicAuth(username, password),
 		},
 	}
 
-	// Download the file (we don't control what name helm creates here)
-	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, h.chartPath)
+	// Download the file into a temp directory since we don't control what name helm creates here
+	temp := filepath.Join(h.chartPath, "temp")
+	if err = utils.CreateDirectory(temp, 0700); err != nil {
+		return fmt.Errorf("unable to create helm chart temp directory: %w", err)
+	}
+	defer os.RemoveAll(temp)
+
+	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, temp)
 	if err != nil {
 		return fmt.Errorf("unable to download the helm chart: %w", err)
 	}
@@ -186,16 +220,10 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		return err
 	}
 
-	// Ensure the name is consistent for deployments
-	destinationTarball := StandardName(h.chartPath, h.chart) + ".tgz"
-	err = os.Rename(saved, destinationTarball)
+	// Finalize the chart
+	err = h.finalizeChartPackage(saved, cosignKeyPath)
 	if err != nil {
-		return fmt.Errorf("unable to save the chart tarball: %w", err)
-	}
-
-	err = h.packageValues(cosignKeyPath)
-	if err != nil {
-		return fmt.Errorf("unable to process the values for the package: %w", err)
+		return err
 	}
 
 	spinner.Success()
@@ -215,6 +243,21 @@ func DownloadChartFromGitToTemp(url string, spinner *message.Spinner) (string, e
 	}
 
 	return gitCfg.GitPath, nil
+}
+
+func (h *Helm) finalizeChartPackage(saved, cosignKeyPath string) error {
+	// Ensure the name is consistent for deployments
+	destinationTarball := StandardName(h.chartPath, h.chart) + ".tgz"
+	err := os.Rename(saved, destinationTarball)
+	if err != nil {
+		return fmt.Errorf("unable to save the final chart tarball: %w", err)
+	}
+
+	err = h.packageValues(cosignKeyPath)
+	if err != nil {
+		return fmt.Errorf("unable to process the values for the package: %w", err)
+	}
+	return nil
 }
 
 func (h *Helm) packageValues(cosignKeyPath string) error {

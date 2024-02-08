@@ -35,15 +35,17 @@ var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
 // GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run.
 func GetCLIName() string {
 	var binaryName string
-	if runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "linux":
 		binaryName = "zarf"
-	} else if runtime.GOOS == "darwin" {
-		if runtime.GOARCH == "arm64" {
+	case "darwin":
+		switch runtime.GOARCH {
+		case "arm64":
 			binaryName = "zarf-mac-apple"
-		} else {
+		default:
 			binaryName = "zarf-mac-intel"
 		}
-	} else if runtime.GOOS == "windows" {
+	case "windows":
 		if runtime.GOARCH == "amd64" {
 			binaryName = "zarf.exe"
 		}
@@ -130,11 +132,14 @@ func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
 	return strings.Trim(stdOut, "\n")
 }
 
-// StripANSICodes strips any ANSI color codes from a given string
-func (e2e *ZarfE2ETest) StripANSICodes(input string) string {
+// StripMessageFormatting strips any ANSI color codes and extra spaces from a given string
+func (e2e *ZarfE2ETest) StripMessageFormatting(input string) string {
 	// Regex to strip any color codes from the output - https://regex101.com/r/YFyIwC/2
 	ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
-	return ansiRegex.ReplaceAllString(input, "")
+	unAnsiInput := ansiRegex.ReplaceAllString(input, "")
+	// Regex to strip any more than two spaces or newline - https://regex101.com/r/wqQmys/1
+	multiSpaceRegex := regexp.MustCompile(`\s{2,}|\n`)
+	return multiSpaceRegex.ReplaceAllString(unAnsiInput, " ")
 }
 
 // NormalizeYAMLFilenames normalizes YAML filenames / paths across Operating Systems (i.e Windows vs Linux)

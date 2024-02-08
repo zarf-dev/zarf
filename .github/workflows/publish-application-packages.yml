@@ -18,7 +18,7 @@ jobs:
       packages: write
     steps:
       - name: "Checkout Repo"
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: ${{ github.event.inputs.branchName }}
 
@@ -44,9 +44,6 @@ jobs:
 
           # Publish a skeleton of the dos-games package
           zarf package publish examples/dos-games oci://ghcr.io/defenseunicorns/packages
-
-          zarf tools registry copy ghcr.io/defenseunicorns/packages/dos-games:1.0.0-amd64 ghcr.io/defenseunicorns/packages/dos-games:1.0.0-x86_64
-          zarf tools registry copy ghcr.io/defenseunicorns/packages/dos-games:1.0.0-arm64 ghcr.io/defenseunicorns/packages/dos-games:1.0.0-aarch64
         env:
           AWS_REGION: ${{ secrets.COSIGN_AWS_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.COSIGN_AWS_KEY_ID }}

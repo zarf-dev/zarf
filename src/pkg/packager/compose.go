@@ -17,7 +17,7 @@ func (p *Packager) composeComponents() error {
 	pkgVars := p.cfg.Pkg.Variables
 	pkgConsts := p.cfg.Pkg.Constants
 
-	for _, component := range p.cfg.Pkg.Components {
+	for i, component := range p.cfg.Pkg.Components {
 		arch := p.arch
 		// filter by architecture
 		if !composer.CompatibleComponent(component, arch, p.cfg.CreateOpts.Flavor) {
@@ -29,7 +29,7 @@ func (p *Packager) composeComponents() error {
 		component.Only.Flavor = ""
 
 		// build the import chain
-		chain, err := composer.NewImportChain(component, arch, p.cfg.CreateOpts.Flavor)
+		chain, err := composer.NewImportChain(component, i, p.cfg.Pkg.Metadata.Name, arch, p.cfg.CreateOpts.Flavor)
 		if err != nil {
 			return err
 		}
@@ -44,7 +44,7 @@ func (p *Packager) composeComponents() error {
 		if err != nil {
 			return err
 		}
-		components = append(components, composed)
+		components = append(components, *composed)
 
 		// merge variables and constants
 		pkgVars = chain.MergeVariables(pkgVars)

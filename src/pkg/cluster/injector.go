@@ -28,6 +28,16 @@ import (
 // The chunk size for the tarball chunks.
 var payloadChunkSize = 1024 * 768
 
+var (
+	injectorRequestedCPU    = resource.MustParse(".5")
+	injectorRequestedMemory = resource.MustParse("64Mi")
+	injectorLimitCPU        = resource.MustParse("1")
+	injectorLimitMemory     = resource.MustParse("256Mi")
+)
+
+// imageNodeMap is a map of image/node pairs.
+type imageNodeMap map[string][]string
+
 // StartInjectionMadness initializes a Zarf injection into the cluster.
 func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injectorSeedSrcs []string) {
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
@@ -46,7 +56,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 	}
 
 	var err error
-	var images k8s.ImageNodeMap
+	var images imageNodeMap
 	var payloadConfigmaps []string
 	var sha256sum string
 	var seedImages []transform.Image
@@ -54,7 +64,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 	// Get all the images from the cluster
 	timeout := 5 * time.Minute
 	spinner.Updatef("Getting the list of existing cluster images (%s timeout)", timeout.String())
-	if images, err = c.GetAllImages(timeout); err != nil {
+	if images, err = c.getImagesAndNodesForInjection(timeout); err != nil {
 		spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
 	}
 
@@ -192,7 +202,7 @@ func (c *Cluster) createPayloadConfigmaps(seedImagesDir, tarPath string, spinner
 		return configMaps, "", err
 	}
 
-	chunks, sha256sum, err := utils.SplitFile(tarPath, payloadChunkSize)
+	chunks, sha256sum, err := utils.ReadFileByChunks(tarPath, payloadChunkSize)
 	if err != nil {
 		return configMaps, "", err
 	}
@@ -245,7 +255,15 @@ func (c *Cluster) injectorIsReady(seedImages []transform.Image, spinner *message
 
 	for _, seedImage := range seedImages {
 		seedRegistry := fmt.Sprintf("%s/v2/%s/manifests/%s", tunnel.HTTPEndpoint(), seedImage.Path, seedImage.Tag)
-		if resp, err := http.Get(seedRegistry); err != nil || resp.StatusCode != 200 {
+
+		var resp *http.Response
+		var err error
+		err = tunnel.Wrap(func() error {
+			resp, err = http.Get(seedRegistry)
+			return err
+		})
+
+		if err != nil || resp.StatusCode != 200 {
 			// Just debug log the output because failures just result in trying the next image
 			message.Debug(resp, err)
 			return false
@@ -354,12 +372,12 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 			// Keep resources as light as possible as we aren't actually running the container's other binaries
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse(".5"),
-					corev1.ResourceMemory: resource.MustParse("64Mi"),
+					corev1.ResourceCPU:    injectorRequestedCPU,
+					corev1.ResourceMemory: injectorRequestedMemory,
 				},
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("1"),
-					corev1.ResourceMemory: resource.MustParse("256Mi"),
+					corev1.ResourceCPU:    injectorLimitCPU,
+					corev1.ResourceMemory: injectorLimitMemory,
 				},
 			},
 		},
@@ -410,4 +428,72 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 	}
 
 	return pod, nil
+}
+
+// GetImagesFromAvailableNodes checks for images on schedulable nodes within a cluster and returns
+func (c *Cluster) getImagesAndNodesForInjection(timeoutDuration time.Duration) (imageNodeMap, error) {
+	timeout := time.After(timeoutDuration)
+	result := make(imageNodeMap)
+
+	for {
+		select {
+
+		// On timeout abort
+		case <-timeout:
+			return nil, fmt.Errorf("get image list timed-out")
+
+		// After delay, try running
+		default:
+			pods, err := c.GetPods(corev1.NamespaceAll)
+			if err != nil {
+				return nil, fmt.Errorf("unable to get the list of pods in the cluster")
+			}
+
+		findImages:
+			for _, pod := range pods.Items {
+				nodeName := pod.Spec.NodeName
+
+				// If this pod doesn't have a node (i.e. is Pending), skip it
+				if nodeName == "" {
+					continue
+				}
+
+				nodeDetails, err := c.GetNode(nodeName)
+
+				if err != nil {
+					return nil, fmt.Errorf("unable to get the node %s", pod.Spec.NodeName)
+				}
+
+				if nodeDetails.Status.Allocatable.Cpu().Cmp(injectorRequestedCPU) < 0 ||
+					nodeDetails.Status.Allocatable.Memory().Cmp(injectorRequestedMemory) < 0 {
+					continue findImages
+				}
+
+				for _, taint := range nodeDetails.Spec.Taints {
+					if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
+						continue findImages
+					}
+				}
+
+				for _, container := range pod.Spec.InitContainers {
+					result[container.Image] = append(result[container.Image], nodeName)
+				}
+
+				for _, container := range pod.Spec.Containers {
+					result[container.Image] = append(result[container.Image], nodeName)
+				}
+
+				for _, container := range pod.Spec.EphemeralContainers {
+					result[container.Image] = append(result[container.Image], nodeName)
+				}
+			}
+		}
+
+		if len(result) < 1 {
+			c.Log("no images found: %w")
+			time.Sleep(2 * time.Second)
+		} else {
+			return result, nil
+		}
+	}
 }

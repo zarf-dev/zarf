@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -46,34 +45,27 @@ func testHelmChartsExample(t *testing.T) {
 	evilChartDepsPath := filepath.Join("src", "test", "packages", "25-evil-chart-deps")
 	stdOut, stdErr, err = e2e.Zarf("package", "create", evilChartDepsPath, "--tmpdir", tmpdir, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, e2e.StripANSICodes(stdErr), "could not download\n          https://charts.jetstack.io/charts/cert-manager-v1.11.1.tgz")
+	require.Contains(t, e2e.StripMessageFormatting(stdErr), "could not download https://charts.jetstack.io/charts/cert-manager-v1.11.1.tgz")
 	require.FileExists(t, filepath.Join(evilChartDepsPath, "good-chart", "charts", "gitlab-runner-0.55.0.tgz"))
 
 	// Create a package with a chart name that doesn't exist in a repo
 	evilChartLookupPath := filepath.Join("src", "test", "packages", "25-evil-chart-lookup")
 	stdOut, stdErr, err = e2e.Zarf("package", "create", evilChartLookupPath, "--tmpdir", tmpdir, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, e2e.StripANSICodes(stdErr), "chart \"asdf\" version \"6.4.0\" not found")
-	require.Contains(t, e2e.StripANSICodes(stdErr), "Available charts and versions from \"https://stefanprodan.github.io/podinfo\":")
+	require.Contains(t, e2e.StripMessageFormatting(stdErr), "chart \"asdf\" version \"6.4.0\" not found")
+	require.Contains(t, e2e.StripMessageFormatting(stdErr), "Available charts and versions from \"https://stefanprodan.github.io/podinfo\":")
 
-	// Create the package with a registry override
+	// Create the package (with a registry override to test that as well)
 	stdOut, stdErr, err = e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io=docker.io", "--tmpdir", tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Deploy the package.
-	allComponents := []string{
-		"demo-helm-local-chart",
-		"demo-helm-git-chart",
-		"demo-helm-oci-chart",
-		"demo-helm-alt-release-name",
-	}
-	componentsFlag := fmt.Sprintf("--components=%s", strings.Join(allComponents, ","))
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", helmChartsPkg, componentsFlag, "--confirm")
+	// Deploy the example package.
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", helmChartsPkg, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, string(stdErr), "registryOverrides", "registry overrides was not saved to build data")
 	require.Contains(t, string(stdErr), "docker.io", "docker.io not found in registry overrides")
 
-	// Remove the package.
+	// Remove the example package.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "helm-charts", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
