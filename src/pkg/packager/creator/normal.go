@@ -108,7 +108,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (loade
 			return nil, nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
 
-		loadedPkg, err = removeCopiesFromDifferentialPackage(loadedPkg, loadedDiffData)
+		loadedPkg.Components, err = removeCopiesFromDifferentialPackage(loadedPkg.Components, loadedDiffData)
 		if err != nil {
 			return nil, nil, err
 		}

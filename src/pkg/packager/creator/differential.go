@@ -77,66 +77,50 @@ func loadDifferentialData(diffData *types.DifferentialData) (loadedDiffData *typ
 	return loadedDiffData, nil
 }
 
-// removeCopiesFromDifferentialPackage removes any images and repos already present in the reference package.
-func removeCopiesFromDifferentialPackage(pkg *types.ZarfPackage, loadedDiffData *types.DifferentialData) (diffPkg *types.ZarfPackage, err error) {
-	// Loop through all of the components to determine if any of them are using already included images or repos
-	componentMap := make(map[int]types.ZarfComponent)
-	for idx, component := range pkg.Components {
+// removeCopiesFromDifferentialPackage removes any images and repos already present in the reference package components.
+func removeCopiesFromDifferentialPackage(components []types.ZarfComponent, loadedDiffData *types.DifferentialData) (diffComponents []types.ZarfComponent, err error) {
+	for _, component := range components {
 		newImageList := []string{}
 		newRepoList := []string{}
-		// Generate a list of all unique images for this component
+
 		for _, img := range component.Images {
-			// If a image doesn't have a ref (or is a commonly reused ref), we will include this image in the differential package
 			imgRef, err := transform.ParseImageRef(img)
 			if err != nil {
 				return nil, fmt.Errorf("unable to parse image ref %s: %s", img, err.Error())
 			}
 
-			// Only include new images or images that have a commonly overwritten tag
 			imgTag := imgRef.TagOrDigest
-			useImgAnyways := imgTag == ":latest" || imgTag == ":stable" || imgTag == ":nightly"
-			if useImgAnyways || !loadedDiffData.DifferentialImages[img] {
+			includeImage := imgTag == ":latest" || imgTag == ":stable" || imgTag == ":nightly"
+			if includeImage || !loadedDiffData.DifferentialImages[img] {
 				newImageList = append(newImageList, img)
 			} else {
 				message.Debugf("Image %s is already included in the differential package", img)
 			}
 		}
 
-		// Generate a list of all unique repos for this component
 		for _, repoURL := range component.Repos {
-			// Split the remote url and the zarf reference
 			_, refPlain, err := transform.GitURLSplitRef(repoURL)
 			if err != nil {
 				return nil, err
 			}
 
 			var ref plumbing.ReferenceName
-			// Parse the ref from the git URL.
 			if refPlain != "" {
 				ref = git.ParseRef(refPlain)
 			}
 
-			// Only include new repos or repos that were not referenced by a specific commit sha or tag
-			useRepoAnyways := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
-			if useRepoAnyways || !loadedDiffData.DifferentialRepos[repoURL] {
+			includeRepo := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
+			if includeRepo || !loadedDiffData.DifferentialRepos[repoURL] {
 				newRepoList = append(newRepoList, repoURL)
 			} else {
 				message.Debugf("Repo %s is already included in the differential package", repoURL)
 			}
 		}
 
-		// Update the component with the unique lists of repos and images
 		component.Images = newImageList
 		component.Repos = newRepoList
-		componentMap[idx] = component
+		diffComponents = append(diffComponents, component)
 	}
 
-	// Update the package with the new component list
-	for idx, component := range componentMap {
-		pkg.Components[idx] = component
-	}
-
-	diffPkg = pkg
-
-	return diffPkg, nil
+	return diffComponents, nil
 }
