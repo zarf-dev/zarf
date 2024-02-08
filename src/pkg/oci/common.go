@@ -6,7 +6,6 @@ package oci
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -25,49 +24,6 @@ const (
 	MultiOS = "multi"
 )
 
-// Debug does nothing
-func (l *DiscardLogger) Debug(_ string, _ ...any) {}
-
-// Info does nothing
-func (l *DiscardLogger) Info(_ string, _ ...any) {}
-
-// Warn does nothing
-func (l *DiscardLogger) Warn(_ string, _ ...any) {}
-
-// Error does nothing
-func (l *DiscardLogger) Error(_ string, _ ...any) {}
-
-// DiscardLogger is the default if the WithLogger modifier is not used
-// It discards all logs
-type DiscardLogger struct{}
-
-// Logger is an interface built to
-type Logger interface {
-	Debug(msg string, args ...any)
-	Info(msg string, args ...any)
-	Warn(msg string, args ...any)
-	Error(msg string, args ...any)
-}
-
-// Write doesn't do anything but satisfy implementation
-func (DiscardProgressWriter) Write(p []byte) (int, error) {
-	return len(p), nil
-}
-
-// UpdateTitle doesn't do anything but satisfy implementation
-func (DiscardProgressWriter) UpdateTitle(_ string) {}
-
-// DiscardProgressWriter is a ProgressWriter in which all calls succeed without doing anything
-// Use this or nil or if you don't care about writing progress
-type DiscardProgressWriter struct{}
-
-// ProgressWriter wraps io.Writer, but also includes an updateTitle function to give the user
-// additional context on what's going on. Useful in OCI for tracking layers
-type ProgressWriter interface {
-	UpdateTitle(string)
-	io.Writer
-}
-
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
 type OrasRemote struct {
 	repo           *remote.Repository
@@ -75,7 +31,7 @@ type OrasRemote struct {
 	Transport      *helpers.Transport
 	CopyOpts       oras.CopyOptions
 	targetPlatform *ocispec.Platform
-	log            Logger
+	log            helpers.Logger
 }
 
 // Modifier is a function that modifies an OrasRemote
@@ -118,7 +74,7 @@ func WithUserAgent(userAgent string) Modifier {
 }
 
 // WithLogger sets the logger for the remote
-func WithLogger(logger Logger) Modifier {
+func WithLogger(logger helpers.Logger) Modifier {
 	return func(o *OrasRemote) {
 		o.log = logger
 	}
@@ -145,7 +101,7 @@ func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*Or
 	}
 
 	if o.log == nil {
-		o.log = &DiscardLogger{}
+		o.log = &helpers.DiscardLogger{}
 	}
 
 	if err := o.setRepository(ref); err != nil {

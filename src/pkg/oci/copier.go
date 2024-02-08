@@ -19,9 +19,9 @@ import (
 
 // Copy copies an artifact from one OCI registry to another
 func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
-	include func(d ocispec.Descriptor) bool, concurrency int, progressBar ProgressWriter) (err error) {
+	include func(d ocispec.Descriptor) bool, concurrency int, progressBar helpers.ProgressWriter) (err error) {
 	if progressBar == nil {
-		progressBar = DiscardProgressWriter{}
+		progressBar = helpers.DiscardProgressWriter{}
 	}
 	// create a new semaphore to limit concurrency
 	sem := semaphore.NewWeighted(int64(concurrency))
