@@ -19,14 +19,14 @@ import (
 )
 
 // PublishPackage publishes the zarf package to the remote repository.
-func (o *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
+func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
 	src, err := file.New(paths.Base)
 	if err != nil {
 		return err
 	}
 	defer src.Close()
 
-	message.Infof("Publishing package to %s", o.Repo().Reference)
+	message.Infof("Publishing package to %s", r.Repo().Reference)
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 
@@ -45,7 +45,7 @@ func (o *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 	}
 	spinner.Successf("Prepared all layers")
 
-	copyOpts := o.CopyOpts
+	copyOpts := r.CopyOpts
 	copyOpts.Concurrency = concurrency
 	total := oci.SumDescsSize(descs)
 
@@ -53,36 +53,38 @@ func (o *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 
 	// assumes referrers API is not supported since OCI artifact
 	// media type is not supported
-	o.Repo().SetReferrersCapability(false)
+	r.Repo().SetReferrersCapability(false)
 
 	// push the manifest config
 	// since this config is so tiny, and the content is not used again
 	// it is not logged to the progress, but will error if it fails
-	manifestConfigDesc, err := o.PushManifestConfigFromMetadata(ctx, annotations, ZarfConfigMediaType)
+	manifestConfigDesc, err := r.PushManifestConfigFromMetadata(ctx, annotations, ZarfConfigMediaType)
 	if err != nil {
 		return err
 	}
-	root, err := o.GeneratePackManifest(ctx, src, descs, manifestConfigDesc, annotations)
-	if err != nil {
-		return err
-	}
-
-	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", o.Repo().Reference.Repository, o.Repo().Reference.Reference))
-	o.Transport.ProgressBar = progressBar
-
-	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), o.Repo(), "", copyOpts)
+	root, err := r.GeneratePackManifest(ctx, src, descs, manifestConfigDesc, annotations)
 	if err != nil {
 		return err
 	}
 
-	o.UpdateIndex(ctx, o.Repo().Reference.Reference, publishedDesc)
+	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", r.Repo().Reference.Repository, r.Repo().Reference.Reference))
+	r.Transport.ProgressBar = progressBar
+
+	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), r.Repo(), "", copyOpts)
+	if err != nil {
+		return err
+	}
+
+	if err := r.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc); err != nil {
+		return err
+	}
 
 	if err != nil {
 		progressBar.Stop()
 		return fmt.Errorf("unable to publish package: %w", err)
 	}
 
-	progressBar.Successf("Published %s [%s]", o.Repo().Reference, ZarfLayerMediaTypeBlob)
+	progressBar.Successf("Published %s [%s]", r.Repo().Reference, ZarfLayerMediaTypeBlob)
 	return nil
 }
 

@@ -40,11 +40,11 @@ var (
 //   - zarf.yaml
 //   - checksums.txt
 //   - zarf.yaml.sig
-func (o *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 	isPartialPull := len(layersToPull) > 0
-	message.Debugf("Pulling %s", o.Repo().Reference)
+	message.Debugf("Pulling %s", r.Repo().Reference)
 
-	manifest, err := o.FetchRoot(ctx)
+	manifest, err := r.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (o *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 
 	// Create a thread to update a progress bar as we save the package to disk
 	doneSaving := make(chan error)
-	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+o.Repo().Reference.String())
+	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+r.Repo().Reference.String())
 
 	layerSize := oci.SumDescsSize(layersToPull)
 	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, doneSaving, "Pulling", successText)
@@ -72,10 +72,10 @@ func (o *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	}
 	defer dst.Close()
 
-	copyOpts := o.CopyOpts
+	copyOpts := r.CopyOpts
 	copyOpts.Concurrency = concurrency
 
-	err = o.CopyToStore(ctx, layersToPull, dst, copyOpts)
+	err = r.CopyToStore(ctx, layersToPull, dst, copyOpts)
 	doneSaving <- err
 	<-doneSaving
 	return layersToPull, err
@@ -85,13 +85,13 @@ func (o *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 // It also retrieves the descriptors for all image layers that are required by the components.
 //
 // It also respects the `required` flag on components, and will retrieve all necessary layers for required components.
-func (o *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []string) (layers []ocispec.Descriptor, err error) {
-	root, err := o.FetchRoot(ctx)
+func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []string) (layers []ocispec.Descriptor, err error) {
+	root, err := r.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	pkg, err := o.FetchZarfYAML(ctx)
+	pkg, err := r.FetchZarfYAML(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (o *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 	if len(images) > 0 {
 		// Add the image index and the oci-layout layers
 		layers = append(layers, root.Locate(ZarfPackageIndexPath), root.Locate(ZarfPackageLayoutPath))
-		index, err := o.FetchImagesIndex(ctx)
+		index, err := r.FetchImagesIndex(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -145,7 +145,7 @@ func (o *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 			// even though these are technically image manifests, we store them as Zarf blobs
 			manifestDescriptor.MediaType = ZarfLayerMediaTypeBlob
 
-			manifest, err := o.FetchManifest(ctx, manifestDescriptor)
+			manifest, err := r.FetchManifest(ctx, manifestDescriptor)
 			if err != nil {
 				return nil, err
 			}
@@ -164,11 +164,11 @@ func (o *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 }
 
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
-func (o *Remote) PullPackageMetadata(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
-	return o.PullPaths(ctx, destinationDir, PackageAlwaysPull)
+func (r *Remote) PullPackageMetadata(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
+	return r.PullPaths(ctx, destinationDir, PackageAlwaysPull)
 }
 
 // PullPackageSBOM pulls the package's sboms.tar from the remote repository and saves it to `destinationDir`.
-func (o *Remote) PullPackageSBOM(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
-	return o.PullPaths(ctx, destinationDir, []string{layout.SBOMTar})
+func (r *Remote) PullPackageSBOM(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
+	return r.PullPaths(ctx, destinationDir, []string{layout.SBOMTar})
 }
