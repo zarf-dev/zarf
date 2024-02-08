@@ -376,7 +376,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 		}()
 	}
 
-	onImageSavingProgress := func(finishedImage digestInfo, iteration int) {
+	onImageSavingProgress := func(finishedImage digestInfo, _ int) {
 		referenceToDigest[finishedImage.refInfo.Reference] = finishedImage.digest
 	}
 
