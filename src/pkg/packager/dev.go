@@ -32,14 +32,13 @@ func (p *Packager) DevDeploy() error {
 
 	pc := creator.NewPackageCreator(p.cfg.CreateOpts, &p.cfg.PkgOpts, p.cfg, cwd)
 
-	loadedPkg, warnings, err := pc.LoadPackageDefinition(p.layout)
+	var warnings []string
+	p.cfg.Pkg, warnings, err = pc.LoadPackageDefinition(p.layout)
 	if err != nil {
 		return err
 	}
 
 	p.warnings = append(p.warnings, warnings...)
-
-	p.cfg.Pkg = *loadedPkg
 
 	// Filter out components that are not compatible with this system
 	p.filterComponents()
@@ -51,7 +50,7 @@ func (p *Packager) DevDeploy() error {
 	// all components and their dependencies, regardless of whether they are required or not
 	p.cfg.Pkg.Components = p.getSelectedComponents()
 
-	if err := validate.Run(*loadedPkg); err != nil {
+	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 

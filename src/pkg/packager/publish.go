@@ -91,22 +91,21 @@ func (p *Packager) Publish() (err error) {
 
 		sc := creator.NewSkeletonCreator(p.cfg.CreateOpts, p.cfg.PublishOpts)
 
-		loadedPkg, warnings, err := sc.LoadPackageDefinition(p.layout)
+		var warnings []string
+		p.cfg.Pkg, warnings, err = sc.LoadPackageDefinition(p.layout)
 		if err != nil {
 			return err
 		}
 
 		p.warnings = append(p.warnings, warnings...)
 
-		if err := sc.Assemble(p.layout, loadedPkg.Components, ""); err != nil {
+		if err := sc.Assemble(p.layout, p.cfg.Pkg.Components, ""); err != nil {
 			return err
 		}
 
-		if err := sc.Output(p.layout, loadedPkg); err != nil {
+		if err := sc.Output(p.layout, p.cfg.Pkg); err != nil {
 			return err
 		}
-
-		p.cfg.Pkg = *loadedPkg
 	} else {
 		if err := p.source.LoadPackage(p.layout, false); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)

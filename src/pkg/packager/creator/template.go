@@ -15,11 +15,12 @@ import (
 )
 
 // FillActiveTemplate merges user-specified variables into the configuration templates of a zarf.yaml.
-func FillActiveTemplate(pkg *types.ZarfPackage, setVariables map[string]string) (templatedPkg *types.ZarfPackage, warnings []string, err error) {
+func FillActiveTemplate(pkg types.ZarfPackage, setVariables map[string]string) (types.ZarfPackage, []string, error) {
 	templateMap := map[string]string{}
+	warnings := []string{}
 
 	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
-		yamlTemplates, err := utils.FindYamlTemplates(pkg, templatePrefix, "###")
+		yamlTemplates, err := utils.FindYamlTemplates(&pkg, templatePrefix, "###")
 		if err != nil {
 			return err
 		}
@@ -52,28 +53,26 @@ func FillActiveTemplate(pkg *types.ZarfPackage, setVariables map[string]string) 
 	}
 
 	// update the component templates on the package
-	if err := ReloadComponentTemplatesInPackage(pkg); err != nil {
-		return nil, nil, err
+	if err := ReloadComponentTemplatesInPackage(&pkg); err != nil {
+		return types.ZarfPackage{}, nil, err
 	}
 
 	if err := promptAndSetTemplate(types.ZarfPackageTemplatePrefix, false); err != nil {
-		return nil, nil, err
+		return types.ZarfPackage{}, nil, err
 	}
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
 	if err := promptAndSetTemplate(types.ZarfPackageVariablePrefix, true); err != nil {
-		return nil, nil, err
+		return types.ZarfPackage{}, nil, err
 	}
 
 	// Add special variable for the current package architecture
 	templateMap[types.ZarfPackageArch] = pkg.Build.Architecture
 
-	if err := utils.ReloadYamlTemplate(pkg, templateMap); err != nil {
-		return nil, nil, err
+	if err := utils.ReloadYamlTemplate(&pkg, templateMap); err != nil {
+		return types.ZarfPackage{}, nil, err
 	}
 
-	templatedPkg = pkg
-
-	return templatedPkg, warnings, nil
+	return pkg, warnings, nil
 }
 
 // ReloadComponentTemplate appends ###ZARF_COMPONENT_NAME### for the component, assigns value, and reloads

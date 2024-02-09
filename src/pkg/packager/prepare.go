@@ -59,7 +59,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	p.cfg.Pkg.Metadata.Architecture = config.GetArch(p.cfg.Pkg.Metadata.Architecture)
 
-	composedPkg, composeWarnings, err := creator.ComposeComponents(&p.cfg.Pkg, p.cfg.CreateOpts.Flavor)
+	composedPkg, composeWarnings, err := creator.ComposeComponents(p.cfg.Pkg, p.cfg.CreateOpts.Flavor)
 	if err != nil {
 		return nil, err
 	}

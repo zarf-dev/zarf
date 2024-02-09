@@ -29,16 +29,15 @@ func (p *Packager) Create() (err error) {
 
 	pc := creator.NewPackageCreator(p.cfg.CreateOpts, &p.cfg.PkgOpts, p.cfg, cwd)
 
-	loadedPkg, warnings, err := pc.LoadPackageDefinition(p.layout)
+	var warnings []string
+	p.cfg.Pkg, warnings, err = pc.LoadPackageDefinition(p.layout)
 	if err != nil {
 		return err
 	}
-
-	p.cfg.Pkg = *loadedPkg
 	p.warnings = append(p.warnings, warnings...)
 
 	// Perform early package validation.
-	if err := validate.Run(*loadedPkg); err != nil {
+	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
@@ -46,7 +45,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	if err := pc.Assemble(p.layout, loadedPkg.Components, loadedPkg.Metadata.Architecture); err != nil {
+	if err := pc.Assemble(p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
 		return err
 	}
 
@@ -55,5 +54,5 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	return pc.Output(p.layout, loadedPkg)
+	return pc.Output(p.layout, p.cfg.Pkg)
 }
