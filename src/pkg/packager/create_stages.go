@@ -516,7 +516,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 		if file.Executable || utils.IsDir(dst) {
 			_ = os.Chmod(dst, 0700)
 		} else {
-			_ = os.Chmod(dst, 0600)
+			_ = os.Chmod(dst, helpers.ReadWriteUser)
 		}
 	}
 
@@ -654,7 +654,7 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 
 	// Create the checksums file
 	checksumsFilePath := p.layout.Checksums
-	if err := os.WriteFile(checksumsFilePath, []byte(strings.Join(checksumsData, "\n")+"\n"), 0600); err != nil {
+	if err := os.WriteFile(checksumsFilePath, []byte(strings.Join(checksumsData, "\n")+"\n"), helpers.ReadWriteUser); err != nil {
 		return "", err
 	}
 
@@ -680,7 +680,7 @@ func (p *Packager) loadDifferentialData() error {
 		if err != nil {
 			return err
 		}
-		err = utils.WriteYaml(filepath.Join(tmpDir, layout.ZarfYAML), pkg, 0600)
+		err = utils.WriteYaml(filepath.Join(tmpDir, layout.ZarfYAML), pkg, helpers.ReadWriteUser)
 		if err != nil {
 			return err
 		}

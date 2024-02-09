@@ -21,6 +21,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -205,13 +206,13 @@ var generatePKICmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pki := pki.GeneratePKI(args[0], subAltNames...)
-		if err := os.WriteFile("tls.ca", pki.CA, 0644); err != nil {
+		if err := os.WriteFile("tls.ca", pki.CA, helpers.WriteUserReadAll); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, "tls.ca", err.Error())
 		}
-		if err := os.WriteFile("tls.crt", pki.Cert, 0644); err != nil {
+		if err := os.WriteFile("tls.crt", pki.Cert, helpers.WriteUserReadAll); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, "tls.crt", err.Error())
 		}
-		if err := os.WriteFile("tls.key", pki.Key, 0600); err != nil {
+		if err := os.WriteFile("tls.key", pki.Key, helpers.ReadWriteUser); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, "tls.key", err.Error())
 		}
 		message.Successf(lang.CmdToolsGenPkiSuccess, args[0])
@@ -279,10 +280,10 @@ var generateKeyCmd = &cobra.Command{
 		}
 
 		// Write the key file contents to disk
-		if err := os.WriteFile(prvKeyFileName, keyBytes.PrivateBytes, 0600); err != nil {
+		if err := os.WriteFile(prvKeyFileName, keyBytes.PrivateBytes, helpers.ReadWriteUser); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, prvKeyFileName, err.Error())
 		}
-		if err := os.WriteFile(pubKeyFileName, keyBytes.PublicBytes, 0644); err != nil {
+		if err := os.WriteFile(pubKeyFileName, keyBytes.PublicBytes, helpers.WriteUserReadAll); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, pubKeyFileName, err.Error())
 		}
 
