@@ -271,7 +271,7 @@ func init() {
 
 	devFindImagesCmd.Flags().MarkDeprecated("set", "This field is replaced by create-set")
 	devFindImagesCmd.Flags().MarkHidden("set")
-	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.Flavor, "flavor", v.GetStringMapString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	devFindImagesCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	// allow for the override of the default helm KubeVersion
