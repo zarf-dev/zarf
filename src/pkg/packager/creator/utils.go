@@ -15,7 +15,7 @@ import (
 )
 
 // setPackageMetadata sets various package metadata.
-func setPackageMetadata(pkg types.ZarfPackage, createOpts types.ZarfCreateOptions) (types.ZarfPackage, error) {
+func setPackageMetadata(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptions) error {
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue.
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
@@ -28,7 +28,7 @@ func setPackageMetadata(pkg types.ZarfPackage, createOpts types.ZarfCreateOption
 
 	hostname, err := os.Hostname()
 	if err != nil {
-		return types.ZarfPackage{}, err
+		return err
 	}
 
 	if pkg.IsInitConfig() {
@@ -54,5 +54,5 @@ func setPackageMetadata(pkg types.ZarfPackage, createOpts types.ZarfCreateOption
 	// Record the latest version of Zarf without breaking changes to the package structure.
 	pkg.Build.LastNonBreakingVersion = deprecated.LastNonBreakingVersion
 
-	return pkg, nil
+	return nil
 }

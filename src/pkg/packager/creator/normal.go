@@ -226,7 +226,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 //
 // - writes the Zarf package as a tarball to a local directory,
 // or an OCI registry based on the --output flag
-func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg types.ZarfPackage) error {
+func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackage) error {
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range pkg.Components {
@@ -249,8 +249,7 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg types.ZarfPackage
 		deprecated.PluralizeSetVariable,
 	}
 
-	pkg, err = setPackageMetadata(pkg, pc.createOpts)
-	if err != nil {
+	if err := setPackageMetadata(pkg, pc.createOpts); err != nil {
 		return err
 	}
 
@@ -278,7 +277,7 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg types.ZarfPackage
 			return err
 		}
 
-		err = remote.PublishPackage(&pkg, dst, config.CommonOptions.OCIConcurrency)
+		err = remote.PublishPackage(pkg, dst, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
@@ -293,7 +292,7 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg types.ZarfPackage
 		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
 	} else {
 		// Use the output path if the user specified it.
-		packageName := filepath.Join(pc.createOpts.Output, utils.GetPackageName(pkg, pc.createOpts.DifferentialData))
+		packageName := filepath.Join(pc.createOpts.Output, utils.GetPackageName(*pkg, pc.createOpts.DifferentialData))
 
 		// Try to remove the package if it already exists.
 		_ = os.Remove(packageName)

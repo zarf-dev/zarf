@@ -13,5 +13,5 @@ import (
 type Creator interface {
 	LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error)
 	Assemble(dst *layout.PackagePaths, components []types.ZarfComponent, arch string) error
-	Output(dst *layout.PackagePaths, pkg types.ZarfPackage) error
+	Output(dst *layout.PackagePaths, pkg *types.ZarfPackage) error
 }

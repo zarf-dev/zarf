@@ -89,7 +89,7 @@ func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths, components []types
 // - writes the loaded zarf.yaml to disk
 //
 // - signs the package
-func (sc *SkeletonCreator) Output(dst *layout.PackagePaths, pkg types.ZarfPackage) error {
+func (sc *SkeletonCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackage) error {
 	for _, component := range pkg.Components {
 		if err := dst.Components.Archive(component, false); err != nil {
 			return err
@@ -102,8 +102,7 @@ func (sc *SkeletonCreator) Output(dst *layout.PackagePaths, pkg types.ZarfPackag
 	}
 	pkg.Metadata.AggregateChecksum = checksumChecksum
 
-	pkg, err = setPackageMetadata(pkg, sc.createOpts)
-	if err != nil {
+	if err := setPackageMetadata(pkg, sc.createOpts); err != nil {
 		return err
 	}
 

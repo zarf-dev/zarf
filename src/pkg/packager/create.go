@@ -52,5 +52,5 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	return pc.Output(p.layout, p.cfg.Pkg)
+	return pc.Output(p.layout, &p.cfg.Pkg)
 }

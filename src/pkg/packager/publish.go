@@ -100,7 +100,7 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 
-		if err := sc.Output(p.layout, p.cfg.Pkg); err != nil {
+		if err := sc.Output(p.layout, &p.cfg.Pkg); err != nil {
 			return err
 		}
 	} else {
