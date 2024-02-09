@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -61,5 +62,5 @@ func (s *ClusterSource) LoadPackageMetadata(dst *layout.PackagePaths, _ bool, _ 
 
 	dst.ZarfYAML = filepath.Join(dst.Base, layout.ZarfYAML)
 
-	return utils.WriteYaml(dst.ZarfYAML, dpkg.Data, 0755)
+	return utils.WriteYaml(dst.ZarfYAML, dpkg.Data, helpers.WriteUserReadXAll)
 }

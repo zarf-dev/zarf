@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -49,7 +50,7 @@ func OutputSBOMFiles(sourceDir, outputDir, packageName string) (string, error) {
 		return "", err
 	}
 
-	if err := utils.CreateDirectory(packagePath, 0700); err != nil {
+	if err := utils.CreateDirectory(packagePath, helpers.ReadWriteXUser); err != nil {
 		return "", err
 	}
 

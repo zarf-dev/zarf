@@ -43,7 +43,7 @@ type TextTemplate struct {
 // MakeTempDir creates a temp directory with the zarf- prefix.
 func MakeTempDir(basePath string) (string, error) {
 	if basePath != "" {
-		if err := CreateDirectory(basePath, 0700); err != nil {
+		if err := CreateDirectory(basePath, helpers.ReadWriteXUser); err != nil {
 			return "", err
 		}
 	}
@@ -225,7 +225,7 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp, skipHidden bool) (fil
 // CreateParentDirectory creates the parent directory for the given file path.
 func CreateParentDirectory(destination string) error {
 	parentDest := filepath.Dir(destination)
-	return CreateDirectory(parentDest, 0700)
+	return CreateDirectory(parentDest, helpers.ReadWriteXUser)
 }
 
 // CreatePathAndCopy creates the parent directory for the given file path and copies the source file to the destination.

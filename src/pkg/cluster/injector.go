@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +52,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 		InjectorPayloadTarGz: filepath.Join(tmpDir, "payload.tar.gz"),
 	}
 
-	if err := utils.CreateDirectory(tmp.SeedImagesDir, 0700); err != nil {
+	if err := utils.CreateDirectory(tmp.SeedImagesDir, helpers.ReadWriteXUser); err != nil {
 		spinner.Fatalf(err, "Unable to create the seed images directory")
 	}
 

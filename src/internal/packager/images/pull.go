@@ -126,7 +126,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	}
 
 	// Create the ImagePath directory
-	if err := utils.CreateDirectory(i.ImagesPath, 0755); err != nil {
+	if err := utils.CreateDirectory(i.ImagesPath, helpers.WriteUserReadXAll); err != nil {
 		return nil, fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
 
