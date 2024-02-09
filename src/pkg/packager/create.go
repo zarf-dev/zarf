@@ -29,12 +29,10 @@ func (p *Packager) Create() (err error) {
 
 	pc := creator.NewPackageCreator(p.cfg.CreateOpts, &p.cfg.PkgOpts, p.cfg, cwd)
 
-	var warnings []string
-	p.cfg.Pkg, warnings, err = pc.LoadPackageDefinition(p.layout)
+	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(p.layout)
 	if err != nil {
 		return err
 	}
-	p.warnings = append(p.warnings, warnings...)
 
 	// Perform early package validation.
 	if err := validate.Run(p.cfg.Pkg); err != nil {

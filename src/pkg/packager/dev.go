@@ -32,13 +32,10 @@ func (p *Packager) DevDeploy() error {
 
 	pc := creator.NewPackageCreator(p.cfg.CreateOpts, &p.cfg.PkgOpts, p.cfg, cwd)
 
-	var warnings []string
-	p.cfg.Pkg, warnings, err = pc.LoadPackageDefinition(p.layout)
+	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(p.layout)
 	if err != nil {
 		return err
 	}
-
-	p.warnings = append(p.warnings, warnings...)
 
 	// Filter out components that are not compatible with this system
 	p.filterComponents()

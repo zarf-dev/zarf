@@ -91,13 +91,10 @@ func (p *Packager) Publish() (err error) {
 
 		sc := creator.NewSkeletonCreator(p.cfg.CreateOpts, p.cfg.PublishOpts)
 
-		var warnings []string
-		p.cfg.Pkg, warnings, err = sc.LoadPackageDefinition(p.layout)
+		p.cfg.Pkg, p.warnings, err = sc.LoadPackageDefinition(p.layout)
 		if err != nil {
 			return err
 		}
-
-		p.warnings = append(p.warnings, warnings...)
 
 		if err := sc.Assemble(p.layout, p.cfg.Pkg.Components, ""); err != nil {
 			return err
