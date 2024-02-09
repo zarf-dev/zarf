@@ -15,7 +15,6 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
-	"oras.land/oras-go/v2"
 )
 
 // Copy copies an artifact from one OCI registry to another
@@ -111,12 +110,4 @@ func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
 	src.log.Debug("Copied", src.repo.Reference, "to", dst.repo.Reference, "with a concurrency of", concurrency, "and took", duration)
 
 	return nil
-}
-
-// GetCopyOpts returns the default copy options
-func (o *OrasRemote) GetCopyOpts() oras.CopyOptions {
-	copyOpts := oras.DefaultCopyOptions
-	copyOpts.OnCopySkipped = o.printLayerSkipped
-	copyOpts.PostCopy = o.printLayerCopied
-	return copyOpts
 }

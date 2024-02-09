@@ -100,7 +100,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 			doneSaving := make(chan error)
 			successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+remote.Repo().Reference.String())
 			go utils.RenderProgressBarForLocalDirWrite(cache, componentDesc.Size, doneSaving, "Pulling", successText)
-			err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetCopyOpts())
+			err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
 			doneSaving <- err
 			<-doneSaving
 			if err != nil {

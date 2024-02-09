@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -51,4 +52,12 @@ func SumDescsSize(descs []ocispec.Descriptor) int64 {
 		sum += layer.Size
 	}
 	return sum
+}
+
+// GetDefaultCopyOpts returns the default copy options
+func (o *OrasRemote) GetDefaultCopyOpts() oras.CopyOptions {
+	copyOpts := oras.DefaultCopyOptions
+	copyOpts.OnCopySkipped = o.printLayerSkipped
+	copyOpts.PostCopy = o.printLayerCopied
+	return copyOpts
 }
