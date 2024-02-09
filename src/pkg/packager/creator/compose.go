@@ -37,7 +37,8 @@ func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage,
 		message.Debugf("%s", chain)
 
 		// migrate any deprecated component configurations now
-		warnings = chain.Migrate(pkg.Build)
+		warning := chain.Migrate(pkg.Build)
+		warnings = append(warnings, warning...)
 
 		// get the composed component
 		composed, err := chain.Compose()
