@@ -35,7 +35,7 @@ type SkeletonCreator struct {
 
 // NewSkeletonCreator returns a new SkeletonCreator.
 func NewSkeletonCreator(createOpts types.ZarfCreateOptions, publishOpts types.ZarfPublishOptions) *SkeletonCreator {
-	return &SkeletonCreator{createOpts: createOpts, publishOpts: publishOpts}
+	return &SkeletonCreator{createOpts, publishOpts}
 }
 
 // LoadPackageDefinition loads and configure a zarf.yaml file when creating and publishing a skeleton package.
