@@ -35,13 +35,6 @@ func setPackageMetadata(pkg types.ZarfPackage, createOpts types.ZarfCreateOption
 		pkg.Metadata.Version = config.CLIVersion
 	}
 
-	// Set package architecture
-	if createOpts.IsSkeleton {
-		pkg.Metadata.Architecture = "skeleton"
-	}
-	if pkg.Metadata.Architecture == "" {
-		pkg.Metadata.Architecture = config.GetArch()
-	}
 	pkg.Build.Architecture = pkg.Metadata.Architecture
 
 	// Record the time of package creation.
@@ -52,11 +45,6 @@ func setPackageMetadata(pkg types.ZarfPackage, createOpts types.ZarfCreateOption
 
 	// Record the hostname of the package creation terminal.
 	pkg.Build.Terminal = hostname
-
-	// If the --differential flag was used, record that this is a differential package.
-	if createOpts.DifferentialData.DifferentialPackagePath != "" {
-		pkg.Build.Differential = true
-	}
 
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = createOpts.Flavor

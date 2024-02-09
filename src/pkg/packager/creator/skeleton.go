@@ -44,10 +44,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg 
 		return types.ZarfPackage{}, nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
-	pkg, err = setPackageMetadata(pkg, sc.createOpts)
-	if err != nil {
-		message.Warn(err.Error())
-	}
+	pkg.Metadata.Architecture = "skeleton"
 
 	// Compose components into a single zarf.yaml file
 	pkg, composeWarnings, err := ComposeComponents(pkg, sc.createOpts.Flavor)
@@ -104,6 +101,11 @@ func (sc *SkeletonCreator) Output(dst *layout.PackagePaths, pkg types.ZarfPackag
 		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
 	}
 	pkg.Metadata.AggregateChecksum = checksumChecksum
+
+	pkg, err = setPackageMetadata(pkg, sc.createOpts)
+	if err != nil {
+		return err
+	}
 
 	if err := utils.WriteYaml(dst.ZarfYAML, pkg, 0400); err != nil {
 		return err

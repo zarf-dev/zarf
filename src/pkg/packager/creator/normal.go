@@ -62,9 +62,8 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg t
 		return types.ZarfPackage{}, nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
-	pkg, err = setPackageMetadata(pkg, pc.createOpts)
-	if err != nil {
-		message.Warn(err.Error())
+	if pkg.Metadata.Architecture == "" {
+		pkg.Metadata.Architecture = config.GetArch()
 	}
 
 	// Compose components into a single zarf.yaml file
@@ -90,7 +89,9 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg t
 	}
 
 	// If we are creating a differential package, remove duplicate images and repos.
-	if pkg.Build.Differential {
+	if pc.createOpts.DifferentialData.DifferentialPackagePath != "" {
+		pkg.Build.Differential = true
+
 		diffData, err := pc.loadDifferentialData()
 		if err != nil {
 			return types.ZarfPackage{}, nil, err
@@ -246,6 +247,11 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg types.ZarfPackage
 	pkg.Build.Migrations = []string{
 		deprecated.ScriptsToActionsMigrated,
 		deprecated.PluralizeSetVariable,
+	}
+
+	pkg, err = setPackageMetadata(pkg, pc.createOpts)
+	if err != nil {
+		return err
 	}
 
 	// Save the transformed config.
