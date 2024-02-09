@@ -39,7 +39,7 @@ var devDeployCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Short: lang.CmdDevDeployShort,
 	Long:  lang.CmdDevDeployLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.CreateOpts.SetBaseDirectory(args)
 
 		v := common.GetViper()
@@ -65,7 +65,7 @@ var devTransformGitLinksCmd = &cobra.Command{
 	Aliases: []string{"p"},
 	Short:   lang.CmdDevPatchGitShort,
 	Args:    cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		host, fileName := args[0], args[1]
 
 		// Read the contents of the given file
