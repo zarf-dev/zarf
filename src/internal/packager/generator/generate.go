@@ -54,28 +54,29 @@ func filterSlice[Type any](slice []Type, filterFunction func(Type) bool) []Type 
 }
 
 func getOrAskNamespace(source string, componentType string, required bool, defaultNS string) (namespace string) {
-	if config.CommonOptions.Confirm {
-		return defaultNS
-	} else if config.GenerateOptions.Namespace != "" {
-		return config.GenerateOptions.Namespace
-	} else {
-		prompt := &survey.Input{
-			Message: fmt.Sprintf("What namespace would you like to use for your %s component from %s?", componentType, source),
-			Default: defaultNS,
-		}
-		if required {
-			if err := survey.AskOne(prompt, &namespace, survey.WithValidator(survey.Required)); err != nil {
-				message.Fatal("", err.Error())
-			}
-		} else {
-			prompt.Message = fmt.Sprintf("If you would like a namespace for your %s component from %s, please enter it now:", componentType, source)
-			prompt.Help = "You may leave the input blank, the namespace will be inherited from the metadata of the manifests in that case"
-			if err := survey.AskOne(prompt, &namespace); err != nil {
-				message.Fatal("", err.Error())
-			}
-		}
-		return namespace
-	}
+	return defaultNS
+	// if config.CommonOptions.Confirm {
+	// 	return defaultNS
+	// } else if config.GenerateOptions.Namespace != "" {
+	// 	return config.GenerateOptions.Namespace
+	// } else {
+	// 	prompt := &survey.Input{
+	// 		Message: fmt.Sprintf("What namespace would you like to use for your %s component from %s?", componentType, source),
+	// 		Default: defaultNS,
+	// 	}
+	// 	if required {
+	// 		if err := survey.AskOne(prompt, &namespace, survey.WithValidator(survey.Required)); err != nil {
+	// 			message.Fatal("", err.Error())
+	// 		}
+	// 	} else {
+	// 		prompt.Message = fmt.Sprintf("If you would like a namespace for your %s component from %s, please enter it now:", componentType, source)
+	// 		prompt.Help = "You may leave the input blank, the namespace will be inherited from the metadata of the manifests in that case"
+	// 		if err := survey.AskOne(prompt, &namespace); err != nil {
+	// 			message.Fatal("", err.Error())
+	// 		}
+	// 	}
+	// 	return namespace
+	// }
 }
 
 func getManifestNames(dirPath string) (manifests []string) {
