@@ -72,12 +72,7 @@ var devMigrateCmd = &cobra.Command{
 	Long:  lang.CmdDevMigrateLong,
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var dir string
-		if len(args) == 0 {
-			dir = "."
-		} else {
-			dir = args[0]
-		}
+		dir := common.SetBaseDirectory(args)
 		var pkg types.ZarfPackage
 		cm := goyaml.CommentMap{}
 
