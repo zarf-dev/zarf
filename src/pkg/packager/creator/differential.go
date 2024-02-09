@@ -21,9 +21,11 @@ import (
 
 // loadDifferentialData sets any images and repos from the existing reference package in the DifferentialData and returns it.
 func (pc *PackageCreator) loadDifferentialData() (diffData *types.DifferentialData, err error) {
+	pkgOpts := types.ZarfPackageOptions{}
+
 	diffPkgPath := pc.createOpts.DifferentialData.DifferentialPackagePath
 	if diffPkgPath != "" {
-		pc.pkgOpts.PackageSource = diffPkgPath
+		pkgOpts.PackageSource = diffPkgPath
 	}
 
 	tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -34,7 +36,7 @@ func (pc *PackageCreator) loadDifferentialData() (diffData *types.DifferentialDa
 	diffLayout := layout.New(tmpdir)
 	defer os.RemoveAll(diffLayout.Base)
 
-	src, err := sources.New(pc.pkgOpts)
+	src, err := sources.New(&pkgOpts)
 	if err != nil {
 		return nil, err
 	}

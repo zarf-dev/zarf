@@ -41,20 +41,19 @@ var (
 // PackageCreator provides methods for creating normal (not skeleton) Zarf packages.
 type PackageCreator struct {
 	createOpts types.ZarfCreateOptions
-	pkgOpts    *types.ZarfPackageOptions
 
 	// TODO: (@lucasrod16) remove PackagerConfig once actions do not depend on it: https://github.com/defenseunicorns/zarf/pull/2276
 	cfg *types.PackagerConfig
 }
 
 // NewPackageCreator returns a new PackageCreator.
-func NewPackageCreator(createOpts types.ZarfCreateOptions, pkgOpts *types.ZarfPackageOptions, cfg *types.PackagerConfig, cwd string) *PackageCreator {
+func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerConfig, cwd string) *PackageCreator {
 	// differentials are relative to the current working directory
 	if createOpts.DifferentialData.DifferentialPackagePath != "" {
 		createOpts.DifferentialData.DifferentialPackagePath = filepath.Join(cwd, createOpts.DifferentialData.DifferentialPackagePath)
 	}
 
-	return &PackageCreator{createOpts: createOpts, pkgOpts: pkgOpts, cfg: cfg}
+	return &PackageCreator{createOpts, cfg}
 }
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
