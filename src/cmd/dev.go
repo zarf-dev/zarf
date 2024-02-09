@@ -68,6 +68,9 @@ var devGenerateCmd = &cobra.Command{
 	Short:   "Use to generate either an example package or a package from resources",
 	Example: "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo",
 	Run: func(cmd *cobra.Command, args []string) {
+		if !validateDevGenerateFlags(){
+			message.Fatal(nil, "One or more flags are missing or invalid")
+		}
 		newPkg := types.ZarfPackage{
 			Metadata: types.ZarfMetadata{
 				Name: args[0],
@@ -373,4 +376,25 @@ func bindDevGenerateFlags(v *viper.Viper) {
 	generateFlags.StringArrayVarP(&pkgConfig.GenerateOpts.URL, "url", "u", []string{}, "URL to the source git repository")
 	generateFlags.StringArrayVarP(&pkgConfig.GenerateOpts.Version, "version", "v", []string{}, "The Version of the chart to use")
 	generateFlags.StringArrayVarP(&pkgConfig.GenerateOpts.GitPath, "gitPath", "g", []string{}, "Relative path to the chart in the git repository")
+}
+
+func validateDevGenerateFlags() bool {
+	flagsValid := true
+
+	if pkgConfig.GenerateOpts.URL == nil || len(pkgConfig.GenerateOpts.URL) == 0 {
+		flagsValid = false
+		message.Warn("URL is empty or invalid")
+	}
+
+	if pkgConfig.GenerateOpts.Version == nil || len(pkgConfig.GenerateOpts.Version) == 0 {
+		flagsValid = false
+		message.Warn("Chart Version is empty or invalid")
+	}
+
+	if pkgConfig.GenerateOpts.GitPath == nil || len(pkgConfig.GenerateOpts.GitPath) == 0 {
+		flagsValid = false
+		message.Warn("Git Path is empty or invalid")
+	}
+
+	return flagsValid
 }

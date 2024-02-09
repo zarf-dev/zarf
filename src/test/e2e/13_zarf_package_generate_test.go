@@ -13,10 +13,19 @@ import (
 func TestZarfDevGenerate(t *testing.T) {
 	t.Log("E2E: Zarf Dev Generate")
 
+	t.Run("Zarf Dev Generate empty args", func(t *testing.T) {
+		stdOut, stdErr, err := e2e.Zarf("dev", "generate")
+		require.Error(t, err, stdOut, stdErr)
+
+		stdOut, stdErr, err = e2e.Zarf("dev", "generate", "podinfo")
+		require.Error(t, err, stdOut, stdErr)
+
+		stdOut, stdErr, err = e2e.Zarf("dev", "generate", "podinfo", "--url", "https://zarf.dev")
+		require.Error(t, err, stdOut, stdErr)
+	})
+
 	stdOut, stdErr, err := e2e.Zarf("dev", "generate", "podinfo", "--url", "https://github.com/stefanprodan/podinfo.git", "--version", "6.4.0", "--gitPath", "charts/podinfo")
 	require.NoError(t, err, stdOut, stdErr)
-
-
 
 	// Assert the ZarfPackageConfig
 	// ```yaml
