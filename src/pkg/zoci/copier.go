@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -18,17 +17,6 @@ import (
 
 // CopyPackage copies a zarf package from one OCI registry to another
 func CopyPackage(ctx context.Context, src *Remote, dst *Remote, concurrency int) error {
-
-	arch := config.GetArch()
-	pkg, err := src.FetchZarfYAML(ctx)
-	if err != nil {
-		return err
-	}
-
-	// ensure cli arch matches package arch
-	if pkg.Build.Architecture != arch {
-		return fmt.Errorf("architecture mismatch (specified: %q, found %q)", arch, pkg.Build.Architecture)
-	}
 
 	srcManifest, err := src.FetchRoot(ctx)
 	if err != nil {
