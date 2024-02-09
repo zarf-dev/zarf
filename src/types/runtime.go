@@ -115,6 +115,17 @@ type ZarfCreateOptions struct {
 	NoYOLO             bool              `json:"noYOLO" jsonschema:"description=Whether to create a YOLO package"`
 }
 
+// SetBaseDirectory sets the base directory.
+//
+// This is a directory that contains a zarf.yaml.
+func (createOpts *ZarfCreateOptions) SetBaseDirectory(args []string) {
+	if len(args) > 0 {
+		createOpts.BaseDir = args[0]
+	} else {
+		createOpts.BaseDir = "."
+	}
+}
+
 // ZarfSplitPackageData contains info about a split package.
 type ZarfSplitPackageData struct {
 	Sha256Sum string `json:"sha256Sum" jsonschema:"description=The sha256sum of the package"`
