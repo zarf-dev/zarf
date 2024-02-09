@@ -44,8 +44,8 @@ func (o *OrasRemote) FileDescriptorExists(desc ocispec.Descriptor, destinationDi
 	return actual == desc.Digest.Encoded()
 }
 
-// CopyToStore copies the given layers from the remote repository to the given store.
-func (o *OrasRemote) CopyToStore(ctx context.Context, layers []ocispec.Descriptor, store oras.Target, copyOpts oras.CopyOptions) error {
+// CopyToTarget copies the given layers from the remote repository to the given target
+func (o *OrasRemote) CopyToTarget(ctx context.Context, layers []ocispec.Descriptor, target oras.Target, copyOpts oras.CopyOptions) error {
 	shas := []string{}
 	for _, layer := range layers {
 		if len(layer.Digest.String()) > 0 {
@@ -68,7 +68,7 @@ func (o *OrasRemote) CopyToStore(ctx context.Context, layers []ocispec.Descripto
 		return oras.SkipNode
 	}
 
-	_, err := oras.Copy(ctx, o.repo, o.repo.Reference.String(), store, o.repo.Reference.String(), copyOpts)
+	_, err := oras.Copy(ctx, o.repo, o.repo.Reference.String(), target, o.repo.Reference.String(), copyOpts)
 	if err != nil {
 		return err
 	}
