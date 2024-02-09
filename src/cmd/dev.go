@@ -61,6 +61,69 @@ var devDeployCmd = &cobra.Command{
 	},
 }
 
+var devGenerateCmd = &cobra.Command{
+	Use:     "generate NAME",
+	Aliases: []string{"g"},
+	Args:    cobra.ExactArgs(1),
+	Short:   "Use to generate either an example package or a package from resources",
+	Example: "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo",
+	Run: func(cmd *cobra.Command, args []string) {
+		newPkg := types.ZarfPackage{
+			Metadata: types.ZarfMetadata{
+				Name: args[0],
+			},
+			Kind: "ZarfPackageConfig",
+		}
+
+		message.Info("Unimplemented - Package  with name " + "\"" + newPkg.Metadata.Name + "\"" + " will be generated upon implementation")
+
+		// if cmd.Flags().Changed("from") {
+		// 	if cmd.Flags().Changed("assume") {
+		// 		message.Warn("Zarf will assume all necessary parts of components because \"--assume\" has been set")
+		// 	}
+		// 	for _, componentSource := range types.PackagerConfig.GenerateOpts.From.From {
+		// 		message.Notef("Starting component generation from %s", componentSource)
+		// 		spinner := message.NewProgressSpinner("Deducing component type for %s", componentSource)
+		// 		result := generator.DeduceResourceType(componentSource)
+		// 		switch result {
+		// 		case "unknown path":
+		// 			spinner.Fatalf(errors.New("invalid path"), "The path %s is not valid or an empty folder", componentSource)
+		// 		case "unknown url":
+		// 			spinner.Fatalf(errors.New("invalid url"), "The url %s could not be reconciled into a component type", componentSource)
+		// 		case "unparsable":
+		// 			spinner.Fatalf(errors.New("invalid from arg"), "The value %s could not be reconciled into a url or path", componentSource)
+		// 		}
+		// 		spinner.Successf("%s's component from %s is a %s", pkgName, componentSource, result)
+
+		// 		switch result {
+		// 		case "localChart":
+		// 			newPkg.Components = append(newPkg.Components, generator.GenLocalChart(componentSource))
+		// 		case "manifests":
+		// 			newPkg.Components = append(newPkg.Components, generator.GenManifests(componentSource))
+		// 		case "localFiles":
+		// 			newPkg.Components = append(newPkg.Components, generator.GenLocalFiles(componentSource))
+		// 		case "gitChart":
+		// 			newPkg.Components = append(newPkg.Components, generator.GenGitChart(componentSource))
+		// 		case "helmRepoChart":
+		// 			newPkg.Components = append(newPkg.Components, generator.GenHelmRepoChart(componentSource))
+		// 		case "remoteFile":
+		// 			newPkg.Components = append(newPkg.Components, generator.GenRemoteFile(componentSource))
+		// 		}
+		// 	}
+		// } else {
+		// 	message.Fatal(errors.New("Unimplemented"), "Unimplemented")
+		// }
+		// packageLocation := "./" + pkgName + ".zarf.yaml"
+		// message.Note("Component Generation Complete!")
+		// spinner := message.NewProgressSpinner("Writing package file to %s", packageLocation)
+		// err := utils.WriteYaml(packageLocation, newPkg, 0644)
+		// if err != nil {
+		// 	spinner.Fatalf(err, err.Error())
+		// }
+		// spinner.Successf("Package generated successfully! Package saved to %s", packageLocation)
+	},
+}
+
 var devTransformGitLinksCmd = &cobra.Command{
 	Use:     "patch-git HOST FILE",
 	Aliases: []string{"p"},
@@ -256,6 +319,7 @@ func init() {
 	rootCmd.AddCommand(devCmd)
 
 	devCmd.AddCommand(devDeployCmd)
+	devCmd.AddCommand(devGenerateCmd)
 	devCmd.AddCommand(devTransformGitLinksCmd)
 	devCmd.AddCommand(devSha256SumCmd)
 	devCmd.AddCommand(devFindImagesCmd)
@@ -263,6 +327,7 @@ func init() {
 	devCmd.AddCommand(devLintCmd)
 
 	bindDevDeployFlags(v)
+	bindDevGenerateFlags(v)
 
 	devSha256SumCmd.Flags().StringVarP(&extractPath, "extract-path", "e", "", lang.CmdDevFlagExtractPath)
 
@@ -300,4 +365,12 @@ func bindDevDeployFlags(v *viper.Viper) {
 	devDeployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 
 	devDeployFlags.BoolVar(&pkgConfig.CreateOpts.NoYOLO, "no-yolo", v.GetBool(common.VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
+}
+
+func bindDevGenerateFlags(v *viper.Viper) {
+	generateFlags := devGenerateCmd.Flags()
+
+	generateFlags.StringArrayVarP(&pkgConfig.GenerateOpts.URL, "url", "u", []string{}, "URL to the source git repository")
+	generateFlags.StringArrayVarP(&pkgConfig.GenerateOpts.Version, "version", "v", []string{}, "The Version of the chart to use")
+	generateFlags.StringArrayVarP(&pkgConfig.GenerateOpts.GitPath, "gitPath", "g", []string{}, "Relative path to the chart in the git repository")
 }
