@@ -30,6 +30,11 @@ func (p *Packager) Publish() (err error) {
 		// w/o layers touching the filesystem
 		srcRemote := p.source.(*sources.OCISource).Remote
 
+		parts := strings.Split(srcRemote.Repo().Reference.Repository, "/")
+		packageName := parts[len(parts)-1]
+
+		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
+
 		arch := config.GetArch()
 
 		dstRemote, err := zoci.NewRemote(p.cfg.PublishOpts.PackageDestination, oci.PlatformForArch(arch))
@@ -37,12 +42,7 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 
-		parts := strings.Split(srcRemote.Repo().Reference.Repository, "/")
-		packageName := parts[len(parts)-1]
-
-		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
-
-		if err := zoci.CopyPackage(ctx, srcRemote, dstRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
+		if err := zoci.CopyPackage(ctx, srcRemote, dstRemote, config.CommonOptions.OCIConcurrency); err != nil {
 			return err
 		}
 		return nil

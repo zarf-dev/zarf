@@ -12,13 +12,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
 )
 
 // CopyPackage copies a zarf package from one OCI registry to another
-func CopyPackage(ctx context.Context, src *Remote, dst *Remote, include func(d ocispec.Descriptor) bool, concurrency int) error {
+func CopyPackage(ctx context.Context, src *Remote, dst *Remote, concurrency int) error {
 
 	arch := config.GetArch()
 	pkg, err := src.FetchZarfYAML(ctx)
@@ -35,15 +34,14 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, include func(d o
 	if err != nil {
 		return err
 	}
-	layers := helpers.Filter(srcManifest.Layers, include)
-	layers = append(layers, srcManifest.Config)
+	layers := append(srcManifest.Layers, srcManifest.Config)
 	size := oci.SumDescsSize(layers)
 
 	title := fmt.Sprintf("[0/%d] layers copied", len(layers))
 	progressBar := message.NewProgressBar(size, title)
 	defer progressBar.Stop()
 
-	if err := oci.Copy(ctx, src.OrasRemote, dst.OrasRemote, include, concurrency, progressBar); err != nil {
+	if err := oci.Copy(ctx, src.OrasRemote, dst.OrasRemote, nil, concurrency, progressBar); err != nil {
 		return err
 	}
 	progressBar.Successf("Copied %s", src.Repo().Reference)
