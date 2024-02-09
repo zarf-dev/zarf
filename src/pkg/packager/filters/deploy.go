@@ -128,7 +128,6 @@ func (f *DeploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 		}
 
 		// Check that we have matched against all requests
-		var err error
 		for _, requestedComponent := range f.requestedComponents {
 			if _, ok := matchedRequests[requestedComponent]; !ok {
 				closeEnough := []string{}
@@ -138,16 +137,8 @@ func (f *DeploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 						closeEnough = append(closeEnough, c.Name)
 					}
 				}
-				failure := fmt.Errorf(lang.PkgDeployErrNoCompatibleComponentsForSelection, requestedComponent, strings.Join(closeEnough, ", "))
-				if err != nil {
-					err = fmt.Errorf("%w, %w", err, failure)
-				} else {
-					err = failure
-				}
+				return nil, fmt.Errorf(lang.PkgDeployErrNoCompatibleComponentsForSelection, requestedComponent, strings.Join(closeEnough, ", "))
 			}
-		}
-		if err != nil {
-			return []types.ZarfComponent{}, err
 		}
 	} else {
 		for _, groupKey := range orderedComponentGroups {
