@@ -91,6 +91,7 @@ type ZarfGenerateOptions struct {
 	URL     []string `json:"url" jsonschema:"description=URL to the source git repository"`
 	Version []string `json:"version" jsonschema:"description=Version of the chart to use"`
 	GitPath []string `json:"gitPath" jsonschema:"description=Relative path to the chart in the git repository"`
+	Output  string   `json:"output" jsonschema:"description=Location where the finalized zarf.yaml will be placed"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.

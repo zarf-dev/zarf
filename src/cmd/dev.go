@@ -15,6 +15,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
@@ -68,17 +70,32 @@ var devGenerateCmd = &cobra.Command{
 	Short:   "Use to generate either an example package or a package from resources",
 	Example: "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo",
 	Run: func(cmd *cobra.Command, args []string) {
-		if !validateDevGenerateFlags(){
+		spinner := message.NewProgressSpinner("Generating package with name %s", args[0])
+		if !validateDevGenerateFlags() {
 			message.Fatal(nil, "One or more flags are missing or invalid")
 		}
 		newPkg := types.ZarfPackage{
 			Metadata: types.ZarfMetadata{
 				Name: args[0],
 			},
-			Kind: "ZarfPackageConfig",
+			Kind: types.ZarfPackageConfig,
+			Components: []types.ZarfComponent{{
+				Name:     args[0],
+				Required: true,
+				Charts: []types.ZarfChart{
+					{
+						//TODO: replace with the actual chart name
+						Name:      args[0],
+						Version:   pkgConfig.GenerateOpts.Version[0],
+						Namespace: args[0],
+						URL:       pkgConfig.GenerateOpts.URL[0],
+						GitPath:   pkgConfig.GenerateOpts.GitPath[0],
+					},
+				},
+				//TODO: findimages
+				Images: []string{""},
+			}},
 		}
-
-		message.Info("Unimplemented - Package  with name " + "\"" + newPkg.Metadata.Name + "\"" + " will be generated upon implementation")
 
 		// if cmd.Flags().Changed("from") {
 		// 	if cmd.Flags().Changed("assume") {
@@ -116,14 +133,36 @@ var devGenerateCmd = &cobra.Command{
 		// } else {
 		// 	message.Fatal(errors.New("Unimplemented"), "Unimplemented")
 		// }
-		// packageLocation := "./" + pkgName + ".zarf.yaml"
-		// message.Note("Component Generation Complete!")
-		// spinner := message.NewProgressSpinner("Writing package file to %s", packageLocation)
-		// err := utils.WriteYaml(packageLocation, newPkg, 0644)
-		// if err != nil {
-		// 	spinner.Fatalf(err, err.Error())
-		// }
-		// spinner.Successf("Package generated successfully! Package saved to %s", packageLocation)
+
+		if err := validate.Run(newPkg); err != nil {
+			message.Fatalf(err, err.Error())
+		}
+
+		directory := "./"
+		if pkgConfig.GenerateOpts.Output != "" {
+			output := pkgConfig.GenerateOpts.Output
+			if filepath.IsAbs(output) {
+				directory = output
+			} else {
+				directory = filepath.Join(directory, output)
+			}
+			if _, err := os.Stat(directory); os.IsNotExist(err) {
+				// TODO: create the directory?
+				message.Fatalf(err, "The directory %s does not exist", directory)
+			}
+		}
+		packageLocation := filepath.Join(directory, layout.ZarfYAML)
+		_, err := os.Stat(packageLocation)
+		if !os.IsNotExist(err) {
+			// TODO: prompt overwrite if exists?
+			packageLocation = "./zarf-" + newPkg.Metadata.Name + ".yaml"
+		}
+		err = utils.WriteYaml(packageLocation, newPkg, 0644)
+		if err != nil {
+			message.Fatalf(err, err.Error())
+		}
+
+		spinner.Successf("Package generated successfully! Package saved to %s", packageLocation)
 	},
 }
 
@@ -376,6 +415,8 @@ func bindDevGenerateFlags(v *viper.Viper) {
 	generateFlags.StringArrayVarP(&pkgConfig.GenerateOpts.URL, "url", "u", []string{}, "URL to the source git repository")
 	generateFlags.StringArrayVarP(&pkgConfig.GenerateOpts.Version, "version", "v", []string{}, "The Version of the chart to use")
 	generateFlags.StringArrayVarP(&pkgConfig.GenerateOpts.GitPath, "gitPath", "g", []string{}, "Relative path to the chart in the git repository")
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "", "Output directory for the generated zarf.yaml")
+
 }
 
 func validateDevGenerateFlags() bool {
