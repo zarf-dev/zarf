@@ -26,6 +26,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -292,7 +293,7 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackag
 		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
 	} else {
 		// Use the output path if the user specified it.
-		packageName := filepath.Join(pc.createOpts.Output, utils.GetPackageName(*pkg, pc.createOpts.DifferentialData))
+		packageName := filepath.Join(pc.createOpts.Output, sources.GetPackageName(*pkg, pc.createOpts.DifferentialData))
 
 		// Try to remove the package if it already exists.
 		_ = os.Remove(packageName)
