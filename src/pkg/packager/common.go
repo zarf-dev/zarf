@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -42,15 +41,6 @@ type Packager struct {
 	source         sources.PackageSource
 	generation     int
 }
-
-// Zarf Packager Variables.
-var (
-	// Find zarf-packages on the local system (https://regex101.com/r/TUUftK/1)
-	// ZarfPackagePattern = regexp.MustCompile(`zarf-package[^\s\\\/]*\.tar(\.zst)?$`)
-
-	// Find zarf-init packages on the local system
-	ZarfInitPattern = regexp.MustCompile(sources.GetInitPackageName("") + "$")
-)
 
 // Modifier is a function that modifies the packager.
 type Modifier func(*Packager)
