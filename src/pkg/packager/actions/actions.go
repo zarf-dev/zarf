@@ -161,12 +161,15 @@ retryCmd:
 
 	select {
 	case <-timeout:
-		// If we reached this point, the timeout was reached.
-		return fmt.Errorf("command \"%s\" timed out after %d seconds", cmdEscaped, actionDefaults.MaxTotalSeconds)
-
+		// If we reached this point, the timeout was reached or command failed with no retries.
+		if actionDefaults.MaxTotalSeconds < 1 {
+			return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
+		} else {
+			return fmt.Errorf("command %q timed out after %d seconds", cmdEscaped, actionDefaults.MaxTotalSeconds)
+		}
 	default:
 		// If we reached this point, the retry limit was reached.
-		return fmt.Errorf("command \"%s\" failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
+		return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
 	}
 }
 
