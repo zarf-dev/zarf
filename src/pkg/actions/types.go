@@ -42,7 +42,6 @@ type Action struct {
 	MaxRetries            *int                `json:"maxRetries,omitempty" jsonschema:"description=Retry the command if it fails up to given number of times (default 0)"`
 	Dir                   *string             `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
 	Env                   []string            `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
-	If                    string              `json:"if,omitempty" jsonschema:"description=A go expression controlling whether this action will execute"`
 	Cmd                   string              `json:"cmd,omitempty" jsonschema:"description=The command to run. Must specify either cmd or wait for the action to do anything."`
 	Shell                 *exec.ExecShell     `json:"shell,omitempty" jsonschema:"description=(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"`
 	DeprecatedSetVariable string              `json:"setVariable,omitempty" jsonschema:"description=[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0,pattern=^[A-Z0-9_]+$"`
