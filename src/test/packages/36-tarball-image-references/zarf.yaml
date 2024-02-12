@@ -1,0 +1,27 @@
+kind: ZarfPackageConfig
+metadata:
+  name: tarball-image-reference
+  description: test if we can create a deploy a package which uses an image from a tarball
+components:
+  - name: baseline
+    required: true
+    manifests:
+      - name: multi-games
+        namespace: tarball-dos-games
+        files:
+          - manifests/deployment.yaml
+          - manifests/service.yaml
+    images:
+      - zarf-game.tar
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: game
+                namespace: tarball-dos-games
+                condition: available
+      onCreate:
+        before:
+          - cmd: ./zarf tools registry pull defenseunicorns/zarf-game:multi-tile-dark zarf-game.tar

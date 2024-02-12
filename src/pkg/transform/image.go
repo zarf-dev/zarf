@@ -63,39 +63,52 @@ func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string,
 
 // ParseImageRef parses a source reference into an Image struct
 func ParseImageRef(srcReference string) (out Image, err error) {
-	ref, err := reference.ParseAnyReference(srcReference)
-	if err != nil {
-		return out, err
-	}
-
-	// Parse the reference into its components
-	if named, ok := ref.(reference.Named); ok {
-		out.Name = named.Name()
-		out.Path = reference.Path(named)
-		out.Host = reference.Domain(named)
-		out.Reference = ref.String()
+	if IsTarball(srcReference) {
+		out.Host = "docker.io"
+		out.Name = strings.TrimSuffix(srcReference, ".tar")
+		out.Path = fmt.Sprintf("%s/%s/%s", out.Host, "library", out.Name)
+		out.Reference = srcReference
 	} else {
-		return out, fmt.Errorf("unable to parse image name from %s", srcReference)
-	}
+		ref, err := reference.ParseAnyReference(srcReference)
+		if err != nil {
+			return out, err
+		}
 
-	// Parse the tag and add it to digestOrReference
-	if tagged, ok := ref.(reference.Tagged); ok {
-		out.Tag = tagged.Tag()
-		out.TagOrDigest = fmt.Sprintf(":%s", tagged.Tag())
-	}
+		// Parse the reference into its components
+		if named, ok := ref.(reference.Named); ok {
+			out.Name = named.Name()
+			out.Path = reference.Path(named)
+			out.Host = reference.Domain(named)
+			out.Reference = ref.String()
+		} else {
+			return out, fmt.Errorf("unable to parse image name from %s", srcReference)
+		}
 
-	// Parse the digest and override digestOrReference
-	if digested, ok := ref.(reference.Digested); ok {
-		out.Digest = digested.Digest().String()
-		out.TagOrDigest = fmt.Sprintf("@%s", digested.Digest().String())
+		// Parse the tag and add it to digestOrReference
+		if tagged, ok := ref.(reference.Tagged); ok {
+			out.Tag = tagged.Tag()
+			out.TagOrDigest = fmt.Sprintf(":%s", tagged.Tag())
+		}
+
+		// Parse the digest and override digestOrReference
+		if digested, ok := ref.(reference.Digested); ok {
+			out.Digest = digested.Digest().String()
+			out.TagOrDigest = fmt.Sprintf("@%s", digested.Digest().String())
+		}
 	}
 
 	// If no tag or digest was provided use the default tag (latest)
 	if out.TagOrDigest == "" {
 		out.Tag = "latest"
 		out.TagOrDigest = ":latest"
-		out.Reference += ":latest"
+		if !IsTarball(srcReference) {
+			out.Reference += ":latest"
+		}
 	}
 
 	return out, nil
+}
+
+func IsTarball(srcReference string) bool {
+	return strings.HasSuffix(srcReference, ".tar") || strings.HasSuffix(srcReference, ".tar.gz") || strings.HasSuffix(srcReference, ".tgz")
 }

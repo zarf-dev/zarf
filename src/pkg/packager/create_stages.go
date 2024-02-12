@@ -199,7 +199,6 @@ func (p *Packager) assembleSkeleton() error {
 		if err := p.addComponent(idx, component); err != nil {
 			return err
 		}
-
 		if err := p.layout.Components.Archive(component, false); err != nil {
 			return err
 		}
