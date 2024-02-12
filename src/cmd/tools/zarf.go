@@ -206,10 +206,10 @@ var generatePKICmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		pki := pki.GeneratePKI(args[0], subAltNames...)
-		if err := os.WriteFile("tls.ca", pki.CA, helpers.WriteUserReadAll); err != nil {
+		if err := os.WriteFile("tls.ca", pki.CA, helpers.ReadAllWriteUser); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, "tls.ca", err.Error())
 		}
-		if err := os.WriteFile("tls.crt", pki.Cert, helpers.WriteUserReadAll); err != nil {
+		if err := os.WriteFile("tls.crt", pki.Cert, helpers.ReadAllWriteUser); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, "tls.crt", err.Error())
 		}
 		if err := os.WriteFile("tls.key", pki.Key, helpers.ReadWriteUser); err != nil {
@@ -283,7 +283,7 @@ var generateKeyCmd = &cobra.Command{
 		if err := os.WriteFile(prvKeyFileName, keyBytes.PrivateBytes, helpers.ReadWriteUser); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, prvKeyFileName, err.Error())
 		}
-		if err := os.WriteFile(pubKeyFileName, keyBytes.PublicBytes, helpers.WriteUserReadAll); err != nil {
+		if err := os.WriteFile(pubKeyFileName, keyBytes.PublicBytes, helpers.ReadAllWriteUser); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, pubKeyFileName, err.Error())
 		}
 

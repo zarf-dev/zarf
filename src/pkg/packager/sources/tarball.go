@@ -58,7 +58,7 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool)
 
 		dir := filepath.Dir(path)
 		if dir != "." {
-			if err := os.MkdirAll(filepath.Join(dst.Base, dir), helpers.WriteUserReadXAll); err != nil {
+			if err := os.MkdirAll(filepath.Join(dst.Base, dir), helpers.ReadExecuteAllWriteUser); err != nil {
 				return err
 			}
 		}

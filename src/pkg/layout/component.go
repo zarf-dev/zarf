@@ -157,13 +157,13 @@ func (c *Components) Create(component types.ZarfComponent) (cp *ComponentPaths, 
 		}
 	}
 
-	if err = utils.CreateDirectory(c.Base, helpers.ReadWriteXUser); err != nil {
+	if err = utils.CreateDirectory(c.Base, helpers.ReadWriteExecuteUser); err != nil {
 		return nil, err
 	}
 
 	base := filepath.Join(c.Base, name)
 
-	if err = utils.CreateDirectory(base, helpers.ReadWriteXUser); err != nil {
+	if err = utils.CreateDirectory(base, helpers.ReadWriteExecuteUser); err != nil {
 		return nil, err
 	}
 
@@ -172,26 +172,26 @@ func (c *Components) Create(component types.ZarfComponent) (cp *ComponentPaths, 
 	}
 
 	cp.Temp = filepath.Join(base, TempDir)
-	if err = utils.CreateDirectory(cp.Temp, helpers.ReadWriteXUser); err != nil {
+	if err = utils.CreateDirectory(cp.Temp, helpers.ReadWriteExecuteUser); err != nil {
 		return nil, err
 	}
 
 	if len(component.Files) > 0 {
 		cp.Files = filepath.Join(base, FilesDir)
-		if err = utils.CreateDirectory(cp.Files, helpers.ReadWriteXUser); err != nil {
+		if err = utils.CreateDirectory(cp.Files, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(component.Charts) > 0 {
 		cp.Charts = filepath.Join(base, ChartsDir)
-		if err = utils.CreateDirectory(cp.Charts, helpers.ReadWriteXUser); err != nil {
+		if err = utils.CreateDirectory(cp.Charts, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 		for _, chart := range component.Charts {
 			cp.Values = filepath.Join(base, ValuesDir)
 			if len(chart.ValuesFiles) > 0 {
-				if err = utils.CreateDirectory(cp.Values, helpers.ReadWriteXUser); err != nil {
+				if err = utils.CreateDirectory(cp.Values, helpers.ReadWriteExecuteUser); err != nil {
 					return nil, err
 				}
 				break
@@ -201,21 +201,21 @@ func (c *Components) Create(component types.ZarfComponent) (cp *ComponentPaths, 
 
 	if len(component.Repos) > 0 {
 		cp.Repos = filepath.Join(base, ReposDir)
-		if err = utils.CreateDirectory(cp.Repos, helpers.ReadWriteXUser); err != nil {
+		if err = utils.CreateDirectory(cp.Repos, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(component.Manifests) > 0 {
 		cp.Manifests = filepath.Join(base, ManifestsDir)
-		if err = utils.CreateDirectory(cp.Manifests, helpers.ReadWriteXUser); err != nil {
+		if err = utils.CreateDirectory(cp.Manifests, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(component.DataInjections) > 0 {
 		cp.DataInjections = filepath.Join(base, DataInjectionsDir)
-		if err = utils.CreateDirectory(cp.DataInjections, helpers.ReadWriteXUser); err != nil {
+		if err = utils.CreateDirectory(cp.DataInjections, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 	}

@@ -62,5 +62,5 @@ func (s *ClusterSource) LoadPackageMetadata(dst *layout.PackagePaths, _ bool, _ 
 
 	dst.ZarfYAML = filepath.Join(dst.Base, layout.ZarfYAML)
 
-	return utils.WriteYaml(dst.ZarfYAML, dpkg.Data, helpers.WriteUserReadXAll)
+	return utils.WriteYaml(dst.ZarfYAML, dpkg.Data, helpers.ReadExecuteAllWriteUser)
 }

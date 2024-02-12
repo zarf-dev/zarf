@@ -514,7 +514,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 		}
 
 		if file.Executable || utils.IsDir(dst) {
-			_ = os.Chmod(dst, helpers.ReadWriteXUser)
+			_ = os.Chmod(dst, helpers.ReadWriteExecuteUser)
 		} else {
 			_ = os.Chmod(dst, helpers.ReadWriteUser)
 		}

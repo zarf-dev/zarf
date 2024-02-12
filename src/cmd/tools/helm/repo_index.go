@@ -101,7 +101,7 @@ func index(dir, url, mergeTo string) error {
 		var i2 *repo.IndexFile
 		if _, err := os.Stat(mergeTo); os.IsNotExist(err) {
 			i2 = repo.NewIndexFile()
-			i2.WriteFile(mergeTo, helpers.WriteUserReadAll)
+			i2.WriteFile(mergeTo, helpers.ReadAllWriteUser)
 		} else {
 			i2, err = repo.LoadIndexFile(mergeTo)
 			if err != nil {
@@ -111,5 +111,5 @@ func index(dir, url, mergeTo string) error {
 		i.Merge(i2)
 	}
 	i.SortEntries()
-	return i.WriteFile(out, helpers.WriteUserReadAll)
+	return i.WriteFile(out, helpers.ReadAllWriteUser)
 }

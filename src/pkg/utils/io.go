@@ -43,7 +43,7 @@ type TextTemplate struct {
 // MakeTempDir creates a temp directory with the zarf- prefix.
 func MakeTempDir(basePath string) (string, error) {
 	if basePath != "" {
-		if err := CreateDirectory(basePath, helpers.ReadWriteXUser); err != nil {
+		if err := CreateDirectory(basePath, helpers.ReadWriteExecuteUser); err != nil {
 			return "", err
 		}
 	}
@@ -225,7 +225,7 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp, skipHidden bool) (fil
 // CreateParentDirectory creates the parent directory for the given file path.
 func CreateParentDirectory(destination string) error {
 	parentDest := filepath.Dir(destination)
-	return CreateDirectory(parentDest, helpers.ReadWriteXUser)
+	return CreateDirectory(parentDest, helpers.ReadWriteExecuteUser)
 }
 
 // CreatePathAndCopy creates the parent directory for the given file path and copies the source file to the destination.
@@ -352,7 +352,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 
 	// create file path starting from part 001
 	path := fmt.Sprintf("%s.part001", srcFile)
-	chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, helpers.WriteUserReadAll)
+	chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, helpers.ReadAllWriteUser)
 	if err != nil {
 		return err
 	}
@@ -386,7 +386,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 
 			// create new file
 			path = fmt.Sprintf("%s.part%03d", srcFile, len(fileNames)+1)
-			chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, helpers.WriteUserReadAll)
+			chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, helpers.ReadAllWriteUser)
 			if err != nil {
 				return err
 			}
@@ -432,7 +432,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 
 	// write header file
 	path = fmt.Sprintf("%s.part000", srcFile)
-	if err := os.WriteFile(path, jsonData, helpers.WriteUserReadAll); err != nil {
+	if err := os.WriteFile(path, jsonData, helpers.ReadAllWriteUser); err != nil {
 		return fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
 	fileNames = append(fileNames, path)

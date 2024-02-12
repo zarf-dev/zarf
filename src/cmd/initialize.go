@@ -92,7 +92,7 @@ func findInitPackage(initPackageName string) (string, error) {
 
 	// Create the cache directory if it doesn't exist
 	if utils.InvalidPath(config.GetAbsCachePath()) {
-		if err := utils.CreateDirectory(config.GetAbsCachePath(), helpers.WriteUserReadXAll); err != nil {
+		if err := utils.CreateDirectory(config.GetAbsCachePath(), helpers.ReadExecuteAllWriteUser); err != nil {
 			message.Fatalf(err, lang.CmdInitErrUnableCreateCache, config.GetAbsCachePath())
 		}
 	}
