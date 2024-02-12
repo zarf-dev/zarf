@@ -70,8 +70,7 @@ func (s *SBOMs) Archive() (err error) {
 
 // StageSBOMViewFiles copies SBOM viewer HTML files to the Zarf SBOM directory.
 func (s *SBOMs) StageSBOMViewFiles() (warnings []string, err error) {
-	isTarball := !utils.IsDir(s.Path) && filepath.Ext(s.Path) == ".tar"
-	if isTarball {
+	if s.IsTarball() {
 		return nil, fmt.Errorf("unable to process the SBOM files for this package: %s is a tarball", s.Path)
 	}
 
@@ -104,4 +103,9 @@ func (s *SBOMs) OutputSBOMFiles(outputDir, packageName string) (string, error) {
 	}
 
 	return packagePath, utils.CreatePathAndCopy(s.Path, packagePath)
+}
+
+// IsTarball returns true if the SBOMs are a tarball.
+func (s SBOMs) IsTarball() bool {
+	return !utils.IsDir(s.Path) && filepath.Ext(s.Path) == ".tar"
 }

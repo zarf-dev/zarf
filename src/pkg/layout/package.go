@@ -323,7 +323,7 @@ func (pp *PackagePaths) Files() map[string]string {
 		add(tarball)
 	}
 
-	if filepath.Ext(pp.SBOMs.Path) == ".tar" {
+	if pp.SBOMs.IsTarball() {
 		add(pp.SBOMs.Path)
 	}
 	return pathMap
