@@ -128,6 +128,9 @@ func (p *Packager) assemble() error {
 
 		// Combine all component images into a single entry for efficient layer reuse.
 		for _, src := range component.Images {
+			if strings.HasSuffix(src, ".tar") || strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
+				continue
+			}
 			refInfo, err := transform.ParseImageRef(src)
 			if err != nil {
 				return fmt.Errorf("failed to create ref for image %s: %w", src, err)
