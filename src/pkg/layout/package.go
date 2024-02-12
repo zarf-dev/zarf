@@ -145,9 +145,7 @@ func (pp *PackagePaths) IsLegacyLayout() bool {
 
 // SignPackage signs the zarf.yaml in a Zarf package.
 func (pp *PackagePaths) SignPackage(signingKeyPath, signingKeyPassword string) error {
-	if signingKeyPath != "" {
-		pp.Signature = filepath.Join(pp.Base, Signature)
-	}
+	pp.Signature = filepath.Join(pp.Base, Signature)
 
 	passwordFunc := func(_ bool) ([]byte, error) {
 		if signingKeyPassword != "" {
