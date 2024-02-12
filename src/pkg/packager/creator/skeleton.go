@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	// veryify that SkeletonCreator implements Creator
+	// verify that SkeletonCreator implements Creator
 	_ Creator = (*SkeletonCreator)(nil)
 )
 

@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	// veryify that SplitTarballSource implements PackageSource
+	// verify that SplitTarballSource implements PackageSource
 	_ PackageSource = (*SplitTarballSource)(nil)
 )
 

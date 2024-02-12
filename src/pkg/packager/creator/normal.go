@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	// veryify that PackageCreator implements Creator
+	// verify that PackageCreator implements Creator
 	_ Creator = (*PackageCreator)(nil)
 )
 
