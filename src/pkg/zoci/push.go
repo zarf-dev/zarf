@@ -26,7 +26,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 	}
 	defer src.Close()
 
-	message.Infof("Publishing package to %s", r.Repo().Reference)
+	r.Log().Info(fmt.Sprintf("Publishing package to %s", r.Repo().Reference))
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 

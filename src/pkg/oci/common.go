@@ -46,7 +46,7 @@ func WithPlainHTTP(plainHTTP bool) Modifier {
 // WithInsecureSkipVerify sets the insecure TLS flag for the remote
 func WithInsecureSkipVerify(insecure bool) Modifier {
 	return func(o *OrasRemote) {
-		o.Transport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
+		o.Transport.RoundTripper.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
 	}
 }
 
@@ -104,6 +104,11 @@ func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*Or
 // Repo gives you access to the underlying remote repository
 func (o *OrasRemote) Repo() *remote.Repository {
 	return o.repo
+}
+
+// Repo gives you access to the underlying remote repository
+func (o *OrasRemote) Log() *slog.Logger {
+	return &o.log
 }
 
 // setRepository sets the repository for the remote as well as the auth client.

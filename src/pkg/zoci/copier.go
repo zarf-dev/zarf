@@ -54,6 +54,6 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, concurrency int)
 		return err
 	}
 
-	message.Infof("Published %s to %s", src.Repo().Reference, dst.Repo().Reference)
+	src.Log().Info(fmt.Sprintf("Published %s to %s", src.Repo().Reference, dst.Repo().Reference))
 	return nil
 }

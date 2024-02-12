@@ -11,7 +11,6 @@ import (
 	"slices"
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -42,7 +41,7 @@ var (
 //   - zarf.yaml.sig
 func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 	isPartialPull := len(layersToPull) > 0
-	message.Debugf("Pulling %s", r.Repo().Reference)
+	r.Log().Debug(fmt.Sprintf("Pulling %s", r.Repo().Reference))
 
 	manifest, err := r.FetchRoot(ctx)
 	if err != nil {
