@@ -6,6 +6,7 @@ package oci
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -29,7 +30,7 @@ type OrasRemote struct {
 	root           *Manifest
 	Transport      *helpers.Transport
 	targetPlatform *ocispec.Platform
-	log            helpers.Logger
+	log            slog.Logger
 }
 
 // Modifier is a function that modifies an OrasRemote
@@ -65,7 +66,7 @@ func WithUserAgent(userAgent string) Modifier {
 }
 
 // WithLogger sets the logger for the remote
-func WithLogger(logger helpers.Logger) Modifier {
+func WithLogger(logger slog.Logger) Modifier {
 	return func(o *OrasRemote) {
 		o.log = logger
 	}
@@ -86,14 +87,11 @@ func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*Or
 		repo:           &remote.Repository{Client: client},
 		Transport:      helpers.NewTransport(transport, nil),
 		targetPlatform: &platform,
+		log:            *slog.Default(),
 	}
 
 	for _, mod := range mods {
 		mod(o)
-	}
-
-	if o.log == nil {
-		o.log = &helpers.DiscardLogger{}
 	}
 
 	if err := o.setRepository(ref); err != nil {
@@ -140,7 +138,7 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, error) {
 
 	client := o.repo.Client.(*auth.Client)
-	o.log.Debug("Loading docker config file from default config location: %s for %s", config.Dir(), ref)
+	o.log.Debug(fmt.Sprintf("Loading docker config file from default config location: %s for %s", config.Dir(), ref))
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
 		return nil, err
