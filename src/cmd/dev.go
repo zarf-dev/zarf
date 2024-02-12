@@ -108,7 +108,7 @@ var devSha256SumCmd = &cobra.Command{
 	Aliases: []string{"s"},
 	Short:   lang.CmdDevSha256sumShort,
 	Args:    cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		fileName := args[0]
 
 		var tmp string
