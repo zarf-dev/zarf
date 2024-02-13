@@ -94,7 +94,6 @@ func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 	if err != nil {
 		return nil, err
 	}
-	images := map[string]bool{}
 	tarballFormat := "%s.tar"
 	for _, name := range requestedComponents {
 		component := helpers.Find(pkg.Components, func(component types.ZarfComponent) bool {
@@ -104,12 +103,11 @@ func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 			return nil, fmt.Errorf("component %s does not exist in this package", name)
 		}
 	}
+	var images []string
 	for _, component := range pkg.Components {
 		// If we requested this component, or it is required, we need to pull its images and tarball
 		if slices.Contains(requestedComponents, component.Name) || component.Required {
-			for _, image := range component.Images {
-				images[image] = true
-			}
+			images = append(images, component.Images...)
 			layers = append(layers, root.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 		}
 	}
@@ -127,7 +125,7 @@ func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 		if err != nil {
 			return nil, err
 		}
-		for image := range images {
+		for _, image := range images {
 			// use docker's transform lib to parse the image ref
 			// this properly mirrors the logic within create
 			refInfo, err := transform.ParseImageRef(image)
