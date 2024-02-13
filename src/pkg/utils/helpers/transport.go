@@ -85,7 +85,7 @@ func (t *Transport) roundTrip(req *http.Request) (resp *http.Response, err error
 		req.Body = io.NopCloser(io.TeeReader(req.Body, t.ProgressBar))
 	}
 
-	resp, err = t.RoundTrip(req)
+	resp, err = t.Base.RoundTrip(req)
 
 	if resp != nil && req.Method == http.MethodHead && err == nil && t.ProgressBar != nil {
 		if resp.ContentLength > 0 {
