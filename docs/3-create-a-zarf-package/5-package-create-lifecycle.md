@@ -8,8 +8,8 @@ The following diagram shows the order of operations for the `zarf package create
 graph TD
     A1(cd to directory with zarf.yaml)-->A2
     A2(load zarf.yaml into memory)-->A3
-    A3(set pkg architecture if not provided)-->A4
-    A4(filter components by arch and flavor)-->A5
+    A3(set package architecture if not provided)-->A4
+    A4(filter components by architecture and flavor)-->A5
     A5(migrate deprecated component configs)-->A6
     A6(parse component imports)-->A7
     A7(process create-time variables)-->A8
@@ -30,17 +30,17 @@ graph TD
         A19-->|No|A999
     end
 
-    A20-->A21(load '.images')
+    A20-->A21(load all '.images')
     A21-->A22(generate SBOMs unless --skip-sbom flag was used)
     A22-->A23(cd back to original working directory)
     A23-->A24(archive components into tarballs)
-    A24-->A25(generate checksums for all pkg files)
-    A25-->A26(record pkg build metadata)
+    A24-->A25(generate checksums for all package files)
+    A25-->A26(record package build metadata)
     A26-->A27(write the zarf.yaml to disk)
     A27-->A28(sign the package if a key was provided)
     A28-->A29{Output to OCI?}
-    A29-->|Yes|A30(publish pkg to OCI registry)
-    A29-->|No|A31(archive pkg into a tarball and write to disk)
+    A29-->|Yes|A30(publish package to OCI registry)
+    A29-->|No|A31(archive package into a tarball and write to disk)
     A30-->A32
     A31-->A32
     A32(write SBOM files to disk if --sbom or --sbom-out flags used)-->A33
