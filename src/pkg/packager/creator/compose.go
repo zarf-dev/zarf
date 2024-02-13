@@ -20,7 +20,7 @@ func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage,
 
 	for i, component := range pkg.Components {
 		arch := pkg.Metadata.Architecture
-		// filter by architecture
+		// filter by architecture and flavor
 		if !composer.CompatibleComponent(component, arch, flavor) {
 			continue
 		}
