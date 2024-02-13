@@ -30,7 +30,7 @@ type Remote struct {
 // NewRemote returns an oras remote repository client and context for the given url
 // with zarf opination embedded
 func NewRemote(url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
-	logger := *slog.New(message.ZarfHandler{})
+	logger := slog.New(message.ZarfHandler{})
 	modifiers := append([]oci.Modifier{
 		oci.WithPlainHTTP(config.CommonOptions.Insecure),
 		oci.WithInsecureSkipVerify(config.CommonOptions.Insecure),

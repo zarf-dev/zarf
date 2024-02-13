@@ -30,7 +30,7 @@ type OrasRemote struct {
 	root           *Manifest
 	Transport      *helpers.Transport
 	targetPlatform *ocispec.Platform
-	log            slog.Logger
+	log            *slog.Logger
 }
 
 // Modifier is a function that modifies an OrasRemote
@@ -66,7 +66,7 @@ func WithUserAgent(userAgent string) Modifier {
 }
 
 // WithLogger sets the logger for the remote
-func WithLogger(logger slog.Logger) Modifier {
+func WithLogger(logger *slog.Logger) Modifier {
 	return func(o *OrasRemote) {
 		o.log = logger
 	}
@@ -87,7 +87,7 @@ func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*Or
 		repo:           &remote.Repository{Client: client},
 		Transport:      helpers.NewTransport(transport, nil),
 		targetPlatform: &platform,
-		log:            *slog.Default(),
+		log:            slog.Default(),
 	}
 
 	for _, mod := range mods {
@@ -108,7 +108,7 @@ func (o *OrasRemote) Repo() *remote.Repository {
 
 // Log gives you access to the OrasRemote logger
 func (o *OrasRemote) Log() *slog.Logger {
-	return &o.log
+	return o.log
 }
 
 // setRepository sets the repository for the remote as well as the auth client.
