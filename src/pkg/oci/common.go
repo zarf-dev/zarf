@@ -106,7 +106,7 @@ func (o *OrasRemote) Repo() *remote.Repository {
 	return o.repo
 }
 
-// Repo gives you access to the underlying remote repository
+// Log gives you access to the OrasRemote logger
 func (o *OrasRemote) Log() *slog.Logger {
 	return &o.log
 }
