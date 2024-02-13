@@ -18,6 +18,7 @@ zarf dev find-images [ PACKAGE ] [flags]
 ```
       --create-set stringToString   Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]. (default [])
       --deploy-set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+  -f, --flavor string               The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                        help for find-images
       --kube-version string         Override the default helm template KubeVersion when performing a package chart template
       --registry-url string         Override the ###ZARF_REGISTRY### value (default "127.0.0.1:31999")
