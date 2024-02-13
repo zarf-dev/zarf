@@ -18,7 +18,7 @@ graph TD
     A10(run validations)-->A11
     A11(confirm package create):::prompt-->A12
 
-    subgraph Add Each Component
+    subgraph  
         A12(run each '.actions.onCreate.before'):::action-->A13(load '.charts')
         A13-->A14(load '.files')
         A14-->A15(load '.dataInjections')
