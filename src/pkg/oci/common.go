@@ -46,7 +46,7 @@ func WithPlainHTTP(plainHTTP bool) Modifier {
 // WithInsecureSkipVerify sets the insecure TLS flag for the remote
 func WithInsecureSkipVerify(insecure bool) Modifier {
 	return func(o *OrasRemote) {
-		o.Transport.RoundTripper.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
+		o.Transport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
 	}
 }
 

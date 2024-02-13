@@ -15,15 +15,15 @@ import (
 // Transport is an http.RoundTripper that keeps track of the in-flight
 // request and add hooks to report upload progress.
 type Transport struct {
-	http.RoundTripper
+	Base        http.RoundTripper
 	ProgressBar ProgressWriter
 }
 
 // NewTransport returns a custom transport that tracks an http.RoundTripper and a message.ProgressBar.
 func NewTransport(base http.RoundTripper, bar ProgressWriter) *Transport {
 	return &Transport{
-		RoundTripper: base,
-		ProgressBar:  bar,
+		Base:        base,
+		ProgressBar: bar,
 	}
 }
 
