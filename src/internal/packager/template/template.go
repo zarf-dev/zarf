@@ -71,11 +71,6 @@ func (values *Values) GetRegistry() string {
 	return values.registry
 }
 
-// SetRegistry sets the registry
-func (values *Values) SetRegistry(registry string) {
-	values.registry = registry
-}
-
 // SetState sets the state
 func (values *Values) SetState(state *types.ZarfState) {
 	values.config.State = state
@@ -99,7 +94,7 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 			"STORAGE_CLASS": values.config.State.StorageClass,
 
 			// Registry info
-			"REGISTRY":           values.registry,
+			"REGISTRY":           regInfo.Address,
 			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
 			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
 			"REGISTRY_AUTH_PULL": regInfo.PullPassword,

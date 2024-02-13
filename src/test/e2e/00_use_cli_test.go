@@ -243,6 +243,10 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, tlsKey)
 	})
 
+}
+
+func TestUseCLI2(t *testing.T) {
+
 	t.Run("zarf dev find-images with helm or manifest vars", func(t *testing.T) {
 		t.Parallel()
 		// Test `zarf prepare find-images` for a package with zarf variables in the chart, values file, and manifests

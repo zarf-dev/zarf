@@ -129,8 +129,8 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate template values")
 		}
-		values.SetState(&types.ZarfState{})
-		values.SetRegistry(p.cfg.FindImagesOpts.RegistryURL)
+
+		values.SetState(&types.ZarfState{RegistryInfo: types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}})
 		for _, chart := range component.Charts {
 
 			helmCfg := helm.New(
