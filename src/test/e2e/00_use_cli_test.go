@@ -243,12 +243,9 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, tlsKey)
 	})
 
-}
-
-func TestUseCLI2(t *testing.T) {
-
 	t.Run("zarf dev find-images with helm or manifest vars", func(t *testing.T) {
 		t.Parallel()
+
 		registry := "coolregistry.gov"
 		stdOut, _, err := e2e.Zarf("prepare", "find-images", ".", "--registry-url", registry)
 		require.NoError(t, err)
@@ -257,7 +254,6 @@ func TestUseCLI2(t *testing.T) {
 		require.Contains(t, stdOut, "busybox:latest", "Busybox image should be found as long as helm chart doesn't error")
 
 		path := filepath.Join("examples", "manifests")
-
 		stdOut, _, err = e2e.Zarf("prepare", "find-images", path)
 		require.NoError(t, err)
 		require.Contains(t, stdOut, "httpd:alpine3.18", "Should contain the templated image from manifests")
