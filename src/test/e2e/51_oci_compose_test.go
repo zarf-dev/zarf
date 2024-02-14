@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	corev1 "k8s.io/api/core/v1"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -150,6 +151,10 @@ func (suite *SkeletonSuite) Test_2_FilePaths() {
 			for _, manifest := range kustomizeGeneratedManifests {
 				fullPath := filepath.Join(manifestPath, manifest)
 				suite.FileExists(fullPath, "expected to find kustomize-generated manifest: %q", fullPath)
+				var configMap corev1.ConfigMap
+				err := utils.ReadYaml(fullPath, &configMap)
+				suite.NoError(err)
+				suite.Equal("ConfigMap", configMap.Kind, "expected manifest %q to be of kind ConfigMap", fullPath)
 			}
 		}
 
