@@ -71,6 +71,11 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
+	composable := filepath.Join("src", "test", "packages", "09-composable-packages")
+	_, stdErr, err = e2e.Zarf("package", "publish", composable, "oci://"+ref, "--insecure")
+	suite.NoError(err)
+	suite.Contains(stdErr, "Published "+ref)
+
 	_, stdErr, err = e2e.Zarf("package", "publish", importEverything, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
@@ -85,6 +90,9 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 
 	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/big-bang-min:2.10.0", "-o", "build", "--insecure", "-a", "skeleton")
+	suite.NoError(err)
+
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/test-compose-package:0.0.1", "-o", "build", "--insecure", "-a", "skeleton")
 	suite.NoError(err)
 }
 
@@ -122,6 +130,7 @@ func (suite *SkeletonSuite) Test_2_FilePaths() {
 		filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
 		filepath.Join("build", "zarf-package-helm-charts-skeleton-0.0.1.tar.zst"),
 		filepath.Join("build", "zarf-package-big-bang-min-skeleton-2.10.0.tar.zst"),
+		filepath.Join("build", "zarf-package-test-compose-package-skeleton-0.0.1.tar.zst"),
 	}
 
 	for _, pkgTar := range pkgTars {
@@ -133,6 +142,16 @@ func (suite *SkeletonSuite) Test_2_FilePaths() {
 		_, _, err := e2e.Zarf("tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
 		suite.NoError(err)
 		suite.DirExists(unpacked)
+
+		// Verify skeleton contains kustomize-generated manifests.
+		if strings.HasSuffix(pkgTar, "zarf-package-test-compose-package-skeleton-0.0.1.tar.zst") {
+			kustomizeGeneratedManifests := []string{"kustomization-connect-service-0.yaml", "kustomization-connect-service-1.yaml", "kustomization-connect-service-two-0.yaml"}
+			manifestPath := filepath.Join(unpacked, "components", "test-compose-package", "manifests")
+			for _, manifest := range kustomizeGeneratedManifests {
+				fullPath := filepath.Join(manifestPath, manifest)
+				suite.FileExists(fullPath, "expected to find kustomize-generated manifest: %q", fullPath)
+			}
+		}
 
 		err = utils.ReadYaml(filepath.Join(unpacked, layout.ZarfYAML), &pkg)
 		suite.NoError(err)
