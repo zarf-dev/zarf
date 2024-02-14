@@ -130,13 +130,13 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			return nil, fmt.Errorf("unable to generate template values")
 		}
 
-		values.SetState(
-			&types.ZarfState{
-				RegistryInfo: types.RegistryInfo{
-					Address: p.cfg.FindImagesOpts.RegistryURL,
-					// Adding a fake secret here so if a chart expects the registry secret, like the init package, it won't fail
-					Secret: "fake-zarf-secret",
-				}})
+		values.SetState(&types.ZarfState{
+			RegistryInfo: types.RegistryInfo{
+				Address: p.cfg.FindImagesOpts.RegistryURL,
+				// Adding a fake secret here so if a chart expects the registry secret, like the init package, it won't fail
+				Secret: "fake-zarf-secret",
+			},
+		})
 		for _, chart := range component.Charts {
 
 			helmCfg := helm.New(
