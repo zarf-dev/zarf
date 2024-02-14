@@ -3,6 +3,10 @@ metadata:
   name: manifests
   version: 0.0.1
 
+constants:
+  - name: HTTPD_VERSION
+    value: "3.18"
+
 components:
   - name: httpd-local
     required: true

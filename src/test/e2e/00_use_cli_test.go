@@ -249,14 +249,17 @@ func TestUseCLI2(t *testing.T) {
 
 	t.Run("zarf dev find-images with helm or manifest vars", func(t *testing.T) {
 		t.Parallel()
-		// Test `zarf prepare find-images` for a package with zarf variables in the chart, values file, and manifests
-		path := filepath.Join("src", "test", "packages", "00-find-images-with-vars")
 		registry := "coolregistry.gov"
-		stdOut, _, err := e2e.Zarf("prepare", "find-images", path, "--registry-url", registry)
+		stdOut, _, err := e2e.Zarf("prepare", "find-images", ".", "--registry-url", registry)
 		require.NoError(t, err)
-		manifestImage := fmt.Sprintf("%s/%s", registry, "defenseunicorns/zarf/agent:local")
-		require.Contains(t, stdOut, manifestImage, "Manifests aren't interpreting vars")
-		require.Contains(t, stdOut, "busybox:latest", "Values files aren't interpreting vars")
-		require.Contains(t, stdOut, "nginx:stable-perl", "Helm isn't interpreting vars")
+		internalRegistryImage := fmt.Sprintf("%s/%s", registry, "defenseunicorns/zarf/agent:local")
+		require.Contains(t, stdOut, internalRegistryImage, "registry image should be found with registry url")
+		require.Contains(t, stdOut, "busybox:latest", "Busybox image should be found as long as helm chart doesn't error")
+
+		path := filepath.Join("examples", "manifests")
+
+		stdOut, _, err = e2e.Zarf("prepare", "find-images", path)
+		require.NoError(t, err)
+		require.Contains(t, stdOut, "httpd:alpine3.18", "Should contain the templated image from manifests")
 	})
 }
