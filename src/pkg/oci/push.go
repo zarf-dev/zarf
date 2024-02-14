@@ -89,6 +89,7 @@ func (o *OrasRemote) UpdateIndex(ctx context.Context, tag string, publishedDesc 
 	if err != nil {
 		if errors.Is(err, errdef.ErrNotFound) {
 			index = ocispec.Index{
+				MediaType: ocispec.MediaTypeImageIndex,
 				Versioned: specs.Versioned{
 					SchemaVersion: 2,
 				},
