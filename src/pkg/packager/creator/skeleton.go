@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -299,6 +300,19 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 				}
 
 				updatedComponent.Manifests[manifestIdx].Files[fileIdx] = rel
+			}
+
+			for kustomizeIdx, path := range manifest.Kustomizations {
+				// Generate manifests from kustomizations and place in the package.
+				spinner.Updatef("Building kustomization for %s", path)
+
+				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
+				rel := filepath.Join(layout.ManifestsDir, kname)
+				dst := filepath.Join(componentPaths.Base, rel)
+
+				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+					return nil, fmt.Errorf("unable to build kustomization %s: %w", path, err)
+				}
 			}
 
 			// remove kustomizations
