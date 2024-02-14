@@ -1,2 +1,0 @@
-replicaCount: ###ZARF_VAR_REPLICA_COUNT###
-otherContainer: ###ZARF_VAR_VALUES_IMAGE###
