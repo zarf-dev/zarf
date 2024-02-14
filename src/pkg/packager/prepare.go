@@ -204,7 +204,8 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 					}
 					f = destination
 				} else {
-					newDestination := filepath.Join(componentPaths.Manifests, f)
+					filename := filepath.Base(f)
+					newDestination := filepath.Join(componentPaths.Manifests, filename)
 					utils.CreatePathAndCopy(f, newDestination)
 					f = newDestination
 				}
