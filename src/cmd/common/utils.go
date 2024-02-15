@@ -8,7 +8,6 @@ package common
 func SetBaseDirectory(args []string) string {
 	if len(args) > 0 {
 		return args[0]
-	} else {
-		return "."
 	}
+	return "."
 }
