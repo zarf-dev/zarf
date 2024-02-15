@@ -269,7 +269,7 @@ func init() {
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 
-	devFindImagesCmd.Flags().MarkDeprecated("set", "This field is replaced by create-set")
+	devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
 	devFindImagesCmd.Flags().MarkHidden("set")
 	devFindImagesCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
