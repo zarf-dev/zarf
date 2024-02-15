@@ -38,6 +38,7 @@ type imageMap map[string]bool
 func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	repoHelmChartPath := p.cfg.FindImagesOpts.RepoHelmChartPath
 	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
+	pkg := p.cfg.Pkg
 
 	imagesMap := make(map[string][]string)
 	erroredCharts := []string{}
@@ -53,20 +54,20 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+	if err := utils.ReadYaml(layout.ZarfYAML, &pkg); err != nil {
 		return nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
-	p.cfg.Pkg.Metadata.Architecture = config.GetArch(p.cfg.Pkg.Metadata.Architecture)
+	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 
-	composedPkg, composeWarnings, err := creator.ComposeComponents(p.cfg.Pkg, p.cfg.CreateOpts.Flavor)
+	pkg, composeWarnings, err := creator.ComposeComponents(pkg, p.cfg.CreateOpts.Flavor)
 	if err != nil {
 		return nil, err
 	}
 	p.warnings = append(p.warnings, composeWarnings...)
 
 	// After components are composed, template the active package
-	templatedPkg, templateWarnings, err := creator.FillActiveTemplate(composedPkg, p.cfg.CreateOpts.SetVariables)
+	pkg, templateWarnings, err := creator.FillActiveTemplate(pkg, p.cfg.CreateOpts.SetVariables)
 	if err != nil {
 		return nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}
@@ -76,7 +77,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		message.Warn(warning)
 	}
 
-	for _, component := range templatedPkg.Components {
+	for _, component := range pkg.Components {
 		if len(component.Repos) > 0 && repoHelmChartPath == "" {
 			message.Note("This Zarf package contains git repositories, " +
 				"if any repos contain helm charts you want to template and " +
@@ -87,7 +88,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	componentDefinition := "\ncomponents:\n"
 
-	for _, component := range templatedPkg.Components {
+	for _, component := range pkg.Components {
 
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
@@ -237,7 +238,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			}
 
 			if len(validImages) > 0 {
-				componentDefinition += fmt.Sprintf("      # Possible images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
+				componentDefinition += fmt.Sprintf("      # Possible images - %s - %s\n", pkg.Metadata.Name, component.Name)
 				for _, image := range validImages {
 					imagesMap[component.Name] = append(imagesMap[component.Name], image)
 					componentDefinition += fmt.Sprintf("      - %s\n", image)
@@ -267,7 +268,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 			if len(cosignArtifactList) > 0 {
 				imagesMap[component.Name] = append(imagesMap[component.Name], cosignArtifactList...)
-				componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
+				componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s - %s\n", pkg.Metadata.Name, component.Name)
 				for _, cosignArtifact := range cosignArtifactList {
 					componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
 				}
