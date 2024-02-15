@@ -203,11 +203,6 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
 					f = destination
-				} else {
-					filename := filepath.Base(f)
-					newDestination := filepath.Join(componentPaths.Manifests, filename)
-					utils.CreatePathAndCopy(f, newDestination)
-					f = newDestination
 				}
 
 				if err := values.Apply(component, f, true); err != nil {
