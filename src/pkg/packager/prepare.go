@@ -54,7 +54,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
 	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
-		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
+		return nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
 	}
 
 	if err := p.composeComponents(); err != nil {
@@ -67,7 +67,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	// After components are composed, template the active package
 	if err := p.fillActiveTemplate(); err != nil {
-		return nil, fmt.Errorf("unable to fill values in template: %s", err.Error())
+		return nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
@@ -149,7 +149,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 			err = helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
 			if err != nil {
-				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.Name, err.Error())
+				return nil, fmt.Errorf("unable to package the chart %s: %w", chart.Name, err)
 			}
 
 			valuesFilePaths, _ := utils.RecursiveFileList(componentPaths.Values, nil, false)
@@ -190,7 +190,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
 				destination := filepath.Join(componentPaths.Manifests, kname)
 				if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
-					return nil, fmt.Errorf("unable to build the kustomization for %s: %s", k, err.Error())
+					return nil, fmt.Errorf("unable to build the kustomization for %s: %w", k, err)
 				}
 				manifest.Files = append(manifest.Files, destination)
 			}
