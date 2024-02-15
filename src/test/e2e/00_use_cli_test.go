@@ -247,15 +247,16 @@ func TestUseCLI(t *testing.T) {
 		t.Parallel()
 
 		registry := "coolregistry.gov"
-		stdOut, _, err := e2e.Zarf("prepare", "find-images", ".", "--registry-url", registry)
+		agentTag := "test"
+		stdOut, _, err := e2e.Zarf("prepare", "find-images", ".", "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag))
 		require.NoError(t, err)
-		internalRegistryImage := fmt.Sprintf("%s/%s", registry, "defenseunicorns/zarf/agent:local")
+		internalRegistryImage := fmt.Sprintf("%s/%s:%s", registry, "defenseunicorns/zarf/agent", agentTag)
 		require.Contains(t, stdOut, internalRegistryImage, "registry image should be found with registry url")
 		require.Contains(t, stdOut, "busybox:latest", "Busybox image should be found as long as helm chart doesn't error")
 
 		path := filepath.Join("examples", "manifests")
-		stdOut, _, err = e2e.Zarf("prepare", "find-images", path)
+		stdOut, _, err = e2e.Zarf("prepare", "find-images", path, "--deploy-set", "httpd_version=3.19")
 		require.NoError(t, err)
-		require.Contains(t, stdOut, "httpd:alpine3.18", "Should contain the templated image from manifests")
+		require.Contains(t, stdOut, "httpd:alpine3.19", "Should contain the templated image from manifests")
 	})
 }
