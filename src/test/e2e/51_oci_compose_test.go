@@ -146,15 +146,19 @@ func (suite *SkeletonSuite) Test_2_FilePaths() {
 
 		// Verify skeleton contains kustomize-generated manifests.
 		if strings.HasSuffix(pkgTar, "zarf-package-test-compose-package-skeleton-0.0.1.tar.zst") {
-			kustomizeGeneratedManifests := []string{"kustomization-connect-service-0.yaml", "kustomization-connect-service-1.yaml", "kustomization-connect-service-two-0.yaml"}
-			manifestPath := filepath.Join(unpacked, "components", "test-compose-package", "manifests")
+			kustomizeGeneratedManifests := []string{
+				"kustomization-connect-service-0.yaml",
+				"kustomization-connect-service-1.yaml",
+				"kustomization-connect-service-two-0.yaml",
+			}
+			manifestDir := filepath.Join(unpacked, "components", "test-compose-package", "manifests")
 			for _, manifest := range kustomizeGeneratedManifests {
-				fullPath := filepath.Join(manifestPath, manifest)
-				suite.FileExists(fullPath, "expected to find kustomize-generated manifest: %q", fullPath)
+				manifestPath := filepath.Join(manifestDir, manifest)
+				suite.FileExists(manifestPath, "expected to find kustomize-generated manifest: %q", manifestPath)
 				var configMap corev1.ConfigMap
-				err := utils.ReadYaml(fullPath, &configMap)
+				err := utils.ReadYaml(manifestPath, &configMap)
 				suite.NoError(err)
-				suite.Equal("ConfigMap", configMap.Kind, "expected manifest %q to be of kind ConfigMap", fullPath)
+				suite.Equal("ConfigMap", configMap.Kind, "expected manifest %q to be of kind ConfigMap", manifestPath)
 			}
 		}
 
