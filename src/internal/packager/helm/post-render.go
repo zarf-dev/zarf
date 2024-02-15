@@ -95,7 +95,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 	// Otherwise, loop over the resources,
 	if r.cluster != nil {
-		if err := r.editResourceForHelm(resources, finalManifestsOutput); err != nil {
+		if err := r.editHelmResources(resources, finalManifestsOutput); err != nil {
 			return nil, err
 		}
 
@@ -170,7 +170,7 @@ func (r *renderer) adoptAndUpdateNamespaces() error {
 	return nil
 }
 
-func (r *renderer) editResourceForHelm(resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
+func (r *renderer) editHelmResources(resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
 	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
 		rawData := &unstructured.Unstructured{}
