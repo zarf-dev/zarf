@@ -471,9 +471,20 @@ func IsTextFile(path string) (bool, error) {
 	}
 	defer f.Close() // Make sure to close the file when we're done
 
-	// Read the first 512 bytes of the file
+	// Get file stat
+	stat, err := f.Stat()
+	if err != nil {
+		return false, err
+	}
+
+	// Create 512 byte buffer
 	data := make([]byte, 512)
-	n, err := f.Read(data)
+
+	// Clip offset to minimum of 0
+	offset := max(0, stat.Size()-512)
+
+	// Read the last 512 bytes of the file
+	n, err := f.ReadAt(data, offset)
 	if err != nil && err != io.EOF {
 		return false, err
 	}
