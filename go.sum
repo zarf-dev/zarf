@@ -364,8 +364,8 @@ github.com/aliyun/credentials-go v1.3.1 h1:uq/0v7kWrxmoLGpqjx7vtQ/s03f0zR//0br/x
 github.com/aliyun/credentials-go v1.3.1/go.mod h1:8jKYhQuDawt8x2+fusqa1Y6mPxemTsBEN04dgcAcYz0=
 github.com/anchore/bubbly v0.0.0-20231115134915-def0aba654a9 h1:p0ZIe0htYOX284Y4axJaGBvXHU0VCCzLN5Wf5XbKStU=
 github.com/anchore/bubbly v0.0.0-20231115134915-def0aba654a9/go.mod h1:3ZsFB9tzW3vl4gEiUeuSOMDnwroWxIxJelOOHUp8dSw=
-github.com/anchore/clio v0.0.0-20240209170235-06cf78ff3446 h1:44e0L+vE5dYq20nAl/QOWUqYJcJQn8ThOXJCue50peM=
-github.com/anchore/clio v0.0.0-20240209170235-06cf78ff3446/go.mod h1:8Jr7CjmwFVcBPtkJdTpaAGHimoGJGfbExypjzOu87Og=
+github.com/anchore/clio v0.0.0-20240209204744-cb94e40a4f65 h1:u9XrEabKlGPsrmRvAER+kUKkwXiJfLyqGhmOTFsXjX4=
+github.com/anchore/clio v0.0.0-20240209204744-cb94e40a4f65/go.mod h1:8Jr7CjmwFVcBPtkJdTpaAGHimoGJGfbExypjzOu87Og=
 github.com/anchore/fangs v0.0.0-20231201140849-5075d28d6d8b h1:L/djgY7ZbZ/38+wUtdkk398W3PIBJLkt1N8nU/7e47A=
 github.com/anchore/fangs v0.0.0-20231201140849-5075d28d6d8b/go.mod h1:TLcE0RE5+8oIx2/NPWem/dq1DeaMoC+fPEH7hoSzPLo=
 github.com/anchore/go-logger v0.0.0-20230725134548-c21dafa1ec5a h1:nJ2G8zWKASyVClGVgG7sfM5mwoZlZ2zYpIzN2OhjWkw=
