@@ -1,0 +1,23 @@
+component: httpd-local
+manifest: simple-httpd-deployment
+resource: httpd-deployment
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      containers:
+      - image: httpd:alpine3.18
+        name: httpd
+        ports:
+        - containerPort: 80

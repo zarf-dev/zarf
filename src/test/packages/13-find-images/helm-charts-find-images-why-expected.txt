@@ -1,0 +1,197 @@
+component: demo-helm-charts
+chart: podinfo-oci
+resource: podinfo-oci-service-test-wlxqz
+
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    appmesh.k8s.aws/sidecarInjectorWebhook: disabled
+    helm.sh/hook: test-success
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    linkerd.io/inject: disabled
+    sidecar.istio.io/inject: "false"
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: podinfo-oci
+    app.kubernetes.io/version: 6.4.0
+    helm.sh/chart: podinfo-6.4.0
+  name: podinfo-oci-service-test-wlxqz
+spec:
+  containers:
+  - command:
+    - sh
+    - -c
+    - |
+      curl -s ${PODINFO_SVC}/api/info | grep version
+    env:
+    - name: PODINFO_SVC
+      value: podinfo-oci.podinfo-from-oci:9898
+    image: curlimages/curl:7.69.0
+    name: curl
+  restartPolicy: Never
+
+component: demo-helm-charts
+chart: podinfo-git
+resource: podinfo-oci-service-test-wlxqz
+
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    appmesh.k8s.aws/sidecarInjectorWebhook: disabled
+    helm.sh/hook: test-success
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    linkerd.io/inject: disabled
+    sidecar.istio.io/inject: "false"
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: podinfo-oci
+    app.kubernetes.io/version: 6.4.0
+    helm.sh/chart: podinfo-6.4.0
+  name: podinfo-oci-service-test-wlxqz
+spec:
+  containers:
+  - command:
+    - sh
+    - -c
+    - |
+      curl -s ${PODINFO_SVC}/api/info | grep version
+    env:
+    - name: PODINFO_SVC
+      value: podinfo-oci.podinfo-from-oci:9898
+    image: curlimages/curl:7.69.0
+    name: curl
+  restartPolicy: Never
+
+component: demo-helm-charts
+chart: podinfo-git
+resource: podinfo-git-service-test-gtb1y
+
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    appmesh.k8s.aws/sidecarInjectorWebhook: disabled
+    helm.sh/hook: test-success
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    linkerd.io/inject: disabled
+    sidecar.istio.io/inject: "false"
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: podinfo-git
+    app.kubernetes.io/version: 6.4.0
+    helm.sh/chart: podinfo-6.4.0
+  name: podinfo-git-service-test-gtb1y
+spec:
+  containers:
+  - command:
+    - sh
+    - -c
+    - |
+      curl -s ${PODINFO_SVC}/api/info | grep version
+    env:
+    - name: PODINFO_SVC
+      value: podinfo-git.podinfo-from-git:9898
+    image: curlimages/curl:7.69.0
+    name: curl
+  restartPolicy: Never
+
+component: demo-helm-charts
+chart: podinfo-repo
+resource: podinfo-oci-service-test-wlxqz
+
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    appmesh.k8s.aws/sidecarInjectorWebhook: disabled
+    helm.sh/hook: test-success
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    linkerd.io/inject: disabled
+    sidecar.istio.io/inject: "false"
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: podinfo-oci
+    app.kubernetes.io/version: 6.4.0
+    helm.sh/chart: podinfo-6.4.0
+  name: podinfo-oci-service-test-wlxqz
+spec:
+  containers:
+  - command:
+    - sh
+    - -c
+    - |
+      curl -s ${PODINFO_SVC}/api/info | grep version
+    env:
+    - name: PODINFO_SVC
+      value: podinfo-oci.podinfo-from-oci:9898
+    image: curlimages/curl:7.69.0
+    name: curl
+  restartPolicy: Never
+
+component: demo-helm-charts
+chart: podinfo-repo
+resource: podinfo-git-service-test-gtb1y
+
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    appmesh.k8s.aws/sidecarInjectorWebhook: disabled
+    helm.sh/hook: test-success
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    linkerd.io/inject: disabled
+    sidecar.istio.io/inject: "false"
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: podinfo-git
+    app.kubernetes.io/version: 6.4.0
+    helm.sh/chart: podinfo-6.4.0
+  name: podinfo-git-service-test-gtb1y
+spec:
+  containers:
+  - command:
+    - sh
+    - -c
+    - |
+      curl -s ${PODINFO_SVC}/api/info | grep version
+    env:
+    - name: PODINFO_SVC
+      value: podinfo-git.podinfo-from-git:9898
+    image: curlimages/curl:7.69.0
+    name: curl
+  restartPolicy: Never
+
+component: demo-helm-charts
+chart: podinfo-repo
+resource: cool-release-name-podinfo-service-test-aabrx
+
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    appmesh.k8s.aws/sidecarInjectorWebhook: disabled
+    helm.sh/hook: test-success
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    linkerd.io/inject: disabled
+    sidecar.istio.io/inject: "false"
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cool-release-name-podinfo
+    app.kubernetes.io/version: 6.4.0
+    helm.sh/chart: podinfo-6.4.0
+  name: cool-release-name-podinfo-service-test-aabrx
+spec:
+  containers:
+  - command:
+    - sh
+    - -c
+    - |
+      curl -s ${PODINFO_SVC}/api/info | grep version
+    env:
+    - name: PODINFO_SVC
+      value: cool-release-name-podinfo.podinfo-from-repo:9898
+    image: curlimages/curl:7.69.0
+    name: curl
+  restartPolicy: Never
