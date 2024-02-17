@@ -150,5 +150,7 @@ func TestComponentActions(t *testing.T) {
 		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=on-deploy-immediate-failure", "--confirm")
 		require.Error(t, err, stdOut, stdErr)
 		require.Contains(t, stdErr, "Failed to deploy package")
+		// regression test to ensure that failed commands are not erroneously flagged as a timeout
+		require.NotContains(t, stdErr, "timed out")
 	})
 }

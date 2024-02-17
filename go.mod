@@ -11,7 +11,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/agnivade/levenshtein v1.1.1
 	github.com/alecthomas/jsonschema v0.0.0-20220216202328-9eeeec9d044b
-	github.com/anchore/clio v0.0.0-20240208153717-378d8c0180f9
+	github.com/anchore/clio v0.0.0-20240209204744-cb94e40a4f65
 	github.com/anchore/stereoscope v0.0.1
 	github.com/anchore/syft v0.100.0
 	github.com/derailed/k9s v0.31.7
@@ -48,7 +48,7 @@ require (
 	golang.org/x/crypto v0.18.0
 	golang.org/x/sync v0.6.0
 	golang.org/x/term v0.17.0
-	helm.sh/helm/v3 v3.14.0
+	helm.sh/helm/v3 v3.14.1
 	k8s.io/api v0.29.1
 	k8s.io/apimachinery v0.29.1
 	k8s.io/client-go v0.29.1
