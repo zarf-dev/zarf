@@ -49,7 +49,7 @@ func Identify(pkgSrc string) string {
 		return "split"
 	}
 
-	if config.IsValidFileExtension(pkgSrc) {
+	if IsValidFileExtension(pkgSrc) {
 		return "tarball"
 	}
 
