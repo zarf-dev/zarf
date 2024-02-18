@@ -477,27 +477,35 @@ func IsTextFile(path string) (bool, error) {
 		return false, err
 	}
 
-	// Create 512 byte buffer
-	data := make([]byte, 512)
-
 	// Clip offset to minimum of 0
-	offset := max(0, stat.Size()-512)
+	lastOffset := max(0, stat.Size()-512)
 
-	// Read the last 512 bytes of the file
-	n, err := f.ReadAt(data, offset)
-	if err != nil && err != io.EOF {
-		return false, err
+	// Take two passes checking front and back of the file
+	offsetPasses := []int64{0, lastOffset}
+	isTextCheck := []bool{false, false}
+	for idx, offset := range offsetPasses {
+		// Create 512 byte buffer
+		data := make([]byte, 512)
+
+		n, err := f.ReadAt(data, offset)
+		if err != nil && err != io.EOF {
+			return false, err
+		}
+
+		// Use http.DetectContentType to determine the MIME type of the file
+		mimeType := http.DetectContentType(data[:n])
+
+		// Check if the MIME type indicates that the file is text
+		hasText := strings.HasPrefix(mimeType, "text/")
+		hasJSON := strings.Contains(mimeType, "json")
+		hasXML := strings.Contains(mimeType, "xml")
+
+		// Save result
+		isTextCheck[idx] = hasText || hasJSON || hasXML
 	}
 
-	// Use http.DetectContentType to determine the MIME type of the file
-	mimeType := http.DetectContentType(data[:n])
-
-	// Check if the MIME type indicates that the file is text
-	hasText := strings.HasPrefix(mimeType, "text/")
-	hasJSON := strings.Contains(mimeType, "json")
-	hasXML := strings.Contains(mimeType, "xml")
-
-	return hasText || hasJSON || hasXML, nil
+	// Returns true if both front and back show they are text
+	return isTextCheck[0] && isTextCheck[1], nil
 }
 
 // IsTrashBin checks if the given directory path corresponds to an operating system's trash bin.
