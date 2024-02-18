@@ -5,30 +5,41 @@
 package filters
 
 import (
+	"fmt"
+	"slices"
+
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-var (
-	_ ComponentFilterStrategy = &ArchAndOSFilter{}
-)
-
-// NewArchAndOSFilter creates an architecture and OS filter.
-func NewArchAndOSFilter(arch string, os string) *ArchAndOSFilter {
-	return &ArchAndOSFilter{
-		arch: arch,
-		os:   os,
-	}
+// ByArchAndOS creates an architecture and OS filter.
+func ByArchAndOS(arch string, os string) ComponentFilterStrategy {
+	return &archAndOSFilter{arch, os}
 }
 
-// ArchAndOSFilter filters components based on OS/architecture.
-type ArchAndOSFilter struct {
+// archAndOSFilter filters components based on OS/architecture.
+type archAndOSFilter struct {
 	arch string
 	os   string
 }
 
+// Define allowed OS and architecture, an empty string means it is allowed on all platforms.
+// same as enums on ZarfComponentOnlyTarget
+var allowedOs = []string{"linux", "darwin", "windows", ""}
+
+// same as enums on ZarfComponentOnlyClusterTarget
+var allowedArch = []string{"amd64", "arm64", ""}
+
 // Apply applies the filter.
-func (f *ArchAndOSFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
+func (f *archAndOSFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
+	if !slices.Contains(allowedOs, f.os) {
+		return nil, fmt.Errorf("invalid OS: %s", f.os)
+	}
+
+	if !slices.Contains(allowedArch, f.arch) {
+		return nil, fmt.Errorf("invalid architecture: %s", f.arch)
+	}
+
 	filtered := []types.ZarfComponent{}
 	// Filter each component to only compatible platforms.
 	for _, component := range pkg.Components {

@@ -19,7 +19,7 @@ func (p *Packager) Mirror() (err error) {
 	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
-	filter := filters.NewIncludedFilter(p.cfg.PkgOpts.OptionalComponents)
+	filter := filters.ByIncluded(p.cfg.PkgOpts.OptionalComponents)
 
 	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)

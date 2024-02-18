@@ -6,14 +6,14 @@ package filters
 
 import "github.com/defenseunicorns/zarf/src/types"
 
-var (
-	_ ComponentFilterStrategy = &EmptyFilter{}
-)
+func Empty() ComponentFilterStrategy {
+	return &emptyFilter{}
+}
 
-// EmptyFilter is a filter that does nothing.
-type EmptyFilter struct{}
+// emptyFilter is a filter that does nothing.
+type emptyFilter struct{}
 
 // Apply returns the components unchanged.
-func (f *EmptyFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
+func (f *emptyFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
 	return pkg.Components, nil
 }

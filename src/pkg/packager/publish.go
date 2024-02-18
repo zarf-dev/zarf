@@ -99,7 +99,7 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 	} else {
-		filter := &filters.EmptyFilter{}
+		filter := filters.Empty()
 		if err = p.source.LoadPackage(p.layout, filter, false); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}

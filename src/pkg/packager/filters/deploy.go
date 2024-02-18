@@ -18,28 +18,24 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-var (
-	_ ComponentFilterStrategy = &DeploymentFilter{}
-)
-
-// NewDeploymentFilter creates a new deployment filter.
-func NewDeploymentFilter(optionalComponents string, isInteractive bool) *DeploymentFilter {
+// ForDeploy creates a new deployment filter.
+func ForDeploy(optionalComponents string, isInteractive bool) ComponentFilterStrategy {
 	requested := helpers.StringToSlice(optionalComponents)
 
-	return &DeploymentFilter{
+	return &deploymentFilter{
 		requested,
 		isInteractive,
 	}
 }
 
-// DeploymentFilter is the default filter for deployments.
-type DeploymentFilter struct {
+// deploymentFilter is the default filter for deployments.
+type deploymentFilter struct {
 	requestedComponents []string
 	isInteractive       bool
 }
 
 // Apply applies the filter.
-func (f *DeploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
+func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
 	useRequiredLogic := false
 	if pkg.Build.Version != config.UnsetCLIVersion {
 		buildVersion, err := semver.NewVersion(pkg.Build.Version)
