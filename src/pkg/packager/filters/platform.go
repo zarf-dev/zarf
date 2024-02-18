@@ -27,7 +27,7 @@ type archAndOSFilter struct {
 // same as enums on ZarfComponentOnlyTarget
 var allowedOs = []string{"linux", "darwin", "windows", ""}
 
-// same as enums on ZarfComponentOnlyClusterTarget
+// same as enums on ZarfComponentOnlyCluster
 var allowedArch = []string{"amd64", "arm64", ""}
 
 // Apply applies the filter.
