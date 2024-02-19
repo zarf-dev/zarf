@@ -5,6 +5,7 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,6 +37,21 @@ func TestMultiPartPackage(t *testing.T) {
 	require.NoError(t, err)
 	// Length is 7 because there are 6 parts and 1 manifest
 	require.Len(t, parts, 7)
+	// Check the file sizes are even
+	part1FileInfo, err := os.Stat(parts[1])
+	require.NoError(t, err)
+	require.Equal(t, int64(1000000), part1FileInfo.Size())
+	part2FileInfo, err := os.Stat(parts[2])
+	require.NoError(t, err)
+	require.Equal(t, int64(1000000), part2FileInfo.Size())
+	// Check the package data is correct
+	pkgData := types.ZarfSplitPackageData{}
+	part0File, err := os.ReadFile(parts[0])
+	require.NoError(t, err)
+	err = json.Unmarshal(part0File, &pkgData)
+	require.NoError(t, err)
+	require.Equal(t, pkgData.Count, 6)
+	fmt.Printf("%#v", pkgData)
 
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", deployPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -45,6 +61,17 @@ func TestMultiPartPackage(t *testing.T) {
 
 	// deploying package combines parts back into single archive, check dir again to find all files
 	parts, err = filepath.Glob("zarf-package-multi-part-*")
+	require.NoError(t, err)
+	// Length is 1 because `zarf package deploy` will recombine the file
+	require.Len(t, parts, 1)
+	// Ensure that the number of pkgData bytes was correct
+	fullFileInfo, err := os.Stat(parts[0])
+	require.NoError(t, err)
+	require.Equal(t, pkgData.Bytes, fullFileInfo.Size())
+	// Ensure that the pkgData shasum was correct (should be checked during deploy as well, but this is to double check)
+	err = utils.SHAsMatch(parts[0], pkgData.Sha256Sum)
+	require.NoError(t, err)
+
 	e2e.CleanFiles(parts...)
 	e2e.CleanFiles(outputFile)
 }
