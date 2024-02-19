@@ -24,13 +24,13 @@ func TestMultiPartPackage(t *testing.T) {
 	var (
 		createPath = "src/test/packages/05-multi-part"
 		deployPath = fmt.Sprintf("zarf-package-multi-part-%s.tar.zst.part000", e2e.Arch)
-		outputFile = "multi-part-demo.dat"
+		outputFile = "devops.stackexchange.com_en_all_2023-05.zim"
 	)
 
 	e2e.CleanFiles(deployPath, outputFile)
 
 	// Create the package with a max size of 1MB
-	stdOut, stdErr, err := e2e.Zarf("package", "create", createPath, "--max-package-size=2", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", createPath, "--max-package-size=20", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	parts, err := filepath.Glob("zarf-package-multi-part-*")
@@ -40,10 +40,10 @@ func TestMultiPartPackage(t *testing.T) {
 	// Check the file sizes are even
 	part1FileInfo, err := os.Stat(parts[1])
 	require.NoError(t, err)
-	require.Equal(t, int64(2000000), part1FileInfo.Size())
+	require.Equal(t, int64(20000000), part1FileInfo.Size())
 	part2FileInfo, err := os.Stat(parts[2])
 	require.NoError(t, err)
-	require.Equal(t, int64(2000000), part2FileInfo.Size())
+	require.Equal(t, int64(20000000), part2FileInfo.Size())
 	// Check the package data is correct
 	pkgData := types.ZarfSplitPackageData{}
 	part0File, err := os.ReadFile(parts[0])
