@@ -9,22 +9,22 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// ByIncluded creates a new simple included filter.
-func ByIncluded(optionalComponents string) ComponentFilterStrategy {
+// BySelectState creates a new simple included filter.
+func BySelectState(optionalComponents string) ComponentFilterStrategy {
 	requested := helpers.StringToSlice(optionalComponents)
 
-	return &includedFilter{
+	return &selectStateFilter{
 		requested,
 	}
 }
 
-// includedFilter sorts based purely on the internal included state of the component.
-type includedFilter struct {
+// selectStateFilter sorts based purely on the internal included state of the component.
+type selectStateFilter struct {
 	requestedComponents []string
 }
 
 // Apply applies the filter.
-func (f *includedFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
+func (f *selectStateFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
 	isPartial := len(f.requestedComponents) > 0 && f.requestedComponents[0] != ""
 
 	result := []types.ZarfComponent{}
