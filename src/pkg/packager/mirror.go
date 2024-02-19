@@ -37,12 +37,6 @@ func (p *Packager) Mirror() (err error) {
 		return fmt.Errorf("mirror cancelled")
 	}
 
-	state := &types.ZarfState{
-		RegistryInfo: p.cfg.InitOpts.RegistryInfo,
-		GitServer:    p.cfg.InitOpts.GitServer,
-	}
-	p.cfg.State = state
-
 	if err := p.filterComponentsByArchAndOS(); err != nil {
 		return err
 	}
@@ -50,6 +44,11 @@ func (p *Packager) Mirror() (err error) {
 	included, err := filter.Apply(p.cfg.Pkg)
 	if err != nil {
 		return err
+	}
+
+	p.cfg.State = &types.ZarfState{
+		RegistryInfo: p.cfg.InitOpts.RegistryInfo,
+		GitServer:    p.cfg.InitOpts.GitServer,
 	}
 
 	for _, component := range included {

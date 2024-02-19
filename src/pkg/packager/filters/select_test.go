@@ -49,7 +49,7 @@ func Test_selectStateFilter_Apply(t *testing.T) {
 		},
 		{
 			name:                "Test when requestedComponents contains an excluded component name",
-			requestedComponents: "-component2",
+			requestedComponents: "component1, -component2",
 			components: []types.ZarfComponent{
 				{Name: "component1"},
 				{Name: "component2"},
@@ -57,7 +57,6 @@ func Test_selectStateFilter_Apply(t *testing.T) {
 			},
 			expectedResult: []types.ZarfComponent{
 				{Name: "component1"},
-				{Name: "component3"},
 			},
 			expectedError: nil,
 		},
