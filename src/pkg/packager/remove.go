@@ -42,7 +42,7 @@ func (p *Packager) Remove() (err error) {
 	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
-	if err := p.filterComponentsByOSAndArch(); err != nil {
+	if err := p.filterComponentsByArchAndOS(); err != nil {
 		return err
 	}
 	packageName = p.cfg.Pkg.Metadata.Name

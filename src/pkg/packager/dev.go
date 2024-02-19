@@ -37,7 +37,7 @@ func (p *Packager) DevDeploy() error {
 	p.cfg.Pkg.Build.Version = config.CLIVersion
 
 	// Filter out components that are not compatible with this system
-	if err := p.filterComponentsByOSAndArch(); err != nil {
+	if err := p.filterComponentsByArchAndOS(); err != nil {
 		return err
 	}
 

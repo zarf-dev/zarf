@@ -41,8 +41,8 @@ func (p *Packager) readZarfYAML(path string) error {
 	return nil
 }
 
-// filterComponentsByOSAndArch removes components not matching the current OS and architecture.
-func (p *Packager) filterComponentsByOSAndArch() (err error) {
+// filterComponentsByArchAndOS removes components not matching the current OS and architecture.
+func (p *Packager) filterComponentsByArchAndOS() (err error) {
 	p.cfg.Pkg.Components, err = filters.ByArchAndOS(p.arch, runtime.GOOS).Apply(p.cfg.Pkg)
 	return err
 }

@@ -75,7 +75,7 @@ func (p *Packager) Deploy() (err error) {
 	defer p.resetRegistryHPA()
 
 	// Filter out components that are not compatible with this system
-	if err := p.filterComponentsByOSAndArch(); err != nil {
+	if err := p.filterComponentsByArchAndOS(); err != nil {
 		return err
 	}
 
