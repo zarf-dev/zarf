@@ -85,6 +85,12 @@ func (s *SplitTarballSource) Collect(dir string) (string, error) {
 		if _, err = io.Copy(pkgFile, f); err != nil {
 			return "", fmt.Errorf("unable to copy file %s: %w", file, err)
 		}
+
+		// Close the file when done copying
+		err = f.Close()
+		if err != nil {
+			return "", fmt.Errorf("unable to close file %s: %w", file, err)
+		}
 	}
 
 	if err := utils.SHAsMatch(reassembled, pkgData.Sha256Sum); err != nil {
