@@ -24,7 +24,7 @@ func TestMultiPartPackage(t *testing.T) {
 	var (
 		createPath = "src/test/packages/05-multi-part"
 		deployPath = fmt.Sprintf("zarf-package-multi-part-%s.tar.zst.part000", e2e.Arch)
-		outputFile = "devops.stackexchange.com_en_all_2023-05.zim"
+		outputFile = "multi-part-demo.dat"
 	)
 
 	e2e.CleanFiles(deployPath, outputFile)
