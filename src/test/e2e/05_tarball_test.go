@@ -30,27 +30,27 @@ func TestMultiPartPackage(t *testing.T) {
 	e2e.CleanFiles(deployPath, outputFile)
 
 	// Create the package with a max size of 1MB
-	stdOut, stdErr, err := e2e.Zarf("package", "create", createPath, "--max-package-size=1", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", createPath, "--max-package-size=2", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	parts, err := filepath.Glob("zarf-package-multi-part-*")
 	require.NoError(t, err)
-	// Length is 7 because there are 6 parts and 1 manifest
-	require.Len(t, parts, 7)
+	// Length is 4 because there are 3 parts and 1 manifest
+	require.Len(t, parts, 4)
 	// Check the file sizes are even
 	part1FileInfo, err := os.Stat(parts[1])
 	require.NoError(t, err)
-	require.Equal(t, int64(1000000), part1FileInfo.Size())
+	require.Equal(t, int64(2000000), part1FileInfo.Size())
 	part2FileInfo, err := os.Stat(parts[2])
 	require.NoError(t, err)
-	require.Equal(t, int64(1000000), part2FileInfo.Size())
+	require.Equal(t, int64(2000000), part2FileInfo.Size())
 	// Check the package data is correct
 	pkgData := types.ZarfSplitPackageData{}
 	part0File, err := os.ReadFile(parts[0])
 	require.NoError(t, err)
 	err = json.Unmarshal(part0File, &pkgData)
 	require.NoError(t, err)
-	require.Equal(t, pkgData.Count, 6)
+	require.Equal(t, pkgData.Count, 3)
 	fmt.Printf("%#v", pkgData)
 
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", deployPath, "--confirm")
