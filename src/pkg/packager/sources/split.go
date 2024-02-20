@@ -87,8 +87,7 @@ func (s *SplitTarballSource) Collect(dir string) (string, error) {
 		}
 
 		// Close the file when done copying
-		err = f.Close()
-		if err != nil {
+		if err := f.Close(); err != nil {
 			return "", fmt.Errorf("unable to close file %s: %w", file, err)
 		}
 	}
