@@ -14,7 +14,8 @@ export default defineConfig({
         baseUrl: "https://github.com/defenseunicorns/zarf/edit/main/",
       },
       logo: {
-        src: "./src/assets/img/favicon.svg",
+        src: "./src/assets/zarf-logo-header.svg",
+		replacesTitle: true,
       },
       sidebar: [
         {

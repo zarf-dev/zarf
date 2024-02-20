@@ -19,27 +19,28 @@ Before beginning this tutorial you will need the following:
 
 1. Run the `zarf init` command on your cluster.
 
-```sh
-$ zarf init
-```
+    ```sh
+    zarf init
+    ```
 
-2. When prompted to deploy the package select `y` for Yes, then hit the `enter` key. <br/>
+1. When prompted to deploy the package select `y` for Yes, then hit the `enter` key.
 
-3. Decline Optional Components
+1. Decline Optional Components
 
-:::info
+:::note
 
 More information about the init-package and its components can be found [here](../3-create-a-zarf-package/3-zarf-init-package.md)
 
 :::
 
-<iframe src="/docs/tutorials/zarf_init.html" height="800px" width="100%"></iframe>
+<iframe src="/tutorials/zarf_init.html" height="800px" width="100%"></iframe>
 
 :::note
 You will only be prompted to deploy the k3s component if you are on a Linux machine
 :::
 
 ### Validating the Deployment
+
 After the `zarf init` command is done running, you should see a few new `zarf` pods in the Kubernetes cluster.
 
 ```bash
@@ -47,6 +48,7 @@ zarf tools monitor
 
 # Note you can press `0` if you want to see all namespaces and CTRL-C to exit
 ```
+
 ![Zarf Tools Monitor](../.images/tutorials/zarf_tools_monitor.png)
 
 ## Cleaning Up
