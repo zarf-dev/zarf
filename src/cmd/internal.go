@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/zarf/src/cmd/common"
@@ -107,14 +109,36 @@ var genCLIDocs = &cobra.Command{
 			}
 		}
 
-		//Generate markdown of the Zarf command (and all of its child commands)
-		if err := os.RemoveAll("./docs/2-the-zarf-cli/100-cli-commands"); err != nil {
+		if err := os.RemoveAll("./docs-next/src/content/docs/cli/commands"); err != nil {
 			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
 		}
-		if err := os.Mkdir("./docs/2-the-zarf-cli/100-cli-commands", 0775); err != nil {
+		if err := os.Mkdir("./docs-next/src/content/docs/cli/commands", 0775); err != nil {
 			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
 		}
-		if err := doc.GenMarkdownTree(rootCmd, "./docs/2-the-zarf-cli/100-cli-commands"); err != nil {
+
+		var prependTitle = func(s string) string {
+			fmt.Println(s)
+
+			name := filepath.Base(s)
+
+			// strip .md extension
+			name = name[:len(name)-3]
+
+			// replace _ with space
+			title := strings.Replace(name, "_", " ", -1)
+
+			return fmt.Sprintf(`---
+title: %s
+---
+
+`, title)
+		}
+
+		var linkHandler = func(link string) string {
+			return "/cli/commands/" + link[:len(link)-3] + "/"
+		}
+
+		if err := doc.GenMarkdownTreeCustom(rootCmd, "./docs-next/src/content/docs/cli/commands", prependTitle, linkHandler); err != nil {
 			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
 		} else {
 			message.Success(lang.CmdInternalGenerateCliDocsSuccess)

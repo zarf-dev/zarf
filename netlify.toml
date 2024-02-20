@@ -1,8 +1,8 @@
 [build]
-  base = "docs-website/"
+  base = "docs-next/"
   command = "npm run build"
   publish = "build/"
   ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF . ../docs/ ../examples/"
 
 [build.environment]
-  NODE_VERSION = "18.12.1"
+  NODE_VERSION = "20.10.0"

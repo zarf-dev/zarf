@@ -1,0 +1,33 @@
+---
+title: Welcome to Zarf's Documentation
+description: Get started building your docs site with Starlight.
+template: splash
+hero:
+  tagline: DevSecOps for Air Gap & Limited-Connection Systems.
+  image:
+    file: ../../assets/zarf-logo.png
+  actions:
+    - text: Getting Started
+      link: /getting-started
+      icon: right-arrow
+      variant: primary
+    # - text: Read the Starlight docs
+    #   link: https://starlight.astro.build
+    #   icon: external
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## Next steps
+
+<CardGrid stagger>
+  <Card title="Securely Package Apps & Resources" icon="pencil">
+    Provides the ability to package a chunk of the internet and then securely deliver all of the files and dependencies needed to run an application in a disconnected environment.
+  </Card>
+  <Card title="Deploy Cloud Apps While Disconnected" icon="add-document">
+    Provides the ability to deploy apps declaratively and without internet connectivity. Opening up the door for modern cloud capabilities to be deployed in disconnected environments.
+  </Card>
+  <Card title="Easily Maintain Apps While Disconnected" icon="setting">
+    Zarf reduces the skill and resources needed to manage and update applications in disconnected environments, ensuring no down time or data loss when updating software.
+  </Card>
+</CardGrid>
