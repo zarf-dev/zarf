@@ -42,11 +42,11 @@ Resources can be excluded at the namespace or resources level by adding the `zar
 
 During the `zarf init` operation, the Zarf Agent will patch any existing namespaces with the `zarf.dev/agent: ignore` label to prevent the Agent from modifying any resources in that namespace. This is done because there is no way to guarantee the images used by pods in existing namespaces are available in the Zarf Registry.
 
-If you would like to adopt pre-existing resources into a Zarf deployment you can use the `--adopt-existing-resources` flag on [`zarf package deploy`](./2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md) to adopt those resources into the Helm Releases that Zarf manages (including namespaces).  This will add the requisite annotations and labels to those resources and drop the `zarf.dev/agent: ignore` label from any namespaces specified by those resources.
+If you would like to adopt pre-existing resources into a Zarf deployment you can use the `--adopt-existing-resources` flag on [`zarf package deploy`](./2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md) to adopt those resources into the Helm Releases that Zarf manages (including namespaces). This will add the requisite annotations and labels to those resources and drop the `zarf.dev/agent: ignore` label from any namespaces specified by those resources.
 
 :::note
 
-Zarf will refuse to adopt the Kubernetes [initial namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces).  It is recommended that you do not deploy resources into the `default` or `kube-*` namespaces with Zarf.
+Zarf will refuse to adopt the Kubernetes [initial namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces). It is recommended that you do not deploy resources into the `default` or `kube-*` namespaces with Zarf.
 
 Additionally, when adopting resources, you should ensure that the namespaces you are adopting are dedicated to Zarf, or that you go back and manually add the `zarf.dev/agent: ignore` label to any non-Zarf managed resources in those namespaces (and ensure that updates to those resources do not strip that label) otherwise you may see [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) errors.
 
@@ -78,16 +78,16 @@ components:
       onCreate:
         # runs before the component is created
         before:
-          - cmd: 'docker tag registry.enterprise.corp/###ZARF_PKG_TMPL_IMG### localhost:5000/###ZARF_PKG_TMPL_IMG###'
-          - cmd: 'docker push localhost:5000/###ZARF_PKG_TMPL_IMG###'
+          - cmd: "docker tag registry.enterprise.corp/###ZARF_PKG_TMPL_IMG### localhost:5000/###ZARF_PKG_TMPL_IMG###"
+          - cmd: "docker push localhost:5000/###ZARF_PKG_TMPL_IMG###"
 
     images:
-      - 'registry.enterprise.corp/###ZARF_PKG_TMPL_IMG###'
+      - "registry.enterprise.corp/###ZARF_PKG_TMPL_IMG###"
 ```
 
 ## Can I pull in more than http(s) git repos on `zarf package create`?
 
-Under the hood, Zarf uses [`go-git`](https://github.com/go-git/go-git) to perform `git` operations, but it can fallback to `git` located on the host and thus supports any of the [git protocols](https://git-scm.com/book/en/v2/Git-on-the-Server-The-Protocols) available.  All you need to use a different protocol is to specify the full URL for that particular repo:
+Under the hood, Zarf uses [`go-git`](https://github.com/go-git/go-git) to perform `git` operations, but it can fallback to `git` located on the host and thus supports any of the [git protocols](https://git-scm.com/book/en/v2/Git-on-the-Server-The-Protocols) available. All you need to use a different protocol is to specify the full URL for that particular repo:
 
 :::note
 
@@ -101,18 +101,18 @@ metadata:
   name: repo-schemes-example
 
 components:
-    repos:
-      - https://github.com/defenseunicorns/zarf.git
-      - ssh://git@github.com/defenseunicorns/zarf.git
-      - file:///home/zarf/workspace/zarf
-      - git://somegithost.com/zarf.git
+  repos:
+    - https://github.com/defenseunicorns/zarf.git
+    - ssh://git@github.com/defenseunicorns/zarf.git
+    - file:///home/zarf/workspace/zarf
+    - git://somegithost.com/zarf.git
 ```
 
 In the airgap, Zarf with rewrite these URLs to match the scheme and host of the provided airgap `git` server.
 
 :::note
 
-When specifying other schemes in Zarf you must change the consuming side as well since Zarf will add a CRC hash of the URL to the repo name on the airgap side.  This is to reduce the chance for collisions between repos with similar names.  This means an example Flux `GitRepository` specification would look like this for the `file://` based pull:
+When specifying other schemes in Zarf you must change the consuming side as well since Zarf will add a CRC hash of the URL to the repo name on the airgap side. This is to reduce the chance for collisions between repos with similar names. This means an example Flux `GitRepository` specification would look like this for the `file://` based pull:
 
 ```yaml
 ---
@@ -142,6 +142,6 @@ Typically you should not deploy a Zarf package in YOLO mode if the cluster has a
 
 ## What is a `skeleton` Zarf Package?
 
-A `skeleton` package is a bare-bones Zarf package definition alongside its associated local files and manifests that has been published to an OCI registry.  These packages are intended for use with [component composability](../examples/composable-packages/README.md) to provide versioned imports for components that you wish to mix and match or modify with merge-overrides across multiple separate packages.
+A `skeleton` package is a bare-bones Zarf package definition alongside its associated local files and manifests that has been published to an OCI registry. These packages are intended for use with [component composability](../examples/composable-packages/README.md) to provide versioned imports for components that you wish to mix and match or modify with merge-overrides across multiple separate packages.
 
 Skeleton packages have not been run through the `zarf package create` process yet, and thus do not have any remote resources included (no images, repos, or remote manifests and files) thereby retaining any [create-time package configuration templates](../examples/variables/README.md#create-time-package-configuration-templates) as they were defined in the original `zarf.yaml` (i.e. untemplated).
