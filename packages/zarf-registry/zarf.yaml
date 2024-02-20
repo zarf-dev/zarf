@@ -111,16 +111,6 @@ components:
     images:
       # The seed image (or images) that will be injected (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
-    actions:
-      onDeploy:
-        before:
-          - description: Check that the cluster has the specified storage class
-            maxTotalSeconds: 3
-            # if: ${{ .Zarf.Var.REGISTRY_PVC_ENABLED }}
-            wait:
-             cluster:
-               kind: storageclass
-               name: "\"${ZARF_STORAGE_CLASS}\""
 
   - name: zarf-registry
     description: |
