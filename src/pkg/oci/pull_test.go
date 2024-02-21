@@ -17,51 +17,61 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	orasRegistry "oras.land/oras-go/v2/registry"
 )
 
-func TestPull(t *testing.T) {
-	t.Run("generic pull", func(t *testing.T) {
+type OCISuite struct {
+	suite.Suite
+	*require.Assertions
+	Reference   orasRegistry.Reference
+	registryURL string
+}
 
-		// This is the general flow that helm is doing
-		// I want to figure out what tool they are using to actually start their server
-		ctx := context.TODO()
+func (suite *OCISuite) SetupSuite() {
+	suite.Assertions = require.New(suite.T())
+	suite.StartRegistry()
+}
 
-		// Registry config
-		config := &configuration.Configuration{}
-		port, err := freeport.GetFreePort()
-		if err != nil {
-			t.Fatalf("error finding free port for test registry")
-		}
+func (suite *OCISuite) StartRegistry() {
+	// Registry config
+	ctx := context.TODO()
+	config := &configuration.Configuration{}
+	port, err := freeport.GetFreePort()
+	suite.NoError(err)
 
-		config.HTTP.Addr = fmt.Sprintf(":%d", port)
-		config.HTTP.DrainTimeout = 10 * time.Second
-		config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
+	config.HTTP.Addr = fmt.Sprintf(":%d", port)
+	config.HTTP.DrainTimeout = 10 * time.Second
+	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
 
-		registryURL := fmt.Sprintf("oci://localhost:%d/package:1.0.1", port)
+	ref, err := registry.NewRegistry(ctx, config)
+	suite.NoError(err)
 
-		ref, err := registry.NewRegistry(ctx, config)
-		if err != nil {
-			t.Fatal(err)
-		}
+	go ref.ListenAndServe()
 
-		go ref.ListenAndServe()
+	suite.registryURL = fmt.Sprintf("oci://localhost:%d/package:1.0.1", port)
+}
 
-		platform := PlatformForArch("arm64")
-		remote, err := NewOrasRemote(registryURL, platform, WithPlainHTTP(true))
-		if err != nil {
-			t.Fatal(err)
-		}
+func (suite *OCISuite) Test_0_Publish() {
+	suite.T().Log("")
+	// This is the general flow that helm is doing
+	// I want to figure out what tool they are using to actually start their server
 
-		annotations := map[string]string{
-			ocispec.AnnotationTitle:       "name",
-			ocispec.AnnotationDescription: "desc",
-		}
+	ctx := context.TODO()
+	platform := PlatformForArch("fake-package-so-does-not-matter")
+	remote, err := NewOrasRemote(suite.registryURL, platform, WithPlainHTTP(true))
+	suite.NoError(err)
 
-		_, err = remote.PushManifestConfigFromMetadata(ctx, annotations, ocispec.MediaTypeImageConfig)
-		if err != nil {
-			t.Fatal(err)
-		}
+	annotations := map[string]string{
+		ocispec.AnnotationTitle:       "name",
+		ocispec.AnnotationDescription: "desc",
+	}
 
-		require.True(t, true)
-	})
+	_, err = remote.PushManifestConfigFromMetadata(ctx, annotations, ocispec.MediaTypeImageConfig)
+	suite.NoError(err)
+
+}
+
+func TestPublishDeploySuite(t *testing.T) {
+	suite.Run(t, new(OCISuite))
 }
