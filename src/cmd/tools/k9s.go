@@ -23,7 +23,7 @@ func init() {
 		Use:     "monitor",
 		Aliases: []string{"m", "k9s"},
 		Short:   lang.CmdToolsMonitorShort,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			// Hack to make k9s think it's all alone
 			os.Args = []string{os.Args[0]}
 			k9s.Execute()
