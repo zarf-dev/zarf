@@ -246,6 +246,9 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.DeployedPackage, registryEndpoint string) error {
 	authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PushUsername, zarfState.RegistryInfo.PushPassword)
 
+	spinner := message.NewProgressSpinner("Looking up images within package definitions")
+	defer spinner.Stop()
+
 	// Determine which image digests are currently used by Zarf packages
 	pkgImages := map[string]bool{}
 	for _, pkg := range zarfPackages {
@@ -273,6 +276,8 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 		}
 	}
 
+	spinner.Updatef("Cataloging images in the registry")
+
 	// Find which images and tags are in the registry currently
 	imageCatalog, err := crane.Catalog(registryEndpoint, authOption)
 	if err != nil {
@@ -295,6 +300,8 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 		}
 	}
 
+	spinner.Updatef("Calculating images to prune")
+
 	// Figure out which images are in the registry but not needed by packages
 	imageDigestsToPrune := map[string]bool{}
 	for digestRef, digest := range referenceToDigest {
@@ -307,6 +314,8 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 			imageDigestsToPrune[digestRef] = true
 		}
 	}
+
+	spinner.Success()
 
 	if len(imageDigestsToPrune) > 0 {
 		message.Note(lang.CmdToolsRegistryPruneImageList)
@@ -328,6 +337,9 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 			}
 		}
 		if confirm {
+			spinner := message.NewProgressSpinner("Deleting unused images")
+			defer spinner.Stop()
+
 			// Delete the digest references that are to be pruned
 			for digestRef := range imageDigestsToPrune {
 				err = crane.Delete(digestRef, authOption)
@@ -335,6 +347,8 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 					return err
 				}
 			}
+
+			spinner.Success()
 		}
 	} else {
 		message.Note(lang.CmdToolsRegistryPruneNoImages)
