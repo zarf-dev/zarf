@@ -26,7 +26,7 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use: "zarf COMMAND",
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 		// Skip for vendor-only commands
 		if common.CheckVendorOnlyFromPath(cmd) {
 			return
