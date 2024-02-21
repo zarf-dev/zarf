@@ -7,7 +7,6 @@ package images
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
@@ -51,7 +50,6 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 	httpTransport.TLSClientConfig.InsecureSkipVerify = i.Insecure
-	httpTransport.ResponseHeaderTimeout = 10 * time.Second
 	progressBar := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images to the zarf registry", len(i.ImageList)))
 	defer progressBar.Stop()
 	craneTransport := utils.NewTransport(httpTransport, progressBar)
