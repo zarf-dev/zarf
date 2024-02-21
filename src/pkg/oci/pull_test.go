@@ -18,19 +18,24 @@ import (
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	orasRegistry "oras.land/oras-go/v2/registry"
 )
 
 type OCISuite struct {
 	suite.Suite
 	*require.Assertions
-	Reference   orasRegistry.Reference
+	remote      *OrasRemote
 	registryURL string
 }
 
 func (suite *OCISuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 	suite.StartRegistry()
+
+	platform := PlatformForArch("fake-package-so-does-not-matter")
+	var err error
+	suite.remote, err = NewOrasRemote(suite.registryURL, platform, WithPlainHTTP(true))
+	suite.NoError(err)
+
 }
 
 func (suite *OCISuite) StartRegistry() {
@@ -52,26 +57,36 @@ func (suite *OCISuite) StartRegistry() {
 	suite.registryURL = fmt.Sprintf("oci://localhost:%d/package:1.0.1", port)
 }
 
-func (suite *OCISuite) Test_0_Publish() {
+func (suite *OCISuite) TestPublishNoTitle() {
 	suite.T().Log("")
-	// This is the general flow that helm is doing
-	// I want to figure out what tool they are using to actually start their server
 
 	ctx := context.TODO()
-	platform := PlatformForArch("fake-package-so-does-not-matter")
-	remote, err := NewOrasRemote(suite.registryURL, platform, WithPlainHTTP(true))
-	suite.NoError(err)
+	annotations := map[string]string{
+		ocispec.AnnotationDescription: "No title",
+	}
+	_, err := suite.remote.PushManifestConfigFromMetadata(ctx, annotations, ocispec.MediaTypeImageConfig)
+	suite.Error(err)
+}
+
+func (suite *OCISuite) TestPublish() {
+	suite.T().Log("")
+
+	ctx := context.TODO()
 
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       "name",
-		ocispec.AnnotationDescription: "desc",
+		ocispec.AnnotationDescription: "description",
 	}
 
-	_, err = remote.PushManifestConfigFromMetadata(ctx, annotations, ocispec.MediaTypeImageConfig)
+	_, err := suite.remote.PushManifestConfigFromMetadata(ctx, annotations, ocispec.MediaTypeImageConfig)
 	suite.NoError(err)
+
+	// tempDir := suite.T().TempDir()
+	// src, err := file.New(tempDir)
+	// src.Add(ctx, "fake-package-so-does-not-matter", "fake-package-so-does-not-matter", "fake-package-so-does-not-matter")
 
 }
 
-func TestPublishDeploySuite(t *testing.T) {
+func TestOCI(t *testing.T) {
 	suite.Run(t, new(OCISuite))
 }
