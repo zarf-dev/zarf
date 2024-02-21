@@ -39,7 +39,7 @@ var packageCreateCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageCreateShort,
 	Long:    lang.CmdPackageCreateLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		common.SetBaseDirectory(args, &pkgConfig)
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
@@ -70,7 +70,7 @@ var packageDeployCmd = &cobra.Command{
 	Short:   lang.CmdPackageDeployShort,
 	Long:    lang.CmdPackageDeployLong,
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		// Ensure uppercase keys from viper and CLI --set
@@ -98,7 +98,7 @@ var packageMirrorCmd = &cobra.Command{
 	Long:    lang.CmdPackageMirrorLong,
 	Example: lang.CmdPackageMirrorExample,
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		// Configure the packager
@@ -118,7 +118,7 @@ var packageInspectCmd = &cobra.Command{
 	Short:   lang.CmdPackageInspectShort,
 	Long:    lang.CmdPackageInspectLong,
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		src := identifyAndFallbackToClusterSource()
@@ -139,7 +139,7 @@ var packageListCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"l", "ls"},
 	Short:   lang.CmdPackageListShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// Get all the deployed packages
 		deployedZarfPackages, errs := cluster.NewClusterOrDie().GetDeployedZarfPackages()
 		if len(errs) > 0 && len(deployedZarfPackages) == 0 {
@@ -177,7 +177,7 @@ var packageRemoveCmd = &cobra.Command{
 	Aliases: []string{"u", "rm"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		src := identifyAndFallbackToClusterSource()
@@ -197,7 +197,7 @@ var packagePublishCmd = &cobra.Command{
 	Short:   lang.CmdPackagePublishShort,
 	Example: lang.CmdPackagePublishExample,
 	Args:    cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = args[0]
 
 		if !helpers.IsOCIURL(args[1]) {
@@ -236,7 +236,7 @@ var packagePullCmd = &cobra.Command{
 	Short:   lang.CmdPackagePullShort,
 	Example: lang.CmdPackagePullExample,
 	Args:    cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = args[0]
 
 		// Configure the packager
