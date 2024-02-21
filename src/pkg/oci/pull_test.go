@@ -7,6 +7,8 @@ package oci
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"oras.land/oras-go/v2/content/file"
 )
 
 type OCISuite struct {
@@ -57,6 +60,12 @@ func (suite *OCISuite) StartRegistry() {
 	suite.registryURL = fmt.Sprintf("oci://localhost:%d/package:1.0.1", port)
 }
 
+func (suite *OCISuite) TestBadRemote() {
+	suite.T().Log("Here")
+	_, err := NewOrasRemote("nonsense", PlatformForArch("fake-package-so-does-not-matter"))
+	suite.Error(err)
+}
+
 func (suite *OCISuite) TestPublishNoTitle() {
 	suite.T().Log("")
 
@@ -81,10 +90,34 @@ func (suite *OCISuite) TestPublish() {
 	_, err := suite.remote.PushManifestConfigFromMetadata(ctx, annotations, ocispec.MediaTypeImageConfig)
 	suite.NoError(err)
 
-	// tempDir := suite.T().TempDir()
-	// src, err := file.New(tempDir)
-	// src.Add(ctx, "fake-package-so-does-not-matter", "fake-package-so-does-not-matter", "fake-package-so-does-not-matter")
+}
 
+func (suite *OCISuite) TestPublishForReal() {
+	suite.T().Log("")
+
+	ctx := context.TODO()
+
+	annotations := map[string]string{
+		ocispec.AnnotationTitle:       "name",
+		ocispec.AnnotationDescription: "description",
+	}
+
+	manifestConfigDesc, err := suite.remote.PushManifestConfigFromMetadata(ctx, annotations, ocispec.MediaTypeLayoutHeader)
+	suite.NoError(err)
+
+	tempDir := suite.T().TempDir()
+	ociSmallFile := filepath.Join(tempDir, "oci-small-file")
+	os.WriteFile(ociSmallFile, []byte("{}"), 0644)
+	src, err := file.New(tempDir)
+	suite.NoError(err)
+
+	desc, err := src.Add(ctx, "small-file", ocispec.MediaTypeEmptyJSON, ociSmallFile)
+	fmt.Printf("this is the desc %q\n", desc.Digest.String())
+	suite.NoError(err)
+	descs := []ocispec.Descriptor{desc}
+	manifestDesc, err := suite.remote.GeneratePackManifest(ctx, src, descs, manifestConfigDesc, annotations)
+	suite.NoError(err)
+	fmt.Println(manifestDesc)
 }
 
 func TestOCI(t *testing.T) {
