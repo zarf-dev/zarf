@@ -35,7 +35,7 @@ const properties = Object.keys(itemSchema.properties)
       properties.map((key) => {
         return (
           <tr>
-            <td>
+            <td style="min-width: 10rem;">
               <code>{key}</code>
               {itemSchema.required && itemSchema.required.includes(key) && <em>*</em>}
             </td>
