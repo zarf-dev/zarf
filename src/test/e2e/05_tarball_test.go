@@ -29,7 +29,6 @@ func TestMultiPartPackage(t *testing.T) {
 
 	e2e.CleanFiles(deployPath, outputFile)
 
-
 	// Create the package with a max size of 20MB
 	stdOut, stdErr, err := e2e.Zarf("package", "create", createPath, "--max-package-size=20", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
