@@ -58,7 +58,7 @@ func newRepoIndexCmd(out io.Writer) *cobra.Command {
 		Short: "generate an index file given a directory containing packaged charts",
 		Long:  repoIndexDesc,
 		Args:  require.ExactArgs(1),
-		ValidArgsFunction: func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 			if len(args) == 0 {
 				// Allow file completion when completing the argument for the directory
 				return nil, cobra.ShellCompDirectiveDefault
