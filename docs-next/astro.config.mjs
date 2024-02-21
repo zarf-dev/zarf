@@ -3,6 +3,14 @@ import starlight from "@astrojs/starlight";
 
 // https://astro.build/config
 export default defineConfig({
+  vite: {
+    resolve: {
+      alias: {
+        "@examples": "../examples",
+        "@packages": "../packages",
+      },
+    }
+  },
   integrations: [
     starlight({
       title: "Zarf",
@@ -10,24 +18,31 @@ export default defineConfig({
         github: "https://github.com/defenseunicorns/zarf",
         slack: "https://kubernetes.slack.com/archives/C03B6BJAUJ3",
       },
+      favicon: "./src/assets/favicon.svg",
       editLink: {
         baseUrl: "https://github.com/defenseunicorns/zarf/edit/main/",
       },
       logo: {
         src: "./src/assets/zarf-logo-header.svg",
-		replacesTitle: true,
+        replacesTitle: true,
       },
+      lastUpdated: true,
       sidebar: [
         {
           label: "Start Here",
           autogenerate: { directory: "getting-started" },
-		  collapsed: true,
+          collapsed: true,
         },
         {
           label: "CLI",
           autogenerate: { directory: "cli" },
-		  collapsed: true,
-		},
+          collapsed: true,
+        },
+        {
+          label: "Create a Package",
+          autogenerate: { directory: "create-a-package" },
+          collapsed: true,
+        },
         {
           label: "Tutorials",
           autogenerate: { directory: "tutorials" },

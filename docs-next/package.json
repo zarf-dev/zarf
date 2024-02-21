@@ -3,8 +3,10 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
+    "predev": "cp ../zarf.schema.json ./src/assets/zarf.schema.json",
     "dev": "astro dev",
     "start": "astro dev",
+    "prebuild": "cp ../zarf.schema.json ./src/assets/zarf.schema.json",
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro"

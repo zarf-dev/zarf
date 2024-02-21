@@ -13,9 +13,7 @@ hero:
       variant: primary
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
-
-## Next steps
+import { LinkCard, Card, CardGrid } from "@astrojs/starlight/components";
 
 <CardGrid stagger>
   <Card title="Securely Package Apps & Resources" icon="pencil">
@@ -28,3 +26,12 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
     Zarf reduces the skill and resources needed to manage and update applications in disconnected environments, ensuring no down time or data loss when updating software.
   </Card>
 </CardGrid>
+
+## Quick links
+
+<CardGrid>
+ <LinkCard title="Create a Package" href="/create-a-package/" />
+ <LinkCard title="View tutorials"  href="/tutorials"/>
+</CardGrid>
+
+<LinkCard title="Discover CLI commands" href="/cli/commands/zarf" />

@@ -1,4 +1,6 @@
-# Understanding Zarf Packages
+---
+title: Understanding Zarf Packages
+---
 
 Zarf offers a comprehensive solution for deploying system software or capabilities while fully disconnected. This is accomplished through the use of a single tarball archive, which includes all necessary components and is defined by a `zarf.yaml` file.
 

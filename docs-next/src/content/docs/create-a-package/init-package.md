@@ -1,4 +1,6 @@
-# The Zarf 'init' Package
+---
+title: The 'init' Package
+---
 
 The 'init' package is a special Zarf Package (denoted by `kind: ZarfInitConfig` in its `zarf.yaml`) that initializes a cluster with the requisite air gap services when running `zarf init`.  This allows future Zarf Packages to store any required resources (i.e. container images and git repositories) so that they can be retrieved later.
 

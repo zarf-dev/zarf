@@ -1,8 +1,10 @@
+---
+title: Component Actions
+---
+
 import ExampleYAML from '@site/src/components/ExampleYAML';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-
-# Component Actions
 
 Component Actions offer several exec entrypoints that allow a component to perform additional logic at key stages of its lifecycle. These actions are executed within a shell with the same context as the Zarf binary. For a detailed overview of the execution sequence of component actions, please refer to the Zarf [package create lifecycle documentation](./5-package-create-lifecycle.md) and [package deploy lifecycle documentation](../4-deploy-a-zarf-package/1-package-deploy-lifecycle.md). Additionally, you can experiment with the component actions example located in the [Component Actions](../../examples/component-actions/README.md) example page.
 

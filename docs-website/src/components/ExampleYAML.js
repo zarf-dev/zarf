@@ -2,7 +2,7 @@ import React from "react";
 import { useEffect, useState } from "react";
 import CodeBlock from "@theme/CodeBlock";
 
-const FetchExampleYAML = ({ src, component, raw, showLink = true }) => {
+const FetchExampleYAML = ({ src, component, showLink = true }) => {
   const [content, setContent] = useState(null);
   const linkBaseUrl = `${src}`.replace(/^\/build\/\.\.\//gm,'').replace(/\/zarf\.yaml.+?$/gm,'');
 

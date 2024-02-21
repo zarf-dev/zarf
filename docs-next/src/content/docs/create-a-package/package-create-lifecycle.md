@@ -1,4 +1,6 @@
-# Package Create Lifecycle
+---
+title: Package Create Lifecycle
+---
 
 The following diagram shows the order of operations for the `zarf package create` command and the hook locations for [actions](../../examples/component-actions/README.md).
 

@@ -1,4 +1,6 @@
-# Developing Zarf Packages
+---
+title: Developing
+---
 
 ## `dev` Commands
 
@@ -12,7 +14,7 @@ The `dev` commands are meant to be used in **development** environments / workfl
 
 ### `dev deploy`
 
-The `dev deploy` command will combine the lifecycle of `package create` and `package deploy` into a single command. This command will:
+The `dev deploy` command combines the lifecycle of `package create` and `package deploy` into a single command. This command will:
 
 - Not result in a re-usable tarball / OCI artifact
 - Not have any interactive prompts
