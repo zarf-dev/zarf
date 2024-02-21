@@ -78,9 +78,7 @@ func (o *OrasRemote) LayersFromPaths(requestedPaths []string) (layers []ocispec.
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.
 //
 // It also retrieves the descriptors for all image layers that are required by the components.
-//
-// It also respects the `required` flag on components, and will retrieve all necessary layers for required components.
-func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string) (layers []ocispec.Descriptor, err error) {
+func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []types.ZarfComponent) (layers []ocispec.Descriptor, err error) {
 	root, err := o.FetchRoot()
 	if err != nil {
 		return nil, err
@@ -92,22 +90,17 @@ func (o *OrasRemote) LayersFromRequestedComponents(requestedComponents []string)
 	}
 	images := map[string]bool{}
 	tarballFormat := "%s.tar"
-	for _, name := range requestedComponents {
+	for _, rc := range requestedComponents {
 		component := helpers.Find(pkg.Components, func(component types.ZarfComponent) bool {
-			return component.Name == name
+			return component.Name == rc.Name
 		})
 		if component.Name == "" {
-			return nil, fmt.Errorf("component %s does not exist in this package", name)
+			return nil, fmt.Errorf("component %s does not exist in this package", rc.Name)
 		}
-	}
-	for _, component := range pkg.Components {
-		// If we requested this component, or it is required, we need to pull its images and tarball
-		if slices.Contains(requestedComponents, component.Name) || component.Required {
-			for _, image := range component.Images {
-				images[image] = true
-			}
-			layers = append(layers, root.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
+		for _, image := range component.Images {
+			images[image] = true
 		}
+		layers = append(layers, root.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 	}
 	// Append the sboms.tar layer if it exists
 	//

@@ -34,17 +34,17 @@ type Node struct {
 	next *Node
 }
 
-// GetIndex returns the .components index location for this node's source `zarf.yaml`
-func (n *Node) GetIndex() int {
+// Index returns the .components index location for this node's source `zarf.yaml`
+func (n *Node) Index() int {
 	return n.index
 }
 
-// GetOriginalPackageName returns the .metadata.name of the zarf package the component originated from
-func (n *Node) GetOriginalPackageName() string {
+// OriginalPackageName returns the .metadata.name for this node's source `zarf.yaml`
+func (n *Node) OriginalPackageName() string {
 	return n.originalPackageName
 }
 
-// ImportLocation gets the path from the base zarf file to the imported zarf file
+// ImportLocation gets the path from the base `zarf.yaml` to the imported `zarf.yaml`
 func (n *Node) ImportLocation() string {
 	if n.prev != nil {
 		if n.prev.ZarfComponent.Import.URL != "" {
@@ -264,7 +264,7 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 		node = node.next
 	}
 	if len(warnings) > 0 {
-		final := fmt.Sprintf("migrations were performed on the import chain of: %q", ic.head.Name)
+		final := fmt.Sprintf("Migrations were performed on the import chain of: %q", ic.head.Name)
 		warnings = append(warnings, final)
 	}
 	return warnings

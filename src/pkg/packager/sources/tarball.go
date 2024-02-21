@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
@@ -31,7 +32,7 @@ type TarballSource struct {
 }
 
 // LoadPackage loads a package from a tarball.
-func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
+func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, _ filters.ComponentFilterStrategy, unarchiveAll bool) (err error) {
 	var pkg types.ZarfPackage
 
 	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)

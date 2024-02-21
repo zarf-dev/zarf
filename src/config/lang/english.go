@@ -356,6 +356,10 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
 	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
+	CmdDevMigrateShort = "[beta] Migrates the zarf.yaml in a given directory to the latest version of the zarf.yaml format"
+	CmdDevMigrateLong  = "[beta] Migrates the zarf.yaml in a given directory to the latest version of the zarf.yaml format.\n\n" +
+		"This command modifies the original zarf.yaml file, performs a best effort attempt to preserve comments, and will format the contents in an opinionated manner."
+
 	CmdDevPatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
 	CmdDevPatchGitOverwritePrompt = "Overwrite the file %s with these changes?"
@@ -623,15 +627,15 @@ const (
 	PkgCreateErrDifferentialSameVersion = "unable to create a differential package with the same version as the package you are using as a reference; the package version must be incremented"
 )
 
-// src/internal/packager/deploy.
+// src/internal/packager/deploy
 const (
-	PkgDeployErrMultipleComponentsSameGroup        = "You cannot specify multiple components (%q, %q) within the same group (%q) when using the --components flag."
-	PkgDeployErrNoDefaultOrSelection               = "You must make a selection from %q with the --components flag as there is no default in their group."
-	PkgDeployErrNoCompatibleComponentsForSelection = "No compatible components found that matched %q. Please check spelling and try again."
+	PkgDeployErrMultipleComponentsSameGroup        = "cannot specify multiple components (%q, %q) within the same group (%q) when using the --components flag"
+	PkgDeployErrNoDefaultOrSelection               = "no selection made from %q with the --components flag and there is no default in the group"
+	PkgDeployErrNoCompatibleComponentsForSelection = "no compatible components found that matched %q, suggestion(s): %s"
 	PkgDeployErrComponentSelectionCanceled         = "Component selection canceled: %s"
 )
 
-// src/internal/packager/validate.
+// src/internal/packager/validate
 const (
 	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_%s###."
 	PkgValidateMustBeUppercase            = "variable name %q must be all uppercase and contain no special characters except _"
@@ -649,6 +653,7 @@ const (
 	PkgValidateErrComponentName           = "component name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
 	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
 	PkgValidateErrComponent               = "invalid component %q: %w"
+	PkgValidateErrComponentRequired       = "component %q contains deprecated usage of required. Please use `zarf dev migrate <directory> --run required-to-optional` to migrate your zarf.yaml"
 	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"
 	PkgValidateErrComponentReqGrouped     = "component %q cannot be both required and grouped"
 	PkgValidateErrComponentYOLO           = "component %q incompatible with the online-only package flag (metadata.yolo): %w"

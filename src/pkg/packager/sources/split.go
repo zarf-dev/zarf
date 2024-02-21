@@ -15,6 +15,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -108,7 +109,7 @@ func (s *SplitTarballSource) Collect(dir string) (string, error) {
 }
 
 // LoadPackage loads a package from a split tarball.
-func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
+func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (err error) {
 	tb, err := s.Collect(filepath.Dir(s.PackageSource))
 	if err != nil {
 		return err
@@ -122,7 +123,7 @@ func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll 
 	ts := &TarballSource{
 		s.ZarfPackageOptions,
 	}
-	return ts.LoadPackage(dst, unarchiveAll)
+	return ts.LoadPackage(dst, filter, unarchiveAll)
 }
 
 // LoadPackageMetadata loads a package's metadata from a split tarball.

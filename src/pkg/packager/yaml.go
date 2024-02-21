@@ -80,8 +80,9 @@ func (p *Packager) writeYaml() error {
 	}
 
 	// Record the migrations that will be run on the package.
-	for _, m := range deprecated.Migrations() {
-		p.cfg.Pkg.Build.Migrations = append(p.cfg.Pkg.Build.Migrations, m.ID())
+	p.cfg.Pkg.Build.Migrations = []string{
+		deprecated.ScriptsToActionsMigrated,
+		deprecated.PluralizeSetVariable,
 	}
 
 	// Record the flavor of Zarf used to build this package (if any).
