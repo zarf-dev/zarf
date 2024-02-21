@@ -14,7 +14,6 @@ import (
 
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry"
-	_ "github.com/distribution/distribution/v3/registry/auth/htpasswd"           // used for docker test registry
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/phayes/freeport"
