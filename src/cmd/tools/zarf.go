@@ -35,7 +35,7 @@ var deprecatedGetGitCredsCmd = &cobra.Command{
 	Hidden: true,
 	Short:  lang.CmdToolsGetGitPasswdShort,
 	Long:   lang.CmdToolsGetGitPasswdLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		message.Warn(lang.CmdToolsGetGitPasswdDeprecation)
 		getCredsCmd.Run(getCredsCmd, []string{"git"})
 	},
@@ -48,7 +48,7 @@ var getCredsCmd = &cobra.Command{
 	Example: lang.CmdToolsGetCredsExample,
 	Aliases: []string{"gc"},
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		state, err := cluster.NewClusterOrDie().LoadZarfState()
 		if err != nil || state.Distro == "" {
 			// If no distro the zarf secret did not load properly
@@ -168,7 +168,7 @@ var clearCacheCmd = &cobra.Command{
 	Use:     "clear-cache",
 	Aliases: []string{"c"},
 	Short:   lang.CmdToolsClearCacheShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		message.Notef(lang.CmdToolsClearCacheDir, config.GetAbsCachePath())
 		if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
 			message.Fatalf(err, lang.CmdToolsClearCacheErr, config.GetAbsCachePath())
@@ -180,7 +180,7 @@ var clearCacheCmd = &cobra.Command{
 var downloadInitCmd = &cobra.Command{
 	Use:   "download-init",
 	Short: lang.CmdToolsDownloadInitShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		url := oci.GetInitPackageURL(config.CLIVersion)
 
 		remote, err := oci.NewOrasRemote(url, oci.PlatformForArch(config.GetArch()))
@@ -202,7 +202,7 @@ var generatePKICmd = &cobra.Command{
 	Aliases: []string{"pki"},
 	Short:   lang.CmdToolsGenPkiShort,
 	Args:    cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pki := pki.GeneratePKI(args[0], subAltNames...)
 		if err := os.WriteFile("tls.ca", pki.CA, 0644); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, "tls.ca", err.Error())
@@ -221,7 +221,7 @@ var generateKeyCmd = &cobra.Command{
 	Use:     "gen-key",
 	Aliases: []string{"key"},
 	Short:   lang.CmdToolsGenKeyShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// Utility function to prompt the user for the password to the private key
 		passwordFunc := func(bool) ([]byte, error) {
 			// perform the first prompt
