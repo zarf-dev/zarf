@@ -339,7 +339,7 @@ func ReadFileByChunks(path string, chunkSizeBytes int) (chunks [][]byte, sha256s
 // - fileNames: list of file paths srcFile was split across
 // - sha256sum: sha256sum of the srcFile before splitting
 // - err: any errors encountered
-func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
+func SplitFile(srcPath string, chunkSizeBytes int) (err error) {
 	var fileNames []string
 	var sha256sum string
 	hash := sha256.New()
@@ -353,7 +353,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 	buf := make([]byte, bufferSize)
 
 	// get file size
-	fi, err := os.Stat(srcFile)
+	fi, err := os.Stat(srcPath)
 	if err != nil {
 		return err
 	}
@@ -364,15 +364,15 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 	progressBar := message.NewProgressBar(fileSize, title)
 	defer progressBar.Stop()
 
-	// open file
-	file, err := os.Open(srcFile)
-	defer file.Close()
+	// open srcFile
+	srcFile, err := os.Open(srcPath)
 	if err != nil {
 		return err
 	}
+	defer srcFile.Close()
 
 	// create file path starting from part 001
-	path := fmt.Sprintf("%s.part001", srcFile)
+	path := fmt.Sprintf("%s.part001", srcPath)
 	chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -384,7 +384,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 	chunkBytesRemaining := chunkSizeBytes
 	// Loop over the tarball hashing as we go and breaking it into chunks based on the chunkSizeBytes
 	for {
-		bytesRead, err := file.Read(buf)
+		bytesRead, err := srcFile.Read(buf)
 
 		if err != nil {
 			if err == io.EOF {
@@ -404,10 +404,14 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 			if err != nil {
 				return err
 			}
+			err = chunkFile.Close()
+			if err != nil {
+				return err
+			}
 
 			// create new file
-			path = fmt.Sprintf("%s.part%03d", srcFile, len(fileNames)+1)
-			chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+			path = fmt.Sprintf("%s.part%03d", srcPath, len(fileNames)+1)
+			chunkFile, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				return err
 			}
@@ -435,8 +439,8 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 		title := fmt.Sprintf("[%d/%d] MB bytes written", progressBar.GetCurrent()/1000/1000, fileSize/1000/1000)
 		progressBar.UpdateTitle(title)
 	}
-	file.Close()
-	_ = os.RemoveAll(srcFile)
+	srcFile.Close()
+	_ = os.RemoveAll(srcPath)
 
 	// calculate sha256 sum
 	sha256sum = fmt.Sprintf("%x", hash.Sum(nil))
@@ -452,7 +456,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 	}
 
 	// write header file
-	path = fmt.Sprintf("%s.part000", srcFile)
+	path = fmt.Sprintf("%s.part000", srcPath)
 	if err := os.WriteFile(path, jsonData, 0644); err != nil {
 		return fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
