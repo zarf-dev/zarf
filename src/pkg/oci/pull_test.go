@@ -65,7 +65,7 @@ func (suite *OCISuite) TestBadRemote() {
 	suite.Error(err)
 }
 
-func (suite *OCISuite) TestPublishNoTitle() {
+func (suite *OCISuite) TestPublishFailNoTitle() {
 	suite.T().Log("")
 
 	ctx := context.TODO()
@@ -76,11 +76,10 @@ func (suite *OCISuite) TestPublishNoTitle() {
 	suite.Error(err)
 }
 
-func (suite *OCISuite) TestPublish() {
+func (suite *OCISuite) TestPublishSuccess() {
 	suite.T().Log("")
 
 	ctx := context.TODO()
-
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       "name",
 		ocispec.AnnotationDescription: "description",
@@ -114,7 +113,7 @@ func (suite *OCISuite) TestPublishForReal() {
 	fmt.Printf("this is the desc %q\n", desc.Digest.String())
 	suite.NoError(err)
 	descs := []ocispec.Descriptor{desc}
-	manifestDesc, err := suite.remote.GeneratePackManifest(ctx, src, descs, manifestConfigDesc, annotations)
+	manifestDesc, err := suite.remote.CreateAndPushManifest(ctx, src, descs, manifestConfigDesc, annotations)
 	suite.NoError(err)
 	fmt.Println(manifestDesc)
 }
