@@ -3,23 +3,25 @@
 This folder contains packages maintained by the [Zarf team](https://github.com/defenseunicorns/zarf/graphs/contributors).  Some of these packages are used by `zarf init` for new cluster initialization.
 
 **Packages**
-- [distros](#distros)
-- [gitea](#gitea)
-- [logging-pgl](#logging-pgl)
-- [zarf-agent](#zarf-agent)
-- [zarf-registry](#zarf-registry)
+- [Zarf Packages](#zarf-packages)
+    - [Distros](#distros)
+      - [Usage Examples](#usage-examples)
+    - [Gitea](#gitea)
+    - [Logging PGL](#logging-pgl)
+    - [Zarf Agent](#zarf-agent)
+    - [Zarf Registry](#zarf-registry)
 
 ### Distros
 
 The distros package adds optional capabilities for spinning up and tearing down clusters.  Currently, the following distros are supported:
 
-- [EKS](https://aws.amazon.com/eks/) - Zarf deploys and tears down using the `eksctl` binary under the hood. See how it's done in the EKS package's [`zarf.yaml`](./distros/eks/zarf.yaml) and checkout the [EKS package's config](./distros/eks/eks.yaml) for more information. 
+- [EKS](https://aws.amazon.com/eks/) - Zarf deploys and tears down using the `eksctl` binary under the hood. See how it's done in the EKS package's [`zarf.yaml`](./distros/eks/zarf.yaml) and checkout the [EKS package's config](./distros/eks/eks.yaml) for more information.
 
-- [k3s](https://k3s.io/) - Zarf deploys and tears down using the `k3s` service under the hood. See how it's done in the k3s package's [`zarf.yaml`](./distros/k3s/common/zarf.yaml). 
+- [k3s](https://k3s.io/) - Zarf deploys and tears down using the `k3s` service under the hood. See how it's done in the k3s package's [`zarf.yaml`](./distros/k3s/common/zarf.yaml).
 
 
 #### Usage Examples  
-  
+
 **EKS**  - Create/Deploy EKS cluster.  
 
 > **Note** - requires `eksctl` credentials.
@@ -27,7 +29,7 @@ The distros package adds optional capabilities for spinning up and tearing down 
 ```bash
 zarf package create packages/distros/eks -o build --confirm
 
-zarf package deploy build/zarf-package-distro-eks-multi-x.x.x.tar.zst --components=deploy-eks-cluster --set=CLUSTER_NAME='zarf-nightly-eks-e2e-test',INSTANCE_TYPE='t3.medium' --confirm
+zarf package deploy build/zarf-package-distro-eks-amd64-x.x.x.tar.zst --components=deploy-eks-cluster --set=CLUSTER_NAME='zarf-nightly-eks-e2e-test',INSTANCE_TYPE='t3.medium' --confirm
 ```
 
 See the [nightly-eks test](../.github/workflows/nightly-eks.yml) for another example.
@@ -65,7 +67,7 @@ zarf init --components=logging
 The Zarf Agent is a mutating admission controller used to modify the image property within a PodSpec. The purpose is to redirect it to Zarf's configured registry instead of the the original registry (such as DockerHub, GHCR, or Quay). Additionally, the webhook attaches the appropriate `ImagePullSecret` for the seed registry to the pod. This configuration allows the pod to successfully retrieve the image from the seed registry, even when operating in an air-gapped environment.
 
 ```bash
-$ zarf tools kubectl get deploy -n zarf agent-hook 
+$ zarf tools kubectl get deploy -n zarf agent-hook
 
 NAME         READY   UP-TO-DATE   AVAILABLE   AGE
 agent-hook   2/2     2            2           17m
