@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -18,7 +19,9 @@ func (p *Packager) Mirror() (err error) {
 	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
-	if err = p.source.LoadPackage(p.layout, true); err != nil {
+	filter := filters.BySelectState(p.cfg.PkgOpts.OptionalComponents)
+
+	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
@@ -34,17 +37,26 @@ func (p *Packager) Mirror() (err error) {
 		return fmt.Errorf("mirror cancelled")
 	}
 
-	state := &types.ZarfState{
+	if err := p.filterComponentsByArchAndOS(); err != nil {
+		return err
+	}
+
+	included, err := filter.Apply(p.cfg.Pkg)
+	if err != nil {
+		return err
+	}
+
+	p.cfg.State = &types.ZarfState{
 		RegistryInfo: p.cfg.InitOpts.RegistryInfo,
 		GitServer:    p.cfg.InitOpts.GitServer,
 	}
-	p.cfg.State = state
 
-	// Filter out components that are not compatible with this system if we have loaded from a tarball
-	p.filterComponents()
-
-	// Run mirror for each requested component
-	return p.forIncludedComponents(p.mirrorComponent)
+	for _, component := range included {
+		if err := p.mirrorComponent(component); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // mirrorComponent mirrors a Zarf Component.

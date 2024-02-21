@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -41,7 +42,9 @@ func (p *Packager) Remove() (err error) {
 	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
 		return err
 	}
-	p.filterComponents()
+	if err := p.filterComponentsByArchAndOS(); err != nil {
+		return err
+	}
 	packageName = p.cfg.Pkg.Metadata.Name
 
 	// Build a list of components to remove and determine if we need a cluster connection
@@ -49,15 +52,19 @@ func (p *Packager) Remove() (err error) {
 	packageRequiresCluster := false
 
 	// If components were provided; just remove the things we were asked to remove
-	p.forIncludedComponents(func(component types.ZarfComponent) error {
+	filter := filters.BySelectState(p.cfg.PkgOpts.OptionalComponents)
+	included, err := filter.Apply(p.cfg.Pkg)
+	if err != nil {
+		return err
+	}
+
+	for _, component := range included {
 		componentsToRemove = append(componentsToRemove, component.Name)
 
-		if requiresCluster(component) {
+		if component.RequiresCluster() {
 			packageRequiresCluster = true
 		}
-
-		return nil
-	})
+	}
 
 	// Get or build the secret for the deployed package
 	deployedPackage := &types.DeployedPackage{}

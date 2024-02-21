@@ -23,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -40,7 +41,9 @@ func (p *Packager) resetRegistryHPA() {
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
-	if err = p.source.LoadPackage(p.layout, true); err != nil {
+	filter := filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm)
+
+	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
@@ -72,7 +75,9 @@ func (p *Packager) Deploy() (err error) {
 	defer p.resetRegistryHPA()
 
 	// Filter out components that are not compatible with this system
-	p.filterComponents()
+	if err := p.filterComponentsByArchAndOS(); err != nil {
+		return err
+	}
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
@@ -93,7 +98,11 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy := p.getSelectedComponents()
+	filter := filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm)
+	componentsToDeploy, err := filter.Apply(p.cfg.Pkg)
+	if err != nil {
+		return deployedComponents, fmt.Errorf("unable to get selected components: %w", err)
+	}
 
 	// Generate a value template
 	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
@@ -115,7 +124,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		}
 
 		// If this component requires a cluster, connect to one
-		if requiresCluster(component) {
+		if component.RequiresCluster() {
 			timeout := cluster.DefaultTimeout
 			if p.isInitConfig() {
 				timeout = 5 * time.Minute
@@ -206,7 +215,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	}
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if requiresCluster(component) && p.cfg.State == nil {
+	if component.RequiresCluster() && p.cfg.State == nil {
 		err = p.cluster.InitZarfState(p.cfg.InitOpts)
 		if err != nil {
 			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -260,7 +269,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	onDeploy := component.Actions.OnDeploy
 
-	if !p.valueTemplate.Ready() && requiresCluster(component) {
+	if !p.valueTemplate.Ready() && component.RequiresCluster() {
 		// Setup the state in the config and get the valuesTemplate
 		p.valueTemplate, err = p.setupStateValuesTemplate()
 		if err != nil {
