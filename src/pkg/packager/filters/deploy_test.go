@@ -25,12 +25,6 @@ func cfq(t *testing.T, q string) types.ZarfComponent {
 			c.Default = true
 		case "default=false":
 			c.Default = false
-		case "optional=<nil>":
-			c.Optional = nil
-		case "optional=false":
-			c.Optional = helpers.BoolPtr(false)
-		case "optional=true":
-			c.Optional = helpers.BoolPtr(true)
 		case "required=<nil>":
 			c.DeprecatedRequired = nil
 		case "required=false":
@@ -53,7 +47,6 @@ func componentMatrix(t *testing.T) []types.ZarfComponent {
 	var components []types.ZarfComponent
 
 	defaultValues := []bool{true, false}
-	optionalValues := []interface{}{nil, true, false}
 	requiredValues := []interface{}{nil, true, false}
 	groupValues := []string{"", "foo", "foo", "bar", "bar"}
 
@@ -61,25 +54,19 @@ func componentMatrix(t *testing.T) []types.ZarfComponent {
 	// 2 * 3 * 3 * 5 = 90
 
 	for _, defaultValue := range defaultValues {
-		for _, optionalValue := range optionalValues {
-			for _, requiredValue := range requiredValues {
-				for _, groupValue := range groupValues {
-					c := types.ZarfComponent{
-						Name:            fmt.Sprintf("default=%t && optional=%v && required=%v && group=%s", defaultValue, optionalValue, requiredValue, groupValue),
-						Default:         defaultValue,
-						DeprecatedGroup: groupValue,
-					}
-
-					if optionalValue != nil {
-						c.Optional = helpers.BoolPtr(optionalValue.(bool))
-					}
-
-					if requiredValue != nil {
-						c.DeprecatedRequired = helpers.BoolPtr(requiredValue.(bool))
-					}
-
-					components = append(components, c)
+		for _, requiredValue := range requiredValues {
+			for _, groupValue := range groupValues {
+				c := types.ZarfComponent{
+					Name:            fmt.Sprintf("default=%t && required=%v && group=%s", defaultValue, requiredValue, groupValue),
+					Default:         defaultValue,
+					DeprecatedGroup: groupValue,
 				}
+
+				if requiredValue != nil {
+					c.DeprecatedRequired = helpers.BoolPtr(requiredValue.(bool))
+				}
+
+				components = append(components, c)
 			}
 		}
 	}

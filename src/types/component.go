@@ -24,11 +24,6 @@ type ZarfComponent struct {
 	// DeprecatedRequired makes this component mandatory for package deployment
 	DeprecatedRequired *bool `json:"required,omitempty" jsonschema:"description=[Deprecated] Do not prompt user to install this component, always install on package deploy. This will be removed in Zarf v1.0.0.,deprecated=true"`
 
-	// Optional controls if the component is required or not
-	//
-	// Components are required by default (implicit optional:false)
-	Optional *bool `json:"optional,omitempty" jsonschema:"description=Prompt user to install this component on package deploy, defaults to false"`
-
 	// Only include compatible components during package deployment
 	Only ZarfComponentOnlyTarget `json:"only,omitempty" jsonschema:"description=Filter when this component is included in package creation or deployment"`
 

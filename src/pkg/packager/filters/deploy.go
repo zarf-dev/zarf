@@ -9,9 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/agnivade/levenshtein"
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -36,17 +34,6 @@ type deploymentFilter struct {
 
 // Apply applies the filter.
 func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
-	useRequiredLogic := false
-	if pkg.Build.Version != config.UnsetCLIVersion {
-		buildVersion, err := semver.NewVersion(pkg.Build.Version)
-		if err != nil {
-			return []types.ZarfComponent{}, fmt.Errorf("unable to parse package version %q: %w", pkg.Build.Version, err)
-		}
-		if buildVersion.LessThan(semver.MustParse("v0.33.0")) {
-			useRequiredLogic = true
-		}
-	}
-
 	var selectedComponents []types.ZarfComponent
 	groupedComponents := map[string][]types.ZarfComponent{}
 	orderedComponentGroups := []string{}
@@ -81,7 +68,7 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 
 				selectState, matchedRequest := includedOrExcluded(component.Name, f.requestedComponents)
 
-				if !isRequired(component, useRequiredLogic) {
+				if !isRequired(component) {
 					if selectState == excluded {
 						// If the component was explicitly excluded, record the match and continue
 						matchedRequests[matchedRequest] = true
@@ -169,7 +156,7 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 						selectedComponents = append(selectedComponents, component)
 					}
 				} else {
-					if isRequired(component, useRequiredLogic) || component.Default {
+					if isRequired(component) || component.Default {
 						selectedComponents = append(selectedComponents, component)
 					}
 				}

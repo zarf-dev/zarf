@@ -62,14 +62,14 @@ func Run(pkg types.ZarfPackage) error {
 		}
 
 		// ensure groups don't have multiple defaults or only one component
-		if component.Group != "" {
+		if component.DeprecatedGroup != "" {
 			if component.Default {
-				if _, ok := groupDefault[component.Group]; ok {
-					return fmt.Errorf(lang.PkgValidateErrGroupMultipleDefaults, component.Group, groupDefault[component.Group], component.Name)
+				if _, ok := groupDefault[component.DeprecatedGroup]; ok {
+					return fmt.Errorf(lang.PkgValidateErrGroupMultipleDefaults, component.DeprecatedGroup, groupDefault[component.DeprecatedGroup], component.Name)
 				}
-				groupDefault[component.Group] = component.Name
+				groupDefault[component.DeprecatedGroup] = component.Name
 			}
-			groupedComponents[component.Group] = append(groupedComponents[component.Group], component.Name)
+			groupedComponents[component.DeprecatedGroup] = append(groupedComponents[component.DeprecatedGroup], component.Name)
 		}
 	}
 
@@ -129,11 +129,11 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		return fmt.Errorf(lang.PkgValidateErrComponentName, component.Name)
 	}
 
-	if component.Required {
+	if component.DeprecatedRequired != nil && *component.DeprecatedRequired {
 		if component.Default {
 			return fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name)
 		}
-		if component.Group != "" {
+		if component.DeprecatedGroup != "" {
 			return fmt.Errorf(lang.PkgValidateErrComponentReqGrouped, component.Name)
 		}
 	}
