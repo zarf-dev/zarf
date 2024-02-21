@@ -6,6 +6,7 @@ package filters
 
 import "github.com/defenseunicorns/zarf/src/types"
 
+// Empty returns a filter that does nothing.
 func Empty() ComponentFilterStrategy {
 	return &emptyFilter{}
 }

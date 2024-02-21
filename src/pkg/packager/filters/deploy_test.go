@@ -43,7 +43,7 @@ func cfq(t *testing.T, q string) types.ZarfComponent {
 	return c
 }
 
-func componentMatrix(t *testing.T) []types.ZarfComponent {
+func componentMatrix(_ *testing.T) []types.ZarfComponent {
 	var components []types.ZarfComponent
 
 	defaultValues := []bool{true, false}
