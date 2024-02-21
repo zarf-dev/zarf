@@ -62,7 +62,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 	if err != nil {
 		return err
 	}
-	root, err := r.GeneratePackManifest(ctx, src, descs, manifestConfigDesc, annotations)
+	root, err := r.CreateAndPushManifest(ctx, src, descs, manifestConfigDesc, annotations)
 	if err != nil {
 		return err
 	}

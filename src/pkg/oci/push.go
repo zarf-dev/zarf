@@ -57,8 +57,9 @@ func (o *OrasRemote) PushManifestConfigFromMetadata(ctx context.Context, annotat
 	return o.PushLayer(ctx, manifestConfigBytes, configMediaType)
 }
 
-// GeneratePackManifest generates an OCI Image Manifest based on the given parameters
-func (o *OrasRemote) GeneratePackManifest(ctx context.Context, src *file.Store, descs []ocispec.Descriptor,
+// CreateAndPushManifest generates an OCI Image Manifest based on the given parameters
+// pushes that manifest to the remote repository and returns the manifest descriptor.
+func (o *OrasRemote) CreateAndPushManifest(ctx context.Context, src *file.Store, descs []ocispec.Descriptor,
 	configDesc *ocispec.Descriptor, annotations map[string]string) (ocispec.Descriptor, error) {
 	packOpts := oras.PackManifestOptions{
 		Layers:              descs,
