@@ -31,7 +31,7 @@ var (
 		Aliases: []string{"c"},
 		Short:   lang.CmdConnectShort,
 		Long:    lang.CmdConnectLong,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			var target string
 			if len(args) > 0 {
 				target = args[0]
@@ -89,7 +89,7 @@ var (
 		Use:     "list",
 		Aliases: []string{"l"},
 		Short:   lang.CmdConnectListShort,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			cluster.NewClusterOrDie().PrintConnectTable()
 		},
 	}

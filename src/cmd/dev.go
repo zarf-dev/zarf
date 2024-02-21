@@ -184,7 +184,7 @@ var devFindImagesCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdDevFindImagesShort,
 	Long:    lang.CmdDevFindImagesLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
 		// Ensure uppercase keys from viper
@@ -209,7 +209,7 @@ var devGenConfigFileCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdDevGenerateConfigShort,
 	Long:    lang.CmdDevGenerateConfigLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		fileName := "zarf-config.toml"
 
 		// If a filename was provided, use that
@@ -230,7 +230,7 @@ var devLintCmd = &cobra.Command{
 	Aliases: []string{"l"},
 	Short:   lang.CmdDevLintShort,
 	Long:    lang.CmdDevLintLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(

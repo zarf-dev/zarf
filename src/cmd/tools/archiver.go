@@ -28,7 +28,7 @@ var archiverCompressCmd = &cobra.Command{
 	Aliases: []string{"c"},
 	Short:   lang.CmdToolsArchiverCompressShort,
 	Args:    cobra.MinimumNArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		sourceFiles, destinationArchive := args[:len(args)-1], args[len(args)-1]
 		err := archiver.Archive(sourceFiles, destinationArchive)
 		if err != nil {
@@ -44,7 +44,7 @@ var archiverDecompressCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   lang.CmdToolsArchiverDecompressShort,
 	Args:    cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		sourceArchive, destinationPath := args[0], args[1]
 		err := archiver.Unarchive(sourceArchive, destinationPath)
 		if err != nil {
