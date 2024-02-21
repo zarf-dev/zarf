@@ -246,7 +246,7 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.DeployedPackage, registryEndpoint string) error {
 	authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PushUsername, zarfState.RegistryInfo.PushPassword)
 
-	spinner := message.NewProgressSpinner("Looking up images within package definitions")
+	spinner := message.NewProgressSpinner(lang.CmdToolsRegistryPruneLookup)
 	defer spinner.Stop()
 
 	// Determine which image digests are currently used by Zarf packages
@@ -276,7 +276,7 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 		}
 	}
 
-	spinner.Updatef("Cataloging images in the registry")
+	spinner.Updatef(lang.CmdToolsRegistryPruneCatalog)
 
 	// Find which images and tags are in the registry currently
 	imageCatalog, err := crane.Catalog(registryEndpoint, authOption)
@@ -300,7 +300,7 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 		}
 	}
 
-	spinner.Updatef("Calculating images to prune")
+	spinner.Updatef(lang.CmdToolsRegistryPruneCalculate)
 
 	// Figure out which images are in the registry but not needed by packages
 	imageDigestsToPrune := map[string]bool{}
@@ -337,7 +337,7 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 			}
 		}
 		if confirm {
-			spinner := message.NewProgressSpinner("Deleting unused images")
+			spinner := message.NewProgressSpinner(lang.CmdToolsRegistryPruneDelete)
 			defer spinner.Stop()
 
 			// Delete the digest references that are to be pruned
