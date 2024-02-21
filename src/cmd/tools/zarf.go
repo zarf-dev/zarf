@@ -37,7 +37,7 @@ var deprecatedGetGitCredsCmd = &cobra.Command{
 	Hidden: true,
 	Short:  lang.CmdToolsGetGitPasswdShort,
 	Long:   lang.CmdToolsGetGitPasswdLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		message.Warn(lang.CmdToolsGetGitPasswdDeprecation)
 		getCredsCmd.Run(getCredsCmd, []string{"git"})
 	},
@@ -170,7 +170,7 @@ var clearCacheCmd = &cobra.Command{
 	Use:     "clear-cache",
 	Aliases: []string{"c"},
 	Short:   lang.CmdToolsClearCacheShort,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		message.Notef(lang.CmdToolsClearCacheDir, config.GetAbsCachePath())
 		if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
 			message.Fatalf(err, lang.CmdToolsClearCacheErr, config.GetAbsCachePath())
