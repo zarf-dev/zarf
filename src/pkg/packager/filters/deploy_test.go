@@ -51,7 +51,7 @@ func componentMatrix(t *testing.T) []types.ZarfComponent {
 	groupValues := []string{"", "foo", "foo", "bar", "bar"}
 
 	// how many combinations of the above values are there?
-	// 2 * 3 * 3 * 5 = 90
+	// 2 * 3 * 5 = 30
 
 	for _, defaultValue := range defaultValues {
 		for _, requiredValue := range requiredValues {
@@ -87,47 +87,12 @@ func TestDeployFilter_Apply(t *testing.T) {
 				Components: componentMatrix(t),
 			},
 			want: []types.ZarfComponent{
-				cfq(t, "default=true && optional=<nil> && required=<nil> && group="),
-				cfq(t, "default=true && optional=<nil> && required=<nil> && group=foo"),
-				cfq(t, "default=true && optional=<nil> && required=<nil> && group=bar"),
-				cfq(t, "default=true && optional=<nil> && required=true && group="),
-				cfq(t, "default=true && optional=<nil> && required=false && group="),
-				cfq(t, "default=true && optional=true && required=<nil> && group="),
-				cfq(t, "default=true && optional=true && required=true && group="),
-				cfq(t, "default=true && optional=true && required=false && group="),
-				cfq(t, "default=true && optional=false && required=<nil> && group="),
-				cfq(t, "default=true && optional=false && required=true && group="),
-				cfq(t, "default=true && optional=false && required=false && group="),
-				cfq(t, "default=false && optional=<nil> && required=true && group="),
-				cfq(t, "default=false && optional=true && required=true && group="),
-				cfq(t, "default=false && optional=false && required=true && group="),
-			},
-		},
-		"Test when version is less than v0.33.0 and component is optional": {
-			pkg: types.ZarfPackage{
-				Build: types.ZarfBuildData{
-					Version: "v0.33.0",
-				},
-				Components: componentMatrix(t),
-			},
-			want: []types.ZarfComponent{
-				cfq(t, "default=true && optional=<nil> && required=<nil> && group="),
-				cfq(t, "default=true && optional=<nil> && required=<nil> && group=foo"),
-				cfq(t, "default=true && optional=<nil> && required=<nil> && group=bar"),
-				cfq(t, "default=true && optional=<nil> && required=true && group="),
-				cfq(t, "default=true && optional=<nil> && required=false && group="),
-				cfq(t, "default=true && optional=true && required=<nil> && group="),
-				cfq(t, "default=true && optional=true && required=true && group="),
-				cfq(t, "default=true && optional=true && required=false && group="),
-				cfq(t, "default=true && optional=false && required=<nil> && group="),
-				cfq(t, "default=true && optional=false && required=true && group="),
-				cfq(t, "default=true && optional=false && required=false && group="),
-				cfq(t, "default=false && optional=<nil> && required=<nil> && group="),
-				cfq(t, "default=false && optional=<nil> && required=true && group="),
-				cfq(t, "default=false && optional=<nil> && required=false && group="),
-				cfq(t, "default=false && optional=false && required=<nil> && group="),
-				cfq(t, "default=false && optional=false && required=true && group="),
-				cfq(t, "default=false && optional=false && required=false && group="),
+				cfq(t, "default=true && required=<nil> && group="),
+				cfq(t, "default=true && required=<nil> && group=foo"),
+				cfq(t, "default=true && required=<nil> && group=bar"),
+				cfq(t, "default=true && required=true && group="),
+				cfq(t, "default=true && required=false && group="),
+				cfq(t, "default=false && required=true && group="),
 			},
 		},
 	}

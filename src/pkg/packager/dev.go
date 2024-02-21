@@ -43,7 +43,7 @@ func (p *Packager) DevDeploy() error {
 
 	// Also filter out components that are not required, nor requested via --components
 	// This is different from the above filter, as it is not based on the system, but rather
-	// the user's selection and the component's `required`/`optional` field
+	// the user's selection and the component's fields
 	// This is also different from regular package creation, where we still assemble and package up
 	// all components and their dependencies, regardless of whether they are required or not
 	filter := filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, false)
