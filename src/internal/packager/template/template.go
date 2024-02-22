@@ -84,6 +84,7 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 	if values.config.State != nil {
 		regInfo := values.config.State.RegistryInfo
 		gitInfo := values.config.State.GitServer
+		artInfo := values.config.State.ArtifactServer
 
 		builtinMap := map[string]string{
 			"STORAGE_CLASS": values.config.State.StorageClass,
@@ -91,14 +92,22 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 			// Registry info
 			"REGISTRY":           values.registry,
 			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
+			"REGISTRY_PUSH":      regInfo.PushUsername,
 			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
+			"REGISTRY_PULL":      regInfo.PullUsername,
 			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
 
 			// Git server info
+			"GIT_URL":       gitInfo.Address,
 			"GIT_PUSH":      gitInfo.PushUsername,
 			"GIT_AUTH_PUSH": gitInfo.PushPassword,
 			"GIT_PULL":      gitInfo.PullUsername,
 			"GIT_AUTH_PULL": gitInfo.PullPassword,
+
+			// Artifact server info
+			"ARTIFACT_URL":       artInfo.Address,
+			"ARTIFACT_PUSH":      artInfo.PushUsername,
+			"ARTIFACT_AUTH_PUSH": artInfo.PushToken,
 		}
 
 		// Include the data injection marker template if the component has data injections
