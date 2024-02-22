@@ -28,5 +28,5 @@ func (r *Remote) FetchImagesIndex(ctx context.Context) (index *ocispec.Index, er
 	if err != nil {
 		return index, err
 	}
-	return oci.FetchJSONFile[*ocispec.Index](ctx, r.FetchLayer, manifest, ZarfPackageIndexPath)
+	return oci.FetchJSONFile[*ocispec.Index](ctx, r.FetchLayer, manifest, layout.IndexPath)
 }
