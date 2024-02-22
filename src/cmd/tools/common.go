@@ -14,7 +14,7 @@ import (
 var toolsCmd = &cobra.Command{
 	Use:     "tools",
 	Aliases: []string{"t"},
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 		config.SkipLogFile = true
 
 		// Skip for vendor-only commands
