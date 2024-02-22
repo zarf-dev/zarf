@@ -104,7 +104,7 @@ func TestValidatePackageArchitecture(t *testing.T) {
 			}
 
 			// Set up test data for fetching cluster architecture.
-			mockClient.Fake.PrependReactor("list", "nodes", func(action k8sTesting.Action) (handled bool, ret runtime.Object, err error) {
+			mockClient.Fake.PrependReactor("list", "nodes", func(_ k8sTesting.Action) (bool, runtime.Object, error) {
 				// Return an error for cases that test this error path.
 				if testCase.getArchError != nil {
 					return true, nil, testCase.getArchError
