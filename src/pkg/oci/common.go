@@ -58,7 +58,7 @@ func PlatformForArch(arch string) ocispec.Platform {
 	}
 }
 
-// WithUserAgent sets the target architecture for the remote
+// WithUserAgent sets the user agent for the remote
 func WithUserAgent(userAgent string) Modifier {
 	return func(o *OrasRemote) {
 		o.repo.Client.(*auth.Client).SetUserAgent(userAgent)

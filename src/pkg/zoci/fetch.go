@@ -26,7 +26,7 @@ func (r *Remote) FetchZarfYAML(ctx context.Context) (pkg types.ZarfPackage, err 
 func (r *Remote) FetchImagesIndex(ctx context.Context) (index *ocispec.Index, err error) {
 	manifest, err := r.FetchRoot(ctx)
 	if err != nil {
-		return index, err
+		return nil, err
 	}
 	return oci.FetchJSONFile[*ocispec.Index](ctx, r.FetchLayer, manifest, layout.IndexPath)
 }
