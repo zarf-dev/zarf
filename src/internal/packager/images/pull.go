@@ -125,7 +125,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 			if cosignArtifactsExist {
 				for _, cosignArtifact := range cosignList {
 					if strings.HasSuffix(cosignArtifact, ".sig") {
-						err := utils.CosignVerifyBlob(actualSrc, cosignArtifact, "")
+						err := utils.CosignVerifyBlob(actualSrc, cosignArtifact, "https://zarf.dev/cosign.pub")
 						if err != nil {
 							metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to get verify image using cosign signature for %s: %w", actualSrc, err)
 							return
