@@ -211,7 +211,14 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			for _, image := range sortedImages {
 				// Use print because we want this dumped to stdout
 				imagesMap[component.Name] = append(imagesMap[component.Name], image)
-				componentDefinition += fmt.Sprintf("      - %s\n", image)
+				imageWithSha, err := utils.GetImageWithSha(image)
+				if err != nil {
+					message.WarnErrf(err, "Problem getting image with sha for %s: %s", image, err.Error())
+					erroredCosignLookups = append(erroredCosignLookups, image)
+					continue
+				}
+				message.Debugf("Image with sha: %s", imageWithSha)
+				componentDefinition += fmt.Sprintf("      - %s\n", imageWithSha)
 			}
 		}
 
@@ -226,14 +233,6 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 					// Otherwise, add to the list of images
 					message.Debugf("Imaged digest found: %s", descriptor.Digest)
 					validImages = append(validImages, image)
-				}
-			}
-
-			if len(validImages) > 0 {
-				componentDefinition += fmt.Sprintf("      # Possible images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
-				for _, image := range validImages {
-					imagesMap[component.Name] = append(imagesMap[component.Name], image)
-					componentDefinition += fmt.Sprintf("      - %s\n", image)
 				}
 			}
 		}
