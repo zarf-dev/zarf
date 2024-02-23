@@ -67,72 +67,51 @@ var devGenerateCmd = &cobra.Command{
 	Use:     "generate NAME",
 	Aliases: []string{"g"},
 	Args:    cobra.ExactArgs(1),
-	Short:   "Use to generate either an example package or a package from resources",
+	Short:   "[beta] Use to generate either an example package or a package from resources",
 	Example: "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo",
 	Run: func(cmd *cobra.Command, args []string) {
 		spinner := message.NewProgressSpinner("Generating package with name %s", args[0])
 		if !validateDevGenerateFlags() {
 			message.Fatal(nil, "One or more flags are missing or invalid")
 		}
-		newPkg := types.ZarfPackage{
-			Metadata: types.ZarfMetadata{
-				Name: args[0],
-			},
-			Kind: types.ZarfPackageConfig,
-			Components: []types.ZarfComponent{{
-				Name:     args[0],
-				Required: true,
-				Charts: []types.ZarfChart{
-					{
-						//TODO: replace with the actual chart name
-						Name:      args[0],
-						Version:   pkgConfig.GenerateOpts.Version[0],
-						Namespace: args[0],
-						URL:       pkgConfig.GenerateOpts.URL[0],
-						GitPath:   pkgConfig.GenerateOpts.GitPath[0],
-					},
+
+		newComponent := []types.ZarfComponent{{
+			Name:     args[0],
+			Required: true,
+			Charts: []types.ZarfChart{
+				{
+					Name:      args[0],
+					Version:   pkgConfig.GenerateOpts.Version,
+					Namespace: args[0],
+					URL:       pkgConfig.GenerateOpts.URL,
+					GitPath:   pkgConfig.GenerateOpts.GitPath,
 				},
-				//TODO: findimages
-				Images: []string{""},
-			}},
+			},
+			//TODO: findimages logic (should have images and cosign signature)
+			// Images: []string{""},
+		}}
+
+		newPkg := pkgConfig.Pkg
+		newPkg.Kind = "ZarfPackageConfig"
+		newPkg.Metadata.Name = args[0]
+		newPkg.Components = append(newComponent, newPkg.Components...)
+
+		pkgConfig.CreateOpts.BaseDir = "."
+		pkgConfig.FindImagesOpts.RepoHelmChartPath = pkgConfig.GenerateOpts.GitPath
+
+		v := common.GetViper()
+		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+
+		// Configure the packager
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		// Find all the images the package might need
+		//TODO: images are not found
+		if err := pkgClient.FindImagesWithPackage(); err != nil {
+			message.Fatalf(err, lang.CmdDevFindImagesErr, err.Error())
 		}
-
-		// if cmd.Flags().Changed("from") {
-		// 	if cmd.Flags().Changed("assume") {
-		// 		message.Warn("Zarf will assume all necessary parts of components because \"--assume\" has been set")
-		// 	}
-		// 	for _, componentSource := range types.PackagerConfig.GenerateOpts.From.From {
-		// 		message.Notef("Starting component generation from %s", componentSource)
-		// 		spinner := message.NewProgressSpinner("Deducing component type for %s", componentSource)
-		// 		result := generator.DeduceResourceType(componentSource)
-		// 		switch result {
-		// 		case "unknown path":
-		// 			spinner.Fatalf(errors.New("invalid path"), "The path %s is not valid or an empty folder", componentSource)
-		// 		case "unknown url":
-		// 			spinner.Fatalf(errors.New("invalid url"), "The url %s could not be reconciled into a component type", componentSource)
-		// 		case "unparsable":
-		// 			spinner.Fatalf(errors.New("invalid from arg"), "The value %s could not be reconciled into a url or path", componentSource)
-		// 		}
-		// 		spinner.Successf("%s's component from %s is a %s", pkgName, componentSource, result)
-
-		// 		switch result {
-		// 		case "localChart":
-		// 			newPkg.Components = append(newPkg.Components, generator.GenLocalChart(componentSource))
-		// 		case "manifests":
-		// 			newPkg.Components = append(newPkg.Components, generator.GenManifests(componentSource))
-		// 		case "localFiles":
-		// 			newPkg.Components = append(newPkg.Components, generator.GenLocalFiles(componentSource))
-		// 		case "gitChart":
-		// 			newPkg.Components = append(newPkg.Components, generator.GenGitChart(componentSource))
-		// 		case "helmRepoChart":
-		// 			newPkg.Components = append(newPkg.Components, generator.GenHelmRepoChart(componentSource))
-		// 		case "remoteFile":
-		// 			newPkg.Components = append(newPkg.Components, generator.GenRemoteFile(componentSource))
-		// 		}
-		// 	}
-		// } else {
-		// 	message.Fatal(errors.New("Unimplemented"), "Unimplemented")
-		// }
 
 		if err := validate.Run(newPkg); err != nil {
 			message.Fatalf(err, err.Error())
@@ -290,9 +269,8 @@ var devFindImagesCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdDevFindImagesShort,
 	Long:    lang.CmdDevFindImagesLong,
-	Run: func(_ *cobra.Command, args []string) {
-		// If a directory was provided, use that as the base directory
-		common.SetBaseDirectory(args, &pkgConfig)
+	Run: func(cmd *cobra.Command, args []string) {
+		pkgConfig.CreateOpts.BaseDir = "."
 
 		// Ensure uppercase keys from viper
 		v := common.GetViper()
@@ -412,9 +390,9 @@ func bindDevDeployFlags(v *viper.Viper) {
 func bindDevGenerateFlags(v *viper.Viper) {
 	generateFlags := devGenerateCmd.Flags()
 
-	generateFlags.StringArrayVarP(&pkgConfig.GenerateOpts.URL, "url", "u", []string{}, "URL to the source git repository")
-	generateFlags.StringArrayVarP(&pkgConfig.GenerateOpts.Version, "version", "v", []string{}, "The Version of the chart to use")
-	generateFlags.StringArrayVarP(&pkgConfig.GenerateOpts.GitPath, "gitPath", "g", []string{}, "Relative path to the chart in the git repository")
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.URL, "url", "", "URL to the source git repository")
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.Version, "version", "", "The Version of the chart to use")
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.GitPath, "gitPath", "", "Relative path to the chart in the git repository")
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "", "Output directory for the generated zarf.yaml")
 
 }
@@ -422,17 +400,17 @@ func bindDevGenerateFlags(v *viper.Viper) {
 func validateDevGenerateFlags() bool {
 	flagsValid := true
 
-	if pkgConfig.GenerateOpts.URL == nil || len(pkgConfig.GenerateOpts.URL) == 0 {
+	if pkgConfig.GenerateOpts.URL == "" || len(pkgConfig.GenerateOpts.URL) == 0 {
 		flagsValid = false
 		message.Warn("URL is empty or invalid")
 	}
 
-	if pkgConfig.GenerateOpts.Version == nil || len(pkgConfig.GenerateOpts.Version) == 0 {
+	if pkgConfig.GenerateOpts.Version == "" || len(pkgConfig.GenerateOpts.Version) == 0 {
 		flagsValid = false
 		message.Warn("Chart Version is empty or invalid")
 	}
 
-	if pkgConfig.GenerateOpts.GitPath == nil || len(pkgConfig.GenerateOpts.GitPath) == 0 {
+	if pkgConfig.GenerateOpts.GitPath == "" || len(pkgConfig.GenerateOpts.GitPath) == 0 {
 		flagsValid = false
 		message.Warn("Git Path is empty or invalid")
 	}

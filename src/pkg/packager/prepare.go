@@ -36,8 +36,39 @@ import (
 // imageMap is a map of image/boolean pairs.
 type imageMap map[string]bool
 
+// FindImagesWithPackage iterates over a ZarfPackage object and attempts to parse images.
+func (p *Packager) FindImagesWithPackage() error {
+	message.Debug("Finding images for ZarfPackage")
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
+
+	images, err := p.findImages()
+	if err != nil {
+		return err
+	}
+
+	for i := range p.cfg.Pkg.Components {
+		p.cfg.Pkg.Components[i].Images = images[p.cfg.Pkg.Components[i].Name]
+	}
+
+	return nil
+}
+
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
+	cwd, err := os.Getwd()
+	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+		return nil, fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
+	}
+	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
+
+	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
+		return nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
+	}
+
+	return p.findImages()
+}
+
+func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 	repoHelmChartPath := p.cfg.FindImagesOpts.RepoHelmChartPath
 	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
 	whyImage := p.cfg.FindImagesOpts.Why
@@ -49,19 +80,12 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	cwd, err := os.Getwd()
 	if err != nil {
+		message.Debug("bad working dir")
 		return nil, err
 	}
 
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return nil, fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
-	}
-	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
-
-	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
-		return nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
-	}
-
 	if err := p.composeComponents(); err != nil {
+		message.Debug("bad compose")
 		return nil, err
 	}
 
@@ -71,7 +95,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	// After components are composed, template the active package
 	if err := p.fillActiveTemplate(); err != nil {
-		return nil, fmt.Errorf("unable to fill values in template: %w", err)
+		return nil, fmt.Errorf("unable to fill values in template: %s", err.Error())
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
@@ -90,7 +114,6 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
-
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
 			continue
