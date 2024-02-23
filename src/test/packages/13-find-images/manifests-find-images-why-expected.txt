@@ -1,6 +1,6 @@
 component: httpd-local
 manifest: simple-httpd-deployment
-resource: httpd-deployment
+resource:
 
 apiVersion: apps/v1
 kind: Deployment
@@ -21,3 +21,4 @@ spec:
         name: httpd
         ports:
         - containerPort: 80
+

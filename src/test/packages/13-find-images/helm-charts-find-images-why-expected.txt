@@ -1,6 +1,6 @@
 component: demo-helm-charts
 chart: podinfo-oci
-resource: podinfo-oci-service-test-wlxqz
+resource:
 
 apiVersion: v1
 kind: Pod
@@ -16,7 +16,7 @@ metadata:
     app.kubernetes.io/name: podinfo-oci
     app.kubernetes.io/version: 6.4.0
     helm.sh/chart: podinfo-6.4.0
-  name: podinfo-oci-service-test-wlxqz
+  name: podinfo-oci-service-test-[a-zA-Z0-9]+
 spec:
   containers:
   - command:
@@ -33,7 +33,7 @@ spec:
 
 component: demo-helm-charts
 chart: podinfo-git
-resource: podinfo-oci-service-test-wlxqz
+resource:
 
 apiVersion: v1
 kind: Pod
@@ -49,7 +49,7 @@ metadata:
     app.kubernetes.io/name: podinfo-oci
     app.kubernetes.io/version: 6.4.0
     helm.sh/chart: podinfo-6.4.0
-  name: podinfo-oci-service-test-wlxqz
+  name: podinfo-oci-service-test-[a-zA-Z0-9]+
 spec:
   containers:
   - command:
@@ -66,7 +66,7 @@ spec:
 
 component: demo-helm-charts
 chart: podinfo-git
-resource: podinfo-git-service-test-gtb1y
+resource:
 
 apiVersion: v1
 kind: Pod
@@ -82,7 +82,7 @@ metadata:
     app.kubernetes.io/name: podinfo-git
     app.kubernetes.io/version: 6.4.0
     helm.sh/chart: podinfo-6.4.0
-  name: podinfo-git-service-test-gtb1y
+  name: podinfo-git-service-test-[a-zA-Z0-9]+
 spec:
   containers:
   - command:
@@ -99,7 +99,7 @@ spec:
 
 component: demo-helm-charts
 chart: podinfo-repo
-resource: podinfo-oci-service-test-wlxqz
+resource:
 
 apiVersion: v1
 kind: Pod
@@ -115,7 +115,7 @@ metadata:
     app.kubernetes.io/name: podinfo-oci
     app.kubernetes.io/version: 6.4.0
     helm.sh/chart: podinfo-6.4.0
-  name: podinfo-oci-service-test-wlxqz
+  name: podinfo-oci-service-test-[a-zA-Z0-9]+
 spec:
   containers:
   - command:
@@ -132,7 +132,7 @@ spec:
 
 component: demo-helm-charts
 chart: podinfo-repo
-resource: podinfo-git-service-test-gtb1y
+resource:
 
 apiVersion: v1
 kind: Pod
@@ -148,7 +148,7 @@ metadata:
     app.kubernetes.io/name: podinfo-git
     app.kubernetes.io/version: 6.4.0
     helm.sh/chart: podinfo-6.4.0
-  name: podinfo-git-service-test-gtb1y
+  name: podinfo-git-service-test-[a-zA-Z0-9]+
 spec:
   containers:
   - command:
@@ -165,7 +165,7 @@ spec:
 
 component: demo-helm-charts
 chart: podinfo-repo
-resource: cool-release-name-podinfo-service-test-aabrx
+resource:
 
 apiVersion: v1
 kind: Pod
@@ -181,7 +181,7 @@ metadata:
     app.kubernetes.io/name: cool-release-name-podinfo
     app.kubernetes.io/version: 6.4.0
     helm.sh/chart: podinfo-6.4.0
-  name: cool-release-name-podinfo-service-test-aabrx
+  name: cool-release-name-podinfo-service-test-[a-zA-Z0-9]+
 spec:
   containers:
   - command:
