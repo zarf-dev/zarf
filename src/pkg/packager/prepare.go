@@ -163,10 +163,11 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 			// Check if the --why flag is set
 			if whyImage != "" {
-				_, err := p.findWhyResources(resources, whyImage, component.Name, chart.Name, true)
+				whyResourcesChart, err := findWhyResources(resources, whyImage, component.Name, chart.Name, true)
 				if err != nil {
 					message.WarnErrf(err, "Error finding why resources for chart %s: %s", chart.Name, err.Error())
 				}
+				whyResources = append(whyResources, whyResourcesChart...)
 			}
 		}
 
@@ -206,10 +207,11 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 				// Check if the --why flag is set and if it is process the manifests
 				if whyImage != "" {
-					_, err := p.findWhyResources(resources, whyImage, component.Name, manifest.Name, false)
+					whyResourcesManifest, err := findWhyResources(resources, whyImage, component.Name, manifest.Name, false)
 					if err != nil {
 						message.WarnErrf(err, "Error finding why resources for manifest %s: %s", manifest.Name, err.Error())
 					}
+					whyResources = append(whyResources, whyResourcesManifest...)
 				}
 			}
 		}
@@ -286,9 +288,14 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		}
 	}
 
-	if whyImage == "" {
-		fmt.Println(componentDefinition)
+	if whyImage != "" {
+		if len(whyResources) == 0 {
+			message.Warnf("image %q not found in any charts or manifests", whyImage)
+		}
+		return nil, nil
 	}
+
+	fmt.Println(componentDefinition)
 
 	// Return to the original working directory
 	if err := os.Chdir(cwd); err != nil {
@@ -376,12 +383,12 @@ func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured
 	return matchedImages, maybeImages, nil
 }
 
-func (p *Packager) findWhyResources(resources []*unstructured.Unstructured, whyImage, componentName, resourceName string, isChart bool) ([]string, error) {
+func findWhyResources(resources []*unstructured.Unstructured, whyImage, componentName, resourceName string, isChart bool) ([]string, error) {
 	foundWhyResources := []string{}
 	for _, resource := range resources {
 		bytes, err := resource.MarshalJSON()
 		if err != nil {
-			return foundWhyResources, fmt.Errorf("could not marshal resource: %w", err)
+			return nil, err
 		}
 		json := string(bytes)
 		resourceTypeKey := "manifest"
@@ -392,15 +399,14 @@ func (p *Packager) findWhyResources(resources []*unstructured.Unstructured, whyI
 		if strings.Contains(json, whyImage) {
 			yamlResource, err := yaml.Marshal(resource.Object)
 			if err != nil {
-				return foundWhyResources, fmt.Errorf("could not marshal resource: %w", err)
+				return nil, err
 			}
-			fmt.Printf("component: %s\n%s: %s\nresource: %s\n\n%s\n", componentName, resourceTypeKey, resourceName, resource.GetName(), string(yamlResource))
+			fmt.Printf("component: %s\n%s: %s\nresource:\n\n%s\n", componentName, resourceTypeKey, resourceName, string(yamlResource))
 			foundWhyResources = append(foundWhyResources, resourceName)
 		}
 	}
 	return foundWhyResources, nil
 }
-
 // BuildImageMap looks for init container, ephemeral and regular container images.
 func buildImageMap(images imageMap, pod corev1.PodSpec) imageMap {
 	for _, container := range pod.InitContainers {
