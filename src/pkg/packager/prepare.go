@@ -43,6 +43,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	imagesMap := make(map[string][]string)
 	erroredCharts := []string{}
 	erroredCosignLookups := []string{}
+	whyResources := []string{}
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -407,6 +408,7 @@ func findWhyResources(resources []*unstructured.Unstructured, whyImage, componen
 	}
 	return foundWhyResources, nil
 }
+
 // BuildImageMap looks for init container, ephemeral and regular container images.
 func buildImageMap(images imageMap, pod corev1.PodSpec) imageMap {
 	for _, container := range pod.InitContainers {
