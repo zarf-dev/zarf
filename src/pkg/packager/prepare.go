@@ -387,22 +387,18 @@ func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured
 func findWhyResources(resources []*unstructured.Unstructured, whyImage, componentName, resourceName string, isChart bool) ([]string, error) {
 	foundWhyResources := []string{}
 	for _, resource := range resources {
-		bytes, err := resource.MarshalJSON()
+		bytes, err := yaml.Marshal(resource.Object)
 		if err != nil {
 			return nil, err
 		}
-		json := string(bytes)
+		yaml := string(bytes)
 		resourceTypeKey := "manifest"
 		if isChart {
 			resourceTypeKey = "chart"
 		}
 
-		if strings.Contains(json, whyImage) {
-			yamlResource, err := yaml.Marshal(resource.Object)
-			if err != nil {
-				return nil, err
-			}
-			fmt.Printf("component: %s\n%s: %s\nresource:\n\n%s\n", componentName, resourceTypeKey, resourceName, string(yamlResource))
+		if strings.Contains(yaml, whyImage) {
+			fmt.Printf("component: %s\n%s: %s\nresource:\n\n%s\n", componentName, resourceTypeKey, resourceName, yaml)
 			foundWhyResources = append(foundWhyResources, resourceName)
 		}
 	}
