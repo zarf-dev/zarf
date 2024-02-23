@@ -6,6 +6,8 @@ package transform
 
 import (
 	"fmt"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/google/go-containerregistry/pkg/crane"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -64,8 +66,24 @@ func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string,
 // ParseImageRef parses a source reference into an Image struct
 func ParseImageRef(srcReference string) (out Image, err error) {
 	if IsTarball(srcReference) {
+		imgDesc, err := crane.Load(srcReference)
+		if err != nil {
+			return out, fmt.Errorf("unable to parse image ref from tarball %s: %s", srcReference, err.Error())
+		}
+		digest, err := imgDesc.Digest()
+		if err != nil {
+			return out, fmt.Errorf("unable to get digest from tarball %s: %s", srcReference, err.Error())
+		}
+		imgManifest, err := imgDesc.Manifest()
+		if err != nil {
+			return out, fmt.Errorf("unable to get manifest from tarball %s: %s", srcReference, err.Error())
+		}
+
+		out.Digest = digest.String()
+		for k, v := range imgManifest.Annotations {
+			message.Debugf("Annotation: %s: %s", k, v)
+		}
 		out.Host = "docker.io"
-		out.Name = strings.TrimSuffix(srcReference, ".tar")
 		out.Path = fmt.Sprintf("%s/%s/%s", out.Host, "library", out.Name)
 		out.Reference = srcReference
 	} else {
