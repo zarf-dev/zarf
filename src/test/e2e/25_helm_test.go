@@ -63,7 +63,7 @@ func testHelmChartsExample(t *testing.T) {
 	// expect to fail as ghcr.io is overriden and the expected final image doesn't exist but the override works well based on the error message in the output
 	stdOut, stdErr, err = e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io=localhost:555/noway", "--tmpdir", tmpdir, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, string(stdErr), "localhost:555")
+	require.Contains(t, string(stdErr), "localhost:555/noway")
 
 	// Create a test package (with a registry override (host+subpath to host) to test that as well)
 	// works same as the above failing test
