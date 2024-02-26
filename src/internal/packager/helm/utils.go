@@ -64,7 +64,7 @@ func (h *Helm) parseChartValues() (chartutil.Values, error) {
 func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) error {
 	// Initialize helm SDK
 	actionConfig := new(action.Configuration)
-	// Set the setings for the helm SDK
+	// Set the settings for the helm SDK
 	h.settings = cli.New()
 
 	// Set the namespace for helm

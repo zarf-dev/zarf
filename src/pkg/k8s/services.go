@@ -78,7 +78,7 @@ func (k *K8s) GetServices(namespace string) (*corev1.ServiceList, error) {
 
 // GetServicesByLabel returns a list of matched services given a label and value.  To search all namespaces, pass "" in the namespace arg.
 func (k *K8s) GetServicesByLabel(namespace, label, value string) (*corev1.ServiceList, error) {
-	// Creat the selector and add the requirement
+	// Create the selector and add the requirement
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: Labels{
 			label: value,
@@ -91,7 +91,7 @@ func (k *K8s) GetServicesByLabel(namespace, label, value string) (*corev1.Servic
 
 // GetServicesByLabelExists returns a list of matched services given a label.  To search all namespaces, pass "" in the namespace arg.
 func (k *K8s) GetServicesByLabelExists(namespace, label string) (*corev1.ServiceList, error) {
-	// Creat the selector and add the requirement
+	// Create the selector and add the requirement
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{{
 			Key:      label,
