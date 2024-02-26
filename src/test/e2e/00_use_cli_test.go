@@ -255,8 +255,8 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, "busybox:latest", "Busybox image should be found as long as helm chart doesn't error")
 
 		path := filepath.Join("examples", "manifests")
-		stdOut, _, err = e2e.Zarf("prepare", "find-images", path, "--deploy-set", "httpd_version=3.19")
+		stdOut, _, err = e2e.Zarf("prepare", "find-images", path, "--deploy-set", "redis_enabled=false")
 		require.NoError(t, err)
-		require.Contains(t, stdOut, "httpd:alpine3.19", "Should contain the templated image from manifests")
+		require.Contains(t, stdOut, "redis:7.0.7", "Should contain the templated image from manifests")
 	})
 }

@@ -1,3 +1,6 @@
+redis:
+  enabled: ###ZARF_VAR_REDIS_ENABLED###
+
 ui:
   color: "#0d133d"
   message: "greetings from podinfo (as deployed by Zarf)"

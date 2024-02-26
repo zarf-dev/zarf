@@ -13,7 +13,7 @@ spec:
         app: httpd
     spec:
       containers:
-        - name: httpd
-          image: httpd:alpine###ZARF_VAR_HTTPD_VERSION###
-          ports:
-            - containerPort: 80
+      - name: httpd
+        image: httpd:alpine3.18
+        ports:
+          - containerPort: 80
