@@ -42,10 +42,7 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 
-		if err := zoci.CopyPackage(ctx, srcRemote, dstRemote, config.CommonOptions.OCIConcurrency); err != nil {
-			return err
-		}
-		return nil
+		return zoci.CopyPackage(ctx, srcRemote, dstRemote, config.CommonOptions.OCIConcurrency)
 	}
 
 	if p.cfg.CreateOpts.IsSkeleton {
