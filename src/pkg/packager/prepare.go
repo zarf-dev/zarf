@@ -55,6 +55,16 @@ func (p *Packager) FindImagesWithPackage() error {
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		// Return to the original working directory
+		if err := os.Chdir(cwd); err != nil {
+			message.Warnf("Unable to return to the original working directory: %s", err.Error())
+		}
+	}()
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return nil, fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
 	}
@@ -76,11 +86,6 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 	erroredCharts := []string{}
 	erroredCosignLookups := []string{}
 	whyResources := []string{}
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
 
 	if err := p.composeComponents(); err != nil {
 		return nil, err
@@ -361,11 +366,6 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 	}
 
 	fmt.Println(componentDefinition)
-
-	// Return to the original working directory
-	if err := os.Chdir(cwd); err != nil {
-		return nil, err
-	}
 
 	if len(erroredCharts) > 0 || len(erroredCosignLookups) > 0 {
 		errMsg := ""
