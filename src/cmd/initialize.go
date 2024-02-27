@@ -22,6 +22,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/spf13/cobra"
 )
@@ -180,8 +181,8 @@ func init() {
 
 	// Init package variable defaults that are non-zero values
 	// NOTE: these are not in common.setDefaults so that zarf tools update-creds does not erroneously update values back to the default
-	v.SetDefault(common.VInitGitPushUser, config.ZarfGitPushUser)
-	v.SetDefault(common.VInitRegistryPushUser, config.ZarfRegistryPushUser)
+	v.SetDefault(common.VInitGitPushUser, types.ZarfGitPushUser)
+	v.SetDefault(common.VInitRegistryPushUser, types.ZarfRegistryPushUser)
 
 	// Init package set variable flags
 	initCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdInitFlagSet)
