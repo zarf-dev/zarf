@@ -56,7 +56,7 @@ func runAction(cfg *types.PackagerConfig, defaultCfg types.ZarfComponentActionDe
 			return err
 		}
 
-		// Mute the output becuase it will be noisy.
+		// Mute the output because it will be noisy.
 		t := true
 		action.Mute = &t
 
