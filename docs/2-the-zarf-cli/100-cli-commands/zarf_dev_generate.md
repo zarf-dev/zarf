@@ -18,7 +18,7 @@ zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --ve
 ```
       --gitPath string            Relative path to the chart in the git repository
   -h, --help                      help for generate
-      --output-directory string   Output directory for the generated zarf.yaml
+      --output-directory string   Output directory for the generated zarf.yaml (default "./")
       --url string                URL to the source git repository
       --version string            The Version of the chart to use
 ```
