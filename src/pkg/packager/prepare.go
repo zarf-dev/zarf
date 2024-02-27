@@ -129,6 +129,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate template values")
 		}
+		// Adding these so the default builtin values exist in case any helm charts rely on them
 		registryInfo, err := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}.FillInEmptyValues()
 		if err != nil {
 			return nil, err
