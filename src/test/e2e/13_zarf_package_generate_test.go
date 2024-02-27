@@ -5,8 +5,10 @@
 package test
 
 import (
+	"path/filepath"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
@@ -37,10 +39,12 @@ func TestZarfDevGenerate(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 
 		zarfPackage := types.ZarfPackage{}
-		err = utils.ReadYaml(tmpDir+"/zarf.yaml", &zarfPackage)
+		packageLocation := filepath.Join(tmpDir, layout.ZarfYAML)
+		err = utils.ReadYaml(packageLocation, &zarfPackage)
 		require.NoError(t, err)
 		require.Equal(t, zarfPackage.Components[0].Charts[0].URL, url)
 		require.Equal(t, zarfPackage.Components[0].Charts[0].Version, version)
 		require.Equal(t, zarfPackage.Components[0].Charts[0].GitPath, gitPath)
+		require.NotEmpty(t, zarfPackage.Components[0].Images)
 	})
 }
