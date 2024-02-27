@@ -191,7 +191,7 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 		name := node.ImportName()
 
 		// 'found' and 'index' are parallel slices. Each element in found[x] corresponds to pkg[index[x]]
-		// found[0] and pkg[index[0]] would be the same componenet for example
+		// found[0] and pkg[index[0]] would be the same component for example
 		found := []types.ZarfComponent{}
 		index := []int{}
 		for i, component := range pkg.Components {

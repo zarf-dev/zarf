@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	// veryify that OCISource implements PackageSource
+	// verify that OCISource implements PackageSource
 	_ PackageSource = (*OCISource)(nil)
 )
 
