@@ -131,9 +131,17 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		}
 		registryInfo, err := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}.FillInEmptyValues()
 		if err != nil {
-			return nil, fmt.Errorf("unable to set registry secret")
+			return nil, err
 		}
-		values.SetState(&types.ZarfState{RegistryInfo: registryInfo})
+		gitServer, err := types.GitServerInfo{}.FillInEmptyValues()
+		if err != nil {
+			return nil, err
+		}
+		artifactServer := types.ArtifactServerInfo{}.FillInEmptyValues()
+		values.SetState(&types.ZarfState{
+			RegistryInfo:   registryInfo,
+			GitServer:      gitServer,
+			ArtifactServer: artifactServer})
 		for _, chart := range component.Charts {
 
 			helmCfg := helm.New(
