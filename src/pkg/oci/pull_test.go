@@ -19,6 +19,7 @@ import (
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
 )
 
@@ -72,7 +73,7 @@ func (suite *OCISuite) TestPublishFailNoTitle() {
 	annotations := map[string]string{
 		ocispec.AnnotationDescription: "No title",
 	}
-	_, err := suite.remote.PushManifestConfigFromMetadata(ctx, annotations, ocispec.MediaTypeImageConfig)
+	_, err := suite.remote.CreateAndPushManifestConfig(ctx, annotations, ocispec.MediaTypeImageConfig)
 	suite.Error(err)
 }
 
@@ -85,7 +86,7 @@ func (suite *OCISuite) TestPublishSuccess() {
 		ocispec.AnnotationDescription: "description",
 	}
 
-	_, err := suite.remote.PushManifestConfigFromMetadata(ctx, annotations, ocispec.MediaTypeImageConfig)
+	_, err := suite.remote.CreateAndPushManifestConfig(ctx, annotations, ocispec.MediaTypeImageConfig)
 	suite.NoError(err)
 
 }
@@ -100,7 +101,7 @@ func (suite *OCISuite) TestPublishForReal() {
 		ocispec.AnnotationDescription: "description",
 	}
 
-	manifestConfigDesc, err := suite.remote.PushManifestConfigFromMetadata(ctx, annotations, ocispec.MediaTypeLayoutHeader)
+	manifestConfigDesc, err := suite.remote.CreateAndPushManifestConfig(ctx, annotations, ocispec.MediaTypeLayoutHeader)
 	suite.NoError(err)
 
 	tempDir := suite.T().TempDir()
@@ -110,12 +111,20 @@ func (suite *OCISuite) TestPublishForReal() {
 	suite.NoError(err)
 
 	desc, err := src.Add(ctx, "small-file", ocispec.MediaTypeEmptyJSON, ociSmallFile)
-	fmt.Printf("this is the desc %q\n", desc.Digest.String())
 	suite.NoError(err)
 	descs := []ocispec.Descriptor{desc}
 	manifestDesc, err := suite.remote.CreateAndPushManifest(ctx, src, descs, manifestConfigDesc, annotations)
 	suite.NoError(err)
-	fmt.Println(manifestDesc)
+	publishedDesc, err := oras.Copy(ctx, src, manifestDesc.Digest.String(), suite.remote.Repo(), "", suite.remote.GetDefaultCopyOpts())
+	suite.NoError(err)
+	fmt.Printf("manifest descriptor %s", publishedDesc.Digest.String())
+	manifest, err := suite.remote.FetchManifest(ctx, manifestDesc)
+	fmt.Printf("this is the manifest %v", manifest)
+	suite.NoError(err)
+
+	// err = suite.remote.UpdateIndex(ctx, "0.0.1", manifestDesc)
+	// suite.NoError(err)
+
 }
 
 func TestOCI(t *testing.T) {

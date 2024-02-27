@@ -74,6 +74,8 @@ func (o *OrasRemote) CreateAndPushManifest(ctx context.Context, src *file.Store,
 	if err = src.Tag(ctx, root, root.Digest.String()); err != nil {
 		return ocispec.Descriptor{}, err
 	}
+	// oras.Copy(ctx, src, root.Digest.String(), r.Repo(), "", copyOpts)
+	// oras.Copy(ctx,src, o.repo,"", o.GetDefaultCopyOpts())
 
 	return root, nil
 }
