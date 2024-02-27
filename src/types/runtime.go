@@ -88,6 +88,7 @@ type ZarfPullOptions struct {
 
 // ZarfGenerateOptions tracks the user-defined options during package generation.
 type ZarfGenerateOptions struct {
+	Name   string `json:"name" jsonschema:"description=Name of the package being generated"`
 	URL     string `json:"url" jsonschema:"description=URL to the source git repository"`
 	Version string `json:"version" jsonschema:"description=Version of the chart to use"`
 	GitPath string `json:"gitPath" jsonschema:"description=Relative path to the chart in the git repository"`

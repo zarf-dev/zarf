@@ -16,14 +16,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -70,70 +68,31 @@ var devGenerateCmd = &cobra.Command{
 	Short:   "[beta] Use to generate either an example package or a package from resources",
 	Example: "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo",
 	Run: func(cmd *cobra.Command, args []string) {
-		spinner := message.NewProgressSpinner("Generating package with name %s", args[0])
+		pkgConfig.GenerateOpts.Name = args[0]
+		spinner := message.NewProgressSpinner("Generating package with name: %s", pkgConfig.GenerateOpts.Name)
 		if !validateDevGenerateFlags() {
 			message.Fatal(nil, "One or more flags are missing or invalid")
 		}
 
-		newComponent := []types.ZarfComponent{{
-			Name:     args[0],
-			Required: true,
-			Charts: []types.ZarfChart{
-				{
-					Name:      args[0],
-					Version:   pkgConfig.GenerateOpts.Version,
-					Namespace: args[0],
-					URL:       pkgConfig.GenerateOpts.URL,
-					GitPath:   pkgConfig.GenerateOpts.GitPath,
-				},
-			},
-			//TODO: findimages logic (should have images and cosign signature)
-			// Images: []string{""},
-		}}
-
-		newPkg := pkgConfig.Pkg
-		newPkg.Kind = "ZarfPackageConfig"
-		newPkg.Metadata.Name = args[0]
-		newPkg.Components = append(newComponent, newPkg.Components...)
-		pkgConfig.Pkg = newPkg
-
-		pkgConfig.CreateOpts.BaseDir = "."
-		pkgConfig.FindImagesOpts.RepoHelmChartPath = pkgConfig.GenerateOpts.GitPath
-
-		v := common.GetViper()
-		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
-			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
-
-		// Configure the packager
+		// Configure and Instantiate the packager
+		pkgConfig = packager.UpdatePackageConfig(&pkgConfig)
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
+		// Update the Package with Images
 		if err := pkgClient.FindImagesWithPackage(); err != nil {
 			message.WarnErr(err, "Unable to find images for the package")
 		}
 
+		// Validate the package
 		if err := validate.Run(pkgConfig.Pkg); err != nil {
 			message.Fatalf(err, err.Error())
 		}
 
-		outputDirectory := pkgConfig.GenerateOpts.Output
-		if _, err := os.Stat(outputDirectory); os.IsNotExist(err) {
-			outputDirectory = "."
-			message.Warn("Directory does not exist: \"" + outputDirectory + "\". Using current directory instead.")
-		}
+		// Write the generated zarf.yaml
+		packager.WriteGeneratedZarfPackage(&pkgConfig)
 
-		packageLocation := filepath.Join(outputDirectory, layout.ZarfYAML)
-		if _, err := os.Stat(packageLocation); err == nil {
-			message.Warn("A " + layout.ZarfYAML + " already exists in the directory: \"" + outputDirectory + "\".")
-			packageLocation = filepath.Join(outputDirectory, "zarf-"+args[0]+".yaml")
-		}
-
-		err := utils.WriteYaml(packageLocation, pkgConfig.Pkg, 0644)
-		if err != nil {
-			message.Fatalf(err, err.Error())
-		}
-
-		spinner.Successf("Package generated successfully! Package saved to %s", packageLocation)
+		spinner.Successf("Package generated successfully!")
 	},
 }
 
