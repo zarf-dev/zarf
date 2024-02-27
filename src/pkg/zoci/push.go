@@ -67,7 +67,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 		return err
 	}
 
-	total += root.Size + manifestConfigDesc.Size
+	total += root.Size
 
 	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", r.Repo().Reference.Repository, r.Repo().Reference.Reference))
 	r.Transport.ProgressBar = progressBar
@@ -91,7 +91,6 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 }
 
 func annotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {
-
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,
