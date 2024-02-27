@@ -79,12 +79,10 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		message.Debug("bad working dir")
 		return nil, err
 	}
 
 	if err := p.composeComponents(); err != nil {
-		message.Debug("bad compose")
 		return nil, err
 	}
 
