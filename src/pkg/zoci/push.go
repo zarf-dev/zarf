@@ -58,7 +58,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 	// push the manifest config
 	// since this config is so tiny, and the content is not used again
 	// it is not logged to the progress, but will error if it fails
-	manifestConfigDesc, err := r.PushManifestConfigFromMetadata(ctx, annotations, ZarfConfigMediaType)
+	manifestConfigDesc, err := r.CreateAndPushManifestConfig(ctx, annotations, ZarfConfigMediaType)
 	if err != nil {
 		return err
 	}

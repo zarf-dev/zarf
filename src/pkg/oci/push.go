@@ -39,8 +39,8 @@ func (o *OrasRemote) PushLayer(ctx context.Context, b []byte, mediaType string) 
 	return &desc, o.repo.Push(ctx, desc, bytes.NewReader(b))
 }
 
-// PushManifestConfigFromMetadata pushes the manifest config with metadata to the remote repository.
-func (o *OrasRemote) PushManifestConfigFromMetadata(ctx context.Context, annotations map[string]string, configMediaType string) (*ocispec.Descriptor, error) {
+// CreateAndPushManifestConfig pushes the manifest config with metadata to the remote repository.
+func (o *OrasRemote) CreateAndPushManifestConfig(ctx context.Context, annotations map[string]string, configMediaType string) (*ocispec.Descriptor, error) {
 	if annotations[ocispec.AnnotationTitle] == "" {
 		return nil, fmt.Errorf("invalid annotations: please include value for %q", ocispec.AnnotationTitle)
 	}
