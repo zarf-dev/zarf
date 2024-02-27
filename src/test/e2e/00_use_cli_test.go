@@ -254,8 +254,8 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, internalRegistryImage, "registry image should be found with registry url")
 		require.Contains(t, stdOut, "busybox:latest", "Busybox image should be found as long as helm chart doesn't error")
 
-		path := filepath.Join("examples", "manifests")
-		stdOut, _, err = e2e.Zarf("prepare", "find-images", path, "--deploy-set", "redis_enabled=false")
+		path := filepath.Join("examples", "helm-charts")
+		stdOut, _, err = e2e.Zarf("prepare", "find-images", path, "--deploy-set", "redis_enabled=true")
 		require.NoError(t, err)
 		require.Contains(t, stdOut, "redis:7.0.7", "Should contain the templated image from manifests")
 	})
