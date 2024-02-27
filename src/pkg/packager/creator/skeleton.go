@@ -48,11 +48,10 @@ func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg 
 	pkg.Metadata.Architecture = "skeleton"
 
 	// Compose components into a single zarf.yaml file
-	pkg, composeWarnings, err := ComposeComponents(pkg, sc.createOpts.Flavor)
+	pkg, warnings, err = ComposeComponents(pkg, sc.createOpts.Flavor)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
-	warnings = append(warnings, composeWarnings...)
 
 	pkg.Components, err = sc.processExtensions(pkg.Components, dst)
 	if err != nil {
