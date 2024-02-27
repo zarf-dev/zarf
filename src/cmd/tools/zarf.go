@@ -182,7 +182,7 @@ var clearCacheCmd = &cobra.Command{
 var downloadInitCmd = &cobra.Command{
 	Use:   "download-init",
 	Short: lang.CmdToolsDownloadInitShort,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		url := zoci.GetInitPackageURL(config.CLIVersion)
 
 		remote, err := zoci.NewRemote(url, oci.PlatformForArch(config.GetArch()))
@@ -223,7 +223,7 @@ var generateKeyCmd = &cobra.Command{
 	Use:     "gen-key",
 	Aliases: []string{"key"},
 	Short:   lang.CmdToolsGenKeyShort,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// Utility function to prompt the user for the password to the private key
 		passwordFunc := func(bool) ([]byte, error) {
 			// perform the first prompt

@@ -29,7 +29,7 @@ func (z ZarfHandler) WithGroup(_ string) slog.Handler {
 
 // Handle prints the respective logging function in zarf
 // This function ignores any key pairs passed through the record
-func (z ZarfHandler) Handle(ctx context.Context, record slog.Record) error {
+func (z ZarfHandler) Handle(_ context.Context, record slog.Record) error {
 	level := record.Level
 	message := record.Message
 

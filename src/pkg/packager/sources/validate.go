@@ -157,7 +157,7 @@ func pathCheckMap(dir string) (map[string]bool, error) {
 			return nil
 		}
 		filepathMap[path] = false
-		return nil
+		return err
 	})
 	return filepathMap, err
 }
