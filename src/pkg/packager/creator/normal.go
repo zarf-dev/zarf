@@ -295,13 +295,14 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackag
 		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
 	} else {
 		// Use the output path if the user specified it.
-		packageName := filepath.Join(pc.createOpts.Output, sources.GetPackageName(*pkg))
+		packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(pkg, pc.createOpts.IsSkeleton), sources.PkgSuffix(pkg.Metadata.Uncompressed))
+		tarballPath := filepath.Join(pc.createOpts.Output, packageName)
 
 		// Try to remove the package if it already exists.
-		_ = os.Remove(packageName)
+		_ = os.Remove(tarballPath)
 
 		// Create the package tarball.
-		if err := dst.ArchivePackage(packageName, pc.createOpts.MaxPackageSizeMB); err != nil {
+		if err := dst.ArchivePackage(tarballPath, pc.createOpts.MaxPackageSizeMB); err != nil {
 			return fmt.Errorf("unable to archive package: %w", err)
 		}
 	}

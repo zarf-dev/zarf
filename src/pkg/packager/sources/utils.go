@@ -125,7 +125,7 @@ func NameFromMetadata(pkg *types.ZarfPackage, isSkeleton bool) string {
 	}
 
 	if pkg.Build.Differential {
-		name = fmt.Sprintf("%s-differential-%s", name, pkg.Metadata.Version)
+		name = fmt.Sprintf("%s-%s-differential-%s", name, pkg.Build.DifferentialPackageVersion, pkg.Metadata.Version)
 	} else if pkg.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, pkg.Metadata.Version)
 	}
@@ -134,32 +134,17 @@ func NameFromMetadata(pkg *types.ZarfPackage, isSkeleton bool) string {
 }
 
 // GetInitPackageName returns the formatted name of the init package.
-func GetInitPackageName(arch string) string {
-	if arch == "" {
-		// No package has been loaded yet so lookup GetArch() with no package info
-		arch = config.GetArch()
-	}
+func GetInitPackageName() string {
+	// No package has been loaded yet so lookup GetArch() with no package info
+	arch := config.GetArch()
 	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, config.CLIVersion)
 }
 
-// GetPackageName returns the formatted name of the package.
-func GetPackageName(pkg types.ZarfPackage) string {
-	if pkg.IsInitConfig() {
-		return GetInitPackageName(pkg.Metadata.Architecture)
+// PkgSuffix returns a package suffix based on whether it is uncompressed or not.
+func PkgSuffix(uncompressed bool) (suffix string) {
+	suffix = ".tar.zst"
+	if uncompressed {
+		suffix = ".tar"
 	}
-
-	packageName := pkg.Metadata.Name
-	suffix := "tar.zst"
-	if pkg.Metadata.Uncompressed {
-		suffix = "tar"
-	}
-
-	packageFileName := fmt.Sprintf("%s%s-%s", config.ZarfPackagePrefix, packageName, pkg.Metadata.Architecture)
-	if pkg.Build.Differential {
-		packageFileName = fmt.Sprintf("%s-%s-differential-%s", packageFileName, pkg.Build.DifferentialPackageVersion, pkg.Metadata.Version)
-	} else if pkg.Metadata.Version != "" {
-		packageFileName = fmt.Sprintf("%s-%s", packageFileName, pkg.Metadata.Version)
-	}
-
-	return fmt.Sprintf("%s.%s", packageFileName, suffix)
+	return suffix
 }
