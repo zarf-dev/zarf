@@ -38,6 +38,7 @@ const (
 // Values during setup of the initial zarf state
 const (
 	ZarfGeneratedPasswordLen               = 24
+	ZarfGeneratedSecretLen                 = 48
 	ZarfInClusterContainerRegistryNodePort = 31999
 	ZarfRegistryPushUser                   = "zarf-push"
 	ZarfRegistryPullUser                   = "zarf-pull"
@@ -225,7 +226,7 @@ func (ri RegistryInfo) FillInEmptyValues() (RegistryInfo, error) {
 	}
 
 	if ri.Secret == "" {
-		if ri.Secret, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
+		if ri.Secret, err = helpers.RandomString(ZarfGeneratedSecretLen); err != nil {
 			return RegistryInfo{}, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 		}
 	}
