@@ -65,13 +65,13 @@ var devGenerateCmd = &cobra.Command{
 	Use:     "generate NAME",
 	Aliases: []string{"g"},
 	Args:    cobra.ExactArgs(1),
-	Short:   "[beta] Use to generate either an example package or a package from resources",
-	Example: "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo",
+	Short:   lang.CmdDevGenerateShort,
+	Example: lang.CmdDevGenerateExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.GenerateOpts.Name = args[0]
-		spinner := message.NewProgressSpinner("Generating package with name: %s", pkgConfig.GenerateOpts.Name)
+		spinner := message.NewProgressSpinner(lang.CmdDevGenerateNewMessage, pkgConfig.GenerateOpts.Name)
 		if !validateDevGenerateFlags() {
-			message.Fatal(nil, "One or more flags are missing or invalid")
+			message.Fatal(nil, lang.CmdDevGenerateInvalidFlagsErr)
 		}
 
 		// Configure and Instantiate the packager
@@ -81,7 +81,7 @@ var devGenerateCmd = &cobra.Command{
 
 		// Update the Package with Images
 		if err := pkgClient.FindImagesWithPackage(); err != nil {
-			message.WarnErr(err, "Unable to find images for the package")
+			message.WarnErr(err, lang.CmdDevGenerateFoundNoImagesErr)
 		}
 
 		// Validate the package
@@ -92,7 +92,7 @@ var devGenerateCmd = &cobra.Command{
 		// Write the generated zarf.yaml
 		packager.WriteGeneratedZarfPackage(&pkgConfig)
 
-		spinner.Successf("Package generated successfully!")
+		spinner.Successf(lang.CmdDevGenerateSuccess)
 	},
 }
 
