@@ -93,7 +93,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg t
 	if pc.createOpts.DifferentialPackagePath != "" {
 		pkg.Build.Differential = true
 
-		diffData, err := pc.loadDifferentialData()
+		diffData, err := loadDifferentialData(pc.createOpts.DifferentialPackagePath)
 		if err != nil {
 			return types.ZarfPackage{}, nil, err
 		}
