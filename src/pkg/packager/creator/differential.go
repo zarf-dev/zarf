@@ -30,7 +30,7 @@ func (pc *PackageCreator) loadDifferentialData() (diffData *types.DifferentialDa
 	defer os.RemoveAll(diffLayout.Base)
 
 	src, err := sources.New(&types.ZarfPackageOptions{
-		PackageSource: pc.createOpts.DifferentialData.DifferentialPackagePath,
+		PackageSource: pc.createOpts.DifferentialPackagePath,
 	})
 	if err != nil {
 		return nil, err
@@ -57,13 +57,11 @@ func (pc *PackageCreator) loadDifferentialData() (diffData *types.DifferentialDa
 		}
 	}
 
-	pc.createOpts.DifferentialData.DifferentialImages = allIncludedImagesMap
-	pc.createOpts.DifferentialData.DifferentialRepos = allIncludedReposMap
-	pc.createOpts.DifferentialData.DifferentialPackageVersion = diffPkg.Metadata.Version
-
-	diffData = &pc.createOpts.DifferentialData
-
-	return diffData, nil
+	return &types.DifferentialData{
+		DifferentialImages:         allIncludedImagesMap,
+		DifferentialRepos:          allIncludedReposMap,
+		DifferentialPackageVersion: diffPkg.Metadata.Version,
+	}, nil
 }
 
 // removeCopiesFromComponents removes any images and repos already present in the reference package components.

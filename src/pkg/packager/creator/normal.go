@@ -50,8 +50,8 @@ type PackageCreator struct {
 // NewPackageCreator returns a new PackageCreator.
 func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerConfig, cwd string) *PackageCreator {
 	// differentials are relative to the current working directory
-	if createOpts.DifferentialData.DifferentialPackagePath != "" {
-		createOpts.DifferentialData.DifferentialPackagePath = filepath.Join(cwd, createOpts.DifferentialData.DifferentialPackagePath)
+	if createOpts.DifferentialPackagePath != "" {
+		createOpts.DifferentialPackagePath = filepath.Join(cwd, createOpts.DifferentialPackagePath)
 	}
 
 	return &PackageCreator{createOpts, cfg}
@@ -90,13 +90,15 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg t
 	}
 
 	// If we are creating a differential package, remove duplicate images and repos.
-	if pc.createOpts.DifferentialData.DifferentialPackagePath != "" {
+	if pc.createOpts.DifferentialPackagePath != "" {
 		pkg.Build.Differential = true
 
 		diffData, err := pc.loadDifferentialData()
 		if err != nil {
 			return types.ZarfPackage{}, nil, err
 		}
+
+		pkg.Build.DifferentialPackageVersion = diffData.DifferentialPackageVersion
 
 		versionsMatch := diffData.DifferentialPackageVersion == pkg.Metadata.Version
 		if versionsMatch {
@@ -293,7 +295,7 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackag
 		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
 	} else {
 		// Use the output path if the user specified it.
-		packageName := filepath.Join(pc.createOpts.Output, sources.GetPackageName(*pkg, pc.createOpts.DifferentialData))
+		packageName := filepath.Join(pc.createOpts.Output, sources.GetPackageName(*pkg))
 
 		// Try to remove the package if it already exists.
 		_ = os.Remove(packageName)
