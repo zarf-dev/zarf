@@ -95,6 +95,7 @@ var devGenerateCmd = &cobra.Command{
 		newPkg.Kind = "ZarfPackageConfig"
 		newPkg.Metadata.Name = args[0]
 		newPkg.Components = append(newComponent, newPkg.Components...)
+		pkgConfig.Pkg = newPkg
 
 		pkgConfig.CreateOpts.BaseDir = "."
 		pkgConfig.FindImagesOpts.RepoHelmChartPath = pkgConfig.GenerateOpts.GitPath
@@ -107,36 +108,27 @@ var devGenerateCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Find all the images the package might need
-		//TODO: images are not found
 		if err := pkgClient.FindImagesWithPackage(); err != nil {
-			message.Fatalf(err, lang.CmdDevFindImagesErr, err.Error())
+			message.WarnErr(err, "Unable to find images for the package")
 		}
 
-		if err := validate.Run(newPkg); err != nil {
+		if err := validate.Run(pkgConfig.Pkg); err != nil {
 			message.Fatalf(err, err.Error())
 		}
 
-		directory := "./"
-		if pkgConfig.GenerateOpts.Output != "" {
-			output := pkgConfig.GenerateOpts.Output
-			if filepath.IsAbs(output) {
-				directory = output
-			} else {
-				directory = filepath.Join(directory, output)
-			}
-			if _, err := os.Stat(directory); os.IsNotExist(err) {
-				// TODO: create the directory?
-				message.Fatalf(err, "The directory %s does not exist", directory)
-			}
+		outputDirectory := pkgConfig.GenerateOpts.Output
+		if _, err := os.Stat(outputDirectory); os.IsNotExist(err) {
+			outputDirectory = "."
+			message.Warn("Directory does not exist: \"" + outputDirectory + "\". Using current directory instead.")
 		}
-		packageLocation := filepath.Join(directory, layout.ZarfYAML)
-		_, err := os.Stat(packageLocation)
-		if !os.IsNotExist(err) {
-			// TODO: prompt overwrite if exists?
-			packageLocation = "./zarf-" + newPkg.Metadata.Name + ".yaml"
+
+		packageLocation := filepath.Join(outputDirectory, layout.ZarfYAML)
+		if _, err := os.Stat(packageLocation); err == nil {
+			message.Warn("A " + layout.ZarfYAML + " already exists in the directory: \"" + outputDirectory + "\".")
+			packageLocation = filepath.Join(outputDirectory, "zarf-"+args[0]+".yaml")
 		}
-		err = utils.WriteYaml(packageLocation, newPkg, 0644)
+
+		err := utils.WriteYaml(packageLocation, pkgConfig.Pkg, 0644)
 		if err != nil {
 			message.Fatalf(err, err.Error())
 		}
@@ -393,7 +385,7 @@ func bindDevGenerateFlags(v *viper.Viper) {
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.URL, "url", "", "URL to the source git repository")
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.Version, "version", "", "The Version of the chart to use")
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.GitPath, "gitPath", "", "Relative path to the chart in the git repository")
-	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "", "Output directory for the generated zarf.yaml")
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "./", "Output directory for the generated zarf.yaml")
 
 }
 

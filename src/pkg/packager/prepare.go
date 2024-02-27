@@ -55,7 +55,6 @@ func (p *Packager) FindImagesWithPackage() error {
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
-	cwd, err := os.Getwd()
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return nil, fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
 	}
