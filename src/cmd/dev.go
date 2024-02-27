@@ -386,7 +386,7 @@ func bindDevGenerateFlags(v *viper.Viper) {
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.Version, "version", "", "The Version of the chart to use")
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.GitPath, "gitPath", "", "Relative path to the chart in the git repository")
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "./", "Output directory for the generated zarf.yaml")
-
+	generateFlags.StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 }
 
 func validateDevGenerateFlags() bool {
