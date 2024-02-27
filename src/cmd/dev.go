@@ -221,7 +221,7 @@ var devFindImagesCmd = &cobra.Command{
 	Short:   lang.CmdDevFindImagesShort,
 	Long:    lang.CmdDevFindImagesLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.CreateOpts.BaseDir = "."
+		common.SetBaseDirectory(args, &pkgConfig)
 
 		// Ensure uppercase keys from viper
 		v := common.GetViper()
