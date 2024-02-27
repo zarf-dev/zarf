@@ -10,6 +10,7 @@ universal_binaries:
 builds:
   - env:
       - CGO_ENABLED=0
+      - GOFLAGS="-buildmode=pie" # Building a Position Independent Executable (PIE)
     goos:
       - linux
       - darwin
