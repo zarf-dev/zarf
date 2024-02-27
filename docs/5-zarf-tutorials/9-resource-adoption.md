@@ -10,7 +10,7 @@ In this tutorial, you will create a test workload prior to initializing Zarf.  A
 
 ## Prerequisites
 
-- Prior to this tutorial you'll want to have a working cluster.  But unlike our other tutorials you **don't want Zarf initialzed**.
+- Prior to this tutorial you'll want to have a working cluster.  But unlike our other tutorials you **don't want Zarf initialized**.
 
 - Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
 
@@ -18,7 +18,7 @@ In this tutorial, you will create a test workload prior to initializing Zarf.  A
 [![Tutorial: Adopt Pre-Existing Resources to Manage with Zarf](../.images/tutorials/adoption_thumbnail.png)](https://youtu.be/r3TBpMXtuNY "Adopt Pre-Existing Resources to Manage with Zarf")
 
 ## Creating a Test Component
-We're going to use the manifests from the [Deploying a Retro Arcade](./3-deploy-a-retro-arcade.md) tutorial for this example.  So if you haven't yet, clone the Zarf repository, and navigate to the cloned repository's root directory. 
+We're going to use the manifests from the [Deploying a Retro Arcade](./3-deploy-a-retro-arcade.md) tutorial for this example.  So if you haven't yet, clone the Zarf repository, and navigate to the cloned repository's root directory.
 
 1. Create the dos-games namespace
 
