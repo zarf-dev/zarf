@@ -60,7 +60,7 @@ func (cfg *PackagerConfig) SetVariable(name, value string, sensitive bool, autoI
 }
 
 // CheckVariablePattern checks to see if a variable is set to a value that matches its pattern.
-func (cfg PackagerConfig) CheckVariablePattern(name, pattern string) error {
+func (cfg *PackagerConfig) CheckVariablePattern(name, pattern string) error {
 	if regexp.MustCompile(pattern).MatchString(cfg.SetVariableMap[name].Value) {
 		return nil
 	}
