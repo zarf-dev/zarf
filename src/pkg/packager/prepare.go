@@ -16,7 +16,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -50,28 +49,16 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return nil, fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
+		return nil, fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	if err := utils.ReadYaml(layout.ZarfYAML, &pkg); err != nil {
-		return nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
-	}
+	c := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
 
-	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-
-	pkg, composeWarnings, err := creator.ComposeComponents(pkg, p.cfg.CreateOpts.Flavor)
+	pkg, p.warnings, err = c.LoadPackageDefinition(p.layout)
 	if err != nil {
 		return nil, err
 	}
-	p.warnings = append(p.warnings, composeWarnings...)
-
-	// After components are composed, template the active package
-	pkg, templateWarnings, err := creator.FillActiveTemplate(pkg, p.cfg.CreateOpts.SetVariables)
-	if err != nil {
-		return nil, fmt.Errorf("unable to fill values in template: %w", err)
-	}
-	p.warnings = append(p.warnings, templateWarnings...)
 
 	for _, warning := range p.warnings {
 		message.Warn(warning)
