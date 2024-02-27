@@ -11,7 +11,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -80,8 +79,6 @@ func removeCopiesFromComponents(components []types.ZarfComponent, loadedDiffData
 			includeImage := imgTag == ":latest" || imgTag == ":stable" || imgTag == ":nightly"
 			if includeImage || !loadedDiffData.DifferentialImages[img] {
 				newImageList = append(newImageList, img)
-			} else {
-				message.Debugf("Image %s is already included in the differential package", img)
 			}
 		}
 
@@ -99,8 +96,6 @@ func removeCopiesFromComponents(components []types.ZarfComponent, loadedDiffData
 			includeRepo := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
 			if includeRepo || !loadedDiffData.DifferentialRepos[repoURL] {
 				newRepoList = append(newRepoList, repoURL)
-			} else {
-				message.Debugf("Repo %s is already included in the differential package", repoURL)
 			}
 		}
 
