@@ -104,27 +104,40 @@ func (suite *OCISuite) TestPublishForReal() {
 	manifestConfigDesc, err := suite.remote.CreateAndPushManifestConfig(ctx, annotations, ocispec.MediaTypeLayoutHeader)
 	suite.NoError(err)
 
+	fileContents := "here's what I'm putting in the file"
+
 	tempDir := suite.T().TempDir()
-	ociSmallFile := filepath.Join(tempDir, "oci-small-file")
-	os.WriteFile(ociSmallFile, []byte("{}"), 0644)
+	regularFileName := "i-am-what-i-am"
+	regularFilePath := filepath.Join(tempDir, regularFileName)
+	os.WriteFile(regularFilePath, []byte(fileContents), 0644)
 	src, err := file.New(tempDir)
 	suite.NoError(err)
 
-	desc, err := src.Add(ctx, "small-file", ocispec.MediaTypeEmptyJSON, ociSmallFile)
+	// I want to test that I am able to get a file by it's oci file name and see the contents
+
+	ociFileName := "small-file"
+	desc, err := src.Add(ctx, ociFileName, ocispec.MediaTypeEmptyJSON, regularFilePath)
 	suite.NoError(err)
 	descs := []ocispec.Descriptor{desc}
-	manifestDesc, err := suite.remote.CreateAndPushManifest(ctx, src, descs, manifestConfigDesc, annotations)
+	manifestDesc, err := suite.remote.PackAndTagManifest(ctx, src, descs, manifestConfigDesc, annotations)
 	suite.NoError(err)
 	publishedDesc, err := oras.Copy(ctx, src, manifestDesc.Digest.String(), suite.remote.Repo(), "", suite.remote.GetDefaultCopyOpts())
 	suite.NoError(err)
 	fmt.Printf("manifest descriptor %s", publishedDesc.Digest.String())
-	manifest, err := suite.remote.FetchManifest(ctx, manifestDesc)
-	fmt.Printf("this is the manifest %v", manifest)
+
+	err = suite.remote.UpdateIndex(ctx, "0.0.1", manifestDesc)
 	suite.NoError(err)
 
-	// err = suite.remote.UpdateIndex(ctx, "0.0.1", manifestDesc)
-	// suite.NoError(err)
+	otherTempDir := suite.T().TempDir()
+	dst, err := file.New(otherTempDir)
 
+	suite.NoError(err)
+	err = suite.remote.CopyToTarget(ctx, descs, dst, suite.remote.GetDefaultCopyOpts())
+	suite.NoError(err)
+	ociFile := filepath.Join(otherTempDir, ociFileName)
+	b, _ := os.ReadFile(ociFile)
+	contents := string(b)
+	suite.Equal(contents, fileContents)
 }
 
 func TestOCI(t *testing.T) {
