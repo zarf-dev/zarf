@@ -359,7 +359,6 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevGenerateShort            = "[beta] Use to generate either an example package or a package from resources"
 	CmdDevGenerateExample          = "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo"
 	CmdDevGenerateNewMessage       = "Generating package with name: %s"
-	CmdDevGenerateInvalidFlagsErr  = "One or more flags are missing or invalid"
 	CmdDevGenerateFoundNoImagesErr = "Unable to find images for the package"
 	CmdDevGenerateSuccess          = "Package generated successfully!"
 

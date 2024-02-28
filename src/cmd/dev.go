@@ -70,9 +70,6 @@ var devGenerateCmd = &cobra.Command{
 	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.GenerateOpts.Name = args[0]
 		spinner := message.NewProgressSpinner(lang.CmdDevGenerateNewMessage, pkgConfig.GenerateOpts.Name)
-		if !validateDevGenerateFlags() {
-			message.Fatal(nil, lang.CmdDevGenerateInvalidFlagsErr)
-		}
 
 		// Configure and Instantiate the packager
 		pkgConfig = packager.UpdatePackageConfig(&pkgConfig)
@@ -346,25 +343,8 @@ func bindDevGenerateFlags(_ *viper.Viper) {
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.GitPath, "gitPath", "", "Relative path to the chart in the git repository")
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "./", "Output directory for the generated zarf.yaml")
 	generateFlags.StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
-}
 
-func validateDevGenerateFlags() bool {
-	flagsValid := true
-
-	if pkgConfig.GenerateOpts.URL == "" || len(pkgConfig.GenerateOpts.URL) == 0 {
-		flagsValid = false
-		message.Warn("URL is empty or invalid")
-	}
-
-	if pkgConfig.GenerateOpts.Version == "" || len(pkgConfig.GenerateOpts.Version) == 0 {
-		flagsValid = false
-		message.Warn("Chart Version is empty or invalid")
-	}
-
-	if pkgConfig.GenerateOpts.GitPath == "" || len(pkgConfig.GenerateOpts.GitPath) == 0 {
-		flagsValid = false
-		message.Warn("Git Path is empty or invalid")
-	}
-
-	return flagsValid
+	devGenerateCmd.MarkFlagRequired("url")
+	devGenerateCmd.MarkFlagRequired("version")
+	devGenerateCmd.MarkFlagRequired("gitPath")
 }
