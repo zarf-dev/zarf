@@ -13,9 +13,6 @@ import (
 )
 
 // Manifest is a wrapper around the OCI manifest
-//
-// it includes the path to the index.json, oci-layout, and image blobs.
-// as well as a few helper functions for locating layers and calculating the size of the layers.
 type Manifest struct {
 	ocispec.Manifest
 }
