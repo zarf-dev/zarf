@@ -31,7 +31,7 @@ We also accept contributions from the community (regardless of where a particula
 - [ ] - Transfer project and additional repos (`zarf-ui`, `zarf-init-aws`, `setup-zarf`, etc.) to a new GitHub organization.
 - [ ] - Stabilize features after the consolidation of Q2 - clean up GA milestone in preparation for Q4.
 - [ ] - Flesh out the extension system for new features / experiments to be more smoothly integrated with Zarf.
-- [ ] - Make `zarf init` custom logic defineable in-schema and across all packages.
+- [ ] - Make `zarf init` custom logic definable in-schema and across all packages.
 
 ### Q4: Post Donation and General Availability
 
