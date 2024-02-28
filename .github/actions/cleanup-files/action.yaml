@@ -7,10 +7,17 @@ runs:
     - run: |
         lsblk -f
 
+        du -sh
         sudo rm -rf zarf-sbom /tmp/zarf-*
         sudo env "PATH=$PATH" CI=true make delete-packages
         sudo build/zarf tools clear-cache
         sudo docker system prune --all --force
+        du -sh
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf "/usr/local/share/boost"
+        sudo rm -rf "$RUNNER_TOOL_CACHE"
+        du -sh
 
         lsblk -f
       shell: bash
