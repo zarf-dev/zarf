@@ -21,10 +21,10 @@ func TestTarballImageReferences(t *testing.T) {
 		tb         = filepath.Join(tmpdir, fmt.Sprintf("zarf-package-tarball-image-reference-%s.tar.zst", e2e.Arch))
 	)
 
-	stdOut, stdErr, err := e2e.Zarf("package", "create", createPath, "--confirm", "--output", tmpdir, "--log-level", "info")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", createPath, "--confirm", "--output", tmpdir, "--log-level", "debug")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", tb, "--confirm", "--log-level", "info")
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", tb, "--confirm", "--log-level", "debug")
 	require.NoError(t, err, stdOut, stdErr)
 
 	e2e.CleanFiles(tb)

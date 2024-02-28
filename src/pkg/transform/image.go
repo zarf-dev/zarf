@@ -6,8 +6,9 @@ package transform
 
 import (
 	"fmt"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -66,26 +67,35 @@ func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string,
 // ParseImageRef parses a source reference into an Image struct
 func ParseImageRef(srcReference string) (out Image, err error) {
 	if IsTarball(srcReference) {
-		imgDesc, err := crane.Load(srcReference)
+		img, err := tarball.ImageFromPath(srcReference, nil)
 		if err != nil {
-			return out, fmt.Errorf("unable to parse image ref from tarball %s: %s", srcReference, err.Error())
+			return out, err
 		}
-		digest, err := imgDesc.Digest()
+		manifest, err := tarball.LoadManifest(func() (io.ReadCloser, error) {
+			file, err := os.Open(srcReference)
+			if err != nil {
+				return nil, err
+			}
+			return file, nil
+		})
 		if err != nil {
-			return out, fmt.Errorf("unable to get digest from tarball %s: %s", srcReference, err.Error())
+			return out, err
 		}
-		imgManifest, err := imgDesc.Manifest()
-		if err != nil {
-			return out, fmt.Errorf("unable to get manifest from tarball %s: %s", srcReference, err.Error())
-		}
+		splitRepoTag := strings.Split(manifest[0].RepoTags[0], ":")
 
-		out.Digest = digest.String()
-		for k, v := range imgManifest.Annotations {
-			message.Debugf("Annotation: %s: %s", k, v)
+		digestHash, err := img.Digest()
+		if err != nil {
+			return out, err
 		}
+		out.Digest = digestHash.String()
+		out.TagOrDigest = fmt.Sprintf("@%s", digestHash.String())
+		out.Name = splitRepoTag[0]
 		out.Host = "docker.io"
-		out.Path = fmt.Sprintf("%s/%s/%s", out.Host, "library", out.Name)
+		out.Path = strings.Join([]string{out.Host, "library", splitRepoTag[0]}, "/")
 		out.Reference = srcReference
+		if len(splitRepoTag) > 1 {
+			out.Tag = splitRepoTag[1]
+		}
 	} else {
 		ref, err := reference.ParseAnyReference(srcReference)
 		if err != nil {
