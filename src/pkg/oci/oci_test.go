@@ -102,7 +102,8 @@ func (suite *OCISuite) TestPublishForReal() {
 	}
 
 	srcTempDir := suite.T().TempDir()
-
+	otherTempDir := suite.T().TempDir()
+	thirdTempDir := suite.T().TempDir()
 	fileContents := "here's what I'm putting in the file"
 	regularFileName := "this-file-is-in-a-regular-directory"
 	ociFileName := "this-file-is-in-a-oci-file-store"
@@ -110,6 +111,8 @@ func (suite *OCISuite) TestPublishForReal() {
 	regularFilePath := filepath.Join(srcTempDir, regularFileName)
 	os.WriteFile(regularFilePath, []byte(fileContents), 0644)
 	src, err := file.New(srcTempDir)
+	suite.NoError(err)
+	dst, err := file.New(otherTempDir)
 	suite.NoError(err)
 	desc, err := src.Add(ctx, ociFileName, ocispec.MediaTypeEmptyJSON, regularFilePath)
 	suite.NoError(err)
@@ -127,9 +130,7 @@ func (suite *OCISuite) TestPublishForReal() {
 	err = suite.remote.UpdateIndex(ctx, "0.0.1", publishedDesc)
 	suite.NoError(err)
 
-	otherTempDir := suite.T().TempDir()
-	dst, err := file.New(otherTempDir)
-
+	// Testing copy to target
 	suite.NoError(err)
 	err = suite.remote.CopyToTarget(ctx, descs, dst, suite.remote.GetDefaultCopyOpts())
 	suite.NoError(err)
@@ -140,6 +141,17 @@ func (suite *OCISuite) TestPublishForReal() {
 	suite.NoError(err)
 	contents := string(b)
 	suite.Equal(contents, fileContents)
+
+	// Testing pulled paths
+	pulledDescs, err := suite.remote.PullPaths(ctx, thirdTempDir, []string{ociFileName, "path-that-does-not-exist"})
+	fmt.Printf("pulled descs %v", pulledDescs)
+	suite.NoError(err)
+	pulledPathOCIFile := filepath.Join(thirdTempDir, ociFileName)
+	b, err = os.ReadFile(pulledPathOCIFile)
+	suite.NoError(err)
+	contents = string(b)
+	suite.Equal(contents, fileContents)
+
 }
 
 func TestOCI(t *testing.T) {
