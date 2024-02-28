@@ -127,6 +127,7 @@ func ParseImageRef(srcReference string) (out Image, err error) {
 	return out, nil
 }
 
+// IsTarball checks if a given reference is a tarball
 func IsTarball(srcReference string) bool {
 	return strings.HasSuffix(srcReference, ".tar") || strings.HasSuffix(srcReference, ".tar.gz") || strings.HasSuffix(srcReference, ".tgz")
 }
