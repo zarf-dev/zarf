@@ -94,38 +94,37 @@ func (suite *OCISuite) TestPublishSuccess() {
 func (suite *OCISuite) TestPublishForReal() {
 	suite.T().Log("")
 
+	// arrange
 	ctx := context.TODO()
-
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       "name",
 		ocispec.AnnotationDescription: "description",
 	}
 
-	manifestConfigDesc, err := suite.remote.CreateAndPushManifestConfig(ctx, annotations, ocispec.MediaTypeLayoutHeader)
-	suite.NoError(err)
+	srcTempDir := suite.T().TempDir()
 
 	fileContents := "here's what I'm putting in the file"
+	regularFileName := "this-file-is-in-a-regular-directory"
+	ociFileName := "this-file-is-in-a-oci-file-store"
 
-	tempDir := suite.T().TempDir()
-	regularFileName := "i-am-what-i-am"
-	regularFilePath := filepath.Join(tempDir, regularFileName)
+	regularFilePath := filepath.Join(srcTempDir, regularFileName)
 	os.WriteFile(regularFilePath, []byte(fileContents), 0644)
-	src, err := file.New(tempDir)
+	src, err := file.New(srcTempDir)
 	suite.NoError(err)
-
-	// I want to test that I am able to get a file by it's oci file name and see the contents
-
-	ociFileName := "small-file"
 	desc, err := src.Add(ctx, ociFileName, ocispec.MediaTypeEmptyJSON, regularFilePath)
 	suite.NoError(err)
 	descs := []ocispec.Descriptor{desc}
+
+	// Act
+	manifestConfigDesc, err := suite.remote.CreateAndPushManifestConfig(ctx, annotations, ocispec.MediaTypeLayoutHeader)
+	suite.NoError(err)
+
 	manifestDesc, err := suite.remote.PackAndTagManifest(ctx, src, descs, manifestConfigDesc, annotations)
 	suite.NoError(err)
 	publishedDesc, err := oras.Copy(ctx, src, manifestDesc.Digest.String(), suite.remote.Repo(), "", suite.remote.GetDefaultCopyOpts())
 	suite.NoError(err)
-	fmt.Printf("manifest descriptor %s", publishedDesc.Digest.String())
 
-	err = suite.remote.UpdateIndex(ctx, "0.0.1", manifestDesc)
+	err = suite.remote.UpdateIndex(ctx, "0.0.1", publishedDesc)
 	suite.NoError(err)
 
 	otherTempDir := suite.T().TempDir()
@@ -134,8 +133,11 @@ func (suite *OCISuite) TestPublishForReal() {
 	suite.NoError(err)
 	err = suite.remote.CopyToTarget(ctx, descs, dst, suite.remote.GetDefaultCopyOpts())
 	suite.NoError(err)
+
+	// Assert
 	ociFile := filepath.Join(otherTempDir, ociFileName)
-	b, _ := os.ReadFile(ociFile)
+	b, err := os.ReadFile(ociFile)
+	suite.NoError(err)
 	contents := string(b)
 	suite.Equal(contents, fileContents)
 }
