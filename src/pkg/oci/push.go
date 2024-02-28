@@ -25,8 +25,6 @@ import (
 // which causes an error on Google Artifact Registry
 //
 // to negate this, we create a simple manifest config with some build metadata
-//
-// the contents of this file are not used by Zarf
 type ConfigPartial struct {
 	Architecture string            `json:"architecture"`
 	OCIVersion   string            `json:"ociVersion"`
