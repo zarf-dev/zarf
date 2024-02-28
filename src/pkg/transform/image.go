@@ -6,7 +6,6 @@ package transform
 
 import (
 	"fmt"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"io"
 	"os"
@@ -68,38 +67,10 @@ func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string,
 // ParseImageRef parses a source reference into an Image struct
 func ParseImageRef(srcReference string) (out Image, err error) {
 	if IsTarball(srcReference) {
-		img, err := tarball.ImageFromPath(srcReference, nil)
+		out, err = TarballToImage(srcReference)
 		if err != nil {
 			return out, err
 		}
-		manifest, err := tarball.LoadManifest(func() (io.ReadCloser, error) {
-			file, err := os.Open(srcReference)
-			if err != nil {
-				return nil, err
-			}
-			return file, nil
-		})
-		if err != nil {
-			return out, err
-		}
-		splitRepoTag := strings.Split(manifest[0].RepoTags[0], ":")
-		splitRepo := strings.Split(splitRepoTag[0], "/")
-		out.Name = splitRepo[0]
-
-		digestHash, err := img.Digest()
-		if err != nil {
-			return out, err
-		}
-		out.Digest = digestHash.String()
-		out.TagOrDigest = fmt.Sprintf("@%s", digestHash.String())
-		out.Host = ""
-		out.Path = splitRepoTag[0]
-		out.Reference = manifest[0].RepoTags[0]
-		if len(splitRepoTag) > 1 {
-			out.Tag = splitRepoTag[1]
-		}
-		message.Debugf("Parsed image reference: %+v", out)
-		message.Debugf("Manifest: %+v", manifest)
 	} else {
 		ref, err := reference.ParseAnyReference(srcReference)
 		if err != nil {
@@ -141,7 +112,67 @@ func ParseImageRef(srcReference string) (out Image, err error) {
 	return out, nil
 }
 
+func TarballToImage(srcReference string) (Image, error) {
+	var (
+		digest   string
+		repoTags []string
+		out      = Image{}
+		err      error
+	)
+	if digest, err = getDigestFromTarball(srcReference); err != nil {
+		return out, err
+	}
+	if repoTags, err = getRepoTagsFromTarball(srcReference); err != nil {
+		return out, err
+	}
+	imageRef := repoTags[0]
+
+	splitTag := strings.Split(repoTags[0], ":")
+	imagePath := splitTag[0]
+
+	splitRepo := strings.Split(splitTag[0], "/")
+	imageName := splitRepo[len(splitRepo)-1]
+
+	out.Name = imageName
+	out.Digest = digest
+	out.TagOrDigest = fmt.Sprintf("@%s", digest)
+	out.Host = ""
+	out.Path = imagePath
+	out.Reference = imageRef
+	if len(splitTag) > 1 {
+		out.Tag = splitTag[1]
+	}
+	return out, nil
+}
+
 // IsTarball checks if a given reference is a tarball
 func IsTarball(srcReference string) bool {
 	return strings.HasSuffix(srcReference, ".tar") || strings.HasSuffix(srcReference, ".tar.gz") || strings.HasSuffix(srcReference, ".tgz")
+}
+
+func getDigestFromTarball(path string) (string, error) {
+	var digest string
+	if img, err := tarball.ImageFromPath(path, nil); err != nil {
+		return digest, err
+	} else {
+		if digestHash, err := img.Digest(); err != nil {
+			return digest, err
+		} else {
+			return digestHash.String(), nil
+		}
+	}
+}
+
+func getRepoTagsFromTarball(path string) ([]string, error) {
+	if manifest, err := tarball.LoadManifest(func() (io.ReadCloser, error) {
+		file, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		return file, nil
+	}); err != nil {
+		return nil, err
+	} else {
+		return manifest[0].RepoTags, nil
+	}
 }
