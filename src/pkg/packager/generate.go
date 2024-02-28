@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+// UpdatePackageConfig updates the package configuration with the new ZarfPackageConfig from pkgConfig.GenerateOpts
 func UpdatePackageConfig(pkgConfig *types.PackagerConfig) types.PackagerConfig {
 
 	// Add new ZarfPackageConfig
@@ -51,6 +52,7 @@ func UpdatePackageConfig(pkgConfig *types.PackagerConfig) types.PackagerConfig {
 	return *pkgConfig
 }
 
+// WriteGeneratedZarfPackage writes the generated ZarfPackageConfig to the output directory and filename avoiding overwriting existing files
 func WriteGeneratedZarfPackage(pkgConfig *types.PackagerConfig) {
 	outputDirectory := pkgConfig.GenerateOpts.Output
 	if _, err := os.Stat(outputDirectory); os.IsNotExist(err) {

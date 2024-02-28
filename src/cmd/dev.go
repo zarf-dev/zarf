@@ -67,7 +67,7 @@ var devGenerateCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdDevGenerateShort,
 	Example: lang.CmdDevGenerateExample,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.GenerateOpts.Name = args[0]
 		spinner := message.NewProgressSpinner(lang.CmdDevGenerateNewMessage, pkgConfig.GenerateOpts.Name)
 		if !validateDevGenerateFlags() {
@@ -220,7 +220,7 @@ var devFindImagesCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdDevFindImagesShort,
 	Long:    lang.CmdDevFindImagesLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		common.SetBaseDirectory(args, &pkgConfig)
 
 		// Ensure uppercase keys from viper
@@ -338,7 +338,7 @@ func bindDevDeployFlags(v *viper.Viper) {
 	devDeployFlags.BoolVar(&pkgConfig.CreateOpts.NoYOLO, "no-yolo", v.GetBool(common.VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
 }
 
-func bindDevGenerateFlags(v *viper.Viper) {
+func bindDevGenerateFlags(_ *viper.Viper) {
 	generateFlags := devGenerateCmd.Flags()
 
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.URL, "url", "", "URL to the source git repository")
