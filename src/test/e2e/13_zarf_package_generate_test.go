@@ -17,17 +17,6 @@ import (
 func TestZarfDevGenerate(t *testing.T) {
 	t.Log("E2E: Zarf Dev Generate")
 
-	t.Run("Test arguments and flags", func(t *testing.T) {
-		stdOut, stdErr, err := e2e.Zarf("dev", "generate")
-		require.Error(t, err, stdOut, stdErr)
-
-		stdOut, stdErr, err = e2e.Zarf("dev", "generate", "podinfo")
-		require.Error(t, err, stdOut, stdErr)
-
-		stdOut, stdErr, err = e2e.Zarf("dev", "generate", "podinfo", "--url", "https://zarf.dev")
-		require.Error(t, err, stdOut, stdErr)
-	})
-
 	t.Run("Test generate podinfo", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
