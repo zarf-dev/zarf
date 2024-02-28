@@ -49,7 +49,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestReleases(t *testing.T) {
-	tmpdir := ""
+	tmpdir := fmt.Sprintf("--tmpdir=%s", t.TempDir())
 	// If we are in CI set the temporary directory to /mnt/zarf-tmp to reduce disk pressure
 	if os.Getenv("CI") == "true" {
 		tmpdir = "--tmpdir=/mnt/zarf-tmp"
