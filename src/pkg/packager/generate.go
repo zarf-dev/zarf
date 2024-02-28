@@ -7,13 +7,10 @@ package packager
 import (
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -35,19 +32,13 @@ func UpdatePackageConfig(pkgConfig *types.PackagerConfig) types.PackagerConfig {
 		},
 	}}
 
-	newPkg := pkgConfig.Pkg
-	newPkg.Kind = "ZarfPackageConfig"
-	newPkg.Metadata.Name = pkgConfig.GenerateOpts.Name
-	newPkg.Components = append(newComponent, newPkg.Components...)
-	pkgConfig.Pkg = newPkg
+	pkgConfig.Pkg.Kind = types.ZarfPackageConfig
+	pkgConfig.Pkg.Metadata.Name = pkgConfig.GenerateOpts.Name
+	pkgConfig.Pkg.Components = append(newComponent, pkgConfig.Pkg.Components...)
 
 	// Set config for FindImages and helm
 	pkgConfig.CreateOpts.BaseDir = "."
 	pkgConfig.FindImagesOpts.RepoHelmChartPath = pkgConfig.GenerateOpts.GitPath
-
-	v := common.GetViper()
-	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
 	return *pkgConfig
 }
