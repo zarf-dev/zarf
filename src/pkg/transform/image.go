@@ -112,6 +112,7 @@ func ParseImageRef(srcReference string) (out Image, err error) {
 	return out, nil
 }
 
+// TarballToImage converts a tarball to an Image struct
 func TarballToImage(srcReference string) (Image, error) {
 	var (
 		digest   string
