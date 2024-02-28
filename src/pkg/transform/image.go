@@ -98,13 +98,11 @@ func ParseImageRef(srcReference string) (out Image, err error) {
 			out.Digest = digested.Digest().String()
 			out.TagOrDigest = fmt.Sprintf("@%s", digested.Digest().String())
 		}
-	}
 
-	// If no tag or digest was provided use the default tag (latest)
-	if out.TagOrDigest == "" {
-		out.Tag = "latest"
-		out.TagOrDigest = ":latest"
-		if !IsTarball(srcReference) {
+		// If no tag or digest was provided use the default tag (latest)
+		if out.TagOrDigest == "" {
+			out.Tag = "latest"
+			out.TagOrDigest = ":latest"
 			out.Reference += ":latest"
 		}
 	}
