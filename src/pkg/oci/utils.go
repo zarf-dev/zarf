@@ -5,28 +5,13 @@
 package oci
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/registry"
 )
 
 // IsEmptyDescriptor returns true if the given descriptor is empty.
 func IsEmptyDescriptor(desc ocispec.Descriptor) bool {
 	return desc.Digest == "" && desc.Size == 0
-}
-
-// ValidateReference validates the given url is a valid OCI reference.
-func ValidateReference(url string) error {
-	if !strings.HasPrefix(url, helpers.OCIURLPrefix) {
-		return fmt.Errorf("oci url reference must begin with %s", helpers.OCIURLPrefix)
-	}
-	sansPrefix := strings.TrimPrefix(url, helpers.OCIURLPrefix)
-	_, err := registry.ParseReference(sansPrefix)
-	return err
 }
 
 // RemoveDuplicateDescriptors removes duplicate descriptors from the given list.
