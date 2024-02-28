@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -164,6 +165,56 @@ func (suite *OCISuite) TestPublishForReal() {
 	suite.NoError(err)
 	suite.Equal(ocispec.MediaTypeImageManifest, rootDesc.MediaType)
 	fmt.Printf(rootDesc.MediaType)
+}
+
+func TestRemoveDuplicateDescriptors(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []ocispec.Descriptor
+		expected []ocispec.Descriptor
+	}{
+		{
+			name: "no duplicates",
+			input: []ocispec.Descriptor{
+				{Digest: "sha256:1111", Size: 100},
+				{Digest: "sha256:2222", Size: 200},
+			},
+			expected: []ocispec.Descriptor{
+				{Digest: "sha256:1111", Size: 100},
+				{Digest: "sha256:2222", Size: 200},
+			},
+		},
+		{
+			name: "with duplicates",
+			input: []ocispec.Descriptor{
+				{Digest: "sha256:1111", Size: 100},
+				{Digest: "sha256:1111", Size: 100},
+				{Digest: "sha256:2222", Size: 200},
+			},
+			expected: []ocispec.Descriptor{
+				{Digest: "sha256:1111", Size: 100},
+				{Digest: "sha256:2222", Size: 200},
+			},
+		},
+		{
+			name: "with empty descriptors",
+			input: []ocispec.Descriptor{
+				{Size: 0},
+				{Digest: "sha256:1111", Size: 100},
+			},
+			expected: []ocispec.Descriptor{
+				{Digest: "sha256:1111", Size: 100},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := RemoveDuplicateDescriptors(tt.input)
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("RemoveDuplicateDescriptors(%v) = %v, expected %v", tt.input, result, tt.expected)
+			}
+		})
+	}
 }
 
 func TestOCI(t *testing.T) {
