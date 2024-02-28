@@ -49,6 +49,8 @@ func (suite *OCISuite) StartRegistry() {
 	suite.NoError(err)
 
 	config.HTTP.Addr = fmt.Sprintf(":%d", port)
+	config.Log.AccessLog.Disabled = true
+	config.Log.Level = "error"
 	config.HTTP.DrainTimeout = 10 * time.Second
 	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
 
@@ -152,6 +154,16 @@ func (suite *OCISuite) TestPublishForReal() {
 	contents = string(b)
 	suite.Equal(contents, fileContents)
 
+	// Testing fetch root
+	root, err := suite.remote.FetchRoot(ctx)
+	suite.NoError(err)
+	fmt.Printf("this is the root %v", root.Layers[0])
+
+	// Testing resolve root
+	rootDesc, err := suite.remote.ResolveRoot(ctx)
+	suite.NoError(err)
+	suite.Equal(ocispec.MediaTypeImageManifest, rootDesc.MediaType)
+	fmt.Printf(rootDesc.MediaType)
 }
 
 func TestOCI(t *testing.T) {
