@@ -6,6 +6,7 @@ package transform
 
 import (
 	"fmt"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"io"
 	"os"
@@ -82,6 +83,8 @@ func ParseImageRef(srcReference string) (out Image, err error) {
 			return out, err
 		}
 		splitRepoTag := strings.Split(manifest[0].RepoTags[0], ":")
+		splitRepo := strings.Split(splitRepoTag[0], "/")
+		out.Name = splitRepo[0]
 
 		digestHash, err := img.Digest()
 		if err != nil {
@@ -89,13 +92,14 @@ func ParseImageRef(srcReference string) (out Image, err error) {
 		}
 		out.Digest = digestHash.String()
 		out.TagOrDigest = fmt.Sprintf("@%s", digestHash.String())
-		out.Name = splitRepoTag[0]
-		out.Host = "docker.io"
-		out.Path = strings.Join([]string{out.Host, "library", splitRepoTag[0]}, "/")
-		out.Reference = srcReference
+		out.Host = ""
+		out.Path = splitRepoTag[0]
+		out.Reference = manifest[0].RepoTags[0]
 		if len(splitRepoTag) > 1 {
 			out.Tag = splitRepoTag[1]
 		}
+		message.Debugf("Parsed image reference: %+v", out)
+		message.Debugf("Manifest: %+v", manifest)
 	} else {
 		ref, err := reference.ParseAnyReference(srcReference)
 		if err != nil {
