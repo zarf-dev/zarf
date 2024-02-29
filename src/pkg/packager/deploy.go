@@ -46,12 +46,12 @@ func (p *Packager) Deploy() (err error) {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	if err := utils.ReadYaml(p.layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML)
+	if err != nil {
 		return err
 	}
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
-	p.runMigrations()
+	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
 
 	if err := p.validateLastNonBreakingVersion(); err != nil {
 		return err
