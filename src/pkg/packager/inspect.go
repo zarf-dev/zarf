@@ -17,7 +17,8 @@ func (p *Packager) Inspect() (err error) {
 		return err
 	}
 
-	if err := utils.ReadYaml(p.layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML)
+	if err != nil {
 		return err
 	}
 
