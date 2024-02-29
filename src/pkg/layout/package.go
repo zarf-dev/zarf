@@ -14,6 +14,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -53,6 +54,29 @@ func New(baseDir string) *PackagePaths {
 			Base: filepath.Join(baseDir, ComponentsDir),
 		},
 	}
+}
+
+// ReadZarfYAML reads a zarf.yaml file into memory,
+// checks if it's using the legacy layout, and migrates deprecated component configs.
+func (pp *PackagePaths) ReadZarfYAML(path string) (pkg types.ZarfPackage, warnings []string, err error) {
+	if err := utils.ReadYaml(path, &pkg); err != nil {
+		return types.ZarfPackage{}, nil, fmt.Errorf("unable to read zarf.yaml file at %q", path)
+	}
+
+	if pp.IsLegacyLayout() {
+		warnings = append(warnings, "Detected deprecated package layout, migrating to new layout - support for this package will be dropped in v1.0.0")
+	}
+
+	if len(pkg.Build.Migrations) > 0 {
+		var componentWarnings []string
+		for idx, component := range pkg.Components {
+			// Handle component configuration deprecations
+			pkg.Components[idx], componentWarnings = deprecated.MigrateComponent(pkg.Build, component)
+			warnings = append(warnings, componentWarnings...)
+		}
+	}
+
+	return pkg, warnings, nil
 }
 
 // MigrateLegacy migrates a legacy package layout to the new layout.

@@ -41,17 +41,20 @@ func NewSkeletonCreator(createOpts types.ZarfCreateOptions, publishOpts types.Za
 
 // LoadPackageDefinition loads and configure a zarf.yaml file when creating and publishing a skeleton package.
 func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
-	if err := utils.ReadYaml(layout.ZarfYAML, &pkg); err != nil {
-		return types.ZarfPackage{}, nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
+	pkg, warnings, err = dst.ReadZarfYAML(layout.ZarfYAML)
+	if err != nil {
+		return types.ZarfPackage{}, nil, err
 	}
 
 	pkg.Metadata.Architecture = "skeleton"
 
 	// Compose components into a single zarf.yaml file
-	pkg, warnings, err = ComposeComponents(pkg, sc.createOpts.Flavor)
+	pkg, composeWarnings, err := ComposeComponents(pkg, sc.createOpts.Flavor)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
+
+	warnings = append(warnings, composeWarnings...)
 
 	pkg.Components, err = sc.processExtensions(pkg.Components, dst)
 	if err != nil {

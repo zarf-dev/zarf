@@ -59,8 +59,9 @@ func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerCo
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
 func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
-	if err := utils.ReadYaml(layout.ZarfYAML, &pkg); err != nil {
-		return types.ZarfPackage{}, nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
+	pkg, warnings, err = dst.ReadZarfYAML(layout.ZarfYAML)
+	if err != nil {
+		return types.ZarfPackage{}, nil, err
 	}
 
 	if pkg.Metadata.Architecture == "" {
