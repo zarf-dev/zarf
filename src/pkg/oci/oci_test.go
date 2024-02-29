@@ -36,13 +36,10 @@ func (suite *OCISuite) SetupSuite() {
 
 }
 
-func (suite *OCISuite) SetupTest() {
-	// Registry config
-	ctx := context.TODO()
-	config := &configuration.Configuration{}
+func (suite *OCISuite) setupInMemoryRegistry(ctx context.Context) {
 	port, err := freeport.GetFreePort()
 	suite.NoError(err)
-
+	config := &configuration.Configuration{}
 	config.HTTP.Addr = fmt.Sprintf(":%d", port)
 	config.Log.AccessLog.Disabled = true
 	config.Log.Level = "error"
@@ -55,8 +52,16 @@ func (suite *OCISuite) SetupTest() {
 	go ref.ListenAndServe()
 
 	suite.registryURL = fmt.Sprintf("oci://localhost:%d/package:1.0.1", port)
+}
+
+func (suite *OCISuite) SetupTest() {
+	// Registry config
+	ctx := context.TODO()
+
+	suite.setupInMemoryRegistry(ctx)
 
 	platform := PlatformForArch("fake-package-so-does-not-matter")
+	var err error
 	suite.remote, err = NewOrasRemote(suite.registryURL, platform, WithPlainHTTP(true))
 	suite.NoError(err)
 }
@@ -115,10 +120,9 @@ func (suite *OCISuite) TestCopyToTarget() {
 	suite.T().Log("")
 	ctx := context.TODO()
 
-	// So what are my options.
-	// I could completely tear down the registry and bring it back up before we do anything
-	// I could have a long running ordered registry and do things as I go. For example in the index case
-	// I don't think I actually need a file to be in the source so the same title shouldn't actually matter
+	// So what are the options.
+	// completely tear down the registry and bring it back up before we do anything
+	// have a long running ordered registry and do things as I go. For example in the index case
 
 	srcTempDir := suite.T().TempDir()
 	regularFileName := "this-file-is-in-a-regular-directory"
@@ -182,29 +186,71 @@ func (suite *OCISuite) TestPulledPaths() {
 		pulledPathOCIFile := filepath.Join(dstTempDir, file)
 		_, err := os.Stat(pulledPathOCIFile)
 		suite.NoError(err)
-
 	}
 
-	// suite.NoError(err)
-	// contents = string(b)
-	// suite.Equal(contents, fileContents)
+}
 
-	// // Testing fetch root
-	// // suite.remote.root = nil
-	// // suite.Nil(suite.remote.root)
-	// root, err := suite.remote.FetchRoot(ctx)
-	// suite.NoError(err)
-	// fmt.Printf("this is the root %v", root)
-	// // suite.Equal(root.Config.Digest, otherManifestConfig.Digest)
+func (suite *OCISuite) TestResolveRoot() {
+	suite.T().Log("")
+	ctx := context.TODO()
+	srcTempDir := suite.T().TempDir()
+	files := []string{"firstFile", "secondFile", "thirdFile"}
 
-	// // Testing resolve root
-	// rootDesc, err := suite.remote.ResolveRoot(ctx)
-	// suite.NoError(err)
-	// suite.Equal(ocispec.MediaTypeImageManifest, rootDesc.MediaType)
+	var descs []ocispec.Descriptor
+	src, err := file.New(srcTempDir)
+	suite.NoError(err)
+	for _, file := range files {
+		path := filepath.Join(srcTempDir, file)
+		os.Create(path)
+		desc, err := src.Add(ctx, file, ocispec.MediaTypeEmptyJSON, path)
+		suite.NoError(err)
+		descs = append(descs, desc)
+	}
+
+	suite.publishPackage(src, descs)
+
+	root, err := suite.remote.FetchRoot(ctx)
+	suite.NoError(err)
+	b, err := root.MarshalJSON()
+	suite.NoError(err)
+	suite.Equal(3, len(root.Layers))
+	fmt.Printf("this is the root %v", string(b))
+	fmt.Print("done with root\n")
+	desc := root.Locate("thirdFile")
+	suite.Equal("thirdFile", desc.Annotations[ocispec.AnnotationTitle])
+}
+
+func (suite *OCISuite) TestCopy() {
+	suite.T().Log("")
+	ctx := context.TODO()
+	srcTempDir := suite.T().TempDir()
+	files := []string{"firstFile"}
+
+	var descs []ocispec.Descriptor
+	src, err := file.New(srcTempDir)
+	suite.NoError(err)
+	for _, file := range files {
+		path := filepath.Join(srcTempDir, file)
+		os.Create(path)
+		desc, err := src.Add(ctx, file, ocispec.MediaTypeEmptyJSON, path)
+		suite.NoError(err)
+		descs = append(descs, desc)
+	}
+
+	suite.publishPackage(src, descs)
+
+	otherSrc, err := file.New(srcTempDir)
+	suite.NoError(err)
+	for _, file := range files {
+		path := filepath.Join(srcTempDir, file)
+		os.Create(path)
+		desc, err := otherSrc.Add(ctx, file, ocispec.MediaTypeEmptyJSON, path)
+		suite.NoError(err)
+		descs = append(descs, desc)
+	}
 
 	// Everything we want to test
 	// Copy
-	// Manifest locate
 	// Index more in depth
 }
 
