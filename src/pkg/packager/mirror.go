@@ -10,7 +10,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -23,7 +22,8 @@ func (p *Packager) Mirror() (err error) {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	if err := utils.ReadYaml(p.layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML)
+	if err != nil {
 		return err
 	}
 
