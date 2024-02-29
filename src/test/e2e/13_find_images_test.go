@@ -38,7 +38,7 @@ func TestFindImages(t *testing.T) {
 	})
 
 	t.Run("zarf test find images --why w/  manifests success", func(t *testing.T) {
-		t.Log("E2E: Test Find Images against a helm chart with why flag")
+		t.Log("E2E: Test Find Images against manifests with why flag")
 
 		testPackagePath := filepath.Join("examples", "manifests")
 		expectedOutput, err := os.ReadFile("src/test/packages/13-find-images/manifests-find-images-why-expected.txt")
