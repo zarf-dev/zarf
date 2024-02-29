@@ -84,12 +84,9 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 			}
 
 			actualSrc := refInfo.Reference
-			if overrideHost, present := i.RegistryOverrides[refInfo.Host]; present {
-				var err error
-				actualSrc, err = transform.ImageTransformHostWithoutChecksum(overrideHost, refInfo.Reference)
-				if err != nil {
-					metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to swap override host %s for %s: %w", overrideHost, refInfo.Reference, err)
-					return
+			for k, v := range i.RegistryOverrides {
+				if strings.HasPrefix(refInfo.Reference, k) {
+					actualSrc = strings.Replace(refInfo.Reference, k, v, 1)
 				}
 			}
 
@@ -379,7 +376,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 		}()
 	}
 
-	onImageSavingProgress := func(finishedImage digestInfo, iteration int) {
+	onImageSavingProgress := func(finishedImage digestInfo, _ int) {
 		referenceToDigest[finishedImage.refInfo.Reference] = finishedImage.digest
 	}
 

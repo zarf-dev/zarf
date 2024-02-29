@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	// veryify that TarballSource implements PackageSource
+	// verify that TarballSource implements PackageSource
 	_ PackageSource = (*TarballSource)(nil)
 )
 

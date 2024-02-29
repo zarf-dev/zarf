@@ -174,7 +174,7 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 						continue
 					}
 
-					// Success, break out of the swtich statement.
+					// Success, break out of the switch statement.
 					break
 				}
 
