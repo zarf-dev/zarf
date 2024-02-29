@@ -1,11 +1,12 @@
 package test
 
 import (
-	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestFindImages(t *testing.T) {
@@ -31,7 +32,7 @@ func TestFindImages(t *testing.T) {
 		require.NoError(t, err)
 
 		stdout, _, err := e2e.Zarf("dev", "find-images", testPackagePath, "--why", "curlimages/curl:7.69.0")
-		require.NoError(t, err, "Expect no error here")
+		require.NoError(t, err)
 		match, err := regexp.MatchString(string(expectedOutput), stdout)
 		require.NoError(t, err)
 		require.True(t, match)
