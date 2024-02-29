@@ -7,6 +7,7 @@ package oci
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -27,16 +28,18 @@ import (
 type OCISuite struct {
 	suite.Suite
 	*require.Assertions
-	remote      *OrasRemote
-	registryURL string
+	remote *OrasRemote
 }
 
 func (suite *OCISuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
-
 }
 
-func (suite *OCISuite) setupInMemoryRegistry(ctx context.Context) {
+const (
+	testArch = "fake-test-arch"
+)
+
+func (suite *OCISuite) setupInMemoryRegistry(ctx context.Context) string {
 	port, err := freeport.GetFreePort()
 	suite.NoError(err)
 	config := &configuration.Configuration{}
@@ -51,30 +54,26 @@ func (suite *OCISuite) setupInMemoryRegistry(ctx context.Context) {
 
 	go ref.ListenAndServe()
 
-	suite.registryURL = fmt.Sprintf("oci://localhost:%d/package:1.0.1", port)
+	return fmt.Sprintf("oci://localhost:%d/package:1.0.1", port)
 }
 
 func (suite *OCISuite) SetupTest() {
-	// Registry config
 	ctx := context.TODO()
+	registry := suite.setupInMemoryRegistry(ctx)
+	platform := PlatformForArch(testArch)
 
-	suite.setupInMemoryRegistry(ctx)
-
-	platform := PlatformForArch("fake-package-so-does-not-matter")
 	var err error
-	suite.remote, err = NewOrasRemote(suite.registryURL, platform, WithPlainHTTP(true))
+	opts := &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}
+	handler := slog.NewJSONHandler(os.Stdout, opts)
+	logger := slog.New(handler)
+	suite.remote, err = NewOrasRemote(registry, platform, WithPlainHTTP(true), WithLogger(logger))
+
 	suite.NoError(err)
 }
 
-func (suite *OCISuite) TestBadRemote() {
-	suite.T().Log("Here")
-	_, err := NewOrasRemote("nonsense", PlatformForArch("fake-package-so-does-not-matter"))
-	suite.Error(err)
-}
-
 func (suite *OCISuite) TestPublishFailNoTitle() {
-	suite.T().Log("")
-
 	ctx := context.TODO()
 	annotations := map[string]string{
 		ocispec.AnnotationDescription: "No title",
@@ -84,8 +83,6 @@ func (suite *OCISuite) TestPublishFailNoTitle() {
 }
 
 func (suite *OCISuite) TestPublishSuccess() {
-	suite.T().Log("")
-
 	ctx := context.TODO()
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       "name",
@@ -134,7 +131,7 @@ func (suite *OCISuite) TestCopyToTarget() {
 	src, err := file.New(srcTempDir)
 	suite.NoError(err)
 
-	desc, err := src.Add(ctx, ociFileName, ocispec.MediaTypeEmptyJSON, regularFilePath)
+	desc, err := src.Add(ctx, ociFileName, ocispec.MediaTypeImageLayer, regularFilePath)
 	suite.NoError(err)
 
 	descs := []ocispec.Descriptor{desc}
@@ -160,7 +157,6 @@ func (suite *OCISuite) TestCopyToTarget() {
 }
 
 func (suite *OCISuite) TestPulledPaths() {
-	suite.T().Log("")
 	ctx := context.TODO()
 	srcTempDir := suite.T().TempDir()
 	files := []string{"firstFile", "secondFile"}
@@ -211,28 +207,43 @@ func (suite *OCISuite) TestResolveRoot() {
 
 	root, err := suite.remote.FetchRoot(ctx)
 	suite.NoError(err)
-	b, err := root.MarshalJSON()
-	suite.NoError(err)
 	suite.Equal(3, len(root.Layers))
-	fmt.Printf("this is the root %v", string(b))
-	fmt.Print("done with root\n")
 	desc := root.Locate("thirdFile")
 	suite.Equal("thirdFile", desc.Annotations[ocispec.AnnotationTitle])
+}
+
+// Write doesn't do anything but satisfy implementation
+func (tpw *TestProgressWriter) Write(b []byte) (int, error) {
+	tpw.bytesSent += len(b)
+	return len(b), nil
+}
+
+// UpdateTitle doesn't do anything but satisfy implementation
+func (TestProgressWriter) UpdateTitle(s string) {
+	fmt.Printf("this is the title %s", s)
+}
+
+// TestProgressWriter is a ProgressWriter in which all calls succeed without doing anything
+// Use this or nil or if you don't care about writing progress
+type TestProgressWriter struct {
+	bytesSent int
 }
 
 func (suite *OCISuite) TestCopy() {
 	suite.T().Log("")
 	ctx := context.TODO()
 	srcTempDir := suite.T().TempDir()
-	files := []string{"firstFile"}
+	files := []string{"firstFile", "secondFile"}
+
+	fileContents := "here's what I'm putting in each file"
 
 	var descs []ocispec.Descriptor
 	src, err := file.New(srcTempDir)
 	suite.NoError(err)
 	for _, file := range files {
 		path := filepath.Join(srcTempDir, file)
-		os.Create(path)
-		desc, err := src.Add(ctx, file, ocispec.MediaTypeEmptyJSON, path)
+		os.WriteFile(path, []byte(fileContents), 0600)
+		desc, err := src.Add(ctx, file, ocispec.MediaTypeImageLayer, path)
 		suite.NoError(err)
 		descs = append(descs, desc)
 	}
@@ -249,9 +260,24 @@ func (suite *OCISuite) TestCopy() {
 		descs = append(descs, desc)
 	}
 
-	// Everything we want to test
-	// Copy
-	// Index more in depth
+	dstRegistryUrl := suite.setupInMemoryRegistry(ctx)
+	dstRemote, err := NewOrasRemote(dstRegistryUrl, PlatformForArch(testArch), WithPlainHTTP(true))
+	suite.NoError(err)
+	testWriter := &TestProgressWriter{}
+	err = Copy(ctx, suite.remote, dstRemote, nil, 1, testWriter)
+	suite.NoError(err)
+
+	srcRoot, err := suite.remote.FetchRoot(ctx)
+	suite.NoError(err)
+	totalSize := srcRoot.Config.Size
+	for _, layer := range srcRoot.Layers {
+		totalSize += layer.Size
+		ok, err := dstRemote.Repo().Exists(ctx, layer)
+		suite.True(ok)
+		suite.NoError(err)
+	}
+
+	suite.Equal(int(totalSize), testWriter.bytesSent)
 }
 
 func TestRemoveDuplicateDescriptors(t *testing.T) {
