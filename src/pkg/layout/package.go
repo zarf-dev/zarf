@@ -60,7 +60,7 @@ func New(baseDir string) *PackagePaths {
 // checks if it's using the legacy layout, and migrates deprecated component configs.
 func (pp *PackagePaths) ReadZarfYAML(path string) (pkg types.ZarfPackage, warnings []string, err error) {
 	if err := utils.ReadYaml(path, &pkg); err != nil {
-		return types.ZarfPackage{}, nil, fmt.Errorf("unable to read zarf.yaml file at %q", path)
+		return types.ZarfPackage{}, nil, fmt.Errorf("unable to read zarf.yaml file")
 	}
 
 	if pp.IsLegacyLayout() {
