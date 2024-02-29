@@ -107,7 +107,9 @@ func (p *Packager) Publish() (err error) {
 		if err := p.source.LoadPackage(p.layout, false); err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
-		if err := utils.ReadYaml(p.layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+
+		p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML)
+		if err != nil {
 			return err
 		}
 
