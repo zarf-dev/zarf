@@ -56,8 +56,6 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 	r.Repo().SetReferrersCapability(false)
 
 	// push the manifest config
-	// since this config is so tiny, and the content is not used again
-	// it is not logged to the progress, but will error if it fails
 	manifestConfigDesc, err := r.CreateAndPushManifestConfig(ctx, annotations, ZarfConfigMediaType)
 	if err != nil {
 		return err
@@ -67,7 +65,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 		return err
 	}
 
-	total += root.Size
+	total += manifestConfigDesc.Size
 
 	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", r.Repo().Reference.Repository, r.Repo().Reference.Reference))
 	r.Transport.ProgressBar = progressBar
