@@ -72,7 +72,7 @@ var devGenerateCmd = &cobra.Command{
 		spinner := message.NewProgressSpinner(lang.CmdDevGenerateNewMessage, pkgConfig.GenerateOpts.Name)
 
 		// Configure and Instantiate the packager
-		pkgConfig = packager.UpdatePackageConfig(&pkgConfig)
+		pkgConfig = packager.UpdatePackageConfigForGenerate(&pkgConfig)
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 

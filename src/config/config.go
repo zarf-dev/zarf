@@ -68,7 +68,7 @@ var (
 	// CommonOptions tracks user-defined values that apply across commands
 	CommonOptions types.ZarfCommonOptions
 
-	// CliArch is the computer architecture of the device executing the CLI commands
+	// CLIArch is the computer architecture of the device executing the CLI commands
 	CLIArch string
 
 	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'

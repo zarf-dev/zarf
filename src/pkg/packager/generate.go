@@ -14,8 +14,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// UpdatePackageConfig updates the package configuration with the new ZarfPackageConfig from pkgConfig.GenerateOpts
-func UpdatePackageConfig(pkgConfig *types.PackagerConfig) types.PackagerConfig {
+// UpdatePackageConfigForGenerate updates the package configuration with the new ZarfPackageConfig from pkgConfig.GenerateOpts
+func UpdatePackageConfigForGenerate(pkgConfig *types.PackagerConfig) types.PackagerConfig {
 
 	// Add new ZarfPackageConfig
 	newComponent := []types.ZarfComponent{{

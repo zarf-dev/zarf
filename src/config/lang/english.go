@@ -7,7 +7,9 @@
 // Alternative languages can be created by duplicating this file and changing the build tag to "//go:build alt_language && <language>".
 package lang
 
-import "errors"
+import (
+	"errors"
+)
 
 // All language strings should be in the form of a constant
 // The constants should be grouped by the top level package they are used in (or common)
@@ -356,7 +358,7 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
 	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
-	CmdDevGenerateShort            = "[beta] Use to generate either an example package or a package from resources"
+	CmdDevGenerateShort            = "[beta] Creates a zarf.yaml automatically from a given remote helm chart"
 	CmdDevGenerateExample          = "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo"
 	CmdDevGenerateNewMessage       = "Generating package with name: %s"
 	CmdDevGenerateFoundNoImagesErr = "Unable to find images for the package"
