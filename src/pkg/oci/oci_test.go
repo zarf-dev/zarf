@@ -33,16 +33,10 @@ type OCISuite struct {
 
 func (suite *OCISuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
-	suite.StartRegistry()
-
-	platform := PlatformForArch("fake-package-so-does-not-matter")
-	var err error
-	suite.remote, err = NewOrasRemote(suite.registryURL, platform, WithPlainHTTP(true))
-	suite.NoError(err)
 
 }
 
-func (suite *OCISuite) StartRegistry() {
+func (suite *OCISuite) SetupTest() {
 	// Registry config
 	ctx := context.TODO()
 	config := &configuration.Configuration{}
@@ -61,6 +55,10 @@ func (suite *OCISuite) StartRegistry() {
 	go ref.ListenAndServe()
 
 	suite.registryURL = fmt.Sprintf("oci://localhost:%d/package:1.0.1", port)
+
+	platform := PlatformForArch("fake-package-so-does-not-matter")
+	suite.remote, err = NewOrasRemote(suite.registryURL, platform, WithPlainHTTP(true))
+	suite.NoError(err)
 }
 
 func (suite *OCISuite) TestBadRemote() {
@@ -94,34 +92,13 @@ func (suite *OCISuite) TestPublishSuccess() {
 
 }
 
-func (suite *OCISuite) TestPublishForReal() {
-	suite.T().Log("")
-
-	// arrange
+func (suite *OCISuite) publishPackage(src *file.Store, descs []ocispec.Descriptor) {
 	ctx := context.TODO()
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       "name",
 		ocispec.AnnotationDescription: "description",
 	}
 
-	srcTempDir := suite.T().TempDir()
-	otherTempDir := suite.T().TempDir()
-	thirdTempDir := suite.T().TempDir()
-	fileContents := "here's what I'm putting in the file"
-	regularFileName := "this-file-is-in-a-regular-directory"
-	ociFileName := "this-file-is-in-a-oci-file-store"
-
-	regularFilePath := filepath.Join(srcTempDir, regularFileName)
-	os.WriteFile(regularFilePath, []byte(fileContents), 0644)
-	src, err := file.New(srcTempDir)
-	suite.NoError(err)
-	dst, err := file.New(otherTempDir)
-	suite.NoError(err)
-	desc, err := src.Add(ctx, ociFileName, ocispec.MediaTypeEmptyJSON, regularFilePath)
-	suite.NoError(err)
-	descs := []ocispec.Descriptor{desc}
-
-	// Act
 	manifestConfigDesc, err := suite.remote.CreateAndPushManifestConfig(ctx, annotations, ocispec.MediaTypeLayoutHeader)
 	suite.NoError(err)
 
@@ -132,6 +109,59 @@ func (suite *OCISuite) TestPublishForReal() {
 
 	err = suite.remote.UpdateIndex(ctx, "0.0.1", publishedDesc)
 	suite.NoError(err)
+}
+
+func (suite *OCISuite) TestPublishForReal() {
+	suite.T().Log("")
+	ctx := context.TODO()
+
+	// So what are my options.
+	// I could completely tear down the registry and bring it back up before we do anything
+	// I could have a long running ordered registry and do things as I go. For example in the index case
+	// I don't think I actually need a file to be in the source so the same title shouldn't actually matter
+
+	// arrange
+
+	srcTempDir := suite.T().TempDir()
+	regularFileName := "this-file-is-in-a-regular-directory"
+	fileContents := "here's what I'm putting in the file"
+	ociFileName := "this-file-is-in-a-oci-file-store"
+
+	regularFilePath := filepath.Join(srcTempDir, regularFileName)
+	os.WriteFile(regularFilePath, []byte(fileContents), 0644)
+	src, err := file.New(srcTempDir)
+	suite.NoError(err)
+
+	desc, err := src.Add(ctx, ociFileName, ocispec.MediaTypeEmptyJSON, regularFilePath)
+	suite.NoError(err)
+
+	descs := []ocispec.Descriptor{desc}
+	suite.publishPackage(src, descs)
+
+	otherTempDir := suite.T().TempDir()
+	thirdTempDir := suite.T().TempDir()
+
+	dst, err := file.New(otherTempDir)
+	suite.NoError(err)
+
+	suite.NoError(err)
+
+	// Act
+
+	// otherPlatform := PlatformForArch("other")
+	// suite.remote.targetPlatform = &otherPlatform
+	// annotations[ocispec.AnnotationTitle] = "otherName"
+	// otherManifestConfig, err := suite.remote.CreateAndPushManifestConfig(ctx, annotations, ocispec.MediaTypeLayoutHeader)
+	// suite.NoError(err)
+
+	// _, err = suite.remote.PackAndTagManifest(ctx, src, descs, otherManifestConfig, annotations)
+	// suite.NoError(err)
+
+	// publishedOtherManifest, err := oras.Copy(ctx, src, manifestDesc.Digest.String(), suite.remote.Repo(), "", suite.remote.GetDefaultCopyOpts())
+	// suite.NoError(err)
+
+	// err = suite.remote.UpdateIndex(ctx, "0.0.1", publishedOtherManifest)
+	// suite.NoError(err)
 
 	// Testing copy to target
 	suite.NoError(err)
@@ -156,15 +186,22 @@ func (suite *OCISuite) TestPublishForReal() {
 	suite.Equal(contents, fileContents)
 
 	// Testing fetch root
+	// suite.remote.root = nil
+	// suite.Nil(suite.remote.root)
 	root, err := suite.remote.FetchRoot(ctx)
 	suite.NoError(err)
-	fmt.Printf("this is the root %v", root.Layers[0])
+	fmt.Printf("this is the root %v", root)
+	// suite.Equal(root.Config.Digest, otherManifestConfig.Digest)
 
 	// Testing resolve root
 	rootDesc, err := suite.remote.ResolveRoot(ctx)
 	suite.NoError(err)
 	suite.Equal(ocispec.MediaTypeImageManifest, rootDesc.MediaType)
-	fmt.Printf(rootDesc.MediaType)
+
+	// Everything we want to test
+	// Copy
+	// Manifest locate
+	// Index more in depth
 }
 
 func TestRemoveDuplicateDescriptors(t *testing.T) {
@@ -197,7 +234,7 @@ func TestRemoveDuplicateDescriptors(t *testing.T) {
 			},
 		},
 		{
-			name: "with empty descriptors",
+			name: "with empty descriptor",
 			input: []ocispec.Descriptor{
 				{Size: 0},
 				{Digest: "sha256:1111", Size: 100},
