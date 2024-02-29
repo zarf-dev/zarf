@@ -92,7 +92,8 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 			}
 			// This label will tell the Zarf Agent to ignore this namespace.
 			namespace.Labels[agentLabel] = "ignore"
-			if _, err = c.UpdateNamespace(&namespace); err != nil {
+			namespaceCopy := namespace
+			if _, err = c.UpdateNamespace(&namespaceCopy); err != nil {
 				// This is not a hard failure, but we should log it.
 				message.WarnErrf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
 			}
