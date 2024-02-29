@@ -66,6 +66,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
+      # Before we run the tests we need to aggressively cleanup files to reduce disk pressure
+      - name: Cleanup files
+        uses: ./.github/actions/cleanup-files
+
       - name: Download build artifacts
         uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
         with:
@@ -78,10 +82,6 @@ jobs:
       - name: Make Zarf executable
         run: |
           chmod +x build/zarf
-
-      # Before we run the tests we need to aggressively cleanup files to reduce disk pressure
-      - name: Cleanup files
-        uses: ./.github/actions/cleanup-files
 
       - name: Setup K3d
         uses: ./.github/actions/k3d
