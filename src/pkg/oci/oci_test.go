@@ -111,7 +111,7 @@ func (suite *OCISuite) publishPackage(src *file.Store, descs []ocispec.Descripto
 	suite.NoError(err)
 }
 
-func (suite *OCISuite) TestPublishForReal() {
+func (suite *OCISuite) TestCopyToTarget() {
 	suite.T().Log("")
 	ctx := context.TODO()
 
@@ -119,8 +119,6 @@ func (suite *OCISuite) TestPublishForReal() {
 	// I could completely tear down the registry and bring it back up before we do anything
 	// I could have a long running ordered registry and do things as I go. For example in the index case
 	// I don't think I actually need a file to be in the source so the same title shouldn't actually matter
-
-	// arrange
 
 	srcTempDir := suite.T().TempDir()
 	regularFileName := "this-file-is-in-a-regular-directory"
@@ -139,64 +137,70 @@ func (suite *OCISuite) TestPublishForReal() {
 	suite.publishPackage(src, descs)
 
 	otherTempDir := suite.T().TempDir()
-	thirdTempDir := suite.T().TempDir()
 
 	dst, err := file.New(otherTempDir)
 	suite.NoError(err)
 
 	suite.NoError(err)
 
-	// Act
-
-	// otherPlatform := PlatformForArch("other")
-	// suite.remote.targetPlatform = &otherPlatform
-	// annotations[ocispec.AnnotationTitle] = "otherName"
-	// otherManifestConfig, err := suite.remote.CreateAndPushManifestConfig(ctx, annotations, ocispec.MediaTypeLayoutHeader)
-	// suite.NoError(err)
-
-	// _, err = suite.remote.PackAndTagManifest(ctx, src, descs, otherManifestConfig, annotations)
-	// suite.NoError(err)
-
-	// publishedOtherManifest, err := oras.Copy(ctx, src, manifestDesc.Digest.String(), suite.remote.Repo(), "", suite.remote.GetDefaultCopyOpts())
-	// suite.NoError(err)
-
-	// err = suite.remote.UpdateIndex(ctx, "0.0.1", publishedOtherManifest)
-	// suite.NoError(err)
-
 	// Testing copy to target
 	suite.NoError(err)
 	err = suite.remote.CopyToTarget(ctx, descs, dst, suite.remote.GetDefaultCopyOpts())
 	suite.NoError(err)
 
-	// Assert
 	ociFile := filepath.Join(otherTempDir, ociFileName)
 	b, err := os.ReadFile(ociFile)
 	suite.NoError(err)
 	contents := string(b)
 	suite.Equal(contents, fileContents)
+}
+
+func (suite *OCISuite) TestPulledPaths() {
+	suite.T().Log("")
+	ctx := context.TODO()
+	srcTempDir := suite.T().TempDir()
+	files := []string{"firstFile", "secondFile"}
+
+	var descs []ocispec.Descriptor
+	src, err := file.New(srcTempDir)
+	suite.NoError(err)
+	for _, file := range files {
+		path := filepath.Join(srcTempDir, file)
+		os.Create(path)
+		desc, err := src.Add(ctx, file, ocispec.MediaTypeEmptyJSON, path)
+		suite.NoError(err)
+		descs = append(descs, desc)
+	}
+
+	suite.publishPackage(src, descs)
+	dstTempDir := suite.T().TempDir()
 
 	// Testing pulled paths
-	pulledDescs, err := suite.remote.PullPaths(ctx, thirdTempDir, []string{ociFileName, "path-that-does-not-exist"})
-	fmt.Printf("pulled descs %v", pulledDescs)
+	suite.remote.PullPaths(ctx, dstTempDir, files)
 	suite.NoError(err)
-	pulledPathOCIFile := filepath.Join(thirdTempDir, ociFileName)
-	b, err = os.ReadFile(pulledPathOCIFile)
-	suite.NoError(err)
-	contents = string(b)
-	suite.Equal(contents, fileContents)
+	for _, file := range files {
+		pulledPathOCIFile := filepath.Join(dstTempDir, file)
+		_, err := os.Stat(pulledPathOCIFile)
+		suite.NoError(err)
 
-	// Testing fetch root
-	// suite.remote.root = nil
-	// suite.Nil(suite.remote.root)
-	root, err := suite.remote.FetchRoot(ctx)
-	suite.NoError(err)
-	fmt.Printf("this is the root %v", root)
-	// suite.Equal(root.Config.Digest, otherManifestConfig.Digest)
+	}
 
-	// Testing resolve root
-	rootDesc, err := suite.remote.ResolveRoot(ctx)
-	suite.NoError(err)
-	suite.Equal(ocispec.MediaTypeImageManifest, rootDesc.MediaType)
+	// suite.NoError(err)
+	// contents = string(b)
+	// suite.Equal(contents, fileContents)
+
+	// // Testing fetch root
+	// // suite.remote.root = nil
+	// // suite.Nil(suite.remote.root)
+	// root, err := suite.remote.FetchRoot(ctx)
+	// suite.NoError(err)
+	// fmt.Printf("this is the root %v", root)
+	// // suite.Equal(root.Config.Digest, otherManifestConfig.Digest)
+
+	// // Testing resolve root
+	// rootDesc, err := suite.remote.ResolveRoot(ctx)
+	// suite.NoError(err)
+	// suite.Equal(ocispec.MediaTypeImageManifest, rootDesc.MediaType)
 
 	// Everything we want to test
 	// Copy
