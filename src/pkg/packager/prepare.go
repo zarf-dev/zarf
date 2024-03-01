@@ -208,7 +208,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 				// Check if the --why flag is set and if it is process the manifests
 				if whyImage != "" {
-					whyResourcesManifest, err := findWhyResources(resources, whyImage, component.Name, manifest.Name, false)
+					whyResourcesManifest, err := findWhyResources(yamls, whyImage, component.Name, manifest.Name, false)
 					if err != nil {
 						message.WarnErrf(err, "Error finding why resources for manifest %s: %s", manifest.Name, err.Error())
 					}
