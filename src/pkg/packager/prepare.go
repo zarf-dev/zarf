@@ -164,7 +164,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 			// Check if the --why flag is set
 			if whyImage != "" {
-				whyResourcesChart, err := findWhyResources(resources, whyImage, component.Name, chart.Name, true)
+				whyResourcesChart, err := findWhyResources(yamls, whyImage, component.Name, chart.Name, true)
 				if err != nil {
 					message.WarnErrf(err, "Error finding why resources for chart %s: %s", chart.Name, err.Error())
 				}
