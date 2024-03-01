@@ -32,7 +32,6 @@ type Packager struct {
 	cfg            *types.PackagerConfig
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
-	arch           string
 	warnings       []string
 	valueTemplate  *template.Values
 	hpaModified    bool
@@ -219,7 +218,7 @@ func (p *Packager) attemptClusterChecks() (err error) {
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() error {
 	// Ignore this check if the architecture is explicitly "multi", we don't have a cluster connection, or the package contains no images
-	if p.arch == "multi" || !p.isConnectedToCluster() || !p.hasImages() {
+	if p.cfg.Pkg.Metadata.Architecture == "multi" || !p.isConnectedToCluster() || !p.hasImages() {
 		return nil
 	}
 
@@ -229,8 +228,8 @@ func (p *Packager) validatePackageArchitecture() error {
 	}
 
 	// Check if the package architecture and the cluster architecture are the same.
-	if !slices.Contains(clusterArchitectures, p.arch) {
-		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, strings.Join(clusterArchitectures, ", "))
+	if !slices.Contains(clusterArchitectures, p.cfg.Pkg.Metadata.Architecture) {
+		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.cfg.Pkg.Metadata.Architecture, strings.Join(clusterArchitectures, ", "))
 	}
 
 	return nil

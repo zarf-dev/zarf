@@ -51,8 +51,6 @@ func (p *Packager) Deploy() (err error) {
 		return err
 	}
 
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
-
 	if err := p.validateLastNonBreakingVersion(); err != nil {
 		return err
 	}
