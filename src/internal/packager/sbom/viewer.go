@@ -72,7 +72,8 @@ func (b *Builder) loadFileCSS(name string) template.CSS {
 
 func (b *Builder) loadFileJS(name string) template.JS {
 	data, _ := viewerAssets.ReadFile("viewer/" + name)
-	return template.JS(data)
+	safeData := template.JSEscapeString(string(data))
+	return template.JS(safeData)
 }
 
 // This could be optimized, but loop over all the images and components to create a list of json files.
