@@ -31,8 +31,8 @@ func (b *Builder) createSBOMHTML(filename string, goTemplate string, jsonData []
 
 	defer sbomViewerFile.Close()
 
-	safeJsonData := template.JSEscapeString(string(jsonData))
-	safeJsonList := template.JSEscapeString(string(b.jsonList))
+	safeJSONData := template.JSEscapeString(string(jsonData))
+	safeJSONList := template.JSEscapeString(string(b.jsonList))
 
 	// Create the sbomviewer template data
 	tplData := struct {
@@ -47,8 +47,8 @@ func (b *Builder) createSBOMHTML(filename string, goTemplate string, jsonData []
 	}{
 		ThemeCSS:  b.loadFileCSS("theme.css"),
 		ViewerCSS: b.loadFileCSS("styles.css"),
-		List:      template.JS(safeJsonList),
-		Data:      template.JS(safeJsonData),
+		List:      template.JS(safeJSONList),
+		Data:      template.JS(safeJSONData),
 		LibraryJS: b.loadFileJS("library.js"),
 		CommonJS:  b.loadFileJS("common.js"),
 		ViewerJS:  b.loadFileJS("viewer.js"),
