@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -25,22 +25,18 @@ import (
 
 // Helm is a config object for working with helm charts.
 type Helm struct {
-	chart      types.ZarfChart
-	chartPath  string
-	valuesPath string
-
-	cfg       *types.PackagerConfig
-	component types.ZarfComponent
-	cluster   *cluster.Cluster
-	timeout   time.Duration
-
-	kubeVersion string
-
+	cfg             *types.PackagerConfig
+	cluster         *cluster.Cluster
 	chartOverride   *chart.Chart
 	valuesOverrides map[string]any
-
-	settings     *cli.EnvSettings
-	actionConfig *action.Configuration
+	settings        *cli.EnvSettings
+	actionConfig    *action.Configuration
+	chartPath       string
+	valuesPath      string
+	kubeVersion     string
+	component       types.ZarfComponent
+	chart           types.ZarfChart
+	timeout         time.Duration
 }
 
 // Modifier is a function that modifies the Helm config.
