@@ -45,8 +45,8 @@ func includedOrExcluded(componentName string, requestedComponentNames []string) 
 
 // isRequired returns if the component is required or not.
 func isRequired(c types.ZarfComponent) bool {
-	requiredExists := c.DeprecatedRequired != nil
-	required := requiredExists && *c.DeprecatedRequired
+	requiredExists := c.Required != nil
+	required := requiredExists && *c.Required
 
 	if requiredExists {
 		return required

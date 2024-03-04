@@ -25,11 +25,11 @@ func cfq(t *testing.T, q string) types.ZarfComponent {
 		case "default=false":
 			c.Default = false
 		case "required=<nil>":
-			c.DeprecatedRequired = nil
+			c.Required = nil
 		case "required=false":
-			c.DeprecatedRequired = helpers.BoolPtr(false)
+			c.Required = helpers.BoolPtr(false)
 		case "required=true":
-			c.DeprecatedRequired = helpers.BoolPtr(true)
+			c.Required = helpers.BoolPtr(true)
 		default:
 			if strings.HasPrefix(cond, "group=") {
 				c.DeprecatedGroup = cond[6:]
@@ -96,7 +96,7 @@ func componentMatrix(_ *testing.T) []types.ZarfComponent {
 				}
 
 				if requiredValue != nil {
-					c.DeprecatedRequired = helpers.BoolPtr(requiredValue.(bool))
+					c.Required = helpers.BoolPtr(requiredValue.(bool))
 				}
 
 				components = append(components, c)

@@ -19,8 +19,8 @@ type ZarfComponent struct {
 	// Default changes the default option when deploying this component
 	Default bool `json:"default,omitempty" jsonschema:"description=Determines the default Y/N state for installing this component on package deploy"`
 
-	// DeprecatedRequired makes this component mandatory for package deployment
-	DeprecatedRequired *bool `json:"required,omitempty" jsonschema:"description=[Deprecated] Do not prompt user to install this component, always install on package deploy. This will be removed in Zarf v1.0.0.,deprecated=true"`
+	// Required makes this component mandatory for package deployment
+	Required *bool `json:"required,omitempty" jsonschema:"description=[Deprecated] Do not prompt user to install this component, always install on package deploy. This will be removed in Zarf v1.0.0.,deprecated=true"`
 
 	// Only include compatible components during package deployment
 	Only ZarfComponentOnlyTarget `json:"only,omitempty" jsonschema:"description=Filter when this component is included in package creation or deployment"`
