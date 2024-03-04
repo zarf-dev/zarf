@@ -14,9 +14,10 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 )
@@ -58,7 +59,7 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, _ filters.Componen
 
 		dir := filepath.Dir(path)
 		if dir != "." {
-			if err := os.MkdirAll(filepath.Join(dst.Base, dir), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Join(dst.Base, dir), helpers.ReadExecuteAllWriteUser); err != nil {
 				return err
 			}
 		}
@@ -143,7 +144,7 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 		}
 	}
 
-	toExtract := oci.PackageAlwaysPull
+	toExtract := zoci.PackageAlwaysPull
 	if wantSBOM {
 		toExtract = append(toExtract, layout.SBOMTar)
 	}

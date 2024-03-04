@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -68,7 +69,7 @@ func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 			pkgSrc = fmt.Sprintf("%s@sha256:%s", pkgSrc, pkgOpts.Shasum)
 		}
 		arch := config.GetArch()
-		remote, err := oci.NewOrasRemote(pkgSrc, oci.PlatformForArch(arch))
+		remote, err := zoci.NewRemote(pkgSrc, oci.PlatformForArch(arch))
 		if err != nil {
 			return nil, err
 		}

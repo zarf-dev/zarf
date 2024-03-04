@@ -187,11 +187,11 @@ func (pp *PackagePaths) SetFromPaths(paths []string) {
 			pp.Checksums = filepath.Join(pp.Base, path)
 		case path == SBOMTar:
 			pp.SBOMs.Path = filepath.Join(pp.Base, path)
-		case path == filepath.Join(ImagesDir, OCILayout):
+		case path == OCILayoutPath:
 			pp.Images.OCILayout = filepath.Join(pp.Base, path)
-		case path == filepath.Join(ImagesDir, IndexJSON):
+		case path == IndexPath:
 			pp.Images.Index = filepath.Join(pp.Base, path)
-		case strings.HasPrefix(path, filepath.Join(ImagesDir, "blobs", "sha256")):
+		case strings.HasPrefix(path, ImagesBlobsDir):
 			if pp.Images.Base == "" {
 				pp.Images.Base = filepath.Join(pp.Base, ImagesDir)
 			}

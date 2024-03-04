@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic utility functions.
-package utils
+// Package helpers provides generic utility functions.
+package helpers
 
 import (
 	"io"
 	"net/http"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
@@ -17,11 +16,11 @@ import (
 // request and add hooks to report upload progress.
 type Transport struct {
 	Base        http.RoundTripper
-	ProgressBar *message.ProgressBar
+	ProgressBar ProgressWriter
 }
 
 // NewTransport returns a custom transport that tracks an http.RoundTripper and a message.ProgressBar.
-func NewTransport(base http.RoundTripper, bar *message.ProgressBar) *Transport {
+func NewTransport(base http.RoundTripper, bar ProgressWriter) *Transport {
 	return &Transport{
 		Base:        base,
 		ProgressBar: bar,
@@ -90,7 +89,9 @@ func (t *Transport) roundTrip(req *http.Request) (resp *http.Response, err error
 
 	if resp != nil && req.Method == http.MethodHead && err == nil && t.ProgressBar != nil {
 		if resp.ContentLength > 0 {
-			t.ProgressBar.Add(int(resp.ContentLength))
+			contentLength := int(resp.ContentLength)
+			b := make([]byte, contentLength)
+			t.ProgressBar.Write(b)
 		}
 	}
 	return resp, err

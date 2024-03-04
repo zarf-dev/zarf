@@ -47,7 +47,7 @@ Potential considerations:
   ```
 
   Example Secret Data:
-  
+
   ```yaml
   hookName: ecr-repository
   internal: true
@@ -59,25 +59,25 @@ Potential considerations:
   ```
 
   For this solution, hooks have to be 'installed' onto a cluster before they are used. When Zarf is deploying a package onto a cluster, it will look for any secrets with the `zarf-hook` label in the `zarf` namespace.  If hooks are found, Zarf will run any 'package' level hooks before deploying a component and run any 'component' level hook for each component that is getting deployed. The hook lifecycle options will be:
-  
+
   1. Before a package deployment
   2. After a package deployment
   3. Before a component deployment
   4. After a component deployment
-  
+
   NOTE: The order of hook execution is nearly random. If there are multiple hooks for a lifecycle there is no guarantee that they will be executed in a certain order.
   NOTE: The `package` lifecycle might be changed to a `run-once` lifecycle. This would benefit packages that don't have kube context information when the deployment starts.
 
   Zarf hooks will have two forms of execution via `Internal` and `External` hooks:
-  
+
   Internal Hooks:
-  
+
   Internal hooks will be hooks that are built into the Zarf CLI and run internal code when executed. The logic for these hooks would be built into the Zarf CLI and would be updated with new releases of the CLI.
-  
+
   External Hooks:
-  
+
   There are a few approaches for external hooks:
-  
+
   1. Have the hook metadata reference an OCI image that is downloaded and run.
 
      - The hook metadata can reference the shasum of the image to ensure the image is not tampered with.
@@ -88,12 +88,12 @@ Potential considerations:
 
   1. Have the hook metadata contain a script or list of shell commands that can get run.
      - This would be the simplest solution but would require the most work from the hook creator. This also has the most potential security issues.
-  
+
   Pros:
 
   - Implementing Hooks internally means we don't have to deal with any bootstrapping issues.
   - Internally managed hooks can leverage Zarf internal code.
-  
+
   Cons:
 
   - Since 'Internal' hooks are built into the CLI, the only way to get updates for the hook is to  update the CLI.

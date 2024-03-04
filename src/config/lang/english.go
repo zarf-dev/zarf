@@ -597,6 +597,9 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 	CmdVersionShort = "Shows the version of the running Zarf binary"
 	CmdVersionLong  = "Displays the version of the Zarf release that the current binary was built from."
 
+	// tools version
+	CmdToolsVersionShort = "Print the version"
+
 	// cmd viper setup
 	CmdViperErrLoadingConfigFile = "failed to load config file: %s"
 	CmdViperInfoUsingConfigFile  = "Using config file %s"
