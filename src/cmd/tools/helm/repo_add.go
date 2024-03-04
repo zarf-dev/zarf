@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -216,7 +217,7 @@ func (o *repoAddOptions) run(out io.Writer) error {
 
 	f.Update(&c)
 
-	if err := f.WriteFile(o.repoFile, 0600); err != nil {
+	if err := f.WriteFile(o.repoFile, helpers.ReadWriteUser); err != nil {
 		return err
 	}
 	fmt.Fprintf(out, "%q has been added to your repositories\n", o.name)
