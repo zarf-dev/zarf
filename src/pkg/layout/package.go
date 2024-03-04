@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
@@ -207,7 +208,7 @@ func (pp *PackagePaths) GenerateChecksums() (string, error) {
 	slices.Sort(checksumsData)
 
 	// Create the checksums file
-	if err := utils.WriteFile(pp.Checksums, []byte(strings.Join(checksumsData, "\n")+"\n")); err != nil {
+	if err := os.WriteFile(pp.Checksums, []byte(strings.Join(checksumsData, "\n")+"\n"), helpers.ReadWriteUser); err != nil {
 		return "", err
 	}
 
@@ -290,11 +291,11 @@ func (pp *PackagePaths) SetFromPaths(paths []string) {
 			pp.Checksums = filepath.Join(pp.Base, path)
 		case path == SBOMTar:
 			pp.SBOMs.Path = filepath.Join(pp.Base, path)
-		case path == filepath.Join(ImagesDir, OCILayout):
+		case path == OCILayoutPath:
 			pp.Images.OCILayout = filepath.Join(pp.Base, path)
-		case path == filepath.Join(ImagesDir, IndexJSON):
+		case path == IndexPath:
 			pp.Images.Index = filepath.Join(pp.Base, path)
-		case strings.HasPrefix(path, filepath.Join(ImagesDir, "blobs", "sha256")):
+		case strings.HasPrefix(path, ImagesBlobsDir):
 			if pp.Images.Base == "" {
 				pp.Images.Base = filepath.Join(pp.Base, ImagesDir)
 			}

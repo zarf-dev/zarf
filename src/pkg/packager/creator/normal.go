@@ -5,6 +5,7 @@
 package creator
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -29,6 +30,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 )
@@ -263,16 +265,17 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackag
 	// Create a remote ref + client for the package (if output is OCI)
 	// then publish the package to the remote.
 	if helpers.IsOCIURL(pc.createOpts.Output) {
-		ref, err := oci.ReferenceFromMetadata(pc.createOpts.Output, &pkg.Metadata, &pkg.Build)
+		ref, err := zoci.ReferenceFromMetadata(pc.createOpts.Output, &pkg.Metadata, &pkg.Build)
 		if err != nil {
 			return err
 		}
-		remote, err := oci.NewOrasRemote(ref, oci.PlatformForArch(config.GetArch()))
+		remote, err := zoci.NewRemote(ref, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
 			return err
 		}
 
-		err = remote.PublishPackage(pkg, dst, config.CommonOptions.OCIConcurrency)
+		ctx := context.TODO()
+		err = remote.PublishPackage(ctx, pkg, dst, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}

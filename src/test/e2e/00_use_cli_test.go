@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +31,7 @@ func TestUseCLI(t *testing.T) {
 			e2e.CleanFiles(shasumTestFilePath)
 		})
 
-		err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), 0600)
+		err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), helpers.ReadWriteUser)
 		require.NoError(t, err)
 
 		stdOut, stdErr, err := e2e.Zarf("prepare", "sha256sum", shasumTestFilePath)

@@ -43,7 +43,7 @@ type TextTemplate struct {
 // MakeTempDir creates a temp directory with the zarf- prefix.
 func MakeTempDir(basePath string) (string, error) {
 	if basePath != "" {
-		if err := CreateDirectory(basePath, 0700); err != nil {
+		if err := CreateDirectory(basePath, helpers.ReadWriteExecuteUser); err != nil {
 			return "", err
 		}
 	}
@@ -105,27 +105,6 @@ func ListDirectories(directory string) ([]string, error) {
 	}
 
 	return directories, nil
-}
-
-// WriteFile writes the given data to the given path.
-func WriteFile(path string, data []byte) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("unable to create the file at %s to write the contents: %w", path, err)
-	}
-
-	_, err = f.Write(data)
-	if err != nil {
-		_ = f.Close()
-		return fmt.Errorf("unable to write the file at %s contents:%w", path, err)
-	}
-
-	err = f.Close()
-	if err != nil {
-		return fmt.Errorf("error saving file %s: %w", path, err)
-	}
-
-	return nil
 }
 
 // ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
@@ -211,7 +190,7 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 
 	textFile.Close()
 
-	return os.WriteFile(path, []byte(text), 0600)
+	return os.WriteFile(path, []byte(text), helpers.ReadWriteUser)
 
 }
 
@@ -252,7 +231,7 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp, skipHidden bool) (fil
 // CreateParentDirectory creates the parent directory for the given file path.
 func CreateParentDirectory(destination string) error {
 	parentDest := filepath.Dir(destination)
-	return CreateDirectory(parentDest, 0700)
+	return CreateDirectory(parentDest, helpers.ReadWriteExecuteUser)
 }
 
 // CreatePathAndCopy creates the parent directory for the given file path and copies the source file to the destination.
@@ -379,7 +358,7 @@ func SplitFile(srcPath string, chunkSizeBytes int) (err error) {
 
 	// create file path starting from part 001
 	path := fmt.Sprintf("%s.part001", srcPath)
-	chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, helpers.ReadAllWriteUser)
 	if err != nil {
 		return err
 	}
@@ -417,7 +396,7 @@ func SplitFile(srcPath string, chunkSizeBytes int) (err error) {
 
 			// create new file
 			path = fmt.Sprintf("%s.part%03d", srcPath, len(fileNames)+1)
-			chunkFile, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+			chunkFile, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY, helpers.ReadAllWriteUser)
 			if err != nil {
 				return err
 			}
@@ -463,7 +442,7 @@ func SplitFile(srcPath string, chunkSizeBytes int) (err error) {
 
 	// write header file
 	path = fmt.Sprintf("%s.part000", srcPath)
-	if err := os.WriteFile(path, jsonData, 0644); err != nil {
+	if err := os.WriteFile(path, jsonData, helpers.ReadAllWriteUser); err != nil {
 		return fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
 	fileNames = append(fileNames, path)
