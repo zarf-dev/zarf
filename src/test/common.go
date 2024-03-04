@@ -71,7 +71,7 @@ func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
 		defer os.RemoveAll(tmpdir)
 		args = append(args, "--tmpdir", tmpdir)
 	}
-	if !slices.Contains(args, "--zarf-cache") {
+	if !slices.Contains(args, "--zarf-cache") && !slices.Contains(args, "tools") {
 		tmpdir, err := os.MkdirTemp("", "zarf-")
 		if err != nil {
 			return "", "", err
