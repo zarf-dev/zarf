@@ -21,7 +21,7 @@ import (
 const bbV1ZarfCredentialsValues = `
 registryCredentials:
   registry: "###ZARF_REGISTRY###"
-  username: "zarf-pull"
+  username: "###ZARF_REGISTRY_PULL###"
   password: "###ZARF_REGISTRY_AUTH_PULL###"
 git:
   existingSecret: "private-git-server"	# -- Chart created secrets with user defined values
@@ -42,7 +42,7 @@ kyvernopolicies:
 const bbV2ZarfCredentialsValues = `
 registryCredentials:
   registry: "###ZARF_REGISTRY###"
-  username: "zarf-pull"
+  username: "###ZARF_REGISTRY_PULL###"
   password: "###ZARF_REGISTRY_AUTH_PULL###"
 git:
   existingSecret: "private-git-server"	# -- Chart created secrets with user defined values
