@@ -17,6 +17,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"helm.sh/helm/v3/pkg/repo"
@@ -173,7 +174,7 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 		URL:      chartURL,
 	}
 	repoFile.Add(entry)
-	utils.WriteYaml(repoPath, repoFile, 0600)
+	utils.WriteYaml(repoPath, repoFile, helpers.ReadWriteUser)
 
 	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.NoError(err, "Unable to find images, helm auth likely failed")

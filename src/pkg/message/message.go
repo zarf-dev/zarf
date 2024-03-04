@@ -357,15 +357,6 @@ func ColorWrap(str string, attr color.Attribute) string {
 	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", attr, str)
 }
 
-// First30last30 returns the source string that has been trimmed to 30 characters at the beginning and end.
-func First30last30(s string) string {
-	if len(s) > 60 {
-		return s[0:27] + "..." + s[len(s)-26:]
-	}
-
-	return s
-}
-
 func debugPrinter(offset int, a ...any) {
 	printer := pterm.Debug.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
 	now := time.Now().Format(time.RFC3339)
