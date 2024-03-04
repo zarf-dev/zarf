@@ -34,3 +34,4 @@ Subset of the Helm CLI that includes the repo and dependency commands for managi
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
 * [zarf tools helm dependency](zarf_tools_helm_dependency.md)	 - manage a chart's dependencies
 * [zarf tools helm repo](zarf_tools_helm_repo.md)	 - add, list, remove, update, and index chart repositories
+* [zarf tools helm version](zarf_tools_helm_version.md)	 - Print the version

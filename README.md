@@ -62,6 +62,7 @@ _<https://www.youtube.com/watch?v=WnOYlFVVKDE>_
 To try Zarf out for yourself, visit the ["Try It Now"](https://zarf.dev/install) section on our website.
 
 To learn more about Zarf and its use cases, visit [docs.zarf.dev](https://docs.zarf.dev/docs/zarf-overview). From the docs, you can learn more about:
+
 - [installation](https://docs.zarf.dev/docs/getting-started/#installing-zarf)
 - [using the CLI](https://docs.zarf.dev/docs/the-zarf-cli/),
 - [making packages](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-packages/),
@@ -92,7 +93,6 @@ To dive deeper into the tech, you can read the [Nerd Notes](https://docs.zarf.de
 ![Architecture Diagram](./docs/.images/architecture.drawio.svg)
 
 [Source DrawIO](docs/.images/architecture.drawio.svg)
-
 
 ## ⭐️ Special Thanks
 

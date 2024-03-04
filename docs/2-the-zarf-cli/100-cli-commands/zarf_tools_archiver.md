@@ -27,3 +27,4 @@ Compresses/Decompresses generic archives, including Zarf packages
 * [zarf tools](zarf_tools.md)	 - Collection of additional tools to make airgap easier
 * [zarf tools archiver compress](zarf_tools_archiver_compress.md)	 - Compresses a collection of sources based off of the destination file extension.
 * [zarf tools archiver decompress](zarf_tools_archiver_decompress.md)	 - Decompresses an archive or Zarf package based off of the source file extension.
+* [zarf tools archiver version](zarf_tools_archiver_version.md)	 - Print the version
