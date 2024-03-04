@@ -27,15 +27,13 @@ func TestFindImages(t *testing.T) {
 	t.Run("zarf test find images --why  w/ helm chart success", func(t *testing.T) {
 		t.Log("E2E: Test Find Images against a helm chart with why flag")
 
-		testPackagePath := filepath.Join("examples", "helm-charts")
+		testPackagePath := filepath.Join("examples", "wordpress")
 		expectedOutput, err := os.ReadFile("src/test/packages/13-find-images/helm-charts-find-images-why-expected.txt")
 		require.NoError(t, err)
 
-		stdout, _, err := e2e.Zarf("dev", "find-images", testPackagePath, "--why", "curlimages/curl:7.69.0")
+		stdout, _, err := e2e.Zarf("dev", "find-images", testPackagePath, "--why", "docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2")
 		require.NoError(t, err)
-		match, err := regexp.MatchString(string(expectedOutput), stdout)
-		require.NoError(t, err)
-		require.True(t, match)
+		require.Contains(t, stdout, string(expectedOutput))
 	})
 
 	t.Run("zarf test find images --why w/  manifests success", func(t *testing.T) {
