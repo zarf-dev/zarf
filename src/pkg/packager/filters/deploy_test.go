@@ -106,7 +106,7 @@ func TestDeployFilter_Apply(t *testing.T) {
 
 			result, err := filter.Apply(tc.pkg)
 			require.NoError(t, err)
-			equal := assert.Equal(t, tc.want, result)
+			equal := reflect.DeepEqual(tc.want, result)
 			if !equal {
 				left := []string{}
 				right := []string{}
