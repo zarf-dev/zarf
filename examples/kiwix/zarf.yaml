@@ -37,3 +37,12 @@ components:
           # Below are some more examples of *.zim files of available content:
           # https://library.kiwix.org/?lang=eng
           # NOTE: If `zarf package create`ing regularly you should mirror content to a web host you control to be a friendly neighbor
+      onDeploy:
+        after:
+          - description: Kiwix deployment to be ready via wait action
+            wait:
+              cluster:
+                kind: Deployment
+                name: app=kiwix-serve
+                namespace: kiwix
+                condition: Available
