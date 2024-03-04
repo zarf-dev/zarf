@@ -21,11 +21,12 @@ import (
 )
 
 func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
-	for _, a := range actions {
-		if err := p.runAction(defaultCfg, a, valueTemplate); err != nil {
-			return err
-		}
-	}
+	// TODO: Need to figure out how to not shell out.
+	// for _, a := range actions {
+	// 	if err := p.runAction(defaultCfg, a, valueTemplate); err != nil {
+	// 		return err
+	// 	}
+	// }
 	return nil
 }
 

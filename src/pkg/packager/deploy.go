@@ -52,9 +52,9 @@ func (p *Packager) Deploy() (err error) {
 		return err
 	}
 
-	if err := p.stageSBOMViewFiles(); err != nil {
-		return err
-	}
+	// if err := p.stageSBOMViewFiles(); err != nil {
+	// 	return err
+	// }
 
 	// Confirm the overall package deployment
 	if !p.confirmAction(config.ZarfDeployStage) {
@@ -466,6 +466,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		RegInfo:       p.cfg.State.RegistryInfo,
 		Insecure:      config.CommonOptions.Insecure,
 		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
+		Cluster:       p.cluster,
 	}
 
 	return helpers.Retry(func() error {

@@ -5,6 +5,7 @@
 package images
 
 import (
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -24,4 +25,6 @@ type ImageConfig struct {
 	Architectures []string
 
 	RegistryOverrides map[string]string
+
+	Cluster *cluster.Cluster
 }

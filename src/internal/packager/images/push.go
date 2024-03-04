@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
@@ -69,7 +68,7 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 
 	registryURL = i.RegInfo.Address
 
-	c, _ := cluster.NewCluster()
+	c := i.Cluster
 	if c != nil {
 		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(i.RegInfo)
 		if err != nil {
