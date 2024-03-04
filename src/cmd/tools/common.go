@@ -5,6 +5,8 @@
 package tools
 
 import (
+	"fmt"
+
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -30,4 +32,16 @@ var toolsCmd = &cobra.Command{
 // Include adds the tools command to the root command.
 func Include(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(toolsCmd)
+}
+
+// newVersionCmd is a generic version command for tools
+func newVersionCmd(name, version string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Args:  cobra.NoArgs,
+		Short: lang.CmdToolsVersionShort,
+		Run: func(cmd *cobra.Command, _ []string) {
+			cmd.Println(fmt.Sprintf("%s %s", name, version))
+		},
+	}
 }
