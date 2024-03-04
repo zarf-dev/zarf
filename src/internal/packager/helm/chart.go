@@ -303,10 +303,6 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 }
 
 func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) (*release.Release, error) {
-	// Print the postRender object piece by piece to not print the htpasswd
-	message.Debugf("helm.upgradeChart(%#v, %#v, %#v, %#v, %s)", postRender.actionConfig, postRender.connectStrings,
-		postRender.namespaces, postRender.Helm, fmt.Sprintf("values:template.Values{ registry: \"%s\" }", postRender.values.GetRegistry()))
-
 	// Migrate any deprecated APIs (if applicable)
 	err := h.migrateDeprecatedAPIs(lastRelease)
 	if err != nil {

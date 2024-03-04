@@ -20,7 +20,6 @@ import (
 // Values contains the values to be used in the template.
 type Values struct {
 	config   *types.PackagerConfig
-	registry string
 	htpasswd string
 }
 
@@ -56,19 +55,12 @@ func Generate(cfg *types.PackagerConfig) (*Values, error) {
 		generated.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
 	}
 
-	generated.registry = regInfo.Address
-
 	return &generated, nil
 }
 
 // Ready returns true if the Values struct is ready to be used in the template.
 func (values *Values) Ready() bool {
 	return values.config.State != nil
-}
-
-// GetRegistry returns the registry address.
-func (values *Values) GetRegistry() string {
-	return values.registry
 }
 
 // SetState sets the state
