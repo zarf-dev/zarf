@@ -204,7 +204,7 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 
 	// Download the file into a temp directory since we don't control what name helm creates here
 	temp := filepath.Join(h.chartPath, "temp")
-	if err = utils.CreateDirectory(temp, 0700); err != nil {
+	if err = utils.CreateDirectory(temp, helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf("unable to create helm chart temp directory: %w", err)
 	}
 	defer os.RemoveAll(temp)

@@ -6,7 +6,7 @@ sidebar_position: 8
 
 ## Who is behind this project?
 
-Zarf was built by the developers at [Defense Unicorns](https://www.defenseunicorns.com/) and an amazing community of contributors. 
+Zarf was built by the developers at [Defense Unicorns](https://www.defenseunicorns.com/) and an amazing community of contributors.
 
 Defense Unicorns' mission is to advance freedom and independence globally through Free and Open Source software.
 
@@ -16,7 +16,7 @@ Zarf is under the [Apache License 2.0](https://github.com/defenseunicorns/zarf/b
 
 ## Is Zarf free to use?
 
-Yes! Zarf is Free and Open-Source Software (FOSS). And will remain free forever. We believe Free and Open Source software changes the world and promotes freedom and security. Anyone who sees the value in our tool should be free to use it without fear of vendor locking or licensing fees. 
+Yes! Zarf is Free and Open-Source Software (FOSS). And will remain free forever. We believe Free and Open Source software changes the world and promotes freedom and security. Anyone who sees the value in our tool should be free to use it without fear of vendor locking or licensing fees.
 
 ## Do I have to use Homebrew to install Zarf?
 
@@ -25,7 +25,6 @@ No, the Zarf binary and init package can be downloaded from the [Releases Page](
 ## What dependencies does Zarf have?
 
 Zarf is statically compiled and written in [Go](https://golang.org/) and [Rust](https://www.rust-lang.org/), so it has no external dependencies. For Linux, Zarf can bring a Kubernetes cluster using [K3s](https://k3s.io/). For Mac and Windows, Zarf can leverage any available local or remote cluster the user has access to. Currently, the K3s installation Zarf performs does require a [Systemd](https://en.wikipedia.org/wiki/Systemd) based system and `root` (not just `sudo`) access.
-
 
 ## What is the Zarf Agent?
 
