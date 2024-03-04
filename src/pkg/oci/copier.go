@@ -1,55 +1,48 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package oci contains functions for interacting with Zarf packages stored in OCI registries.
+// Package oci contains functions for interacting with artifacts stored in OCI registries.
 package oci
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
 
-// CopyPackage copies a package from one OCI registry to another
-func CopyPackage(ctx context.Context, src *OrasRemote, dst *OrasRemote, include func(d ocispec.Descriptor) bool, concurrency int) error {
+// Copy copies an artifact from one OCI registry to another
+func Copy(ctx context.Context, src *OrasRemote, dst *OrasRemote,
+	include func(d ocispec.Descriptor) bool, concurrency int, progressBar helpers.ProgressWriter) (err error) {
+	if progressBar == nil {
+		progressBar = helpers.DiscardProgressWriter{}
+	}
 	// create a new semaphore to limit concurrency
 	sem := semaphore.NewWeighted(int64(concurrency))
 
 	// fetch the source root manifest
-	srcRoot, err := src.FetchRoot()
+	srcRoot, err := src.FetchRoot(ctx)
 	if err != nil {
 		return err
 	}
 
-	var layers []ocispec.Descriptor
-	for _, layer := range srcRoot.Layers {
-		if include != nil && include(layer) {
-			layers = append(layers, layer)
-		} else if include == nil {
-			layers = append(layers, layer)
-		}
-	}
-
+	layers := helpers.Filter(srcRoot.Layers, include)
 	layers = append(layers, srcRoot.Config)
 
-	size := int64(0)
-	for _, layer := range layers {
-		size += layer.Size
-	}
-
-	title := fmt.Sprintf("[0/%d] layers copied", len(layers))
-	progressBar := message.NewProgressBar(size, title)
-	defer progressBar.Successf("Copied %s", src.repo.Reference)
 	start := time.Now()
 
 	for idx, layer := range layers {
-		message.Debug("Copying layer:", message.JSONValue(layer))
+		b, err := json.MarshalIndent(layer, "", "  ")
+		if err != nil {
+			src.log.Debug(fmt.Sprintf("ERROR marshalling json: %s", err.Error()))
+		}
+		src.log.Debug(fmt.Sprintf("Copying layer: %s", string(b)))
 		if err := sem.Acquire(ctx, 1); err != nil {
 			return err
 		}
@@ -60,15 +53,13 @@ func CopyPackage(ctx context.Context, src *OrasRemote, dst *OrasRemote, include 
 			return err
 		}
 		if exists {
-			message.Debug("Layer already exists in destination, skipping")
+			src.log.Debug("Layer already exists in destination, skipping")
+			b := make([]byte, layer.Size)
+			progressBar.Write(b)
 			progressBar.UpdateTitle(fmt.Sprintf("[%d/%d] layers copied", idx+1, len(layers)))
-			progressBar.Add(int(layer.Size))
 			sem.Release(1)
 			continue
 		}
-
-		// create a new pipe so we can write to both the progressbar and the destination at the same time
-		pr, pw := io.Pipe()
 
 		eg, ectx := errgroup.WithContext(ctx)
 		eg.SetLimit(2)
@@ -78,6 +69,10 @@ func CopyPackage(ctx context.Context, src *OrasRemote, dst *OrasRemote, include 
 		if err != nil {
 			return err
 		}
+
+		// create a new pipe so we can write to both the progressbar and the destination at the same time
+		pr, pw := io.Pipe()
+
 		// TeeReader gets the data from the fetching layer and writes it to the PipeWriter
 		tr := io.TeeReader(rc, pw)
 
@@ -112,7 +107,8 @@ func CopyPackage(ctx context.Context, src *OrasRemote, dst *OrasRemote, include 
 	}
 
 	duration := time.Since(start)
-	message.Debug("Copied", src.repo.Reference, "to", dst.repo.Reference, "with a concurrency of", concurrency, "and took", duration)
+	src.log.Debug(fmt.Sprintf("Copied %s to %s with a concurrency of %d and took %s",
+		src.repo.Reference, dst.repo.Reference, concurrency, duration))
 
 	return nil
 }

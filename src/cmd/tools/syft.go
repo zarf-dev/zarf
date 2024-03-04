@@ -7,14 +7,16 @@ package tools
 import (
 	"github.com/anchore/clio"
 	syftCLI "github.com/anchore/syft/cmd/syft/cli"
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 )
+
+// ldflags github.com/defenseunicorns/zarf/src/cmd/tools.syftVersion=x.x.x
+var syftVersion string
 
 func init() {
 	syftCmd := syftCLI.Command(clio.Identification{
 		Name:    "syft",
-		Version: config.CLIVersion,
+		Version: syftVersion,
 	})
 	syftCmd.Use = "sbom"
 	syftCmd.Short = lang.CmdToolsSbomShort
