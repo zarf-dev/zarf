@@ -25,7 +25,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -230,7 +229,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 //
 // - writes the Zarf package as a tarball to a local directory,
 // or an OCI registry based on the --output flag
-func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackage) error {
+func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackage) (err error) {
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range pkg.Components {
@@ -241,23 +240,15 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackag
 	}
 
 	// Calculate all the checksums
-	checksumChecksum, err := dst.GenerateChecksums()
+	pkg.Metadata.AggregateChecksum, err = dst.GenerateChecksums()
 	if err != nil {
 		return fmt.Errorf("unable to generate checksums for the package: %w", err)
 	}
-	pkg.Metadata.AggregateChecksum = checksumChecksum
 
-	// Record the migrations that will be ran on the package.
-	pkg.Build.Migrations = []string{
-		deprecated.ScriptsToActionsMigrated,
-		deprecated.PluralizeSetVariable,
-	}
-
-	if err := setPackageMetadata(pkg, pc.createOpts); err != nil {
+	if err := recordPackageMetadata(pkg, pc.createOpts); err != nil {
 		return err
 	}
 
-	// Save the transformed config.
 	if err := utils.WriteYaml(dst.ZarfYAML, pkg, 0400); err != nil {
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
 	}

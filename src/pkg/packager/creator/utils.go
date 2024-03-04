@@ -14,8 +14,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-// setPackageMetadata sets various package metadata.
-func setPackageMetadata(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptions) error {
+// recordPackageMetadata records various package metadata during package create.
+func recordPackageMetadata(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptions) error {
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue.
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
@@ -31,6 +31,9 @@ func setPackageMetadata(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptio
 		return err
 	}
 
+	// Record the hostname of the package creation terminal.
+	pkg.Build.Terminal = hostname
+
 	if pkg.IsInitConfig() {
 		pkg.Metadata.Version = config.CLIVersion
 	}
@@ -43,8 +46,11 @@ func setPackageMetadata(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptio
 	// Record the Zarf Version the CLI was built with.
 	pkg.Build.Version = config.CLIVersion
 
-	// Record the hostname of the package creation terminal.
-	pkg.Build.Terminal = hostname
+	// Record the migrations that will be ran on the package.
+	pkg.Build.Migrations = []string{
+		deprecated.ScriptsToActionsMigrated,
+		deprecated.PluralizeSetVariable,
+	}
 
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = createOpts.Flavor

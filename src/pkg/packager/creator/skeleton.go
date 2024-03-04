@@ -92,25 +92,25 @@ func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths, components []types
 // - writes the loaded zarf.yaml to disk
 //
 // - signs the package
-func (sc *SkeletonCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackage) error {
+func (sc *SkeletonCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackage) (err error) {
 	for _, component := range pkg.Components {
 		if err := dst.Components.Archive(component, false); err != nil {
 			return err
 		}
 	}
 
-	checksumChecksum, err := dst.GenerateChecksums()
+	// Calculate all the checksums
+	pkg.Metadata.AggregateChecksum, err = dst.GenerateChecksums()
 	if err != nil {
-		return fmt.Errorf("unable to generate checksums for skeleton package: %w", err)
+		return fmt.Errorf("unable to generate checksums for the package: %w", err)
 	}
-	pkg.Metadata.AggregateChecksum = checksumChecksum
 
-	if err := setPackageMetadata(pkg, sc.createOpts); err != nil {
+	if err := recordPackageMetadata(pkg, sc.createOpts); err != nil {
 		return err
 	}
 
 	if err := utils.WriteYaml(dst.ZarfYAML, pkg, 0400); err != nil {
-		return err
+		return fmt.Errorf("unable to write zarf.yaml: %w", err)
 	}
 
 	// Sign the package if a key has been provided
