@@ -73,10 +73,14 @@ func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
 		args = append(args, "--tmpdir", tmpdir)
 	}
 	if !slices.Contains(args, "--zarf-cache") && !slices.Contains(args, "tools") {
-		t := os.TempDir()
-		cachePath := filepath.Join(t, ".cache-location")
-		defer os.RemoveAll(cachePath)
-		args = append(args, "--zarf-cache", cachePath)
+		if os.Getenv("CI") == "true" {
+			// We make the cache dir relative to the working directory to make it work on the Windows Runners
+			// - they use two drives which filepath.Rel cannot cope with.
+			relCacheDir, _ := filepath.Abs(".cache-location")
+			args = append(args, "--zarf-cache=%s", relCacheDir)
+			defer os.RemoveAll(relCacheDir)
+		}
+
 	}
 	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)
 }
