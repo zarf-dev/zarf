@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -72,12 +73,10 @@ func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
 		args = append(args, "--tmpdir", tmpdir)
 	}
 	if !slices.Contains(args, "--zarf-cache") && !slices.Contains(args, "tools") {
-		tmpdir, err := os.MkdirTemp("", "zarf-")
-		if err != nil {
-			return "", "", err
-		}
-		defer os.RemoveAll(tmpdir)
-		args = append(args, "--zarf-cache", tmpdir)
+		t := os.TempDir()
+		cachePath := filepath.Join(t, ".cache-location")
+		defer os.RemoveAll(cachePath)
+		args = append(args, "--zarf-cache", cachePath)
 	}
 	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)
 }
