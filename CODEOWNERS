@@ -2,9 +2,9 @@
 
 # Docs & examples
 /adr/ @jeff-mccoy @Racer159 @Noxsios @lucasrod16 @AustinAbro321
-/docs/ @Madeline-UX @jeff-mccoy  @Racer159 @Noxsios @lucasrod16 @AustinAbro321
+/docs/ @jeff-mccoy  @Racer159 @Noxsios @lucasrod16 @AustinAbro321
 /examples/ @jeff-mccoy @Racer159 @Noxsios @lucasrod16 @AustinAbro321
-*.md @Madeline-UX @jeff-mccoy @Racer159 @Noxsios @lucasrod16 @AustinAbro321
+*.md @jeff-mccoy @Racer159 @Noxsios @lucasrod16 @AustinAbro321
 
 # Core code
 /src/ @jeff-mccoy @Racer159 @Noxsios @lucasrod16 @AustinAbro321
@@ -16,7 +16,7 @@ main.go @jeff-mccoy @Racer159 @Noxsios @lucasrod16 @AustinAbro321
 /zarf.yaml @jeff-mccoy @Racer159 @Noxsios @lucasrod16 @AustinAbro321
 
 # Docs Website
-/docs-website/ @mike-winberry @Racer159 @Noxsios @jeff-mccoy @lucasrod16 @AustinAbro321
+/docs-website/ @Racer159 @Noxsios @jeff-mccoy @lucasrod16 @AustinAbro321
 
 # Privileged pipeline files
 /.github/ @jeff-mccoy @Racer159 @Noxsios @lucasrod16 @AustinAbro321
