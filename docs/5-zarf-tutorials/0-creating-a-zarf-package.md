@@ -14,8 +14,8 @@ When creating a Zarf package, you must have a network connection so that Zarf ca
 
 Before beginning this tutorial you will need the following:
 
--  Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
--  A text editor or development environment such as [VS Code](../3-create-a-zarf-package/8-vscode.md)
+- Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
+- A text editor or development environment such as [VS Code](../3-create-a-zarf-package/8-vscode.md)
 
 ## Putting Together a Zarf Package
 
