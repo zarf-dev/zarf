@@ -73,7 +73,7 @@ func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 		if err != nil {
 			return nil, err
 		}
-		source = &OCISource{ZarfPackageOptions: pkgOpts, OrasRemote: remote}
+		source = &OCISource{ZarfPackageOptions: pkgOpts, Remote: remote}
 	case "tarball":
 		source = &TarballSource{pkgOpts}
 	case "http", "https", "sget":
