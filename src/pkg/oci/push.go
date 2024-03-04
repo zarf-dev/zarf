@@ -190,6 +190,7 @@ func (o *OrasRemote) UpdateIndex(tag string, arch string, publishedDesc ocispec.
 				Versioned: specs.Versioned{
 					SchemaVersion: 2,
 				},
+				MediaType: ocispec.MediaTypeImageIndex,
 				Manifests: []ocispec.Descriptor{
 					{
 						MediaType: ocispec.MediaTypeImageManifest,
