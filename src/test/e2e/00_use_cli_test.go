@@ -257,6 +257,6 @@ func TestUseCLI(t *testing.T) {
 		path := filepath.Join("examples", "helm-charts")
 		stdOut, _, err = e2e.Zarf("prepare", "find-images", path, "--deploy-set", "redis_enabled=true")
 		require.NoError(t, err)
-		require.Contains(t, stdOut, "redis:7.0.7", "Should contain the templated image from manifests")
+		require.Contains(t, stdOut, "docker.io/library/redis:7.0.15-alpine", "Should contain the templated image from manifests")
 	})
 }
