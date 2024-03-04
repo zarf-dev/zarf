@@ -5,8 +5,6 @@
 package types
 
 import (
-	"reflect"
-
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 )
 
@@ -79,33 +77,6 @@ func (c ZarfComponent) RequiresCluster() bool {
 	}
 
 	return false
-}
-
-// IsEmpty returns true if the components fields (other than the fields we were told to ignore) are empty or set to the types zero-value
-func (c ZarfComponent) IsEmpty(fieldsToIgnore []string) bool {
-	// Make a map for the fields we are going to ignore
-	ignoredFieldsMap := make(map[string]bool)
-	for _, field := range fieldsToIgnore {
-		ignoredFieldsMap[field] = true
-	}
-
-	// Get a value representation of the component
-	componentReflectValue := reflect.Indirect(reflect.ValueOf(c))
-
-	// Loop through all of the Components struct fields
-	for i := 0; i < componentReflectValue.NumField(); i++ {
-		// If we were told to ignore this field, continue on..
-		if ignoredFieldsMap[componentReflectValue.Type().Field(i).Name] {
-			continue
-		}
-
-		// Check if this field is empty/zero
-		if !componentReflectValue.Field(i).IsZero() {
-			return false
-		}
-	}
-
-	return true
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
