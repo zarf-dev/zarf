@@ -1,197 +1,187 @@
-component: demo-helm-charts
-chart: podinfo-oci
+component: wordpress
+chart: wordpress
 resource:
 
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  annotations:
-    appmesh.k8s.aws/sidecarInjectorWebhook: disabled
-    helm.sh/hook: test-success
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
-    linkerd.io/inject: disabled
-    sidecar.istio.io/inject: "false"
   labels:
+    app.kubernetes.io/instance: wordpress
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: podinfo-oci
-    app.kubernetes.io/version: 6.4.0
-    helm.sh/chart: podinfo-6.4.0
-  name: podinfo-oci-service-test-[a-zA-Z0-9]+
+    app.kubernetes.io/name: wordpress
+    helm.sh/chart: wordpress-16.0.4
+  name: wordpress
+  namespace: wordpress
 spec:
-  containers:
-  - command:
-    - sh
-    - -c
-    - |
-      curl -s ${PODINFO_SVC}/api/info | grep version
-    env:
-    - name: PODINFO_SVC
-      value: podinfo-oci.podinfo-from-oci:9898
-    image: curlimages/curl:7.69.0
-    name: curl
-  restartPolicy: Never
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: wordpress
+      app.kubernetes.io/name: wordpress
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations: null
+      labels:
+        app.kubernetes.io/instance: wordpress
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: wordpress
+        helm.sh/chart: wordpress-16.0.4
+    spec:
+      affinity:
+        nodeAffinity: null
+        podAffinity: null
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: wordpress
+                  app.kubernetes.io/name: wordpress
+              topologyKey: kubernetes.io/hostname
+            weight: 1
+      containers:
+      - env:
+        - name: BITNAMI_DEBUG
+          value: "false"
+        - name: ALLOW_EMPTY_PASSWORD
+          value: "yes"
+        - name: MARIADB_HOST
+          value: wordpress-mariadb
+        - name: MARIADB_PORT_NUMBER
+          value: "3306"
+        - name: WORDPRESS_DATABASE_NAME
+          value: bitnami_wordpress
+        - name: WORDPRESS_DATABASE_USER
+          value: bn_wordpress
+        - name: WORDPRESS_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: mariadb-password
+              name: wordpress-mariadb
+        - name: WORDPRESS_USERNAME
+          value: null
+        - name: WORDPRESS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: wordpress-password
+              name: wordpress
+        - name: WORDPRESS_EMAIL
+          value: null
+        - name: WORDPRESS_FIRST_NAME
+          value: null
+        - name: WORDPRESS_LAST_NAME
+          value: null
+        - name: WORDPRESS_HTACCESS_OVERRIDE_NONE
+          value: "no"
+        - name: WORDPRESS_ENABLE_HTACCESS_PERSISTENCE
+          value: "no"
+        - name: WORDPRESS_BLOG_NAME
+          value: null
+        - name: WORDPRESS_SKIP_BOOTSTRAP
+          value: "no"
+        - name: WORDPRESS_TABLE_PREFIX
+          value: wp_
+        - name: WORDPRESS_SCHEME
+          value: http
+        - name: WORDPRESS_EXTRA_WP_CONFIG_CONTENT
+          value: ""
+        - name: WORDPRESS_PLUGINS
+          value: none
+        - name: APACHE_HTTP_PORT_NUMBER
+          value: "8080"
+        - name: APACHE_HTTPS_PORT_NUMBER
+          value: "8443"
+        envFrom: null
+        image: docker.io/bitnami/wordpress:6.2.0-debian-11-r18
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 6
+          httpGet:
+            httpHeaders: []
+            path: /wp-admin/install.php
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: wordpress
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8443
+          name: https
+        readinessProbe:
+          failureThreshold: 6
+          httpGet:
+            httpHeaders: []
+            path: /wp-login.php
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits: {}
+          requests:
+            cpu: 300m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1001
+        volumeMounts:
+        - mountPath: /bitnami/wordpress
+          name: wordpress-data
+          subPath: wordpress
+      - command:
+        - /bin/apache_exporter
+        - --scrape_uri
+        - http://status.localhost:8080/server-status/?auto
+        image: docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /metrics
+            port: metrics
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: metrics
+        ports:
+        - containerPort: 9117
+          name: metrics
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /metrics
+            port: metrics
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        resources:
+          limits: {}
+          requests: {}
+      hostAliases:
+      - hostnames:
+        - status.localhost
+        ip: 127.0.0.1
+      securityContext:
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: default
+      volumes:
+      - name: wordpress-data
+        persistentVolumeClaim:
+          claimName: wordpress
 
-component: demo-helm-charts
-chart: podinfo-git
-resource:
-
-apiVersion: v1
-kind: Pod
-metadata:
-  annotations:
-    appmesh.k8s.aws/sidecarInjectorWebhook: disabled
-    helm.sh/hook: test-success
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
-    linkerd.io/inject: disabled
-    sidecar.istio.io/inject: "false"
-  labels:
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: podinfo-oci
-    app.kubernetes.io/version: 6.4.0
-    helm.sh/chart: podinfo-6.4.0
-  name: podinfo-oci-service-test-[a-zA-Z0-9]+
-spec:
-  containers:
-  - command:
-    - sh
-    - -c
-    - |
-      curl -s ${PODINFO_SVC}/api/info | grep version
-    env:
-    - name: PODINFO_SVC
-      value: podinfo-oci.podinfo-from-oci:9898
-    image: curlimages/curl:7.69.0
-    name: curl
-  restartPolicy: Never
-
-component: demo-helm-charts
-chart: podinfo-git
-resource:
-
-apiVersion: v1
-kind: Pod
-metadata:
-  annotations:
-    appmesh.k8s.aws/sidecarInjectorWebhook: disabled
-    helm.sh/hook: test-success
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
-    linkerd.io/inject: disabled
-    sidecar.istio.io/inject: "false"
-  labels:
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: podinfo-git
-    app.kubernetes.io/version: 6.4.0
-    helm.sh/chart: podinfo-6.4.0
-  name: podinfo-git-service-test-[a-zA-Z0-9]+
-spec:
-  containers:
-  - command:
-    - sh
-    - -c
-    - |
-      curl -s ${PODINFO_SVC}/api/info | grep version
-    env:
-    - name: PODINFO_SVC
-      value: podinfo-git.podinfo-from-git:9898
-    image: curlimages/curl:7.69.0
-    name: curl
-  restartPolicy: Never
-
-component: demo-helm-charts
-chart: podinfo-repo
-resource:
-
-apiVersion: v1
-kind: Pod
-metadata:
-  annotations:
-    appmesh.k8s.aws/sidecarInjectorWebhook: disabled
-    helm.sh/hook: test-success
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
-    linkerd.io/inject: disabled
-    sidecar.istio.io/inject: "false"
-  labels:
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: podinfo-oci
-    app.kubernetes.io/version: 6.4.0
-    helm.sh/chart: podinfo-6.4.0
-  name: podinfo-oci-service-test-[a-zA-Z0-9]+
-spec:
-  containers:
-  - command:
-    - sh
-    - -c
-    - |
-      curl -s ${PODINFO_SVC}/api/info | grep version
-    env:
-    - name: PODINFO_SVC
-      value: podinfo-oci.podinfo-from-oci:9898
-    image: curlimages/curl:7.69.0
-    name: curl
-  restartPolicy: Never
-
-component: demo-helm-charts
-chart: podinfo-repo
-resource:
-
-apiVersion: v1
-kind: Pod
-metadata:
-  annotations:
-    appmesh.k8s.aws/sidecarInjectorWebhook: disabled
-    helm.sh/hook: test-success
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
-    linkerd.io/inject: disabled
-    sidecar.istio.io/inject: "false"
-  labels:
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: podinfo-git
-    app.kubernetes.io/version: 6.4.0
-    helm.sh/chart: podinfo-6.4.0
-  name: podinfo-git-service-test-[a-zA-Z0-9]+
-spec:
-  containers:
-  - command:
-    - sh
-    - -c
-    - |
-      curl -s ${PODINFO_SVC}/api/info | grep version
-    env:
-    - name: PODINFO_SVC
-      value: podinfo-git.podinfo-from-git:9898
-    image: curlimages/curl:7.69.0
-    name: curl
-  restartPolicy: Never
-
-component: demo-helm-charts
-chart: podinfo-repo
-resource:
-
-apiVersion: v1
-kind: Pod
-metadata:
-  annotations:
-    appmesh.k8s.aws/sidecarInjectorWebhook: disabled
-    helm.sh/hook: test-success
-    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
-    linkerd.io/inject: disabled
-    sidecar.istio.io/inject: "false"
-  labels:
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: cool-release-name-podinfo
-    app.kubernetes.io/version: 6.4.0
-    helm.sh/chart: podinfo-6.4.0
-  name: cool-release-name-podinfo-service-test-[a-zA-Z0-9]+
-spec:
-  containers:
-  - command:
-    - sh
-    - -c
-    - |
-      curl -s ${PODINFO_SVC}/api/info | grep version
-    env:
-    - name: PODINFO_SVC
-      value: cool-release-name-podinfo.podinfo-from-repo:9898
-    image: curlimages/curl:7.69.0
-    name: curl
-  restartPolicy: Never
