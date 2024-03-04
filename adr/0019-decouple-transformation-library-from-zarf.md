@@ -8,9 +8,10 @@ Pending
 
 ## Context
 
-We need a way to decouple transformations from Zarf. We know the Zarf transformation library is battle tested, hardened, and reliable. As Pepr takes admission responsibilities from the Zarf Agent, we need a way to synchronize the TypeScript with the Go code instead of maintaining two disparate libraries which will be expected to grow. 
+We need a way to decouple transformations from Zarf. We know the Zarf transformation library is battle tested, hardened, and reliable. As Pepr takes admission responsibilities from the Zarf Agent, we need a way to synchronize the TypeScript with the Go code instead of maintaining two disparate libraries which will be expected to grow.
 
 We considered:
+
 - WASM
 - gRPC
 - REST
@@ -19,6 +20,7 @@ We considered:
 #### WASM
 
 **PROS**
+
 - Shared codebase between TypeScript and Go
 - Fast
 - API Contract
@@ -30,6 +32,7 @@ We considered:
 #### gRPC
 
 **PROS**
+
 - Shared codebase between TypeScript and Go
 - Fast
 - API Contract
@@ -40,6 +43,7 @@ We considered:
 #### REST
 
 **PROS**
+
 - Shared codebase between TypeScript and Go
 - Proven
 - API Contract
@@ -50,12 +54,11 @@ We considered:
 #### Rewrite in TypeScript
 
 **PROS**
+
 - Low hanging fruit
 **CONS**
 - Two codebases to maintain
 - TypeScript is not as battle tested as Go
-
-
 
 ## Decision
 
