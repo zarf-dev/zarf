@@ -77,7 +77,7 @@ func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
 			// We make the cache dir relative to the working directory to make it work on the Windows Runners
 			// - they use two drives which filepath.Rel cannot cope with.
 			relCacheDir, _ := filepath.Abs(".cache-location")
-			args = append(args, "--zarf-cache=%s", relCacheDir)
+			args = append(args, "--zarf-cache", relCacheDir)
 			defer os.RemoveAll(relCacheDir)
 		}
 
