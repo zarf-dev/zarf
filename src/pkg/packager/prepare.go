@@ -212,7 +212,9 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				} else {
 					filename := filepath.Base(f)
 					newDestination := filepath.Join(componentPaths.Manifests, filename)
-					utils.CreatePathAndCopy(f, newDestination)
+					if err := utils.CreatePathAndCopy(f, newDestination); err != nil {
+						return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
+					}
 					f = newDestination
 				}
 
