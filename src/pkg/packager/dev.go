@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -63,7 +62,7 @@ func (p *Packager) DevDeploy() error {
 
 	// Set variables and prompt if --confirm is not set
 	if err := p.setVariableMapInConfig(); err != nil {
-		return fmt.Errorf(lang.PkgErrSetVariableMap, err)
+		return err
 	}
 
 	p.connectStrings = make(types.ConnectStrings)

@@ -82,7 +82,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	componentDefinition := "\ncomponents:\n"
 
 	if err := p.setVariableMapInConfig(); err != nil {
-		return nil, fmt.Errorf(lang.PkgErrSetVariableMap, err)
+		return nil, err
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
