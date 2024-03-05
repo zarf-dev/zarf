@@ -255,9 +255,11 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, internalRegistryImage, "registry image should be found with registry url")
 		require.Contains(t, stdOut, "busybox:latest", "Busybox image should be found as long as helm chart doesn't error")
 
-		path := filepath.Join("examples", "helm-charts")
-		stdOut, _, err = e2e.Zarf("prepare", "find-images", path, "--deploy-set", "redis_enabled=true")
+		path := filepath.Join("src", "test", "packages", "00-find-images-with-vars")
+		stdOut, _, err = e2e.Zarf("prepare", "find-images", path, "--deploy-set", "BUSYBOX_IMAGE=busybox:earliest")
 		require.NoError(t, err)
-		require.Contains(t, stdOut, "docker.io/library/redis:7.0.15-alpine", "Should contain the templated image from manifests")
+
+		require.Contains(t, stdOut, "nginx:latest", "Manifests aren't interpreting vars")
+		require.Contains(t, stdOut, "busybox:earliest", "Values files aren't interpreting vars")
 	})
 }
