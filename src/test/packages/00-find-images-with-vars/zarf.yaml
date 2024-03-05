@@ -9,9 +9,7 @@ variables:
 
 constants:
   - name: SAMPLE_IMAGE
-    value: "nginx"
-  - name: SAMPLE_TAG
-    value: "latest"
+    value: "nginx:latest"
 
 components:
 - name: simple-var
