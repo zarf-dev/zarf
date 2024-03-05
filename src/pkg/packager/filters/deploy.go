@@ -151,14 +151,28 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 			} else {
 				component := groupedComponents[groupKey][0]
 
+				// default takes precedence over required
+				if component.Default {
+					selectedComponents = append(selectedComponents, component)
+					continue
+				}
+
+				// otherwise interactively prompt the user
 				if f.isInteractive {
-					if selected := interactive.SelectOptionalComponent(component); selected {
-						selectedComponents = append(selectedComponents, component)
+					selected, err := interactive.SelectOptionalComponent(component)
+					if err != nil {
+						return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrComponentSelectionCanceled, err.Error())
 					}
-				} else {
-					if isRequired(component) || component.Default {
+					if selected {
 						selectedComponents = append(selectedComponents, component)
+						continue
 					}
+				}
+
+				// finally go off the required status
+				if isRequired(component) {
+					selectedComponents = append(selectedComponents, component)
+					continue
 				}
 			}
 		}

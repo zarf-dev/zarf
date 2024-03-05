@@ -16,7 +16,7 @@ import (
 )
 
 // SelectOptionalComponent prompts to confirm optional components
-func SelectOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
+func SelectOptionalComponent(component types.ZarfComponent) (confirm bool, err error) {
 	message.HorizontalRule()
 
 	displayComponent := component
@@ -30,11 +30,8 @@ func SelectOptionalComponent(component types.ZarfComponent) (confirmComponent bo
 		Message: fmt.Sprintf("Deploy the %s component?", component.Name),
 		Default: component.Default,
 	}
-	if err := survey.AskOne(prompt, &confirmComponent); err != nil {
-		message.Fatalf(nil, lang.PkgDeployErrComponentSelectionCanceled, err.Error())
-	}
 
-	return confirmComponent
+	return confirm, survey.AskOne(prompt, &confirm)
 }
 
 // SelectChoiceGroup prompts to select component groups

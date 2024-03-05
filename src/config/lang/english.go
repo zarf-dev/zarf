@@ -639,7 +639,7 @@ const (
 	PkgDeployErrMultipleComponentsSameGroup        = "cannot specify multiple components (%q, %q) within the same group (%q) when using the --components flag"
 	PkgDeployErrNoDefaultOrSelection               = "no selection made from %q with the --components flag and there is no default in the group"
 	PkgDeployErrNoCompatibleComponentsForSelection = "no compatible components found that matched %q, suggestion(s): %s"
-	PkgDeployErrComponentSelectionCanceled         = "Component selection canceled: %s"
+	PkgDeployErrComponentSelectionCanceled         = "component selection canceled: %s"
 )
 
 // src/internal/packager/validate
