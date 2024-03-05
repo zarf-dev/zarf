@@ -65,6 +65,16 @@ func TestZarfInit(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	_, _, err = e2e.Zarf("tools", "kubectl", "config", "view")
+	if err != nil {
+		t.Log(err)
+	}
+
+	_, _, err = e2e.Zarf("tools", "kubectl", "get", "svc", "-A")
+	if err != nil {
+		t.Log(err)
+	}
+
 	// run `zarf init`
 	_, initStdErr, err := e2e.Zarf("init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
 	require.NoError(t, err)

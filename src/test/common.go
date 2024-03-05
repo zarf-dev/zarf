@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -76,9 +75,16 @@ func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
 		if os.Getenv("CI") == "true" {
 			// We make the cache dir relative to the working directory to make it work on the Windows Runners
 			// - they use two drives which filepath.Rel cannot cope with.
-			relCacheDir, _ := filepath.Abs(".cache-location")
-			args = append(args, "--zarf-cache", relCacheDir)
-			defer os.RemoveAll(relCacheDir)
+			cwd, err := os.Getwd()
+			if err != nil {
+				return "", "", err
+			}
+			cacheDir, err := os.MkdirTemp(cwd, "zarf-")
+			if err != nil {
+				return "", "", err
+			}
+			args = append(args, "--zarf-cache", cacheDir)
+			defer os.RemoveAll(cacheDir)
 		}
 
 	}
