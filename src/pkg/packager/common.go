@@ -360,7 +360,10 @@ func (p *Packager) signPackage(signingKeyPath, signingKeyPassword string) error 
 		if signingKeyPassword != "" {
 			return []byte(signingKeyPassword), nil
 		}
-		return interactive.PromptSigPassword()
+		if !config.CommonOptions.Confirm {
+			return interactive.PromptSigPassword()
+		}
+		return nil, nil
 	}
 	_, err := utils.CosignSignBlob(p.layout.ZarfYAML, p.layout.Signature, signingKeyPath, passwordFunc)
 	if err != nil {
