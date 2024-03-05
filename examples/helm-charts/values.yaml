@@ -1,8 +1,3 @@
-redis:
-  enabled: ###ZARF_VAR_REDIS_ENABLED###
-  repository: docker.io/library/redis
-  tag: 7.0.15-alpine
-
 ui:
   color: "#0d133d"
   message: "greetings from podinfo (as deployed by Zarf)"
