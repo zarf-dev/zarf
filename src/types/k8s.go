@@ -110,7 +110,7 @@ type GitServerInfo struct {
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
-func (gs GitServerInfo) FillInEmptyValues() (GitServerInfo, error) {
+func (gs *GitServerInfo) FillInEmptyValues() error {
 	var err error
 	// Set default svc url if an external repository was not provided
 	if gs.Address == "" {
@@ -121,7 +121,7 @@ func (gs GitServerInfo) FillInEmptyValues() (GitServerInfo, error) {
 	// Generate a push-user password if not provided by init flag
 	if gs.PushPassword == "" {
 		if gs.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
-			return GitServerInfo{}, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
+			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 		}
 	}
 
@@ -136,14 +136,14 @@ func (gs GitServerInfo) FillInEmptyValues() (GitServerInfo, error) {
 	if gs.PullPassword == "" {
 		if gs.InternalServer {
 			if gs.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
-				return GitServerInfo{}, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
+				return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		} else {
 			gs.PullPassword = gs.PushPassword
 		}
 	}
 
-	return gs, nil
+	return nil
 }
 
 // ArtifactServerInfo contains information Zarf uses to communicate with a artifact registry to push/pull repositories to.
@@ -156,7 +156,7 @@ type ArtifactServerInfo struct {
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
-func (as ArtifactServerInfo) FillInEmptyValues() ArtifactServerInfo {
+func (as *ArtifactServerInfo) FillInEmptyValues() {
 	// Set default svc url if an external registry was not provided
 	if as.Address == "" {
 		as.Address = ZarfInClusterArtifactServiceURL
@@ -167,7 +167,6 @@ func (as ArtifactServerInfo) FillInEmptyValues() ArtifactServerInfo {
 	if as.PushUsername == "" {
 		as.PushUsername = ZarfGitPushUser
 	}
-	return as
 }
 
 // RegistryInfo contains information Zarf uses to communicate with a container registry to push/pull images.
@@ -185,7 +184,7 @@ type RegistryInfo struct {
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
-func (ri RegistryInfo) FillInEmptyValues() (RegistryInfo, error) {
+func (ri *RegistryInfo) FillInEmptyValues() error {
 	var err error
 	// Set default NodePort if none was provided
 	if ri.NodePort == 0 {
@@ -201,7 +200,7 @@ func (ri RegistryInfo) FillInEmptyValues() (RegistryInfo, error) {
 	// Generate a push-user password if not provided by init flag
 	if ri.PushPassword == "" {
 		if ri.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
-			return RegistryInfo{}, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
+			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 		}
 	}
 
@@ -217,7 +216,7 @@ func (ri RegistryInfo) FillInEmptyValues() (RegistryInfo, error) {
 	if ri.PullPassword == "" {
 		if ri.InternalRegistry {
 			if ri.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
-				return RegistryInfo{}, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
+				return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		} else {
 			// If this is an external registry and a pull-user wasn't provided, use the same credentials as the push user
@@ -227,9 +226,9 @@ func (ri RegistryInfo) FillInEmptyValues() (RegistryInfo, error) {
 
 	if ri.Secret == "" {
 		if ri.Secret, err = helpers.RandomString(ZarfGeneratedSecretLen); err != nil {
-			return RegistryInfo{}, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
+			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 		}
 	}
 
-	return ri, nil
+	return nil
 }

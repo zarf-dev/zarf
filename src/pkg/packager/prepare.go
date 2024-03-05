@@ -130,15 +130,18 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			return nil, fmt.Errorf("unable to generate template values")
 		}
 		// Adding these so the default builtin values exist in case any helm charts rely on them
-		registryInfo, err := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}.FillInEmptyValues()
+		registryInfo := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
+		err = registryInfo.FillInEmptyValues()
 		if err != nil {
 			return nil, err
 		}
-		gitServer, err := types.GitServerInfo{}.FillInEmptyValues()
+		gitServer := types.GitServerInfo{}
+		err = gitServer.FillInEmptyValues()
 		if err != nil {
 			return nil, err
 		}
-		artifactServer := types.ArtifactServerInfo{}.FillInEmptyValues()
+		artifactServer := types.ArtifactServerInfo{}
+		artifactServer.FillInEmptyValues()
 		values.SetState(&types.ZarfState{
 			RegistryInfo:   registryInfo,
 			GitServer:      gitServer,

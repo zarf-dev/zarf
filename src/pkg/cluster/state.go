@@ -113,15 +113,18 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 			return fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
-		state.GitServer, err = initOptions.GitServer.FillInEmptyValues()
+		err = initOptions.GitServer.FillInEmptyValues()
 		if err != nil {
 			return err
 		}
-		state.RegistryInfo, err = initOptions.RegistryInfo.FillInEmptyValues()
+		state.GitServer = initOptions.GitServer
+		err = initOptions.RegistryInfo.FillInEmptyValues()
 		if err != nil {
 			return err
 		}
-		state.ArtifactServer = initOptions.ArtifactServer.FillInEmptyValues()
+		state.RegistryInfo = initOptions.RegistryInfo
+		initOptions.ArtifactServer.FillInEmptyValues()
+		state.ArtifactServer = initOptions.ArtifactServer
 	} else {
 		if helpers.IsNotZeroAndNotEqual(initOptions.GitServer, state.GitServer) {
 			message.Warn("Detected a change in Git Server init options on a re-init. Ignoring... To update run:")
